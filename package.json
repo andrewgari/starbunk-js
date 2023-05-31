@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/andrewgari/starbunk-js/issues"
   },
-  "homepage": "https://github.com/andrewgari/starbunk-js#readme"
+  "homepage": "https://github.com/andrewgari/starbunk-js#readme",
+  "dependencies": {
+    "discord.js": "^14.11.0"
+  }
 }
