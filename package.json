@@ -1,0 +1,23 @@
+{
+  "name": "starbunk",
+  "version": "0.0.1",
+  "description": "it's bot that says blu, among things...",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrewgari/starbunk-js.git"
+  },
+  "keywords": [
+    "discord",
+    "blue"
+  ],
+  "author": "Andrew Gari",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/andrewgari/starbunk-js/issues"
+  },
+  "homepage": "https://github.com/andrewgari/starbunk-js#readme"
+}
