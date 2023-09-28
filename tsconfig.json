@@ -24,8 +24,7 @@
         "src/bunkbot.ts"
     ],
     "include": [
-        "./**/*.ts",
-        ".env"
+        "./**/*.ts"
     ],
     "exclude": [
         "node_modules",
