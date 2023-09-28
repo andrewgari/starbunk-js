@@ -2,6 +2,7 @@ version: '3.7'
 
 services:
   bunkbot-ts:
+    image: andrewgari/bunkbot:latest
     build: 
       context: .
       dockerfile: Dockerfile
@@ -9,3 +10,4 @@ services:
     container_name: bunkbot-js
     env_file: .env
     command: npm run start
+    

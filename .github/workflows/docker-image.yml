@@ -1,18 +1,17 @@
-name: Docker Image CI
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
+name: Push commit
+on: push
+permissions:
+  contents: write
 jobs:
-
-  build:
-
+  report:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - uses: actions/checkout@v3
+      - name: Create report file
+        run: date +%s > report.txt
+      - name: Commit report
+        run: |
+          git config --global user.name 'Andrew Gari'
+          git config --global user.email 'covadax.ag@gmail.com'
+          git commit -am "Automated report"
+          git push
