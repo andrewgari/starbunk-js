@@ -49,13 +49,11 @@ jobs:
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@v4
-        with:
-          context: .
         env:
           STARBUNK_TOKEN: ${{ secrets.STARBUNK_TOKEN }}
           SNOWBUNK_TOKEN: ${{ secrets.SNOWBUNK_TOKEN }}
         with:
-          context: "{{defaultContext}}:src"
+          context: .
           push: ${{ github.event_name != 'pull_request' }} # Don't push on PR
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
