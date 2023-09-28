@@ -8,6 +8,6 @@ export default (client: Client): void => {
     });
 }
 
-const handleMessage = (client: Client, message: Message) => {
+const handleMessage = (_client: Client, message: Message) => {
     message.channel.send('lol somebody definitely said blu');
 };
