@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "start": "ts-node src/Bunkbot.ts"
+    "start": "ts-node src/bunkbot.ts"
   },
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
   "dependencies": {
     "discord.js": "^14.13.0",
     "dotenv": "^16.3.1",
+    "envalid": "^8.0.0",
     "yarn": "^1.22.19"
   },
   "devDependencies": {

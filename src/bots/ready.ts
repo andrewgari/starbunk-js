@@ -1,7 +1,7 @@
-import { Client } from 'discord.js'
+import { Client, Events } from 'discord.js'
 
 export default (client: Client): void => {
-    client.on('ready', async () => {
+    client.on(Events.ClientReady, async () => {
         if (!client.user || !client.application) {
             return;
         };
