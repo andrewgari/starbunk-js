@@ -7,16 +7,8 @@ export class WebhookService {
 		return `Bunkbot-${ channelName }`
 	};
 
-	getWebhookByChannel(channel: TextChannel): Webhook | undefined {
-		channel.fetchWebhooks()
-			.then((webhooks) => {
-				webhooks.forEach((webhook: Webhook) => {
-					if (webhook.name === this.getWebhookName(channel.name)) {
-						return webhook;
-					}
-				});
-			});
-		return undefined;
+	async getWebhookByChannel(channel: TextChannel): Promise<Webhook> {
+		return await this.getWebhook(channel.client, channel.id)
 	};
 
 	async getWebhook(client: Client, channelID: string): Promise<Webhook> {
@@ -37,11 +29,11 @@ export class WebhookService {
 		return newWebhook;
 	};
 
-	public writeMessage(
+	public async writeMessage(
 		channel: TextChannel,
 		message: MessageInfo
 	): Promise<Message<boolean>> {
-		const webhook = this.getWebhookByChannel(channel);
+		const webhook = await this.getWebhookByChannel(channel);
 		if (webhook) {
 			return webhook.send(message);
 		}
