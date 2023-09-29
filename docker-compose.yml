@@ -2,6 +2,7 @@ version: '3.7'
 
 services:
   bunkbot-ts:
+    image: andrewgari/bunkbot:latest
     build: 
       context: .
       dockerfile: Dockerfile
