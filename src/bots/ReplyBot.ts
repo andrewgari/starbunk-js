@@ -1,5 +1,6 @@
 import { Client, Events, Message, TextChannel } from 'discord.js';
-import webhookService from '../../webhooks/WebhookService';
+import webhookService from '../webhooks/WebhookService';
+import { registerBot } from './Bootstrap';
 
 export abstract class ReplyBot {
   private readonly client: Client;
@@ -9,6 +10,7 @@ export abstract class ReplyBot {
     this.client.on(Events.MessageCreate, async (message: Message) => {
       this.handleMessage(message);
     });
+    registerBot(this);
   }
 
   abstract getBotName(): string;

@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits } from 'discord.js';
-import bootstrap from './bots/bootstrap';
+import bootstrap from './bots/Bootstrap';
 import dotenv from 'dotenv';
 dotenv.config();
 
