@@ -1,7 +1,7 @@
-import { Client, Events, Message, TextChannel } from 'discord.js';
-import { ReplyBot } from './ReplyBot';
+import { Message, TextChannel } from 'discord.js';
+import { ReplyBot } from '../ReplyBot';
 
-export class BlueBot extends ReplyBot {
+export default class BlueBot extends ReplyBot {
   private botName: string = 'BluBot';
 
   private readonly defaultAvatarURL = 'https://imgur.com/WcBRCWn.png';
@@ -45,8 +45,8 @@ export class BlueBot extends ReplyBot {
   }
 }
 
-const bluebot = (client: Client): BlueBot => {
-  return new BlueBot(client);
-};
+// const bluebot = (client: Client): BlueBot => {
+//   return new BlueBot(client);
+// };
 
-export default bluebot;
+// export default bluebot;
