@@ -1,6 +1,6 @@
 export type MessageInfo = {
-	content: string,
-	username: string,
-	avatarURL: string,
-	embeds: []
-}
+  content: string;
+  username: string;
+  avatarURL: string;
+  embeds: [];
+};
