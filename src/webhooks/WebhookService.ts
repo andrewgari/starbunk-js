@@ -6,33 +6,39 @@ export class WebhookService {
     return `Bunkbot-${channelName}`;
   }
 
-  async getWebhookByChannel(channel: TextChannel): Promise<Webhook> {
-    return await this.getWebhook(channel.client, channel.id);
-  }
-
-  async getWebhook(client: Client, channelID: string): Promise<Webhook> {
-    const channel = (await client.channels.fetch(channelID)) as TextChannel;
+  async getChannelWebhook(channel: TextChannel): Promise<Webhook> {
     const channelName = this.getWebhookName(channel.name);
     const channelWebhooks = await channel.fetchWebhooks();
-    for (let key in channelWebhooks) {
-      const webhook = channelWebhooks.get(key);
-      if (webhook) {
+    console.log('getting webhook', channelWebhooks);
+    for (let pair of channelWebhooks) {
+      const webhook = pair[1];
+      console.log('webhookName', webhook?.name);
+      console.log('channelName', channelName);
+      if (webhook?.name === channelName) {
         return webhook;
       }
     }
     console.log('Could not find webhook, Creating New One.');
-    const newWebhook = await channel.createWebhook({
+    return this.createWebhook(channel, channelName);
+  }
+
+  async getWebhook(client: Client, channelID: string): Promise<Webhook> {
+    const channel = (await client.channels.fetch(channelID)) as TextChannel;
+    return this.getChannelWebhook(channel);
+  }
+
+  private async createWebhook(channel: TextChannel, channelName: string) {
+    return await channel.createWebhook({
       name: channelName,
       avatar: `https://pbs.twimg.com/profile_images/421461637325787136/0rxpHzVx_400x400.jpeg`
     });
-    return newWebhook;
   }
 
   public async writeMessage(
     channel: TextChannel,
     message: MessageInfo
   ): Promise<Message<boolean>> {
-    const webhook = await this.getWebhookByChannel(channel);
+    const webhook = await this.getChannelWebhook(channel);
     if (webhook) {
       return webhook.send(message);
     }
