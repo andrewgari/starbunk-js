@@ -1,6 +1,7 @@
 import { Client } from 'discord.js';
-import { ReplyBot } from './ReplyBot';
+import ReplyBot from './ReplyBot';
 import BlueBot from './reply-bots/Bluebot';
+import HoldBot from './reply-bots/HoldBot';
 
 const bots = new Map<string, ReplyBot>();
 
@@ -10,4 +11,5 @@ export const registerBot = (bot: ReplyBot) => {
 
 export default (client: Client): void => {
   registerBot(new BlueBot(client));
+  registerBot(new HoldBot(client));
 };
