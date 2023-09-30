@@ -5,6 +5,7 @@ import Botbot from './reply-bots/Botbot';
 import MacaroniBot from './reply-bots/MacaroniBot';
 import GundamBot from './reply-bots/GundamBot';
 import HoldBot from './reply-bots/HoldBot';
+import ChaosBot from './reply-bots/ChaosBos';
 
 const bots = new Map<string, ReplyBot>();
 
@@ -18,4 +19,5 @@ export default (client: Client): void => {
   registerBot(new MacaroniBot(client));
   registerBot(new GundamBot(client));
   registerBot(new HoldBot(client));
+  registerBot(new ChaosBot(client));
 };
