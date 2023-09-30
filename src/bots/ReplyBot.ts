@@ -2,7 +2,7 @@ import { Client, Events, Message, TextChannel } from "discord.js";
 import webhookService from "../webhooks/WebhookService";
 import { registerBot } from "./Bootstrap";
 
-export abstract class ReplyBot {
+export default abstract class ReplyBot {
   private readonly client: Client;
 
   constructor(client: Client) {
