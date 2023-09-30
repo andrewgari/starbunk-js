@@ -1,7 +1,7 @@
 import ReplyBot from './ReplyBot';
 import Client from '../discord/DiscordClient';
 import { readdirSync } from 'fs';
-import { Events, REST, Routes } from 'discord.js';
+import { Events, Message, REST, Routes } from 'discord.js';
 
 const registerBots = async (client: Client) => {
   readdirSync(`./src/bots/reply-bots`).forEach(async (file) => {
@@ -16,6 +16,9 @@ const registerBots = async (client: Client) => {
       )
         return;
       client.bots.set(bot.getBotName(), bot);
+      client.on(Events.MessageCreate, async (message: Message) => {
+        bot.handleMessage(message);
+      });
       console.log(`Registered Bot: ${bot.getBotName()}`);
     });
   });
