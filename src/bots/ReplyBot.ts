@@ -1,6 +1,6 @@
-import { Client, Events, Message, TextChannel } from 'discord.js';
-import webhookService from '../webhooks/WebhookService';
-import { registerBot } from './Bootstrap';
+import { Client, Events, Message, TextChannel } from "discord.js";
+import webhookService from "../webhooks/WebhookService";
+import { registerBot } from "./Bootstrap";
 
 export abstract class ReplyBot {
   private readonly client: Client;
@@ -21,7 +21,7 @@ export abstract class ReplyBot {
       username: this.getBotName(),
       avatarURL: this.getAvatarUrl(),
       content: response,
-      embeds: []
+      embeds: [],
     });
   }
 }
