@@ -44,9 +44,3 @@ export default class BlueBot extends ReplyBot {
     }
   }
 }
-
-// const bluebot = (client: Client): BlueBot => {
-//   return new BlueBot(client);
-// };
-
-// export default bluebot;

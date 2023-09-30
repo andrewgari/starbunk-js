@@ -1,6 +1,7 @@
-import { Client, GatewayIntentBits } from 'discord.js';
+import { GatewayIntentBits } from 'discord.js';
 import bootstrap from './bots/Bootstrap';
 import dotenv from 'dotenv';
+import Client from './discord/DiscordClient';
 dotenv.config();
 
 console.log('Bot is starting...');
@@ -8,14 +9,14 @@ console.log('Bot is starting...');
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildWebhooks
   ]
 });
 
 // add handlers
-bootstrap(client);
+bootstrap(client, process.env.CLIENT_ID!, process.env.GUILD_ID!);
 
-client.login(process.env.STARBUNK_TOKEN);
+client.login(process.env.STARBUNK_TOKEN!);

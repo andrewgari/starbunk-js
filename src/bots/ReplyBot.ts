@@ -1,18 +1,7 @@
-import { Client, Events, Message, TextChannel } from "discord.js";
-import webhookService from "../webhooks/WebhookService";
-import { registerBot } from "./Bootstrap";
+import { Client, Events, Message, TextChannel } from 'discord.js';
+import webhookService from '../webhooks/WebhookService';
 
 export default abstract class ReplyBot {
-  private readonly client: Client;
-
-  constructor(client: Client) {
-    this.client = client;
-    this.client.on(Events.MessageCreate, async (message: Message) => {
-      this.handleMessage(message);
-    });
-    registerBot(this);
-  }
-
   abstract getBotName(): string;
   abstract getAvatarUrl(): string;
   abstract handleMessage(message: Message): void;
@@ -21,7 +10,7 @@ export default abstract class ReplyBot {
       username: this.getBotName(),
       avatarURL: this.getAvatarUrl(),
       content: response,
-      embeds: [],
+      embeds: []
     });
   }
 }
