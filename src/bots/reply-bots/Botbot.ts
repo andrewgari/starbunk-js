@@ -1,11 +1,11 @@
-import { Message, TextChannel } from "discord.js";
-import { ReplyBot } from "../ReplyBot";
+import { Message, TextChannel } from 'discord.js';
+import ReplyBot from '../ReplyBot';
 
 export default class Botbot extends ReplyBot {
   private readonly defaultAvatarURL =
-    "https://cdn-icons-png.flaticon.com/512/4944/4944377.png";
-  private readonly defaultName = "Botbot";
-  private readonly response = "Hello fellow bot!";
+    'https://cdn-icons-png.flaticon.com/512/4944/4944377.png';
+  private readonly defaultName = 'Botbot';
+  private readonly response = 'Hello fellow bot!';
 
   getBotName(): string {
     return this.defaultName;
