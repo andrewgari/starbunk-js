@@ -9,7 +9,7 @@ export default class SheeshBot extends ReplyBot {
   private readonly defaultPattern = /\bshee+sh\b/;
 
   generateRandomEs(): string {
-  const numberOfEs = Math.floor(Math.random() * 10); // Change 10 to your desired maximum number of 'e's
+  const numberOfEs = Math.floor(Math.random() * 10);
   return 'e'.repeat(numberOfEs);
 }
 
