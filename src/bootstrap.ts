@@ -55,7 +55,6 @@ export default async (
         body: client.commands.map((command) => command.data)
       });
     })
-    .then(() => console.log('registered the commands'))
     .catch(console.error)
     .finally(() => {
       client.on(Events.InteractionCreate, async (interaction) => {
