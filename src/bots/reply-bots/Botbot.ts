@@ -14,7 +14,8 @@ export default class Botbot extends ReplyBot {
     return this.defaultAvatarURL;
   }
   handleMessage(message: Message<boolean>): void {
-    if (message.author.bot && message.author.username !== this.getBotName()) {
+    const randomValue = Math.floor(Math.random() * 20) + 1;
+    if (randomValue === 1 && message.author.bot && message.author.username !== this.getBotName()) {
       this.sendReply(message.channel as TextChannel, this.response);
     }
   }
