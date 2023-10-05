@@ -1,5 +1,5 @@
 import { GatewayIntentBits } from 'discord.js';
-import bootstrap from './bots/Bootstrap';
+import bootstrap from './bootstrap';
 import dotenv from 'dotenv';
 import Client from './discord/DiscordClient';
 dotenv.config();
@@ -17,6 +17,11 @@ const client = new Client({
 });
 
 // add handlers
-bootstrap(client, process.env.CLIENT_ID!, process.env.GUILD_ID!);
+bootstrap(
+  client,
+  process.env.STARBUNK_TOKEN!,
+  process.env.CLIENT_ID!,
+  process.env.GUILD_ID!
+);
 
 client.login(process.env.STARBUNK_TOKEN!);
