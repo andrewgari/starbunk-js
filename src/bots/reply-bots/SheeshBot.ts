@@ -9,9 +9,9 @@ export default class SheeshBot extends ReplyBot {
   private readonly defaultPattern = /\bshee+sh\b/;
 
   generateRandomEs(): string {
-  const numberOfEs = Math.floor(Math.random() * 10);
-  return 'e'.repeat(numberOfEs);
-}
+    const numberOfEs = Math.floor(Math.random() * 10);
+    return 'e'.repeat(numberOfEs);
+  }
 
   getBotName(): string {
     return this.botName;
@@ -20,11 +20,11 @@ export default class SheeshBot extends ReplyBot {
     return this.avatarUrl;
   }
   response(): string {
-    return  'Sh' + this.generateRandomEs() + 'sh!'
+    return 'Sh' + this.generateRandomEs() + 'sh!';
   }
 
   handleMessage(message: Message<boolean>): void {
     if (message.content.match(this.defaultPattern))
-        this.sendReply(message.channel as TextChannel, this.response());
-      }
+      this.sendReply(message.channel as TextChannel, this.response());
+  }
 }
