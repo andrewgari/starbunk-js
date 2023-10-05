@@ -9,7 +9,6 @@ export class WebhookService {
   async getChannelWebhook(channel: TextChannel): Promise<Webhook> {
     const channelName = this.getWebhookName(channel.name);
     const channelWebhooks = await channel.fetchWebhooks();
-    console.log('getting webhook', channelWebhooks);
     for (let pair of channelWebhooks) {
       const webhook = pair[1];
       console.log('webhookName', webhook?.name);
