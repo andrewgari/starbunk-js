@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../ReplyBot';
-import UserID from 'src/discord/UserID';
-import Random from 'src/utils/Random';
+import UserID from '../../discord/UserID';
+import Random from '../../utils/Random';
 
 export default class BananaBot extends ReplyBot {
   private botName = 'VennBot';
