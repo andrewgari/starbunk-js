@@ -1,6 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../ReplyBot';
 import Random from '../../utils/Random';
+import isSelf from '../../utils/isSelf';
 
 export default class Botbot extends ReplyBot {
   private readonly defaultAvatarURL =
@@ -15,7 +16,7 @@ export default class Botbot extends ReplyBot {
     return this.defaultAvatarURL;
   }
   handleMessage(message: Message<boolean>): void {
-    if (Random.percentChance(10) && message.author.bot && message.author.username !== this.getBotName()) {
+    if (Random.percentChance(100) && isSelf(message, this.getBotName())) {
       this.sendReply(message.channel as TextChannel, this.response);
     }
   }

@@ -2,6 +2,7 @@ import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../ReplyBot';
 import UserID from '../../discord/UserID';
 import Random from '../../utils/Random';
+import isSelf from '../../utils/isSelf';
 
 export default class PickleBot extends ReplyBot {
   private readonly botname = 'GremlinBot';
@@ -18,6 +19,10 @@ export default class PickleBot extends ReplyBot {
   }
 
   handleMessage(message: Message<boolean>): void {
+    console.log(message.author.username);
+
+    if (message.author.bot) return;
+    if (isSelf(message, this.getBotName())) return;
     if (
       message.content.match(this.pattern) ||
       (message.author.id === UserID.Sig && Random.percentChance(15))
