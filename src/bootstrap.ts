@@ -16,9 +16,6 @@ const registerBots = async (client: Client) => {
       )
         return;
       client.bots.set(bot.getBotName(), bot);
-      client.on(Events.MessageCreate, async (message: Message) => {
-        bot.handleMessage(message);
-      });
       console.log(`Registered Bot: ${bot.getBotName()}`);
     });
   });
@@ -50,6 +47,11 @@ export default async (
   const rest = new REST({ version: '9' }).setToken(token);
   const promises = [registerBots(client), registerCommands(client)];
   Promise.all(promises)
+    .then(() => {
+      client.on(Events.MessageCreate, async (message: Message) => {
+        client.handleMessage(message);
+      });
+    })
     .then(() => {
       return rest.put(Routes.applicationGuildCommands(clientId, guildId), {
         body: client.commands.map((command) => command.data)

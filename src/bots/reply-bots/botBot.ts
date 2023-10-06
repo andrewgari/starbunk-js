@@ -16,7 +16,11 @@ export default class BotBot extends ReplyBot {
     return this.defaultAvatarURL;
   }
   handleMessage(message: Message<boolean>): void {
-    if (!isSelf(message, this.getBotName()) && Random.percentChance(10)) {
+    if (
+      message.author.bot &&
+      !isSelf(message, this.getBotName()) &&
+      Random.percentChance(10)
+    ) {
       this.sendReply(message.channel as TextChannel, this.response);
     }
   }
