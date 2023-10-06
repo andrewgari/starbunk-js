@@ -1,6 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../ReplyBot';
-import Random from '../../utils/Random';
+import ReplyBot from '../replyBot';
+import Random from '../../utils/random';
 import isSelf from '../../utils/isSelf';
 
 export default class BotBot extends ReplyBot {

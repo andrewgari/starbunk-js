@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../ReplyBot';
+import ReplyBot from '../replyBot';
 import isSelf from '../../utils/isSelf';
 
 export default class HoldBot extends ReplyBot {

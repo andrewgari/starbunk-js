@@ -1,5 +1,5 @@
 import { Client, Message, TextChannel, Webhook } from 'discord.js';
-import { MessageInfo } from 'src/bots/MessageInfo';
+import { MessageInfo } from '../bots/messageInfo';
 
 export class WebhookService {
   getWebhookName(channelName: string) {

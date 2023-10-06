@@ -1,5 +1,5 @@
 import { CommandInteraction, SlashCommandBuilder, Webhook } from 'discord.js';
-import Client from '../discord/DiscordClient';
+import Client from '../discord/discordClient';
 
 export default {
   data: new SlashCommandBuilder()

@@ -1,5 +1,5 @@
-import ReplyBot from './bots/ReplyBot';
-import Client from './discord/DiscordClient';
+import ReplyBot from './bots/replyBot';
+import Client from './discord/discordClient';
 import { readdirSync } from 'fs';
 import { Events, Message, REST, Routes } from 'discord.js';
 

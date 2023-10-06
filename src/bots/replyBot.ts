@@ -1,5 +1,5 @@
 import { Client, Events, Message, TextChannel } from 'discord.js';
-import webhookService from '../webhooks/WebhookService';
+import webhookService from '../webhooks/webhookService';
 
 export default abstract class ReplyBot {
   abstract getBotName(): string;
