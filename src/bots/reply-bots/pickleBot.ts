@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../ReplyBot';
-import UserID from '../../discord/UserID';
-import Random from '../../utils/Random';
+import ReplyBot from '../replyBot';
+import UserID from '../../discord/userID';
+import Random from '../../utils/random';
 import isSelf from '../../utils/isSelf';
 
 export default class PickleBot extends ReplyBot {
@@ -19,8 +19,6 @@ export default class PickleBot extends ReplyBot {
   }
 
   handleMessage(message: Message<boolean>): void {
-    console.log(message.author.username);
-
     if (message.author.bot) return;
     if (isSelf(message, this.getBotName())) return;
     if (

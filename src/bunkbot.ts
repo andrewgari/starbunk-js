@@ -1,7 +1,7 @@
 import { GatewayIntentBits } from 'discord.js';
 import bootstrap from './bootstrap';
 import dotenv from 'dotenv';
-import Client from './discord/DiscordClient';
+import Client from './discord/discordClient';
 dotenv.config();
 
 console.log('Bot is starting...');

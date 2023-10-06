@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../ReplyBot';
+import ReplyBot from '../replyBot';
 
 export default class GundamBot extends ReplyBot {
   private readonly botName = 'GundamBot';
