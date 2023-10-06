@@ -19,8 +19,6 @@ export default class PickleBot extends ReplyBot {
   }
 
   handleMessage(message: Message<boolean>): void {
-    console.log(message.author.username);
-
     if (message.author.bot) return;
     if (isSelf(message, this.getBotName())) return;
     if (

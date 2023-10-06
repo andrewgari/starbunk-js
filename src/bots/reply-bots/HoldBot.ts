@@ -16,7 +16,7 @@ export default class HoldBot extends ReplyBot {
   }
   handleMessage(message: Message<boolean>): void {
     if (
-      isSelf(message, this.getBotName()) &&
+      !isSelf(message, this.getBotName()) &&
       message.content.match(this.pattern)
     ) {
       this.sendReply(message.channel as TextChannel, this.response);
