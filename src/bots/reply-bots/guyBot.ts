@@ -47,12 +47,10 @@ export default class GuyBot extends ReplyBot {
   }
   handleMessage(message: Message<boolean>): void {
     if (message.author.bot) return;
-    console.log('not a bot');
     if (
       message.content.match(this.nonGuyPattern) ||
       (message.author.id === userID.Guy && random.percentChance(10))
     ) {
-      console.log('doing a guy');
       this.getGuyFromMessage(message)
         .then((guy) => {
           console.log('this is guy');
