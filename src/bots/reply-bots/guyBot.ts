@@ -24,6 +24,7 @@ export default class GuyBot extends ReplyBot {
     'Fun Fact: That was actually in XI as well.',
     'Bird Up!',
     'Schlorp',
+    `I wouldn't dream of disturbing something so hideously erogenous`,
     'Blimbo'
   ];
   private readonly nonGuyPattern = /guy/i;
