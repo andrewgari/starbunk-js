@@ -4,7 +4,7 @@ import UserID from '../../discord/userID';
 import Random from '../../utils/random';
 
 export default class BananaBot extends ReplyBot {
-  private botName = 'VennBot';
+  private botName = 'BananaBot';
   private avatarUrl = '';
 
   private readonly bananasponses = [
