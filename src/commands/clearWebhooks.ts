@@ -1,10 +1,15 @@
-import { CommandInteraction, SlashCommandBuilder, Webhook } from 'discord.js';
-import Client from '../discord/discordClient';
+import {
+  CommandInteraction,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  Webhook
+} from 'discord.js';
 
 export default {
   data: new SlashCommandBuilder()
     .setName('clearwebhooks')
-    .setDescription('Clear all webhooks made by the bot'),
+    .setDescription('Clear all webhooks made by the bot')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageWebhooks),
   async execute(interaction: CommandInteraction) {
     await interaction.reply({
       content: 'Clearing Webhooks now, boss',
