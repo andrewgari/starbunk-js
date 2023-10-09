@@ -36,6 +36,9 @@ export default class VennBot extends ReplyBot {
       message.author.id == userID.Venn &&
       (message.content.match(this.pattern) || random.percentChance(20))
     ) {
+      this.botName = message.author.displayName;
+      this.avatarUrl =
+        message.author.displayAvatarURL() ?? message.author.defaultAvatarURL;
       this.sendReply(message.channel as TextChannel, this.getResponse());
     }
   }
