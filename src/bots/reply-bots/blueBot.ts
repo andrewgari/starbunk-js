@@ -53,7 +53,6 @@ export default class BlueBot extends ReplyBot {
     if (isSelf(message, this.botName)) return;
 
     if (message.content.match(this.nicePattern)) {
-      console.log('request to say something blue about someone');
       const name = this.getNameFromBluRequest(message);
       if (name.match(/venn/i)) {
         this.avatarUrl = this.defaultAvatarURL;
@@ -73,13 +72,11 @@ export default class BlueBot extends ReplyBot {
       return;
     } else if (this.isSomeoneRespondingToBlu(message)) {
       this.blueTimestamp = new Date(1);
-      console.log('ressetting timestamp', this.blueTimestamp.getTime());
       this.avatarUrl = this.cheekyAvatar;
       this.sendReply(message.channel as TextChannel, this.cheekyResponse);
       return;
     } else if (message.content.match(this.defaultPattern)) {
       this.blueTimestamp = new Date();
-      console.log('updating timestamp', this.blueTimestamp.getTime());
       this.avatarUrl = this.defaultAvatarURL;
       this.sendReply(message.channel as TextChannel, this.defaultResponse);
       return;
@@ -91,19 +88,14 @@ export default class BlueBot extends ReplyBot {
       !message.content.match(this.confirmPattern) &&
       !message.content.match(this.meanPattern)
     ) {
-      console.log('no one is responding');
-      console.log(this.blueTimestamp.getTime());
-      console.log(Date.now);
       return false;
     }
-    console.log('someone is responding to blue');
     const lastMessage = this.blueTimestamp.getTime();
     // if the last blue message was less than five minutes ago
     console.log(message.createdTimestamp - lastMessage);
     if (message.createdTimestamp - lastMessage < 300000) {
       return true;
     }
-    console.log('but they were too late');
     console.log(this.blueTimestamp.getTime());
     console.log(Date.now());
     return false;
@@ -114,8 +106,6 @@ export default class BlueBot extends ReplyBot {
     if (!message.content.match(this.meanPattern)) return false;
     const lastMurder = this.blueMurderTimestamp.getTime() / 1000;
     const current = new Date(message.createdTimestamp).getTime() / 1000;
-    console.log('last murder', lastMurder);
-    console.log('current message', current);
     // if the last murder message was at least 24 hours ago
     if (current - lastMurder > 86400) {
       return true;
@@ -128,7 +118,6 @@ export default class BlueBot extends ReplyBot {
     if (!matches || matches.length < 2) return 'Hey,';
     const pronoun = matches[1];
     if (pronoun === 'me') {
-      console.log('its totally me');
       return message.member?.displayName ?? message.author.displayName;
     }
     return matches[1];
