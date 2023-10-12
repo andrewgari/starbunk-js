@@ -1,6 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
-import isSelf from '../../utils/isSelf';
 
 export default class BabyBot extends ReplyBot {
   private readonly botName = 'BabyBot';
@@ -15,7 +14,7 @@ export default class BabyBot extends ReplyBot {
     return this.avatarUrl;
   }
   handleMessage(message: Message<boolean>): void {
-    if (isSelf(message, this.getBotName())) return;
+    if (message.author.bot) return;
 
     if (message.content.match(this.pattern)) {
       this.sendReply(message.channel as TextChannel, this.response);

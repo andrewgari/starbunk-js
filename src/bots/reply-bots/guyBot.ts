@@ -53,7 +53,6 @@ export default class GuyBot extends ReplyBot {
     ) {
       this.getGuyFromMessage(message)
         .then((guy) => {
-          console.log('this is guy');
           this.botName = guy.nickname ?? guy.displayName;
           this.avatarUrl = guy.avatarURL() ?? guy.displayAvatarURL();
           this.sendReply(message.channel as TextChannel, this.getResponse());

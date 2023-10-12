@@ -11,8 +11,6 @@ export class WebhookService {
     const channelWebhooks = await channel.fetchWebhooks();
     for (let pair of channelWebhooks) {
       const webhook = pair[1];
-      console.log('webhookName', webhook?.name);
-      console.log('channelName', channelName);
       if (webhook?.name === channelName) {
         return webhook;
       }

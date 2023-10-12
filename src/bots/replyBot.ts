@@ -13,4 +13,7 @@ export default abstract class ReplyBot {
       embeds: []
     });
   }
+  isSelf(message: Message): boolean {
+    return message.author.bot && message.author.username === this.getBotName();
+  }
 }

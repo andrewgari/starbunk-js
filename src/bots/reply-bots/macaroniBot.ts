@@ -1,6 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
-import isSelf from '../../utils/isSelf';
 import roleIDs from '../../discord/roleIDs';
 
 export default class MacaroniBot extends ReplyBot {
@@ -21,7 +20,7 @@ export default class MacaroniBot extends ReplyBot {
     return this.avatarUrl;
   }
   handleMessage(message: Message<boolean>): void {
-    if (message.author.bot || isSelf(message, this.getBotName())) return;
+    if (message.author.bot) return;
 
     if (
       message.content.match(this.macaorniPattern) &&

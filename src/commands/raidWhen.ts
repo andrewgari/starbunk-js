@@ -41,9 +41,7 @@ export default {
   permissions: [],
   async execute(interaction: CommandInteraction) {
     const now = new Date(Date.now());
-    console.log(now);
     const nextRaid = getNextRaid(now);
-    console.log(nextRaid);
     const ephemeral = interaction.user.id === userID.Cova ? true : false;
     const tag = ephemeral ? `<@&${roleIDs.RaidTeam}>\n` : '';
     const timestamp = nextRaid.getTime() / 1000;

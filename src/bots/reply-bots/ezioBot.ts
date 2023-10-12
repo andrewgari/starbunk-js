@@ -1,11 +1,10 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
-import isSelf from '../../utils/isSelf';
 
 export default class EzioBot extends ReplyBot {
   private readonly botName = `Ezio Auditore Da Firenze`;
   private readonly avatarUrl =
-    'https://miro.medium.com/max/1838/1*CXPsg1BV8fuPUKchM6Cp-A.png';
+    'https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg';
   private readonly pattern = /\bezio|h?assassin.*\b/i;
 
   getBotName(): string {
@@ -17,10 +16,9 @@ export default class EzioBot extends ReplyBot {
   }
 
   handleMessage(message: Message<boolean>): void {
-    if (isSelf(message, this.getBotName())) return;
+    if (message.author.bot) return;
 
     if (message.content.match(this.pattern)) {
-      console.log('im not an assassin');
       this.sendReply(
         message.channel as TextChannel,
         `Remember ${message.author.displayName}, Nothing is true; Everything is permitted.`
