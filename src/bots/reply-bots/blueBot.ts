@@ -105,7 +105,7 @@ export default class BlueBot extends ReplyBot {
   }
 
   private isVennInsultingBlu(message: Message): boolean {
-    if (message.author.id !== userID.Cova) return false;
+    if (message.author.id !== userID.Venn) return false;
     if (!message.content.match(this.meanPattern)) return false;
     const lastMurder = this.blueMurderTimestamp.getTime() / 1000;
     const current = new Date(message.createdTimestamp).getTime() / 1000;
