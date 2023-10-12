@@ -15,6 +15,8 @@ export default class SoggyBot extends ReplyBot {
     return this.avatarUrl;
   }
   handleMessage(message: Message<boolean>): void {
+    if (message.author.bot) return;
+
     if (
       message.content.match(this.pattern) &&
       message.member?.roles.cache.some((role) => role.id === roleIDs.WetBread)

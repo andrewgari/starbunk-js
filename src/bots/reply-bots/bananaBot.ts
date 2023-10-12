@@ -26,15 +26,19 @@ export default class BananaBot extends ReplyBot {
   getBotName(): string {
     return this.botName;
   }
+
   getAvatarUrl(): string {
     return this.avatarUrl;
   }
+
   response(): string {
     const index = Math.floor(Math.random() * this.bananasponses.length);
     return this.bananasponses[index];
   }
 
   handleMessage(message: Message<boolean>): void {
+    if (message.author.bot) return;
+
     if (message.author.id === UserID.Venn) {
       if (Random.percentChance(5)) {
         this.botName = message.author.displayName ?? message.author.username;

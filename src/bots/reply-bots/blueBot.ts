@@ -1,7 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
 import userID from '../../discord/userID';
-import isSelf from '../../utils/isSelf';
 
 export default class BlueBot extends ReplyBot {
   private botName: string = 'BluBot';
@@ -50,8 +49,8 @@ export default class BlueBot extends ReplyBot {
   }
 
   handleMessage(message: Message<boolean>): void {
-    if (isSelf(message, this.botName)) return;
-
+    if (message.author.bot) return;
+    
     if (message.content.match(this.nicePattern)) {
       const name = this.getNameFromBluRequest(message);
       if (name.match(/venn/i)) {
@@ -92,12 +91,9 @@ export default class BlueBot extends ReplyBot {
     }
     const lastMessage = this.blueTimestamp.getTime();
     // if the last blue message was less than five minutes ago
-    console.log(message.createdTimestamp - lastMessage);
     if (message.createdTimestamp - lastMessage < 300000) {
       return true;
     }
-    console.log(this.blueTimestamp.getTime());
-    console.log(Date.now());
     return false;
   }
 

@@ -6,7 +6,7 @@ export default class SheeshBot extends ReplyBot {
   private botName = 'SheeshBot';
   private readonly avatarUrl = 'https://i.imgflip.com/5fc2iz.png?a471000';
 
-  private readonly defaultPattern = /\bshee+sh\b/;
+  private readonly defaultPattern = /\bshee+sh\b/i;
 
   generateRandomEs(): string {
     const numberOfEs = Math.floor(Math.random() * 10);
@@ -24,6 +24,8 @@ export default class SheeshBot extends ReplyBot {
   }
 
   handleMessage(message: Message<boolean>): void {
+    if (message.author.bot) return;
+
     if (message.content.match(this.defaultPattern))
       this.sendReply(message.channel as TextChannel, this.response());
   }
