@@ -55,11 +55,16 @@ export default class BlueBot extends ReplyBot {
     if (message.content.match(this.nicePattern)) {
       console.log('request to say something blue about someone');
       const name = this.getNameFromBluRequest(message);
-      this.avatarUrl = this.cheekyAvatar;
-      this.sendReply(
-        message.channel as TextChannel,
-        this.friendlyResponse(name)
-      );
+      if (name.match(/venn/i)) {
+        this.avatarUrl = this.defaultAvatarURL;
+        this.sendReply(message.channel as TextChannel, this.contemptResponse);
+      } else {
+        this.avatarUrl = this.cheekyAvatar;
+        this.sendReply(
+          message.channel as TextChannel,
+          this.friendlyResponse(name)
+        );
+      }
       return;
     } else if (this.isVennInsultingBlu(message)) {
       this.blueMurderTimestamp = new Date();
