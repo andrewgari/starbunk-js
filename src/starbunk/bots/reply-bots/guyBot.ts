@@ -1,7 +1,7 @@
 import { GuildMember, Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
-import random from '../../utils/random';
-import userID from '../../discord/userID';
+import random from '../../../utils/random';
+import userID from '../../../discord/userID';
 
 export default class GuyBot extends ReplyBot {
   private botName = 'GuyBot';

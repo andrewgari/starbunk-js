@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
-import UserID from '../../discord/userID';
-import Random from '../../utils/random';
+import UserID from '../../../discord/userID';
+import Random from '../../../utils/random';
 
 export default class PickleBot extends ReplyBot {
   private readonly botname = 'GremlinBot';

@@ -1,6 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
-import userID from '../../discord/userID';
+import userID from '../../../discord/userID';
 
 export default class BlueBot extends ReplyBot {
   private botName: string = 'BluBot';

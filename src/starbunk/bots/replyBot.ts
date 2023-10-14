@@ -1,5 +1,5 @@
 import { Client, Events, Message, TextChannel } from 'discord.js';
-import webhookService from '../webhooks/webhookService';
+import webhookService from '../../webhooks/webhookService';
 
 export default abstract class ReplyBot {
   abstract getBotName(): string;
@@ -10,7 +10,8 @@ export default abstract class ReplyBot {
       username: this.getBotName(),
       avatarURL: this.getAvatarUrl(),
       content: response,
-      embeds: []
+      embeds: [],
+      token: 
     });
   }
   isSelf(message: Message): boolean {
