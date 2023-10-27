@@ -10,8 +10,7 @@ export default abstract class ReplyBot {
       username: this.getBotName(),
       avatarURL: this.getAvatarUrl(),
       content: response,
-      embeds: [],
-      token: 
+      embeds: []
     });
   }
   isSelf(message: Message): boolean {
