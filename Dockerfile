@@ -1,6 +1,6 @@
-FROM node:latest as build
-RUN mkdir -p /home/node/bunkbot/node_modules && chown -R node:node /home/node/bunkbot
-WORKDIR /home/node/bunkbot
-COPY package*.json ./
-RUN npm i
+FROM node:latest
+WORKDIR /bunkbot
+COPY package.json ./
+RUN yarn install --production
+COPY . .
 CMD [ "node", "src/bunkbot.ts" ]
