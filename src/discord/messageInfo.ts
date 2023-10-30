@@ -3,4 +3,5 @@ export type MessageInfo = {
   username: string;
   avatarURL: string;
   embeds: [];
+  token?: string;
 };

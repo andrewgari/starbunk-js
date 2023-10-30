@@ -1,6 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
-import roleIDs from '../../discord/roleIDs';
+import roleIDs from '../../../discord/roleIDs';
 
 export default class MacaroniBot extends ReplyBot {
   private readonly botName = 'MacaroniBot';
