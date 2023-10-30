@@ -1,6 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
-import UserID from '../../discord/userID';
+import UserID from '../../../discord/userID';
 
 export default class SheeshBot extends ReplyBot {
   private botName = 'SheeshBot';

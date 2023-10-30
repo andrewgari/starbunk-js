@@ -1,13 +1,15 @@
 import { Client, Message, TextChannel, Webhook } from 'discord.js';
-import { MessageInfo } from '../bots/messageInfo';
+import { MessageInfo } from '../discord/messageInfo';
+import guildIDs from '../discord/guildIDs';
 
 export class WebhookService {
-  getWebhookName(channelName: string) {
-    return `Bunkbot-${channelName}`;
+  getWebhookName(channelName: string, isSnowbunk: boolean) {
+    return `${isSnowbunk ? 'Snowbunk' : 'StarBunk'}Bunkbot-${channelName}`;
   }
 
   async getChannelWebhook(channel: TextChannel): Promise<Webhook> {
-    const channelName = this.getWebhookName(channel.name);
+    const isSnowbunk = channel.guild.id === guildIDs.Snowfall;
+    const channelName = this.getWebhookName(channel.name, isSnowbunk);
     const channelWebhooks = await channel.fetchWebhooks();
     for (let pair of channelWebhooks) {
       const webhook = pair[1];
@@ -15,7 +17,6 @@ export class WebhookService {
         return webhook;
       }
     }
-    console.log('Could not find webhook, Creating New One.');
     return this.createWebhook(channel, channelName);
   }
 
