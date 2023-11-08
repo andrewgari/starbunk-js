@@ -2,11 +2,13 @@ version: '3.7'
 
 services:
   bunkbot-ts:
-    image: andrewgari/bunkbot:latest
-    build: 
-      context: .
-      dockerfile: Dockerfile
-      target: build
+    image: ghcr.io/andrewgari/starbunk-js:main
     container_name: bunkbot-js
     env_file: .env
     command: npm run start
+  musicbot:
+    image: eritislami/evobot:latest
+    container_name: dj-cova
+    restart: unless-stopped
+    env_file:
+      - docker.env

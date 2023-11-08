@@ -1,14 +1,32 @@
 name: Build and Publish Docker Image
 
 on:
- push:
-  branches: ['main']
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 env:
- REGISTRY: ghcr.io
- IMAGE_NAME: ${{ github.repository }}
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  build-test:
+    runs-on: ubuntu latest
+    strategy:
+      matrix:
+        node-version: [14.x]
+    steps:
+      - uses: actions/checkout@v2
+      - name: setup node
+        uses: actions/setup-node@main
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install Dependencies
+        run: npm install &&  npm ci
+      - name: Build & Test
+        run: npm run build && npm run test
   build-image:
     runs-on: ubuntu-latest
     permissions:
@@ -34,7 +52,12 @@ jobs:
           STARBUNK_TOKEN: ${{ secrets.STARBUNK_TOKEN }}
           SNOWBUNK_TOKEN: ${{ secrets.SNOWBUNK_TOKEN }}
         with:
-          context: .
+          context: ./
+          file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+      - name: Run the image in a container
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
