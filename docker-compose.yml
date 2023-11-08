@@ -3,7 +3,7 @@ version: '3.7'
 services:
   bunkbot-ts:
     image: ghcr.io/andrewgari/starbunk-js:main
-    container_name: bunkbot-js
+    container_name: bunkbot
     env_file: .env
     command: npm run start
   musicbot:
@@ -11,4 +11,4 @@ services:
     container_name: dj-cova
     restart: unless-stopped
     env_file:
-      - docker.env
+      - .env
