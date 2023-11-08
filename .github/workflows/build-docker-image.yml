@@ -57,7 +57,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-      - name: Run the image in a container
-        uses: addnab/docker-run-action@v3
-        with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name}}
