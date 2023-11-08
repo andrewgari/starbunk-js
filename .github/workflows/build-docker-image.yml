@@ -60,4 +60,4 @@ jobs:
       - name: Run the image in a container
         uses: addnab/docker-run-action@v3
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name}}
