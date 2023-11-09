@@ -1,12 +1,15 @@
 name: Build and Publish Docker Image
 
 on:
- push:
-  branches: ['main']
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 env:
- REGISTRY: ghcr.io
- IMAGE_NAME: ${{ github.repository }}
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-image:
@@ -34,7 +37,8 @@ jobs:
           STARBUNK_TOKEN: ${{ secrets.STARBUNK_TOKEN }}
           SNOWBUNK_TOKEN: ${{ secrets.SNOWBUNK_TOKEN }}
         with:
-          context: .
+          context: ./
+          file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
