@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
 import UserID from '../../../discord/userID';
-import Random from '../../../utils/random';
+import random from '../../../utils/random';
 
 export default class BananaBot extends ReplyBot {
   private botName = 'BananaBot';
@@ -40,7 +40,7 @@ export default class BananaBot extends ReplyBot {
     if (message.author.bot) return;
 
     if (message.author.id === UserID.Venn) {
-      if (Random.percentChance(5)) {
+      if (random.percentChance(5)) {
         this.botName = message.author.displayName ?? message.author.username;
         this.avatarUrl =
           message.author.displayAvatarURL() ?? message.author.avatarURL;
