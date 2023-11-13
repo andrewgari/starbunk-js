@@ -39,7 +39,7 @@ export default class BananaBot extends ReplyBot {
   handleMessage(message: Message<boolean>): void {
     if (message.author.bot) return;
 
-    if (message.author.id === UserID.Cova) {
+    if (message.author.id === UserID.Venn) {
       if (random.percentChance(5)) {
         this.botName = message.author.displayName ?? message.author.username;
         this.avatarUrl =
