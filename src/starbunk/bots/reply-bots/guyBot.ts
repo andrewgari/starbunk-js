@@ -27,7 +27,7 @@ export default class GuyBot extends ReplyBot {
     `I wouldn't dream of disturbing something so hideously erogenous`,
     'Blimbo'
   ];
-  private readonly nonGuyPattern = /guy/i;
+  private readonly nonGuyPattern = /\bguy\b/i;
 
   getBotName(): string {
     return this.botName;
