@@ -7,5 +7,6 @@ export default {
   NebulaGuest: '975189726959120384',
   NebulaAlum: '1010737828780589086',
   CoLead: '753251582732271680',
-  TriviaMaster: '1091933617040670792'
+  TriviaMaster: '1091933617040670792',
+  Ratmas: '919401374448492584'
 };
