@@ -1,4 +1,4 @@
-import { GatewayIntentBits, Partials } from 'discord.js';
+import { GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
 import StarbunkClient from './starbunk/starbunkClient';
 import SnowbunkClient from './snowbunk/snowbunkClient';
@@ -12,12 +12,8 @@ const starbunk = new StarbunkClient({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildWebhooks,
-    GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.DirectMessageReactions,
-    GatewayIntentBits.DirectMessageTyping
-  ],
-  partials: [Partials.Channel]
+    GatewayIntentBits.GuildWebhooks
+  ]
 });
 const snowbunk = new SnowbunkClient({
   intents: [
