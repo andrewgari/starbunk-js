@@ -1,6 +1,7 @@
-FROM node:latest
-WORKDIR /bunkbot
+FROM node:alpine
+WORKDIR /run/bunkbot
 COPY package.json .
-RUN npm install && npm ci
 COPY . .
-CMD [ "node", "src/bunkbot.ts" ]
+RUN yarn install
+RUN yarn global add ts-node
+CMD [ "ts-node", "src/bunkbot.ts"]
