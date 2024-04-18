@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
+import ReplyBot from '../../starbunk/bots/replyBot';
 
 export default class MusicCorrectBot extends ReplyBot {
   private readonly botName = 'BunkBot';

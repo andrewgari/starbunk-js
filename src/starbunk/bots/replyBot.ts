@@ -1,4 +1,4 @@
-import { Client, Events, Message, TextChannel } from 'discord.js';
+import { Message, TextChannel } from 'discord.js';
 import webhookService from '../../webhooks/webhookService';
 
 export default abstract class ReplyBot {
