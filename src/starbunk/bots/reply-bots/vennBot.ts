@@ -40,7 +40,7 @@ export default class VennBot extends ReplyBot {
 
     if (
       message.author.id == userID.Venn &&
-      (message.content.match(this.pattern) || random.percentChance(20))
+      (message.content.match(this.pattern) || random.percentChance(5))
     ) {
       this.botName = message.author.displayName;
       this.avatarUrl =
