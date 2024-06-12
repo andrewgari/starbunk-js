@@ -11,8 +11,9 @@ const starbunk = new StarbunkClient({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildWebhooks,
+    GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildWebhooks
   ]
 });
 const snowbunk = new SnowbunkClient({
