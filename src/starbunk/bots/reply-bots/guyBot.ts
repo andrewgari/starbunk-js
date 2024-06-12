@@ -49,7 +49,7 @@ export default class GuyBot extends ReplyBot {
     if (message.author.bot) return;
     if (
       message.content.match(this.nonGuyPattern) ||
-      (message.author.id === userID.Guy && random.percentChance(10))
+      (message.author.id === userID.Guy && random.percentChance(5))
     ) {
       this.getGuyFromMessage(message)
         .then((guy) => {
