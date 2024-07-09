@@ -90,14 +90,10 @@ export default class StarbunkClient extends DiscordClient {
   bootstrap(token: string, clientId: string, guildId: string): void {
     const rest = new REST({ version: '9' }).setToken(token);
     const promises = [this.registerBots(), this.registerCommands(), this.registerVoiceBots()];
-
+    
     Promise.all(promises);
 
     this.on(Events.MessageCreate, async (message: Message) => {
-      this.handleMessage(message);
-    });
-
-    this.on(Events.MessageUpdate, async (message: Message) => {
       this.handleMessage(message);
     });
 
