@@ -35,7 +35,7 @@ export default class StarbunkClient extends DiscordClient {
   };
 
   registerBots = async () => {
-    readdirSync(`./src/starbunk/bots/reply-bots`).forEach(async (file) => {
+    for (const file of readdirSync(`./src/starbunk/bots/reply-bots`)) {
       const fileName = file.replace('.ts', '');
       await import(`./bots/reply-bots/${fileName}`).then((botClass) => {
         if (!botClass) return;
@@ -49,11 +49,11 @@ export default class StarbunkClient extends DiscordClient {
         this.bots.set(bot.getBotName(), bot);
         console.log(`Registered Bot: ${bot.getBotName()}`);
       });
-    });
+    }
   };
 
   registerVoiceBots = async () => {
-    readdirSync(`./src/starbunk/bots/voice-bots`).forEach(async (file) => {
+    for (const file of readdirSync(`./src/starbunk/bots/voice-bots`)) {
       const fileName = file.replace('.ts', '');
       await import(`./bots/voice-bots/${fileName}`).then((botClass) => {
         if (!botClass) return;
@@ -67,11 +67,11 @@ export default class StarbunkClient extends DiscordClient {
         this.voiceBots.set(bot.getBotName(), bot);
         console.log(`Registered Voice Bot: ${bot.getBotName()}`);
       });
-    });
+    }
   };
 
   registerCommands = async () => {
-    readdirSync(`./src/starbunk/commands/`).forEach(async (file) => {
+    for (const file of readdirSync(`./src/starbunk/commands/`)) {
       const fileName = file.replace('.ts', '');
       await import(`./commands/${fileName}`).then((cmd) => {
         const command = cmd.default;
@@ -84,17 +84,22 @@ export default class StarbunkClient extends DiscordClient {
         this.commands.set(command.data.name, command);
         console.log(`Registered Command: ${command.data.name}`);
       });
-    });
+    }
   };
 
   bootstrap(token: string, clientId: string, guildId: string): void {
     const rest = new REST({ version: '9' }).setToken(token);
     const promises = [this.registerBots(), this.registerCommands(), this.registerVoiceBots()];
-    
-    Promise.all(promises);
+
+    Promise.all(promises).then();
 
     this.on(Events.MessageCreate, async (message: Message) => {
       this.handleMessage(message);
+    });
+
+    this.on(Events.MessageUpdate, async (_oldMessage, newMessage) => {
+        const message = await newMessage.fetch();
+        this.handleMessage(message);
     });
 
     console.log('registering voice bots');
