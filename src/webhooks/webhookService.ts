@@ -38,7 +38,11 @@ export class WebhookService {
   ): Promise<Message<boolean>> {
     const webhook = await this.getChannelWebhook(channel);
     if (webhook) {
-      return webhook.send(message);
+      try {
+        return webhook.send(message);
+      } catch (e) {
+        console.error('Failed to send message', e);
+      }
     }
     return Promise.reject('Could not find webhook');
   }

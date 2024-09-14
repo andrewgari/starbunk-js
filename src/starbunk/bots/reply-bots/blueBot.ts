@@ -7,7 +7,7 @@ export default class BlueBot extends ReplyBot {
   private botName: string = 'BluBot';
 
   private readonly defaultPattern =
-    /\b(blue?|bloo|b lue?|eulb|azul|cerulean|azure|vivena|not red)(bot)?|.*cova.*favorite.*color|lau|#0000FF|blau\b/i;
+    /\b(blue?|bloo|b lue?|eulb|azul|cerulean|azure|vivena|not red)(bot)?|cova.*favorite.*color|lau|#0000FF|blau\b/i;
   private readonly confirmPattern =
     /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i;
   private readonly nicePattern =
