@@ -30,6 +30,7 @@
     "dotenv": "^16.3.1",
     "envalid": "^8.0.0",
     "module-name": "^0.0.1-security",
+    "openai": "^4.58.2",
     "yarn": "^1.22.22"
   },
   "devDependencies": {

@@ -33,17 +33,17 @@ const runStarbunkBot = async () => {
     process.env.GUILD_ID!
   );
   console.log('logging into starbunk');
-  starbunk.login(process.env.STARBUNK_TOKEN);
+  await starbunk.login(process.env.STARBUNK_TOKEN);
 };
 
 const runSnowbunkBot = async () => {
   snowbunk.bootstrap();
   console.log('logging into snowbunk');
-  snowbunk.login(process.env.SNOWBUNK_TOKEN);
+  await snowbunk.login(process.env.SNOWBUNK_TOKEN);
 };
 
 const runBots = async () => {
-  Promise.race([runStarbunkBot(), runSnowbunkBot()]);
+  await Promise.race([runStarbunkBot(), runSnowbunkBot()]);
 };
 
-runBots();
+runBots().then();
