@@ -6,14 +6,10 @@ import { OpenAIClient } from '../../../openai/openaiClient';
 export default class BlueBot extends ReplyBot {
   private botName: string = 'BluBot';
 
-  private readonly defaultPattern =
-    /\b(blue?|bloo|b lue?|eulb|azul|cerulean|azure|vivena|not red)(bot)?|cova.*favorite.*color|lau|#0000FF|blau\b/i;
-  private readonly confirmPattern =
-    /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i;
-  private readonly nicePattern =
-    /blue?bot,? say something nice about (?<name>.+$)/i;
-  private readonly meanPattern =
-    /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i;
+  private readonly defaultPattern = /\bblue?\b/i;
+  private readonly confirmPattern = /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i;
+  private readonly nicePattern = /blue?bot,? say something nice about (?<name>.+$)/i;
+  private readonly meanPattern = /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i;
 
   private readonly defaultAvatarURL = 'https://imgur.com/WcBRCWn.png';
   private readonly murderAvatar = 'https://imgur.com/Tpo8Ywd.jpg';
@@ -21,14 +17,10 @@ export default class BlueBot extends ReplyBot {
   private avatarUrl = this.defaultAvatarURL;
 
   private readonly defaultResponse = 'Did somebody say Blu?';
-  private readonly cheekyResponse =
-    'Lol, Somebody definitely said Blu! :smile:';
-  private readonly friendlyResponse = (name: string) =>
-    `${name}, I think you're pretty Blu! :wink:`;
-  private readonly contemptResponse =
-    'No way, Venn can suck my blu cane. :unamused:';
-  private readonly murderResponse =
-    `What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Academia d'Azul, and I've been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I've trained with gorillas in warfare and I'm the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You're fucking dead, kiddo.`;
+  private readonly cheekyResponse = 'Lol, Somebody definitely said Blu! :smile:';
+  private readonly friendlyResponse = (name: string) => `${name}, I think you're pretty Blu! :wink:`;
+  private readonly contemptResponse = 'No way, Venn can suck my blu cane. :unamused:';
+  private readonly murderResponse = `What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Academia d'Azul, and I've been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I've trained with gorillas in warfare and I'm the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You're fucking dead, kiddo.`;
   private blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
   private blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 
@@ -47,30 +39,33 @@ export default class BlueBot extends ReplyBot {
   async handleMessage(message: Message<boolean>): Promise<void> {
     if (message.author.bot) return;
 
-    if (message.content.match(this.nicePattern)) {
+    // bluebot, say something nice about <name>
+    // <name>, I think you're pretty blue.
+    if (this.isSomeoneAskingYouToBeBlue(message)) {
       const name = this.getNameFromBluRequest(message);
       if (name.match(/venn/i)) {
-        this.avatarUrl = this.defaultAvatarURL;
-        this.sendReply(message.channel as TextChannel, this.contemptResponse);
-      } else {
-        this.avatarUrl = this.cheekyAvatar;
-        this.sendReply(
-          message.channel as TextChannel,
-          this.friendlyResponse(name)
-        );
+        this.saySomethingBlueAboutVenn(message);
+        return;
       }
+      this.saySomethingNiceAbout(message, name);
       return;
-    } else if (this.isVennInsultingBlu(message)) {
+    }
+
+    if (this.isVennInsultingBlu(message)) {
       this.blueMurderTimestamp = new Date();
       this.avatarUrl = this.murderAvatar;
       this.sendReply(message.channel as TextChannel, this.murderResponse);
       return;
-    } else if (this.isSomeoneRespondingToBlu(message)) {
+    }
+
+    if (this.isSomeoneRespondingToBlu(message)) {
       this.blueTimestamp = new Date(1);
       this.avatarUrl = this.cheekyAvatar;
       this.sendReply(message.channel as TextChannel, this.cheekyResponse);
       return;
-    } else if (message.content.match(this.defaultPattern)) {
+    }
+
+    if (message.content.match(this.defaultPattern)) {
       this.blueTimestamp = new Date();
       this.avatarUrl = this.defaultAvatarURL;
       this.sendReply(message.channel as TextChannel, this.defaultResponse);
@@ -81,21 +76,20 @@ export default class BlueBot extends ReplyBot {
         this.sendReply(message.channel as TextChannel, this.defaultResponse);
       }
     }
+
+    if (await this.checkIfBlueIsSaid(message)) {
+      console.log('chat gippity said blue');
+      this.sendReply(message.channel as TextChannel, this.defaultResponse);
+    }
   }
 
   private isSomeoneRespondingToBlu(message: Message): boolean {
-    if (
-      !message.content.match(this.confirmPattern) &&
-      !message.content.match(this.meanPattern)
-    ) {
+    if (!message.content.match(this.confirmPattern) && !message.content.match(this.meanPattern)) {
       return false;
     }
     const lastMessage = this.blueTimestamp.getTime();
     // if the last blue message was less than five minutes ago
-    if (message.createdTimestamp - lastMessage < 300000) {
-      return true;
-    }
-    return false;
+    return message.createdTimestamp - lastMessage < 300000;
   }
 
   private isVennInsultingBlu(message: Message): boolean {
@@ -105,10 +99,8 @@ export default class BlueBot extends ReplyBot {
     const lastBlue = this.blueTimestamp.getTime() / 1000;
     const current = new Date(message.createdTimestamp).getTime() / 1000;
     // if the last murder message was at least 24 hours ago
-    if (current - lastMurder > 86400 && current - lastBlue < (2 * 60)) {
-      return true;
-    }
-    return false;
+    return current - lastMurder > 86400 && current - lastBlue < (2 * 60);
+
   }
 
   private getNameFromBluRequest(message: Message): string {
@@ -155,6 +147,7 @@ export default class BlueBot extends ReplyBot {
           - "the job that sucks" -> yes
           - "beastmaster" -> yes
           - "limited job" -> yes
+          - "https://www.the_color_blue.com/blue/bloo/blau/azure/azul" -> no
           - "strawberries are red" -> no
           - "#0000FF" -> yes`
           },
@@ -173,5 +166,19 @@ export default class BlueBot extends ReplyBot {
       console.error(error);
       return false;
     }
+  }
+
+  private isSomeoneAskingYouToBeBlue(message: Message) {
+    return message.content.match(this.nicePattern);
+  }
+
+  private saySomethingNiceAbout(message: Message, name: string) {
+    this.avatarUrl = this.cheekyAvatar;
+    this.sendReply(message.channel as TextChannel, this.friendlyResponse(name));
+  }
+
+  private saySomethingBlueAboutVenn(message: Message) {
+    this.avatarUrl = this.defaultAvatarURL;
+    this.sendReply(message.channel as TextChannel, this.contemptResponse);
   }
 }

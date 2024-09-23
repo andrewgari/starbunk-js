@@ -25,6 +25,9 @@ export default class GuyBot extends ReplyBot {
     'Bird Up!',
     'Schlorp',
     `I wouldn't dream of disturbing something so hideously erogenous`,
+    'Good Year, Good Year',
+    'True Grit',
+    'MisterMisterMisterMisterMisterMisterMisterMisterMisterMisterMisterBeeeeeeeeeeeeeeeeeeeeeeeeeeast',
     'Blimbo'
   ];
   private readonly nonGuyPattern = /\bguy\b/i;
