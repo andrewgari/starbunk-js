@@ -1,0 +1,16 @@
+name: PR Merge Workflow
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  destroy-container:
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/destroy-docker-image.yml
+
+  build-and-publish:
+    if: github.event.pull_request.merged == true
+    needs: destroy-container
+    uses: ./.github/workflows/publish-docker-image.yml

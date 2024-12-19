@@ -1,0 +1,12 @@
+name: PR Update Workflow
+
+on:
+  pull_request:
+    types:
+      - synchronize
+      - reopened
+      - opened
+
+jobs:
+  build-and-run:
+    uses: ./.github/workflows/pr-docker-test.yml
