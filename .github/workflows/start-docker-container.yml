@@ -14,4 +14,4 @@ jobs:
     steps:
       - name: Start Docker Container
         run: |
-          docker run -d --name my-app-container-${{ inputs.tag }} -p 8080:8080 my-app:${{ inputs.tag }}
+          docker run -d --name starbunk-js-container-${{ inputs.tag }} -p 8080:8080 starbunk-js:${{ inputs.tag }}
