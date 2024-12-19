@@ -9,6 +9,13 @@ on:
 
 jobs:
   build-and-run:
-    uses: ./.github/workflows/pr-docker-test.yml
-    with:
-      tag: pr-${{ github.event.pull_request.number }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Call Build Docker Image Workflow
+        uses: ./.github/workflows/build-docker-image.yml
+        with:
+          tag: pr-${{ github.event.pull_request.number }}
