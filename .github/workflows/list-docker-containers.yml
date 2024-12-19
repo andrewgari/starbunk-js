@@ -1,0 +1,12 @@
+name: List Docker Containers
+
+on:
+  workflow_dispatch:
+
+jobs:
+  list-containers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: List Running Docker Containers
+        run: |
+          docker ps

@@ -1,0 +1,18 @@
+name: Stop Docker Container
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag for the Docker container (e.g., pr-123)"
+        required: true
+        type: string
+
+jobs:
+  stop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop Docker Container
+        run: |
+          docker stop my-app-container-${{ inputs.tag }} || true
+          docker rm my-app-container-${{ inputs.tag }} || true

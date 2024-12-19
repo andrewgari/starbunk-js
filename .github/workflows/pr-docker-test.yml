@@ -1,4 +1,4 @@
-name: Build Docker Image
+name: PR Docker Test Workflow
 
 on:
   workflow_call:
@@ -8,7 +8,7 @@ on:
         type: string
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -17,3 +17,7 @@ jobs:
       - name: Build Docker Image
         run: |
           docker build -t my-app:${{ inputs.tag }} .
+
+      - name: Run Docker Container
+        run: |
+          docker run -d --name my-app-container-${{ inputs.tag }} -p 8080:8080 my-app:${{ inputs.tag }}

@@ -1,0 +1,17 @@
+name: Start Docker Container
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag for the Docker container (e.g., pr-123)"
+        required: true
+        type: string
+
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start Docker Container
+        run: |
+          docker run -d --name my-app-container-${{ inputs.tag }} -p 8080:8080 my-app:${{ inputs.tag }}
