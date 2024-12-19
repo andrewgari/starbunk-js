@@ -17,7 +17,7 @@ jobs:
       - name: Build Docker Image
         uses: ./.github/workflows/build-docker-image.yml
         with:
-          tag: ${{ inputs.tag }}
+          tag: pr-${{ github.event.pull_request.number }}
 
       - name: Run Docker Container
         run: |
