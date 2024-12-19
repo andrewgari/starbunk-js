@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Call Build Docker Image Workflow
-        uses: ./.github/workflows/build-docker-image.yml
+      - name: Use Reusable Workflow for PR Test
+        uses: ./.github/workflows/pr-docker-test.yml
         with:
           tag: pr-${{ github.event.pull_request.number }}
