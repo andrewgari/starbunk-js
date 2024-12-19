@@ -12,9 +12,16 @@ jobs:
     with:
       tag: pr-${{ github.event.pull_request.number }}
 
-  publish:
+  destroy-branch-container:
     if: github.event.pull_request.merged == true
     needs: destroy-pr-container
+    uses: ./.github/workflows/destroy-docker-image.yml
+    with:
+      tag: ${{ github.event.pull_request.head.ref }}
+
+  publish:
+    if: github.event.pull_request.merged == true
+    needs: destroy-branch-container
     uses: ./.github/workflows/publish-docker-image.yml
     with:
       tag: main

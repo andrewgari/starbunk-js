@@ -1,21 +1,18 @@
-name: PR Update Workflow
+name: PR Branch Update Workflow
 
 on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
+  push:
+    branches:
+      - 'pr-*'
 
 jobs:
-  build-and-run:
-    runs-on: ubuntu-latest
+  destroy-old-container:
+    uses: ./.github/workflows/destroy-docker-image.yml
+    with:
+      tag: ${{ github.ref_name }}
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Use Reusable Workflow for PR Test
-        uses: ./.github/workflows/pr-docker-test.yml
-        with:
-          tag: pr-${{ github.event.pull_request.number }}
+  build-and-start:
+    needs: destroy-old-container
+    uses: ./.github/workflows/pr-docker-test.yml
+    with:
+      tag: ${{ github.ref_name }}
