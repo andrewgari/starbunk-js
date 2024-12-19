@@ -1,0 +1,24 @@
+name: Start Docker Container
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag for the Docker image (e.g., pr-123)"
+        required: true
+        type: string
+
+jobs:
+  start-container:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to Container Registry (if necessary)
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CI_TOKEN }}
+
+      - name: Start Docker Container
+        run: |
+          docker run -d --name my-app-container-${{ inputs.tag }} -p 8080:8080 ghcr.io/${{ github.repository }}:${{ inputs.tag }}

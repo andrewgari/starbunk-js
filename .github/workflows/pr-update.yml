@@ -3,9 +3,9 @@ name: PR Update Workflow
 on:
   pull_request:
     types:
+      - opened
       - synchronize
       - reopened
-      - opened
 
 jobs:
   build-and-run:
