@@ -12,6 +12,13 @@ jobs:
   start:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Build Docker Image
+        run: |
+          docker build -t starbunk-js:${{ inputs.tag }} .
+
       - name: Start Docker Container
         run: |
-          docker run -d --name my-app-container-${{ inputs.tag }} -p 8080:8080 my-app:${{ inputs.tag }}
+          docker run -d --name starbunk-js-container-${{ inputs.tag }} -p 8080:8080 starbunk-js:${{ inputs.tag }}
