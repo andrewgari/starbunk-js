@@ -8,14 +8,14 @@ on:
         type: string
 
 jobs:
-  publish-image:
+  publish:
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Log in to Container Registry
         uses: docker/login-action@v2

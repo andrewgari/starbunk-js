@@ -12,7 +12,7 @@ jobs:
     with:
       tag: pr-${{ github.event.pull_request.number }}
 
-  build-and-publish:
+  publish:
     if: github.event.pull_request.merged == true
     needs: destroy-pr-container
     uses: ./.github/workflows/publish-docker-image.yml

@@ -8,16 +8,16 @@ on:
         type: string
 
 jobs:
-  test-docker:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Build Docker Image
         uses: ./.github/workflows/build-docker-image.yml
         with:
-          tag: pr-${{ github.event.pull_request.number }}
+          tag: ${{ inputs.tag }}
 
       - name: Run Docker Container
         run: |
