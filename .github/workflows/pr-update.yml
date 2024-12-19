@@ -10,3 +10,5 @@ on:
 jobs:
   build-and-run:
     uses: ./.github/workflows/pr-docker-test.yml
+    with:
+      tag: pr-${{ github.event.pull_request.number }}
