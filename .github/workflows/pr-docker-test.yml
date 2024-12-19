@@ -1,0 +1,34 @@
+name: Build and Run Docker Container on PR Update
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call Build Docker Workflow
+        uses: ./.github/workflows/build-docker-image.yml
+        with:
+          tag: pr-${{ github.event.pull_request.number }}
+
+      - name: Run Docker Container
+        run: |
+          docker run -d --name my-app-container -p 8080:8080 my-app:pr-${{ github.event.pull_request.number }}
+
+      # (Optional) Run tests
+      - name: Run Tests
+        run: |
+          curl -f http://localhost:8080 || exit 1
+
+      # Clean up
+      - name: Clean Up
+        if: always()
+        run: |
+          docker stop my-app-container || true
+          docker rm my-app-container || true

@@ -1,0 +1,31 @@
+name: Destroy Docker Resources on PR Merge
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  destroy-docker:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Log in to Docker (optional, if needed to clean up images in a private registry)
+      - name: Log in to Docker
+        if: secrets.DOCKER_USERNAME && secrets.DOCKER_PASSWORD
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      # Stop and Remove Docker Container
+      - name: Stop and Remove Docker Container
+        run: |
+          docker stop my-app-container || true
+          docker rm my-app-container || true
+
+      # Remove Docker Image
+      - name: Remove Docker Image
+        run: |
+          docker rmi my-app:pr-${{ github.event.pull_request.number }} || true
