@@ -15,18 +15,20 @@ type Rat = {
 
 const RatMap = new Map<String, Rat>();
 
-const getRats = async (guild: Guild) => {
+const getRatsFromGuild = async (guild: Guild) => {
   const members = await guild.members.fetch();
   return members.filter(member => member.roles.cache.has(roleIDs.Ratmas));
 }
+
+export const getRats = () => RatMap;
 
 const assignPairs = (members: Collection<string, GuildMember>) => {
   if (members.size < 3) {
     throw new Error('Rats must be at least 2 to assign pairs.');
   }
 
-  const rats1 = Array.from(members.values());
-  const rats2 = Array.from(members.values());
+  const rats1 = Array.from(members.values()).shuffle();
+  const rats2 = Array.from(members.values()).shuffle();
 
   for (let i = 0; i < members.size; i++) {
     const self = rats1.pop();
@@ -56,7 +58,7 @@ export default {
       fetchReply: false,
       ephemeral: true
     });
-    const rats = await getRats(interaction.guild!);
+    const rats = await getRatsFromGuild(interaction.guild!);
     assignPairs(rats);
 
     console.log("Temp RatMas Assigments: ", JSON.stringify(rats));
