@@ -3,12 +3,10 @@ import { spawn } from 'child_process';
 import {
     CommandInteraction,
     GuildMember,
-    PermissionFlagsBits,
     SlashCommandBuilder,
-    TextChannel
 } from 'discord.js';
-import { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } from '@discordjs/voice';
-import ytdl from 'ytdl-core';   
+import { joinVoiceChannel, createAudioPlayer, createAudioResource } from '@discordjs/voice';
+import ytdl from 'ytdl-core';
 
 export default {
     data: new SlashCommandBuilder()
@@ -65,17 +63,16 @@ export default {
             };
 
             // Usage in your player
-            console.log('got stream')
             const ytDlpStream = getYtDlpStream(url);
-            console.log('create audio resource')
             const resource = createAudioResource(ytDlpStream.stdout, { inlineVolume: true });
-            console.log('volume');
             resource.volume?.setVolume(0.5);
-            player.on('stateChange', (oldState, newState) => {
-            console.log(`Player state changed from ${oldState.status} to ${newState.status}`);});
+            player.on('stateChange', (oldState: { status: any; }, newState: { status: any; }) => {
+                console.log(`Player state changed from ${oldState.status} to ${newState.status}`);
+            });
 
-            player.on('error', (error) => {
-            console.error('AudioPlayer error:', error.message);});
+            player.on('error', (error: Error) => {
+                console.error('AudioPlayer error:', error.message);
+            });
 
             player.play(resource);
             console.log('Player status after play:', player.state.status);
