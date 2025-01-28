@@ -5,8 +5,9 @@ import {
     GuildMember,
     SlashCommandBuilder,
 } from 'discord.js';
-import { joinVoiceChannel, createAudioPlayer, createAudioResource } from '@discordjs/voice';
+import { joinVoiceChannel, createAudioResource } from '@discordjs/voice';
 import ytdl from 'ytdl-core';
+import StarbunkClient from 'src/starbunk/starbunkClient';
 
 export default {
     data: new SlashCommandBuilder()
@@ -48,7 +49,7 @@ export default {
 
             // Create an audio player
             console.log('creating audio player')
-            const player = createAudioPlayer();
+            const player = (interaction.client as StarbunkClient).musicPlayer
 
             const subscription = connection.subscribe(player);
             if (!subscription) {
@@ -85,4 +86,8 @@ export default {
             await interaction.followUp('An error occurred while trying to play the music.');
         }
     }
+}
+
+const getYouTubePlayer = (client: StarbunkClient) => {
+    const player = client.getPlayer();
 }
