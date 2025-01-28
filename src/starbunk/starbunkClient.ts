@@ -13,16 +13,16 @@ import ReplyBot from './bots/replyBot';
 import { readdirSync } from 'fs';
 import DiscordClient from '../discord/discordClient';
 import VoiceBot from './bots/voiceBot';
-import { AudioPlayer, createAudioPlayer } from '@discordjs/voice';
+import { DJCova } from './dJCova';
 
 export default class StarbunkClient extends DiscordClient {
   bots: Collection<string, ReplyBot> = new Collection();
   voiceBots: Collection<string, VoiceBot> = new Collection();
   commands: Collection<string, Command> = new Collection();
-  musicPlayer: AudioPlayer = createAudioPlayer();
+  djCova: DJCova = new DJCova();
 
-  getMusicPlayer = (): AudioPlayer => {
-    return this.musicPlayer;
+  getMusicPlayer = (): DJCova => {
+    return this.djCova;
   }
 
   constructor(options: ClientOptions) {

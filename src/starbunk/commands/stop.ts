@@ -3,8 +3,8 @@ import {
     CommandInteraction,
     SlashCommandBuilder,
 } from 'discord.js'
-import guildIDs from 'src/discord/guildIDs';
-import { getStarbunkClient } from 'src/starbunk/starbunkClient'
+import guildIDs from '../../discord/guildIDs';
+import { getStarbunkClient } from '../starbunkClient'
 
 export default {
     data: new SlashCommandBuilder()
@@ -13,7 +13,7 @@ export default {
     async execute(interaction: CommandInteraction) {
         const client = getStarbunkClient(interaction);
         if (client) {
-            client.musicPlayer.stop();
+            client.getMusicPlayer().stop();
             const connection = getVoiceConnection(interaction.guild?.id ?? guildIDs.StarbunkCrusaders);
             connection?.disconnect();
         }
