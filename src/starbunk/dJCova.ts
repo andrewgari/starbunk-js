@@ -8,9 +8,8 @@ import {
   StreamType,
   VoiceConnection
 } from '@discordjs/voice';
-import play from 'play-dl';
+import ytdl from '@distube/ytdl-core';
 import prism from 'prism-media';
-import * as fs from 'node:fs';
 
 export class DJCova {
   private musicPlayer: AudioPlayer = createAudioPlayer();
@@ -22,25 +21,22 @@ export class DJCova {
 
   async start(url: string) {
     try {
-      const cookies = this.parseCookies();
-
-      console.log('[DEBUG] Initializing play-dl...');
-      await play.setToken({
-        youtube: {
-          cookie: cookies,
-        }
-      });
       console.log('[DEBUG] Fetching stream...');
-      const stream = await play.stream(url, {
-        discordPlayerCompatibility: true,
+      const stream = ytdl(url, {
+        filter: 'audioonly',
+        quality: 'highestaudio', // Use lowestaudio for stability
+        highWaterMark: 1 << 25,
+        dlChunkSize: 0, // Disable chunking
+        requestOptions: {
+          // Add headers to mimic a browser
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
+        },
       });
-      console.log('[DEBUG] Stream obtained:', stream);
 
-      // Use WebmDemuxer for Opus extraction
-      const demuxer = new prism.opus.WebmDemuxer();
-      stream.stream.pipe(demuxer);
-
-      this.activeResource = createAudioResource(demuxer, {
+      this.activeResource = createAudioResource(stream, {
         inputType: StreamType.WebmOpus,
         inlineVolume: true
       });
@@ -49,13 +45,6 @@ export class DJCova {
       console.log('[DEBUG] Playing resource...');
       this.musicPlayer.play(this.activeResource);
       console.log('[DEBUG] Audio resource created and playing started.');
-
-      // Error handling
-      demuxer
-        .on('data', () => console.log('[DEBUG] Demuxer received data'))
-        .on('end', () => console.log('[DEBUG] Demuxer ended'))
-        .on('error', (err) => console.error('[DEBUG] Demuxer error:', err));
-      stream.stream.on('error', (err) => console.error('Stream error:', err));
     } catch (error) {
       console.error('Error starting audio stream:', error);
     }
@@ -101,17 +90,5 @@ export class DJCova {
 
   on(status: AudioPlayerStatus, callback: () => void) {
     this.musicPlayer.on(status, callback);
-  }
-
-  private parseCookies() {
-    const cookies = fs.readFileSync('./cookies.txt', 'utf-8');
-    return cookies
-      .split('\n') // Split lines
-      .filter(line => !line.startsWith('#') && line.trim() !== '') // Remove comments/blanks
-      .map(line => {
-        const parts = line.split('\t'); // Split by tabs
-        return `${parts[5]}=${parts[6]}`; // Extract name=value (6th and 7th fields)
-      })
-      .join('; '); // Join with semicolons
   }
 }

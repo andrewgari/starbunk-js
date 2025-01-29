@@ -25,6 +25,7 @@
     "@discordjs/rest": "^2.0.1",
     "@discordjs/voice": "^0.18.0",
     "@distube/yt-dlp": "^2.0.1",
+    "@distube/ytdl-core": "^4.15.9",
     "@typescript-eslint/parser": "^5.0.1",
     "async": "^3.2.4",
     "discord-api-types": "^0.37.59",
