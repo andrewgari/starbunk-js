@@ -14,12 +14,14 @@ import { readdirSync } from 'fs';
 import DiscordClient from '../discord/discordClient';
 import VoiceBot from './bots/voiceBot';
 import { DJCova } from './dJCova';
+import { PlayerSubscription } from '@discordjs/voice';
 
 export default class StarbunkClient extends DiscordClient {
   bots: Collection<string, ReplyBot> = new Collection();
   voiceBots: Collection<string, VoiceBot> = new Collection();
   commands: Collection<string, Command> = new Collection();
   djCova: DJCova = new DJCova();
+  activeSubscription: PlayerSubscription | undefined;
 
   getMusicPlayer = (): DJCova => {
     return this.djCova;
