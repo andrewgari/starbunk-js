@@ -1,48 +1,95 @@
-import { AudioPlayer, AudioPlayerStatus, AudioResource, createAudioPlayer, createAudioResource, PlayerSubscription, VoiceConnection } from "@discordjs/voice";
-import { spawn } from "child_process";
+import {
+  AudioPlayer,
+  AudioPlayerStatus,
+  AudioResource,
+  createAudioPlayer,
+  createAudioResource,
+  PlayerSubscription,
+  VoiceConnection
+} from '@discordjs/voice';
+import https from 'https';
+import prism from 'prism-media';
 
 export class DJCova {
-    private musicPlayer: AudioPlayer = createAudioPlayer();
-    private activeResource: AudioResource | undefined;
+  private musicPlayer: AudioPlayer = createAudioPlayer();
+  private activeResource: AudioResource | undefined;
 
-    start(url: string) {
-        const getYtDlpStream = (url: string) => {
-            return spawn('yt-dlp', ['-o', '-', 'bestaudio', url], { stdio: ['ignore', 'pipe', 'ignore'] });
-        }
-        const musicStream = getYtDlpStream(url);
-        this.activeResource = createAudioResource(musicStream.stdout, { inlineVolume: true });
-        this.musicPlayer.on('stateChange', (oldState: { status: any; }, newState: { status: any; }) => {
-                console.log(`Player stat changed from ${oldState.status} to ${newState.status}`);
-                if (this.activeResource?.started && newState.status == AudioPlayerStatus.Playing) {
-                    return; // for now just don't do anything if something is actively playing
-                }
+  async start(url: string) {
+    https
+      .get(url, (res) => {
+        const ffmpegStream = new prism.FFmpeg({
+          args: [
+            '-re', // Read input at native frame rate
+            '-analyzeduration',
+            '0',
+            '-loglevel',
+            '0',
+            '-i',
+            'pipe:0', // Input from stdin
+            '-f',
+            's16le', // Output raw PCM
+            '-ar',
+            '48000', // Set audio sample rate to 48kHz
+            '-ac',
+            '2', // Use 2 audio channels (stereo)
+            'pipe:1' // Output to stdout
+          ]
         });
-        this.musicPlayer.on('error', (error: Error) => {
-            console.error('AudioPlayer error', error.message);
+        res.pipe(ffmpegStream);
+
+        ffmpegStream.on('error', (err) => {
+          console.error('FFmpeg error:', err);
+          this.stop(); // Stop the player on FFmpeg error
         });
-    }
 
-    play() {
-        if (this.activeResource) {
-            this.musicPlayer.play(this.activeResource);
-        } else {
-            console.log('active resource is null');
-        }
-    }
+        res.on('error', (err) => {
+          console.error('HTTP stream error:', err);
+          this.stop();
+        });
 
-    stop() {
-        this.musicPlayer.stop();
-    }
+        this.activeResource = createAudioResource(ffmpegStream, {
+          inlineVolume: true
+        });
+        this.activeResource?.volume?.setVolume(0.5);
+        console.log('Volume:', this.activeResource?.volume?.volume);
+        this.musicPlayer.play(this.activeResource);
+      })
+      .on('error', (err) => {
+        console.error('HTTPS request error:', err);
+      });
+  }
 
-    pause() {
-        this.musicPlayer.pause();
+  play() {
+    if (this.activeResource) {
+      this.musicPlayer.play(this.activeResource);
+    } else {
+      console.log('active resource is null');
     }
+  }
 
-    changeVolume(vol: number) {
-        this.activeResource?.volume?.setVolume(vol);
+  stop() {
+    if (this.musicPlayer.state.status !== AudioPlayerStatus.Idle) {
+      this.musicPlayer.stop();
+      console.log('Playback Stopped');
     }
+  }
 
-    subscribe(channel: VoiceConnection): PlayerSubscription | undefined {
-        return channel.subscribe(this.musicPlayer);
+  pause() {
+    if (this.musicPlayer.state.status === AudioPlayerStatus.Playing) {
+      this.musicPlayer.pause();
+      console.log('Playback Stopped');
     }
+  }
+
+  changeVolume(vol: number) {
+    this.activeResource?.volume?.setVolume(vol);
+  }
+
+  subscribe(channel: VoiceConnection): PlayerSubscription | undefined {
+    return channel.subscribe(this.musicPlayer);
+  }
+
+  on(status: AudioPlayerStatus, callback: () => void) {
+    this.musicPlayer.on(status, callback);
+  }
 }

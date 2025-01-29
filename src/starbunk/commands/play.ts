@@ -3,9 +3,11 @@ import {
     GuildMember,
     SlashCommandBuilder,
 } from 'discord.js';
-import { joinVoiceChannel } from '@discordjs/voice';
+import {AudioPlayerStatus, joinVoiceChannel} from '@discordjs/voice';
 import ytdl from 'ytdl-core';
 import { getStarbunkClient } from '../starbunkClient';
+import connectToChannel from "../../utils/connectToChannel";
+import GuildIDs from "../../discord/guildIDs";
 
 export default {
     data: new SlashCommandBuilder()
@@ -37,14 +39,18 @@ export default {
             await interaction.deferReply();
 
             // Join the voice channel
-            const connection = joinVoiceChannel({
-                channelId: voiceChannel.id,
-                guildId: interaction.guildId!,
-                adapterCreator: interaction.guild!.voiceAdapterCreator,
-            });
+            const connection = await connectToChannel(voiceChannel.id, interaction.guildId ?? GuildIDs.CovaDaxServer, interaction.guild!.voiceAdapterCreator);
 
             // Create an audio player
             const djCova = getStarbunkClient(interaction).getMusicPlayer();
+
+            djCova.on(AudioPlayerStatus.Playing, () => {
+              console.log('Audio is now playing');
+            });
+
+            djCova.on(AudioPlayerStatus.Idle, () => {
+                console.log('Audio playback ended.');
+            });
 
             const subscription = djCova.subscribe(connection);
             if (!subscription) {
@@ -52,11 +58,9 @@ export default {
             } else {
                 console.log('Player successfully subscribed to connection.');
             }
-
-            djCova.start(url);
-            djCova.play();
-
             await interaction.followUp(`🎶 Now playing: ${url}`);
+            // await djCova.start(url);
+            await djCova.start('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
         } catch (error) {
             console.error(error);
             await interaction.followUp('An error occurred while trying to play the music.');

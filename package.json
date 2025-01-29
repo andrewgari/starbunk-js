@@ -31,6 +31,7 @@
     "discord.js": "^14.17.3",
     "dotenv": "^16.3.1",
     "envalid": "^8.0.0",
+    "ffmpeg-static": "^5.2.0",
     "module-name": "^0.0.1-security",
     "openai": "^4.58.2",
     "opusscript": "^0.0.8",
