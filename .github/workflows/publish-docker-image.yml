@@ -28,7 +28,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Extract metadata for Docker
         id: meta
@@ -55,3 +55,8 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ env.TAG }}
             ${{ github.ref_name == 'main' && format('ghcr.io/{0}/{1}:latest', github.repository_owner, github.event.repository.name) || '' }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Verify repository and package permissions
+        run: |
+          echo "Checking permissions for GHCR"
+          curl -u "${{ github.actor }}:${{ secrets.GHCR_PAT }}" -X GET "https://ghcr.io/v2/${{ github.repository_owner }}/${{ github.event.repository.name }}/tags/list"
