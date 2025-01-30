@@ -6,13 +6,16 @@ on:
       - '[0-9][0-9]-*'
 
 jobs:
-  destroy-old-container:
-    uses: ./.github/workflows/destroy-docker-image.yml
-    with:
-      tag: ${{ github.ref_name }}
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-  build-and-start:
-    needs: destroy-old-container
-    uses: ./.github/workflows/pr-docker-test.yml
-    with:
-      tag: ${{ github.ref_name }}
+      - name: Build Docker Image
+        run: |
+          docker build -t my-app:${{ inputs.tag }} .
+
+      - name: Run Docker Container
+        run: |
+          docker run -d --name my-app-container-${{ inputs.tag }} -p 8080:8080 my-app:${{ inputs.tag }}
