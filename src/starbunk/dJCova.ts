@@ -9,7 +9,6 @@ import {
   VoiceConnection
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
-import prism from 'prism-media';
 
 export class DJCova {
   private musicPlayer: AudioPlayer = createAudioPlayer();
@@ -20,11 +19,15 @@ export class DJCova {
   }
 
   async start(url: string) {
+    if (this.musicPlayer.state.status === AudioPlayerStatus.Playing) {
+      return;
+    }
+
     try {
       console.log('[DEBUG] Fetching stream...');
       const stream = ytdl(url, {
         filter: 'audioonly',
-        quality: 'highestaudio', // Use lowestaudio for stability
+        quality: 'lowestaudio', // Use lowestaudio for stability
         highWaterMark: 1 << 25,
         dlChunkSize: 0, // Disable chunking
         requestOptions: {
