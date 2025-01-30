@@ -36,6 +36,15 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
 
+      - name: Determine image tag
+        id: image_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "TAG=pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          else
+            echo "TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -43,6 +52,6 @@ jobs:
           file: ./Dockerfile
           push: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ env.TAG }}
             ${{ github.ref_name == 'main' && format('ghcr.io/{0}/{1}:latest', github.repository_owner, github.event.repository.name) || '' }}
           labels: ${{ steps.meta.outputs.labels }}
