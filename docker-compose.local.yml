@@ -1,0 +1,13 @@
+services:
+  bunkbot-ts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bunkbot
+    env_file:
+      - .env
+    command: npm run start
+    volumes:
+      - .:/app
+    ports:
+      - "3000:3000"
