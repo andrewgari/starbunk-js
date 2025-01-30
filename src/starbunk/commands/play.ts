@@ -60,7 +60,7 @@ export default {
 
       await djCova.start(url);
 
-      const subscription = connection.subscribe(djCova.getMusicPlayer());
+      const subscription = djCova.subscribe(connection);
       if (!subscription) {
         console.error('❌ Failed to subscribe player.');
       } else {
