@@ -5,7 +5,7 @@ export default {
     data: new SlashCommandBuilder()
         .setName('volume')
         .setDescription('It makes the noises go up and down')
-        .addIntegerOption(option => 
+        .addIntegerOption(option =>
             option
                 .setName('noise')
                 .setDescription('set player volume %')
@@ -13,10 +13,11 @@ export default {
         ),
     async execute(interaction: CommandInteraction) {
         const client = getStarbunkClient(interaction);
-        const vol = interaction.options.get('volume')?.value as number;
-        if (client && vol) {
-            const player = client.getMusicPlayer();
-            player.changeVolume(vol)
+
+        let vol = interaction.options.get('volume')?.value as number;
+        if (client && vol > 1 && vol <= 100) {
+            vol = Math.round(vol / 10);
+            client.getMusicPlayer().changeVolume(vol)
         }
     }
 }
