@@ -1,6 +1,7 @@
 name: PR Branch Update Workflow
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [ opened, synchronize, reopened ]
 
