@@ -16,7 +16,7 @@ export default {
                     .setDescription('the monkey you want to make speak')
                     .setRequired(true))
             .addStringOption(option =>
-                option
+                option 
                     .setName('message')
                     .setDescription('what you want the monkey to say')
                     .setRequired(true)),

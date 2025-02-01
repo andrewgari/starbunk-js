@@ -3,7 +3,7 @@ import ReplyBot from '../replyBot';
 
 export default class MusicCorrectBot extends ReplyBot {
   private readonly botName = 'BunkBot';
-  private readonly pattern = /^(\?|\!)play /i;
+  private readonly pattern = /^[?!]play /i;
 
   getBotName(): string {
     return this.botName;
