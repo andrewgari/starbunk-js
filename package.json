@@ -43,6 +43,7 @@
     "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
+    "@jest/types": "^29.6.3",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.17.19",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
