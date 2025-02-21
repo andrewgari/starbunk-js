@@ -10,16 +10,18 @@ export interface BotConfig {
 }
 
 export abstract class BaseBot implements MessageHandler {
-  private readonly botName: string;
-  private readonly botAvatar: string;
+  protected readonly botName: string;
+  protected readonly botAvatar: string;
+  protected readonly webhookService: WebhookService;
 
   constructor(
     config: BotConfig,
     protected readonly client: Client,
-    protected readonly webhookService: WebhookService
+    protected readonly _webhookService: WebhookService
   ) {
     this.botName = config.name;
     this.botAvatar = config.avatarUrl;
+    this.webhookService = _webhookService;
   }
 
   getBotName(): string {
@@ -67,8 +69,7 @@ export abstract class BaseBot implements MessageHandler {
       });
 
       return new Success(void 0);
-    }
-    catch (error) {
+    } catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to send message')
       );
