@@ -3,9 +3,9 @@ import { readdirSync } from 'fs';
 import { Failure, Result, Success } from '@/utils/result';
 
 import { Command } from '../command';
-import { RegisterableBot } from './botRegistry';
+import { Bot } from '../bots/types';
 
-type LoadableModule = Command | RegisterableBot;
+type LoadableModule = Command | Bot;
 
 export class FileLoader {
   private readonly basePath: string;
@@ -34,8 +34,7 @@ export class FileLoader {
       const validModules = modules.filter(typeGuard);
 
       return new Success(validModules);
-    }
-    catch (error) {
+    } catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to load files')
       );

@@ -4,22 +4,22 @@ import { Failure, Result, Success } from '@/utils/result';
 
 import { VoiceBot } from '../bots/types';
 import { BotRegistry } from './botRegistry';
+import { Bot } from '../bots/types';
 
 export class VoiceStateManager {
-  private readonly voiceBots: BotRegistry<VoiceBot>;
-
-  constructor(voiceBots: BotRegistry<VoiceBot>) {
-    this.voiceBots = voiceBots;
-  }
+  constructor(private readonly botRegistry: BotRegistry<Bot>) {}
 
   async handleVoiceStateUpdate(
     oldState: VoiceState,
     newState: VoiceState
   ): Promise<Result<void, Error>> {
     try {
-      const bots = this.voiceBots.getAllBots();
+      const voiceBots = this.botRegistry
+        .getAllBots()
+        .filter((bot): bot is VoiceBot => 'handleEvent' in bot);
+
       const results = await Promise.all(
-        bots.map((bot) => bot.handleEvent(oldState, newState))
+        voiceBots.map((bot) => bot.handleEvent(oldState, newState))
       );
 
       const errors = results
@@ -33,8 +33,7 @@ export class VoiceStateManager {
       }
 
       return new Success(void 0);
-    }
-    catch (error) {
+    } catch (error) {
       return new Failure(
         error instanceof Error
           ? error

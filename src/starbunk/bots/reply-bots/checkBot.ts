@@ -6,7 +6,7 @@ import { Result } from '../../../utils/result';
 
 export default class CheckBot extends ReplyBot {
   private readonly pattern = /\bczech\b/i;
-  private readonly response = 'I believe you mean \'check\'.';
+  private readonly response = "I believe you mean 'check'.";
 
   constructor(client: Client, webhookService: WebhookService) {
     super(
@@ -21,7 +21,7 @@ export default class CheckBot extends ReplyBot {
     return !message.author.bot && !!message.content.match(this.pattern);
   }
 
-  async handle(message: Message): Promise<Result<void, Error>> {
+  async processMessage(message: Message): Promise<Result<void, Error>> {
     return this.sendReply(message.channel as TextChannel, this.response);
   }
 }

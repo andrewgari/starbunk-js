@@ -1,10 +1,9 @@
 import { Client } from 'discord.js';
 
-import { VoiceBot } from '../bots/types';
+import { Bot } from '../bots/types';
 import { Command } from '../command';
 import { AudioConfig, AudioService } from './audioService';
 import { BotRegistry } from './botRegistry';
-import { RegisterableBot } from './botRegistry';
 import { CommandRegistry } from './commandRegistry';
 import { FileLoader } from './fileLoader';
 import { InteractionHandler } from './interactionHandler';
@@ -22,7 +21,7 @@ export interface ServiceConfig {
 
 export class ServiceContainer {
   readonly audioService: AudioService;
-  readonly botRegistry: BotRegistry<RegisterableBot>;
+  readonly botRegistry: BotRegistry<Bot>;
   readonly commandRegistry: CommandRegistry;
   readonly fileLoader: FileLoader;
   readonly interactionHandler: InteractionHandler;
@@ -47,7 +46,7 @@ export class ServiceContainer {
     this.messageProcessor = new MessageProcessor([]);
     this.interactionHandler = new InteractionHandler(this.commandRegistry);
     this.voiceStateManager = new VoiceStateManager(
-      this.botRegistry as BotRegistry<VoiceBot>
+      this.botRegistry as BotRegistry<Bot>
     );
   }
 
@@ -74,7 +73,7 @@ export class ServiceContainer {
     // Load and register bots
     const botResult = await this.fileLoader.loadFiles(
       'bots',
-      (module): module is RegisterableBot => {
+      (module): module is Bot => {
         return (
           module !== null &&
           typeof module === 'object' &&

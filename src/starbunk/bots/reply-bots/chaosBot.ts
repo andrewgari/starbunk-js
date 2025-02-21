@@ -6,7 +6,7 @@ import { Result } from '../../../utils/result';
 
 export default class ChaosBot extends ReplyBot {
   private readonly pattern = /\bchaos\b/i;
-  private readonly response = 'All I know is...I\'m here to kill Chaos';
+  private readonly response = "All I know is...I'm here to kill Chaos";
 
   constructor(client: Client, webhookService: WebhookService) {
     super(
@@ -21,7 +21,7 @@ export default class ChaosBot extends ReplyBot {
     return !message.author.bot && !!message.content.match(this.pattern);
   }
 
-  async handle(message: Message): Promise<Result<void, Error>> {
+  async processMessage(message: Message): Promise<Result<void, Error>> {
     return this.sendReply(message.channel as TextChannel, this.response);
   }
 }
