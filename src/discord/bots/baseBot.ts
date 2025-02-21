@@ -69,7 +69,8 @@ export abstract class BaseBot implements MessageHandler {
       });
 
       return new Success(void 0);
-    } catch (error) {
+    }
+    catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to send message')
       );

@@ -1,5 +1,7 @@
 import { Message } from 'discord.js';
-import { Result, Success, Failure } from '@/utils/result';
+
+import { Failure, Result, Success } from '@/utils/result';
+
 import { Bot } from './types';
 
 export const handleMessage = async (
@@ -16,7 +18,8 @@ export const handleMessage = async (
     }
 
     return bot.handle(message);
-  } catch (error) {
+  }
+  catch (error) {
     return new Failure(
       error instanceof Error ? error : new Error('Failed to handle message')
     );

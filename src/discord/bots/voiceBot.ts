@@ -1,7 +1,9 @@
 import { Client, Message, VoiceState } from 'discord.js';
-import { Result, Success, Failure } from '@/utils/result';
-import { VoiceCapableBot } from './types';
+
+import { Failure, Result } from '@/utils/result';
+
 import { AudioService } from '../services/audioService';
+import { VoiceCapableBot } from './types';
 
 export abstract class BasicVoiceBot implements VoiceCapableBot {
   constructor(
@@ -9,7 +11,12 @@ export abstract class BasicVoiceBot implements VoiceCapableBot {
     private readonly avatarUrl: string,
     protected readonly client: Client,
     protected readonly audioService: AudioService
-  ) {}
+  ) {
+    this.name = name;
+    this.avatarUrl = avatarUrl;
+    this.client = client;
+    this.audioService = audioService;
+  }
 
   getName(): string {
     return this.name;
