@@ -1,6 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
+
 import roleIDs from '../../../discord/roleIDs';
+import ReplyBot from '../replyBot';
 
 export default class MacaroniBot extends ReplyBot {
   private readonly botName = 'MacaroniBot';
@@ -9,7 +10,7 @@ export default class MacaroniBot extends ReplyBot {
   private readonly macaorniPattern = /\bmacaroni\b/i;
   private readonly macaroniNamePattern =
     /venn(?!.*Tyrone "The "Macaroni" Man" Johnson" Caelum).*/;
-  private readonly vennResponse = `Correction: you mean Venn "Tyrone "The "Macaroni" Man" Johnson" Caelum`;
+  private readonly vennResponse = 'Correction: you mean Venn "Tyrone "The "Macaroni" Man" Johnson" Caelum';
   private readonly macaroniResponse = (id: string) =>
     `Are you trying to reach <@&${id}>`;
 
@@ -27,7 +28,8 @@ export default class MacaroniBot extends ReplyBot {
       !message.content.match(this.macaroniNamePattern)
     ) {
       this.sendReply(message.channel as TextChannel, this.vennResponse);
-    } else if (message.content.match(this.vennPattern)) {
+    }
+    else if (message.content.match(this.vennPattern)) {
       this.sendReply(
         message.channel as TextChannel,
         this.macaroniResponse(roleIDs.Macaroni)

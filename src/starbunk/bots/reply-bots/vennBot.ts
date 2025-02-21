@@ -1,7 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
-import random from '../../../utils/random';
+
 import userID from '../../../discord/userID';
+import random from '../../../utils/random';
+import ReplyBot from '../replyBot';
 
 export default class VennBot extends ReplyBot {
   private botName = 'VennBot';
@@ -13,7 +14,7 @@ export default class VennBot extends ReplyBot {
     'That was cringe to the max...',
     'What a cringe thing to say...',
     'Mondo cringe, man...',
-    "Yo that was the cringiest thing I've ever heard...",
+    'Yo that was the cringiest thing I\'ve ever heard...',
     'Your daily serving of cringe, milord...',
     'On a scale of one to cringe, that was pretty cringe...',
     'That was pretty cringe :airplane:',

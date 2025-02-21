@@ -8,5 +8,5 @@ export interface Command {
     options?: ApplicationCommandOption[];
   };
   permission?: string[];
-  execute(interaction: CommandInteraction): any;
+  execute(interaction: CommandInteraction): Promise<void>;
 }

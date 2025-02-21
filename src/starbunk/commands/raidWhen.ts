@@ -1,30 +1,35 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+
 import roleIDs from '../../discord/roleIDs';
 import userID from '../../discord/userID';
 
-enum Day {
-  Sunday = 0,
-  Monday = 1,
-  Tuesday = 2,
-  Wednesday = 3,
-  Thursday = 4,
-  Friday = 5,
-  Saturday = 6
+const enum RaidDay {
+  Sunday,
+  Monday,
+  Tuesday,
+  Wednesday,
+  Thursday,
+  Friday,
+  Saturday
 }
 
 const getNextRaid = (now: Date): Date => {
-  let raidTime = now;
+  const raidTime = now;
   switch (raidTime.getUTCDay()) {
-    case Day.Tuesday:
-    case Day.Wednesday:
+    case RaidDay.Tuesday:
+    case RaidDay.Wednesday: {
       raidTime.setUTCHours(24);
       raidTime.setUTCMinutes(0);
       raidTime.setUTCSeconds(0);
       raidTime.setUTCMilliseconds(0);
+
       return raidTime;
-    default:
+    }
+    default: {
       raidTime.setUTCDate(raidTime.getUTCDate() + 1);
+
       return getNextRaid(raidTime);
+    }
   }
 };
 

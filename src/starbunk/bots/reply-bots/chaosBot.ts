@@ -1,4 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
+
 import ReplyBot from '../replyBot';
 
 export default class ChaosBot extends ReplyBot {
@@ -6,7 +7,7 @@ export default class ChaosBot extends ReplyBot {
   private readonly avatarUrl =
     'https://preview.redd.it/md0lzbvuc3571.png?width=1920&format=png&auto=webp&s=ff403a8d4b514af8d99792a275d2c066b8d1a4de';
   private readonly pattern = /\bchaos\b/i;
-  private readonly response = `All I know is...I'm here to kill Chaos`;
+  private readonly response = 'All I know is...I\'m here to kill Chaos';
 
   getBotName(): string {
     return this.botName;

@@ -1,6 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
+
 import Random from '../../../utils/random';
+import ReplyBot from '../replyBot';
 
 export default class BotBot extends ReplyBot {
   private readonly defaultAvatarURL =

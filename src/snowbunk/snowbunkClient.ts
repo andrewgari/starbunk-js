@@ -1,8 +1,8 @@
 import { Events, Message, TextChannel } from 'discord.js';
+
 import DiscordClient from '../discord/discordClient';
 import userID from '../discord/userID';
 import webhookService from '../webhooks/webhookService';
-import { link } from 'fs';
 
 export default class SnowbunkClient extends DiscordClient {
   private readonly channelMap: Record<string, Array<string>> = {

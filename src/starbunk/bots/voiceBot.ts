@@ -1,4 +1,4 @@
-import { VoiceState } from "discord.js";
+import { VoiceState } from 'discord.js';
 
 export default abstract class VoiceBot {
     abstract getBotName(): string;

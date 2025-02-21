@@ -1,8 +1,9 @@
 import { Message, TextChannel } from 'discord.js';
+
 import ReplyBot from '../replyBot';
 
 export default class EzioBot extends ReplyBot {
-  private readonly botName = `Ezio Auditore Da Firenze`;
+  private readonly botName = 'Ezio Auditore Da Firenze';
   private readonly avatarUrl =
     'https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg';
   private readonly pattern = /\bezio|h?assassin.*\b/i;

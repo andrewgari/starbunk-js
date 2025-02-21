@@ -34,9 +34,9 @@ export class DJCova {
           // Add headers to mimic a browser
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
-          },
-        },
+            'Accept-Language': 'en-US,en;q=0.9'
+          }
+        }
       });
 
       this.activeResource = createAudioResource(stream, {
@@ -48,7 +48,8 @@ export class DJCova {
       console.log('[DEBUG] Playing resource...');
       this.musicPlayer.play(this.activeResource);
       console.log('[DEBUG] Audio resource created and playing started.');
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Error starting audio stream:', error);
     }
   }
@@ -57,7 +58,8 @@ export class DJCova {
     if (this.activeResource) {
       this.musicPlayer.play(this.activeResource);
       console.log('Playing active resource.');
-    } else {
+    }
+    else {
       console.log('Active resource is null.');
     }
   }
@@ -85,9 +87,11 @@ export class DJCova {
     const subscription = channel.subscribe(this.musicPlayer);
     if (subscription) {
       console.log('Player successfully subscribed to connection.');
-    } else {
+    }
+    else {
       console.error('Failed to subscribe player to the connection.');
     }
+
     return subscription;
   }
 
