@@ -1,11 +1,12 @@
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
-  moduleFileExtensions: ['ts', 'js'],
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json'
-    }
-  }
-}; 
+	preset: 'ts-jest',
+	testEnvironment: 'node',
+	setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+	testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+	moduleFileExtensions: ['ts', 'js', 'json'],
+	globals: {
+		'ts-jest': {
+			tsconfig: 'tsconfig.json',
+		},
+	},
+};
