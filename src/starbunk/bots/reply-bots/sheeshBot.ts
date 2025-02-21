@@ -1,6 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
+
 import ReplyBot from '../replyBot';
-import UserID from '../../../discord/userID';
 
 export default class SheeshBot extends ReplyBot {
   private botName = 'SheeshBot';
@@ -10,6 +10,7 @@ export default class SheeshBot extends ReplyBot {
 
   generateRandomEs(): string {
     const numberOfEs = Math.floor(Math.random() * 10);
+
     return 'e'.repeat(numberOfEs) + 'e' + 'e';
   }
 
@@ -26,7 +27,8 @@ export default class SheeshBot extends ReplyBot {
   handleMessage(message: Message<boolean>): void {
     if (message.author.bot) return;
 
-    if (message.content.match(this.defaultPattern))
+    if (message.content.match(this.defaultPattern)) {
       this.sendReply(message.channel as TextChannel, this.response());
+    }
   }
 }
