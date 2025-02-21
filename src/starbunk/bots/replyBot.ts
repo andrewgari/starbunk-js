@@ -5,10 +5,18 @@ export interface BotMessageOptions extends WebhookMessageCreateOptions {
   content: string;
 }
 
-export default abstract class ReplyBot {
-  abstract getBotName(): string;
-  abstract getAvatarUrl(): string;
-  abstract handleMessage(message: Message): Promise<void>;
+export default class ReplyBot {
+  public async handleMessage(message: Message): Promise<string | undefined> {
+    if (message.author.bot) {
+      return undefined;
+    }
+
+    if (message.content.startsWith('!help')) {
+      return 'Available commands: !help';
+    }
+
+    return undefined;
+  }
 
   protected async sendReply(channel: TextChannel, response: string): Promise<void> {
     await webhookService.writeMessage(channel, {

@@ -1,4 +1,4 @@
-import { ReplyBot } from '../../src/starbunk/bots/replyBot';
+import ReplyBot from '../../src/starbunk/bots/replyBot';
 import { Message } from 'discord.js';
 import { mock, MockProxy } from 'jest-mock-extended';
 
