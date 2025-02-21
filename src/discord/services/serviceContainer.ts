@@ -1,6 +1,7 @@
 import { Client } from 'discord.js';
 
 import { VoiceBot } from '../bots/voiceBot';
+import { Command } from '../command';
 import { AudioConfig, AudioService } from './audioService';
 import { BotRegistry } from './botRegistry';
 import { CommandRegistry } from './commandRegistry';
@@ -10,7 +11,6 @@ import { MessageProcessor } from './messageProcessor';
 import { MessageSyncConfig, MessageSyncService } from './messageSyncService';
 import { VoiceStateManager } from './voiceStateManager';
 import { WebhookConfig, WebhookService } from './webhookService';
-import { Command } from '../command';
 
 export interface ServiceConfig {
   audio: AudioConfig;

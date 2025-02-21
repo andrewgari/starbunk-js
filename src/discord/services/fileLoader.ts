@@ -1,8 +1,9 @@
 import { readdirSync } from 'fs';
 
 import { Failure, Result, Success } from '@/utils/result';
-import { Command } from '../command';
+
 import { VoiceBot } from '../bots/voiceBot';
+import { Command } from '../command';
 
 type LoadableModule = Command | VoiceBot;
 
@@ -25,13 +26,16 @@ export class FileLoader {
           const module = await import(
             `${this.basePath}/${directory}/${fileName}`
           );
+
           return module.default;
         })
       );
 
       const validModules = modules.filter(typeGuard);
+
       return new Success(validModules);
-    } catch (error) {
+    }
+    catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to load files')
       );

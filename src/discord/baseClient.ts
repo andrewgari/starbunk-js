@@ -5,6 +5,7 @@ import {
   Interaction,
   Message
 } from 'discord.js';
+
 import { ServiceConfig, ServiceContainer } from './services/serviceContainer';
 
 export abstract class BaseClient extends Client {
