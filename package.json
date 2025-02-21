@@ -4,7 +4,9 @@
   "description": "it's bot that says blu, among things...",
   "scripts": {
     "test": "jest",
-    "start": "ts-node src/bunkbot.ts"
+    "start": "ts-node src/bunkbot.ts",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix"
   },
   "repository": {
     "type": "git",
