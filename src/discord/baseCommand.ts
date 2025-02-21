@@ -7,6 +7,13 @@ export abstract class BaseCommand {
 
   abstract execute(interaction: CommandInteraction): Promise<void>;
 
+  public hasPermissions(interaction: CommandInteraction): boolean {
+    if (!this.permissions?.length) return true;
+    return this.permissions.every(permission => 
+      interaction.memberPermissions?.has(permission)
+    );
+  }
+
   protected async reply(interaction: CommandInteraction, content: string): Promise<void> {
     try {
       await interaction.reply({ content, ephemeral: true });
@@ -19,12 +26,5 @@ export abstract class BaseCommand {
         });
       }
     }
-  }
-
-  protected hasPermissions(interaction: CommandInteraction): boolean {
-    if (!this.permissions?.length) return true;
-    return this.permissions.every(permission => 
-      interaction.memberPermissions?.has(permission)
-    );
   }
 } 
