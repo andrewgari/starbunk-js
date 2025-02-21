@@ -6,22 +6,22 @@ on:
       - closed
 
 jobs:
-  destroy-pr-container:
+  cleanup:
     if: github.event.pull_request.merged == true
-    uses: ./.github/workflows/destroy-docker-image.yml
-    with:
-      tag: pr-${{ github.event.pull_request.number }}
-
-  destroy-branch-container:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete PR Docker image
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: ${{ github.repository }}
+          package-type: container
+          tag: pr-${{ github.event.pull_request.number }}
+          
+  release:
     if: github.event.pull_request.merged == true
-    needs: destroy-pr-container
-    uses: ./.github/workflows/destroy-docker-image.yml
-    with:
-      tag: ${{ github.event.pull_request.head.ref }}
-
-  publish:
-    if: github.event.pull_request.merged == true
-    needs: destroy-branch-container
+    needs: cleanup
     uses: ./.github/workflows/publish-docker-image.yml
     with:
       tag: main
+    secrets:
+      GHCR_PAT: ${{ secrets.GHCR_PAT }}

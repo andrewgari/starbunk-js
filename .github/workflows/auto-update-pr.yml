@@ -1,0 +1,22 @@
+name: Auto Update PR with Main
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Run every 6 hours
+  workflow_dispatch:
+
+jobs:
+  auto-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check for PRs needing update
+        run: |
+          for pr in $(gh pr list --json number --jq '.[].number'); do
+            gh pr merge $pr --update-only --auto || true
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
