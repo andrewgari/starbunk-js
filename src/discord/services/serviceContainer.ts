@@ -1,6 +1,6 @@
 import { Client } from 'discord.js';
 
-import { VoiceBot } from '../bots/voiceBot';
+import { VoiceBot } from '../bots/types';
 import { Command } from '../command';
 import { AudioConfig, AudioService } from './audioService';
 import { BotRegistry } from './botRegistry';

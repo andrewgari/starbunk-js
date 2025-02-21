@@ -2,7 +2,7 @@ import { readdirSync } from 'fs';
 
 import { Failure, Result, Success } from '@/utils/result';
 
-import { VoiceBot } from '../bots/voiceBot';
+import { VoiceBot } from '../bots/types';
 import { Command } from '../command';
 
 type LoadableModule = Command | VoiceBot;

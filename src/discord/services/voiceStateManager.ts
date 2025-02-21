@@ -2,7 +2,7 @@ import { VoiceState } from 'discord.js';
 
 import { Failure, Result, Success } from '@/utils/result';
 
-import { VoiceBot } from '../bots/voiceBot';
+import { VoiceBot } from '../bots/types';
 import { BotRegistry } from './botRegistry';
 
 export class VoiceStateManager {
@@ -19,7 +19,7 @@ export class VoiceStateManager {
     try {
       const bots = this.voiceBots.getAllBots();
       const results = await Promise.all(
-        bots.map((bot) => bot.handleEvent(oldState, newState))
+        bots.map((bot) => bot.handleVoiceEvent(oldState, newState))
       );
 
       const errors = results
