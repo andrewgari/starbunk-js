@@ -14,7 +14,7 @@ jobs:
         uses: actions/delete-package-versions@v4
         with:
           owner: ${{ github.repository_owner }}
-          package-name: ${{ github.event.repository.name }}
+          package-name: starbunk-js
           package-type: container
           token: ${{ secrets.GITHUB_TOKEN }}
           min-versions-to-keep: 0

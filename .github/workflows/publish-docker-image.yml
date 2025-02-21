@@ -35,11 +35,17 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ inputs.tag }}
+          tags: ghcr.io/${{ github.repository_owner }}/starbunk-js:${{ inputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Tag latest if main
+        if: inputs.tag == 'main'
+        run: |
+          docker tag ghcr.io/${{ github.repository_owner }}/starbunk-js:${{ inputs.tag }} ghcr.io/${{ github.repository_owner }}/starbunk-js:latest
+          docker push ghcr.io/${{ github.repository_owner }}/starbunk-js:latest
 
       - name: Verify repository and package permissions
         run: |
           echo "Checking permissions for GHCR"
-          curl -u "${{ github.actor }}:${{ secrets.GHCR_PAT }}" -X GET "https://ghcr.io/v2/${{ github.repository_owner }}/${{ github.event.repository.name }}/tags/list"
+          curl -u "${{ github.actor }}:${{ secrets.GHCR_PAT }}" -X GET "https://ghcr.io/v2/${{ github.repository_owner }}/starbunk-js/tags/list"
