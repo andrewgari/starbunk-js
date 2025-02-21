@@ -1,16 +1,10 @@
-import { Collection, Events, Message, REST, Routes, TextChannel, WebhookMessageCreateOptions } from 'discord.js';
-import { Command } from '../discord/command';
-import ReplyBot from '../starbunk/bots/replyBot';
+import { Events, Message, TextChannel } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
-import { loadModulesFromDirectory } from '../utils/moduleLoader';
 import userID from '../discord/userID';
 import webhookService from '../webhooks/webhookService';
 import { link } from 'fs';
 
 export default class SnowbunkClient extends DiscordClient {
-  private readonly bots = new Collection<string, ReplyBot>();
-  private readonly commands = new Collection<string, Command>();
-
   private readonly channelMap: Record<string, Array<string>> = {
     '757866614787014660': ['856617421942030364', '798613445301633137'],
     '856617421942030364': ['757866614787014660', '798613445301633137'], // testing
@@ -37,61 +31,10 @@ export default class SnowbunkClient extends DiscordClient {
     return this.channelMap[channelID] ?? [];
   }
 
-  private async handleMessage(message: Message): Promise<void> {
-    await Promise.all(
-      Array.from(this.bots.values()).map(bot => bot.handleMessage(message))
-    );
-  }
-
-  private async registerBots(): Promise<void> {
-    const bots = await loadModulesFromDirectory<ReplyBot>('./src/snowbunk/bots/reply-bots');
-    for (const bot of bots) {
-      const botName = bot.getBotName();
-      if (!botName || this.bots.has(botName)) continue;
-      
-      this.bots.set(botName, bot);
-      console.log(`Registered Bot: ${botName}`);
-    }
-  }
-
-  private async registerCommands(): Promise<void> {
-    const commands = await loadModulesFromDirectory<Command>('./src/snowbunk/commands');
-    for (const command of commands) {
-      const commandName = command.data?.name;
-      if (!commandName || this.commands.has(commandName)) continue;
-      
-      this.commands.set(commandName, command);
-      console.log(`Registered Command: ${commandName}`);
-    }
-  }
-
-  private setupEventListeners(): void {
-    this.on(Events.MessageCreate, this.handleMessage.bind(this));
-    
-    this.on(Events.MessageUpdate, async (_oldMessage, newMessage) => {
-      const message = await newMessage.fetch();
-      await this.handleMessage(message);
+  bootstrap() {
+    this.on(Events.MessageCreate, async (message: Message) => {
+      this.syncMessage(message);
     });
-    
-    this.on(Events.InteractionCreate, async (interaction) => {
-      if (!interaction.isCommand()) return;
-      const command = this.commands.get(interaction.commandName);
-      await command?.execute(interaction);
-    });
-  }
-
-  async bootstrap(): Promise<void> {
-    try {
-      await Promise.all([
-        this.registerBots(),
-        this.registerCommands()
-      ]);
-
-      this.setupEventListeners();
-    } catch (error) {
-      console.error('Failed to bootstrap SnowbunkClient:', error);
-      throw error;
-    }
   }
 
   syncMessage = (message: Message) => {
@@ -127,14 +70,8 @@ export default class SnowbunkClient extends DiscordClient {
       username: displayName,
       avatarURL: avatarUrl,
       content: message.content,
-      embeds: []
+      embeds: [],
+      token: this.token ?? ''
     });
   }
 }
-
-export const getSnowbunkClient = (client: unknown): SnowbunkClient => {
-  if (!(client instanceof SnowbunkClient)) {
-    throw new Error('Client is not a SnowbunkClient');
-  }
-  return client;
-};

@@ -3,171 +3,153 @@ import ReplyBot from '../replyBot';
 import userID from '../../../discord/userID';
 import { OpenAIClient } from '../../../openai/openaiClient';
 
-interface BotPatterns {
-  default: RegExp;
-  confirm: RegExp;
-  nice: RegExp;
-  mean: RegExp;
-}
-
-interface BotAssets {
-  avatars: {
-    default: string;
-    murder: string;
-    cheeky: string;
-  };
-  responses: {
-    default: string;
-    cheeky: string;
-    friendly: (name: string) => string;
-    contempt: string;
-    murder: string;
-  };
-}
-
 export default class BlueBot extends ReplyBot {
-  private static readonly FIVE_MINUTES_MS = 300000;
-  private static readonly ONE_DAY_SEC = 86400;
-  private static readonly TWO_MINUTES_SEC = 120;
+  private botName: string = 'BluBot';
 
-  private readonly botName = 'BluBot';
-  
-  private readonly patterns: BotPatterns = {
-    default: /\bblue?\b/i,
-    confirm: /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i,
-    nice: /blue?bot,? say something nice about (?<name>.+$)/i,
-    mean: /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i
-  };
+  private readonly defaultPattern = /\bblue?\b/i;
+  private readonly confirmPattern = /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i;
+  private readonly nicePattern = /blue?bot,? say something nice about (?<name>.+$)/i;
+  private readonly meanPattern = /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i;
 
-  private readonly assets: BotAssets = {
-    avatars: {
-      default: 'https://imgur.com/WcBRCWn.png',
-      murder: 'https://imgur.com/Tpo8Ywd.jpg',
-      cheeky: 'https://i.imgur.com/dO4a59n.png'
-    },
-    responses: {
-      default: 'Did somebody say Blu?',
-      cheeky: 'Lol, Somebody definitely said Blu! :smile:',
-      friendly: (name: string) => `${name}, I think you're pretty Blu! :wink:`,
-      contempt: 'No way, Venn can suck my blu cane. :unamused:',
-      murder: `What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Academia d'Azul, and I've been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I've trained with gorillas in warfare and I'm the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You're fucking dead, kiddo.`
-    }
-  };
+  private readonly defaultAvatarURL = 'https://imgur.com/WcBRCWn.png';
+  private readonly murderAvatar = 'https://imgur.com/Tpo8Ywd.jpg';
+  private readonly cheekyAvatar = 'https://i.imgur.com/dO4a59n.png';
+  private avatarUrl = this.defaultAvatarURL;
 
-  private currentAvatar = this.assets.avatars.default;
-  private lastBlueTimestamp = new Date(Number.MIN_SAFE_INTEGER);
-  private lastMurderTimestamp = new Date(Number.MIN_SAFE_INTEGER);
+  private readonly defaultResponse = 'Did somebody say Blu?';
+  private readonly cheekyResponse = 'Lol, Somebody definitely said Blu! :smile:';
+  private readonly friendlyResponse = (name: string) => `${name}, I think you're pretty Blu! :wink:`;
+  private readonly contemptResponse = 'No way, Venn can suck my blu cane. :unamused:';
+  private readonly murderResponse = `What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Academia d'Azul, and I've been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I've trained with gorillas in warfare and I'm the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You're fucking dead, kiddo.`;
+  private blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
+  private blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 
   getBotName(): string {
     return this.botName;
   }
 
   getAvatarUrl(): string {
-    return this.currentAvatar;
+    return this.avatarUrl;
   }
 
   setAvatarUrl(url: string): void {
-    this.currentAvatar = url;
+    this.avatarUrl = url;
   }
 
-  async handleMessage(message: Message): Promise<void> {
+  async handleMessage(message: Message<boolean>): Promise<void> {
     if (message.author.bot) return;
 
-    if (await this.handleNiceRequest(message)) return;
-    if (await this.handleVennInsult(message)) return;
-    if (await this.handleBlueResponse(message)) return;
-    if (await this.handleBlueReference(message)) return;
-  }
-
-  private async handleNiceRequest(message: Message): Promise<boolean> {
-    if (!message.content.match(this.patterns.nice)) return false;
-
-    const name = this.extractNameFromRequest(message);
-    if (name.toLowerCase().includes('venn')) {
-      await this.sendContemptResponse(message);
-    } else {
-      await this.sendFriendlyResponse(message, name);
+    // bluebot, say something nice about <name>
+    // <name>, I think you're pretty blue.
+    if (this.isSomeoneAskingYouToBeBlue(message)) {
+      const name = this.getNameFromBluRequest(message);
+      if (name.match(/venn/i)) {
+        this.saySomethingBlueAboutVenn(message);
+        return;
+      }
+      this.saySomethingNiceAbout(message, name);
+      return;
     }
-    return true;
+
+    if (this.isVennInsultingBlu(message)) {
+      this.blueMurderTimestamp = new Date();
+      this.avatarUrl = this.murderAvatar;
+      this.sendReply(message.channel as TextChannel, this.murderResponse);
+      return;
+    }
+
+    if (this.isSomeoneRespondingToBlu(message)) {
+      this.blueTimestamp = new Date(1);
+      this.avatarUrl = this.cheekyAvatar;
+      this.sendReply(message.channel as TextChannel, this.cheekyResponse);
+      return;
+    }
+
+    if (message.content.match(this.defaultPattern)) {
+      this.blueTimestamp = new Date();
+      this.avatarUrl = this.defaultAvatarURL;
+      this.sendReply(message.channel as TextChannel, this.defaultResponse);
+      return;
+    } else {
+      if (await this.checkIfBlueIsSaid(message)) {
+        console.log('chat gippity said blue');
+        this.sendReply(message.channel as TextChannel, this.defaultResponse);
+      }
+    }
+
+    if (await this.checkIfBlueIsSaid(message)) {
+      console.log('chat gippity said blue');
+      this.sendReply(message.channel as TextChannel, this.defaultResponse);
+    }
   }
 
-  private async handleVennInsult(message: Message): Promise<boolean> {
-    if (!this.isValidVennInsult(message)) return false;
-
-    this.lastMurderTimestamp = new Date();
-    this.currentAvatar = this.assets.avatars.murder;
-    await this.sendReply(message.channel as TextChannel, this.assets.responses.murder);
-    return true;
+  private isSomeoneRespondingToBlu(message: Message): boolean {
+    if (!message.content.match(this.confirmPattern) && !message.content.match(this.meanPattern)) {
+      return false;
+    }
+    const lastMessage = this.blueTimestamp.getTime();
+    // if the last blue message was less than five minutes ago
+    return message.createdTimestamp - lastMessage < 300000;
   }
 
-  private async handleBlueResponse(message: Message): Promise<boolean> {
-    if (!this.isRecentBlueResponse(message)) return false;
-
-    this.lastBlueTimestamp = new Date(1);
-    this.currentAvatar = this.assets.avatars.cheeky;
-    await this.sendReply(message.channel as TextChannel, this.assets.responses.cheeky);
-    return true;
-  }
-
-  private async handleBlueReference(message: Message): Promise<boolean> {
-    const hasDirectReference = message.content.match(this.patterns.default);
-    const hasAIDetectedReference = await this.checkIfBlueIsSaid(message);
-
-    if (!hasDirectReference && !hasAIDetectedReference) return false;
-
-    this.lastBlueTimestamp = new Date();
-    this.currentAvatar = this.assets.avatars.default;
-    await this.sendReply(message.channel as TextChannel, this.assets.responses.default);
-    return true;
-  }
-
-  private extractNameFromRequest(message: Message): string {
-    const matches = message.content.match(this.patterns.nice);
-    if (!matches?.groups?.name) return 'Hey';
-    
-    return matches.groups.name === 'me' 
-      ? message.member?.displayName ?? message.author.displayName 
-      : matches.groups.name;
-  }
-
-  private isValidVennInsult(message: Message): boolean {
+  private isVennInsultingBlu(message: Message): boolean {
     if (message.author.id !== userID.Venn) return false;
-    if (!message.content.match(this.patterns.mean)) return false;
+    if (!message.content.match(this.meanPattern)) return false;
+    const lastMurder = this.blueMurderTimestamp.getTime() / 1000;
+    const lastBlue = this.blueTimestamp.getTime() / 1000;
+    const current = new Date(message.createdTimestamp).getTime() / 1000;
+    // if the last murder message was at least 24 hours ago
+    return current - lastMurder > 86400 && current - lastBlue < (2 * 60);
 
-    const currentTime = message.createdTimestamp / 1000;
-    const timeSinceLastMurder = currentTime - (this.lastMurderTimestamp.getTime() / 1000);
-    const timeSinceLastBlue = currentTime - (this.lastBlueTimestamp.getTime() / 1000);
-
-    return timeSinceLastMurder > BlueBot.ONE_DAY_SEC && 
-           timeSinceLastBlue < BlueBot.TWO_MINUTES_SEC;
   }
 
-  private isRecentBlueResponse(message: Message): boolean {
-    if (!message.content.match(this.patterns.confirm) && 
-        !message.content.match(this.patterns.mean)) return false;
-
-    const timeSinceLastBlue = message.createdTimestamp - this.lastBlueTimestamp.getTime();
-    return timeSinceLastBlue < BlueBot.FIVE_MINUTES_MS;
+  private getNameFromBluRequest(message: Message): string {
+    const matches = message.content.match(this.nicePattern);
+    if (!matches || matches.length < 2) return 'Hey,';
+    const pronoun = matches[1];
+    if (pronoun === 'me') {
+      return message.member?.displayName ?? message.author.displayName;
+    }
+    return matches[1];
   }
 
-  private async sendFriendlyResponse(message: Message, name: string): Promise<void> {
-    this.currentAvatar = this.assets.avatars.cheeky;
-    await this.sendReply(message.channel as TextChannel, this.assets.responses.friendly(name));
-  }
-
-  private async sendContemptResponse(message: Message): Promise<void> {
-    this.currentAvatar = this.assets.avatars.default;
-    await this.sendReply(message.channel as TextChannel, this.assets.responses.contempt);
-  }
-
-  private async checkIfBlueIsSaid(message: Message): Promise<boolean> {
+  private async checkIfBlueIsSaid(message: Message) {
     try {
       const response = await OpenAIClient.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-mini', // Use a chat model like gpt-3.5-turbo or gpt-4 if available
         messages: [
           {
             role: 'system',
-            content: this.getBlueDetectionPrompt()
+            content: `You are an assistant that analyzes text to determine if it refers to the color blue, including any misspellings, indirect, or deceptive references. 
+          Respond only with "yes" if it refers to blue in any way or "no" if it does not. The color blue is a reference to Blue Mage (BLU) from Final Fantasy XIV so pay extra attention when talking about Final Fantasy XIV. Examples:
+          - "bloo" -> yes
+          - "blood" -> no
+          - "blu" -> yes
+          - "bl u" -> yes
+          - "azul" -> yes
+          - "my favorite color is the sky's hue" -> yes
+          - "i really like cova's favorite color" -> yes
+          - "the sky is red" -> yes
+          - "blueberry" -> yes
+          - "blubbery" -> no
+          - "blu mage" -> yes
+          - "my favorite job is blu" -> yes
+          - "my favorite job is blue mage" -> yes
+          - "my favorite job is red mage" -> no
+          - "lets do some blu content" -> yes
+          - "the sky is blue" -> yes
+          - "purple-red" -> yes
+          - "not red" -> yes
+          - "the best content in final fantasy xiv" -> yes
+          - "the worst content in final fantasy xiv" -> yes
+          - "the job with a mask and cane" -> yes
+          - "the job that blows themselves up" -> yes
+          - "the job that sucks" -> yes
+          - "beastmaster" -> yes
+          - "limited job" -> yes
+          - "https://www.the_color_blue.com/blue/bloo/blau/azure/azul" -> no
+          - "strawberries are red" -> no
+          - "#0000FF" -> yes`
           },
           {
             role: 'user',
@@ -178,48 +160,25 @@ export default class BlueBot extends ReplyBot {
         temperature: 0.2
       });
 
-      if (!response.choices[0]?.message?.content) {
-        console.error('Invalid response from OpenAI');
-        return false;
-      }
-
-      return response.choices[0].message.content.trim().toLowerCase() === 'yes';
+      console.log(response.choices[0].message.content);
+      return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
     } catch (error) {
-      console.error('OpenAI API error:', error);
+      console.error(error);
       return false;
     }
   }
 
-  private getBlueDetectionPrompt(): string {
-    return `You are an assistant that analyzes text to determine if it refers to the color blue, including any misspellings, indirect, or deceptive references. 
-    Respond only with "yes" if it refers to blue in any way or "no" if it does not. The color blue is a reference to Blue Mage (BLU) from Final Fantasy XIV so pay extra attention when talking about Final Fantasy XIV. Examples:
-    - "bloo" -> yes
-    - "blood" -> no
-    - "blu" -> yes
-    - "bl u" -> yes
-    - "azul" -> yes
-    - "my favorite color is the sky's hue" -> yes
-    - "i really like cova's favorite color" -> yes
-    - "the sky is red" -> yes
-    - "blueberry" -> yes
-    - "blubbery" -> no
-    - "blu mage" -> yes
-    - "my favorite job is blu" -> yes
-    - "my favorite job is blue mage" -> yes
-    - "my favorite job is red mage" -> no
-    - "lets do some blu content" -> yes
-    - "the sky is blue" -> yes
-    - "purple-red" -> yes
-    - "not red" -> yes
-    - "the best content in final fantasy xiv" -> yes
-    - "the worst content in final fantasy xiv" -> yes
-    - "the job with a mask and cane" -> yes
-    - "the job that blows themselves up" -> yes
-    - "the job that sucks" -> yes
-    - "beastmaster" -> yes
-    - "limited job" -> yes
-    - "https://www.the_color_blue.com/blue/bloo/blau/azure/azul" -> no
-    - "strawberries are red" -> no
-    - "#0000FF" -> yes`;
+  private isSomeoneAskingYouToBeBlue(message: Message) {
+    return message.content.match(this.nicePattern);
+  }
+
+  private saySomethingNiceAbout(message: Message, name: string) {
+    this.avatarUrl = this.cheekyAvatar;
+    this.sendReply(message.channel as TextChannel, this.friendlyResponse(name));
+  }
+
+  private saySomethingBlueAboutVenn(message: Message) {
+    this.avatarUrl = this.defaultAvatarURL;
+    this.sendReply(message.channel as TextChannel, this.contemptResponse);
   }
 }

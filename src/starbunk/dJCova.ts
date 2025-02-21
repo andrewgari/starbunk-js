@@ -4,104 +4,94 @@ import {
   AudioResource,
   createAudioPlayer,
   createAudioResource,
-  joinVoiceChannel,
+  PlayerSubscription,
+  StreamType,
   VoiceConnection
 } from '@discordjs/voice';
-import { VoiceBasedChannel } from 'discord.js';
-import { Readable } from 'stream';
-
-interface AudioTrack {
-  resource: AudioResource;
-  title: string;
-  url: string;
-}
+import ytdl from '@distube/ytdl-core';
 
 export class DJCova {
-  private readonly player: AudioPlayer;
-  private connection?: VoiceConnection;
-  private currentTrack?: AudioTrack;
-  private queue: AudioTrack[] = [];
+  private musicPlayer: AudioPlayer = createAudioPlayer();
+  private activeResource: AudioResource | undefined;
 
-  constructor() {
-    this.player = createAudioPlayer();
-    this.setupPlayerEvents();
+  getMusicPlayer(): AudioPlayer {
+    return this.musicPlayer;
   }
 
-  private setupPlayerEvents(): void {
-    this.player.on(AudioPlayerStatus.Idle, () => {
-      this.currentTrack = undefined;
-      this.playNext();
-    });
+  async start(url: string) {
+    if (this.musicPlayer.state.status === AudioPlayerStatus.Playing) {
+      return;
+    }
 
-    this.player.on('error', error => {
-      console.error('Error:', error.message);
-      this.playNext();
-    });
-  }
-
-  async joinChannel(channel: VoiceBasedChannel): Promise<void> {
     try {
-      this.connection = joinVoiceChannel({
-        channelId: channel.id,
-        guildId: channel.guild.id,
-        adapterCreator: channel.guild.voiceAdapterCreator,
+      console.log('[DEBUG] Fetching stream...');
+      const stream = ytdl(url, {
+        filter: 'audioonly',
+        quality: 'lowestaudio', // Use lowestaudio for stability
+        highWaterMark: 1 << 25,
+        dlChunkSize: 0, // Disable chunking
+        requestOptions: {
+          // Add headers to mimic a browser
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
+        },
       });
-      
-      this.connection.subscribe(this.player);
+
+      this.activeResource = createAudioResource(stream, {
+        inputType: StreamType.WebmOpus,
+        inlineVolume: true
+      });
+      this.activeResource.volume?.setVolume(0.5);
+
+      console.log('[DEBUG] Playing resource...');
+      this.musicPlayer.play(this.activeResource);
+      console.log('[DEBUG] Audio resource created and playing started.');
     } catch (error) {
-      console.error('Failed to join voice channel:', error);
-      throw error;
+      console.error('Error starting audio stream:', error);
     }
   }
 
-  async addTrack(stream: Readable, title: string, url: string): Promise<void> {
-    const track: AudioTrack = {
-      resource: createAudioResource(stream),
-      title,
-      url
-    };
-
-    if (!this.currentTrack) {
-      await this.playTrack(track);
+  play() {
+    if (this.activeResource) {
+      this.musicPlayer.play(this.activeResource);
+      console.log('Playing active resource.');
     } else {
-      this.queue.push(track);
+      console.log('Active resource is null.');
     }
   }
 
-  private async playTrack(track: AudioTrack): Promise<void> {
-    try {
-      this.currentTrack = track;
-      this.player.play(track.resource);
-    } catch (error) {
-      console.error('Failed to play track:', error);
-      this.playNext();
+  stop() {
+    if (this.musicPlayer.state.status !== AudioPlayerStatus.Idle) {
+      this.musicPlayer.stop();
+      console.log('Playback stopped.');
     }
   }
 
-  private async playNext(): Promise<void> {
-    const nextTrack = this.queue.shift();
-    if (nextTrack) {
-      await this.playTrack(nextTrack);
+  pause() {
+    if (this.musicPlayer.state.status === AudioPlayerStatus.Playing) {
+      this.musicPlayer.pause();
+      console.log('Playback paused.');
     }
   }
 
-  getCurrentTrack(): AudioTrack | undefined {
-    return this.currentTrack;
+  changeVolume(vol: number) {
+    this.activeResource?.volume?.setVolume(vol);
+    console.log('Volume changed to:', vol);
   }
 
-  getQueue(): AudioTrack[] {
-    return [...this.queue];
+  subscribe(channel: VoiceConnection): PlayerSubscription | undefined {
+    const subscription = channel.subscribe(this.musicPlayer);
+    if (subscription) {
+      console.log('Player successfully subscribed to connection.');
+    } else {
+      console.error('Failed to subscribe player to the connection.');
+    }
+    return subscription;
   }
 
-  stop(): void {
-    this.player.stop();
-    this.queue = [];
-    this.currentTrack = undefined;
-  }
-
-  disconnect(): void {
-    this.stop();
-    this.connection?.destroy();
-    this.connection = undefined;
+  on(status: AudioPlayerStatus, callback: () => void) {
+    this.musicPlayer.on(status, callback);
   }
 }
