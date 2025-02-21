@@ -1,6 +1,5 @@
-import { Events, Message, TextChannel } from 'discord.js';
-
-import DiscordClient from '../discord/discordClient';
+import { ClientOptions, Events, Message, TextChannel } from 'discord.js';
+import { DiscordClient, DiscordConfig } from '../discord/discordClient';
 import userID from '../discord/userID';
 import webhookService from '../webhooks/webhookService';
 
@@ -27,14 +26,24 @@ export default class SnowbunkClient extends DiscordClient {
     '755578835122126898': ['696948305586028544'] // pets
   };
 
+  constructor(options: ClientOptions) {
+    const config: DiscordConfig = {
+      token: process.env.SNOWBUNK_TOKEN ?? '',
+      clientId: process.env.CLIENT_ID ?? '',
+      guildId: process.env.GUILD_ID ?? ''
+    };
+    super(options, config);
+  }
+
   getSyncedChannels(channelID: string): string[] {
     return this.channelMap[channelID] ?? [];
   }
 
-  bootstrap() {
+  async bootstrap(): Promise<void> {
     this.on(Events.MessageCreate, async (message: Message) => {
       this.syncMessage(message);
     });
+    return Promise.resolve();
   }
 
   syncMessage = (message: Message) => {

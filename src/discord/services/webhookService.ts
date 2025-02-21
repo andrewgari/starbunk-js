@@ -1,11 +1,5 @@
-import {
-  Client,
-  Message,
-  TextChannel,
-  Webhook,
-  WebhookCreateOptions
-} from 'discord.js';
-import { Result, Success, Failure } from '../../utils/result';
+import { Client, TextChannel, Webhook, WebhookCreateOptions } from 'discord.js';
+import { Result, Success, Failure } from '@/utils/result';
 
 export interface WebhookConfig {
   defaultAvatarUrl: string;
@@ -48,7 +42,8 @@ export class WebhookService {
     try {
       const options: WebhookCreateOptions = {
         name: `${this.config.namePrefix}-${channel.name}`,
-        avatar: this.config.defaultAvatarUrl
+        avatar: this.config.defaultAvatarUrl,
+        channel: channel
       };
 
       const webhook = await channel.createWebhook(options);
