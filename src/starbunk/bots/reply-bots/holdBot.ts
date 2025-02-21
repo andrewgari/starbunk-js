@@ -1,11 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
+
 import ReplyBot from '../replyBot';
 
 export default class HoldBot extends ReplyBot {
   private readonly botName = 'HoldBot';
   private readonly avatarUrl = 'https://i.imgur.com/YPFGEzM.png';
   private readonly pattern = /^Hold\.?$/i;
-  private readonly response = `Hold.`;
+  private readonly response = 'Hold.';
 
   getBotName(): string {
     return this.botName;

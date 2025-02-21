@@ -6,6 +6,7 @@ export default {
   },
   percentChance: (target: number) => {
     const roll = randomInt(100);
+
     return roll < target;
   }
 };

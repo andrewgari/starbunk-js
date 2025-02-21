@@ -1,7 +1,8 @@
 import { GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
-import StarbunkClient from './starbunk/starbunkClient';
+
 import SnowbunkClient from './snowbunk/snowbunkClient';
+import StarbunkClient from './starbunk/starbunkClient';
 dotenv.config();
 
 console.log('Bot is starting...');
@@ -13,7 +14,7 @@ const starbunk = new StarbunkClient({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildWebhooks,
     GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.MessageContent
   ]
 });
 const snowbunk = new SnowbunkClient({

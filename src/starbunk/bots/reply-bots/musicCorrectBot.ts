@@ -1,4 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
+
 import ReplyBot from '../replyBot';
 
 export default class MusicCorrectBot extends ReplyBot {

@@ -1,12 +1,13 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
+
 import roleIDs from '../../../discord/roleIDs';
+import ReplyBot from '../replyBot';
 
 export default class SoggyBot extends ReplyBot {
   private readonly botName = 'SoggyBot';
-  private readonly avatarUrl = `https://imgur.com/OCB6i4x.jpg`;
+  private readonly avatarUrl = 'https://imgur.com/OCB6i4x.jpg';
   private readonly pattern = /wet bread/i;
-  private readonly response = `Sounds like somebody enjoys wet bread`;
+  private readonly response = 'Sounds like somebody enjoys wet bread';
 
   getBotName(): string {
     return this.botName;

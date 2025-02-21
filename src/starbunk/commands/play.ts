@@ -1,9 +1,10 @@
+import { AudioPlayerStatus, joinVoiceChannel } from '@discordjs/voice';
 import {
   CommandInteraction,
   GuildMember,
   SlashCommandBuilder
 } from 'discord.js';
-import { AudioPlayerStatus, joinVoiceChannel } from '@discordjs/voice';
+
 import StarbunkClient, { getStarbunkClient } from '../starbunkClient';
 
 export default {
@@ -22,6 +23,7 @@ export default {
 
     if (!url) {
       await interaction.reply('Please provide a valid YouTube link!');
+
       return;
     }
 
@@ -30,6 +32,7 @@ export default {
       await interaction.reply(
         'You need to be in a voice channel to use this command!'
       );
+
       return;
     }
 
@@ -40,11 +43,11 @@ export default {
       const connection = joinVoiceChannel({
         channelId: voiceChannel.id,
         guildId: voiceChannel.guild.id,
-        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+        adapterCreator: voiceChannel.guild.voiceAdapterCreator
       });
 
       if (!connection.state.status || connection.state.status === 'disconnected') {
-        console.log("❌ Connection state invalid. Reconnecting...");
+        console.log('❌ Connection state invalid. Reconnecting...');
       }
 
       // Create an audio player
@@ -63,13 +66,15 @@ export default {
       const subscription = djCova.subscribe(connection);
       if (!subscription) {
         console.error('❌ Failed to subscribe player.');
-      } else {
+      }
+      else {
         console.log('✅ Subscribed to voice connection.');
         (interaction.client as StarbunkClient).activeSubscription = subscription;
       }
 
       await interaction.followUp(`🎶 Now playing: ${url}`);
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Error executing play command:', error);
       await interaction.followUp(
         'An error occurred while trying to play the music.'

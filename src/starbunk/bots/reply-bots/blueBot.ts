@@ -1,7 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
+
 import userID from '../../../discord/userID';
 import { OpenAIClient } from '../../../openai/openaiClient';
+import ReplyBot from '../replyBot';
 
 export default class BlueBot extends ReplyBot {
   private botName: string = 'BluBot';
@@ -20,7 +21,7 @@ export default class BlueBot extends ReplyBot {
   private readonly cheekyResponse = 'Lol, Somebody definitely said Blu! :smile:';
   private readonly friendlyResponse = (name: string) => `${name}, I think you're pretty Blu! :wink:`;
   private readonly contemptResponse = 'No way, Venn can suck my blu cane. :unamused:';
-  private readonly murderResponse = `What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Academia d'Azul, and I've been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I've trained with gorillas in warfare and I'm the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You're fucking dead, kiddo.`;
+  private readonly murderResponse = 'What the fuck did you just fucking say about me, you little bitch? I\'ll have you know I graduated top of my class in the Academia d\'Azul, and I\'ve been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I\'ve trained with gorillas in warfare and I\'m the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You\'re fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that\'s just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn\'t, you didn\'t, and now you\'re paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You\'re fucking dead, kiddo.';
   private blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
   private blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 
@@ -45,9 +46,11 @@ export default class BlueBot extends ReplyBot {
       const name = this.getNameFromBluRequest(message);
       if (name.match(/venn/i)) {
         this.saySomethingBlueAboutVenn(message);
+
         return;
       }
       this.saySomethingNiceAbout(message, name);
+
       return;
     }
 
@@ -55,6 +58,7 @@ export default class BlueBot extends ReplyBot {
       this.blueMurderTimestamp = new Date();
       this.avatarUrl = this.murderAvatar;
       this.sendReply(message.channel as TextChannel, this.murderResponse);
+
       return;
     }
 
@@ -62,6 +66,7 @@ export default class BlueBot extends ReplyBot {
       this.blueTimestamp = new Date(1);
       this.avatarUrl = this.cheekyAvatar;
       this.sendReply(message.channel as TextChannel, this.cheekyResponse);
+
       return;
     }
 
@@ -69,12 +74,12 @@ export default class BlueBot extends ReplyBot {
       this.blueTimestamp = new Date();
       this.avatarUrl = this.defaultAvatarURL;
       this.sendReply(message.channel as TextChannel, this.defaultResponse);
+
       return;
-    } else {
-      if (await this.checkIfBlueIsSaid(message)) {
-        console.log('chat gippity said blue');
-        this.sendReply(message.channel as TextChannel, this.defaultResponse);
-      }
+    }
+    else if (await this.checkIfBlueIsSaid(message)) {
+      console.log('chat gippity said blue');
+      this.sendReply(message.channel as TextChannel, this.defaultResponse);
     }
 
     if (await this.checkIfBlueIsSaid(message)) {
@@ -88,6 +93,7 @@ export default class BlueBot extends ReplyBot {
       return false;
     }
     const lastMessage = this.blueTimestamp.getTime();
+
     // if the last blue message was less than five minutes ago
     return message.createdTimestamp - lastMessage < 300000;
   }
@@ -98,6 +104,7 @@ export default class BlueBot extends ReplyBot {
     const lastMurder = this.blueMurderTimestamp.getTime() / 1000;
     const lastBlue = this.blueTimestamp.getTime() / 1000;
     const current = new Date(message.createdTimestamp).getTime() / 1000;
+
     // if the last murder message was at least 24 hours ago
     return current - lastMurder > 86400 && current - lastBlue < (2 * 60);
 
@@ -110,6 +117,7 @@ export default class BlueBot extends ReplyBot {
     if (pronoun === 'me') {
       return message.member?.displayName ?? message.author.displayName;
     }
+
     return matches[1];
   }
 
@@ -161,9 +169,12 @@ export default class BlueBot extends ReplyBot {
       });
 
       console.log(response.choices[0].message.content);
+
       return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
-    } catch (error) {
+    }
+    catch (error) {
       console.error(error);
+
       return false;
     }
   }

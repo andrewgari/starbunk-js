@@ -1,7 +1,8 @@
 import { GuildMember, Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
-import random from '../../../utils/random';
+
 import userID from '../../../discord/userID';
+import random from '../../../utils/random';
+import ReplyBot from '../replyBot';
 
 export default class GuyBot extends ReplyBot {
   private botName = 'GuyBot';
@@ -12,19 +13,19 @@ export default class GuyBot extends ReplyBot {
     'Try and keep up mate....',
     'But Who really died that day.\n...and who came back?',
     'Sheeeeeeeeeeeesh',
-    "Rats! Rats! Weeeeeeee're the Rats!",
+    'Rats! Rats! Weeeeeeee\'re the Rats!',
     'The One Piece is REEEEEEEEEEEEEEEEEEAL',
     'Psh, I dunno about that, Chief...',
     'Come to me my noble EINHERJAHR',
-    "If you can't beat em, EAT em!",
+    'If you can\'t beat em, EAT em!',
     'Have you ever been so sick you sluiced your pants?',
-    "Welcome back to ... Melon be Smellin'",
-    "Chaotic Evil: Don't Respond. :unamused:",
+    'Welcome back to ... Melon be Smellin\'',
+    'Chaotic Evil: Don\'t Respond. :unamused:',
     ':NODDERS: Big Boys... :NODDERS:',
     'Fun Fact: That was actually in XI as well.',
     'Bird Up!',
     'Schlorp',
-    `I wouldn't dream of disturbing something so hideously erogenous`,
+    'I wouldn\'t dream of disturbing something so hideously erogenous',
     'Good Year, Good Year',
     'True Grit',
     'MisterMisterMisterMisterMisterMisterMisterMisterMisterMisterMisterBeeeeeeeeeeeeeeeeeeeeeeeeeeast',
@@ -47,6 +48,7 @@ export default class GuyBot extends ReplyBot {
     if (guy) {
       return Promise.resolve(guy);
     }
+
     return Promise.reject(new Error('Guy was not found in the server.'));
   }
   handleMessage(message: Message<boolean>): void {
@@ -63,6 +65,7 @@ export default class GuyBot extends ReplyBot {
         })
         .catch((error) => {
           console.error(error);
+
           return;
         });
     }
