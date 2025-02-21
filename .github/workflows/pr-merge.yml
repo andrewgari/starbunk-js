@@ -16,7 +16,9 @@ jobs:
           owner: ${{ github.repository_owner }}
           package-name: ${{ github.event.repository.name }}
           package-type: container
-          version-pattern: pr-${{ github.event.pull_request.number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-versions-to-keep: 0
+          delete-only-untagged-versions: false
           
   release:
     if: github.event.pull_request.merged == true

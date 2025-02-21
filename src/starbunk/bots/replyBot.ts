@@ -6,6 +6,14 @@ export interface BotMessageOptions extends WebhookMessageCreateOptions {
 }
 
 export default class ReplyBot {
+  protected getBotName(): string {
+    return 'ReplyBot';
+  }
+
+  protected getAvatarUrl(): string {
+    return 'https://i.imgur.com/default.png';
+  }
+
   public async handleMessage(message: Message): Promise<string | undefined> {
     if (message.author.bot) {
       return undefined;
