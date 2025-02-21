@@ -7,7 +7,7 @@ import { Result } from '../../../utils/result';
 export default class SpiderBot extends ReplyBot {
   private readonly pattern = /\bspider\s?man\b/i;
   private readonly response =
-    'Hey, it\'s "**Spider-Man**"! Don\'t forget the hyphen! Not Spiderman, that\'s dumb';
+    "Hey, it's \"**Spider-Man**\"! Don't forget the hyphen! Not Spiderman, that's dumb";
 
   constructor(client: Client, webhookService: WebhookService) {
     super(
@@ -22,7 +22,7 @@ export default class SpiderBot extends ReplyBot {
     return !message.author.bot && !!message.content.match(this.pattern);
   }
 
-  async handle(message: Message): Promise<Result<void, Error>> {
+  async processMessage(message: Message): Promise<Result<void, Error>> {
     return this.sendReply(message.channel as TextChannel, this.response);
   }
 }

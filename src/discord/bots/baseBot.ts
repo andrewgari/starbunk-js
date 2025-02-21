@@ -1,7 +1,7 @@
 import { Client, Message, TextChannel } from 'discord.js';
+import { Bot } from './types';
 
 import { Failure, Result, Success } from '../../utils/result';
-import { MessageHandler } from '../handlers/messageHandler';
 import { WebhookService } from '../services/webhookService';
 
 export interface BotConfig {
@@ -9,9 +9,9 @@ export interface BotConfig {
   avatarUrl: string;
 }
 
-export abstract class BaseBot implements MessageHandler {
+export abstract class BaseBot implements Bot {
   protected readonly botName: string;
-  protected readonly botAvatar: string;
+  protected avatarUrl: string;
   protected readonly webhookService: WebhookService;
 
   constructor(
@@ -20,16 +20,19 @@ export abstract class BaseBot implements MessageHandler {
     protected readonly _webhookService: WebhookService
   ) {
     this.botName = config.name;
-    this.botAvatar = config.avatarUrl;
+    this.avatarUrl = config.avatarUrl;
     this.webhookService = _webhookService;
+
+    if (!this.botName) throw new Error('Bot name is required');
+    if (!this.client) throw new Error('Discord client is required');
   }
 
-  getBotName(): string {
+  getName(): string {
     return this.botName;
   }
 
   getAvatarUrl(): string {
-    return this.botAvatar;
+    return this.avatarUrl;
   }
 
   abstract canHandle(message: Message): boolean;
@@ -64,16 +67,19 @@ export abstract class BaseBot implements MessageHandler {
     try {
       await webhookResult.value.send({
         username: this.botName,
-        avatarURL: this.botAvatar,
+        avatarURL: this.avatarUrl,
         content
       });
 
       return new Success(void 0);
-    }
-    catch (error) {
+    } catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to send message')
       );
     }
+  }
+
+  protected setAvatarUrl(url: string): void {
+    this.avatarUrl = url;
   }
 }

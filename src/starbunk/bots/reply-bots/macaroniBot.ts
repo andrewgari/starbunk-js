@@ -48,4 +48,20 @@ export default class MacaroniBot extends ReplyBot {
 
     return new Success(void 0);
   }
+
+  async processMessage(message: Message): Promise<Result<void, Error>> {
+    if (
+      message.content.match(this.macaorniPattern) &&
+      !message.content.match(this.macaroniNamePattern)
+    ) {
+      return this.sendReply(message.channel as TextChannel, this.vennResponse);
+    }
+    if (message.content.match(this.vennPattern)) {
+      return this.sendReply(
+        message.channel as TextChannel,
+        this.macaroniResponse(roleIDs.Macaroni)
+      );
+    }
+    return new Success(void 0);
+  }
 }

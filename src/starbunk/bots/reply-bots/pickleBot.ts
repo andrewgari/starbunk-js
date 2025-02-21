@@ -8,7 +8,7 @@ import { Result } from '../../../utils/result';
 
 export default class PickleBot extends ReplyBot {
   private readonly pattern = /gremlin/i;
-  private readonly response = 'Could you repeat that? I don\'t speak *gremlin*';
+  private readonly response = "Could you repeat that? I don't speak *gremlin*";
 
   constructor(client: Client, webhookService: WebhookService) {
     super(
@@ -27,7 +27,7 @@ export default class PickleBot extends ReplyBot {
     );
   }
 
-  async handle(message: Message): Promise<Result<void, Error>> {
+  async processMessage(message: Message): Promise<Result<void, Error>> {
     return this.sendReply(message.channel as TextChannel, this.response);
   }
 }

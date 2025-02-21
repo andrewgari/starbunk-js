@@ -15,12 +15,13 @@ import { readdirSync } from 'fs';
 import { ReplyBot } from '../discord/bots/replyBot';
 import { Command } from '../discord/command';
 import { DiscordClient, DiscordConfig } from '../discord/discordClient';
-import VoiceBot from './bots/voiceBot';
 import { DJCova } from './dJCova';
+import { BotRegistry } from '../discord/services/botRegistry';
+import { MessageBot, VoiceBot } from '../discord/bots/types';
 
 export default class StarbunkClient extends DiscordClient {
-  bots: Collection<string, ReplyBot> = new Collection();
-  voiceBots: Collection<string, VoiceBot> = new Collection();
+  private readonly replyBots = new BotRegistry<MessageBot>();
+  private readonly voiceBots = new BotRegistry<VoiceBot>();
   commands: Collection<string, Command> = new Collection();
   djCova: DJCova = new DJCova();
   activeSubscription: PlayerSubscription | undefined;
@@ -39,7 +40,7 @@ export default class StarbunkClient extends DiscordClient {
   }
 
   handleMessage = (message: Message) => {
-    this.bots.forEach((bot: ReplyBot) => {
+    this.replyBots.getAllBots().forEach((bot: MessageBot) => {
       if (bot.canHandle(message)) {
         bot.handle(message);
       }
@@ -47,7 +48,7 @@ export default class StarbunkClient extends DiscordClient {
   };
 
   handleVoiceEvent = (oldState: VoiceState, newState: VoiceState) => {
-    this.voiceBots.forEach((bot: VoiceBot) => {
+    this.voiceBots.getAllBots().forEach((bot: VoiceBot) => {
       bot.handleEvent(oldState, newState);
     });
   };
@@ -58,14 +59,10 @@ export default class StarbunkClient extends DiscordClient {
       await import(`./bots/reply-bots/${fileName}`).then((botClass) => {
         if (!botClass) return;
         const bot = new botClass.default(this) as ReplyBot;
-        if (
-          !bot ||
-          !bot.getName() ||
-          this.bots.find((b) => b.getName() === bot.getName())
-        ) {
+        if (!bot || !bot.getName() || this.replyBots.getBot(bot.getName())) {
           return;
         }
-        this.bots.set(bot.getName(), bot);
+        this.replyBots.registerBot(bot);
         console.log(`Registered Bot: ${bot.getName()}`);
       });
     }
@@ -77,14 +74,10 @@ export default class StarbunkClient extends DiscordClient {
       await import(`./bots/voice-bots/${fileName}`).then((botClass) => {
         if (!botClass) return;
         const bot = new botClass.default(this) as VoiceBot;
-        if (
-          !bot ||
-          !bot.getName() ||
-          this.bots.find((b) => b.getName() === bot.getName())
-        ) {
+        if (!bot || !bot.getName() || this.replyBots.getBot(bot.getName())) {
           return;
         }
-        this.voiceBots.set(bot.getName(), bot);
+        this.voiceBots.registerBot(bot);
         console.log(`Registered Voice Bot: ${bot.getName()}`);
       });
     }

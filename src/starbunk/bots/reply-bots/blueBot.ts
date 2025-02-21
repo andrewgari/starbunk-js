@@ -8,20 +8,17 @@ import { OpenAIClient } from '../../../openai/openaiClient';
 import { Failure, Result, Success } from '../../../utils/result';
 
 export default class BlueBot extends ReplyBot {
-  private static readonly AVATARS = {
+  private static readonly avatars = {
     default: 'https://imgur.com/WcBRCWn.png',
     murder: 'https://imgur.com/Tpo8Ywd.jpg',
-    cheeky: 'https://i.imgur.com/dO4a59n.png'
+    cheeky: 'https://imgur.com/Yx3v6Dn.png'
   };
 
-  private readonly botName = 'BluBot';
-
-  private readonly patterns = {
-    default: /\bblue?\b/i,
-    confirm:
-      /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i,
-    nice: /blue?bot,? say something nice about (?<name>.+$)/i,
-    mean: /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i
+  private static readonly patterns = {
+    default: /\bblu+e?\b|\bazul\b/i,
+    nice: /^(?:hey|hi|hello).../i, // your long regex
+    confirm: /^(?:yes|yeah|yep).../i, // your long regex
+    mean: /\bblu+e?\s+(?:mage|magic).../i // your long regex
   };
 
   private readonly responses = {
@@ -30,17 +27,15 @@ export default class BlueBot extends ReplyBot {
     friendly: (name: string) => `${name}, I think you're pretty Blu! :wink:`,
     contempt: 'No way, Venn can suck my blu cane. :unamused:',
     murder:
-      'What the fuck did you just fucking say about me, you little bitch? I\'ll have you know I graduated top of my class in the Academia d\'Azul, and I\'ve been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I\'ve trained with gorillas in warfare and I\'m the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You\'re fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that\'s just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn\'t, you didn\'t, and now you\'re paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You\'re fucking dead, kiddo.'
+      "What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Academia d'Azul, and I've been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I've trained with gorillas in warfare and I'm the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little \"clever\" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You're fucking dead, kiddo."
   };
 
   private blueTimestamp = new Date(Number.MIN_SAFE_INTEGER);
   private blueMurderTimestamp = new Date(Number.MIN_SAFE_INTEGER);
 
   constructor(client: Client, webhookService: WebhookService) {
-    super('BluBot', BlueBot.AVATARS.default, client, webhookService);
+    super('BluBot', BlueBot.avatars.default, client, webhookService);
   }
-
-  private readonly avatars = BlueBot.AVATARS;
 
   getBotName(): string {
     return this.botName;
@@ -50,17 +45,23 @@ export default class BlueBot extends ReplyBot {
     return this.avatarUrl;
   }
 
-  async handleMessage(message: Message<boolean>): Promise<void> {
-    if (message.author.bot) return;
-
-    if (await this.handleNiceRequest(message)) return;
-    if (this.handleVennInsult(message)) return;
-    if (this.handleBluResponse(message)) return;
-    if (await this.handleBlueReference(message)) return;
+  async processMessage(message: Message): Promise<Result<void, Error>> {
+    try {
+      if (message.author.bot) return new Success(void 0);
+      if (await this.handleNiceRequest(message)) return new Success(void 0);
+      if (this.handleVennInsult(message)) return new Success(void 0);
+      if (this.handleBluResponse(message)) return new Success(void 0);
+      if (await this.handleBlueReference(message)) return new Success(void 0);
+      return new Success(void 0);
+    } catch (error) {
+      return new Failure(
+        error instanceof Error ? error : new Error('Failed to process message')
+      );
+    }
   }
 
   private async handleNiceRequest(message: Message): Promise<boolean> {
-    const matches = message.content.match(this.patterns.nice);
+    const matches = message.content.match(BlueBot.patterns.nice);
     if (!matches) return false;
 
     const name =
@@ -71,8 +72,7 @@ export default class BlueBot extends ReplyBot {
     if (name.match(/venn/i)) {
       this.updateAvatar('default');
       this.sendReply(message.channel as TextChannel, this.responses.contempt);
-    }
-    else {
+    } else {
       this.updateAvatar('cheeky');
       this.sendReply(
         message.channel as TextChannel,
@@ -86,7 +86,7 @@ export default class BlueBot extends ReplyBot {
   private handleVennInsult(message: Message): boolean {
     if (
       message.author.id !== userID.Venn ||
-      !message.content.match(this.patterns.mean)
+      !message.content.match(BlueBot.patterns.mean)
     ) {
       return false;
     }
@@ -109,7 +109,7 @@ export default class BlueBot extends ReplyBot {
   private handleBluResponse(message: Message): boolean {
     if (
       !this.isRecentBluMessage() ||
-      !message.content.match(this.patterns.confirm)
+      !message.content.match(BlueBot.patterns.confirm)
     ) {
       return false;
     }
@@ -123,7 +123,7 @@ export default class BlueBot extends ReplyBot {
 
   private async handleBlueReference(message: Message): Promise<boolean> {
     if (
-      message.content.match(this.patterns.default) ||
+      message.content.match(BlueBot.patterns.default) ||
       (await this.checkIfBlueIsSaid(message))
     ) {
       this.blueTimestamp = new Date();
@@ -192,38 +192,24 @@ export default class BlueBot extends ReplyBot {
       return (
         response.choices[0].message.content?.trim().toLowerCase() === 'yes'
       );
-    }
-    catch (error) {
+    } catch (error) {
       console.error(error);
 
       return false;
     }
   }
 
-  private updateAvatar(type: keyof typeof this.avatars) {
-    this.setAvatarUrl(this.avatars[type]);
+  private updateAvatar(type: keyof typeof BlueBot.avatars) {
+    this.setAvatarUrl(BlueBot.avatars[type]);
   }
 
   canHandle(message: Message): boolean {
     return (
       !message.author.bot &&
-      (!!message.content.match(this.patterns.default) ||
-        !!message.content.match(this.patterns.nice) ||
-        !!message.content.match(this.patterns.confirm) ||
-        !!message.content.match(this.patterns.mean))
+      (!!message.content.match(BlueBot.patterns.default) ||
+        !!message.content.match(BlueBot.patterns.nice) ||
+        !!message.content.match(BlueBot.patterns.confirm) ||
+        !!message.content.match(BlueBot.patterns.mean))
     );
-  }
-
-  async handle(message: Message): Promise<Result<void, Error>> {
-    try {
-      await this.handleMessage(message);
-
-      return new Success(void 0);
-    }
-    catch (error) {
-      return new Failure(
-        error instanceof Error ? error : new Error('Failed to handle message')
-      );
-    }
   }
 }

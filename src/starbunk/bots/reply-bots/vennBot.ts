@@ -14,7 +14,7 @@ export default class VennBot extends ReplyBot {
     'That was cringe to the max...',
     'What a cringe thing to say...',
     'Mondo cringe, man...',
-    'Yo that was the cringiest thing I\'ve ever heard...',
+    "Yo that was the cringiest thing I've ever heard...",
     'Your daily serving of cringe, milord...',
     'On a scale of one to cringe, that was pretty cringe...',
     'That was pretty cringe :airplane:',
@@ -36,7 +36,7 @@ export default class VennBot extends ReplyBot {
     );
   }
 
-  async handle(message: Message): Promise<Result<void, Error>> {
+  async processMessage(message: Message): Promise<Result<void, Error>> {
     this.setAvatarUrl(
       message.author.displayAvatarURL() ?? message.author.defaultAvatarURL
     );

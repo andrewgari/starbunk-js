@@ -1,13 +1,9 @@
 import { Collection } from 'discord.js';
+import { Bot } from '../bots/types';
+import { Result, Success, Failure } from '@/utils/result';
 
-import { Failure, Result, Success } from '@/utils/result';
-
-import { MessageBot, VoiceBot } from '../bots/types';
-
-export type RegisterableBot = MessageBot | VoiceBot;
-
-export class BotRegistry<T extends RegisterableBot> {
-  private bots: Collection<string, T> = new Collection();
+export class BotRegistry<T extends Bot> {
+  private readonly bots: Collection<string, T> = new Collection();
 
   async registerBot(bot: T): Promise<Result<void, Error>> {
     try {
@@ -21,10 +17,8 @@ export class BotRegistry<T extends RegisterableBot> {
       }
 
       this.bots.set(name, bot);
-
       return new Success(void 0);
-    }
-    catch (error) {
+    } catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to register bot')
       );
