@@ -4,6 +4,7 @@ import {
   PermissionResolvable,
   PermissionsBitField
 } from 'discord.js';
+
 import { Result } from '@/utils/result';
 
 export interface Command {
@@ -26,6 +27,7 @@ export abstract class BaseCommand implements Command {
 
   protected validatePermissions(interaction: CommandInteraction): boolean {
     if (!this.permission?.length) return true;
+
     return this.permission.every(
       (perm) =>
         interaction.member?.permissions instanceof PermissionsBitField &&

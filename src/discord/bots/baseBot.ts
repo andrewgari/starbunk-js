@@ -1,7 +1,8 @@
 import { Client, Message, TextChannel } from 'discord.js';
+
+import { Failure, Result, Success } from '../../utils/result';
 import { MessageHandler } from '../handlers/messageHandler';
 import { WebhookService } from '../services/webhookService';
-import { Result, Success, Failure } from '../../utils/result';
 
 export interface BotConfig {
   name: string;
@@ -64,8 +65,10 @@ export abstract class BaseBot implements MessageHandler {
         avatarURL: this.botAvatar,
         content
       });
+
       return new Success(void 0);
-    } catch (error) {
+    }
+    catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to send message')
       );

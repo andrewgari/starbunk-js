@@ -4,12 +4,11 @@ import {
   ClientOptions,
   Collection,
   Events,
+  Interaction,
   Message,
   REST,
   Routes,
-  VoiceState,
-  Interaction
-} from 'discord.js';
+  VoiceState } from 'discord.js';
 import { readdirSync } from 'fs';
 
 import { Command } from '../discord/command';

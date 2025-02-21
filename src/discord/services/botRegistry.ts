@@ -1,5 +1,7 @@
 import { Collection } from 'discord.js';
-import { Result, Success, Failure } from '@/utils/result';
+
+import { Failure, Result, Success } from '@/utils/result';
+
 import { BaseBot } from '../bots/baseBot';
 
 export class BotRegistry<T extends BaseBot> {
@@ -17,8 +19,10 @@ export class BotRegistry<T extends BaseBot> {
       }
 
       this.bots.set(name, bot);
+
       return new Success(void 0);
-    } catch (error) {
+    }
+    catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to register bot')
       );

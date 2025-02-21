@@ -1,4 +1,5 @@
 import { Message } from 'discord.js';
+
 import { Result } from '../../utils/result';
 
 export interface MessageHandler {

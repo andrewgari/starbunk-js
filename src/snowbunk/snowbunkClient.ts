@@ -1,4 +1,5 @@
 import { ClientOptions, Events, Message, TextChannel } from 'discord.js';
+
 import { DiscordClient, DiscordConfig } from '../discord/discordClient';
 import userID from '../discord/userID';
 import webhookService from '../webhooks/webhookService';
@@ -43,6 +44,7 @@ export default class SnowbunkClient extends DiscordClient {
     this.on(Events.MessageCreate, async (message: Message) => {
       this.syncMessage(message);
     });
+
     return Promise.resolve();
   }
 

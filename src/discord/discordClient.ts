@@ -1,4 +1,4 @@
-import { ClientOptions, Client } from 'discord.js';
+import { Client, ClientOptions } from 'discord.js';
 
 export interface DiscordConfig {
   token: string;
