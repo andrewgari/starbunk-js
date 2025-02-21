@@ -1,9 +1,15 @@
 import { Message } from 'discord.js';
-import { Result, Success, Failure } from '@/utils/result';
+
+import { Failure, Result, Success } from '@/utils/result';
+
 import { MessageHandler } from '../handlers/messageHandler';
 
 export class MessageProcessor {
-  constructor(private readonly handlers: MessageHandler[]) {}
+  private readonly handlers: MessageHandler[];
+
+  constructor(handlers: MessageHandler[]) {
+    this.handlers = handlers;
+  }
 
   async processMessage(message: Message): Promise<Result<void, Error>> {
     try {
@@ -22,7 +28,8 @@ export class MessageProcessor {
       }
 
       return new Success(void 0);
-    } catch (error) {
+    }
+    catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to process message')
       );

@@ -1,8 +1,13 @@
 import { readdirSync } from 'fs';
-import { Result, Success, Failure } from '@/utils/result';
+
+import { Failure, Result, Success } from '@/utils/result';
 
 export class FileLoader {
-  constructor(private readonly basePath: string) {}
+  private readonly basePath: string;
+
+  constructor(basePath: string) {
+    this.basePath = basePath;
+  }
 
   async loadFiles<T>(
     directory: string,
@@ -16,6 +21,7 @@ export class FileLoader {
           const module = await import(
             `${this.basePath}/${directory}/${fileName}`
           );
+
           return transform(module.default);
         })
       );
@@ -23,8 +29,10 @@ export class FileLoader {
       const validModules = modules.filter(
         (m): m is Awaited<T> => m !== undefined
       );
+
       return new Success(validModules);
-    } catch (error) {
+    }
+    catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to load files')
       );

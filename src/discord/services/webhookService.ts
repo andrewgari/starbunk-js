@@ -1,5 +1,6 @@
 import { Client, TextChannel, Webhook, WebhookCreateOptions } from 'discord.js';
-import { Result, Success, Failure } from '@/utils/result';
+
+import { Failure, Result, Success } from '@/utils/result';
 
 export interface WebhookConfig {
   defaultAvatarUrl: string;
@@ -7,10 +8,13 @@ export interface WebhookConfig {
 }
 
 export class WebhookService {
-  constructor(
-    private readonly config: WebhookConfig,
-    private readonly client: Client
-  ) {}
+  private readonly config: WebhookConfig;
+  private readonly client: Client;
+
+  constructor(config: WebhookConfig, client: Client) {
+    this.config = config;
+    this.client = client;
+  }
 
   async getOrCreateWebhook(
     channel: TextChannel
@@ -20,7 +24,8 @@ export class WebhookService {
       if (webhook) return new Success(webhook);
 
       return await this.createWebhook(channel);
-    } catch (error) {
+    }
+    catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Unknown error')
       );
@@ -31,6 +36,7 @@ export class WebhookService {
     channel: TextChannel
   ): Promise<Webhook | null> {
     const webhooks = await channel.fetchWebhooks();
+
     return (
       webhooks.find((w) => w.name.startsWith(this.config.namePrefix)) ?? null
     );
@@ -47,10 +53,31 @@ export class WebhookService {
       };
 
       const webhook = await channel.createWebhook(options);
+
       return new Success(webhook);
-    } catch (error) {
+    }
+    catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to create webhook')
+      );
+    }
+  }
+
+  async sendMessage(
+    channel: TextChannel,
+    options: { username: string; avatarURL: string; content: string }
+  ): Promise<Result<void, Error>> {
+    try {
+      const webhookResult = await this.getOrCreateWebhook(channel);
+      if (webhookResult.isFailure()) return webhookResult;
+
+      await webhookResult.value.send(options);
+
+      return new Success(void 0);
+    }
+    catch (error) {
+      return new Failure(
+        error instanceof Error ? error : new Error('Failed to send message')
       );
     }
   }
