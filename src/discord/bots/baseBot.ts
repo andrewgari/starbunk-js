@@ -9,11 +9,25 @@ export interface BotConfig {
 }
 
 export abstract class BaseBot implements MessageHandler {
+  private readonly botName: string;
+  private readonly botAvatar: string;
+
   constructor(
-    protected readonly config: BotConfig,
+    config: BotConfig,
     protected readonly client: Client,
     protected readonly webhookService: WebhookService
-  ) {}
+  ) {
+    this.botName = config.name;
+    this.botAvatar = config.avatarUrl;
+  }
+
+  getBotName(): string {
+    return this.botName;
+  }
+
+  getAvatarUrl(): string {
+    return this.botAvatar;
+  }
 
   abstract canHandle(message: Message): boolean;
 
@@ -34,7 +48,7 @@ export abstract class BaseBot implements MessageHandler {
   ): Promise<Result<void, Error>>;
 
   protected isOwnMessage(message: Message): boolean {
-    return message.author.bot && message.author.username === this.config.name;
+    return message.author.bot && message.author.username === this.botName;
   }
 
   protected async sendReply(
@@ -46,8 +60,8 @@ export abstract class BaseBot implements MessageHandler {
 
     try {
       await webhookResult.value.send({
-        username: this.config.name,
-        avatarURL: this.config.avatarUrl,
+        username: this.botName,
+        avatarURL: this.botAvatar,
         content
       });
       return new Success(void 0);
