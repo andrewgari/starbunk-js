@@ -1,6 +1,10 @@
 import { readdirSync } from 'fs';
 
 import { Failure, Result, Success } from '@/utils/result';
+import { Command } from '../command';
+import { VoiceBot } from '../bots/voiceBot';
+
+type LoadableModule = Command | VoiceBot;
 
 export class FileLoader {
   private readonly basePath: string;
@@ -9,9 +13,9 @@ export class FileLoader {
     this.basePath = basePath;
   }
 
-  async loadFiles<T>(
+  async loadFiles<T extends LoadableModule>(
     directory: string,
-    transform: (module: unknown) => T | undefined
+    typeGuard: (module: unknown) => module is T
   ): Promise<Result<T[], Error>> {
     try {
       const files = readdirSync(`${this.basePath}/${directory}`);
@@ -21,18 +25,13 @@ export class FileLoader {
           const module = await import(
             `${this.basePath}/${directory}/${fileName}`
           );
-
-          return transform(module.default);
+          return module.default;
         })
       );
 
-      const validModules = modules.filter(
-        (m): m is Awaited<T> => m !== undefined
-      );
-
+      const validModules = modules.filter(typeGuard);
       return new Success(validModules);
-    }
-    catch (error) {
+    } catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to load files')
       );

@@ -10,6 +10,7 @@ import { MessageProcessor } from './messageProcessor';
 import { MessageSyncConfig, MessageSyncService } from './messageSyncService';
 import { VoiceStateManager } from './voiceStateManager';
 import { WebhookConfig, WebhookService } from './webhookService';
+import { Command } from '../command';
 
 export interface ServiceConfig {
   audio: AudioConfig;
@@ -51,7 +52,14 @@ export class ServiceContainer {
     // Load and register commands
     const commandResult = await this.fileLoader.loadFiles(
       'commands',
-      (module) => module as unknown
+      (module): module is Command => {
+        return (
+          module !== null &&
+          typeof module === 'object' &&
+          'data' in module &&
+          'execute' in module
+        );
+      }
     );
 
     if (commandResult.isSuccess()) {
@@ -63,7 +71,14 @@ export class ServiceContainer {
     // Load and register bots
     const botResult = await this.fileLoader.loadFiles(
       'bots',
-      (module) => module as unknown
+      (module): module is VoiceBot => {
+        return (
+          module !== null &&
+          typeof module === 'object' &&
+          'handleEvent' in module &&
+          'getBotName' in module
+        );
+      }
     );
 
     if (botResult.isSuccess()) {
