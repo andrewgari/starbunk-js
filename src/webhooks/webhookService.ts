@@ -1,52 +1,100 @@
-import { Client, Message, TextChannel, Webhook } from 'discord.js';
+import { TextChannel, WebhookClient, WebhookMessageCreateOptions } from 'discord.js';
 import { MessageInfo } from '../discord/messageInfo';
 import guildIDs from '../discord/guildIDs';
 
-export class WebhookService {
-  getWebhookName(channelName: string, isSnowbunk: boolean) {
+interface WebhookCache {
+  [channelId: string]: WebhookClient;
+}
+
+class WebhookService {
+  private webhooks: WebhookCache = {};
+
+  private getWebhookName(channelName: string, isSnowbunk: boolean): string {
     return `${isSnowbunk ? 'Snowbunk' : 'StarBunk'}Bunkbot-${channelName}`;
   }
 
-  async getChannelWebhook(channel: TextChannel): Promise<Webhook> {
+  async getChannelWebhook(channel: TextChannel): Promise<WebhookClient> {
     const isSnowbunk = channel.guild.id === guildIDs.Snowfall;
     const channelName = this.getWebhookName(channel.name, isSnowbunk);
     const channelWebhooks = await channel.fetchWebhooks();
-    for (let pair of channelWebhooks) {
-      const webhook = pair[1];
-      if (webhook?.name === channelName) {
-        return webhook;
+    
+    for (const [_, webhook] of channelWebhooks) {
+      if (webhook?.name === channelName && webhook.token) {
+        return new WebhookClient({ id: webhook.id, token: webhook.token });
       }
     }
-    return this.createWebhook(channel, channelName);
+    return this.createWebhook(channel);
   }
 
-  async getWebhook(client: Client, channelID: string): Promise<Webhook> {
-    const channel = (await client.channels.fetch(channelID)) as TextChannel;
+  async getWebhook(channel: TextChannel): Promise<WebhookClient> {
     return this.getChannelWebhook(channel);
   }
 
-  private async createWebhook(channel: TextChannel, channelName: string) {
-    return await channel.createWebhook({
-      name: channelName,
-      avatar: `https://pbs.twimg.com/profile_images/421461637325787136/0rxpHzVx_400x400.jpeg`
+  private async createWebhook(channel: TextChannel): Promise<WebhookClient> {
+    const webhooks = await channel.fetchWebhooks();
+    const existingWebhook = webhooks.find(hook => hook.token !== null);
+
+    if (existingWebhook?.token) {
+      return new WebhookClient({ id: existingWebhook.id, token: existingWebhook.token });
+    }
+
+    const newWebhook = await channel.createWebhook({
+      name: 'BunkBot Webhook',
+      avatar: 'https://i.imgur.com/AfFp7pu.png'
     });
+
+    if (!newWebhook.token) {
+      throw new Error('Failed to create webhook: No token available');
+    }
+
+    return new WebhookClient({ id: newWebhook.id, token: newWebhook.token });
+  }
+
+  private async getOrCreateWebhook(channel: TextChannel): Promise<WebhookClient> {
+    if (this.webhooks[channel.id]) {
+      return this.webhooks[channel.id];
+    }
+
+    const isSnowbunk = channel.guild.id === guildIDs.Snowfall;
+    const channelName = this.getWebhookName(channel.name, isSnowbunk);
+    
+    const webhooks = await channel.fetchWebhooks();
+    const existingWebhook = webhooks.find(hook => 
+      hook.token !== null && hook.name === channelName
+    );
+
+    if (existingWebhook?.token) {
+      const webhook = new WebhookClient({ id: existingWebhook.id, token: existingWebhook.token });
+      this.webhooks[channel.id] = webhook;
+      return webhook;
+    }
+
+    const newWebhook = await channel.createWebhook({
+      name: channelName,
+      avatar: 'https://i.imgur.com/AfFp7pu.png'
+    });
+
+    if (!newWebhook.token) {
+      throw new Error('Failed to create webhook: No token available');
+    }
+
+    const webhook = new WebhookClient({ id: newWebhook.id, token: newWebhook.token });
+    this.webhooks[channel.id] = webhook;
+    return webhook;
   }
 
   public async writeMessage(
     channel: TextChannel,
-    message: MessageInfo
-  ): Promise<Message<boolean>> {
-    const webhook = await this.getChannelWebhook(channel);
-    if (webhook) {
-      try {
-        return webhook.send(message);
-      } catch (e) {
-        console.error('Failed to send message', e);
-      }
+    options: WebhookMessageCreateOptions
+  ): Promise<void> {
+    try {
+      const webhook = await this.getOrCreateWebhook(channel);
+      await webhook.send(options);
+    } catch (error) {
+      console.error('Failed to send webhook message:', error);
+      throw error;
     }
-    return Promise.reject('Could not find webhook');
   }
 }
 
-const webhookService = new WebhookService();
-export default webhookService;
+export default new WebhookService();

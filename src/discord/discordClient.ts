@@ -1,3 +1,5 @@
-import Discord from 'discord.js';
+import { Client } from 'discord.js';
 
-export default class DiscordClient extends Discord.Client {}
+export default abstract class DiscordClient extends Client {
+  abstract bootstrap(...args: any[]): void;
+}
