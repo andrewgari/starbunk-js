@@ -7,12 +7,13 @@ import {
   Message,
   REST,
   Routes,
-  VoiceState
+  VoiceState,
+  Interaction
 } from 'discord.js';
 import { readdirSync } from 'fs';
 
 import { Command } from '../discord/command';
-import DiscordClient from '../discord/discordClient';
+import { DiscordClient, DiscordConfig } from '../discord/discordClient';
 import ReplyBot from './bots/replyBot';
 import VoiceBot from './bots/voiceBot';
 import { DJCova } from './dJCova';
@@ -29,7 +30,12 @@ export default class StarbunkClient extends DiscordClient {
   };
 
   constructor(options: ClientOptions) {
-    super(options);
+    const config: DiscordConfig = {
+      token: process.env.STARBUNK_TOKEN ?? '',
+      clientId: process.env.CLIENT_ID ?? '',
+      guildId: process.env.GUILD_ID ?? ''
+    };
+    super(options, config);
   }
 
   handleMessage = (message: Message) => {
@@ -100,7 +106,7 @@ export default class StarbunkClient extends DiscordClient {
     }
   };
 
-  bootstrap(token: string, clientId: string, guildId: string): void {
+  bootstrap(token: string, clientId: string, guildId: string): Promise<void> {
     const rest = new REST({ version: '9' }).setToken(token);
     const promises = [
       this.registerBots(),
@@ -108,35 +114,38 @@ export default class StarbunkClient extends DiscordClient {
       this.registerVoiceBots()
     ];
 
-    Promise.all(promises).then(() => {
+    return Promise.all(promises).then(() => {
       console.log('routing commands');
       rest.put(Routes.applicationGuildCommands(clientId, guildId), {
         body: this.commands.map((command) => command.data)
       });
-    });
 
-    this.on(Events.MessageCreate, async (message: Message) => {
-      this.handleMessage(message);
-    });
+      this.on(Events.MessageCreate, async (message: Message) => {
+        this.handleMessage(message);
+      });
 
-    this.on(Events.MessageUpdate, async (_oldMessage, newMessage) => {
-      const message = await newMessage.fetch();
-      this.handleMessage(message);
-    });
+      this.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
+        const message = await newMessage.fetch();
+        this.handleMessage(message);
+      });
 
-    console.log('registering voice bots');
-    this.on(Events.VoiceStateUpdate, async (oldState, newState) => {
-      console.log('on voice event');
-      this.handleVoiceEvent(oldState, newState);
-    });
+      console.log('registering voice bots');
+      this.on(
+        Events.VoiceStateUpdate,
+        async (oldState: VoiceState, newState: VoiceState) => {
+          console.log('on voice event');
+          this.handleVoiceEvent(oldState, newState);
+        }
+      );
 
-    console.log('listening on commands');
-    this.on(Events.InteractionCreate, async (interaction) => {
-      console.log('got command');
-      if (!interaction.isCommand()) return;
-      const command = this.commands.get(interaction.commandName);
-      if (!command) return;
-      command.execute(interaction);
+      console.log('listening on commands');
+      this.on(Events.InteractionCreate, async (interaction: Interaction) => {
+        console.log('got command');
+        if (!interaction.isCommand()) return;
+        const command = this.commands.get(interaction.commandName);
+        if (!command) return;
+        command.execute(interaction);
+      });
     });
   }
 }
