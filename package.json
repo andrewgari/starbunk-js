@@ -4,7 +4,10 @@
   "description": "it's bot that says blu, among things...",
   "scripts": {
     "test": "jest",
-    "start": "ts-node src/bunkbot.ts"
+    "start": "ts-node src/bunkbot.ts",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
   },
   "repository": {
     "type": "git",
@@ -26,7 +29,6 @@
     "@discordjs/voice": "^0.18.0",
     "@distube/yt-dlp": "^2.0.1",
     "@distube/ytdl-core": "^4.15.9",
-    "@typescript-eslint/parser": "^5.0.1",
     "async": "^3.2.4",
     "discord-api-types": "^0.37.59",
     "discord.js": "^14.17.3",
@@ -42,8 +44,12 @@
   },
   "devDependencies": {
     "@types/node": "^20.17.14",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
     "eslint": "^8.7.0",
-    "prettier": "2.8.8",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "prettier": "^3.2.5",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tslib": "^2.6.2",
