@@ -4,6 +4,7 @@ import { VoiceBot } from '../bots/types';
 import { Command } from '../command';
 import { AudioConfig, AudioService } from './audioService';
 import { BotRegistry } from './botRegistry';
+import { RegisterableBot } from './botRegistry';
 import { CommandRegistry } from './commandRegistry';
 import { FileLoader } from './fileLoader';
 import { InteractionHandler } from './interactionHandler';
@@ -21,7 +22,7 @@ export interface ServiceConfig {
 
 export class ServiceContainer {
   readonly audioService: AudioService;
-  readonly botRegistry: BotRegistry<VoiceBot>;
+  readonly botRegistry: BotRegistry<RegisterableBot>;
   readonly commandRegistry: CommandRegistry;
   readonly fileLoader: FileLoader;
   readonly interactionHandler: InteractionHandler;
@@ -45,7 +46,9 @@ export class ServiceContainer {
 
     this.messageProcessor = new MessageProcessor([]);
     this.interactionHandler = new InteractionHandler(this.commandRegistry);
-    this.voiceStateManager = new VoiceStateManager(this.botRegistry);
+    this.voiceStateManager = new VoiceStateManager(
+      this.botRegistry as BotRegistry<VoiceBot>
+    );
   }
 
   async initialize(): Promise<void> {
@@ -71,12 +74,12 @@ export class ServiceContainer {
     // Load and register bots
     const botResult = await this.fileLoader.loadFiles(
       'bots',
-      (module): module is VoiceBot => {
+      (module): module is RegisterableBot => {
         return (
           module !== null &&
           typeof module === 'object' &&
-          'handleEvent' in module &&
-          'getBotName' in module
+          'getName' in module &&
+          'getAvatarUrl' in module
         );
       }
     );

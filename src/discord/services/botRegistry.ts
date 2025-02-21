@@ -2,14 +2,16 @@ import { Collection } from 'discord.js';
 
 import { Failure, Result, Success } from '@/utils/result';
 
-import { BaseBot } from '../bots/baseBot';
+import { MessageBot, VoiceBot } from '../bots/types';
 
-export class BotRegistry<T extends BaseBot> {
+export type RegisterableBot = MessageBot | VoiceBot;
+
+export class BotRegistry<T extends RegisterableBot> {
   private bots: Collection<string, T> = new Collection();
 
   async registerBot(bot: T): Promise<Result<void, Error>> {
     try {
-      const name = bot.getBotName();
+      const name = bot.getName();
       if (!name) {
         return new Failure(new Error('Bot name is required'));
       }

@@ -2,10 +2,10 @@ import { readdirSync } from 'fs';
 
 import { Failure, Result, Success } from '@/utils/result';
 
-import { VoiceBot } from '../bots/types';
 import { Command } from '../command';
+import { RegisterableBot } from './botRegistry';
 
-type LoadableModule = Command | VoiceBot;
+type LoadableModule = Command | RegisterableBot;
 
 export class FileLoader {
   private readonly basePath: string;
