@@ -9,10 +9,12 @@ import { ServiceConfig, ServiceContainer } from './services/serviceContainer';
 
 export abstract class BaseClient extends Client {
   protected readonly services: ServiceContainer;
+  protected readonly config: ServiceConfig;
 
   constructor(options: ClientOptions, config: ServiceConfig) {
     super(options);
     this.services = new ServiceContainer(this, config);
+    this.config = config;
   }
 
   protected async setupEventHandlers(): Promise<void> {
