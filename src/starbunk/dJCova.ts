@@ -4,94 +4,104 @@ import {
   AudioResource,
   createAudioPlayer,
   createAudioResource,
-  PlayerSubscription,
-  StreamType,
+  joinVoiceChannel,
   VoiceConnection
 } from '@discordjs/voice';
-import ytdl from '@distube/ytdl-core';
+import { VoiceBasedChannel } from 'discord.js';
+import { Readable } from 'stream';
+
+interface AudioTrack {
+  resource: AudioResource;
+  title: string;
+  url: string;
+}
 
 export class DJCova {
-  private musicPlayer: AudioPlayer = createAudioPlayer();
-  private activeResource: AudioResource | undefined;
+  private readonly player: AudioPlayer;
+  private connection?: VoiceConnection;
+  private currentTrack?: AudioTrack;
+  private queue: AudioTrack[] = [];
 
-  getMusicPlayer(): AudioPlayer {
-    return this.musicPlayer;
+  constructor() {
+    this.player = createAudioPlayer();
+    this.setupPlayerEvents();
   }
 
-  async start(url: string) {
-    if (this.musicPlayer.state.status === AudioPlayerStatus.Playing) {
-      return;
-    }
+  private setupPlayerEvents(): void {
+    this.player.on(AudioPlayerStatus.Idle, () => {
+      this.currentTrack = undefined;
+      this.playNext();
+    });
 
+    this.player.on('error', error => {
+      console.error('Error:', error.message);
+      this.playNext();
+    });
+  }
+
+  async joinChannel(channel: VoiceBasedChannel): Promise<void> {
     try {
-      console.log('[DEBUG] Fetching stream...');
-      const stream = ytdl(url, {
-        filter: 'audioonly',
-        quality: 'lowestaudio', // Use lowestaudio for stability
-        highWaterMark: 1 << 25,
-        dlChunkSize: 0, // Disable chunking
-        requestOptions: {
-          // Add headers to mimic a browser
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
-          },
-        },
+      this.connection = joinVoiceChannel({
+        channelId: channel.id,
+        guildId: channel.guild.id,
+        adapterCreator: channel.guild.voiceAdapterCreator,
       });
-
-      this.activeResource = createAudioResource(stream, {
-        inputType: StreamType.WebmOpus,
-        inlineVolume: true
-      });
-      this.activeResource.volume?.setVolume(0.5);
-
-      console.log('[DEBUG] Playing resource...');
-      this.musicPlayer.play(this.activeResource);
-      console.log('[DEBUG] Audio resource created and playing started.');
+      
+      this.connection.subscribe(this.player);
     } catch (error) {
-      console.error('Error starting audio stream:', error);
+      console.error('Failed to join voice channel:', error);
+      throw error;
     }
   }
 
-  play() {
-    if (this.activeResource) {
-      this.musicPlayer.play(this.activeResource);
-      console.log('Playing active resource.');
+  async addTrack(stream: Readable, title: string, url: string): Promise<void> {
+    const track: AudioTrack = {
+      resource: createAudioResource(stream),
+      title,
+      url
+    };
+
+    if (!this.currentTrack) {
+      await this.playTrack(track);
     } else {
-      console.log('Active resource is null.');
+      this.queue.push(track);
     }
   }
 
-  stop() {
-    if (this.musicPlayer.state.status !== AudioPlayerStatus.Idle) {
-      this.musicPlayer.stop();
-      console.log('Playback stopped.');
+  private async playTrack(track: AudioTrack): Promise<void> {
+    try {
+      this.currentTrack = track;
+      this.player.play(track.resource);
+    } catch (error) {
+      console.error('Failed to play track:', error);
+      this.playNext();
     }
   }
 
-  pause() {
-    if (this.musicPlayer.state.status === AudioPlayerStatus.Playing) {
-      this.musicPlayer.pause();
-      console.log('Playback paused.');
+  private async playNext(): Promise<void> {
+    const nextTrack = this.queue.shift();
+    if (nextTrack) {
+      await this.playTrack(nextTrack);
     }
   }
 
-  changeVolume(vol: number) {
-    this.activeResource?.volume?.setVolume(vol);
-    console.log('Volume changed to:', vol);
+  getCurrentTrack(): AudioTrack | undefined {
+    return this.currentTrack;
   }
 
-  subscribe(channel: VoiceConnection): PlayerSubscription | undefined {
-    const subscription = channel.subscribe(this.musicPlayer);
-    if (subscription) {
-      console.log('Player successfully subscribed to connection.');
-    } else {
-      console.error('Failed to subscribe player to the connection.');
-    }
-    return subscription;
+  getQueue(): AudioTrack[] {
+    return [...this.queue];
   }
 
-  on(status: AudioPlayerStatus, callback: () => void) {
-    this.musicPlayer.on(status, callback);
+  stop(): void {
+    this.player.stop();
+    this.queue = [];
+    this.currentTrack = undefined;
+  }
+
+  disconnect(): void {
+    this.stop();
+    this.connection?.destroy();
+    this.connection = undefined;
   }
 }

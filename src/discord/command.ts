@@ -1,12 +1,14 @@
 import { ApplicationCommandOption, CommandInteraction } from 'discord.js';
 
+export interface CommandData {
+  name: string;
+  description: string;
+  type?: number;
+  options?: ApplicationCommandOption[];
+}
+
 export interface Command {
-  data: {
-    name: string;
-    description: string;
-    type?: number;
-    options?: ApplicationCommandOption[];
-  };
+  data: CommandData;
   permission?: string[];
-  execute(interaction: CommandInteraction): any;
+  execute(interaction: CommandInteraction): Promise<void>;
 }
