@@ -40,7 +40,7 @@ export default class StarbunkClient extends DiscordClient {
   private async registerBots(): Promise<void> {
     const bots = await loadModulesFromDirectory<ReplyBot>('./src/starbunk/bots/reply-bots');
     for (const bot of bots) {
-      const botName = bot.getBotName();
+      const botName = bot.name; // Access public name property instead of protected getBotName()
       if (!botName || this.bots.has(botName)) continue;
       
       this.bots.set(botName, bot);
