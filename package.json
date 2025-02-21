@@ -30,7 +30,6 @@
     "@discordjs/voice": "^0.18.0",
     "@distube/yt-dlp": "^2.0.1",
     "@distube/ytdl-core": "^4.15.9",
-    "@typescript-eslint/parser": "^5.0.1",
     "async": "^3.2.4",
     "discord-api-types": "^0.37.59",
     "discord.js": "^14.17.3",
@@ -41,7 +40,6 @@
     "openai": "^4.58.2",
     "opusscript": "^0.0.8",
     "play-dl": "^1.9.7",
-    "yarn": "^1.22.22",
     "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
