@@ -1,13 +1,13 @@
-import { GuildMember, Message, TextChannel } from 'discord.js';
+import { Client, GuildMember, Message, TextChannel } from 'discord.js';
 
+import { ReplyBot } from '../../../discord/bots/replyBot';
+import { WebhookService } from '../../../discord/services/webhookService';
 import userID from '../../../discord/userID';
 import random from '../../../utils/random';
-import ReplyBot from '../replyBot';
+import { Failure, Result } from '../../../utils/result';
 
 export default class GuyBot extends ReplyBot {
-  private botName = 'GuyBot';
-  private avatarUrl = '';
-  private readonly guyResponses = [
+  private readonly responses = [
     'What!? What did you say?',
     'Geeeeeet ready for Shriek Week!',
     'Try and keep up mate....',
@@ -32,42 +32,41 @@ export default class GuyBot extends ReplyBot {
     'It\'s a message you can say',
     'Blimbo'
   ];
-  private readonly nonGuyPattern = /\bguy\b/i;
+  private readonly pattern = /gremlin/i;
 
-  getBotName(): string {
-    return this.botName;
+  constructor(client: Client, webhookService: WebhookService) {
+    super('GuyBot', '', client, webhookService);
   }
-  getAvatarUrl(): string {
-    return this.avatarUrl;
+
+  canHandle(message: Message): boolean {
+    return (
+      !message.author.bot &&
+      (!!message.content.match(this.pattern) ||
+        (message.author.id === userID.Guy && random.percentChance(5)))
+    );
   }
-  getResponse(): string {
-    return this.guyResponses[random.roll(this.guyResponses.length)];
-  }
-  getGuyFromMessage(message: Message): Promise<GuildMember> {
-    const guy = message.guild?.members.fetch(userID.Guy);
-    if (guy) {
-      return Promise.resolve(guy);
+
+  async handle(message: Message): Promise<Result<void, Error>> {
+    try {
+      const guy = await this.getGuyFromMessage(message);
+      this.setAvatarUrl(guy.avatarURL() ?? guy.displayAvatarURL());
+
+      return this.sendReply(message.channel as TextChannel, this.getResponse());
     }
-
-    return Promise.reject(new Error('Guy was not found in the server.'));
-  }
-  handleMessage(message: Message<boolean>): void {
-    if (message.author.bot) return;
-    if (
-      message.content.match(this.nonGuyPattern) ||
-      (message.author.id === userID.Guy && random.percentChance(5))
-    ) {
-      this.getGuyFromMessage(message)
-        .then((guy) => {
-          this.botName = guy.nickname ?? guy.displayName;
-          this.avatarUrl = guy.avatarURL() ?? guy.displayAvatarURL();
-          this.sendReply(message.channel as TextChannel, this.getResponse());
-        })
-        .catch((error) => {
-          console.error(error);
-
-          return;
-        });
+    catch (error) {
+      return new Failure(
+        error instanceof Error ? error : new Error('Failed to handle message')
+      );
     }
+  }
+
+  private getResponse(): string {
+    return this.responses[Math.floor(Math.random() * this.responses.length)];
+  }
+
+  private async getGuyFromMessage(message: Message): Promise<GuildMember> {
+    const guy = await message.guild?.members.fetch(userID.Guy);
+    if (guy) return guy;
+    throw new Error('Guy was not found in the server.');
   }
 }

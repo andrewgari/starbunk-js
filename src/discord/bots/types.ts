@@ -2,6 +2,12 @@ import { Message, TextChannel, VoiceState } from 'discord.js';
 
 import { Result } from '@/utils/result';
 
+export interface Bot {
+  getName(): string;
+  canHandle(message: Message): boolean;
+  handle(message: Message): Promise<Result<void, Error>>;
+}
+
 export interface MessageBot {
   getName(): string;
   getAvatarUrl(): string;
@@ -15,10 +21,7 @@ export interface MessageBot {
 
 export interface VoiceBot {
   getName(): string;
-  getAvatarUrl(): string;
-  canHandle(message: Message): boolean;
-  handle(message: Message): Promise<Result<void, Error>>;
-  handleVoiceEvent(
+  handleEvent(
     oldState: VoiceState,
     newState: VoiceState
   ): Promise<Result<void, Error>>;

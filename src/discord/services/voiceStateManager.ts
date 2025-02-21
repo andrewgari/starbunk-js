@@ -19,7 +19,7 @@ export class VoiceStateManager {
     try {
       const bots = this.voiceBots.getAllBots();
       const results = await Promise.all(
-        bots.map((bot) => bot.handleVoiceEvent(oldState, newState))
+        bots.map((bot) => bot.handleEvent(oldState, newState))
       );
 
       const errors = results

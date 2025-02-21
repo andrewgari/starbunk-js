@@ -1,25 +1,29 @@
-import { Message, TextChannel } from 'discord.js';
+import { Client, Message, TextChannel } from 'discord.js';
 
+import { ReplyBot } from '../../../discord/bots/replyBot';
+import { WebhookService } from '../../../discord/services/webhookService';
 import Random from '../../../utils/random';
-import ReplyBot from '../replyBot';
+import { Result } from '../../../utils/result';
 
 export default class BotBot extends ReplyBot {
-  private readonly defaultAvatarURL =
-    'https://cdn-icons-png.flaticon.com/512/4944/4944377.png';
-  private readonly defaultName = 'Botbot';
-  private readonly response = 'Hello fellow bot!';
+  protected readonly response = 'Hello fellow bot!';
 
-  getBotName(): string {
-    return this.defaultName;
+  constructor(client: Client, webhookService: WebhookService) {
+    super(
+      'Botbot',
+      'https://cdn-icons-png.flaticon.com/512/4944/4944377.png',
+      client,
+      webhookService
+    );
   }
-  getAvatarUrl(): string {
-    return this.defaultAvatarURL;
-  }
-  handleMessage(message: Message<boolean>): void {
-    if (this.isSelf(message)) return;
 
-    if (message.author.bot && Random.percentChance(10)) {
-      this.sendReply(message.channel as TextChannel, this.response);
-    }
+  canHandle(message: Message): boolean {
+    return (
+      !this.isSelf(message) && message.author.bot && Random.percentChance(10)
+    );
+  }
+
+  async handle(message: Message): Promise<Result<void, Error>> {
+    return this.sendReply(message.channel as TextChannel, this.response);
   }
 }

@@ -1,13 +1,12 @@
-import { Message, TextChannel } from 'discord.js';
+import { Client, Message, TextChannel } from 'discord.js';
 
+import { ReplyBot } from '../../../discord/bots/replyBot';
+import { WebhookService } from '../../../discord/services/webhookService';
 import UserID from '../../../discord/userID';
 import random from '../../../utils/random';
-import ReplyBot from '../replyBot';
+import { Failure, Result } from '../../../utils/result';
 
 export default class BananaBot extends ReplyBot {
-  private botName = 'BananaBot';
-  private avatarUrl = '';
-
   private readonly bananasponses = [
     'Always bring a :banana: to a party, banana\'s are good!',
     'Don\'t drop the :banana:, they\'re a good source of potassium!',
@@ -24,38 +23,36 @@ export default class BananaBot extends ReplyBot {
     ':banana: https://www.tiktok.com/@tracey_dintino_charles/video/7197753358143278378?_r=1&_t=8bFpt5cfIbG'
   ];
 
-  getBotName(): string {
-    return this.botName;
+  constructor(client: Client, webhookService: WebhookService) {
+    super('BananaBot', '', client, webhookService);
   }
 
-  getAvatarUrl(): string {
-    return this.avatarUrl;
+  canHandle(message: Message): boolean {
+    return (
+      !message.author.bot &&
+      (/banana/.test(message.content) ||
+        (message.author.id === UserID.Venn && random.percentChance(5)))
+    );
   }
 
-  response(): string {
-    const index = Math.floor(Math.random() * this.bananasponses.length);
+  async handle(message: Message): Promise<Result<void, Error>> {
+    try {
+      this.setAvatarUrl(
+        message.author.displayAvatarURL() ?? message.author.avatarURL
+      );
 
-    return this.bananasponses[index];
-  }
-
-  handleMessage(message: Message<boolean>): void {
-    if (message.author.bot) return;
-
-    this.botName = message.author.displayName ?? message.author.username;
-    this.avatarUrl =
-      message.author.displayAvatarURL() ?? message.author.avatarURL;
-
-    if (/banana/.test(message.content)) {
-      this.sendReply(message.channel as TextChannel, this.response());
-
-      return;
+      return this.sendReply(message.channel as TextChannel, this.getResponse());
     }
-
-    if (message.author.id === UserID.Venn) {
-      if (random.percentChance(5)) {
-        this.sendReply(message.channel as TextChannel, this.response());
-      }
+    catch (error) {
+      return new Failure(
+        error instanceof Error ? error : new Error('Failed to handle message')
+      );
     }
+  }
 
+  private getResponse(): string {
+    return this.bananasponses[
+      Math.floor(Math.random() * this.bananasponses.length)
+    ];
   }
 }

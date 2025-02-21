@@ -8,12 +8,13 @@ import {
   Message,
   REST,
   Routes,
-  VoiceState } from 'discord.js';
+  VoiceState
+} from 'discord.js';
 import { readdirSync } from 'fs';
 
+import { ReplyBot } from '../discord/bots/replyBot';
 import { Command } from '../discord/command';
 import { DiscordClient, DiscordConfig } from '../discord/discordClient';
-import ReplyBot from './bots/replyBot';
 import VoiceBot from './bots/voiceBot';
 import { DJCova } from './dJCova';
 
@@ -39,7 +40,9 @@ export default class StarbunkClient extends DiscordClient {
 
   handleMessage = (message: Message) => {
     this.bots.forEach((bot: ReplyBot) => {
-      bot.handleMessage(message);
+      if (bot.canHandle(message)) {
+        bot.handle(message);
+      }
     });
   };
 
@@ -57,13 +60,13 @@ export default class StarbunkClient extends DiscordClient {
         const bot = new botClass.default(this) as ReplyBot;
         if (
           !bot ||
-          !bot.getBotName() ||
-          this.bots.find((b) => b.getBotName() === bot.getBotName())
+          !bot.getName() ||
+          this.bots.find((b) => b.getName() === bot.getName())
         ) {
           return;
         }
-        this.bots.set(bot.getBotName(), bot);
-        console.log(`Registered Bot: ${bot.getBotName()}`);
+        this.bots.set(bot.getName(), bot);
+        console.log(`Registered Bot: ${bot.getName()}`);
       });
     }
   };
@@ -76,13 +79,13 @@ export default class StarbunkClient extends DiscordClient {
         const bot = new botClass.default(this) as VoiceBot;
         if (
           !bot ||
-          !bot.getBotName() ||
-          this.bots.find((b) => b.getBotName() === bot.getBotName())
+          !bot.getName() ||
+          this.bots.find((b) => b.getName() === bot.getName())
         ) {
           return;
         }
-        this.voiceBots.set(bot.getBotName(), bot);
-        console.log(`Registered Voice Bot: ${bot.getBotName()}`);
+        this.voiceBots.set(bot.getName(), bot);
+        console.log(`Registered Voice Bot: ${bot.getName()}`);
       });
     }
   };

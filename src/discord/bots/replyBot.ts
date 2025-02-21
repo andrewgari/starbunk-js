@@ -3,12 +3,11 @@ import { Client, Message, TextChannel } from 'discord.js';
 import { Failure, Result, Success } from '@/utils/result';
 
 import { WebhookService } from '../services/webhookService';
-import { MessageBot } from './types';
 
-export abstract class ReplyBot implements MessageBot {
-  protected constructor(
+export abstract class ReplyBot {
+  constructor(
     protected readonly name: string,
-    protected readonly avatarUrl: string,
+    protected avatarUrl: string,
     protected readonly client: Client,
     protected readonly webhookService: WebhookService
   ) {
@@ -21,21 +20,33 @@ export abstract class ReplyBot implements MessageBot {
   getName(): string {
     return this.name;
   }
+
   getAvatarUrl(): string {
     return this.avatarUrl;
   }
+
+  protected setAvatarUrl(url: string): void {
+    this.avatarUrl = url;
+  }
+
+  protected isSelf(message: Message): boolean {
+    return message.author.bot && message.author.username === this.getName();
+  }
+
   abstract canHandle(message: Message): boolean;
   abstract handle(message: Message): Promise<Result<void, Error>>;
 
-  async sendReply(
+  protected async sendReply(
     channel: TextChannel,
     content: string
   ): Promise<Result<void, Error>> {
     try {
-      const webhook = await this.webhookService.getOrCreateWebhook(channel);
-      if (webhook.isFailure()) return webhook;
+      const webhookResult = await this.webhookService.getOrCreateWebhook(
+        channel
+      );
+      if (webhookResult.isFailure()) return webhookResult;
 
-      await webhook.value.send({
+      await webhookResult.value.send({
         username: this.name,
         avatarURL: this.avatarUrl,
         content
@@ -45,7 +56,7 @@ export abstract class ReplyBot implements MessageBot {
     }
     catch (error) {
       return new Failure(
-        error instanceof Error ? error : new Error('Failed to send reply')
+        error instanceof Error ? error : new Error('Failed to send message')
       );
     }
   }

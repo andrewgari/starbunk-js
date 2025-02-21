@@ -1,24 +1,22 @@
-import { Message, TextChannel } from 'discord.js';
+import { Client, Message, TextChannel } from 'discord.js';
 
-import ReplyBot from '../replyBot';
+import { ReplyBot } from '../../../discord/bots/replyBot';
+import { WebhookService } from '../../../discord/services/webhookService';
+import { Result } from '../../../utils/result';
 
 export default class HoldBot extends ReplyBot {
-  private readonly botName = 'HoldBot';
-  private readonly avatarUrl = 'https://i.imgur.com/YPFGEzM.png';
   private readonly pattern = /^Hold\.?$/i;
   private readonly response = 'Hold.';
 
-  getBotName(): string {
-    return this.botName;
+  constructor(client: Client, webhookService: WebhookService) {
+    super('HoldBot', 'https://i.imgur.com/YPFGEzM.png', client, webhookService);
   }
-  getAvatarUrl(): string {
-    return this.avatarUrl;
-  }
-  handleMessage(message: Message<boolean>): void {
-    if (message.author.bot) return;
 
-    if (message.content.match(this.pattern)) {
-      this.sendReply(message.channel as TextChannel, this.response);
-    }
+  canHandle(message: Message): boolean {
+    return !message.author.bot && !!message.content.match(this.pattern);
+  }
+
+  async handle(message: Message): Promise<Result<void, Error>> {
+    return this.sendReply(message.channel as TextChannel, this.response);
   }
 }

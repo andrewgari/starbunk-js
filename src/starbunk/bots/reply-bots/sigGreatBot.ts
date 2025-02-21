@@ -1,32 +1,32 @@
-import { Message, TextChannel } from 'discord.js';
+import { Client, Message, TextChannel } from 'discord.js';
 
-import ReplyBot from '../replyBot';
+import { ReplyBot } from '../../../discord/bots/replyBot';
+import { WebhookService } from '../../../discord/services/webhookService';
+import userID from '../../../discord/userID';
+import { Result } from '../../../utils/result';
 
-export default class SigBestBot extends ReplyBot {
-  botName: string = 'SigBestBot';
-  avatarUrl: string = 'PickleSig.comOrWhatever';
-  readonly pattern = /^(?=.*\bsig(g?les)?\b)(?=.*best\b).*$/gim;
+export default class SigGreatBot extends ReplyBot {
+  private readonly pattern = /\bsig\b/i;
+  private readonly response = 'Sig is great!';
 
-  getBotName(): string {
-    return this.botName;
+  constructor(client: Client, webhookService: WebhookService) {
+    super(
+      'SigGreatBot',
+      'https://i.imgur.com/example.jpg',
+      client,
+      webhookService
+    );
   }
 
-  getAvatarUrl(): string {
-    return this.avatarUrl;
+  canHandle(message: Message): boolean {
+    return (
+      !message.author.bot &&
+      message.author.id === userID.Sig &&
+      !!message.content.match(this.pattern)
+    );
   }
 
-  getResponse(): string {
-    return 'Man, Sig really is the best.';
-  }
-
-  handleMessage(message: Message): void {
-    if (message.author.bot) return;
-
-    if (message.content.match(this.pattern)) {
-      this.botName = message.author.displayName;
-      this.avatarUrl =
-        message.author.displayAvatarURL() ?? message.author.defaultAvatarURL;
-      this.sendReply(message.channel as TextChannel, this.getResponse());
-    }
+  async handle(message: Message): Promise<Result<void, Error>> {
+    return this.sendReply(message.channel as TextChannel, this.response);
   }
 }

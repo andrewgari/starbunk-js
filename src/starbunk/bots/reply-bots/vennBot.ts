@@ -1,12 +1,12 @@
-import { Message, TextChannel } from 'discord.js';
+import { Client, Message, TextChannel } from 'discord.js';
 
+import { ReplyBot } from '../../../discord/bots/replyBot';
+import { WebhookService } from '../../../discord/services/webhookService';
 import userID from '../../../discord/userID';
 import random from '../../../utils/random';
-import ReplyBot from '../replyBot';
+import { Result } from '../../../utils/result';
 
 export default class VennBot extends ReplyBot {
-  private botName = 'VennBot';
-  private avatarUrl = '';
   private readonly pattern = /\bcringe\b/i;
   private readonly responses = [
     'Sorry, but that was über cringe...',
@@ -24,29 +24,27 @@ export default class VennBot extends ReplyBot {
     'C.R.I.N.G.E'
   ];
 
-  getResponse(): string {
+  constructor(client: Client, webhookService: WebhookService) {
+    super('VennBot', '', client, webhookService);
+  }
+
+  canHandle(message: Message): boolean {
+    return (
+      !message.author.bot &&
+      message.author.id === userID.Venn &&
+      (!!message.content.match(this.pattern) || random.percentChance(5))
+    );
+  }
+
+  async handle(message: Message): Promise<Result<void, Error>> {
+    this.setAvatarUrl(
+      message.author.displayAvatarURL() ?? message.author.defaultAvatarURL
+    );
+
+    return this.sendReply(message.channel as TextChannel, this.getResponse());
+  }
+
+  private getResponse(): string {
     return this.responses[random.roll(this.responses.length)];
-  }
-
-  getBotName(): string {
-    return this.botName;
-  }
-
-  getAvatarUrl(): string {
-    return this.avatarUrl;
-  }
-
-  handleMessage(message: Message<boolean>): void {
-    if (message.author.bot) return;
-
-    if (
-      message.author.id == userID.Venn &&
-      (message.content.match(this.pattern) || random.percentChance(5))
-    ) {
-      this.botName = message.author.displayName;
-      this.avatarUrl =
-        message.author.displayAvatarURL() ?? message.author.defaultAvatarURL;
-      this.sendReply(message.channel as TextChannel, this.getResponse());
-    }
   }
 }

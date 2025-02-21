@@ -1,34 +1,32 @@
-import { Message, TextChannel } from 'discord.js';
+import { Client, Message, TextChannel } from 'discord.js';
 
-import ReplyBot from '../replyBot';
+import { ReplyBot } from '../../../discord/bots/replyBot';
+import { WebhookService } from '../../../discord/services/webhookService';
+import { Result } from '../../../utils/result';
 
 export default class SheeshBot extends ReplyBot {
-  private botName = 'SheeshBot';
-  private readonly avatarUrl = 'https://i.imgflip.com/5fc2iz.png?a471000';
+  private readonly pattern = /\bshee+sh\b/i;
 
-  private readonly defaultPattern = /\bshee+sh\b/i;
-
-  generateRandomEs(): string {
-    const numberOfEs = Math.floor(Math.random() * 10);
-
-    return 'e'.repeat(numberOfEs) + 'e' + 'e';
+  constructor(client: Client, webhookService: WebhookService) {
+    super(
+      'SheeshBot',
+      'https://i.imgflip.com/5fc2iz.png?a471000',
+      client,
+      webhookService
+    );
   }
 
-  getBotName(): string {
-    return this.botName;
-  }
-  getAvatarUrl(): string {
-    return this.avatarUrl;
-  }
-  response(): string {
-    return 'Sh' + this.generateRandomEs() + 'sh!';
+  canHandle(message: Message): boolean {
+    return !message.author.bot && !!message.content.match(this.pattern);
   }
 
-  handleMessage(message: Message<boolean>): void {
-    if (message.author.bot) return;
+  async handle(message: Message): Promise<Result<void, Error>> {
+    return this.sendReply(message.channel as TextChannel, this.getResponse());
+  }
 
-    if (message.content.match(this.defaultPattern)) {
-      this.sendReply(message.channel as TextChannel, this.response());
-    }
+  private getResponse(): string {
+    const numberOfEs = Math.floor(Math.random() * 10) + 3;
+
+    return `Sh${'e'.repeat(numberOfEs)}sh!`;
   }
 }

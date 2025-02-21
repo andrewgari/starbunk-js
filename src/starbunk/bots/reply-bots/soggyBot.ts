@@ -1,28 +1,30 @@
-import { Message, TextChannel } from 'discord.js';
+import { Client, Message, TextChannel } from 'discord.js';
 
+import { ReplyBot } from '../../../discord/bots/replyBot';
 import roleIDs from '../../../discord/roleIDs';
-import ReplyBot from '../replyBot';
+import { WebhookService } from '../../../discord/services/webhookService';
+import { Result } from '../../../utils/result';
 
 export default class SoggyBot extends ReplyBot {
-  private readonly botName = 'SoggyBot';
-  private readonly avatarUrl = 'https://imgur.com/OCB6i4x.jpg';
   private readonly pattern = /wet bread/i;
   private readonly response = 'Sounds like somebody enjoys wet bread';
 
-  getBotName(): string {
-    return this.botName;
+  constructor(client: Client, webhookService: WebhookService) {
+    super('SoggyBot', 'https://imgur.com/OCB6i4x.jpg', client, webhookService);
   }
-  getAvatarUrl(): string {
-    return this.avatarUrl;
-  }
-  handleMessage(message: Message<boolean>): void {
-    if (message.author.bot) return;
 
-    if (
-      message.content.match(this.pattern) &&
-      message.member?.roles.cache.some((role) => role.id === roleIDs.WetBread)
-    ) {
-      this.sendReply(message.channel as TextChannel, this.response);
-    }
+  canHandle(message: Message): boolean {
+    return (
+      !message.author.bot &&
+      !!message.content.match(this.pattern) &&
+      (message.member?.roles.cache.some(
+        (role) => role.id === roleIDs.WetBread
+      ) ??
+        false)
+    );
+  }
+
+  async handle(message: Message): Promise<Result<void, Error>> {
+    return this.sendReply(message.channel as TextChannel, this.response);
   }
 }

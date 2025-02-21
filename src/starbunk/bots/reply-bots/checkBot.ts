@@ -1,24 +1,27 @@
-import { Message, TextChannel } from 'discord.js';
+import { Client, Message, TextChannel } from 'discord.js';
 
-import ReplyBot from '../replyBot';
+import { ReplyBot } from '../../../discord/bots/replyBot';
+import { WebhookService } from '../../../discord/services/webhookService';
+import { Result } from '../../../utils/result';
 
-export default class BabyBot extends ReplyBot {
-  private readonly botName = 'CheckBot';
-  private readonly avatarUrl = 'https://m.media-amazon.com/images/I/21Unzn9U8sL._AC_.jpg';
+export default class CheckBot extends ReplyBot {
   private readonly pattern = /\bczech\b/i;
   private readonly response = 'I believe you mean \'check\'.';
 
-  getBotName(): string {
-    return this.botName;
+  constructor(client: Client, webhookService: WebhookService) {
+    super(
+      'CheckBot',
+      'https://m.media-amazon.com/images/I/21Unzn9U8sL._AC_.jpg',
+      client,
+      webhookService
+    );
   }
-  getAvatarUrl(): string {
-    return this.avatarUrl;
-  }
-  handleMessage(message: Message<boolean>): void {
-    if (message.author.bot) return;
 
-    if (message.content.match(this.pattern)) {
-      this.sendReply(message.channel as TextChannel, this.response);
-    }
+  canHandle(message: Message): boolean {
+    return !message.author.bot && !!message.content.match(this.pattern);
+  }
+
+  async handle(message: Message): Promise<Result<void, Error>> {
+    return this.sendReply(message.channel as TextChannel, this.response);
   }
 }
