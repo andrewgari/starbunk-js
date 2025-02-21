@@ -6,7 +6,7 @@ export class FileLoader {
 
   async loadFiles<T>(
     directory: string,
-    transform: (module: unknown) => T | null
+    transform: (module: unknown) => T | undefined
   ): Promise<Result<T[], Error>> {
     try {
       const files = readdirSync(`${this.basePath}/${directory}`);
@@ -20,7 +20,10 @@ export class FileLoader {
         })
       );
 
-      return new Success(modules.filter((m): m is T => m !== null));
+      const validModules = modules.filter(
+        (m): m is Awaited<T> => m !== undefined
+      );
+      return new Success(validModules);
     } catch (error) {
       return new Failure(
         error instanceof Error ? error : new Error('Failed to load files')
