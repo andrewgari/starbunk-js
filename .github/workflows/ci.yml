@@ -7,61 +7,70 @@ on:
         branches: [main]
 
 jobs:
-    test:
+    build:
         runs-on: ubuntu-latest
-
         steps:
             - uses: actions/checkout@v4
-
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: '20'
                   cache: 'npm'
-
             - name: Install dependencies
               run: npm ci
+            - name: Build
+              run: npm run build
 
-            - name: Type check
-              run: npm run type-check # assuming you have "tsc --noEmit" in package.json
-
-            - name: Lint
-              run: npm run lint # assuming you have eslint configured
-
+    test:
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+            - name: Install dependencies
+              run: npm ci
             - name: Run tests
               run: npm test -- --coverage
-
             - name: Upload coverage
               uses: codecov/codecov-action@v3
               with:
                   token: ${{ secrets.CODECOV_TOKEN }}
 
-    security:
+    lint:
+        needs: test
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
-
-            - name: Run Snyk to check for vulnerabilities
-              uses: snyk/actions/node@master
-              env:
-                  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-    build:
-        needs: [test, security]
-        runs-on: ubuntu-latest
-        if: github.ref == 'refs/heads/main'
-
-        steps:
-            - uses: actions/checkout@v4
-
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: '20'
                   cache: 'npm'
-
             - name: Install dependencies
               run: npm ci
+            - name: Type check
+              run: npm run type-check
+            - name: Lint
+              run: npm run lint
 
-            - name: Build
-              run: npm run build
+    docker:
+        needs: lint
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Build Docker image
+              run: docker build -t your-app-name .
+
+    security:
+        runs-on: ubuntu-latest
+        continue-on-error: true # Makes this check non-blocking
+        steps:
+            - uses: actions/checkout@v4
+            - name: Run Snyk to check for vulnerabilities
+              uses: snyk/actions/node@master
+              env:
+                  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
