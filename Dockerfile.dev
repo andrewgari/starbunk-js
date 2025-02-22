@@ -10,13 +10,13 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-COPY package*.json yarn.lock ./
+COPY package*.json ./
 
 # Install ALL dependencies including dev
-RUN yarn install
+RUN npm install
 
 # Add global packages needed for development
-RUN yarn global add \
+RUN npm install -g \
     ts-node \
     is-ci \
     distube
