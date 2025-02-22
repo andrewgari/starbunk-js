@@ -1,6 +1,6 @@
 import { config as configDotenv } from 'dotenv';
 import { resolve } from 'path';
-import { Logger } from './services/Logger';
+import { Logger } from './services/logger';
 
 switch (process.env.NODE_ENV) {
 	case 'development':

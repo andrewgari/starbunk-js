@@ -1,7 +1,7 @@
 import { createMockMessage } from '@/__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import userID from '@/discord/userID';
-import { Logger } from '@/services/Logger';
+import { Logger } from '@/services/logger';
 import BlueBot from '@/starbunk/bots/reply-bots/blueBot';
 import { Collection, GuildMember, Message, TextChannel, User } from 'discord.js';
 

@@ -1,6 +1,6 @@
 import channelIDs from '@/discord/channelIDs';
 import userID from '@/discord/userID';
-import { Logger } from '@/services/Logger';
+import { Logger } from '@/services/logger';
 import VoiceBot from '@/starbunk/bots/voiceBot';
 import { VoiceChannel, VoiceState } from 'discord.js';
 

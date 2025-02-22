@@ -1,7 +1,7 @@
 import channelIDs from '@/discord/channelIDs';
 import userID from '@/discord/userID';
-import { Logger } from '@/services/Logger';
-import GuyChannelBot from '@/starbunk/bots/voice-bots/GuyChannelBot';
+import { Logger } from '@/services/logger';
+import GuyChannelBot from '@/starbunk/bots/voice-bots/guyChannelBot';
 import { Client, GuildMember, VoiceChannel, VoiceState } from 'discord.js';
 
 describe('GuyChannelBot', () => {
