@@ -1,27 +1,29 @@
 name: PR Merge Workflow
 
 on:
-  pull_request:
-    types:
-      - closed
+    pull_request:
+        types:
+            - closed
 
 jobs:
-  destroy-pr-container:
-    if: github.event.pull_request.merged == true
-    uses: ./.github/workflows/destroy-docker-image.yml
-    with:
-      tag: pr-${{ github.event.pull_request.number }}
+    cleanup-and-publish:
+        if: github.event.pull_request.merged == true
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
 
-  destroy-branch-container:
-    if: github.event.pull_request.merged == true
-    needs: destroy-pr-container
-    uses: ./.github/workflows/destroy-docker-image.yml
-    with:
-      tag: ${{ github.event.pull_request.head.ref }}
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v2
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
 
-  publish:
-    if: github.event.pull_request.merged == true
-    needs: destroy-branch-container
-    uses: ./.github/workflows/publish-docker-image.yml
-    with:
-      tag: main
+            - name: Build and Push Production Image
+              uses: docker/build-push-action@v4
+              with:
+                  context: .
+                  push: true
+                  tags: |
+                      ghcr.io/${{ github.repository }}:latest
+                      ghcr.io/${{ github.repository }}:main
