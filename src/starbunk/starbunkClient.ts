@@ -1,6 +1,6 @@
 import { Command } from '@/discord/command';
 import DiscordClient from '@/discord/discordClient';
-import { Logger } from '@/services/Logger';
+import { Logger } from '@/services/logger';
 import { PlayerSubscription } from '@discordjs/voice';
 import { Base, ClientOptions, Collection, Events, Message, REST, Routes, VoiceState } from 'discord.js';
 import { readdirSync } from 'fs';

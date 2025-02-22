@@ -1,5 +1,5 @@
 import userID from '@/discord/userID';
-import { Logger } from '@/services/Logger';
+import { Logger } from '@/services/logger';
 import ReplyBot from '@/starbunk/bots/replyBot';
 import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
