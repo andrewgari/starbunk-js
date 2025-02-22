@@ -6,7 +6,8 @@
 		"build": "tsc",
 		"start": "node dist/bunkbot.js",
 		"dev": "npm run lint:fix && npm run build && npm run test",
-		"test": "jest",
+		"test": "jest --config=jest.config.js",
+		"tests": "jest --config=jest.config.js",
 		"test:watch": "jest --watch",
 		"lint": "eslint 'src/**/*.{ts,js}' '*.{ts,js}'",
 		"lint:fix": "eslint 'src/**/*.{ts,js}' '*.{ts,js}' --fix",
@@ -64,5 +65,17 @@
 		"tsconfig-paths": "^4.2.0",
 		"tslib": "^2.6.2",
 		"typescript": "^5.0.0"
+	},
+	"jest": {
+		"testEnvironment": "node",
+		"testMatch": [
+			"<rootDir>/src/tests/**/*.test.ts"
+		],
+		"moduleNameMapper": {
+			"^@/(.*)$": "<rootDir>/src/$1"
+		},
+		"setupFilesAfterEnv": [
+			"<rootDir>/src/tests/setup.ts"
+		]
 	}
 }

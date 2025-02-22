@@ -1,7 +1,7 @@
-import { createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import BabyBot from '@/starbunk/bots/reply-bots/babyBot';
+import { createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Message, User } from 'discord.js';
-import BabyBot from '../babyBot';
 
 describe('BabyBot', () => {
 	let babyBot: BabyBot;

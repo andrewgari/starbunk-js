@@ -1,7 +1,7 @@
-import { createMockGuildMember, createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import EzioBot from '@/starbunk/bots/reply-bots/ezioBot';
+import { createMockGuildMember, createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Message, User } from 'discord.js';
-import EzioBot from '../ezioBot';
 
 describe('EzioBot', () => {
 	let ezioBot: EzioBot;

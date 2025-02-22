@@ -1,8 +1,8 @@
-import { createMockGuildMember, createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import roleIDs from '@/discord/roleIDs';
+import SoggyBot from '@/starbunk/bots/reply-bots/soggyBot';
+import { createMockGuildMember, createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Collection, GuildMember, GuildMemberRoleManager, Message, Role, User } from 'discord.js';
-import roleIDs from '../../../../discord/roleIDs';
-import SoggyBot from '../soggyBot';
 
 const createMockMemberWithRoles = (roles: string[] = []): GuildMember => ({
 	...createMockGuildMember('user-id', 'TestUser'),

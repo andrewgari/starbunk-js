@@ -1,8 +1,8 @@
+import userID from '@/discord/userID';
+import { Logger } from '@/services/Logger';
+import ReplyBot from '@/starbunk/bots/replyBot';
+import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
-import userID from '../../../discord/userID';
-import { Logger } from '../../../services/Logger';
-import { WebhookService } from '../../../webhooks/webhookService';
-import ReplyBot from '../replyBot';
 
 export default class MacaroniBot extends ReplyBot {
 	constructor(webhookService: WebhookService, protected readonly logger = Logger) {

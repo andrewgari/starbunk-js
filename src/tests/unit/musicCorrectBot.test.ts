@@ -1,7 +1,7 @@
-import { createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import MusicCorrectBot from '@/starbunk/bots/reply-bots/musicCorrectBot';
+import { createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Message, User } from 'discord.js';
-import MusicCorrectBot from '../musicCorrectBot';
 
 describe('MusicCorrectBot', () => {
 	let musicCorrectBot: MusicCorrectBot;

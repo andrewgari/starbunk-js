@@ -1,7 +1,7 @@
-import { createMockGuildMember, createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import SheeshBot from '@/starbunk/bots/reply-bots/sheeshBot';
+import { createMockGuildMember, createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Message, User } from 'discord.js';
-import SheeshBot from '../sheeshBot';
 
 describe('SheeshBot', () => {
 	let sheeshBot: SheeshBot;

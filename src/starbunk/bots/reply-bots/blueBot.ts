@@ -1,9 +1,9 @@
+import userID from '@/discord/userID';
+import { OpenAIClient } from '@/openai/openaiClient';
+import { Logger } from '@/services/Logger';
+import ReplyBot from '@/starbunk/bots/replyBot';
+import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
-import userID from '../../../discord/userID';
-import { OpenAIClient } from '../../../openai/openaiClient';
-import { Logger } from '../../../services/Logger';
-import { WebhookService } from '../../../webhooks/webhookService';
-import ReplyBot from '../replyBot';
 
 interface BlueConfig {
 	defaultAvatarURL?: string;
