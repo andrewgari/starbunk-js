@@ -1,7 +1,7 @@
+import ReplyBot from '@/starbunk/bots/replyBot';
+import Random from '@/utils/random';
+import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
-import Random from '../../../utils/random';
-import { WebhookService } from '../../../webhooks/webhookService';
-import ReplyBot from '../replyBot';
 
 export default class BotBot extends ReplyBot {
 	constructor(webhookService: WebhookService) {

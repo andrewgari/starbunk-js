@@ -1,7 +1,7 @@
+import roleIDs from '@/discord/roleIDs';
+import ReplyBot from '@/starbunk/bots/replyBot';
+import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
-import roleIDs from '../../../discord/roleIDs';
-import { WebhookService } from '../../../webhooks/webhookService';
-import ReplyBot from '../replyBot';
 
 export default class SoggyBot extends ReplyBot {
 	constructor(webhookService: WebhookService) {

@@ -1,3 +1,4 @@
+import { Logger } from '@/services/Logger';
 import {
 	AudioPlayer,
 	AudioPlayerStatus,
@@ -9,7 +10,6 @@ import {
 	VoiceConnection,
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
-import { Logger } from '../services/Logger';
 
 interface DJCovaConfig {
 	logger?: typeof Logger;

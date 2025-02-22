@@ -1,8 +1,8 @@
+import channelIDs from '@/discord/channelIDs';
+import userID from '@/discord/userID';
+import { Logger } from '@/services/Logger';
+import VoiceBot from '@/starbunk/bots/voiceBot';
 import { VoiceChannel, VoiceState } from 'discord.js';
-import channelIDs from '../../../discord/channelIDs';
-import userID from '../../../discord/userID';
-import { Logger } from '../../../services/Logger';
-import VoiceBot from '../voiceBot';
 
 interface GuyChannelBotConfig {
 	logger?: typeof Logger;

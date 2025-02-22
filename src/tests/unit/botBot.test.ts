@@ -1,10 +1,10 @@
-import { createMockGuildMember, createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import BotBot from '@/starbunk/bots/reply-bots/botBot';
+import { createMockGuildMember, createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
+import Random from '@/utils/random';
 import { Message, User } from 'discord.js';
-import Random from '../../../../utils/random';
-import BotBot from '../botBot';
 
-jest.mock('../../../../utils/random');
+jest.mock('@/utils/random');
 
 describe('BotBot', () => {
 	let botBot: BotBot;

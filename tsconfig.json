@@ -16,7 +16,7 @@
 
 		/* Module Resolution */
 		"moduleResolution": "node",
-		"baseUrl": "./",
+		"baseUrl": ".",
 		"paths": {
 			"@/*": ["src/*"]
 		},
@@ -32,12 +32,13 @@
 	},
 	"include": [
 		"src/**/*",
-		"test/**/*.ts",
+		"tests/**/*.ts",
 		".eslintrc.js",
 		"jest.config.js",
 		"*.{js,ts}",
 		"process-env.d.ts",
-		"macaroniBot.test.ts"
+		"macaroniBot.test.ts",
+		"src/tests"
 	],
 	"exclude": ["node_modules", "dist"]
 }

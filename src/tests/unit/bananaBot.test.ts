@@ -1,9 +1,9 @@
 import UserID from '@/discord/userID';
-import { createMockGuildMember } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import BananaBot from '@/starbunk/bots/reply-bots/bananaBot';
+import { createMockGuildMember } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import random from '@/utils/random';
 import { Guild, Message, TextChannel, User } from 'discord.js';
-import BananaBot from '../bananaBot';
 
 describe('BananaBot', () => {
 	let bananaBot: BananaBot;

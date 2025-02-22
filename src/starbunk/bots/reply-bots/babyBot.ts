@@ -1,6 +1,6 @@
+import ReplyBot from '@/starbunk/bots/replyBot';
+import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
-import { WebhookService } from '../../../webhooks/webhookService';
-import ReplyBot from '../replyBot';
 
 export default class BabyBot extends ReplyBot {
 	constructor(webhookService: WebhookService) {
@@ -8,7 +8,7 @@ export default class BabyBot extends ReplyBot {
 	}
 	private readonly botName = 'BabyBot';
 	private readonly avatarUrl = 'https://i.redd.it/qc9qus78dc581.jpg';
-	private readonly pattern = /\bbaby\b/i;
+	private readonly pattern = /\.\.\/+/;
 	private readonly response = 'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif';
 
 	getBotName(): string {

@@ -1,11 +1,11 @@
-import { createMockGuildMember, createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import UserID from '@/discord/userID';
+import PickleBot from '@/starbunk/bots/reply-bots//pickleBot';
+import { createMockGuildMember, createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
+import Random from '@/utils/random';
 import { Message, User } from 'discord.js';
-import UserID from '../../../../discord/userID';
-import Random from '../../../../utils/random';
-import PickleBot from '../pickleBot';
 
-jest.mock('../../../../utils/random');
+jest.mock('@/utils/random');
 
 describe('PickleBot', () => {
 	let pickleBot: PickleBot;

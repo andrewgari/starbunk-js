@@ -1,7 +1,7 @@
-import { createMockGuildMember, createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import CheckBot from '@/starbunk/bots/reply-bots/checkBot';
+import { createMockGuildMember, createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Message, User } from 'discord.js';
-import CheckBot from '../checkBot';
 
 describe('CheckBot', () => {
 	let checkBot: CheckBot;

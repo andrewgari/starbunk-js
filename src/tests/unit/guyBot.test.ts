@@ -1,11 +1,11 @@
-import { createMockGuildMember, createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import userID from '@/discord/userID';
+import GuyBot from '@/starbunk/bots/reply-bots/guyBot';
+import { createMockGuildMember, createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
+import Random from '@/utils/random';
 import { Guild, GuildMember, Message, User } from 'discord.js';
-import userID from '../../../../discord/userID';
-import Random from '../../../../utils/random';
-import GuyBot from '../guyBot';
 
-jest.mock('../../../../utils/random');
+jest.mock('@/utils/random');
 
 describe('GuyBot', () => {
 	let guyBot: GuyBot;

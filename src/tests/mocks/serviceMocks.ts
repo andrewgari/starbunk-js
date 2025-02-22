@@ -1,4 +1,4 @@
-import { WebhookService } from '../../webhooks/webhookService';
+import { WebhookService } from '@/webhooks/webhookService';
 
 interface AudioService {
 	play: () => Promise<void>;

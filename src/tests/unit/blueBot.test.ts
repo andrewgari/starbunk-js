@@ -1,12 +1,12 @@
-import { createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import userID from '@/discord/userID';
+import { Logger } from '@/services/Logger';
+import BlueBot from '@/starbunk/bots/reply-bots/blueBot';
+import { createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Collection, GuildMember, Message, TextChannel, User } from 'discord.js';
-import userID from '../../../../discord/userID';
-import { Logger } from '../../../../services/Logger';
-import BlueBot from '../blueBot';
 
 // Mock the OpenAIClient module
-jest.mock('../../../../openai/openaiClient', () => ({
+jest.mock('@/openai/openaiClient', () => ({
 	OpenAIClient: {
 		chat: {
 			completions: {

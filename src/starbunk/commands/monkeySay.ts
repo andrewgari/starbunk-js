@@ -1,5 +1,5 @@
+import webhookService from '@/webhooks/webhookService';
 import { CommandInteraction, GuildMember, PermissionFlagsBits, SlashCommandBuilder, TextChannel } from 'discord.js';
-import webhookService from '../../webhooks/webhookService';
 
 export default {
 	data: new SlashCommandBuilder()

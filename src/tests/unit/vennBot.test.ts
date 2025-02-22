@@ -1,11 +1,11 @@
-import { createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import userID from '@/discord/userID';
+import VennBot from '@/starbunk/bots/reply-bots/vennBot';
+import { createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
+import Random from '@/utils/random';
 import { Message, User } from 'discord.js';
-import userID from '../../../../discord/userID';
-import Random from '../../../../utils/random';
-import VennBot from '../vennBot';
 
-jest.mock('../../../../utils/random');
+jest.mock('@/utils/random');
 
 const createMockVennUser = (overrides = {}): User => ({
 	id: userID.Venn,

@@ -1,17 +1,17 @@
-import { createMockMessage } from '@/test/mocks/discordMocks';
-import { createMockWebhookService } from '@/test/mocks/serviceMocks';
+import SigGreatBot from '@/starbunk/bots/reply-bots/sigGreatBot';
+import { createMockMessage } from '@/tests/mocks/discordMocks';
+import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Message, User } from 'discord.js';
-import SigBestBot from '../sigGreatBot';
 
 describe('SigBestBot', () => {
-	let sigBestBot: SigBestBot;
+	let sigBestBot: SigGreatBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage();
-		sigBestBot = new SigBestBot(mockWebhookService);
+		sigBestBot = new SigGreatBot(mockWebhookService);
 	});
 
 	describe('bot configuration', () => {
