@@ -1,58 +1,64 @@
 {
-  "name": "bunkbot",
-  "version": "0.0.1",
-  "description": "it's bot that says blu, among things...",
-  "scripts": {
-    "test": "jest",
-    "start": "ts-node src/bunkbot.ts",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/andrewgari/starbunk-js.git"
-  },
-  "keywords": [
-    "discord",
-    "blue"
-  ],
-  "author": "Andrew Gari",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/andrewgari/starbunk-js/issues"
-  },
-  "homepage": "https://github.com/andrewgari/starbunk-js#readme",
-  "dependencies": {
-    "@discordjs/builders": "^1.6.5",
-    "@discordjs/rest": "^2.0.1",
-    "@discordjs/voice": "^0.18.0",
-    "@distube/yt-dlp": "^2.0.1",
-    "@distube/ytdl-core": "^4.15.9",
-    "async": "^3.2.4",
-    "discord-api-types": "^0.37.59",
-    "discord.js": "^14.17.3",
-    "dotenv": "^16.3.1",
-    "envalid": "^8.0.0",
-    "ffmpeg-static": "^5.2.0",
-    "module-name": "^0.0.1-security",
-    "openai": "^4.58.2",
-    "opusscript": "^0.0.8",
-    "play-dl": "^1.9.7",
-    "yarn": "^1.22.22",
-    "ytdl-core": "^4.11.5"
-  },
-  "devDependencies": {
-    "@types/node": "^20.17.14",
-    "@typescript-eslint/eslint-plugin": "^8.24.1",
-    "@typescript-eslint/parser": "^8.24.1",
-    "eslint": "^8.7.0",
-    "eslint-config-prettier": "^10.0.1",
-    "eslint-plugin-prettier": "^5.2.3",
-    "prettier": "^3.2.5",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
-    "tslib": "^2.6.2",
-    "typescript": "^4.4.4"
-  }
+	"name": "bunkbot",
+	"version": "0.0.1",
+	"description": "it's bot that says blu, among things...",
+	"scripts": {
+		"build": "tsc",
+		"start": "node dist/bunkbot.js",
+		"dev": "ts-node src/bunkbot.ts",
+		"test": "jest",
+		"lint": "eslint . --ext .ts",
+		"lint:fix": "eslint . --ext .ts --fix",
+		"format": "prettier --write \"src/**/*.ts\"",
+		"type-check": "tsc --noEmit"
+	},
+	"engines": {
+		"node": ">=16.0.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/andrewgari/starbunk-js.git"
+	},
+	"keywords": [
+		"discord",
+		"blue"
+	],
+	"author": "Andrew Gari",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/andrewgari/starbunk-js/issues"
+	},
+	"homepage": "https://github.com/andrewgari/starbunk-js#readme",
+	"dependencies": {
+		"@discordjs/builders": "^1.6.5",
+		"@discordjs/rest": "^2.0.1",
+		"@discordjs/voice": "^0.18.0",
+		"@distube/yt-dlp": "^2.0.1",
+		"@distube/ytdl-core": "^4.15.9",
+		"async": "^3.2.4",
+		"discord-api-types": "^0.37.59",
+		"discord.js": "^14.17.3",
+		"dotenv": "^16.3.1",
+		"envalid": "^8.0.0",
+		"ffmpeg-static": "^5.2.0",
+		"module-name": "^0.0.1-security",
+		"openai": "^4.58.2",
+		"opusscript": "^0.0.8",
+		"play-dl": "^1.9.7",
+		"yarn": "^1.22.22",
+		"ytdl-core": "^4.11.5"
+	},
+	"devDependencies": {
+		"@types/node": "^20.17.14",
+		"@typescript-eslint/eslint-plugin": "^6.21.0",
+		"@typescript-eslint/parser": "^6.21.0",
+		"eslint": "^8.0.0",
+		"eslint-config-prettier": "^10.0.1",
+		"eslint-plugin-prettier": "^5.2.3",
+		"prettier": "^3.2.5",
+		"ts-node": "^10.9.2",
+		"typescript": "^4.9.5",
+		"tsconfig-paths": "^4.2.0",
+		"tslib": "^2.6.2"
+	}
 }
