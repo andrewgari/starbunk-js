@@ -30,6 +30,14 @@
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true
 	},
-	"include": ["src/**/*", "test/**/*.ts", ".eslintrc.js", "jest.config.js", "*.{js,ts}", "process-env.d.ts"],
+	"include": [
+		"src/**/*",
+		"test/**/*.ts",
+		".eslintrc.js",
+		"jest.config.js",
+		"*.{js,ts}",
+		"process-env.d.ts",
+		"macaroniBot.test.ts"
+	],
 	"exclude": ["node_modules", "dist"]
 }

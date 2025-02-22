@@ -1,7 +1,11 @@
 import { Message, TextChannel } from 'discord.js';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 export default class HoldBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
 	private readonly botName = 'HoldBot';
 	private readonly avatarUrl = 'https://i.imgur.com/YPFGEzM.png';
 	private readonly pattern = /^Hold\.?$/i;

@@ -1,8 +1,13 @@
 import { Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/Logger';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 export default class MacaroniBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
+
 	private botName = 'Macaroni Bot';
 	private readonly pattern = /\b(mac(aroni)?|pasta)\b/i;
 	private readonly avatarUrl = 'https://i.imgur.com/fgbH6Xf.jpg';

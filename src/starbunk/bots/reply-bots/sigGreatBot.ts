@@ -1,7 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 export default class SigBestBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
+
 	botName: string = 'SigBestBot';
 	avatarUrl: string = 'PickleSig.comOrWhatever';
 	readonly pattern = /^(?=.*\bsig(g?les)?\b)(?=.*best\b).*$/gim;

@@ -2,6 +2,7 @@ import { Message, TextChannel } from 'discord.js';
 import userID from '../../../discord/userID';
 import { OpenAIClient } from '../../../openai/openaiClient';
 import { Logger } from '../../../services/Logger';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 interface BlueConfig {
@@ -36,8 +37,8 @@ export default class BlueBot extends ReplyBot {
 	private blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 
-	constructor(config: BlueConfig = {}) {
-		super();
+	constructor(webhookService: WebhookService, config: BlueConfig = {}) {
+		super(webhookService);
 		this.openAIClient = config.openAIClient ?? OpenAIClient;
 		this.logger = config.logger ?? Logger;
 		this.defaultAvatarURL = config.defaultAvatarURL ?? 'https://imgur.com/WcBRCWn.png';

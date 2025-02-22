@@ -1,7 +1,11 @@
 import { Message, TextChannel } from 'discord.js';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 export default class GundamBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
 	private readonly botName = 'GundamBot';
 	private readonly avatarUrl =
 		'https://a1.cdn.japantravel.com/photo/41317-179698/1440x960!/tokyo-unicorn-gundam-statue-in-odaiba-179698.jpg';

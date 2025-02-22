@@ -1,7 +1,11 @@
 import { Message, TextChannel } from 'discord.js';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 export default class ChaosBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
 	private readonly botName = 'ChaosBot';
 	private readonly avatarUrl =
 		'https://preview.redd.it/md0lzbvuc3571.png?width=1920&format=png&auto=webp&s=ff403a8d4b514af8d99792a275d2c066b8d1a4de';

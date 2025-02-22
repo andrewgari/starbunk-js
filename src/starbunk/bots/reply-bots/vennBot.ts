@@ -1,9 +1,13 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
-import random from '../../../utils/random';
 import userID from '../../../discord/userID';
+import random from '../../../utils/random';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 export default class VennBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
 	private botName = 'VennBot';
 	private avatarUrl = '';
 	private readonly pattern = /\bcringe\b/i;

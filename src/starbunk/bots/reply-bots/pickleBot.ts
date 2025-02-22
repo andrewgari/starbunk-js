@@ -1,9 +1,14 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
 import UserID from '../../../discord/userID';
 import Random from '../../../utils/random';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 export default class PickleBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
+
 	private readonly botname = 'GremlinBot';
 	private readonly avatarUrl = 'https://i.imgur.com/D0czJFu.jpg';
 	private readonly response = "Could you repeat that? I don't speak *gremlin*";

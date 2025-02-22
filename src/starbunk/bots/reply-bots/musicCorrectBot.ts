@@ -1,8 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
-import { Logger } from '../../../services/Logger';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 export default class MusicCorrectBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
+
 	private botName = 'Music Correct Bot';
 	private readonly pattern = /^[?!]play /i;
 
@@ -22,10 +26,9 @@ export default class MusicCorrectBot extends ReplyBot {
 		if (message.author.bot) return;
 
 		if (message.content.match(this.pattern)) {
-			Logger.debug(`🎵 User ${message.author.username} tried using old play command: "${message.content}"`);
 			this.sendReply(
 				message.channel as TextChannel,
-				"Hey! The play command has changed. Use '/play' instead! 🎵",
+				"Hey! The play command has changed. Use '/play' instead! ��",
 			);
 		}
 	}
