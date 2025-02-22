@@ -1,7 +1,11 @@
 import { Message, TextChannel } from 'discord.js';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 export default class NiceBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
 	private readonly botName = 'BunkBot';
 	private readonly avatarUrl = 'https://pbs.twimg.com/profile_images/421461637325787136/0rxpHzVx.jpeg';
 	private readonly pattern = /\b69|(sixty-?nine)\b/i;
