@@ -10,13 +10,13 @@ interface BlueConfig {
 	murderAvatar?: string;
 	cheekyAvatar?: string;
 	openAIClient?: typeof OpenAIClient;
-	logger?: typeof Logger;
+	timeProvider?: () => number;
 }
 
 export default class BlueBot extends ReplyBot {
 	private botName: string = 'BluBot';
 	private readonly openAIClient: typeof OpenAIClient;
-	private readonly logger: typeof Logger;
+	private readonly timeProvider: () => number;
 
 	private readonly defaultPattern = /\bblue?\b/i;
 	private readonly confirmPattern = /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i;
@@ -37,10 +37,17 @@ export default class BlueBot extends ReplyBot {
 	private blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 
-	constructor(webhookService: WebhookService, config: BlueConfig = {}) {
+	private readonly MURDER_COOLDOWN_HOURS = 24;
+	private readonly BLUE_RESPONSE_WINDOW_MINUTES = 2;
+
+	constructor(
+		webhookService: WebhookService,
+		private readonly logger: typeof Logger,
+		config: BlueConfig = {}
+	) {
 		super(webhookService);
 		this.openAIClient = config.openAIClient ?? OpenAIClient;
-		this.logger = config.logger ?? Logger;
+		this.timeProvider = config.timeProvider ?? (() => Date.now());
 		this.defaultAvatarURL = config.defaultAvatarURL ?? 'https://imgur.com/WcBRCWn.png';
 		this.murderAvatar = config.murderAvatar ?? 'https://imgur.com/Tpo8Ywd.jpg';
 		this.cheekyAvatar = config.cheekyAvatar ?? 'https://i.imgur.com/dO4a59n.png';
@@ -113,11 +120,17 @@ export default class BlueBot extends ReplyBot {
 		if (message.author.id !== userID.Venn) return false;
 		if (!message.content.match(this.meanPattern)) return false;
 
-		const current = this.getTimestamp() / 1000;
-		const lastMurder = this.blueMurderTimestamp.getTime() / 1000;
-		const lastBlue = this.blueTimestamp.getTime() / 1000;
+		return this.isWithinBlueResponseWindow() && this.isMurderOffCooldown();
+	}
 
-		return current - lastMurder > 86400 && current - lastBlue < 2 * 60;
+	private isWithinBlueResponseWindow(): boolean {
+		const secondsSinceLastBlue = (this.getTimestamp() - this.blueTimestamp.getTime()) / 1000;
+		return secondsSinceLastBlue < this.BLUE_RESPONSE_WINDOW_MINUTES * 60;
+	}
+
+	private isMurderOffCooldown(): boolean {
+		const secondsSinceLastMurder = (this.getTimestamp() - this.blueMurderTimestamp.getTime()) / 1000;
+		return secondsSinceLastMurder > this.MURDER_COOLDOWN_HOURS * 3600;
 	}
 
 	private getNameFromBluRequest(message: Message): string {
@@ -202,6 +215,6 @@ export default class BlueBot extends ReplyBot {
 
 	// For testing
 	protected getTimestamp(): number {
-		return Date.now();
+		return this.timeProvider();
 	}
 }
