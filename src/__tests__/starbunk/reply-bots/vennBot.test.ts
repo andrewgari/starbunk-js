@@ -1,7 +1,7 @@
+import { createMockMessage } from '@/__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import userID from '@/discord/userID';
 import VennBot from '@/starbunk/bots/reply-bots/vennBot';
-import { createMockMessage } from '@/tests/mocks/discordMocks';
-import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import Random from '@/utils/random';
 import { Message, User } from 'discord.js';
 

@@ -1,7 +1,7 @@
+import { createMockMessage } from '@/__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import userID from '@/discord/userID';
 import MacaroniBot from '@/starbunk/bots/reply-bots/macaroniBot';
-import { createMockMessage } from '@/tests/mocks/discordMocks';
-import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Message, User } from 'discord.js';
 
 describe('MacaroniBot', () => {

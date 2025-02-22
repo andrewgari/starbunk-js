@@ -1,9 +1,9 @@
+import { createMockCommandInteraction } from '@/__tests__/mocks/discordMocks';
+import { createMockDJCova } from '@/__tests__/mocks/serviceMocks';
 import playCommand from '@/starbunk/commands/play';
 import volumeCommand from '@/starbunk/commands/setVolume';
 import stopCommand from '@/starbunk/commands/stop';
 import { getStarbunkClient } from '@/starbunk/starbunkClient';
-import { createMockCommandInteraction } from '@/tests/mocks/discordMocks';
-import { createMockDJCova } from '@/tests/mocks/serviceMocks';
 import { ChatInputCommandInteraction } from 'discord.js';
 
 // Mock the getStarbunkClient function

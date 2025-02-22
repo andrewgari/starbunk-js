@@ -1,7 +1,7 @@
+import { createMockGuildMember, createMockMessage } from '@/__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import userID from '@/discord/userID';
 import GuyBot from '@/starbunk/bots/reply-bots/guyBot';
-import { createMockGuildMember, createMockMessage } from '@/tests/mocks/discordMocks';
-import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import Random from '@/utils/random';
 import { Guild, GuildMember, Message, User } from 'discord.js';
 

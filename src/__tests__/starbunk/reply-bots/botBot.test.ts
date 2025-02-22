@@ -1,6 +1,6 @@
+import { createMockGuildMember, createMockMessage } from '@/__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import BotBot from '@/starbunk/bots/reply-bots/botBot';
-import { createMockGuildMember, createMockMessage } from '@/tests/mocks/discordMocks';
-import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import Random from '@/utils/random';
 import { Message, User } from 'discord.js';
 

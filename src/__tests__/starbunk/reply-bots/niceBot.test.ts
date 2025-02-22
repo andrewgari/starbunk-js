@@ -1,6 +1,6 @@
+import { createMockMessage } from '@/__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import NiceBot from '@/starbunk/bots/reply-bots/niceBot';
-import { createMockMessage } from '@/tests/mocks/discordMocks';
-import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Message } from 'discord.js';
 
 describe('NiceBot', () => {

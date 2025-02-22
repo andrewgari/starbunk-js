@@ -1,7 +1,7 @@
+import '@/__tests__/mocks/openaiMocks';
 import { Command } from '@/discord/command';
 import { Logger } from '@/services/Logger';
 import StarbunkClient from '@/starbunk/starbunkClient';
-import '@/tests/mocks/openaiMocks';
 import { AudioPlayer } from '@discordjs/voice';
 import { Events, Interaction, Message, TextChannel, VoiceState } from 'discord.js';
 

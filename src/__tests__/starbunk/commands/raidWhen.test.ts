@@ -1,7 +1,7 @@
+import { createMockCommandInteraction } from '@/__tests__/mocks/discordMocks';
 import roleIDs from '@/discord/roleIDs';
 import userID from '@/discord/userID';
 import raidWhenCommand, { getNextRaid } from '@/starbunk/commands/raidWhen';
-import { createMockCommandInteraction } from '@/tests/mocks/discordMocks';
 import { ChatInputCommandInteraction } from 'discord.js';
 
 describe('RaidWhen Command', () => {

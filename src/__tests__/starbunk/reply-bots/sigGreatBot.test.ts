@@ -1,6 +1,6 @@
+import { createMockMessage } from '@/__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import SigGreatBot from '@/starbunk/bots/reply-bots/sigGreatBot';
-import { createMockMessage } from '@/tests/mocks/discordMocks';
-import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import { Message, User } from 'discord.js';
 
 describe('SigBestBot', () => {

@@ -1,7 +1,7 @@
+import { createMockGuildMember } from '@/__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import UserID from '@/discord/userID';
 import BananaBot from '@/starbunk/bots/reply-bots/bananaBot';
-import { createMockGuildMember } from '@/tests/mocks/discordMocks';
-import { createMockWebhookService } from '@/tests/mocks/serviceMocks';
 import random from '@/utils/random';
 import { Guild, Message, TextChannel, User } from 'discord.js';
 

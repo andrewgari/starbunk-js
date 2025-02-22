@@ -1,5 +1,5 @@
+import { createMockCommandInteraction } from '@/__tests__/mocks/discordMocks';
 import monkeySayCommand from '@/starbunk/commands/monkeySay';
-import { createMockCommandInteraction } from '@/tests/mocks/discordMocks';
 import webhookService from '@/webhooks/webhookService';
 import { ChatInputCommandInteraction, GuildMember, TextChannel, User } from 'discord.js';
 
