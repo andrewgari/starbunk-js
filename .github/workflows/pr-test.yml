@@ -5,8 +5,23 @@ on:
         types: [opened, synchronize, reopened]
 
 jobs:
+    check_changes:
+        runs-on: ubuntu-latest
+        outputs:
+            src_changed: ${{ steps.filter.outputs.src }}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dorny/paths-filter@v2
+              id: filter
+              with:
+                  filters: |
+                      src:
+                          - src/**
+
     test:
         name: 🧪 Test
+        needs: check_changes
+        if: needs.check_changes.outputs.src_changed == 'true'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4

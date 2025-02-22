@@ -5,8 +5,24 @@ on:
         types: [opened, synchronize, reopened]
 
 jobs:
+    check_changes:
+        runs-on: ubuntu-latest
+        outputs:
+            non_test_changed: ${{ steps.filter.outputs.non_test }}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dorny/paths-filter@v2
+              id: filter
+              with:
+                  filters: |
+                      non_test:
+                          - 'src/**'
+                          - '!src/tests/**'
+
     docker:
         name: 🐳 Docker Build
+        needs: check_changes
+        if: needs.check_changes.outputs.non_test_changed == 'true'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -20,4 +36,4 @@ jobs:
                   context: .
                   push: false
                   load: true
-                  tags: ghcr.io/${{ github.repository }}/app:pr-${{ github.event.pull_request.number }}
+                  tags: ${{ github.repository }}:pr-${{ github.event.pull_request.number }}
