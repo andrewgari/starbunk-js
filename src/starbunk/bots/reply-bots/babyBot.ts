@@ -1,7 +1,11 @@
 import { Message, TextChannel } from 'discord.js';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 export default class BabyBot extends ReplyBot {
+	constructor(private webhookService: WebhookService) {
+		super();
+	}
 	private readonly botName = 'BabyBot';
 	private readonly avatarUrl = 'https://i.redd.it/qc9qus78dc581.jpg';
 	private readonly pattern = /\bbaby\b/i;
@@ -19,5 +23,13 @@ export default class BabyBot extends ReplyBot {
 		if (message.content.match(this.pattern)) {
 			this.sendReply(message.channel as TextChannel, this.response);
 		}
+	}
+	async sendReply(channel: TextChannel, content: string): Promise<void> {
+		await this.webhookService.writeMessage(channel, {
+			username: this.getBotName(),
+			avatarURL: this.getAvatarUrl(),
+			content,
+			embeds: []
+		});
 	}
 }
