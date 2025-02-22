@@ -1,7 +1,8 @@
+import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
 import UserID from '../../../discord/userID';
 import random from '../../../utils/random';
+import ReplyBot from '../replyBot';
 
 export default class BananaBot extends ReplyBot {
 	private botName = 'BananaBot';
@@ -23,6 +24,10 @@ export default class BananaBot extends ReplyBot {
 		':banana: https://www.tiktok.com/@tracey_dintino_charles/video/7197753358143278378?_r=1&_t=8bFpt5cfIbG',
 	];
 
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
+
 	getBotName(): string {
 		return this.botName;
 	}
@@ -42,7 +47,7 @@ export default class BananaBot extends ReplyBot {
 		this.botName = message.author.displayName ?? message.author.username;
 		this.avatarUrl = message.author.displayAvatarURL() ?? message.author.avatarURL;
 
-		if (/banana/.test(message.content)) {
+		if (/banana/i.test(message.content)) {
 			this.sendReply(message.channel as TextChannel, this.response());
 			return;
 		}

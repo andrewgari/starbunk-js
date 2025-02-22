@@ -50,15 +50,6 @@ interface IProcessEnv {
 export { IProcessEnv };
 
 declare global {
-	namespace NodeJS {
-		interface ProcessEnv {
-			AUTHENTICATION_API_URL: string;
-			GRAPHQL_API_URL: string;
-			NODE_ENV: 'development' | 'test' | 'production';
-			STARBUNK_TOKEN: string;
-			SNOWBUNK_TOKEN: string;
-			CLIENT_ID: string;
-			GUILD_ID: string;
-		}
-	}
+	// Using module augmentation instead of namespace
+	type ProcessEnv = IProcessEnv
 }

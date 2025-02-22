@@ -1,0 +1,26 @@
+{
+	"vim.enabled": false,
+	"editor.lineNumbers": "on",
+	"workbench.startupEditor": "none",
+	"keyboard.dispatch": "keyCode",
+	"vim.useSystemClipboard": false,
+	"vim.handleKeys": {
+		"<C-c>": false,
+		"<C-v>": false,
+		"<C-x>": false,
+		"<C-a>": false,
+		"<C-f>": false,
+		"<C-h>": false,
+		"<C-w>": false,
+		"<C-b>": false
+	},
+	"editor.minimap.enabled": true,
+	"editor.mouseWheelZoom": true,
+	"editor.multiCursorModifier": "alt",
+	"editor.snippetSuggestions": "top",
+	"workbench.editor.enablePreview": true,
+	"editor.acceptSuggestionOnEnter": "on",
+	"editor.suggestSelection": "first",
+	"editor.tabCompletion": "on",
+	"editor.wordWrap": "on"
+}

@@ -1,10 +1,18 @@
 import { Message, TextChannel } from 'discord.js';
+import userID from '../../../discord/userID';
 import { Logger } from '../../../services/Logger';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 export default class MacaroniBot extends ReplyBot {
-	private botName = 'Macaroni Bot';
-	private readonly pattern = /\b(mac(aroni)?|pasta)\b/i;
+	constructor(webhookService: WebhookService, protected readonly logger = Logger) {
+		super(webhookService);
+	}
+
+	private readonly botName = 'Macaroni Bot';
+	private readonly macaroniPattern = /\b(mac(aroni)?|pasta)\b/i;
+	private readonly vennPattern = /\bvenn\b/i;
+	private readonly macaroniResponse = 'Correction: you mean Venn "Tyrone "The "Macaroni" Man" Johnson" Caelum';
 	private readonly avatarUrl = 'https://i.imgur.com/fgbH6Xf.jpg';
 
 	getBotName(): string {
@@ -15,12 +23,15 @@ export default class MacaroniBot extends ReplyBot {
 		return this.avatarUrl;
 	}
 
-	handleMessage(message: Message): void {
+	handleMessage(message: Message<boolean>): void {
 		if (message.author.bot) return;
 
-		if (message.content.match(this.pattern)) {
-			Logger.debug(`🍝 User ${message.author.username} mentioned macaroni: "${message.content}"`);
-			this.sendReply(message.channel as TextChannel, '🍝 Did somebody say macaroni?');
+		if (message.content.match(this.macaroniPattern)) {
+			this.logger.debug(`MacaroniBot: ${message.author.username} mentioned macaroni/pasta: "${message.content}"`);
+			this.sendReply(message.channel as TextChannel, this.macaroniResponse);
+		} else if (message.content.match(this.vennPattern)) {
+			this.logger.debug(`MacaroniBot: ${message.author.username} mentioned Venn: "${message.content}"`);
+			this.sendReply(message.channel as TextChannel, `Are you trying to reach <@${userID.Venn}>`);
 		}
 	}
 }

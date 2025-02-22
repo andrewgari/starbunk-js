@@ -1,8 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
 import roleIDs from '../../../discord/roleIDs';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 export default class SoggyBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
 	private readonly botName = 'SoggyBot';
 	private readonly avatarUrl = 'https://imgur.com/OCB6i4x.jpg';
 	private readonly pattern = /wet bread/i;

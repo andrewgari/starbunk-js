@@ -1,8 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/Logger';
+import { WebhookService } from '../../../webhooks/webhookService';
 import ReplyBot from '../replyBot';
 
 export default class SheeshBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(webhookService);
+	}
 	private botName = 'Sheesh Bot';
 	private readonly avatarUrl = 'https://i.imgflip.com/5fc2iz.png?a471000';
 

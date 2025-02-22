@@ -1,12 +1,15 @@
 import { Message, TextChannel } from 'discord.js';
-import webhookService from '../../webhooks/webhookService';
+import { WebhookService } from '../../webhooks/webhookService';
 
 export default abstract class ReplyBot {
 	abstract getBotName(): string;
 	abstract getAvatarUrl(): string;
 	abstract handleMessage(message: Message): void;
+	constructor(private webhookService: WebhookService) {
+		this.webhookService = webhookService;
+	}
 	sendReply(channel: TextChannel, response: string): void {
-		webhookService.writeMessage(channel, {
+		this.webhookService.writeMessage(channel, {
 			username: this.getBotName(),
 			avatarURL: this.getAvatarUrl(),
 			content: response,
