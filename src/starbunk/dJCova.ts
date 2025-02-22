@@ -9,22 +9,31 @@ import {
 	VoiceConnection,
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
+import { Logger } from '../services/Logger';
+
+interface DJCovaConfig {
+	logger?: typeof Logger;
+}
 
 export class DJCova {
-	private musicPlayer: AudioPlayer = createAudioPlayer();
-	private activeResource: AudioResource | undefined;
+	private readonly logger: typeof Logger;
+	private player: AudioPlayer;
+	private resource: AudioResource | undefined;
 
-	getMusicPlayer(): AudioPlayer {
-		return this.musicPlayer;
+	constructor(config: DJCovaConfig = {}) {
+		this.logger = config.logger ?? Logger;
+		this.logger.debug('🎵 Initializing DJCova audio player');
+		this.player = createAudioPlayer();
 	}
 
 	async start(url: string): Promise<void> {
-		if (this.musicPlayer.state.status === AudioPlayerStatus.Playing) {
+		if (this.player.state.status === AudioPlayerStatus.Playing) {
+			this.logger.warn('Attempted to start playback while already playing');
 			return;
 		}
 
 		try {
-			console.log('[DEBUG] Fetching stream...');
+			this.logger.info(`🎵 Starting playback from URL: ${url}`);
 			const stream = ytdl(url, {
 				filter: 'audioonly',
 				quality: 'lowestaudio',
@@ -39,59 +48,66 @@ export class DJCova {
 				},
 			});
 
-			this.activeResource = createAudioResource(stream, {
+			this.resource = createAudioResource(stream, {
 				inputType: StreamType.WebmOpus,
 				inlineVolume: true,
 			});
-			this.activeResource.volume?.setVolume(0.5);
+			this.resource.volume?.setVolume(0.5);
 
-			console.log('[DEBUG] Playing resource...');
-			this.musicPlayer.play(this.activeResource);
-			console.log('[DEBUG] Audio resource created and playing started.');
+			this.logger.debug('▶️ Playing resource...');
+			this.player.play(this.resource);
+			this.logger.success('🎵 Audio resource created and playback started');
 		} catch (error) {
-			console.error('Error starting audio stream:', error);
+			this.logger.error('Failed to start audio playback', error as Error);
+			throw error;
 		}
 	}
 
 	play(): void {
-		if (this.activeResource) {
-			this.musicPlayer.play(this.activeResource);
-			console.log('Playing active resource.');
-		} else {
-			console.log('Active resource is null.');
+		if (!this.resource) {
+			this.logger.warn('Attempted to play without an active audio resource');
+			return;
 		}
+		this.logger.debug('▶️ Playing audio resource');
+		this.player.play(this.resource);
 	}
 
 	stop(): void {
-		if (this.musicPlayer.state.status !== AudioPlayerStatus.Idle) {
-			this.musicPlayer.stop();
-			console.log('Playback stopped.');
+		if (this.player.state.status !== AudioPlayerStatus.Idle) {
+			this.logger.info('⏹️ Stopping audio playback');
+			this.player.stop();
 		}
 	}
 
 	pause(): void {
-		if (this.musicPlayer.state.status === AudioPlayerStatus.Playing) {
-			this.musicPlayer.pause();
-			console.log('Playback paused.');
+		if (this.player.state.status === AudioPlayerStatus.Playing) {
+			this.logger.info('⏸️ Pausing audio playback');
+			this.player.pause();
 		}
 	}
 
 	changeVolume(vol: number): void {
-		this.activeResource?.volume?.setVolume(vol);
-		console.log('Volume changed to:', vol);
+		if (this.resource) {
+			this.logger.info(`🔊 Adjusting volume to ${vol}%`);
+			this.resource.volume?.setVolume(vol / 100);
+		} else {
+			this.logger.warn('Attempted to change volume without active resource');
+		}
 	}
 
 	subscribe(channel: VoiceConnection): PlayerSubscription | undefined {
-		const subscription = channel.subscribe(this.musicPlayer);
+		this.logger.debug(`🎧 Subscribing to voice channel`);
+		const subscription = channel.subscribe(this.player);
 		if (subscription) {
-			console.log('Player successfully subscribed to connection.');
+			this.logger.success('Player successfully subscribed to connection.');
 		} else {
-			console.error('Failed to subscribe player to the connection.');
+			this.logger.error('Failed to subscribe player to the connection.');
 		}
 		return subscription;
 	}
 
 	on(status: AudioPlayerStatus, callback: () => void): void {
-		this.musicPlayer.on(status, callback);
+		this.logger.debug(`📡 Registering listener for ${status} status`);
+		this.player.on(status, callback);
 	}
 }

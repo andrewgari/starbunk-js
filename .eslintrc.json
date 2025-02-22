@@ -51,7 +51,7 @@
 		"@typescript-eslint/no-explicit-any": "error",
 		"@typescript-eslint/no-unused-vars": "error",
 		"@typescript-eslint/no-empty-function": "error",
-		"no-console": ["warn", { "allow": ["warn", "error"] }],
+		"no-console": ["error", { "allow": ["warn", "error"] }],
 		"no-empty-function": "off",
 		"no-inline-comments": "error",
 		"@typescript-eslint/no-namespace": ["error", { "allowDeclarations": true }]
