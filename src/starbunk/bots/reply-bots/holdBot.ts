@@ -8,7 +8,7 @@ export default class HoldBot extends ReplyBot {
 	}
 	private readonly botName = 'HoldBot';
 	private readonly avatarUrl = 'https://i.imgur.com/YPFGEzM.png';
-	private readonly pattern = /^Hold\.?$/i;
+	private readonly pattern = /\bhold\b/i;
 	private readonly response = 'Hold.';
 
 	getBotName(): string {

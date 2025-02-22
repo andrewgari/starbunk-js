@@ -28,7 +28,8 @@ module.exports = {
 				'@typescript-eslint/explicit-function-return-type': 'error',
 				'@typescript-eslint/no-explicit-any': 'error',
 				'@typescript-eslint/no-unused-vars': 'error',
-				'no-console': ['error', { allow: ['warn', 'error'] }]
+				'no-console': ['error', { allow: ['warn', 'error'] }],
+				'no-inline-comments': 'off'
 			}
 		},
 		{
@@ -88,7 +89,8 @@ module.exports = {
 		'@typescript-eslint/no-empty-function': 'error',
 		'no-console': ['error', { allow: ['warn', 'error'] }],
 		'no-empty-function': 'off',
-		'no-inline-comments': 'error',
-		'@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }]
+		'no-inline-comments': 'off',
+		'@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],
+		'line-comment-position': 'off'
 	}
 };

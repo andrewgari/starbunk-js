@@ -47,7 +47,7 @@ export default class BananaBot extends ReplyBot {
 		this.botName = message.author.displayName ?? message.author.username;
 		this.avatarUrl = message.author.displayAvatarURL() ?? message.author.avatarURL;
 
-		if (/banana/.test(message.content)) {
+		if (/banana/i.test(message.content)) {
 			this.sendReply(message.channel as TextChannel, this.response());
 			return;
 		}
