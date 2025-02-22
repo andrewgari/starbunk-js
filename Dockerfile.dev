@@ -1,0 +1,24 @@
+FROM node:18-alpine
+
+# Install development dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git \
+    ffmpeg
+
+WORKDIR /app
+
+COPY package*.json ./
+
+# Install ALL dependencies including dev
+RUN npm install
+
+# Add global packages needed for development
+RUN npm install -g \
+    ts-node \
+    is-ci \
+    distube
+
+USER node
