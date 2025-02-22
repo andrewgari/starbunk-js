@@ -25,7 +25,7 @@ export default class MusicCorrectBot extends ReplyBot {
 			Logger.debug(`🎵 User ${message.author.username} tried using old play command: "${message.content}"`);
 			this.sendReply(
 				message.channel as TextChannel,
-				"Hey! The play command has changed. Use '/play' instead! 🎵"
+				"Hey! The play command has changed. Use '/play' instead! 🎵",
 			);
 		}
 	}
