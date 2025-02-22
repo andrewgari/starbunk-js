@@ -3,26 +3,17 @@ name: PR Docker Check
 on:
     pull_request:
         types: [opened, synchronize, reopened]
+        paths:
+            - 'src/**'
+            - '!src/tests/**'
+            - 'Dockerfile*'
+            - '.dockerignore'
+            - 'package*.json'
+            - '!**.md'
 
 jobs:
-    check_changes:
-        runs-on: ubuntu-latest
-        outputs:
-            non_test_changed: ${{ steps.filter.outputs.non_test }}
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dorny/paths-filter@v2
-              id: filter
-              with:
-                  filters: |
-                      non_test:
-                          - 'src/**'
-                          - '!src/tests/**'
-
     docker:
         name: 🐳 Docker Build
-        needs: check_changes
-        if: needs.check_changes.outputs.non_test_changed == 'true'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
