@@ -1,0 +1,9 @@
+# Default owner for everything
+*       @andrewgari
+
+# Specific ownership for critical paths
+/src/                   @andrewgari
+/.github/workflows/     @andrewgari
+/docker*/               @andrewgari
+*.json                  @andrewgari
+*.yml                   @andrewgari

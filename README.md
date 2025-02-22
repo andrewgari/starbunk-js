@@ -31,9 +31,25 @@ A powerful Discord bot designed for seamless cross-server communication and comm
 2. Create `.env` file with required configuration:
 
     ```env
-    DISCORD_TOKEN=your_bot_token
+    # Discord Bot Tokens
+    STARBUNK_TOKEN=your_starbunk_bot_token
+    SNOWBUNK_TOKEN=your_snowbunk_bot_token
+
+    # Environment
     NODE_ENV=development
+
+    # Optional: Debug Logging
+    DEBUG=false
     ```
+
+    You'll need to:
+
+    1. Create a Discord application in the [Discord Developer Portal](https://discord.com/developers/applications)
+    2. Create a bot for each server (StarBunk and SnowBunk)
+    3. Generate tokens for each bot
+    4. Add the tokens to your `.env` file
+
+    ⚠️ Never commit your `.env` file or share your bot tokens
 
 3. Install dependencies:
 
@@ -42,41 +58,6 @@ A powerful Discord bot designed for seamless cross-server communication and comm
     ```
 
 4. Start development server:
-    ```bash
-    npm run dev
     ```
 
-### 🐳 Docker Deployment
-
-1. Build and run with Docker Compose:
-
-    ```bash
-    docker-compose -f docker-compose.dev.yml up --build
     ```
-
-2. For production:
-    ```bash
-    docker-compose up -d
-    ```
-
-## 🔧 Configuration
-
-- Configure server IDs in `src/discord/guildIDs.ts`
-- Adjust webhook settings in `src/webhooks/webhookService.ts`
-- Customize bot permissions in Discord Developer Portal
-
-## 📚 Documentation
-
-For detailed API documentation and advanced configuration options, please visit our [Wiki](https://github.com/yourusername/bunkbot/wiki).
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
