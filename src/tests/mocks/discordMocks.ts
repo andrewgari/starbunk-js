@@ -1,4 +1,4 @@
-import { Client, Guild, GuildManager, GuildMemberManager, Message, TextChannel, User } from 'discord.js';
+import { ChatInputCommandInteraction, Client, Guild, GuildManager, GuildMember, GuildMemberManager, Message, TextChannel, User, VoiceChannel } from 'discord.js';
 
 export const createMockTextChannel = (): jest.Mocked<TextChannel> => ({
 	send: jest.fn().mockResolvedValue(undefined),
@@ -48,6 +48,16 @@ export const mockMessage = jest.fn().mockImplementation(({ channel }) => ({
 	channel,
 }) as unknown as Message);
 
+export const createMockVoiceChannel = (): VoiceChannel => ({
+	id: 'mock-voice-channel-id',
+	guild: {
+		id: 'mock-guild-id',
+		voiceAdapterCreator: jest.fn()
+	},
+	join: jest.fn(),
+	leave: jest.fn()
+} as unknown as VoiceChannel);
+
 export const createMockGuildMember = (userId: string = '0', username: string = 'TestUser'): { user: User; displayName: string } => ({
 	user: {
 		id: userId,
@@ -76,7 +86,12 @@ export const createMockGuildMember = (userId: string = '0', username: string = '
 		flags: null,
 		hexAccentColor: null,
 		partial: false,
-		tag: `${username}#0000`
+		tag: `${username}#0000`,
+		voice: {
+			channel: createMockVoiceChannel(),
+			channelId: 'mock-voice-channel-id',
+			guild: createMockGuild()
+		}
 	} as unknown as User,
 	displayName: username
 });
@@ -93,3 +108,29 @@ export const createMockDiscordClient = (): Partial<Client> => ({
 		fetch: jest.fn().mockImplementation(async () => createMockGuild())
 	} as unknown as GuildManager
 });
+
+export const createMockCommandInteraction = (): ChatInputCommandInteraction => ({
+	options: {
+		getString: jest.fn().mockReturnValue('https://youtube.com/mock'),
+		get: jest.fn().mockReturnValue({ value: 50 })
+	},
+	reply: jest.fn().mockResolvedValue(undefined),
+	deferReply: jest.fn().mockResolvedValue(undefined),
+	followUp: jest.fn().mockResolvedValue(undefined),
+	member: {
+		voice: {
+			channel: {
+				id: 'mock-voice-channel-id',
+				guild: {
+					id: 'mock-guild-id',
+					voiceAdapterCreator: jest.fn().mockReturnValue({
+						sendPayload: jest.fn(),
+						destroy: jest.fn()
+					})
+				}
+			}
+		}
+	} as unknown as GuildMember,
+	guild: createMockGuild(),
+	client: createMockDiscordClient()
+} as unknown as ChatInputCommandInteraction);
