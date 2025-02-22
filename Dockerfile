@@ -1,23 +1,17 @@
 # Build stage
-FROM node:18-alpine AS builder
-
-# Install build dependencies
-RUN apk add --no-cache python3 make g++ git
+FROM node:20-slim
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
-COPY yarn.lock ./
+RUN npm ci
 
-# Install ALL dependencies (including devDependencies)
-RUN yarn install --frozen-lockfile
-
-# Copy source
 COPY . .
+RUN npm run build
 
-# Build the application
-RUN yarn build
+# If you're running a production image
+ENV NODE_ENV production
+CMD ["npm", "start"]
 
 # Production stage
 FROM node:18-alpine
