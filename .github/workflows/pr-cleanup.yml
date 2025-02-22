@@ -1,4 +1,4 @@
-name: PR Cleanup
+name: Cleanup PR Resources
 
 on:
     pull_request:
@@ -6,22 +6,23 @@ on:
 
 jobs:
     cleanup:
+        name: 🧹 Cleanup PR Resources
         runs-on: ubuntu-latest
         steps:
-            - name: Login to GitHub Container Registry
-              uses: docker/login-action@v2
+            - name: Delete PR Docker Image
+              uses: actions/github-script@v7
               with:
-                  registry: ghcr.io
-                  username: ${{ github.actor }}
-                  password: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      const { owner, repo } = context.repo;
+                      const prNumber = context.payload.pull_request.number;
 
-            - name: Extract branch name
-              shell: bash
-              run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr '/' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-            - name: Delete PR images
-              run: |
-                  gh api \
-                    --method DELETE \
-                    "/user/packages/container/starbunk-js/versions/$(echo pr-${{ github.event.pull_request.number }} | sha256sum | cut -d' ' -f1)" \
-                    || true
+                      try {
+                          await github.rest.packages.deletePackageVersionForOrg({
+                              package_type: 'container',
+                              package_name: `${repo}/app`,
+                              org: owner,
+                              version: `pr-${prNumber}`
+                          });
+                      } catch (error) {
+                          console.log('Error deleting package:', error);
+                      }
