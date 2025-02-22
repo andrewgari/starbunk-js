@@ -11,4 +11,4 @@ services:
         ports:
             - '3000:3000'
         env_file: .env
-        command: yarn dev
+        command: npm run dev
