@@ -3,6 +3,13 @@ name: PR Docker Check
 on:
     pull_request:
         types: [opened, synchronize, reopened]
+        paths:
+            - 'src/**'
+            - '!src/tests/**'
+            - 'Dockerfile*'
+            - '.dockerignore'
+            - 'package*.json'
+            - '!**.md'
 
 jobs:
     docker:
@@ -20,4 +27,4 @@ jobs:
                   context: .
                   push: false
                   load: true
-                  tags: ghcr.io/${{ github.repository }}/app:pr-${{ github.event.pull_request.number }}
+                  tags: ${{ github.repository }}:pr-${{ github.event.pull_request.number }}

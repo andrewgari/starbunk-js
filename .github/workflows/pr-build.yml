@@ -3,6 +3,13 @@ name: PR Build Check
 on:
     pull_request:
         types: [opened, synchronize, reopened]
+        paths:
+            - 'src/**'
+            - '!src/tests/**'
+            - 'package*.json'
+            - 'tsconfig.json'
+            - 'webpack.config.js'
+            - '!**.md'
 
 jobs:
     build:

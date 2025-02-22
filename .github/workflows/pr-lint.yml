@@ -3,6 +3,18 @@ name: PR Lint Check
 on:
     pull_request:
         types: [opened, synchronize, reopened]
+        paths:
+            - '**.js'
+            - '**.ts'
+            - '**.jsx'
+            - '**.tsx'
+            - '.eslintrc*'
+            - '.prettierrc*'
+            - 'tsconfig.json'
+            - '!**.md'
+            - '!src/tests/fixtures/**'
+            - '!**.test.ts'
+            - '!**.test.js'
 
 jobs:
     lint:

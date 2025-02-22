@@ -3,6 +3,12 @@ name: PR Test Check
 on:
     pull_request:
         types: [opened, synchronize, reopened]
+        paths:
+            - 'src/**'
+            - 'package*.json'
+            - 'jest.config.js'
+            - 'tsconfig.json'
+            - '!**.md'
 
 jobs:
     test:
