@@ -8,6 +8,7 @@
 		"dev": "npm run lint:fix && npm run build && npm run test",
 		"test": "jest",
 		"tests": "jest --config=jest.config.js",
+		"test:coverage": "jest --coverage",
 		"test:watch": "jest --watch",
 		"lint": "eslint 'src/**/*.{ts,js}' '*.{ts,js}'",
 		"lint:fix": "eslint 'src/**/*.{ts,js}' '*.{ts,js}' --fix",
