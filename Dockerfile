@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-slim
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -9,29 +9,26 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# If you're running a production image
-ENV NODE_ENV production
-CMD ["npm", "start"]
-
 # Production stage
-FROM node:18-alpine
+FROM node:20-slim
 
 # Install production dependencies
-RUN apk add --no-cache ffmpeg python3
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Copy built assets and package files
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/yarn.lock ./
 
 # Install only production dependencies
-RUN yarn install --frozen-lockfile --production && \
-    yarn cache clean
+RUN npm ci --only=production
 
 # Add specific packages that need global installation
-RUN yarn global add \
+RUN npm install -g \
     ts-node \
     is-ci \
     distube
