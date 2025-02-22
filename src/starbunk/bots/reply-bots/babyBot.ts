@@ -8,7 +8,7 @@ export default class BabyBot extends ReplyBot {
 	}
 	private readonly botName = 'BabyBot';
 	private readonly avatarUrl = 'https://i.redd.it/qc9qus78dc581.jpg';
-	private readonly pattern = /\.\.\/+/;
+	private readonly pattern = /\b(baby)\b/i;
 	private readonly response = 'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif';
 
 	getBotName(): string {
