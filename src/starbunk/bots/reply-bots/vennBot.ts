@@ -11,7 +11,7 @@ export default class VennBot extends ReplyBot {
 	private botName = 'VennBot';
 	private avatarUrl = '';
 	private readonly pattern = /\bcringe\b/i;
-	private readonly responses = [
+	private static readonly responses = [
 		'Sorry, but that was über cringe...',
 		'Geez, that was hella cringe...',
 		'That was cringe to the max...',
@@ -27,8 +27,12 @@ export default class VennBot extends ReplyBot {
 		'C.R.I.N.G.E',
 	];
 
-	getResponse(): string {
+	static getRandomResponse(): string {
 		return this.responses[random.roll(this.responses.length)];
+	}
+
+	getResponse(): string {
+		return VennBot.getRandomResponse();
 	}
 
 	getBotName(): string {
