@@ -1,17 +1,13 @@
-name: PR Merge Workflow
+name: PR Cleanup
 
 on:
     pull_request:
-        types:
-            - closed
+        types: [closed]
 
 jobs:
-    cleanup-and-publish:
-        if: github.event.pull_request.merged == true
+    cleanup:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v3
-
             - name: Login to GitHub Container Registry
               uses: docker/login-action@v2
               with:
@@ -19,7 +15,6 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            # Clean up PR images first
             - name: Extract branch name
               shell: bash
               run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr '/' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
@@ -30,12 +25,3 @@ jobs:
                     --method DELETE \
                     "/user/packages/container/starbunk-js/versions/$(echo pr-${{ github.event.pull_request.number }} | sha256sum | cut -d' ' -f1)" \
                     || true
-
-            - name: Build and Push Production Image
-              uses: docker/build-push-action@v4
-              with:
-                  context: .
-                  push: true
-                  tags: |
-                      ghcr.io/${{ github.repository }}:latest
-                      ghcr.io/${{ github.repository }}:main
