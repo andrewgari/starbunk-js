@@ -1,0 +1,38 @@
+name: Deploy
+
+on:
+    push:
+        tags:
+            - 'v*'
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build
+              run: npm run build
+
+            - name: Deploy to Production
+              uses: appleboy/ssh-action@master
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USERNAME }}
+                  key: ${{ secrets.SSH_KEY }}
+                  script: |
+                      cd /path/to/your/bot
+                      git pull
+                      npm ci
+                      npm run build
+                      pm2 restart discord-bot # assuming you're using PM2
