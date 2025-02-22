@@ -3,6 +3,7 @@ import { Base, ClientOptions, Collection, Events, Message, REST, Routes, VoiceSt
 import { readdirSync } from 'fs';
 import { Command } from '../discord/command';
 import DiscordClient from '../discord/discordClient';
+import { Logger } from '../services/Logger';
 import ReplyBot from './bots/replyBot';
 import VoiceBot from './bots/voiceBot';
 import { DJCova } from './dJCova';
@@ -44,7 +45,7 @@ export default class StarbunkClient extends DiscordClient {
 					return;
 				}
 				this.bots.set(bot.getBotName(), bot);
-				console.log(`Registered Bot: ${bot.getBotName()}`);
+				Logger.success(`Registered Bot: ${bot.getBotName()} 🤖`);
 			});
 		}
 	};
@@ -59,7 +60,7 @@ export default class StarbunkClient extends DiscordClient {
 					return;
 				}
 				this.voiceBots.set(bot.getBotName(), bot);
-				console.log(`Registered Voice Bot: ${bot.getBotName()}`);
+				Logger.success(`Registered Voice Bot: ${bot.getBotName()} 🎤`);
 			});
 		}
 	};
@@ -73,7 +74,7 @@ export default class StarbunkClient extends DiscordClient {
 					return;
 				}
 				this.commands.set(command.data.name, command);
-				console.log(`Registered Command: ${command.data.name}`);
+				Logger.success(`Registered Command: ${command.data.name} ⚡`);
 			});
 		}
 	};
@@ -82,34 +83,40 @@ export default class StarbunkClient extends DiscordClient {
 		const rest = new REST({ version: '9' }).setToken(token);
 		const promises = [this.registerBots(), this.registerCommands(), this.registerVoiceBots()];
 
+		Logger.info('🚀 Starting Starbunk initialization...');
 		Promise.all(promises).then();
 
 		this.on(Events.MessageCreate, async (message: Message) => {
+			Logger.debug(`Received message: ${message.content.substring(0, 50)}...`);
 			this.handleMessage(message);
 		});
 
 		this.on(Events.MessageUpdate, async (_oldMessage, newMessage) => {
 			const message = await newMessage.fetch();
+			Logger.debug(`Message updated: ${message.content.substring(0, 50)}...`);
 			this.handleMessage(message);
 		});
 
-		console.log('registering voice bots');
+		Logger.info('🎤 Registering voice event handlers...');
 		this.on(Events.VoiceStateUpdate, async (oldState, newState) => {
-			console.log('on voice event');
+			Logger.debug('Voice state update detected');
 			this.handleVoiceEvent(oldState, newState);
 		});
 
-		console.log('routing commands');
+		Logger.info('⚡ Registering slash commands...');
 		rest.put(Routes.applicationGuildCommands(clientId, guildId), {
 			body: this.commands.map((command) => command.data),
 		});
 
-		console.log('listening on commands');
+		Logger.info('👂 Listening for commands...');
 		this.on(Events.InteractionCreate, async (interaction) => {
-			console.log('got command');
 			if (!interaction.isCommand()) return;
 			const command = this.commands.get(interaction.commandName);
-			if (!command) return;
+			if (!command) {
+				Logger.warn(`Unknown command received: ${interaction.commandName}`);
+				return;
+			}
+			Logger.debug(`Executing command: ${interaction.commandName}`);
 			command.execute(interaction);
 		});
 	}

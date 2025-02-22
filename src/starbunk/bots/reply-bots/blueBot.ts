@@ -1,6 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import userID from '../../../discord/userID';
 import { OpenAIClient } from '../../../openai/openaiClient';
+import { Logger } from '../../../services/Logger';
 import ReplyBot from '../replyBot';
 
 export default class BlueBot extends ReplyBot {
@@ -40,19 +41,21 @@ export default class BlueBot extends ReplyBot {
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		// bluebot, say something nice about <name>
-		// <name>, I think you're pretty blue.
 		if (this.isSomeoneAskingYouToBeBlue(message)) {
+			Logger.debug(`User ${message.author.username} asked BlueBot to be nice`);
 			const name = this.getNameFromBluRequest(message);
 			if (name.match(/venn/i)) {
+				Logger.debug(`${message.author.username} asked about Venn - responding with contempt`);
 				this.saySomethingBlueAboutVenn(message);
 				return;
 			}
+			Logger.debug(`Being nice to ${name} as requested by ${message.author.username}`);
 			this.saySomethingNiceAbout(message, name);
 			return;
 		}
 
 		if (this.isVennInsultingBlu(message)) {
+			Logger.warn(`Venn is being mean again! Message: "${message.content}"`);
 			this.blueMurderTimestamp = new Date();
 			this.avatarUrl = this.murderAvatar;
 			this.sendReply(message.channel as TextChannel, this.murderResponse);
@@ -72,12 +75,7 @@ export default class BlueBot extends ReplyBot {
 			this.sendReply(message.channel as TextChannel, this.defaultResponse);
 			return;
 		} else if (await this.checkIfBlueIsSaid(message)) {
-			console.log('chat gippity said blue');
-			this.sendReply(message.channel as TextChannel, this.defaultResponse);
-		}
-
-		if (await this.checkIfBlueIsSaid(message)) {
-			console.log('chat gippity said blue');
+			Logger.debug('AI detected blue reference in message');
 			this.sendReply(message.channel as TextChannel, this.defaultResponse);
 		}
 	}
@@ -113,6 +111,7 @@ export default class BlueBot extends ReplyBot {
 
 	private async checkIfBlueIsSaid(message: Message): Promise<boolean> {
 		try {
+			Logger.debug('Checking message for blue references via AI');
 			const response = await OpenAIClient.chat.completions.create({
 				model: 'gpt-4o-mini',
 				messages: [
@@ -158,16 +157,16 @@ export default class BlueBot extends ReplyBot {
 				temperature: 0.2,
 			});
 
-			console.log(response.choices[0].message.content);
+			Logger.debug(`AI response: ${response.choices[0].message.content}`);
 			return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
 		} catch (error) {
-			console.error(error);
+			Logger.error('Error checking for blue reference', error as Error);
 			return false;
 		}
 	}
 
 	private isSomeoneAskingYouToBeBlue(message: Message): boolean {
-		return message.content.match(this.nicePattern);
+		return Boolean(message.content.match(this.nicePattern));
 	}
 
 	private saySomethingNiceAbout(message: Message, name: string): void {

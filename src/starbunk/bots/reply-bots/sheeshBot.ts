@@ -1,8 +1,9 @@
 import { Message, TextChannel } from 'discord.js';
+import { Logger } from '../../../services/Logger';
 import ReplyBot from '../replyBot';
 
 export default class SheeshBot extends ReplyBot {
-	private botName = 'SheeshBot';
+	private botName = 'Sheesh Bot';
 	private readonly avatarUrl = 'https://i.imgflip.com/5fc2iz.png?a471000';
 
 	private readonly defaultPattern = /\bshee+sh\b/i;
@@ -22,9 +23,14 @@ export default class SheeshBot extends ReplyBot {
 		return 'Sh' + this.generateRandomEs() + 'sh!';
 	}
 
-	handleMessage(message: Message<boolean>): void {
+	handleMessage(message: Message): void {
 		if (message.author.bot) return;
 
 		if (message.content.match(this.defaultPattern)) this.sendReply(message.channel as TextChannel, this.response());
+
+		if (message.content.match(/\bsheesh\b/i)) {
+			Logger.debug(`😤 User ${message.author.username} said sheesh in: "${message.content}"`);
+			this.sendReply(message.channel as TextChannel, 'SHEEEEEEEESH 😤');
+		}
 	}
 }

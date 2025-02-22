@@ -46,7 +46,8 @@
 		"opusscript": "^0.0.8",
 		"play-dl": "^1.9.7",
 		"yarn": "^1.22.22",
-		"ytdl-core": "^4.11.5"
+		"ytdl-core": "^4.11.5",
+		"chalk": "^4.1.2"
 	},
 	"devDependencies": {
 		"@types/node": "^20.17.14",
