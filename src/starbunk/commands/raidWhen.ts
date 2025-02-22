@@ -12,7 +12,7 @@ enum Day {
 	Saturday = 6,
 }
 
-const getNextRaid = (now: Date): Date => {
+export const getNextRaid = (now: Date): Date => {
 	const raidTime = now;
 	switch (raidTime.getUTCDay()) {
 		case Day.Tuesday:
