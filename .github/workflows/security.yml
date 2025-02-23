@@ -4,7 +4,6 @@ on: [push, pull_request]
 
 jobs:
     security:
-        if: ${{ secrets.SNYK_TOKEN != '' }}
         runs-on: ubuntu-latest
         continue-on-error: true
         steps:
