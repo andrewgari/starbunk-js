@@ -77,5 +77,16 @@ export const ratmasCommands = [
 			await interaction.editReply(`Ratmas opening date updated to ${dateStr}! 🐀`);
 		}
 	},
+	{
+		data: new SlashCommandBuilder()
+			.setName('ratmas-end')
+			.setDescription('End the current Ratmas event')
+			.setDefaultMemberPermissions('ADMINISTRATOR'),
+		execute: async (interaction: ChatInputCommandInteraction, ratmasService: RatmasService) => {
+			await interaction.deferReply();
+			await ratmasService.endRatmas(interaction.guild!);
+			await interaction.editReply('Ratmas has ended! The channel will be archived. 🐀');
+		}
+	},
 	// Additional commands to be implemented...
 ];

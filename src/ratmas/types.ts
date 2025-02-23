@@ -6,8 +6,21 @@ export interface RatmasParticipant {
 
 export interface RatmasEvent {
 	channelId: string;
+	guildId: string;
 	startDate: Date;
 	openingDate: Date;
 	participants: Map<string, RatmasParticipant>;
 	isActive: boolean;
+	year: number;
+}
+
+// For persistence
+export interface SerializedRatmasEvent {
+	channelId: string;
+	guildId: string;
+	startDate: string;
+	openingDate: string;
+	participants: Array<[string, RatmasParticipant]>;
+	isActive: boolean;
+	year: number;
 }
