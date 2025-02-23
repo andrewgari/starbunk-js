@@ -128,5 +128,72 @@ Happy Ratmas! 🎁`
 		participant.wishlistUrl = url;
 	}
 
+	async getTargetWishlist(userId: string): Promise<string> {
+		if (!this.currentEvent?.participants.has(userId)) {
+			throw new Error('You are not participating in Ratmas');
+		}
+
+		const santa = this.currentEvent.participants.get(userId)!;
+		if (!santa.assignedTargetId) {
+			throw new Error('No target assigned yet');
+		}
+
+		const target = this.currentEvent.participants.get(santa.assignedTargetId)!;
+		const targetUser = await this.client.users.fetch(target.userId);
+
+		if (!target.wishlistUrl) {
+			return `${targetUser.username} hasn't set their wishlist yet! 😢`;
+		}
+
+		return `🎁 ${targetUser.username}'s wishlist: ${target.wishlistUrl}`;
+	}
+
+	async reportWishlistIssue(reporterId: string, message: string): Promise<void> {
+		if (!this.currentEvent?.participants.has(reporterId)) {
+			throw new Error('You are not participating in Ratmas');
+		}
+
+		const reporter = this.currentEvent.participants.get(reporterId)!;
+		if (!reporter.assignedTargetId) {
+			throw new Error('No target assigned yet');
+		}
+
+		const target = await this.client.users.fetch(reporter.assignedTargetId);
+		await target.send(
+			`🐀 Anonymous Ratmas Message: Your wishlist needs attention!\n\n${message}\n\nPlease update your wishlist using \`/ratmas-wishlist\``
+		);
+	}
+
+	async adjustOpeningDate(guild: Guild, dateStr: string): Promise<void> {
+		if (!this.currentEvent?.isActive) {
+			throw new Error('No active Ratmas event');
+		}
+
+		const newDate = new Date(dateStr);
+		if (isNaN(newDate.getTime())) {
+			throw new Error('Invalid date format. Please use MM/DD/YYYY');
+		}
+
+		this.currentEvent.openingDate = newDate;
+
+		// Update the server event
+		const events = await guild.scheduledEvents.fetch();
+		const ratmasEvent = events.find(e =>
+			e.name.includes('Ratmas') && e.name.includes(new Date().getFullYear().toString())
+		);
+
+		if (ratmasEvent) {
+			await ratmasEvent.edit({
+				scheduledStartTime: newDate
+			});
+		}
+
+		// Announce change
+		const channel = await guild.channels.fetch(this.currentEvent.channelId) as TextChannel;
+		await channel.send({
+			content: `🐀 **Ratmas Update!**\nThe opening date has been adjusted to ${newDate.toLocaleDateString()}!`
+		});
+	}
+
 	// Additional methods to be implemented for commands...
 }
