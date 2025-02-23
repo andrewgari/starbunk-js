@@ -1,71 +1,19 @@
-import { CategoryChannel, ChannelType, Client, Guild, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, GuildScheduledEventStatus, TextChannel, ThreadChannel } from 'discord.js';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { Client, Guild, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, TextChannel, ThreadChannel } from 'discord.js';
 import roleIDs from '../discord/roleIDs';
+import { ChannelManager, EventManager, MessageSender, RatmasStorage } from './interfaces';
 import { RatmasEvent, RatmasParticipant, SerializedRatmasEvent } from './types';
 
 export class RatmasService {
 	private currentEvent: RatmasEvent | null = null;
-	private readonly client: Client;
-	private readonly storageFile = path.join(process.cwd(), 'data', 'ratmas.json');
 
-	constructor(client: Client) {
-		this.client = client;
+	constructor(
+		private readonly client: Client,
+		private readonly storage: RatmasStorage,
+		private readonly channelManager: ChannelManager,
+		private readonly eventManager: EventManager,
+		private readonly messageSender: MessageSender
+	) {
 		this.loadState().catch(console.error);
-	}
-
-	private async setupRatmasChannel(guild: Guild, year: number): Promise<TextChannel> {
-		const channelName = `ratmas-${year} 🐀`;
-
-		// Find or create Ratmas category
-		let ratmasCategory = guild.channels.cache.find(
-			channel => channel.name === 'Ratmas' && channel.type === ChannelType.GuildCategory
-		) as CategoryChannel;
-
-		if (!ratmasCategory) {
-			// Create category and move existing Ratmas channels
-			ratmasCategory = await guild.channels.create({
-				name: 'Ratmas',
-				type: ChannelType.GuildCategory
-			});
-
-			// Find all Ratmas channels and move them
-			const ratmasChannels = guild.channels.cache.filter(channel =>
-				channel.name.toLowerCase().startsWith('ratmas-') &&
-				channel.type === ChannelType.GuildText
-			);
-
-			for (const [, channel] of ratmasChannels) {
-				await (channel as TextChannel).edit({ parent: ratmasCategory });
-			}
-		}
-
-		// Find existing channel (archived or not)
-		let channel = guild.channels.cache.find(
-			channel => channel.name === channelName && channel.type === ChannelType.GuildText
-		) as TextChannel;
-
-		if (!channel) {
-			// Create new channel
-			channel = await guild.channels.create({
-				name: channelName,
-				type: ChannelType.GuildText,
-				parent: ratmasCategory
-			});
-		} else {
-			// Move to Ratmas category and unarchive if needed
-			await channel.edit({ parent: ratmasCategory });
-			if (channel.isThread()) {
-				const threadChannel = channel as ThreadChannel;
-				await threadChannel.setArchived(false);
-				await threadChannel.setLocked(false);
-			}
-		}
-
-		// Move to top
-		await channel.edit({ position: 0 });
-
-		return channel;
 	}
 
 	async startRatmas(guild: Guild): Promise<void> {
@@ -74,7 +22,7 @@ export class RatmasService {
 		}
 
 		const year = new Date().getFullYear();
-		const channel = await this.setupRatmasChannel(guild, year);
+		const channel = await this.channelManager.setupRatmasChannel(guild, year);
 
 		// Set default dates
 		const startDate = new Date();
@@ -97,7 +45,8 @@ export class RatmasService {
 			participants,
 			isActive: true,
 			year: year,
-			guildId: guild.id
+			guildId: guild.id,
+			eventId: ''  // Will be set after creating server event
 		};
 
 		await this.assignSecretSantas();
@@ -127,7 +76,8 @@ export class RatmasService {
 			// Send DM
 			const santaUser = await this.client.users.fetch(santa.userId);
 			const targetUser = await this.client.users.fetch(target.userId);
-			await santaUser.send(
+			await this.messageSender.sendDM(
+				santaUser,
 				`🐀 Ho ho ho! You're a Ratmas rat! Your gift recipient is: ${targetUser.username}`
 			);
 		}
@@ -145,21 +95,14 @@ export class RatmasService {
 			description: 'Time to open our Ratmas gifts! Join us in voice chat!'
 		});
 
-		// Add event end handler
-		guild.scheduledEvents.fetch(event.id).then(async fetchedEvent => {
-			if (fetchedEvent?.status === GuildScheduledEventStatus.Completed) {
-				await this.endRatmas(guild, true);
-			}
-		});
+		this.currentEvent.eventId = event.id;
+		await this.saveState();
 	}
 
 	private async announceStart(channel: TextChannel): Promise<void> {
 		const openingDate = this.currentEvent?.openingDate.toLocaleDateString();
-		await channel.send({
-			content: `<@&${roleIDs.Ratmas}>
-🐀 **Ratmas ${new Date().getFullYear()} has begun!** 🐀
-
-You have 2 weeks to purchase your gifts! Opening day is ${openingDate}.
+		await this.messageSender.announceInChannel(channel,
+			`<@&${roleIDs.Ratmas}>\n🐀 **Ratmas ${new Date().getFullYear()} has begun!** 🐀\n\nYou have 2 weeks to purchase your gifts! Opening day is ${openingDate}.
 
 Please set your wishlist using the command:
 \`/ratmas-wishlist [amazon-url]\`
@@ -170,7 +113,7 @@ To view your target's wishlist:
 If you notice any issues with wishlists, you can DM me to anonymously notify them.
 
 Happy Ratmas! 🎁`
-		});
+		);
 	}
 
 	async setWishlist(userId: string, url: string): Promise<void> {
@@ -233,7 +176,7 @@ Happy Ratmas! 🎁`
 		}
 
 		const target = await this.client.users.fetch(reporter.assignedTargetId);
-		await target.send(
+		await this.messageSender.sendDM(target,
 			`🐀 Anonymous Ratmas Message: Your wishlist needs attention!\n\n${message}\n\nPlease update your wishlist using \`/ratmas-wishlist\``
 		);
 	}
@@ -305,15 +248,13 @@ Happy Ratmas! 🎁`
 			year: this.currentEvent.year
 		};
 
-		await fs.mkdir(path.dirname(this.storageFile), { recursive: true });
-		await fs.writeFile(this.storageFile, JSON.stringify(serialized, null, 2));
+		await this.storage.save(serialized);
 	}
 
 	private async loadState(): Promise<void> {
-		try {
-			const data = await fs.readFile(this.storageFile, 'utf-8');
-			const serialized: SerializedRatmasEvent = JSON.parse(data);
+		const serialized = await this.storage.load();
 
+		if (serialized) {
 			this.currentEvent = {
 				...serialized,
 				startDate: new Date(serialized.startDate),
@@ -324,36 +265,13 @@ Happy Ratmas! 🎁`
 			// Set up event end handler if event is still active
 			if (this.currentEvent.isActive) {
 				const guild = await this.client.guilds.fetch(this.currentEvent.guildId);
-				const events = await guild.scheduledEvents.fetch();
-				const ratmasEvent = events.find(e =>
-					e.name.includes('Ratmas') && e.name.includes(this.currentEvent!.year.toString())
-				);
-
-				if (ratmasEvent) {
-					this.watchEvent(guild, ratmasEvent.id);
-				}
+				this.eventManager.watchEvent(guild, this.currentEvent.eventId, async () => {
+					await this.endRatmas(guild, true);
+				});
 			}
-		} catch (error) {
-			// No saved state or error reading file
+		} else {
 			this.currentEvent = null;
 		}
-	}
-
-	private watchEvent(guild: Guild, eventId: string): void {
-		guild.scheduledEvents.fetch(eventId).then(async fetchedEvent => {
-			if (fetchedEvent) {
-				switch (fetchedEvent.status) {
-					case GuildScheduledEventStatus.Completed:
-						await this.endRatmas(guild, true);
-						break;
-					case GuildScheduledEventStatus.Active:
-					case GuildScheduledEventStatus.Scheduled:
-						// Check again in 5 minutes
-						setTimeout(() => this.watchEvent(guild, eventId), 5 * 60 * 1000);
-						break;
-				}
-			}
-		});
 	}
 
 	// Additional methods to be implemented for commands...

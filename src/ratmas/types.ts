@@ -7,6 +7,7 @@ export interface RatmasParticipant {
 export interface RatmasEvent {
 	channelId: string;
 	guildId: string;
+	eventId: string;
 	startDate: Date;
 	openingDate: Date;
 	participants: Map<string, RatmasParticipant>;
@@ -18,6 +19,7 @@ export interface RatmasEvent {
 export interface SerializedRatmasEvent {
 	channelId: string;
 	guildId: string;
+	eventId: string;
 	startDate: string;
 	openingDate: string;
 	participants: Array<[string, RatmasParticipant]>;
