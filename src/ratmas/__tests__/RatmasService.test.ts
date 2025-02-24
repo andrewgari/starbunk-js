@@ -1,11 +1,18 @@
 import { Client, Collection, Guild, TextChannel, User } from 'discord.js';
-import { ChannelManager, EventManager, MessageSender, RatmasStorage } from '../interfaces';
+import { ChannelManager, EventManager, MessageSender } from '../interfaces';
 import { RatmasService } from '../RatmasService';
+import { IRatmasStorage } from '../storage/RatmasStorage';
+import { RatmasEvent } from '../types';
+
+// Update type for accessing private members
+type RatmasServicePrivate = {
+	currentEvent: RatmasEvent;
+};
 
 describe('RatmasService', () => {
 	let service: RatmasService;
 	let mockClient: jest.Mocked<Client>;
-	let mockStorage: jest.Mocked<RatmasStorage>;
+	let mockStorage: jest.Mocked<IRatmasStorage>;
 	let mockChannelManager: jest.Mocked<ChannelManager>;
 	let mockEventManager: jest.Mocked<EventManager>;
 	let mockMessageSender: jest.Mocked<MessageSender>;
@@ -25,13 +32,13 @@ describe('RatmasService', () => {
 			guilds: { fetch: jest.fn() },
 			application: null,
 			options: {},
-			emojis: {} as any,
+			emojis: new Collection()
 		} as unknown as jest.Mocked<Client>;
 
 		mockStorage = {
-			save: jest.fn(),
+			save: jest.fn().mockResolvedValue(undefined),
 			load: jest.fn().mockResolvedValue(null)
-		};
+		} as unknown as jest.Mocked<IRatmasStorage>;
 
 		mockChannelManager = {
 			setupRatmasChannel: jest.fn(),
@@ -79,13 +86,17 @@ describe('RatmasService', () => {
 
 		it('creates new Ratmas event with correct initial state', async () => {
 			await service.startRatmas(mockGuild);
-
 			expect(mockChannelManager.setupRatmasChannel).toHaveBeenCalledWith(mockGuild, expect.any(Number));
-			expect(mockStorage.save).toHaveBeenCalledWith(expect.objectContaining({
+			expect(mockStorage.save).toHaveBeenCalledWith({
 				channelId: 'channel-123',
 				guildId: 'guild-123',
-				isActive: true
-			}));
+				eventId: 'event-123',
+				isActive: true,
+				participants: [],
+				startDate: expect.any(String),
+				openingDate: expect.any(String),
+				year: expect.any(Number)
+			});
 		});
 
 		it('prevents starting when event is already active', async () => {
@@ -100,12 +111,16 @@ describe('RatmasService', () => {
 
 		beforeEach(async () => {
 			// Setup active event with participant
-			(service as any).currentEvent = {
-				participants: new Map([[userId, { userId }]]),
+			(service as unknown as RatmasServicePrivate).currentEvent = {
+				participants: [
+					[userId, { userId }]
+				],
 				isActive: true,
 				startDate: new Date(),
 				openingDate: new Date(),
 				channelId: 'channel-123',
+				guildId: 'guild-123',
+				eventId: 'event-123',
 				year: 2024
 			};
 		});
@@ -113,8 +128,9 @@ describe('RatmasService', () => {
 		it('sets wishlist for valid participant', async () => {
 			await service.setWishlist(userId, wishlistUrl);
 
-			const participant = (service as any).currentEvent.participants.get(userId);
-			expect(participant.wishlistUrl).toBe(wishlistUrl);
+			const participant = (service as unknown as RatmasServicePrivate).currentEvent.participants
+				.find(([id]) => id === userId)?.[1];
+			expect(participant?.wishlistUrl).toBe(wishlistUrl);
 			expect(mockStorage.save).toHaveBeenCalled();
 		});
 
@@ -140,15 +156,17 @@ describe('RatmasService', () => {
 			mockClient.channels.fetch = jest.fn().mockResolvedValue(mockChannel);
 
 			// Setup active event with participants
-			(service as any).currentEvent = {
-				participants: new Map([
+			(service as unknown as RatmasServicePrivate).currentEvent = {
+				participants: [
 					[santaId, { userId: santaId, assignedTargetId: targetId }],
 					[targetId, { userId: targetId, wishlistUrl: targetWishlist }]
-				]),
+				],
 				isActive: true,
 				startDate: new Date(),
 				openingDate: new Date(),
 				channelId: 'channel-123',
+				guildId: 'guild-123',
+				eventId: 'event-123',
 				year: 2024
 			};
 		});
@@ -159,7 +177,11 @@ describe('RatmasService', () => {
 		});
 
 		it('handles missing wishlist gracefully', async () => {
-			(service as any).currentEvent.participants.get(targetId).wishlistUrl = undefined;
+			const targetParticipant = (service as unknown as RatmasServicePrivate).currentEvent.participants
+				.find(([id]) => id === targetId)?.[1];
+			if (targetParticipant) {
+				targetParticipant.wishlistUrl = undefined;
+			}
 			const result = await service.getTargetWishlist(santaId);
 			expect(result).toContain("hasn't set their wishlist yet");
 		});

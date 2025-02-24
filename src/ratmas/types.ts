@@ -10,7 +10,7 @@ export interface RatmasEvent {
 	eventId: string;
 	startDate: Date;
 	openingDate: Date;
-	participants: Map<string, RatmasParticipant>;
+	participants: [string, RatmasParticipant][];
 	isActive: boolean;
 	year: number;
 }

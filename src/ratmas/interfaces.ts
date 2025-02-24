@@ -1,10 +1,4 @@
 import { Guild, TextChannel, User } from 'discord.js';
-import { SerializedRatmasEvent } from './types';
-
-export interface RatmasStorage {
-	save(data: SerializedRatmasEvent): Promise<void>;
-	load(): Promise<SerializedRatmasEvent | null>;
-}
 
 export interface ChannelManager {
 	setupRatmasChannel(guild: Guild, year: number): Promise<TextChannel>;

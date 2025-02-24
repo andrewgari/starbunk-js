@@ -1,6 +1,7 @@
 import { Client, Guild, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, TextChannel, ThreadChannel } from 'discord.js';
 import roleIDs from '../discord/roleIDs';
-import { ChannelManager, EventManager, MessageSender, RatmasStorage } from './interfaces';
+import { ChannelManager, EventManager, MessageSender } from './interfaces';
+import { IRatmasStorage } from './storage/RatmasStorage';
 import { RatmasEvent, RatmasParticipant, SerializedRatmasEvent } from './types';
 
 export class RatmasService {
@@ -8,7 +9,7 @@ export class RatmasService {
 
 	constructor(
 		private readonly client: Client,
-		private readonly storage: RatmasStorage,
+		private readonly storage: IRatmasStorage,
 		private readonly channelManager: ChannelManager,
 		private readonly eventManager: EventManager,
 		private readonly messageSender: MessageSender
@@ -31,11 +32,11 @@ export class RatmasService {
 		// Adjust to next Friday
 		openingDate.setDate(openingDate.getDate() + ((5 - openingDate.getDay() + 7) % 7));
 
-		// Initialize participants
-		const participants = new Map<string, RatmasParticipant>();
+		// Initialize participants as array
+		const participants: [string, RatmasParticipant][] = [];
 		const ratmasRole = guild.roles.cache.get(roleIDs.Ratmas);
 		ratmasRole?.members.forEach(member => {
-			participants.set(member.id, { userId: member.id });
+			participants.push([member.id, { userId: member.id }]);
 		});
 
 		this.currentEvent = {
@@ -58,7 +59,7 @@ export class RatmasService {
 	private async assignSecretSantas(): Promise<void> {
 		if (!this.currentEvent) return;
 
-		const participants = Array.from(this.currentEvent.participants.values());
+		const participants = this.currentEvent.participants.map(([_, p]) => p);
 		const shuffled = [...participants];
 
 		// Fisher-Yates shuffle
@@ -100,7 +101,10 @@ export class RatmasService {
 	}
 
 	private async announceStart(channel: TextChannel): Promise<void> {
-		const openingDate = this.currentEvent?.openingDate.toLocaleDateString();
+		if (!this.currentEvent) {
+			throw new Error('No active Ratmas event');
+		}
+		const openingDate = this.currentEvent.openingDate.toLocaleDateString();
 		await this.messageSender.announceInChannel(channel,
 			`<@&${roleIDs.Ratmas}>\n🐀 **Ratmas ${new Date().getFullYear()} has begun!** 🐀\n\nYou have 2 weeks to purchase your gifts! Opening day is ${openingDate}.
 
@@ -116,26 +120,43 @@ Happy Ratmas! 🎁`
 		);
 	}
 
+	private findParticipant(userId: string): RatmasParticipant | undefined {
+		if (!this.currentEvent) return undefined;
+		return this.currentEvent.participants
+			.find(([id]) => id === userId)?.[1];
+	}
+
 	async setWishlist(userId: string, url: string): Promise<void> {
-		if (!this.currentEvent?.participants.has(userId)) {
+		if (!this.currentEvent) {
+			throw new Error('No active Ratmas event');
+		}
+		const participant = this.findParticipant(userId);
+		if (!participant) {
 			throw new Error('You are not participating in Ratmas');
 		}
-		const participant = this.currentEvent.participants.get(userId)!;
 		participant.wishlistUrl = url;
 		await this.saveState();
 	}
 
 	async getTargetWishlist(userId: string): Promise<string> {
-		if (!this.currentEvent?.participants.has(userId)) {
+		if (!this.currentEvent) {
+			throw new Error('No active Ratmas event');
+		}
+
+		const santa = this.findParticipant(userId);
+		if (!santa) {
 			throw new Error('You are not participating in Ratmas');
 		}
 
-		const santa = this.currentEvent.participants.get(userId)!;
 		if (!santa.assignedTargetId) {
 			throw new Error('No target assigned yet');
 		}
 
-		const target = this.currentEvent.participants.get(santa.assignedTargetId)!;
+		const target = this.findParticipant(santa.assignedTargetId);
+		if (!target) {
+			throw new Error('Target not found');
+		}
+
 		const targetUser = await this.client.users.fetch(target.userId);
 
 		if (!target.wishlistUrl) {
@@ -166,11 +187,11 @@ Happy Ratmas! 🎁`
 	}
 
 	async reportWishlistIssue(reporterId: string, message: string): Promise<void> {
-		if (!this.currentEvent?.participants.has(reporterId)) {
+		const reporter = this.findParticipant(reporterId);
+		if (!reporter) {
 			throw new Error('You are not participating in Ratmas');
 		}
 
-		const reporter = this.currentEvent.participants.get(reporterId)!;
 		if (!reporter.assignedTargetId) {
 			throw new Error('No target assigned yet');
 		}
@@ -244,7 +265,7 @@ Happy Ratmas! 🎁`
 			...this.currentEvent,
 			startDate: this.currentEvent.startDate.toISOString(),
 			openingDate: this.currentEvent.openingDate.toISOString(),
-			participants: Array.from(this.currentEvent.participants.entries()),
+			participants: this.currentEvent.participants,
 			year: this.currentEvent.year
 		};
 
@@ -259,7 +280,7 @@ Happy Ratmas! 🎁`
 				...serialized,
 				startDate: new Date(serialized.startDate),
 				openingDate: new Date(serialized.openingDate),
-				participants: new Map(serialized.participants)
+				participants: serialized.participants
 			};
 
 			// Set up event end handler if event is still active
