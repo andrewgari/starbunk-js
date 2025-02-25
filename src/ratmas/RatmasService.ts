@@ -59,7 +59,7 @@ export class RatmasService {
 	private async assignSecretSantas(): Promise<void> {
 		if (!this.currentEvent) return;
 
-		const participants = this.currentEvent.participants.map(([_, p]) => p);
+		const participants = this.currentEvent.participants.map(([, p]) => p);
 		const shuffled = [...participants];
 
 		// Fisher-Yates shuffle

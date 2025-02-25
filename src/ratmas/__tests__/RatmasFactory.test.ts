@@ -13,7 +13,7 @@ describe('RatmasFactory', () => {
 
 		it('passes client to RatmasService', () => {
 			const service = RatmasFactory.create(mockClient);
-			expect((service as any).client).toBe(mockClient);
+			expect((service as unknown as { client: Client }).client).toBe(mockClient);
 		});
 	});
 });

@@ -103,7 +103,7 @@ describe('RatmasService', () => {
 			// Mock the current date to have a fixed year for testing
 			const realDate = Date;
 			const mockDate = class extends Date {
-				constructor(...args: any[]) {
+				constructor(...args: unknown[]) {
 					if (args.length === 0) {
 						super(2024, 0, 1); // January 1, 2024
 					} else {
@@ -132,7 +132,7 @@ describe('RatmasService', () => {
 			const fixedOpeningDate = new Date(2024, 0, 12); // January 12, 2024 (a Friday)
 
 			const mockDate = class extends Date {
-				constructor(...args: any[]) {
+				constructor(...args: unknown[]) {
 					if (args.length === 0) {
 						super(fixedStartDate.getTime());
 					} else {
@@ -362,7 +362,7 @@ describe('RatmasService', () => {
 				expect(savedData).toHaveProperty('year', 2024);
 
 				// Verify the participant's wishlist was updated
-				const savedParticipant = savedData.participants.find(([id]: [string, any]) => id === userId)?.[1];
+				const savedParticipant = savedData.participants.find(([id]: [string, unknown]) => id === userId)?.[1];
 				expect(savedParticipant).toBeDefined();
 				expect(savedParticipant!.wishlistUrl).toBe(url);
 
@@ -580,8 +580,9 @@ describe('RatmasService', () => {
 			try {
 				await service.getTargetWishlist('non-participant-123');
 				fail('Should have thrown an error');
-			} catch (error: any) {
-				expect(error.message).toBe('You are not participating in Ratmas');
+			} catch (error: unknown) {
+				const errorWithMessage = error as { message: string };
+				expect(errorWithMessage.message).toBe('You are not participating in Ratmas');
 
 				// Verify no other operations were performed
 				expect(mockClient.users.fetch).not.toHaveBeenCalled();
@@ -615,7 +616,7 @@ describe('RatmasService', () => {
 
 		it('throws error when no active Ratmas event exists', async () => {
 			// Set currentEvent to null to simulate no active event
-			(service as any).currentEvent = null;
+			(service as unknown as { currentEvent: null }).currentEvent = null;
 
 			// Attempt to get target wishlist
 			await expect(service.getTargetWishlist(santaId))
