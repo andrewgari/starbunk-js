@@ -1,5 +1,3 @@
-// Delete if this file exists
-
 import path from 'path';
 import { JsonFileStorage } from '../../storage/JsonFileStorage';
 import { FileStorage } from '../FileStorage';
