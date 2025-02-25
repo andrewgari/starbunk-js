@@ -1,4 +1,4 @@
-import { Client, Guild, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, TextChannel, ThreadChannel } from 'discord.js';
+import { Client, Guild, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, TextChannel, ThreadChannel, User } from 'discord.js';
 import roleIDs from '../discord/roleIDs';
 import { ChannelManager, EventManager, MessageSender } from './interfaces';
 import { IRatmasStorage } from './storage/RatmasStorage';
@@ -192,7 +192,7 @@ Happy Ratmas! 🎁`;
 		return `🎁 ${targetUser.username}'s wishlist: ${target.wishlistUrl}`;
 	}
 
-	private async handleMissingWishlist(target: RatmasParticipant, targetUser: any): Promise<string> {
+	private async handleMissingWishlist(target: RatmasParticipant, targetUser: User): Promise<string> {
 		// Search for wishlist in channel history
 		const wishlistFromChat = await this.findWishlistInChat(target);
 
@@ -222,7 +222,7 @@ Happy Ratmas! 🎁`;
 		return wishlistMessage ? wishlistMessage.content : null;
 	}
 
-	private async notifyMissingWishlist(targetUser: any): Promise<void> {
+	private async notifyMissingWishlist(targetUser: User): Promise<void> {
 		await targetUser.send(
 			`🐀 Hey there! Someone is trying to view your Ratmas wishlist, but you haven't set one yet!\n` +
 			`Please use \`/ratmas-wishlist\` to set your Amazon wishlist URL.`

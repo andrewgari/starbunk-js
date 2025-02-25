@@ -39,7 +39,7 @@ export class DiscordChannelManager implements ChannelManager {
 	}
 
 	private async getOrCreateChannel(guild: Guild, channelName: string, category: CategoryChannel): Promise<TextChannel> {
-		let channel = guild.channels.cache.find(
+		const channel = guild.channels.cache.find(
 			channel => channel.name === channelName && channel.type === ChannelType.GuildText
 		) as TextChannel | undefined;
 

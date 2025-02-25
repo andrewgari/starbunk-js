@@ -10,4 +10,12 @@ export class RatmasStorage extends JsonFileStorage<SerializedRatmasEvent> implem
 	constructor() {
 		super('ratmas.json');
 	}
+
+	async save(data: SerializedRatmasEvent): Promise<void> {
+		return super.save(data);
+	}
+
+	async load(): Promise<SerializedRatmasEvent | null> {
+		return super.load();
+	}
 }

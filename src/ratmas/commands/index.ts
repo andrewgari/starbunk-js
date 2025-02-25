@@ -2,17 +2,23 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 import { ChatInputCommandInteraction } from 'discord.js';
 import { RatmasService } from '../RatmasService';
 
+// Define the return type for the command
+interface Command {
+	data: SlashCommandBuilder;
+	execute: (interaction: ChatInputCommandInteraction, ratmasService: RatmasService) => Promise<void>;
+}
+
 // Command factory to reduce duplication
 const createCommand = (
 	name: string,
 	description: string,
 	options: {
-		isAdmin?: boolean,
-		stringOptions?: Array<{ name: string, description: string, required: boolean }>,
-		ephemeral?: boolean
+		isAdmin?: boolean;
+		stringOptions?: Array<{ name: string; description: string; required: boolean }>;
+		ephemeral?: boolean;
 	},
 	executeFunction: (interaction: ChatInputCommandInteraction, ratmasService: RatmasService) => Promise<void>
-) => {
+): Command => {
 	const builder = new SlashCommandBuilder()
 		.setName(name)
 		.setDescription(description);

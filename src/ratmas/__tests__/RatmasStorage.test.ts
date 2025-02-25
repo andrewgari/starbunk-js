@@ -1,10 +1,10 @@
 import path from 'path';
 import { JsonFileStorage } from '../../storage/JsonFileStorage';
-import { FileStorage } from '../FileStorage';
+import { RatmasStorage } from '../storage/RatmasStorage';
 
-describe('FileStorage', () => {
+describe('RatmasStorage', () => {
 	it('extends JsonFileStorage with the correct type and filename', () => {
-		const storage = new FileStorage();
+		const storage = new RatmasStorage();
 
 		// Verify it's an instance of JsonFileStorage with the correct type
 		expect(storage).toBeInstanceOf(JsonFileStorage);
@@ -15,7 +15,7 @@ describe('FileStorage', () => {
 	});
 
 	it('implements the required save and load methods', () => {
-		const storage = new FileStorage();
+		const storage = new RatmasStorage();
 
 		// Verify the methods exist
 		expect(typeof storage.save).toBe('function');

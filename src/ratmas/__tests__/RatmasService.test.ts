@@ -1,8 +1,26 @@
-import { Client, Collection, Guild, TextChannel, User } from 'discord.js';
+import { ChannelManager as DiscordChannelManager, Client, Collection, Guild, GuildMessageManager, TextChannel, User, UserManager } from 'discord.js';
 import roleIDs from '../../discord/roleIDs';
 import { ChannelManager, EventManager, MessageSender } from '../interfaces';
 import { RatmasService } from '../RatmasService';
 import { IRatmasStorage } from '../storage/RatmasStorage';
+
+// Define a type for the private properties of RatmasService
+type RatmasServicePrivate = {
+	currentEvent: {
+		participants: Array<[string, { userId: string; assignedTargetId?: string; wishlistUrl?: string }]>;
+		startDate: Date;
+		endDate?: Date;
+		openingDate: Date;
+		channelId: string;
+		guildId: string;
+		eventId: string;
+		isActive?: boolean;
+		assignments?: Map<string, string>;
+		year: number;
+	} | null;
+	loadState: () => Promise<void>;
+	findWishlistInChat: (target: { userId: string }) => Promise<string | null>;
+};
 
 describe('RatmasService', () => {
 	// Simplified test to verify that tests are passing
@@ -71,7 +89,7 @@ describe('RatmasService', () => {
 		);
 
 		// Bypass the loadState method
-		jest.spyOn(service as any, 'loadState').mockImplementation(() => Promise.resolve());
+		jest.spyOn(service as unknown as RatmasServicePrivate, 'loadState').mockImplementation(() => Promise.resolve());
 
 		// Create a mock Guild with roles
 		const mockGuild = {
@@ -124,7 +142,7 @@ describe('RatmasService', () => {
 		);
 
 		// Set up active event
-		(service as any).currentEvent = {
+		(service as unknown as RatmasServicePrivate).currentEvent = {
 			isActive: true,
 			participants: [],
 			startDate: new Date(),
@@ -159,11 +177,11 @@ describe('RatmasService', () => {
 
 	describe('setWishlist', () => {
 		let service: RatmasService;
-		let mockStorage: any;
-		let mockClient: any;
-		let mockChannelManager: any;
-		let mockEventManager: any;
-		let mockMessageSender: any;
+		let mockStorage: IRatmasStorage;
+		let mockClient: Partial<Client>;
+		let mockChannelManager: ChannelManager;
+		let mockEventManager: EventManager;
+		let mockMessageSender: MessageSender;
 
 		beforeEach(() => {
 			mockStorage = {
@@ -177,12 +195,12 @@ describe('RatmasService', () => {
 					guildId: 'guild-123',
 					eventId: 'event-123'
 				})
-			};
+			} as unknown as IRatmasStorage;
 
 			mockClient = {
 				users: {
 					fetch: jest.fn().mockResolvedValue({ id: 'user-123', username: 'testuser' })
-				},
+				} as unknown as UserManager,
 				channels: {
 					fetch: jest.fn().mockResolvedValue({
 						id: 'channel-123',
@@ -190,7 +208,7 @@ describe('RatmasService', () => {
 							fetch: jest.fn().mockResolvedValue([])
 						}
 					})
-				}
+				} as unknown as DiscordChannelManager
 			};
 
 			mockChannelManager = {
@@ -198,28 +216,28 @@ describe('RatmasService', () => {
 					send: jest.fn().mockResolvedValue({}),
 					messages: {
 						fetch: jest.fn().mockResolvedValue([])
-					}
-				})
-			};
+					} as unknown as GuildMessageManager
+				} as unknown as TextChannel)
+			} as unknown as ChannelManager;
 
 			mockEventManager = {
 				createEvent: jest.fn().mockResolvedValue({ id: 'event-123' })
-			};
+			} as unknown as EventManager;
 
 			mockMessageSender = {
 				sendDirectMessage: jest.fn().mockResolvedValue(undefined)
-			};
+			} as unknown as MessageSender;
 
 			service = new RatmasService(
-				mockClient as any,
-				mockStorage as any,
-				mockChannelManager as any,
-				mockEventManager as any,
-				mockMessageSender as any
+				mockClient as Client,
+				mockStorage,
+				mockChannelManager,
+				mockEventManager,
+				mockMessageSender
 			);
 
 			// Initialize currentEvent for tests
-			(service as any).currentEvent = {
+			(service as unknown as RatmasServicePrivate).currentEvent = {
 				participants: [],
 				startDate: new Date(),
 				endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -231,7 +249,7 @@ describe('RatmasService', () => {
 			};
 
 			// Mock loadState to prevent it from resetting currentEvent
-			jest.spyOn(service as any, 'loadState').mockImplementation(() => Promise.resolve());
+			jest.spyOn(service as unknown as RatmasServicePrivate, 'loadState').mockImplementation(() => Promise.resolve());
 		});
 
 		it('handles wishlist operations correctly', async () => {
@@ -239,15 +257,15 @@ describe('RatmasService', () => {
 			const wishlistUrl = 'https://amazon.com/wishlist/123';
 
 			// Add the user to participants before testing
-			(service as any).currentEvent.participants.push(
+			(service as unknown as RatmasServicePrivate).currentEvent!.participants.push(
 				[userId, { userId }]
 			);
 
 			// Test valid participant
 			await service.setWishlist(userId, wishlistUrl);
 
-			const participant = (service as any).currentEvent.participants
-				.find(([id]: [string, any]) => id === userId)?.[1];
+			const participant = (service as unknown as RatmasServicePrivate).currentEvent!.participants
+				.find(([id]) => id === userId)?.[1];
 			expect(participant?.wishlistUrl).toBe(wishlistUrl);
 			expect(mockStorage.save).toHaveBeenCalled();
 		});
@@ -264,15 +282,15 @@ describe('RatmasService', () => {
 			];
 
 			// Add the user to participants before testing
-			(service as any).currentEvent.participants.push(
+			(service as unknown as RatmasServicePrivate).currentEvent!.participants.push(
 				[userId, { userId }]
 			);
 
 			for (const url of validUrls) {
 				await service.setWishlist(userId, url);
 
-				const participant = (service as any).currentEvent.participants
-					.find(([id]: [string, any]) => id === userId)?.[1];
+				const participant = (service as unknown as RatmasServicePrivate).currentEvent!.participants
+					.find(([id]) => id === userId)?.[1];
 				expect(participant?.wishlistUrl).toBe(url);
 				expect(mockStorage.save).toHaveBeenCalled();
 			}
@@ -281,12 +299,12 @@ describe('RatmasService', () => {
 
 	describe('getTargetWishlist', () => {
 		let service: RatmasService;
-		let mockStorage: any;
-		let mockClient: any;
-		let mockChannelManager: any;
-		let mockEventManager: any;
-		let mockMessageSender: any;
-		let mockChannel: any;
+		let mockStorage: IRatmasStorage;
+		let mockClient: Partial<Client>;
+		let mockChannelManager: ChannelManager;
+		let mockEventManager: EventManager;
+		let mockMessageSender: MessageSender;
+		let mockChannel: Partial<TextChannel>;
 
 		beforeEach(() => {
 			mockChannel = {
@@ -294,8 +312,9 @@ describe('RatmasService', () => {
 				send: jest.fn().mockResolvedValue({}),
 				messages: {
 					fetch: jest.fn().mockResolvedValue([])
-				}
-			};
+				} as unknown as GuildMessageManager,
+				toString: () => `<#channel-123>`
+			} as unknown as Partial<TextChannel>;
 
 			mockStorage = {
 				save: jest.fn().mockResolvedValue(undefined),
@@ -309,7 +328,7 @@ describe('RatmasService', () => {
 					eventId: 'event-123',
 					assignments: new Map()
 				})
-			};
+			} as unknown as IRatmasStorage;
 
 			mockClient = {
 				users: {
@@ -320,34 +339,34 @@ describe('RatmasService', () => {
 							send: jest.fn().mockResolvedValue(undefined)
 						};
 					})
-				},
+				} as unknown as UserManager,
 				channels: {
 					fetch: jest.fn().mockResolvedValue(mockChannel)
-				}
+				} as unknown as DiscordChannelManager
 			};
 
 			mockChannelManager = {
 				getTextChannelById: jest.fn().mockResolvedValue(mockChannel)
-			};
+			} as unknown as ChannelManager;
 
 			mockEventManager = {
 				createEvent: jest.fn().mockResolvedValue({ id: 'event-123' })
-			};
+			} as unknown as EventManager;
 
 			mockMessageSender = {
 				sendDirectMessage: jest.fn().mockResolvedValue(undefined)
-			};
+			} as unknown as MessageSender;
 
 			service = new RatmasService(
-				mockClient as any,
-				mockStorage as any,
-				mockChannelManager as any,
-				mockEventManager as any,
-				mockMessageSender as any
+				mockClient as Client,
+				mockStorage,
+				mockChannelManager,
+				mockEventManager,
+				mockMessageSender
 			);
 
 			// Initialize currentEvent for tests
-			(service as any).currentEvent = {
+			(service as unknown as RatmasServicePrivate).currentEvent = {
 				participants: [],
 				startDate: new Date(),
 				endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -360,10 +379,10 @@ describe('RatmasService', () => {
 			};
 
 			// Mock loadState to prevent it from resetting currentEvent
-			jest.spyOn(service as any, 'loadState').mockImplementation(() => Promise.resolve());
+			jest.spyOn(service as unknown as RatmasServicePrivate, 'loadState').mockImplementation(() => Promise.resolve());
 
 			// Mock findWishlistInChat to prevent channel fetch issues
-			jest.spyOn(service as any, 'findWishlistInChat').mockImplementation(async () => null);
+			jest.spyOn(service as unknown as RatmasServicePrivate, 'findWishlistInChat').mockImplementation(async () => null);
 		});
 
 		it('returns target wishlist for valid santa', async () => {
@@ -372,7 +391,7 @@ describe('RatmasService', () => {
 			const wishlistUrl = 'https://amazon.com/wishlist/target';
 
 			// Setup participants with assignedTargetId
-			(service as any).currentEvent.participants = [
+			(service as unknown as RatmasServicePrivate).currentEvent!.participants = [
 				[santaId, { userId: santaId, assignedTargetId: targetId }],
 				[targetId, { userId: targetId, wishlistUrl }]
 			];
@@ -387,7 +406,7 @@ describe('RatmasService', () => {
 		it('handles error cases appropriately', async () => {
 			// Test no target assigned
 			const santaWithoutTarget = 'santa-without-target';
-			(service as any).currentEvent.participants.push(
+			(service as unknown as RatmasServicePrivate).currentEvent!.participants.push(
 				[santaWithoutTarget, { userId: santaWithoutTarget }]
 			);
 			await expect(service.getTargetWishlist(santaWithoutTarget))
@@ -402,19 +421,19 @@ describe('RatmasService', () => {
 			const wishlistUrl = 'https://amazon.com/my-wishlist-from-chat';
 
 			// Setup participants with assignedTargetId
-			(service as any).currentEvent.participants = [
+			(service as unknown as RatmasServicePrivate).currentEvent!.participants = [
 				[santaId, { userId: santaId, assignedTargetId: targetId }],
 				[targetId, { userId: targetId }]
 			];
 
 			// Mock findWishlistInChat to return a wishlist URL
-			jest.spyOn(service as any, 'findWishlistInChat').mockImplementation(async () => wishlistUrl);
+			jest.spyOn(service as unknown as RatmasServicePrivate, 'findWishlistInChat').mockImplementation(async () => wishlistUrl);
 
 			// Mock the getTargetWishlist method to return a specific value
 			jest.spyOn(service, 'getTargetWishlist').mockImplementation(async () => {
 				// Manually set the wishlistUrl on the participant
-				const targetParticipant = (service as any).currentEvent.participants
-					.find(([id]: [string, any]) => id === targetId)?.[1];
+				const targetParticipant = (service as unknown as RatmasServicePrivate).currentEvent!.participants
+					.find(([id]) => id === targetId)?.[1];
 				if (targetParticipant) {
 					targetParticipant.wishlistUrl = wishlistUrl;
 				}
@@ -425,8 +444,8 @@ describe('RatmasService', () => {
 			expect(result).toContain(wishlistUrl);
 
 			// Verify the wishlist was saved for future use
-			const targetParticipant = (service as any).currentEvent.participants
-				.find(([id]: [string, any]) => id === targetId)?.[1];
+			const targetParticipant = (service as unknown as RatmasServicePrivate).currentEvent!.participants
+				.find(([id]) => id === targetId)?.[1];
 			expect(targetParticipant?.wishlistUrl).toBe(wishlistUrl);
 		});
 	});
