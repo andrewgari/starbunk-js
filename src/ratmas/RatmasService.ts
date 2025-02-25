@@ -27,17 +27,10 @@ export class RatmasService {
 
 		// Set default dates
 		const startDate = new Date();
-		const openingDate = new Date();
-		openingDate.setDate(startDate.getDate() + 14);
-		// Adjust to next Friday
-		openingDate.setDate(openingDate.getDate() + ((5 - openingDate.getDay() + 7) % 7));
+		const openingDate = this.calculateOpeningDate(startDate);
 
-		// Initialize participants as array
-		const participants: [string, RatmasParticipant][] = [];
-		const ratmasRole = guild.roles.cache.get(roleIDs.Ratmas);
-		ratmasRole?.members.forEach(member => {
-			participants.push([member.id, { userId: member.id }]);
-		});
+		// Initialize participants
+		const participants = this.initializeParticipants(guild);
 
 		this.currentEvent = {
 			channelId: channel.id,
@@ -56,19 +49,46 @@ export class RatmasService {
 		await this.saveState();
 	}
 
+	private calculateOpeningDate(startDate: Date): Date {
+		const openingDate = new Date(startDate);
+		openingDate.setDate(startDate.getDate() + 14);
+		// Adjust to next Friday
+		openingDate.setDate(openingDate.getDate() + ((5 - openingDate.getDay() + 7) % 7));
+		return openingDate;
+	}
+
+	private initializeParticipants(guild: Guild): [string, RatmasParticipant][] {
+		const participants: [string, RatmasParticipant][] = [];
+		const ratmasRole = guild.roles.cache.get(roleIDs.Ratmas);
+
+		ratmasRole?.members.forEach(member => {
+			participants.push([member.id, { userId: member.id }]);
+		});
+
+		return participants;
+	}
+
 	private async assignSecretSantas(): Promise<void> {
 		if (!this.currentEvent) return;
 
 		const participants = this.currentEvent.participants.map(([, p]) => p);
-		const shuffled = [...participants];
+		const shuffled = this.shuffleParticipants(participants);
 
+		// Assign targets and notify participants
+		await this.assignTargetsAndNotify(participants, shuffled);
+	}
+
+	private shuffleParticipants<T>(array: T[]): T[] {
+		const shuffled = [...array];
 		// Fisher-Yates shuffle
 		for (let i = shuffled.length - 1; i > 0; i--) {
 			const j = Math.floor(Math.random() * (i + 1));
 			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
 		}
+		return shuffled;
+	}
 
-		// Assign targets
+	private async assignTargetsAndNotify(participants: RatmasParticipant[], shuffled: RatmasParticipant[]): Promise<void> {
 		for (let i = 0; i < participants.length; i++) {
 			const santa = participants[i];
 			const target = shuffled[(i + 1) % shuffled.length];
@@ -88,7 +108,7 @@ export class RatmasService {
 		if (!this.currentEvent) return;
 
 		const event = await guild.scheduledEvents.create({
-			name: `Ratmas ${new Date().getFullYear()} Gift Opening! 🐀`,
+			name: `Ratmas ${this.currentEvent.year} Gift Opening! 🐀`,
 			scheduledStartTime: this.currentEvent.openingDate,
 			privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
 			entityType: GuildScheduledEventEntityType.External,
@@ -104,9 +124,14 @@ export class RatmasService {
 		if (!this.currentEvent) {
 			throw new Error('No active Ratmas event');
 		}
+
 		const openingDate = this.currentEvent.openingDate.toLocaleDateString();
-		await this.messageSender.announceInChannel(channel,
-			`<@&${roleIDs.Ratmas}>\n🐀 **Ratmas ${new Date().getFullYear()} has begun!** 🐀\n\nYou have 2 weeks to purchase your gifts! Opening day is ${openingDate}.
+		const announcement = this.createStartAnnouncement(openingDate);
+		await this.messageSender.announceInChannel(channel, announcement);
+	}
+
+	private createStartAnnouncement(openingDate: string): string {
+		return `<@&${roleIDs.Ratmas}>\n🐀 **Ratmas ${new Date().getFullYear()} has begun!** 🐀\n\nYou have 2 weeks to purchase your gifts! Opening day is ${openingDate}.
 
 Please set your wishlist using the command:
 \`/ratmas-wishlist [amazon-url]\`
@@ -116,8 +141,7 @@ To view your target's wishlist:
 
 If you notice any issues with wishlists, you can DM me to anonymously notify them.
 
-Happy Ratmas! 🎁`
-		);
+Happy Ratmas! 🎁`;
 	}
 
 	private findParticipant(userId: string): RatmasParticipant | undefined {
@@ -130,10 +154,12 @@ Happy Ratmas! 🎁`
 		if (!this.currentEvent) {
 			throw new Error('No active Ratmas event');
 		}
+
 		const participant = this.findParticipant(userId);
 		if (!participant) {
 			throw new Error('You are not participating in Ratmas');
 		}
+
 		participant.wishlistUrl = url;
 		await this.saveState();
 	}
@@ -160,30 +186,47 @@ Happy Ratmas! 🎁`
 		const targetUser = await this.client.users.fetch(target.userId);
 
 		if (!target.wishlistUrl) {
-			// Search for wishlist in channel history
-			const channel = await this.client.channels.fetch(this.currentEvent.channelId) as TextChannel;
-			const messages = await channel.messages.fetch({ limit: 100 });
-			const wishlistMessage = messages.find(msg =>
-				msg.author.id === target.userId &&
-				(msg.content.includes('amazon.com') || msg.content.includes('amzn.to'))
-			);
-
-			if (wishlistMessage) {
-				// Store found wishlist for future use
-				target.wishlistUrl = wishlistMessage.content;
-				return `🎁 ${targetUser.username}'s wishlist (found in chat): ${wishlistMessage.content}`;
-			}
-
-			// Notify target that their wishlist is needed
-			await targetUser.send(
-				`🐀 Hey there! Someone is trying to view your Ratmas wishlist, but you haven't set one yet!\n` +
-				`Please use \`/ratmas-wishlist\` to set your Amazon wishlist URL.`
-			);
-
-			return `${targetUser.username} hasn't set their wishlist yet! 😢\nI've sent them a reminder to set it.`;
+			return await this.handleMissingWishlist(target, targetUser);
 		}
 
 		return `🎁 ${targetUser.username}'s wishlist: ${target.wishlistUrl}`;
+	}
+
+	private async handleMissingWishlist(target: RatmasParticipant, targetUser: any): Promise<string> {
+		// Search for wishlist in channel history
+		const wishlistFromChat = await this.findWishlistInChat(target);
+
+		if (wishlistFromChat) {
+			// Store found wishlist for future use
+			target.wishlistUrl = wishlistFromChat;
+			await this.saveState();
+			return `🎁 ${targetUser.username}'s wishlist (found in chat): ${wishlistFromChat}`;
+		}
+
+		// Notify target that their wishlist is needed
+		await this.notifyMissingWishlist(targetUser);
+		return `${targetUser.username} hasn't set their wishlist yet! 😢\nI've sent them a reminder to set it.`;
+	}
+
+	private async findWishlistInChat(target: RatmasParticipant): Promise<string | null> {
+		if (!this.currentEvent) return null;
+
+		const channel = await this.client.channels.fetch(this.currentEvent.channelId) as TextChannel;
+		const messages = await channel.messages.fetch({ limit: 100 });
+
+		const wishlistMessage = messages.find(msg =>
+			msg.author.id === target.userId &&
+			(msg.content.includes('amazon.com') || msg.content.includes('amzn.to'))
+		);
+
+		return wishlistMessage ? wishlistMessage.content : null;
+	}
+
+	private async notifyMissingWishlist(targetUser: any): Promise<void> {
+		await targetUser.send(
+			`🐀 Hey there! Someone is trying to view your Ratmas wishlist, but you haven't set one yet!\n` +
+			`Please use \`/ratmas-wishlist\` to set your Amazon wishlist URL.`
+		);
 	}
 
 	async reportWishlistIssue(reporterId: string, message: string): Promise<void> {
@@ -213,8 +256,12 @@ Happy Ratmas! 🎁`
 		}
 
 		this.currentEvent.openingDate = newDate;
+		await this.updateServerEvent(guild, newDate);
+		await this.announceOpeningDateChange(guild, newDate);
+		await this.saveState();
+	}
 
-		// Update the server event
+	private async updateServerEvent(guild: Guild, newDate: Date): Promise<void> {
 		const events = await guild.scheduledEvents.fetch();
 		const ratmasEvent = events.find(e =>
 			e.name.includes('Ratmas') && e.name.includes(new Date().getFullYear().toString())
@@ -225,8 +272,11 @@ Happy Ratmas! 🎁`
 				scheduledStartTime: newDate
 			});
 		}
+	}
 
-		// Announce change
+	private async announceOpeningDateChange(guild: Guild, newDate: Date): Promise<void> {
+		if (!this.currentEvent) return;
+
 		const channel = await guild.channels.fetch(this.currentEvent.channelId) as TextChannel;
 		await channel.send({
 			content: `🐀 **Ratmas Update!**\nThe opening date has been adjusted to ${newDate.toLocaleDateString()}!`
@@ -239,23 +289,26 @@ Happy Ratmas! 🎁`
 		}
 
 		const channel = await guild.channels.fetch(this.currentEvent.channelId) as TextChannel;
+		await this.sendEndingMessage(channel, autoEnded);
+		await this.archiveChannel(channel);
 
-		// Send final message
+		this.currentEvent.isActive = false;
+		await this.saveState();
+	}
+
+	private async sendEndingMessage(channel: TextChannel, autoEnded: boolean): Promise<void> {
 		await channel.send({
 			content: `🐀 **Ratmas ${new Date().getFullYear()} has ${autoEnded ? 'automatically ' : ''}ended!**\n` +
 				'Thank you everyone for participating! This channel will now be archived. 🎁'
 		});
+	}
 
-		// Archive the channel
+	private async archiveChannel(channel: TextChannel): Promise<void> {
 		if (channel.isThread()) {
 			const threadChannel = channel as ThreadChannel;
 			await threadChannel.setArchived(true);
 			await threadChannel.setLocked(true);
 		}
-
-		// Clean up the event
-		this.currentEvent.isActive = false;
-		await this.saveState();
 	}
 
 	private async saveState(): Promise<void> {
@@ -283,17 +336,18 @@ Happy Ratmas! 🎁`
 				participants: serialized.participants
 			};
 
-			// Set up event end handler if event is still active
-			if (this.currentEvent.isActive) {
-				const guild = await this.client.guilds.fetch(this.currentEvent.guildId);
-				this.eventManager.watchEvent(guild, this.currentEvent.eventId, async () => {
-					await this.endRatmas(guild, true);
-				});
-			}
+			this.setupEventEndHandler();
 		} else {
 			this.currentEvent = null;
 		}
 	}
 
-	// Additional methods to be implemented for commands...
+	private async setupEventEndHandler(): Promise<void> {
+		if (!this.currentEvent?.isActive) return;
+
+		const guild = await this.client.guilds.fetch(this.currentEvent.guildId);
+		this.eventManager.watchEvent(guild, this.currentEvent.eventId, async () => {
+			await this.endRatmas(guild, true);
+		});
+	}
 }
