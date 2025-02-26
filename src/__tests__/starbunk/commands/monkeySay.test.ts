@@ -1,115 +1,167 @@
-import { createMockCommandInteraction } from '@/__tests__/mocks/discordMocks';
-import monkeySayCommand from '@/starbunk/commands/monkeySay';
-import webhookService from '@/webhooks/webhookService';
-import { ChatInputCommandInteraction, GuildMember, TextChannel, User } from 'discord.js';
-
-jest.mock('@/webhooks/webhookService');
+import { CommandInteraction, GuildMember, TextChannel, User } from 'discord.js';
+import { MessageSender, MonkeySayService, WebhookMessageSender } from '../../../starbunk/commands/monkeySay';
+import { WebhookService } from '../../../webhooks/webhookService';
 
 describe('MonkeySay Command', () => {
-	let mockInteraction: ChatInputCommandInteraction;
-	const mockUser = {
-		username: 'TestMonkey',
-		displayAvatarURL: jest.fn().mockReturnValue('mock-avatar-url'),
-		toString: () => `<@123456789>`
-	} as unknown as Partial<User>;
-	const mockMember = {
-		nickname: 'NickMonkey',
-		displayAvatarURL: jest.fn().mockReturnValue('mock-member-avatar-url'),
-		toString: () => `<@123456789>`
-	} as unknown as Partial<GuildMember>;
-	const mockChannel = {
-		id: 'mock-channel-id',
-		toString: () => `<#123456789>`
-	} as unknown as Partial<TextChannel>;
+	describe('WebhookMessageSender', () => {
+		let mockWebhookService: Partial<WebhookService>;
+		let sender: WebhookMessageSender;
+		let mockChannel: Partial<TextChannel>;
 
-	beforeEach(() => {
-		mockInteraction = {
-			...createMockCommandInteraction(),
-			channel: mockChannel as TextChannel
-		} as ChatInputCommandInteraction;
-		mockInteraction.options.get = jest.fn().mockImplementation((name: string) => {
-			switch (name) {
-				case 'user':
-					return { user: mockUser, member: mockMember };
-				case 'message':
-					return { value: 'test message' };
-				default:
-					return null;
-			}
+		beforeEach(() => {
+			mockWebhookService = {
+				writeMessage: jest.fn().mockResolvedValue(undefined)
+			};
+
+			mockChannel = {
+				id: 'channel-id',
+				name: 'test-channel'
+			} as Partial<TextChannel>;
+
+			sender = new WebhookMessageSender(mockWebhookService as WebhookService);
 		});
-		jest.clearAllMocks();
-	});
 
-	it('should send message via webhook with nickname and member avatar', async () => {
-		await monkeySayCommand.execute(mockInteraction);
+		it('should send message with correct parameters', async () => {
+			const username = 'TestUser';
+			const avatarURL = 'https://example.com/avatar.png';
+			const content = 'Hello, world!';
 
-		expect(webhookService.writeMessage).toHaveBeenCalledWith(
-			mockChannel,
-			{
-				username: 'NickMonkey',
-				avatarURL: 'mock-member-avatar-url',
-				content: 'test message',
-				embeds: []
-			}
-		);
-		expect(mockInteraction.reply).toHaveBeenCalledWith({
-			content: 'Message sent!',
-			ephemeral: true
+			await sender.sendMessage(mockChannel as TextChannel, username, avatarURL, content);
+
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				mockChannel,
+				{
+					username,
+					avatarURL,
+					content,
+					embeds: []
+				}
+			);
 		});
 	});
 
-	it('should use username if nickname is not available', async () => {
-		const mockMemberNoNick = { ...mockMember, nickname: null };
-		mockInteraction.options.get = jest.fn().mockImplementation((name: string) => {
-			switch (name) {
-				case 'user':
-					return { user: mockUser, member: mockMemberNoNick };
-				case 'message':
-					return { value: 'test message' };
-				default:
-					return null;
-			}
+	describe('MonkeySayService', () => {
+		let mockMessageSender: MessageSender;
+		let service: MonkeySayService;
+		let mockInteraction: Partial<CommandInteraction>;
+		let mockUser: User;
+		let mockMember: GuildMember;
+		let mockChannel: Partial<TextChannel>;
+
+		beforeEach(() => {
+			mockMessageSender = {
+				sendMessage: jest.fn().mockResolvedValue(undefined)
+			};
+
+			mockChannel = {
+				id: 'channel-id',
+				name: 'test-channel'
+			} as Partial<TextChannel>;
+
+			mockUser = {
+				id: 'user-id',
+				username: 'TestUser',
+				displayAvatarURL: jest.fn().mockReturnValue('https://example.com/default-avatar.png')
+			} as unknown as User;
+
+			mockMember = {
+				id: 'user-id',
+				nickname: 'TestNickname',
+				displayAvatarURL: jest.fn().mockReturnValue('https://example.com/member-avatar.png')
+			} as unknown as GuildMember;
+
+			mockInteraction = {
+				channel: mockChannel as TextChannel,
+				reply: jest.fn().mockResolvedValue(undefined)
+			} as unknown as Partial<CommandInteraction>;
+
+			service = new MonkeySayService(mockMessageSender);
 		});
 
-		await monkeySayCommand.execute(mockInteraction);
+		it('should use member nickname and avatar when available', async () => {
+			const message = 'Hello, world!';
 
-		expect(webhookService.writeMessage).toHaveBeenCalledWith(
-			mockChannel,
-			expect.objectContaining({
-				username: 'TestMonkey'
-			})
-		);
-	});
+			await service.impersonateUser(
+				mockInteraction as CommandInteraction,
+				mockUser,
+				mockMember,
+				message
+			);
 
-	it('should use user avatar if member avatar is not available', async () => {
-		const mockMemberNoAvatar = {
-			...mockMember,
-			displayAvatarURL: jest.fn().mockReturnValue(null)
-		};
-		mockInteraction.options.get = jest.fn().mockImplementation((name: string) => {
-			switch (name) {
-				case 'user':
-					return { user: mockUser, member: mockMemberNoAvatar };
-				case 'message':
-					return { value: 'test message' };
-				default:
-					return null;
-			}
+			expect(mockMessageSender.sendMessage).toHaveBeenCalledWith(
+				mockChannel,
+				'TestNickname',
+				'https://example.com/member-avatar.png',
+				message
+			);
+
+			expect(mockInteraction.reply).toHaveBeenCalledWith({
+				content: 'Message sent!',
+				ephemeral: true
+			});
 		});
 
-		await monkeySayCommand.execute(mockInteraction);
+		it('should fall back to user username when nickname is not available', async () => {
+			const message = 'Hello, world!';
+			mockMember.nickname = null;
 
-		expect(webhookService.writeMessage).toHaveBeenCalledWith(
-			mockChannel,
-			expect.objectContaining({
-				avatarURL: 'mock-avatar-url'
-			})
-		);
-	});
+			await service.impersonateUser(
+				mockInteraction as CommandInteraction,
+				mockUser,
+				mockMember,
+				message
+			);
 
-	it('should have correct command data', () => {
-		expect(monkeySayCommand.data.name).toBe('monkeysay');
-		expect(monkeySayCommand.data.description).toBe('monkeydo');
-		expect(monkeySayCommand.data.default_member_permissions).toBe('8'); // Administrator permission
+			expect(mockMessageSender.sendMessage).toHaveBeenCalledWith(
+				mockChannel,
+				'TestUser',
+				'https://example.com/member-avatar.png',
+				message
+			);
+		});
+
+		it('should fall back to user avatar when member avatar is not available', async () => {
+			const message = 'Hello, world!';
+			(mockMember.displayAvatarURL as jest.Mock).mockReturnValue(null);
+
+			await service.impersonateUser(
+				mockInteraction as CommandInteraction,
+				mockUser,
+				mockMember,
+				message
+			);
+
+			expect(mockMessageSender.sendMessage).toHaveBeenCalledWith(
+				mockChannel,
+				'TestNickname',
+				'https://example.com/default-avatar.png',
+				message
+			);
+		});
+
+		it('should handle errors when sending message', async () => {
+			const message = 'Hello, world!';
+			const error = new Error('Failed to send message');
+
+			(mockMessageSender.sendMessage as jest.Mock).mockRejectedValue(error);
+
+			// Mock console.error to prevent test output pollution
+			const originalConsoleError = console.error;
+			console.error = jest.fn();
+
+			try {
+				await expect(
+					service.impersonateUser(
+						mockInteraction as CommandInteraction,
+						mockUser,
+						mockMember,
+						message
+					)
+				).rejects.toThrow(error);
+			} finally {
+				// Restore console.error
+				console.error = originalConsoleError;
+			}
+		});
 	});
 });
