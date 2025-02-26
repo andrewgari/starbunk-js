@@ -14,7 +14,8 @@
 		"lint:fix": "eslint 'src/**/*.{ts,js}' '*.{ts,js}' --fix",
 		"format": "prettier --write \"src/**/*.ts\"",
 		"type-check": "tsc --noEmit",
-		"test:music": "jest src/tests/starbunk/commands/musicCommands.test.ts"
+		"test:music": "jest src/tests/starbunk/commands/musicCommands.test.ts",
+		"validate-bots": "./scripts/validate-bots.sh"
 	},
 	"engines": {
 		"node": ">=16.0.0"
