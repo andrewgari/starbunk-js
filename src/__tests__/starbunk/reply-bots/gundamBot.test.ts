@@ -1,7 +1,8 @@
-import { createMockGuildMember, createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import GundamBot from '@/starbunk/bots/reply-bots/gundamBot';
 import { Message, User } from 'discord.js';
+import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import GundamBot from '../../../starbunk/bots/reply-bots/gundamBot';
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 
 describe('GundamBot', () => {
 	let gundamBot: GundamBot;
@@ -12,6 +13,9 @@ describe('GundamBot', () => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
 		gundamBot = new GundamBot(mockWebhookService);
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(gundamBot, mockWebhookService);
 	});
 
 	describe('bot configuration', () => {

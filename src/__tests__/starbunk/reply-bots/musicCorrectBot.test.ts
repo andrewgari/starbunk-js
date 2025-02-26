@@ -1,3 +1,4 @@
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { createMockMessage } from '@/__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import MusicCorrectBot from '@/starbunk/bots/reply-bots/musicCorrectBot';
@@ -10,10 +11,12 @@ describe('MusicCorrectBot', () => {
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
-		mockMessage = createMockMessage();
+		mockMessage = createMockMessage('');
 		musicCorrectBot = new MusicCorrectBot(mockWebhookService);
-	});
 
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(musicCorrectBot, mockWebhookService);
+	});
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {

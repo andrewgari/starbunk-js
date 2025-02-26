@@ -1,8 +1,8 @@
-import UserID from '@/discord/userID';
-import ReplyBot from '@/starbunk/bots/replyBot';
-import random from '@/utils/random';
-import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
+import UserID from '../../../discord/userID';
+import random from '../../../utils/random';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 export default class BananaBot extends ReplyBot {
 	private botName = 'BananaBot';

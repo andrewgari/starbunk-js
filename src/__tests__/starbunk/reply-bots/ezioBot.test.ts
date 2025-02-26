@@ -1,7 +1,7 @@
-import { createMockGuildMember, createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import EzioBot from '@/starbunk/bots/reply-bots/ezioBot';
 import { Message, User } from 'discord.js';
+import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import EzioBot from '../../../starbunk/bots/reply-bots/ezioBot';
 
 describe('EzioBot', () => {
 	let ezioBot: EzioBot;
@@ -25,65 +25,74 @@ describe('EzioBot', () => {
 	});
 
 	describe('message handling', () => {
-		const getExpectedMessageOptions = (username: string): {
-			username: string;
-			avatarURL: string;
-			content: string;
-			embeds: never[];
-		} => ({
-			username: 'Ezio Auditore Da Firenze',
-			avatarURL: 'https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg',
-			content: `Remember ${username}, Nothing is true; Everything is permitted.`,
-			embeds: []
-		});
+		const expectedResponse = (username: string): string =>
+			`Remember ${username}, Nothing is true; Everything is permitted.`;
 
-		it('should ignore messages from bots', () => {
+		it('should ignore messages from bots', async () => {
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
-			ezioBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+
+			const sendReplySpy = jest.spyOn(ezioBot, 'sendReply').mockResolvedValue();
+
+			await ezioBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).not.toHaveBeenCalled();
 		});
 
-		it('should respond to "ezio"', () => {
+		it('should respond to "ezio"', async () => {
 			mockMessage.content = 'ezio';
-			ezioBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+
+			const sendReplySpy = jest.spyOn(ezioBot, 'sendReply').mockResolvedValue();
+
+			await ezioBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).toHaveBeenCalledWith(
 				mockMessage.channel,
-				getExpectedMessageOptions('TestUser')
+				expectedResponse('TestUser')
 			);
 		});
 
-		it('should respond to "assassin"', () => {
+		it('should respond to "assassin"', async () => {
 			mockMessage.content = 'assassin';
-			ezioBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+
+			const sendReplySpy = jest.spyOn(ezioBot, 'sendReply').mockResolvedValue();
+
+			await ezioBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).toHaveBeenCalledWith(
 				mockMessage.channel,
-				getExpectedMessageOptions('TestUser')
+				expectedResponse('TestUser')
 			);
 		});
 
-		it('should respond to "hassassin"', () => {
+		it('should respond to "hassassin"', async () => {
 			mockMessage.content = 'hassassin';
-			ezioBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+
+			const sendReplySpy = jest.spyOn(ezioBot, 'sendReply').mockResolvedValue();
+
+			await ezioBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).toHaveBeenCalledWith(
 				mockMessage.channel,
-				getExpectedMessageOptions('TestUser')
+				expectedResponse('TestUser')
 			);
 		});
 
-		it('should respond to case variations', () => {
+		it('should respond to case variations', async () => {
 			mockMessage.content = 'EZIO';
-			ezioBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+
+			const sendReplySpy = jest.spyOn(ezioBot, 'sendReply').mockResolvedValue();
+
+			await ezioBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).toHaveBeenCalledWith(
 				mockMessage.channel,
-				getExpectedMessageOptions('TestUser')
+				expectedResponse('TestUser')
 			);
 		});
 
-		it('should not respond to unrelated messages', () => {
+		it('should not respond to unrelated messages', async () => {
 			mockMessage.content = 'hello world';
-			ezioBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+
+			const sendReplySpy = jest.spyOn(ezioBot, 'sendReply').mockResolvedValue();
+
+			await ezioBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).not.toHaveBeenCalled();
 		});
 	});
 });

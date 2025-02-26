@@ -1,7 +1,7 @@
-import { Logger } from '@/services/logger';
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
+import { Logger } from '../../../services/logger';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 export default class SheeshBot extends ReplyBot {
 	constructor(webhookService: WebhookService) {

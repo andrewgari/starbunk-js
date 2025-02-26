@@ -1,7 +1,8 @@
-import { createMockGuildMember, createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import SheeshBot from '@/starbunk/bots/reply-bots/sheeshBot';
 import { Message, User } from 'discord.js';
+import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import SheeshBot from '../../../starbunk/bots/reply-bots/sheeshBot';
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 
 describe('SheeshBot', () => {
 	let sheeshBot: SheeshBot;
@@ -13,6 +14,9 @@ describe('SheeshBot', () => {
 		mockMessage = createMockMessage('TestUser');
 		sheeshBot = new SheeshBot(mockWebhookService);
 		jest.spyOn(sheeshBot, 'generateRandomEs').mockReturnValue('eeeee');
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(sheeshBot, mockWebhookService);
 	});
 
 	describe('bot configuration', () => {

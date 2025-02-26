@@ -1,7 +1,8 @@
-import { createMockGuildMember, createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import SpiderBot from '@/starbunk/bots/reply-bots/spiderBot';
-import { Message, User } from 'discord.js';
+import { Message, TextChannel, User } from 'discord.js';
+import { patchReplyBot } from '../../../__tests__/helpers/replyBotHelper';
+import { createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import SpiderBot from '../../../starbunk/bots/reply-bots/spiderBot';
 
 describe('SpiderBot', () => {
 	let spiderBot: SpiderBot;
@@ -10,8 +11,17 @@ describe('SpiderBot', () => {
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
-		mockMessage = createMockMessage('TestUser');
+		mockMessage = createMockMessage();
 		spiderBot = new SpiderBot(mockWebhookService);
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(spiderBot, mockWebhookService);
+
+		jest.useRealTimers();
+	});
+
+	afterEach(() => {
+		jest.clearAllMocks();
 	});
 
 	describe('bot configuration', () => {
@@ -33,8 +43,14 @@ describe('SpiderBot', () => {
 		};
 
 		it('should ignore messages from bots', () => {
-			const mockMember = createMockGuildMember('bot-id', 'BotUser');
-			mockMessage.author = { ...mockMember.user, bot: true } as User;
+			mockMessage.author = {
+				bot: true,
+				id: '123',
+				username: 'test',
+				discriminator: '1234',
+				avatar: 'test',
+				system: false
+			} as unknown as User;
 			spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
@@ -43,7 +59,7 @@ describe('SpiderBot', () => {
 			mockMessage.content = 'spiderman';
 			spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
+				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});
@@ -52,7 +68,16 @@ describe('SpiderBot', () => {
 			mockMessage.content = 'spider man';
 			spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
+				mockMessage.channel as TextChannel,
+				expectedMessageOptions
+			);
+		});
+
+		it('should respond to "spider-man"', () => {
+			mockMessage.content = 'spider-man';
+			spiderBot.handleMessage(mockMessage as Message<boolean>);
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});

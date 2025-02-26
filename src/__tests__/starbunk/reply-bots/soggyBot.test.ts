@@ -42,52 +42,58 @@ describe('SoggyBot', () => {
 	});
 
 	describe('message handling', () => {
-		const expectedMessageOptions: {
-			username: string;
-			avatarURL: string;
-			content: string;
-			embeds: never[];
-		} = {
-			username: 'SoggyBot',
-			avatarURL: 'https://imgur.com/OCB6i4x.jpg',
-			content: 'Sounds like somebody enjoys wet bread',
-			embeds: []
-		};
+		const expectedResponse = 'Sounds like somebody enjoys wet bread';
 
-		it('should ignore messages from bots', () => {
+		it('should ignore messages from bots', async () => {
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
-			soggyBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+
+			// Mock the sendReply method
+			const sendReplySpy = jest.spyOn(soggyBot, 'sendReply').mockResolvedValue();
+
+			await soggyBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).not.toHaveBeenCalled();
 		});
 
-		it('should respond to "wet bread" from users with WetBread role', () => {
+		it('should respond to "wet bread" from users with WetBread role', async () => {
 			mockMessage.content = 'wet bread';
 			mockMessage = {
 				...mockMessage,
 				member: createMockMemberWithRoles([roleIDs.WetBread])
 			};
-			soggyBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+
+			// Mock the sendReply method
+			const sendReplySpy = jest.spyOn(soggyBot, 'sendReply').mockResolvedValue();
+
+			await soggyBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).toHaveBeenCalledWith(
 				mockMessage.channel,
-				expectedMessageOptions
+				expectedResponse
 			);
 		});
 
-		it('should not respond to "wet bread" from users without WetBread role', () => {
+		it('should not respond to "wet bread" from users without WetBread role', async () => {
 			mockMessage.content = 'wet bread';
 			mockMessage = {
 				...mockMessage,
 				member: createMockMemberWithRoles([])
 			};
-			soggyBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+
+			// Mock the sendReply method
+			const sendReplySpy = jest.spyOn(soggyBot, 'sendReply').mockResolvedValue();
+
+			await soggyBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).not.toHaveBeenCalled();
 		});
 
-		it('should not respond to unrelated messages', () => {
+		it('should not respond to unrelated messages', async () => {
 			mockMessage.content = 'hello world';
-			soggyBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+
+			// Mock the sendReply method
+			const sendReplySpy = jest.spyOn(soggyBot, 'sendReply').mockResolvedValue();
+
+			await soggyBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).not.toHaveBeenCalled();
 		});
 	});
 });

@@ -1,8 +1,8 @@
-import userID from '@/discord/userID';
-import ReplyBot from '@/starbunk/bots/replyBot';
-import random from '@/utils/random';
-import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
+import userID from '../../../discord/userID';
+import random from '../../../utils/random';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 export default class VennBot extends ReplyBot {
 	constructor(webhookService: WebhookService) {
@@ -43,13 +43,13 @@ export default class VennBot extends ReplyBot {
 		return this.avatarUrl;
 	}
 
-	handleMessage(message: Message<boolean>): void {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
 		if (message.author.id == userID.Venn && (message.content.match(this.pattern) || random.percentChance(5))) {
 			this.botName = message.author.displayName;
 			this.avatarUrl = message.author.displayAvatarURL() ?? message.author.defaultAvatarURL;
-			this.sendReply(message.channel as TextChannel, this.getResponse());
+			await this.sendReply(message.channel as TextChannel, this.getResponse());
 		}
 	}
 }

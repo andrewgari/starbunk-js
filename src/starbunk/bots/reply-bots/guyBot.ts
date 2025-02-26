@@ -1,8 +1,8 @@
-import userID from '@/discord/userID';
-import ReplyBot from '@/starbunk/bots/replyBot';
-import random from '@/utils/random';
-import { WebhookService } from '@/webhooks/webhookService';
 import { GuildMember, Message, TextChannel } from 'discord.js';
+import userID from '../../../discord/userID';
+import random from '../../../utils/random';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 export default class GuyBot extends ReplyBot {
 	constructor(webhookService: WebhookService) {

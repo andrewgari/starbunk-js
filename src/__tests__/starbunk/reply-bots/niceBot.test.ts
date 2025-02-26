@@ -1,7 +1,8 @@
-import { createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import NiceBot from '@/starbunk/bots/reply-bots/niceBot';
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { Message } from 'discord.js';
+import { createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import NiceBot from '../../../starbunk/bots/reply-bots/niceBot';
 
 describe('NiceBot', () => {
 	let niceBot: NiceBot;
@@ -11,7 +12,11 @@ describe('NiceBot', () => {
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
+		mockMessage.author = { ...mockMessage.author, bot: false } as Message['author'];
 		niceBot = new NiceBot(mockWebhookService);
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(niceBot, mockWebhookService);
 	});
 
 	describe('bot configuration', () => {

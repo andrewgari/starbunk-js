@@ -1,6 +1,6 @@
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 export default class EzioBot extends ReplyBot {
 	constructor(webhookService: WebhookService) {
@@ -18,11 +18,11 @@ export default class EzioBot extends ReplyBot {
 		return this.avatarUrl;
 	}
 
-	handleMessage(message: Message<boolean>): void {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
 		if (message.content.match(this.pattern)) {
-			this.sendReply(
+			await this.sendReply(
 				message.channel as TextChannel,
 				`Remember ${message.author.displayName}, Nothing is true; Everything is permitted.`,
 			);

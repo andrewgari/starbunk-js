@@ -1,12 +1,13 @@
-import { createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import userID from '@/discord/userID';
-import { Logger } from '@/services/logger';
-import BlueBot from '@/starbunk/bots/reply-bots/blueBot';
 import { Collection, GuildMember, Message, TextChannel, User } from 'discord.js';
+import { patchReplyBot } from '../../../__tests__/helpers/replyBotHelper';
+import { createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import userID from '../../../discord/userID';
+import { Logger } from '../../../services/logger';
+import BlueBot from '../../../starbunk/bots/reply-bots/blueBot';
 
 // Mock the OpenAIClient module
-jest.mock('@/openai/openaiClient', () => ({
+jest.mock('../../../openai/openaiClient', () => ({
 	OpenAIClient: {
 		chat: {
 			completions: {
@@ -75,6 +76,9 @@ describe('BlueBot', () => {
 		// Initialize timestamps to well in the past
 		(blueBot as unknown as BlueBotPrivateMembers).blueTimestamp = new Date(Number.MIN_SAFE_INTEGER);
 		(blueBot as unknown as BlueBotPrivateMembers).blueMurderTimestamp = new Date(Number.MIN_SAFE_INTEGER);
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(blueBot, mockWebhookService);
 	});
 
 	afterEach(() => {

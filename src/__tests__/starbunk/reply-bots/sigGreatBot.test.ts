@@ -1,7 +1,8 @@
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { createMockMessage } from '@/__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import SigGreatBot from '@/starbunk/bots/reply-bots/sigGreatBot';
-import { Message, User } from 'discord.js';
+import { Message, TextChannel, User } from 'discord.js';
 
 describe('SigBestBot', () => {
 	let sigBestBot: SigGreatBot;
@@ -12,6 +13,15 @@ describe('SigBestBot', () => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage();
 		sigBestBot = new SigGreatBot(mockWebhookService);
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(sigBestBot, mockWebhookService);
+
+		jest.useRealTimers();
+	});
+
+	afterEach(() => {
+		jest.clearAllMocks();
 	});
 
 	describe('bot configuration', () => {
@@ -39,6 +49,7 @@ describe('SigBestBot', () => {
 				username: 'test',
 				discriminator: '1234',
 				avatar: 'test',
+				system: false
 			} as unknown as User;
 			sigBestBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
@@ -48,7 +59,7 @@ describe('SigBestBot', () => {
 			mockMessage.content = 'sig is best';
 			sigBestBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
+				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});
@@ -57,7 +68,7 @@ describe('SigBestBot', () => {
 			mockMessage.content = 'siggles is best';
 			sigBestBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
+				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});

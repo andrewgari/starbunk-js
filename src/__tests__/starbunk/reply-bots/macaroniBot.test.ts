@@ -1,8 +1,9 @@
-import { createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import userID from '@/discord/userID';
-import MacaroniBot from '@/starbunk/bots/reply-bots/macaroniBot';
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { Message, User } from 'discord.js';
+import { createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import userID from '../../../discord/userID';
+import MacaroniBot from '../../../starbunk/bots/reply-bots/macaroniBot';
 
 describe('MacaroniBot', () => {
 	let macaroniBot: MacaroniBot;
@@ -13,6 +14,9 @@ describe('MacaroniBot', () => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage();
 		macaroniBot = new MacaroniBot(mockWebhookService);
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(macaroniBot, mockWebhookService);
 	});
 
 	describe('bot configuration', () => {

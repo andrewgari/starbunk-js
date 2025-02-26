@@ -1,6 +1,6 @@
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 export default class ChaosBot extends ReplyBot {
 	constructor(webhookService: WebhookService) {
@@ -18,11 +18,23 @@ export default class ChaosBot extends ReplyBot {
 	getAvatarUrl(): string {
 		return this.avatarUrl;
 	}
-	handleMessage(message: Message<boolean>): void {
+
+	// Extract pattern matching logic for better testability
+	shouldReplyToMessage(content: string): boolean {
+		return !!content.match(this.pattern);
+	}
+
+	// Get the response for a message
+	getResponseForMessage(content: string): string | null {
+		return this.shouldReplyToMessage(content) ? this.response : null;
+	}
+
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (message.content.match(this.pattern)) {
-			this.sendReply(message.channel as TextChannel, this.response);
+		const response = this.getResponseForMessage(message.content);
+		if (response) {
+			await this.sendReply(message.channel as TextChannel, response);
 		}
 	}
 }

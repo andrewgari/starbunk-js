@@ -1,11 +1,12 @@
-import { createMockGuildMember, createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import userID from '@/discord/userID';
-import GuyBot from '@/starbunk/bots/reply-bots/guyBot';
-import Random from '@/utils/random';
 import { Guild, GuildMember, Message, User } from 'discord.js';
+import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import userID from '../../../discord/userID';
+import GuyBot from '../../../starbunk/bots/reply-bots/guyBot';
+import Random from '../../../utils/random';
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 
-jest.mock('@/utils/random');
+jest.mock('../../../utils/random');
 
 describe('GuyBot', () => {
 	let guyBot: GuyBot;
@@ -34,6 +35,9 @@ describe('GuyBot', () => {
 
 		guyBot = new GuyBot(mockWebhookService);
 		jest.clearAllMocks();
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(guyBot, mockWebhookService);
 	});
 
 	describe('bot configuration', () => {

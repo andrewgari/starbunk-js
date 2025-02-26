@@ -1,11 +1,12 @@
-import { createMockGuildMember, createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import UserID from '@/discord/userID';
-import PickleBot from '@/starbunk/bots/reply-bots//pickleBot';
-import Random from '@/utils/random';
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { Message, User } from 'discord.js';
+import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import UserID from '../../../discord/userID';
+import PickleBot from '../../../starbunk/bots/reply-bots/pickleBot';
+import Random from '../../../utils/random';
 
-jest.mock('@/utils/random');
+jest.mock('../../../utils/random');
 
 describe('PickleBot', () => {
 	let pickleBot: PickleBot;
@@ -17,6 +18,9 @@ describe('PickleBot', () => {
 		mockMessage = createMockMessage('TestUser');
 		pickleBot = new PickleBot(mockWebhookService);
 		jest.clearAllMocks();
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(pickleBot, mockWebhookService);
 	});
 
 	describe('bot configuration', () => {

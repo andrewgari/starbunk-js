@@ -1,7 +1,8 @@
-import { createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import BabyBot from '@/starbunk/bots/reply-bots/babyBot';
-import { Message, User } from 'discord.js';
+import { Message, TextChannel, User } from 'discord.js';
+import { patchReplyBot } from '../../../__tests__/helpers/replyBotHelper';
+import { createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import BabyBot from '../../../starbunk/bots/reply-bots/babyBot';
 
 describe('BabyBot', () => {
 	let babyBot: BabyBot;
@@ -12,6 +13,15 @@ describe('BabyBot', () => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage();
 		babyBot = new BabyBot(mockWebhookService);
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(babyBot, mockWebhookService);
+
+		jest.useRealTimers();
+	});
+
+	afterEach(() => {
+		jest.clearAllMocks();
 	});
 
 	describe('bot configuration', () => {
@@ -49,7 +59,7 @@ describe('BabyBot', () => {
 			mockMessage.content = 'hello baby!';
 			babyBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
+				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});
@@ -58,7 +68,7 @@ describe('BabyBot', () => {
 			mockMessage.content = 'hello BABY!';
 			babyBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
+				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});
@@ -79,7 +89,7 @@ describe('BabyBot', () => {
 			mockMessage.content = 'cry baby';
 			babyBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
+				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});

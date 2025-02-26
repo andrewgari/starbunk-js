@@ -1,7 +1,7 @@
-import roleIDs from '@/discord/roleIDs';
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
+import roleIDs from '../../../discord/roleIDs';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 export default class SoggyBot extends ReplyBot {
 	constructor(webhookService: WebhookService) {
@@ -18,14 +18,14 @@ export default class SoggyBot extends ReplyBot {
 	getAvatarUrl(): string {
 		return this.avatarUrl;
 	}
-	handleMessage(message: Message<boolean>): void {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
 		if (
 			message.content.match(this.pattern) &&
 			message.member?.roles.cache.some((role) => role.id === roleIDs.WetBread)
 		) {
-			this.sendReply(message.channel as TextChannel, this.response);
+			await this.sendReply(message.channel as TextChannel, this.response);
 		}
 	}
 }

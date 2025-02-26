@@ -26,6 +26,7 @@ describe('VennBot', () => {
 	let vennBot: VennBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
+	let sendReplySpy: jest.SpyInstance;
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
@@ -34,6 +35,7 @@ describe('VennBot', () => {
 			author: createMockVennUser()
 		};
 		vennBot = new VennBot(mockWebhookService);
+		sendReplySpy = jest.spyOn(vennBot, 'sendReply').mockResolvedValue();
 		jest.clearAllMocks();
 	});
 
@@ -52,64 +54,65 @@ describe('VennBot', () => {
 			jest.spyOn(Random, 'roll').mockReturnValue(0);
 		});
 
-		it('should ignore messages from bots', () => {
+		it('should ignore messages from bots', async () => {
 			mockMessage.author = { ...mockMessage.author, bot: true } as User;
-			vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+			await vennBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).not.toHaveBeenCalled();
 		});
 
-		it('should respond to Venn saying "cringe"', () => {
+		it('should respond to Venn saying "cringe"', async () => {
 			mockMessage.content = 'that was cringe';
-			vennBot.handleMessage(mockMessage as Message<boolean>);
+			await vennBot.handleMessage(mockMessage as Message<boolean>);
 
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect(sendReplySpy).toHaveBeenCalledWith(
 				mockMessage.channel,
-				expect.objectContaining({
-					username: 'Venn',
-					avatarURL: 'venn-avatar-url',
-					content: expect.any(String)
-				})
+				expect.any(String)
 			);
+			// Verify the bot name and avatar were updated
+			expect(vennBot.getBotName()).toBe('Venn');
+			expect(vennBot.getAvatarUrl()).toBe('venn-avatar-url');
 		});
 
-		it('should respond to Venn\'s messages with 5% chance', () => {
+		it('should respond to Venn\'s messages with 5% chance', async () => {
 			mockMessage.content = 'regular message';
 			(Random.percentChance as jest.Mock).mockReturnValue(true);
 
-			vennBot.handleMessage(mockMessage as Message<boolean>);
+			await vennBot.handleMessage(mockMessage as Message<boolean>);
 
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect(sendReplySpy).toHaveBeenCalledWith(
 				mockMessage.channel,
-				expect.objectContaining({
-					username: 'Venn',
-					avatarURL: 'venn-avatar-url'
-				})
+				expect.any(String)
 			);
+			// Verify the bot name and avatar were updated
+			expect(vennBot.getBotName()).toBe('Venn');
+			expect(vennBot.getAvatarUrl()).toBe('venn-avatar-url');
 		});
 
-		it('should not respond to Venn\'s messages with 95% chance', () => {
+		it('should not respond to Venn\'s messages with 95% chance', async () => {
 			mockMessage.content = 'regular message';
 			(Random.percentChance as jest.Mock).mockReturnValue(false);
 
-			vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+			await vennBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).not.toHaveBeenCalled();
 		});
 
-		it('should use random responses', () => {
+		it('should use random responses', async () => {
 			mockMessage.content = 'cringe';
 			const responses = new Set();
 
 			for (let i = 0; i < 5; i++) {
 				jest.spyOn(Random, 'roll').mockReturnValue(i);
-				vennBot.handleMessage(mockMessage as Message<boolean>);
-				const call = (mockWebhookService.writeMessage as jest.Mock).mock.calls[i];
-				responses.add(call[1].content);
+				sendReplySpy.mockClear();
+				await vennBot.handleMessage(mockMessage as Message<boolean>);
+				expect(sendReplySpy).toHaveBeenCalled();
+				const call = sendReplySpy.mock.calls[0];
+				responses.add(call[1]);
 			}
 
 			expect(responses.size).toBeGreaterThan(1);
 		});
 
-		it('should use default avatar URL if display avatar URL is not available', () => {
+		it('should use default avatar URL if display avatar URL is not available', async () => {
 			mockMessage = {
 				...mockMessage,
 				content: 'cringe',
@@ -118,25 +121,22 @@ describe('VennBot', () => {
 				})
 			};
 
-			vennBot.handleMessage(mockMessage as Message<boolean>);
+			await vennBot.handleMessage(mockMessage as Message<boolean>);
 
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
-				expect.objectContaining({
-					avatarURL: 'venn-default-avatar-url'
-				})
-			);
+			expect(sendReplySpy).toHaveBeenCalled();
+			// Verify the avatar was set to the default
+			expect(vennBot.getAvatarUrl()).toBe('venn-default-avatar-url');
 		});
 
-		it('should not respond to non-Venn users saying cringe', () => {
+		it('should not respond to non-Venn users saying cringe', async () => {
 			mockMessage.content = 'cringe';
 			mockMessage.author = {
 				...mockMessage.author,
 				id: 'some-other-id'
 			} as User;
 
-			vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+			await vennBot.handleMessage(mockMessage as Message<boolean>);
+			expect(sendReplySpy).not.toHaveBeenCalled();
 		});
 	});
 });

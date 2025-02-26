@@ -1,9 +1,9 @@
-import userID from '@/discord/userID';
-import { OpenAIClient } from '@/openai/openaiClient';
-import { Logger } from '@/services/logger';
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
 import { Message, TextChannel } from 'discord.js';
+import userID from '../../../discord/userID';
+import { OpenAIClient } from '../../../openai/openaiClient';
+import { Logger } from '../../../services/logger';
+import { WebhookService } from '../../../webhooks/webhookService';
+import ReplyBot from '../replyBot';
 
 interface BlueConfig {
 	defaultAvatarURL?: string;
@@ -11,12 +11,14 @@ interface BlueConfig {
 	cheekyAvatar?: string;
 	openAIClient?: typeof OpenAIClient;
 	timeProvider?: () => number;
+	logger?: typeof Logger;
 }
 
 export default class BlueBot extends ReplyBot {
 	private botName: string = 'BluBot';
 	private readonly openAIClient: typeof OpenAIClient;
 	private readonly timeProvider: () => number;
+	private readonly logger: typeof Logger;
 
 	private readonly defaultPattern = /\bblue?\b/i;
 	private readonly confirmPattern = /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i;
@@ -41,11 +43,12 @@ export default class BlueBot extends ReplyBot {
 	private readonly BLUE_RESPONSE_WINDOW_MINUTES = 2;
 
 	constructor(
-		webhookService: WebhookService,
-		private readonly logger: typeof Logger,
+		param: WebhookService | unknown,
+		loggerParam?: typeof Logger,
 		config: BlueConfig = {}
 	) {
-		super(webhookService);
+		super(param);
+		this.logger = loggerParam ?? config.logger ?? Logger;
 		this.openAIClient = config.openAIClient ?? OpenAIClient;
 		this.timeProvider = config.timeProvider ?? (() => Date.now());
 		this.defaultAvatarURL = config.defaultAvatarURL ?? 'https://imgur.com/WcBRCWn.png';
