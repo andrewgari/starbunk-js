@@ -1,7 +1,8 @@
-import { createMockGuildMember, createMockMessage } from '@/__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import CheckBot from '@/starbunk/bots/reply-bots/checkBot';
 import { Message, User } from 'discord.js';
+import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import CheckBot from '../../../starbunk/bots/reply-bots/checkBot';
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 
 describe('CheckBot', () => {
 	let checkBot: CheckBot;
@@ -12,6 +13,9 @@ describe('CheckBot', () => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
 		checkBot = new CheckBot(mockWebhookService);
+
+		// Patch the sendReply method for synchronous testing
+		patchReplyBot(checkBot, mockWebhookService);
 	});
 
 	describe('bot configuration', () => {
