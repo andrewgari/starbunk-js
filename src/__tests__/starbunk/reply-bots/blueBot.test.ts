@@ -1,7 +1,7 @@
 import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { createMockMessage } from '@/__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import BlueBot from '@/starbunk/bots/reply-bots/blueBot';
+import createBlueBot from '@/starbunk/bots/reply-bots/blueBot';
 import ReplyBot from '@/starbunk/bots/replyBot';
 import { Collection, GuildMember, Message, TextChannel, User } from 'discord.js';
 
@@ -31,7 +31,7 @@ describe('BlueBot', () => {
 			} as unknown as GuildMember
 		};
 
-		blueBot = new BlueBot(mockWebhookService);
+		blueBot = createBlueBot(mockWebhookService);
 
 		// Patch the bot for testing
 		patchReplyBot(blueBot, mockWebhookService);

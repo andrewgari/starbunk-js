@@ -3,11 +3,12 @@ import { Guild, Message, TextChannel, User } from 'discord.js';
 import { createMockGuildMember } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import UserID from '../../../discord/userID';
-import BananaBot, { BANANA_RESPONSES } from '../../../starbunk/bots/reply-bots/bananaBot';
+import createBananaBot, { BANANA_RESPONSES } from '../../../starbunk/bots/reply-bots/bananaBot';
+import ReplyBot from '../../../starbunk/bots/replyBot';
 import random from '../../../utils/random';
 
 describe('BananaBot', () => {
-	let bananaBot: BananaBot;
+	let bananaBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 	const expectedMessageBase = {
@@ -30,7 +31,7 @@ describe('BananaBot', () => {
 			} as unknown as TextChannel,
 			member: mockMember
 		} as Message<boolean>;
-		bananaBot = new BananaBot(mockWebhookService);
+		bananaBot = createBananaBot(mockWebhookService);
 
 		// Patch the sendReply method for synchronous testing
 		patchReplyBot(bananaBot, mockWebhookService);

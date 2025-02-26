@@ -1,0 +1,59 @@
+{
+	"rules": [
+		{
+			"name": "clean-code",
+			"description": "Apply CLEAN code principles to file",
+			"prompt": "Refactor this code to strictly follow CLEAN principles: Create clear separation of concerns, Limit function size (<15 lines), Eliminate duplication, Avoid nested conditionals, Name everything meaningfully. Ensure consistent style matching the project's standards."
+		},
+		{
+			"name": "fix-lint-errors",
+			"description": "Fix linting errors based on eslint rules",
+			"prompt": "Fix all eslint errors in this file according to project standards. Preserve functionality and maintain consistent style throughout."
+		},
+		{
+			"name": "add-tests",
+			"description": "Generate unit tests for this file",
+			"prompt": "Create comprehensive unit tests for this file using Jest. Cover all edge cases and ensure good test coverage. Follow the project's existing test patterns."
+		},
+		{
+			"name": "optimize",
+			"description": "Optimize code for performance",
+			"prompt": "Optimize this code for better performance without changing its behavior. Look for inefficient loops, unnecessary object creation, and other performance bottlenecks. Maintain CLEAN code principles and consistent style."
+		},
+		{
+			"name": "document",
+			"description": "Add JSDoc documentation",
+			"prompt": "Add comprehensive JSDoc comments to all functions, classes, and interfaces in this file. Include parameter descriptions, return types, and examples where helpful."
+		},
+		{
+			"name": "consistent-style",
+			"description": "Ensure code follows consistent style",
+			"prompt": "Review and modify this code to ensure it follows a consistent style matching the rest of the project. Focus on naming conventions, formatting, comment style, and code organization. Don't change functionality."
+		},
+		{
+			"name": "type-safety",
+			"description": "Improve TypeScript type safety",
+			"prompt": "Improve the TypeScript type safety in this file. Replace any uses of 'any' with proper types, add missing type annotations, and ensure strict type checking."
+		},
+		{
+			"name": "discord-command",
+			"description": "Create a new Discord bot command",
+			"prompt": "Create a new Discord.js command module following the project's patterns. Include proper error handling, type safety, and helpful command documentation."
+		},
+		{
+			"name": "error-handling",
+			"description": "Improve error handling",
+			"prompt": "Enhance error handling in this code. Add try/catch blocks where appropriate, add meaningful error messages, and ensure errors are properly logged."
+		},
+		{
+			"name": "dependency-injection",
+			"description": "Apply dependency injection pattern",
+			"prompt": "Refactor this code to use dependency injection for better testability and separation of concerns. Make dependencies explicit."
+		},
+		{
+			"name": "convert-to-typescript",
+			"description": "Convert JavaScript to TypeScript",
+			"prompt": "Convert this JavaScript file to TypeScript with appropriate interfaces, types, and type annotations. Maintain the original functionality."
+		}
+	]
+}

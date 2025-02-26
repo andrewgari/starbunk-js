@@ -2,10 +2,11 @@ import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { Message } from 'discord.js';
 import { createMockMessage } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
-import NiceBot from '../../../starbunk/bots/reply-bots/niceBot';
+import createNiceBot from '../../../starbunk/bots/reply-bots/niceBot';
+import ReplyBot from '../../../starbunk/bots/replyBot';
 
 describe('NiceBot', () => {
-	let niceBot: NiceBot;
+	let niceBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
@@ -13,7 +14,7 @@ describe('NiceBot', () => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
 		mockMessage.author = { ...mockMessage.author, bot: false } as Message['author'];
-		niceBot = new NiceBot(mockWebhookService);
+		niceBot = createNiceBot(mockWebhookService);
 
 		// Patch the sendReply method for synchronous testing
 		patchReplyBot(niceBot, mockWebhookService);
@@ -21,11 +22,13 @@ describe('NiceBot', () => {
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
-			expect(niceBot.getBotName()).toBe('BunkBot');
+			const identity = niceBot.getIdentity();
+			expect(identity.name).toBe('BunkBot');
 		});
 
 		it('should have correct avatar URL', () => {
-			expect(niceBot.getAvatarUrl()).toBe('https://pbs.twimg.com/profile_images/421461637325787136/0rxpHzVx.jpeg');
+			const identity = niceBot.getIdentity();
+			expect(identity.avatarUrl).toBe('https://pbs.twimg.com/profile_images/421461637325787136/0rxpHzVx.jpeg');
 		});
 	});
 
@@ -42,36 +45,36 @@ describe('NiceBot', () => {
 			embeds: []
 		};
 
-		it('should respond to "69"', () => {
+		it('should respond to "69"', async () => {
 			mockMessage.content = '69';
-			niceBot.handleMessage(mockMessage as Message<boolean>);
+			await niceBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				expectedMessageOptions
 			);
 		});
 
-		it('should respond to "sixty-nine"', () => {
+		it('should respond to "sixty-nine"', async () => {
 			mockMessage.content = 'sixty-nine';
-			niceBot.handleMessage(mockMessage as Message<boolean>);
+			await niceBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				expectedMessageOptions
 			);
 		});
 
-		it('should respond to "sixtynine"', () => {
+		it('should respond to "sixtynine"', async () => {
 			mockMessage.content = 'sixtynine';
-			niceBot.handleMessage(mockMessage as Message<boolean>);
+			await niceBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				expectedMessageOptions
 			);
 		});
 
-		it('should not respond to unrelated messages', () => {
+		it('should not respond to unrelated messages', async () => {
 			mockMessage.content = 'hello world';
-			niceBot.handleMessage(mockMessage as Message<boolean>);
+			await niceBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 	});

@@ -1,70 +1,25 @@
-import { Message } from 'discord.js';
-import { Logger } from '../../../services/logger';
-import { WebhookService } from '../../../webhooks/webhookService';
-import { BotIdentity, CompositeTrigger, PatternTrigger, ResponseGenerator } from '../botTypes';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import { ResponseGenerator } from '../botTypes';
 import ReplyBot from '../replyBot';
 
-// Custom response generator for variable-length "sheesh"
-class RandomSheeshResponse implements ResponseGenerator {
-	generateRandomEs(): string {
-		const numberOfEs = Math.floor(Math.random() * 10);
-		return 'e'.repeat(numberOfEs) + 'e' + 'e';
-	}
-
+// Custom response generator for random sheesh lengths
+class SheeshResponseGenerator implements ResponseGenerator {
 	async generateResponse(): Promise<string> {
-		return 'Sh' + this.generateRandomEs() + 'sh!';
+		// Generate a sheesh with random number of 'e's
+		const eeCount = Math.floor(Math.random() * 15) + 3;
+		const response = `Sh${'e'.repeat(eeCount)}sh`;
+		return response;
 	}
 }
 
-// Logger response that logs and returns a fixed response
-class LoggingSheeshResponse implements ResponseGenerator {
-	async generateResponse(message: Message): Promise<string> {
-		Logger.debug(`😤 User ${message.author.username} said sheesh in: "${message.content}"`);
-		return 'SHEEEEEEEESH 😤';
-	}
+/**
+ * SheeshBot - A bot that responds to "sheesh" with a sheesh of random length
+ */
+export default function createSheeshBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	return new BotBuilder('SheeshBot', webhookServiceParam)
+		.withAvatar('https://i.kym-cdn.com/photos/images/newsfeed/002/297/355/cb3')
+		.withPatternTrigger(/\bsheesh\b/i)
+		.respondsWithCustom(new SheeshResponseGenerator())
+		.build();
 }
-
-// Composite response generator that tries both responses
-class CompositeSheeshResponse implements ResponseGenerator {
-	constructor(
-		private variableResponse: ResponseGenerator,
-		private exactResponse: ResponseGenerator
-	) { }
-
-	async generateResponse(message: Message): Promise<string> {
-		// If it's an exact "sheesh", use that response
-		if (message.content.match(/\bsheesh\b/i)) {
-			return this.exactResponse.generateResponse(message);
-		}
-		// Otherwise use the variable-length response
-		return this.variableResponse.generateResponse(message);
-	}
-}
-
-class SheeshBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		const identity: BotIdentity = {
-			name: 'Sheesh Bot',
-			avatarUrl: 'https://i.imgflip.com/5fc2iz.png?a471000'
-		};
-
-		const trigger = new CompositeTrigger([
-			new PatternTrigger(/\bshee+sh\b/i),
-			new PatternTrigger(/\bsheesh\b/i)
-		]);
-
-		const response = new CompositeSheeshResponse(
-			new RandomSheeshResponse(),
-			new LoggingSheeshResponse()
-		);
-
-		super(identity, trigger, response, webhookService);
-	}
-
-	getBotName(): string {
-		return 'Sheesh Bot';
-	}
-}
-
-// Export the SheeshBot class
-export default SheeshBot;

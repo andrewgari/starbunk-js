@@ -69,22 +69,34 @@ export default class StarbunkClient extends DiscordClient {
 						continue;
 					}
 
-					const bot = new botModule.default(this) as ReplyBotWithName;
+					// Handle both class-based and function-based bots
+					let bot;
+					if (typeof botModule.default === 'function') {
+						// If it's a function, pass the entire client as before
+						bot = botModule.default(this);
+					} else {
+						// Otherwise, instantiate the class as before
+						bot = new botModule.default(this);
+					}
 
-					if (!bot || !bot.getBotName()) {
+					if (!bot || !bot.getBotName) {
 						this.logger.warn(`Invalid bot in file: ${fileName}`);
 						continue;
 					}
 
-					if (this.bots.has(bot.getBotName())) {
-						this.logger.warn(`Duplicate bot name: ${bot.getBotName()}`);
+					const botName = bot.getBotName();
+
+					if (this.bots.has(botName)) {
+						this.logger.warn(`Duplicate bot name: ${botName}`);
 						continue;
 					}
 
-					this.bots.set(bot.getBotName(), bot);
-					this.logger.success(`Registered Bot: ${bot.getBotName()} 🤖`);
-				} catch (error) {
-					this.logger.error(`Error registering bot from file ${file}:`, error as Error);
+					// Register the bot with its name
+					this.bots.set(botName, bot);
+
+					this.logger.success(`Registered Bot: ${botName} 🤖`);
+				} catch (err) {
+					this.logger.error(`Error registering bot from file ${file}:`, err as Error);
 				}
 			}
 		} catch (error) {

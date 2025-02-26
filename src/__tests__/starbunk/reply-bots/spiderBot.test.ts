@@ -2,17 +2,18 @@ import { Message, TextChannel, User } from 'discord.js';
 import { patchReplyBot } from '../../../__tests__/helpers/replyBotHelper';
 import { createMockMessage } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
-import SpiderBot from '../../../starbunk/bots/reply-bots/spiderBot';
+import createSpiderBot from '../../../starbunk/bots/reply-bots/spiderBot';
+import ReplyBot from '../../../starbunk/bots/replyBot';
 
 describe('SpiderBot', () => {
-	let spiderBot: SpiderBot;
+	let spiderBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage();
-		spiderBot = new SpiderBot(mockWebhookService);
+		spiderBot = createSpiderBot(mockWebhookService);
 
 		// Patch the sendReply method for synchronous testing
 		patchReplyBot(spiderBot, mockWebhookService);
@@ -26,11 +27,11 @@ describe('SpiderBot', () => {
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
-			expect(spiderBot.getBotName()).toBe('Spider-Bot');
+			expect(spiderBot.getIdentity().name).toBe('Spider-Bot');
 		});
 
 		it('should have correct avatar URL', () => {
-			expect(spiderBot.getAvatarUrl()).toBe('https://i.pinimg.com/736x/33/e0/06/33e00653eb485455ce5121b413b26d3b.jpg');
+			expect(spiderBot.getIdentity().avatarUrl).toBe('https://i.pinimg.com/736x/33/e0/06/33e00653eb485455ce5121b413b26d3b.jpg');
 		});
 	});
 
@@ -42,7 +43,7 @@ describe('SpiderBot', () => {
 			embeds: []
 		};
 
-		it('should ignore messages from bots', () => {
+		it('should ignore messages from bots', async () => {
 			mockMessage.author = {
 				bot: true,
 				id: '123',
@@ -51,40 +52,40 @@ describe('SpiderBot', () => {
 				avatar: 'test',
 				system: false
 			} as unknown as User;
-			spiderBot.handleMessage(mockMessage as Message<boolean>);
+			await spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond to "spiderman"', () => {
+		it('should respond to "spiderman"', async () => {
 			mockMessage.content = 'spiderman';
-			spiderBot.handleMessage(mockMessage as Message<boolean>);
+			await spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});
 
-		it('should respond to "spider man"', () => {
+		it('should respond to "spider man"', async () => {
 			mockMessage.content = 'spider man';
-			spiderBot.handleMessage(mockMessage as Message<boolean>);
+			await spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});
 
-		it('should respond to "spider-man"', () => {
+		it('should respond to "spider-man"', async () => {
 			mockMessage.content = 'spider-man';
-			spiderBot.handleMessage(mockMessage as Message<boolean>);
+			await spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});
 
-		it('should not respond to unrelated messages', () => {
+		it('should not respond to unrelated messages', async () => {
 			mockMessage.content = 'hello world';
-			spiderBot.handleMessage(mockMessage as Message<boolean>);
+			await spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 	});

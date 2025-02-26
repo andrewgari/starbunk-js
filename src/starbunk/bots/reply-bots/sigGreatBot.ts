@@ -1,27 +1,14 @@
-import { WebhookService } from '../../../webhooks/webhookService';
-import { PatternTrigger, StaticResponse } from '../botTypes';
+import webhookService from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
 import ReplyBot from '../replyBot';
 
-class SigBestBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		const trigger = new PatternTrigger(/\b(sig|siggles) is best\b/i);
-		const responseGenerator = new StaticResponse('Man, Sig really is the best.');
-
-		super(
-			{
-				name: 'SigBestBot',
-				avatarUrl: '',
-			},
-			trigger,
-			responseGenerator,
-			webhookService
-		);
-	}
-
-	getBotName(): string {
-		return 'SigBestBot';
-	}
+/**
+ * SigGreatBot - A bot that responds to "Sig best" with "The greatest".
+ */
+export default function createSigGreatBot(): ReplyBot {
+	return new BotBuilder('SigGreatBot', webhookService)
+		.withAvatar('https://static.wikia.nocookie.net/chrono/images/a/a5/Serge2.png')
+		.withPatternTrigger(/\bsig\s+(?:best|greatest)\b/i)
+		.respondsWithStatic('The greatest.')
+		.build();
 }
-
-// Export the SigBestBot class
-export default SigBestBot;

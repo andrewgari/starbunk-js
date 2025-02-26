@@ -1,8 +1,9 @@
 import { Message, TextChannel, User, Webhook } from 'discord.js';
+import { patchReplyBot } from '../../../__tests__/helpers/replyBotHelper';
 import { createMockMessage, createMockTextChannel } from '../../../__tests__/mocks/discordMocks';
 import UserID from '../../../discord/userID';
 import { TriggerCondition } from '../../../starbunk/bots/botTypes';
-import GremlinBot from '../../../starbunk/bots/reply-bots/pickleBot';
+import createGremlinBot from '../../../starbunk/bots/reply-bots/pickleBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { WebhookService } from '../../../webhooks/webhookService';
 
@@ -71,7 +72,12 @@ describe('PickleBot', () => {
 			channel: mockChannel
 		};
 
-		pickleBot = new GremlinBot(mockWebhookService);
+		// Create the bot using the factory function with mockWebhookService
+		pickleBot = createGremlinBot(mockWebhookService);
+
+		// Patch the bot to use our mock webhook service
+		patchReplyBot(pickleBot, mockWebhookService);
+
 		jest.clearAllMocks();
 	});
 

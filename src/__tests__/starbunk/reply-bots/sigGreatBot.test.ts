@@ -1,22 +1,24 @@
 import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { createMockMessage } from '@/__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import SigBestBot from '@/starbunk/bots/reply-bots/sigGreatBot';
+import createSigGreatBot from '@/starbunk/bots/reply-bots/sigGreatBot';
 import ReplyBot from '@/starbunk/bots/replyBot';
 import { Message, TextChannel, User } from 'discord.js';
 
-describe('SigBestBot', () => {
-	let sigBestBot: ReplyBot;
+describe('SigGreatBot', () => {
+	let sigGreatBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage();
-		sigBestBot = new SigBestBot(mockWebhookService);
+
+		// Create bot with the new factory function
+		sigGreatBot = createSigGreatBot();
 
 		// Patch the sendReply method for synchronous testing
-		patchReplyBot(sigBestBot, mockWebhookService);
+		patchReplyBot(sigGreatBot, mockWebhookService);
 
 		jest.useRealTimers();
 	});
@@ -27,9 +29,9 @@ describe('SigBestBot', () => {
 
 	describe('message handling', () => {
 		const expectedMessageOptions = {
-			username: 'SigBestBot',
-			avatarURL: '',
-			content: 'Man, Sig really is the best.',
+			username: 'SigGreatBot',
+			avatarURL: 'https://static.wikia.nocookie.net/chrono/images/a/a5/Serge2.png',
+			content: 'The greatest.',
 			embeds: []
 		};
 
@@ -42,22 +44,22 @@ describe('SigBestBot', () => {
 				avatar: 'test',
 				system: false
 			} as unknown as User;
-			await sigBestBot.handleMessage(mockMessage as Message<boolean>);
+			await sigGreatBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond to "sig is best"', async () => {
-			mockMessage.content = 'sig is best';
-			await sigBestBot.handleMessage(mockMessage as Message<boolean>);
+		it('should respond to "sig best"', async () => {
+			mockMessage.content = 'sig best';
+			await sigGreatBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expectedMessageOptions
 			);
 		});
 
-		it('should respond to "siggles is best"', async () => {
-			mockMessage.content = 'siggles is best';
-			await sigBestBot.handleMessage(mockMessage as Message<boolean>);
+		it('should respond to "sig greatest"', async () => {
+			mockMessage.content = 'sig greatest';
+			await sigGreatBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expectedMessageOptions

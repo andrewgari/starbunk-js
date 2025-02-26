@@ -2,31 +2,35 @@ import { Message, TextChannel, User } from 'discord.js';
 import { patchReplyBot } from '../../../__tests__/helpers/replyBotHelper';
 import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
-import BotBot from '../../../starbunk/bots/reply-bots/botBot';
+import createBotBot from '../../../starbunk/bots/reply-bots/botBot';
+import ReplyBot from '../../../starbunk/bots/replyBot';
 import Random from '../../../utils/random';
 
 jest.mock('../../../utils/random');
 
 describe('BotBot', () => {
-	let botBot: BotBot;
+	let botBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
-		botBot = new BotBot(mockWebhookService);
+		botBot = createBotBot(mockWebhookService);
 		patchReplyBot(botBot, mockWebhookService);
+		(Random.percentChance as jest.Mock).mockClear();
 		jest.clearAllMocks();
 	});
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
-			expect(botBot.botName).toBe('BotBot');
+			const identity = botBot.getIdentity();
+			expect(identity.name).toBe('BotBot');
 		});
 
 		it('should have correct avatar URL', () => {
-			expect(botBot.avatarUrl).toBe('https://cdn-icons-png.flaticon.com/512/4944/4944377.png');
+			const identity = botBot.getIdentity();
+			expect(identity.avatarUrl).toBe('https://cdn-icons-png.flaticon.com/512/4944/4944377.png');
 		});
 	});
 
@@ -34,6 +38,7 @@ describe('BotBot', () => {
 		beforeEach(() => {
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
+			(Random.percentChance as jest.Mock).mockReturnValue(false);
 		});
 
 		it('should respond to bot messages with 5% chance', async () => {
@@ -84,6 +89,46 @@ describe('BotBot', () => {
 
 			await botBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		});
+
+		it('should not respond when random chance is not met', async () => {
+			mockMessage = {
+				...createMockMessage('TestUser'),
+				content: 'Hello from another bot',
+				author: {
+					...createMockGuildMember('bot-id', 'OtherBot').user,
+					bot: true
+				} as User
+			};
+
+			(Random.percentChance as jest.Mock).mockReturnValue(false);
+
+			await botBot.handleMessage(mockMessage as Message<boolean>);
+			expect(Random.percentChance).toHaveBeenCalledWith(5);
+			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		});
+
+		it('should handle empty messages from bots', async () => {
+			mockMessage = {
+				...createMockMessage('TestUser'),
+				content: '',
+				author: {
+					...createMockGuildMember('bot-id', 'OtherBot').user,
+					bot: true
+				} as User
+			};
+
+			(Random.percentChance as jest.Mock).mockReturnValue(true);
+
+			await botBot.handleMessage(mockMessage as Message<boolean>);
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					username: 'BotBot',
+					avatarURL: 'https://cdn-icons-png.flaticon.com/512/4944/4944377.png',
+					content: 'Hello fellow bot!'
+				})
+			);
 		});
 	});
 });

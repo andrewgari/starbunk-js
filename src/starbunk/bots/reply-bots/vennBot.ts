@@ -1,8 +1,11 @@
 import userID from '../../../discord/userID';
-import { WebhookService } from '../../../webhooks/webhookService';
-import { CompositeTrigger, PatternTrigger, RandomResponse, UserRandomTrigger } from '../botTypes';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
 import ReplyBot from '../replyBot';
 
+/**
+ * VennBot - A bot that responds to mentions of Venn or randomly to Venn's messages
+ */
 const responses = [
 	'Oh no guys, it\'s in the other DPS now',
 	'Oh hey dude',
@@ -21,30 +24,11 @@ const responses = [
 	'Not to be TOO political, but...',
 ];
 
-class VennBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		const trigger = new CompositeTrigger([
-			new PatternTrigger(/\bvenn\b/i),
-			new UserRandomTrigger(userID.Venn, 5),
-		]);
-
-		const responseGenerator = new RandomResponse(responses);
-
-		super(
-			{
-				name: 'VennBot',
-				avatarUrl: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png',
-			},
-			trigger,
-			responseGenerator,
-			webhookService
-		);
-	}
-
-	getBotName(): string {
-		return 'VennBot';
-	}
+export default function createVennBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	return new BotBuilder('VennBot', webhookServiceParam)
+		.withAvatar('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png')
+		.withPatternTrigger(/\bvenn\b/i)
+		.withUserRandomTrigger(userID.Venn, 5)
+		.respondsWithRandom(responses)
+		.build();
 }
-
-// Export the VennBot class
-export default VennBot;

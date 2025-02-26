@@ -1,7 +1,10 @@
-import { WebhookService } from '../../../webhooks/webhookService';
-import { CompositeTrigger, PatternTrigger, RandomResponse } from '../botTypes';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
 import ReplyBot from '../replyBot';
 
+/**
+ * GundamBot - A bot that responds to mentions of Gundam, mecha, robot, etc.
+ */
 const responses = [
 	'You\'re going down, Patlabor!',
 	'Super Dimension Fortress. I feel small...',
@@ -25,29 +28,10 @@ const responses = [
 	'Operation: Meteor has begun!'
 ];
 
-class GundamBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		const trigger = new CompositeTrigger([
-			new PatternTrigger(/\b(gundam|mecha|robot|pacific rim|jaeger)\b/i)
-		]);
-
-		const responseGenerator = new RandomResponse(responses);
-
-		super(
-			{
-				name: 'GundamBot',
-				avatarUrl: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839584849930/gundam.png',
-			},
-			trigger,
-			responseGenerator,
-			webhookService
-		);
-	}
-
-	getBotName(): string {
-		return 'GundamBot';
-	}
+export default function createGundamBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	return new BotBuilder('GundamBot', webhookServiceParam)
+		.withAvatar('https://cdn.discordapp.com/attachments/854790294253117531/902975839584849930/gundam.png')
+		.withPatternTrigger(/\b(gundam|mecha|robot|pacific rim|jaeger)\b/i)
+		.respondsWithRandom(responses)
+		.build();
 }
-
-// Export the GundamBot class
-export default GundamBot;

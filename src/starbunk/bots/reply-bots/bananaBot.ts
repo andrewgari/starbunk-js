@@ -1,8 +1,9 @@
 import { Message } from 'discord.js';
-import UserID from '../../../discord/userID';
+import userID from '../../../discord/userID';
 import random from '../../../utils/random';
-import { WebhookService } from '../../../webhooks/webhookService';
-import { BotIdentity, CompositeTrigger, RandomResponse, TriggerCondition } from '../botTypes';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import { BotIdentity, TriggerCondition } from '../botTypes';
 import ReplyBot from '../replyBot';
 
 // Define the responses as a constant outside the class
@@ -27,7 +28,7 @@ class VennRandomTrigger implements TriggerCondition {
 	constructor(private chance: number) { }
 
 	async shouldTrigger(message: Message): Promise<boolean> {
-		return message.author.id === UserID.Venn && random.percentChance(this.chance);
+		return message.author.id === userID.Venn && random.percentChance(this.chance);
 	}
 }
 
@@ -40,55 +41,27 @@ class BananaPatternTrigger implements TriggerCondition {
 	}
 }
 
-// Custom BananaBot class that extends ReplyBot
-class BananaBot extends ReplyBot {
-	// Properties needed for the patchReplyBot helper
-	botName: string;
-	avatarUrl: string;
-
-	constructor(webhookService: WebhookService) {
-		// Create the identity
-		const identity: BotIdentity = {
-			name: 'BananaBot',
-			avatarUrl: ''
+/**
+ * BananaBot - A bot that responds to messages containing "banana" or randomly to Venn
+ * This bot dynamically updates its identity to mimic the user it's responding to
+ */
+export default function createBananaBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	// Identity updater function
+	const updateIdentity = async (message: Message): Promise<BotIdentity> => {
+		return {
+			name: message.author.displayName ?? message.author.username,
+			avatarUrl: message.author.displayAvatarURL?.() ?? ''
 		};
+	};
 
-		// Create the triggers
-		const bananaPattern = new BananaPatternTrigger();
-		const vennRandom = new VennRandomTrigger(5);
-		const trigger = new CompositeTrigger([bananaPattern, vennRandom]);
-
-		// Create the response generator
-		const responseGenerator = new RandomResponse(BANANA_RESPONSES);
-
-		super(identity, trigger, responseGenerator, webhookService);
-
-		// Initialize properties for the patchReplyBot helper
-		this.botName = identity.name;
-		this.avatarUrl = identity.avatarUrl;
-	}
-
-	// Override handleMessage to update the identity before processing
-	async handleMessage(message: Message): Promise<void> {
-		if (message.author.bot) return;
-
-		// Update the identity properties
-		this.botName = message.author.displayName ?? message.author.username;
-		this.avatarUrl = message.author.displayAvatarURL?.() ?? '';
-
-		// Also update the identity object
-		const identity = this.getIdentity();
-		identity.name = this.botName;
-		identity.avatarUrl = this.avatarUrl;
-
-		// Call the parent handleMessage method to use the trigger and response generator
-		return super.handleMessage(message);
-	}
-
-	getBotName(): string {
-		return this.botName || 'BananaBot';
-	}
+	// Create and return the bot using the builder pattern
+	return new BotBuilder('BananaBot', webhookServiceParam)
+		// Add custom triggers
+		.withCustomTrigger(new BananaPatternTrigger())
+		.withCustomTrigger(new VennRandomTrigger(5))
+		// Set up dynamic identity that updates based on the message sender
+		.withDynamicIdentity('', updateIdentity)
+		// Set responses
+		.respondsWithRandom(BANANA_RESPONSES)
+		.build();
 }
-
-// Export the BananaBot class directly
-export default BananaBot;

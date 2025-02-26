@@ -1,6 +1,7 @@
-import { Message, TextChannel } from 'discord.js';
-import { WebhookService } from '../../../webhooks/webhookService';
-import { BotIdentity, CompositeTrigger, PatternTrigger, ResponseGenerator, TriggerCondition } from '../botTypes';
+import { Message } from 'discord.js';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import { ResponseGenerator, TriggerCondition } from '../botTypes';
 import ReplyBot from '../replyBot';
 
 // Avatar URLs
@@ -8,72 +9,9 @@ const DEFAULT_AVATAR = 'https://imgur.com/WcBRCWn.png';
 const CHEEKY_AVATAR = 'https://i.imgur.com/dO4a59n.png';
 const MURDER_AVATAR = 'https://imgur.com/Tpo8Ywd.jpg';
 
-// Custom implementation for BlueBot
-class BlueBot extends ReplyBot {
-	// Expose these properties for the patchReplyBot helper
-	botName = 'BluBot';
-	avatarUrl = DEFAULT_AVATAR;
-
-	private niceTrigger = new NiceMessageTrigger();
-
-	constructor(webhookService: WebhookService) {
-		const identity: BotIdentity = {
-			name: 'BluBot',
-			avatarUrl: DEFAULT_AVATAR
-		};
-
-		const trigger = new CompositeTrigger([
-			new PatternTrigger(/\bblue?\b/i),
-			new NiceMessageTrigger()
-		]);
-
-		// We'll override handleMessage, so this doesn't matter
-		const responseGenerator: ResponseGenerator = {
-			async generateResponse(): Promise<string> {
-				return 'Did somebody say Blu?';
-			}
-		};
-
-		super(identity, trigger, responseGenerator, webhookService);
-	}
-
-	async handleMessage(message: Message): Promise<void> {
-		if (message.author.bot) return;
-
-		// Check for mean words
-		if (message.content.match(/\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i)) {
-			this.avatarUrl = MURDER_AVATAR;
-			await this.sendReply(message.channel as TextChannel, 'No way, Venn can suck my blu cane. :unamused:');
-			return;
-		}
-
-		// Check for nice message
-		if (await this.niceTrigger.shouldTrigger(message)) {
-			this.avatarUrl = CHEEKY_AVATAR;
-			const name = this.niceTrigger.getNameFromMessage(message);
-			await this.sendReply(message.channel as TextChannel, `${name}, I think you're pretty Blu! :wink:`);
-			return;
-		}
-
-		// Check for confirmation - only if we've seen a blue message first
-		if (message.content.match(/\b(yes|no|yep|yeah|(i did)|(you got it)|(sure did))\b/i)) {
-			this.avatarUrl = CHEEKY_AVATAR;
-			await this.sendReply(message.channel as TextChannel, 'Lol, Somebody definitely said Blu! :smile:');
-			return;
-		}
-
-		// Check for blue mention - this needs to be last
-		if (message.content.match(/\bblue?\b/i)) {
-			this.avatarUrl = DEFAULT_AVATAR;
-			await this.sendReply(message.channel as TextChannel, 'Did somebody say Blu?');
-			return;
-		}
-	}
-
-	getBotName(): string {
-		return this.botName;
-	}
-}
+/**
+ * BluBot - A bot with complex response logic for messages containing "blue"
+ */
 
 // Nice message trigger implementation
 class NiceMessageTrigger implements TriggerCondition {
@@ -95,4 +33,71 @@ class NiceMessageTrigger implements TriggerCondition {
 	}
 }
 
-export default BlueBot;
+// Custom response generator for BlueBot
+class BlueBotResponseGenerator implements ResponseGenerator {
+	private niceTrigger = new NiceMessageTrigger();
+	private avatarUrl = DEFAULT_AVATAR;
+
+	async generateResponse(message: Message): Promise<string> {
+		if (message.author.bot) return '';
+
+		// Check for mean words
+		if (message.content.match(/\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i)) {
+			this.avatarUrl = MURDER_AVATAR;
+			return 'No way, Venn can suck my blu cane. :unamused:';
+		}
+
+		// Check for nice message
+		if (await this.niceTrigger.shouldTrigger(message)) {
+			this.avatarUrl = CHEEKY_AVATAR;
+			const name = this.niceTrigger.getNameFromMessage(message);
+			return `${name}, I think you're pretty Blu! :wink:`;
+		}
+
+		// Check for confirmation
+		if (message.content.match(/\b(yes|no|yep|yeah|(i did)|(you got it)|(sure did))\b/i)) {
+			this.avatarUrl = CHEEKY_AVATAR;
+			return 'Lol, Somebody definitely said Blu! :smile:';
+		}
+
+		// Check for blue mention
+		if (message.content.match(/\bblue?\b/i)) {
+			this.avatarUrl = DEFAULT_AVATAR;
+			return 'Did somebody say Blu?';
+		}
+
+		return '';
+	}
+
+	// Method to get current avatar URL
+	getAvatarUrl(): string {
+		return this.avatarUrl;
+	}
+}
+
+// Create the triggers
+class BluBotTrigger implements TriggerCondition {
+	private bluePattern = /\bblue?\b/i;
+	private confirmPattern = /\b(yes|no|yep|yeah|(i did)|(you got it)|(sure did))\b/i;
+	private meanPattern = /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i;
+	private niceTrigger = new NiceMessageTrigger();
+
+	async shouldTrigger(message: Message): Promise<boolean> {
+		if (message.author.bot) return false;
+		return this.bluePattern.test(message.content) ||
+			this.confirmPattern.test(message.content) ||
+			this.meanPattern.test(message.content) ||
+			await this.niceTrigger.shouldTrigger(message);
+	}
+}
+
+export default function createBlueBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	const responseGenerator = new BlueBotResponseGenerator();
+
+	// Create and return the bot using the builder pattern
+	return new BotBuilder('BluBot', webhookServiceParam)
+		.withAvatar(DEFAULT_AVATAR)
+		.withCustomTrigger(new BluBotTrigger())
+		.respondsWithCustom(responseGenerator)
+		.build();
+}

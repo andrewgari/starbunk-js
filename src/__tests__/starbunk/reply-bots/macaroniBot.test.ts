@@ -3,17 +3,18 @@ import { Message, User } from 'discord.js';
 import { createMockMessage } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import userID from '../../../discord/userID';
-import MacaroniBot from '../../../starbunk/bots/reply-bots/macaroniBot';
+import createMacaroniBot from '../../../starbunk/bots/reply-bots/macaroniBot';
+import ReplyBot from '../../../starbunk/bots/replyBot';
 
 describe('MacaroniBot', () => {
-	let macaroniBot: MacaroniBot;
+	let macaroniBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage();
-		macaroniBot = new MacaroniBot(mockWebhookService);
+		macaroniBot = createMacaroniBot(mockWebhookService);
 
 		// Patch the sendReply method for synchronous testing
 		patchReplyBot(macaroniBot, mockWebhookService);
@@ -21,11 +22,13 @@ describe('MacaroniBot', () => {
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
-			expect(macaroniBot.getBotName()).toBe('Macaroni Bot');
+			const identity = macaroniBot.getIdentity();
+			expect(identity.name).toBe('Macaroni Bot');
 		});
 
 		it('should have correct avatar URL', () => {
-			expect(macaroniBot.getAvatarUrl()).toBe('https://i.imgur.com/fgbH6Xf.jpg');
+			const identity = macaroniBot.getIdentity();
+			expect(identity.avatarUrl).toBe('https://i.imgur.com/fgbH6Xf.jpg');
 		});
 	});
 
@@ -44,7 +47,7 @@ describe('MacaroniBot', () => {
 			embeds: []
 		};
 
-		it('should ignore messages from bots', () => {
+		it('should ignore messages from bots', async () => {
 			mockMessage.author = {
 				bot: true,
 				id: '123',
@@ -52,40 +55,40 @@ describe('MacaroniBot', () => {
 				discriminator: '1234',
 				avatar: 'test'
 			} as unknown as User;
-			macaroniBot.handleMessage(mockMessage as Message<boolean>);
+			await macaroniBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond with Venn correction for "macaroni"', () => {
+		it('should respond with Venn correction for "macaroni"', async () => {
 			mockMessage.content = 'I love macaroni';
-			macaroniBot.handleMessage(mockMessage as Message<boolean>);
+			await macaroniBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				macaroniMessageOptions
 			);
 		});
 
-		it('should respond with Venn correction for "pasta"', () => {
+		it('should respond with Venn correction for "pasta"', async () => {
 			mockMessage.content = 'pasta time!';
-			macaroniBot.handleMessage(mockMessage as Message<boolean>);
+			await macaroniBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				macaroniMessageOptions
 			);
 		});
 
-		it('should respond with Venn mention for "venn"', () => {
+		it('should respond with Venn mention for "venn"', async () => {
 			mockMessage.content = 'where is venn?';
-			macaroniBot.handleMessage(mockMessage as Message<boolean>);
+			await macaroniBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				vennMessageOptions
 			);
 		});
 
-		it('should not respond to unrelated messages', () => {
+		it('should not respond to unrelated messages', async () => {
 			mockMessage.content = 'hello world';
-			macaroniBot.handleMessage(mockMessage as Message<boolean>);
+			await macaroniBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 	});

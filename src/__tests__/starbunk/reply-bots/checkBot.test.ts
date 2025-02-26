@@ -2,17 +2,18 @@ import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { Message, User } from 'discord.js';
 import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
-import CheckBot from '../../../starbunk/bots/reply-bots/checkBot';
+import createCheckBot from '../../../starbunk/bots/reply-bots/checkBot';
+import ReplyBot from '../../../starbunk/bots/replyBot';
 
 describe('CheckBot', () => {
-	let checkBot: CheckBot;
+	let checkBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
-		checkBot = new CheckBot(mockWebhookService);
+		checkBot = createCheckBot(mockWebhookService);
 
 		// Patch the sendReply method for synchronous testing
 		patchReplyBot(checkBot, mockWebhookService);
@@ -20,11 +21,11 @@ describe('CheckBot', () => {
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
-			expect(checkBot.getBotName()).toBe('CheckBot');
+			expect(checkBot.getIdentity().name).toBe('CheckBot');
 		});
 
 		it('should have correct avatar URL', () => {
-			expect(checkBot.getAvatarUrl()).toBe('https://m.media-amazon.com/images/I/21Unzn9U8sL._AC_.jpg');
+			expect(checkBot.getIdentity().avatarUrl).toBe('https://m.media-amazon.com/images/I/21Unzn9U8sL._AC_.jpg');
 		});
 	});
 

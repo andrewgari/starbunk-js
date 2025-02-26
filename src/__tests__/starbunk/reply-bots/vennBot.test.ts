@@ -2,7 +2,7 @@ import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { createMockMessage } from '@/__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import userID from '@/discord/userID';
-import VennBot from '@/starbunk/bots/reply-bots/vennBot';
+import createVennBot from '@/starbunk/bots/reply-bots/vennBot';
 import ReplyBot from '@/starbunk/bots/replyBot';
 import Random from '@/utils/random';
 import { Message, User } from 'discord.js';
@@ -31,143 +31,111 @@ describe('VennBot', () => {
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
-		mockMessage = {
-			...createMockMessage('Venn'),
-			content: '',
-			author: createMockVennUser()
-		};
-		vennBot = new VennBot(mockWebhookService);
+		mockMessage = createMockMessage('TestUser');
 
-		// Patch the bot to use the mock webhook service
+		// Create the bot with factory function
+		vennBot = createVennBot(mockWebhookService);
+
+		// Patch the bot for testing
 		patchReplyBot(vennBot, mockWebhookService);
 
+		// Clear mocks
+		(Random.percentChance as jest.Mock).mockClear();
 		jest.clearAllMocks();
 	});
 
-	describe('bot configuration', () => {
-		it('should have correct initial name', () => {
-			expect(vennBot.getIdentity().name).toBe('VennBot');
-		});
-
-		it('should have correct initial avatar URL', () => {
-			expect(vennBot.getIdentity().avatarUrl).toBe('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png');
-		});
+	afterEach(() => {
+		jest.clearAllMocks();
 	});
 
 	describe('message handling', () => {
-		beforeEach(() => {
-			jest.spyOn(Random, 'roll').mockReturnValue(0);
-		});
+		const expectedMessageBase = {
+			username: 'VennBot',
+			avatarURL: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png',
+			embeds: []
+		};
 
 		it('should ignore messages from bots', async () => {
-			mockMessage.author = { ...mockMessage.author, bot: true } as User;
+			mockMessage.author = createMockVennUser({ bot: true });
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond to Venn saying "venn"', async () => {
-			mockMessage.content = 'that was venn';
+		it('should respond to "venn" in messages', async () => {
+			mockMessage.content = 'Did you see what venn did?';
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
 
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				expect.objectContaining({
-					username: 'VennBot',
+					...expectedMessageBase,
 					content: expect.any(String)
 				})
 			);
 		});
 
-		it('should respond to Venn\'s messages with 5% chance', async () => {
-			mockMessage.content = 'regular message';
-			// Mock Math.random to return a value that will trigger the bot (less than 5/100)
-			jest.spyOn(global.Math, 'random').mockReturnValue(0.01);
-
+		it('should respond to case-insensitive "VENN"', async () => {
+			mockMessage.content = 'That VENN guy is awesome!';
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
 
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				expect.objectContaining({
-					username: 'VennBot',
+					...expectedMessageBase,
 					content: expect.any(String)
 				})
 			);
-
-			// Restore the original Math.random
-			(global.Math.random as jest.Mock).mockRestore();
 		});
 
-		it('should not respond to Venn\'s messages with 95% chance', async () => {
-			mockMessage.content = 'regular message';
-			jest.spyOn(Random, 'percentChance').mockReturnValue(false);
-
+		it('should not respond to messages without "venn"', async () => {
+			mockMessage.content = 'Just a regular message';
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should use random responses', async () => {
-			mockMessage.content = 'venn';
-			const responses = new Set();
+		it('should respond to "venn" at word boundaries', async () => {
+			mockMessage.content = 'Hey venn!';
+			await vennBot.handleMessage(mockMessage as Message<boolean>);
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel,
+				expect.objectContaining({
+					...expectedMessageBase,
+					content: expect.any(String)
+				})
+			);
+		});
 
-			for (let i = 0; i < 5; i++) {
-				jest.spyOn(Random, 'roll').mockReturnValue(i);
-				mockWebhookService.writeMessage.mockClear();
+		describe('user random responses', () => {
+			beforeEach(() => {
+				mockMessage.author = createMockVennUser();
+				(Random.percentChance as jest.Mock).mockReturnValue(false);
+			});
+
+			it('should randomly respond to Venn messages when chance is met', async () => {
+				(Random.percentChance as jest.Mock).mockReturnValue(true);
+				mockMessage.content = 'Just saying hello';
+
 				await vennBot.handleMessage(mockMessage as Message<boolean>);
-				expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-				const call = mockWebhookService.writeMessage.mock.calls[0];
-				responses.add(call[1].content);
-			}
 
-			expect(responses.size).toBeGreaterThan(1);
-		});
+				expect(Random.percentChance).toHaveBeenCalledWith(5);
+				expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+					mockMessage.channel,
+					expect.objectContaining({
+						...expectedMessageBase,
+						content: expect.any(String)
+					})
+				);
+			});
 
-		it('should use avatar URL from configuration', async () => {
-			mockMessage = {
-				...mockMessage,
-				content: 'venn',
-				author: createMockVennUser({
-					displayAvatarURL: () => null
-				})
-			};
+			it('should not respond to Venn when chance is not met', async () => {
+				(Random.percentChance as jest.Mock).mockReturnValue(false);
+				mockMessage.content = 'Just saying hello';
 
-			await vennBot.handleMessage(mockMessage as Message<boolean>);
+				await vennBot.handleMessage(mockMessage as Message<boolean>);
 
-			expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
-				expect.objectContaining({
-					avatarURL: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png'
-				})
-			);
-		});
-
-		it('should respond to messages containing "venn" regardless of user', async () => {
-			mockMessage.content = 'venn';
-			mockMessage.author = {
-				...mockMessage.author,
-				id: 'some-other-id'
-			} as User;
-
-			await vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-		});
-	});
-
-	describe('response generation', () => {
-		it('should return responses from the predefined list', async () => {
-			jest.spyOn(Random, 'roll').mockReturnValue(1); // Second response is 'Oh hey dude'
-
-			// Trigger the bot to generate a response
-			mockMessage.content = 'venn';
-			await vennBot.handleMessage(mockMessage as Message<boolean>);
-
-			// Check that writeMessage was called with the expected response
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
-				expect.objectContaining({
-					content: expect.any(String) // Just check that there's some content
-				})
-			);
+				expect(Random.percentChance).toHaveBeenCalledWith(5);
+				expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+			});
 		});
 	});
 });

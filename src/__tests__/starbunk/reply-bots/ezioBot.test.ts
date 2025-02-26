@@ -1,28 +1,31 @@
 import { Message, TextChannel, User } from 'discord.js';
 import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
-import EzioBot from '../../../starbunk/bots/reply-bots/ezioBot';
+import createEzioBot from '../../../starbunk/bots/reply-bots/ezioBot';
+import ReplyBot from '../../../starbunk/bots/replyBot';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
 
 describe('EzioBot', () => {
-	let ezioBot: EzioBot;
+	let ezioBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
-		ezioBot = new EzioBot(mockWebhookService);
+		ezioBot = createEzioBot(mockWebhookService);
 		patchReplyBot(ezioBot, mockWebhookService);
 	});
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
-			expect(ezioBot.botName).toBe('Ezio Auditore Da Firenze');
+			const identity = ezioBot.getIdentity();
+			expect(identity.name).toBe('Ezio Auditore Da Firenze');
 		});
 
 		it('should have correct avatar URL', () => {
-			expect(ezioBot.avatarUrl).toBe('https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg');
+			const identity = ezioBot.getIdentity();
+			expect(identity.avatarUrl).toBe('https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg');
 		});
 	});
 

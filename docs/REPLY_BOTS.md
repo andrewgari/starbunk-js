@@ -5,21 +5,127 @@ Reply bots are simple modules that respond to specific messages in Discord chann
 ## Quick Start
 
 1. Create a new file in `src/starbunk/bots/reply-bots/` with your bot name (e.g., `helloBot.ts`)
-2. Use the template below
+2. Use one of the templates below
 3. Restart the bot service
 
 Your bot will automatically be registered and ready to respond to messages.
 
 ## Bot Architecture
 
-All bots in the system now extend the `ReplyBot` base class using a class-based inheritance model. This provides:
+All bots in the system extend the `ReplyBot` base class using a class-based inheritance model or are created with our new `BotBuilder` pattern for simpler implementation.
 
-- Standardized message handling through a common interface
-- Automatic registration of bots via the class name
-- Built-in webhook integration for rich responses
-- Consistent identity management via the `getBotName()` method
+## Simple Template: Builder Pattern (Recommended)
 
-## Basic Template
+The simplest way to create a new bot is to use the Builder pattern:
+
+```typescript
+import { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import ReplyBot from '../replyBot';
+
+export default function createGreetingBot(webhookService: WebhookService): ReplyBot {
+	return new BotBuilder('GreetingBot', webhookService)
+		.withAvatar('https://example.com/greeting.png')
+		.withPatternTrigger(/hello|hi|hey/i)
+		.respondsWithStatic('Hello there!')
+		.build();
+}
+```
+
+## Advanced Builder Examples
+
+### Random Response Bot
+
+```typescript
+import { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import ReplyBot from '../replyBot';
+
+export default function createRandomGreetingBot(webhookService: WebhookService): ReplyBot {
+	const responses = ['Hello there!', 'Hi, how are you?', 'Greetings!', "Hey, what's up?", 'Good to see you!'];
+
+	return new BotBuilder('GreetingBot', webhookService)
+		.withAvatar('https://example.com/greeting.png')
+		.withPatternTrigger(/hello|hi|hey/i)
+		.respondsWithRandom(responses)
+		.build();
+}
+```
+
+### Multiple Trigger Bot
+
+```typescript
+import userID from '../../../discord/userID';
+import { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import ReplyBot from '../replyBot';
+
+export default function createMultiTriggerBot(webhookService: WebhookService): ReplyBot {
+	return new BotBuilder('MultiBot', webhookService)
+		.withAvatar('https://example.com/multibot.png')
+		.withPatternTrigger(/multi/i)
+		.withUserRandomTrigger(userID.Venn, 10) // 10% chance for Venn
+		.respondsWithStatic('Multiple triggers activated!')
+		.build();
+}
+```
+
+### Dynamic Identity Bot
+
+```typescript
+import { Message } from 'discord.js';
+import userID from '../../../discord/userID';
+import { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import { BotIdentity } from '../botTypes';
+import ReplyBot from '../replyBot';
+
+export default function createMimicBot(webhookService: WebhookService): ReplyBot {
+	const responses = [
+		"I'm copying you!",
+		"Look at me, I'm just like you!",
+		'Imitation is the sincerest form of flattery.',
+	];
+
+	const identityUpdater = async (message: Message): Promise<BotIdentity> => {
+		return {
+			name: message.author.username,
+			avatarUrl: message.author.displayAvatarURL(),
+		};
+	};
+
+	return new BotBuilder('MimicBot', webhookService)
+		.withPatternTrigger(/mimic/i)
+		.withUserRandomTrigger(userID.Venn, 5)
+		.respondsWithRandom(responses)
+		.withDynamicIdentity('https://i.imgur.com/default.png', identityUpdater)
+		.build();
+}
+```
+
+### Using Factory Functions
+
+For even more simplicity, you can use the provided factory functions:
+
+```typescript
+import { WebhookService } from '../../../webhooks/webhookService';
+import { createPatternBot, createRandomResponseBot } from '../botFactory';
+import ReplyBot from '../replyBot';
+
+export default function createSimpleBot(webhookService: WebhookService): ReplyBot {
+	return createPatternBot(
+		'SimpleBot',
+		/simple/i,
+		'This is a simple bot!',
+		'https://example.com/simple.png',
+		webhookService,
+	);
+}
+```
+
+## Traditional Class-Based Template (Legacy)
+
+You can still use the traditional class-based approach if needed:
 
 ```typescript
 import { WebhookService } from '../../../webhooks/webhookService';
@@ -46,127 +152,19 @@ class HelloBot extends ReplyBot {
 export default HelloBot;
 ```
 
-## Advanced Templates
-
-### Random Response Bot
-
-```typescript
-import { WebhookService } from '../../../webhooks/webhookService';
-import { PatternTrigger, RandomResponse } from '../botTypes';
-import ReplyBot from '../replyBot';
-
-class GreetingBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		const responses = ['Hello there!', 'Hi, how are you?', 'Greetings!', "Hey, what's up?", 'Good to see you!'];
-
-		super(
-			{ name: 'GreetingBot', avatarUrl: 'https://example.com/greeting.png' },
-			new PatternTrigger(/hi|hello|hey|greetings/i),
-			new RandomResponse(responses),
-			webhookService,
-		);
-	}
-
-	getBotName(): string {
-		return 'GreetingBot';
-	}
-}
-
-export default GreetingBot;
-```
-
-### Custom Trigger Bot
-
-```typescript
-import { Message } from 'discord.js';
-import { WebhookService } from '../../../webhooks/webhookService';
-import { TriggerCondition, StaticResponse } from '../botTypes';
-import ReplyBot from '../replyBot';
-
-// Custom trigger that responds only to messages with exactly 3 words
-class ThreeWordTrigger implements TriggerCondition {
-	async shouldTrigger(message: Message): Promise<boolean> {
-		if (message.author.bot) return false;
-		const words = message.content.trim().split(/\s+/);
-		return words.length === 3;
-	}
-}
-
-class ThreeWordBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		super(
-			{ name: 'ThreeWordBot', avatarUrl: 'https://example.com/three.png' },
-			new ThreeWordTrigger(),
-			new StaticResponse('That was exactly three words!'),
-			webhookService,
-		);
-	}
-
-	getBotName(): string {
-		return 'ThreeWordBot';
-	}
-}
-
-export default ThreeWordBot;
-```
-
-### Dynamic Identity Bot
-
-```typescript
-import { Message } from 'discord.js';
-import userID from '../../../discord/userID';
-import { WebhookService } from '../../../webhooks/webhookService';
-import { DynamicIdentity, DynamicResponse } from '../botFactory';
-import { CompositeTrigger, PatternTrigger, RandomResponse } from '../botTypes';
-import ReplyBot from '../replyBot';
-
-class MimicBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		const identity = new DynamicIdentity({
-			defaultName: 'MimicBot',
-			defaultAvatarUrl: 'https://example.com/mimic.png',
-			async updateIdentity(message: Message) {
-				return {
-					name: message.author.username,
-					avatarUrl: message.author.displayAvatarURL(),
-				};
-			},
-		});
-
-		const trigger = new PatternTrigger(/mimic/i);
-
-		const responses = [
-			"I'm copying you!",
-			"Look at me, I'm just like you!",
-			'Imitation is the sincerest form of flattery.',
-		];
-
-		const responseGenerator = new DynamicResponse(identity, new RandomResponse(responses));
-
-		super(identity, trigger, responseGenerator, webhookService);
-	}
-
-	getBotName(): string {
-		return 'MimicBot';
-	}
-}
-
-export default MimicBot;
-```
-
 ## Testing Your Bot
 
-Add a test in `src/__tests__/starbunk/bots/reply-bots/`:
+For builder-pattern bots:
 
 ```typescript
 import { Message } from 'discord.js';
 import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
-import HelloBot from '@/starbunk/bots/reply-bots/helloBot';
+import createExampleBot from '@/starbunk/bots/reply-bots/exampleBot';
 import ReplyBot from '@/starbunk/bots/replyBot';
 
-describe('HelloBot', () => {
-	let helloBot: ReplyBot;
+describe('ExampleBot', () => {
+	let exampleBot: ReplyBot;
 	let mockMessage: Partial<Message>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
@@ -178,59 +176,52 @@ describe('HelloBot', () => {
 			channel: { id: 'channel-id' },
 		} as Partial<Message>;
 
-		helloBot = new HelloBot(mockWebhookService);
-		patchReplyBot(helloBot, mockWebhookService);
+		exampleBot = createExampleBot(mockWebhookService);
+		patchReplyBot(exampleBot, mockWebhookService);
 	});
 
-	it('should respond to hello messages', async () => {
-		mockMessage.content = 'hello there';
-		await helloBot.handleMessage(mockMessage as Message);
+	it('should respond to example messages', async () => {
+		mockMessage.content = 'this is an example';
+		await exampleBot.handleMessage(mockMessage as Message);
 		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-	});
-
-	it('should not respond to unrelated messages', async () => {
-		mockMessage.content = 'something else';
-		await helloBot.handleMessage(mockMessage as Message);
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });
 ```
 
 ## Tips & Best Practices
 
-1. **Extend ReplyBot**: Always extend the ReplyBot base class
-2. **Implement getBotName**: This method is required for registration
-3. **Use Provided Components**: Use the built-in trigger and response classes when possible
-4. **Keep It Simple**: Reply bots should do one thing well
-5. **Test Thoroughly**: Write tests for your bot's behavior
-6. **Handle Edge Cases**: Account for bot messages, empty content, etc.
-7. **Use Composite Triggers**: Combine triggers for complex conditions
-8. **Avoid Race Conditions**: Be careful with async message handling
+1. **Use the Builder Pattern**: The builder pattern is much simpler and cleaner
+2. **Keep Bots Simple**: Each bot should do one thing well
+3. **Reuse Common Patterns**: Use factory functions for common bot types
+4. **Test Thoroughly**: Write tests for your bot's behavior
+5. **Handle Edge Cases**: Account for bot messages, empty content, etc.
+6. **Use Composite Triggers**: Combine triggers for complex conditions
 
 ## Bot Registration Process
 
-The system automatically registers all bots that:
+The system automatically registers all bots:
 
-1. Export a class as the default export
-2. Extend the ReplyBot base class
-3. Implement the required getBotName() method
+1. For class-based bots: Instantiate the class and call `getBotName()`
+2. For builder/factory bots: Call the function and use the returned bot
 
 ```typescript
 // From starbunkClient.ts - this happens automatically
 registerBots = async (): Promise<void> => {
 	try {
 		const botFiles = readdirSync('./src/starbunk/bots/reply-bots');
-		this.logger.info(`Found ${botFiles.length} reply bots to register`);
 
 		for (const file of botFiles) {
 			try {
 				// Import the bot module
 				const botModule = await import(`./bots/reply-bots/${file}`);
 
-				// Create an instance of the bot
-				const bot = new botModule.default(this.webhookService);
+				// Handle both class-based and factory-based bots
+				const bot =
+					typeof botModule.default === 'function'
+						? botModule.default(this.webhookService) // Factory function
+						: new botModule.default(this.webhookService); // Class constructor
 
-				// Register it with its name from getBotName()
+				// Register it
 				const botName = bot.getBotName();
 				this.bots.set(botName, bot);
 

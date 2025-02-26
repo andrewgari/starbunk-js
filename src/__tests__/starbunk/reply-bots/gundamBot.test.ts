@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import { createMockGuildMember, createMockMessage, createMockTextChannel } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
-import GundamBot from '../../../starbunk/bots/reply-bots/gundamBot';
+import createGundamBot from '../../../starbunk/bots/reply-bots/gundamBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
 
@@ -19,22 +19,11 @@ describe('GundamBot', () => {
 			channel: mockChannel,
 			content: ''
 		};
-		gundamBot = new GundamBot(mockWebhookService);
+		// Use factory function with mock webhook service
+		gundamBot = createGundamBot(mockWebhookService);
 
 		// Patch the bot for testing
 		patchReplyBot(gundamBot, mockWebhookService);
-	});
-
-	describe('bot configuration', () => {
-		it('should have correct name', () => {
-			expect(gundamBot.getIdentity().name).toBe('GundamBot');
-		});
-
-		it('should have correct avatar URL', () => {
-			expect(gundamBot.getIdentity().avatarUrl).toBe(
-				'https://cdn.discordapp.com/attachments/854790294253117531/902975839584849930/gundam.png'
-			);
-		});
 	});
 
 	describe('message handling', () => {

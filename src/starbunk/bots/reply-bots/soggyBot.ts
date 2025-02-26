@@ -1,9 +1,13 @@
 import { Message } from 'discord.js';
 import roleIDs from '../../../discord/roleIDs';
-import { WebhookService } from '../../../webhooks/webhookService';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
 import { TriggerCondition } from '../botTypes';
 import ReplyBot from '../replyBot';
 
+/**
+ * SoggyBot - A bot that responds to wet bread mentions from users with the WetBread role
+ */
 class WetBreadTrigger implements TriggerCondition {
 	constructor(private pattern: RegExp) { }
 
@@ -14,19 +18,10 @@ class WetBreadTrigger implements TriggerCondition {
 	}
 }
 
-class SoggyBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		super(
-			{ name: 'SoggyBot', avatarUrl: 'https://imgur.com/OCB6i4x.jpg' },
-			new WetBreadTrigger(/wet bread/i),
-			{ generateResponse: async () => 'Sounds like somebody enjoys wet bread' },
-			webhookService
-		);
-	}
-
-	getBotName(): string {
-		return 'SoggyBot';
-	}
+export default function createSoggyBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	return new BotBuilder('SoggyBot', webhookServiceParam)
+		.withAvatar('https://imgur.com/OCB6i4x.jpg')
+		.withCustomTrigger(new WetBreadTrigger(/wet bread/i))
+		.respondsWithStatic('Sounds like somebody enjoys wet bread')
+		.build();
 }
-
-export default SoggyBot;
