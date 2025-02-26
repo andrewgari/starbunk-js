@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
-import webhookService from '../../../webhooks/webhookService';
-import { BotBuilder } from '../botBuilder';
-import ReplyBot from '../replyBot';
+import { BotBuilder } from '../../src/starbunk/bots/botBuilder';
+import ReplyBot from '../../src/starbunk/bots/replyBot';
+import webhookService from '../../src/webhooks/webhookService';
 
 /**
  * MimicBot - A bot that mimics the user who triggered it

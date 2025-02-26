@@ -1,9 +1,9 @@
 import { Message } from 'discord.js';
-import webhookService from '../../../webhooks/webhookService';
-import { BotBuilder } from '../botBuilder';
-import { StaticResponse } from '../botTypes';
-import ReplyBot from '../replyBot';
-import { isVenn } from '../triggers/userConditions';
+import { BotBuilder } from '../../src/starbunk/bots/botBuilder';
+import { StaticResponse } from '../../src/starbunk/bots/botTypes';
+import ReplyBot from '../../src/starbunk/bots/replyBot';
+import { isVenn } from '../../src/starbunk/bots/triggers/userConditions';
+import webhookService from '../../src/webhooks/webhookService';
 
 /**
  * ConditionResponseBot - A bot that demonstrates the condition-response pattern

@@ -1,6 +1,6 @@
-import webhookService from '../../../webhooks/webhookService';
-import { BotBuilder } from '../botBuilder';
-import ReplyBot from '../replyBot';
+import { BotBuilder } from '../../src/starbunk/bots/botBuilder';
+import ReplyBot from '../../src/starbunk/bots/replyBot';
+import webhookService from '../../src/webhooks/webhookService';
 
 /**
  * ExampleBot - A simple bot that responds to "example" with a random message

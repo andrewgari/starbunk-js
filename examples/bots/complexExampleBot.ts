@@ -1,9 +1,9 @@
 import { Message } from 'discord.js';
-import userID from '../../../discord/userID';
-import webhookService from '../../../webhooks/webhookService';
-import { BotBuilder } from '../botBuilder';
-import { BotIdentity } from '../botTypes';
-import ReplyBot from '../replyBot';
+import userID from '../../src/discord/userID';
+import { BotBuilder } from '../../src/starbunk/bots/botBuilder';
+import { BotIdentity } from '../../src/starbunk/bots/botTypes';
+import ReplyBot from '../../src/starbunk/bots/replyBot';
+import webhookService from '../../src/webhooks/webhookService';
 
 /**
  * ComplexExampleBot - A more advanced example bot
