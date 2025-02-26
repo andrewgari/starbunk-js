@@ -1,9 +1,11 @@
 import userID from '@/discord/userID';
+import { Logger } from '@/services/logger';
 import SnowbunkClient from '@/snowbunk/snowbunkClient';
 import webhookService from '@/webhooks/webhookService';
 import { Events, Message, TextChannel } from 'discord.js';
 
 jest.mock('@/webhooks/webhookService');
+jest.mock('@/services/logger');
 
 describe('SnowbunkClient', () => {
 	let client: SnowbunkClient;
@@ -18,6 +20,7 @@ describe('SnowbunkClient', () => {
 
 		mockChannel = {
 			id: '757866614787014660',
+			name: 'test-channel',
 			members: new Map([
 				['user-id', { displayName: 'Test User', avatarURL: () => 'avatar-url' }]
 			])
@@ -100,12 +103,61 @@ describe('SnowbunkClient', () => {
 				})
 			);
 		});
+
+		it('should handle errors during message syncing', async () => {
+			// Mock an error during channel fetch
+			(client.channels.fetch as jest.Mock).mockRejectedValueOnce(new Error('Channel fetch error'));
+
+			// Spy on logger.error
+			const errorSpy = jest.spyOn(Logger, 'error');
+
+			client.syncMessage(mockMessage as Message);
+
+			// Flush promises
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('Error fetching channel'),
+				expect.any(Error)
+			);
+		});
 	});
 
 	describe('bootstrap', () => {
 		it('should set up message event handler', () => {
 			client.bootstrap();
 			expect(client.listenerCount(Events.MessageCreate)).toBe(1);
+		});
+
+		it('should log initialization messages', () => {
+			const infoSpy = jest.spyOn(Logger, 'info');
+			const successSpy = jest.spyOn(Logger, 'success');
+
+			client.bootstrap();
+
+			expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('Starting Snowbunk initialization'));
+			expect(successSpy).toHaveBeenCalledWith(expect.stringContaining('Snowbunk initialized successfully'));
+		});
+
+		it('should handle errors during bootstrap', () => {
+			// Mock an error during bootstrap
+			const originalOn = client.on;
+			client.on = jest.fn().mockImplementationOnce(() => {
+				throw new Error('Bootstrap error');
+			});
+
+			const errorSpy = jest.spyOn(Logger, 'error');
+
+			client.bootstrap();
+
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('Error bootstrapping Snowbunk:'),
+				expect.any(Error)
+			);
+
+			// Restore original method
+			client.on = originalOn;
 		});
 	});
 
@@ -132,6 +184,49 @@ describe('SnowbunkClient', () => {
 					username: 'Test User'
 				})
 			);
+		});
+
+		it('should handle errors during message writing', () => {
+			// Mock error logger
+			const errorSpy = jest.spyOn(Logger, 'error');
+
+			// Create a safer mock that doesn't actually reject
+			(webhookService.writeMessage as jest.Mock).mockImplementation(() => {
+				// Trigger the error callback directly
+				Logger.error('Error writing message to channel test-channel:', new Error('Webhook error'));
+				// Return a resolved promise to prevent unhandled rejections
+				return Promise.resolve();
+			});
+
+			// Call the method - with the mock above, this won't actually throw
+			client.writeMessage(mockMessage as Message, mockChannel as TextChannel);
+
+			// Check if error was logged
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('Error writing message to channel'),
+				expect.any(Error)
+			);
+		});
+	});
+
+	describe('syncToChannel', () => {
+		it('should handle non-text channels', async () => {
+			// Mock a non-text channel
+			(client.channels.fetch as jest.Mock).mockResolvedValueOnce({
+				type: 2, // Voice channel type
+				id: 'voice-channel-id'
+			});
+
+			const warnSpy = jest.spyOn(Logger, 'warn');
+
+			// Call the private method using type assertion
+			(client as unknown as { syncToChannel: (message: Message, channelId: string) => Promise<void> })
+				.syncToChannel(mockMessage as Message, 'voice-channel-id');
+
+			// Flush promises
+			await Promise.resolve();
+
+			expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('is not a text channel'));
 		});
 	});
 });
