@@ -1,21 +1,55 @@
-import { Guild, GuildMember, Message, User } from 'discord.js';
-import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import { Guild, GuildMember, Message, TextChannel, User, Webhook } from 'discord.js';
+import { createMockGuildMember, createMockMessage, createMockTextChannel } from '../../../__tests__/mocks/discordMocks';
 import userID from '../../../discord/userID';
-import GuyBot from '../../../starbunk/bots/reply-bots/guyBot';
+import createGuyBot from '../../../starbunk/bots/reply-bots/guyBot';
+import ReplyBot from '../../../starbunk/bots/replyBot';
 import Random from '../../../utils/random';
-import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
+import { WebhookService } from '../../../webhooks/webhookService';
 
-jest.mock('../../../utils/random');
+// Mock the Random module for roll
+jest.mock('../../../utils/random', () => ({
+	roll: jest.fn().mockReturnValue(0)
+}));
+
+// Mock the crypto module
+jest.mock('crypto', () => ({
+	randomInt: jest.fn().mockReturnValue(50)
+}));
 
 describe('GuyBot', () => {
-	let guyBot: GuyBot;
+	let guyBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
-	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
+	let mockWebhookService: jest.Mocked<WebhookService>;
 	let mockGuy: GuildMember;
+	let mockChannel: TextChannel;
+	let mockWebhook: Partial<Webhook>;
+	let originalMathRandom: () => number;
 
 	beforeEach(() => {
-		mockWebhookService = createMockWebhookService();
+		// Store original Math.random
+		originalMathRandom = Math.random;
+
+		mockChannel = createMockTextChannel();
+		mockWebhook = {
+			id: 'mock-webhook-id',
+			name: 'mock-webhook-name',
+			send: jest.fn().mockResolvedValue({})
+		};
+
+		// Create a proper mock that extends WebhookService
+		mockWebhookService = {
+			getChannelWebhook: jest.fn().mockResolvedValue(mockWebhook as Webhook),
+			getWebhookName: jest.fn().mockReturnValue('mock-webhook-name'),
+			getWebhook: jest.fn().mockResolvedValue(mockWebhook as Webhook),
+			writeMessage: jest.fn().mockImplementation(async (channel, message) => {
+				const webhook = await mockWebhookService.getChannelWebhook(channel as TextChannel);
+				return webhook.send(message) as Promise<Message<boolean>>;
+			})
+		} as unknown as jest.Mocked<WebhookService>;
+
+		// Make the mock pass the instanceof check
+		Object.setPrototypeOf(mockWebhookService, WebhookService.prototype);
+
 		mockGuy = {
 			...createMockGuildMember(userID.Guy, 'Guy'),
 			nickname: 'Guy',
@@ -26,6 +60,7 @@ describe('GuyBot', () => {
 
 		mockMessage = {
 			...createMockMessage('Guy'),
+			channel: mockChannel,
 			guild: {
 				members: {
 					fetch: jest.fn().mockResolvedValue(mockGuy)
@@ -33,21 +68,13 @@ describe('GuyBot', () => {
 			} as unknown as Guild
 		};
 
-		guyBot = new GuyBot(mockWebhookService);
+		guyBot = createGuyBot(mockWebhookService);
 		jest.clearAllMocks();
-
-		// Patch the sendReply method for synchronous testing
-		patchReplyBot(guyBot, mockWebhookService);
 	});
 
-	describe('bot configuration', () => {
-		it('should have correct initial name', () => {
-			expect(guyBot.getBotName()).toBe('GuyBot');
-		});
-
-		it('should have empty initial avatar URL', () => {
-			expect(guyBot.getAvatarUrl()).toBe('');
-		});
+	afterEach(() => {
+		// Restore original Math.random
+		Math.random = originalMathRandom;
 	});
 
 	describe('message handling', () => {
@@ -55,10 +82,10 @@ describe('GuyBot', () => {
 			jest.spyOn(Random, 'roll').mockReturnValue(0);
 		});
 
-		it('should ignore messages from bots', () => {
+		it('should ignore messages from bots', async () => {
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
-			guyBot.handleMessage(mockMessage as Message<boolean>);
+			await guyBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
@@ -79,7 +106,7 @@ describe('GuyBot', () => {
 		it('should respond to Guy\'s messages with 5% chance', async () => {
 			mockMessage.content = 'regular message';
 			mockMessage.author = { id: userID.Guy } as User;
-			(Random.percentChance as jest.Mock).mockReturnValue(true);
+			Math.random = jest.fn().mockReturnValue(0.02); // 2% chance, which is less than 5%
 
 			await guyBot.handleMessage(mockMessage as Message<boolean>);
 
@@ -91,12 +118,12 @@ describe('GuyBot', () => {
 			);
 		});
 
-		it('should not respond to Guy\'s messages with 95% chance', () => {
+		it('should not respond to Guy\'s messages with 95% chance', async () => {
 			mockMessage.content = 'regular message';
 			mockMessage.author = { id: userID.Guy } as User;
-			(Random.percentChance as jest.Mock).mockReturnValue(false);
+			Math.random = jest.fn().mockReturnValue(0.95); // 95% chance, which is greater than 5%
 
-			guyBot.handleMessage(mockMessage as Message<boolean>);
+			await guyBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 

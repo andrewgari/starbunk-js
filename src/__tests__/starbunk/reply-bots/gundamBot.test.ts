@@ -1,30 +1,41 @@
-import { Message, User } from 'discord.js';
-import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { Message, TextChannel, User } from 'discord.js';
+import { createMockGuildMember, createMockMessage, createMockTextChannel } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
-import GundamBot from '../../../starbunk/bots/reply-bots/gundamBot';
-import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
+import createGundamBot from '../../../starbunk/bots/reply-bots/gundamBot';
+import { patchReplyBot } from '../../helpers/replyBotHelper';
+
+// Import the GundamBot class type
+import { GundamBot } from '../../../starbunk/bots/reply-bots/gundamBot';
 
 describe('GundamBot', () => {
 	let gundamBot: GundamBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
+	let mockChannel: TextChannel;
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
-		mockMessage = createMockMessage('TestUser');
-		gundamBot = new GundamBot(mockWebhookService);
+		mockChannel = createMockTextChannel();
+		mockMessage = {
+			...createMockMessage('TestUser'),
+			channel: mockChannel,
+			content: ''
+		};
+		gundamBot = createGundamBot(mockWebhookService) as GundamBot;
 
-		// Patch the sendReply method for synchronous testing
+		// Patch the bot for testing
 		patchReplyBot(gundamBot, mockWebhookService);
 	});
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
-			expect(gundamBot.getBotName()).toBe('GundamBot');
+			expect(gundamBot.botName).toBe('GundamBot');
 		});
 
 		it('should have correct avatar URL', () => {
-			expect(gundamBot.getAvatarUrl()).toBe('https://a1.cdn.japantravel.com/photo/41317-179698/1440x960!/tokyo-unicorn-gundam-statue-in-odaiba-179698.jpg');
+			expect(gundamBot.avatarUrl).toBe(
+				'https://a1.cdn.japantravel.com/photo/41317-179698/1440x960!/tokyo-unicorn-gundam-statue-in-odaiba-179698.jpg'
+			);
 		});
 	});
 
@@ -36,59 +47,93 @@ describe('GundamBot', () => {
 			embeds: []
 		};
 
-		it('should ignore messages from bots', () => {
+		it('should ignore messages from bots', async () => {
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
-			gundamBot.handleMessage(mockMessage as Message<boolean>);
+			await gundamBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond to "gundam"', () => {
-			mockMessage.content = 'gundam';
-			gundamBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
-				expectedMessageOptions
-			);
+		describe('pattern matching', () => {
+			it('should match "gundam"', () => {
+				expect(gundamBot.shouldReplyToMessage('gundam')).toBe(true);
+			});
+
+			it('should match "gandam"', () => {
+				expect(gundamBot.shouldReplyToMessage('gandam')).toBe(true);
+			});
+
+			it('should match case variations', () => {
+				expect(gundamBot.shouldReplyToMessage('GUNDAM')).toBe(true);
+			});
+
+			it('should match word within text', () => {
+				expect(gundamBot.shouldReplyToMessage('look at that gundam over there')).toBe(true);
+			});
+
+			it('should not match partial matches', () => {
+				expect(gundamBot.shouldReplyToMessage('gundamium')).toBe(false);
+			});
 		});
 
-		it('should respond to "gandam"', () => {
-			mockMessage.content = 'gandam';
-			gundamBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
-				expectedMessageOptions
-			);
+		describe('response generation', () => {
+			it('should return response for matching content', () => {
+				expect(gundamBot.getResponseForMessage('gundam')).toBe('That\'s the famous Unicorn Robot, "Gandum". There, I said it.');
+			});
+
+			it('should return null for non-matching content', () => {
+				expect(gundamBot.getResponseForMessage('hello world')).toBeNull();
+			});
 		});
 
-		it('should respond to case variations', () => {
-			mockMessage.content = 'GUNDAM';
-			gundamBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
-				expectedMessageOptions
-			);
-		});
+		describe('message response', () => {
+			it('should respond to "gundam"', async () => {
+				mockMessage.content = 'gundam';
+				await gundamBot.handleMessage(mockMessage as Message<boolean>);
+				expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+					mockChannel,
+					expectedMessageOptions
+				);
+			});
 
-		it('should respond to word within text', () => {
-			mockMessage.content = 'look at that gundam over there';
-			gundamBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
-				expectedMessageOptions
-			);
-		});
+			it('should respond to "gandam"', async () => {
+				mockMessage.content = 'gandam';
+				await gundamBot.handleMessage(mockMessage as Message<boolean>);
+				expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+					mockChannel,
+					expectedMessageOptions
+				);
+			});
 
-		it('should not respond to partial matches', () => {
-			mockMessage.content = 'gundamium';
-			gundamBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-		});
+			it('should respond to case variations', async () => {
+				mockMessage.content = 'GUNDAM';
+				await gundamBot.handleMessage(mockMessage as Message<boolean>);
+				expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+					mockChannel,
+					expectedMessageOptions
+				);
+			});
 
-		it('should not respond to unrelated messages', () => {
-			mockMessage.content = 'hello world';
-			gundamBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+			it('should respond to word within text', async () => {
+				mockMessage.content = 'look at that gundam over there';
+				await gundamBot.handleMessage(mockMessage as Message<boolean>);
+				expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+					mockChannel,
+					expectedMessageOptions
+				);
+			});
+
+			it('should not respond to partial matches', async () => {
+				mockMessage.content = 'gundamium';
+				await gundamBot.handleMessage(mockMessage as Message<boolean>);
+				expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+			});
+
+			it('should not respond to unrelated messages', async () => {
+				mockMessage.content = 'hello world';
+				await gundamBot.handleMessage(mockMessage as Message<boolean>);
+				expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+			});
 		});
 	});
 });

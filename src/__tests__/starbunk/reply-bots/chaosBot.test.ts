@@ -1,24 +1,19 @@
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
+import { createMockGuildMember, createMockMessage, createMockTextChannel } from '@/__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
+import ChaosBot from '@/starbunk/bots/reply-bots/chaosBot';
 import { Message, TextChannel, User } from 'discord.js';
-import { createMockGuildMember, createMockMessage, createMockTextChannel } from '../../../__tests__/mocks/discordMocks';
-import ChaosBot from '../../../starbunk/bots/reply-bots/chaosBot';
-import { WebhookService } from '../../../webhooks/webhookService';
 
 describe('ChaosBot', () => {
 	let chaosBot: ChaosBot;
 	let mockMessage: Partial<Message<boolean>>;
-	let mockWebhookService: jest.Mocked<Partial<WebhookService>>;
-	let mockChannel: jest.Mocked<TextChannel>;
+	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
+	let mockChannel: TextChannel;
 
 	beforeEach(() => {
-		// Create a custom mock implementation for the webhook service
-		mockWebhookService = {
-			writeMessage: jest.fn().mockResolvedValue({}),
-			getChannelWebhook: jest.fn().mockResolvedValue({}),
-			getWebhookName: jest.fn().mockReturnValue('MockWebhook'),
-			getWebhook: jest.fn().mockResolvedValue({})
-		} as jest.Mocked<Partial<WebhookService>>;
-
+		mockWebhookService = createMockWebhookService();
 		mockChannel = createMockTextChannel();
+
 		// Create the mock message with the channel already set
 		mockMessage = {
 			...createMockMessage('TestUser'),
@@ -26,16 +21,19 @@ describe('ChaosBot', () => {
 			content: ''
 		};
 
-		chaosBot = new ChaosBot(mockWebhookService as WebhookService);
+		chaosBot = new ChaosBot(mockWebhookService);
+
+		// Patch the bot for testing
+		patchReplyBot(chaosBot, mockWebhookService);
 	});
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
-			expect(chaosBot.getBotName()).toBe('ChaosBot');
+			expect(chaosBot.botName).toBe('ChaosBot');
 		});
 
 		it('should have correct avatar URL', () => {
-			expect(chaosBot.getAvatarUrl()).toBe(
+			expect(chaosBot.avatarUrl).toBe(
 				'https://preview.redd.it/md0lzbvuc3571.png?width=1920&format=png&auto=webp&s=ff403a8d4b514af8d99792a275d2c066b8d1a4de'
 			);
 		});
@@ -78,48 +76,24 @@ describe('ChaosBot', () => {
 		});
 
 		describe('message response', () => {
-			// Skip the direct test of sendReply since it's not working properly
-			it('should handle messages with chaos correctly', async () => {
-				// Create a spy on the shouldReplyToMessage method
-				const shouldReplySpy = jest.spyOn(chaosBot, 'shouldReplyToMessage');
-				shouldReplySpy.mockReturnValue(true);
-
-				// Create a spy on the sendReply method
-				const sendReplySpy = jest.spyOn(chaosBot, 'sendReply');
-				sendReplySpy.mockResolvedValue();
-
-				// Set the message content
+			it('should respond to messages with chaos', async () => {
 				mockMessage.content = 'chaos';
-
-				// Call the method
 				await chaosBot.handleMessage(mockMessage as Message<boolean>);
 
-				// Verify the spies were called correctly
-				expect(shouldReplySpy).toHaveBeenCalledWith('chaos');
-				expect(sendReplySpy).toHaveBeenCalledWith(
+				expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 					mockChannel,
-					"All I know is...I'm here to kill Chaos"
+					expect.objectContaining({
+						username: 'ChaosBot',
+						avatarURL: chaosBot.avatarUrl,
+						content: "All I know is...I'm here to kill Chaos"
+					})
 				);
 			});
 
 			it('should not respond to messages not matching pattern', async () => {
-				// Create a spy on the shouldReplyToMessage method
-				const shouldReplySpy = jest.spyOn(chaosBot, 'shouldReplyToMessage');
-				shouldReplySpy.mockReturnValue(false);
-
-				// Create a spy on the sendReply method
-				const sendReplySpy = jest.spyOn(chaosBot, 'sendReply');
-				sendReplySpy.mockResolvedValue();
-
-				// Set the message content
 				mockMessage.content = 'hello world';
-
-				// Call the method
 				await chaosBot.handleMessage(mockMessage as Message<boolean>);
-
-				// Verify the spies were called correctly
-				expect(shouldReplySpy).toHaveBeenCalledWith('hello world');
-				expect(sendReplySpy).not.toHaveBeenCalled();
+				expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 			});
 		});
 	});

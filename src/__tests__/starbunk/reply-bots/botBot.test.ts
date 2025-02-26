@@ -1,4 +1,5 @@
-import { Message, User } from 'discord.js';
+import { Message, TextChannel, User } from 'discord.js';
+import { patchReplyBot } from '../../../__tests__/helpers/replyBotHelper';
 import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import BotBot from '../../../starbunk/bots/reply-bots/botBot';
@@ -15,16 +16,17 @@ describe('BotBot', () => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
 		botBot = new BotBot(mockWebhookService);
+		patchReplyBot(botBot, mockWebhookService);
 		jest.clearAllMocks();
 	});
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
-			expect(botBot.getBotName()).toBe('BotBot');
+			expect(botBot.botName).toBe('BotBot');
 		});
 
 		it('should have correct avatar URL', () => {
-			expect(botBot.getAvatarUrl()).toBe('https://cdn-icons-png.flaticon.com/512/4944/4944377.png');
+			expect(botBot.avatarUrl).toBe('https://cdn-icons-png.flaticon.com/512/4944/4944377.png');
 		});
 	});
 
@@ -48,26 +50,24 @@ describe('BotBot', () => {
 			// Mock the random chance to return true (5% chance hit)
 			(Random.percentChance as jest.Mock).mockReturnValue(true);
 
-			// Mock the sendReply method directly
-			const sendReplySpy = jest.spyOn(botBot, 'sendReply').mockResolvedValue();
-
 			await botBot.handleMessage(mockMessage as Message<boolean>);
 
 			expect(Random.percentChance).toHaveBeenCalledWith(5);
-			expect(sendReplySpy).toHaveBeenCalledWith(
-				mockMessage.channel,
-				'Hello fellow bot!'
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					username: 'BotBot',
+					avatarURL: 'https://cdn-icons-png.flaticon.com/512/4944/4944377.png',
+					content: 'Hello fellow bot!'
+				})
 			);
 		});
 
 		it('should not respond to human messages', async () => {
 			mockMessage.author = { ...mockMessage.author, bot: false } as User;
 
-			// Mock the sendReply method directly
-			const sendReplySpy = jest.spyOn(botBot, 'sendReply').mockResolvedValue();
-
 			await botBot.handleMessage(mockMessage as Message<boolean>);
-			expect(sendReplySpy).not.toHaveBeenCalled();
+			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
 		it('should not respond to its own messages', async () => {
@@ -82,11 +82,8 @@ describe('BotBot', () => {
 				} as User
 			};
 
-			// Mock the sendReply method directly
-			const sendReplySpy = jest.spyOn(botBot, 'sendReply').mockResolvedValue();
-
 			await botBot.handleMessage(mockMessage as Message<boolean>);
-			expect(sendReplySpy).not.toHaveBeenCalled();
+			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 	});
 });

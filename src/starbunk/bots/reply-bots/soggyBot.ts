@@ -1,31 +1,37 @@
-import { Message, TextChannel } from 'discord.js';
+import { Message } from 'discord.js';
 import roleIDs from '../../../discord/roleIDs';
 import { WebhookService } from '../../../webhooks/webhookService';
+import { TriggerCondition } from '../botTypes';
 import ReplyBot from '../replyBot';
 
-export default class SoggyBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		super(webhookService);
-	}
-	private readonly botName = 'SoggyBot';
-	private readonly avatarUrl = 'https://imgur.com/OCB6i4x.jpg';
-	private readonly pattern = /wet bread/i;
-	private readonly response = 'Sounds like somebody enjoys wet bread';
+class WetBreadTrigger implements TriggerCondition {
+	constructor(private pattern: RegExp) { }
 
-	getBotName(): string {
-		return this.botName;
+	async shouldTrigger(message: Message): Promise<boolean> {
+		if (message.author.bot || !message.member) return false;
+		return message.content.match(this.pattern) !== null &&
+			message.member.roles.cache.some((role) => role.id === roleIDs.WetBread);
 	}
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
-	async handleMessage(message: Message<boolean>): Promise<void> {
-		if (message.author.bot) return;
+}
 
-		if (
-			message.content.match(this.pattern) &&
-			message.member?.roles.cache.some((role) => role.id === roleIDs.WetBread)
-		) {
-			await this.sendReply(message.channel as TextChannel, this.response);
-		}
-	}
+// Interface for bot with properties needed by patchReplyBot helper
+interface BotWithProperties extends ReplyBot {
+	botName: string;
+	avatarUrl: string;
+}
+
+export default function createSoggyBot(webhookService: WebhookService): ReplyBot {
+	const bot = new ReplyBot(
+		{ name: 'SoggyBot', avatarUrl: 'https://imgur.com/OCB6i4x.jpg' },
+		new WetBreadTrigger(/wet bread/i),
+		{ generateResponse: async () => 'Sounds like somebody enjoys wet bread' },
+		webhookService
+	);
+
+	// Add the properties to the bot instance for the patchReplyBot helper
+	const botWithProps = bot as unknown as BotWithProperties;
+	botWithProps.botName = 'SoggyBot';
+	botWithProps.avatarUrl = 'https://imgur.com/OCB6i4x.jpg';
+
+	return bot;
 }

@@ -1,16 +1,36 @@
 import { Message, TextChannel } from 'discord.js';
 import Random from '../../../utils/random';
 import { WebhookService } from '../../../webhooks/webhookService';
+import { BotIdentity, StaticResponse, TriggerCondition } from '../botTypes';
 import ReplyBot from '../replyBot';
 
-export default class BotBot extends ReplyBot {
-	constructor(param: WebhookService | unknown) {
-		super(param);
+// Custom trigger for bot messages with random chance
+class BotMessageTrigger implements TriggerCondition {
+	constructor(private chance: number) { }
+
+	async shouldTrigger(message: Message): Promise<boolean> {
+		return message.author.bot && Random.percentChance(this.chance);
 	}
-	private readonly botName = 'BotBot';
-	private readonly avatarUrl = 'https://cdn-icons-png.flaticon.com/512/4944/4944377.png';
+}
+
+export default class BotBot extends ReplyBot {
+	botName = 'BotBot';
+	avatarUrl = 'https://cdn-icons-png.flaticon.com/512/4944/4944377.png';
 	private readonly response: string = 'Hello fellow bot!';
 
+	constructor(webhookService: WebhookService | unknown) {
+		const identity: BotIdentity = {
+			name: 'BotBot',
+			avatarUrl: 'https://cdn-icons-png.flaticon.com/512/4944/4944377.png'
+		};
+
+		const trigger = new BotMessageTrigger(5);
+		const responseGenerator = new StaticResponse('Hello fellow bot!');
+
+		super(identity, trigger, responseGenerator, webhookService);
+	}
+
+	// Keep these methods for backward compatibility
 	getBotName(): string {
 		return this.botName;
 	}

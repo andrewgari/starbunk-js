@@ -134,3 +134,4 @@ node_modules
 .DS_Store
 *.log
 src/starbunk/bots/reply-bots/attitudeBot.ts
+src/__tests__/starbunk/reply-bots/attitudeBot.test.ts

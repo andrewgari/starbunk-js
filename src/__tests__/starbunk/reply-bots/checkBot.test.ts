@@ -1,8 +1,8 @@
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { Message, User } from 'discord.js';
 import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import CheckBot from '../../../starbunk/bots/reply-bots/checkBot';
-import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 
 describe('CheckBot', () => {
 	let checkBot: CheckBot;
@@ -43,76 +43,76 @@ describe('CheckBot', () => {
 			embeds: []
 		};
 
-		it('should ignore messages from bots', () => {
+		it('should ignore messages from bots', async () => {
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
-			checkBot.handleMessage(mockMessage as Message<boolean>);
+			await checkBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond to "czech"', () => {
+		it('should respond to "czech"', async () => {
 			mockMessage.content = 'czech';
-			checkBot.handleMessage(mockMessage as Message<boolean>);
+			await checkBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				czechMessageOptions
 			);
 		});
 
-		it('should respond to "chezh"', () => {
+		it('should respond to "chezh"', async () => {
 			mockMessage.content = 'chezh';
-			checkBot.handleMessage(mockMessage as Message<boolean>);
+			await checkBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				chezhMessageOptions
 			);
 		});
 
-		it('should respond to case variations of czech', () => {
+		it('should respond to case variations of czech', async () => {
 			mockMessage.content = 'CZECH';
-			checkBot.handleMessage(mockMessage as Message<boolean>);
+			await checkBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				czechMessageOptions
 			);
 		});
 
-		it('should respond to case variations of chezh', () => {
+		it('should respond to case variations of chezh', async () => {
 			mockMessage.content = 'CHEZH';
-			checkBot.handleMessage(mockMessage as Message<boolean>);
+			await checkBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				chezhMessageOptions
 			);
 		});
 
-		it('should respond to word "czech" within text', () => {
+		it('should respond to word "czech" within text', async () => {
 			mockMessage.content = 'please czech this out';
-			checkBot.handleMessage(mockMessage as Message<boolean>);
+			await checkBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				czechMessageOptions
 			);
 		});
 
-		it('should respond to word "chezh" within text', () => {
+		it('should respond to word "chezh" within text', async () => {
 			mockMessage.content = 'please chezh this out';
-			checkBot.handleMessage(mockMessage as Message<boolean>);
+			await checkBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel,
 				chezhMessageOptions
 			);
 		});
 
-		it('should not respond to partial matches', () => {
+		it('should not respond to partial matches', async () => {
 			mockMessage.content = 'czechoslovakia';
-			checkBot.handleMessage(mockMessage as Message<boolean>);
+			await checkBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should not respond to unrelated messages', () => {
+		it('should not respond to unrelated messages', async () => {
 			mockMessage.content = 'hello world';
-			checkBot.handleMessage(mockMessage as Message<boolean>);
+			await checkBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 	});
