@@ -1,4 +1,5 @@
 import { Message } from 'discord.js';
+import Random from '../../utils/random';
 
 export interface BotIdentity {
 	name: string;
@@ -27,7 +28,7 @@ export class UserRandomTrigger implements TriggerCondition {
 	constructor(private userId: string, private chance: number) { }
 
 	async shouldTrigger(message: Message): Promise<boolean> {
-		return message.author.id === this.userId && Math.random() * 100 < this.chance;
+		return message.author.id === this.userId && Random.percentChance(this.chance);
 	}
 }
 
