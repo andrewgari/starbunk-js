@@ -1,10 +1,15 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20.11-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++ git
+# Install build dependencies with specific versions
+RUN apk add --no-cache \
+    python3~=3.11 \
+    make~=4.4 \
+    g++~=13.2 \
+    git~=2.43 \
+    && rm -rf /var/cache/apk/*
 
 COPY package*.json ./
 RUN npm ci
@@ -13,14 +18,15 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine
+FROM node:20.11-alpine
 
-# Install production dependencies
+# Install production dependencies with specific versions
 RUN apk add --no-cache \
-    ffmpeg \
-    python3 \
-    tzdata \
-    ca-certificates
+    ffmpeg~=6.1 \
+    python3~=3.11 \
+    tzdata~=2024 \
+    ca-certificates~=20240226 \
+    && rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
@@ -29,15 +35,19 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 
 # Install only production dependencies
-RUN apk add --no-cache python3 make g++ && \
-    npm ci --only=production && \
-    apk del python3 make g++
+# Keep the build dependencies since they might be needed at runtime
+RUN apk add --no-cache \
+    python3~=3.11 \
+    make~=4.4 \
+    g++~=13.2 \
+    && npm ci --only=production \
+    && rm -rf /var/cache/apk/*
 
-# Add specific packages that need global installation
+# Add specific packages that need global installation with pinned versions
 RUN npm install -g \
-    ts-node \
-    is-ci \
-    distube
+    ts-node@10.9.2 \
+    is-ci@3.0.1 \
+    distube@4.1.1
 
 # Set proper ownership for the application directory
 RUN chown -R node:node /app
