@@ -18,9 +18,14 @@ const rl = readline.createInterface({
 	output: process.stdout
 });
 
+// Helper function to print to stdout (replacing console.log)
+function print(message) {
+	process.stdout.write(message + '\n');
+}
+
 // Main function to run the script
-async function main() {
-	console.log('Loading bot validation environment...');
+function main() {
+	print('Loading bot validation environment...');
 
 	try {
 		// Import necessary modules
@@ -37,7 +42,7 @@ async function main() {
 
 		// Override the writeMessage method to capture responses
 		const originalWriteMessage = webhookService.writeMessage;
-		webhookService.writeMessage = async (channel, options) => {
+		webhookService.writeMessage = function (channel, options) {
 			responses.push({
 				botName: options.username,
 				content: options.content,
@@ -51,20 +56,20 @@ async function main() {
 		const botFiles = fs.readdirSync(botsDir)
 			.filter(file => file.endsWith('.js') && !file.startsWith('index'));
 
-		console.log(`Found ${botFiles.length} bot files`);
+		print('Found ' + botFiles.length + ' bot files');
 
 		// Load each bot
 		const bots = [];
 		for (const file of botFiles) {
 			try {
 				const fileName = file.replace('.js', '');
-				const importPath = `../dist/starbunk/bots/reply-bots/${fileName}`;
+				const importPath = '../dist/starbunk/bots/reply-bots/' + fileName;
 
 				// Dynamic import
 				const botModule = require(importPath);
 
-				if (!botModule?.default) {
-					console.warn(`No default export in bot file: ${fileName}`);
+				if (!botModule || !botModule.default) {
+					console.warn('No default export in bot file: ' + fileName);
 					continue;
 				}
 
@@ -72,7 +77,7 @@ async function main() {
 				const bot = botModule.default(webhookService);
 
 				if (!bot) {
-					console.warn(`Failed to create bot from file: ${fileName}`);
+					console.warn('Failed to create bot from file: ' + fileName);
 					continue;
 				}
 
@@ -80,16 +85,16 @@ async function main() {
 				const botName = bot.getIdentity().name;
 
 				bots.push({ name: botName, bot });
-				console.log(`Loaded bot: ${botName}`);
+				print('Loaded bot: ' + botName);
 			} catch (err) {
-				console.error(`Error loading bot from file ${file}:`, err);
+				console.error('Error loading bot from file ' + file + ':', err);
 			}
 		}
 
-		console.log(`Successfully loaded ${bots.length} bots\n`);
+		print('Successfully loaded ' + bots.length + ' bots\n');
 
 		// Function to test a message against all bots
-		async function testMessage(message) {
+		function testMessage(message) {
 			// Clear previous responses
 			responses.length = 0;
 
@@ -98,39 +103,46 @@ async function main() {
 			mockMessage.content = message;
 
 			// Process the message with each bot
-			const promises = bots.map(({ bot }) => bot.handleMessage(mockMessage));
-			await Promise.all(promises);
+			const promises = bots.map(function (botInfo) {
+				return botInfo.bot.handleMessage(mockMessage);
+			});
 
-			// Display results
-			console.log('\n=== Results ===');
+			return Promise.all(promises).then(function () {
+				// Display results
+				print('\n=== Results ===');
 
-			if (responses.length === 0) {
-				console.log('No bots would respond to this message.');
-			} else {
-				console.log(`${responses.length} bot(s) would respond:`);
+				if (responses.length === 0) {
+					print('No bots would respond to this message.');
+				} else {
+					print(responses.length + ' bot(s) would respond:');
 
-				responses.forEach((response, index) => {
-					console.log(`\n[${index + 1}] ${response.botName}`);
-					console.log(`Response: ${response.content}`);
-					console.log(`Avatar: ${response.avatarURL}`);
-				});
-			}
+					responses.forEach(function (response, index) {
+						print('\n[' + (index + 1) + '] ' + response.botName);
+						print('Response: ' + response.content);
+						print('Avatar: ' + response.avatarURL);
+					});
+				}
 
-			console.log('\n');
+				print('\n');
+			});
 		}
 
 		// Interactive loop
-		const askForMessage = () => {
-			rl.question('Enter a message to test (or "exit" to quit): ', async (message) => {
+		function askForMessage() {
+			rl.question('Enter a message to test (or "exit" to quit): ', function (message) {
 				if (message.toLowerCase() === 'exit') {
 					rl.close();
 					return;
 				}
 
-				await testMessage(message);
-				askForMessage();
+				testMessage(message).then(function () {
+					askForMessage();
+				}).catch(function (err) {
+					console.error('Error testing message:', err);
+					askForMessage();
+				});
 			});
-		};
+		}
 
 		askForMessage();
 
@@ -142,7 +154,4 @@ async function main() {
 }
 
 // Start the script
-main().catch(err => {
-	console.error('Error running script:', err);
-	process.exit(1);
-});
+main();
