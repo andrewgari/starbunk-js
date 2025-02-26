@@ -1,8 +1,10 @@
 import { Client, Events, Message, TextChannel } from 'discord.js';
 import userID from '../discord/userID';
+import { Logger } from '../services/logger';
 import webhookService from '../webhooks/webhookService';
 
 export default class SnowbunkClient extends Client {
+	private readonly logger = Logger;
 	private readonly channelMap: Record<string, Array<string>> = {
 		'757866614787014660': ['856617421942030364', '798613445301633137'],
 		// testing
@@ -48,46 +50,89 @@ export default class SnowbunkClient extends Client {
 	}
 
 	bootstrap(): void {
-		(this as unknown as Client).on(Events.MessageCreate, async (message: Message) => {
-			this.syncMessage(message);
-		});
+		try {
+			this.logger.info('🚀 Starting Snowbunk initialization...');
+
+			(this as unknown as Client).on(Events.MessageCreate, async (message: Message) => {
+				try {
+					this.syncMessage(message);
+				} catch (error) {
+					this.logger.error('Error syncing message:', error as Error);
+				}
+			});
+
+			this.logger.success('✅ Snowbunk initialized successfully');
+		} catch (error) {
+			this.logger.error('Error bootstrapping Snowbunk:', error as Error);
+		}
 	}
 
 	syncMessage = (message: Message): void => {
-		if (message.author.id === userID.Goose) return;
-		if (message.author.bot) return;
+		try {
+			// Skip messages from Goose or bots
+			if (message.author.id === userID.Goose) return;
+			if (message.author.bot) return;
 
-		const linkedChannels = this.getSyncedChannels(message.channel.id);
-		linkedChannels.forEach((channelID: string) => {
+			const linkedChannels = this.getSyncedChannels(message.channel.id);
+			if (linkedChannels.length === 0) return;
+
+			this.logger.debug(`Syncing message to ${linkedChannels.length} channels`);
+
+			linkedChannels.forEach((channelID: string) => {
+				this.syncToChannel(message, channelID);
+			});
+		} catch (error) {
+			this.logger.error('Error in syncMessage:', error as Error);
+		}
+	};
+
+	private syncToChannel(message: Message, channelID: string): void {
+		try {
 			((this as unknown as Client).channels)
 				.fetch(channelID)
 				.then((channel) => {
 					if (channel && channel instanceof TextChannel) {
 						this.writeMessage(message, channel);
+					} else {
+						this.logger.warn(`Channel ${channelID} is not a text channel`);
 					}
 				})
 				.catch((error: Error) => {
-					console.error(error);
+					this.logger.error(`Error fetching channel ${channelID}:`, error);
 				});
-		});
-	};
+		} catch (error) {
+			this.logger.error(`Error syncing to channel ${channelID}:`, error as Error);
+		}
+	}
 
 	writeMessage(message: Message, linkedChannel: TextChannel): void {
-		const userid = message.author.id;
-		const displayName =
-			linkedChannel.members.get(userid)?.displayName ?? message.member?.displayName ?? message.author.displayName;
+		try {
+			const userid = message.author.id;
 
-		const avatarUrl =
-			linkedChannel.members.get(userid)?.avatarURL() ??
-			message.member?.avatarURL() ??
-			message.author.defaultAvatarURL;
+			// Get the appropriate display name
+			const displayName =
+				linkedChannel.members.get(userid)?.displayName ??
+				message.member?.displayName ??
+				message.author.displayName;
 
-		webhookService.writeMessage(linkedChannel, {
-			username: displayName,
-			avatarURL: avatarUrl,
-			content: message.content,
-			embeds: [],
-			token: (this as unknown as Client).token ?? '',
-		});
+			// Get the appropriate avatar URL
+			const avatarUrl =
+				linkedChannel.members.get(userid)?.avatarURL() ??
+				message.member?.avatarURL() ??
+				message.author.defaultAvatarURL;
+
+			// Write the message to the linked channel
+			webhookService.writeMessage(linkedChannel, {
+				username: displayName,
+				avatarURL: avatarUrl,
+				content: message.content,
+				embeds: [],
+				token: (this as unknown as Client).token ?? '',
+			});
+
+			this.logger.debug(`Message from ${displayName} synced to ${linkedChannel.name}`);
+		} catch (error) {
+			this.logger.error(`Error writing message to channel ${linkedChannel.name}:`, error as Error);
+		}
 	}
 }
