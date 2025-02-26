@@ -1,6 +1,6 @@
-import guildIDs from '@/discord/guildIDs';
-import { MessageInfo } from '@/discord/messageInfo';
 import { Client, Message, TextChannel, Webhook } from 'discord.js';
+import guildIDs from '../discord/guildIDs';
+import { MessageInfo } from '../discord/messageInfo';
 
 export class WebhookService {
 	getWebhookName(channelName: string, isSnowbunk: boolean): string {
@@ -33,16 +33,16 @@ export class WebhookService {
 	}
 
 	public async writeMessage(channel: TextChannel, message: MessageInfo): Promise<Message<boolean>> {
-		const webhook = await this.getChannelWebhook(channel);
-		if (webhook) {
-			try {
+		try {
+			const webhook = await this.getChannelWebhook(channel);
+			if (webhook) {
 				return await webhook.send(message);
-			} catch (error) {
-				console.error('Failed to send message', error);
-				throw error;
 			}
+			return Promise.reject('Could not find webhook');
+		} catch (error) {
+			console.error('Failed to send message', error);
+			return Promise.reject(error);
 		}
-		return Promise.reject('Could not find webhook');
 	}
 }
 

@@ -1,9 +1,8 @@
-import DiscordClient from '@/discord/discordClient';
-import userID from '@/discord/userID';
-import webhookService from '@/webhooks/webhookService';
-import { Events, Message, TextChannel } from 'discord.js';
+import { Client, Events, Message, TextChannel } from 'discord.js';
+import userID from '../discord/userID';
+import webhookService from '../webhooks/webhookService';
 
-export default class SnowbunkClient extends DiscordClient {
+export default class SnowbunkClient extends Client {
 	private readonly channelMap: Record<string, Array<string>> = {
 		'757866614787014660': ['856617421942030364', '798613445301633137'],
 		// testing
@@ -49,7 +48,7 @@ export default class SnowbunkClient extends DiscordClient {
 	}
 
 	bootstrap(): void {
-		this.on(Events.MessageCreate, async (message: Message) => {
+		(this as unknown as Client).on(Events.MessageCreate, async (message: Message) => {
 			this.syncMessage(message);
 		});
 	}
@@ -60,12 +59,14 @@ export default class SnowbunkClient extends DiscordClient {
 
 		const linkedChannels = this.getSyncedChannels(message.channel.id);
 		linkedChannels.forEach((channelID: string) => {
-			this.channels
+			((this as unknown as Client).channels)
 				.fetch(channelID)
 				.then((channel) => {
-					this.writeMessage(message, channel as TextChannel);
+					if (channel && channel instanceof TextChannel) {
+						this.writeMessage(message, channel);
+					}
 				})
-				.catch((error) => {
+				.catch((error: Error) => {
 					console.error(error);
 				});
 		});
@@ -86,7 +87,7 @@ export default class SnowbunkClient extends DiscordClient {
 			avatarURL: avatarUrl,
 			content: message.content,
 			embeds: [],
-			token: this.token ?? '',
+			token: (this as unknown as Client).token ?? '',
 		});
 	}
 }

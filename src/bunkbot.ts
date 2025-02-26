@@ -1,5 +1,6 @@
 import { GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
+import './moduleAlias';
 import SnowbunkClient from './snowbunk/snowbunkClient';
 import StarbunkClient from './starbunk/starbunkClient';
 dotenv.config();
