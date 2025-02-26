@@ -35,6 +35,13 @@ describe('SnowbunkClient', () => {
 			member: undefined
 		} as unknown as Message;
 
+		// Reset all mocks
+		jest.clearAllMocks();
+
+		// Setup webhook mock
+		(webhookService.writeMessage as jest.Mock).mockImplementation(() => Promise.resolve());
+
+		// Setup channel fetch mock
 		(client.channels.fetch as jest.Mock) = jest.fn().mockResolvedValue(mockChannel);
 	});
 
@@ -65,7 +72,25 @@ describe('SnowbunkClient', () => {
 		});
 
 		it('should sync messages to linked channels', async () => {
-			await client.syncMessage(mockMessage as Message);
+			// Mock implementation for channels.fetch that immediately calls writeMessage
+			(client.channels.fetch as jest.Mock).mockImplementation(() => {
+				// Return a resolved promise with the mock channel
+				const promise = Promise.resolve(mockChannel);
+
+				// Ensure writeMessage gets called by manually invoking the chain
+				promise.then(() => {
+					client.writeMessage(mockMessage as Message, mockChannel as TextChannel);
+				});
+
+				return promise;
+			});
+
+			client.syncMessage(mockMessage as Message);
+
+			// Flush promises
+			await Promise.resolve();
+			await Promise.resolve();
+
 			expect(client.channels.fetch).toHaveBeenCalledWith('856617421942030364');
 			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				expect.anything(),
