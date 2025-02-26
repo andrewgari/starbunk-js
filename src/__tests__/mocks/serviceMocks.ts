@@ -7,8 +7,26 @@ interface AudioService {
 }
 
 export const createMockWebhookService = (): jest.Mocked<WebhookService> => ({
-	writeMessage: jest.fn().mockResolvedValue(undefined),
-	getChannelWebhook: jest.fn().mockResolvedValue(undefined)
+	writeMessage: jest.fn().mockImplementation((channel, message) => {
+		const channelId = channel.id;
+		return Promise.resolve({
+			id: 'mock-message-id',
+			content: message.content,
+			author: { username: message.username },
+			channelId
+		});
+	}),
+	getChannelWebhook: jest.fn().mockResolvedValue({
+		id: 'mock-webhook-id',
+		name: 'mock-webhook-name',
+		send: jest.fn().mockResolvedValue({})
+	}),
+	getWebhookName: jest.fn().mockReturnValue('MockWebhook'),
+	getWebhook: jest.fn().mockResolvedValue({
+		id: 'mock-webhook-id',
+		name: 'mock-webhook-name',
+		send: jest.fn().mockResolvedValue({})
+	})
 } as unknown as jest.Mocked<WebhookService>);
 
 export const createMockAudioService = (): jest.Mocked<AudioService> => ({
