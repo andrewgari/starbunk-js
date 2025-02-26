@@ -2,6 +2,8 @@ import { Message } from 'discord.js';
 import { WebhookService } from '../../webhooks/webhookService';
 import { DynamicIdentity, DynamicResponse } from './botFactory';
 import { BotIdentity, CompositeTrigger, PatternTrigger, RandomResponse, ResponseGenerator, StaticResponse, TriggerCondition, UserRandomTrigger } from './botTypes';
+import { ConditionResponseHandler } from './conditionResponseHandler';
+import { Condition } from './conditions';
 import ReplyBot from './replyBot';
 
 /**
@@ -21,6 +23,11 @@ export class BotBuilder {
 		defaultAvatarUrl: string;
 		updateIdentity: (message: Message) => Promise<BotIdentity>;
 	} | null = null;
+	private conditionResponseHandler: ConditionResponseHandler | null = null;
+	private customConditions: Array<{
+		response: string | ResponseGenerator;
+		conditions: Condition[];
+	}> = [];
 
 	/**
 	 * Create a new BotBuilder
@@ -112,10 +119,133 @@ export class BotBuilder {
 	}
 
 	/**
+	 * Add a condition-response pair to the bot
+	 * This allows for directly pairing a response with one or more conditions
+	 *
+	 * @param response The response generator to use when the conditions match
+	 * @param conditions One or more condition functions that must all be true for the response to be used
+	 */
+	withConditionResponse(
+		response: ResponseGenerator,
+		...conditions: Array<TriggerCondition | ((message: Message) => Promise<boolean>)>
+	): BotBuilder {
+		// Create the handler if it doesn't exist yet
+		if (!this.conditionResponseHandler) {
+			this.conditionResponseHandler = new ConditionResponseHandler();
+			this.responseGenerator = this.conditionResponseHandler;
+		}
+
+		// Create a combined condition from all the provided conditions
+		const combinedCondition = async (message: Message): Promise<boolean> => {
+			for (const condition of conditions) {
+				// Check if it's a TriggerCondition or a function
+				const result = typeof condition === 'function'
+					? await condition(message)
+					: await condition.shouldTrigger(message);
+
+				if (!result) return false;
+			}
+			return true;
+		};
+
+		// Add the pair to the handler
+		this.conditionResponseHandler.addPair(response, combinedCondition);
+
+		// Make sure we have a trigger that will activate the bot
+		// We'll add a simple trigger that always returns true, since the actual
+		// condition checking will be done by the ConditionResponseHandler
+		if (this.triggers.length === 0) {
+			this.withCustomTrigger({
+				shouldTrigger: async () => true
+			});
+		}
+
+		return this;
+	}
+
+	/**
+	 * Add a custom condition-response pair with a static response
+	 * This is a more declarative way to define bot behavior
+	 * Lower items in the list take precedence
+	 *
+	 * @param response The static response text to use when the conditions match
+	 * @param conditions One or more conditions that must all be true for the response to be used
+	 */
+	withCustomCondition(
+		response: string,
+		...conditions: Condition[]
+	): BotBuilder {
+		this.customConditions.push({
+			response,
+			conditions
+		});
+		return this;
+	}
+
+	/**
+	 * Add multiple custom condition-response pairs at once
+	 * This is a convenience method for adding multiple conditions
+	 * Lower items in the list take precedence
+	 *
+	 * @param pairs An array of condition-response pairs
+	 */
+	withCustomConditions(
+		...pairs: Array<{
+			response: string;
+			conditions: Condition[];
+		}>
+	): BotBuilder {
+		for (const pair of pairs) {
+			this.customConditions.push({
+				response: pair.response,
+				conditions: pair.conditions
+			});
+		}
+		return this;
+	}
+
+	/**
 	 * Build the final ReplyBot instance
 	 * @returns A configured ReplyBot instance
 	 */
 	build(): ReplyBot {
+		// Process custom conditions if any
+		if (this.customConditions.length > 0) {
+			// Create the handler if it doesn't exist yet
+			if (!this.conditionResponseHandler) {
+				this.conditionResponseHandler = new ConditionResponseHandler();
+				this.responseGenerator = this.conditionResponseHandler;
+			}
+
+			// Add conditions in reverse order (so lower items take precedence)
+			for (let i = this.customConditions.length - 1; i >= 0; i--) {
+				const pair = this.customConditions[i];
+				const responseGen = typeof pair.response === 'string'
+					? new StaticResponse(pair.response)
+					: pair.response;
+
+				// Create a combined condition from all the provided conditions
+				const combinedCondition = async (message: Message): Promise<boolean> => {
+					for (const condition of pair.conditions) {
+						if (!(await condition.shouldTrigger(message))) {
+							return false;
+						}
+					}
+					return true;
+				};
+
+				// Add the pair to the handler
+				this.conditionResponseHandler.addPair(responseGen, combinedCondition);
+			}
+
+			// Make sure we have a trigger that will activate the bot
+			if (this.triggers.length === 0) {
+				this.withCustomTrigger({
+					shouldTrigger: async () => true
+				});
+			}
+		}
+
 		// Validate configuration
 		if (this.triggers.length === 0) {
 			throw new Error(`Bot ${this.name} must have at least one trigger`);

@@ -1,5 +1,6 @@
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
+import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
 
 /**
@@ -29,9 +30,11 @@ const responses = [
 ];
 
 export default function createGundamBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	const gundamCondition = new PatternCondition(Patterns.GUNDAM);
+
 	return new BotBuilder('GundamBot', webhookServiceParam)
 		.withAvatar('https://cdn.discordapp.com/attachments/854790294253117531/902975839584849930/gundam.png')
-		.withPatternTrigger(/\b(gundam|mecha|robot|pacific rim|jaeger)\b/i)
+		.withCustomTrigger(gundamCondition)
 		.respondsWithRandom(responses)
 		.build();
 }

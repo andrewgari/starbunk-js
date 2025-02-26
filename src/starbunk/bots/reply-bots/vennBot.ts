@@ -1,6 +1,7 @@
 import userID from '../../../discord/userID';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
+import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
 
 /**
@@ -25,9 +26,11 @@ const responses = [
 ];
 
 export default function createVennBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	const vennCondition = new PatternCondition(Patterns.VENN_MENTION);
+
 	return new BotBuilder('VennBot', webhookServiceParam)
 		.withAvatar('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png')
-		.withPatternTrigger(/\bvenn\b/i)
+		.withCustomTrigger(vennCondition)
 		.withUserRandomTrigger(userID.Venn, 5)
 		.respondsWithRandom(responses)
 		.build();

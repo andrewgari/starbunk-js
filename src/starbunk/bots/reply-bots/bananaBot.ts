@@ -4,6 +4,7 @@ import random from '../../../utils/random';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import { BotIdentity, TriggerCondition } from '../botTypes';
+import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
 
 // Define the responses as a constant outside the class
@@ -32,15 +33,6 @@ class VennRandomTrigger implements TriggerCondition {
 	}
 }
 
-// Custom trigger for banana pattern
-class BananaPatternTrigger implements TriggerCondition {
-	private pattern = /banana/i;
-
-	async shouldTrigger(message: Message): Promise<boolean> {
-		return this.pattern.test(message.content);
-	}
-}
-
 /**
  * BananaBot - A bot that responds to messages containing "banana" or randomly to Venn
  * This bot dynamically updates its identity to mimic the user it's responding to
@@ -54,11 +46,14 @@ export default function createBananaBot(webhookServiceParam: WebhookService = we
 		};
 	};
 
+	const bananaCondition = new PatternCondition(Patterns.BANANA);
+	const vennRandomTrigger = new VennRandomTrigger(5);
+
 	// Create and return the bot using the builder pattern
 	return new BotBuilder('BananaBot', webhookServiceParam)
 		// Add custom triggers
-		.withCustomTrigger(new BananaPatternTrigger())
-		.withCustomTrigger(new VennRandomTrigger(5))
+		.withCustomTrigger(bananaCondition)
+		.withCustomTrigger(vennRandomTrigger)
 		// Set up dynamic identity that updates based on the message sender
 		.withDynamicIdentity('', updateIdentity)
 		// Set responses

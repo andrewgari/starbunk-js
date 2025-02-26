@@ -7,6 +7,8 @@ import ReplyBot from '../replyBot';
  *
  * This bot demonstrates the simplified builder pattern for creating bots.
  * Compare this implementation to other bots to see how much simpler it is.
+ *
+ * NOTE: This is an example bot and is not used in production.
  */
 export default function createExampleBot(): ReplyBot {
 	// Define possible responses

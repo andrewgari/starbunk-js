@@ -5,6 +5,7 @@ import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks'
 import userID from '../../../discord/userID';
 import createMacaroniBot from '../../../starbunk/bots/reply-bots/macaroniBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
+import { formatUserMention } from '../../../utils/discordFormat';
 
 describe('MacaroniBot', () => {
 	let macaroniBot: ReplyBot;
@@ -43,7 +44,7 @@ describe('MacaroniBot', () => {
 		const vennMessageOptions = {
 			username: 'Macaroni Bot',
 			avatarURL: 'https://i.imgur.com/fgbH6Xf.jpg',
-			content: `Are you trying to reach <@${userID.Venn}>`,
+			content: `Are you trying to reach ${formatUserMention(userID.Venn)}`,
 			embeds: []
 		};
 

@@ -1,25 +1,20 @@
 import { Message, TextChannel } from 'discord.js';
-import Random from '../../../utils/random';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
-import { TriggerCondition } from '../botTypes';
+import { BotMessagePatternCondition } from '../conditions';
 import ReplyBot from '../replyBot';
 
-// Custom trigger for bot messages with random chance
-class BotMessageTrigger implements TriggerCondition {
-	constructor(private chance: number) { }
-
-	async shouldTrigger(message: Message): Promise<boolean> {
-		return message.author.bot && !message.author.username?.includes('BotBot') && Random.percentChance(this.chance);
-	}
-}
-
-// Create a custom bot factory that handles bot messages
+/**
+ * BotBot - A bot that responds to messages from other bots
+ */
 export default function createBotBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	// Create a bot message condition
+	const botMessageCondition = new BotMessagePatternCondition(5);
+
 	// Create a bot with the builder
 	const bot = new BotBuilder('BotBot', webhookServiceParam)
 		.withAvatar('https://cdn-icons-png.flaticon.com/512/4944/4944377.png')
-		.withCustomTrigger(new BotMessageTrigger(5))
+		.withCustomTrigger(botMessageCondition)
 		.respondsWithStatic('Hello fellow bot!')
 		.build();
 
@@ -32,7 +27,7 @@ export default function createBotBot(webhookServiceParam: WebhookService = webho
 
 		// For bot messages, use our custom trigger
 		if (message.author.bot) {
-			if (await new BotMessageTrigger(5).shouldTrigger(message)) {
+			if (await botMessageCondition.shouldTrigger(message)) {
 				const channel = message.channel as TextChannel;
 				await webhookServiceParam.writeMessage(channel, {
 					username: 'BotBot',
