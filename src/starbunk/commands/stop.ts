@@ -1,7 +1,7 @@
-import guildIDs from '@/discord/guildIDs';
-import { getStarbunkClient } from '@/starbunk/starbunkClient';
 import { getVoiceConnection } from '@discordjs/voice';
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import guildIDs from '../../discord/guildIDs';
+import { getStarbunkClient } from '../starbunkClient';
 
 export default {
 	data: new SlashCommandBuilder().setName('stop').setDescription('Stop playing and leave channel'),

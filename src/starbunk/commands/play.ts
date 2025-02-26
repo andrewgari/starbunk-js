@@ -1,7 +1,7 @@
-import { Logger } from '@/services/logger';
-import StarbunkClient, { getStarbunkClient } from '@/starbunk/starbunkClient';
 import { AudioPlayerStatus, joinVoiceChannel } from '@discordjs/voice';
 import { ChatInputCommandInteraction, GuildMember, SlashCommandBuilder } from 'discord.js';
+import { Logger } from '../../services/logger';
+import StarbunkClient, { getStarbunkClient } from '../starbunkClient';
 
 class PlayCommand {
 	private readonly logger: typeof Logger;

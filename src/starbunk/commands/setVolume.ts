@@ -1,5 +1,5 @@
-import { getStarbunkClient } from '@/starbunk/starbunkClient';
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { getStarbunkClient } from '../starbunkClient';
 
 export default {
 	data: new SlashCommandBuilder()
