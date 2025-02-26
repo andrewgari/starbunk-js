@@ -10,184 +10,210 @@ Reply bots are simple modules that respond to specific messages in Discord chann
 
 Your bot will automatically be registered and ready to respond to messages.
 
+## Bot Architecture
+
+All bots in the system now extend the `ReplyBot` base class using a class-based inheritance model. This provides:
+
+- Standardized message handling through a common interface
+- Automatic registration of bots via the class name
+- Built-in webhook integration for rich responses
+- Consistent identity management via the `getBotName()` method
+
 ## Basic Template
 
 ```typescript
-import { Message } from 'discord.js';
-import { Logger } from '../../../services/logger';
-import StarbunkClient from '../../starbunkClient';
+import { WebhookService } from '../../../webhooks/webhookService';
+import { PatternTrigger, StaticResponse } from '../botTypes';
 import ReplyBot from '../replyBot';
 
-export default class HelloBot implements ReplyBot {
-	private client: StarbunkClient;
-
-	constructor(client: StarbunkClient) {
-		this.client = client;
-		Logger.info('HelloBot initialized');
+class HelloBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		// Configure the bot with identity, trigger, and response
+		super(
+			{ name: 'HelloBot', avatarUrl: 'https://example.com/avatar.png' },
+			new PatternTrigger(/hello/i),
+			new StaticResponse('Hello there!'),
+			webhookService,
+		);
 	}
 
 	getBotName(): string {
+		// Required method for bot registration
 		return 'HelloBot';
 	}
-
-	handleMessage(message: Message): void {
-		// Ignore bot messages to prevent loops
-		if (message.author.bot) return;
-
-		// Define your trigger - what the bot should respond to
-		if (message.content.toLowerCase().includes('hello')) {
-			// Reply to the message
-			message.reply('Hello there!');
-		}
-	}
 }
+
+export default HelloBot;
 ```
 
 ## Advanced Templates
 
-### Pattern Matching Bot
+### Random Response Bot
 
 ```typescript
-import { Message } from 'discord.js';
-import { Logger } from '../../../services/logger';
-import StarbunkClient from '../../starbunkClient';
+import { WebhookService } from '../../../webhooks/webhookService';
+import { PatternTrigger, RandomResponse } from '../botTypes';
 import ReplyBot from '../replyBot';
 
-export default class PatternBot implements ReplyBot {
-	private client: StarbunkClient;
-	private triggers: Array<{ pattern: RegExp; response: string }>;
+class GreetingBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		const responses = ['Hello there!', 'Hi, how are you?', 'Greetings!', "Hey, what's up?", 'Good to see you!'];
 
-	constructor(client: StarbunkClient) {
-		this.client = client;
-		this.triggers = [
-			{ pattern: /hello world/i, response: 'Hello to you too!' },
-			{ pattern: /how are you/i, response: "I'm doing great, thanks for asking!" },
-			{ pattern: /good morning/i, response: 'Good morning! Hope you have a great day!' },
-		];
-		Logger.info('PatternBot initialized');
+		super(
+			{ name: 'GreetingBot', avatarUrl: 'https://example.com/greeting.png' },
+			new PatternTrigger(/hi|hello|hey|greetings/i),
+			new RandomResponse(responses),
+			webhookService,
+		);
 	}
 
 	getBotName(): string {
-		return 'PatternBot';
-	}
-
-	handleMessage(message: Message): void {
-		if (message.author.bot) return;
-
-		for (const trigger of this.triggers) {
-			if (trigger.pattern.test(message.content)) {
-				message.reply(trigger.response);
-				return; // Stop after first match
-			}
-		}
+		return 'GreetingBot';
 	}
 }
+
+export default GreetingBot;
 ```
 
-### Command Bot
+### Custom Trigger Bot
 
 ```typescript
 import { Message } from 'discord.js';
-import { Logger } from '../../../services/logger';
-import StarbunkClient from '../../starbunkClient';
+import { WebhookService } from '../../../webhooks/webhookService';
+import { TriggerCondition, StaticResponse } from '../botTypes';
 import ReplyBot from '../replyBot';
 
-export default class CommandBot implements ReplyBot {
-	private client: StarbunkClient;
-	private prefix: string;
-	private commands: Record<string, (message: Message, args: string[]) => void>;
+// Custom trigger that responds only to messages with exactly 3 words
+class ThreeWordTrigger implements TriggerCondition {
+	async shouldTrigger(message: Message): Promise<boolean> {
+		if (message.author.bot) return false;
+		const words = message.content.trim().split(/\s+/);
+		return words.length === 3;
+	}
+}
 
-	constructor(client: StarbunkClient) {
-		this.client = client;
-		this.prefix = '!'; // Command prefix
-
-		// Define available commands
-		this.commands = {
-			help: (message, args) => {
-				message.reply('Available commands: !help, !ping, !roll');
-			},
-			ping: (message, args) => {
-				message.reply('Pong!');
-			},
-			roll: (message, args) => {
-				const sides = parseInt(args[0]) || 6;
-				const result = Math.floor(Math.random() * sides) + 1;
-				message.reply(`You rolled a ${result} (d${sides})`);
-			},
-		};
-
-		Logger.info('CommandBot initialized');
+class ThreeWordBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(
+			{ name: 'ThreeWordBot', avatarUrl: 'https://example.com/three.png' },
+			new ThreeWordTrigger(),
+			new StaticResponse('That was exactly three words!'),
+			webhookService,
+		);
 	}
 
 	getBotName(): string {
-		return 'CommandBot';
-	}
-
-	handleMessage(message: Message): void {
-		if (message.author.bot) return;
-		if (!message.content.startsWith(this.prefix)) return;
-
-		const args = message.content.slice(this.prefix.length).trim().split(/ +/);
-		const command = args.shift()?.toLowerCase();
-
-		if (command && this.commands[command]) {
-			this.commands[command](message, args);
-		}
+		return 'ThreeWordBot';
 	}
 }
+
+export default ThreeWordBot;
+```
+
+### Dynamic Identity Bot
+
+```typescript
+import { Message } from 'discord.js';
+import userID from '../../../discord/userID';
+import { WebhookService } from '../../../webhooks/webhookService';
+import { DynamicIdentity, DynamicResponse } from '../botFactory';
+import { CompositeTrigger, PatternTrigger, RandomResponse } from '../botTypes';
+import ReplyBot from '../replyBot';
+
+class MimicBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		const identity = new DynamicIdentity({
+			defaultName: 'MimicBot',
+			defaultAvatarUrl: 'https://example.com/mimic.png',
+			async updateIdentity(message: Message) {
+				return {
+					name: message.author.username,
+					avatarUrl: message.author.displayAvatarURL(),
+				};
+			},
+		});
+
+		const trigger = new PatternTrigger(/mimic/i);
+
+		const responses = [
+			"I'm copying you!",
+			"Look at me, I'm just like you!",
+			'Imitation is the sincerest form of flattery.',
+		];
+
+		const responseGenerator = new DynamicResponse(identity, new RandomResponse(responses));
+
+		super(identity, trigger, responseGenerator, webhookService);
+	}
+
+	getBotName(): string {
+		return 'MimicBot';
+	}
+}
+
+export default MimicBot;
 ```
 
 ## Testing Your Bot
 
-Add a simple test in `src/__tests__/starbunk/bots/`:
+Add a test in `src/__tests__/starbunk/bots/reply-bots/`:
 
 ```typescript
 import { Message } from 'discord.js';
-import StarbunkClient from '../../../starbunk/starbunkClient';
-import HelloBot from '../../../starbunk/bots/reply-bots/helloBot';
+import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
+import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
+import HelloBot from '@/starbunk/bots/reply-bots/helloBot';
+import ReplyBot from '@/starbunk/bots/replyBot';
 
 describe('HelloBot', () => {
-	let bot: HelloBot;
-	let mockClient: Partial<StarbunkClient>;
+	let helloBot: ReplyBot;
 	let mockMessage: Partial<Message>;
+	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
 	beforeEach(() => {
-		mockClient = {} as StarbunkClient;
+		mockWebhookService = createMockWebhookService();
 		mockMessage = {
-			content: 'test message',
-			author: { bot: false },
-			reply: jest.fn(),
-		} as unknown as Partial<Message>;
+			content: '',
+			author: { bot: false, id: 'user-id' },
+			channel: { id: 'channel-id' },
+		} as Partial<Message>;
 
-		bot = new HelloBot(mockClient as StarbunkClient);
+		helloBot = new HelloBot(mockWebhookService);
+		patchReplyBot(helloBot, mockWebhookService);
 	});
 
-	it('should reply to hello messages', () => {
+	it('should respond to hello messages', async () => {
 		mockMessage.content = 'hello there';
-		bot.handleMessage(mockMessage as Message);
-		expect(mockMessage.reply).toHaveBeenCalledWith('Hello there!');
+		await helloBot.handleMessage(mockMessage as Message);
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
 	});
 
-	it('should not reply to other messages', () => {
+	it('should not respond to unrelated messages', async () => {
 		mockMessage.content = 'something else';
-		bot.handleMessage(mockMessage as Message);
-		expect(mockMessage.reply).not.toHaveBeenCalled();
+		await helloBot.handleMessage(mockMessage as Message);
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });
 ```
 
 ## Tips & Best Practices
 
-1. **Keep it simple**: Reply bots should do one thing well
-2. **Avoid high frequency triggers**: Don't make bots that trigger on common words
-3. **Add rate limiting**: For frequently used bots, consider adding rate limiting
-4. **Test extensively**: Make sure your bot doesn't have unintended side effects
-5. **Use webhooks** for complex formatting: `this.client.webhookService.writeMessage()`
-6. **Handle errors gracefully**: Wrap logic in try/catch blocks
+1. **Extend ReplyBot**: Always extend the ReplyBot base class
+2. **Implement getBotName**: This method is required for registration
+3. **Use Provided Components**: Use the built-in trigger and response classes when possible
+4. **Keep It Simple**: Reply bots should do one thing well
+5. **Test Thoroughly**: Write tests for your bot's behavior
+6. **Handle Edge Cases**: Account for bot messages, empty content, etc.
+7. **Use Composite Triggers**: Combine triggers for complex conditions
+8. **Avoid Race Conditions**: Be careful with async message handling
 
-## Auto-Registration
+## Bot Registration Process
 
-The StarbunkClient automatically registers all bots in the `src/starbunk/bots/reply-bots/` directory. You don't need to manually register your bot - just place your file in the correct directory.
+The system automatically registers all bots that:
+
+1. Export a class as the default export
+2. Extend the ReplyBot base class
+3. Implement the required getBotName() method
 
 ```typescript
 // From starbunkClient.ts - this happens automatically
@@ -197,12 +223,24 @@ registerBots = async (): Promise<void> => {
 		this.logger.info(`Found ${botFiles.length} reply bots to register`);
 
 		for (const file of botFiles) {
-			// ... loading logic
-			const bot = new botModule.default(this);
-			this.bots.set(bot.getBotName(), bot);
+			try {
+				// Import the bot module
+				const botModule = await import(`./bots/reply-bots/${file}`);
+
+				// Create an instance of the bot
+				const bot = new botModule.default(this.webhookService);
+
+				// Register it with its name from getBotName()
+				const botName = bot.getBotName();
+				this.bots.set(botName, bot);
+
+				this.logger.success(`Registered Bot: ${botName} 🤖`);
+			} catch (err) {
+				this.logger.error(`Error registering bot from file ${file}:`, err);
+			}
 		}
 	} catch (error) {
-		this.logger.error('Error registering bots:', error as Error);
+		this.logger.error('Error registering bots:', error);
 	}
 };
 ```

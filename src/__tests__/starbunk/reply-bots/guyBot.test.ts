@@ -1,7 +1,7 @@
 import { Guild, GuildMember, Message, TextChannel, User, Webhook } from 'discord.js';
 import { createMockGuildMember, createMockMessage, createMockTextChannel } from '../../../__tests__/mocks/discordMocks';
 import userID from '../../../discord/userID';
-import createGuyBot from '../../../starbunk/bots/reply-bots/guyBot';
+import GuyBot from '../../../starbunk/bots/reply-bots/guyBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import Random from '../../../utils/random';
 import { WebhookService } from '../../../webhooks/webhookService';
@@ -68,7 +68,7 @@ describe('GuyBot', () => {
 			} as unknown as Guild
 		};
 
-		guyBot = createGuyBot(mockWebhookService);
+		guyBot = new GuyBot(mockWebhookService);
 		jest.clearAllMocks();
 	});
 

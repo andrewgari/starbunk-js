@@ -1,6 +1,6 @@
 import { Message, TextChannel, User, Webhook } from 'discord.js';
 import { createMockMessage, createMockTextChannel } from '../../../__tests__/mocks/discordMocks';
-import createSheeshBot from '../../../starbunk/bots/reply-bots/sheeshBot';
+import SheeshBot from '../../../starbunk/bots/reply-bots/sheeshBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { WebhookService } from '../../../webhooks/webhookService';
 
@@ -38,7 +38,7 @@ describe('SheeshBot', () => {
 			channel: mockChannel
 		};
 
-		sheeshBot = createSheeshBot(mockWebhookService);
+		sheeshBot = new SheeshBot(mockWebhookService);
 		jest.clearAllMocks();
 	});
 

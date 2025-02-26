@@ -1,7 +1,7 @@
 import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { createMockMessage } from '@/__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
-import createSigGreatBot from '@/starbunk/bots/reply-bots/sigGreatBot';
+import SigBestBot from '@/starbunk/bots/reply-bots/sigGreatBot';
 import ReplyBot from '@/starbunk/bots/replyBot';
 import { Message, TextChannel, User } from 'discord.js';
 
@@ -13,7 +13,7 @@ describe('SigBestBot', () => {
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage();
-		sigBestBot = createSigGreatBot(mockWebhookService);
+		sigBestBot = new SigBestBot(mockWebhookService);
 
 		// Patch the sendReply method for synchronous testing
 		patchReplyBot(sigBestBot, mockWebhookService);

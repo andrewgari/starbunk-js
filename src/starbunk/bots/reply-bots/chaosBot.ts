@@ -45,4 +45,8 @@ export default class ChaosBot extends ReplyBot {
 			await this.sendReply(message.channel as TextChannel, response);
 		}
 	}
+
+	getBotName(): string {
+		return this.botName;
+	}
 }

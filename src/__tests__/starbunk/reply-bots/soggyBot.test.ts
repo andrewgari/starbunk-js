@@ -2,7 +2,7 @@ import { patchReplyBot } from '@/__tests__/helpers/replyBotHelper';
 import { createMockGuildMember, createMockMessage } from '@/__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '@/__tests__/mocks/serviceMocks';
 import roleIDs from '@/discord/roleIDs';
-import createSoggyBot from '@/starbunk/bots/reply-bots/soggyBot';
+import SoggyBot from '@/starbunk/bots/reply-bots/soggyBot';
 import ReplyBot from '@/starbunk/bots/replyBot';
 import { Collection, GuildMember, GuildMemberRoleManager, Message, Role, TextChannel, User } from 'discord.js';
 
@@ -30,7 +30,7 @@ describe('SoggyBot', () => {
 			...createMockMessage('TestUser'),
 			member: createMockMemberWithRoles()
 		};
-		soggyBot = createSoggyBot(mockWebhookService);
+		soggyBot = new SoggyBot(mockWebhookService);
 
 		// Patch the bot for testing
 		patchReplyBot(soggyBot, mockWebhookService);

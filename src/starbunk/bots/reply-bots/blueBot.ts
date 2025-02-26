@@ -69,6 +69,10 @@ class BlueBot extends ReplyBot {
 			return;
 		}
 	}
+
+	getBotName(): string {
+		return this.botName;
+	}
 }
 
 // Nice message trigger implementation
@@ -91,6 +95,4 @@ class NiceMessageTrigger implements TriggerCondition {
 	}
 }
 
-export default function createBlueBot(webhookService: WebhookService): ReplyBot {
-	return new BlueBot(webhookService);
-}
+export default BlueBot;

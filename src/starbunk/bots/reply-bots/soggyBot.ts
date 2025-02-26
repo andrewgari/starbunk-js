@@ -14,24 +14,19 @@ class WetBreadTrigger implements TriggerCondition {
 	}
 }
 
-// Interface for bot with properties needed by patchReplyBot helper
-interface BotWithProperties extends ReplyBot {
-	botName: string;
-	avatarUrl: string;
+class SoggyBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		super(
+			{ name: 'SoggyBot', avatarUrl: 'https://imgur.com/OCB6i4x.jpg' },
+			new WetBreadTrigger(/wet bread/i),
+			{ generateResponse: async () => 'Sounds like somebody enjoys wet bread' },
+			webhookService
+		);
+	}
+
+	getBotName(): string {
+		return 'SoggyBot';
+	}
 }
 
-export default function createSoggyBot(webhookService: WebhookService): ReplyBot {
-	const bot = new ReplyBot(
-		{ name: 'SoggyBot', avatarUrl: 'https://imgur.com/OCB6i4x.jpg' },
-		new WetBreadTrigger(/wet bread/i),
-		{ generateResponse: async () => 'Sounds like somebody enjoys wet bread' },
-		webhookService
-	);
-
-	// Add the properties to the bot instance for the patchReplyBot helper
-	const botWithProps = bot as unknown as BotWithProperties;
-	botWithProps.botName = 'SoggyBot';
-	botWithProps.avatarUrl = 'https://imgur.com/OCB6i4x.jpg';
-
-	return bot;
-}
+export default SoggyBot;

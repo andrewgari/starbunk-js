@@ -24,23 +24,6 @@ class LoggingSheeshResponse implements ResponseGenerator {
 	}
 }
 
-export default function createSheeshBot(webhookService: WebhookService): ReplyBot {
-	const identity: BotIdentity = {
-		name: 'Sheesh Bot',
-		avatarUrl: 'https://i.imgflip.com/5fc2iz.png?a471000'
-	};
-	const trigger = new CompositeTrigger([
-		new PatternTrigger(/\bshee+sh\b/i),
-		new PatternTrigger(/\bsheesh\b/i)
-	]);
-	const response = new CompositeSheeshResponse(
-		new RandomSheeshResponse(),
-		new LoggingSheeshResponse()
-	);
-
-	return new ReplyBot(identity, trigger, response, webhookService);
-}
-
 // Composite response generator that tries both responses
 class CompositeSheeshResponse implements ResponseGenerator {
 	constructor(
@@ -57,3 +40,31 @@ class CompositeSheeshResponse implements ResponseGenerator {
 		return this.variableResponse.generateResponse(message);
 	}
 }
+
+class SheeshBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		const identity: BotIdentity = {
+			name: 'Sheesh Bot',
+			avatarUrl: 'https://i.imgflip.com/5fc2iz.png?a471000'
+		};
+
+		const trigger = new CompositeTrigger([
+			new PatternTrigger(/\bshee+sh\b/i),
+			new PatternTrigger(/\bsheesh\b/i)
+		]);
+
+		const response = new CompositeSheeshResponse(
+			new RandomSheeshResponse(),
+			new LoggingSheeshResponse()
+		);
+
+		super(identity, trigger, response, webhookService);
+	}
+
+	getBotName(): string {
+		return 'Sheesh Bot';
+	}
+}
+
+// Export the SheeshBot class
+export default SheeshBot;

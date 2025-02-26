@@ -84,9 +84,11 @@ class BananaBot extends ReplyBot {
 		// Call the parent handleMessage method to use the trigger and response generator
 		return super.handleMessage(message);
 	}
+
+	getBotName(): string {
+		return this.botName || 'BananaBot';
+	}
 }
 
-// Factory function to create a BananaBot instance
-export default function createBananaBot(webhookService: WebhookService): BananaBot {
-	return new BananaBot(webhookService);
-}
+// Export the BananaBot class directly
+export default BananaBot;

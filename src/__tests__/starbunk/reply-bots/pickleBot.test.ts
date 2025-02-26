@@ -2,7 +2,7 @@ import { Message, TextChannel, User, Webhook } from 'discord.js';
 import { createMockMessage, createMockTextChannel } from '../../../__tests__/mocks/discordMocks';
 import UserID from '../../../discord/userID';
 import { TriggerCondition } from '../../../starbunk/bots/botTypes';
-import createPickleBot from '../../../starbunk/bots/reply-bots/pickleBot';
+import GremlinBot from '../../../starbunk/bots/reply-bots/pickleBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { WebhookService } from '../../../webhooks/webhookService';
 
@@ -71,7 +71,7 @@ describe('PickleBot', () => {
 			channel: mockChannel
 		};
 
-		pickleBot = createPickleBot(mockWebhookService);
+		pickleBot = new GremlinBot(mockWebhookService);
 		jest.clearAllMocks();
 	});
 

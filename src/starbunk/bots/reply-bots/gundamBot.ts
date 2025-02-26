@@ -1,51 +1,53 @@
-import { Message, TextChannel } from 'discord.js';
 import { WebhookService } from '../../../webhooks/webhookService';
-import { BotIdentity, PatternTrigger, StaticResponse } from '../botTypes';
+import { CompositeTrigger, PatternTrigger, RandomResponse } from '../botTypes';
 import ReplyBot from '../replyBot';
 
-// Custom GundamBot class that extends ReplyBot
-export class GundamBot extends ReplyBot {
-	// Properties needed for the patchReplyBot helper
-	botName = 'GundamBot';
-	avatarUrl = 'https://a1.cdn.japantravel.com/photo/41317-179698/1440x960!/tokyo-unicorn-gundam-statue-in-odaiba-179698.jpg';
+const responses = [
+	'You\'re going down, Patlabor!',
+	'Super Dimension Fortress. I feel small...',
+	'Get in the robot!',
+	'I\'ll destroy your Gundam!',
+	'I\'ll destroy you WITH my Gundam!',
+	'Let me show you the power of my Victory Gundam!',
+	'Trunks! Get back in your Gundam!',
+	'TRANS-AM!',
+	'Colony drop inbound!',
+	'This operation... you know what it means, don\'t you?',
+	'Char Aznable is waiting for you!',
+	'Launching the Keilas Guilie !!',
+	'In a Zaku? You\'re piloting a Zaku in this day and age? Mmm, you\'ve got guts...',
+	'Celestial Being, eliminating war, with war.',
+	'I AM GUNDAM!',
+	'I\'ll take this... G-ARMOR!',
+	'I\'ll make it. I\'ll make the machines with all my heart.',
+	'Titans! Let\'s go!',
+	'Together, we\'ll make a world without conflict!',
+	'Operation: Meteor has begun!'
+];
 
-	private readonly pattern = /\bg(u|a)ndam\b/i;
-	private readonly response = 'That\'s the famous Unicorn Robot, "Gandum". There, I said it.';
-
+class GundamBot extends ReplyBot {
 	constructor(webhookService: WebhookService) {
-		const identity: BotIdentity = {
-			name: 'GundamBot',
-			avatarUrl: 'https://a1.cdn.japantravel.com/photo/41317-179698/1440x960!/tokyo-unicorn-gundam-statue-in-odaiba-179698.jpg'
-		};
+		const trigger = new CompositeTrigger([
+			new PatternTrigger(/\b(gundam|mecha|robot|pacific rim|jaeger)\b/i)
+		]);
 
-		const trigger = new PatternTrigger(/\bg(u|a)ndam\b/i);
-		const responseGenerator = new StaticResponse('That\'s the famous Unicorn Robot, "Gandum". There, I said it.');
+		const responseGenerator = new RandomResponse(responses);
 
-		super(identity, trigger, responseGenerator, webhookService);
+		super(
+			{
+				name: 'GundamBot',
+				avatarUrl: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839584849930/gundam.png',
+			},
+			trigger,
+			responseGenerator,
+			webhookService
+		);
 	}
 
-	// Extract pattern matching logic for better testability
-	shouldReplyToMessage(content: string): boolean {
-		return !!content.match(this.pattern);
-	}
-
-	// Get the response for a message
-	getResponseForMessage(content: string): string | null {
-		return this.shouldReplyToMessage(content) ? this.response : null;
-	}
-
-	// Override handleMessage to ensure async behavior
-	async handleMessage(message: Message): Promise<void> {
-		if (message.author.bot) return;
-
-		const response = this.getResponseForMessage(message.content);
-		if (response) {
-			await this.sendReply(message.channel as TextChannel, response);
-		}
+	getBotName(): string {
+		return 'GundamBot';
 	}
 }
 
-// Factory function to create a GundamBot instance
-export default function createGundamBot(webhookService: WebhookService): ReplyBot {
-	return new GundamBot(webhookService);
-}
+// Export the GundamBot class
+export default GundamBot;

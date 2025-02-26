@@ -1,12 +1,27 @@
 import { WebhookService } from '../../../webhooks/webhookService';
-import { createSimpleBot } from '../botFactory';
+import { PatternTrigger, StaticResponse } from '../botTypes';
 import ReplyBot from '../replyBot';
 
-export default function createSigGreatBot(webhookService: WebhookService): ReplyBot {
-	return createSimpleBot({
-		name: 'SigBestBot',
-		avatarUrl: '',
-		pattern: /\b(sig|siggles) is best\b/i,
-		response: 'Man, Sig really is the best.'
-	}, webhookService);
+class SigBestBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		const trigger = new PatternTrigger(/\b(sig|siggles) is best\b/i);
+		const responseGenerator = new StaticResponse('Man, Sig really is the best.');
+
+		super(
+			{
+				name: 'SigBestBot',
+				avatarUrl: '',
+			},
+			trigger,
+			responseGenerator,
+			webhookService
+		);
+	}
+
+	getBotName(): string {
+		return 'SigBestBot';
+	}
 }
+
+// Export the SigBestBot class
+export default SigBestBot;

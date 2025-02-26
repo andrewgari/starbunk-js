@@ -11,7 +11,7 @@ const responses = [
 	'Try and keep up mate....',
 	'But Who really died that day.\n...and who came back?',
 	'Sheeeeeeeeeeeesh',
-	"Rats! Rats! Weeeeeeee're the Rats!",
+	"Rats! Rats! Weeeeeeeeee're the Rats!",
 	'The One Piece is REEEEEEEEEEEEEEEEEEAL',
 	'Psh, I dunno about that, Chief...',
 	'Come to me my noble EINHERJAHR',
@@ -31,28 +31,37 @@ const responses = [
 	'Blimbo',
 ];
 
-export default function createGuyBot(webhookService: WebhookService): ReplyBot {
-	const identity = new DynamicIdentity({
-		defaultName: 'GuyBot',
-		defaultAvatarUrl: '',
-		async updateIdentity(message: Message) {
-			const guy = await message.guild?.members.fetch(userID.Guy);
-			return {
-				name: guy?.nickname ?? guy?.displayName ?? 'GuyBot',
-				avatarUrl: guy?.avatarURL() ?? guy?.displayAvatarURL() ?? ''
-			};
-		}
-	});
+class GuyBot extends ReplyBot {
+	constructor(webhookService: WebhookService) {
+		const identity = new DynamicIdentity({
+			defaultName: 'GuyBot',
+			defaultAvatarUrl: '',
+			async updateIdentity(message: Message) {
+				const guy = await message.guild?.members.fetch(userID.Guy);
+				return {
+					name: guy?.nickname ?? guy?.displayName ?? 'GuyBot',
+					avatarUrl: guy?.avatarURL() ?? guy?.displayAvatarURL() ?? ''
+				};
+			}
+		});
 
-	const trigger = new CompositeTrigger([
-		new PatternTrigger(/\bguy\b/i),
-		new UserRandomTrigger(userID.Guy, 5)
-	]);
+		const trigger = new CompositeTrigger([
+			new PatternTrigger(/\bguy\b/i),
+			new UserRandomTrigger(userID.Guy, 5)
+		]);
 
-	const responseGenerator = new DynamicResponse(
-		identity,
-		new RandomResponse(responses)
-	);
+		const responseGenerator = new DynamicResponse(
+			identity,
+			new RandomResponse(responses)
+		);
 
-	return new ReplyBot(identity, trigger, responseGenerator, webhookService);
+		super(identity, trigger, responseGenerator, webhookService);
+	}
+
+	getBotName(): string {
+		return 'GuyBot';
+	}
 }
+
+// Export the GuyBot class
+export default GuyBot;

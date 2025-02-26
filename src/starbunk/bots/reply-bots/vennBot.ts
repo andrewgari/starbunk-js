@@ -1,94 +1,50 @@
-import { Message, TextChannel } from 'discord.js';
 import userID from '../../../discord/userID';
-import random from '../../../utils/random';
 import { WebhookService } from '../../../webhooks/webhookService';
-import { BotIdentity, TriggerCondition } from '../botTypes';
+import { CompositeTrigger, PatternTrigger, RandomResponse, UserRandomTrigger } from '../botTypes';
 import ReplyBot from '../replyBot';
 
-// Remove debug logging
-const VENN_RESPONSES = [
-	'Sorry, but that was über cringe...',
-	'Geez, that was hella cringe...',
-	'That was cringe to the max...',
-	'What a cringe thing to say...',
-	'Mondo cringe, man...',
-	"Yo that was the cringiest thing I've ever heard...",
-	'Your daily serving of cringe, milord...',
-	'On a scale of one to cringe, that was pretty cringe...',
-	'That was pretty cringe :airplane:',
-	'Wow, like....cringe much?',
-	'Excuse me, I seem to have dropped my cringe. Do you have it perchance?',
-	'Like I always say, that was pretty cringe...',
-	'C.R.I.N.G.E',
+const responses = [
+	'Oh no guys, it\'s in the other DPS now',
+	'Oh hey dude',
+	'Oh wait, I think I got it to work',
+	'Happy Birthday',
+	'Oh this fight',
+	'Oh this is the ez fight',
+	'Chillinhour',
+	'Taco Bell stream?',
+	'Oh, let me look',
+	'*Confused Venn Noises*',
+	'Wow, he actually did it',
+	'Actually, it\'s a great team comp',
+	'We can do it man',
+	'ez',
+	'Not to be TOO political, but...',
 ];
 
-// Custom VennBot implementation that extends ReplyBot directly
 class VennBot extends ReplyBot {
-	// Expose these properties for the patchReplyBot helper
-	botName = 'VennBot';
-	avatarUrl = '';
-
 	constructor(webhookService: WebhookService) {
-		// Create a simple identity
-		const identity: BotIdentity = {
-			name: 'VennBot',
-			avatarUrl: ''
-		};
+		const trigger = new CompositeTrigger([
+			new PatternTrigger(/\bvenn\b/i),
+			new UserRandomTrigger(userID.Venn, 5),
+		]);
 
-		// Create a trigger that only responds to Venn
-		const trigger: TriggerCondition = {
-			async shouldTrigger(message: Message): Promise<boolean> {
-				if (message.author.bot) return false;
+		const responseGenerator = new RandomResponse(responses);
 
-				// Only trigger for Venn
-				if (message.author.id !== userID.Venn) return false;
-
-				// Trigger on "cringe" or random chance
-				return /\bcringe\b/i.test(message.content) || random.percentChance(5);
-			}
-		};
-
-		// Create a response generator
-		const responseGenerator = {
-			async generateResponse(): Promise<string> {
-				return VENN_RESPONSES[random.roll(VENN_RESPONSES.length)];
-			}
-		};
-
-		super(identity, trigger, responseGenerator, webhookService);
+		super(
+			{
+				name: 'VennBot',
+				avatarUrl: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png',
+			},
+			trigger,
+			responseGenerator,
+			webhookService
+		);
 	}
 
-	// Override handleMessage to update identity before sending reply
-	async handleMessage(message: Message): Promise<void> {
-		if (message.author.bot || this.isSelf(message)) return;
-
-		// Only process messages from Venn
-		if (message.author.id !== userID.Venn) return;
-
-		// Check if we should trigger
-		const shouldTrigger = /\bcringe\b/i.test(message.content) || random.percentChance(5);
-		if (!shouldTrigger) return;
-
-		// Update identity to match Venn
-		const identity = this.getIdentity();
-		identity.name = message.author.displayName || message.author.username;
-		identity.avatarUrl = message.author.displayAvatarURL?.() ?? message.author.defaultAvatarURL;
-
-		// Also update the properties for the patchReplyBot helper
-		this.botName = identity.name;
-		this.avatarUrl = identity.avatarUrl;
-
-		// Generate response and send reply
-		const response = VENN_RESPONSES[random.roll(VENN_RESPONSES.length)];
-		await this.sendReply(message.channel as TextChannel, response);
+	getBotName(): string {
+		return 'VennBot';
 	}
 }
 
-export default function createVennBot(webhookService: WebhookService): ReplyBot {
-	return new VennBot(webhookService);
-}
-
-// Export static method for testing
-export function getRandomResponse(): string {
-	return VENN_RESPONSES[random.roll(VENN_RESPONSES.length)];
-}
+// Export the VennBot class
+export default VennBot;

@@ -41,7 +41,18 @@ export function createSimpleBot(
 		? new RandomResponse(config.response)
 		: new StaticResponse(config.response);
 
-	return new ReplyBot(identity, trigger, responseGenerator, webhookService);
+	const bot = new ReplyBot(identity, trigger, responseGenerator, webhookService);
+
+	// Add getBotName method to the bot instance
+	interface BotWithGetName extends ReplyBot {
+		getBotName(): string;
+	}
+
+	(bot as BotWithGetName).getBotName = function () {
+		return identity.name;
+	};
+
+	return bot as BotWithGetName;
 }
 
 export interface DynamicIdentityConfig {
