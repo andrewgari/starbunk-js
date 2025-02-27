@@ -13,6 +13,9 @@ export const Patterns = {
 	/** Matches "bluebot, say something nice about [name]" */
 	BLUEBOT_NICE_REQUEST_NAMED: /blue?bot,? say something nice about (?<n>.+$)/i,
 
+	/** Matches "bluebot say something mean about venn" */
+	BLUEBOT_MEAN_ABOUT_VENN: /blue?bot,? say something mean about venn/i,
+
 	/** Matches acknowledgments to blue bot */
 	BLUEBOT_ACKNOWLEDGMENT: /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i,
 
