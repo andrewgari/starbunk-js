@@ -4,18 +4,26 @@ import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks'
 import createPickleBot from '../../../starbunk/bots/reply-bots/pickleBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { OneCondition } from '../../../starbunk/bots/triggers/conditions/oneCondition';
+import { UserCondition } from '../../../starbunk/bots/triggers/conditions/userCondition';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
 
 // Mock the conditions to control their behavior in tests
 jest.mock('../../../starbunk/bots/triggers/conditions/oneCondition');
 jest.mock('../../../starbunk/bots/triggers/conditions/patternCondition');
 jest.mock('../../../starbunk/bots/triggers/conditions/randomChanceCondition');
+jest.mock('../../../starbunk/bots/triggers/conditions/userCondition');
+
+// Mock the UserID for Sig
+jest.mock('../../../discord/userID', () => ({
+	Sig: 'sig-user-id'
+}));
 
 describe('PickleBot', () => {
 	let pickleBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 	let mockOneCondition: jest.MockedClass<typeof OneCondition>;
+	let mockUserCondition: jest.Mock;
 
 	beforeEach(() => {
 		// Reset mocks
@@ -23,9 +31,11 @@ describe('PickleBot', () => {
 
 		// Setup mocks for conditions
 		mockOneCondition = OneCondition as jest.MockedClass<typeof OneCondition>;
+		mockUserCondition = UserCondition.prototype.shouldTrigger as jest.Mock;
 
 		// Mock the shouldTrigger method
-		mockOneCondition.prototype.shouldTrigger = jest.fn();
+		mockOneCondition.prototype.shouldTrigger = jest.fn().mockResolvedValue(false);
+		mockUserCondition.mockResolvedValue(false);
 
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
@@ -72,8 +82,15 @@ describe('PickleBot', () => {
 			);
 		});
 
-		it('should respond to random messages when random chance condition triggers', async () => {
-			mockMessage.content = 'some random message';
+		it('should respond to messages from Sig containing "gremlin"', async () => {
+			// Create a message from Sig with "gremlin"
+			const mockSigMember = createMockGuildMember('sig-user-id', 'Sig');
+			mockMessage.author = mockSigMember.user as User;
+			Object.defineProperty(mockMessage.author, 'id', {
+				value: 'sig-user-id',
+				configurable: true
+			});
+			mockMessage.content = 'I am a gremlin';
 
 			// Make the OneCondition trigger
 			mockOneCondition.prototype.shouldTrigger.mockResolvedValue(true);
@@ -89,7 +106,7 @@ describe('PickleBot', () => {
 			);
 		});
 
-		it('should NOT respond when neither condition triggers', async () => {
+		it('should NOT respond when no condition triggers', async () => {
 			mockMessage.content = 'some random message';
 
 			// Make the OneCondition not trigger

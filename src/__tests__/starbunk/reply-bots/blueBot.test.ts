@@ -3,6 +3,8 @@ import { createMockGuildMember, createMockMessage } from '../../../__tests__/moc
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import createBlueBot from '../../../starbunk/bots/reply-bots/blueBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
+import { CooldownCondition } from '../../../starbunk/bots/triggers/conditions/cooldownCondition';
+import { RecentMessageCondition } from '../../../starbunk/bots/triggers/conditions/recentMessageCondition';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
 
 // Mock the OpenAI client
@@ -12,12 +14,33 @@ jest.mock('@/openai/openaiClient', () => ({
 	}
 }));
 
+// Mock the RecentMessageCondition and CooldownCondition
+jest.mock('../../../starbunk/bots/triggers/conditions/recentMessageCondition');
+jest.mock('../../../starbunk/bots/triggers/conditions/cooldownCondition');
+
+// Mock the UserID for Venn
+jest.mock('../../../discord/userID', () => ({
+	Venn: 'venn-user-id'
+}));
+
 describe('BlueBot', () => {
 	let blueBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
 
+	// Mock implementations for the conditions
+	let mockRecentMessageCondition: jest.Mock;
+	let mockCooldownCondition: jest.Mock;
+
 	beforeEach(() => {
+		// Reset mocks
+		mockRecentMessageCondition = RecentMessageCondition.prototype.shouldTrigger as jest.Mock;
+		mockCooldownCondition = CooldownCondition.prototype.shouldTrigger as jest.Mock;
+
+		// Default behavior: recent message is false, cooldown is true
+		mockRecentMessageCondition.mockResolvedValue(false);
+		mockCooldownCondition.mockResolvedValue(true);
+
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
 		// Ensure the author has a displayName
@@ -124,11 +147,98 @@ describe('BlueBot', () => {
 			);
 		});
 
-		// Skip this test for now as it requires more complex mocking
-		it.skip('should respond to mean messages from Venn with Navy Seal copypasta', async () => {
-			// This test would need to mock the RecentMessageCondition and CooldownCondition
-			// which would require significant changes to the test setup
-			expect(true).toBe(true); // Placeholder assertion
+		it('should respond to mean messages from Venn with Navy Seal copypasta', async () => {
+			// Create a message from Venn with a mean message about blue
+			const mockVennMember = createMockGuildMember('venn-user-id', 'Venn');
+			mockMessage.author = mockVennMember.user as User;
+			Object.defineProperty(mockMessage.author, 'displayName', {
+				value: 'Venn',
+				configurable: true
+			});
+			Object.defineProperty(mockMessage.author, 'id', {
+				value: 'venn-user-id',
+				configurable: true
+			});
+			mockMessage.content = 'I hate blue, it\'s the worst bot ever';
+
+			// Configure mocks to allow the Navy Seal copypasta to trigger:
+			// 1. RecentMessageCondition should return true (bot said something within last 5 minutes)
+			// 2. CooldownCondition should return true (cooldown period has passed)
+			mockRecentMessageCondition.mockResolvedValue(true);
+			mockCooldownCondition.mockResolvedValue(true);
+
+			await blueBot.handleMessage(mockMessage as Message<boolean>);
+
+			// Verify the Navy Seal copypasta was sent
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					username: 'BlueBot',
+					avatarURL: 'https://imgur.com/WcBRCWn.png',
+					content: expect.stringContaining('What the fuck did you just fucking say about me')
+				})
+			);
+		});
+
+		it('should NOT respond with Navy Seal copypasta if RecentMessageCondition is false', async () => {
+			// Create a message from Venn with a mean message about blue
+			const mockVennMember = createMockGuildMember('venn-user-id', 'Venn');
+			mockMessage.author = mockVennMember.user as User;
+			Object.defineProperty(mockMessage.author, 'displayName', {
+				value: 'Venn',
+				configurable: true
+			});
+			Object.defineProperty(mockMessage.author, 'id', {
+				value: 'venn-user-id',
+				configurable: true
+			});
+			mockMessage.content = 'I hate blue, it\'s the worst bot ever';
+
+			// Configure mocks to prevent the Navy Seal copypasta from triggering:
+			// RecentMessageCondition should return false (bot didn't say something within last 5 minutes)
+			mockRecentMessageCondition.mockResolvedValue(false);
+			mockCooldownCondition.mockResolvedValue(true);
+
+			await blueBot.handleMessage(mockMessage as Message<boolean>);
+
+			// Verify the Navy Seal copypasta was NOT sent
+			expect(mockWebhookService.writeMessage).not.toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					content: expect.stringContaining('What the fuck did you just fucking say about me')
+				})
+			);
+		});
+
+		it('should NOT respond with Navy Seal copypasta if CooldownCondition is false', async () => {
+			// Create a message from Venn with a mean message about blue
+			const mockVennMember = createMockGuildMember('venn-user-id', 'Venn');
+			mockMessage.author = mockVennMember.user as User;
+			Object.defineProperty(mockMessage.author, 'displayName', {
+				value: 'Venn',
+				configurable: true
+			});
+			Object.defineProperty(mockMessage.author, 'id', {
+				value: 'venn-user-id',
+				configurable: true
+			});
+			mockMessage.content = 'I hate blue, it\'s the worst bot ever';
+
+			// Configure mocks to prevent the Navy Seal copypasta from triggering:
+			// RecentMessageCondition should return true (bot said something within last 5 minutes)
+			// CooldownCondition should return false (cooldown period hasn't passed - already sent within 24 hours)
+			mockRecentMessageCondition.mockResolvedValue(true);
+			mockCooldownCondition.mockResolvedValue(false);
+
+			await blueBot.handleMessage(mockMessage as Message<boolean>);
+
+			// Verify the Navy Seal copypasta was NOT sent
+			expect(mockWebhookService.writeMessage).not.toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					content: expect.stringContaining('What the fuck did you just fucking say about me')
+				})
+			);
 		});
 
 		it('should NOT respond to unrelated messages', async () => {

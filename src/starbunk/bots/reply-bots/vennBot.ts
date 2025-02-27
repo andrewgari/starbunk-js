@@ -1,13 +1,12 @@
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import ReplyBot from '../replyBot';
-import { OneCondition } from '../triggers/conditions/oneCondition';
-import { PatternCondition } from '../triggers/conditions/patternCondition';
-import { Patterns } from '../triggers/conditions/patterns';
+import { AllConditions } from '../triggers/conditions/allConditions';
 import { RandomChanceCondition } from '../triggers/conditions/randomChanceCondition';
+import { getVennCondition } from '../triggers/userConditions';
 
 /**
- * VennBot - A bot that responds to mentions of Venn or randomly to Venn's messages
+ * VennBot - A bot that responds to Venn's messages with a 5% chance
  */
 const responses = [
 	'Sorry, but that was über cringe...',
@@ -26,13 +25,16 @@ const responses = [
 ];
 
 export default function createVennBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
-	// Option 1: Using pattern condition and random chance separately
+	// Create conditions
+	const vennCondition = getVennCondition();
+	const randomChanceCondition = new RandomChanceCondition(5);
+
+	// Combine conditions - only trigger for Venn's messages with a 5% chance
+	const combinedCondition = new AllConditions(vennCondition, randomChanceCondition);
+
 	return new BotBuilder('VennBot', webhookServiceParam)
 		.withAvatar('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png')
-		.withCustomTrigger(new OneCondition(
-			new PatternCondition(Patterns.VENN_MENTION),
-			new RandomChanceCondition(5)
-		))
+		.withCustomTrigger(combinedCondition)
 		.respondsWithRandom(responses)
 		.build();
 }

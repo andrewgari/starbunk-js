@@ -3,14 +3,54 @@ import { createMockGuildMember, createMockMessage } from '../../../__tests__/moc
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import createVennBot from '../../../starbunk/bots/reply-bots/vennBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
+import { RandomChanceCondition } from '../../../starbunk/bots/triggers/conditions/randomChanceCondition';
+import { UserCondition } from '../../../starbunk/bots/triggers/conditions/userCondition';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
+
+// Mock the RandomChanceCondition to control the random behavior in tests
+jest.mock('../../../starbunk/bots/triggers/conditions/randomChanceCondition');
+
+// Mock the UserCondition to control the user check in tests
+jest.mock('../../../starbunk/bots/triggers/conditions/userCondition');
+
+// Mock the UserID for Venn
+jest.mock('../../../discord/userID', () => ({
+	Venn: 'venn-user-id'
+}));
+
+// Define the expected responses for easier testing
+const expectedResponses = [
+	'Sorry, but that was über cringe...',
+	'Geez, that was hella cringe...',
+	'That was cringe to the max...',
+	'What a cringe thing to say...',
+	'Mondo cringe, man...',
+	"Yo that was the cringiest thing I've ever heard...",
+	'Your daily serving of cringe, milord...',
+	'On a scale of one to cringe, that was pretty cringe...',
+	'That was pretty cringe :airplane:',
+	'Wow, like....cringe much?',
+	'Excuse me, I seem to have dropped my cringe. Do you have it perchance?',
+	'Like I always say, that was pretty cringe...',
+	'C.R.I.N.G.E',
+];
 
 describe('VennBot', () => {
 	let vennBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
 	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
+	let mockRandomChanceCondition: jest.Mock;
+	let mockUserCondition: jest.Mock;
 
 	beforeEach(() => {
+		// Reset mocks
+		mockRandomChanceCondition = RandomChanceCondition.prototype.shouldTrigger as jest.Mock;
+		mockUserCondition = UserCondition.prototype.shouldTrigger as jest.Mock;
+
+		// Default to not triggering
+		mockRandomChanceCondition.mockResolvedValue(false);
+		mockUserCondition.mockResolvedValue(false);
+
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
 		vennBot = createVennBot(mockWebhookService);
@@ -36,18 +76,25 @@ describe('VennBot', () => {
 		it('should ignore messages from bots', async () => {
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
-			mockMessage.content = 'venn';
+			mockMessage.content = 'Hello there';
 
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond to "venn" with a random cringe message when random chance is met', async () => {
-			// Mock Math.random to ensure the random chance is met
-			const originalRandom = Math.random;
-			Math.random = jest.fn().mockReturnValue(0.01); // Will trigger 5% chance
+		it('should respond to messages from Venn with a random cringe message when random chance is met', async () => {
+			// Create a message from Venn
+			const mockVennMember = createMockGuildMember('venn-user-id', 'Venn');
+			mockMessage.author = mockVennMember.user as User;
+			Object.defineProperty(mockMessage.author, 'id', {
+				value: 'venn-user-id',
+				configurable: true
+			});
+			mockMessage.content = 'Hello everyone!';
 
-			mockMessage.content = 'venn';
+			// Configure the conditions to trigger
+			mockUserCondition.mockResolvedValue(true);
+			mockRandomChanceCondition.mockResolvedValue(true);
 
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
@@ -55,27 +102,60 @@ describe('VennBot', () => {
 				expect.objectContaining({
 					username: 'VennBot',
 					avatarURL: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png',
-					content: expect.stringMatching(/cringe/i)
+					content: expect.stringMatching(new RegExp(expectedResponses.map(r => r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')))
 				})
 			);
-
-			// Restore original Math.random
-			Math.random = originalRandom;
 		});
 
-		// This test is skipped because it's difficult to reliably test random behavior
-		// The VennBot uses an OR condition between pattern matching and random chance
-		it.skip('should NOT respond to "venn" when random chance is not met', async () => {
-			// This test is skipped because it's difficult to reliably test random behavior
-			// In a real scenario, the bot might or might not respond based on random chance
+		it('should NOT respond to messages from Venn when random chance is not met', async () => {
+			// Create a message from Venn
+			const mockVennMember = createMockGuildMember('venn-user-id', 'Venn');
+			mockMessage.author = mockVennMember.user as User;
+			Object.defineProperty(mockMessage.author, 'id', {
+				value: 'venn-user-id',
+				configurable: true
+			});
+			mockMessage.content = 'Hello everyone!';
+
+			// Configure the UserCondition to trigger but RandomChanceCondition to not trigger
+			mockUserCondition.mockResolvedValue(true);
+			mockRandomChanceCondition.mockResolvedValue(false);
+
+			await vennBot.handleMessage(mockMessage as Message<boolean>);
+			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond to "VENN" (case insensitive) when random chance is met', async () => {
-			// Mock Math.random to ensure the random chance is met
-			const originalRandom = Math.random;
-			Math.random = jest.fn().mockReturnValue(0.01); // Will trigger 5% chance
+		it('should NOT respond to messages from other users regardless of content', async () => {
+			// Create a message from a non-Venn user
+			const mockOtherMember = createMockGuildMember('other-user-id', 'OtherUser');
+			mockMessage.author = mockOtherMember.user as User;
+			Object.defineProperty(mockMessage.author, 'id', {
+				value: 'other-user-id',
+				configurable: true
+			});
+			mockMessage.content = 'Hello everyone!';
 
-			mockMessage.content = 'VENN';
+			// Configure the UserCondition to not trigger but RandomChanceCondition to trigger
+			mockUserCondition.mockResolvedValue(false);
+			mockRandomChanceCondition.mockResolvedValue(true);
+
+			await vennBot.handleMessage(mockMessage as Message<boolean>);
+			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		});
+
+		it('should respond to messages from Venn containing any content when both conditions are met', async () => {
+			// Create a message from Venn with random content
+			const mockVennMember = createMockGuildMember('venn-user-id', 'Venn');
+			mockMessage.author = mockVennMember.user as User;
+			Object.defineProperty(mockMessage.author, 'id', {
+				value: 'venn-user-id',
+				configurable: true
+			});
+			mockMessage.content = 'This message has nothing to do with venn or cringe';
+
+			// Configure both conditions to trigger
+			mockUserCondition.mockResolvedValue(true);
+			mockRandomChanceCondition.mockResolvedValue(true);
 
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
@@ -83,62 +163,9 @@ describe('VennBot', () => {
 				expect.objectContaining({
 					username: 'VennBot',
 					avatarURL: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png',
-					content: expect.stringMatching(/cringe/i)
+					content: expect.stringMatching(new RegExp(expectedResponses.map(r => r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')))
 				})
 			);
-
-			// Restore original Math.random
-			Math.random = originalRandom;
-		});
-
-		it('should respond to "venn" in a sentence when random chance is met', async () => {
-			// Mock Math.random to ensure the random chance is met
-			const originalRandom = Math.random;
-			Math.random = jest.fn().mockReturnValue(0.01); // Will trigger 5% chance
-
-			mockMessage.content = 'I was talking to venn yesterday';
-
-			await vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel as TextChannel,
-				expect.objectContaining({
-					username: 'VennBot',
-					avatarURL: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png',
-					content: expect.stringMatching(/cringe/i)
-				})
-			);
-
-			// Restore original Math.random
-			Math.random = originalRandom;
-		});
-
-		it('should NOT respond to words containing "venn" as a substring', async () => {
-			// Mock Math.random to ensure the random chance would be met if pattern matched
-			const originalRandom = Math.random;
-			Math.random = jest.fn().mockReturnValue(0.01); // Would trigger 5% chance
-
-			// Use a word that contains "venn" but not as a standalone word
-			mockMessage.content = 'convention';
-
-			await vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-
-			// Restore original Math.random
-			Math.random = originalRandom;
-		});
-
-		it('should NOT respond to unrelated messages', async () => {
-			// Mock Math.random to ensure the random chance would be met if pattern matched
-			const originalRandom = Math.random;
-			Math.random = jest.fn().mockReturnValue(0.01); // Would trigger 5% chance
-
-			mockMessage.content = 'Hello there!';
-
-			await vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-
-			// Restore original Math.random
-			Math.random = originalRandom;
 		});
 	});
 });
