@@ -1,9 +1,9 @@
 import { Message, TextChannel, User } from 'discord.js';
-import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import createMusicCorrectBot from '../../../starbunk/bots/reply-bots/musicCorrectBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
+import { createMockGuildMember, createMockMessage } from '../../mocks/discordMocks';
+import { createMockWebhookService } from '../../mocks/serviceMocks';
 
 describe('MusicCorrectBot', () => {
 	let musicCorrectBot: ReplyBot;

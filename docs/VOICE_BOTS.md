@@ -167,7 +167,7 @@ export default class MusicAnnouncerBot implements VoiceBot {
 
 ## Testing Your Voice Bot
 
-Add a test in `src/__tests__/starbunk/bots/`:
+Add a test in `src/tests/starbunk/bots/`:
 
 ```typescript
 import { VoiceState, ChannelType } from 'discord.js';

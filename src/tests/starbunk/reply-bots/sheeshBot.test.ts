@@ -1,9 +1,9 @@
 import { Message, TextChannel, User } from 'discord.js';
-import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import createSheeshBot from '../../../starbunk/bots/reply-bots/sheeshBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
+import { createMockGuildMember, createMockMessage } from '../../mocks/discordMocks';
+import { createMockWebhookService } from '../../mocks/serviceMocks';
 
 // Mock Math.random to control the random behavior in tests
 const originalRandom = Math.random;

@@ -1,5 +1,5 @@
-import { createMockCommandInteraction } from '@/__tests__/mocks/discordMocks';
 import clearWebhooksCommand from '@/starbunk/commands/clearWebhooks';
+import { createMockCommandInteraction } from '@/tests/mocks/discordMocks';
 import { ChatInputCommandInteraction, Guild, Webhook } from 'discord.js';
 
 describe('ClearWebhooks Command', () => {

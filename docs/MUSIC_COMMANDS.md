@@ -152,7 +152,7 @@ export const repeatCommand: Command = {
 
 ## Testing Music Commands
 
-Add a test in `src/__tests__/starbunk/commands/`:
+Add a test in `src/tests/starbunk/commands/`:
 
 ```typescript
 import { mockInteraction, mockDJCova } from '../../testUtils';

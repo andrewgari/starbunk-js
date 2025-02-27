@@ -1,5 +1,5 @@
-import { createMockCommandInteraction } from '@/__tests__/mocks/discordMocks';
 import pingCommand from '@/starbunk/commands/ping';
+import { createMockCommandInteraction } from '@/tests/mocks/discordMocks';
 import { ChatInputCommandInteraction } from 'discord.js';
 
 describe('Ping Command', () => {

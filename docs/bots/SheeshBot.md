@@ -42,4 +42,4 @@ SheeshBot will not respond to:
 
 ## Testing
 
-SheeshBot has tests in `src/__tests__/starbunk/reply-bots/sheeshBot.test.ts` that verify its functionality.
+SheeshBot has tests in `src/tests/starbunk/reply-bots/sheeshBot.test.ts` that verify its functionality.

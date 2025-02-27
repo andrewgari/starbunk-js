@@ -42,4 +42,4 @@ SoggyBot will not respond to:
 
 ## Testing
 
-SoggyBot has tests in `src/__tests__/starbunk/reply-bots/soggyBot.test.ts` that verify its functionality.
+SoggyBot has tests in `src/tests/starbunk/reply-bots/soggyBot.test.ts` that verify its functionality.

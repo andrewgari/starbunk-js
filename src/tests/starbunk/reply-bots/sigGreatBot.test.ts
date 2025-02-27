@@ -1,9 +1,9 @@
 import { Message, TextChannel, User } from 'discord.js';
-import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import createSigGreatBot from '../../../starbunk/bots/reply-bots/sigGreatBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
+import { createMockGuildMember, createMockMessage } from '../../mocks/discordMocks';
+import { createMockWebhookService } from '../../mocks/serviceMocks';
 
 describe('SigGreatBot', () => {
 	let sigGreatBot: ReplyBot;

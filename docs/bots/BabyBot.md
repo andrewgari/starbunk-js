@@ -45,4 +45,4 @@ BabyBot will not respond to:
 
 ## Testing
 
-BabyBot has tests in `src/__tests__/starbunk/reply-bots/babyBot.test.ts` that verify its functionality.
+BabyBot has tests in `src/tests/starbunk/reply-bots/babyBot.test.ts` that verify its functionality.

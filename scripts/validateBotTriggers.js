@@ -50,8 +50,8 @@ function main() {
 
 	try {
 		// Import necessary modules
-		const { createMockMessage } = require('../dist/__tests__/mocks/discordMocks');
-		const { createMockWebhookService } = require('../dist/__tests__/mocks/serviceMocks');
+		const { createMockMessage } = require('../dist/tests/mocks/discordMocks');
+		const { createMockWebhookService } = require('../dist/tests/mocks/serviceMocks');
 
 		// Configure logger to be less verbose
 		const { Logger } = require('../dist/services/logger');

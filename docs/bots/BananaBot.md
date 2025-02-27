@@ -120,7 +120,7 @@ BananaBot will not respond to:
 
 ## Testing
 
-BananaBot has tests in `src/__tests__/starbunk/reply-bots/bananaBot.test.ts` that verify:
+BananaBot has tests in `src/tests/starbunk/reply-bots/bananaBot.test.ts` that verify:
 
 1. The bot's identity (name and avatar URL)
 2. The bot's response to messages containing "banana"

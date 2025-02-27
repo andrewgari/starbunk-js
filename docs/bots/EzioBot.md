@@ -42,4 +42,4 @@ EzioBot will not respond to:
 
 ## Testing
 
-EzioBot has tests in `src/__tests__/starbunk/reply-bots/ezioBot.test.ts` that verify its functionality.
+EzioBot has tests in `src/tests/starbunk/reply-bots/ezioBot.test.ts` that verify its functionality.

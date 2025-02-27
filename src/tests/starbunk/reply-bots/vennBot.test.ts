@@ -1,11 +1,11 @@
 import { Message, TextChannel, User } from 'discord.js';
-import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import createVennBot from '../../../starbunk/bots/reply-bots/vennBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { RandomChanceCondition } from '../../../starbunk/bots/triggers/conditions/randomChanceCondition';
 import { UserCondition } from '../../../starbunk/bots/triggers/conditions/userCondition';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
+import { createMockGuildMember, createMockMessage } from '../../mocks/discordMocks';
+import { createMockWebhookService } from '../../mocks/serviceMocks';
 
 // Mock the RandomChanceCondition to control the random behavior in tests
 jest.mock('../../../starbunk/bots/triggers/conditions/randomChanceCondition');

@@ -83,7 +83,7 @@ SpiderBot will not respond to:
 
 ## Testing
 
-SpiderBot has comprehensive tests in `src/__tests__/starbunk/reply-bots/spiderBot.test.ts` that verify:
+SpiderBot has comprehensive tests in `src/tests/starbunk/reply-bots/spiderBot.test.ts` that verify:
 
 1. The bot's identity (name and avatar URL)
 2. The bot's response to various spellings of "Spider-Man"

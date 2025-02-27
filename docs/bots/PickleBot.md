@@ -45,4 +45,4 @@ PickleBot will not respond to:
 
 ## Testing
 
-PickleBot has tests in `src/__tests__/starbunk/reply-bots/pickleBot.test.ts` that verify its functionality.
+PickleBot has tests in `src/tests/starbunk/reply-bots/pickleBot.test.ts` that verify its functionality.

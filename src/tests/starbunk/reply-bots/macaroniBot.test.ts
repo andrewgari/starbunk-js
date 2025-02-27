@@ -1,10 +1,10 @@
 import { Message, TextChannel, User } from 'discord.js';
-import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import userID from '../../../discord/userID';
 import createMacaroniBot from '../../../starbunk/bots/reply-bots/macaroniBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
+import { createMockGuildMember, createMockMessage } from '../../mocks/discordMocks';
+import { createMockWebhookService } from '../../mocks/serviceMocks';
 
 // Mock the userID and formatUserMention
 jest.mock('../../../discord/userID', () => ({

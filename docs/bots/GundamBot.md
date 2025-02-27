@@ -45,4 +45,4 @@ GundamBot will not respond to:
 
 ## Testing
 
-GundamBot has tests in `src/__tests__/starbunk/reply-bots/gundamBot.test.ts` that verify its functionality.
+GundamBot has tests in `src/tests/starbunk/reply-bots/gundamBot.test.ts` that verify its functionality.

@@ -59,7 +59,7 @@ this.replyBots = [
 
 ### 4. Create tests for your bot
 
-Create a test file in `src/__tests__/starbunk/reply-bots/myBot.test.ts`:
+Create a test file in `src/tests/starbunk/reply-bots/myBot.test.ts`:
 
 ```typescript
 import { Message, TextChannel, User } from 'discord.js';

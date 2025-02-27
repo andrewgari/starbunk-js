@@ -1,11 +1,11 @@
 import { Message, TextChannel, User } from 'discord.js';
-import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
-import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import createBlueBot from '../../../starbunk/bots/reply-bots/blueBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
 import { CooldownCondition } from '../../../starbunk/bots/triggers/conditions/cooldownCondition';
 import { RecentMessageCondition } from '../../../starbunk/bots/triggers/conditions/recentMessageCondition';
 import { patchReplyBot } from '../../helpers/replyBotHelper';
+import { createMockGuildMember, createMockMessage } from '../../mocks/discordMocks';
+import { createMockWebhookService } from '../../mocks/serviceMocks';
 
 // Mock the OpenAI client
 jest.mock('@/openai/openaiClient', () => ({

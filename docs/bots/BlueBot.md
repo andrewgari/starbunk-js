@@ -126,7 +126,7 @@ If an OpenAI API key is available, BlueBot can generate custom compliments about
 
 ## Testing
 
-BlueBot has comprehensive tests in `src/__tests__/starbunk/reply-bots/blueBot.test.ts` that verify:
+BlueBot has comprehensive tests in `src/tests/starbunk/reply-bots/blueBot.test.ts` that verify:
 
 1. The bot's identity (name and avatar URL)
 2. The bot's responses to various triggers

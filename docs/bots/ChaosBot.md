@@ -45,4 +45,4 @@ ChaosBot will not respond to:
 
 ## Testing
 
-ChaosBot has tests in `src/__tests__/starbunk/reply-bots/chaosBot.test.ts` that verify its functionality.
+ChaosBot has tests in `src/tests/starbunk/reply-bots/chaosBot.test.ts` that verify its functionality.

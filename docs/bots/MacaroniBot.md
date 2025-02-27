@@ -42,4 +42,4 @@ MacaroniBot will not respond to:
 
 ## Testing
 
-MacaroniBot has tests in `src/__tests__/starbunk/reply-bots/macaroniBot.test.ts` that verify its functionality.
+MacaroniBot has tests in `src/tests/starbunk/reply-bots/macaroniBot.test.ts` that verify its functionality.

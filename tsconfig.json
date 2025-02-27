@@ -38,7 +38,7 @@
 		"*.{js,ts}",
 		"process-env.d.ts",
 		"macaroniBot.test.ts",
-		"src/__tests__",
+		"src/tests",
 		"examples/bots/exampleBot.ts"
 	],
 	"exclude": ["node_modules", "dist"]
