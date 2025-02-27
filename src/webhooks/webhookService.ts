@@ -32,8 +32,63 @@ export class WebhookService {
 		});
 	}
 
-	public async writeMessage(channel: TextChannel, message: MessageInfo): Promise<Message<boolean>> {
+	/**
+	 * Send a message using a webhook
+	 * @param channel The channel to send the message to
+	 * @param message The message info to send
+	 * @returns The sent message
+	 */
+	public async writeMessage(channel: TextChannel, message: MessageInfo): Promise<Message<boolean>>;
+
+	/**
+	 * Send a message using a webhook
+	 * @param channelId The ID of the channel to send the message to
+	 * @param content The content of the message
+	 * @param username The username to display for the webhook
+	 * @param avatarURL The avatar URL to use for the webhook
+	 * @returns The sent message
+	 */
+	public async writeMessage(
+		channelId: string,
+		content: string,
+		username: string,
+		avatarURL: string
+	): Promise<Message<boolean>>;
+
+	// Implementation that handles both overloads
+	public async writeMessage(
+		channelOrId: TextChannel | string,
+		messageOrContent: MessageInfo | string,
+		username?: string,
+		avatarURL?: string
+	): Promise<Message<boolean>> {
 		try {
+			// Handle the new overload
+			if (typeof channelOrId === 'string' && typeof messageOrContent === 'string') {
+				// Get the channel from the ID
+				const client = require('../discord/client').default;
+				const channel = await client.channels.fetch(channelOrId) as TextChannel;
+
+				// Create the message info
+				const messageInfo: MessageInfo = {
+					content: messageOrContent,
+					username: username || 'Bot',
+					avatarURL: avatarURL || '',
+					embeds: []
+				};
+
+				// Send the message
+				const webhook = await this.getChannelWebhook(channel);
+				if (webhook) {
+					return await webhook.send(messageInfo);
+				}
+				return Promise.reject('Could not find webhook');
+			}
+
+			// Handle the original overload
+			const channel = channelOrId as TextChannel;
+			const message = messageOrContent as MessageInfo;
+
 			const webhook = await this.getChannelWebhook(channel);
 			if (webhook) {
 				return await webhook.send(message);

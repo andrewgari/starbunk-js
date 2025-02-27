@@ -1,9 +1,9 @@
 import { Message, TextChannel, User } from 'discord.js';
-import { patchReplyBot } from '../../../__tests__/helpers/replyBotHelper';
-import { createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
 import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
 import createSpiderBot from '../../../starbunk/bots/reply-bots/spiderBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
+import { patchReplyBot } from '../../helpers/replyBotHelper';
 
 describe('SpiderBot', () => {
 	let spiderBot: ReplyBot;
@@ -12,79 +12,129 @@ describe('SpiderBot', () => {
 
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
-		mockMessage = createMockMessage();
+		mockMessage = createMockMessage('TestUser');
 		spiderBot = createSpiderBot(mockWebhookService);
-
-		// Patch the sendReply method for synchronous testing
 		patchReplyBot(spiderBot, mockWebhookService);
-
-		jest.useRealTimers();
-	});
-
-	afterEach(() => {
-		jest.clearAllMocks();
 	});
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
-			expect(spiderBot.getIdentity().name).toBe('Spider-Bot');
+			const identity = spiderBot.getIdentity();
+			expect(identity.name).toBe('Spider-Bot');
 		});
 
 		it('should have correct avatar URL', () => {
-			expect(spiderBot.getIdentity().avatarUrl).toBe('https://i.pinimg.com/736x/33/e0/06/33e00653eb485455ce5121b413b26d3b.jpg');
+			const identity = spiderBot.getIdentity();
+			expect(identity.avatarUrl).toBe('https://i.pinimg.com/736x/33/e0/06/33e00653eb485455ce5121b413b26d3b.jpg');
 		});
 	});
 
 	describe('message handling', () => {
+		const expectedResponse = "Hey, it's \"**Spider-Man**\"! Don't forget the hyphen! Not Spiderman, that's dumb";
+
 		const expectedMessageOptions = {
 			username: 'Spider-Bot',
 			avatarURL: 'https://i.pinimg.com/736x/33/e0/06/33e00653eb485455ce5121b413b26d3b.jpg',
-			content: "Hey, it's \"**Spider-Man**\"! Don't forget the hyphen! Not Spiderman, that's dumb",
+			content: expectedResponse,
 			embeds: []
 		};
 
 		it('should ignore messages from bots', async () => {
-			mockMessage.author = {
-				bot: true,
-				id: '123',
-				username: 'test',
-				discriminator: '1234',
-				avatar: 'test',
-				system: false
-			} as unknown as User;
+			const mockMember = createMockGuildMember('bot-id', 'BotUser');
+			mockMessage.author = { ...mockMember.user, bot: true } as User;
+			mockMessage.content = 'spiderman';
+
 			await spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond to "spiderman"', async () => {
+		it('should respond to "spiderman" (no hyphen)', async () => {
 			mockMessage.content = 'spiderman';
+
 			await spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
-				expectedMessageOptions
+				expect.objectContaining({
+					username: expectedMessageOptions.username,
+					avatarURL: expectedMessageOptions.avatarURL,
+					content: expectedMessageOptions.content
+				})
 			);
 		});
 
-		it('should respond to "spider man"', async () => {
+		it('should respond to "Spiderman" (case insensitive)', async () => {
+			mockMessage.content = 'Spiderman';
+
+			await spiderBot.handleMessage(mockMessage as Message<boolean>);
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					username: expectedMessageOptions.username,
+					avatarURL: expectedMessageOptions.avatarURL,
+					content: expectedMessageOptions.content
+				})
+			);
+		});
+
+		it('should respond to "SPIDERMAN" (all caps)', async () => {
+			mockMessage.content = 'SPIDERMAN';
+
+			await spiderBot.handleMessage(mockMessage as Message<boolean>);
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					username: expectedMessageOptions.username,
+					avatarURL: expectedMessageOptions.avatarURL,
+					content: expectedMessageOptions.content
+				})
+			);
+		});
+
+		it('should respond to "spider man" (with space instead of hyphen)', async () => {
 			mockMessage.content = 'spider man';
+
 			await spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
-				expectedMessageOptions
+				expect.objectContaining({
+					username: expectedMessageOptions.username,
+					avatarURL: expectedMessageOptions.avatarURL,
+					content: expectedMessageOptions.content
+				})
 			);
 		});
 
-		it('should respond to "spider-man"', async () => {
+		it('should respond when "spiderman" is part of a sentence', async () => {
+			mockMessage.content = 'I love spiderman movies!';
+
+			await spiderBot.handleMessage(mockMessage as Message<boolean>);
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					username: expectedMessageOptions.username,
+					avatarURL: expectedMessageOptions.avatarURL,
+					content: expectedMessageOptions.content
+				})
+			);
+		});
+
+		it('should NOT respond to "spider-man" (correct hyphenation)', async () => {
 			mockMessage.content = 'spider-man';
+
 			await spiderBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel as TextChannel,
-				expectedMessageOptions
-			);
+			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should not respond to unrelated messages', async () => {
-			mockMessage.content = 'hello world';
+		it('should NOT respond to "Spider-Man" (correct hyphenation, case insensitive)', async () => {
+			mockMessage.content = 'Spider-Man';
+
+			await spiderBot.handleMessage(mockMessage as Message<boolean>);
+			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		});
+
+		it('should NOT respond to unrelated messages', async () => {
+			mockMessage.content = 'Hello there!';
+
 			await spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});

@@ -1,5 +1,5 @@
-import { WebhookService } from '@/webhooks/webhookService';
 import { AudioPlayerStatus, PlayerSubscription, VoiceConnection, VoiceConnectionStatus } from '@discordjs/voice';
+import { WebhookService } from '../../webhooks/webhookService';
 
 interface AudioService {
 	play: () => Promise<void>;

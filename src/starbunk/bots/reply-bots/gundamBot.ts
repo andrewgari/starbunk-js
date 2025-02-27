@@ -1,40 +1,15 @@
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
-import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
-
+import { Patterns } from '../triggers/conditions/patterns'; // Importing the Patterns enum from the patterns file
 /**
- * GundamBot - A bot that responds to mentions of Gundam, mecha, robot, etc.
+ * GundamBot - A bot that responds to mentions of Gundam or Gandam
  */
-const responses = [
-	'You\'re going down, Patlabor!',
-	'Super Dimension Fortress. I feel small...',
-	'Get in the robot!',
-	'I\'ll destroy your Gundam!',
-	'I\'ll destroy you WITH my Gundam!',
-	'Let me show you the power of my Victory Gundam!',
-	'Trunks! Get back in your Gundam!',
-	'TRANS-AM!',
-	'Colony drop inbound!',
-	'This operation... you know what it means, don\'t you?',
-	'Char Aznable is waiting for you!',
-	'Launching the Keilas Guilie !!',
-	'In a Zaku? You\'re piloting a Zaku in this day and age? Mmm, you\'ve got guts...',
-	'Celestial Being, eliminating war, with war.',
-	'I AM GUNDAM!',
-	'I\'ll take this... G-ARMOR!',
-	'I\'ll make it. I\'ll make the machines with all my heart.',
-	'Titans! Let\'s go!',
-	'Together, we\'ll make a world without conflict!',
-	'Operation: Meteor has begun!'
-];
 
 export default function createGundamBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
-	const gundamCondition = new PatternCondition(Patterns.GUNDAM);
-
 	return new BotBuilder('GundamBot', webhookServiceParam)
 		.withAvatar('https://cdn.discordapp.com/attachments/854790294253117531/902975839584849930/gundam.png')
-		.withCustomTrigger(gundamCondition)
-		.respondsWithRandom(responses)
+		.withPatternTrigger(Patterns.GUNDAM)
+		.respondsWithStatic("That's the giant unicorn robot gandam, there i said it")
 		.build();
 }

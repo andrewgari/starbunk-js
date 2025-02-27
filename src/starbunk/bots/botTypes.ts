@@ -1,5 +1,4 @@
 import { Message } from 'discord.js';
-import Random from '../../utils/random';
 
 export interface BotIdentity {
 	name: string;
@@ -11,7 +10,16 @@ export interface TriggerCondition {
 }
 
 export interface ResponseGenerator {
-	generateResponse(message: Message): Promise<string>;
+	generateResponse(message: Message): Promise<string | null>;
+}
+
+/**
+ * Interface for condition response data
+ */
+export interface ConditionResponseData {
+	responseGenerator: ResponseGenerator;
+	identity?: Partial<BotIdentity>;
+	[key: string]: unknown;
 }
 
 // Simple pattern-based trigger
@@ -23,35 +31,18 @@ export class PatternTrigger implements TriggerCondition {
 	}
 }
 
-// Random chance trigger for specific user
-export class UserRandomTrigger implements TriggerCondition {
-	constructor(private userId: string, private chance: number) { }
-
-	async shouldTrigger(message: Message): Promise<boolean> {
-		return message.author.id === this.userId && Random.percentChance(this.chance);
-	}
-}
-
-// Combines multiple triggers with OR logic
-export class CompositeTrigger implements TriggerCondition {
-	constructor(private triggers: TriggerCondition[]) { }
-
-	async shouldTrigger(message: Message): Promise<boolean> {
-		for (const trigger of this.triggers) {
-			if (await trigger.shouldTrigger(message)) {
-				return true;
-			}
-		}
-		return false;
-	}
-}
-
 // Simple single response
 export class StaticResponse implements ResponseGenerator {
 	constructor(private response: string) { }
 
-	async generateResponse(): Promise<string> {
-		return this.response;
+	async generateResponse(message: Message): Promise<string> {
+		// Replace {username} with the message author's username or displayName
+		let formattedResponse = this.response;
+		if (message && message.author) {
+			const username = message.author.globalName || message.author.username || 'User';
+			formattedResponse = formattedResponse.replace(/{username}/g, username);
+		}
+		return formattedResponse;
 	}
 }
 

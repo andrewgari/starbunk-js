@@ -1,17 +1,15 @@
-import webhookService from '../../../webhooks/webhookService';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
-import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
+import { Patterns } from '../triggers/conditions/patterns';
 
 /**
  * SigGreatBot - A bot that responds to "Sig best" with "The greatest".
  */
-export default function createSigGreatBot(): ReplyBot {
-	const sigGreatCondition = new PatternCondition(Patterns.SIG_GREAT);
-
-	return new BotBuilder('SigGreatBot', webhookService)
+export default function createSigGreatBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	return new BotBuilder('SigGreatBot', webhookServiceParam)
 		.withAvatar('https://static.wikia.nocookie.net/chrono/images/a/a5/Serge2.png')
-		.withCustomTrigger(sigGreatCondition)
+		.withPatternTrigger(Patterns.SIG_GREAT)
 		.respondsWithStatic('The greatest.')
 		.build();
 }

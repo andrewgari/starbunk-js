@@ -4,9 +4,10 @@ import random from '../../../utils/random';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import { BotIdentity, TriggerCondition } from '../botTypes';
-import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
-
+import { OneCondition } from '../triggers/conditions/oneCondition';
+import { PatternCondition } from '../triggers/conditions/patternCondition';
+import { Patterns } from '../triggers/conditions/patterns';
 // Define the responses as a constant outside the class
 export const BANANA_RESPONSES = [
 	"Always bring a :banana: to a party, banana's are good!",
@@ -49,11 +50,12 @@ export default function createBananaBot(webhookServiceParam: WebhookService = we
 	const bananaCondition = new PatternCondition(Patterns.BANANA);
 	const vennRandomTrigger = new VennRandomTrigger(5);
 
+	const oneCondition = new OneCondition(bananaCondition, vennRandomTrigger);
+
 	// Create and return the bot using the builder pattern
 	return new BotBuilder('BananaBot', webhookServiceParam)
 		// Add custom triggers
-		.withCustomTrigger(bananaCondition)
-		.withCustomTrigger(vennRandomTrigger)
+		.withCustomTrigger(oneCondition)
 		// Set up dynamic identity that updates based on the message sender
 		.withDynamicIdentity('', updateIdentity)
 		// Set responses

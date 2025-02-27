@@ -1,95 +1,42 @@
 import { Message } from 'discord.js';
 import { OpenAI } from 'openai';
-import { Logger } from '../../../services/logger';
-import { TriggerCondition } from '../botTypes';
-import { isBot } from './userConditions';
-
-/**
- * BluBot-specific triggers
- * This file contains trigger conditions specifically designed for BluBot
- */
-
-/**
- * Trigger for Venn insults
- * Used by BluBot to respond to Venn with the Navy Seal copypasta
- *
- * Note: The time-based rate limiting is now handled in the BluBot class
- */
-export class VennInsultTrigger implements TriggerCondition {
-	private pattern = /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i;
-
-	async shouldTrigger(message: Message): Promise<boolean> {
-		if (isBot(message)) return false;
-
-		// Only check if the message contains the mean pattern
-		// The BluBot class will handle checking if it's from Venn and the time limits
-		return this.pattern.test(message.content);
-	}
-}
-
-/**
- * Composite trigger that combines multiple triggers with OR logic
- * Used by BluBot to check multiple trigger conditions
- */
-export class CompositeTrigger implements TriggerCondition {
-	constructor(private triggers: TriggerCondition[]) { }
-
-	async shouldTrigger(message: Message): Promise<boolean> {
-		for (const trigger of this.triggers) {
-			if (await trigger.shouldTrigger(message)) {
-				return true;
-			}
-		}
-		return false;
-	}
-}
-
-/**
- * Composite trigger that combines multiple triggers with AND logic
- */
-export class AllConditionsTrigger implements TriggerCondition {
-	constructor(private triggers: TriggerCondition[]) { }
-
-	async shouldTrigger(message: Message): Promise<boolean> {
-		for (const trigger of this.triggers) {
-			if (!(await trigger.shouldTrigger(message))) {
-				return false;
-			}
-		}
-		return true;
-	}
-}
-
-/**
- * Trigger that negates another trigger
- */
-export class NotTrigger implements TriggerCondition {
-	constructor(private trigger: TriggerCondition) { }
-
-	async shouldTrigger(message: Message): Promise<boolean> {
-		return !(await this.trigger.shouldTrigger(message));
-	}
-}
+import { TriggerCondition } from '../../botTypes';
 
 /**
  * AI-powered trigger that uses OpenAI to detect references to blue
+ *
  * This is a more sophisticated trigger that can catch subtle or indirect references
+ * to the color blue in messages.
  *
  * IMPORTANT: This trigger is ONLY for use by BluBot. Do not use in other bots.
  * The OpenAI integration is specifically designed for BluBot's behavior.
  */
 export class BlueAICondition implements TriggerCondition {
+	/**
+   * Creates a new BlueAICondition instance
+   *
+   * @param openAIClient - The OpenAI client to use for AI-powered detection
+   */
 	constructor(private openAIClient: OpenAI) { }
 
+	/**
+   * Checks if the message should trigger based on AI detection of blue references
+   *
+   * @param message - The Discord message to check
+   * @returns True if the AI detects a reference to blue, false otherwise
+   */
 	async shouldTrigger(message: Message): Promise<boolean> {
-		if (isBot(message)) return false;
-
 		return this.checkIfBlueIsSaid(message);
 	}
 
+	/**
+   * Checks if the message contains a reference to the color blue using AI
+   *
+   * @param message - The Discord message to analyze
+   * @returns True if the AI determines the message refers to blue, false otherwise
+   */
 	protected async checkIfBlueIsSaid(message: Message): Promise<boolean> {
 		try {
-			Logger.debug('Checking message for blue references via AI');
 			const response = await this.openAIClient.chat.completions.create({
 				model: 'gpt-4o-mini',
 				messages: [
@@ -135,10 +82,8 @@ export class BlueAICondition implements TriggerCondition {
 				temperature: 0.2,
 			});
 
-			Logger.debug(`AI response: ${response.choices[0].message.content}`);
 			return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
 		} catch (error) {
-			Logger.error('Error checking for blue reference', error as Error);
 			return false;
 		}
 	}

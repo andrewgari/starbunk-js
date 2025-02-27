@@ -1,14 +1,11 @@
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
-import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
-
+import { Patterns } from '../triggers/conditions/patterns';
 export default function createHoldBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
-	const holdCondition = new PatternCondition(Patterns.HOLD);
-
 	return new BotBuilder('HoldBot', webhookServiceParam)
 		.withAvatar('https://i.imgur.com/YPFGEzM.png')
-		.withCustomTrigger(holdCondition)
+		.withPatternTrigger(Patterns.HOLD)
 		.respondsWithStatic('Hold.')
 		.build();
 }

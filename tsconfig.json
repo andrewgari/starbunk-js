@@ -3,7 +3,7 @@
 		/* Language and Environment */
 		"target": "ES2021",
 		"module": "commonjs",
-		"rootDir": "./src/",
+		"rootDir": "./",
 		"outDir": "./dist/",
 
 		/* Type Checking */
@@ -38,7 +38,10 @@
 		"*.{js,ts}",
 		"process-env.d.ts",
 		"macaroniBot.test.ts",
-		"src/__tests__"
+		"src/__tests__",
+		"examples/bots/exampleBot.ts",
+		"examples/bots/replyBot.test.ts",
+		"examples/bots/exampleBot.test.ts"
 	],
 	"exclude": ["node_modules", "dist"]
 }

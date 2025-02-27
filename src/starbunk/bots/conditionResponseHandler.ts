@@ -2,18 +2,29 @@ import { Message } from 'discord.js';
 import { ResponseGenerator, TriggerCondition } from './botTypes';
 
 /**
- * Represents a condition-response pair for handling messages
+ * A pair of condition and response
  */
 export interface ConditionResponsePair {
+	/**
+	 * The response generator to use when the condition matches
+	 */
+	responseGenerator: ResponseGenerator;
+
+	/**
+	 * The condition that determines if this response should be used
+	 * Returns true if the condition matches
+	 */
 	condition: (message: Message) => Promise<boolean>;
-	response: ResponseGenerator;
-	onMatch?: () => void; // Optional callback for when this pair matches
+
+	/**
+	 * Optional callback to run when this condition matches
+	 */
+	onMatch?: (message: Message) => Promise<void>;
 }
 
 /**
- * A response generator that handles prioritized condition-response pairs
- * This allows for cleaner, more declarative bot logic by pairing conditions
- * directly with their responses
+ * A handler for condition-response pairs
+ * This allows for a more declarative approach to defining bot behavior
  */
 export class ConditionResponseHandler implements ResponseGenerator {
 	private pairs: ConditionResponsePair[] = [];
@@ -27,14 +38,21 @@ export class ConditionResponseHandler implements ResponseGenerator {
 	}
 
 	/**
-	 * Add a new condition-response pair with the highest priority
-	 * @param response The response generator to use when the condition matches
-	 * @param condition The condition function that determines if this pair should be used
-	 * @param onMatch Optional callback to execute when this pair matches
+	 * Add a condition-response pair
+	 * @param responseGenerator The response generator to use when the condition matches
+	 * @param condition The condition that determines if this response should be used
+	 * @param onMatch Optional callback to run when this condition matches
 	 */
-	addPair(response: ResponseGenerator, condition: (message: Message) => Promise<boolean>, onMatch?: () => void): this {
-		this.pairs.push({ condition, response, onMatch });
-		return this;
+	addPair(
+		responseGenerator: ResponseGenerator,
+		condition: (message: Message) => Promise<boolean>,
+		onMatch?: (message: Message) => Promise<void>
+	): void {
+		this.pairs.push({
+			responseGenerator,
+			condition,
+			onMatch
+		});
 	}
 
 	/**
@@ -43,27 +61,78 @@ export class ConditionResponseHandler implements ResponseGenerator {
 	 * @param trigger The trigger condition that determines if this pair should be used
 	 * @param onMatch Optional callback to execute when this pair matches
 	 */
-	addTriggerPair(response: ResponseGenerator, trigger: TriggerCondition, onMatch?: () => void): this {
-		return this.addPair(response, (message) => trigger.shouldTrigger(message), onMatch);
+	addTriggerPair(response: ResponseGenerator, trigger: TriggerCondition, onMatch?: (message: Message) => Promise<void>): void {
+		// Convert the trigger to a condition function
+		const condition = (message: Message): Promise<boolean> => trigger.shouldTrigger(message);
+
+		// Add the pair
+		this.addPair(response, condition, onMatch);
 	}
 
 	/**
-	 * Generate a response based on the first matching condition
-	 * @param message The Discord message to respond to
-	 * @returns The generated response, or empty string if no conditions match
+	 * Generate a response for a message
+	 * @param message The message to generate a response for
+	 * @returns The generated response, or null if no condition matches
 	 */
-	async generateResponse(message: Message): Promise<string> {
-		// Check each condition-response pair in priority order
-		for (const pair of this.pairs) {
+	async generateResponse(message: Message): Promise<string | null> {
+		// Check each pair in reverse order (last added has highest priority)
+		for (let i = this.pairs.length - 1; i >= 0; i--) {
+			const pair = this.pairs[i];
 			if (await pair.condition(message)) {
-				// Call the onMatch callback if provided
+				// Run the onMatch callback if provided
 				if (pair.onMatch) {
-					pair.onMatch();
+					await pair.onMatch(message);
 				}
-				return await pair.response.generateResponse(message);
+
+				// Generate the response
+				return pair.responseGenerator.generateResponse(message);
 			}
 		}
 
-		return '';
+		return null;
+	}
+
+	/**
+	 * Find all matching responses for a message
+	 * @param message The message to generate responses for
+	 * @returns Array of matching response generators
+	 */
+	async findAllMatches(message: Message): Promise<ResponseGenerator[]> {
+		const matches: ResponseGenerator[] = [];
+
+		// Check each pair in reverse order (last added has highest priority)
+		for (let i = this.pairs.length - 1; i >= 0; i--) {
+			const pair = this.pairs[i];
+			if (await pair.condition(message)) {
+				// Run the onMatch callback if provided
+				if (pair.onMatch) {
+					await pair.onMatch(message);
+				}
+
+				matches.push(pair.responseGenerator);
+			}
+		}
+
+		return matches;
+	}
+
+	/**
+	 * Generate all matching responses for a message
+	 * @param message The message to generate responses for
+	 * @returns Array of generated responses (non-null only)
+	 */
+	async generateAllResponses(message: Message): Promise<string[]> {
+		const responses: string[] = [];
+		const matches = await this.findAllMatches(message);
+
+		// Generate responses from all matches
+		for (const responseGen of matches) {
+			const response = await responseGen.generateResponse(message);
+			if (response !== null) {
+				responses.push(response);
+			}
+		}
+
+		return responses;
 	}
 }

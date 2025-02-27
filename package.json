@@ -55,6 +55,7 @@
 		"ytdl-core": "^4.11.5"
 	},
 	"devDependencies": {
+		"@testing-library/jest-dom": "^6.6.3",
 		"@types/jest": "^29.5.14",
 		"@types/module-alias": "^2.0.4",
 		"@types/node": "^20.17.14",

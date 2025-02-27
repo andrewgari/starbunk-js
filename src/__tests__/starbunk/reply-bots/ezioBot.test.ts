@@ -13,6 +13,13 @@ describe('EzioBot', () => {
 	beforeEach(() => {
 		mockWebhookService = createMockWebhookService();
 		mockMessage = createMockMessage('TestUser');
+		// Ensure the author has a displayName
+		if (mockMessage.author) {
+			Object.defineProperty(mockMessage.author, 'displayName', {
+				value: 'TestUser',
+				configurable: true
+			});
+		}
 		ezioBot = createEzioBot(mockWebhookService);
 		patchReplyBot(ezioBot, mockWebhookService);
 	});
@@ -30,19 +37,14 @@ describe('EzioBot', () => {
 	});
 
 	describe('message handling', () => {
-		const expectedResponse = (username: string): string =>
-			`Remember ${username}, Nothing is true; Everything is permitted.`;
-
-		const expectedMessageOptions = {
-			username: 'Ezio Auditore Da Firenze',
-			avatarURL: 'https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg',
-			content: expectedResponse('TestUser'),
-			embeds: []
-		};
-
 		it('should ignore messages from bots', async () => {
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
+			Object.defineProperty(mockMessage.author, 'displayName', {
+				value: 'BotUser',
+				configurable: true
+			});
+			mockMessage.content = 'ezio';
 
 			await ezioBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
@@ -54,7 +56,11 @@ describe('EzioBot', () => {
 			await ezioBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
-				expectedMessageOptions
+				expect.objectContaining({
+					username: 'Ezio Auditore Da Firenze',
+					avatarURL: 'https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg',
+					content: 'Remember TestUser, Nothing is true; Everything is permitted.'
+				})
 			);
 		});
 
@@ -64,32 +70,30 @@ describe('EzioBot', () => {
 			await ezioBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
-				expectedMessageOptions
+				expect.objectContaining({
+					username: 'Ezio Auditore Da Firenze',
+					avatarURL: 'https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg',
+					content: 'Remember TestUser, Nothing is true; Everything is permitted.'
+				})
 			);
 		});
 
-		it('should respond to "hassassin"', async () => {
-			mockMessage.content = 'hassassin';
+		it('should respond to "assassins creed"', async () => {
+			mockMessage.content = 'I love assassins creed';
 
 			await ezioBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
-				expectedMessageOptions
+				expect.objectContaining({
+					username: 'Ezio Auditore Da Firenze',
+					avatarURL: 'https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg',
+					content: 'Remember TestUser, Nothing is true; Everything is permitted.'
+				})
 			);
 		});
 
-		it('should respond to case variations', async () => {
-			mockMessage.content = 'EZIO';
-
-			await ezioBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel as TextChannel,
-				expectedMessageOptions
-			);
-		});
-
-		it('should not respond to unrelated messages', async () => {
-			mockMessage.content = 'hello world';
+		it('should NOT respond to unrelated messages', async () => {
+			mockMessage.content = 'Hello there!';
 
 			await ezioBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();

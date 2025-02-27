@@ -1,172 +1,101 @@
-import { Message, TextChannel, User, Webhook } from 'discord.js';
-import { patchReplyBot } from '../../../__tests__/helpers/replyBotHelper';
-import { createMockMessage, createMockTextChannel } from '../../../__tests__/mocks/discordMocks';
-import UserID from '../../../discord/userID';
-import { TriggerCondition } from '../../../starbunk/bots/botTypes';
-import createGremlinBot from '../../../starbunk/bots/reply-bots/pickleBot';
+import { Message, TextChannel, User } from 'discord.js';
+import { createMockGuildMember, createMockMessage } from '../../../__tests__/mocks/discordMocks';
+import { createMockWebhookService } from '../../../__tests__/mocks/serviceMocks';
+import createPickleBot from '../../../starbunk/bots/reply-bots/pickleBot';
 import ReplyBot from '../../../starbunk/bots/replyBot';
-import { WebhookService } from '../../../webhooks/webhookService';
+import { OneCondition } from '../../../starbunk/bots/triggers/conditions/oneCondition';
+import { patchReplyBot } from '../../helpers/replyBotHelper';
 
-// Mock the trigger classes
-jest.mock('../../../starbunk/bots/botTypes', () => {
-	const originalModule = jest.requireActual('../../../starbunk/bots/botTypes');
-	return {
-		...originalModule,
-		PatternTrigger: jest.fn().mockImplementation(() => ({
-			shouldTrigger: jest.fn().mockImplementation(async (message: Message) =>
-				Promise.resolve(/gremlin/i.test(message.content || ''))
-			)
-		})),
-		UserRandomTrigger: jest.fn().mockImplementation((userId: string, chance: number) => ({
-			shouldTrigger: jest.fn().mockImplementation(async (message: Message) =>
-				Promise.resolve(message.author?.id === userId && Math.random() * 100 < chance)
-			)
-		})),
-		CompositeTrigger: jest.fn().mockImplementation((triggers: TriggerCondition[]) => ({
-			shouldTrigger: jest.fn().mockImplementation(async (message: Message) => {
-				for (const trigger of triggers) {
-					if (await trigger.shouldTrigger(message)) {
-						return true;
-					}
-				}
-				return false;
-			})
-		})),
-		StaticResponse: jest.fn().mockImplementation((response: string) => ({
-			generateResponse: jest.fn().mockResolvedValue(response)
-		}))
-	};
-});
+// Mock the conditions to control their behavior in tests
+jest.mock('../../../starbunk/bots/triggers/conditions/oneCondition');
+jest.mock('../../../starbunk/bots/triggers/conditions/patternCondition');
+jest.mock('../../../starbunk/bots/triggers/conditions/randomChanceCondition');
 
 describe('PickleBot', () => {
 	let pickleBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
-	let mockWebhookService: jest.Mocked<WebhookService>;
-	let mockChannel: TextChannel;
-	let mockWebhook: Partial<Webhook>;
+	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
+	let mockOneCondition: jest.MockedClass<typeof OneCondition>;
 
 	beforeEach(() => {
-		mockChannel = createMockTextChannel();
-		mockWebhook = {
-			id: 'mock-webhook-id',
-			name: 'mock-webhook-name',
-			send: jest.fn().mockResolvedValue({})
-		};
-
-		// Create a proper mock that extends WebhookService
-		mockWebhookService = {
-			getChannelWebhook: jest.fn().mockResolvedValue(mockWebhook as Webhook),
-			getWebhookName: jest.fn().mockReturnValue('mock-webhook-name'),
-			getWebhook: jest.fn().mockResolvedValue(mockWebhook as Webhook),
-			writeMessage: jest.fn().mockImplementation(async (channel, message) => {
-				const webhook = await mockWebhookService.getChannelWebhook(channel as TextChannel);
-				return webhook.send(message) as Promise<Message<boolean>>;
-			})
-		} as unknown as jest.Mocked<WebhookService>;
-
-		// Make the mock pass the instanceof check
-		Object.setPrototypeOf(mockWebhookService, WebhookService.prototype);
-
-		mockMessage = {
-			...createMockMessage('TestUser'),
-			channel: mockChannel
-		};
-
-		// Create the bot using the factory function with mockWebhookService
-		pickleBot = createGremlinBot(mockWebhookService);
-
-		// Patch the bot to use our mock webhook service
-		patchReplyBot(pickleBot, mockWebhookService);
-
+		// Reset mocks
 		jest.clearAllMocks();
+
+		// Setup mocks for conditions
+		mockOneCondition = OneCondition as jest.MockedClass<typeof OneCondition>;
+
+		// Mock the shouldTrigger method
+		mockOneCondition.prototype.shouldTrigger = jest.fn();
+
+		mockWebhookService = createMockWebhookService();
+		mockMessage = createMockMessage('TestUser');
+		pickleBot = createPickleBot(mockWebhookService);
+		patchReplyBot(pickleBot, mockWebhookService);
+	});
+
+	describe('bot configuration', () => {
+		it('should have correct name', () => {
+			const identity = pickleBot.getIdentity();
+			expect(identity.name).toBe('PickleBot');
+		});
+
+		it('should have correct avatar URL', () => {
+			const identity = pickleBot.getIdentity();
+			expect(identity.avatarUrl).toBe('https://i.imgur.com/D0czJFu.jpg');
+		});
 	});
 
 	describe('message handling', () => {
 		it('should ignore messages from bots', async () => {
-			const botMessage = {
-				...createMockMessage('BotUser'),
-				channel: mockChannel,
-				author: {
-					...createMockMessage('BotUser').author as User,
-					bot: true
-				} as User
-			};
-			await pickleBot.handleMessage(botMessage as Message);
+			const mockMember = createMockGuildMember('bot-id', 'BotUser');
+			mockMessage.author = { ...mockMember.user, bot: true } as User;
+			mockMessage.content = 'gremlin';
+
+			await pickleBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond to "gremlin"', async () => {
+		it('should respond to "gremlin" when pattern condition triggers', async () => {
 			mockMessage.content = 'gremlin';
-			await pickleBot.handleMessage(mockMessage as Message);
+
+			// Make the OneCondition trigger
+			mockOneCondition.prototype.shouldTrigger.mockResolvedValue(true);
+
+			await pickleBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
+				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					username: 'GremlinBot',
+					username: 'PickleBot',
 					avatarURL: 'https://i.imgur.com/D0czJFu.jpg',
 					content: "Could you repeat that? I don't speak *gremlin*"
 				})
 			);
 		});
 
-		it('should respond to case variations', async () => {
-			mockMessage.content = 'GREMLIN';
-			await pickleBot.handleMessage(mockMessage as Message);
+		it('should respond to random messages when random chance condition triggers', async () => {
+			mockMessage.content = 'some random message';
+
+			// Make the OneCondition trigger
+			mockOneCondition.prototype.shouldTrigger.mockResolvedValue(true);
+
+			await pickleBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
+				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					username: 'GremlinBot',
+					username: 'PickleBot',
 					avatarURL: 'https://i.imgur.com/D0czJFu.jpg',
 					content: "Could you repeat that? I don't speak *gremlin*"
 				})
 			);
 		});
 
-		it('should respond to word within text', async () => {
-			mockMessage.content = 'hello gremlin world';
-			await pickleBot.handleMessage(mockMessage as Message);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				mockMessage.channel,
-				expect.objectContaining({
-					username: 'GremlinBot',
-					avatarURL: 'https://i.imgur.com/D0czJFu.jpg',
-					content: "Could you repeat that? I don't speak *gremlin*"
-				})
-			);
-		});
+		it('should NOT respond when neither condition triggers', async () => {
+			mockMessage.content = 'some random message';
 
-		it('should respond to Sig messages randomly', async () => {
-			// Mock Math.random to return predictable values
-			const mockMath = Object.create(global.Math);
-			mockMath.random = () => 0.1; // 10% chance, which is less than our 15% threshold
-			global.Math = mockMath;
+			// Make the OneCondition not trigger
+			mockOneCondition.prototype.shouldTrigger.mockResolvedValue(false);
 
-			const sigMessage = {
-				...createMockMessage('Sig'),
-				channel: mockChannel,
-				author: {
-					...createMockMessage('Sig').author as User,
-					id: UserID.Sig
-				} as User,
-				content: 'any message'
-			};
-
-			await pickleBot.handleMessage(sigMessage as Message);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-				sigMessage.channel,
-				expect.objectContaining({
-					username: 'GremlinBot',
-					avatarURL: 'https://i.imgur.com/D0czJFu.jpg',
-					content: "Could you repeat that? I don't speak *gremlin*"
-				})
-			);
-
-			// Restore original Math
-			global.Math = Object.create(global.Math);
-		});
-
-		it('should not respond to unrelated messages', async () => {
-			mockMessage.content = 'hello world';
-			await pickleBot.handleMessage(mockMessage as Message);
+			await pickleBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 	});

@@ -5,6 +5,7 @@ BlueBot is a complex reply bot that responds to mentions of "blue" with various 
 ## Overview
 
 BlueBot monitors chat messages for mentions of "blue" and has several different response modes:
+
 - Basic mentions of "blue"
 - Acknowledgment of previous mentions
 - Responses to mean messages about blue
@@ -20,7 +21,7 @@ export default function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 	const {
 		webhookService: webhookServiceParam = webhookService,
 		openAIClient = createOpenAIClient(),
-		useAIDetection = !!openAIClient
+		useAIDetection = !!openAIClient,
 	} = config;
 
 	// Create the bot with dynamic identity
@@ -30,9 +31,7 @@ export default function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 
 	// Add the nice message response handler
 	if (openAIClient) {
-		builder.withConditionResponseHandler(
-			new NiceMessageResponse(openAIClient)
-		);
+		builder.withConditionResponseHandler(new NiceMessageResponse(openAIClient));
 	}
 
 	// Add the various triggers and responses
@@ -41,10 +40,9 @@ export default function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 		.respondsWithStatic(RESPONSES.ACKNOWLEDGMENT)
 		.withCustomTrigger(new VennCondition())
 		.respondsWithStatic(RESPONSES.VENN_INSULT)
-		.withCustomTrigger(new AllConditionsTrigger([
-			new PatternCondition(Patterns.BLUE),
-			new PatternCondition(Patterns.MEAN)
-		]))
+		.withCustomTrigger(
+			new AllConditionsTrigger([new PatternCondition(Patterns.BLUE), new PatternCondition(Patterns.MEAN)]),
+		)
 		.respondsWithStatic(RESPONSES.NAVY_SEAL)
 		.withCustomTrigger(new PatternCondition(Patterns.BLUE))
 		.respondsWithStatic(RESPONSES.BASIC_MENTION)
@@ -76,9 +74,9 @@ BlueBot has several different responses depending on the trigger:
 
 1. **Basic Mention**: "Did somebody say Blu?"
 2. **Acknowledgment**: "Lol, Somebody definitely said Blu! :smile:"
-3. **Mean Messages**: A long "Navy Seal" copypasta parody
+3. **Mean Messages**: A long "Navy Seal" copypasta parody // only when venn sent the message and only once per day
 4. **Venn Mentions**: "No way, Venn can suck my blu cane. :unamused:"
-5. **Nice Message Requests**: AI-generated compliments (if OpenAI API is available)
+5. **Nice Message Requests**: "<name> I think you're pretty blu :wink:"
 
 ## Examples
 
@@ -86,30 +84,31 @@ BlueBot has several different responses depending on the trigger:
 
 BlueBot will respond to various mentions of "blue":
 
-| Message | Response |
-|---------|----------|
-| "I like the color blue" | "Did somebody say Blu?" |
-| "BluBot, are you there?" | "Did somebody say Blu?" |
-| "I hate blue, it's the worst color" | Navy Seal copypasta parody |
-| "BluBot, say something nice about cats" | AI-generated compliment about cats (if OpenAI available) |
-| "Yes" (after BlueBot has recently responded) | "Lol, Somebody definitely said Blu! :smile:" |
+| Message                                      | Response                                                 |
+| -------------------------------------------- | -------------------------------------------------------- |
+| "I like the color blue"                      | "Did somebody say Blu?"                                  |
+| "BluBot, are you there?"                     | "Did somebody say Blu?"                                  |
+| "I hate blue, it's the worst color"          | Navy Seal copypasta parody                               |
+| "BluBot, say something nice about cats"      | AI-generated compliment about cats (if OpenAI available) |
+| "Yes" (after BlueBot has recently responded) | "Lol, Somebody definitely said Blu! :smile:"             |
 
 ### When BlueBot Doesn't Respond
 
 BlueBot will not respond to:
 
-| Message | Reason |
-|---------|--------|
-| "The sky is bluish today" | "blue" is part of another word |
-| "I'm feeling sad" | No mention of "blue" |
-| Messages from other bots | Bot messages are ignored by design |
-| Messages from itself | Self-messages are ignored |
+| Message                   | Reason                             |
+| ------------------------- | ---------------------------------- |
+| "The sky is bluish today" | "blue" is part of another word     |
+| "I'm feeling sad"         | No mention of "blue"               |
+| Messages from other bots  | Bot messages are ignored by design |
+| Messages from itself      | Self-messages are ignored          |
 
 ## Special Features
 
 ### Dynamic Identity
 
 BlueBot can change its avatar based on context:
+
 - Default: https://imgur.com/WcBRCWn.png
 - Cheeky: https://i.imgur.com/dO4a59n.png
 - Murder: https://imgur.com/Tpo8Ywd.jpg

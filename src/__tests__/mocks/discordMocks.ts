@@ -36,12 +36,14 @@ export const createMockMessage = (username: string = 'TestUser'): Partial<Messag
 	const member = createMockGuildMember('0', username);
 	const mockGuild = createMockGuild();
 	const mockChannel = createMockTextChannel();
+	const mockClient = createMockClient();
 
 	return {
 		content: '',
 		author: member.user,
 		guild: mockGuild,
-		channel: mockChannel
+		channel: mockChannel,
+		client: mockClient
 	} as unknown as Partial<Message<boolean>>;
 };
 

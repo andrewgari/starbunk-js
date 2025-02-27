@@ -1,7 +1,13 @@
 import { Message } from 'discord.js';
 import { ResponseGenerator } from '../botTypes';
-import { BlueBotNiceMessageTrigger as NiceMessageTrigger } from '../triggers/patternTriggers';
 import { isVenn } from '../triggers/userConditions';
+
+/**
+ * Interface for triggers that can extract names from message patterns
+ */
+interface NiceMessageTrigger {
+	getNameFromMessage(message: Message): string;
+}
 
 /**
  * Response for nice messages that extracts a name from the message

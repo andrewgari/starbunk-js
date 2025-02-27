@@ -2,8 +2,8 @@ import { Message } from 'discord.js';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import { ResponseGenerator } from '../botTypes';
-import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
+import { Patterns } from '../triggers/conditions/patterns';
 
 // Custom response generator for Ezio
 class EzioResponseGenerator implements ResponseGenerator {
@@ -13,11 +13,10 @@ class EzioResponseGenerator implements ResponseGenerator {
 }
 
 export default function createEzioBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
-	const ezioCondition = new PatternCondition(Patterns.EZIO);
 
 	return new BotBuilder('Ezio Auditore Da Firenze', webhookServiceParam)
 		.withAvatar('https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg')
-		.withCustomTrigger(ezioCondition)
+		.withPatternTrigger(Patterns.EZIO)
 		.respondsWithCustom(new EzioResponseGenerator())
 		.build();
 }

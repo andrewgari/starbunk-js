@@ -1,42 +1,31 @@
-import { Message } from 'discord.js';
 import userID from '../../../discord/userID';
-import { Logger } from '../../../services/logger';
 import { formatUserMention } from '../../../utils/discordFormat';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
-import { ResponseGenerator } from '../botTypes';
-import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
+import { Patterns } from '../triggers/conditions/patterns';
 
-// Custom response generator for MacaroniBot
-class MacaroniResponseGenerator implements ResponseGenerator {
-	constructor(private readonly logger = Logger) { }
-
-	async generateResponse(message: Message): Promise<string> {
-		const macaroniCondition = new PatternCondition(Patterns.MACARONI);
-		const vennCondition = new PatternCondition(Patterns.VENN_MENTION);
-
-		if (await macaroniCondition.shouldTrigger(message)) {
-			this.logger.debug(`MacaroniBot: ${message.author.username} mentioned macaroni/pasta: "${message.content}"`);
-			return 'Correction: you mean Venn "Tyrone "The "Macaroni" Man" Johnson" Caelum';
-		} else if (await vennCondition.shouldTrigger(message)) {
-			this.logger.debug(`MacaroniBot: ${message.author.username} mentioned Venn: "${message.content}"`);
-			return `Are you trying to reach ${formatUserMention(userID.Venn)}`;
-		}
-
-		return '';
-	}
-}
-
+/**
+ * MacaroniBot - A bot that responds to mentions of "macaroni" and "venn"
+ *
+ * This bot has two distinct behaviors:
+ * 1. When someone mentions "venn", it corrects them with the full name
+ * 2. When someone mentions "macaroni", it responds with a user mention
+ */
 export default function createMacaroniBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
-	const macaroniCondition = new PatternCondition(Patterns.MACARONI);
-	const vennCondition = new PatternCondition(Patterns.VENN_MENTION);
-	const responseGenerator = new MacaroniResponseGenerator(Logger);
+	// Create a bot that responds to both patterns
+	const builder = new BotBuilder('Macaroni Bot', webhookServiceParam)
+		.withAvatar('https://i.imgur.com/Jx5v7bZ.png')
+		// IMPORTANT: Enable multi-response mode BEFORE adding the patterns
+		.withMultipleResponses(true);
 
-	return new BotBuilder('Macaroni Bot', webhookServiceParam)
-		.withAvatar('https://i.imgur.com/fgbH6Xf.jpg')
-		.withCustomTrigger(macaroniCondition)
-		.withCustomTrigger(vennCondition)
-		.respondsWithCustom(responseGenerator)
-		.build();
+	// First add the VENN_MENTION pattern
+	builder.withPatternTrigger(Patterns.VENN_MENTION)
+		.respondsWithStatic("Correction: you mean Venn \"Tyrone \"The \"Macaroni\" Man\" Johnson\" Caelum");
+
+	// Then add the MACARONI pattern
+	builder.withPatternTrigger(Patterns.MACARONI)
+		.respondsWithStatic(`Are you trying to reach ${formatUserMention(userID.Venn)}`);
+
+	return builder.build();
 }

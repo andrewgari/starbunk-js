@@ -10,16 +10,21 @@ CheckBot is a reply bot that monitors chat messages.
 
 CheckBot is implemented using the BotBuilder pattern.
 
-```typescript
-// See implementation in src/starbunk/bots/reply-bots/checkBot.ts
-```
-
 ## Trigger Condition
 
 CheckBot uses the `CZECH` pattern defined in `conditions.ts`.
 
+## Response
 
+It says "I believe you mean '${ // repeat the original message but replace czech with check}
 
+## Trigger Condition
+
+CheckBot uses the `CHECK` pattern defined in `conditions.ts`.
+
+## Response
+
+It says "I believe you mean '${ // repeat the original message but replace check with czech}
 
 ## Examples
 
@@ -27,17 +32,17 @@ CheckBot uses the `CZECH` pattern defined in `conditions.ts`.
 
 CheckBot will respond to:
 
-| Message | Response |
-|---------|----------|
+| Message         | Response         |
+| --------------- | ---------------- |
 | Example message | Example response |
 
 ### When CheckBot Doesn't Respond
 
 CheckBot will not respond to:
 
-| Message | Reason |
-|---------|--------|
-| Example message | Example reason |
+| Message                  | Reason                             |
+| ------------------------ | ---------------------------------- |
+| Example message          | Example reason                     |
 | Messages from other bots | Bot messages are ignored by design |
 
 ## Testing

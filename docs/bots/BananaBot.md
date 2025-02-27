@@ -20,7 +20,7 @@ import { isVenn } from '../triggers/userConditions';
 import ReplyBot from '../replyBot';
 
 const responses = [
-	'Did you know that bananas are berries, but strawberries aren\'t?',
+	"Did you know that bananas are berries, but strawberries aren't?",
 	'Bananas are slightly radioactive due to their potassium content!',
 	'A cluster of bananas is called a "hand" and a single banana is called a "finger"!',
 	'Bananas float in water because they are less dense than water.',
@@ -30,7 +30,7 @@ const responses = [
 	'Bananas contain tryptophan, which helps the body produce serotonin!',
 	'Bananas are 75% water.',
 	'Bananas are the most popular fruit in the US!',
-	'Bananas don\'t grow on trees. They grow on plants that are actually giant herbs!',
+	"Bananas don't grow on trees. They grow on plants that are actually giant herbs!",
 	'Bananas are naturally slightly radioactive!',
 	'Bananas are actually berries!',
 	'Bananas are curved because they grow towards the sun!',
@@ -65,12 +65,13 @@ export default function createBananaBot(): ReplyBot {
 
 ## Trigger Conditions
 
-BananaBot uses two trigger conditions:
+BananaBot requires one of two trigger conditions:
 
 1. The `BANANA` pattern defined in `conditions.ts`:
-   ```typescript
-   BANANA: /banana/i,
-   ```
+
+    ```typescript
+    BANANA: /banana/i,
+    ```
 
 2. A custom `VennRandomTrigger` that has a 10% chance of triggering when a user named "Venn" sends any message.
 
@@ -90,31 +91,31 @@ When triggered, BananaBot responds with a randomly selected banana fact from its
 
 BananaBot will respond to:
 
-| Message | Response | Reason |
-|---------|----------|--------|
-| "I love bananas!" | Random banana fact | Contains "banana" |
-| "Banana bread is delicious." | Random banana fact | Contains "banana" |
-| "BANANA!" | Random banana fact | Contains "banana" |
+| Message                      | Response                        | Reason                   |
+| ---------------------------- | ------------------------------- | ------------------------ |
+| "I love bananas!"            | Random banana fact              | Contains "banana"        |
+| "Banana bread is delicious." | Random banana fact              | Contains "banana"        |
+| "BANANA!"                    | Random banana fact              | Contains "banana"        |
 | Any message from user "Venn" | Random banana fact (10% chance) | Special trigger for Venn |
 
 ### When BananaBot Doesn't Respond
 
 BananaBot will not respond to:
 
-| Message | Reason |
-|---------|--------|
-| "I like fruit." | Doesn't contain "banana" |
-| "Let's talk about apples." | Doesn't contain "banana" |
-| Messages from user "Venn" (90% of the time) | Random chance doesn't trigger |
-| Messages from other bots | Bot messages are ignored by design |
+| Message                                     | Reason                             |
+| ------------------------------------------- | ---------------------------------- |
+| "I like fruit."                             | Doesn't contain "banana"           |
+| "Let's talk about apples."                  | Doesn't contain "banana"           |
+| Messages from user "Venn" (90% of the time) | Random chance doesn't trigger      |
+| Messages from other bots                    | Bot messages are ignored by design |
 
 ## Configuration
 
 - **Name**: BananaBot
 - **Avatar**: https://i.imgur.com/Yx2cHyJ.png
 - **Triggers**:
-  - Pattern matching for "banana"
-  - 10% chance for messages from user "Venn"
+    - Pattern matching for "banana"
+    - 10% chance for messages from user "Venn"
 - **Response**: Random selection from banana facts
 
 ## Testing
