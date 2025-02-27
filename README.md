@@ -63,38 +63,44 @@ A powerful Discord bot designed for seamless cross-server communication and comm
     npm run dev
     ```
 
-## 🤖 Bot Architecture
+## �� Bot Architecture
 
-All bots in BunkBot use a class-based structure that extends the base `ReplyBot` class. This provides:
+BunkBot includes two main types of bots:
 
-- Consistent interface with required methods like `getBotName()`
-- Flexible message handling through event-driven design
-- Automatic registration and discovery of new bots
-- Clean separation of concerns through inheritance
+1. **Reply Bots** - Respond to text messages with specific patterns
+2. **Voice Bots** - Respond to voice channel events
 
-### Example Bot Implementation
+Most bots are created using the `BotBuilder` class, which provides a fluent API for configuring bot behavior:
 
 ```typescript
-import { WebhookService } from '../../../webhooks/webhookService';
-import { PatternTrigger, StaticResponse } from '../botTypes';
+import webhookService from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
 
-class SampleBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		super(
-			{ name: 'SampleBot', avatarUrl: 'https://example.com/avatar.png' },
-			new PatternTrigger(/keyword/i),
-			new StaticResponse('Hello there!'),
-			webhookService,
-		);
-	}
+export default function createMyBot(): ReplyBot {
+  const myCondition = new PatternCondition(Patterns.MY_PATTERN);
 
-	getBotName(): string {
-		return 'SampleBot';
-	}
+  return new BotBuilder('MyBot', webhookService)
+    .withAvatar('https://example.com/avatar.png')
+    .withCustomTrigger(myCondition)
+    .respondsWithStatic('Hello there!')
+    .build();
 }
-
-export default SampleBot;
 ```
 
-See the [documentation](./docs/REPLY_BOTS.md) for more details on creating bots.
+## 📚 Documentation
+
+- [Bot Documentation](./docs/bots/README.md) - Overview of all bots in the system
+- [Creating New Bots](./docs/bots/CreatingNewBots.md) - Guide to creating new bots
+- [Bot Examples](./docs/bots/) - Individual documentation for each bot
+
+## 🧪 Testing
+
+Run the test suite:
+
+```bash
+npm test
+```
+
+The project uses Jest for testing and includes comprehensive tests for all bots and services.
