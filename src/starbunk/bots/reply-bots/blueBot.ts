@@ -143,7 +143,7 @@ export default function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 			CHEEKY_AVATAR,
 			new OneCondition(
 				niceRequestCondition,
-				new PatternCondition(Patterns.BLUEBOT_NICE_REQUEST_GENERIC)
+				new PatternCondition(Patterns.BLUEBOT_NICE_REQUEST_NAMED)
 			)
 		)
 		.withCustomCondition(
