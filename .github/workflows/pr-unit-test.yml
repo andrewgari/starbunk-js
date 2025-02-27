@@ -8,13 +8,35 @@ on:
             - 'package*.json'
             - 'jest.config.js'
             - 'tsconfig.json'
+            - 'tsconfig.cypress.json'
             - '!**.md'
 
 jobs:
+    type-check:
+        name: 🔍 Type Check
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Type Check Main Code
+              run: npm run type-check:main
+
+            - name: Type Check Cypress Code
+              run: npm run type-check:cypress
+
     unit-test:
         name: 🧪 Unit Tests
         runs-on: ubuntu-latest
-        needs: [build]
+        needs: [build, type-check]
         steps:
             - uses: actions/checkout@v4
 

@@ -17,6 +17,14 @@ A powerful Discord bot designed for seamless cross-server communication and comm
 - 🔒 **Secure Design**: Runs with non-root user in production
 - 🧩 **Class-Based Bot Architecture**: Modular and extensible bot system using class inheritance
 
+## 📚 Documentation
+
+- [Installation Guide](docs/installation.md)
+- [Configuration Guide](docs/configuration.md)
+- [Testing Guide](docs/testing.md) - Instructions for linting, testing, building, and Docker usage
+- [API Documentation](docs/api.md)
+- [Contributing Guidelines](CONTRIBUTING.md)
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -130,12 +138,6 @@ export default function createMyBot(): ReplyBot {
     .build();
 }
 ```
-
-## 📚 Documentation
-
-- [Bot Documentation](./docs/bots/README.md) - Overview of all bots in the system
-- [Creating New Bots](./docs/bots/CreatingNewBots.md) - Guide to creating new bots
-- [Bot Examples](./docs/bots/) - Individual documentation for each bot
 
 ## 🧪 Testing
 

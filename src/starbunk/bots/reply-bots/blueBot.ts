@@ -140,7 +140,7 @@ export default function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 		)
 		.withConditionResponse(
 			niceResponseGenerator,
-			DEFAULT_AVATAR,
+			CHEEKY_AVATAR,
 			new OneCondition(
 				niceRequestCondition,
 				new PatternCondition(Patterns.BLUEBOT_NICE_REQUEST_GENERIC)
@@ -148,8 +148,8 @@ export default function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 		)
 		.withCustomCondition(
 			"No way, Venn can suck my blu cane",
-			MURDER_AVATAR,
-			new PatternCondition(Patterns.BLUE_VENN_REQUEST)
+			DEFAULT_AVATAR,
+			new PatternCondition(Patterns.BLUEBOT_MEAN_WORDS)
 		)
 		.build();
 

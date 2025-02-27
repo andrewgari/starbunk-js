@@ -7,20 +7,24 @@
 		"start": "node dist/bunkbot.js",
 		"dev": "npm run lint:fix && npm run build && npm run test",
 		"test": "jest",
-		"tests": "jest --config=jest.config.js",
+		"tests": "jest",
 		"test:coverage": "jest --coverage",
 		"test:watch": "jest --watch",
 		"lint": "eslint 'src/**/*.{ts,js}' '*.{ts,js}'",
 		"lint:fix": "eslint 'src/**/*.{ts,js}' '*.{ts,js}' --fix",
 		"format": "prettier --write \"src/**/*.ts\"",
-		"type-check": "tsc --noEmit",
+		"type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.cypress.json",
+		"type-check:main": "tsc --noEmit",
+		"type-check:cypress": "tsc --noEmit -p tsconfig.cypress.json",
 		"test:music": "jest src/tests/starbunk/commands/musicCommands.test.ts",
 		"validate-bots": "./scripts/validate-bots.sh",
 		"cypress:open": "cypress open",
 		"cypress:run": "cypress run",
 		"test:e2e": "cypress run --spec 'cypress/e2e/**/*.cy.ts'",
 		"test:e2e:bots": "cypress run --spec 'cypress/e2e/bots/**/*.cy.ts'",
-		"test:bots": "cypress run --spec 'cypress/e2e/bots/*.cy.ts'"
+		"test:bots": "cypress run --spec 'cypress/e2e/bots/*.cy.ts'",
+		"check:all": "./scripts/check-all.sh",
+		"check:demo": "./scripts/check-demo.sh"
 	},
 	"engines": {
 		"node": ">=16.0.0"

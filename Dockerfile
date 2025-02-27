@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20.11-alpine AS builder
+FROM node:alpine/latest AS builder
 
 WORKDIR /app
 
@@ -8,8 +8,7 @@ RUN apk add --no-cache \
     python3~=3.11 \
     make~=4.4 \
     g++~=13.2 \
-    git~=2.43 \
-    && rm -rf /var/cache/apk/*
+    git~=2.43
 
 COPY package*.json ./
 RUN npm ci
@@ -18,16 +17,14 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:20.11-alpine
+FROM node:alpine/latest
 
 # Install production dependencies with more flexible version constraints
 RUN apk add --no-cache \
     ffmpeg~=6.1 \
     python3~=3.11 \
     tzdata \
-    ca-certificates \
-    && rm -rf /var/cache/apk/*
-
+    ca-certificates
 WORKDIR /app
 
 # Copy built assets and package files

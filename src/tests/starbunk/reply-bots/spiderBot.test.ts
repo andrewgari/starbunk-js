@@ -118,14 +118,14 @@ describe('SpiderBot', () => {
 			);
 		});
 
-		it('should NOT respond to "spider-man" (correct hyphenation)', async () => {
+		it('should respond to "spider-man" (correct hyphenation)', async () => {
 			mockMessage.content = 'spider-man';
 
 			await spiderBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should NOT respond to "Spider-Man" (correct hyphenation, case insensitive)', async () => {
+		it('should respond to "Spider-Man" (correct hyphenation, case insensitive)', async () => {
 			mockMessage.content = 'Spider-Man';
 
 			await spiderBot.handleMessage(mockMessage as Message<boolean>);

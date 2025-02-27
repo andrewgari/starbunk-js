@@ -10,14 +10,8 @@ export const Patterns = {
 	/** Matches various negative/mean words */
 	BLUEBOT_MEAN_WORDS: /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i,
 
-	/** Matches requests for blue bot to say something nice */
-	BLUEBOT_NICE_REQUEST_GENERIC: /blue?bot,? say something nice about/i,
-
 	/** Matches "bluebot, say something nice about [name]" */
 	BLUEBOT_NICE_REQUEST_NAMED: /blue?bot,? say something nice about (?<n>.+$)/i,
-
-	/** Matches "bluebot, say something mean about [name]" */
-	BLUEBOT_MEAN_REQUEST_NAMED: /blue?bot,? say something mean about (?<n>.+$)/i,
 
 	/** Matches acknowledgments to blue bot */
 	BLUEBOT_ACKNOWLEDGMENT: /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i,
@@ -52,7 +46,7 @@ export const Patterns = {
 	WORD_SHEESH: /\bsh(e)+sh\b/i,
 
 	/** Matches references to "spider-man" or "spiderman" */
-	WORD_SPIDERMAN: /\bspider[-\s]?man\b/i,
+	WORD_SPIDERMAN: /\b(spiderman|spider\s+man)\b/i,
 
 	/** Matches references to "gundam" with possible misspellings */
 	WORD_GUNDAM: /\b(g(u|a)ndam)\b/i,
@@ -85,6 +79,4 @@ export const Patterns = {
 	/** Matches Discord music bot commands starting with !play */
 	COMMAND_MUSIC: /^[!?]play\b/,
 
-	/** Custom pattern for Venn requests - matches both nice and mean requests */
-	BLUE_VENN_REQUEST: /blue?bot,? say something (nice|mean) about venn/i,
 };
