@@ -47,7 +47,6 @@
 		"dotenv": "^16.3.1",
 		"envalid": "^8.0.0",
 		"ffmpeg-static": "^5.2.0",
-		"module-alias": "^2.2.3",
 		"module-name": "^0.0.1-security",
 		"openai": "^4.58.2",
 		"opusscript": "^0.0.8",
@@ -57,7 +56,6 @@
 	"devDependencies": {
 		"@testing-library/jest-dom": "^6.6.3",
 		"@types/jest": "^29.5.14",
-		"@types/module-alias": "^2.0.4",
 		"@types/node": "^20.17.14",
 		"@typescript-eslint/eslint-plugin": "^6.21.0",
 		"@typescript-eslint/parser": "^6.21.0",

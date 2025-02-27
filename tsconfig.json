@@ -39,9 +39,7 @@
 		"process-env.d.ts",
 		"macaroniBot.test.ts",
 		"src/__tests__",
-		"examples/bots/exampleBot.ts",
-		"examples/bots/replyBot.test.ts",
-		"examples/bots/exampleBot.test.ts"
+		"examples/bots/exampleBot.ts"
 	],
 	"exclude": ["node_modules", "dist"]
 }
