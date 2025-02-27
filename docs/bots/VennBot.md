@@ -45,4 +45,4 @@ VennBot will not respond to:
 
 ## Testing
 
-VennBot has tests in `src/__tests__/starbunk/reply-bots/vennBot.test.ts` that verify its functionality.
+VennBot has tests in `src/tests/starbunk/reply-bots/vennBot.test.ts` that verify its functionality.

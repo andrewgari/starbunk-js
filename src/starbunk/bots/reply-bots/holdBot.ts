@@ -5,7 +5,7 @@ import { Patterns } from '../triggers/conditions/patterns';
 export default function createHoldBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
 	return new BotBuilder('HoldBot', webhookServiceParam)
 		.withAvatar('https://i.imgur.com/YPFGEzM.png')
-		.withPatternTrigger(Patterns.HOLD)
+		.withPatternTrigger(Patterns.WORD_HOLD)
 		.respondsWithStatic('Hold.')
 		.build();
 }

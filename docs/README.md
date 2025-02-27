@@ -83,60 +83,8 @@ src/
 │   │   │   └── ...               # Other services
 │   │   ├── starbunkClient.ts     # Main client class
 │   │   └── snowbunkClient.ts     # Secondary client class
-│   └── __tests__/                # Tests
+│   └── tests/                # Tests
 │       └── ...                   # Test files
-└── __tests__/                # Tests
+└── tests/                # Tests
     └── ...                   # Test files
 ```
-
-## Core Components
-
-### 1. Client Classes
-
-- **StarbunkClient**: The main Discord client that handles events, command registration, and bot management
-- **SnowbunkClient**: A secondary client for advanced features
-
-### 2. Bot Types
-
-- **Reply Bots**: Process and respond to text messages
-- **Voice Bots**: Handle voice channel events
-
-### 3. Command System
-
-Uses Discord's slash command API to provide interactive commands.
-
-### 4. Music System
-
-Provides audio playback capabilities from YouTube sources.
-
-## Project Structure
-
-### Reply Bots
-
-Reply bots are simple text-based bots that respond to specific patterns in messages. They implement the `ReplyBot` interface and are automatically loaded from the `src/starbunk/bots/reply-bots/` directory.
-
-### Voice Bots
-
-Voice bots handle voice channel events, such as users joining or leaving voice channels. They implement the `VoiceBot` interface and are automatically loaded from the `src/starbunk/bots/voice-bots/` directory.
-
-### Commands
-
-Slash commands provide interactive functionality through Discord's command system. Commands are organized by category and implement the `Command` interface.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- [Discord.js](https://discord.js.org/) - The Discord API wrapper
-- [TypeScript](https://www.typescriptlang.org/) - The programming language
-- [Jest](https://jestjs.io/) - The testing framework

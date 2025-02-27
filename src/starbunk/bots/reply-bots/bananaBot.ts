@@ -4,6 +4,7 @@ import random from '../../../utils/random';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import { BotIdentity, TriggerCondition } from '../botTypes';
+import { getUserIdentity } from '../identity/userIdentity';
 import ReplyBot from '../replyBot';
 import { OneCondition } from '../triggers/conditions/oneCondition';
 import { PatternCondition } from '../triggers/conditions/patternCondition';
@@ -39,15 +40,12 @@ class VennRandomTrigger implements TriggerCondition {
  * This bot dynamically updates its identity to mimic the user it's responding to
  */
 export default function createBananaBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
-	// Identity updater function
+	// Identity updater function that uses the new utility function
 	const updateIdentity = async (message: Message): Promise<BotIdentity> => {
-		return {
-			name: message.author.displayName ?? message.author.username,
-			avatarUrl: message.author.displayAvatarURL?.() ?? ''
-		};
+		return await getUserIdentity(message);
 	};
 
-	const bananaCondition = new PatternCondition(Patterns.BANANA);
+	const bananaCondition = new PatternCondition(Patterns.WORD_BANANA);
 	const vennRandomTrigger = new VennRandomTrigger(5);
 
 	const oneCondition = new OneCondition(bananaCondition, vennRandomTrigger);

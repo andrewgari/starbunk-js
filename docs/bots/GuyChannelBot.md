@@ -91,7 +91,7 @@ GuyChannelBot will not take action in these scenarios:
 
 ## Testing
 
-GuyChannelBot has tests in `src/__tests__/starbunk/voice-bots/guyChannelBot.test.ts` that verify:
+GuyChannelBot has tests in `src/tests/starbunk/voice-bots/guyChannelBot.test.ts` that verify:
 
 1. The bot correctly redirects "Guy" from "NoGuyLounge"
 2. The bot correctly redirects non-Guy users from "GuyLounge"

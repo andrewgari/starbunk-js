@@ -1,13 +1,16 @@
+import { Message } from 'discord.js';
+import userID from '../../../discord/userID';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
+import { BotIdentity } from '../botTypes';
+import { getUserIdentity } from '../identity/userIdentity';
 import ReplyBot from '../replyBot';
-import { OneCondition } from '../triggers/conditions/oneCondition';
-import { PatternCondition } from '../triggers/conditions/patternCondition';
-import { Patterns } from '../triggers/conditions/patterns';
+import { AllConditions } from '../triggers/conditions/allConditions';
 import { RandomChanceCondition } from '../triggers/conditions/randomChanceCondition';
+import { getVennCondition } from '../triggers/userConditions';
 
 /**
- * VennBot - A bot that responds to mentions of Venn or randomly to Venn's messages
+ * VennBot - A bot that responds to Venn's messages with a 5% chance
  */
 const responses = [
 	'Sorry, but that was über cringe...',
@@ -26,13 +29,31 @@ const responses = [
 ];
 
 export default function createVennBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
-	// Option 1: Using pattern condition and random chance separately
+	// Create conditions
+	const vennCondition = getVennCondition();
+	const randomChanceCondition = new RandomChanceCondition(5);
+
+	// Combine conditions - only trigger for Venn's messages with a 5% chance
+	const combinedCondition = new AllConditions(vennCondition, randomChanceCondition);
+
+	// Identity updater function that uses the new utility function
+	const updateIdentity = async (message: Message): Promise<BotIdentity> => {
+		// If the message is from Venn, use Venn's identity
+		if (message.author.id === userID.Venn) {
+			return await getUserIdentity(message);
+		}
+
+		// Otherwise, use the default VennBot identity
+		return {
+			name: 'VennBot',
+			avatarUrl: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png'
+		};
+	};
+
 	return new BotBuilder('VennBot', webhookServiceParam)
 		.withAvatar('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png')
-		.withCustomTrigger(new OneCondition(
-			new PatternCondition(Patterns.VENN_MENTION),
-			new RandomChanceCondition(5)
-		))
+		.withCustomTrigger(combinedCondition)
+		.withDynamicIdentity('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png', updateIdentity)
 		.respondsWithRandom(responses)
 		.build();
 }

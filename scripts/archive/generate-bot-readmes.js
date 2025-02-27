@@ -141,7 +141,7 @@ ${botName} will not respond to:
 
 ## Testing
 
-${botName} has tests in \`src/__tests__/starbunk/${bot.type}-bots/${bot.name}.test.ts\` that verify its functionality.
+${botName} has tests in \`src/tests/starbunk/${bot.type}-bots/${bot.name}.test.ts\` that verify its functionality.
 `;
 
 	const readmePath = path.join(DOCS_DIR, `${botName}.md`);

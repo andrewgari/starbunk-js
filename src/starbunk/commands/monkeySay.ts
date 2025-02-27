@@ -1,5 +1,6 @@
-import { CommandInteraction, GuildMember, PermissionFlagsBits, SlashCommandBuilder, TextChannel, User } from 'discord.js';
+import { CommandInteraction, GuildMember, PermissionFlagsBits, SlashCommandBuilder, TextChannel } from 'discord.js';
 import webhookService, { WebhookService } from '../../webhooks/webhookService';
+import { getUserIdentity } from '../bots/identity/userIdentity';
 
 // Interface for message sender
 export interface MessageSender {
@@ -34,15 +35,14 @@ export class MonkeySayService {
 
 	async impersonateUser(
 		interaction: CommandInteraction,
-		user: User,
 		member: GuildMember,
 		message: string
 	): Promise<void> {
-		const nickname = member.nickname ?? user.username;
-		const avatar = member.displayAvatarURL() ?? user.displayAvatarURL();
+		// Get the most up-to-date user identity
+		const identity = await getUserIdentity(member);
 		const channel = interaction.channel as TextChannel;
 
-		await this.messageSender.sendMessage(channel, nickname, avatar, message);
+		await this.messageSender.sendMessage(channel, identity.name, identity.avatarUrl, message);
 
 		await interaction.reply({
 			content: 'Message sent!',
@@ -82,7 +82,7 @@ export default {
 		const monkeySayService = new MonkeySayService(messageSender);
 
 		try {
-			await monkeySayService.impersonateUser(interaction, user, member, message);
+			await monkeySayService.impersonateUser(interaction, member, message);
 		} catch (error) {
 			console.error('Error sending monkey message:', error);
 			await interaction.reply({

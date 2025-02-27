@@ -1,0 +1,42 @@
+FROM cypress/included:14.1.0
+
+WORKDIR /app
+
+# Install dependencies required for Cypress
+RUN apt-get update && apt-get install -y \
+    libgtk2.0-0 \
+    libgtk-3-0 \
+    libgbm-dev \
+    libnotify-dev \
+    libgconf-2-4 \
+    libnss3 \
+    libxss1 \
+    libasound2 \
+    libxtst6 \
+    xauth \
+    xvfb \
+    python3 \
+    make \
+    g++ \
+    git \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy the rest of the application
+COPY . .
+
+# Verify Cypress installation
+RUN npx cypress verify
+
+# Set environment variables
+ENV CYPRESS_CACHE_FOLDER=/root/.cache/Cypress
+ENV NODE_ENV=test
+
+# Default command
+CMD ["npm", "run", "cypress:run"]

@@ -20,11 +20,11 @@ export default function createMacaroniBot(webhookServiceParam: WebhookService = 
 		.withMultipleResponses(true);
 
 	// First add the VENN_MENTION pattern
-	builder.withPatternTrigger(Patterns.VENN_MENTION)
+	builder.withPatternTrigger(Patterns.WORD_VENN)
 		.respondsWithStatic("Correction: you mean Venn \"Tyrone \"The \"Macaroni\" Man\" Johnson\" Caelum");
 
 	// Then add the MACARONI pattern
-	builder.withPatternTrigger(Patterns.MACARONI)
+	builder.withPatternTrigger(Patterns.WORD_MACARONI)
 		.respondsWithStatic(`Are you trying to reach ${formatUserMention(userID.Venn)}`);
 
 	return builder.build();

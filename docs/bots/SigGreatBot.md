@@ -45,4 +45,4 @@ SigGreatBot will not respond to:
 
 ## Testing
 
-SigGreatBot has tests in `src/__tests__/starbunk/reply-bots/sigGreatBot.test.ts` that verify its functionality.
+SigGreatBot has tests in `src/tests/starbunk/reply-bots/sigGreatBot.test.ts` that verify its functionality.

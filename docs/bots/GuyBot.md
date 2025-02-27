@@ -92,7 +92,7 @@ GuyBot will not respond to:
 
 ## Testing
 
-GuyBot has tests in `src/__tests__/starbunk/reply-bots/guyBot.test.ts` that verify:
+GuyBot has tests in `src/tests/starbunk/reply-bots/guyBot.test.ts` that verify:
 
 1. The bot's identity (name and avatar URL)
 2. The bot's response to messages containing "guy"

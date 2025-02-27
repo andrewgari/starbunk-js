@@ -9,11 +9,11 @@ export default function createCheckBot(webhookServiceParam: WebhookService = web
 		.withAvatar('https://m.media-amazon.com/images/I/21Unzn9U8sL._AC_.jpg')
 		.withCustomCondition(
 			"I believe you mean 'check' :wink:",
-			new PatternCondition(Patterns.CZECH)
+			new PatternCondition(Patterns.WORD_CZECH)
 		)
 		.withCustomCondition(
 			"I believe you mean 'czech' :wink:",
-			new PatternCondition(Patterns.CHECK)
+			new PatternCondition(Patterns.WORD_CHECK)
 		)
 		.build();
 }

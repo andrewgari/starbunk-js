@@ -299,7 +299,7 @@ await interaction.reply({
 
 ## Testing Commands
 
-Test your commands in `src/__tests__/starbunk/commands/`:
+Test your commands in `src/tests/starbunk/commands/`:
 
 ```typescript
 import { commandName } from '../../../starbunk/commands/commandName';

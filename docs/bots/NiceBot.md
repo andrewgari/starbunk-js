@@ -82,7 +82,7 @@ NiceBot will not respond to:
 
 ## Testing
 
-NiceBot has tests in `src/__tests__/starbunk/reply-bots/niceBot.test.ts` that verify:
+NiceBot has tests in `src/tests/starbunk/reply-bots/niceBot.test.ts` that verify:
 
 1. The bot's identity (name and avatar URL)
 2. The bot's response to messages containing "69"

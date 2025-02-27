@@ -22,7 +22,7 @@ export default function createSheeshBot(webhookServiceParam: WebhookService = we
 
 	return new BotBuilder('SheeshBot', webhookServiceParam)
 		.withAvatar('https://i.kym-cdn.com/photos/images/newsfeed/002/297/355/cb3')
-		.withPatternTrigger(Patterns.SHEESH)
+		.withPatternTrigger(Patterns.WORD_SHEESH)
 		.respondsWithCustom(responseGenerator)
 		.build();
 }

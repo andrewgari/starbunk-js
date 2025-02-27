@@ -45,4 +45,4 @@ MusicCorrectBot will not respond to:
 
 ## Testing
 
-MusicCorrectBot has tests in `src/__tests__/starbunk/reply-bots/musicCorrectBot.test.ts` that verify its functionality.
+MusicCorrectBot has tests in `src/tests/starbunk/reply-bots/musicCorrectBot.test.ts` that verify its functionality.

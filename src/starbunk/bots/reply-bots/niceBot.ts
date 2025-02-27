@@ -6,7 +6,7 @@ export default function createNiceBot(webhookServiceParam: WebhookService = webh
 
 	return new BotBuilder('BunkBot', webhookServiceParam)
 		.withAvatar('https://pbs.twimg.com/profile_images/421461637325787136/0rxpHzVx.jpeg')
-		.withPatternTrigger(Patterns.NICE_NUMBER)
+		.withPatternTrigger(Patterns.SPECIAL_NICE_NUMBER)
 		.respondsWithStatic('Nice.')
 		.build();
 }

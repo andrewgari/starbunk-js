@@ -134,7 +134,7 @@ node_modules
 .DS_Store
 *.log
 src/starbunk/bots/reply-bots/attitudeBot.ts
-src/__tests__/starbunk/reply-bots/attitudeBot.test.ts
+src/tests/starbunk/reply-bots/attitudeBot.test.ts
 
 # Generated PR comment files
 pr_*.txt

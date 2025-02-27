@@ -9,7 +9,7 @@ import { Patterns } from '../triggers/conditions/patterns'; // Importing the Pat
 export default function createGundamBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
 	return new BotBuilder('GundamBot', webhookServiceParam)
 		.withAvatar('https://cdn.discordapp.com/attachments/854790294253117531/902975839584849930/gundam.png')
-		.withPatternTrigger(Patterns.GUNDAM)
+		.withPatternTrigger(Patterns.WORD_GUNDAM)
 		.respondsWithStatic("That's the giant unicorn robot gandam, there i said it")
 		.build();
 }

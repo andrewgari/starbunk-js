@@ -9,7 +9,7 @@ import { Patterns } from '../triggers/conditions/patterns';
 export default function createChaosBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
 	return new BotBuilder('ChaosBot', webhookServiceParam)
 		.withAvatar('https://preview.redd.it/md0lzbvuc3571.png?width=1920&format=png&auto=webp&s=ff403a8d4b514af8d99792a275d2c066b8d1a4de')
-		.withPatternTrigger(Patterns.CHAOS)
+		.withPatternTrigger(Patterns.WORD_CHAOS)
 		.respondsWithStatic("All I know is...I'm here to kill Chaos")
 		.build();
 }

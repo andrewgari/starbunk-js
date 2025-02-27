@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  cypress:
+    build:
+      context: .
+      dockerfile: Dockerfile.cypress
+    container_name: starbunk-cypress
+    volumes:
+      - .:/app
+      - ./cypress/screenshots:/app/cypress/screenshots
+      - ./cypress/videos:/app/cypress/videos
+      - ./cypress/downloads:/app/cypress/downloads
+      - ./cypress/fixtures:/app/cypress/fixtures
+      - node_modules:/app/node_modules
+    environment:
+      - CYPRESS_baseUrl=http://localhost:3000
+      - NODE_ENV=test
+    command: npm run cypress:run -- --spec "cypress/e2e/snowbunk/*.cy.ts"
+
+volumes:
+  node_modules:

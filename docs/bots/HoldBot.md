@@ -45,4 +45,4 @@ HoldBot will not respond to:
 
 ## Testing
 
-HoldBot has tests in `src/__tests__/starbunk/reply-bots/holdBot.test.ts` that verify its functionality.
+HoldBot has tests in `src/tests/starbunk/reply-bots/holdBot.test.ts` that verify its functionality.
