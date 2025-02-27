@@ -1,32 +1,30 @@
-import UserID from '@/discord/userID';
-import ReplyBot from '@/starbunk/bots/replyBot';
-import Random from '@/utils/random';
-import { WebhookService } from '@/webhooks/webhookService';
-import { Message, TextChannel } from 'discord.js';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import ReplyBot from '../replyBot';
+import { OneCondition } from '../triggers/conditions/oneCondition';
+import { PatternCondition } from '../triggers/conditions/patternCondition';
+import { Patterns } from '../triggers/conditions/patterns';
+import { getSigCondition } from '../triggers/userConditions';
 
-export default class PickleBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		super(webhookService);
-	}
+/**
+ * PickleBot - A bot that responds to mentions of "gremlin" or to Sig's messages containing "gremlin"
+ */
+export default function createPickleBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	// Get the condition for checking if the message is from Sig
+	const sigUserCondition = getSigCondition();
 
-	private readonly botname = 'GremlinBot';
-	private readonly avatarUrl = 'https://i.imgur.com/D0czJFu.jpg';
-	private readonly response = "Could you repeat that? I don't speak *gremlin*";
-	private readonly pattern = /gremlin/i;
+	// Combine the Sig user condition with the gremlin pattern condition
+	const sigCondition = new OneCondition(
+		sigUserCondition,
+		new PatternCondition(Patterns.GREMLIN)
+	);
 
-	getBotName(): string {
-		return this.botname;
-	}
-
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
-
-	handleMessage(message: Message<boolean>): void {
-		if (message.author.bot) return;
-
-		if (message.content.match(this.pattern) || (message.author.id === UserID.Sig && Random.percentChance(15))) {
-			this.sendReply(message.channel as TextChannel, this.response);
-		}
-	}
+	return new BotBuilder('PickleBot', webhookServiceParam)
+		.withAvatar('https://i.imgur.com/D0czJFu.jpg')
+		.withCustomTrigger(new OneCondition(
+			new PatternCondition(Patterns.GREMLIN),
+			sigCondition
+		))
+		.respondsWithStatic("Could you repeat that? I don't speak *gremlin*")
+		.build();
 }

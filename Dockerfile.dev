@@ -15,10 +15,14 @@ COPY package*.json ./
 # Install ALL dependencies including dev
 RUN npm install
 
+# Copy the source code
+COPY . .
+
 # Add global packages needed for development
 RUN npm install -g \
     ts-node \
     is-ci \
-    distube
+    distube@5.0.6
 
-USER node
+# We'll run as root in development mode
+# This is not recommended for production, but simplifies development

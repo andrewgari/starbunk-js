@@ -1,29 +1,15 @@
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
-import { Message, TextChannel } from 'discord.js';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import ReplyBot from '../replyBot';
+import { Patterns } from '../triggers/conditions/patterns';
 
-export default class SigBestBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		super(webhookService);
-	}
-
-	private readonly botName = 'SigBestBot';
-	private readonly pattern = /\b(sig|siggles) is best\b/i;
-	private readonly response = 'Man, Sig really is the best.';
-
-	getBotName(): string {
-		return this.botName;
-	}
-
-	getAvatarUrl(): string {
-		return '';
-	}
-
-	handleMessage(message: Message<boolean>): void {
-		if (message.author.bot) return;
-
-		if (message.content.match(this.pattern)) {
-			this.sendReply(message.channel as TextChannel, this.response);
-		}
-	}
+/**
+ * SigGreatBot - A bot that responds to "Sig best" with "The greatest".
+ */
+export default function createSigGreatBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+	return new BotBuilder('SigGreatBot', webhookServiceParam)
+		.withAvatar('https://static.wikia.nocookie.net/chrono/images/a/a5/Serge2.png')
+		.withPatternTrigger(Patterns.SIG_GREAT)
+		.respondsWithStatic('The greatest.')
+		.build();
 }

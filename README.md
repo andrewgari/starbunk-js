@@ -9,6 +9,7 @@ A powerful Discord bot designed for seamless cross-server communication and comm
 - 🎵 **Media Support**: High-quality audio playback with ffmpeg integration
 - 🐳 **Modern Deployment**: Containerized with Docker for reliable hosting
 - 🔒 **Secure Design**: Runs with non-root user in production
+- 🧩 **Class-Based Bot Architecture**: Modular and extensible bot system using class inheritance
 
 ## 🚀 Getting Started
 
@@ -58,6 +59,48 @@ A powerful Discord bot designed for seamless cross-server communication and comm
     ```
 
 4. Start development server:
+    ```bash
+    npm run dev
     ```
 
-    ```
+## �� Bot Architecture
+
+BunkBot includes two main types of bots:
+
+1. **Reply Bots** - Respond to text messages with specific patterns
+2. **Voice Bots** - Respond to voice channel events
+
+Most bots are created using the `BotBuilder` class, which provides a fluent API for configuring bot behavior:
+
+```typescript
+import webhookService from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import { PatternCondition, Patterns } from '../conditions';
+import ReplyBot from '../replyBot';
+
+export default function createMyBot(): ReplyBot {
+  const myCondition = new PatternCondition(Patterns.MY_PATTERN);
+
+  return new BotBuilder('MyBot', webhookService)
+    .withAvatar('https://example.com/avatar.png')
+    .withCustomTrigger(myCondition)
+    .respondsWithStatic('Hello there!')
+    .build();
+}
+```
+
+## 📚 Documentation
+
+- [Bot Documentation](./docs/bots/README.md) - Overview of all bots in the system
+- [Creating New Bots](./docs/bots/CreatingNewBots.md) - Guide to creating new bots
+- [Bot Examples](./docs/bots/) - Individual documentation for each bot
+
+## 🧪 Testing
+
+Run the test suite:
+
+```bash
+npm test
+```
+
+The project uses Jest for testing and includes comprehensive tests for all bots and services.

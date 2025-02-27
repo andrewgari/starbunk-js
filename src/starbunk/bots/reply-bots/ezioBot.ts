@@ -1,31 +1,22 @@
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
-import { Message, TextChannel } from 'discord.js';
+import { Message } from 'discord.js';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import { ResponseGenerator } from '../botTypes';
+import ReplyBot from '../replyBot';
+import { Patterns } from '../triggers/conditions/patterns';
 
-export default class EzioBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		super(webhookService);
+// Custom response generator for Ezio
+class EzioResponseGenerator implements ResponseGenerator {
+	async generateResponse(message: Message): Promise<string> {
+		return `Remember ${message.author.displayName}, Nothing is true; Everything is permitted.`;
 	}
-	private readonly botName = 'Ezio Auditore Da Firenze';
-	private readonly avatarUrl = 'https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg';
-	private readonly pattern = /\bezio|h?assassin.*\b/i;
+}
 
-	getBotName(): string {
-		return this.botName;
-	}
+export default function createEzioBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
 
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
-
-	handleMessage(message: Message<boolean>): void {
-		if (message.author.bot) return;
-
-		if (message.content.match(this.pattern)) {
-			this.sendReply(
-				message.channel as TextChannel,
-				`Remember ${message.author.displayName}, Nothing is true; Everything is permitted.`,
-			);
-		}
-	}
+	return new BotBuilder('Ezio Auditore Da Firenze', webhookServiceParam)
+		.withAvatar('https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg')
+		.withPatternTrigger(Patterns.EZIO)
+		.respondsWithCustom(new EzioResponseGenerator())
+		.build();
 }
