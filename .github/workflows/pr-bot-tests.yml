@@ -1,0 +1,44 @@
+name: PR Bot Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/starbunk/bots/**'
+      - 'cypress/e2e/bots/**'
+      - 'cypress/support/**'
+      - 'cypress.config.ts'
+      - 'package*.json'
+      - '!**.md'
+
+jobs:
+  bot-tests:
+    name: 🤖 Bot Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Create .env file
+        run: |
+          echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
+          echo "NODE_ENV=test" >> .env
+
+      - name: Run Bot Tests
+        run: npm run test:bots
+
+      - name: Upload Test Screenshots
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          if-no-files-found: ignore

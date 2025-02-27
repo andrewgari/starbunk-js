@@ -2,6 +2,10 @@
 
 A powerful Discord bot designed for seamless cross-server communication and community management.
 
+![Bot Tests](https://github.com/andrewgari/starbunk-js/actions/workflows/pr-bot-tests.yml/badge.svg)
+![Tests](https://github.com/andrewgari/starbunk-js/actions/workflows/pr-test.yml/badge.svg)
+![Lint](https://github.com/andrewgari/starbunk-js/actions/workflows/pr-lint.yml/badge.svg)
+
 ## ✨ Features
 
 - 🔄 **Cross-Server Sync**: Bridge channels between Snowbunk and StarBunk communities
@@ -63,7 +67,43 @@ A powerful Discord bot designed for seamless cross-server communication and comm
     npm run dev
     ```
 
-## �� Bot Architecture
+## 🚀 Running the Bot
+
+### Prerequisites
+
+1. Make sure you have Node.js installed (v16.0.0 or higher)
+2. Create a `.env` file in the root directory based on the `.env_sample` file
+3. Fill in the required environment variables in the `.env` file:
+   - `STARBUNK_TOKEN`: Discord token for the Starbunk bot
+   - `SNOWBUNK_TOKEN`: Discord token for the Snowbunk bot
+   - `GUILD_ID`: ID of your Discord server
+   - `CLIENT_ID`: Client ID of your Discord application
+
+### Starting the Bot
+
+To start the bot, run:
+
+```bash
+npm install  # Install dependencies (only needed once)
+npm run build  # Build the TypeScript code
+npm run start  # Start the bot
+```
+
+The bot will connect to Discord using the tokens provided in your `.env` file.
+
+### Stopping the Bot
+
+To stop the running bot, you can press `Ctrl+C` in the terminal where the bot is running. If the bot is running in the background, you can find and stop the process using:
+
+```bash
+# Find the bot process
+ps aux | grep "node dist/bunkbot.js"
+
+# Stop the process (replace PID with the actual process ID)
+kill PID
+```
+
+## 🤖 Bot Architecture
 
 BunkBot includes two main types of bots:
 
@@ -104,3 +144,47 @@ npm test
 ```
 
 The project uses Jest for testing and includes comprehensive tests for all bots and services.
+
+## E2E Testing
+
+This project includes Cypress E2E tests to verify that all bots correctly respond to their trigger conditions. These tests send real messages to Discord and verify the responses.
+
+### Running E2E Tests
+
+To run the E2E tests:
+
+1. Make sure the Discord bot is running and properly configured with the correct token in your `.env` file.
+2. Run the tests using one of the following commands:
+
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Run only bot tests
+npm run test:e2e:bots
+
+# Run bot tests (direct pattern match)
+npm run test:bots
+
+# Open Cypress UI
+npm run cypress:open
+```
+
+### Test Structure
+
+The E2E tests are located in the `cypress/e2e/bots` directory. Each bot has tests that verify:
+
+1. The bot responds correctly to its trigger conditions
+2. The bot does not respond to messages that should not trigger it
+
+For more information about the E2E tests, see the [Cypress README](cypress/README.md).
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment. The following workflows are included:
+
+- **PR Bot Tests**: Runs the bot tests for each pull request that modifies bot-related code
+- **PR Test Check**: Runs the Jest tests for each pull request
+- **PR Lint**: Ensures code quality by running ESLint
+
+All workflows must pass before a pull request can be merged.

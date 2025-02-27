@@ -15,7 +15,12 @@
 		"format": "prettier --write \"src/**/*.ts\"",
 		"type-check": "tsc --noEmit",
 		"test:music": "jest src/tests/starbunk/commands/musicCommands.test.ts",
-		"validate-bots": "./scripts/validate-bots.sh"
+		"validate-bots": "./scripts/validate-bots.sh",
+		"cypress:open": "cypress open",
+		"cypress:run": "cypress run",
+		"test:e2e": "cypress run --spec 'cypress/e2e/**/*.cy.ts'",
+		"test:e2e:bots": "cypress run --spec 'cypress/e2e/bots/**/*.cy.ts'",
+		"test:bots": "cypress run --spec 'cypress/e2e/bots/*.cy.ts'"
 	},
 	"engines": {
 		"node": ">=16.0.0"
@@ -47,17 +52,20 @@
 		"distube": "^5.0.6",
 		"dotenv": "^16.3.1",
 		"ffmpeg-static": "^5.2.0",
+		"module-alias": "^2.2.3",
 		"openai": "^4.80.0",
 		"opusscript": "^0.0.8",
 		"play-dl": "^1.9.7",
 		"ytdl-core": "^4.11.5"
 	},
 	"devDependencies": {
+		"@cypress/code-coverage": "^3.12.24",
 		"@testing-library/jest-dom": "^6.6.3",
 		"@types/jest": "^29.5.14",
 		"@types/node": "^20.17.14",
 		"@typescript-eslint/eslint-plugin": "^6.21.0",
 		"@typescript-eslint/parser": "^6.21.0",
+		"cypress": "^14.1.0",
 		"eslint": "^8.0.0",
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-prettier": "^5.2.3",
