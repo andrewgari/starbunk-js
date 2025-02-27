@@ -1,6 +1,11 @@
+import { Message } from 'discord.js';
+import userID from '../../../discord/userID';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
+import { BotIdentity } from '../botTypes';
+import { getUserIdentity } from '../identity/userIdentity';
 import ReplyBot from '../replyBot';
+import { AllConditions } from '../triggers/conditions/allConditions';
 import { OneCondition } from '../triggers/conditions/oneCondition';
 import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
@@ -41,13 +46,30 @@ export default function createGuyBot(webhookServiceParam: WebhookService = webho
 	// Get the condition for checking if the message is from Guy
 	const guyUserCondition = getGuyCondition();
 
+	// Identity updater function that uses the new utility function
+	const updateIdentity = async (message: Message): Promise<BotIdentity> => {
+		// If the message is from Guy, use Guy's identity
+		if (message.author.id === userID.Guy) {
+			return await getUserIdentity(message);
+		}
+
+		// Otherwise, use the default GuyBot identity
+		return {
+			name: 'GuyBot',
+			avatarUrl: 'https://i.pinimg.com/originals/dc/39/85/dc3985a3ac127397c53bf8c3a749b011.jpg'
+		};
+	};
+
 	return new BotBuilder('GuyBot', webhookServiceParam)
 		.withAvatar('https://i.pinimg.com/originals/dc/39/85/dc3985a3ac127397c53bf8c3a749b011.jpg')
 		.withCustomTrigger(new OneCondition(
-			new PatternCondition(Patterns.GUY_MENTION),
-			new RandomChanceCondition(5),
-			guyUserCondition
+			new PatternCondition(Patterns.WORD_GUY),
+			new AllConditions(
+				new RandomChanceCondition(5),
+				guyUserCondition
+			)
 		))
+		.withDynamicIdentity('https://i.pinimg.com/originals/dc/39/85/dc3985a3ac127397c53bf8c3a749b011.jpg', updateIdentity)
 		.respondsWithRandom(responses)
 		.build();
 }

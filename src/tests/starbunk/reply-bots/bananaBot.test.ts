@@ -12,6 +12,28 @@ jest.mock('../../../utils/random', () => ({
 	percentChance: jest.fn()
 }));
 
+// Mock the getUserIdentity function
+jest.mock('../../../starbunk/bots/identity/userIdentity', () => ({
+	getUserIdentity: jest.fn().mockImplementation(async (message) => {
+		if ('author' in message) {
+			return {
+				name: message.author.displayName || message.author.username,
+				avatarUrl: message.author.displayAvatarURL()
+			};
+		} else if ('guild' in message) {
+			return {
+				name: message.displayName,
+				avatarUrl: message.displayAvatarURL()
+			};
+		} else {
+			return {
+				name: message.displayName || message.username,
+				avatarUrl: message.displayAvatarURL()
+			};
+		}
+	})
+}));
+
 // Import the mocked random utility
 import random from '../../../utils/random';
 

@@ -4,6 +4,7 @@ import ReplyBot from '../replyBot';
 import { OneCondition } from '../triggers/conditions/oneCondition';
 import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
+import { RandomChanceCondition } from '../triggers/conditions/randomChanceCondition';
 import { getSigCondition } from '../triggers/userConditions';
 
 /**
@@ -16,13 +17,13 @@ export default function createPickleBot(webhookServiceParam: WebhookService = we
 	// Combine the Sig user condition with the gremlin pattern condition
 	const sigCondition = new OneCondition(
 		sigUserCondition,
-		new PatternCondition(Patterns.GREMLIN)
+		new RandomChanceCondition(15)
 	);
 
 	return new BotBuilder('PickleBot', webhookServiceParam)
 		.withAvatar('https://i.imgur.com/D0czJFu.jpg')
 		.withCustomTrigger(new OneCondition(
-			new PatternCondition(Patterns.GREMLIN),
+			new PatternCondition(Patterns.WORD_GREMLIN),
 			sigCondition
 		))
 		.respondsWithStatic("Could you repeat that? I don't speak *gremlin*")

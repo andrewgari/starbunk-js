@@ -1,6 +1,10 @@
-import { CommandInteraction, GuildMember, TextChannel, User } from 'discord.js';
+import { CommandInteraction, GuildMember, TextChannel } from 'discord.js';
+import { getUserIdentity } from '../../../starbunk/bots/identity/userIdentity';
 import { MessageSender, MonkeySayService, WebhookMessageSender } from '../../../starbunk/commands/monkeySay';
 import { WebhookService } from '../../../webhooks/webhookService';
+
+// Mock the getUserIdentity function
+jest.mock('../../../starbunk/bots/identity/userIdentity');
 
 describe('MonkeySay Command', () => {
 	describe('WebhookMessageSender', () => {
@@ -44,7 +48,6 @@ describe('MonkeySay Command', () => {
 		let mockMessageSender: MessageSender;
 		let service: MonkeySayService;
 		let mockInteraction: Partial<CommandInteraction>;
-		let mockUser: User;
 		let mockMember: GuildMember;
 		let mockChannel: Partial<TextChannel>;
 
@@ -58,12 +61,6 @@ describe('MonkeySay Command', () => {
 				name: 'test-channel'
 			} as Partial<TextChannel>;
 
-			mockUser = {
-				id: 'user-id',
-				username: 'TestUser',
-				displayAvatarURL: jest.fn().mockReturnValue('https://example.com/default-avatar.png')
-			} as unknown as User;
-
 			mockMember = {
 				id: 'user-id',
 				nickname: 'TestNickname',
@@ -76,6 +73,12 @@ describe('MonkeySay Command', () => {
 			} as unknown as Partial<CommandInteraction>;
 
 			service = new MonkeySayService(mockMessageSender);
+
+			// Mock getUserIdentity to return a default identity
+			(getUserIdentity as jest.Mock).mockResolvedValue({
+				name: 'TestNickname',
+				avatarUrl: 'https://example.com/member-avatar.png'
+			});
 		});
 
 		it('should use member nickname and avatar when available', async () => {
@@ -83,11 +86,11 @@ describe('MonkeySay Command', () => {
 
 			await service.impersonateUser(
 				mockInteraction as CommandInteraction,
-				mockUser,
 				mockMember,
 				message
 			);
 
+			expect(getUserIdentity).toHaveBeenCalledWith(mockMember);
 			expect(mockMessageSender.sendMessage).toHaveBeenCalledWith(
 				mockChannel,
 				'TestNickname',
@@ -103,11 +106,15 @@ describe('MonkeySay Command', () => {
 
 		it('should fall back to user username when nickname is not available', async () => {
 			const message = 'Hello, world!';
-			mockMember.nickname = null;
+
+			// Mock getUserIdentity to return a username instead of nickname
+			(getUserIdentity as jest.Mock).mockResolvedValue({
+				name: 'TestUser',
+				avatarUrl: 'https://example.com/member-avatar.png'
+			});
 
 			await service.impersonateUser(
 				mockInteraction as CommandInteraction,
-				mockUser,
 				mockMember,
 				message
 			);
@@ -122,11 +129,15 @@ describe('MonkeySay Command', () => {
 
 		it('should fall back to user avatar when member avatar is not available', async () => {
 			const message = 'Hello, world!';
-			(mockMember.displayAvatarURL as jest.Mock).mockReturnValue(null);
+
+			// Mock getUserIdentity to return a default avatar
+			(getUserIdentity as jest.Mock).mockResolvedValue({
+				name: 'TestNickname',
+				avatarUrl: 'https://example.com/default-avatar.png'
+			});
 
 			await service.impersonateUser(
 				mockInteraction as CommandInteraction,
-				mockUser,
 				mockMember,
 				message
 			);
@@ -153,7 +164,6 @@ describe('MonkeySay Command', () => {
 				await expect(
 					service.impersonateUser(
 						mockInteraction as CommandInteraction,
-						mockUser,
 						mockMember,
 						message
 					)
