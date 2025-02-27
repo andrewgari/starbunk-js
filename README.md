@@ -2,8 +2,10 @@
 
 A powerful Discord bot designed for seamless cross-server communication and community management.
 
-![Bot Tests](https://github.com/andrewgari/starbunk-js/actions/workflows/pr-bot-tests.yml/badge.svg)
-![Tests](https://github.com/andrewgari/starbunk-js/actions/workflows/pr-test.yml/badge.svg)
+![Build](https://github.com/andrewgari/starbunk-js/actions/workflows/pr-build.yml/badge.svg)
+![Unit Tests](https://github.com/andrewgari/starbunk-js/actions/workflows/pr-unit-test.yml/badge.svg)
+![E2E Tests](https://github.com/andrewgari/starbunk-js/actions/workflows/pr-e2e-test.yml/badge.svg)
+![Docker](https://github.com/andrewgari/starbunk-js/actions/workflows/pr-docker-build.yml/badge.svg)
 ![Lint](https://github.com/andrewgari/starbunk-js/actions/workflows/pr-lint.yml/badge.svg)
 
 ## ✨ Features
@@ -183,8 +185,10 @@ For more information about the E2E tests, see the [Cypress README](cypress/READM
 
 This project uses GitHub Actions for continuous integration and deployment. The following workflows are included:
 
-- **PR Bot Tests**: Runs the bot tests for each pull request that modifies bot-related code
-- **PR Test Check**: Runs the Jest tests for each pull request
+- **PR Build**: Builds the TypeScript code and uploads artifacts
+- **PR Unit Tests**: Runs Jest unit tests (depends on Build)
+- **PR E2E Tests**: Runs Cypress E2E tests for bots (depends on Build and Unit Tests)
+- **PR Docker Build**: Builds the Docker image (depends on all previous steps)
 - **PR Lint**: Ensures code quality by running ESLint
 
 All workflows must pass before a pull request can be merged.
