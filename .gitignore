@@ -135,3 +135,13 @@ node_modules
 *.log
 src/starbunk/bots/reply-bots/attitudeBot.ts
 src/__tests__/starbunk/reply-bots/attitudeBot.test.ts
+
+# Generated PR comment files
+pr_*.txt
+pr_*.json
+*_comments.txt
+*_pr_comments.txt
+completed_pr_comments.txt
+
+# Archive directory
+.archive/

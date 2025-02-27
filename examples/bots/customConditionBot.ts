@@ -1,9 +1,9 @@
 import { Message } from 'discord.js';
-import webhookService from '../../../webhooks/webhookService';
-import { BotBuilder } from '../botBuilder';
-import { Condition, TimeDelayCondition } from '../conditions';
-import ReplyBot from '../replyBot';
-import { isVenn } from '../triggers/userConditions';
+import { BotBuilder } from '../../src/starbunk/bots/botBuilder';
+import { Condition, TimeDelayCondition } from '../../src/starbunk/bots/conditions';
+import ReplyBot from '../../src/starbunk/bots/replyBot';
+import { isVenn } from '../../src/starbunk/bots/triggers/userConditions';
+import webhookService from '../../src/webhooks/webhookService';
 
 /**
  * Custom condition that checks if a user is Venn
