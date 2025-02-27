@@ -47,7 +47,7 @@ RUN apk add --no-cache \
 RUN npm install -g \
     ts-node@10.9.2 \
     is-ci@3.0.1 \
-    distube@4.1.1
+    distube@5.0.6
 
 # Set proper ownership for the application directory
 RUN chown -R node:node /app

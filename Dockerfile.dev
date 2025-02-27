@@ -22,7 +22,7 @@ COPY . .
 RUN npm install -g \
     ts-node \
     is-ci \
-    distube
+    distube@5.0.6
 
 # We'll run as root in development mode
 # This is not recommended for production, but simplifies development
