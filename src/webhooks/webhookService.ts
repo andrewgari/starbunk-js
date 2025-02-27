@@ -1,4 +1,5 @@
 import { Client, Message, TextChannel, Webhook } from 'discord.js';
+import { getClient } from '../discord/clientInstance';
 import guildIDs from '../discord/guildIDs';
 import { MessageInfo } from '../discord/messageInfo';
 
@@ -66,7 +67,7 @@ export class WebhookService {
 			// Handle the new overload
 			if (typeof channelOrId === 'string' && typeof messageOrContent === 'string') {
 				// Get the channel from the ID
-				const client = require('../discord/client').default;
+				const client = getClient();
 				const channel = await client.channels.fetch(channelOrId) as TextChannel;
 
 				// Create the message info

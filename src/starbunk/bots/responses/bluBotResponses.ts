@@ -56,13 +56,16 @@ export class ConditionalResponse implements ResponseGenerator {
 		private defaultResponse: ResponseGenerator
 	) { }
 
-	async generateResponse(message: Message): Promise<string> {
+	async generateResponse(message: Message): Promise<string | null> {
 		for (const { condition, response } of this.responseMap) {
 			const result = condition(message);
 			const shouldUse = result instanceof Promise ? await result : result;
 
 			if (shouldUse) {
-				return response.generateResponse(message);
+				const responseText = await response.generateResponse(message);
+				if (responseText !== null) {
+					return responseText;
+				}
 			}
 		}
 

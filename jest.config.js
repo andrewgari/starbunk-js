@@ -10,5 +10,11 @@ module.exports = {
 		'^@/(.*)$': '<rootDir>/src/$1'
 	},
 	setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
-	moduleDirectories: ['node_modules', 'src']
+	moduleDirectories: ['node_modules', 'src'],
+	testPathIgnorePatterns: [
+		'<rootDir>/src/__tests__/mocks/',
+		'<rootDir>/src/__tests__/helpers/',
+		'<rootDir>/src/__tests__/types/',
+		'<rootDir>/src/__tests__/setup.ts'
+	]
 };

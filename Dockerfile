@@ -20,12 +20,12 @@ RUN npm run build
 # Production stage
 FROM node:20.11-alpine
 
-# Install production dependencies with specific versions
+# Install production dependencies with more flexible version constraints
 RUN apk add --no-cache \
     ffmpeg~=6.1 \
     python3~=3.11 \
-    tzdata~=2024 \
-    ca-certificates~=20240226 \
+    tzdata \
+    ca-certificates \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /app
