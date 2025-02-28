@@ -65,7 +65,8 @@ jobs:
     build:
         needs: [changes]
         name: 🔨 Build
-        if: ${{ needs.changes.outputs.should_run == 'true' && (needs.changes.outputs.src == 'true' || needs.changes.outputs.config == 'true') }}
+        # Only run if PR was merged or direct push to main/develop
+        if: ${{ needs.changes.outputs.should_run == 'true' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -111,7 +112,8 @@ jobs:
     test:
         needs: [type-check]
         name: 🧪 Test
-        if: ${{ always() && needs.changes.outputs.should_run == 'true' && (needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true') }}
+        # Only run if PR was merged or direct push to main/develop
+        if: ${{ needs.changes.outputs.should_run == 'true' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -130,7 +132,7 @@ jobs:
     e2e-test:
         needs: [test]
         name: 🤖 E2E Bot Tests
-        if: ${{ always() && needs.changes.outputs.should_run == 'true' && needs.changes.outputs.bots == 'true' && needs.test.result == 'success' }}
+        if: ${{ needs.changes.outputs.should_run == 'true' && needs.changes.outputs.bots == 'true' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
