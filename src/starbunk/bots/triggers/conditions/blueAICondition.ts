@@ -39,9 +39,9 @@ export class BlueAICondition implements TriggerCondition {
 		try {
 			// Check if the OpenAI API key is set
 			if (!process.env.OPENAI_KEY) {
-				console.warn('OPENAI_KEY environment variable is not set. Falling back to pattern matching.');
-				// Fall back to a simple pattern match for "blue" or variations
-				return /\b(blu|blue|bloo|azul|blau|bl(u+)|blew|blö|синий|青|ブルー|블루|כחול|नीला|蓝)\b/i.test(message.content);
+				console.warn('OPENAI_KEY environment variable is not set. Blue detection may not work properly.');
+				// Return false if no API key is available
+				return false;
 			}
 
 			const response = await this.openAIClient.chat.completions.create({
@@ -92,8 +92,8 @@ export class BlueAICondition implements TriggerCondition {
 			return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
 		} catch (error) {
 			console.warn('Error using OpenAI API:', error);
-			// Fall back to a simple pattern match for "blue" or variations
-			return /\b(blu|blue|bloo|azul|blau|bl(u+)|blew|blö|синий|青|ブルー|블루|כחול|नीला|蓝)\b/i.test(message.content);
+			// Return false if there was an error with the API
+			return false;
 		}
 	}
 }

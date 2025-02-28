@@ -22,7 +22,7 @@ export const Patterns = {
 	// ===== WORD MENTION PATTERNS =====
 
 	/** Matches any form of "blue" or variations like blu, bloo, azul etc */
-	WORD_BLUE: /\b(blu|blue|bloo|azul|blau|bl(u+)|blew|blö|синий|青|ブルー|블루|כחול|नीला|蓝)\b/i,
+	WORD_BLUE: /\b(blu|blue|bl(o+)|azul|blau|bl(u+)|blew|blö|синий|青|ブルー|블루|כחול|नीला|蓝)\b/i,
 
 	/** Matches references to macaroni or pasta */
 	WORD_MACARONI: /\b(mac(aroni)?|pasta)\b/i,
