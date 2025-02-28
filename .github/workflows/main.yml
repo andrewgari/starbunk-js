@@ -84,8 +84,9 @@ jobs:
                   if-no-files-found: error
 
     lint:
-        needs: [build]
+        needs: [changes]
         name: 🔍 Lint
+        if: ${{ needs.changes.outputs.should_run == 'true' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -97,8 +98,9 @@ jobs:
             - run: npm run lint
 
     type-check:
-        needs: [lint]
+        needs: [changes]
         name: 🔍 Type Check
+        if: ${{ needs.changes.outputs.should_run == 'true' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -110,7 +112,7 @@ jobs:
             - run: npm run type-check:main
 
     test:
-        needs: [type-check]
+        needs: [changes, build]
         name: 🧪 Test
         # Only run if PR was merged or direct push to main/develop
         if: ${{ needs.changes.outputs.should_run == 'true' }}
@@ -130,7 +132,7 @@ jobs:
             - run: npm run test
 
     e2e-test:
-        needs: [test]
+        needs: [changes, build]
         name: 🤖 E2E Bot Tests
         if: ${{ needs.changes.outputs.should_run == 'true' && needs.changes.outputs.bots == 'true' }}
         runs-on: ubuntu-latest
@@ -150,12 +152,18 @@ jobs:
               run: |
                   echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
                   echo "NODE_ENV=test" >> .env
-            - run: npm run test:bots
+            - run: npm run test:e2e:bots
+              env:
+                  CYPRESS_DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+                  NODE_ENV: test
+                  # Add Cypress-specific environment variables
+                  CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     docker:
-        needs: [test, e2e-test]
+        needs: [test, e2e-test, lint, type-check]
         name: 🐳 Release Docker Image
-        if: ${{ always() && needs.changes.outputs.should_run == 'true' && needs.test.result == 'success' && (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped') }}
+        if: ${{ always() && needs.changes.outputs.should_run == 'true' && needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped') }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
