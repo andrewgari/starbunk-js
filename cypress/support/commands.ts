@@ -47,6 +47,16 @@ interface DiscordResponse {
 	content: string;
 }
 
+/**
+ * Bot test configuration interface
+ */
+export interface BotTestConfig {
+	botName: string;
+	triggerMessage: string;
+	expectedResponsePattern: RegExp;
+	channelId?: string;
+}
+
 // Initialize Discord client
 Cypress.Commands.add('initDiscordClient', () => {
 	cy.task('initDiscordClient').then((client) => {
@@ -100,5 +110,44 @@ Cypress.Commands.add('simulateMessage', (message: string, userId: string) => {
 				$el.text(typedResponse.content);
 			});
 		});
+	});
+});
+
+/**
+ * Test a bot with the given configuration
+ * @param config The bot test configuration
+ */
+Cypress.Commands.add('testBot', (config: BotTestConfig) => {
+	const {
+		botName,
+		triggerMessage,
+		expectedResponsePattern,
+		channelId = channelIDs.NebulaChat
+	} = config;
+
+	cy.sendDiscordMessage(
+		triggerMessage,
+		botName,
+		expectedResponsePattern,
+		channelId
+	);
+});
+
+/**
+ * Test that a bot does not respond to a message
+ * @param botName The name of the bot
+ * @param message The message that should not trigger the bot
+ * @param channelId The channel ID to send the message to
+ */
+Cypress.Commands.add('testBotNoResponse', (
+	message: string,
+	channelId: string = channelIDs.NebulaChat
+) => {
+	cy.task('sendDiscordMessage', {
+		message,
+		channelId,
+		expectResponse: false
+	}).then((result) => {
+		expect(result).to.equal(null);
 	});
 });

@@ -1,92 +1,47 @@
 /// <reference types="cypress" />
 import channelIDs from '../../../src/discord/channelIDs';
+import { testBot, testBotNoResponse } from '../../support/botTestHelper';
 
+/**
+ * E2E tests for the Banana-Bot
+ *
+ * This bot responds to messages containing the word "banana" in various forms
+ */
 describe('Banana-Bot E2E Tests', () => {
 	before(() => {
 		// Initialize Discord client before running tests
 		cy.initDiscordClient();
 	});
 
-	it('should respond to "banana" with a matching response', () => {
-		cy.sendDiscordMessage(
-			'I ate a banana for breakfast',
-			'Banana-Bot',
-			/banana/i,
-			channelIDs.NebulaChat
-		);
-	});
+	// Test cases where the bot should respond
+	const responseTests = [
+		{ name: 'with a matching response', message: 'I ate a banana for breakfast' },
+		{ name: 'at the beginning of a sentence', message: 'Banana splits are delicious' },
+		{ name: 'at the end of a sentence', message: 'My favorite fruit is banana' },
+		{ name: 'in the middle of a sentence', message: 'I put banana slices in my cereal' },
+		{ name: 'uppercase "BANANA"', message: 'BANANA BREAD IS AMAZING' },
+		{ name: 'mixed case "BaNaNa"', message: 'BaNaNa pudding is tasty' },
+		{ name: 'plural "bananas"', message: 'I bought some bananas at the store' }
+	];
 
-	it('should respond to "banana" at the beginning of a sentence', () => {
-		cy.sendDiscordMessage(
-			'Banana splits are delicious',
-			'Banana-Bot',
-			/banana/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to "banana" at the end of a sentence', () => {
-		cy.sendDiscordMessage(
-			'My favorite fruit is banana',
-			'Banana-Bot',
-			/banana/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to "banana" in the middle of a sentence', () => {
-		cy.sendDiscordMessage(
-			'I put banana slices in my cereal',
-			'Banana-Bot',
-			/banana/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to uppercase "BANANA"', () => {
-		cy.sendDiscordMessage(
-			'BANANA BREAD IS AMAZING',
-			'Banana-Bot',
-			/banana/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to mixed case "BaNaNa"', () => {
-		cy.sendDiscordMessage(
-			'BaNaNa pudding is tasty',
-			'Banana-Bot',
-			/banana/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to plural "bananas"', () => {
-		cy.sendDiscordMessage(
-			'I bought some bananas at the store',
-			'Banana-Bot',
-			/banana/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should NOT respond to a message without "banana"', () => {
-		cy.task('sendDiscordMessage', {
-			message: 'I love apples',
-			channelId: channelIDs.NebulaChat,
-			expectResponse: false
-		}).then((result) => {
-			expect(result).to.equal(null);
+	// Run all response tests
+	responseTests.forEach(test => {
+		testBot({
+			botName: 'Banana-Bot',
+			triggerMessage: test.message,
+			expectedResponsePattern: /banana/i,
+			channelId: channelIDs.NebulaChat
 		});
 	});
 
-	it('should NOT respond to similar but incorrect words', () => {
-		cy.task('sendDiscordMessage', {
-			message: 'I like bandanas',
-			channelId: channelIDs.NebulaChat,
-			expectResponse: false
-		}).then((result) => {
-			expect(result).to.equal(null);
-		});
+	// Test cases where the bot should NOT respond
+	const noResponseTests = [
+		{ name: 'a message without "banana"', message: 'I love apples' },
+		{ name: 'similar but incorrect words', message: 'I like bandanas' }
+	];
+
+	// Run all no-response tests
+	noResponseTests.forEach(test => {
+		testBotNoResponse('Banana-Bot', test.message, channelIDs.NebulaChat);
 	});
 });

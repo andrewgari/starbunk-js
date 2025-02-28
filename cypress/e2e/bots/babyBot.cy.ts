@@ -1,92 +1,47 @@
 /// <reference types="cypress" />
 import channelIDs from '../../../src/discord/channelIDs';
+import { testBot, testBotNoResponse } from '../../support/botTestHelper';
 
+/**
+ * E2E tests for the Baby-Bot
+ *
+ * This bot responds to messages containing the word "baby" in various forms
+ */
 describe('Baby-Bot E2E Tests', () => {
 	before(() => {
 		// Initialize Discord client before running tests
 		cy.initDiscordClient();
 	});
 
-	it('should respond to "baby" with a matching response', () => {
-		cy.sendDiscordMessage(
-			'Look at that cute baby',
-			'Baby-Bot',
-			/baby/i,
-			channelIDs.NebulaChat
-		);
-	});
+	// Test cases where the bot should respond
+	const responseTests = [
+		{ name: 'with a matching response', message: 'Look at that cute baby' },
+		{ name: 'at the beginning of a sentence', message: 'Baby shark doo doo doo' },
+		{ name: 'at the end of a sentence', message: 'She is just a baby' },
+		{ name: 'in the middle of a sentence', message: 'That baby doll is creepy' },
+		{ name: 'uppercase "BABY"', message: 'BABY YODA IS CUTE' },
+		{ name: 'mixed case "BaBy"', message: 'BaBy steps are important' },
+		{ name: 'as a term of endearment', message: 'Hey baby, how are you?' }
+	];
 
-	it('should respond to "baby" at the beginning of a sentence', () => {
-		cy.sendDiscordMessage(
-			'Baby shark doo doo doo',
-			'Baby-Bot',
-			/baby/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to "baby" at the end of a sentence', () => {
-		cy.sendDiscordMessage(
-			'She is just a baby',
-			'Baby-Bot',
-			/baby/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to "baby" in the middle of a sentence', () => {
-		cy.sendDiscordMessage(
-			'That baby doll is creepy',
-			'Baby-Bot',
-			/baby/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to uppercase "BABY"', () => {
-		cy.sendDiscordMessage(
-			'BABY YODA IS CUTE',
-			'Baby-Bot',
-			/baby/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to mixed case "BaBy"', () => {
-		cy.sendDiscordMessage(
-			'BaBy steps are important',
-			'Baby-Bot',
-			/baby/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to "baby" as a term of endearment', () => {
-		cy.sendDiscordMessage(
-			'Hey baby, how are you?',
-			'Baby-Bot',
-			/baby/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should NOT respond to a message without "baby"', () => {
-		cy.task('sendDiscordMessage', {
-			message: 'Look at that cute kid',
-			channelId: channelIDs.NebulaChat,
-			expectResponse: false
-		}).then((result) => {
-			expect(result).to.equal(null);
+	// Run all response tests
+	responseTests.forEach(test => {
+		testBot({
+			botName: 'Baby-Bot',
+			triggerMessage: test.message,
+			expectedResponsePattern: /baby/i,
+			channelId: channelIDs.NebulaChat
 		});
 	});
 
-	it('should NOT respond to similar but incorrect words', () => {
-		cy.task('sendDiscordMessage', {
-			message: 'I need to babysit tonight',
-			channelId: channelIDs.NebulaChat,
-			expectResponse: false
-		}).then((result) => {
-			expect(result).to.equal(null);
-		});
+	// Test cases where the bot should NOT respond
+	const noResponseTests = [
+		{ name: 'a message without "baby"', message: 'Look at that cute kid' },
+		{ name: 'similar but incorrect words', message: 'I need to babysit tonight' }
+	];
+
+	// Run all no-response tests
+	noResponseTests.forEach(test => {
+		testBotNoResponse('Baby-Bot', test.message, channelIDs.NebulaChat);
 	});
 });

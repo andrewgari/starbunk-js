@@ -25,5 +25,5 @@
 	},
 	"include": ["cypress/**/*.ts", "cypress.config.ts"],
 	"exclude": ["node_modules", "dist"],
-	"files": ["cypress/support/index.d.ts", "cypress/support/commands-types.d.ts"]
+	"files": ["cypress/support/index.d.ts"]
 }

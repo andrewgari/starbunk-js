@@ -1,94 +1,48 @@
 /// <reference types="cypress" />
 import channelIDs from '../../../src/discord/channelIDs';
+import { testBot, testBotNoResponse } from '../../support/botTestHelper';
 
+/**
+ * E2E tests for the Music-Correct-Bot
+ *
+ * This bot responds to users who try to use old music commands (!play or ?play)
+ * with a message informing them about the new /play command format.
+ */
 describe('Music-Correct-Bot E2E Tests', () => {
 	before(() => {
 		// Initialize Discord client before running tests
 		cy.initDiscordClient();
 	});
 
-	it('should respond to "!play" with a correction message', () => {
-		cy.sendDiscordMessage(
-			'!play despacito',
-			'Music-Correct-Bot',
-			/Use \/play instead of !play/i,
-			channelIDs.NebulaChat
-		);
-	});
+	// Test cases where the bot should respond
+	const responseTests = [
+		{ name: 'with a correction message', message: '!play despacito' },
+		{ name: 'with different songs', message: '!play never gonna give you up' },
+		{ name: 'with no song specified', message: '!play' },
+		{ name: 'with uppercase', message: '!PLAY some music' },
+		{ name: 'with mixed case', message: '!PlAy a song' },
+		{ name: 'when user tries to use old music command', message: '!play something' }
+	];
 
-	it('should respond to "!play" with different songs', () => {
-		cy.sendDiscordMessage(
-			'!play never gonna give you up',
-			'Music-Correct-Bot',
-			/Use \/play instead of !play/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to "!play" with no song specified', () => {
-		cy.sendDiscordMessage(
-			'!play',
-			'Music-Correct-Bot',
-			/Use \/play instead of !play/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to "!play" with uppercase', () => {
-		cy.sendDiscordMessage(
-			'!PLAY some music',
-			'Music-Correct-Bot',
-			/Use \/play instead of !play/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should respond to "!play" with mixed case', () => {
-		cy.sendDiscordMessage(
-			'!PlAy a song',
-			'Music-Correct-Bot',
-			/Use \/play instead of !play/i,
-			channelIDs.NebulaChat
-		);
-	});
-
-	it('should NOT respond to "/play" (correct command)', () => {
-		cy.task('sendDiscordMessage', {
-			message: '/play despacito',
-			channelId: channelIDs.NebulaChat,
-			expectResponse: false
-		}).then((result) => {
-			expect(result).to.equal(null);
+	// Run all response tests
+	responseTests.forEach(test => {
+		testBot({
+			botName: 'Music-Correct-Bot',
+			triggerMessage: test.message,
+			expectedResponsePattern: /Use \/play instead of !play/i,
+			channelId: channelIDs.NebulaChat
 		});
 	});
 
-	it('should NOT respond to other commands', () => {
-		cy.task('sendDiscordMessage', {
-			message: '!skip',
-			channelId: channelIDs.NebulaChat,
-			expectResponse: false
-		}).then((result) => {
-			expect(result).to.equal(null);
-		});
-	});
+	// Test cases where the bot should NOT respond
+	const noResponseTests = [
+		{ name: '"/play" (correct command)', message: '/play despacito' },
+		{ name: 'other commands', message: '!skip' },
+		{ name: 'messages about playing without the command', message: 'I want to play some music' }
+	];
 
-	it('should NOT respond to messages about playing without the command', () => {
-		cy.task('sendDiscordMessage', {
-			message: 'I want to play some music',
-			channelId: channelIDs.NebulaChat,
-			expectResponse: false
-		}).then((result) => {
-			expect(result).to.equal(null);
-		});
-	});
-
-	it('responds with correct message when user tries to use old music command', () => {
-		// Use the sendDiscordMessage command that's already working in other tests
-		cy.sendDiscordMessage(
-			'!play something',
-			'Music-Correct-Bot',
-			/Use \/play instead of !play/i,
-			channelIDs.NebulaChat
-		);
+	// Run all no-response tests
+	noResponseTests.forEach(test => {
+		testBotNoResponse('Music-Correct-Bot', test.message, channelIDs.NebulaChat);
 	});
 });
