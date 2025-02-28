@@ -109,9 +109,9 @@ jobs:
             - run: npm run type-check:main
 
     test:
-        needs: [changes, type-check]
+        needs: [type-check]
         name: 🧪 Test
-        if: ${{ needs.changes.outputs.should_run == 'true' && (needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true') }}
+        if: ${{ always() && needs.changes.outputs.should_run == 'true' && (needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true') }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -130,7 +130,7 @@ jobs:
     e2e-test:
         needs: [test]
         name: 🤖 E2E Bot Tests
-        if: ${{ needs.changes.outputs.should_run == 'true' && needs.changes.outputs.bots == 'true' }}
+        if: ${{ always() && needs.changes.outputs.should_run == 'true' && needs.changes.outputs.bots == 'true' && needs.test.result == 'success' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
