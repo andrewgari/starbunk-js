@@ -47,7 +47,7 @@
 		"envalid": "^8.0.0",
 		"ffmpeg-static": "^5.2.0",
 		"module-name": "^0.0.1-security",
-		"openai": "^4.58.2",
+		"openai": "^4.83.0",
 		"opusscript": "^0.0.8",
 		"play-dl": "^1.9.7",
 		"ytdl-core": "^4.11.5"
