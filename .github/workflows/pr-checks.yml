@@ -72,7 +72,7 @@ jobs:
               run: npm run build
 
             - name: Upload Build Artifacts
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: build-artifacts
                   path: dist/
@@ -137,7 +137,7 @@ jobs:
               run: npm ci
 
             - name: Download Build Artifacts
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: build-artifacts
                   path: dist/
@@ -163,7 +163,7 @@ jobs:
               run: npm ci
 
             - name: Download Build Artifacts
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: build-artifacts
                   path: dist/
@@ -177,7 +177,7 @@ jobs:
               run: npm run test:bots
 
             - name: Upload Test Screenshots
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               if: failure()
               with:
                   name: cypress-screenshots
