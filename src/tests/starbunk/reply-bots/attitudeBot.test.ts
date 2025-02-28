@@ -33,21 +33,13 @@ describe('AttitudeBot', () => {
 		});
 	});
 
-	function isDiscordMessage(message: Partial<Message<boolean>>): message is Message<boolean> {
-		return message.content !== undefined && message.author !== undefined;
-	}
-
 	describe('message handling', () => {
 		it('should ignore messages from bots', async () => {
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
 			mockMessage.content = 'I can\'t do that';
 
-			if (!isDiscordMessage(mockMessage)) {
-				throw new Error('Invalid mock message setup');
-			}
-
-			await attitudeBot.handleMessage(mockMessage);
+			await attitudeBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
@@ -63,11 +55,7 @@ describe('AttitudeBot', () => {
 				it(`should respond to ${testCase.description}`, async () => {
 					mockMessage.content = testCase.content;
 
-					if (!isDiscordMessage(mockMessage)) {
-						throw new Error('Invalid mock message setup');
-					}
-
-					await attitudeBot.handleMessage(mockMessage);
+					await attitudeBot.handleMessage(mockMessage as Message<boolean>);
 					expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 						mockMessage.channel as TextChannel,
 						expect.objectContaining({
@@ -83,11 +71,7 @@ describe('AttitudeBot', () => {
 		it('should NOT respond to unrelated messages', async () => {
 			mockMessage.content = 'Hello there!';
 
-			if (!isDiscordMessage(mockMessage)) {
-				throw new Error('Invalid mock message setup');
-			}
-
-			await attitudeBot.handleMessage(mockMessage);
+			await attitudeBot.handleMessage(mockMessage as Message<boolean>);
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 	});
