@@ -145,3 +145,6 @@ completed_pr_comments.txt
 
 # Archive directory
 .archive/
+
+# Ignore archived GitHub workflows
+.github/workflows/archive/
