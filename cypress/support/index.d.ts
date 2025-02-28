@@ -7,13 +7,13 @@ declare namespace Cypress {
 		 * @param message - The message to send
 		 * @param botName - The name of the bot expected to respond
 		 * @param expectedResponsePattern - Regex pattern to match in the bot's response
-		 * @param channelId - The channel ID to send the message to (defaults to NebulaChat)
+		 * @param channelId - The channel ID to send the message to
 		 */
 		sendDiscordMessage(
 			message: string,
 			botName: string,
 			expectedResponsePattern: RegExp,
-			channelId?: string
+			channelId: string
 		): Chainable<void>;
 
 		/**

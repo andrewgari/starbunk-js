@@ -148,3 +148,8 @@ completed_pr_comments.txt
 
 # Ignore archived GitHub workflows
 .github/workflows/archive/
+
+# Cypress
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/

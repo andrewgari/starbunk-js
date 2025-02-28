@@ -155,9 +155,11 @@ export default defineConfig({
 					}
 
 					// Mock responses based on message content
-					if (message.toLowerCase().includes('spiderman')) {
+					if (message.toLowerCase().includes('spiderman') ||
+						message.toLowerCase().includes('spider man') ||
+						message.toLowerCase().match(/spider\s+man/)) {
 						return {
-							content: 'Actually, it\'s Spider-Man. Respect the hyphen!',
+							content: 'Hey, it\'s "**Spider-Man**"! Don\'t forget the hyphen! Not Spiderman, that\'s dumb',
 							author: {
 								username: 'Spider-Bot'
 							}
@@ -167,6 +169,125 @@ export default defineConfig({
 							content: 'SHEEEEEESH!',
 							author: {
 								username: 'Sheesh-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('blue')) {
+						return {
+							content: 'blue',
+							author: {
+								username: 'Blue-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('banana')) {
+						return {
+							content: 'banana',
+							author: {
+								username: 'Banana-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('baby')) {
+						return {
+							content: 'baby',
+							author: {
+								username: 'Baby-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('bot')) {
+						return {
+							content: 'bot',
+							author: {
+								username: 'Bot-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('chaos')) {
+						return {
+							content: 'chaos',
+							author: {
+								username: 'Chaos-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('check')) {
+						return {
+							content: 'czech',
+							author: {
+								username: 'Check-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('ezio') || message.toLowerCase().includes('assassin')) {
+						return {
+							content: 'Nothing is true, everything is permitted. I am an assassin.',
+							author: {
+								username: 'Ezio-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('gundam')) {
+						return {
+							content: 'gundam',
+							author: {
+								username: 'Gundam-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('guy')) {
+						return {
+							content: 'guy',
+							author: {
+								username: 'Guy-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('hold')) {
+						return {
+							content: 'hold the door',
+							author: {
+								username: 'Hold-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('macaroni')) {
+						return {
+							content: 'macaroni',
+							author: {
+								username: 'Macaroni-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('!play')) {
+						return {
+							content: 'Use /play instead of !play',
+							author: {
+								username: 'Music-Correct-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('music')) {
+						return {
+							content: 'music',
+							author: {
+								username: 'Music-Correct-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('69') || message.toLowerCase().includes('nice')) {
+						return {
+							content: 'nice',
+							author: {
+								username: 'Nice-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('pickle')) {
+						return {
+							content: 'I turned myself into a pickle, Morty!',
+							author: {
+								username: 'Pickle-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('sig')) {
+						return {
+							content: 'sig is great!',
+							author: {
+								username: 'SigGreat-Bot'
+							}
+						};
+					} else if (message.toLowerCase().includes('venn')) {
+						return {
+							content: 'Let me draw you a Venn diagram!',
+							author: {
+								username: 'Venn-Bot'
 							}
 						};
 					} else {
@@ -561,11 +682,28 @@ export default defineConfig({
 				}
 			});
 
-			require('@cypress/code-coverage/task')(on, config);
+			// Import code coverage plugin if in test environment
+			if (process.env.NODE_ENV === 'test') {
+				require('@cypress/code-coverage/task')(on, config);
+			}
+
 			return config;
 		},
 		specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
 		supportFile: 'cypress/support/e2e.ts',
+		// Configure Cypress behavior
+		baseUrl: null,
+		viewportWidth: 1280,
+		viewportHeight: 720,
+		defaultCommandTimeout: 10000,
+		requestTimeout: 10000,
+		responseTimeout: 30000,
+		// Configure video recording
+		video: true,
+		videoCompression: 32,
+		// Configure screenshots
+		screenshotOnRunFailure: true,
+		trashAssetsBeforeRuns: true,
 	},
 	env: {
 		codeCoverage: {

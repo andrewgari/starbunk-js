@@ -1,84 +1,67 @@
-# Cypress E2E Tests for Starbunk Bots
+# Cypress E2E Tests
 
-This directory contains Cypress E2E tests for the Starbunk Discord bots. These tests verify that each bot correctly responds to its trigger conditions by sending real messages to Discord and verifying the responses.
+This directory contains end-to-end tests for the Discord bots using Cypress.
 
-## Directory Structure
+## Setup
 
-- `e2e/` - Contains the actual test files
-  - `bots/` - Tests for Discord bots
-    - `allBots.cy.ts` - Tests all bots in a single file
-    - `spiderBot.cy.ts` - Tests specifically for Spider-Bot
-    - `sigGreatBot.cy.ts` - Tests specifically for SigGreat-Bot
-    - `botBot.cy.ts` - Tests specifically for Bot-Bot
-    - And many more individual bot test files
-- `support/` - Contains support files for Cypress
-  - `commands.ts` - Custom Cypress commands
-  - `e2e.ts` - E2E test configuration
-  - `botTestHelper.ts` - Helper functions for testing bots
-  - `index.d.ts` - Type definitions for custom commands
-- `plugins/` - Contains Cypress plugins
-  - `index.ts` - Plugin configuration
+1. Create a `.env` file in the root directory with the following variables:
+
+    ```
+    DISCORD_TOKEN=your_discord_token
+    ```
+
+2. Install dependencies:
+    ```
+    npm install
+    ```
 
 ## Running Tests
 
-To run the tests, you need to have the Discord bot running and properly configured with the correct token in your `.env` file.
+### Run all bot tests
 
-### Running All Tests
-
-```bash
-npm run test:e2e
+```
+npm run test:e2e:local
 ```
 
-### Running Only Bot Tests
+### Run a specific bot test
 
-```bash
-# Run all bot tests (includes nested directories)
-npm run test:e2e:bots
-
-# Run bot tests (direct pattern match)
-npm run test:bots
+```
+npm run test:e2e:bot blueBot
 ```
 
-### Opening Cypress UI
+Replace `blueBot` with the name of the bot you want to test.
 
-```bash
+### Open Cypress UI
+
+```
 npm run cypress:open
 ```
 
-## Adding New Bot Tests
+### Clean up Cypress artifacts
 
-To add tests for a new bot:
-
-1. Add a new test case to `e2e/bots/allBots.cy.ts` using the `testBot` helper function:
-
-```typescript
-describe('New-Bot', () => {
-  testBot({
-    botName: 'New-Bot',
-    triggerMessage: 'Message that triggers the bot',
-    expectedResponsePattern: /expected response pattern/i
-  });
-
-  // Optionally test that the bot doesn't respond to certain messages
-  testBotNoResponse('New-Bot', 'Message that should not trigger the bot');
-});
+```
+npm run cypress:clean
 ```
 
-2. Create a dedicated test file for the bot in `e2e/bots/newBot.cy.ts` following the pattern of existing bot test files.
+## Test Structure
 
-## How It Works
+- `cypress/e2e/bots/` - Contains test files for each bot
+- `cypress/support/` - Contains helper functions and custom commands
+- `cypress/fixtures/` - Contains test data
 
-The tests work by:
+## Adding a New Bot Test
 
-1. Initializing a Discord client
-2. Sending a message to a specific Discord channel
-3. Waiting for a bot response
-4. Verifying that the response matches the expected pattern
+1. Create a new test file in `cypress/e2e/bots/` named after your bot (e.g., `myBot.cy.ts`)
+2. Use the `testBot` and `testBotNoResponse` helper functions from `botTestHelper.ts`
+3. Run your test with `npm run test:e2e:bot myBot`
 
-The tests use real Discord channels specified in `src/discord/channelIDs.ts` to send and receive messages.
+## Troubleshooting
 
-## Continuous Integration
+- If tests fail, check the screenshots in `cypress/screenshots/`
+- If you encounter network issues, ensure your Discord token is valid
+- For more detailed logs, run Cypress in UI mode with `npm run cypress:open`
 
-These tests are run automatically as part of the GitHub Actions workflow for pull requests. The workflow is defined in `.github/workflows/pr-bot-tests.yml` and is triggered when changes are made to bot-related files.
+## Notes
 
-For a pull request to be merged, all bot tests must pass.
+- Screenshots and videos are automatically excluded from git
+- Tests are configured to run in CI/CD pipelines with GitHub Actions

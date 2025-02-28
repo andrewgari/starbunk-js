@@ -47,32 +47,6 @@ interface DiscordResponse {
 	content: string;
 }
 
-// Declare global Cypress namespace to add custom commands
-declare global {
-	namespace Cypress {
-		interface Chainable {
-			/**
-			 * Custom command to send a message to Discord and verify the bot response
-			 * @param message - The message to send
-			 * @param botName - The name of the bot expected to respond
-			 * @param expectedResponsePattern - Regex pattern to match in the bot's response
-			 * @param channelId - The channel ID to send the message to (defaults to NebulaChat)
-			 */
-			sendDiscordMessage(
-				message: string,
-				botName: string,
-				expectedResponsePattern: RegExp,
-				channelId?: string
-			): Chainable<void>;
-
-			/**
-			 * Custom command to initialize the Discord client
-			 */
-			initDiscordClient(): Chainable<void>;
-		}
-	}
-}
-
 // Initialize Discord client
 Cypress.Commands.add('initDiscordClient', () => {
 	cy.task('initDiscordClient').then((client) => {
