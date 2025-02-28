@@ -17,7 +17,7 @@ export const Patterns = {
 	BLUEBOT_MEAN_ABOUT_VENN: /blue?bot,? say something mean about venn/i,
 
 	/** Matches acknowledgments to blue bot */
-	BLUEBOT_ACKNOWLEDGMENT: /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i,
+	BLUEBOT_ACKNOWLEDGMENT: /\b(yes|yep|yeah|indeed|correct|(i did)|(you got it)|(sure did)|(that's right)|(that is right)|(did someone)|(did somebody)|(who said)|(talking about))\b/i,
 
 	// ===== WORD MENTION PATTERNS =====
 

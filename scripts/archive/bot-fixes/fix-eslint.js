@@ -7,10 +7,6 @@ const BOT_DIR = path.join(__dirname, 'src', 'starbunk', 'bots', 'reply-bots');
 const botFiles = fs.readdirSync(BOT_DIR)
 	.filter(file => file.endsWith('.ts') && file !== 'blueBot.ts');
 
-console.log(`Found ${botFiles.length} bot files to examine...`);
-
-let fixedCount = 0;
-
 // Process each bot file
 for (const file of botFiles) {
 	const filePath = path.join(BOT_DIR, file);
@@ -21,8 +17,6 @@ for (const file of botFiles) {
 		!content.includes('@ts-ignore') &&
 		!content.includes('// eslint-disable-next-line')) {
 
-		console.log(`Adding eslint-disable to ${file}...`);
-
 		// Add eslint-disable-next-line comment before function declaration
 		content = content.replace(
 			/(export default function create\w+Bot\()/g,
@@ -30,8 +24,5 @@ for (const file of botFiles) {
 		);
 
 		fs.writeFileSync(filePath, content, 'utf8');
-		fixedCount++;
 	}
 }
-
-console.log(`Fixed ${fixedCount} bot files!`);

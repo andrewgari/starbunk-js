@@ -1,6 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
 import { Logger } from '../../services/logger';
-import { WebhookService } from '../../webhooks/webhookService';
+import webhookService, { WebhookService } from '../../webhooks/webhookService';
 import { BotIdentity, ConditionResponseData, ResponseGenerator, TriggerCondition } from './botTypes';
 import { ConditionResponseHandler } from './conditionResponseHandler';
 
@@ -58,18 +58,19 @@ export default class ReplyBot {
 	 * @param identity The bot's identity (name and avatar)
 	 * @param trigger The condition that determines if the bot should respond
 	 * @param responseGenerator The generator that creates the bot's response
-	 * @param webhookService The service used to send messages
+	 * @param webhookService The service used to send messages (only used in tests, runtime uses the singleton)
 	 */
 	constructor(
 		identity: BotIdentity,
 		trigger: TriggerCondition,
 		responseGenerator: ResponseGenerator,
-		webhookService: WebhookService
+		webhookServiceParam: WebhookService
 	) {
 		this.identity = identity;
 		this.trigger = trigger;
 		this.responseGenerator = responseGenerator;
-		this.webhookService = webhookService;
+		// Always use the singleton instance for runtime, but allow test mocks to be passed in
+		this.webhookService = process.env.NODE_ENV === 'test' ? webhookServiceParam : webhookService;
 	}
 
 	/**

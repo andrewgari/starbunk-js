@@ -37,6 +37,13 @@ export class BlueAICondition implements TriggerCondition {
    */
 	protected async checkIfBlueIsSaid(message: Message): Promise<boolean> {
 		try {
+			// Check if the OpenAI API key is set
+			if (!process.env.OPENAI_KEY) {
+				console.warn('OPENAI_KEY environment variable is not set. Falling back to pattern matching.');
+				// Fall back to a simple pattern match for "blue" or variations
+				return /\b(blu|blue|bloo|azul|blau|bl(u+)|blew|blö|синий|青|ブルー|블루|כחול|नीला|蓝)\b/i.test(message.content);
+			}
+
 			const response = await this.openAIClient.chat.completions.create({
 				model: 'gpt-4o-mini',
 				messages: [
@@ -84,7 +91,9 @@ export class BlueAICondition implements TriggerCondition {
 
 			return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
 		} catch (error) {
-			return false;
+			console.warn('Error using OpenAI API:', error);
+			// Fall back to a simple pattern match for "blue" or variations
+			return /\b(blu|blue|bloo|azul|blau|bl(u+)|blew|blö|синий|青|ブルー|블루|כחול|नीला|蓝)\b/i.test(message.content);
 		}
 	}
 }

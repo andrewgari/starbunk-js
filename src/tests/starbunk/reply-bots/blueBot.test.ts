@@ -223,7 +223,7 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					avatarURL: 'https://imgur.com/WcBRCWn.png',
+					avatarURL: 'https://i.imgur.com/dO4a59n.png',
 					content: expect.stringContaining('What the fuck did you just fucking say about me')
 				})
 			);
@@ -410,6 +410,68 @@ describe('BlueBot', () => {
 				BLUEBOT_TIMESTAMP_KEY,
 				expect.any(Number)
 			);
+		});
+
+		it('should follow the expected conversation sequence', async () => {
+			// Reset mocks and state before each message
+			const expectResponse = async (message: string, expectedResponse: string | null): Promise<void> => {
+				jest.clearAllMocks();
+				mockMessage.content = message;
+				await blueBot.handleMessage(mockMessage as Message<boolean>);
+
+				if (expectedResponse === null) {
+					// Expect no response
+					expect(webhookService.writeMessage).not.toHaveBeenCalled();
+				} else {
+					// Expect specific response
+					expect(webhookService.writeMessage).toHaveBeenCalledWith(
+						mockMessage.channel as TextChannel,
+						expect.objectContaining({
+							content: expectedResponse
+						})
+					);
+				}
+			};
+
+			// 1. Send "blu" expect "Did somebody say Blu"
+			// This should set the timestamp
+			setLastMessageTime(null); // Reset timestamp
+			await expectResponse('blu', 'Did somebody say Blu');
+
+			// 2. Send "blu" expect "Somebody definitely said blu"
+			// The timestamp should be recent, so it should trigger the cheeky response
+			setLastMessageTime(1); // 1 minute ago
+			await expectResponse('blu', 'Somebody definitely said blu');
+
+			// 3. Send "blu" expect "Did somebody say Blu"
+			// This should reset the timestamp
+			setLastMessageTime(null); // Reset timestamp
+			await expectResponse('blu', 'Did somebody say Blu');
+
+			// 4. Send "yes" expect "Somebody definitely said blu"
+			// The timestamp should be recent, so it should trigger the cheeky response
+			setLastMessageTime(1); // 1 minute ago
+			await expectResponse('yes', 'Somebody definitely said blu');
+
+			// 5. Send "blu" expect "Did somebody say Blu"
+			// This should reset the timestamp
+			setLastMessageTime(null); // Reset timestamp
+			await expectResponse('blu', 'Did somebody say Blu');
+
+			// 6. Send "blu" expect "Somebody definitely said blu"
+			// The timestamp should be recent, so it should trigger the cheeky response
+			setLastMessageTime(1); // 1 minute ago
+			await expectResponse('blu', 'Somebody definitely said blu');
+
+			// 7. Send "yes" expect NO RESPONSE
+			// This should fail if the bot responds, as it should not respond to "yes" without a recent "blu" message
+			setLastMessageTime(10); // Set timestamp to be outside the 5-minute window
+			await expectResponse('yes', null);
+
+			// 8. Send "blu" expect "Did somebody say Blu"
+			// Reset the timestamp to simulate a new conversation
+			setLastMessageTime(null);
+			await expectResponse('blu', 'Did somebody say Blu');
 		});
 	});
 });

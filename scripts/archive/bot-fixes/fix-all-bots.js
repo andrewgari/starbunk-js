@@ -7,10 +7,6 @@ const BOT_DIR = path.join(__dirname, 'src', 'starbunk', 'bots', 'reply-bots');
 const botFiles = fs.readdirSync(BOT_DIR)
 	.filter(file => file.endsWith('.ts') && file !== 'blueBot.ts');
 
-console.log(`Found ${botFiles.length} bot files to examine...`);
-
-let fixedCount = 0;
-
 // Process each bot file
 for (const file of botFiles) {
 	const filePath = path.join(BOT_DIR, file);
@@ -20,7 +16,6 @@ for (const file of botFiles) {
 	// Check if the file imports WebhookService but doesn't use it in the function signature
 	if (content.includes('import webhookService, { WebhookService }') &&
 		!content.includes('webhookServiceParam:')) {
-		console.log(`Fixing ${file} - removing unused WebhookService import...`);
 		content = content.replace(
 			/import webhookService, { WebhookService } from ['"](.*)['"];/g,
 			'import webhookService from \'$1\';'
@@ -36,9 +31,6 @@ for (const file of botFiles) {
 		// Extract the bot name from the function
 		const match = content.match(/function create([A-Za-z]+)Bot\(\)/);
 		if (match) {
-			const botName = match[1];
-			console.log(`Fixing ${file} - adding webhookServiceParam to function signature...`);
-
 			// Add the parameter to the function signature
 			content = content.replace(
 				/function create([A-Za-z]+)Bot\(\)/g,
@@ -60,8 +52,5 @@ for (const file of botFiles) {
 	// Save changes if needed
 	if (needsUpdate) {
 		fs.writeFileSync(filePath, content, 'utf8');
-		fixedCount++;
 	}
 }
-
-console.log(`Fixed ${fixedCount} bot files!`);

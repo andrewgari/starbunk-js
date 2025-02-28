@@ -7,10 +7,7 @@ const BOT_DIR = path.join(__dirname, 'src', 'starbunk', 'bots', 'reply-bots');
 const botFiles = fs.readdirSync(BOT_DIR)
 	.filter(file => file.endsWith('.ts') && file !== 'blueBot.ts');
 
-console.log(`Found ${botFiles.length} bot files to fix...`);
-
 // Fix each bot
-let fixedCount = 0;
 for (const file of botFiles) {
 	const filePath = path.join(BOT_DIR, file);
 	const content = fs.readFileSync(filePath, 'utf8');
@@ -20,8 +17,6 @@ for (const file of botFiles) {
 		// Check if this file passes webhookServiceParam to BotBuilder
 		const botBuilderPattern = /new\s+BotBuilder\s*\(\s*['"][\w]+['"]\s*,\s*webhookServiceParam\s*\)/;
 		if (botBuilderPattern.test(content)) {
-			console.log(`Fixing ${file}...`);
-
 			// Replace the constructor parameter with webhookService
 			let fixedContent = content.replace(
 				/new\s+BotBuilder\s*\(\s*(['"][\w]+['"]\s*),\s*webhookServiceParam\s*\)/g,
@@ -38,9 +33,6 @@ for (const file of botFiles) {
 
 			// Write the fixed content back to the file
 			fs.writeFileSync(filePath, fixedContent, 'utf8');
-			fixedCount++;
 		}
 	}
 }
-
-console.log(`Fixed ${fixedCount} bot files successfully!`);

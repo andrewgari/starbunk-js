@@ -10,6 +10,7 @@ import ReplyBot from '../replyBot';
 import { AllConditions } from '../triggers/conditions/allConditions';
 import { BlueAICondition } from '../triggers/conditions/blueAICondition';
 import { CooldownCondition } from '../triggers/conditions/cooldownCondition';
+import { NotCondition } from '../triggers/conditions/notCondition';
 import { OneCondition } from '../triggers/conditions/oneCondition';
 import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
@@ -18,7 +19,8 @@ import { UserMessageCondition } from '../triggers/conditions/userMessageConditio
 // Avatar URLs
 const DEFAULT_AVATAR = 'https://imgur.com/WcBRCWn.png';
 const CHEEKY_AVATAR = 'https://i.imgur.com/dO4a59n.png';
-const MURDER_AVATAR = 'https://imgur.com/Tpo8Ywd.jpg';
+const MURDER_AVATAR = 'https://imgur.com/WcBRCWn.png'; // For Navy Seal copypasta
+const MEAN_AVATAR = 'https://imgur.com/Tpo8Ywd.jpg'; // For "mean about venn" response
 
 // State persistence keys
 export const BLUEBOT_TIMESTAMP_KEY = 'bluebot_last_initial_message_time';
@@ -164,6 +166,22 @@ export function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 	const cheekyResponseGenerator = new CheekyBluResponseGenerator();
 	const navySealResponseGenerator = new NavySealResponseGenerator();
 
+	// Check if OpenAI is available
+	const useAI = process.env.OPENAI_KEY !== undefined && process.env.OPENAI_KEY !== '';
+
+	// Create the initial trigger condition
+	let initialTrigger: TriggerCondition;
+	if (useAI) {
+		// Use AI detection if available
+		initialTrigger = new OneCondition(
+			new PatternCondition(Patterns.WORD_BLUE),
+			new BlueAICondition(OpenAIClient)
+		);
+	} else {
+		// Fall back to pattern matching only
+		initialTrigger = new PatternCondition(Patterns.WORD_BLUE);
+	}
+
 	// Build bot with the new conversation flow pattern
 	const bot = new BotBuilder('BlueBot', webhookService)
 		.withAvatar(DEFAULT_AVATAR)
@@ -171,28 +189,33 @@ export function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 		.withConditionResponse(
 			initialResponseGenerator,
 			DEFAULT_AVATAR,
-			new OneCondition(
-				new PatternCondition(Patterns.WORD_BLUE),
-				new BlueAICondition(OpenAIClient)
+			new AllConditions(
+				initialTrigger,
+				new NotCondition(recentBluMessageCondition) // Only trigger initial response if not within time window
 			)
 		)
-		// Cheeky response that requires a recent initial message
+		// Cheeky response for "blu" within time window
 		.withConditionResponse(
 			cheekyResponseGenerator,
 			CHEEKY_AVATAR,
 			new AllConditions(
-				new OneCondition(
-					new PatternCondition(Patterns.WORD_BLUE),
-					new PatternCondition(Patterns.BLUEBOT_MEAN_WORDS),
-					new PatternCondition(Patterns.BLUEBOT_ACKNOWLEDGMENT)
-				),
+				new PatternCondition(Patterns.WORD_BLUE),
+				recentBluMessageCondition
+			)
+		)
+		// Cheeky response for acknowledgment within time window
+		.withConditionResponse(
+			cheekyResponseGenerator,
+			CHEEKY_AVATAR,
+			new AllConditions(
+				new PatternCondition(Patterns.BLUEBOT_ACKNOWLEDGMENT),
 				recentBluMessageCondition
 			)
 		)
 		// Navy Seal response that requires a recent initial message
 		.withConditionResponse(
 			navySealResponseGenerator,
-			DEFAULT_AVATAR,
+			MURDER_AVATAR,
 			new AllConditions(
 				new PatternCondition(Patterns.WORD_BLUE),
 				new PatternCondition(Patterns.BLUEBOT_MEAN_WORDS),
@@ -205,15 +228,12 @@ export function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 		.withConditionResponse(
 			niceResponseGenerator,
 			DEFAULT_AVATAR,
-			new OneCondition(
-				niceRequestCondition,
-				new PatternCondition(Patterns.BLUEBOT_NICE_REQUEST_NAMED)
-			)
+			niceRequestCondition
 		)
 		// Mean response about Venn
 		.withCustomCondition(
 			"No way, Venn can suck my blu cane",
-			MURDER_AVATAR,
+			MEAN_AVATAR,
 			new PatternCondition(Patterns.BLUEBOT_MEAN_ABOUT_VENN)
 		)
 		.build();

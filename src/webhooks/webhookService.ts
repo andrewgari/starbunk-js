@@ -102,5 +102,6 @@ export class WebhookService {
 	}
 }
 
+// Create a singleton instance of the WebhookService
 const webhookService = new WebhookService();
 export default webhookService;

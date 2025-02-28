@@ -7,10 +7,6 @@ const BOT_DIR = path.join(__dirname, 'src', 'starbunk', 'bots', 'reply-bots');
 const botFiles = fs.readdirSync(BOT_DIR)
 	.filter(file => file.endsWith('.ts') && file !== 'blueBot.ts');
 
-console.log(`Found ${botFiles.length} bot files to examine...`);
-
-let fixedCount = 0;
-
 // Process each bot file
 for (const file of botFiles) {
 	const filePath = path.join(BOT_DIR, file);
@@ -29,8 +25,6 @@ for (const file of botFiles) {
 
 	// Only write if changes were made
 	if (newContent !== content) {
-		console.log(`Fixing ${file}...`);
-
 		// Remove any existing eslint-disable comments
 		let finalContent = newContent.replace(
 			/\/\/ eslint-disable-next-line @typescript-eslint\/no-unused-vars\n/g,
@@ -38,8 +32,5 @@ for (const file of botFiles) {
 		);
 
 		fs.writeFileSync(filePath, finalContent, 'utf8');
-		fixedCount++;
 	}
 }
-
-console.log(`Fixed ${fixedCount} bot files!`);
