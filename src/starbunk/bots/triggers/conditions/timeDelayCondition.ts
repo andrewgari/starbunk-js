@@ -1,3 +1,5 @@
+import { botStateService } from '../../../../services/botStateService';
+import { Logger } from '../../../../services/logger';
 import { TriggerCondition } from "../../botTypes";
 
 /**
@@ -8,6 +10,7 @@ import { TriggerCondition } from "../../botTypes";
  */
 export class TimeDelayCondition implements TriggerCondition {
 	private lastTime: number = 0;
+	private persistenceKey: string | null = null;
 
 	/**
    * Create a time delay condition
@@ -15,8 +18,19 @@ export class TimeDelayCondition implements TriggerCondition {
    * @param delay - The time delay in milliseconds
    * @param min - If true, checks if time since last trigger is less than delay (within window)
    *            If false, checks if time since last trigger is greater than delay (cooldown)
+   * @param persistenceId - Optional ID for persisting this condition's state between restarts
    */
-	constructor(private delay: number, private min: boolean = true) { }
+	constructor(
+		private delay: number,
+		private min: boolean = true,
+		persistenceId?: string
+	) {
+		// If persistenceId is provided, set up persistence
+		if (persistenceId) {
+			this.persistenceKey = `time_condition_${persistenceId}`;
+			this.loadPersistedState();
+		}
+	}
 
 	/**
    * Determines if enough time has passed or if we're within a time window
@@ -41,5 +55,53 @@ export class TimeDelayCondition implements TriggerCondition {
    */
 	updateLastTime(): void {
 		this.lastTime = Date.now();
+		this.persistState();
+	}
+
+	/**
+   * Set the last trigger time to a specific timestamp
+   * @param timestamp The timestamp to set
+   */
+	setLastTime(timestamp: number): void {
+		this.lastTime = timestamp;
+		this.persistState();
+	}
+
+	/**
+   * Get the last trigger time
+   * @returns The last trigger time as a timestamp
+   */
+	getLastTime(): number {
+		return this.lastTime;
+	}
+
+	/**
+   * Save the state to the persistence service
+   */
+	private persistState(): void {
+		if (!this.persistenceKey) return;
+
+		try {
+			botStateService.setState(this.persistenceKey, this.lastTime);
+		} catch (error) {
+			Logger.debug(`Failed to persist time condition state: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	/**
+   * Load the state from the persistence service
+   */
+	private loadPersistedState(): void {
+		if (!this.persistenceKey) return;
+
+		try {
+			const persistedTime = botStateService.getState<number>(this.persistenceKey, 0);
+			if (persistedTime > 0) {
+				this.lastTime = persistedTime;
+				Logger.debug(`Loaded persisted time for ${this.persistenceKey}: ${new Date(this.lastTime).toISOString()}`);
+			}
+		} catch (error) {
+			Logger.debug(`Failed to load persisted time condition state: ${error instanceof Error ? error.message : String(error)}`);
+		}
 	}
 }

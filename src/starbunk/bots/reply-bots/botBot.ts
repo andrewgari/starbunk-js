@@ -9,15 +9,18 @@ import { RandomChanceCondition } from '../triggers/conditions/randomChanceCondit
  * with a friendly greeting
  */
 export default function createBotBot(
-	// @ts-ignore - parameter kept for test compatibility but not used
-	webhookServiceParam: WebhookService = webhookService
+	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+	_webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
 	return new BotBuilder('BotBot', webhookService)
-		.withAvatar('https://preview.redd.it/md0lzbvuc3571.png?width=1920&format=png&auto=webp&s=ff403a8d4b514af8d99792a275d2c066b8d1a4de')
-		.withCustomTrigger(new RandomChanceCondition(5))
-		.respondsWithStatic("Why hello there, fellow bot 🤖")
+		.withAvatar('https://cdn-icons-png.flaticon.com/512/4944/4944377.png')
+		.withCustomCondition(
+			"Why hello there, fellow bot 🤖",
+			'https://cdn-icons-png.flaticon.com/512/4944/4944377.png',
+			new RandomChanceCondition(5)
+		)
 		.allowBotMessages(true)
 		.build();
 }

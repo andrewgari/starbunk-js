@@ -6,7 +6,7 @@ export interface BotIdentity {
 }
 
 export interface TriggerCondition {
-	shouldTrigger(message: Message): Promise<boolean>;
+	shouldTrigger(message?: Message): Promise<boolean>;
 }
 
 export interface ResponseGenerator {
@@ -26,7 +26,8 @@ export interface ConditionResponseData {
 export class PatternTrigger implements TriggerCondition {
 	constructor(private pattern: RegExp) { }
 
-	async shouldTrigger(message: Message): Promise<boolean> {
+	async shouldTrigger(message?: Message): Promise<boolean> {
+		if (!message) return false;
 		return this.pattern.test(message.content);
 	}
 }

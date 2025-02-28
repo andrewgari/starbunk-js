@@ -1,6 +1,7 @@
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import ReplyBot from '../replyBot';
+import { AllConditions } from '../triggers/conditions/allConditions';
 import { OneCondition } from '../triggers/conditions/oneCondition';
 import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
@@ -11,8 +12,8 @@ import { getSigCondition } from '../triggers/userConditions';
  * PickleBot - A bot that responds to mentions of "gremlin" or to Sig's messages containing "gremlin"
  */
 export default function createPickleBot(
-	// @ts-ignore - parameter kept for test compatibility but not used
-	webhookServiceParam: WebhookService = webhookService
+	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+	_webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Get the condition for checking if the message is from Sig
 	const sigUserCondition = getSigCondition();
@@ -27,7 +28,7 @@ export default function createPickleBot(
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
 	return new BotBuilder('PickleBot', webhookService)
 		.withAvatar('https://i.imgur.com/D0czJFu.jpg')
-		.withCustomTrigger(new OneCondition(
+		.withCustomTrigger(new AllConditions(
 			new PatternCondition(Patterns.WORD_GREMLIN),
 			sigCondition
 		))

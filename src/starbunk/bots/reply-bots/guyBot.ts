@@ -43,8 +43,8 @@ const responses = [
  * has a 5% random chance of responding to any message, or responds to messages from Guy
  */
 export default function createGuyBot(
-	// @ts-ignore - parameter kept for test compatibility but not used
-	webhookServiceParam: WebhookService = webhookService
+	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+	_webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Get the condition for checking if the message is from Guy
 	const guyUserCondition = getGuyCondition();

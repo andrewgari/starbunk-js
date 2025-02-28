@@ -1,7 +1,42 @@
 import { Message, TextChannel } from 'discord.js';
+import { Logger } from '../../services/logger';
 import { WebhookService } from '../../webhooks/webhookService';
 import { BotIdentity, ConditionResponseData, ResponseGenerator, TriggerCondition } from './botTypes';
 import { ConditionResponseHandler } from './conditionResponseHandler';
+
+/**
+ * Interface for conditions that track time and need updates
+ */
+interface TimeCondition extends TriggerCondition {
+	updateLastTime(): void;
+}
+
+/**
+ * Interface for conditions that contain other conditions
+ */
+interface CompositeCondition extends TriggerCondition {
+	conditions: TriggerCondition[];
+}
+
+/**
+ * Check if an object is a TimeCondition
+ */
+function isTimeCondition(obj: unknown): obj is TimeCondition {
+	return obj !== null &&
+		typeof obj === 'object' &&
+		'updateLastTime' in obj &&
+		typeof (obj as Record<string, unknown>).updateLastTime === 'function';
+}
+
+/**
+ * Check if an object is a CompositeCondition
+ */
+function isCompositeCondition(obj: unknown): obj is CompositeCondition {
+	return obj !== null &&
+		typeof obj === 'object' &&
+		'conditions' in obj &&
+		Array.isArray((obj as Record<string, unknown>).conditions);
+}
 
 /**
  * ReplyBot - Base class for bots that reply to messages
@@ -142,6 +177,9 @@ export default class ReplyBot {
 						}
 					);
 
+					// Update any time-based conditions after sending a response
+					this.updateTimeConditions(trigger);
+
 					anySent = true;
 				}
 			}
@@ -175,10 +213,60 @@ export default class ReplyBot {
 					embeds: []
 				}
 			);
+
+			// Update any time-based conditions after sending a response
+			this.updateTimeConditions(this.trigger);
+
 			return true;
 		}
 
 		return false;
+	}
+
+	/**
+	 * Update the lastTime property of any time-based conditions
+	 * @param trigger The trigger condition to update
+	 */
+	private updateTimeConditions(trigger: TriggerCondition): void {
+		try {
+			// Handle composite conditions by recursively updating them
+			this.updateTimeConditionRecursive(trigger);
+		} catch (error) {
+			// Log error but don't let it break the bot's operation
+			Logger.error(`Error updating time conditions for ${this.identity.name}:`, error as Error);
+		}
+	}
+
+	/**
+	 * Recursively update the lastTime property of any time-based conditions
+	 * @param condition The condition to update
+	 * @param visited Set of already visited conditions to prevent infinite loops
+	 */
+	private updateTimeConditionRecursive(condition: TriggerCondition, visited: Set<TriggerCondition> = new Set()): void {
+		// Prevent circular reference infinite loops
+		if (visited.has(condition)) {
+			return;
+		}
+		visited.add(condition);
+
+		// Check if this is a time-based condition
+		if (isTimeCondition(condition)) {
+			try {
+				// Update the last trigger time
+				condition.updateLastTime();
+			} catch (error) {
+				Logger.debug(`Failed to update time for condition in ${this.identity.name}: ${error instanceof Error ? error.message : String(error)}`);
+				// Continue processing other conditions
+			}
+		}
+
+		// Check if this is a composite condition with children
+		if (isCompositeCondition(condition)) {
+			// Update all child conditions
+			for (const childCondition of condition.conditions) {
+				this.updateTimeConditionRecursive(childCondition, visited);
+			}
+		}
 	}
 
 	/**

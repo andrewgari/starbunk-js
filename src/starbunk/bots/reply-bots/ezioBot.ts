@@ -14,8 +14,8 @@ class EzioResponseGenerator implements ResponseGenerator {
 }
 
 export default function createEzioBot(
-	// @ts-ignore - parameter kept for test compatibility but not used
-	webhookServiceParam: WebhookService = webhookService
+	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+	_webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	const responseGenerator = new EzioResponseGenerator();
 

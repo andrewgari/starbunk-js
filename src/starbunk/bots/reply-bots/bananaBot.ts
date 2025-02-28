@@ -40,8 +40,8 @@ class VennRandomTrigger implements TriggerCondition {
  * This bot dynamically updates its identity to mimic the user it's responding to
  */
 export default function createBananaBot(
-	// @ts-ignore - parameter kept for test compatibility but not used
-	webhookServiceParam: WebhookService = webhookService
+	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+	_webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Identity updater function that uses the new utility function
 	const updateIdentity = async (message: Message): Promise<BotIdentity> => {

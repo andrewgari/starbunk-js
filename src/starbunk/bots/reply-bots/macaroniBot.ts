@@ -3,6 +3,7 @@ import { formatUserMention } from '../../../utils/discordFormat';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import ReplyBot from '../replyBot';
+import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
 
 /**
@@ -13,22 +14,29 @@ import { Patterns } from '../triggers/conditions/patterns';
  * 2. When someone mentions "macaroni", it responds with a user mention
  */
 export default function createMacaroniBot(
-	// @ts-ignore - parameter kept for test compatibility but not used
-	webhookServiceParam: WebhookService = webhookService
+	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+	_webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Create a bot that responds to both patterns
+	const avatarUrl = 'https://i.imgur.com/Jx5v7bZ.png';
 	const builder = new BotBuilder('Macaroni Bot', webhookService)
-		.withAvatar('https://i.imgur.com/Jx5v7bZ.png')
+		.withAvatar(avatarUrl)
 		// IMPORTANT: Enable multi-response mode BEFORE adding the patterns
 		.withMultipleResponses(true);
 
 	// First add the VENN_MENTION pattern
-	builder.withPatternTrigger(Patterns.WORD_VENN)
-		.respondsWithStatic("Correction: you mean Venn \"Tyrone \"The \"Macaroni\" Man\" Johnson\" Caelum");
+	builder.withCustomCondition(
+		"Correction: you mean Venn \"Tyrone \"The \"Macaroni\" Man\" Johnson\" Caelum",
+		avatarUrl,
+		new PatternCondition(Patterns.WORD_VENN)
+	);
 
 	// Then add the MACARONI pattern
-	builder.withPatternTrigger(Patterns.WORD_MACARONI)
-		.respondsWithStatic(`Are you trying to reach ${formatUserMention(userID.Venn)}`);
+	builder.withCustomCondition(
+		`Are you trying to reach ${formatUserMention(userID.Venn)}`,
+		avatarUrl,
+		new PatternCondition(Patterns.WORD_MACARONI)
+	);
 
 	return builder.build();
 }

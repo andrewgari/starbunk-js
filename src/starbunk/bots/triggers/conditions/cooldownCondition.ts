@@ -12,10 +12,14 @@ export class CooldownCondition implements TriggerCondition {
    * Creates a condition that checks if enough time has passed since the last trigger
    *
    * @param minutes - The number of minutes that must pass before triggering again
+   * @param persistenceId - Optional identifier for persisting cooldown state
    */
-	constructor(minutes: number) {
+	constructor(minutes: number, persistenceId?: string) {
+		// Generate a persistence ID if provided
+		const persistKey = persistenceId ? `${persistenceId}_cooldown` : undefined;
+
 		// Convert minutes to milliseconds and set to "cooldown" mode (min = false)
-		this.timeCondition = new TimeDelayCondition(minutes * 60 * 1000, false);
+		this.timeCondition = new TimeDelayCondition(minutes * 60 * 1000, false, persistKey);
 	}
 
 	/**
@@ -32,5 +36,21 @@ export class CooldownCondition implements TriggerCondition {
    */
 	updateLastTime(): void {
 		this.timeCondition.updateLastTime();
+	}
+
+	/**
+   * Get the time when the cooldown started
+   * @returns The timestamp when the cooldown started
+   */
+	getCooldownStartTime(): number {
+		return this.timeCondition.getLastTime();
+	}
+
+	/**
+   * Set the cooldown start time manually
+   * @param timestamp The timestamp to set
+   */
+	setCooldownStartTime(timestamp: number): void {
+		this.timeCondition.setLastTime(timestamp);
 	}
 }
