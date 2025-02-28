@@ -175,6 +175,9 @@ export class BotBuilder {
 
 		this.usesDynamicAvatars = true;
 
+		// Update the main avatar URL to match the condition-specific avatar
+		this.identity.avatarUrl = url;
+
 		// Store the avatar with the current condition
 		const existingData = this.conditionResponseMap.get(this.currentCondition);
 		if (existingData) {

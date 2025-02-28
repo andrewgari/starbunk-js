@@ -1,3 +1,7 @@
+# Main workflow for CI/CD pipeline
+# Triggers on:
+# - Push to main or develop branches
+# - Merged PRs to main or develop branches
 name: Main Branch Checks
 
 on:
@@ -8,7 +12,14 @@ on:
         branches: [main, develop]
 
 jobs:
-    # Initial check to determine what files changed and if PR was merged
+    # Determines which parts of the codebase have changed and if the workflow should run
+    # Outputs:
+    # - should_run: true if PR merged or direct push
+    # - src: changes to source code
+    # - tests: changes to test files
+    # - docker: changes to Docker configuration
+    # - config: changes to project configuration
+    # - bots: changes to bot-related code
     changes:
         name: 🔍 Detect Changes
         runs-on: ubuntu-latest
@@ -62,6 +73,7 @@ jobs:
                           - 'src/starbunk/bots/**'
                           - 'cypress/e2e/bots/**'
 
+    # Builds the TypeScript project and saves artifacts for later jobs
     build:
         needs: [changes]
         name: 🔨 Build
@@ -83,6 +95,7 @@ jobs:
                   path: dist/
                   if-no-files-found: error
 
+    # Runs ESLint to ensure code quality
     lint:
         needs: [changes]
         name: 🔍 Lint
@@ -97,6 +110,7 @@ jobs:
             - run: npm ci
             - run: npm run lint
 
+    # Verifies TypeScript types are correct
     type-check:
         needs: [changes]
         name: 🔍 Type Check
@@ -111,6 +125,7 @@ jobs:
             - run: npm ci
             - run: npm run type-check:main
 
+    # Runs Jest unit tests using the built artifacts
     test:
         needs: [changes, build]
         name: 🧪 Test
@@ -131,6 +146,8 @@ jobs:
                   path: dist/
             - run: npm run test
 
+    # Runs Cypress E2E tests for bot functionality
+    # Only executes if bot-related code has changed
     e2e-test:
         needs: [changes, build]
         name: 🤖 E2E Bot Tests
@@ -169,6 +186,10 @@ jobs:
                   path: cypress/screenshots
                   if-no-files-found: ignore
 
+    # Builds and publishes Docker image if all checks pass
+    # Tags images with:
+    # - latest
+    # - YYYY.MM.DD-<git-sha>
     docker:
         needs: [test, e2e-test, lint, type-check]
         name: 🐳 Release Docker Image

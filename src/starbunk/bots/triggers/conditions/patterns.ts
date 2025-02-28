@@ -11,10 +11,10 @@ export const Patterns = {
 	BLUEBOT_MEAN_WORDS: /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i,
 
 	/** Matches "bluebot, say something nice about [name]" */
-	BLUEBOT_NICE_REQUEST_NAMED: /blue?bot,? say something nice about (?<n>.+$)/i,
+	BLUEBOT_NICE_REQUEST_NAMED: /^blue?bot,? say something nice about (?<n>.+$)/i,
 
 	/** Matches "bluebot say something mean about venn" */
-	BLUEBOT_MEAN_ABOUT_VENN: /blue?bot,? say something mean about venn/i,
+	BLUEBOT_NICE_REQUEST_VENN: /^blue?bot,? say something (nice|mean) about venn/i,
 
 	/** Matches acknowledgments to blue bot */
 	BLUEBOT_ACKNOWLEDGMENT: /\b(yes|yep|yeah|indeed|correct|(i did)|(you got it)|(sure did)|(that's right)|(that is right)|(did someone)|(did somebody)|(who said)|(talking about))\b/i,

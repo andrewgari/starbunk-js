@@ -16,9 +16,10 @@ export class NiceMessageResponse implements ResponseGenerator {
 	constructor(private niceTrigger: NiceMessageTrigger) { }
 
 	async generateResponse(message: Message): Promise<string> {
-		const name = this.niceTrigger.getNameFromMessage(message);
+		// Get name from trigger, defaulting to 'Friend' if null/undefined
+		const name = this.niceTrigger.getNameFromMessage(message) || 'Friend';
 
-		// Special case for Venn
+		// Special case for Venn - safely check with optional chaining
 		if (name.toLowerCase() === 'venn') {
 			return 'No way, Venn can suck my blu cane. :unamused:';
 		}

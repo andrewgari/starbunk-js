@@ -90,7 +90,7 @@ function run_docker_build {
 function run_docker_test {
   echo -e "${YELLOW}Running tests in Docker...${NC}"
   check_docker
-  docker run --rm -v "$(pwd)":/app starbunk-js:latest npm test
+  docker run --rm --user $(id -u):$(id -g) -v "$(pwd)":/app starbunk-js:latest npm test
 }
 
 # Run Cypress tests in Docker

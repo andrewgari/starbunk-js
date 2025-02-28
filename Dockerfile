@@ -1,14 +1,14 @@
 # Build stage
-FROM node:alpine/latest AS builder
+FROM node:alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies with specific versions
+# Install build dependencies
 RUN apk add --no-cache \
-    python3~=3.11 \
-    make~=4.4 \
-    g++~=13.2 \
-    git~=2.43
+    python3 \
+    make \
+    g++ \
+    git
 
 COPY package*.json ./
 RUN npm ci
@@ -17,12 +17,12 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:alpine/latest
+FROM node:alpine
 
-# Install production dependencies with more flexible version constraints
+# Install production dependencies
 RUN apk add --no-cache \
-    ffmpeg~=6.1 \
-    python3~=3.11 \
+    ffmpeg \
+    python3 \
     tzdata \
     ca-certificates
 WORKDIR /app
@@ -34,9 +34,9 @@ COPY --from=builder /app/package*.json ./
 # Install only production dependencies
 # Keep the build dependencies since they might be needed at runtime
 RUN apk add --no-cache \
-    python3~=3.11 \
-    make~=4.4 \
-    g++~=13.2 \
+    python3 \
+    make \
+    g++ \
     && npm ci --only=production \
     && rm -rf /var/cache/apk/*
 

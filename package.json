@@ -7,7 +7,7 @@
 		"build:clean": "rm -rf dist && tsc",
 		"start": "node dist/src/bunkbot.js",
 		"start:clean": "rm -rf dist && tsc && node dist/src/bunkbot.js",
-		"dev": "npm run lint:fix && npm run build && npm run test",
+		"dev": "./scripts/dev-check.sh",
 		"test": "jest",
 		"test:coverage": "jest --coverage",
 		"test:watch": "jest --watch",

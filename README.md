@@ -72,10 +72,20 @@ A powerful Discord bot designed for seamless cross-server communication and comm
     npm install
     ```
 
-4. Start development server:
+4. Run the comprehensive development check:
+
     ```bash
     npm run dev
     ```
+
+    This will:
+
+    - Run linting checks
+    - Execute unit tests
+    - Build the project
+    - Run Cypress tests (if Xvfb is installed)
+    - Build the Docker image (if Docker is installed)
+    - Verify the application starts correctly
 
 ## 🚀 Running the Bot
 
@@ -84,10 +94,10 @@ A powerful Discord bot designed for seamless cross-server communication and comm
 1. Make sure you have Node.js installed (v16.0.0 or higher)
 2. Create a `.env` file in the root directory based on the `.env_sample` file
 3. Fill in the required environment variables in the `.env` file:
-   - `STARBUNK_TOKEN`: Discord token for the Starbunk bot
-   - `SNOWBUNK_TOKEN`: Discord token for the Snowbunk bot
-   - `GUILD_ID`: ID of your Discord server
-   - `CLIENT_ID`: Client ID of your Discord application
+    - `STARBUNK_TOKEN`: Discord token for the Starbunk bot
+    - `SNOWBUNK_TOKEN`: Discord token for the Snowbunk bot
+    - `GUILD_ID`: ID of your Discord server
+    - `CLIENT_ID`: Client ID of your Discord application
 
 ### Starting the Bot
 
@@ -129,13 +139,13 @@ import { PatternCondition, Patterns } from '../conditions';
 import ReplyBot from '../replyBot';
 
 export default function createMyBot(): ReplyBot {
-  const myCondition = new PatternCondition(Patterns.MY_PATTERN);
+	const myCondition = new PatternCondition(Patterns.MY_PATTERN);
 
-  return new BotBuilder('MyBot', webhookService)
-    .withAvatar('https://example.com/avatar.png')
-    .withCustomTrigger(myCondition)
-    .respondsWithStatic('Hello there!')
-    .build();
+	return new BotBuilder('MyBot', webhookService)
+		.withAvatar('https://example.com/avatar.png')
+		.withCustomTrigger(myCondition)
+		.respondsWithStatic('Hello there!')
+		.build();
 }
 ```
 

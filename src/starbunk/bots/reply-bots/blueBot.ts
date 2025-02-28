@@ -5,7 +5,7 @@ import UserID from '../../../discord/userID';
 import { botStateService } from '../../../services/botStateService';
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
-import { ResponseGenerator, TriggerCondition } from '../botTypes';
+import { BotIdentity, ResponseGenerator, TriggerCondition } from '../botTypes';
 import ReplyBot from '../replyBot';
 import { AllConditions } from '../triggers/conditions/allConditions';
 import { BlueAICondition } from '../triggers/conditions/blueAICondition';
@@ -19,11 +19,12 @@ import { UserMessageCondition } from '../triggers/conditions/userMessageConditio
 // Avatar URLs
 const DEFAULT_AVATAR = 'https://imgur.com/WcBRCWn.png';
 const CHEEKY_AVATAR = 'https://i.imgur.com/dO4a59n.png';
-const MURDER_AVATAR = 'https://imgur.com/WcBRCWn.png'; // For Navy Seal copypasta
+const MURDER_AVATAR = 'https://imgur.com/Tpo8Ywd.jpg'; // For Navy Seal copypasta
 const MEAN_AVATAR = 'https://imgur.com/Tpo8Ywd.jpg'; // For "mean about venn" response
 
 // State persistence keys
 export const BLUEBOT_TIMESTAMP_KEY = 'bluebot_last_initial_message_time';
+export const BLUEBOT_LAST_AVATAR_KEY = 'bluebot_last_avatar';
 
 /**
  * BluNiceRequestCondition - A condition for handling "say something nice about" requests
@@ -75,6 +76,8 @@ class InitialBluResponseGenerator implements ResponseGenerator {
 	async generateResponse(): Promise<string> {
 		// Record the timestamp when this message was sent
 		botStateService.setState(BLUEBOT_TIMESTAMP_KEY, Date.now());
+		// Store the avatar used for this response
+		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, DEFAULT_AVATAR);
 		return "Did somebody say Blu";
 	}
 }
@@ -96,7 +99,7 @@ class RecentBluMessageCondition implements TriggerCondition {
 		const lastMessageTime = botStateService.getState<number>(BLUEBOT_TIMESTAMP_KEY, 0);
 
 		// If we've never sent the message or the timestamp is invalid, return false
-		if (!lastMessageTime) return false;
+		if (lastMessageTime === 0) return false;
 
 		// Check if the message was sent within our time window
 		const timeSinceMessage = Date.now() - lastMessageTime;
@@ -109,6 +112,8 @@ class RecentBluMessageCondition implements TriggerCondition {
  */
 class CheekyBluResponseGenerator implements ResponseGenerator {
 	async generateResponse(): Promise<string> {
+		// Store the avatar used for this response
+		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, CHEEKY_AVATAR);
 		return "Somebody definitely said blu";
 	}
 }
@@ -120,8 +125,91 @@ class NavySealResponseGenerator implements ResponseGenerator {
 	private readonly navySealText = "What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Academia d'Azul, and I've been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I've trained with gorillas in warfare and I'm the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little \"clever\" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You're fucking dead, kiddo.";
 
 	async generateResponse(): Promise<string> {
+		// Store the avatar used for this response
+		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, MURDER_AVATAR);
 		return this.navySealText;
 	}
+}
+
+/**
+ * Custom identity updater for BlueBot
+ * This ensures the correct avatar is used for each condition, even if no response is sent
+ */
+async function updateBlueBotIdentity(message: Message): Promise<BotIdentity> {
+	// Default identity values
+	const defaultName = 'BlueBot';
+	const defaultAvatarUrl = DEFAULT_AVATAR;
+
+	// Check for Venn's mean messages about blue
+	if (message.author.id === UserID.Venn &&
+		message.content.match(Patterns.WORD_BLUE) &&
+		message.content.match(Patterns.BLUEBOT_MEAN_WORDS)) {
+
+		const recentBluMessage = await new RecentBluMessageCondition(5).shouldTrigger();
+		const cooldownOff = await new CooldownCondition(24 * 60, "BlueBot_NavySeal").shouldTrigger();
+
+		if (recentBluMessage && cooldownOff) {
+			// Store the avatar used for this condition
+			botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, MURDER_AVATAR);
+			return {
+				name: defaultName,
+				avatarUrl: MURDER_AVATAR
+			};
+		}
+	}
+
+	// Check for acknowledgment messages within time window
+	if (message.content.match(Patterns.BLUEBOT_ACKNOWLEDGMENT)) {
+		const recentBluMessage = await new RecentBluMessageCondition(5).shouldTrigger();
+		if (recentBluMessage) {
+			// Store the avatar used for this condition
+			botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, CHEEKY_AVATAR);
+			return {
+				name: defaultName,
+				avatarUrl: CHEEKY_AVATAR
+			};
+		}
+	}
+
+	// Check for "blu" messages within time window
+	if (message.content.match(Patterns.WORD_BLUE)) {
+		const recentBluMessage = await new RecentBluMessageCondition(5).shouldTrigger();
+		if (recentBluMessage) {
+			// Store the avatar used for this condition
+			botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, CHEEKY_AVATAR);
+			return {
+				name: defaultName,
+				avatarUrl: CHEEKY_AVATAR
+			};
+		}
+	}
+
+	// Check for "say something nice about Venn" messages
+	if (message.content.match(Patterns.BLUEBOT_NICE_REQUEST_VENN)) {
+		// Store the avatar used for this condition
+		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, MEAN_AVATAR);
+		return {
+			name: defaultName,
+			avatarUrl: MEAN_AVATAR
+		};
+	}
+
+	// Check for "say something nice about X" messages
+	if (message.content.match(Patterns.BLUEBOT_NICE_REQUEST_NAMED)) {
+		// Store the avatar used for this condition
+		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, DEFAULT_AVATAR);
+		return {
+			name: defaultName,
+			avatarUrl: DEFAULT_AVATAR
+		};
+	}
+
+	// Use the last avatar if available, otherwise use default
+	const lastAvatar = botStateService.getState<string>(BLUEBOT_LAST_AVATAR_KEY, defaultAvatarUrl);
+	return {
+		name: defaultName,
+		avatarUrl: lastAvatar
+	};
 }
 
 /**
@@ -185,6 +273,8 @@ export function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 	// Build bot with the new conversation flow pattern
 	const bot = new BotBuilder('BlueBot', webhookService)
 		.withAvatar(DEFAULT_AVATAR)
+		// Add dynamic identity updater to ensure correct avatar is used
+		.withDynamicIdentity(DEFAULT_AVATAR, updateBlueBotIdentity)
 		// Initial response that records the timestamp
 		.withConditionResponse(
 			initialResponseGenerator,
@@ -234,7 +324,7 @@ export function createBlueBot(config: BluBotConfig = {}): ReplyBot {
 		.withCustomCondition(
 			"No way, Venn can suck my blu cane",
 			MEAN_AVATAR,
-			new PatternCondition(Patterns.BLUEBOT_MEAN_ABOUT_VENN)
+			new PatternCondition(Patterns.BLUEBOT_NICE_REQUEST_VENN)
 		)
 		.build();
 

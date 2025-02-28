@@ -27,7 +27,16 @@ export class WebhookCleanupService {
 	}
 
 	async cleanupWebhooks(interaction: CommandInteraction): Promise<void> {
-		const webhooks = await interaction.guild?.fetchWebhooks();
+		// Check if guild exists before attempting to fetch webhooks
+		if (!interaction.guild) {
+			await interaction.followUp({
+				content: 'This command can only be used in a server, not in DMs.',
+				ephemeral: true
+			});
+			return;
+		}
+
+		const webhooks = await interaction.guild.fetchWebhooks();
 
 		if (!webhooks) {
 			return;
@@ -60,6 +69,15 @@ export default {
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageWebhooks),
 
 	async execute(interaction: CommandInteraction) {
+		// Check if the command is being used in a guild
+		if (!interaction.guild) {
+			await interaction.reply({
+				content: 'This command can only be used in a server, not in DMs.',
+				ephemeral: true
+			});
+			return;
+		}
+
 		await interaction.reply({
 			content: 'Clearing Webhooks now, boss',
 			fetchReply: false,
