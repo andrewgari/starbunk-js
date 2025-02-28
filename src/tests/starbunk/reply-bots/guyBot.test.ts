@@ -4,7 +4,52 @@ jest.mock('../../../starbunk/bots/triggers/conditions/patternCondition');
 jest.mock('../../../starbunk/bots/triggers/conditions/randomChanceCondition');
 jest.mock('../../../starbunk/bots/triggers/conditions/userCondition');
 jest.mock('../../../starbunk/bots/triggers/conditions/allConditions');
-jest.mock('../../../webhooks/webhookService');
+jest.mock('../../../webhooks/webhookService', () => {
+	return {
+		__esModule: true,
+		default: {
+			writeMessage: jest.fn().mockResolvedValue(undefined),
+			getChannelWebhook: jest.fn().mockResolvedValue({}),
+			getWebhook: jest.fn().mockResolvedValue({}),
+			getWebhookName: jest.fn().mockReturnValue('MockWebhook')
+		},
+		WebhookService: jest.fn().mockImplementation(() => ({
+			writeMessage: jest.fn().mockResolvedValue(undefined),
+			getChannelWebhook: jest.fn().mockResolvedValue({}),
+			getWebhook: jest.fn().mockResolvedValue({}),
+			getWebhookName: jest.fn().mockReturnValue('MockWebhook')
+		}))
+	};
+});
+
+// Mock the Logger to prevent console outputs
+jest.mock('../../../services/logger', () => ({
+	Logger: {
+		debug: jest.fn(),
+		info: jest.fn(),
+		success: jest.fn(),
+		warn: jest.fn(),
+		error: jest.fn()
+	}
+}));
+
+// Mock the userIdentity module to prevent console errors
+jest.mock('../../../starbunk/bots/identity/userIdentity', () => ({
+	getUserIdentity: jest.fn().mockImplementation(message => {
+		// When message is from Guy, return GuyBot identity
+		if (message?.author?.id === 'guy-user-id') {
+			return Promise.resolve({
+				name: 'GuyBot',
+				avatarUrl: 'https://i.pinimg.com/originals/dc/39/85/dc3985a3ac127397c53bf8c3a749b011.jpg'
+			});
+		}
+		// Otherwise return mock user
+		return Promise.resolve({
+			name: 'MockUser',
+			avatarUrl: 'https://example.com/avatar.jpg'
+		});
+	})
+}));
 
 // Mock the UserID for Guy
 jest.mock('../../../discord/userID', () => ({
@@ -15,7 +60,7 @@ import { Message, TextChannel, User } from 'discord.js';
 import createGuyBot from '../../../starbunk/bots/reply-bots/guyBot';
 import { OneCondition } from '../../../starbunk/bots/triggers/conditions/oneCondition';
 import { UserCondition } from '../../../starbunk/bots/triggers/conditions/userCondition';
-import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { WebhookService } from '../../../webhooks/webhookService';
 import { createMockGuildMember, createMockMessage } from '../../mocks/discordMocks';
 
 describe('GuyBot', () => {
@@ -28,10 +73,7 @@ describe('GuyBot', () => {
 	let oneConditionShouldTriggerResponse = false;
 
 	beforeAll(() => {
-		// Make webhookService.writeMessage use our mock
-		(webhookService.writeMessage as jest.Mock).mockImplementation(
-			mockWebhookService.writeMessage
-		);
+		// Mock implementations are already set up in the jest.mock() call
 
 		// Mock OneCondition constructor and shouldTrigger method
 		(OneCondition as jest.MockedClass<typeof OneCondition>).mockImplementation(() => {
@@ -50,8 +92,7 @@ describe('GuyBot', () => {
 
 	beforeEach(() => {
 		// Reset mocks before each test
-		mockWebhookService.writeMessage.mockClear();
-		(webhookService.writeMessage as jest.Mock).mockClear();
+		jest.clearAllMocks();
 		oneConditionShouldTriggerResponse = false;
 	});
 
@@ -81,31 +122,31 @@ describe('GuyBot', () => {
 
 	describe('message handling', () => {
 		it('should ignore messages from bots', async () => {
-			// Arrange
+			// Arrange: Create bot message
 			const guyBot = createGuyBot(mockWebhookService as unknown as WebhookService);
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			const mockMessage = createMockMessage('BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
 			mockMessage.content = 'guy';
 
-			// Act
+			// Act: Process the message
 			await guyBot.handleMessage(mockMessage as Message<boolean>);
 
-			// Assert
+			// Assert: Verify bot did not respond
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
 		it('should respond to "guy" when pattern condition triggers', async () => {
-			// Arrange
+			// Arrange: Create message with trigger word and set condition to trigger
 			const guyBot = createGuyBot(mockWebhookService as unknown as WebhookService);
 			const mockMessage = createMockMessage('TestUser');
 			mockMessage.content = 'guy';
 			oneConditionShouldTriggerResponse = true;
 
-			// Act
+			// Act: Process the message
 			await guyBot.handleMessage(mockMessage as Message<boolean>);
 
-			// Assert
+			// Assert: Verify correct response was sent
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
@@ -117,9 +158,8 @@ describe('GuyBot', () => {
 		});
 
 		it('should respond to messages from Guy', async () => {
-			// Arrange
+			// Arrange: Create a message from Guy
 			const guyBot = createGuyBot(mockWebhookService as unknown as WebhookService);
-			// Create a message from Guy
 			const mockMessage = createMockMessage('Guy');
 			const mockGuyMember = createMockGuildMember('guy-user-id', 'Guy');
 			mockMessage.author = mockGuyMember.user as User;
@@ -130,10 +170,10 @@ describe('GuyBot', () => {
 			mockMessage.content = 'Hello everyone!';
 			oneConditionShouldTriggerResponse = true;
 
-			// Act
+			// Act: Process the message
 			await guyBot.handleMessage(mockMessage as Message<boolean>);
 
-			// Assert
+			// Assert: Verify bot responded with Guy's identity
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
@@ -145,16 +185,16 @@ describe('GuyBot', () => {
 		});
 
 		it('should NOT respond when no condition triggers', async () => {
-			// Arrange
+			// Arrange: Create message that doesn't trigger conditions
 			const guyBot = createGuyBot(mockWebhookService as unknown as WebhookService);
 			const mockMessage = createMockMessage('TestUser');
 			mockMessage.content = 'Hello there!';
 			oneConditionShouldTriggerResponse = false;
 
-			// Act
+			// Act: Process the message
 			await guyBot.handleMessage(mockMessage as Message<boolean>);
 
-			// Assert
+			// Assert: Verify no response was sent
 			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 		});
 	});
