@@ -122,8 +122,8 @@ jobs:
     unit-test:
         name: 🧪 Unit Tests
         runs-on: ubuntu-latest
-        needs: [changes, type-check]
-        if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true' || needs.changes.outputs.config == 'true' }}
+        needs: [type-check]
+        if: ${{ always() && (needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true' || needs.changes.outputs.config == 'true') }}
         steps:
             - uses: actions/checkout@v4
 
@@ -149,7 +149,7 @@ jobs:
         name: 🤖 E2E Bot Tests
         runs-on: ubuntu-latest
         needs: [unit-test]
-        if: ${{ needs.changes.outputs.bots == 'true' }}
+        if: ${{ always() && needs.changes.outputs.bots == 'true' && needs.unit-test.result == 'success' }}
         steps:
             - uses: actions/checkout@v4
 
@@ -188,7 +188,7 @@ jobs:
         name: 🐳 Docker Build
         runs-on: ubuntu-latest
         needs: [unit-test, e2e-test]
-        if: ${{ needs.changes.outputs.docker == 'true' || success() }}
+        if: ${{ always() && (needs.changes.outputs.docker == 'true' || success()) && needs.unit-test.result == 'success' && (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped') }}
         steps:
             - uses: actions/checkout@v4
 
