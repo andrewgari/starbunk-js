@@ -4,13 +4,13 @@ import { testBot, testBotNoResponse } from '../../support/botTestHelper';
 import '../../support/index.d.ts';
 
 /**
- * E2E tests for the Attitude-Bot
+ * E2E tests for the AttitudeBot
  *
  * This bot responds to negative attitude messages containing
  * phrases like "I can't", "you can't", "they can't", or "we can't"
  * with "Not with THAT attitude!!!"
  */
-describe('Attitude-Bot E2E Tests', () => {
+describe('AttitudeBot E2E Tests', () => {
 	before(() => {
 		// Initialize Discord client before running tests
 		cy.initDiscordClient();
@@ -30,11 +30,13 @@ describe('Attitude-Bot E2E Tests', () => {
 
 	// Run all response tests
 	responseTests.forEach(test => {
-		testBot({
-			botName: 'Attitude-Bot',
-			triggerMessage: test.message,
-			expectedResponsePattern: /Not with THAT attitude!!!/,
-			channelId: channelIDs.NebulaChat
+		it(`should respond ${test.name}`, () => {
+			testBot({
+				botName: 'AttitudeBot',
+				triggerMessage: test.message,
+				expectedResponsePattern: /Not with THAT attitude!!!/,
+				channelId: channelIDs.NebulaChat
+			});
 		});
 	});
 
@@ -49,6 +51,8 @@ describe('Attitude-Bot E2E Tests', () => {
 
 	// Run all no-response tests
 	noResponseTests.forEach(test => {
-		testBotNoResponse('Attitude-Bot', test.message, channelIDs.NebulaChat);
+		it(`should not respond to ${test.name}`, () => {
+			testBotNoResponse('AttitudeBot', test.message, channelIDs.NebulaChat);
+		});
 	});
 });

@@ -15,6 +15,7 @@ import { Patterns } from '../triggers/conditions/patterns';
 export default function createAttitudeBot(
 	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
+	// Always use the webhook service passed as parameter
 	return new BotBuilder('Xander Crews', webhookSvc)
 		.withAvatar('https://i.ytimg.com/vi/56PMgO3q2-A/sddefault.jpg')
 		.withPatternTrigger(Patterns.PHRASE_NEGATIVE_ATTITUDE)
