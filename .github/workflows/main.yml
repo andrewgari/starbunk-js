@@ -2,10 +2,10 @@ name: Main Branch Checks
 
 on:
     push:
-        branches: [main]
+        branches: [main, develop]
     pull_request:
         types: [closed]
-        branches: [main]
+        branches: [main, develop]
 
 jobs:
     check_merged:
