@@ -1,22 +1,105 @@
+# Main workflow for CI/CD pipeline
+# Triggers on:
+# - Push to main or develop branches
+# - Merged PRs to main or develop branches
 name: Main Branch Checks
 
 on:
     push:
-        branches: [main]
+        branches: [main, develop]
     pull_request:
         types: [closed]
-        branches: [main]
+        branches: [main, develop]
 
 jobs:
-    check_merged:
-        if: github.event.pull_request.merged == true || github.event_name == 'push'
+    # Determines which parts of the codebase have changed and if the workflow should run
+    # Outputs:
+    # - should_run: true if PR merged or direct push
+    # - src: changes to source code
+    # - tests: changes to test files
+    # - docker: changes to Docker configuration
+    # - config: changes to project configuration
+    # - bots: changes to bot-related code
+    changes:
+        name: 🔍 Detect Changes
+        runs-on: ubuntu-latest
+        outputs:
+            should_run: ${{ steps.check_merged.outputs.should_run }}
+            src: ${{ steps.filter.outputs.src }}
+            tests: ${{ steps.filter.outputs.tests }}
+            docker: ${{ steps.filter.outputs.docker }}
+            config: ${{ steps.filter.outputs.config }}
+            bots: ${{ steps.filter.outputs.bots }}
+        steps:
+            - name: Check if PR was merged or direct push
+              id: check_merged
+              run: |
+                  if [[ "${{ github.event_name }}" == "push" || "${{ github.event.pull_request.merged }}" == "true" ]]; then
+                    echo "should_run=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "should_run=false" >> $GITHUB_OUTPUT
+                  fi
+
+            - uses: actions/checkout@v4
+              if: steps.check_merged.outputs.should_run == 'true'
+              with:
+                  fetch-depth: 0 # Needed for file change detection
+
+            - name: Check for file changes
+              if: steps.check_merged.outputs.should_run == 'true'
+              uses: dorny/paths-filter@v2
+              id: filter
+              with:
+                  filters: |
+                      src:
+                          - 'src/**'
+                          - '!src/tests/**'
+                      tests:
+                          - 'src/tests/**'
+                          - '**/*.test.ts'
+                          - '**/*.spec.ts'
+                          - 'jest.config.js'
+                      docker:
+                          - 'Dockerfile*'
+                          - '.dockerignore'
+                          - 'docker-compose*.yml'
+                      config:
+                          - 'package.json'
+                          - 'package-lock.json'
+                          - 'tsconfig*.json'
+                          - '.eslintrc*'
+                          - '.prettierrc*'
+                      bots:
+                          - 'src/starbunk/bots/**'
+                          - 'cypress/e2e/bots/**'
+
+    # Builds the TypeScript project and saves artifacts for later jobs
+    build:
+        needs: [changes]
+        name: 🔨 Build
+        # Only run if PR was merged or direct push to main/develop
+        if: ${{ needs.changes.outputs.should_run == 'true' }}
         runs-on: ubuntu-latest
         steps:
-            - run: echo "Running post-merge checks"
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+            - run: npm ci
+            - run: npm run build
+            - name: Upload Build Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: dist/
+                  if-no-files-found: error
 
+    # Runs ESLint to ensure code quality
     lint:
-        needs: check_merged
+        needs: [changes]
         name: 🔍 Lint
+        if: ${{ needs.changes.outputs.should_run == 'true' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -27,9 +110,11 @@ jobs:
             - run: npm ci
             - run: npm run lint
 
-    test:
-        needs: check_merged
-        name: 🧪 Test
+    # Verifies TypeScript types are correct
+    type-check:
+        needs: [changes]
+        name: 🔍 Type Check
+        if: ${{ needs.changes.outputs.should_run == 'true' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -38,11 +123,35 @@ jobs:
                   node-version: '20'
                   cache: 'npm'
             - run: npm ci
+            - run: npm run type-check:main
+
+    # Runs Jest unit tests using the built artifacts
+    test:
+        needs: [changes, build]
+        name: 🧪 Test
+        # Only run if PR was merged or direct push to main/develop
+        if: ${{ needs.changes.outputs.should_run == 'true' }}
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+            - run: npm ci
+            - name: Download Build Artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: dist/
             - run: npm run test
 
-    build:
-        needs: check_merged
-        name: 🔨 Build
+    # Runs Cypress E2E tests for bot functionality
+    # Only executes if bot-related code has changed
+    e2e-test:
+        needs: [changes, build]
+        name: 🤖 E2E Bot Tests
+        if: ${{ needs.changes.outputs.should_run == 'true' && needs.changes.outputs.bots == 'true' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -51,11 +160,40 @@ jobs:
                   node-version: '20'
                   cache: 'npm'
             - run: npm ci
-            - run: npm run build
+            - name: Download Build Artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: dist/
+            - name: Create .env file
+              run: |
+                  echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
+                  echo "NODE_ENV=test" >> .env
+            - name: Run Bot Tests
+              run: npm run test:e2e:bots
+              env:
+                  CYPRESS_DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+                  NODE_ENV: test
+                  # Add Cypress-specific environment variables
+                  CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Upload Test Screenshots
+              uses: actions/upload-artifact@v4
+              if: failure()
+              with:
+                  name: cypress-screenshots
+                  path: cypress/screenshots
+                  if-no-files-found: ignore
+
+    # Builds and publishes Docker image if all checks pass
+    # Tags images with:
+    # - latest
+    # - YYYY.MM.DD-<git-sha>
     docker:
-        needs: [lint, test, build]
+        needs: [test, e2e-test, lint, type-check]
         name: 🐳 Release Docker Image
+        if: ${{ always() && needs.changes.outputs.should_run == 'true' && needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped') }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4

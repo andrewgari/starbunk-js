@@ -1,27 +1,19 @@
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
-import { Message, TextChannel } from 'discord.js';
-
-export default class HoldBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		super(webhookService);
-	}
-	private readonly botName = 'HoldBot';
-	private readonly avatarUrl = 'https://i.imgur.com/YPFGEzM.png';
-	private readonly pattern = /\bhold\b/i;
-	private readonly response = 'Hold.';
-
-	getBotName(): string {
-		return this.botName;
-	}
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
-	handleMessage(message: Message<boolean>): void {
-		if (message.author.bot) return;
-
-		if (message.content.match(this.pattern)) {
-			this.sendReply(message.channel as TextChannel, this.response);
-		}
-	}
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import ReplyBot from '../replyBot';
+import { PatternCondition } from '../triggers/conditions/patternCondition';
+import { Patterns } from '../triggers/conditions/patterns';
+export default function createHoldBot(
+	webhookSvc: WebhookService = webhookService
+): ReplyBot {
+	// Use the webhook service passed as parameter instead of always using the imported singleton
+	const avatarUrl = 'https://i.imgur.com/YPFGEzM.png';
+	return new BotBuilder('HoldBot', webhookSvc)
+		.withAvatar(avatarUrl)
+		.withCustomCondition(
+			'Hold.',
+			avatarUrl,
+			new PatternCondition(Patterns.WORD_HOLD)
+		)
+		.build();
 }

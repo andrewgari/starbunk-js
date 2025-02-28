@@ -1,27 +1,20 @@
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
-import { Message, TextChannel } from 'discord.js';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import ReplyBot from '../replyBot';
+import { PatternCondition } from '../triggers/conditions/patternCondition';
+import { Patterns } from '../triggers/conditions/patterns';
 
-export default class BabyBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		super(webhookService);
-	}
-	private readonly botName = 'BabyBot';
-	private readonly avatarUrl = 'https://i.redd.it/qc9qus78dc581.jpg';
-	private readonly pattern = /\b(baby)\b/i;
-	private readonly response = 'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif';
-
-	getBotName(): string {
-		return this.botName;
-	}
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
-	handleMessage(message: Message<boolean>): void {
-		if (message.author.bot) return;
-
-		if (message.content.match(this.pattern)) {
-			this.sendReply(message.channel as TextChannel, this.response);
-		}
-	}
+export default function createBabyBot(
+	webhookSvc: WebhookService = webhookService
+): ReplyBot {
+	// Always use the imported singleton webhookService, ignoring any webhookService in config
+	// This ensures we're using the properly initialized webhookService with the writeMessage method
+	return new BotBuilder('BabyBot', webhookSvc)
+		.withAvatar('https://i.redd.it/qc9qus78dc581.jpg')
+		.withCustomCondition(
+			'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif',
+			'https://i.redd.it/qc9qus78dc581.jpg',
+			new PatternCondition(Patterns.WORD_BABY)
+		)
+		.build();
 }

@@ -133,3 +133,23 @@ config.json
 node_modules
 .DS_Store
 *.log
+src/starbunk/bots/reply-bots/attitudeBot.ts
+src/tests/starbunk/reply-bots/attitudeBot.test.ts
+
+# Generated PR comment files
+pr_*.txt
+pr_*.json
+*_comments.txt
+*_pr_comments.txt
+completed_pr_comments.txt
+
+# Archive directory
+.archive/
+
+# Ignore archived GitHub workflows
+.github/workflows/archive/
+
+# Cypress
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/

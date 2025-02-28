@@ -1,55 +1,63 @@
-import userID from '@/discord/userID';
-import ReplyBot from '@/starbunk/bots/replyBot';
-import random from '@/utils/random';
-import { WebhookService } from '@/webhooks/webhookService';
-import { Message, TextChannel } from 'discord.js';
+import { Message } from 'discord.js';
+import userID from '../../../discord/userID';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import { BotIdentity } from '../botTypes';
+import { getUserIdentity } from '../identity/userIdentity';
+import ReplyBot from '../replyBot';
+import { AllConditions } from '../triggers/conditions/allConditions';
+import { RandomChanceCondition } from '../triggers/conditions/randomChanceCondition';
+import { getVennCondition } from '../triggers/userConditions';
 
-export default class VennBot extends ReplyBot {
-	constructor(webhookService: WebhookService) {
-		super(webhookService);
-	}
-	private botName = 'VennBot';
-	private avatarUrl = '';
-	private readonly pattern = /\bcringe\b/i;
-	private static readonly responses = [
-		'Sorry, but that was über cringe...',
-		'Geez, that was hella cringe...',
-		'That was cringe to the max...',
-		'What a cringe thing to say...',
-		'Mondo cringe, man...',
-		"Yo that was the cringiest thing I've ever heard...",
-		'Your daily serving of cringe, milord...',
-		'On a scale of one to cringe, that was pretty cringe...',
-		'That was pretty cringe :airplane:',
-		'Wow, like....cringe much?',
-		'Excuse me, I seem to have dropped my cringe. Do you have it perchance?',
-		'Like I always say, that was pretty cringe...',
-		'C.R.I.N.G.E',
-	];
+/**
+ * VennBot - A bot that responds to Venn's messages with a 5% chance
+ */
+const responses = [
+	'Sorry, but that was über cringe...',
+	'Geez, that was hella cringe...',
+	'That was cringe to the max...',
+	'What a cringe thing to say...',
+	'Mondo cringe, man...',
+	"Yo that was the cringiest thing I've ever heard...",
+	'Your daily serving of cringe, milord...',
+	'On a scale of one to cringe, that was pretty cringe...',
+	'That was pretty cringe :airplane:',
+	'Wow, like....cringe much?',
+	'Excuse me, I seem to have dropped my cringe. Do you have it perchance?',
+	'Like I always say, that was pretty cringe...',
+	'C.R.I.N.G.E',
+];
 
-	static getRandomResponse(): string {
-		return this.responses[random.roll(this.responses.length)];
-	}
+export default function createVennBot(
+	webhookSvc: WebhookService = webhookService
+): ReplyBot {
+	// Create conditions
+	const vennCondition = getVennCondition();
+	const randomChanceCondition = new RandomChanceCondition(5);
 
-	getResponse(): string {
-		return VennBot.getRandomResponse();
-	}
+	// Combine conditions - only trigger for Venn's messages with a 5% chance
+	const combinedCondition = new AllConditions(vennCondition, randomChanceCondition);
 
-	getBotName(): string {
-		return this.botName;
-	}
-
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
-
-	handleMessage(message: Message<boolean>): void {
-		if (message.author.bot) return;
-
-		if (message.author.id == userID.Venn && (message.content.match(this.pattern) || random.percentChance(5))) {
-			this.botName = message.author.displayName;
-			this.avatarUrl = message.author.displayAvatarURL() ?? message.author.defaultAvatarURL;
-			this.sendReply(message.channel as TextChannel, this.getResponse());
+	// Identity updater function that uses the new utility function
+	const updateIdentity = async (message: Message): Promise<BotIdentity> => {
+		// If the message is from Venn, use Venn's identity
+		if (message.author.id === userID.Venn) {
+			return await getUserIdentity(message);
 		}
-	}
+
+		// Otherwise, use the default VennBot identity
+		return {
+			name: 'VennBot',
+			avatarUrl: 'https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png'
+		};
+	};
+
+	// Always use the imported singleton webhookService, ignoring any webhookService in config
+	// This ensures we're using the properly initialized webhookService with the writeMessage method
+	return new BotBuilder('VennBot', webhookSvc)
+		.withAvatar('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png')
+		.withCustomTrigger(combinedCondition)
+		.withDynamicIdentity('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png', updateIdentity)
+		.respondsWithRandom(responses)
+		.build();
 }

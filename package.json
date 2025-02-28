@@ -4,20 +4,37 @@
 	"description": "it's bot that says blu, among things...",
 	"scripts": {
 		"build": "tsc",
-		"start": "node dist/bunkbot.js",
-		"dev": "npm run lint:fix && npm run build && npm run test",
+		"build:clean": "rm -rf dist && tsc",
+		"start": "node dist/src/bunkbot.js",
+		"start:clean": "rm -rf dist && tsc && node dist/src/bunkbot.js",
+		"dev": "./scripts/dev-check.sh",
 		"test": "jest",
-		"tests": "jest --config=jest.config.js",
 		"test:coverage": "jest --coverage",
 		"test:watch": "jest --watch",
 		"lint": "eslint 'src/**/*.{ts,js}' '*.{ts,js}'",
 		"lint:fix": "eslint 'src/**/*.{ts,js}' '*.{ts,js}' --fix",
 		"format": "prettier --write \"src/**/*.ts\"",
-		"type-check": "tsc --noEmit",
-		"test:music": "jest src/tests/starbunk/commands/musicCommands.test.ts"
+		"type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.cypress.json",
+		"type-check:main": "tsc --noEmit",
+		"type-check:cypress": "tsc --noEmit -p tsconfig.cypress.json",
+		"test:music": "jest src/tests/starbunk/commands/musicCommands.test.ts",
+		"validate-bots": "./scripts/validate-bots.sh",
+		"cypress:open": "cypress open",
+		"cypress:run": "cypress run",
+		"test:e2e": "cypress run --spec 'cypress/e2e/**/*.cy.ts'",
+		"test:e2e:bots": "cypress run --spec 'cypress/e2e/bots/**/*.cy.ts'",
+		"test:bots": "cypress run --spec 'cypress/e2e/bots/*.cy.ts'",
+		"test:e2e:local": "./scripts/run-e2e-tests.sh",
+		"test:e2e:bot": "./scripts/test-specific-bot.sh",
+		"cypress:clean": "./scripts/clean-cypress.sh",
+		"check:all": "./scripts/check-all.sh",
+		"check:demo": "./scripts/check-demo.sh"
 	},
 	"engines": {
 		"node": ">=16.0.0"
+	},
+	"_moduleAliases": {
+		"@": "dist/src"
 	},
 	"repository": {
 		"type": "git",
@@ -34,29 +51,32 @@
 	},
 	"homepage": "https://github.com/andrewgari/starbunk-js#readme",
 	"dependencies": {
-		"@discordjs/builders": "^1.6.5",
-		"@discordjs/rest": "^2.0.1",
+		"@discordjs/builders": "^1.7.0",
+		"@discordjs/rest": "^2.2.0",
 		"@discordjs/voice": "^0.18.0",
 		"@distube/yt-dlp": "^2.0.1",
 		"@distube/ytdl-core": "^4.15.9",
-		"async": "^3.2.4",
+		"async": "^3.2.5",
 		"chalk": "^4.1.2",
-		"discord-api-types": "^0.37.59",
-		"discord.js": "^14.17.3",
+		"discord-api-types": "^0.37.67",
+		"discord.js": "^14.14.1",
+		"distube": "^5.0.6",
 		"dotenv": "^16.3.1",
-		"envalid": "^8.0.0",
 		"ffmpeg-static": "^5.2.0",
-		"module-name": "^0.0.1-security",
-		"openai": "^4.58.2",
+		"module-alias": "^2.2.3",
+		"openai": "^4.80.0",
 		"opusscript": "^0.0.8",
 		"play-dl": "^1.9.7",
 		"ytdl-core": "^4.11.5"
 	},
 	"devDependencies": {
+		"@cypress/code-coverage": "^3.12.24",
+		"@testing-library/jest-dom": "^6.6.3",
 		"@types/jest": "^29.5.14",
 		"@types/node": "^20.17.14",
 		"@typescript-eslint/eslint-plugin": "^6.21.0",
 		"@typescript-eslint/parser": "^6.21.0",
+		"cypress": "^14.1.0",
 		"eslint": "^8.0.0",
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-prettier": "^5.2.3",
@@ -66,6 +86,6 @@
 		"ts-node": "^10.9.2",
 		"tsconfig-paths": "^4.2.0",
 		"tslib": "^2.6.2",
-		"typescript": "^5.0.0"
+		"typescript": "~5.3.3"
 	}
 }

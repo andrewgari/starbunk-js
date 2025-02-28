@@ -1,0 +1,210 @@
+name: PR Checks
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+        paths-ignore:
+            - '**.md'
+            - '.github/ISSUE_TEMPLATE/**'
+            - 'docs/**'
+
+jobs:
+    # Initial check to determine what files changed
+    changes:
+        name: 🔍 Detect Changes
+        runs-on: ubuntu-latest
+        outputs:
+            src: ${{ steps.filter.outputs.src }}
+            tests: ${{ steps.filter.outputs.tests }}
+            docker: ${{ steps.filter.outputs.docker }}
+            config: ${{ steps.filter.outputs.config }}
+            bots: ${{ steps.filter.outputs.bots }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # Needed for file change detection
+
+            - name: Check for file changes
+              uses: dorny/paths-filter@v2
+              id: filter
+              with:
+                  filters: |
+                      src:
+                          - 'src/**'
+                          - '!src/tests/**'
+                      tests:
+                          - 'src/tests/**'
+                          - '**/*.test.ts'
+                          - '**/*.spec.ts'
+                          - 'jest.config.js'
+                      docker:
+                          - 'Dockerfile*'
+                          - '.dockerignore'
+                          - 'docker-compose*.yml'
+                      config:
+                          - 'package.json'
+                          - 'package-lock.json'
+                          - 'tsconfig*.json'
+                          - '.eslintrc*'
+                          - '.prettierrc*'
+                      bots:
+                          - 'src/starbunk/bots/**'
+                          - 'cypress/e2e/bots/**'
+
+    build:
+        name: 🔨 Build
+        runs-on: ubuntu-latest
+        needs: [changes]
+        # Always run build regardless of what changed
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Build App
+              run: npm run build
+
+            - name: Upload Build Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: dist/
+                  if-no-files-found: error
+
+    lint:
+        name: 🔍 Lint
+        runs-on: ubuntu-latest
+        needs: [changes]
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Run Lint
+              run: npm run lint
+
+    type-check:
+        name: 🔍 Type Check
+        runs-on: ubuntu-latest
+        needs: [changes]
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Type Check Main Code
+              run: npm run type-check:main
+
+            - name: Type Check Cypress Code
+              run: npm run type-check:cypress
+
+    unit-test:
+        name: 🧪 Unit Tests
+        runs-on: ubuntu-latest
+        needs: [changes, build]
+        # Always run unit tests regardless of what changed
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Download Build Artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: dist/
+
+            - name: Run Unit Tests
+              run: npm run test
+
+    e2e-test:
+        name: 🤖 E2E Bot Tests
+        runs-on: ubuntu-latest
+        needs: [changes, build]
+        if: ${{ needs.changes.outputs.bots == 'true' }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Download Build Artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: dist/
+
+            - name: Create .env file
+              run: |
+                  echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
+                  echo "NODE_ENV=test" >> .env
+
+            - name: Run Bot Tests
+              run: npm run test:e2e:bots
+              env:
+                  CYPRESS_DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+                  NODE_ENV: test
+                  # Add Cypress-specific environment variables
+                  CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Upload Test Screenshots
+              uses: actions/upload-artifact@v4
+              if: failure()
+              with:
+                  name: cypress-screenshots
+                  path: cypress/screenshots
+                  if-no-files-found: ignore
+
+    docker-build:
+        name: 🐳 Docker Build
+        runs-on: ubuntu-latest
+        needs: [unit-test, e2e-test, lint, type-check]
+        if: ${{ always() && (needs.changes.outputs.docker == 'true' || success()) && needs.unit-test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped') }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build Docker Image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  push: false
+                  load: true
+                  tags: ${{ github.repository }}:pr-${{ github.event.pull_request.number }}

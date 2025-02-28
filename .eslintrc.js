@@ -39,6 +39,28 @@ module.exports = {
 				es6: true
 			},
 			extends: ['eslint:recommended', 'prettier']
+		},
+		{
+			files: ['cypress/**/*.ts', 'cypress.config.ts'],
+			parser: '@typescript-eslint/parser',
+			parserOptions: {
+				project: './tsconfig.cypress.json',
+				tsconfigRootDir: '.'
+			},
+			plugins: ['@typescript-eslint'],
+			extends: [
+				'eslint:recommended',
+				'plugin:@typescript-eslint/recommended',
+				'prettier'
+			],
+			rules: {
+				'no-console': 'off',
+				'@typescript-eslint/no-explicit-any': 'off',
+				'@typescript-eslint/no-unused-vars': 'warn',
+				'prefer-const': 'warn',
+				'@typescript-eslint/member-delimiter-style': 'warn',
+				'@typescript-eslint/no-var-requires': 'off'
+			}
 		}
 	],
 	env: {

@@ -1,220 +1,335 @@
-import userID from '@/discord/userID';
 import { OpenAIClient } from '@/openai/openaiClient';
-import { Logger } from '@/services/logger';
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
-import { Message, TextChannel } from 'discord.js';
+import { Message } from 'discord.js';
+import { OpenAI } from 'openai';
+import UserID from '../../../discord/userID';
+import { botStateService } from '../../../services/botStateService';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import { BotIdentity, ResponseGenerator, TriggerCondition } from '../botTypes';
+import ReplyBot from '../replyBot';
+import { AllConditions } from '../triggers/conditions/allConditions';
+import { BlueAICondition } from '../triggers/conditions/blueAICondition';
+import { CooldownCondition } from '../triggers/conditions/cooldownCondition';
+import { NotCondition } from '../triggers/conditions/notCondition';
+import { OneCondition } from '../triggers/conditions/oneCondition';
+import { PatternCondition } from '../triggers/conditions/patternCondition';
+import { Patterns } from '../triggers/conditions/patterns';
+import { UserMessageCondition } from '../triggers/conditions/userMessageCondition';
 
-interface BlueConfig {
-	defaultAvatarURL?: string;
-	murderAvatar?: string;
-	cheekyAvatar?: string;
-	openAIClient?: typeof OpenAIClient;
-	timeProvider?: () => number;
-}
+// Avatar URLs
+const DEFAULT_AVATAR = 'https://imgur.com/WcBRCWn.png';
+const CHEEKY_AVATAR = 'https://i.imgur.com/dO4a59n.png';
+const MURDER_AVATAR = 'https://imgur.com/Tpo8Ywd.jpg'; // For Navy Seal copypasta
+const MEAN_AVATAR = 'https://imgur.com/Tpo8Ywd.jpg'; // For "mean about venn" response
 
-export default class BlueBot extends ReplyBot {
-	private botName: string = 'BluBot';
-	private readonly openAIClient: typeof OpenAIClient;
-	private readonly timeProvider: () => number;
+// State persistence keys
+export const BLUEBOT_TIMESTAMP_KEY = 'bluebot_last_initial_message_time';
+export const BLUEBOT_LAST_AVATAR_KEY = 'bluebot_last_avatar';
 
-	private readonly defaultPattern = /\bblue?\b/i;
-	private readonly confirmPattern = /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i;
-	private readonly nicePattern = /blue?bot,? say something nice about (?<name>.+$)/i;
-	private readonly meanPattern = /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i;
-
-	private readonly defaultAvatarURL: string;
-	private readonly murderAvatar: string;
-	private readonly cheekyAvatar: string;
-	private avatarUrl: string;
-
-	private readonly defaultResponse = 'Did somebody say Blu?';
-	private readonly cheekyResponse = 'Lol, Somebody definitely said Blu! :smile:';
-	private readonly friendlyResponse = (name: string): string => `${name}, I think you're pretty Blu! :wink:`;
-	private readonly contemptResponse = 'No way, Venn can suck my blu cane. :unamused:';
-	private readonly murderResponse =
-		"What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Academia d'Azul, and I've been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I've trained with gorillas in warfare and I'm the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little \"clever\" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You're fucking dead, kiddo.";
-	private blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
-	private blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
-
-	private readonly MURDER_COOLDOWN_HOURS = 24;
-	private readonly BLUE_RESPONSE_WINDOW_MINUTES = 2;
-
-	constructor(
-		webhookService: WebhookService,
-		private readonly logger: typeof Logger,
-		config: BlueConfig = {}
-	) {
-		super(webhookService);
-		this.openAIClient = config.openAIClient ?? OpenAIClient;
-		this.timeProvider = config.timeProvider ?? (() => Date.now());
-		this.defaultAvatarURL = config.defaultAvatarURL ?? 'https://imgur.com/WcBRCWn.png';
-		this.murderAvatar = config.murderAvatar ?? 'https://imgur.com/Tpo8Ywd.jpg';
-		this.cheekyAvatar = config.cheekyAvatar ?? 'https://i.imgur.com/dO4a59n.png';
-		this.avatarUrl = this.defaultAvatarURL;
+/**
+ * BluNiceRequestCondition - A condition for handling "say something nice about" requests
+ * Extracts the name from the pattern's capture group
+ */
+class BluNiceRequestCondition extends PatternCondition {
+	constructor() {
+		super(Patterns.BLUEBOT_NICE_REQUEST_NAMED);
 	}
 
-	getBotName(): string {
-		return this.botName;
-	}
-
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
-
-	setAvatarUrl(url: string): void {
-		this.avatarUrl = url;
-	}
-
-	async handleMessage(message: Message<boolean>): Promise<void> {
-		if (message.author.bot) return;
-
-		if (this.isSomeoneAskingYouToBeBlue(message)) {
-			this.logger.debug(`User ${message.author.username} asked BlueBot to be nice`);
-			const name = this.getNameFromBluRequest(message);
-			if (name.match(/venn/i)) {
-				this.logger.debug(`${message.author.username} asked about Venn - responding with contempt`);
-				this.saySomethingBlueAboutVenn(message);
-				return;
-			}
-			this.logger.debug(`Being nice to ${name} as requested by ${message.author.username}`);
-			this.saySomethingNiceAbout(message, name);
-			return;
-		}
-
-		if (this.isVennInsultingBlu(message)) {
-			this.logger.warn(`Venn is being mean again! Message: "${message.content}"`);
-			this.blueMurderTimestamp = new Date();
-			this.avatarUrl = this.murderAvatar;
-			this.sendReply(message.channel as TextChannel, this.murderResponse);
-			return;
-		}
-
-		if (this.isSomeoneRespondingToBlu(message)) {
-			this.blueTimestamp = new Date(1);
-			this.avatarUrl = this.cheekyAvatar;
-			this.sendReply(message.channel as TextChannel, this.cheekyResponse);
-			return;
-		}
-
-		if (message.content.match(this.defaultPattern)) {
-			this.blueTimestamp = new Date();
-			this.avatarUrl = this.defaultAvatarURL;
-			this.sendReply(message.channel as TextChannel, this.defaultResponse);
-			return;
-		} else if (await this.checkIfBlueIsSaid(message)) {
-			this.logger.debug('AI detected blue reference in message');
-			this.sendReply(message.channel as TextChannel, this.defaultResponse);
-		}
-	}
-
-	private isSomeoneRespondingToBlu(message: Message): boolean {
-		if (!message.content.match(this.confirmPattern) && !message.content.match(this.meanPattern)) {
-			return false;
-		}
-		const lastMessage = this.blueTimestamp.getTime();
-		return this.getTimestamp() - lastMessage < 300000;
-	}
-
-	private isVennInsultingBlu(message: Message): boolean {
-		if (message.author.id !== userID.Venn) return false;
-		if (!message.content.match(this.meanPattern)) return false;
-
-		return this.isWithinBlueResponseWindow() && this.isMurderOffCooldown();
-	}
-
-	private isWithinBlueResponseWindow(): boolean {
-		const secondsSinceLastBlue = (this.getTimestamp() - this.blueTimestamp.getTime()) / 1000;
-		return secondsSinceLastBlue < this.BLUE_RESPONSE_WINDOW_MINUTES * 60;
-	}
-
-	private isMurderOffCooldown(): boolean {
-		const secondsSinceLastMurder = (this.getTimestamp() - this.blueMurderTimestamp.getTime()) / 1000;
-		return secondsSinceLastMurder > this.MURDER_COOLDOWN_HOURS * 3600;
-	}
-
-	private getNameFromBluRequest(message: Message): string {
-		const matches = message.content.match(this.nicePattern);
-		if (!matches || matches.length < 2) return 'Hey,';
-		const pronoun = matches[1];
-		if (pronoun === 'me') {
+	/**
+	 * Extract the name from the nice message request
+	 *
+	 * @param message - The Discord message containing the request
+	 * @returns The name mentioned in the message, or "Friend" if no name is found
+	 */
+	getNameFromMessage(message: Message): string {
+		const matches = message.content.match(this.pattern);
+		if (!matches?.groups?.n) return 'Friend';
+		const name = matches.groups.n.trim();
+		if (name.toLowerCase() === 'me') {
 			return message.member?.displayName ?? message.author.displayName;
 		}
-		return matches[1];
+		return name;
+	}
+}
+
+/**
+ * Custom response generator for nice messages
+ */
+class BluNiceResponseGenerator implements ResponseGenerator {
+	private condition: BluNiceRequestCondition;
+
+	constructor(condition: BluNiceRequestCondition) {
+		this.condition = condition;
 	}
 
-	protected async checkIfBlueIsSaid(message: Message): Promise<boolean> {
-		try {
-			this.logger.debug('Checking message for blue references via AI');
-			const response = await this.openAIClient.chat.completions.create({
-				model: 'gpt-4o-mini',
-				messages: [
-					{
-						role: 'system',
-						content: `You are an assistant that analyzes text to determine if it refers to the color blue, including any misspellings, indirect, or deceptive references.
-          Respond only with "yes" if it refers to blue in any way or "no" if it does not. The color blue is a reference to Blue Mage (BLU) from Final Fantasy XIV so pay extra attention when talking about Final Fantasy XIV. Examples:
-          - "bloo" -> yes
-          - "blood" -> no
-          - "blu" -> yes
-          - "bl u" -> yes
-          - "azul" -> yes
-          - "my favorite color is the sky's hue" -> yes
-          - "i really like cova's favorite color" -> yes
-          - "the sky is red" -> yes
-          - "blueberry" -> yes
-          - "blubbery" -> no
-          - "blu mage" -> yes
-          - "my favorite job is blu" -> yes
-          - "my favorite job is blue mage" -> yes
-          - "my favorite job is red mage" -> no
-          - "lets do some blu content" -> yes
-          - "the sky is blue" -> yes
-          - "purple-red" -> yes
-          - "not red" -> yes
-          - "the best content in final fantasy xiv" -> yes
-          - "the worst content in final fantasy xiv" -> yes
-          - "the job with a mask and cane" -> yes
-          - "the job that blows themselves up" -> yes
-          - "the job that sucks" -> yes
-          - "beastmaster" -> yes
-          - "limited job" -> yes
-          - "https://www.the_color_blue.com/blue/bloo/blau/azure/azul" -> no
-          - "strawberries are red" -> no
-          - "#0000FF" -> yes`,
-					},
-					{
-						role: 'user',
-						content: `Is the following message referring to the color blue in any form? Message: "${message.content}"`,
-					},
-				],
-				max_tokens: 10,
-				temperature: 0.2,
-			});
+	async generateResponse(message: Message): Promise<string> {
+		const name = this.condition.getNameFromMessage(message);
+		return `${name}, I think you're really blu! :wink:`;
+	}
+}
 
-			this.logger.debug(`AI response: ${response.choices[0].message.content}`);
-			return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
-		} catch (error) {
-			this.logger.error('Error checking for blue reference', error as Error);
-			return false;
+/**
+ * Custom response generator for the initial "Did somebody say Blu" message
+ * Records the timestamp when this message was sent
+ */
+class InitialBluResponseGenerator implements ResponseGenerator {
+	async generateResponse(): Promise<string> {
+		// Record the timestamp when this message was sent
+		botStateService.setState(BLUEBOT_TIMESTAMP_KEY, Date.now());
+		// Store the avatar used for this response
+		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, DEFAULT_AVATAR);
+		return "Did somebody say Blu";
+	}
+}
+
+/**
+ * Condition that checks if the bot recently said "Did somebody say Blu"
+ * Specifically designed for follow-up responses
+ */
+class RecentBluMessageCondition implements TriggerCondition {
+	private readonly timeWindowMs: number;
+
+	constructor(minutesWindow: number = 5) {
+		// Convert minutes to milliseconds
+		this.timeWindowMs = minutesWindow * 60 * 1000;
+	}
+
+	async shouldTrigger(): Promise<boolean> {
+		// Get the timestamp of the last initial message
+		const lastMessageTime = botStateService.getState<number>(BLUEBOT_TIMESTAMP_KEY, 0);
+
+		// If we've never sent the message or the timestamp is invalid, return false
+		if (lastMessageTime === 0) return false;
+
+		// Check if the message was sent within our time window
+		const timeSinceMessage = Date.now() - lastMessageTime;
+		return timeSinceMessage < this.timeWindowMs;
+	}
+}
+
+/**
+ * Custom response generator for cheeky "Somebody definitely said blu" message
+ */
+class CheekyBluResponseGenerator implements ResponseGenerator {
+	async generateResponse(): Promise<string> {
+		// Store the avatar used for this response
+		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, CHEEKY_AVATAR);
+		return "Somebody definitely said blu";
+	}
+}
+
+/**
+ * Custom response generator for Navy Seal copypasta
+ */
+class NavySealResponseGenerator implements ResponseGenerator {
+	private readonly navySealText = "What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Academia d'Azul, and I've been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I've trained with gorillas in warfare and I'm the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little \"clever\" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You're fucking dead, kiddo.";
+
+	async generateResponse(): Promise<string> {
+		// Store the avatar used for this response
+		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, MURDER_AVATAR);
+		return this.navySealText;
+	}
+}
+
+/**
+ * Custom identity updater for BlueBot
+ * This ensures the correct avatar is used for each condition, even if no response is sent
+ */
+async function updateBlueBotIdentity(message: Message): Promise<BotIdentity> {
+	// Default identity values
+	const defaultName = 'BlueBot';
+	const defaultAvatarUrl = DEFAULT_AVATAR;
+
+	// Check for Venn's mean messages about blue
+	if (message.author.id === UserID.Venn &&
+		message.content.match(Patterns.WORD_BLUE) &&
+		message.content.match(Patterns.BLUEBOT_MEAN_WORDS)) {
+
+		const recentBluMessage = await new RecentBluMessageCondition(5).shouldTrigger();
+		const cooldownOff = await new CooldownCondition(24 * 60, "BlueBot_NavySeal").shouldTrigger();
+
+		if (recentBluMessage && cooldownOff) {
+			// Store the avatar used for this condition
+			botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, MURDER_AVATAR);
+			return {
+				name: defaultName,
+				avatarUrl: MURDER_AVATAR
+			};
 		}
 	}
 
-	private isSomeoneAskingYouToBeBlue(message: Message): boolean {
-		return Boolean(message.content.match(this.nicePattern));
+	// Check for acknowledgment messages within time window
+	if (message.content.match(Patterns.BLUEBOT_ACKNOWLEDGMENT)) {
+		const recentBluMessage = await new RecentBluMessageCondition(5).shouldTrigger();
+		if (recentBluMessage) {
+			// Store the avatar used for this condition
+			botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, CHEEKY_AVATAR);
+			return {
+				name: defaultName,
+				avatarUrl: CHEEKY_AVATAR
+			};
+		}
 	}
 
-	private saySomethingNiceAbout(message: Message, name: string): void {
-		this.avatarUrl = this.cheekyAvatar;
-		this.sendReply(message.channel as TextChannel, this.friendlyResponse(name));
+	// Check for "blu" messages within time window
+	if (message.content.match(Patterns.WORD_BLUE)) {
+		const recentBluMessage = await new RecentBluMessageCondition(5).shouldTrigger();
+		if (recentBluMessage) {
+			// Store the avatar used for this condition
+			botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, CHEEKY_AVATAR);
+			return {
+				name: defaultName,
+				avatarUrl: CHEEKY_AVATAR
+			};
+		}
 	}
 
-	private saySomethingBlueAboutVenn(message: Message): void {
-		this.avatarUrl = this.defaultAvatarURL;
-		this.sendReply(message.channel as TextChannel, this.contemptResponse);
+	// Check for "say something nice about Venn" messages
+	if (message.content.match(Patterns.BLUEBOT_NICE_REQUEST_VENN)) {
+		// Store the avatar used for this condition
+		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, MEAN_AVATAR);
+		return {
+			name: defaultName,
+			avatarUrl: MEAN_AVATAR
+		};
 	}
 
-	// For testing
-	protected getTimestamp(): number {
-		return this.timeProvider();
+	// Check for "say something nice about X" messages
+	if (message.content.match(Patterns.BLUEBOT_NICE_REQUEST_NAMED)) {
+		// Store the avatar used for this condition
+		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, DEFAULT_AVATAR);
+		return {
+			name: defaultName,
+			avatarUrl: DEFAULT_AVATAR
+		};
 	}
+
+	// Use the last avatar if available, otherwise use default
+	const lastAvatar = botStateService.getState<string>(BLUEBOT_LAST_AVATAR_KEY, defaultAvatarUrl);
+	return {
+		name: defaultName,
+		avatarUrl: lastAvatar
+	};
 }
+
+/**
+ * Configuration options for BluBot
+ */
+export interface BluBotConfig {
+	webhookService?: WebhookService;
+	openAIClient?: OpenAI;
+	useAIDetection?: boolean;
+}
+
+// Export BlueBot type for tests
+export type BlueBot = ReplyBot;
+
+/**
+ * BluBot - A bot with specific response logic for messages containing "blue"
+ *
+ * Updated conversation flow:
+ * 1. When someone mentions "blue", the bot responds with "Did somebody say Blu"
+ *    and internally records the timestamp
+ *
+ * 2. After the initial response, if someone acknowledges with blue-related phrases
+ *    within 5 minutes, the bot responds with "Somebody definitely said blu"
+ *
+ * 3. Alternatively, if the user is Venn and uses mean words related to blue
+ *    within 5 minutes of the initial message, the bot responds with the Navy Seal
+ *    copypasta (limited to once per 24 hours)
+ */
+// @ts-expect-error - We need to keep the config parameter for test compatibility
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function createBlueBot(config: BluBotConfig = {}): ReplyBot {
+	// Always use the imported singleton webhookService
+	const niceRequestCondition = new BluNiceRequestCondition();
+	const niceResponseGenerator = new BluNiceResponseGenerator(niceRequestCondition);
+
+	// Create persistent time conditions
+	const recentBluMessageCondition = new RecentBluMessageCondition(5);  // 5 minute window
+	const cooldownCondition = new CooldownCondition(24 * 60, "BlueBot_NavySeal");
+
+	// Create custom response generators
+	const initialResponseGenerator = new InitialBluResponseGenerator();
+	const cheekyResponseGenerator = new CheekyBluResponseGenerator();
+	const navySealResponseGenerator = new NavySealResponseGenerator();
+
+	// Check if OpenAI is available
+	const useAI = process.env.OPENAI_KEY !== undefined && process.env.OPENAI_KEY !== '';
+
+	// Create the initial trigger condition
+	let initialTrigger: TriggerCondition;
+	if (useAI) {
+		// Use AI detection if available
+		initialTrigger = new OneCondition(
+			new PatternCondition(Patterns.WORD_BLUE),
+			new BlueAICondition(OpenAIClient)
+		);
+	} else {
+		// Fall back to pattern matching only
+		initialTrigger = new PatternCondition(Patterns.WORD_BLUE);
+	}
+
+	// Build bot with the new conversation flow pattern
+	const bot = new BotBuilder('BlueBot', webhookService)
+		.withAvatar(DEFAULT_AVATAR)
+		// Add dynamic identity updater to ensure correct avatar is used
+		.withDynamicIdentity(DEFAULT_AVATAR, updateBlueBotIdentity)
+		// Initial response that records the timestamp
+		.withConditionResponse(
+			initialResponseGenerator,
+			DEFAULT_AVATAR,
+			new AllConditions(
+				initialTrigger,
+				new NotCondition(recentBluMessageCondition) // Only trigger initial response if not within time window
+			)
+		)
+		// Cheeky response for "blu" within time window
+		.withConditionResponse(
+			cheekyResponseGenerator,
+			CHEEKY_AVATAR,
+			new AllConditions(
+				new PatternCondition(Patterns.WORD_BLUE),
+				recentBluMessageCondition
+			)
+		)
+		// Cheeky response for acknowledgment within time window
+		.withConditionResponse(
+			cheekyResponseGenerator,
+			CHEEKY_AVATAR,
+			new AllConditions(
+				new PatternCondition(Patterns.BLUEBOT_ACKNOWLEDGMENT),
+				recentBluMessageCondition
+			)
+		)
+		// Navy Seal response that requires a recent initial message
+		.withConditionResponse(
+			navySealResponseGenerator,
+			MURDER_AVATAR,
+			new AllConditions(
+				new PatternCondition(Patterns.WORD_BLUE),
+				new PatternCondition(Patterns.BLUEBOT_MEAN_WORDS),
+				new UserMessageCondition(UserID.Venn),
+				recentBluMessageCondition,
+				cooldownCondition
+			)
+		)
+		// "Say something nice" response
+		.withConditionResponse(
+			niceResponseGenerator,
+			DEFAULT_AVATAR,
+			niceRequestCondition
+		)
+		// Mean response about Venn
+		.withCustomCondition(
+			"No way, Venn can suck my blu cane",
+			MEAN_AVATAR,
+			new PatternCondition(Patterns.BLUEBOT_NICE_REQUEST_VENN)
+		)
+		.build();
+
+	return bot;
+}
+
+// Also export as default for compatibility
+export default createBlueBot;

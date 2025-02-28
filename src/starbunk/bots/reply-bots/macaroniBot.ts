@@ -1,37 +1,41 @@
-import userID from '@/discord/userID';
-import { Logger } from '@/services/logger';
-import ReplyBot from '@/starbunk/bots/replyBot';
-import { WebhookService } from '@/webhooks/webhookService';
-import { Message, TextChannel } from 'discord.js';
+import userID from '../../../discord/userID';
+import { formatUserMention } from '../../../utils/discordFormat';
+import webhookService, { WebhookService } from '../../../webhooks/webhookService';
+import { BotBuilder } from '../botBuilder';
+import ReplyBot from '../replyBot';
+import { PatternCondition } from '../triggers/conditions/patternCondition';
+import { Patterns } from '../triggers/conditions/patterns';
 
-export default class MacaroniBot extends ReplyBot {
-	constructor(webhookService: WebhookService, protected readonly logger = Logger) {
-		super(webhookService);
-	}
+/**
+ * MacaroniBot - A bot that responds to mentions of "macaroni" and "venn"
+ *
+ * This bot has two distinct behaviors:
+ * 1. When someone mentions "venn", it corrects them with the full name
+ * 2. When someone mentions "macaroni", it responds with a user mention
+ */
+export default function createMacaroniBot(
+	webhookSvc: WebhookService = webhookService
+): ReplyBot {
+	// Create a bot that responds to both patterns
+	const avatarUrl = 'https://i.imgur.com/Jx5v7bZ.png';
+	const builder = new BotBuilder('Macaroni Bot', webhookSvc)
+		.withAvatar(avatarUrl)
+		// IMPORTANT: Enable multi-response mode BEFORE adding the patterns
+		.withMultipleResponses(true);
 
-	private readonly botName = 'Macaroni Bot';
-	private readonly macaroniPattern = /\b(mac(aroni)?|pasta)\b/i;
-	private readonly vennPattern = /\bvenn\b/i;
-	private readonly macaroniResponse = 'Correction: you mean Venn "Tyrone "The "Macaroni" Man" Johnson" Caelum';
-	private readonly avatarUrl = 'https://i.imgur.com/fgbH6Xf.jpg';
+	// First add the VENN_MENTION pattern
+	builder.withCustomCondition(
+		"Correction: you mean Venn \"Tyrone \"The \"Macaroni\" Man\" Johnson\" Caelum",
+		avatarUrl,
+		new PatternCondition(Patterns.WORD_VENN)
+	);
 
-	getBotName(): string {
-		return this.botName;
-	}
+	// Then add the MACARONI pattern
+	builder.withCustomCondition(
+		`Are you trying to reach ${formatUserMention(userID.Venn)}`,
+		avatarUrl,
+		new PatternCondition(Patterns.WORD_MACARONI)
+	);
 
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
-
-	handleMessage(message: Message<boolean>): void {
-		if (message.author.bot) return;
-
-		if (message.content.match(this.macaroniPattern)) {
-			this.logger.debug(`MacaroniBot: ${message.author.username} mentioned macaroni/pasta: "${message.content}"`);
-			this.sendReply(message.channel as TextChannel, this.macaroniResponse);
-		} else if (message.content.match(this.vennPattern)) {
-			this.logger.debug(`MacaroniBot: ${message.author.username} mentioned Venn: "${message.content}"`);
-			this.sendReply(message.channel as TextChannel, `Are you trying to reach <@${userID.Venn}>`);
-		}
-	}
+	return builder.build();
 }

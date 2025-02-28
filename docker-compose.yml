@@ -1,7 +1,7 @@
 version: '3.8'
 services:
     bunkbot:
-        image: ghcr.io/andrewgari/starbunk-js:main
+        image: starbunk-js:latest
         container_name: bunkbot-prod
         restart: unless-stopped
         env_file: .env
