@@ -5,12 +5,10 @@ import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
 
 export default function createSpiderBot(
-	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-	_webhookSvc: WebhookService = webhookService
+	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
-	// Always use the imported singleton webhookService, ignoring any webhookService in config
-	// This ensures we're using the properly initialized webhookService with the writeMessage method
-	return new BotBuilder('Spider-Bot', webhookService)
+	// Use the webhook service passed as parameter
+	return new BotBuilder('Spider-Bot', webhookSvc)
 		.withAvatar('https://i.pinimg.com/736x/33/e0/06/33e00653eb485455ce5121b413b26d3b.jpg')
 		.withCustomCondition(
 			"Hey, it's \"**Spider-Man**\"! Don't forget the hyphen! Not Spiderman, that's dumb",

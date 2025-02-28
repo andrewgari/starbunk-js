@@ -1,22 +1,47 @@
-import { Message, TextChannel, User } from 'discord.js';
-import createVennBot from '../../../starbunk/bots/reply-bots/vennBot';
-import ReplyBot from '../../../starbunk/bots/replyBot';
-import { RandomChanceCondition } from '../../../starbunk/bots/triggers/conditions/randomChanceCondition';
-import { UserCondition } from '../../../starbunk/bots/triggers/conditions/userCondition';
-import { patchReplyBot } from '../../helpers/replyBotHelper';
-import { createMockGuildMember, createMockMessage } from '../../mocks/discordMocks';
-import { createMockWebhookService } from '../../mocks/serviceMocks';
+// Mocks need to be at the very top, before any imports
+jest.mock('../../../webhooks/webhookService', () => {
+	return {
+		__esModule: true,
+		default: {
+			writeMessage: jest.fn().mockResolvedValue({})
+		},
+		WebhookService: jest.fn()
+	};
+});
 
-// Mock the RandomChanceCondition to control the random behavior in tests
-jest.mock('../../../starbunk/bots/triggers/conditions/randomChanceCondition');
+// Create variables to control mock behaviors
+let randomChanceShouldTrigger = true;
+let userConditionShouldTrigger = true;
 
-// Mock the UserCondition to control the user check in tests
-jest.mock('../../../starbunk/bots/triggers/conditions/userCondition');
+// Mock the RandomChanceCondition
+jest.mock('../../../starbunk/bots/triggers/conditions/randomChanceCondition', () => {
+	return {
+		RandomChanceCondition: jest.fn().mockImplementation(() => ({
+			shouldTrigger: jest.fn().mockImplementation(() => Promise.resolve(randomChanceShouldTrigger))
+		}))
+	};
+});
+
+// Mock the UserCondition
+jest.mock('../../../starbunk/bots/triggers/conditions/userCondition', () => {
+	return {
+		UserCondition: jest.fn().mockImplementation(() => ({
+			shouldTrigger: jest.fn().mockImplementation(() => Promise.resolve(userConditionShouldTrigger))
+		}))
+	};
+});
 
 // Mock the UserID for Venn
 jest.mock('../../../discord/userID', () => ({
 	Venn: 'venn-user-id'
 }));
+
+// Real imports after all mocks
+import { Message, TextChannel, User } from 'discord.js';
+import createVennBot from '../../../starbunk/bots/reply-bots/vennBot';
+import ReplyBot from '../../../starbunk/bots/replyBot';
+import webhookService from '../../../webhooks/webhookService';
+import { createMockGuildMember, createMockMessage } from '../../mocks/discordMocks';
 
 // Define the expected responses for easier testing
 const expectedResponses = [
@@ -38,52 +63,62 @@ const expectedResponses = [
 describe('VennBot', () => {
 	let vennBot: ReplyBot;
 	let mockMessage: Partial<Message<boolean>>;
-	let mockWebhookService: ReturnType<typeof createMockWebhookService>;
-	let mockRandomChanceCondition: jest.Mock;
-	let mockUserCondition: jest.Mock;
 
 	beforeEach(() => {
-		// Reset mocks
-		mockRandomChanceCondition = RandomChanceCondition.prototype.shouldTrigger as jest.Mock;
-		mockUserCondition = UserCondition.prototype.shouldTrigger as jest.Mock;
-
-		// Default to not triggering
-		mockRandomChanceCondition.mockResolvedValue(false);
-		mockUserCondition.mockResolvedValue(false);
-
-		mockWebhookService = createMockWebhookService();
-		mockMessage = createMockMessage('TestUser');
-		vennBot = createVennBot(mockWebhookService);
-		patchReplyBot(vennBot, mockWebhookService);
-
-		// Reset mocks between tests
+		// Reset all mocks
 		jest.clearAllMocks();
+
+		// Reset variables
+		randomChanceShouldTrigger = true;
+		userConditionShouldTrigger = true;
+
+		// Create message mock
+		mockMessage = createMockMessage('TestUser');
+		if (mockMessage.author) {
+			Object.defineProperty(mockMessage.author, 'displayName', {
+				value: 'TestUser',
+				configurable: true
+			});
+		}
+
+		// Create bot instance
+		vennBot = createVennBot();
 	});
 
 	describe('bot configuration', () => {
 		it('should have correct name', () => {
+			// Act
 			const identity = vennBot.getIdentity();
+
+			// Assert
 			expect(identity.name).toBe('VennBot');
 		});
 
 		it('should have correct avatar URL', () => {
+			// Act
 			const identity = vennBot.getIdentity();
+
+			// Assert
 			expect(identity.avatarUrl).toBe('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png');
 		});
 	});
 
 	describe('message handling', () => {
 		it('should ignore messages from bots', async () => {
+			// Arrange
 			const mockMember = createMockGuildMember('bot-id', 'BotUser');
 			mockMessage.author = { ...mockMember.user, bot: true } as User;
 			mockMessage.content = 'Hello there';
 
+			// Act
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+
+			// Assert
+			expect(webhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
-		it('should respond to messages from Venn with a random cringe message when random chance is met', async () => {
-			// Create a message from Venn
+		it('should respond to messages from Venn with a random cringe message when both conditions are met', async () => {
+			// Arrange
 			const mockVennMember = createMockGuildMember('venn-user-id', 'Venn');
 			mockMessage.author = mockVennMember.user as User;
 			Object.defineProperty(mockMessage.author, 'id', {
@@ -91,13 +126,14 @@ describe('VennBot', () => {
 				configurable: true
 			});
 			mockMessage.content = 'Hello everyone!';
+			userConditionShouldTrigger = true;
+			randomChanceShouldTrigger = true;
 
-			// Configure the conditions to trigger
-			mockUserCondition.mockResolvedValue(true);
-			mockRandomChanceCondition.mockResolvedValue(true);
-
+			// Act
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+
+			// Assert
+			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'VennBot',
@@ -108,7 +144,7 @@ describe('VennBot', () => {
 		});
 
 		it('should NOT respond to messages from Venn when random chance is not met', async () => {
-			// Create a message from Venn
+			// Arrange
 			const mockVennMember = createMockGuildMember('venn-user-id', 'Venn');
 			mockMessage.author = mockVennMember.user as User;
 			Object.defineProperty(mockMessage.author, 'id', {
@@ -116,17 +152,18 @@ describe('VennBot', () => {
 				configurable: true
 			});
 			mockMessage.content = 'Hello everyone!';
+			userConditionShouldTrigger = true;
+			randomChanceShouldTrigger = false;
 
-			// Configure the UserCondition to trigger but RandomChanceCondition to not trigger
-			mockUserCondition.mockResolvedValue(true);
-			mockRandomChanceCondition.mockResolvedValue(false);
-
+			// Act
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+
+			// Assert
+			expect(webhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
 		it('should NOT respond to messages from other users regardless of content', async () => {
-			// Create a message from a non-Venn user
+			// Arrange
 			const mockOtherMember = createMockGuildMember('other-user-id', 'OtherUser');
 			mockMessage.author = mockOtherMember.user as User;
 			Object.defineProperty(mockMessage.author, 'id', {
@@ -134,17 +171,18 @@ describe('VennBot', () => {
 				configurable: true
 			});
 			mockMessage.content = 'Hello everyone!';
+			userConditionShouldTrigger = false;
+			randomChanceShouldTrigger = true;
 
-			// Configure the UserCondition to not trigger but RandomChanceCondition to trigger
-			mockUserCondition.mockResolvedValue(false);
-			mockRandomChanceCondition.mockResolvedValue(true);
-
+			// Act
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+
+			// Assert
+			expect(webhookService.writeMessage).not.toHaveBeenCalled();
 		});
 
 		it('should respond to messages from Venn containing any content when both conditions are met', async () => {
-			// Create a message from Venn with random content
+			// Arrange
 			const mockVennMember = createMockGuildMember('venn-user-id', 'Venn');
 			mockMessage.author = mockVennMember.user as User;
 			Object.defineProperty(mockMessage.author, 'id', {
@@ -152,13 +190,14 @@ describe('VennBot', () => {
 				configurable: true
 			});
 			mockMessage.content = 'This message has nothing to do with venn or cringe';
+			userConditionShouldTrigger = true;
+			randomChanceShouldTrigger = true;
 
-			// Configure both conditions to trigger
-			mockUserCondition.mockResolvedValue(true);
-			mockRandomChanceCondition.mockResolvedValue(true);
-
+			// Act
 			await vennBot.handleMessage(mockMessage as Message<boolean>);
-			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+
+			// Assert
+			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'VennBot',

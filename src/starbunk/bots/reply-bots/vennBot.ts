@@ -29,8 +29,7 @@ const responses = [
 ];
 
 export default function createVennBot(
-	// @ts-ignore - parameter kept for test compatibility but not used
-	webhookServiceParam: WebhookService = webhookService
+	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Create conditions
 	const vennCondition = getVennCondition();
@@ -55,7 +54,7 @@ export default function createVennBot(
 
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
-	return new BotBuilder('VennBot', webhookService)
+	return new BotBuilder('VennBot', webhookSvc)
 		.withAvatar('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png')
 		.withCustomTrigger(combinedCondition)
 		.withDynamicIdentity('https://cdn.discordapp.com/attachments/854790294253117531/902975839420497940/venn.png', updateIdentity)

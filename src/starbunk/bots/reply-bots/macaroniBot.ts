@@ -14,12 +14,11 @@ import { Patterns } from '../triggers/conditions/patterns';
  * 2. When someone mentions "macaroni", it responds with a user mention
  */
 export default function createMacaroniBot(
-	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-	_webhookSvc: WebhookService = webhookService
+	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Create a bot that responds to both patterns
 	const avatarUrl = 'https://i.imgur.com/Jx5v7bZ.png';
-	const builder = new BotBuilder('Macaroni Bot', webhookService)
+	const builder = new BotBuilder('Macaroni Bot', webhookSvc)
 		.withAvatar(avatarUrl)
 		// IMPORTANT: Enable multi-response mode BEFORE adding the patterns
 		.withMultipleResponses(true);

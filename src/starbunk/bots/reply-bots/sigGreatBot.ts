@@ -49,12 +49,11 @@ class SigPraiseResponse implements ResponseGenerator {
  * Uses the same adjective that was in the original message.
  */
 export default function createSigGreatBot(
-	// @ts-ignore - parameter kept for test compatibility but not used
-	webhookServiceParam: WebhookService = webhookService
+	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
-	return new BotBuilder('SigGreatBot', webhookService)
+	return new BotBuilder('SigGreatBot', webhookSvc)
 		.withAvatar('https://static.wikia.nocookie.net/chrono/images/a/a5/Serge2.png')
 		.withPatternTrigger(Patterns.PHRASE_SIG_PRAISE)
 		.respondsWithCustom(new SigPraiseResponse())

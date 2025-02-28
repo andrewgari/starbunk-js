@@ -9,12 +9,11 @@ import { RandomChanceCondition } from '../triggers/conditions/randomChanceCondit
  * with a friendly greeting
  */
 export default function createBotBot(
-	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-	_webhookSvc: WebhookService = webhookService
+	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
-	return new BotBuilder('BotBot', webhookService)
+	return new BotBuilder('BotBot', webhookSvc)
 		.withAvatar('https://cdn-icons-png.flaticon.com/512/4944/4944377.png')
 		.withCustomCondition(
 			"Why hello there, fellow bot 🤖",

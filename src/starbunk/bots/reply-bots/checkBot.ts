@@ -5,12 +5,11 @@ import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
 
 export default function createCheckBot(
-	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-	_webhookSvc: WebhookService = webhookService
+	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
-	return new BotBuilder('CheckBot', webhookService)
+	return new BotBuilder('CheckBot', webhookSvc)
 		.withAvatar('https://m.media-amazon.com/images/I/21Unzn9U8sL._AC_.jpg')
 		.withCustomCondition(
 			"I believe you mean 'check' :wink:",

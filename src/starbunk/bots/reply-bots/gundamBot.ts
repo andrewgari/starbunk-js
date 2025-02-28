@@ -8,13 +8,12 @@ import { Patterns } from '../triggers/conditions/patterns';
  */
 
 export default function createGundamBot(
-	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-	_webhookSvc: WebhookService = webhookService
+	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
 	const avatarUrl = 'https://i.imgur.com/WuBBl0A.png';
-	return new BotBuilder('GundamBot', webhookService)
+	return new BotBuilder('GundamBot', webhookSvc)
 		.withAvatar(avatarUrl)
 		.withCustomCondition(
 			"That's the giant unicorn robot gandam, there i said it",

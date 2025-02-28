@@ -5,12 +5,11 @@ import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
 
 export default function createBabyBot(
-	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-	_webhookSvc: WebhookService = webhookService
+	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
-	return new BotBuilder('BabyBot', webhookService)
+	return new BotBuilder('BabyBot', webhookSvc)
 		.withAvatar('https://i.redd.it/qc9qus78dc581.jpg')
 		.withCustomCondition(
 			'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif',

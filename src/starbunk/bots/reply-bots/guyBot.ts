@@ -43,8 +43,7 @@ const responses = [
  * has a 5% random chance of responding to any message, or responds to messages from Guy
  */
 export default function createGuyBot(
-	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-	_webhookSvc: WebhookService = webhookService
+	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Get the condition for checking if the message is from Guy
 	const guyUserCondition = getGuyCondition();
@@ -65,7 +64,7 @@ export default function createGuyBot(
 
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
-	return new BotBuilder('GuyBot', webhookService)
+	return new BotBuilder('GuyBot', webhookSvc)
 		.withAvatar('https://i.pinimg.com/originals/dc/39/85/dc3985a3ac127397c53bf8c3a749b011.jpg')
 		.withCustomTrigger(new OneCondition(
 			new PatternCondition(Patterns.WORD_GUY),
