@@ -13,12 +13,22 @@ declare namespace Cypress {
 			message: string,
 			botName: string,
 			expectedResponsePattern: RegExp,
-			channelId: string
+			channelId?: string
 		): Chainable<void>;
 
 		/**
 		 * Custom command to initialize the Discord client
 		 */
 		initDiscordClient(): Chainable<void>;
+
+		/**
+		 * Simulate a message from a user and render the response in the test UI
+		 * @param message The message to simulate
+		 * @param userId The user ID to simulate the message from
+		 */
+		simulateMessage(
+			message: string,
+			userId: string
+		): Chainable<void>;
 	}
 }

@@ -81,4 +81,14 @@ describe('Music-Correct-Bot E2E Tests', () => {
 			expect(result).to.equal(null);
 		});
 	});
+
+	it('responds with correct message when user tries to use old music command', () => {
+		// Use the sendDiscordMessage command that's already working in other tests
+		cy.sendDiscordMessage(
+			'!play something',
+			'Music-Correct-Bot',
+			/Use \/play instead of !play/i,
+			channelIDs.NebulaChat
+		);
+	});
 });

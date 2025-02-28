@@ -73,3 +73,32 @@ Cypress.Commands.add('sendDiscordMessage', (
 		expect(typedResponse.content).to.match(expectedResponsePattern);
 	});
 });
+
+// Simulate a message from a user and render the response in the test UI
+Cypress.Commands.add('simulateMessage', (message: string, userId: string) => {
+	cy.task('sendDiscordMessage', {
+		message,
+		channelId: channelIDs.NebulaChat,
+		guildId: guildIDs.StarbunkCrusaders,
+		userId
+	}).then((response) => {
+		// Create a div to display the bot response
+		cy.get('body').then(($body) => {
+			if (!$body.find('[data-testid="bot-response"]').length) {
+				$body.append('<div data-testid="bot-response"></div>');
+			}
+
+			// Type assertion for the response
+			const typedResponse = response as DiscordResponse;
+
+			// Log the response for debugging
+			cy.log('Bot response:', typedResponse);
+
+			// Set the response content using jQuery's html method
+			cy.get('[data-testid="bot-response"]').then(($el) => {
+				// Use text method instead of html to avoid HTML parsing issues
+				$el.text(typedResponse.content);
+			});
+		});
+	});
+});
