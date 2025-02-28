@@ -1,5 +1,6 @@
 /// <reference types="cypress" />
 import { testBot, testBotNoResponse } from '../../support/botTestHelper';
+import '../../support/index.d.ts';
 
 describe('All Bots E2E Tests', () => {
 	before(() => {
@@ -41,6 +42,16 @@ describe('All Bots E2E Tests', () => {
 			triggerMessage: 'The answer is 69',
 			expectedResponsePattern: /nice/i
 		});
+	});
+
+	describe('Attitude-Bot', () => {
+		testBot({
+			botName: 'Attitude-Bot',
+			triggerMessage: 'I can\'t do this',
+			expectedResponsePattern: /Not with THAT attitude!!!/
+		});
+
+		testBotNoResponse('Attitude-Bot', 'I am unable to do that');
 	});
 
 	describe('Music-Correct-Bot', () => {
