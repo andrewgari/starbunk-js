@@ -8,14 +8,82 @@ on:
         branches: [main, develop]
 
 jobs:
-    check_merged:
-        if: github.event.pull_request.merged == true || github.event_name == 'push'
+    # Initial check to determine what files changed and if PR was merged
+    changes:
+        name: 🔍 Detect Changes
+        runs-on: ubuntu-latest
+        outputs:
+            should_run: ${{ steps.check_merged.outputs.should_run }}
+            src: ${{ steps.filter.outputs.src }}
+            tests: ${{ steps.filter.outputs.tests }}
+            docker: ${{ steps.filter.outputs.docker }}
+            config: ${{ steps.filter.outputs.config }}
+            bots: ${{ steps.filter.outputs.bots }}
+        steps:
+            - name: Check if PR was merged or direct push
+              id: check_merged
+              run: |
+                  if [[ "${{ github.event_name }}" == "push" || "${{ github.event.pull_request.merged }}" == "true" ]]; then
+                    echo "should_run=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "should_run=false" >> $GITHUB_OUTPUT
+                  fi
+
+            - uses: actions/checkout@v4
+              if: steps.check_merged.outputs.should_run == 'true'
+              with:
+                  fetch-depth: 0 # Needed for file change detection
+
+            - name: Check for file changes
+              if: steps.check_merged.outputs.should_run == 'true'
+              uses: dorny/paths-filter@v2
+              id: filter
+              with:
+                  filters: |
+                      src:
+                          - 'src/**'
+                          - '!src/tests/**'
+                      tests:
+                          - 'src/tests/**'
+                          - '**/*.test.ts'
+                          - '**/*.spec.ts'
+                          - 'jest.config.js'
+                      docker:
+                          - 'Dockerfile*'
+                          - '.dockerignore'
+                          - 'docker-compose*.yml'
+                      config:
+                          - 'package.json'
+                          - 'package-lock.json'
+                          - 'tsconfig*.json'
+                          - '.eslintrc*'
+                          - '.prettierrc*'
+                      bots:
+                          - 'src/starbunk/bots/**'
+                          - 'cypress/e2e/bots/**'
+
+    build:
+        needs: [changes]
+        name: 🔨 Build
+        if: ${{ needs.changes.outputs.should_run == 'true' && (needs.changes.outputs.src == 'true' || needs.changes.outputs.config == 'true') }}
         runs-on: ubuntu-latest
         steps:
-            - run: echo "Running post-merge checks"
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+            - run: npm ci
+            - run: npm run build
+            - name: Upload Build Artifacts
+              uses: actions/upload-artifact@v3
+              with:
+                  name: build-artifacts
+                  path: dist/
+                  if-no-files-found: error
 
     lint:
-        needs: check_merged
+        needs: [build]
         name: 🔍 Lint
         runs-on: ubuntu-latest
         steps:
@@ -27,9 +95,9 @@ jobs:
             - run: npm ci
             - run: npm run lint
 
-    test:
-        needs: check_merged
-        name: 🧪 Test
+    type-check:
+        needs: [lint]
+        name: 🔍 Type Check
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -38,11 +106,31 @@ jobs:
                   node-version: '20'
                   cache: 'npm'
             - run: npm ci
+            - run: npm run type-check:main
+
+    test:
+        needs: [changes, type-check]
+        name: 🧪 Test
+        if: ${{ needs.changes.outputs.should_run == 'true' && (needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true') }}
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+            - run: npm ci
+            - name: Download Build Artifacts
+              uses: actions/download-artifact@v3
+              with:
+                  name: build-artifacts
+                  path: dist/
             - run: npm run test
 
-    build:
-        needs: check_merged
-        name: 🔨 Build
+    e2e-test:
+        needs: [test]
+        name: 🤖 E2E Bot Tests
+        if: ${{ needs.changes.outputs.should_run == 'true' && needs.changes.outputs.bots == 'true' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -51,11 +139,21 @@ jobs:
                   node-version: '20'
                   cache: 'npm'
             - run: npm ci
-            - run: npm run build
+            - name: Download Build Artifacts
+              uses: actions/download-artifact@v3
+              with:
+                  name: build-artifacts
+                  path: dist/
+            - name: Create .env file
+              run: |
+                  echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
+                  echo "NODE_ENV=test" >> .env
+            - run: npm run test:bots
 
     docker:
-        needs: [lint, test, build]
+        needs: [test, e2e-test]
         name: 🐳 Release Docker Image
+        if: ${{ always() && needs.changes.outputs.should_run == 'true' && needs.test.result == 'success' && (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped') }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
