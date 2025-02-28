@@ -11,6 +11,11 @@ on:
         types: [closed]
         branches: [main, develop]
 
+# Add explicit permissions for the GITHUB_TOKEN
+permissions:
+    contents: read
+    packages: write
+
 jobs:
     # Determines which parts of the codebase have changed and if the workflow should run
     # Outputs:
