@@ -152,13 +152,22 @@ jobs:
               run: |
                   echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
                   echo "NODE_ENV=test" >> .env
-            - run: npm run test:e2e:bots
+            - name: Run Bot Tests
+              run: npm run test:e2e:bots
               env:
                   CYPRESS_DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
                   NODE_ENV: test
                   # Add Cypress-specific environment variables
                   CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Upload Test Screenshots
+              uses: actions/upload-artifact@v4
+              if: failure()
+              with:
+                  name: cypress-screenshots
+                  path: cypress/screenshots
+                  if-no-files-found: ignore
 
     docker:
         needs: [test, e2e-test, lint, type-check]
