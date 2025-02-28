@@ -13,10 +13,15 @@ class EzioResponseGenerator implements ResponseGenerator {
 	}
 }
 
-export default function createEzioBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+export default function createEzioBot(
+	// @ts-ignore - parameter kept for test compatibility but not used
+	webhookServiceParam: WebhookService = webhookService
+): ReplyBot {
 	const responseGenerator = new EzioResponseGenerator();
 
-	return new BotBuilder('Ezio Auditore Da Firenze', webhookServiceParam)
+	// Always use the imported singleton webhookService, ignoring any webhookService in config
+	// This ensures we're using the properly initialized webhookService with the writeMessage method
+	return new BotBuilder('Ezio Auditore Da Firenze', webhookService)
 		.withAvatar('https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg')
 		.withConditionResponse(
 			responseGenerator,

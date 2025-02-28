@@ -30,6 +30,9 @@
 	"engines": {
 		"node": ">=16.0.0"
 	},
+	"_moduleAliases": {
+		"@": "dist/src"
+	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/andrewgari/starbunk-js.git"

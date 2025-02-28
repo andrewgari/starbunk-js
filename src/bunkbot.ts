@@ -1,3 +1,6 @@
+// Register module aliases first
+import 'module-alias/register';
+
 import { GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
 import SnowbunkClient from './snowbunk/snowbunkClient';

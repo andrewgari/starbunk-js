@@ -48,8 +48,13 @@ class SigPraiseResponse implements ResponseGenerator {
  * SigGreatBot - A bot that responds to praise for Sig by agreeing with the specific praise.
  * Uses the same adjective that was in the original message.
  */
-export default function createSigGreatBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
-	return new BotBuilder('SigGreatBot', webhookServiceParam)
+export default function createSigGreatBot(
+	// @ts-ignore - parameter kept for test compatibility but not used
+	webhookServiceParam: WebhookService = webhookService
+): ReplyBot {
+	// Always use the imported singleton webhookService, ignoring any webhookService in config
+	// This ensures we're using the properly initialized webhookService with the writeMessage method
+	return new BotBuilder('SigGreatBot', webhookService)
 		.withAvatar('https://static.wikia.nocookie.net/chrono/images/a/a5/Serge2.png')
 		.withPatternTrigger(Patterns.PHRASE_SIG_PRAISE)
 		.respondsWithCustom(new SigPraiseResponse())

@@ -42,7 +42,10 @@ const responses = [
  * GuyBot - A bot that responds to messages containing "guy" with random Guy quotes,
  * has a 5% random chance of responding to any message, or responds to messages from Guy
  */
-export default function createGuyBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+export default function createGuyBot(
+	// @ts-ignore - parameter kept for test compatibility but not used
+	webhookServiceParam: WebhookService = webhookService
+): ReplyBot {
 	// Get the condition for checking if the message is from Guy
 	const guyUserCondition = getGuyCondition();
 
@@ -60,7 +63,9 @@ export default function createGuyBot(webhookServiceParam: WebhookService = webho
 		};
 	};
 
-	return new BotBuilder('GuyBot', webhookServiceParam)
+	// Always use the imported singleton webhookService, ignoring any webhookService in config
+	// This ensures we're using the properly initialized webhookService with the writeMessage method
+	return new BotBuilder('GuyBot', webhookService)
 		.withAvatar('https://i.pinimg.com/originals/dc/39/85/dc3985a3ac127397c53bf8c3a749b011.jpg')
 		.withCustomTrigger(new OneCondition(
 			new PatternCondition(Patterns.WORD_GUY),

@@ -4,8 +4,13 @@ import ReplyBot from '../replyBot';
 import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
 
-export default function createCheckBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
-	return new BotBuilder('CheckBot', webhookServiceParam)
+export default function createCheckBot(
+	// @ts-ignore - parameter kept for test compatibility but not used
+	webhookServiceParam: WebhookService = webhookService
+): ReplyBot {
+	// Always use the imported singleton webhookService, ignoring any webhookService in config
+	// This ensures we're using the properly initialized webhookService with the writeMessage method
+	return new BotBuilder('CheckBot', webhookService)
 		.withAvatar('https://m.media-amazon.com/images/I/21Unzn9U8sL._AC_.jpg')
 		.withCustomCondition(
 			"I believe you mean 'check' :wink:",

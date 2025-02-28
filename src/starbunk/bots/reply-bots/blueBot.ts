@@ -58,7 +58,7 @@ class BluNiceResponseGenerator implements ResponseGenerator {
 
 	async generateResponse(message: Message): Promise<string> {
 		const name = this.condition.getNameFromMessage(message);
-		return `${name}, I think you're really blu`;
+		return `${name}, I think you're really blu! :wink:`;
 	}
 }
 
@@ -101,12 +101,17 @@ export interface BluBotConfig {
  *   1. Someone uses the phrase "bluebot say something nice about venn" (text or @username)
  */
 
+// @ts-expect-error - We need to keep the config parameter for test compatibility
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function createBlueBot(config: BluBotConfig = {}): ReplyBot {
-	const webhookServiceToUse = config.webhookService || webhookService;
+	// Always use the imported singleton webhookService, ignoring any webhookService in config
+	// This ensures we're using the properly initialized webhookService with the writeMessage method
+
 	const niceRequestCondition = new BluNiceRequestCondition();
 	const niceResponseGenerator = new BluNiceResponseGenerator(niceRequestCondition);
 
-	const bot = new BotBuilder('BlueBot', webhookServiceToUse)
+	// Pass the imported webhookService directly to BotBuilder without using an intermediate variable
+	const bot = new BotBuilder('BlueBot', webhookService)
 		.withAvatar(DEFAULT_AVATAR)
 		.withCustomCondition(
 			"Did somebody say Blu",

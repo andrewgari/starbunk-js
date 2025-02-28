@@ -17,10 +17,15 @@ class SheeshResponseGenerator implements ResponseGenerator {
 /**
  * SheeshBot - A bot that responds to "sheesh" with a sheesh of random length
  */
-export default function createSheeshBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+export default function createSheeshBot(
+	// @ts-ignore - parameter kept for test compatibility but not used
+	webhookServiceParam: WebhookService = webhookService
+): ReplyBot {
 	const responseGenerator = new SheeshResponseGenerator();
 
-	return new BotBuilder('SheeshBot', webhookServiceParam)
+	// Always use the imported singleton webhookService, ignoring any webhookService in config
+	// This ensures we're using the properly initialized webhookService with the writeMessage method
+	return new BotBuilder('SheeshBot', webhookService)
 		.withAvatar('https://i.kym-cdn.com/photos/images/newsfeed/002/297/355/cb3')
 		.withPatternTrigger(Patterns.WORD_SHEESH)
 		.respondsWithCustom(responseGenerator)

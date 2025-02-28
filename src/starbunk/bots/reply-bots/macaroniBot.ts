@@ -12,9 +12,12 @@ import { Patterns } from '../triggers/conditions/patterns';
  * 1. When someone mentions "venn", it corrects them with the full name
  * 2. When someone mentions "macaroni", it responds with a user mention
  */
-export default function createMacaroniBot(webhookServiceParam: WebhookService = webhookService): ReplyBot {
+export default function createMacaroniBot(
+	// @ts-ignore - parameter kept for test compatibility but not used
+	webhookServiceParam: WebhookService = webhookService
+): ReplyBot {
 	// Create a bot that responds to both patterns
-	const builder = new BotBuilder('Macaroni Bot', webhookServiceParam)
+	const builder = new BotBuilder('Macaroni Bot', webhookService)
 		.withAvatar('https://i.imgur.com/Jx5v7bZ.png')
 		// IMPORTANT: Enable multi-response mode BEFORE adding the patterns
 		.withMultipleResponses(true);
