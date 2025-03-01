@@ -8,25 +8,25 @@
  */
 
 // Import constants from bot model files with renamed imports to avoid conflicts
-import { BOT_NAME as ATTITUDEBOT_BOT_NAME, TEST as ATTITUDEBOT_BOT_TEST, NEGATIVE_ATTITUDE_RESPONSE } from '../../src/starbunk/bots/reply-bots/attitudeBot/attitudeBotModel';
-import { BOT_NAME as BABYBOT_BOT_NAME, TEST as BABYBOT_BOT_TEST, BABY_RESPONSE } from '../../src/starbunk/bots/reply-bots/babyBot/babyBotModel';
+import { BOT_NAME as ATTITUDEBOT_NAME, TEST as ATTITUDEBOT_TEST, NEGATIVE_ATTITUDE_RESPONSE } from '../../src/starbunk/bots/reply-bots/attitudeBot/attitudeBotModel';
+import { BOT_NAME as BABYBOT_NAME, TEST as BABYBOT_TEST, BABY_RESPONSE } from '../../src/starbunk/bots/reply-bots/babyBot/babyBotModel';
 import { BANANA_RESPONSES } from '../../src/starbunk/bots/reply-bots/bananaBot/bananaBotModel';
-import { DEFAULT_RESPONSES } from '../../src/starbunk/bots/reply-bots/blueBot/blueBotModel';
-import { BOT_NAME as BOTBOT_BOT_NAME, TEST as BOTBOT_BOT_TEST, BOT_GREETING } from '../../src/starbunk/bots/reply-bots/botBot/botBotModel';
-import { BOT_NAME as CHAOSBOT_BOT_NAME, TEST as CHAOSBOT_BOT_TEST, CHAOS_RESPONSE } from '../../src/starbunk/bots/reply-bots/chaosBot/chaosBotModel';
-import { TEST as CHECKBOT_BOT_TEST, CHECK_RESPONSE, CZECH_RESPONSE } from '../../src/starbunk/bots/reply-bots/checkBot/checkBotModel';
-import { EZIO_BOT_NAME as EZIOBOT_BOT_NAME, TEST as EZIOBOT_BOT_TEST, EZIO_BOT_RESPONSE } from '../../src/starbunk/bots/reply-bots/ezioBot/ezioBotModel';
-import { BOT_NAME as GUNDAMBOT_BOT_NAME, TEST as GUNDAMBOT_BOT_TEST, GUNDAM_RESPONSE } from '../../src/starbunk/bots/reply-bots/gundamBot/gundamBotModel';
-import { BOT_NAME as GUYBOT_BOT_NAME, TEST as GUYBOT_BOT_TEST, RESPONSES } from '../../src/starbunk/bots/reply-bots/guyBot/guyBotModel';
-import { BOT_NAME as HOLDBOT_BOT_NAME, TEST as HOLDBOT_BOT_TEST, HOLD_BOT_RESPONSE } from '../../src/starbunk/bots/reply-bots/holdBot/holdBotModel';
-import { BOT_NAME as MACARONIBOT_BOT_NAME, TEST as MACARONIBOT_BOT_TEST, VENN_CORRECTION } from '../../src/starbunk/bots/reply-bots/macaroniBot/macaroniBotModel';
-import { TEST as MUSICCORRECTBOT_BOT_TEST, MUSIC_CORRECT_BOT_RESPONSE } from '../../src/starbunk/bots/reply-bots/musicCorrectBot/musicCorrectBotModel';
-import { BOT_NAME as NICEBOT_BOT_NAME, TEST as NICEBOT_BOT_TEST, NICE_BOT_RESPONSE } from '../../src/starbunk/bots/reply-bots/niceBot/niceBotModel';
-import { BOT_NAME as PICKLEBOT_BOT_NAME, TEST as PICKLEBOT_BOT_TEST, PICKLE_BOT_RESPONSE } from '../../src/starbunk/bots/reply-bots/pickleBot/pickleBotModel';
-import { BOT_NAME as SHEESHBOT_BOT_NAME, TEST as SHEESHBOT_BOT_TEST } from '../../src/starbunk/bots/reply-bots/sheeshBot/sheeshBotModel';
-import { DEFAULT_RESPONSE, BOT_NAME as SIGGREATBOT_BOT_NAME, TEST as SIGGREATBOT_BOT_TEST } from '../../src/starbunk/bots/reply-bots/sigGreatBot/sigGreatBotModel';
-import { BOT_NAME as SPIDERBOT_BOT_NAME, TEST as SPIDERBOT_BOT_TEST, SPIDERMAN_CORRECTION } from '../../src/starbunk/bots/reply-bots/spiderBot/spiderBotModel';
-import { CRINGE_RESPONSES, BOT_NAME as VENNBOT_BOT_NAME, TEST as VENNBOT_BOT_TEST } from '../../src/starbunk/bots/reply-bots/vennBot/vennBotModel';
+import { BLUEBOT_NAME, DEFAULT_RESPONSES } from '../../src/starbunk/bots/reply-bots/blueBot/blueBotModel';
+import { BOT_NAME as BOTBOT_NAME, TEST as BOTBOT_TEST, BOT_GREETING } from '../../src/starbunk/bots/reply-bots/botBot/botBotModel';
+import { BOT_NAME as CHAOSBOT_NAME, TEST as CHAOSBOT_TEST, CHAOS_RESPONSE } from '../../src/starbunk/bots/reply-bots/chaosBot/chaosBotModel';
+import { TEST as CHECKBOT_TEST, CHECK_RESPONSE, CZECH_RESPONSE } from '../../src/starbunk/bots/reply-bots/checkBot/checkBotModel';
+import { EZIO_BOT_NAME as EZIOBOT_NAME, TEST as EZIOBOT_TEST, EZIO_BOT_RESPONSE } from '../../src/starbunk/bots/reply-bots/ezioBot/ezioBotModel';
+import { BOT_NAME as GUNDAMBOT_NAME, TEST as GUNDAMBOT_TEST, GUNDAM_RESPONSE } from '../../src/starbunk/bots/reply-bots/gundamBot/gundamBotModel';
+import { BOT_NAME as GUYBOT_NAME, TEST as GUYBOT_TEST, RESPONSES } from '../../src/starbunk/bots/reply-bots/guyBot/guyBotModel';
+import { BOT_NAME as HOLDBOT_NAME, HOLD_BOT_RESPONSE as HOLDBOT_RESPONSE, TEST as HOLDBOT_TEST } from '../../src/starbunk/bots/reply-bots/holdBot/holdBotModel';
+import { BOT_NAME as MACARONIBOT_NAME, TEST as MACARONIBOT_TEST, VENN_CORRECTION } from '../../src/starbunk/bots/reply-bots/macaroniBot/macaroniBotModel';
+import { TEST as MUSICCORRECTBOT_TEST, MUSIC_CORRECT_BOT_RESPONSE as MUSIC_CORRECT_RESPONSE } from '../../src/starbunk/bots/reply-bots/musicCorrectBot/musicCorrectBotModel';
+import { BOT_NAME as NICEBOT_NAME, TEST as NICEBOT_TEST, NICE_BOT_RESPONSE as NICE_RESPONSE } from '../../src/starbunk/bots/reply-bots/niceBot/niceBotModel';
+import { BOT_NAME as PICKLEBOT_NAME, TEST as PICKLEBOT_TEST, PICKLE_BOT_RESPONSE as PICKLE_RESPONSE } from '../../src/starbunk/bots/reply-bots/pickleBot/pickleBotModel';
+import { BOT_NAME as SHEESHBOT_NAME, TEST as SHEESHBOT_TEST } from '../../src/starbunk/bots/reply-bots/sheeshBot/sheeshBotModel';
+import { DEFAULT_RESPONSE, BOT_NAME as SIGGREATBOT_NAME, TEST as SIGGREATBOT_TEST } from '../../src/starbunk/bots/reply-bots/sigGreatBot/sigGreatBotModel';
+import { BOT_NAME as SPIDERBOT_NAME, TEST as SPIDERBOT_TEST, SPIDERMAN_CORRECTION } from '../../src/starbunk/bots/reply-bots/spiderBot/spiderBotModel';
+import { CRINGE_RESPONSES, BOT_NAME as VENNBOT_NAME, TEST as VENNBOT_TEST } from '../../src/starbunk/bots/reply-bots/vennBot/vennBotModel';
 
 // Create empty TEST objects for bots that don't have TEST exports
 const EMPTY_TEST = {
@@ -38,18 +38,18 @@ const EMPTY_TEST = {
 
 // Export all constants for use in tests
 export const BOT_CONSTANTS = {
-	ATTITUDEBOT_BOT: {
-		NAME: ATTITUDEBOT_BOT_NAME,
+	ATTITUDEBOT: {
+		NAME: ATTITUDEBOT_NAME,
 		RESPONSE: NEGATIVE_ATTITUDE_RESPONSE,
-		TEST: ATTITUDEBOT_BOT_TEST
+		TEST: ATTITUDEBOT_TEST
 	},
-	BABYBOT_BOT: {
-		NAME: BABYBOT_BOT_NAME,
+	BABYBOT: {
+		NAME: BABYBOT_NAME,
 		RESPONSE: BABY_RESPONSE,
-		TEST: BABYBOT_BOT_TEST
+		TEST: BABYBOT_TEST
 	},
 	BLUEBOT_BOT: {
-		NAME: 'BlueBotBot',
+		NAME: BLUEBOT_NAME,
 		RESPONSE: DEFAULT_RESPONSES,
 		TEST: EMPTY_TEST
 	},
@@ -57,32 +57,32 @@ export const BOT_CONSTANTS = {
 		NAME: 'CheckBot',
 		RESPONSE: CHECK_RESPONSE,
 		CZECH_RESPONSE: CZECH_RESPONSE,
-		TEST: CHECKBOT_BOT_TEST
+		TEST: CHECKBOT_TEST
 	},
 	EZIOBOT_BOT: {
-		NAME: EZIOBOT_BOT_NAME,
+		NAME: EZIOBOT_NAME,
 		RESPONSE: EZIO_BOT_RESPONSE,
-		TEST: EZIOBOT_BOT_TEST
+		TEST: EZIOBOT_TEST
 	},
 	PICKLEBOT_BOT: {
-		NAME: PICKLEBOT_BOT_NAME,
-		RESPONSE: PICKLE_BOT_RESPONSE,
-		TEST: PICKLEBOT_BOT_TEST
+		NAME: PICKLEBOT_NAME,
+		RESPONSE: PICKLE_RESPONSE,
+		TEST: PICKLEBOT_TEST
 	},
 	BOTBOT_BOT: {
-		NAME: BOTBOT_BOT_NAME,
+		NAME: BOTBOT_NAME,
 		RESPONSE: BOT_GREETING,
-		TEST: BOTBOT_BOT_TEST
+		TEST: BOTBOT_TEST
 	},
 	CHAOSBOT_BOT: {
-		NAME: CHAOSBOT_BOT_NAME,
+		NAME: CHAOSBOT_NAME,
 		RESPONSE: CHAOS_RESPONSE,
-		TEST: CHAOSBOT_BOT_TEST
+		TEST: CHAOSBOT_TEST
 	},
 	NICEBOT_BOT: {
-		NAME: NICEBOT_BOT_NAME,
-		RESPONSE: NICE_BOT_RESPONSE,
-		TEST: NICEBOT_BOT_TEST
+		NAME: NICEBOT_NAME,
+		RESPONSE: NICE_RESPONSE,
+		TEST: NICEBOT_TEST
 	},
 	BANANABOT_BOT: {
 		NAME: 'BananaBot',
@@ -90,48 +90,48 @@ export const BOT_CONSTANTS = {
 		TEST: EMPTY_TEST
 	},
 	MACARONIBOT_BOT: {
-		NAME: MACARONIBOT_BOT_NAME,
+		NAME: MACARONIBOT_NAME,
 		RESPONSE: VENN_CORRECTION,
-		TEST: MACARONIBOT_BOT_TEST
+		TEST: MACARONIBOT_TEST
 	},
 	SHEESHBOT_BOT: {
-		NAME: SHEESHBOT_BOT_NAME,
-		TEST: SHEESHBOT_BOT_TEST
+		NAME: SHEESHBOT_NAME,
+		TEST: SHEESHBOT_TEST
 	},
 	SPIDERBOT_BOT: {
-		NAME: SPIDERBOT_BOT_NAME,
+		NAME: SPIDERBOT_NAME,
 		RESPONSE: SPIDERMAN_CORRECTION,
-		TEST: SPIDERBOT_BOT_TEST
+		TEST: SPIDERBOT_TEST
 	},
 	GUNDAMBOT_BOT: {
-		NAME: GUNDAMBOT_BOT_NAME,
+		NAME: GUNDAMBOT_NAME,
 		RESPONSE: GUNDAM_RESPONSE,
-		TEST: GUNDAMBOT_BOT_TEST
+		TEST: GUNDAMBOT_TEST
 	},
 	VENNBOT_BOT: {
-		NAME: VENNBOT_BOT_NAME,
+		NAME: VENNBOT_NAME,
 		RESPONSE: CRINGE_RESPONSES,
-		TEST: VENNBOT_BOT_TEST
+		TEST: VENNBOT_TEST
 	},
 	HOLDBOT_BOT: {
-		NAME: HOLDBOT_BOT_NAME,
-		RESPONSE: HOLD_BOT_RESPONSE,
-		TEST: HOLDBOT_BOT_TEST
+		NAME: HOLDBOT_NAME,
+		RESPONSE: HOLDBOT_RESPONSE,
+		TEST: HOLDBOT_TEST
 	},
 	GUYBOT_BOT: {
-		NAME: GUYBOT_BOT_NAME,
+		NAME: GUYBOT_NAME,
 		RESPONSE: RESPONSES,
-		TEST: GUYBOT_BOT_TEST
+		TEST: GUYBOT_TEST
 	},
 	MUSICCORRECTBOT_BOT: {
 		NAME: 'MusicCorrectBot',
-		RESPONSE: MUSIC_CORRECT_BOT_RESPONSE,
-		TEST: MUSICCORRECTBOT_BOT_TEST
+		RESPONSE: MUSIC_CORRECT_RESPONSE,
+		TEST: MUSICCORRECTBOT_TEST
 	},
 	SIGGREATBOT_BOT: {
-		NAME: SIGGREATBOT_BOT_NAME,
+		NAME: SIGGREATBOT_NAME,
 		RESPONSE: DEFAULT_RESPONSE,
-		TEST: SIGGREATBOT_BOT_TEST
+		TEST: SIGGREATBOT_TEST
 	},
 };
 

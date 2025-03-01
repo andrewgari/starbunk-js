@@ -5,6 +5,8 @@
  * Organizing these in one place makes them easier to maintain and update
  */
 
+export const BLUEBOT_NAME = 'BlueBot';
+
 // Avatar URLs
 export const AVATAR_URLS = {
 	DEFAULT: 'https://imgur.com/WcBRCWn.png',

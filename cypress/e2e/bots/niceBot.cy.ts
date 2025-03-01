@@ -11,7 +11,7 @@ import '../../support/commands';
  */
 describe('Nice-Bot E2E Tests', () => {
 	// In the model file it's "NiceBot" but in Cypress tests it's "Nice-Bot"
-	const { RESPONSE, TEST } = BOT_CONSTANTS.NICEBOT_BOT;
+	const { TEST } = BOT_CONSTANTS.NICEBOT_BOT;
 	const BOT_NAME_IN_DISCORD = 'Nice-Bot';
 
 	// The model has "Nice." but the actual response might be "nice" (lowercase)
