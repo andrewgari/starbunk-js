@@ -1,20 +1,32 @@
 import webhookService, { WebhookService } from '@/webhooks/webhookService';
 import { BotBuilder } from '../../botBuilder';
 import ReplyBot from '../../replyBot';
-import { AVATAR_URL, BOT_NAME, SPIDERMAN_CORRECTION } from './spiderBotModel';
-import { PatternCondition } from '../../triggers/conditions/patternCondition';
-import { Patterns } from '../../triggers/conditions/patterns';
+import { AVATAR_URL, BOT_NAME } from './spiderBotModel';
 
+// Import the extracted components
+import { SpiderManCondition } from './conditions/spiderManCondition';
+import { SpiderManCorrectionGenerator } from './responses/spiderManCorrectionGenerator';
+
+/**
+ * Creates a Spider-Bot instance that corrects people who write "spiderman" without a hyphen
+ *
+ * @param webhookSvc - The webhook service to use for sending messages
+ * @returns A configured ReplyBot instance
+ */
 export default function createSpiderBot(
 	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
-	// Use the webhook service passed as parameter
+	// Create the condition and response generator
+	const spiderManCondition = new SpiderManCondition();
+	const correctionGenerator = new SpiderManCorrectionGenerator();
+
+	// Build and return the bot
 	return new BotBuilder(BOT_NAME, webhookSvc)
 		.withAvatar(AVATAR_URL)
-		.withCustomCondition(
-			SPIDERMAN_CORRECTION,
+		.withConditionResponse(
+			correctionGenerator,
 			AVATAR_URL,
-			new PatternCondition(Patterns.WORD_SPIDERMAN)
+			spiderManCondition
 		)
 		.build();
 }
