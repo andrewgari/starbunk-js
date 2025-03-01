@@ -1,6 +1,7 @@
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import ReplyBot from '../replyBot';
+import { AVATAR_URL, BOT_NAME, NEGATIVE_ATTITUDE_RESPONSE } from '../responses/attitudeBot.responses';
 import { Patterns } from '../triggers/conditions/patterns';
 
 /**
@@ -16,9 +17,9 @@ export default function createAttitudeBot(
 	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
 	// Always use the webhook service passed as parameter
-	return new BotBuilder('Xander Crews', webhookSvc)
-		.withAvatar('https://i.ytimg.com/vi/56PMgO3q2-A/sddefault.jpg')
+	return new BotBuilder(BOT_NAME, webhookSvc)
+		.withAvatar(AVATAR_URL)
 		.withPatternTrigger(Patterns.PHRASE_NEGATIVE_ATTITUDE)
-		.respondsWithStatic("Not with THAT attitude!!!")
+		.respondsWithStatic(NEGATIVE_ATTITUDE_RESPONSE)
 		.build();
 }

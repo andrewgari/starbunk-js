@@ -1,5 +1,6 @@
 /// <reference types="cypress" />
 import channelIDs from '../../../src/discord/channelIDs';
+import { DEFAULT_RESPONSES, NICE_RESPONSE_TEMPLATE } from '../../../src/starbunk/bots/responses/blueBot.responses';
 import { testBot, testBotNoResponse } from '../../support/botTestHelper';
 
 /**
@@ -38,8 +39,16 @@ describe('BlueBot E2E Tests', () => {
 
 	// Test cases for nice messages
 	const niceMessageTests = [
-		{ message: 'bluebot, say something nice about TestUser', description: 'should respond with nice message about named user', expectedResponse: /TestUser, I think you're really blu! :wink:/ },
-		{ message: 'bluebot, say something nice about me', description: 'should respond with nice message about sender', expectedResponse: /\w+, I think you're really blu! :wink:/ }
+		{
+			message: 'bluebot, say something nice about TestUser',
+			description: 'should respond with nice message about named user',
+			expectedResponse: new RegExp(NICE_RESPONSE_TEMPLATE.replace('{name}', 'TestUser'))
+		},
+		{
+			message: 'bluebot, say something nice about me',
+			description: 'should respond with nice message about sender',
+			expectedResponse: new RegExp(NICE_RESPONSE_TEMPLATE.replace('{name}', '\\w+'))
+		}
 	];
 
 	// Test cases where the bot should not respond
@@ -54,7 +63,7 @@ describe('BlueBot E2E Tests', () => {
 			testBot({
 				botName: 'BlueBot',
 				triggerMessage: test.message,
-				expectedResponsePattern: /Did somebody say Blu/,
+				expectedResponsePattern: new RegExp(DEFAULT_RESPONSES.INITIAL),
 				channelId: channelIDs.NebulaChat
 			});
 		});
@@ -66,7 +75,7 @@ describe('BlueBot E2E Tests', () => {
 		testBot({
 			botName: 'BlueBot',
 			triggerMessage: 'blue',
-			expectedResponsePattern: /Did somebody say Blu/,
+			expectedResponsePattern: new RegExp(DEFAULT_RESPONSES.INITIAL),
 			channelId: channelIDs.NebulaChat
 		});
 
@@ -86,7 +95,7 @@ describe('BlueBot E2E Tests', () => {
 		testBot({
 			botName: 'BlueBot',
 			triggerMessage: 'blue',
-			expectedResponsePattern: /Did somebody say Blu/,
+			expectedResponsePattern: new RegExp(DEFAULT_RESPONSES.INITIAL),
 			channelId: channelIDs.NebulaChat
 		});
 
@@ -117,7 +126,7 @@ describe('BlueBot E2E Tests', () => {
 		testBot({
 			botName: 'BlueBot',
 			triggerMessage: 'bluebot say something nice about venn',
-			expectedResponsePattern: /No way, Venn can suck my blu cane/,
+			expectedResponsePattern: new RegExp(DEFAULT_RESPONSES.NICE_ABOUT_VENN),
 			channelId: channelIDs.NebulaChat
 		});
 	});

@@ -26,23 +26,26 @@ jest.mock('../../../starbunk/bots/triggers/conditions/cooldownCondition', () => 
 	};
 });
 
+// Import constants for testing
+import { AVATAR_URLS, DEFAULT_RESPONSES, NICE_RESPONSE_TEMPLATE, STATE_KEYS } from '../../../starbunk/bots/responses/blueBot.responses';
+
 // Create a timestamp variable for testing
 let mockBluMessageTimestamp = 0;
-let mockLastAvatarUrl = 'https://imgur.com/WcBRCWn.png'; // Default avatar
+let mockLastAvatarUrl = AVATAR_URLS.DEFAULT; // Default avatar
 
 // Mock the botStateService to control the timestamp and avatar URL
 jest.mock('../../../services/botStateService', () => ({
 	botStateService: {
 		setState: jest.fn().mockImplementation((key, value) => {
-			if (key === 'bluebot_last_avatar') {
+			if (key === STATE_KEYS.LAST_AVATAR) {
 				mockLastAvatarUrl = value;
 			}
 		}),
 		getState: jest.fn().mockImplementation((key, defaultValue) => {
-			if (key === 'bluebot_last_initial_message_time') {
+			if (key === STATE_KEYS.TIMESTAMP) {
 				return mockBluMessageTimestamp;
 			}
-			if (key === 'bluebot_last_avatar') {
+			if (key === STATE_KEYS.LAST_AVATAR) {
 				return mockLastAvatarUrl;
 			}
 			return defaultValue;
@@ -81,7 +84,7 @@ describe('BlueBot', () => {
 
 		// Reset variables
 		mockBluMessageTimestamp = 0;
-		mockLastAvatarUrl = 'https://imgur.com/WcBRCWn.png'; // Default avatar
+		mockLastAvatarUrl = AVATAR_URLS.DEFAULT; // Default avatar
 		cooldownShouldTriggerResponse = true;
 
 		// Create message mock
@@ -111,7 +114,7 @@ describe('BlueBot', () => {
 			const identity = blueBot.getIdentity();
 
 			// Assert
-			expect(identity.avatarUrl).toBe('https://imgur.com/WcBRCWn.png');
+			expect(identity.avatarUrl).toBe(AVATAR_URLS.DEFAULT);
 		});
 	});
 
@@ -141,8 +144,8 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					avatarURL: 'https://imgur.com/WcBRCWn.png',
-					content: 'Did somebody say Blu'
+					avatarURL: AVATAR_URLS.DEFAULT,
+					content: DEFAULT_RESPONSES.INITIAL
 				})
 			);
 			expect(botStateService.setState).toHaveBeenCalledWith(
@@ -163,8 +166,8 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					avatarURL: 'https://imgur.com/WcBRCWn.png',
-					content: 'TestUser, I think you\'re really blu! :wink:'
+					avatarURL: AVATAR_URLS.DEFAULT,
+					content: NICE_RESPONSE_TEMPLATE.replace('{name}', 'TestUser')
 				})
 			);
 		});
@@ -190,8 +193,8 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					avatarURL: 'https://imgur.com/WcBRCWn.png',
-					content: 'TestUser, I think you\'re really blu! :wink:'
+					avatarURL: AVATAR_URLS.DEFAULT,
+					content: NICE_RESPONSE_TEMPLATE.replace('{name}', 'TestUser')
 				})
 			);
 		});
@@ -216,8 +219,8 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					avatarURL: 'https://imgur.com/WcBRCWn.png',
-					content: 'No way, Venn can suck my blu cane'
+					avatarURL: AVATAR_URLS.DEFAULT,
+					content: DEFAULT_RESPONSES.NICE_ABOUT_VENN
 				})
 			);
 		});
@@ -245,7 +248,7 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					avatarURL: 'https://i.imgur.com/dO4a59n.png',
+					avatarURL: AVATAR_URLS.CHEEKY,
 					content: expect.stringContaining('What the fuck did you just fucking say about me')
 				})
 			);
@@ -282,7 +285,7 @@ describe('BlueBot', () => {
 			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					content: 'Did somebody say Blu'
+					content: DEFAULT_RESPONSES.INITIAL
 				})
 			);
 		});
@@ -322,7 +325,7 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					avatarURL: 'https://i.imgur.com/dO4a59n.png',
+					avatarURL: AVATAR_URLS.CHEEKY,
 					content: expect.any(String)
 				})
 			);
@@ -351,7 +354,7 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					content: 'Did somebody say Blu'
+					content: DEFAULT_RESPONSES.INITIAL
 				})
 			);
 			expect(botStateService.setState).toHaveBeenCalledWith(
@@ -373,7 +376,7 @@ describe('BlueBot', () => {
 			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					content: 'Did somebody say Blu'
+					content: DEFAULT_RESPONSES.INITIAL
 				})
 			);
 			expect(botStateService.setState).toHaveBeenCalledWith(
@@ -395,7 +398,7 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					avatarURL: 'https://i.imgur.com/dO4a59n.png',
+					avatarURL: AVATAR_URLS.CHEEKY,
 					content: expect.any(String)
 				})
 			);
@@ -414,7 +417,7 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					avatarURL: 'https://i.imgur.com/dO4a59n.png',
+					avatarURL: AVATAR_URLS.CHEEKY,
 					content: expect.any(String)
 				})
 			);
@@ -449,7 +452,7 @@ describe('BlueBot', () => {
 			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					content: 'Did somebody say Blu'
+					content: DEFAULT_RESPONSES.INITIAL
 				})
 			);
 			expect(botStateService.setState).toHaveBeenCalledWith(
@@ -492,32 +495,32 @@ describe('BlueBot', () => {
 			// 1. Send "blu" expect "Did somebody say Blu"
 			// This should set the timestamp
 			setLastMessageTime(null); // Reset timestamp
-			await expectResponse('blu', 'Did somebody say Blu', 'https://imgur.com/WcBRCWn.png');
+			await expectResponse('blu', DEFAULT_RESPONSES.INITIAL, AVATAR_URLS.DEFAULT);
 
 			// 2. Send "blu" expect cheeky response
 			// The timestamp should be recent, so it should trigger the cheeky response
 			setLastMessageTime(1); // 1 minute ago
-			await expectResponse('blu', 'cheeky', 'https://i.imgur.com/dO4a59n.png');
+			await expectResponse('blu', 'cheeky', AVATAR_URLS.CHEEKY);
 
 			// 3. Send "blu" expect "Did somebody say Blu"
 			// This should reset the timestamp
 			setLastMessageTime(null); // Reset timestamp
-			await expectResponse('blu', 'Did somebody say Blu', 'https://imgur.com/WcBRCWn.png');
+			await expectResponse('blu', DEFAULT_RESPONSES.INITIAL, AVATAR_URLS.DEFAULT);
 
 			// 4. Send "yes" expect cheeky response
 			// The timestamp should be recent, so it should trigger the cheeky response
 			setLastMessageTime(1); // 1 minute ago
-			await expectResponse('yes', 'cheeky', 'https://i.imgur.com/dO4a59n.png');
+			await expectResponse('yes', 'cheeky', AVATAR_URLS.CHEEKY);
 
 			// 5. Send "blu" expect "Did somebody say Blu"
 			// This should reset the timestamp
 			setLastMessageTime(null); // Reset timestamp
-			await expectResponse('blu', 'Did somebody say Blu', 'https://imgur.com/WcBRCWn.png');
+			await expectResponse('blu', DEFAULT_RESPONSES.INITIAL, AVATAR_URLS.DEFAULT);
 
 			// 6. Send "blu" expect cheeky response
 			// The timestamp should be recent, so it should trigger the cheeky response
 			setLastMessageTime(1); // 1 minute ago
-			await expectResponse('blu', 'cheeky', 'https://i.imgur.com/dO4a59n.png');
+			await expectResponse('blu', 'cheeky', AVATAR_URLS.CHEEKY);
 
 			// 7. Send "yes" expect NO RESPONSE
 			// This should fail if the bot responds, as it should not respond to "yes" without a recent "blu" message
@@ -527,7 +530,7 @@ describe('BlueBot', () => {
 			// 8. Send "blu" expect "Did somebody say Blu"
 			// Reset the timestamp to simulate a new conversation
 			setLastMessageTime(null);
-			await expectResponse('blu', 'Did somebody say Blu', 'https://imgur.com/WcBRCWn.png');
+			await expectResponse('blu', DEFAULT_RESPONSES.INITIAL, AVATAR_URLS.DEFAULT);
 		});
 	});
 
@@ -543,7 +546,7 @@ describe('BlueBot', () => {
 			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					avatarURL: 'https://imgur.com/WcBRCWn.png'
+					avatarURL: AVATAR_URLS.DEFAULT
 				})
 			);
 		});
@@ -560,7 +563,7 @@ describe('BlueBot', () => {
 			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					avatarURL: 'https://i.imgur.com/dO4a59n.png'
+					avatarURL: AVATAR_URLS.CHEEKY
 				})
 			);
 		});
@@ -583,7 +586,7 @@ describe('BlueBot', () => {
 			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					avatarURL: 'https://i.imgur.com/dO4a59n.png'
+					avatarURL: AVATAR_URLS.CHEEKY
 				})
 			);
 		});
@@ -600,8 +603,8 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					content: 'No way, Venn can suck my blu cane',
-					avatarURL: 'https://imgur.com/WcBRCWn.png'
+					content: DEFAULT_RESPONSES.NICE_ABOUT_VENN,
+					avatarURL: AVATAR_URLS.DEFAULT
 				})
 			);
 		});
