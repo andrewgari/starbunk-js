@@ -115,7 +115,7 @@ jobs:
             - name: Get test files
               id: test-files
               run: |
-                  FILES=$(ls -1 cypress/e2e/bots/*.cy.ts | tr '\n' ' ')
+                  FILES=$(find cypress/e2e/bots -name "*.cy.ts" | tr '\n' ' ')
                   echo "all_files=$FILES" >> $GITHUB_OUTPUT
 
                   # Count files
