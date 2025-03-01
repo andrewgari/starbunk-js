@@ -39,7 +39,7 @@ jobs:
     build:
         name: '🔨 Cypress - Build TypeScript Project'
         runs-on: ubuntu-latest
-        needs: [changes]
+        needs: changes
         # Only run build if src files changed
         if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.src == 'true' }}
         steps:
