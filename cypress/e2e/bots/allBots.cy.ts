@@ -1,158 +1,194 @@
 /// <reference types="cypress" />
-import { testBot, testBotNoResponse } from '../../support/botTestHelper';
-import '../../support/index.d.ts';
+import channelIDs from '../../../src/discord/channelIDs';
 
+/**
+ * E2E tests for all bots in a single file
+ *
+ * This file tests all bots with their basic functionality using a simpler structure
+ */
 describe('All Bots E2E Tests', () => {
 	before(() => {
 		// Initialize Discord client before running tests
 		cy.initDiscordClient();
 	});
 
-	// Test each bot with its trigger pattern and expected response
-
-	describe('Spider-Bot', () => {
-		testBot({
-			botName: 'Spider-Bot',
-			triggerMessage: 'I love spiderman movies!',
-			expectedResponsePattern: /Hey, it's "\*\*Spider-Man\*\*"! Don't forget the hyphen! Not Spiderman, that's dumb/
-		});
-
-		testBotNoResponse('Spider-Bot', 'Spider-Man is awesome!');
+	// Spider-Bot
+	it('Spider-Bot should respond to "I love spiderman movies!"', () => {
+		cy.sendDiscordMessage(
+			'I love spiderman movies!',
+			'Spider-Bot',
+			/Hey, it's "\*\*Spider-Man\*\*"! Don't forget the hyphen! Not Spiderman, that's dumb/,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Sheesh-Bot', () => {
-		testBot({
-			botName: 'Sheesh-Bot',
-			triggerMessage: 'sheesh that was amazing',
-			expectedResponsePattern: /sh(e+)sh/i
-		});
+	// Sheesh-Bot
+	it('Sheesh-Bot should respond to "sheesh that was amazing"', () => {
+		cy.sendDiscordMessage(
+			'sheesh that was amazing',
+			'Sheesh-Bot',
+			/sh(e+)sh/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Pickle-Bot', () => {
-		testBot({
-			botName: 'Pickle-Bot',
-			triggerMessage: 'I turned myself into a pickle',
-			expectedResponsePattern: /pickle/i
-		});
+	// Pickle-Bot
+	it('Pickle-Bot should respond to "I turned myself into a pickle"', () => {
+		cy.sendDiscordMessage(
+			'I turned myself into a pickle',
+			'Pickle-Bot',
+			/pickle/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Nice-Bot', () => {
-		testBot({
-			botName: 'Nice-Bot',
-			triggerMessage: 'The answer is 69',
-			expectedResponsePattern: /nice/i
-		});
+	// Nice-Bot
+	it('Nice-Bot should respond to "The answer is 69"', () => {
+		cy.sendDiscordMessage(
+			'The answer is 69',
+			'Nice-Bot',
+			/nice/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Music-Correct-Bot', () => {
-		testBot({
-			botName: 'Music-Correct-Bot',
-			triggerMessage: '!play despacito',
-			expectedResponsePattern: /Use \/play instead of !play/i
-		});
+	// Music-Correct-Bot
+	it('Music-Correct-Bot should respond to "!play despacito"', () => {
+		cy.sendDiscordMessage(
+			'!play despacito',
+			'Music-Correct-Bot',
+			/Use \/play instead of !play/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Macaroni-Bot', () => {
-		testBot({
-			botName: 'Macaroni-Bot',
-			triggerMessage: 'I love macaroni and cheese',
-			expectedResponsePattern: /macaroni/i
-		});
+	// Macaroni-Bot
+	it('Macaroni-Bot should respond to "I love macaroni and cheese"', () => {
+		cy.sendDiscordMessage(
+			'I love macaroni and cheese',
+			'Macaroni-Bot',
+			/macaroni/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Hold-Bot', () => {
-		testBot({
-			botName: 'Hold-Bot',
-			triggerMessage: 'Please hold the door',
-			expectedResponsePattern: /hold/i
-		});
+	// Hold-Bot
+	it('Hold-Bot should respond to "Please hold the door"', () => {
+		cy.sendDiscordMessage(
+			'Please hold the door',
+			'Hold-Bot',
+			/hold/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Gundam-Bot', () => {
-		testBot({
-			botName: 'Gundam-Bot',
-			triggerMessage: 'I love gundam models',
-			expectedResponsePattern: /gundam/i
-		});
+	// Gundam-Bot
+	it('Gundam-Bot should respond to "I love gundam models"', () => {
+		cy.sendDiscordMessage(
+			'I love gundam models',
+			'Gundam-Bot',
+			/gundam/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Check-Bot', () => {
-		testBot({
-			botName: 'Check-Bot',
-			triggerMessage: 'Let me check that for you',
-			expectedResponsePattern: /czech/i
-		});
+	// Check-Bot
+	it('Check-Bot should respond to "Let me check that for you"', () => {
+		cy.sendDiscordMessage(
+			'Let me check that for you',
+			'Check-Bot',
+			/czech/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Chaos-Bot', () => {
-		testBot({
-			botName: 'Chaos-Bot',
-			triggerMessage: 'This is pure chaos',
-			expectedResponsePattern: /chaos/i
-		});
+	// Chaos-Bot
+	it('Chaos-Bot should respond to "This is pure chaos"', () => {
+		cy.sendDiscordMessage(
+			'This is pure chaos',
+			'Chaos-Bot',
+			/chaos/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Baby-Bot', () => {
-		testBot({
-			botName: 'Baby-Bot',
-			triggerMessage: 'Look at that cute baby',
-			expectedResponsePattern: /baby/i
-		});
+	// Baby-Bot
+	it('Baby-Bot should respond to "Look at that cute baby"', () => {
+		cy.sendDiscordMessage(
+			'Look at that cute baby',
+			'Baby-Bot',
+			/baby/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Banana-Bot', () => {
-		testBot({
-			botName: 'Banana-Bot',
-			triggerMessage: 'I ate a banana for breakfast',
-			expectedResponsePattern: /banana/i
-		});
+	// Banana-Bot
+	it('Banana-Bot should respond to "I ate a banana for breakfast"', () => {
+		cy.sendDiscordMessage(
+			'I ate a banana for breakfast',
+			'Banana-Bot',
+			/banana/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Guy-Bot', () => {
-		testBot({
-			botName: 'Guy-Bot',
-			triggerMessage: 'That guy is cool',
-			expectedResponsePattern: /guy/i
-		});
+	// Guy-Bot
+	it('Guy-Bot should respond to "That guy is cool"', () => {
+		cy.sendDiscordMessage(
+			'That guy is cool',
+			'Guy-Bot',
+			/guy/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Ezio-Bot', () => {
-		testBot({
-			botName: 'Ezio-Bot',
-			triggerMessage: 'Ezio is my favorite assassin',
-			expectedResponsePattern: /assassin/i
-		});
+	// Ezio-Bot
+	it('Ezio-Bot should respond to "Ezio is my favorite assassin"', () => {
+		cy.sendDiscordMessage(
+			'Ezio is my favorite assassin',
+			'Ezio-Bot',
+			/assassin/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Blue-Bot', () => {
-		testBot({
-			botName: 'Blue-Bot',
-			triggerMessage: 'The sky is blue today',
-			expectedResponsePattern: /blue/i
-		});
+	// Blue-Bot
+	it('Blue-Bot should respond to "The sky is blue today"', () => {
+		cy.sendDiscordMessage(
+			'The sky is blue today',
+			'Blue-Bot',
+			/blue/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Venn-Bot', () => {
-		testBot({
-			botName: 'Venn-Bot',
-			triggerMessage: 'Let me make a venn diagram',
-			expectedResponsePattern: /venn/i
-		});
+	// Venn-Bot
+	it('Venn-Bot should respond to "Let me make a venn diagram"', () => {
+		cy.sendDiscordMessage(
+			'Let me make a venn diagram',
+			'Venn-Bot',
+			/venn/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('SigGreat-Bot', () => {
-		testBot({
-			botName: 'SigGreat-Bot',
-			triggerMessage: 'Sig is the best',
-			expectedResponsePattern: /sig/i
-		});
+	// SigGreat-Bot
+	it('SigGreat-Bot should respond to "Sig is the best"', () => {
+		cy.sendDiscordMessage(
+			'Sig is the best',
+			'SigGreat-Bot',
+			/sig/i,
+			channelIDs.NebulaChat
+		);
 	});
 
-	describe('Bot-Bot', () => {
-		testBot({
-			botName: 'Bot-Bot',
-			triggerMessage: 'This bot is cool',
-			expectedResponsePattern: /bot/i
-		});
+	// Bot-Bot
+	it('Bot-Bot should respond to "This bot is cool"', () => {
+		cy.sendDiscordMessage(
+			'This bot is cool',
+			'Bot-Bot',
+			/bot/i,
+			channelIDs.NebulaChat
+		);
 	});
 });
