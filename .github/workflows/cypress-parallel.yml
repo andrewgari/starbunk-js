@@ -155,24 +155,49 @@ jobs:
 
                   # Clean up any stale Xvfb lock files
                   if [ -f "/tmp/.X${DISPLAY_NUM}-lock" ]; then
-                    sudo rm -f "/tmp/.X${DISPLAY_NUM}-lock"
+                    echo "Removing stale Xvfb lock file: /tmp/.X${DISPLAY_NUM}-lock"
+                    sudo rm -f "/tmp/.X${DISPLAY_NUM}-lock" || echo "Warning: Failed to remove lock file, but continuing anyway"
+                  else
+                    echo "No stale Xvfb lock file found for display :${DISPLAY_NUM}"
                   fi
 
                   # Start Xvfb with unique display
+                  echo "Starting Xvfb on display :${DISPLAY_NUM}"
                   Xvfb :${DISPLAY_NUM} -screen 0 1280x720x24 &
                   XVFB_PID=$!
 
+                  # Verify Xvfb started successfully
+                  if ! ps -p $XVFB_PID > /dev/null; then
+                    echo "Error: Failed to start Xvfb on display :${DISPLAY_NUM}"
+                    exit 1
+                  fi
+
                   # Export display for Cypress
                   export DISPLAY=:${DISPLAY_NUM}
+                  echo "Using display $DISPLAY for Cypress tests"
 
-                  # Run tests
+                  # Run tests with proper error handling
+                  echo "Running Cypress tests for group ${{ matrix.group }}..."
                   npx cypress run --spec "${{ steps.group-files.outputs.group_files }}" --config video=false,screenshotOnRunFailure=false
                   TEST_RESULT=$?
 
-                  # Kill Xvfb
-                  kill $XVFB_PID || true
+                  # Kill Xvfb with proper error handling
+                  echo "Stopping Xvfb process (PID: $XVFB_PID)"
+                  if ps -p $XVFB_PID > /dev/null; then
+                    kill $XVFB_PID || echo "Warning: Failed to kill Xvfb process, but continuing anyway"
+                    # Wait a moment to ensure process terminates
+                    sleep 1
+                    # Force kill if still running
+                    if ps -p $XVFB_PID > /dev/null; then
+                      echo "Xvfb process still running, force killing it"
+                      kill -9 $XVFB_PID 2>/dev/null || true
+                    fi
+                  else
+                    echo "Xvfb process already terminated"
+                  fi
 
                   # Return test result
+                  echo "Cypress tests completed with exit code: $TEST_RESULT"
                   exit $TEST_RESULT
               env:
                   CYPRESS_DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
