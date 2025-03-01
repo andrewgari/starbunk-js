@@ -197,43 +197,92 @@ jobs:
                     "pageLoadTimeout": 10000
                   }' > cypress.env.json
 
-            # Get list of test files and split them
-            - name: Get test files
+            # Get list of test files and analyze them for better distribution
+            - name: Analyze test files
               id: test-files
               run: |
-                  FILES=$(ls -1 cypress/e2e/bots/*.cy.ts | tr '\n' ' ')
-                  echo "all_files=$FILES" >> $GITHUB_OUTPUT
+                  # Get all test files
+                  FILES=$(find cypress/e2e/bots -name "*.cy.ts" | sort)
 
-                  # Count files
-                  FILE_COUNT=$(echo $FILES | wc -w)
+                  # Count the number of test files
+                  FILE_COUNT=$(echo "$FILES" | wc -l)
                   echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
 
-                  # Calculate files per group
-                  FILES_PER_GROUP=$(( ($FILE_COUNT + 3) / 4 ))
-                  echo "files_per_group=$FILES_PER_GROUP" >> $GITHUB_OUTPUT
+                  # Create arrays to store file info
+                  declare -a FILE_PATHS=()
+                  declare -a FILE_SIZES=()
+                  declare -a FILE_COMPLEXITY=()
 
-            # Determine which files to run for this group
-            - name: Determine test files for this group
-              id: group-files
-              run: |
-                  FILES=(${{ steps.test-files.outputs.all_files }})
-                  FILES_PER_GROUP=${{ steps.test-files.outputs.files_per_group }}
-                  GROUP_INDEX=$((${{ matrix.group }} - 1))
+                  # Analyze each file for size and complexity
+                  while IFS= read -r file; do
+                    # Store file path
+                    FILE_PATHS+=("$file")
 
-                  START_INDEX=$((GROUP_INDEX * FILES_PER_GROUP))
+                    # Get file size
+                    SIZE=$(wc -c < "$file")
+                    FILE_SIZES+=($SIZE)
 
-                  # Get files for this group
-                  GROUP_FILES=""
-                  for ((i=START_INDEX; i<START_INDEX+FILES_PER_GROUP && i<${#FILES[@]}; i++)); do
-                    if [ -n "$GROUP_FILES" ]; then
-                      GROUP_FILES="$GROUP_FILES,"
-                    fi
-                    GROUP_FILES="$GROUP_FILES${FILES[$i]}"
+                    # Estimate complexity based on number of test cases
+                    # Count 'it(' and 'test(' occurrences as a proxy for test cases
+                    TEST_COUNT=$(grep -E "it\(|test\(" "$file" | wc -l)
+
+                    # Count describe blocks as they add setup/teardown overhead
+                    DESCRIBE_COUNT=$(grep -E "describe\(" "$file" | wc -l)
+
+                    # Calculate weighted complexity
+                    COMPLEXITY=$((TEST_COUNT * 10 + DESCRIBE_COUNT * 5 + SIZE / 1000))
+                    FILE_COMPLEXITY+=($COMPLEXITY)
+                  done <<< "$FILES"
+
+                  # Save file paths and complexity scores
+                  echo "file_paths=${FILE_PATHS[*]}" >> $GITHUB_OUTPUT
+                  echo "file_complexity=${FILE_COMPLEXITY[*]}" >> $GITHUB_OUTPUT
+
+                  # Distribute files across groups using a greedy algorithm
+                  # This ensures more balanced execution times
+                  NUM_GROUPS=4
+                  declare -a GROUP_FILES=()
+                  declare -a GROUP_LOAD=()
+
+                  # Initialize arrays
+                  for ((i=0; i<NUM_GROUPS; i++)); do
+                    GROUP_FILES[$i]=""
+                    GROUP_LOAD[$i]=0
                   done
 
-                  echo "group_files=$GROUP_FILES" >> $GITHUB_OUTPUT
+                  # Sort files by complexity (descending) and distribute
+                  # Start with the most complex files to ensure better balance
+                  for ((i=0; i<${#FILE_PATHS[@]}; i++)); do
+                    # Find the group with the lowest current load
+                    MIN_LOAD_IDX=0
+                    MIN_LOAD=${GROUP_LOAD[0]}
 
-            # Run tests for this group with a unique display number
+                    for ((j=1; j<NUM_GROUPS; j++)); do
+                      if (( ${GROUP_LOAD[$j]} < $MIN_LOAD )); then
+                        MIN_LOAD_IDX=$j
+                        MIN_LOAD=${GROUP_LOAD[$j]}
+                      fi
+                    done
+
+                    # Add file to the group with the lowest load
+                    if [[ -n "${GROUP_FILES[$MIN_LOAD_IDX]}" ]]; then
+                      GROUP_FILES[$MIN_LOAD_IDX]="${GROUP_FILES[$MIN_LOAD_IDX]},${FILE_PATHS[$i]}"
+                    else
+                      GROUP_FILES[$MIN_LOAD_IDX]="${FILE_PATHS[$i]}"
+                    fi
+
+                    # Update the group's load
+                    GROUP_LOAD[$MIN_LOAD_IDX]=$((${GROUP_LOAD[$MIN_LOAD_IDX]} + ${FILE_COMPLEXITY[$i]}))
+                  done
+
+                  # Output the file lists for each group
+                  for ((i=0; i<NUM_GROUPS; i++)); do
+                    echo "group_$((i+1))_files=${GROUP_FILES[$i]}" >> $GITHUB_OUTPUT
+                    echo "group_$((i+1))_load=${GROUP_LOAD[$i]}" >> $GITHUB_OUTPUT
+                    echo "Group $((i+1)) has ${GROUP_LOAD[$i]} complexity units"
+                  done
+
+            # Run tests for this group
             - name: Run Cypress tests (Group ${{ matrix.group }})
               run: |
                   # Set unique display number for this group
@@ -251,8 +300,14 @@ jobs:
                   # Export display for Cypress
                   export DISPLAY=:${DISPLAY_NUM}
 
+                  # Get the files for this group
+                  GROUP_FILES="${{ steps.test-files.outputs.group_${{ matrix.group }}_files }}"
+
+                  echo "Running tests for group ${{ matrix.group }} with complexity ${{ steps.test-files.outputs.group_${{ matrix.group }}_load }}"
+                  echo "Files: $GROUP_FILES"
+
                   # Run tests
-                  npx cypress run --spec "${{ steps.group-files.outputs.group_files }}" --config video=false,screenshotOnRunFailure=true
+                  npx cypress run --spec "$GROUP_FILES" --config video=false,screenshotOnRunFailure=true
                   TEST_RESULT=$?
 
                   # Kill Xvfb
