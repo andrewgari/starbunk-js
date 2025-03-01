@@ -178,7 +178,7 @@ jobs:
 
                   # Run tests with proper error handling
                   echo "Running Cypress tests for group ${{ matrix.group }}..."
-                  npx cypress run --spec "${{ steps.group-files.outputs.group_files }}" --config video=false,screenshotOnRunFailure=false
+                  npm run cypress:run -- --spec "${{ steps.group-files.outputs.group_files }}" --config video=false,screenshotOnRunFailure=false
                   TEST_RESULT=$?
 
                   # Kill Xvfb with proper error handling
