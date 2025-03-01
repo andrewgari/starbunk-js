@@ -314,6 +314,14 @@ export default defineConfig({
 								username: 'Venn-Bot'
 							}
 						};
+					} else if (message.toLowerCase().includes('can\'t') ||
+						message.toLowerCase().includes('cant')) {
+						return {
+							content: 'Not with THAT attitude!!!',
+							author: {
+								username: 'Attitude-Bot'
+							}
+						};
 					} else {
 						return {
 							content: `Received: ${message}`,
