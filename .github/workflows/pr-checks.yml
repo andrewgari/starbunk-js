@@ -158,7 +158,7 @@ jobs:
         # Run if src or cypress files changed
         if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.cypress == 'true' }}
         strategy:
-            fail-fast: false
+            fail-fast: true
             matrix:
                 # Split tests into 4 groups
                 group: [1, 2, 3, 4]
@@ -301,9 +301,9 @@ jobs:
                   export DISPLAY=:${DISPLAY_NUM}
 
                   # Get the files for this group
-                  GROUP_FILES="${{ steps.test-files.outputs.group_${{ matrix.group }}_files }}"
+                  GROUP_FILES="${{ steps.test-files.outputs[format('group_{0}_files', matrix.group)] }}"
 
-                  echo "Running tests for group ${{ matrix.group }} with complexity ${{ steps.test-files.outputs.group_${{ matrix.group }}_load }}"
+                  echo "Running tests for group ${{ matrix.group }} with complexity ${{ steps.test-files.outputs[format('group_{0}_load', matrix.group)] }}"
                   echo "Files: $GROUP_FILES"
 
                   # Run tests
