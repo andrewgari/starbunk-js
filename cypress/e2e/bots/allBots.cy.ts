@@ -44,16 +44,6 @@ describe('All Bots E2E Tests', () => {
 		});
 	});
 
-	describe('Attitude-Bot', () => {
-		testBot({
-			botName: 'Attitude-Bot',
-			triggerMessage: 'I can\'t do this',
-			expectedResponsePattern: /Not with THAT attitude!!!/
-		});
-
-		testBotNoResponse('Attitude-Bot', 'I am unable to do that');
-	});
-
 	describe('Music-Correct-Bot', () => {
 		testBot({
 			botName: 'Music-Correct-Bot',

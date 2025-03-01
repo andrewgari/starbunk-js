@@ -1,0 +1,212 @@
+name: Cypress Parallel Tests
+
+on:
+    # Run on pull requests
+    pull_request:
+        types: [opened, synchronize, reopened]
+        paths:
+            - 'src/**'
+            - 'cypress/**'
+            - 'package.json'
+            - 'package-lock.json'
+            - 'cypress.config.ts'
+            - 'scripts/**'
+
+    # Allow manual triggering
+    workflow_dispatch:
+
+jobs:
+    # Initial check to determine what files changed
+    changes:
+        name: '🔍 Cypress - Detect File Changes'
+        runs-on: ubuntu-latest
+        outputs:
+            src: ${{ steps.filter.outputs.src }}
+            cypress: ${{ steps.filter.outputs.cypress }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # Needed for file change detection
+
+            - name: Check for file changes
+              uses: dorny/paths-filter@v2
+              id: filter
+              with:
+                  filters: |
+                      src:
+                          - 'src/**'
+                          - '!src/tests/**'
+                      cypress:
+                          - 'cypress/**'
+                          - 'cypress.config.ts'
+
+    # Build the application
+    build:
+        name: '🔨 Cypress - Build TypeScript Project'
+        runs-on: ubuntu-latest
+        needs: [changes]
+        # Only run build if src files changed
+        if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.src == 'true' }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Build App
+              run: npm run build
+
+            - name: Upload Build Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: dist/
+                  if-no-files-found: error
+
+    # Run Cypress tests in parallel
+    cypress-parallel:
+        name: '🤖 Cypress - Run Parallel E2E Tests'
+        runs-on: ubuntu-latest
+        needs: [changes, build]
+        # Run if src or cypress files changed
+        if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.src == 'true' || needs.changes.outputs.cypress == 'true' }}
+        strategy:
+            fail-fast: false
+            matrix:
+                # Split tests into 4 groups
+                group: [1, 2, 3, 4]
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Download Build Artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: dist/
+              if: ${{ needs.changes.outputs.src == 'true' || github.event_name == 'workflow_dispatch' }}
+
+            - name: Create .env file
+              run: |
+                  echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
+                  echo "NODE_ENV=test" >> .env
+
+            - name: Create cypress.env.json
+              run: |
+                  echo '{
+                    "numTestsKeptInMemory": 5,
+                    "requestTimeout": 5000,
+                    "responseTimeout": 10000,
+                    "defaultCommandTimeout": 5000,
+                    "pageLoadTimeout": 10000
+                  }' > cypress.env.json
+
+            # Get list of test files and split them
+            - name: Get test files
+              id: test-files
+              run: |
+                  FILES=$(ls -1 cypress/e2e/bots/*.cy.ts | tr '\n' ' ')
+                  echo "all_files=$FILES" >> $GITHUB_OUTPUT
+
+                  # Count files
+                  FILE_COUNT=$(echo $FILES | wc -w)
+                  echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+
+                  # Calculate files per group
+                  FILES_PER_GROUP=$(( ($FILE_COUNT + 3) / 4 ))
+                  echo "files_per_group=$FILES_PER_GROUP" >> $GITHUB_OUTPUT
+
+            # Determine which files to run for this group
+            - name: Determine test files for this group
+              id: group-files
+              run: |
+                  FILES=(${{ steps.test-files.outputs.all_files }})
+                  FILES_PER_GROUP=${{ steps.test-files.outputs.files_per_group }}
+                  GROUP_INDEX=$((${{ matrix.group }} - 1))
+
+                  START_INDEX=$((GROUP_INDEX * FILES_PER_GROUP))
+
+                  # Get files for this group
+                  GROUP_FILES=""
+                  for ((i=START_INDEX; i<START_INDEX+FILES_PER_GROUP && i<${#FILES[@]}; i++)); do
+                    if [ -n "$GROUP_FILES" ]; then
+                      GROUP_FILES="$GROUP_FILES,"
+                    fi
+                    GROUP_FILES="$GROUP_FILES${FILES[$i]}"
+                  done
+
+                  echo "group_files=$GROUP_FILES" >> $GITHUB_OUTPUT
+
+            # Run tests for this group with a unique display number
+            - name: Run Cypress tests (Group ${{ matrix.group }})
+              run: |
+                  # Set unique display number for this group
+                  DISPLAY_NUM=$((100 + ${{ matrix.group }}))
+
+                  # Clean up any stale Xvfb lock files
+                  if [ -f "/tmp/.X${DISPLAY_NUM}-lock" ]; then
+                    sudo rm -f "/tmp/.X${DISPLAY_NUM}-lock"
+                  fi
+
+                  # Start Xvfb with unique display
+                  Xvfb :${DISPLAY_NUM} -screen 0 1280x720x24 &
+                  XVFB_PID=$!
+
+                  # Export display for Cypress
+                  export DISPLAY=:${DISPLAY_NUM}
+
+                  # Run tests
+                  npx cypress run --spec "${{ steps.group-files.outputs.group_files }}" --config video=false,screenshotOnRunFailure=false
+                  TEST_RESULT=$?
+
+                  # Kill Xvfb
+                  kill $XVFB_PID || true
+
+                  # Return test result
+                  exit $TEST_RESULT
+              env:
+                  CYPRESS_DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+                  NODE_ENV: test
+                  # Add Cypress-specific environment variables
+                  CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Upload Test Screenshots
+              uses: actions/upload-artifact@v4
+              if: failure()
+              with:
+                  name: cypress-screenshots-group-${{ matrix.group }}
+                  path: cypress/screenshots
+                  if-no-files-found: ignore
+
+    # Summary job that depends on all test groups
+    test-summary:
+        name: '📊 Cypress - Test Summary'
+        runs-on: ubuntu-latest
+        needs: cypress-parallel
+        if: always()
+        steps:
+            - name: Test Summary
+              run: |
+                  if [ "${{ needs.cypress-parallel.result }}" == "success" ]; then
+                    echo "✅ All Cypress tests passed successfully!"
+                    exit 0
+                  else
+                    echo "❌ Some Cypress tests failed. Check the logs for details."
+                    exit 1
+                  fi

@@ -22,19 +22,19 @@ jobs:
     # - should_run: true if PR merged or direct push
     # - src: changes to source code
     # - tests: changes to test files
+    # - cypress: changes to cypress files
+    # - workflows: changes to workflow files
     # - docker: changes to Docker configuration
-    # - config: changes to project configuration
-    # - bots: changes to bot-related code
     changes:
-        name: 🔍 Detect Changes
+        name: '🔍 Main - Detect File Changes'
         runs-on: ubuntu-latest
         outputs:
             should_run: ${{ steps.check_merged.outputs.should_run }}
             src: ${{ steps.filter.outputs.src }}
             tests: ${{ steps.filter.outputs.tests }}
+            cypress: ${{ steps.filter.outputs.cypress }}
+            workflows: ${{ steps.filter.outputs.workflows }}
             docker: ${{ steps.filter.outputs.docker }}
-            config: ${{ steps.filter.outputs.config }}
-            bots: ${{ steps.filter.outputs.bots }}
         steps:
             - name: Check if PR was merged or direct push
               id: check_merged
@@ -59,31 +59,28 @@ jobs:
                       src:
                           - 'src/**'
                           - '!src/tests/**'
+                          - '!cypress/**'
                       tests:
                           - 'src/tests/**'
                           - '**/*.test.ts'
                           - '**/*.spec.ts'
                           - 'jest.config.js'
+                      cypress:
+                          - 'cypress/**'
+                          - 'cypress.config.ts'
+                      workflows:
+                          - '.github/workflows/**'
                       docker:
                           - 'Dockerfile*'
                           - '.dockerignore'
                           - 'docker-compose*.yml'
-                      config:
-                          - 'package.json'
-                          - 'package-lock.json'
-                          - 'tsconfig*.json'
-                          - '.eslintrc*'
-                          - '.prettierrc*'
-                      bots:
-                          - 'src/starbunk/bots/**'
-                          - 'cypress/e2e/bots/**'
 
     # Builds the TypeScript project and saves artifacts for later jobs
     build:
         needs: [changes]
-        name: 🔨 Build
-        # Only run if PR was merged or direct push to main/develop
-        if: ${{ needs.changes.outputs.should_run == 'true' }}
+        name: '🔨 Main - Build TypeScript Project'
+        # Only run if PR was merged or direct push to main/develop AND src files changed
+        if: ${{ needs.changes.outputs.should_run == 'true' && needs.changes.outputs.src == 'true' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -103,8 +100,9 @@ jobs:
     # Runs ESLint to ensure code quality
     lint:
         needs: [changes]
-        name: 🔍 Lint
-        if: ${{ needs.changes.outputs.should_run == 'true' }}
+        name: '🔍 Main - Run ESLint Code Quality Checks'
+        # Run lint if src or test files changed
+        if: ${{ needs.changes.outputs.should_run == 'true' && (needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true') }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -118,8 +116,9 @@ jobs:
     # Verifies TypeScript types are correct
     type-check:
         needs: [changes]
-        name: 🔍 Type Check
-        if: ${{ needs.changes.outputs.should_run == 'true' }}
+        name: '🔍 Main - Verify TypeScript Types'
+        # Run type check if src or test files changed
+        if: ${{ needs.changes.outputs.should_run == 'true' && (needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true') }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -129,13 +128,16 @@ jobs:
                   cache: 'npm'
             - run: npm ci
             - run: npm run type-check:main
+            - name: Type Check Cypress Code
+              if: ${{ needs.changes.outputs.cypress == 'true' }}
+              run: npm run type-check:cypress
 
     # Runs Jest unit tests using the built artifacts
     test:
         needs: [changes, build]
-        name: 🧪 Test
-        # Only run if PR was merged or direct push to main/develop
-        if: ${{ needs.changes.outputs.should_run == 'true' }}
+        name: '🧪 Main - Run Jest Unit Tests'
+        # Run unit tests if src or test files changed
+        if: ${{ needs.changes.outputs.should_run == 'true' && (needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true') }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -149,14 +151,15 @@ jobs:
               with:
                   name: build-artifacts
                   path: dist/
+              if: ${{ needs.changes.outputs.src == 'true' }}
             - run: npm run test
 
     # Runs Cypress E2E tests for bot functionality
-    # Only executes if bot-related code has changed
+    # Only executes if src or cypress files have changed
     e2e-test:
         needs: [changes, build]
-        name: 🤖 E2E Bot Tests
-        if: ${{ needs.changes.outputs.should_run == 'true' && needs.changes.outputs.bots == 'true' }}
+        name: '🤖 Main - Run Cypress E2E Bot Tests'
+        if: ${{ needs.changes.outputs.should_run == 'true' && (needs.changes.outputs.src == 'true' || needs.changes.outputs.cypress == 'true') }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -170,12 +173,51 @@ jobs:
               with:
                   name: build-artifacts
                   path: dist/
+              if: ${{ needs.changes.outputs.src == 'true' }}
             - name: Create .env file
               run: |
                   echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
                   echo "NODE_ENV=test" >> .env
-            - name: Run Bot Tests
-              run: npm run test:e2e:bots
+
+            - name: Create cypress.env.json
+              run: |
+                  echo '{
+                    "numTestsKeptInMemory": 5,
+                    "requestTimeout": 5000,
+                    "responseTimeout": 10000,
+                    "defaultCommandTimeout": 5000,
+                    "pageLoadTimeout": 10000
+                  }' > cypress.env.json
+
+            - name: Clean up any stale Xvfb lock files
+              run: |
+                  for i in {99..110}; do
+                    if [ -f "/tmp/.X${i}-lock" ]; then
+                      sudo rm -f "/tmp/.X${i}-lock"
+                    fi
+                  done
+
+            - name: Run Bot Tests in Parallel
+              run: |
+                  # Set unique display number
+                  DISPLAY_NUM=100
+
+                  # Start Xvfb with unique display
+                  Xvfb :${DISPLAY_NUM} -screen 0 1280x720x24 &
+                  XVFB_PID=$!
+
+                  # Export display for Cypress
+                  export DISPLAY=:${DISPLAY_NUM}
+
+                  # Run tests with optimized settings
+                  npm run test:e2e:bots
+                  TEST_RESULT=$?
+
+                  # Kill Xvfb
+                  kill $XVFB_PID || true
+
+                  # Return test result
+                  exit $TEST_RESULT
               env:
                   CYPRESS_DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
                   NODE_ENV: test
@@ -196,9 +238,19 @@ jobs:
     # - latest
     # - YYYY.MM.DD-<git-sha>
     docker:
-        needs: [test, e2e-test, lint, type-check]
-        name: 🐳 Release Docker Image
-        if: ${{ always() && needs.changes.outputs.should_run == 'true' && needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped') }}
+        needs: [changes, test, e2e-test, lint, type-check]
+        name: '🐳 Main - Build & Publish Docker Image'
+        if: |
+            ${{
+              needs.changes.outputs.should_run == 'true' &&
+              (needs.changes.outputs.src == 'true' ||
+               needs.changes.outputs.workflows == 'true' ||
+               needs.changes.outputs.docker == 'true') &&
+              (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+              (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
+              (needs.type-check.result == 'success' || needs.type-check.result == 'skipped') &&
+              (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped')
+            }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4

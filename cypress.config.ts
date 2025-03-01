@@ -2,6 +2,30 @@ import { defineConfig } from "cypress";
 
 export default defineConfig({
 	e2e: {
+		video: false,
+		// Disable screenshots on test failure to improve performance
+		screenshotOnRunFailure: false,
+		// Reduce the default timeout values
+		defaultCommandTimeout: 5000,
+		requestTimeout: 5000,
+		responseTimeout: 10000,
+		// Disable unnecessary animations
+		animationDistanceThreshold: 5,
+		// Run tests in parallel when possible
+		experimentalRunAllSpecs: true,
+		// Disable unnecessary network requests
+		experimentalModifyObstructiveThirdPartyCode: true,
+		// Disable unnecessary logging
+		experimentalMemoryManagement: true,
+		// Don't wait for page load events
+		pageLoadTimeout: 10000,
+		// Speed up by not waiting for animations
+		waitForAnimations: false,
+		// Disable unnecessary retries
+		retries: {
+			runMode: 0,
+			openMode: 0
+		},
 		setupNodeEvents(on, config) {
 			// Track connection state and message queue for testing
 			let isConnected = true;
@@ -294,7 +318,7 @@ export default defineConfig({
 						return {
 							content: `Received: ${message}`,
 							author: {
-								username: 'Test-Bot'
+								username: 'Xander Crews'
 							}
 						};
 					}
@@ -695,14 +719,7 @@ export default defineConfig({
 		baseUrl: null,
 		viewportWidth: 1280,
 		viewportHeight: 720,
-		defaultCommandTimeout: 10000,
-		requestTimeout: 10000,
-		responseTimeout: 30000,
-		// Configure video recording
-		video: true,
-		videoCompression: 32,
 		// Configure screenshots
-		screenshotOnRunFailure: true,
 		trashAssetsBeforeRuns: true,
 	},
 	env: {

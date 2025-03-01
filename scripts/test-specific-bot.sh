@@ -39,7 +39,7 @@ fi
 
 # Run the specific bot test
 echo "Running test for ${BOT_NAME}..."
-npx cypress run --spec "cypress/e2e/bots/${BOT_NAME}.cy.ts"
+npx cypress run --spec "cypress/e2e/bots/${BOT_NAME}.cy.ts" --config video=false
 
 # Check if tests failed
 if [ $? -ne 0 ]; then
