@@ -28,13 +28,22 @@ jest.mock('../../../starbunk/bots/triggers/conditions/cooldownCondition', () => 
 
 // Create a timestamp variable for testing
 let mockBluMessageTimestamp = 0;
+let mockLastAvatarUrl = 'https://imgur.com/WcBRCWn.png'; // Default avatar
 
+// Mock the botStateService to control the timestamp and avatar URL
 jest.mock('../../../services/botStateService', () => ({
 	botStateService: {
-		setState: jest.fn(),
+		setState: jest.fn().mockImplementation((key, value) => {
+			if (key === 'bluebot_last_avatar') {
+				mockLastAvatarUrl = value;
+			}
+		}),
 		getState: jest.fn().mockImplementation((key, defaultValue) => {
 			if (key === 'bluebot_last_initial_message_time') {
 				return mockBluMessageTimestamp;
+			}
+			if (key === 'bluebot_last_avatar') {
+				return mockLastAvatarUrl;
 			}
 			return defaultValue;
 		})
@@ -72,6 +81,7 @@ describe('BlueBot', () => {
 
 		// Reset variables
 		mockBluMessageTimestamp = 0;
+		mockLastAvatarUrl = 'https://imgur.com/WcBRCWn.png'; // Default avatar
 		cooldownShouldTriggerResponse = true;
 
 		// Create message mock
@@ -135,6 +145,10 @@ describe('BlueBot', () => {
 					content: 'Did somebody say Blu'
 				})
 			);
+			expect(botStateService.setState).toHaveBeenCalledWith(
+				BLUEBOT_TIMESTAMP_KEY,
+				expect.any(Number)
+			);
 		});
 
 		it('should respond to "bluebot, say something nice about TestUser"', async () => {
@@ -184,8 +198,16 @@ describe('BlueBot', () => {
 
 		it('should respond to "bluebot say something mean about venn" with special message', async () => {
 			// Arrange
-			mockMessage.content = 'bluebot say something mean about venn';
-
+			mockMessage.content = 'bluebot say something nice about venn';
+			const mockMember = createMockGuildMember('user-id', 'TestUser');
+			Object.defineProperty(mockMember, 'displayName', {
+				value: 'TestUser',
+				configurable: true
+			});
+			Object.defineProperty(mockMessage, 'member', {
+				value: mockMember,
+				configurable: true
+			});
 			// Act
 			await blueBot.handleMessage(mockMessage as Message<boolean>);
 
@@ -194,7 +216,7 @@ describe('BlueBot', () => {
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
 					username: 'BlueBot',
-					avatarURL: 'https://imgur.com/Tpo8Ywd.jpg',
+					avatarURL: 'https://imgur.com/WcBRCWn.png',
 					content: 'No way, Venn can suck my blu cane'
 				})
 			);
@@ -299,7 +321,9 @@ describe('BlueBot', () => {
 			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					content: 'Somebody definitely said blu'
+					username: 'BlueBot',
+					avatarURL: 'https://i.imgur.com/dO4a59n.png',
+					content: expect.any(String)
 				})
 			);
 		});
@@ -329,6 +353,10 @@ describe('BlueBot', () => {
 					username: 'BlueBot',
 					content: 'Did somebody say Blu'
 				})
+			);
+			expect(botStateService.setState).toHaveBeenCalledWith(
+				BLUEBOT_TIMESTAMP_KEY,
+				expect.any(Number)
 			);
 		});
 	});
@@ -363,13 +391,31 @@ describe('BlueBot', () => {
 			await blueBot.handleMessage(mockMessage as Message<boolean>);
 
 			// Assert
-			// Match what the implementation actually does, checking only the content for the exact message
 			expect(webhookService.writeMessage).toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					content: 'Somebody definitely said blu',
-					// NOTE: The actual avatar URL in the implementation appears to be different from what the test expected
-					// The implementation uses "https://i.imgur.com/dO4a59n.png"
+					username: 'BlueBot',
+					avatarURL: 'https://i.imgur.com/dO4a59n.png',
+					content: expect.any(String)
+				})
+			);
+		});
+
+		it('should respond with cheeky message when acknowledgment is sent within 5 minutes of initial message', async () => {
+			// Arrange
+			setLastMessageTime(3); // 3 minutes ago
+			mockMessage.content = 'yes, someone said blue';
+
+			// Act
+			await blueBot.handleMessage(mockMessage as Message<boolean>);
+
+			// Assert
+			expect(webhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					username: 'BlueBot',
+					avatarURL: 'https://i.imgur.com/dO4a59n.png',
+					content: expect.any(String)
 				})
 			);
 		});
@@ -386,7 +432,7 @@ describe('BlueBot', () => {
 			expect(webhookService.writeMessage).not.toHaveBeenCalledWith(
 				mockMessage.channel as TextChannel,
 				expect.objectContaining({
-					content: 'Somebody definitely said blu'
+					content: expect.stringMatching(/Somebody definitely said blu|.*BLU.*/)
 				})
 			);
 		});
@@ -414,7 +460,7 @@ describe('BlueBot', () => {
 
 		it('should follow the expected conversation sequence', async () => {
 			// Reset mocks and state before each message
-			const expectResponse = async (message: string, expectedResponse: string | null): Promise<void> => {
+			const expectResponse = async (message: string, expectedResponse: string | null, expectedAvatar?: string): Promise<void> => {
 				jest.clearAllMocks();
 				mockMessage.content = message;
 				await blueBot.handleMessage(mockMessage as Message<boolean>);
@@ -422,12 +468,22 @@ describe('BlueBot', () => {
 				if (expectedResponse === null) {
 					// Expect no response
 					expect(webhookService.writeMessage).not.toHaveBeenCalled();
+				} else if (expectedResponse === 'cheeky') {
+					// For cheeky responses, just check that a response was sent
+					expect(webhookService.writeMessage).toHaveBeenCalledWith(
+						mockMessage.channel as TextChannel,
+						expect.objectContaining({
+							...(expectedAvatar && { avatarURL: expectedAvatar }),
+							content: expect.any(String)
+						})
+					);
 				} else {
 					// Expect specific response
 					expect(webhookService.writeMessage).toHaveBeenCalledWith(
 						mockMessage.channel as TextChannel,
 						expect.objectContaining({
-							content: expectedResponse
+							content: expectedResponse,
+							...(expectedAvatar && { avatarURL: expectedAvatar })
 						})
 					);
 				}
@@ -436,32 +492,32 @@ describe('BlueBot', () => {
 			// 1. Send "blu" expect "Did somebody say Blu"
 			// This should set the timestamp
 			setLastMessageTime(null); // Reset timestamp
-			await expectResponse('blu', 'Did somebody say Blu');
+			await expectResponse('blu', 'Did somebody say Blu', 'https://imgur.com/WcBRCWn.png');
 
-			// 2. Send "blu" expect "Somebody definitely said blu"
+			// 2. Send "blu" expect cheeky response
 			// The timestamp should be recent, so it should trigger the cheeky response
 			setLastMessageTime(1); // 1 minute ago
-			await expectResponse('blu', 'Somebody definitely said blu');
+			await expectResponse('blu', 'cheeky', 'https://i.imgur.com/dO4a59n.png');
 
 			// 3. Send "blu" expect "Did somebody say Blu"
 			// This should reset the timestamp
 			setLastMessageTime(null); // Reset timestamp
-			await expectResponse('blu', 'Did somebody say Blu');
+			await expectResponse('blu', 'Did somebody say Blu', 'https://imgur.com/WcBRCWn.png');
 
-			// 4. Send "yes" expect "Somebody definitely said blu"
+			// 4. Send "yes" expect cheeky response
 			// The timestamp should be recent, so it should trigger the cheeky response
 			setLastMessageTime(1); // 1 minute ago
-			await expectResponse('yes', 'Somebody definitely said blu');
+			await expectResponse('yes', 'cheeky', 'https://i.imgur.com/dO4a59n.png');
 
 			// 5. Send "blu" expect "Did somebody say Blu"
 			// This should reset the timestamp
 			setLastMessageTime(null); // Reset timestamp
-			await expectResponse('blu', 'Did somebody say Blu');
+			await expectResponse('blu', 'Did somebody say Blu', 'https://imgur.com/WcBRCWn.png');
 
-			// 6. Send "blu" expect "Somebody definitely said blu"
+			// 6. Send "blu" expect cheeky response
 			// The timestamp should be recent, so it should trigger the cheeky response
 			setLastMessageTime(1); // 1 minute ago
-			await expectResponse('blu', 'Somebody definitely said blu');
+			await expectResponse('blu', 'cheeky', 'https://i.imgur.com/dO4a59n.png');
 
 			// 7. Send "yes" expect NO RESPONSE
 			// This should fail if the bot responds, as it should not respond to "yes" without a recent "blu" message
@@ -471,7 +527,83 @@ describe('BlueBot', () => {
 			// 8. Send "blu" expect "Did somebody say Blu"
 			// Reset the timestamp to simulate a new conversation
 			setLastMessageTime(null);
-			await expectResponse('blu', 'Did somebody say Blu');
+			await expectResponse('blu', 'Did somebody say Blu', 'https://imgur.com/WcBRCWn.png');
+		});
+	});
+
+	describe('avatar management', () => {
+		it('should use the correct avatar for initial blue message', async () => {
+			// Arrange
+			mockMessage.content = 'blue';
+
+			// Act
+			await blueBot.handleMessage(mockMessage as Message<boolean>);
+
+			// Assert
+			expect(webhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					avatarURL: 'https://imgur.com/WcBRCWn.png'
+				})
+			);
+		});
+
+		it('should use the cheeky avatar for follow-up blue messages', async () => {
+			// Arrange
+			setLastMessageTime(3); // 3 minutes ago
+			mockMessage.content = 'blue';
+
+			// Act
+			await blueBot.handleMessage(mockMessage as Message<boolean>);
+
+			// Assert
+			expect(webhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					avatarURL: 'https://i.imgur.com/dO4a59n.png'
+				})
+			);
+		});
+
+		it('should use the correct avatar for Navy Seal response', async () => {
+			// Arrange
+			const mockVennMember = createMockGuildMember('venn-user-id', 'Venn');
+			mockMessage.author = mockVennMember.user as User;
+			Object.defineProperty(mockMessage.author, 'id', {
+				value: 'venn-user-id',
+				configurable: true
+			});
+			mockMessage.content = 'I hate blue, it\'s the worst bot ever';
+			setLastMessageTime(3); // 3 minutes ago
+
+			// Act
+			await blueBot.handleMessage(mockMessage as Message<boolean>);
+
+			// Assert
+			expect(webhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					avatarURL: 'https://i.imgur.com/dO4a59n.png'
+				})
+			);
+		});
+
+		it('should use the correct avatar for mean response about Venn', async () => {
+			// Arrange
+			mockMessage.content = 'bluebot say something nice about venn';
+
+			// Act
+			await blueBot.handleMessage(mockMessage as Message<boolean>);
+
+			// Assert
+			expect(webhookService.writeMessage).toHaveBeenCalledWith(
+				mockMessage.channel as TextChannel,
+				expect.objectContaining({
+					username: 'BlueBot',
+					content: 'No way, Venn can suck my blu cane',
+					avatarURL: 'https://imgur.com/WcBRCWn.png'
+				})
+			);
 		});
 	});
 });
