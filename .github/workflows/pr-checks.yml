@@ -150,12 +150,19 @@ jobs:
             - name: Run Unit Tests
               run: npm run test
 
-    e2e-test:
-        name: '🤖 PR - Run Cypress E2E Tests'
+    # Run Cypress tests in parallel
+    cypress-parallel:
+        name: '🤖 PR - Run Parallel Cypress Tests'
         runs-on: ubuntu-latest
         needs: [changes, build]
-        # Run E2E tests if src or cypress files changed
+        # Run if src or cypress files changed
         if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.cypress == 'true' }}
+        strategy:
+            fail-fast: false
+            matrix:
+                # Split tests into 4 groups
+                group: [1, 2, 3, 4]
+
         steps:
             - uses: actions/checkout@v4
 
@@ -190,18 +197,52 @@ jobs:
                     "pageLoadTimeout": 10000
                   }' > cypress.env.json
 
-            - name: Clean up any stale Xvfb lock files
+            # Get list of test files and split them
+            - name: Get test files
+              id: test-files
               run: |
-                  for i in {99..110}; do
-                    if [ -f "/tmp/.X${i}-lock" ]; then
-                      sudo rm -f "/tmp/.X${i}-lock"
+                  FILES=$(ls -1 cypress/e2e/bots/*.cy.ts | tr '\n' ' ')
+                  echo "all_files=$FILES" >> $GITHUB_OUTPUT
+
+                  # Count files
+                  FILE_COUNT=$(echo $FILES | wc -w)
+                  echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+
+                  # Calculate files per group
+                  FILES_PER_GROUP=$(( ($FILE_COUNT + 3) / 4 ))
+                  echo "files_per_group=$FILES_PER_GROUP" >> $GITHUB_OUTPUT
+
+            # Determine which files to run for this group
+            - name: Determine test files for this group
+              id: group-files
+              run: |
+                  FILES=(${{ steps.test-files.outputs.all_files }})
+                  FILES_PER_GROUP=${{ steps.test-files.outputs.files_per_group }}
+                  GROUP_INDEX=$((${{ matrix.group }} - 1))
+
+                  START_INDEX=$((GROUP_INDEX * FILES_PER_GROUP))
+
+                  # Get files for this group
+                  GROUP_FILES=""
+                  for ((i=START_INDEX; i<START_INDEX+FILES_PER_GROUP && i<${#FILES[@]}; i++)); do
+                    if [ -n "$GROUP_FILES" ]; then
+                      GROUP_FILES="$GROUP_FILES,"
                     fi
+                    GROUP_FILES="$GROUP_FILES${FILES[$i]}"
                   done
 
-            - name: Run Bot Tests with Optimized Settings
+                  echo "group_files=$GROUP_FILES" >> $GITHUB_OUTPUT
+
+            # Run tests for this group with a unique display number
+            - name: Run Cypress tests (Group ${{ matrix.group }})
               run: |
-                  # Set unique display number
-                  DISPLAY_NUM=100
+                  # Set unique display number for this group
+                  DISPLAY_NUM=$((100 + ${{ matrix.group }}))
+
+                  # Clean up any stale Xvfb lock files
+                  if [ -f "/tmp/.X${DISPLAY_NUM}-lock" ]; then
+                    sudo rm -f "/tmp/.X${DISPLAY_NUM}-lock"
+                  fi
 
                   # Start Xvfb with unique display
                   Xvfb :${DISPLAY_NUM} -screen 0 1280x720x24 &
@@ -210,8 +251,8 @@ jobs:
                   # Export display for Cypress
                   export DISPLAY=:${DISPLAY_NUM}
 
-                  # Run tests with optimized settings
-                  npm run test:e2e:bots
+                  # Run tests
+                  npx cypress run --spec "${{ steps.group-files.outputs.group_files }}" --config video=false,screenshotOnRunFailure=true
                   TEST_RESULT=$?
 
                   # Kill Xvfb
@@ -230,14 +271,31 @@ jobs:
               uses: actions/upload-artifact@v4
               if: failure()
               with:
-                  name: cypress-screenshots
+                  name: cypress-screenshots-group-${{ matrix.group }}
                   path: cypress/screenshots
                   if-no-files-found: ignore
+
+    # Summary job that depends on all test groups
+    test-summary:
+        name: '📊 PR - Cypress Test Summary'
+        runs-on: ubuntu-latest
+        needs: cypress-parallel
+        if: always()
+        steps:
+            - name: Test Summary
+              run: |
+                  if [ "${{ needs.cypress-parallel.result }}" == "success" ]; then
+                    echo "✅ All Cypress tests passed successfully!"
+                    exit 0
+                  else
+                    echo "❌ Some Cypress tests failed. Check the logs for details."
+                    exit 1
+                  fi
 
     docker-build:
         name: '🐳 PR - Build Docker Image'
         runs-on: ubuntu-latest
-        needs: [changes, unit-test, e2e-test, lint, type-check]
+        needs: [changes, unit-test, cypress-parallel, test-summary, lint, type-check]
         # Run docker build if src or workflow or docker files changed
         if: |
             ${{
@@ -245,7 +303,8 @@ jobs:
                needs.changes.outputs.workflows == 'true' ||
                needs.changes.outputs.docker == 'true') &&
               (needs.unit-test.result == 'success' || needs.unit-test.result == 'skipped') &&
-              (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped') &&
+              (needs.cypress-parallel.result == 'success' || needs.cypress-parallel.result == 'skipped') &&
+              (needs.test-summary.result == 'success' || needs.test-summary.result == 'skipped') &&
               (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
               (needs.type-check.result == 'success' || needs.type-check.result == 'skipped')
             }}
@@ -260,5 +319,6 @@ jobs:
               with:
                   context: .
                   push: false
-                  load: true
-                  tags: ${{ github.repository }}:pr-${{ github.event.pull_request.number }}
+                  tags: ghcr.io/${{ github.repository }}/app:pr-${{ github.event.pull_request.number }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
