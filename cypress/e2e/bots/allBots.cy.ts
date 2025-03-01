@@ -57,7 +57,7 @@ describe('All Bots E2E Tests', () => {
 	describe('Nice-Bot', () => {
 		it('should respond to "69" with "nice"', () => {
 			cy.sendDiscordMessage(
-				BOT_CONSTANTS.NICEBOT_BOT.TEST.MESSAGE.SIXTY_NINE_IN_SENTENCE,
+				BOT_CONSTANTS.NICEBOT.TEST.MESSAGE.SIXTY_NINE_IN_SENTENCE,
 				BOT_NAMES_IN_DISCORD.NICE_BOT,
 				/nice\.?/i,
 				channelIDs.NebulaChat

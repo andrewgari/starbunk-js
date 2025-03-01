@@ -10,7 +10,7 @@ import BOT_CONSTANTS from '../../support/botConstants';
  */
 describe('BlueBot E2E Tests', () => {
   // In the model file it's "BlueBot" but in Cypress tests it's "BlueBot" with a hyphen
-  const { RESPONSE, TEST } = BOT_CONSTANTS.BLUEBOT_BOT;
+  const { RESPONSE, TEST } = BOT_CONSTANTS.BLUEBOT;
   const BOT_NAME_IN_DISCORD = 'BlueBot';
 
   // Create a flexible pattern for matching responses that might have case or punctuation differences
