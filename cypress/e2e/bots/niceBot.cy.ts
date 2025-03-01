@@ -1,6 +1,7 @@
 /// <reference types="cypress" />
 import channelIDs from '../../../src/discord/channelIDs';
 import BOT_CONSTANTS from '../../support/botConstants';
+import '../../support/commands';
 
 /**
  * E2E tests for NiceBot
@@ -10,7 +11,7 @@ import BOT_CONSTANTS from '../../support/botConstants';
  */
 describe('Nice-Bot E2E Tests', () => {
 	// In the model file it's "NiceBot" but in Cypress tests it's "Nice-Bot"
-	const { RESPONSE, TEST } = BOT_CONSTANTS.NICE_BOT;
+	const { RESPONSE, TEST } = BOT_CONSTANTS.NICEBOT_BOT;
 	const BOT_NAME_IN_DISCORD = 'Nice-Bot';
 
 	// The model has "Nice." but the actual response might be "nice" (lowercase)

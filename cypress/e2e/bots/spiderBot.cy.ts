@@ -1,6 +1,7 @@
 /// <reference types="cypress" />
 import channelIDs from '../../../src/discord/channelIDs';
 import BOT_CONSTANTS from '../../support/botConstants';
+import '../../support/commands';
 
 /**
  * E2E tests for SpiderBot
@@ -10,7 +11,7 @@ import BOT_CONSTANTS from '../../support/botConstants';
  */
 describe('Spider-Bot E2E Tests', () => {
 	// In the model file it's "Spider-Bot" but in Cypress tests it's "Spider-Bot" with a hyphen
-	const { RESPONSE, TEST } = BOT_CONSTANTS.SPIDER_BOT;
+	const { RESPONSE, TEST } = BOT_CONSTANTS.SPIDERBOT_BOT;
 	const BOT_NAME_IN_DISCORD = 'Spider-Bot';
 
 	before(() => {
