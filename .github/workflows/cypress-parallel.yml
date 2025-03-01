@@ -221,7 +221,7 @@ jobs:
         needs: cypress-parallel
         if: always()
         steps:
-            - name: Test Summary
+            - name: Generate Cypress Parallel Test Execution Report
               run: |
                   if [ "${{ needs.cypress-parallel.result }}" == "success" ]; then
                     echo "✅ All Cypress tests passed successfully!"
