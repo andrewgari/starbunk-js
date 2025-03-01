@@ -1,7 +1,22 @@
 /// <reference types="cypress" />
 import channelIDs from '../../../src/discord/channelIDs';
+import BOT_CONSTANTS from '../../support/botConstants';
 
+/**
+ * E2E tests for NiceBot
+ *
+ * These tests verify that NiceBot responds correctly to messages containing "69"
+ * and ignores messages that don't contain "69".
+ */
 describe('Nice-Bot E2E Tests', () => {
+	// In the model file it's "NiceBot" but in Cypress tests it's "Nice-Bot"
+	const { RESPONSE, TEST } = BOT_CONSTANTS.NICE_BOT;
+	const BOT_NAME_IN_DISCORD = 'Nice-Bot';
+
+	// The model has "Nice." but the actual response might be "nice" (lowercase)
+	// So we use a case-insensitive regex that matches both
+	const RESPONSE_PATTERN = /nice\.?/i;
+
 	before(() => {
 		// Initialize Discord client before running tests
 		cy.initDiscordClient();
@@ -9,52 +24,52 @@ describe('Nice-Bot E2E Tests', () => {
 
 	it('should respond to "69" with "nice"', () => {
 		cy.sendDiscordMessage(
-			'The answer is 69',
-			'Nice-Bot',
-			/nice/i,
+			TEST.MESSAGE.SIXTY_NINE,
+			BOT_NAME_IN_DISCORD,
+			RESPONSE_PATTERN,
 			channelIDs.NebulaChat
 		);
 	});
 
 	it('should respond to "69" at the beginning of a sentence', () => {
 		cy.sendDiscordMessage(
-			'69 is a funny number',
-			'Nice-Bot',
-			/nice/i,
+			`${TEST.MESSAGE.SIXTY_NINE} is a funny number`,
+			BOT_NAME_IN_DISCORD,
+			RESPONSE_PATTERN,
 			channelIDs.NebulaChat
 		);
 	});
 
 	it('should respond to "69" at the end of a sentence', () => {
 		cy.sendDiscordMessage(
-			'My favorite number is 69',
-			'Nice-Bot',
-			/nice/i,
+			`My favorite number is ${TEST.MESSAGE.SIXTY_NINE}`,
+			BOT_NAME_IN_DISCORD,
+			RESPONSE_PATTERN,
 			channelIDs.NebulaChat
 		);
 	});
 
 	it('should respond to "69" in the middle of a word', () => {
 		cy.sendDiscordMessage(
-			'The route69highway is closed',
-			'Nice-Bot',
-			/nice/i,
+			`The route${TEST.MESSAGE.SIXTY_NINE}highway is closed`,
+			BOT_NAME_IN_DISCORD,
+			RESPONSE_PATTERN,
 			channelIDs.NebulaChat
 		);
 	});
 
 	it('should respond to "69" with other numbers', () => {
 		cy.sendDiscordMessage(
-			'The numbers are 42, 69, and 420',
-			'Nice-Bot',
-			/nice/i,
+			`The numbers are ${TEST.MESSAGE.OTHER_NUMBER}, ${TEST.MESSAGE.SIXTY_NINE}, and 420`,
+			BOT_NAME_IN_DISCORD,
+			RESPONSE_PATTERN,
 			channelIDs.NebulaChat
 		);
 	});
 
 	it('should NOT respond to a message without "69"', () => {
 		cy.task('sendDiscordMessage', {
-			message: 'The answer is 42',
+			message: TEST.MESSAGE.OTHER_NUMBER,
 			channelId: channelIDs.NebulaChat,
 			expectResponse: false
 		}).then((result) => {

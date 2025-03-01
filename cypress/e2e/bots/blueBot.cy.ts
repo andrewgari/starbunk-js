@@ -1,6 +1,6 @@
 /// <reference types="cypress" />
 import channelIDs from '../../../src/discord/channelIDs';
-import { DEFAULT_RESPONSES, NICE_RESPONSE_TEMPLATE } from '../../../src/starbunk/bots/responses/blueBot.responses';
+import { DEFAULT_RESPONSES, NICE_RESPONSE_TEMPLATE } from '../../../src/starbunk/bots/reply-bots/blueBot/blueBotModel';
 import { testBot, testBotNoResponse } from '../../support/botTestHelper';
 
 /**
@@ -13,7 +13,6 @@ describe('BlueBot E2E Tests', () => {
 	before(() => {
 		// Use try-catch to handle the initialization safely
 		try {
-			// @ts-expect-error - initDiscordClient may exist at runtime but not in types
 			cy.initDiscordClient();
 		} catch (e) {
 			cy.log('initDiscordClient not available, skipping initialization');
