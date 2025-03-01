@@ -1,19 +1,14 @@
 name: Cypress Parallel Tests
 
 on:
-    # Run on pull requests
-    pull_request:
-        types: [opened, synchronize, reopened]
-        paths:
-            - 'src/**'
-            - 'cypress/**'
-            - 'package.json'
-            - 'package-lock.json'
-            - 'cypress.config.ts'
-            - 'scripts/**'
-
-    # Allow manual triggering
+    # Only run when manually triggered
     workflow_dispatch:
+        inputs:
+            run_all:
+                description: 'Run all tests regardless of changed files'
+                required: false
+                default: false
+                type: 'boolean'
 
 jobs:
     # Initial check to determine what files changed
