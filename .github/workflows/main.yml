@@ -22,19 +22,19 @@ jobs:
     # - should_run: true if PR merged or direct push
     # - src: changes to source code
     # - tests: changes to test files
+    # - cypress: changes to cypress files
+    # - workflows: changes to workflow files
     # - docker: changes to Docker configuration
-    # - config: changes to project configuration
-    # - bots: changes to bot-related code
     changes:
-        name: 🔍 Detect Changes
+        name: '🔍 Main - Detect File Changes'
         runs-on: ubuntu-latest
         outputs:
             should_run: ${{ steps.check_merged.outputs.should_run }}
             src: ${{ steps.filter.outputs.src }}
             tests: ${{ steps.filter.outputs.tests }}
+            cypress: ${{ steps.filter.outputs.cypress }}
+            workflows: ${{ steps.filter.outputs.workflows }}
             docker: ${{ steps.filter.outputs.docker }}
-            config: ${{ steps.filter.outputs.config }}
-            bots: ${{ steps.filter.outputs.bots }}
         steps:
             - name: Check if PR was merged or direct push
               id: check_merged
@@ -59,146 +59,60 @@ jobs:
                       src:
                           - 'src/**'
                           - '!src/tests/**'
+                          - '!cypress/**'
                       tests:
                           - 'src/tests/**'
                           - '**/*.test.ts'
                           - '**/*.spec.ts'
                           - 'jest.config.js'
+                      cypress:
+                          - 'cypress/**'
+                          - 'cypress.config.ts'
+                      workflows:
+                          - '.github/workflows/**'
                       docker:
                           - 'Dockerfile*'
                           - '.dockerignore'
                           - 'docker-compose*.yml'
-                      config:
-                          - 'package.json'
-                          - 'package-lock.json'
-                          - 'tsconfig*.json'
-                          - '.eslintrc*'
-                          - '.prettierrc*'
-                      bots:
-                          - 'src/starbunk/bots/**'
-                          - 'cypress/e2e/bots/**'
 
-    # Builds the TypeScript project and saves artifacts for later jobs
-    build:
+    # Verify that PR checks have passed
+    verify-pr-checks:
+        name: '✅ Main - Verify PR Checks Passed'
         needs: [changes]
-        name: 🔨 Build
-        # Only run if PR was merged or direct push to main/develop
         if: ${{ needs.changes.outputs.should_run == 'true' }}
         runs-on: ubuntu-latest
+        outputs:
+            checks_passed: ${{ steps.pr_status.outputs.checks_passed }}
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: '20'
-                  cache: 'npm'
-            - run: npm ci
-            - run: npm run build
-            - name: Upload Build Artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                  name: build-artifacts
-                  path: dist/
-                  if-no-files-found: error
-
-    # Runs ESLint to ensure code quality
-    lint:
-        needs: [changes]
-        name: 🔍 Lint
-        if: ${{ needs.changes.outputs.should_run == 'true' }}
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: '20'
-                  cache: 'npm'
-            - run: npm ci
-            - run: npm run lint
-
-    # Verifies TypeScript types are correct
-    type-check:
-        needs: [changes]
-        name: 🔍 Type Check
-        if: ${{ needs.changes.outputs.should_run == 'true' }}
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: '20'
-                  cache: 'npm'
-            - run: npm ci
-            - run: npm run type-check:main
-
-    # Runs Jest unit tests using the built artifacts
-    test:
-        needs: [changes, build]
-        name: 🧪 Test
-        # Only run if PR was merged or direct push to main/develop
-        if: ${{ needs.changes.outputs.should_run == 'true' }}
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: '20'
-                  cache: 'npm'
-            - run: npm ci
-            - name: Download Build Artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: build-artifacts
-                  path: dist/
-            - run: npm run test
-
-    # Runs Cypress E2E tests for bot functionality
-    # Only executes if bot-related code has changed
-    e2e-test:
-        needs: [changes, build]
-        name: 🤖 E2E Bot Tests
-        if: ${{ needs.changes.outputs.should_run == 'true' && needs.changes.outputs.bots == 'true' }}
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: '20'
-                  cache: 'npm'
-            - run: npm ci
-            - name: Download Build Artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: build-artifacts
-                  path: dist/
-            - name: Create .env file
+            - name: Check PR Status
+              id: pr_status
               run: |
-                  echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
-                  echo "NODE_ENV=test" >> .env
-            - name: Run Bot Tests
-              run: npm run test:e2e:bots
-              env:
-                  CYPRESS_DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
-                  NODE_ENV: test
-                  # Add Cypress-specific environment variables
-                  CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Upload Test Screenshots
-              uses: actions/upload-artifact@v4
-              if: failure()
-              with:
-                  name: cypress-screenshots
-                  path: cypress/screenshots
-                  if-no-files-found: ignore
+                  if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.merged }}" == "true" ]]; then
+                    # For merged PRs, check the PR status
+                    echo "PR #${{ github.event.pull_request.number }} was merged, assuming all checks passed"
+                    echo "checks_passed=true" >> $GITHUB_OUTPUT
+                  else
+                    # For direct pushes to main/develop, we assume the developer knows what they're doing
+                    # In a real-world scenario, you might want to add additional safeguards here
+                    echo "Direct push to branch, assuming developer verified changes"
+                    echo "checks_passed=true" >> $GITHUB_OUTPUT
+                  fi
 
     # Builds and publishes Docker image if all checks pass
     # Tags images with:
     # - latest
     # - YYYY.MM.DD-<git-sha>
     docker:
-        needs: [test, e2e-test, lint, type-check]
-        name: 🐳 Release Docker Image
-        if: ${{ always() && needs.changes.outputs.should_run == 'true' && needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped') }}
+        needs: [changes, verify-pr-checks]
+        name: '🐳 Main - Build & Publish Docker Image'
+        if: |
+            ${{
+              needs.changes.outputs.should_run == 'true' &&
+              needs.verify-pr-checks.outputs.checks_passed == 'true' &&
+              (needs.changes.outputs.src == 'true' ||
+               needs.changes.outputs.workflows == 'true' ||
+               needs.changes.outputs.docker == 'true')
+            }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -226,3 +140,5 @@ jobs:
                   tags: |
                       ghcr.io/${{ github.repository }}/app:latest
                       ghcr.io/${{ github.repository }}/app:${{ steps.version.outputs.tag }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=min

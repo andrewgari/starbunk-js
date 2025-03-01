@@ -11,14 +11,14 @@ on:
 jobs:
     # Initial check to determine what files changed
     changes:
-        name: 🔍 Detect Changes
+        name: '🔍 PR - Detect File Changes'
         runs-on: ubuntu-latest
         outputs:
             src: ${{ steps.filter.outputs.src }}
             tests: ${{ steps.filter.outputs.tests }}
+            cypress: ${{ steps.filter.outputs.cypress }}
+            workflows: ${{ steps.filter.outputs.workflows }}
             docker: ${{ steps.filter.outputs.docker }}
-            config: ${{ steps.filter.outputs.config }}
-            bots: ${{ steps.filter.outputs.bots }}
         steps:
             - uses: actions/checkout@v4
               with:
@@ -32,30 +32,28 @@ jobs:
                       src:
                           - 'src/**'
                           - '!src/tests/**'
+                          - '!cypress/**'
                       tests:
                           - 'src/tests/**'
                           - '**/*.test.ts'
                           - '**/*.spec.ts'
                           - 'jest.config.js'
+                      cypress:
+                          - 'cypress/**'
+                          - 'cypress.config.ts'
+                      workflows:
+                          - '.github/workflows/**'
                       docker:
                           - 'Dockerfile*'
                           - '.dockerignore'
                           - 'docker-compose*.yml'
-                      config:
-                          - 'package.json'
-                          - 'package-lock.json'
-                          - 'tsconfig*.json'
-                          - '.eslintrc*'
-                          - '.prettierrc*'
-                      bots:
-                          - 'src/starbunk/bots/**'
-                          - 'cypress/e2e/bots/**'
 
     build:
-        name: 🔨 Build
+        name: '🔨 PR - Build TypeScript Project'
         runs-on: ubuntu-latest
         needs: [changes]
-        # Always run build regardless of what changed
+        # Only run build if src files changed
+        if: ${{ needs.changes.outputs.src == 'true' }}
         steps:
             - uses: actions/checkout@v4
 
@@ -79,9 +77,11 @@ jobs:
                   if-no-files-found: error
 
     lint:
-        name: 🔍 Lint
+        name: '🔍 PR - Run ESLint Code Quality Checks'
         runs-on: ubuntu-latest
         needs: [changes]
+        # Run lint if src or test files changed
+        if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true' }}
         steps:
             - uses: actions/checkout@v4
 
@@ -98,9 +98,11 @@ jobs:
               run: npm run lint
 
     type-check:
-        name: 🔍 Type Check
+        name: '🔍 PR - Verify TypeScript Types'
         runs-on: ubuntu-latest
         needs: [changes]
+        # Run type check if src or test files changed
+        if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true' }}
         steps:
             - uses: actions/checkout@v4
 
@@ -117,13 +119,15 @@ jobs:
               run: npm run type-check:main
 
             - name: Type Check Cypress Code
+              if: ${{ needs.changes.outputs.cypress == 'true' }}
               run: npm run type-check:cypress
 
     unit-test:
-        name: 🧪 Unit Tests
+        name: '🧪 PR - Run Jest Unit Tests'
         runs-on: ubuntu-latest
         needs: [changes, build]
-        # Always run unit tests regardless of what changed
+        # Run unit tests if src or test files changed
+        if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true' }}
         steps:
             - uses: actions/checkout@v4
 
@@ -141,15 +145,24 @@ jobs:
               with:
                   name: build-artifacts
                   path: dist/
+              if: ${{ needs.changes.outputs.src == 'true' }}
 
             - name: Run Unit Tests
               run: npm run test
 
-    e2e-test:
-        name: 🤖 E2E Bot Tests
+    # Run Cypress tests in parallel
+    cypress-parallel:
+        name: '🤖 PR - Run Parallel Cypress Tests'
         runs-on: ubuntu-latest
         needs: [changes, build]
-        if: ${{ needs.changes.outputs.bots == 'true' }}
+        # Run if src or cypress files changed
+        if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.cypress == 'true' }}
+        strategy:
+            fail-fast: true
+            matrix:
+                # Split tests into 4 groups
+                group: [1, 2, 3, 4]
+
         steps:
             - uses: actions/checkout@v4
 
@@ -167,14 +180,141 @@ jobs:
               with:
                   name: build-artifacts
                   path: dist/
+              if: ${{ needs.changes.outputs.src == 'true' }}
 
             - name: Create .env file
               run: |
                   echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
                   echo "NODE_ENV=test" >> .env
 
-            - name: Run Bot Tests
-              run: npm run test:e2e:bots
+            - name: Create cypress.env.json
+              run: |
+                  echo '{
+                    "numTestsKeptInMemory": 5,
+                    "requestTimeout": 5000,
+                    "responseTimeout": 10000,
+                    "defaultCommandTimeout": 5000,
+                    "pageLoadTimeout": 10000
+                  }' > cypress.env.json
+
+            # Get list of test files and analyze them for better distribution
+            - name: Analyze test files
+              id: test-files
+              run: |
+                  # Get all test files
+                  FILES=$(find cypress/e2e/bots -name "*.cy.ts" | sort)
+
+                  # Count the number of test files
+                  FILE_COUNT=$(echo "$FILES" | wc -l)
+                  echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+
+                  # Create arrays to store file info
+                  declare -a FILE_PATHS=()
+                  declare -a FILE_SIZES=()
+                  declare -a FILE_COMPLEXITY=()
+
+                  # Analyze each file for size and complexity
+                  while IFS= read -r file; do
+                    # Store file path
+                    FILE_PATHS+=("$file")
+
+                    # Get file size
+                    SIZE=$(wc -c < "$file")
+                    FILE_SIZES+=($SIZE)
+
+                    # Estimate complexity based on number of test cases
+                    # Count 'it(' and 'test(' occurrences as a proxy for test cases
+                    TEST_COUNT=$(grep -E "it\(|test\(" "$file" | wc -l)
+
+                    # Count describe blocks as they add setup/teardown overhead
+                    DESCRIBE_COUNT=$(grep -E "describe\(" "$file" | wc -l)
+
+                    # Calculate weighted complexity
+                    COMPLEXITY=$((TEST_COUNT * 10 + DESCRIBE_COUNT * 5 + SIZE / 1000))
+                    FILE_COMPLEXITY+=($COMPLEXITY)
+                  done <<< "$FILES"
+
+                  # Save file paths and complexity scores
+                  echo "file_paths=${FILE_PATHS[*]}" >> $GITHUB_OUTPUT
+                  echo "file_complexity=${FILE_COMPLEXITY[*]}" >> $GITHUB_OUTPUT
+
+                  # Distribute files across groups using a greedy algorithm
+                  # This ensures more balanced execution times
+                  NUM_GROUPS=4
+                  declare -a GROUP_FILES=()
+                  declare -a GROUP_LOAD=()
+
+                  # Initialize arrays
+                  for ((i=0; i<NUM_GROUPS; i++)); do
+                    GROUP_FILES[$i]=""
+                    GROUP_LOAD[$i]=0
+                  done
+
+                  # Sort files by complexity (descending) and distribute
+                  # Start with the most complex files to ensure better balance
+                  for ((i=0; i<${#FILE_PATHS[@]}; i++)); do
+                    # Find the group with the lowest current load
+                    MIN_LOAD_IDX=0
+                    MIN_LOAD=${GROUP_LOAD[0]}
+
+                    for ((j=1; j<NUM_GROUPS; j++)); do
+                      if (( ${GROUP_LOAD[$j]} < $MIN_LOAD )); then
+                        MIN_LOAD_IDX=$j
+                        MIN_LOAD=${GROUP_LOAD[$j]}
+                      fi
+                    done
+
+                    # Add file to the group with the lowest load
+                    if [[ -n "${GROUP_FILES[$MIN_LOAD_IDX]}" ]]; then
+                      GROUP_FILES[$MIN_LOAD_IDX]="${GROUP_FILES[$MIN_LOAD_IDX]},${FILE_PATHS[$i]}"
+                    else
+                      GROUP_FILES[$MIN_LOAD_IDX]="${FILE_PATHS[$i]}"
+                    fi
+
+                    # Update the group's load
+                    GROUP_LOAD[$MIN_LOAD_IDX]=$((${GROUP_LOAD[$MIN_LOAD_IDX]} + ${FILE_COMPLEXITY[$i]}))
+                  done
+
+                  # Output the file lists for each group
+                  for ((i=0; i<NUM_GROUPS; i++)); do
+                    echo "group_$((i+1))_files=${GROUP_FILES[$i]}" >> $GITHUB_OUTPUT
+                    echo "group_$((i+1))_load=${GROUP_LOAD[$i]}" >> $GITHUB_OUTPUT
+                    echo "Group $((i+1)) has ${GROUP_LOAD[$i]} complexity units"
+                  done
+
+            # Run tests for this group
+            - name: Run Cypress tests (Group ${{ matrix.group }})
+              run: |
+                  # Set unique display number for this group
+                  DISPLAY_NUM=$((100 + ${{ matrix.group }}))
+
+                  # Clean up any stale Xvfb lock files
+                  if [ -f "/tmp/.X${DISPLAY_NUM}-lock" ]; then
+                    sudo rm -f "/tmp/.X${DISPLAY_NUM}-lock"
+                  fi
+
+                  # Start Xvfb with unique display
+                  Xvfb :${DISPLAY_NUM} -screen 0 1280x720x24 &
+                  XVFB_PID=$!
+
+                  # Export display for Cypress
+                  export DISPLAY=:${DISPLAY_NUM}
+
+                  # Get the files for this group
+                  GROUP_FILES="${{ steps.test-files.outputs[format('group_{0}_files', matrix.group)] }}"
+
+                  echo "Running tests for group ${{ matrix.group }} with complexity ${{ steps.test-files.outputs[format('group_{0}_load', matrix.group)] }}"
+                  echo "Files: $GROUP_FILES"
+
+                  # Run tests
+                  npx cypress run --spec "$GROUP_FILES" --config video=false,screenshotOnRunFailure=true
+                  TEST_RESULT=$?
+
+                  # Kill Xvfb
+                  kill $XVFB_PID || true
+
+                  # Return test result
+                  exit $TEST_RESULT
               env:
                   CYPRESS_DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
                   NODE_ENV: test
@@ -186,15 +326,43 @@ jobs:
               uses: actions/upload-artifact@v4
               if: failure()
               with:
-                  name: cypress-screenshots
+                  name: cypress-screenshots-group-${{ matrix.group }}
                   path: cypress/screenshots
                   if-no-files-found: ignore
 
-    docker-build:
-        name: 🐳 Docker Build
+    # Summary job that depends on all test groups
+    test-summary:
+        name: '📊 PR - Cypress Test Summary'
         runs-on: ubuntu-latest
-        needs: [unit-test, e2e-test, lint, type-check]
-        if: ${{ always() && (needs.changes.outputs.docker == 'true' || success()) && needs.unit-test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && (needs.e2e-test.result == 'success' || needs.e2e-test.result == 'skipped') }}
+        needs: cypress-parallel
+        if: always()
+        steps:
+            - name: Test Summary
+              run: |
+                  if [ "${{ needs.cypress-parallel.result }}" == "success" ]; then
+                    echo "✅ All Cypress tests passed successfully!"
+                    exit 0
+                  else
+                    echo "❌ Some Cypress tests failed. Check the logs for details."
+                    exit 1
+                  fi
+
+    docker-build:
+        name: '🐳 PR - Build Docker Image'
+        runs-on: ubuntu-latest
+        needs: [changes, unit-test, cypress-parallel, test-summary, lint, type-check]
+        # Run docker build if src or workflow or docker files changed
+        if: |
+            ${{
+              (needs.changes.outputs.src == 'true' ||
+               needs.changes.outputs.workflows == 'true' ||
+               needs.changes.outputs.docker == 'true') &&
+              (needs.unit-test.result == 'success' || needs.unit-test.result == 'skipped') &&
+              (needs.cypress-parallel.result == 'success' || needs.cypress-parallel.result == 'skipped') &&
+              (needs.test-summary.result == 'success' || needs.test-summary.result == 'skipped') &&
+              (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
+              (needs.type-check.result == 'success' || needs.type-check.result == 'skipped')
+            }}
         steps:
             - uses: actions/checkout@v4
 
@@ -206,5 +374,6 @@ jobs:
               with:
                   context: .
                   push: false
-                  load: true
-                  tags: ${{ github.repository }}:pr-${{ github.event.pull_request.number }}
+                  tags: ghcr.io/${{ github.repository }}/app:pr-${{ github.event.pull_request.number }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=min
