@@ -111,10 +111,56 @@ class RecentBluMessageCondition implements TriggerCondition {
  * Custom response generator for cheeky "Somebody definitely said blu" message
  */
 class CheekyBluResponseGenerator implements ResponseGenerator {
+	private readonly cheekyResponses = [
+		"Somebody definitely said blu!",
+		"I HEARD THAT! Someone said BLU!",
+		"Did I hear BLU? I definitely heard BLU!",
+		"BLU! BLU! BLU! I knew I heard it!",
+		"Oh my stars, was that a BLU I heard?!",
+		"*excitedly* BLU! Someone said BLU!",
+		"You can't hide it from me - I heard BLU!",
+		"My blu-dar is going off the charts!",
+		"That's right! Keep saying BLU!",
+		"BLU is my favorite word and you just said it!",
+		"*gasps dramatically* Was that... BLU?!",
+		"I'm 100% certain someone mentioned BLU!",
+		"The bluest of words has been spoken!",
+		"My ears are perfectly tuned to detect BLU!",
+		"BLU! BLU! The magical word has been uttered!",
+		"*jumps up and down* BLU! BLU! BLU!",
+		"Did you just say the B-word?! The BLU word?!",
+		"My blu-senses are tingling!",
+		"BLUUUUUUUUUUUUUUUUUUU!",
+		"*falls out of chair* Someone said BLU again!",
+		"The sacred word has been spoken: BLU!",
+		"*puts on sunglasses* That's what I call a BLU moment",
+		"Stop the presses! Someone said BLU!",
+		"*does a little dance* B-L-U! B-L-U!",
+		"Blu-tiful! Simply blu-tiful!",
+		"*rings bell* ATTENTION EVERYONE! SOMEONE SAID BLU!",
+		"I live for these blu moments!",
+		"*pretends to faint* The power of BLU is overwhelming!",
+		"That's the bluest thing I've heard all day!",
+		"*nods vigorously* Yes! Yes! BLU! BLU!",
+		"Once you go blu, you never go back!",
+		"*points excitedly* I HEARD BLU! RIGHT THERE!",
+		"The prophecy is true - someone said BLU!",
+		"*adjusts bow tie* Did someone mention my favorite color?",
+		"Blu-ming marvelous! Someone said it!",
+		"*spins in circles* BLU! BLU! BLU! BLU!",
+		"That's what I'm talking about! BLU!",
+		"*raises eyebrows* Oh? Oh! BLU! BLU!",
+		"Blu-per duper! You said the magic word!",
+		"*throws confetti* CONGRATULATIONS! YOU SAID BLU!"
+	];
+
 	async generateResponse(): Promise<string> {
 		// Store the avatar used for this response
 		botStateService.setState(BLUEBOT_LAST_AVATAR_KEY, CHEEKY_AVATAR);
-		return "Somebody definitely said blu";
+
+		// Select a random response from the array
+		const randomIndex = Math.floor(Math.random() * this.cheekyResponses.length);
+		return this.cheekyResponses[randomIndex];
 	}
 }
 
