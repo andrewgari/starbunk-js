@@ -1,7 +1,5 @@
 /// <reference types="cypress" />
 import channelIDs from '../../../src/discord/channelIDs';
-import { testBot, testBotNoResponse } from '../../support/botTestHelper';
-import '../../support/index.d.ts';
 
 /**
  * E2E tests for the AttitudeBot
@@ -31,12 +29,12 @@ describe('AttitudeBot E2E Tests', () => {
 	// Run all response tests
 	responseTests.forEach(test => {
 		it(`should respond ${test.name}`, () => {
-			testBot({
-				botName: 'AttitudeBot',
-				triggerMessage: test.message,
-				expectedResponsePattern: /Not with THAT attitude!!!/,
-				channelId: channelIDs.NebulaChat
-			});
+			cy.sendDiscordMessage(
+				test.message,
+				'Attitude-Bot',
+				/Not with THAT attitude!!!/,
+				channelIDs.NebulaChat
+			);
 		});
 	});
 
@@ -52,7 +50,7 @@ describe('AttitudeBot E2E Tests', () => {
 	// Run all no-response tests
 	noResponseTests.forEach(test => {
 		it(`should not respond to ${test.name}`, () => {
-			testBotNoResponse('AttitudeBot', test.message, channelIDs.NebulaChat);
+			cy.testBotNoResponse(test.message, channelIDs.NebulaChat);
 		});
 	});
 });
