@@ -1,6 +1,7 @@
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import ReplyBot from '../replyBot';
+import { AVATAR_URL, BOT_GREETING, BOT_NAME, RESPONSE_CHANCE } from '../responses/botBot.responses';
 import { RandomChanceCondition } from '../triggers/conditions/randomChanceCondition';
 /**
  * BotBot - A bot that occasionally responds to other bots
@@ -13,12 +14,12 @@ export default function createBotBot(
 ): ReplyBot {
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
-	return new BotBuilder('BotBot', webhookSvc)
-		.withAvatar('https://cdn-icons-png.flaticon.com/512/4944/4944377.png')
+	return new BotBuilder(BOT_NAME, webhookSvc)
+		.withAvatar(AVATAR_URL)
 		.withCustomCondition(
-			"Why hello there, fellow bot 🤖",
-			'https://cdn-icons-png.flaticon.com/512/4944/4944377.png',
-			new RandomChanceCondition(5)
+			BOT_GREETING,
+			AVATAR_URL,
+			new RandomChanceCondition(RESPONSE_CHANCE)
 		)
 		.allowBotMessages(true)
 		.build();

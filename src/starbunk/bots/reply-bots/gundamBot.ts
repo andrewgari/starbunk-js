@@ -1,6 +1,7 @@
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import ReplyBot from '../replyBot';
+import { AVATAR_URL, BOT_NAME, GUNDAM_RESPONSE } from '../responses/gundamBot.responses';
 import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
 /**
@@ -12,12 +13,11 @@ export default function createGundamBot(
 ): ReplyBot {
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
-	const avatarUrl = 'https://i.imgur.com/WuBBl0A.png';
-	return new BotBuilder('GundamBot', webhookSvc)
-		.withAvatar(avatarUrl)
+	return new BotBuilder(BOT_NAME, webhookSvc)
+		.withAvatar(AVATAR_URL)
 		.withCustomCondition(
-			"That's the giant unicorn robot gandam, there i said it",
-			avatarUrl,
+			GUNDAM_RESPONSE,
+			AVATAR_URL,
 			new PatternCondition(Patterns.WORD_GUNDAM)
 		)
 		.build();

@@ -1,6 +1,7 @@
 import webhookService, { WebhookService } from '../../../webhooks/webhookService';
 import { BotBuilder } from '../botBuilder';
 import ReplyBot from '../replyBot';
+import { AVATAR_URL, BOT_NAME, CHAOS_RESPONSE } from '../responses/chaosBot.responses';
 import { PatternCondition } from '../triggers/conditions/patternCondition';
 import { Patterns } from '../triggers/conditions/patterns';
 
@@ -12,12 +13,11 @@ export default function createChaosBot(
 ): ReplyBot {
 	// Always use the imported singleton webhookService, ignoring any webhookService in config
 	// This ensures we're using the properly initialized webhookService with the writeMessage method
-	const avatarUrl = 'https://preview.redd.it/md0lzbvuc3571.png?width=1920&format=png&auto=webp&s=ff403a8d4b514af8d99792a275d2c066b8d1a4de';
-	return new BotBuilder('ChaosBot', webhookSvc)
-		.withAvatar(avatarUrl)
+	return new BotBuilder(BOT_NAME, webhookSvc)
+		.withAvatar(AVATAR_URL)
 		.withCustomCondition(
-			"All I know is...I'm here to kill Chaos",
-			avatarUrl,
+			CHAOS_RESPONSE,
+			AVATAR_URL,
 			new PatternCondition(Patterns.WORD_CHAOS)
 		)
 		.build();
