@@ -376,4 +376,4 @@ jobs:
                   push: false
                   tags: ghcr.io/${{ github.repository }}/app:pr-${{ github.event.pull_request.number }}
                   cache-from: type=gha
-                  cache-to: type=gha,mode=max
+                  cache-to: type=gha,mode=min

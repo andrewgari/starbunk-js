@@ -140,3 +140,5 @@ jobs:
                   tags: |
                       ghcr.io/${{ github.repository }}/app:latest
                       ghcr.io/${{ github.repository }}/app:${{ steps.version.outputs.tag }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=min
