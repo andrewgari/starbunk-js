@@ -81,6 +81,8 @@ jobs:
         needs: [changes]
         if: ${{ needs.changes.outputs.should_run == 'true' }}
         runs-on: ubuntu-latest
+        outputs:
+            checks_passed: ${{ steps.pr_status.outputs.checks_passed }}
         steps:
             - name: Check PR Status
               id: pr_status
@@ -106,6 +108,7 @@ jobs:
         if: |
             ${{
               needs.changes.outputs.should_run == 'true' &&
+              needs.verify-pr-checks.outputs.checks_passed == 'true' &&
               (needs.changes.outputs.src == 'true' ||
                needs.changes.outputs.workflows == 'true' ||
                needs.changes.outputs.docker == 'true')
