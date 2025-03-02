@@ -13,9 +13,6 @@ interface BotTestParams {
 	channelId?: string;
 }
 
-// Default test user ID
-const DEFAULT_USER_ID = '123456789';
-
 /**
  * Tests that a bot responds correctly to a specific trigger message
  * @param params Object containing botName, triggerMessage, and expectedResponsePattern

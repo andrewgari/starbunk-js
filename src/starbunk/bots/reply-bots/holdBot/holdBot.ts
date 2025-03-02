@@ -1,20 +1,32 @@
 import webhookService, { WebhookService } from '@/webhooks/webhookService';
 import { BotBuilder } from '../../botBuilder';
 import ReplyBot from '../../replyBot';
-import { PatternCondition } from '../../triggers/conditions/patternCondition';
-import { Patterns } from '../../triggers/conditions/patterns';
-import { HOLD_BOT_AVATAR_URL, HOLD_BOT_RESPONSE } from './holdBotModel';
+import { BOT_NAME, HOLD_BOT_AVATAR_URL } from './holdBotModel';
 
+// Import the extracted components
+import { HoldCondition } from './conditions/holdCondition';
+import { HoldResponseGenerator } from './responses/holdResponseGenerator';
+
+/**
+ * Creates a HoldBot instance that responds with "Hold." to messages containing "hold"
+ *
+ * @param webhookSvc - The webhook service to use for sending messages
+ * @returns A configured ReplyBot instance
+ */
 export default function createHoldBot(
 	webhookSvc: WebhookService = webhookService
 ): ReplyBot {
-	// Use the webhook service passed as parameter instead of always using the imported singleton
-	return new BotBuilder('HoldBot', webhookSvc)
+	// Create the condition and response generator
+	const holdCondition = new HoldCondition();
+	const holdResponseGenerator = new HoldResponseGenerator();
+
+	// Build and return the bot
+	return new BotBuilder(BOT_NAME, webhookSvc)
 		.withAvatar(HOLD_BOT_AVATAR_URL)
-		.withCustomCondition(
-			HOLD_BOT_RESPONSE,
+		.withConditionResponse(
+			holdResponseGenerator,
 			HOLD_BOT_AVATAR_URL,
-			new PatternCondition(Patterns.WORD_HOLD)
+			holdCondition
 		)
 		.build();
 }
