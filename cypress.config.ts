@@ -33,39 +33,17 @@ export default defineConfig({
 		// Speed up by not waiting for unnecessary network requests
 		experimentalCspAllowList: true,
 		// Speed up by not waiting for unnecessary network requests
-		experimentalSkipDomainInjection: ['*'],
-		// Speed up by not waiting for unnecessary network requests
 		chromeWebSecurity: false,
 		// Speed up by not waiting for unnecessary network requests
 		experimentalInteractiveRunEvents: true,
 		// Speed up by not waiting for unnecessary network requests
 		experimentalSourceRewriting: false,
 		// Speed up by not waiting for unnecessary network requests
-		experimentalSessionAndOrigin: true,
-		// Speed up by not waiting for unnecessary network requests
 		experimentalWebKitSupport: false,
-		// Speed up by not waiting for unnecessary network requests
-		experimentalFetchPolyfill: false,
-		// Speed up by not waiting for unnecessary network requests
-		experimentalSessionSupport: false,
 		// Speed up by not waiting for unnecessary network requests
 		experimentalStudio: false,
 		// Speed up by not waiting for unnecessary network requests
-		experimentalSingleTabRunMode: true,
-		// Speed up by not waiting for unnecessary network requests
 		experimentalOriginDependencies: false,
-		// Speed up by not waiting for unnecessary network requests
-		experimentalModuleScripts: false,
-		// Speed up by not waiting for unnecessary network requests
-		experimentalIgnoreTestFiles: ['**/examples/**', '**/snapshots/**'],
-		// Speed up by not waiting for unnecessary network requests
-		experimentalFetchPolyfill: false,
-		// Speed up by not waiting for unnecessary network requests
-		experimentalOriginDependencies: false,
-		// Speed up by not waiting for unnecessary network requests
-		experimentalModuleScripts: false,
-		// Speed up by not waiting for unnecessary network requests
-		experimentalIgnoreTestFiles: ['**/examples/**', '**/snapshots/**'],
 		setupNodeEvents(on, config) {
 			// Track connection state and message queue for testing
 			let isConnected = true;
