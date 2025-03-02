@@ -44,14 +44,16 @@ fi
 export CYPRESS_DISCORD_TOKEN=$DISCORD_TOKEN
 export NODE_ENV=test
 
-# Get all bot test files
+# Get all test files
 BOT_FILES=$(ls -1 cypress/e2e/bots/*.cy.ts)
+SNOWBUNK_FILES=$(ls -1 cypress/e2e/snowbunk/*.cy.ts)
+ALL_FILES=("$BOT_FILES" "$SNOWBUNK_FILES")
 
 # Count the number of available CPU cores (minus 1 to leave resources for the system)
-# For stability, limit to a maximum of 4 parallel processes
+# For maximum performance, use more cores
 CORES=$(nproc --ignore=1)
-if [ $CORES -gt 4 ]; then
-  CORES=4
+if [ $CORES -gt 8 ]; then
+  CORES=8
 fi
 if [ $CORES -lt 1 ]; then
   CORES=1
@@ -67,8 +69,9 @@ run_test_group() {
   local test_files=("$@")
   local specs=""
   local display_num=$1
+  local group_id=$2
 
-  for file in "${test_files[@]:1}"; do
+  for file in "${test_files[@]:2}"; do
     if [ -n "$specs" ]; then
       specs="$specs,"
     fi
@@ -76,36 +79,51 @@ run_test_group() {
   done
 
   if [ -n "$specs" ]; then
-    echo "Running tests: $specs"
+    echo "Running test group $group_id: $specs"
+
+    # Create a unique Cypress project folder for each group to avoid conflicts
+    local cypress_cache="cypress-cache-$group_id"
+    mkdir -p "$cypress_cache"
+
+    # Set environment variables for this test group
+    export CYPRESS_CACHE_FOLDER="$cypress_cache"
 
     if [ "$USE_XVFB" = true ]; then
       # Use a unique display number for each process
       export DISPLAY=":$display_num"
-      echo "Using display $DISPLAY for this test group"
+      echo "Using display $DISPLAY for test group $group_id"
 
       # Start Xvfb with the unique display
       Xvfb $DISPLAY -screen 0 1280x720x24 &
       XVFB_PID=$!
 
-      # Run Cypress with this display
-      npx cypress run --spec "$specs" --config video=false,screenshotOnRunFailure=false
+      # Run Cypress with this display and optimized settings
+      npx cypress run --spec "$specs" --config video=false,screenshotOnRunFailure=false,numTestsKeptInMemory=0,experimentalMemoryManagement=true,defaultCommandTimeout=3000,requestTimeout=3000,responseTimeout=5000,pageLoadTimeout=5000,testIsolation=false
       TEST_RESULT=$?
 
       # Kill the Xvfb process
       kill $XVFB_PID 2>/dev/null || true
 
+      # Clean up the temporary Cypress cache
+      rm -rf "$cypress_cache"
+
       # Return the test result
       return $TEST_RESULT
     else
-      # Run without special display configuration
-      npx cypress run --spec "$specs" --config video=false,screenshotOnRunFailure=false
-      return $?
+      # Run without special display configuration but with optimized settings
+      npx cypress run --spec "$specs" --config video=false,screenshotOnRunFailure=false,numTestsKeptInMemory=0,experimentalMemoryManagement=true,defaultCommandTimeout=3000,requestTimeout=3000,responseTimeout=5000,pageLoadTimeout=5000,testIsolation=false
+      TEST_RESULT=$?
+
+      # Clean up the temporary Cypress cache
+      rm -rf "$cypress_cache"
+
+      return $TEST_RESULT
     fi
   fi
 }
 
 # Divide tests into groups based on number of cores
-test_files=($BOT_FILES)
+test_files=($ALL_FILES)
 total_files=${#test_files[@]}
 files_per_group=$(( (total_files + CORES - 1) / CORES ))
 
@@ -123,8 +141,8 @@ for ((i=0; i<CORES; i++)); do
     # Calculate display number (start at 100 to avoid conflicts)
     display_num=$((100 + i))
 
-    # Create array with display number as first element followed by files
-    group_files=($display_num "${test_files[@]:$start_idx:$((end_idx-start_idx))}")
+    # Create array with display number and group ID as first elements followed by files
+    group_files=($display_num $i "${test_files[@]:$start_idx:$((end_idx-start_idx))}")
 
     run_test_group "${group_files[@]}" &
     pids+=($!)

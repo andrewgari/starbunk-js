@@ -30,7 +30,17 @@
 		"cypress:clean": "./scripts/clean-cypress.sh",
 		"cypress:optimize": "./scripts/optimize-cypress.sh",
 		"check:all": "./scripts/check-all.sh",
-		"check:demo": "./scripts/check-demo.sh"
+		"check:demo": "./scripts/check-demo.sh",
+		"test:e2e:fast": "cypress run --config video=false,screenshotOnRunFailure=false,numTestsKeptInMemory=0,experimentalMemoryManagement=true,defaultCommandTimeout=3000,requestTimeout=3000,responseTimeout=5000,pageLoadTimeout=5000,testIsolation=false",
+		"test:e2e:parallel:fast": "./scripts/run-parallel-tests.sh",
+		"test:e2e:batched": "./scripts/run-batched-tests.sh",
+		"test:e2e:headless": "./scripts/run-headless-tests.sh",
+		"docker:build": "./scripts/build-docker.sh",
+		"docker:build:prod": "./scripts/build-docker.sh prod",
+		"docker:build:dev": "./scripts/build-docker.sh dev",
+		"docker:build:cypress": "./scripts/build-docker.sh cypress",
+		"docker:test": "docker-compose -f docker-compose.cypress.yml up --build",
+		"docker:test:parallel": "docker-compose -f docker-compose.cypress.yml up --build --scale cypress=4"
 	},
 	"engines": {
 		"node": ">=16.0.0"

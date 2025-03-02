@@ -1,6 +1,6 @@
 FROM node:18-alpine
 
-# Install development dependencies
+# Install development dependencies with optimized layer caching
 RUN apk add --no-cache \
     python3 \
     make \
@@ -10,19 +10,23 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-COPY package*.json ./
+# Copy package files first to leverage Docker cache
+COPY package.json package-lock.json ./
 
-# Install ALL dependencies including dev
-RUN npm install
-
-# Copy the source code
-COPY . .
+# Install dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --no-fund
 
 # Add global packages needed for development
 RUN npm install -g \
     ts-node \
-    is-ci \
-    distube@5.0.6
+    is-ci
 
-# We'll run as root in development mode
-# This is not recommended for production, but simplifies development
+# Use a volume mount for source code in docker-compose
+# This allows for faster development without rebuilding the image
+
+# Set NODE_ENV
+ENV NODE_ENV=development
+
+# Default command
+CMD ["npm", "run", "dev"]
