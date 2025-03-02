@@ -32,14 +32,14 @@ export const createMockUser = (isBot = false, username = 'mock-user-name'): User
 	system: false
 } as unknown as User);
 
-export const createMockMessage = (username: string = 'TestUser'): Partial<Message<boolean>> => {
+export const createMockMessage = (username: string = 'TestUser', content: string = ''): Partial<Message<boolean>> => {
 	const member = createMockGuildMember('0', username);
 	const mockGuild = createMockGuild();
 	const mockChannel = createMockTextChannel();
 	const mockClient = createMockClient();
 
 	return {
-		content: '',
+		content,
 		author: member.user,
 		guild: mockGuild,
 		channel: mockChannel,
