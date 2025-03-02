@@ -2,8 +2,8 @@ FROM cypress/included:14.1.0
 
 WORKDIR /app
 
-# Install dependencies required for Cypress
-RUN apt-get update && apt-get install -y \
+# Install dependencies required for Cypress with optimized layer caching
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgtk2.0-0 \
     libgtk-3-0 \
     libgbm-dev \
@@ -20,16 +20,20 @@ RUN apt-get update && apt-get install -y \
     g++ \
     git \
     ffmpeg \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
-COPY package*.json ./
+# Copy package files first to leverage Docker cache
+COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --no-fund
 
-# Copy the rest of the application
-COPY . .
+# Copy only necessary files for tests
+COPY cypress.config.ts cypress.env.json tsconfig.cypress.json ./
+COPY cypress ./cypress
+COPY src ./src
 
 # Verify Cypress installation
 RUN npx cypress verify
@@ -37,6 +41,8 @@ RUN npx cypress verify
 # Set environment variables
 ENV CYPRESS_CACHE_FOLDER=/root/.cache/Cypress
 ENV NODE_ENV=test
+ENV CYPRESS_FORCE_MINIMAL_BROWSER=true
+ENV CYPRESS_BROWSER_ARGS="--disable-gpu --no-sandbox --disable-dev-shm-usage --disable-extensions"
 
-# Default command
-CMD ["npm", "run", "cypress:run"]
+# Default command with optimized settings
+CMD ["npm", "run", "test:e2e:headless"]

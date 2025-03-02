@@ -1,5 +1,5 @@
 # Build stage
-FROM node:alpine AS builder
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
@@ -10,14 +10,22 @@ RUN apk add --no-cache \
     g++ \
     git
 
-COPY package*.json ./
-RUN npm ci
+# Copy package files first to leverage Docker cache
+COPY package.json package-lock.json ./
 
-COPY . .
+# Use npm ci with cache mount for faster installation
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --no-fund
+
+# Copy only necessary files for build
+COPY tsconfig.json ./
+COPY src ./src
+
+# Build the application
 RUN npm run build
 
 # Production stage
-FROM node:alpine
+FROM node:18-alpine AS production
 
 # Install production dependencies
 RUN apk add --no-cache \
@@ -25,26 +33,18 @@ RUN apk add --no-cache \
     python3 \
     tzdata \
     ca-certificates
+
 WORKDIR /app
 
-# Copy built assets and package files
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install only production dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --no-fund --only=production
+
+# Copy built assets from builder stage
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
-
-# Install only production dependencies
-# Keep the build dependencies since they might be needed at runtime
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    && npm ci --only=production \
-    && rm -rf /var/cache/apk/*
-
-# Add specific packages that need global installation with pinned versions
-RUN npm install -g \
-    ts-node@10.9.2 \
-    is-ci@3.0.1 \
-    distube@5.0.6
 
 # Set proper ownership for the application directory
 RUN chown -R node:node /app

@@ -6,19 +6,19 @@ export default defineConfig({
 		// Disable screenshots on test failure to improve performance
 		screenshotOnRunFailure: false,
 		// Reduce the default timeout values
-		defaultCommandTimeout: 5000,
-		requestTimeout: 5000,
-		responseTimeout: 10000,
+		defaultCommandTimeout: 3000,
+		requestTimeout: 3000,
+		responseTimeout: 5000,
 		// Disable unnecessary animations
 		animationDistanceThreshold: 5,
 		// Run tests in parallel when possible
 		experimentalRunAllSpecs: true,
 		// Disable unnecessary network requests
 		experimentalModifyObstructiveThirdPartyCode: true,
-		// Disable unnecessary logging
+		// Enable memory management
 		experimentalMemoryManagement: true,
 		// Don't wait for page load events
-		pageLoadTimeout: 10000,
+		pageLoadTimeout: 5000,
 		// Speed up by not waiting for animations
 		waitForAnimations: false,
 		// Disable unnecessary retries
@@ -26,6 +26,46 @@ export default defineConfig({
 			runMode: 0,
 			openMode: 0
 		},
+		// Reduce test isolation to speed up tests
+		testIsolation: false,
+		// Speed up by not waiting for unnecessary network requests
+		numTestsKeptInMemory: 5,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalCspAllowList: true,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalSkipDomainInjection: ['*'],
+		// Speed up by not waiting for unnecessary network requests
+		chromeWebSecurity: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalInteractiveRunEvents: true,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalSourceRewriting: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalSessionAndOrigin: true,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalWebKitSupport: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalFetchPolyfill: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalSessionSupport: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalStudio: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalSingleTabRunMode: true,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalOriginDependencies: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalModuleScripts: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalIgnoreTestFiles: ['**/examples/**', '**/snapshots/**'],
+		// Speed up by not waiting for unnecessary network requests
+		experimentalFetchPolyfill: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalOriginDependencies: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalModuleScripts: false,
+		// Speed up by not waiting for unnecessary network requests
+		experimentalIgnoreTestFiles: ['**/examples/**', '**/snapshots/**'],
 		setupNodeEvents(on, config) {
 			// Track connection state and message queue for testing
 			let isConnected = true;
