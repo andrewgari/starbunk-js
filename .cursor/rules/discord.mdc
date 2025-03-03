@@ -1,0 +1,10 @@
+---
+description: discord specific stuff
+globs: 
+---
+
+## Discord-Specific
+- Rate limit all API calls
+- Handle connection interruptions gracefully
+- Implement proper permission checking
+- Cache responses appropriately

@@ -144,63 +144,7 @@ export default function createMyBot(): ReplyBot {
 	return new BotBuilder('MyBot', webhookService)
 		.withAvatar('https://example.com/avatar.png')
 		.withCustomTrigger(myCondition)
-		.respondsWithStatic('Hello there!')
+		.withResponseStatic('Hello there!')
 		.build();
 }
 ```
-
-## 🧪 Testing
-
-Run the test suite:
-
-```bash
-npm test
-```
-
-The project uses Jest for testing and includes comprehensive tests for all bots and services.
-
-## E2E Testing
-
-This project includes Cypress E2E tests to verify that all bots correctly respond to their trigger conditions. These tests send real messages to Discord and verify the responses.
-
-### Running E2E Tests
-
-To run the E2E tests:
-
-1. Make sure the Discord bot is running and properly configured with the correct token in your `.env` file.
-2. Run the tests using one of the following commands:
-
-```bash
-# Run all E2E tests
-npm run test:e2e
-
-# Run only bot tests
-npm run test:e2e:bots
-
-# Run bot tests (direct pattern match)
-npm run test:bots
-
-# Open Cypress UI
-npm run cypress:open
-```
-
-### Test Structure
-
-The E2E tests are located in the `cypress/e2e/bots` directory. Each bot has tests that verify:
-
-1. The bot responds correctly to its trigger conditions
-2. The bot does not respond to messages that should not trigger it
-
-For more information about the E2E tests, see the [Cypress README](cypress/README.md).
-
-## CI/CD
-
-This project uses GitHub Actions for continuous integration and deployment. The following workflows are included:
-
-- **PR Build**: Builds the TypeScript code and uploads artifacts
-- **PR Unit Tests**: Runs Jest unit tests (depends on Build)
-- **PR E2E Tests**: Runs Cypress E2E tests for bots (depends on Build and Unit Tests)
-- **PR Docker Build**: Builds the Docker image (depends on all previous steps)
-- **PR Lint**: Ensures code quality by running ESLint
-
-All workflows must pass before a pull request can be merged.

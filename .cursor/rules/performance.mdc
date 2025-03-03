@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+---
+## Performance
+- Avoid nested subscriptions
+- Use switchMap/mergeMap appropriately
+- Debounce user input
+- Memoize expensive calculations
+- Lazy load components
