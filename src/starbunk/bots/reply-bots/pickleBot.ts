@@ -1,27 +1,19 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
-import UserID from '../../../discord/userID';
+import userID from '../../../discord/userID';
 import Random from '../../../utils/random';
+import ReplyBot from '../replyBot';
+import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from './botConstants';
 
 export default class PickleBot extends ReplyBot {
-	private readonly botname = 'GremlinBot';
-	private readonly avatarUrl = 'https://i.imgur.com/D0czJFu.jpg';
-	private readonly response = "Could you repeat that? I don't speak *gremlin*";
-	private readonly pattern = /gremlin/i;
-
-	getBotName(): string {
-		return this.botname;
-	}
-
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
+	public readonly botName = getBotName('Gremlin');
+	public readonly avatarUrl = getBotAvatar('Gremlin', 'Default');
 
 	handleMessage(message: Message<boolean>): void {
 		if (message.author.bot) return;
 
-		if (message.content.match(this.pattern) || (message.author.id === UserID.Sig && Random.percentChance(15))) {
-			this.sendReply(message.channel as TextChannel, this.response);
+		if (getBotPattern('Gremlin', 'Default')?.test(message.content) ||
+			(message.author.id === userID.Sig && Random.percentChance(15))) {
+			this.sendReply(message.channel as TextChannel, getBotResponse('Pickle', 'Default'));
 		}
 	}
 }

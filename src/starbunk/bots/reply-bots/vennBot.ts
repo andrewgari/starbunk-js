@@ -1,47 +1,34 @@
 import { Message, TextChannel } from 'discord.js';
-import ReplyBot from '../replyBot';
-import random from '../../../utils/random';
 import userID from '../../../discord/userID';
+import random from '../../../utils/random';
+import ReplyBot from '../replyBot';
+import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from './botConstants';
 
 export default class VennBot extends ReplyBot {
-	private botName = 'VennBot';
-	private avatarUrl = '';
-	private readonly pattern = /\bcringe\b/i;
-	private readonly responses = [
-		'Sorry, but that was über cringe...',
-		'Geez, that was hella cringe...',
-		'That was cringe to the max...',
-		'What a cringe thing to say...',
-		'Mondo cringe, man...',
-		"Yo that was the cringiest thing I've ever heard...",
-		'Your daily serving of cringe, milord...',
-		'On a scale of one to cringe, that was pretty cringe...',
-		'That was pretty cringe :airplane:',
-		'Wow, like....cringe much?',
-		'Excuse me, I seem to have dropped my cringe. Do you have it perchance?',
-		'Like I always say, that was pretty cringe...',
-		'C.R.I.N.G.E',
-	];
+	private _botName: string = getBotName('Venn');
+	private _avatarUrl: string = getBotAvatar('Venn');
 
-	getResponse(): string {
-		return this.responses[random.roll(this.responses.length)];
+	// Public getters
+	get botName(): string {
+		return this._botName;
 	}
 
-	getBotName(): string {
-		return this.botName;
+	get avatarUrl(): string {
+		return this._avatarUrl;
 	}
 
-	getAvatarUrl(): string {
-		return this.avatarUrl;
+	defaultBotName(): string {
+		return 'Venn Bot';
 	}
 
 	handleMessage(message: Message<boolean>): void {
 		if (message.author.bot) return;
 
-		if (message.author.id == userID.Venn && (message.content.match(this.pattern) || random.percentChance(5))) {
-			this.botName = message.author.displayName;
-			this.avatarUrl = message.author.displayAvatarURL() ?? message.author.defaultAvatarURL;
-			this.sendReply(message.channel as TextChannel, this.getResponse());
+		if (
+			(message.author.id == userID.Venn && random.percentChance(5)) ||
+			getBotPattern('Venn', 'Default')?.test(message.content)
+		) {
+			this.sendReply(message.channel as TextChannel, getBotResponse('Venn', 'Default'));
 		}
 	}
 }

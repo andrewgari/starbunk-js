@@ -2,18 +2,21 @@ import { Message, TextChannel } from 'discord.js';
 import webhookService from '../../webhooks/webhookService';
 
 export default abstract class ReplyBot {
-	abstract getBotName(): string;
-	abstract getAvatarUrl(): string;
+	abstract botName: string;
+	defaultBotName(): string {
+		return this.botName;
+	}
+	abstract avatarUrl: string;
 	abstract handleMessage(message: Message): void;
 	sendReply(channel: TextChannel, response: string): void {
 		webhookService.writeMessage(channel, {
-			username: this.getBotName(),
-			avatarURL: this.getAvatarUrl(),
+			username: this.botName,
+			avatarURL: this.avatarUrl,
 			content: response,
 			embeds: [],
 		});
 	}
 	isSelf(message: Message): boolean {
-		return message.author.bot && message.author.username === this.getBotName();
+		return message.author.bot && message.author.id === message.client.user?.id;
 	}
 }

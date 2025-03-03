@@ -38,14 +38,23 @@ export default class StarbunkClient extends DiscordClient {
 	registerBots = async (): Promise<void> => {
 		for (const file of readdirSync('./src/starbunk/bots/reply-bots')) {
 			const fileName = file.replace('.ts', '');
-			await import(`./bots/reply-bots/${fileName}`).then((botClass) => {
-				if (!botClass) return;
-				const bot = new botClass.default(this) as ReplyBot;
-				if (!bot || !bot.getBotName() || this.bots.find((b) => b.getBotName() === bot.getBotName())) {
-					return;
+			await import(`./bots/reply-bots/${fileName}`).then((botModule) => {
+				if (!botModule) return;
+
+				// Get the constructor from either default or named export
+				const BotConstructor = botModule.default || botModule;
+				if (!BotConstructor) return;
+
+				try {
+					const bot = new BotConstructor(this) as ReplyBot;
+					if (!bot || !bot.defaultBotName() || this.bots.find((b) => b.defaultBotName() === bot.defaultBotName())) {
+						return;
+					}
+					this.bots.set(bot.defaultBotName(), bot);
+					Logger.success(`Registered Bot: ${bot.defaultBotName()} 🤖`);
+				} catch (error) {
+					Logger.error(`Failed to initialize bot from ${fileName}: ${error}`);
 				}
-				this.bots.set(bot.getBotName(), bot);
-				Logger.success(`Registered Bot: ${bot.getBotName()} 🤖`);
 			});
 		}
 	};
@@ -56,11 +65,11 @@ export default class StarbunkClient extends DiscordClient {
 			await import(`./bots/voice-bots/${fileName}`).then((botClass) => {
 				if (!botClass) return;
 				const bot = new botClass.default(this) as VoiceBot;
-				if (!bot || !bot.getBotName() || this.bots.find((b) => b.getBotName() === bot.getBotName())) {
+				if (!bot || !bot.defaultBotName() || this.voiceBots.find((b) => b.defaultBotName() === bot.defaultBotName())) {
 					return;
 				}
-				this.voiceBots.set(bot.getBotName(), bot);
-				Logger.success(`Registered Voice Bot: ${bot.getBotName()} 🎤`);
+				this.voiceBots.set(bot.defaultBotName(), bot);
+				Logger.success(`Registered Voice Bot: ${bot.defaultBotName()} 🎤`);
 			});
 		}
 	};

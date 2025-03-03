@@ -3,39 +3,17 @@ import userID from '../../../discord/userID';
 import { OpenAIClient } from '../../../openai/openaiClient';
 import { Logger } from '../../../services/Logger';
 import ReplyBot from '../replyBot';
+import { BotConstants, getBotAvatar, getBotPattern, getBotResponse } from './botConstants';
 
 export default class BlueBot extends ReplyBot {
-	private botName: string = 'BluBot';
-
-	private readonly defaultPattern = /\bblue?\b/i;
-	private readonly confirmPattern = /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i;
-	private readonly nicePattern = /blue?bot,? say something nice about (?<name>.+$)/i;
-	private readonly meanPattern = /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i;
-
-	private readonly defaultAvatarURL = 'https://imgur.com/WcBRCWn.png';
-	private readonly murderAvatar = 'https://imgur.com/Tpo8Ywd.jpg';
-	private readonly cheekyAvatar = 'https://i.imgur.com/dO4a59n.png';
-	private avatarUrl = this.defaultAvatarURL;
-
-	private readonly defaultResponse = 'Did somebody say Blu?';
-	private readonly cheekyResponse = 'Lol, Somebody definitely said Blu! :smile:';
-	private readonly friendlyResponse = (name: string): string => `${name}, I think you're pretty Blu! :wink:`;
-	private readonly contemptResponse = 'No way, Venn can suck my blu cane. :unamused:';
-	private readonly murderResponse =
-		"What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Academia d'Azul, and I've been involved in numerous secret raids on Western La Noscea, and I have over 300 confirmed kills. I've trained with gorillas in warfare and I'm the top bombardier in the entire Eorzean Alliance. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Shard, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of tonberries across Eorzea and your IP is being traced right now so you better prepare for the storm, macaroni boy. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bear-hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Eorzean Blue Brigade and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little \"clever\" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will fucking cook you like the little macaroni boy you are. You're fucking dead, kiddo.";
 	private blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
+	private _avatarUrl: string = BotConstants.Blue.Avatars.Default;
+	public readonly botName: string = BotConstants.Blue.Name;
 
-	getBotName(): string {
-		return this.botName;
-	}
-
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
-
-	setAvatarUrl(url: string): void {
-		this.avatarUrl = url;
+	// Public getters
+	get avatarUrl(): string {
+		return this._avatarUrl;
 	}
 
 	async handleMessage(message: Message<boolean>): Promise<void> {
@@ -43,70 +21,60 @@ export default class BlueBot extends ReplyBot {
 
 		if (this.isSomeoneAskingYouToBeBlue(message)) {
 			Logger.debug(`User ${message.author.username} asked BlueBot to be nice`);
-			const name = this.getNameFromBluRequest(message);
-			if (name.match(/venn/i)) {
+			if (getBotPattern('Blue', 'Nice')?.test(message.content)) {
 				Logger.debug(`${message.author.username} asked about Venn - responding with contempt`);
-				this.saySomethingBlueAboutVenn(message);
-				return;
+				this.sendReply(
+					message.channel as TextChannel,
+					getBotResponse('Blue', 'Nice', message.author.displayName)
+				);
 			}
+
 			Logger.debug(`Being nice to ${name} as requested by ${message.author.username}`);
-			this.saySomethingNiceAbout(message, name);
 			return;
 		}
 
 		if (this.isVennInsultingBlu(message)) {
 			Logger.warn(`Venn is being mean again! Message: "${message.content}"`);
 			this.blueMurderTimestamp = new Date();
-			this.avatarUrl = this.murderAvatar;
-			this.sendReply(message.channel as TextChannel, this.murderResponse);
+			this._avatarUrl = getBotAvatar('Blue', 'Murder');
+			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Murder'));
 			return;
 		}
 
 		if (this.isSomeoneRespondingToBlu(message)) {
 			this.blueTimestamp = new Date(1);
-			this.avatarUrl = this.cheekyAvatar;
-			this.sendReply(message.channel as TextChannel, this.cheekyResponse);
+			this._avatarUrl = getBotAvatar('Blue', 'Cheeky');
+			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Cheeky'));
 			return;
 		}
 
-		if (message.content.match(this.defaultPattern)) {
+		if (getBotPattern('Blue', 'Default')?.test(message.content)) {
 			this.blueTimestamp = new Date();
-			this.avatarUrl = this.defaultAvatarURL;
-			this.sendReply(message.channel as TextChannel, this.defaultResponse);
+			this._avatarUrl = getBotAvatar('Blue', 'Default');
+			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Default'));
 			return;
 		} else if (await this.checkIfBlueIsSaid(message)) {
 			Logger.debug('AI detected blue reference in message');
-			this.sendReply(message.channel as TextChannel, this.defaultResponse);
+			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Default'));
 		}
 	}
 
 	private isSomeoneRespondingToBlu(message: Message): boolean {
-		if (!message.content.match(this.confirmPattern) && !message.content.match(this.meanPattern)) {
-			return false;
+		if (BotConstants.Blue.Patterns?.Confirm?.test(message.content) || BotConstants.Blue.Patterns?.Mean?.test(message.content)) {
+			const lastMessage = this.blueTimestamp.getTime();
+			return message.createdTimestamp - lastMessage < 300000;
 		}
-		const lastMessage = this.blueTimestamp.getTime();
-		// if the last blue message was less than five minutes ago
-		return message.createdTimestamp - lastMessage < 300000;
+		return false;
 	}
 
 	private isVennInsultingBlu(message: Message): boolean {
 		if (message.author.id !== userID.Venn) return false;
-		if (!message.content.match(this.meanPattern)) return false;
+		if (!getBotPattern('Blue', 'Mean')?.test(message.content)) return false;
 		const lastMurder = this.blueMurderTimestamp.getTime() / 1000;
 		const lastBlue = this.blueTimestamp.getTime() / 1000;
 		const current = new Date(message.createdTimestamp).getTime() / 1000;
 		// if the last murder message was at least 24 hours ago
 		return current - lastMurder > 86400 && current - lastBlue < 2 * 60;
-	}
-
-	private getNameFromBluRequest(message: Message): string {
-		const matches = message.content.match(this.nicePattern);
-		if (!matches || matches.length < 2) return 'Hey,';
-		const pronoun = matches[1];
-		if (pronoun === 'me') {
-			return message.member?.displayName ?? message.author.displayName;
-		}
-		return matches[1];
 	}
 
 	private async checkIfBlueIsSaid(message: Message): Promise<boolean> {
@@ -153,7 +121,7 @@ export default class BlueBot extends ReplyBot {
 						content: `Is the following message referring to the color blue in any form? Message: "${message.content}"`,
 					},
 				],
-				max_tokens: 10,
+				max_tokens: 11,
 				temperature: 0.2,
 			});
 
@@ -166,16 +134,6 @@ export default class BlueBot extends ReplyBot {
 	}
 
 	private isSomeoneAskingYouToBeBlue(message: Message): boolean {
-		return Boolean(message.content.match(this.nicePattern));
-	}
-
-	private saySomethingNiceAbout(message: Message, name: string): void {
-		this.avatarUrl = this.cheekyAvatar;
-		this.sendReply(message.channel as TextChannel, this.friendlyResponse(name));
-	}
-
-	private saySomethingBlueAboutVenn(message: Message): void {
-		this.avatarUrl = this.defaultAvatarURL;
-		this.sendReply(message.channel as TextChannel, this.contemptResponse);
+		return BotConstants.Blue.Patterns?.Nice?.test(message.content) ?? false;
 	}
 }

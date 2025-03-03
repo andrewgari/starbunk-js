@@ -1,30 +1,32 @@
-import { Message, TextChannel } from 'discord.js';
+import { Guild, Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
-
+import { getBotAvatar, getBotName, getBotPattern, getBotResponse, getCurrentMemberIdentity } from './botConstants';
 export default class SigBestBot extends ReplyBot {
-	botName: string = 'SigBestBot';
-	avatarUrl: string = 'PickleSig.comOrWhatever';
-	readonly pattern = /^(?=.*\bsig(g?les)?\b)(?=.*best\b).*$/gim;
+	private _botName: string = getBotName('SigGreat');
+	private _avatarUrl: string = getBotAvatar('SigGreat');
 
-	getBotName(): string {
-		return this.botName;
+	// Public getters
+	get botName(): string {
+		return this._botName;
 	}
 
-	getAvatarUrl(): string {
-		return this.avatarUrl;
+	get avatarUrl(): string {
+		return this._avatarUrl;
 	}
 
-	getResponse(): string {
-		return 'Man, Sig really is the best.';
+	defaultBotName(): string {
+		return 'SigGreat Bot';
 	}
 
-	handleMessage(message: Message): void {
+	async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
-		if (message.content.match(this.pattern)) {
-			this.botName = message.author.displayName;
-			this.avatarUrl = message.author.displayAvatarURL() ?? message.author.defaultAvatarURL;
-			this.sendReply(message.channel as TextChannel, this.getResponse());
+		if (getBotPattern('SigBest', 'Default')?.test(message.content)) {
+			const identity = await getCurrentMemberIdentity(message.author.id, message.guild as Guild);
+			if (!identity) return;
+			this._avatarUrl = identity.avatarUrl ?? this._avatarUrl;
+			this._botName = identity?.botName ?? this._botName;
+			this.sendReply(message.channel as TextChannel, getBotResponse('SigBest', 'Default'));
 		}
 	}
 }

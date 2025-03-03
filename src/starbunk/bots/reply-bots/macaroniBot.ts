@@ -1,26 +1,18 @@
 import { Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/Logger';
 import ReplyBot from '../replyBot';
+import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from './botConstants';
 
 export default class MacaroniBot extends ReplyBot {
-	private botName = 'Macaroni Bot';
-	private readonly pattern = /\b(mac(aroni)?|pasta)\b/i;
-	private readonly avatarUrl = 'https://i.imgur.com/fgbH6Xf.jpg';
-
-	getBotName(): string {
-		return this.botName;
-	}
-
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
+	public readonly botName: string = getBotName('Macaroni');
+	public readonly avatarUrl: string = getBotAvatar('Macaroni');
 
 	handleMessage(message: Message): void {
 		if (message.author.bot) return;
 
-		if (message.content.match(this.pattern)) {
+		if (getBotPattern('Macaroni', 'Default')?.test(message.content)) {
 			Logger.debug(`🍝 User ${message.author.username} mentioned macaroni: "${message.content}"`);
-			this.sendReply(message.channel as TextChannel, '🍝 Did somebody say macaroni?');
+			this.sendReply(message.channel as TextChannel, getBotResponse('Macaroni', 'Default'));
 		}
 	}
 }

@@ -1,26 +1,18 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
+import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from './botConstants';
 
 export default class EzioBot extends ReplyBot {
-	private readonly botName = 'Ezio Auditore Da Firenze';
-	private readonly avatarUrl = 'https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg';
-	private readonly pattern = /\bezio|h?assassin.*\b/i;
-
-	getBotName(): string {
-		return this.botName;
-	}
-
-	getAvatarUrl(): string {
-		return this.avatarUrl;
-	}
+	public readonly botName = getBotName('Ezio');
+	public readonly avatarUrl = getBotAvatar('Ezio');
 
 	handleMessage(message: Message<boolean>): void {
 		if (message.author.bot) return;
 
-		if (message.content.match(this.pattern)) {
+		if (getBotPattern('Ezio', 'Default')?.test(message.content)) {
 			this.sendReply(
 				message.channel as TextChannel,
-				`Remember ${message.author.displayName}, Nothing is true; Everything is permitted.`,
+				getBotResponse('Ezio', 'Default', message.author.displayName)
 			);
 		}
 	}
