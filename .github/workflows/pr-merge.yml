@@ -20,8 +20,8 @@ jobs:
       tag: ${{ github.event.pull_request.head.ref }}
 
   publish:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     needs: destroy-branch-container
     uses: ./.github/workflows/publish-docker-image.yml
     with:
-      tag: main
+      tag: latest

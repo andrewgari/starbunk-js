@@ -2,12 +2,6 @@ services:
   bunkbot-ts:
     image: ghcr.io/andrewgari/starbunk-js:main
     container_name: bunkbot
-    env_file: 
+    env_file:
       - .env
     command: npm run start
-  # musicbot:
-  #   image: eritislami/evobot:latest
-  #   container_name: dj-cova
-  #   restart: unless-stopped
-  #   env_file:
-  #     - .env
