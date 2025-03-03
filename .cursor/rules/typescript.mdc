@@ -1,0 +1,12 @@
+---
+description: typescript
+globs: 
+---
+## Typescript
+- Enable strict mode
+- Use strict null checks
+- Prefer type inference where obvious
+- No any unless absolutely necessary
+- Use discriminated unions for complex types
+- Use `const` instead of `let` when the value is not reassigned
+- Use `async`/`await` for asynchronous operations

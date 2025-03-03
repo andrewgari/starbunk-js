@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+---
+## Error Handling
+- Never swallow errors
+- Use custom error classes
+- Centralize error handling
+- Observable error handling with catchError

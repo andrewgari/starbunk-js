@@ -1,0 +1,9 @@
+---
+description: architecture and pattern preferences
+globs: 
+---
+## Architecture
+- Use observer pattern for event handling (RxJS preferred)
+- Favor composition over inheritance
+- Implement builder pattern for complex object creation
+- Service/repository pattern for data access

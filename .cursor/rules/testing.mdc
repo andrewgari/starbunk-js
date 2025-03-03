@@ -1,0 +1,10 @@
+---
+description: unit testing patterns
+globs: 
+---
+## Testing
+- AAA: Arrange, Act, Assert
+- Test behaviors, not implementations
+- Mock external dependencies
+- Aim for 80%+ coverage
+- Use dependency injection for testability
