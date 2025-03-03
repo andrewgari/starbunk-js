@@ -5,9 +5,7 @@ import { Logger } from '../../../services/Logger';
 import VoiceBot from '../voiceBot';
 
 export default class GuyChannelBot extends VoiceBot {
-	getBotName(): string {
-		return 'Guy Channel Bot';
-	}
+	public readonly botName = 'Guy Channel Bot';
 
 	handleEvent(oldState: VoiceState, newState: VoiceState): void {
 		const member = oldState.member;
