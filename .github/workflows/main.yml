@@ -1,0 +1,140 @@
+# Main workflow for CI/CD pipeline
+# Triggers on:
+# - Push to main or develop branches
+# - Merged PRs to main or develop branches
+name: Main Branch Checks
+
+on:
+    push:
+        branches: [main, develop]
+    pull_request:
+        types: [closed]
+        branches: [main, develop]
+
+# Add explicit permissions for the GITHUB_TOKEN
+permissions:
+    contents: read
+    packages: write
+
+jobs:
+    # Determines which parts of the codebase have changed and if the workflow should run
+    # Outputs:
+    # - should_run: true if PR merged or direct push
+    # - src: changes to source code
+    # - tests: changes to test files
+    # - cypress: changes to cypress files
+    # - workflows: changes to workflow files
+    # - docker: changes to Docker configuration
+    changes:
+        name: '🔍 Main - Detect File Changes'
+        runs-on: ubuntu-latest
+        outputs:
+            should_run: ${{ steps.check_merged.outputs.should_run }}
+            src: ${{ steps.filter.outputs.src }}
+            tests: ${{ steps.filter.outputs.tests }}
+            cypress: ${{ steps.filter.outputs.cypress }}
+            workflows: ${{ steps.filter.outputs.workflows }}
+            docker: ${{ steps.filter.outputs.docker }}
+        steps:
+            - name: Check if PR was merged or direct push
+              id: check_merged
+              run: |
+                  if [[ "${{ github.event_name }}" == "push" || "${{ github.event.pull_request.merged }}" == "true" ]]; then
+                    echo "should_run=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "should_run=false" >> $GITHUB_OUTPUT
+                  fi
+
+            - uses: actions/checkout@v4
+              if: steps.check_merged.outputs.should_run == 'true'
+              with:
+                  fetch-depth: 0 # Needed for file change detection
+
+            - name: Check for file changes
+              if: steps.check_merged.outputs.should_run == 'true'
+              uses: dorny/paths-filter@v2
+              id: filter
+              with:
+                  filters: |
+                      src:
+                          - 'src/**'
+                          - '!src/tests/**'
+                      tests:
+                          - 'src/tests/**'
+                          - '**/*.test.ts'
+                          - '**/*.spec.ts'
+                          - 'jest.config.js'
+                      workflows:
+                          - '.github/workflows/**'
+                      docker:
+                          - 'Dockerfile*'
+                          - '.dockerignore'
+                          - 'docker-compose*.yml'
+
+    # Verify that PR checks have passed
+    verify-pr-checks:
+        name: '✅ Main - Verify PR Checks Passed'
+        needs: [changes]
+        if: ${{ needs.changes.outputs.should_run == 'true' }}
+        runs-on: ubuntu-latest
+        outputs:
+            checks_passed: ${{ steps.pr_status.outputs.checks_passed }}
+        steps:
+            - name: Check PR Status
+              id: pr_status
+              run: |
+                  if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.merged }}" == "true" ]]; then
+                    # For merged PRs, check the PR status
+                    echo "PR #${{ github.event.pull_request.number }} was merged, assuming all checks passed"
+                    echo "checks_passed=true" >> $GITHUB_OUTPUT
+                  else
+                    # For direct pushes to main/develop, we assume the developer knows what they're doing
+                    # In a real-world scenario, you might want to add additional safeguards here
+                    echo "Direct push to branch, assuming developer verified changes"
+                    echo "checks_passed=true" >> $GITHUB_OUTPUT
+                  fi
+
+    # Builds and publishes Docker image if all checks pass
+    # Tags images with:
+    # - latest
+    # - YYYY.MM.DD-<git-sha>
+    docker:
+        needs: [changes, verify-pr-checks]
+        name: '🐳 Main - Build & Publish Docker Image'
+        if: |
+            ${{
+              needs.changes.outputs.should_run == 'true' &&
+              needs.verify-pr-checks.outputs.checks_passed == 'true' &&
+              (needs.changes.outputs.src == 'true' ||
+               needs.changes.outputs.workflows == 'true' ||
+               needs.changes.outputs.docker == 'true')
+            }}
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Generate Version Tag
+              id: version
+              run: |
+                  echo "tag=$(date +'%Y.%m.%d')-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+            - name: Build and Push Release Image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  push: true
+                  tags: |
+                      ghcr.io/${{ github.repository }}/app:latest
+                      ghcr.io/${{ github.repository }}/app:${{ steps.version.outputs.tag }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=min

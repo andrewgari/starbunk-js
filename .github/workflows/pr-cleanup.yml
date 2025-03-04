@@ -1,43 +1,28 @@
 name: PR Cleanup
 
 on:
-    workflow_call: {}
     pull_request:
         types: [closed]
 
 jobs:
     cleanup:
+        name: 🧹 Cleanup
         runs-on: ubuntu-latest
         steps:
-            - name: 🗑️ Delete PR Image
-              id: delete_image
+            - name: Delete PR Image
               uses: actions/github-script@v7
               with:
-                  github-token: ${{ secrets.GITHUB_TOKEN }}
                   script: |
+                      const { owner, repo } = context.repo;
                       const prNumber = context.payload.pull_request.number;
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
-                      const packageName = `${owner}/${repo}`.toLowerCase();
-                      const tag = `pr-${prNumber}`;
 
                       try {
-                        await github.rest.packages.deletePackageVersionForOrg({
-                          package_type: 'container',
-                          package_name: packageName,
-                          org: owner,
-                          version_id: tag
-                        });
-                        console.log(`Deleted container image with tag: ${tag}`);
-                        return { success: true, tag: tag };
+                          await github.rest.packages.deletePackageVersionForOrg({
+                              package_type: 'container',
+                              package_name: `${repo}/app`,
+                              org: owner,
+                              version: `pr-${prNumber}`
+                          });
                       } catch (error) {
-                        console.log(`Failed to delete image or image not found: ${error.message}`);
-                        return { success: false, error: error.message };
+                          console.log('Failed to delete package:', error);
                       }
-
-            - name: 📝 Cleanup Summary
-              run: |
-                  echo "### 🧹 PR Cleanup Results" >> $GITHUB_STEP_SUMMARY
-                  echo "| Action | Status | Details |" >> $GITHUB_STEP_SUMMARY
-                  echo "| --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
-                  echo "| **PR Image Cleanup** | ${{ fromJSON(steps.delete_image.outputs.result).success && '✅ Success' || '⚠️ Warning' }} | PR #${{ github.event.pull_request.number }} image ${{ fromJSON(steps.delete_image.outputs.result).success && 'deleted' || 'not found or failed to delete' }} |" >> $GITHUB_STEP_SUMMARY
