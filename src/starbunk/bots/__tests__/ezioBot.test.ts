@@ -1,8 +1,4 @@
 import { Message, TextChannel } from 'discord.js';
-import webhookService from '../../../webhooks/webhookService';
-
-// Mock the webhook service
-jest.mock('../../../webhooks/webhookService');
 
 // Mock the bot constants
 jest.mock('../botConstants', () => ({
@@ -13,10 +9,7 @@ jest.mock('../botConstants', () => ({
 }));
 
 import EzioBot from '../reply-bots/ezioBot';
-import { mockWebhookService } from './testUtils';
-
-// Set up the mock implementation
-jest.mocked(webhookService).writeMessage = mockWebhookService.writeMessage;
+import { mockWebhookService, setupTestContainer } from './testUtils';
 
 const mockMessage = (content: string, isBot = false): Message<boolean> => ({
 	content,
@@ -29,6 +22,11 @@ describe('EzioBot', () => {
 
 	beforeEach(() => {
 		jest.clearAllMocks();
+		
+		// Setup the test container with mock services
+		setupTestContainer();
+		
+		// Create bot
 		ezioBot = new EzioBot();
 	});
 
@@ -41,7 +39,7 @@ describe('EzioBot', () => {
 		await ezioBot.handleMessage(botMessage);
 
 		// Assert
-		expect(webhookService.writeMessage).not.toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
 	test('should respond to messages containing "ezio"', async () => {
@@ -52,7 +50,7 @@ describe('EzioBot', () => {
 		await ezioBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
 	});
 
 	test('should respond to messages containing "assassin"', async () => {
@@ -63,6 +61,6 @@ describe('EzioBot', () => {
 		await ezioBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
 	});
 });

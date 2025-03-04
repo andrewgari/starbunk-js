@@ -1,11 +1,22 @@
 import { ILogger, Logger } from './Logger';
+import container from './ServiceContainer';
+import { ServiceRegistry } from './ServiceRegistry';
 
 export class LoggerFactory {
 	private static instance: LoggerFactory;
-	private defaultLogger: ILogger;
 
 	private constructor() {
-		this.defaultLogger = new Logger();
+		// Register default logger if not already registered
+		if (!container.has(ServiceRegistry.LOGGER)) {
+			// Use the default logger instance instead of creating a new one
+			container.register(ServiceRegistry.LOGGER, {
+				debug: (message: string): void => Logger.debug(message),
+				info: (message: string): void => Logger.info(message),
+				success: (message: string): void => Logger.success(message),
+				warn: (message: string): void => Logger.warn(message),
+				error: (message: string, error?: Error): void => Logger.error(message, error),
+			});
+		}
 	}
 
 	static getInstance(): LoggerFactory {
@@ -16,12 +27,12 @@ export class LoggerFactory {
 	}
 
 	getLogger(): ILogger {
-		return this.defaultLogger;
+		return container.get<ILogger>(ServiceRegistry.LOGGER) || new Logger();
 	}
 
 	// For testing purposes
 	setLogger(logger: ILogger): void {
-		this.defaultLogger = logger;
+		container.register(ServiceRegistry.LOGGER, logger);
 	}
 }
 

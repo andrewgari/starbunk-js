@@ -1,8 +1,24 @@
 import { Client, Message, TextChannel, Webhook } from 'discord.js';
 import guildIDs from '../discord/guildIDs';
 import { MessageInfo } from '../discord/messageInfo';
+import { ILogger } from '../services/Logger';
+import loggerFactory from '../services/LoggerFactory';
+import container from '../services/ServiceContainer';
+import { ServiceRegistry } from '../services/ServiceRegistry';
 
-export class WebhookService {
+export interface IWebhookService {
+	getChannelWebhook(channel: TextChannel): Promise<Webhook>;
+	getWebhook(client: Client, channelID: string): Promise<Webhook>;
+	writeMessage(channel: TextChannel, message: MessageInfo): Promise<Message<boolean>>;
+}
+
+export class WebhookService implements IWebhookService {
+	private logger: ILogger;
+
+	constructor(logger?: ILogger) {
+		this.logger = logger || loggerFactory.getLogger();
+	}
+
 	getWebhookName(channelName: string, isSnowbunk: boolean): string {
 		return `${isSnowbunk ? 'Snowbunk' : 'StarBunk'}Bunkbot-${channelName}`;
 	}
@@ -38,12 +54,15 @@ export class WebhookService {
 			try {
 				return webhook.send(message);
 			} catch (e) {
-				console.error('Failed to send message', e);
+				this.logger.error('Failed to send message', e as Error);
 			}
 		}
 		return Promise.reject('Could not find webhook');
 	}
 }
 
+// Create and register the default webhook service
 const webhookService = new WebhookService();
+container.register(ServiceRegistry.WEBHOOK_SERVICE, webhookService);
+
 export default webhookService;

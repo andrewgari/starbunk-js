@@ -1,4 +1,8 @@
-import { Client, Guild, Message, TextChannel, User } from 'discord.js';
+import { Client, Guild, Message, TextChannel, User, Webhook } from 'discord.js';
+import { ILogger } from '../../../services/Logger';
+import container from '../../../services/ServiceContainer';
+import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import { IWebhookService } from '../../../webhooks/webhookService';
 
 export const mockMessage = (content: string = 'test message', username: string = 'testUser'): Message => {
 	const mockUser = {
@@ -33,18 +37,36 @@ export const mockMessage = (content: string = 'test message', username: string =
 	} as unknown as Message;
 };
 
-export const mockWebhookService = {
-	writeMessage: jest.fn().mockResolvedValue({}),
-	getChannelWebhook: jest.fn().mockResolvedValue({}),
+// Need to use jest.fn() to create proper mock functions
+const mockWriteMessage = jest.fn().mockResolvedValue({} as Message<boolean>);
+const mockGetChannelWebhook = jest.fn().mockResolvedValue({} as Webhook);
+const mockGetWebhook = jest.fn().mockResolvedValue({} as Webhook);
+
+export const mockWebhookService: IWebhookService = {
+	writeMessage: mockWriteMessage,
+	getChannelWebhook: mockGetChannelWebhook,
+	getWebhook: mockGetWebhook,
 };
 
-export const mockLogger = {
+export const mockLogger: ILogger = {
 	debug: jest.fn(),
 	info: jest.fn(),
 	warn: jest.fn(),
 	error: jest.fn(),
 	success: jest.fn(),
 };
+
+/**
+ * Sets up the service container with mock services for testing
+ */
+export function setupTestContainer(): void {
+	// Clear any existing services
+	container.clear();
+	
+	// Register mock services
+	container.register(ServiceRegistry.LOGGER, mockLogger);
+	container.register(ServiceRegistry.WEBHOOK_SERVICE, mockWebhookService);
+}
 
 jest.mock('../botConstants', () => ({
 	getBotName: jest.fn().mockReturnValue('EzioBot'),
