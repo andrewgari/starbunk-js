@@ -4,10 +4,11 @@ WORKDIR /app
 
 # Copy package files first for better layer caching
 COPY package.json ./
+COPY package-lock.json ./
 
 # Install dependencies in a single layer with production flags
 # Use --ignore-scripts to bypass @distube/yt-dlp postinstall script that's failing
-RUN npm install --production=false --ignore-scripts
+RUN npm ci --ignore-scripts
 
 # Build the application
 RUN npm run build
