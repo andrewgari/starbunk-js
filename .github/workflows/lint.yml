@@ -1,6 +1,8 @@
 name: Lint
 
 on:
+    workflow_call:
+        # This allows the workflow to be called from other workflows
     pull_request:
         types: [opened, synchronize]
         paths:
