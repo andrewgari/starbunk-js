@@ -42,7 +42,7 @@ export default class StarbunkClient extends DiscordClient {
 			try {
 				const botName = file.split('.')[0];
 				const { default: BotClass } = await import(path.join(botDir, file));
-				const bot = new BotClass();
+				const bot = new BotClass() as ReplyBot;
 				this.bots.set(botName, bot);
 				LoggerAdapter.success(`Registered Bot: ${botName} 🤖`);
 			} catch (error) {

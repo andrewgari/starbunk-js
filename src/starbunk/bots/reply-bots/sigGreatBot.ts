@@ -1,6 +1,7 @@
 import { Guild, Message, TextChannel } from 'discord.js';
 import { getBotAvatar, getBotName, getBotPattern, getBotResponse, getCurrentMemberIdentity } from '../botConstants';
 import ReplyBot from '../replyBot';
+
 export default class SigBestBot extends ReplyBot {
 	private _botName: string = getBotName('SigGreat') ?? this.defaultBotName();
 	private _avatarUrl: string = getBotAvatar('SigGreat') ?? '';
