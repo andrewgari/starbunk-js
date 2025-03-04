@@ -1,12 +1,14 @@
 import { Message, TextChannel } from 'discord.js';
 import userID from '../../../discord/userID';
 import random from '../../../utils/random';
-import ReplyBot from '../replyBot';
 import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
+import ReplyBot from '../replyBot';
+import { VennDiagram } from '../vennDiagram';
 
 export default class VennBot extends ReplyBot {
 	private _botName: string = getBotName('Venn');
 	private _avatarUrl: string = getBotAvatar('Venn');
+	private diagram: VennDiagram;
 
 	// Public getters
 	get botName(): string {
@@ -21,6 +23,11 @@ export default class VennBot extends ReplyBot {
 		return 'Venn Bot';
 	}
 
+	constructor(diagram: VennDiagram = { leftCircle: 'Cringe', rightCircle: 'Based' }) {
+		super();
+		this.diagram = diagram;
+	}
+
 	handleMessage(message: Message<boolean>): void {
 		if (message.author.bot) return;
 
@@ -28,7 +35,8 @@ export default class VennBot extends ReplyBot {
 			(message.author.id == userID.Venn && random.percentChance(5)) ||
 			getBotPattern('Venn', 'Default')?.test(message.content)
 		) {
-			this.sendReply(message.channel as TextChannel, getBotResponse('Venn', 'Default'));
+			const response = `${this.diagram.leftCircle} vs ${this.diagram.rightCircle}: ${getBotResponse('Venn', 'Default')}`;
+			this.sendReply(message.channel as TextChannel, response);
 		}
 	}
 }
