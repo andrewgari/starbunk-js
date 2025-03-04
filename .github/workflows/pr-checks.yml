@@ -9,25 +9,45 @@ jobs:
     checks:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - name: 📥 Checkout code
+              uses: actions/checkout@v4
 
-            - name: Setup Node.js
+            - name: 🔧 Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: '18'
                   cache: 'npm'
 
-            - name: Install Dependencies
-              run: npm ci
+            - name: 📦 Install Dependencies
+              run: |
+                  echo "::group::Installing dependencies"
+                  npm ci
+                  echo "::endgroup::"
 
-            - name: Lint
-              run: npm run lint
+            - name: 🔍 Lint
+              run: |
+                  echo "::group::Running linter"
+                  npm run lint
+                  echo "::endgroup::"
+                  echo "✅ Code linting passed"
 
-            - name: Test
-              run: npm test
+            - name: 🧪 Test
+              run: |
+                  echo "::group::Running tests"
+                  npm test
+                  echo "::endgroup::"
+                  echo "✅ All tests passed successfully"
 
-            - name: Build
-              run: npm run build
+            - name: 🏗️ Build
+              run: |
+                  echo "::group::Building application"
+                  npm run build
+                  echo "::endgroup::"
+                  echo "✅ Build completed successfully"
 
-            - name: Docker Build
-              run: docker build -t ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }} .
+            - name: 🐳 Docker Build
+              run: |
+                  echo "::group::Building Docker image"
+                  docker build -t ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }} .
+                  echo "::endgroup::"
+                  echo "✅ Docker image built: ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}"
