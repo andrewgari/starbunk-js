@@ -1,23 +1,23 @@
 import { config as configDotenv } from 'dotenv';
 import { resolve } from 'path';
-import { Logger } from './services/Logger';
+import LoggerAdapter from './services/LoggerAdapter';
 
 switch (process.env.NODE_ENV) {
 	case 'development':
-		Logger.info('🔧 Loading development environment configuration');
+		LoggerAdapter.info('🔧 Loading development environment configuration');
 		configDotenv({
 			path: resolve(__dirname, '../.env.development'),
 		});
 		break;
 	case 'test':
-		Logger.info('🧪 Loading test environment configuration');
+		LoggerAdapter.info('🧪 Loading test environment configuration');
 		configDotenv({
 			path: resolve(__dirname, '../.env.test'),
 		});
 		break;
 	// Add 'staging' and 'production' cases here as well!
 	default:
-		Logger.error(`Invalid NODE_ENV: ${process.env.NODE_ENV}`);
+		LoggerAdapter.error(`Invalid NODE_ENV: ${process.env.NODE_ENV}`);
 		throw new Error(`'NODE_ENV' ${process.env.NODE_ENV} is not handled!`);
 }
 
@@ -25,17 +25,17 @@ switch (process.env.NODE_ENV) {
 const throwIfNot = function <T, K extends keyof T>(obj: Partial<T>, prop: K, msg?: string): T[K] {
 	if (obj[prop] === undefined || obj[prop] === null) {
 		const errorMsg = msg || `Environment is missing variable ${String(prop)}`;
-		Logger.error(errorMsg);
+		LoggerAdapter.error(errorMsg);
 		throw new Error(errorMsg);
 	}
 	return obj[prop] as T[K];
 };
 
-Logger.info('🔍 Validating environment variables...');
+LoggerAdapter.info('🔍 Validating environment variables...');
 ['AUTHENTICATION_API_URL', 'GRAPHQL_API_URL'].forEach((v) => {
 	throwIfNot(process.env, v);
 });
-Logger.success('✅ Environment validation complete');
+LoggerAdapter.success('✅ Environment validation complete');
 
 interface IProcessEnv {
 	AUTHENTICATION_API_URL: string;

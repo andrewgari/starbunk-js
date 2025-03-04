@@ -1,5 +1,5 @@
 import { Guild, GuildMember, User } from "discord.js";
-import userID from "../../../discord/userID";
+import userID from "../../discord/userID";
 
 interface BotConstantsConfig {
 	[key: string]: {
@@ -8,7 +8,7 @@ interface BotConstantsConfig {
 			[key: string]: string;
 		};
 		Patterns?: {
-			[key: string]: RegExp;
+			[key: string]: RegExp | undefined;
 		};
 		Responses: {
 			[key: string]: string | string[] | ((...args: string[]) => string);
@@ -16,7 +16,7 @@ interface BotConstantsConfig {
 	};
 }
 
-export const BotConstants: BotConstantsConfig = {
+const BotConstants: BotConstantsConfig = {
 	Attitude: {
 		Name: 'Xander Crews',
 		Avatars: {
@@ -46,7 +46,7 @@ export const BotConstants: BotConstantsConfig = {
 	Banana: {
 		Name: 'BananaBot',
 		Avatars: {
-			Default: 'banana_avatar_url'  // Replace with actual URL
+			Default: 'https://static.wikia.nocookie.net/donkeykong/images/a/a6/Xananab.jpg/revision/latest/scale-to-width-down/299?cb=20100522010210'
 		},
 		Patterns: {
 			Default: /banana/i
@@ -86,10 +86,17 @@ export const BotConstants: BotConstantsConfig = {
 		Responses: {
 			Default: 'Did somebody say Blu?',
 			Cheeky: 'Lol, Somebody definitely said Blu! :smile:',
-			Request: (name: string) => {
+			Request: (message: string) => {
+				let name = message.match(getBotPattern('Blue', 'Nice')!)?.groups?.name ?? "Hey";
+
 				if (name.toLowerCase() === 'venn') {
 					return `No way, Venn can suck my blu cane. :unamused:`
 				}
+
+				if (name.toLowerCase() === 'me') {
+					name = 'Hey';
+				}
+
 				return `${name}, I think you're pretty Blu! :wink: :blue_heart:`
 			}
 		}
@@ -99,6 +106,9 @@ export const BotConstants: BotConstantsConfig = {
 		Name: 'BotBot',
 		Avatars: {
 			Default: 'https://cdn-icons-png.flaticon.com/512/4944/4944377.png'
+		},
+		Patterns: {
+			Default: /bot/i,
 		},
 		Responses: {
 			Default: 'Hello fellow bot!'
@@ -128,7 +138,7 @@ export const BotConstants: BotConstantsConfig = {
 		},
 		Responses: {
 			Default: (content: string) => {
-				const swapped = content.replace(BotConstants.Check.Patterns!!.Default, match => {
+				const swapped = content.replace(getBotPattern('Check', 'Default')!, match => {
 					const isLower = match[0].toLowerCase() === match[0];
 					const isCheck = match.toLowerCase() === "check";
 
@@ -154,19 +164,6 @@ export const BotConstants: BotConstantsConfig = {
 		},
 		Responses: {
 			Default: (name: string) => `Remember ${name}, Nothing is true; Everything is permitted.`
-		}
-	},
-
-	Gremlin: {
-		Name: 'GremlinBot',
-		Avatars: {
-			Default: 'https://i.imgur.com/D0czJFu.jpg'
-		},
-		Patterns: {
-			Default: /gremlin/i
-		},
-		Responses: {
-			Default: "Could you repeat that? I don't speak *gremlin*"
 		}
 	},
 
@@ -208,7 +205,7 @@ export const BotConstants: BotConstantsConfig = {
 			Default: (content: string) => {
 				const VennCorection = "Correction: you mean Venn \"Tyrone \"The \"Macaroni\" Man\" Johnson\" Caelum";
 				const MacaroniMention = (userMention: string): string => `Are you trying to reach <@${userMention}>`;
-				const matches = content.match(BotConstants.Macaroni.Patterns!!.Macaroni)
+				const matches = content.match(getBotPattern('Macaroni', 'Macaroni')!)
 
 				if (!matches) { return 'No match found'; };
 				if (matches[0].toLowerCase() === "venn") {
@@ -233,6 +230,19 @@ export const BotConstants: BotConstantsConfig = {
 		}
 	},
 
+	Pickle: {
+		Name: 'GremlinBot',
+		Avatars: {
+			Default: 'https://i.imgur.com/D0czJFu.jpg'
+		},
+		Patterns: {
+			Default: /gremlin/i
+		},
+		Responses: {
+			Default: "Could you repeat that? I don't speak *gremlin*"
+		}
+	},
+
 	Nice: {
 		Name: 'BunkBot',
 		Avatars: {
@@ -252,8 +262,7 @@ export const BotConstants: BotConstantsConfig = {
 			Default: 'https://i.imgur.com/D0czJFu.jpg'
 		},
 		Patterns: {
-			Default: /\b(sig|siggles) \s+ (?: is\s+)?(best | greatest | awesome | amazing | cool | fantastic | wonderful | excellent | good | great | brilliant | perfect | the\s + best)\b/i,
-
+			Default: /\b(sig|siggles)\s+(?:is\s+)?(best|greatest|awesome|amazing|cool|fantastic|wonderful|excellent|good|great|brilliant|perfect|the\s+best)\b/i,
 		},
 		Responses: {
 			Default: 'SigGreat.'
@@ -270,19 +279,6 @@ export const BotConstants: BotConstantsConfig = {
 		},
 		Responses: {
 			Default: () => 'Sh' + 'e'.repeat(Math.floor(Math.random() * 50)) + 'sh 😤'
-		}
-	},
-
-	Soggy: {
-		Name: 'SoggyBot',
-		Avatars: {
-			Default: 'https://imgur.com/OCB6i4x.jpg'
-		},
-		Patterns: {
-			Default: /wet bread/i
-		},
-		Responses: {
-			Default: 'Sounds like somebody enjoys wet bread'
 		}
 	},
 
@@ -366,7 +362,7 @@ export const BotConstants: BotConstantsConfig = {
 }
 
 // Helper functions for type-safe access
-export function getBotConfig(botKey: keyof typeof BotConstants) {
+export function getBotConfig(botKey: keyof typeof BotConstants): typeof BotConstants[keyof typeof BotConstants] {
 	return BotConstants[botKey];
 }
 
@@ -377,7 +373,7 @@ export type BotIdentity = {
 }
 
 export async function getCurrentMemberIdentity(userID: string, guild: Guild): Promise<BotIdentity | undefined> {
-	let member: GuildMember | User | undefined =
+	const member: GuildMember | User | undefined =
 		await guild.members.fetch(userID) ?? await guild.client.users.fetch(userID);
 	if (member) {
 		return {
@@ -409,9 +405,15 @@ export function getBotResponse(botKey: keyof typeof BotConstants, responseKey: s
 }
 
 export function getBotPattern(botKey: keyof typeof BotConstants, patternKey: string = 'Default'): RegExp | undefined {
-	return BotConstants[botKey].Patterns?.[patternKey];
+	const bot = BotConstants[botKey];
+	if (!bot || !bot.Patterns) return undefined;
+	return bot.Patterns[patternKey];
 }
 
 export function getBotAvatar(botKey: keyof typeof BotConstants, avatarKey: string = 'Default'): string {
-	return BotConstants[botKey].Avatars[avatarKey];
+	const bot = BotConstants[botKey];
+	if (!bot) return 'https://twitter.com/jeanralphio/status/523633061393879040';
+
+	// If the requested avatar doesn't exist, fall back to Default
+	return bot.Avatars[avatarKey] || bot.Avatars['Default'] || '';
 }

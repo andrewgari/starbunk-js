@@ -1,7 +1,15 @@
 import { Message, TextChannel } from 'discord.js';
+import { ILogger } from '../../services/Logger';
+import loggerFactory from '../../services/LoggerFactory';
 import webhookService from '../../webhooks/webhookService';
 
 export default abstract class ReplyBot {
+	protected logger: ILogger;
+
+	constructor(logger?: ILogger) {
+		this.logger = logger || loggerFactory.getLogger();
+	}
+
 	abstract botName: string;
 	defaultBotName(): string {
 		return this.botName;

@@ -2,7 +2,7 @@ import { Message, TextChannel } from 'discord.js';
 import UserID from '../../../discord/userID';
 import random from '../../../utils/random';
 import ReplyBot from '../replyBot';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from './botConstants';
+import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
 
 export default class BananaBot extends ReplyBot {
 	private _botName = getBotName('Banana') ?? 'Banana Bot';

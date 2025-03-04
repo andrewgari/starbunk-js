@@ -9,28 +9,29 @@ import {
 	VoiceConnection,
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
-import { Logger } from '../services/Logger';
+import LoggerAdapter from '../services/LoggerAdapter';
 
 export class DJCova {
 	private player: AudioPlayer;
 	private resource: AudioResource | undefined;
 
 	constructor() {
-		Logger.debug('🎵 Initializing DJCova audio player');
+		LoggerAdapter.debug('🎵 Initializing DJCova audio player');
 		this.player = createAudioPlayer();
 	}
 
 	async start(url: string): Promise<void> {
-		if (this.player.state.status === AudioPlayerStatus.Playing) {
-			Logger.warn('Attempted to start playback while already playing');
+		if (this.resource) {
+			LoggerAdapter.warn('Attempted to start playback while already playing');
 			return;
 		}
 
+		LoggerAdapter.info(`🎵 Starting playback from URL: ${url}`);
+
 		try {
-			Logger.info(`🎵 Starting playback from URL: ${url}`);
 			const stream = ytdl(url, {
 				filter: 'audioonly',
-				quality: 'lowestaudio',
+				quality: 'highestaudio',
 				highWaterMark: 1 << 25,
 				dlChunkSize: 0,
 				requestOptions: {
@@ -46,62 +47,65 @@ export class DJCova {
 				inputType: StreamType.WebmOpus,
 				inlineVolume: true,
 			});
-			this.resource.volume?.setVolume(0.5);
 
-			Logger.debug('▶️ Playing resource...');
+			if (this.resource.volume) {
+				this.resource.volume.setVolume(0.5);
+			}
+
+			LoggerAdapter.debug('▶️ Playing resource...');
 			this.player.play(this.resource);
-			Logger.success('🎵 Audio resource created and playback started');
+			LoggerAdapter.success('🎵 Audio resource created and playback started');
 		} catch (error) {
-			Logger.error('Failed to start audio playback', error as Error);
-			throw error;
+			LoggerAdapter.error('Failed to start audio playback', error as Error);
 		}
 	}
 
 	play(): void {
 		if (!this.resource) {
-			Logger.warn('Attempted to play without an active audio resource');
+			LoggerAdapter.warn('Attempted to play without an active audio resource');
 			return;
 		}
-		Logger.debug('▶️ Playing audio resource');
+
+		LoggerAdapter.debug('▶️ Playing audio resource');
 		this.player.play(this.resource);
 	}
 
 	stop(): void {
-		if (this.player.state.status !== AudioPlayerStatus.Idle) {
-			Logger.info('⏹️ Stopping audio playback');
-			this.player.stop();
-		}
+		LoggerAdapter.info('⏹️ Stopping audio playback');
+		this.player.stop();
+		this.resource = undefined;
 	}
 
 	pause(): void {
-		if (this.player.state.status === AudioPlayerStatus.Playing) {
-			Logger.info('⏸️ Pausing audio playback');
-			this.player.pause();
-		}
+		LoggerAdapter.info('⏸️ Pausing audio playback');
+		this.player.pause();
 	}
 
 	changeVolume(vol: number): void {
-		if (this.resource) {
-			Logger.info(`🔊 Adjusting volume to ${vol}%`);
-			this.resource.volume?.setVolume(vol / 100);
+		LoggerAdapter.info(`🔊 Adjusting volume to ${vol}%`);
+		if (this.resource?.volume) {
+			this.resource.volume.setVolume(vol / 100);
 		} else {
-			Logger.warn('Attempted to change volume without active resource');
+			LoggerAdapter.warn('Attempted to change volume without active resource');
 		}
 	}
 
 	subscribe(channel: VoiceConnection): PlayerSubscription | undefined {
-		Logger.debug(`🎧 Subscribing to voice channel`);
-		const subscription = channel.subscribe(this.player);
-		if (subscription) {
-			Logger.success('Player successfully subscribed to connection.');
-		} else {
-			Logger.error('Failed to subscribe player to the connection.');
+		LoggerAdapter.debug(`🎧 Subscribing to voice channel`);
+		try {
+			const subscription = channel.subscribe(this.player);
+			if (subscription) {
+				LoggerAdapter.success('Player successfully subscribed to connection.');
+			}
+			return subscription;
+		} catch (error) {
+			LoggerAdapter.error('Failed to subscribe player to the connection.');
+			return undefined;
 		}
-		return subscription;
 	}
 
 	on(status: AudioPlayerStatus, callback: () => void): void {
-		Logger.debug(`📡 Registering listener for ${status} status`);
+		LoggerAdapter.debug(`📡 Registering listener for ${status} status`);
 		this.player.on(status, callback);
 	}
 }
