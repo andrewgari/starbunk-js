@@ -115,7 +115,7 @@ jobs:
               run: npm ci
 
             - name: Type Check Main Code
-              run: npm run type-check:main
+              run: npm run type-check
 
             - name: Type Check Cypress Code
               if: ${{ needs.changes.outputs.cypress == 'true' }}
