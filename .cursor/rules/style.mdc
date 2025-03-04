@@ -1,0 +1,14 @@
+---
+description: coding style and best practices
+globs: 
+---
+## Code Style
+- Use interfaces for contracts
+- Keep classes small (< 200 lines)
+- Methods should do one thing only
+- Max 3 parameters per method
+- Favor pure functions
+- One class per file
+- Utils can have multiple functions if same concept
+- Keep functions under 20 lines when possible
+- Optimize for readability

@@ -1,0 +1,19 @@
+---
+description: Casing rules for code
+globs: .ts, .tsx
+---
+Use camcelCase for method and variable names
+```
+function exampleFunction() {
+	const exampleVariable = "1";
+}
+```
+
+Use PascalCase for class names and global constants
+```
+class ExampleClass {
+
+}
+
+const GlobalConstant = 5;
+```
