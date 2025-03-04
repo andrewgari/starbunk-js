@@ -5,8 +5,13 @@ on:
         types: [opened, synchronize]
 
 jobs:
+    unit-tests:
+        name: Unit Tests
+        uses: ./.github/workflows/unit-tests.yml
+
     verify:
         runs-on: ubuntu-latest
+        needs: unit-tests
         steps:
             - uses: actions/checkout@v3
 
@@ -17,9 +22,6 @@ jobs:
 
             - name: Install Dependencies
               run: npm ci
-
-            - name: Run Unit Tests
-              run: npm test
 
             - name: Lint Check
               run: npm run lint
