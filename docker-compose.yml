@@ -1,7 +1,15 @@
 services:
-  bunkbot-ts:
-    image: ghcr.io/andrewgari/starbunk-js:main
-    container_name: bunkbot
-    env_file:
-      - .env
-    command: npm run start
+    bunkbot-ts:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: bunkbot
+        env_file:
+            - .env
+        command: npm run start
+        # Improve performance with resource limits
+        deploy:
+            resources:
+                limits:
+                    cpus: '2'
+                    memory: 1G
