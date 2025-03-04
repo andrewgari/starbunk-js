@@ -114,12 +114,8 @@ jobs:
             - name: Install Dependencies
               run: npm ci
 
-            - name: Type Check Main Code
+            - name: Type Check Code
               run: npm run type-check
-
-            - name: Type Check Cypress Code
-              if: ${{ needs.changes.outputs.cypress == 'true' }}
-              run: npm run type-check:cypress
 
     unit-test:
         name: '🧪 PR - Run Jest Unit Tests'
@@ -160,8 +156,6 @@ jobs:
                needs.changes.outputs.workflows == 'true' ||
                needs.changes.outputs.docker == 'true') &&
               (needs.unit-test.result == 'success' || needs.unit-test.result == 'skipped') &&
-              (needs.cypress-parallel.result == 'success' || needs.cypress-parallel.result == 'skipped') &&
-              (needs.test-summary.result == 'success' || needs.test-summary.result == 'skipped') &&
               (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
               (needs.type-check.result == 'success' || needs.type-check.result == 'skipped')
             }}
