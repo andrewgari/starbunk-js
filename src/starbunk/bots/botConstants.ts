@@ -220,7 +220,7 @@ const BotConstants: BotConstantsConfig = {
 	MusicCorrect: {
 		Name: 'Music Correct Bot',
 		Avatars: {
-			Default: 'default_music_avatar.png'
+			Default: 'https://i.imgur.com/HXVVfyj.png'
 		},
 		Patterns: {
 			Default: /^[?!]play /i

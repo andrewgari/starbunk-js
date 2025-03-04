@@ -34,7 +34,7 @@ jest.mock('../botConstants', () => {
 
 	return {
 		getBotName: jest.fn().mockReturnValue('Music Correct Bot'),
-		getBotAvatar: jest.fn().mockReturnValue('default_music_avatar.png'),
+		getBotAvatar: jest.fn().mockReturnValue('https://i.imgur.com/HXVVfyj.png'),
 		getBotPattern: jest.fn().mockReturnValue(/^[?!]play /i),
 		getBotResponse: jest.fn().mockImplementation((_botKey, _responseKey, userId) => {
 			// This simulates the behavior of the real getBotResponse function
@@ -68,7 +68,7 @@ describe('MusicCorrectBot', () => {
 
 	test('should have the correct avatarUrl', () => {
 		// Assert
-		expect(musicCorrectBot.avatarUrl).toBe('default_music_avatar.png');
+		expect(musicCorrectBot.avatarUrl).toBe('https://i.imgur.com/HXVVfyj.png');
 		expect(getBotAvatar).toHaveBeenCalledWith('MusicCorrect');
 	});
 
