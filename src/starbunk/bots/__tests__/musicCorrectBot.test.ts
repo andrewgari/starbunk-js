@@ -12,16 +12,17 @@ jest.mock('../../../services/Logger', () => ({
 }));
 
 // Mock the LoggerFactory
+const mockLogger = {
+	debug: jest.fn(),
+	info: jest.fn(),
+	warn: jest.fn(),
+	error: jest.fn(),
+};
+
 jest.mock('../../../services/LoggerFactory', () => ({
-	LoggerFactory: {
-		getInstance: jest.fn().mockReturnValue({
-			getLogger: jest.fn().mockReturnValue({
-				debug: jest.fn(),
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-			}),
-		}),
+	__esModule: true,
+	default: {
+		getLogger: jest.fn().mockReturnValue(mockLogger),
 	},
 }));
 
@@ -91,6 +92,7 @@ describe('MusicCorrectBot', () => {
 		musicCorrectBot.handleMessage(message);
 
 		// Assert
+		expect(mockLogger.debug).toHaveBeenCalled();
 		expect(webhookService.writeMessage).toHaveBeenCalled();
 		expect(getBotResponse).toHaveBeenCalledWith('MusicCorrect', 'Default', message.author.id);
 	});
@@ -103,6 +105,7 @@ describe('MusicCorrectBot', () => {
 		musicCorrectBot.handleMessage(message);
 
 		// Assert
+		expect(mockLogger.debug).toHaveBeenCalled();
 		expect(webhookService.writeMessage).toHaveBeenCalled();
 		expect(getBotResponse).toHaveBeenCalledWith('MusicCorrect', 'Default', message.author.id);
 	});

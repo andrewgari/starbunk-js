@@ -1,6 +1,21 @@
 // Mock the webhook service
 jest.mock('../../../webhooks/webhookService');
 
+// Mock the Logger
+const mockLogger = {
+	debug: jest.fn(),
+	info: jest.fn(),
+	warn: jest.fn(),
+	error: jest.fn(),
+};
+
+jest.mock('../../../services/LoggerFactory', () => ({
+	__esModule: true,
+	default: {
+		getLogger: jest.fn().mockReturnValue(mockLogger),
+	},
+}));
+
 // Mock the bot constants
 jest.mock('../botConstants', () => ({
 	getBotName: jest.fn().mockReturnValue('Xander Crews'),
@@ -10,6 +25,7 @@ jest.mock('../botConstants', () => ({
 }));
 
 import webhookService from '../../../webhooks/webhookService';
+import { getBotAvatar, getBotName } from '../botConstants';
 import AttitudeBot from '../reply-bots/attitudeBot';
 import { mockMessage, mockWebhookService } from './testUtils';
 
@@ -22,6 +38,23 @@ describe('AttitudeBot', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		attitudeBot = new AttitudeBot();
+	});
+
+	test('should have the correct botName', () => {
+		// Assert
+		expect(attitudeBot.botName).toBe('Xander Crews');
+		expect(getBotName).toHaveBeenCalledWith('Attitude');
+	});
+
+	test('should have the correct avatarUrl', () => {
+		// Assert
+		expect(attitudeBot.avatarUrl).toBe('https://i.ytimg.com/vi/56PMgO3q2-A/sddefault.jpg');
+		expect(getBotAvatar).toHaveBeenCalledWith('Attitude');
+	});
+
+	test('should have the correct defaultBotName', () => {
+		// Assert
+		expect(attitudeBot.defaultBotName()).toBe('Attitude Bot');
 	});
 
 	test('should not respond to bot messages', async () => {
