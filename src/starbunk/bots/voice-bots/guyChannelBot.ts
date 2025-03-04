@@ -8,7 +8,7 @@ export default class GuyChannelBot extends VoiceBot {
 	public readonly botName = 'Guy Channel Bot';
 
 	constructor(logger?: ILogger) {
-		super(logger);
+		super(logger, 1.0);
 	}
 
 	handleEvent(oldState: VoiceState, newState: VoiceState): void {
@@ -39,5 +39,9 @@ export default class GuyChannelBot extends VoiceBot {
 				this.logger.debug(`👤 ${member.displayName} moved from ${oldChannelId || 'nowhere'} to ${newChannelId || 'nowhere'}`);
 			}
 		});
+	}
+
+	connectToChannel(): void {
+		// Implementation will be added later
 	}
 }
