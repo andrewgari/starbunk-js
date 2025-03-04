@@ -1,0 +1,52 @@
+name: Merge Actions
+
+on:
+    pull_request:
+        types: [closed]
+        branches: [main]
+
+jobs:
+    publish:
+        if: github.event.pull_request.merged == true
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v2
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Delete PR Image
+              uses: actions/github-script@v6
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      const prNumber = context.payload.pull_request.number;
+                      const owner = context.repo.owner;
+                      const repo = context.repo.repo;
+                      const packageName = `${owner}/${repo}`.toLowerCase();
+                      const tag = `pr-${prNumber}`;
+
+                      try {
+                        await github.rest.packages.deletePackageVersionForOrg({
+                          package_type: 'container',
+                          package_name: packageName,
+                          org: owner,
+                          version_id: tag
+                        });
+                        console.log(`Deleted container image with tag: ${tag}`);
+                      } catch (error) {
+                        console.log(`Failed to delete image or image not found: ${error.message}`);
+                      }
+
+            - name: Build and Push
+              uses: docker/build-push-action@v4
+              with:
+                  context: .
+                  push: true
+                  tags: |
+                      ghcr.io/${{ github.repository }}:latest
+                      ghcr.io/${{ github.repository }}:${{ github.sha }}

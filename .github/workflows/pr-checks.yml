@@ -1,0 +1,33 @@
+name: PR Checks
+
+on:
+    pull_request:
+        types: [opened, synchronize]
+    workflow_dispatch:
+
+jobs:
+    checks:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '18'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Lint
+              run: npm run lint
+
+            - name: Test
+              run: npm test
+
+            - name: Build
+              run: npm run build
+
+            - name: Docker Build
+              run: docker build -t ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }} .
