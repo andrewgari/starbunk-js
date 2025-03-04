@@ -35,12 +35,8 @@ on:
     workflow_dispatch: # Allow manual trigger
 
 jobs:
-    setup:
-        uses: ./.github/workflows/setup.yml
-
     test:
         name: Run Unit Tests
-        needs: setup
         runs-on: ubuntu-latest
         steps:
             - name: 📥 Checkout code
@@ -53,8 +49,11 @@ jobs:
                   cache: 'npm'
 
             - name: 📦 Install dependencies
-              if: ${{ needs.setup.outputs.cache-hit != 'true' }}
-              run: npm ci
+              run: |
+                  echo "::group::Installing dependencies"
+                  npm ci
+                  echo "::endgroup::"
+                  echo "✅ Dependencies installed successfully"
 
             - name: 🧪 Run tests
               run: |

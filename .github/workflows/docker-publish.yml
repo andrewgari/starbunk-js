@@ -20,6 +20,13 @@ jobs:
             - name: 📥 Checkout Repository
               uses: actions/checkout@v4
 
+            - name: 🔧 Create empty yarn.lock if it doesn't exist
+              run: |
+                  if [ ! -f yarn.lock ]; then
+                    echo "Creating empty yarn.lock file"
+                    touch yarn.lock
+                  fi
+
             - name: 🔐 Log in to GitHub Container Registry
               uses: docker/login-action@v3
               with:
@@ -34,6 +41,8 @@ jobs:
                   context: .
                   push: true
                   tags: ghcr.io/${{ github.repository }}:${{ inputs.tag }}
+                  no-cache: true
+                  buildkitd-flags: --debug
 
             - name: 📝 Image Summary
               run: |

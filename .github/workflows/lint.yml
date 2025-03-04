@@ -17,11 +17,7 @@ on:
     workflow_dispatch:
 
 jobs:
-    setup:
-        uses: ./.github/workflows/setup.yml
-
     lint:
-        needs: setup
         runs-on: ubuntu-latest
         steps:
             - name: 📥 Checkout code
@@ -34,8 +30,11 @@ jobs:
                   cache: 'npm'
 
             - name: 📦 Install Dependencies
-              if: ${{ needs.setup.outputs.cache-hit != 'true' }}
-              run: npm ci
+              run: |
+                  echo "::group::Installing dependencies"
+                  npm ci
+                  echo "::endgroup::"
+                  echo "✅ Dependencies installed successfully"
 
             - name: 🔍 Lint
               run: |
