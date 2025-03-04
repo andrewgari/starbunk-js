@@ -1,15 +1,19 @@
 import { Message, TextChannel } from 'discord.js';
 import userID from '../../../discord/userID';
 import { OpenAIClient } from '../../../openai/openaiClient';
-import { Logger } from '../../../services/Logger';
+import { ILogger } from '../../../services/Logger';
+import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
 import ReplyBot from '../replyBot';
-import { BotConstants, getBotAvatar, getBotPattern, getBotResponse } from './botConstants';
 
 export default class BlueBot extends ReplyBot {
 	private blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
-	private _avatarUrl: string = BotConstants.Blue.Avatars.Default;
-	public readonly botName: string = BotConstants.Blue.Name;
+	private _avatarUrl: string = getBotAvatar('Blue', 'Default');
+	public readonly botName: string = getBotName('Blue');
+
+	constructor(logger?: ILogger) {
+		super(logger);
+	}
 
 	// Public getters
 	get avatarUrl(): string {
@@ -20,21 +24,20 @@ export default class BlueBot extends ReplyBot {
 		if (message.author.bot) return;
 
 		if (this.isSomeoneAskingYouToBeBlue(message)) {
-			Logger.debug(`User ${message.author.username} asked BlueBot to be nice`);
+			this.logger.debug(`User ${message.author.username} asked BlueBot to be nice`);
 			if (getBotPattern('Blue', 'Nice')?.test(message.content)) {
-				Logger.debug(`${message.author.username} asked about Venn - responding with contempt`);
+				this.logger.debug(`${message.author.username} asked about Venn - responding with contempt`);
 				this.sendReply(
 					message.channel as TextChannel,
-					getBotResponse('Blue', 'Nice', message.author.displayName)
+					getBotResponse('Blue', 'Request', message.content)
 				);
 			}
 
-			Logger.debug(`Being nice to ${name} as requested by ${message.author.username}`);
 			return;
 		}
 
 		if (this.isVennInsultingBlu(message)) {
-			Logger.warn(`Venn is being mean again! Message: "${message.content}"`);
+			this.logger.warn(`Venn is being mean again! Message: "${message.content}"`);
 			this.blueMurderTimestamp = new Date();
 			this._avatarUrl = getBotAvatar('Blue', 'Murder');
 			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Murder'));
@@ -54,13 +57,13 @@ export default class BlueBot extends ReplyBot {
 			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Default'));
 			return;
 		} else if (await this.checkIfBlueIsSaid(message)) {
-			Logger.debug('AI detected blue reference in message');
+			this.logger.debug('AI detected blue reference in message');
 			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Default'));
 		}
 	}
 
 	private isSomeoneRespondingToBlu(message: Message): boolean {
-		if (BotConstants.Blue.Patterns?.Confirm?.test(message.content) || BotConstants.Blue.Patterns?.Mean?.test(message.content)) {
+		if (getBotPattern('Blue', 'Confirm')?.test(message.content) || getBotPattern('Blue', 'Mean')?.test(message.content)) {
 			const lastMessage = this.blueTimestamp.getTime();
 			return message.createdTimestamp - lastMessage < 300000;
 		}
@@ -79,7 +82,7 @@ export default class BlueBot extends ReplyBot {
 
 	private async checkIfBlueIsSaid(message: Message): Promise<boolean> {
 		try {
-			Logger.debug('Checking message for blue references via AI');
+			this.logger.debug('Checking message for blue references via AI');
 			const response = await OpenAIClient.chat.completions.create({
 				model: 'gpt-4o-mini',
 				messages: [
@@ -125,15 +128,15 @@ export default class BlueBot extends ReplyBot {
 				temperature: 0.2,
 			});
 
-			Logger.debug(`AI response: ${response.choices[0].message.content}`);
+			this.logger.debug(`AI response: ${response.choices[0].message.content}`);
 			return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
 		} catch (error) {
-			Logger.error('Error checking for blue reference', error as Error);
+			this.logger.error('Error checking for blue reference', error as Error);
 			return false;
 		}
 	}
 
 	private isSomeoneAskingYouToBeBlue(message: Message): boolean {
-		return BotConstants.Blue.Patterns?.Nice?.test(message.content) ?? false;
+		return getBotPattern('Blue', 'Nice')?.test(message.content) ?? false;
 	}
 }

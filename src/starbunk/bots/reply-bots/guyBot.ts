@@ -1,8 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
 import userID from '../../../discord/userID';
 import random from '../../../utils/random';
+import { getBotAvatar, getBotName, getBotPattern, getBotResponse, getCurrentMemberIdentity } from '../botConstants';
 import ReplyBot from '../replyBot';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse, getCurrentMemberIdentity } from './botConstants';
 
 export default class GuyBot extends ReplyBot {
 	private _botName: string = getBotName('Guy');
@@ -24,7 +24,7 @@ export default class GuyBot extends ReplyBot {
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		const guyIdentity = await getCurrentMemberIdentity(userID.Guy, message.guild!!);
+		const guyIdentity = await getCurrentMemberIdentity(userID.Guy, message.guild!);
 		if (guyIdentity) {
 			this._avatarUrl = guyIdentity.avatarUrl ?? this._avatarUrl;
 			this._botName = guyIdentity?.botName ?? this._botName;

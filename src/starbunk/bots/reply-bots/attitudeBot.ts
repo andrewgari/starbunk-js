@@ -1,6 +1,6 @@
 import { Message, TextChannel } from "discord.js";
+import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from "../botConstants";
 import ReplyBot from "../replyBot";
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from "./botConstants";
 
 export default class AttitudeBot extends ReplyBot {
 	public readonly botName: string = getBotName('Attitude');

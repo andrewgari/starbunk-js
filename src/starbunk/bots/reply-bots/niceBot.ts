@@ -1,6 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
 import ReplyBot from '../replyBot';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from './botConstants';
+import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
 
 export default class NiceBot extends ReplyBot {
 	public readonly botName: string = getBotName('Nice');
