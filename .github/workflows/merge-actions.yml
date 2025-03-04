@@ -6,62 +6,35 @@ on:
         branches: [main]
 
 jobs:
-    publish:
+    cleanup:
         if: github.event.pull_request.merged == true
+        uses: ./.github/workflows/pr-cleanup.yml
+
+    publish-latest:
+        if: github.event.pull_request.merged == true
+        needs: cleanup
+        uses: ./.github/workflows/docker-publish.yml
+        with:
+            tag: latest
+
+    publish-sha:
+        if: github.event.pull_request.merged == true
+        needs: cleanup
+        uses: ./.github/workflows/docker-publish.yml
+        with:
+            tag: ${{ github.sha }}
+
+    summary:
+        if: github.event.pull_request.merged == true
+        needs: [cleanup, publish-latest, publish-sha]
         runs-on: ubuntu-latest
         steps:
-            - name: 📥 Checkout code
-              uses: actions/checkout@v4
-
-            - name: 🔐 Login to GitHub Container Registry
-              uses: docker/login-action@v2
-              with:
-                  registry: ghcr.io
-                  username: ${{ github.actor }}
-                  password: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: 🗑️ Delete PR Image
-              id: delete_image
-              uses: actions/github-script@v6
-              with:
-                  github-token: ${{ secrets.GITHUB_TOKEN }}
-                  script: |
-                      const prNumber = context.payload.pull_request.number;
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
-                      const packageName = `${owner}/${repo}`.toLowerCase();
-                      const tag = `pr-${prNumber}`;
-
-                      try {
-                        await github.rest.packages.deletePackageVersionForOrg({
-                          package_type: 'container',
-                          package_name: packageName,
-                          org: owner,
-                          version_id: tag
-                        });
-                        console.log(`Deleted container image with tag: ${tag}`);
-                        return { success: true, tag: tag };
-                      } catch (error) {
-                        console.log(`Failed to delete image or image not found: ${error.message}`);
-                        return { success: false, error: error.message };
-                      }
-
-            - name: 🏗️ Build and Push
-              id: docker_build
-              uses: docker/build-push-action@v4
-              with:
-                  context: .
-                  push: true
-                  tags: |
-                      ghcr.io/${{ github.repository }}:latest
-                      ghcr.io/${{ github.repository }}:${{ github.sha }}
-
             - name: 📝 Merge Summary
               run: |
-                  echo "### 🚀 PR Merged and Images Published" >> $GITHUB_STEP_SUMMARY
-                  echo "| Action | Status | Details |" >> $GITHUB_STEP_SUMMARY
-                  echo "| --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
-                  echo "| **PR Cleanup** | ${{ fromJSON(steps.delete_image.outputs.result).success && '✅ Success' || '⚠️ Warning' }} | PR #${{ github.event.pull_request.number }} image ${{ fromJSON(steps.delete_image.outputs.result).success && 'deleted' || 'not found or failed to delete' }} |" >> $GITHUB_STEP_SUMMARY
-                  echo "| **New Images** | ✅ Published | ghcr.io/${{ github.repository }}:latest<br>ghcr.io/${{ github.repository }}:${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
-                  echo "| **Digest** | 📝 | ${{ steps.docker_build.outputs.digest }} |" >> $GITHUB_STEP_SUMMARY
-                  echo "| **Image URL** | 🔗 | [View in GitHub Container Registry](https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }}) |" >> $GITHUB_STEP_SUMMARY
+                  echo "### 🚀 PR Merged and Actions Completed" >> $GITHUB_STEP_SUMMARY
+                  echo "| Action | Status |" >> $GITHUB_STEP_SUMMARY
+                  echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **PR Cleanup** | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Latest Image** | ✅ Published |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **SHA Image** | ✅ Published |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Image URL** | 🔗 [View in GitHub Container Registry](https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }}) |" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,42 @@
+name: PR Cleanup
+
+on:
+    pull_request:
+        types: [closed]
+
+jobs:
+    cleanup:
+        runs-on: ubuntu-latest
+        steps:
+            - name: 🗑️ Delete PR Image
+              id: delete_image
+              uses: actions/github-script@v6
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      const prNumber = context.payload.pull_request.number;
+                      const owner = context.repo.owner;
+                      const repo = context.repo.repo;
+                      const packageName = `${owner}/${repo}`.toLowerCase();
+                      const tag = `pr-${prNumber}`;
+
+                      try {
+                        await github.rest.packages.deletePackageVersionForOrg({
+                          package_type: 'container',
+                          package_name: packageName,
+                          org: owner,
+                          version_id: tag
+                        });
+                        console.log(`Deleted container image with tag: ${tag}`);
+                        return { success: true, tag: tag };
+                      } catch (error) {
+                        console.log(`Failed to delete image or image not found: ${error.message}`);
+                        return { success: false, error: error.message };
+                      }
+
+            - name: 📝 Cleanup Summary
+              run: |
+                  echo "### 🧹 PR Cleanup Results" >> $GITHUB_STEP_SUMMARY
+                  echo "| Action | Status | Details |" >> $GITHUB_STEP_SUMMARY
+                  echo "| --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **PR Image Cleanup** | ${{ fromJSON(steps.delete_image.outputs.result).success && '✅ Success' || '⚠️ Warning' }} | PR #${{ github.event.pull_request.number }} image ${{ fromJSON(steps.delete_image.outputs.result).success && 'deleted' || 'not found or failed to delete' }} |" >> $GITHUB_STEP_SUMMARY

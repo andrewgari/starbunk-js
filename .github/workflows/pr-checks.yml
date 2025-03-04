@@ -6,48 +6,28 @@ on:
     workflow_dispatch:
 
 jobs:
-    checks:
+    lint:
+        uses: ./.github/workflows/lint.yml
+
+    test:
+        uses: ./.github/workflows/unit-tests.yml
+
+    build:
+        uses: ./.github/workflows/build.yml
+
+    docker-build:
+        uses: ./.github/workflows/docker-build.yml
+
+    summary:
+        needs: [lint, test, build, docker-build]
         runs-on: ubuntu-latest
         steps:
-            - name: 📥 Checkout code
-              uses: actions/checkout@v4
-
-            - name: 🔧 Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '18'
-                  cache: 'npm'
-
-            - name: 📦 Install Dependencies
+            - name: 📝 PR Checks Summary
               run: |
-                  echo "::group::Installing dependencies"
-                  npm ci
-                  echo "::endgroup::"
-
-            - name: 🔍 Lint
-              run: |
-                  echo "::group::Running linter"
-                  npm run lint
-                  echo "::endgroup::"
-                  echo "✅ Code linting passed"
-
-            - name: 🧪 Test
-              run: |
-                  echo "::group::Running tests"
-                  npm test
-                  echo "::endgroup::"
-                  echo "✅ All tests passed successfully"
-
-            - name: 🏗️ Build
-              run: |
-                  echo "::group::Building application"
-                  npm run build
-                  echo "::endgroup::"
-                  echo "✅ Build completed successfully"
-
-            - name: 🐳 Docker Build
-              run: |
-                  echo "::group::Building Docker image"
-                  docker build -t ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }} .
-                  echo "::endgroup::"
-                  echo "✅ Docker image built: ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}"
+                  echo "### 🔍 PR Checks Summary" >> $GITHUB_STEP_SUMMARY
+                  echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+                  echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Lint** | ${{ needs.lint.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Tests** | ${{ needs.test.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Build** | ${{ needs.build.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Docker Build** | ${{ needs.docker-build.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
