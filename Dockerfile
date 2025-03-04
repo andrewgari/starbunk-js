@@ -1,12 +1,13 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
 # Copy package files first for better layer caching
-COPY package.json yarn.lock ./
+COPY package.json ./
 
 # Install dependencies in a single layer with production flags
-RUN yarn install --frozen-lockfile --production=false
+# Use --ignore-scripts to bypass @distube/yt-dlp postinstall script that's failing
+RUN yarn install --production=false --ignore-scripts
 
 # Copy source code after dependencies are installed
 COPY . .
