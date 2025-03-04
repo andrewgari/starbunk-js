@@ -1,0 +1,181 @@
+name: PR Checks
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+        paths-ignore:
+            - '**.md'
+            - '.github/ISSUE_TEMPLATE/**'
+            - 'docs/**'
+
+jobs:
+    # Initial check to determine what files changed
+    changes:
+        name: '🔍 PR - Detect File Changes'
+        runs-on: ubuntu-latest
+        outputs:
+            src: ${{ steps.filter.outputs.src }}
+            tests: ${{ steps.filter.outputs.tests }}
+            cypress: ${{ steps.filter.outputs.cypress }}
+            workflows: ${{ steps.filter.outputs.workflows }}
+            docker: ${{ steps.filter.outputs.docker }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # Needed for file change detection
+
+            - name: Check for file changes
+              uses: dorny/paths-filter@v2
+              id: filter
+              with:
+                  filters: |
+                      src:
+                          - 'src/**'
+                          - '!src/tests/**'
+                      tests:
+                          - 'src/tests/**'
+                          - '**/*.test.ts'
+                          - '**/*.spec.ts'
+                          - 'jest.config.js'
+                      cypress:
+                          - 'cypress/**'
+                          - 'cypress.config.ts'
+                      workflows:
+                          - '.github/workflows/**'
+                      docker:
+                          - 'Dockerfile*'
+                          - '.dockerignore'
+                          - 'docker-compose*.yml'
+
+    build:
+        name: '🔨 PR - Build TypeScript Project'
+        runs-on: ubuntu-latest
+        needs: [changes]
+        # Only run build if src files changed
+        if: ${{ needs.changes.outputs.src == 'true' }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Build App
+              run: npm run build
+
+            - name: Upload Build Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: dist/
+                  if-no-files-found: error
+
+    lint:
+        name: '🔍 PR - Run ESLint Code Quality Checks'
+        runs-on: ubuntu-latest
+        needs: [changes]
+        # Run lint if src or test files changed
+        if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true' }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Run Lint
+              run: npm run lint
+
+    type-check:
+        name: '🔍 PR - Verify TypeScript Types'
+        runs-on: ubuntu-latest
+        needs: [changes]
+        # Run type check if src or test files changed
+        if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true' }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Type Check Main Code
+              run: npm run type-check
+
+            - name: Type Check Cypress Code
+              if: ${{ needs.changes.outputs.cypress == 'true' }}
+              run: npm run type-check:cypress
+
+    unit-test:
+        name: '🧪 PR - Run Jest Unit Tests'
+        runs-on: ubuntu-latest
+        needs: [changes, build]
+        # Run unit tests if src or test files changed
+        if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true' }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install Dependencies
+              run: npm ci
+
+            - name: Download Build Artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: dist/
+              if: ${{ needs.changes.outputs.src == 'true' }}
+
+            - name: Run Unit Tests
+              run: npm run test
+
+    docker-build:
+        name: '🐳 PR - Build Docker Image'
+        runs-on: ubuntu-latest
+        needs: [changes, unit-test, lint, type-check]
+        # Run docker build if src or workflow or docker files changed
+        if: |
+            ${{
+              (needs.changes.outputs.src == 'true' ||
+               needs.changes.outputs.workflows == 'true' ||
+               needs.changes.outputs.docker == 'true') &&
+              (needs.unit-test.result == 'success' || needs.unit-test.result == 'skipped') &&
+              (needs.cypress-parallel.result == 'success' || needs.cypress-parallel.result == 'skipped') &&
+              (needs.test-summary.result == 'success' || needs.test-summary.result == 'skipped') &&
+              (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
+              (needs.type-check.result == 'success' || needs.type-check.result == 'skipped')
+            }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build Docker Image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  push: false
+                  tags: ghcr.io/${{ github.repository }}/app:pr-${{ github.event.pull_request.number }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=min
