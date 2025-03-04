@@ -17,12 +17,16 @@ export default abstract class ReplyBot {
 	abstract avatarUrl: string;
 	abstract handleMessage(message: Message): void;
 	sendReply(channel: TextChannel, response: string): void {
-		webhookService.writeMessage(channel, {
-			username: this.botName,
-			avatarURL: this.avatarUrl,
-			content: response,
-			embeds: [],
-		});
+		try {
+			webhookService.writeMessage(channel, {
+				username: this.botName,
+				avatarURL: this.avatarUrl,
+				content: response,
+				embeds: [],
+			});
+		} catch (error) {
+			this.logger.error(`Failed to send reply to channel ${channel.id}: ${error}`);
+		}
 	}
 	isSelf(message: Message): boolean {
 		return message.author.bot && message.author.id === message.client.user?.id;
