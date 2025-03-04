@@ -10,9 +10,12 @@ on:
             - 'src/**/*.js'
             - 'test/**/*.ts'
             - 'test/**/*.js'
+            - 'tests/**/*.ts'
+            - 'tests/**/*.js'
             - 'package.json'
             - 'package-lock.json'
             - 'jest.config.js'
+            - 'tsconfig.json'
             - '.github/workflows/unit-tests.yml'
     push:
         branches:
@@ -22,10 +25,14 @@ on:
             - 'src/**/*.js'
             - 'test/**/*.ts'
             - 'test/**/*.js'
+            - 'tests/**/*.ts'
+            - 'tests/**/*.js'
             - 'package.json'
             - 'package-lock.json'
             - 'jest.config.js'
+            - 'tsconfig.json'
             - '.github/workflows/unit-tests.yml'
+    workflow_dispatch: # Allow manual trigger
 
 jobs:
     test:

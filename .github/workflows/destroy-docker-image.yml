@@ -1,0 +1,23 @@
+name: Destroy Docker Image
+
+on:
+    workflow_call:
+        inputs:
+            tag:
+                required: true
+                type: string
+
+jobs:
+    destroy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Delete Docker Image
+              run: |
+                  echo "Deleting package with tag: ${{ inputs.tag }}"
+                  # Install GitHub CLI
+                  gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+                  gh api \
+                    --method DELETE \
+                    -H "Accept: application/vnd.github+json" \
+                    "/orgs/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}/versions" \
+                    -f package_version_ids=$(gh api "/orgs/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}/versions" -q '.[] | select(.metadata.container.tags[] == "${{ inputs.tag }}") | .id')
