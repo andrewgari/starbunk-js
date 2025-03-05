@@ -73,13 +73,17 @@ export function setupTestContainer(): void {
  * in a way that Jest understands for type checking
  * @returns A mocked webhookService with jest.fn() implementations
  */
-export function getMockedWebhookService() {
-    // Create fresh mock functions for each test
-    return {
-        writeMessage: jest.fn().mockResolvedValue({}) as any,
-        getChannelWebhook: jest.fn().mockResolvedValue({}) as any,
-        getWebhook: jest.fn().mockResolvedValue({}) as any
-    };
+export function getMockedWebhookService(): { 
+	writeMessage: jest.Mock; 
+	getChannelWebhook: jest.Mock; 
+	getWebhook: jest.Mock; 
+} {
+	// Create fresh mock functions for each test
+	return {
+		writeMessage: jest.fn().mockResolvedValue({}),
+		getChannelWebhook: jest.fn().mockResolvedValue({}),
+		getWebhook: jest.fn().mockResolvedValue({})
+	};
 }
 
 /**
@@ -91,6 +95,7 @@ export function setupBotMocks(): void {
 	jest.resetAllMocks();
 	
 	// Import only when needed to avoid circular dependencies
+	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	const webhookServiceModule = require('../../../webhooks/webhookService');
 	
 	// Create mock functions
