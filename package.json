@@ -12,7 +12,12 @@
 		"format": "prettier --write \"src/**/*.ts\"",
 		"type-check": "tsc --noEmit",
 		"clean": "rimraf dist",
-		"build:clean": "npm run clean && npm run build"
+		"build:clean": "npm run clean && npm run build",
+		"check:docker": "docker build -t starbunk-js:latest .",
+		"check:types": "npm run type-check",
+		"check:lint": "npm run lint",
+		"check:build": "npm run build",
+		"check:all": "npm run check:types && npm run check:lint && npm run check:build && npm run check:docker"
 	},
 	"engines": {
 		"node": ">=16.0.0"
