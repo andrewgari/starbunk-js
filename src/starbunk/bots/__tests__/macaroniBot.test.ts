@@ -12,10 +12,10 @@ jest.mock('../botConstants', () => ({
 import { TextChannel } from 'discord.js';
 import webhookService from '../../../webhooks/webhookService';
 import MacaroniBot from '../reply-bots/macaroniBot';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockLogger, mockMessage } from './testUtils';
 
 // Set up the mock implementation
-jest.mocked(webhookService).writeMessage = mockWebhookService.writeMessage;
+// The setupBotMocks() function in testUtils now handles this
 
 describe('MacaroniBot', () => {
 	let macaroniBot: MacaroniBot;

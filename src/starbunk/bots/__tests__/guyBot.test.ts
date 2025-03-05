@@ -27,10 +27,10 @@ import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
 import { getBotAvatar, getBotName } from '../botConstants';
 import GuyBot from '../reply-bots/guyBot';
-import { mockMessage, mockWebhookService } from './testUtils';
+import { mockMessage } from './testUtils';
 
 // Set up the mock implementation
-jest.mocked(webhookService).writeMessage = mockWebhookService.writeMessage;
+// The setupBotMocks() function in testUtils now handles this
 
 describe('GuyBot', () => {
 	let guyBot: GuyBot;

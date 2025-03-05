@@ -11,10 +11,10 @@ jest.mock('../botConstants', () => ({
 
 import webhookService from '../../../webhooks/webhookService';
 import SheeshBot from '../reply-bots/sheeshBot';
-import { mockMessage, mockWebhookService } from './testUtils';
+import { mockMessage } from './testUtils';
 
 // Set up the mock implementation
-jest.mocked(webhookService).writeMessage = mockWebhookService.writeMessage;
+// The setupBotMocks() function in testUtils now handles this
 
 describe('SheeshBot', () => {
 	let sheeshBot: SheeshBot;

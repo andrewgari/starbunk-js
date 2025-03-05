@@ -1,6 +1,6 @@
 // This file is used by Jest to set up the test environment
 import '@testing-library/jest-dom';
-import { setupTestContainer } from '../starbunk/bots/__tests__/testUtils';
+import { setupBotMocks, setupTestContainer } from '../starbunk/bots/__tests__/testUtils';
 
 // Mock the global Date object if needed
 const originalDate = global.Date;
@@ -9,6 +9,8 @@ const originalDate = global.Date;
 beforeEach(() => {
 	// Set up the service container with mock services for all tests
 	setupTestContainer();
+	// Set up mocks for bot tests
+	setupBotMocks();
 });
 
 // Restore all mocks after each test

@@ -30,10 +30,10 @@ jest.mock('../botConstants', () => ({
 import { OpenAIClient } from '../../../openai/openaiClient';
 import webhookService from '../../../webhooks/webhookService';
 import BlueBot from '../reply-bots/blueBot';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockLogger, mockMessage } from './testUtils';
 
 // Set up the mock implementation
-jest.mocked(webhookService).writeMessage = mockWebhookService.writeMessage;
+// The setupBotMocks() function in testUtils now handles this
 
 describe('BlueBot', () => {
 	let blueBot: BlueBot;

@@ -68,6 +68,40 @@ export function setupTestContainer(): void {
 	container.register(ServiceRegistry.WEBHOOK_SERVICE, mockWebhookService);
 }
 
+/**
+ * This workaround is necessary because we can't directly mock the webhook service
+ * in a way that Jest understands for type checking
+ * @returns A mocked webhookService with jest.fn() implementations
+ */
+export function getMockedWebhookService() {
+    // Create fresh mock functions for each test
+    return {
+        writeMessage: jest.fn().mockResolvedValue({}) as any,
+        getChannelWebhook: jest.fn().mockResolvedValue({}) as any,
+        getWebhook: jest.fn().mockResolvedValue({}) as any
+    };
+}
+
+/**
+ * Setup mocks for testing ReplyBots
+ * This function sets up the necessary mocks for webhook service
+ */
+export function setupBotMocks(): void {
+	// Reset all mocks between tests
+	jest.resetAllMocks();
+	
+	// Import only when needed to avoid circular dependencies
+	const webhookServiceModule = require('../../../webhooks/webhookService');
+	
+	// Create mock functions
+	const mockedService = getMockedWebhookService();
+	
+	// Replace the original functions with mocks
+	webhookServiceModule.default.writeMessage = mockedService.writeMessage;
+	webhookServiceModule.default.getChannelWebhook = mockedService.getChannelWebhook;
+	webhookServiceModule.default.getWebhook = mockedService.getWebhook;
+}
+
 jest.mock('../botConstants', () => ({
 	getBotName: jest.fn().mockReturnValue('EzioBot'),
 	getBotAvatar: jest.fn().mockReturnValue('http://example.com/ezio.jpg'),
