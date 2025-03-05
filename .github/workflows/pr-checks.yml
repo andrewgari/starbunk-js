@@ -148,14 +148,13 @@ jobs:
     docker-build:
         name: '🐳 PR - Build Docker Image'
         runs-on: ubuntu-latest
-        needs: [changes, unit-test, lint, type-check]
+        needs: [changes, lint, type-check]
         # Run docker build if src or workflow or docker files changed
         if: |
             ${{
               (needs.changes.outputs.src == 'true' ||
                needs.changes.outputs.workflows == 'true' ||
                needs.changes.outputs.docker == 'true') &&
-              (needs.unit-test.result == 'success' || needs.unit-test.result == 'skipped') &&
               (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
               (needs.type-check.result == 'success' || needs.type-check.result == 'skipped')
             }}
