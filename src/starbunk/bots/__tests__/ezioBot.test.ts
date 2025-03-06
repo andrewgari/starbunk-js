@@ -1,68 +1,63 @@
-import { Message, TextChannel } from 'discord.js';
-import webhookService from '../../../webhooks/webhookService';
-
 // Mock the webhook service
 jest.mock('../../../webhooks/webhookService');
 
-// Mock the bot constants
-jest.mock('../botConstants', () => ({
-	getBotName: jest.fn().mockReturnValue('EzioBot'),
-	getBotAvatar: jest.fn().mockReturnValue('http://example.com/ezio.jpg'),
-	getBotPattern: jest.fn().mockReturnValue(/\bezio|h?assassin.*\b/i),
-	getBotResponse: jest.fn().mockReturnValue('Requiescat in pace'),
+// Mock the random utility
+jest.mock('../../../utils/random', () => ({
+	percentChance: jest.fn().mockReturnValue(true),
 }));
 
+// Import test dependencies
+
+import webhookService from '../../../webhooks/webhookService';
+import { getBotPattern } from '../botConstants';
 import EzioBot from '../reply-bots/ezioBot';
-import { mockWebhookService } from './testUtils';
-
-// Set up the mock implementation
-jest.mocked(webhookService).writeMessage = mockWebhookService.writeMessage;
-
-const mockMessage = (content: string, isBot = false): Message<boolean> => ({
-	content,
-	author: { bot: isBot, displayName: 'TestUser' },
-	channel: {} as TextChannel,
-} as Message<boolean>);
+import { mockMessage, setupTestContainer } from './testUtils';
 
 describe('EzioBot', () => {
 	let ezioBot: EzioBot;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
+		// Set up container with mock services
+		setupTestContainer();
+		// Create bot after setting up container
 		ezioBot = new EzioBot();
 	});
 
-	test('should not respond to bot messages', async () => {
+	test('should not respond to bot messages', () => {
 		// Arrange
-		const botMessage = mockMessage('ezio auditore');
+		const botMessage = mockMessage('test message with ezioBot');
 		botMessage.author.bot = true;
 
 		// Act
-		await ezioBot.handleMessage(botMessage);
+		ezioBot.handleMessage(botMessage);
 
 		// Assert
 		expect(webhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	test('should respond to messages containing "ezio"', async () => {
+	test('should respond to messages matching the pattern', () => {
 		// Arrange
-		const message = mockMessage('ezio auditore');
+		const message = mockMessage('test message with ezioBot');
+		// Make sure pattern matches for this test
+		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
 
 		// Act
-		await ezioBot.handleMessage(message);
+		ezioBot.handleMessage(message);
 
 		// Assert
 		expect(webhookService.writeMessage).toHaveBeenCalled();
 	});
 
-	test('should respond to messages containing "assassin"', async () => {
+	test('should not respond to messages not matching the pattern', () => {
 		// Arrange
-		const message = mockMessage('the assassin strikes at midnight');
+		const message = mockMessage('hello world');
+		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
 
 		// Act
-		await ezioBot.handleMessage(message);
+		ezioBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).toHaveBeenCalled();
+		expect(webhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });

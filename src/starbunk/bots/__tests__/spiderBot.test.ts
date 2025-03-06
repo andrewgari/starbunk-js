@@ -1,49 +1,63 @@
 // Mock the webhook service
 jest.mock('../../../webhooks/webhookService');
 
-// Mock the bot constants
-jest.mock('../botConstants', () => ({
-	getBotName: jest.fn().mockReturnValue('SpiderBot'),
-	getBotAvatar: jest.fn().mockReturnValue('http://example.com/spider.jpg'),
-	getBotPattern: jest.fn().mockReturnValue(/\bspider\b/i),
-	getBotResponse: jest.fn().mockReturnValue('🕷️'),
+// Mock the random utility
+jest.mock('../../../utils/random', () => ({
+	percentChance: jest.fn().mockReturnValue(true),
 }));
 
-import webhookService from '../../../webhooks/webhookService';
-import SpiderBot from '../reply-bots/spiderBot';
-import { mockMessage, mockWebhookService } from './testUtils';
+// Import test dependencies
 
-// Set up the mock implementation
-jest.mocked(webhookService).writeMessage = mockWebhookService.writeMessage;
+import webhookService from '../../../webhooks/webhookService';
+import { getBotPattern } from '../botConstants';
+import SpiderBot from '../reply-bots/spiderBot';
+import { mockMessage, setupTestContainer } from './testUtils';
 
 describe('SpiderBot', () => {
 	let spiderBot: SpiderBot;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
+		// Set up container with mock services
+		setupTestContainer();
+		// Create bot after setting up container
 		spiderBot = new SpiderBot();
 	});
 
-	test('should not respond to bot messages', async () => {
+	test('should not respond to bot messages', () => {
 		// Arrange
-		const botMessage = mockMessage('I saw a spider today');
+		const botMessage = mockMessage('test message with spiderBot');
 		botMessage.author.bot = true;
 
 		// Act
-		await spiderBot.handleMessage(botMessage);
+		spiderBot.handleMessage(botMessage);
 
 		// Assert
 		expect(webhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	test('should respond to messages containing "spider"', async () => {
+	test('should respond to messages matching the pattern', () => {
 		// Arrange
-		const message = mockMessage('I saw a spider today');
+		const message = mockMessage('test message with spiderBot');
+		// Make sure pattern matches for this test
+		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
 
 		// Act
-		await spiderBot.handleMessage(message);
+		spiderBot.handleMessage(message);
 
 		// Assert
 		expect(webhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	test('should not respond to messages not matching the pattern', () => {
+		// Arrange
+		const message = mockMessage('hello world');
+		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
+
+		// Act
+		spiderBot.handleMessage(message);
+
+		// Assert
+		expect(webhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });

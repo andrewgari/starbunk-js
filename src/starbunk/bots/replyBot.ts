@@ -1,13 +1,28 @@
 import { Message, TextChannel } from 'discord.js';
 import { ILogger } from '../../services/Logger';
 import loggerFactory from '../../services/LoggerFactory';
-import webhookService from '../../webhooks/webhookService';
+import container from '../../services/ServiceContainer';
+import { ServiceRegistry } from '../../services/ServiceRegistry';
+import { IWebhookService } from '../../webhooks/webhookService';
 
 export default abstract class ReplyBot {
 	protected logger: ILogger;
+	protected webhookService: IWebhookService;
 
-	constructor(logger?: ILogger) {
+	constructor(logger?: ILogger, webhookService?: IWebhookService) {
 		this.logger = logger || loggerFactory.getLogger();
+		
+		// Get webhook service from container
+		const containerWebhookService = container.get<IWebhookService>(ServiceRegistry.WEBHOOK_SERVICE);
+		
+		// Use provided service or container service
+		if (webhookService) {
+			this.webhookService = webhookService;
+		} else if (containerWebhookService) {
+			this.webhookService = containerWebhookService;
+		} else {
+			throw new Error('WebhookService not found in container. Make sure it is registered before creating bots.');
+		}
 	}
 
 	abstract botName: string;
@@ -18,7 +33,7 @@ export default abstract class ReplyBot {
 	abstract handleMessage(message: Message): void;
 	sendReply(channel: TextChannel, response: string): void {
 		try {
-			webhookService.writeMessage(channel, {
+			this.webhookService.writeMessage(channel, {
 				username: this.botName,
 				avatarURL: this.avatarUrl,
 				content: response,
