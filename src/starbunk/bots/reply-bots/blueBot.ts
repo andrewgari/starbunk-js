@@ -59,7 +59,7 @@ export default class BlueBot extends ReplyBot {
 		if (this.isSomeoneRespondingToBlu(message)) {
 			this._blueTimestamp = new Date(1);
 			this._avatarUrl = BlueBotConfig.Avatars.Cheeky;
-			this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Cheeky);
+			this.sendReply(message.channel as TextChannel, BlueBotConfig.getRandomCheekyResponse());
 			return;
 		}
 

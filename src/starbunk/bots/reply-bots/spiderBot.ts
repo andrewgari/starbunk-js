@@ -13,7 +13,7 @@ export default class SpiderBot extends ReplyBot {
 		const hasSpider = SpiderBotConfig.Patterns.Default?.test(content);
 
 		if (hasSpider) {
-			this.sendReply(message.channel as TextChannel, SpiderBotConfig.Responses.Default);
+			this.sendReply(message.channel as TextChannel, SpiderBotConfig.getRandomCheekyResponse());
 		}
 	}
 }

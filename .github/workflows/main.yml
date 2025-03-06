@@ -37,14 +37,6 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GHCR_PAT }}
 
-            # Option 2: If GITHUB_TOKEN doesn't work, uncomment and use a PAT with packages:write scope
-            # - name: Login to GitHub Container Registry with PAT
-            #   uses: docker/login-action@v3
-            #   with:
-            #     registry: ghcr.io
-            #     username: ${{ github.actor }}
-            #     password: ${{ secrets.PAT }}
-
             - name: Generate Version Tag
               id: version
               run: |
@@ -81,40 +73,65 @@ jobs:
                   script: |
                       const owner = context.repo.owner;
                       const repo = context.repo.repo;
-                      const packageName = `${owner}/${repo}`.toLowerCase();
+                      const packageName = repo.toLowerCase();
                       
-                      // Get all package versions
-                      const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
-                        package_type: 'container',
-                        package_name: packageName,
-                        org: owner
-                      });
-                      
-                      // Sort by created_at descending (newest first)
-                      versions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                      
-                      // Keep 'latest' tag and the 10 most recent tags
-                      const tagsToKeep = new Set(['latest']);
-                      let versionCount = 0;
-                      
-                      for (const version of versions) {
-                        // Skip the 'latest' tag
-                        if (version.metadata.container.tags.includes('latest')) {
-                          continue;
+                      try {
+                        console.log(`Looking for package: ${packageName} owned by user: ${owner}`);
+                        
+                        // Get all package versions for a user-owned package
+                        const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
+                          package_type: 'container',
+                          package_name: packageName,
+                          username: owner
+                        });
+                        
+                        console.log(`Found ${versions.length} versions of the package`);
+                        
+                        if (versions.length <= 10) {
+                          console.log('Fewer than 10 versions found, no cleanup needed');
+                          return;
                         }
                         
-                        // Keep the 10 most recent versions
-                        if (versionCount < 10) {
-                          version.metadata.container.tags.forEach(tag => tagsToKeep.add(tag));
-                          versionCount++;
-                        } else {
-                          // Delete older versions
+                        // Sort by created_at descending (newest first)
+                        versions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                        
+                        // Keep 'latest' tag and the 10 most recent tags
+                        const tagsToKeep = new Set(['latest']);
+                        let keptVersions = [];
+                        let versionsToDelete = [];
+                        
+                        // First pass - identify 'latest' and mark it to keep
+                        for (const version of versions) {
+                          if (version.metadata?.container?.tags?.includes('latest')) {
+                            keptVersions.push(version);
+                            console.log(`Keeping version with 'latest' tag: ${version.id}`);
+                          } else {
+                            versionsToDelete.push(version);
+                          }
+                        }
+                        
+                        // Second pass - keep up to 10 most recent non-latest versions
+                        const versionsToKeep = versionsToDelete.slice(0, 10);
+                        keptVersions = keptVersions.concat(versionsToKeep);
+                        versionsToDelete = versionsToDelete.slice(10);
+                        
+                        for (const version of versionsToKeep) {
+                          console.log(`Keeping recent version: ${version.id}`);
+                          if (version.metadata?.container?.tags) {
+                            version.metadata.container.tags.forEach(tag => tagsToKeep.add(tag));
+                          }
+                        }
+                        
+                        // Delete older versions
+                        console.log(`Deleting ${versionsToDelete.length} older versions`);
+                        
+                        for (const version of versionsToDelete) {
                           console.log(`Deleting package version ${version.id}`);
                           try {
-                            await github.rest.packages.deletePackageVersionForOrg({
+                            await github.rest.packages.deletePackageVersionForUser({
                               package_type: 'container',
                               package_name: packageName,
-                              org: owner,
+                              username: owner,
                               package_version_id: version.id
                             });
                             console.log(`Successfully deleted package version ${version.id}`);
@@ -122,7 +139,12 @@ jobs:
                             console.error(`Error deleting package version ${version.id}: ${error.message}`);
                           }
                         }
+                        
+                        console.log(`Kept tags: ${Array.from(tagsToKeep).join(', ')}`);
+                        console.log(`Kept ${keptVersions.length} versions, deleted ${versionsToDelete.length} versions`);
+                      } catch (error) {
+                        console.error(`Error in cleanup: ${error.message}`);
+                        console.error(error);
                       }
                       
-                      console.log(`Kept tags: ${Array.from(tagsToKeep).join(', ')}`);
-                      console.log('Cleanup completed successfully');
+                      console.log('Cleanup completed');

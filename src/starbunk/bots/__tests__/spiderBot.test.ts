@@ -1,9 +1,9 @@
 import { Message } from 'discord.js';
 import container from '../../../services/ServiceContainer';
 import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import { SpiderBotConfig } from '../config/SpiderBotConfig';
 import SpiderBot from '../reply-bots/spiderBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
-
 describe('SpiderBot', () => {
 	let spiderBot: SpiderBot;
 	let message: Message<boolean>;
@@ -82,7 +82,7 @@ describe('SpiderBot', () => {
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	it('should respond with the correct message', async () => {
+	it('should respond with one of the possible responses', async () => {
 		// Arrange
 		message.content = 'spiderman is my favorite superhero';
 
@@ -93,7 +93,8 @@ describe('SpiderBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'Hey, it\'s "**Spider-Man**"! Don\'t forget the hyphen! Not Spiderman, that\'s dumb'
+				content: expect.stringMatching(new RegExp(SpiderBotConfig.Responses.Default.map(r =>
+					r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')))
 			})
 		);
 	});

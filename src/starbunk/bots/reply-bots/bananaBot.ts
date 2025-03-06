@@ -17,7 +17,8 @@ export default class BananaBot extends ReplyBot {
 		const shouldReply = hasBanana || (isVenn && random.percentChance(5));
 
 		if (shouldReply) {
-			this.sendReply(message.channel as TextChannel, BananaBotConfig.Responses.Default());
+			// Randomly decide between normal and cheeky responses with 50% chance
+			this.sendReply(message.channel as TextChannel, BananaBotConfig.getRandomCheekyResponse());
 		}
 	}
 }
