@@ -55,5 +55,14 @@
 		"no-empty-function": "off",
 		"no-inline-comments": "error",
 		"@typescript-eslint/no-namespace": ["error", { "allowDeclarations": true }]
-	}
+	},
+	"overrides": [
+		{
+			"files": ["**/__tests__/**/*.ts"],
+			"rules": {
+				"@typescript-eslint/no-unused-vars": "off",
+				"@typescript-eslint/no-explicit-any": "off"
+			}
+		}
+	]
 }
