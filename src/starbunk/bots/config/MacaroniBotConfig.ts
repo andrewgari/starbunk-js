@@ -1,4 +1,4 @@
-import userID from "@/discord/userID";
+import userID from "../../../discord/userID";
 
 export const MacaroniBotConfig = {
 	Name: 'Macaroni Bot',
@@ -6,7 +6,7 @@ export const MacaroniBotConfig = {
 		Default: 'https://i.imgur.com/fgbH6Xf.jpg'
 	},
 	Patterns: {
-		Macaroni: /\b(macaroni?|pasta|venn)\b/gi,
+		Macaroni: /\b(macaroni|pasta|venn)\b/i,
 	},
 	Responses: {
 		Default: (content: string) => {

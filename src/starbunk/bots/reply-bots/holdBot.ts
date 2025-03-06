@@ -1,16 +1,23 @@
 import { Message, TextChannel } from 'discord.js';
+import { HoldBotConfig } from '../config/HoldBotConfig';
 import ReplyBot from '../replyBot';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
 
 export default class HoldBot extends ReplyBot {
-	public readonly botName: string = getBotName('Hold');
-	public readonly avatarUrl: string = getBotAvatar('Hold');
+	public readonly botName: string = HoldBotConfig.Name;
+	public readonly avatarUrl: string = HoldBotConfig.Avatars.Default;
 
-	handleMessage(message: Message<boolean>): void {
+	defaultBotName(): string {
+		return 'HoldBot';
+	}
+
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (getBotPattern('Hold', 'Default')?.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, getBotResponse('Hold', 'Default'));
+		const content = message.content;
+		const hasHold = HoldBotConfig.Patterns.Default?.test(content);
+
+		if (hasHold) {
+			this.sendReply(message.channel as TextChannel, HoldBotConfig.Responses.Default);
 		}
 	}
 }

@@ -1,10 +1,11 @@
 import { Guild, Message, TextChannel } from 'discord.js';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse, getCurrentMemberIdentity } from '../botConstants';
+import { getCurrentMemberIdentity } from '../botConstants';
+import { SigGreatBotConfig } from '../config/SigGreatBotConfig';
 import ReplyBot from '../replyBot';
 
-export default class SigBestBot extends ReplyBot {
-	private _botName: string = getBotName('SigGreat') ?? this.defaultBotName();
-	private _avatarUrl: string = getBotAvatar('SigGreat') ?? '';
+export default class SigGreatBot extends ReplyBot {
+	private _botName: string = SigGreatBotConfig.Name;
+	private _avatarUrl: string = SigGreatBotConfig.Avatars.Default;
 
 	// Public getters
 	get botName(): string {
@@ -16,18 +17,25 @@ export default class SigBestBot extends ReplyBot {
 	}
 
 	defaultBotName(): string {
-		return 'SigGreat Bot';
+		return 'SigGreatBot';
 	}
 
-	async handleMessage(message: Message): Promise<void> {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (getBotPattern('SigGreat', 'Default')?.test(message.content)) {
-			const identity = await getCurrentMemberIdentity(message.author.id, message.guild as Guild);
-			if (!identity) return;
+		const content = message.content;
+		const hasSigGreat = SigGreatBotConfig.Patterns.Default?.test(content);
+
+		if (hasSigGreat) {
+			const identity = await getCurrentMemberIdentity(message.author.id, message.guild as Guild) ?? {
+				avatarUrl: this._avatarUrl,
+				botName: this._botName
+			};
+
 			this._avatarUrl = identity.avatarUrl ?? this._avatarUrl;
 			this._botName = identity?.botName ?? this._botName;
-			this.sendReply(message.channel as TextChannel, getBotResponse('SigGreat', 'Default'));
+
+			this.sendReply(message.channel as TextChannel, SigGreatBotConfig.Responses.Default);
 		}
 	}
 }

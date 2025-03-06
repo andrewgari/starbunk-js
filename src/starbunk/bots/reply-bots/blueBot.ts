@@ -2,22 +2,31 @@ import { Message, TextChannel } from 'discord.js';
 import userID from '../../../discord/userID';
 import { OpenAIClient } from '../../../openai/openaiClient';
 import { ILogger } from '../../../services/Logger';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
+import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
+import { BlueBotConfig } from '../config/BlueBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BlueBot extends ReplyBot {
-	private blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
-	private blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
-	private _avatarUrl: string = getBotAvatar('Blue', 'Default');
-	public readonly botName: string = getBotName('Blue');
+	private _blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
+	private _blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
+	private _avatarUrl: string = BlueBotConfig.Avatars.Default;
+
+	public readonly botName: string = BlueBotConfig.Name;
 
 	constructor(logger?: ILogger) {
 		super(logger);
 	}
 
-	// Public getters
 	get avatarUrl(): string {
 		return this._avatarUrl;
+	}
+
+	get blueTimestamp(): Date {
+		return this._blueTimestamp;
+	}
+
+	get blueMurderTimestamp(): Date {
+		return this._blueMurderTimestamp;
 	}
 
 	async handleMessage(message: Message<boolean>): Promise<void> {
@@ -25,11 +34,14 @@ export default class BlueBot extends ReplyBot {
 
 		if (this.isSomeoneAskingYouToBeBlue(message)) {
 			this.logger.debug(`User ${message.author.username} asked BlueBot to be nice`);
-			if (getBotPattern('Blue', 'Nice')?.test(message.content)) {
+			const content = message.content;
+			const isNice = BlueBotConfig.Patterns.Nice?.test(content);
+
+			if (isNice) {
 				this.logger.debug(`${message.author.username} asked about Venn - responding with contempt`);
 				this.sendReply(
 					message.channel as TextChannel,
-					getBotResponse('Blue', 'Request', message.content)
+					BlueBotConfig.Responses.Request(content)
 				);
 			}
 
@@ -38,46 +50,61 @@ export default class BlueBot extends ReplyBot {
 
 		if (this.isVennInsultingBlu(message)) {
 			this.logger.warn(`Venn is being mean again! Message: "${message.content}"`);
-			this.blueMurderTimestamp = new Date();
-			this._avatarUrl = getBotAvatar('Blue', 'Murder');
-			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Murder'));
+			this._blueMurderTimestamp = new Date();
+			this._avatarUrl = BlueBotConfig.Avatars.Murder;
+			this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Murder);
 			return;
 		}
 
 		if (this.isSomeoneRespondingToBlu(message)) {
-			this.blueTimestamp = new Date(1);
-			this._avatarUrl = getBotAvatar('Blue', 'Cheeky');
-			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Cheeky'));
+			this._blueTimestamp = new Date(1);
+			this._avatarUrl = BlueBotConfig.Avatars.Cheeky;
+			this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Cheeky);
 			return;
 		}
 
-		if (getBotPattern('Blue', 'Default')?.test(message.content)) {
-			this.blueTimestamp = new Date();
-			this._avatarUrl = getBotAvatar('Blue', 'Default');
-			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Default'));
+		const content = message.content;
+		const hasBlue = BlueBotConfig.Patterns.Default?.test(content);
+
+		if (hasBlue) {
+			this._blueTimestamp = new Date();
+			this._avatarUrl = BlueBotConfig.Avatars.Default;
+			this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Default);
 			return;
 		} else if (await this.checkIfBlueIsSaid(message)) {
 			this.logger.debug('AI detected blue reference in message');
-			this.sendReply(message.channel as TextChannel, getBotResponse('Blue', 'Default'));
+			this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Default);
 		}
 	}
 
 	private isSomeoneRespondingToBlu(message: Message): boolean {
-		if (getBotPattern('Blue', 'Confirm')?.test(message.content) || getBotPattern('Blue', 'Mean')?.test(message.content)) {
-			const lastMessage = this.blueTimestamp.getTime();
-			return message.createdTimestamp - lastMessage < 300000;
+		const content = message.content;
+		const isConfirm = BlueBotConfig.Patterns.Confirm?.test(content);
+		const isMean = BlueBotConfig.Patterns.Mean?.test(content);
+
+		if (isConfirm || isMean) {
+			return isWithinTimeframe(this.blueTimestamp, 5, TimeUnit.MINUTE, new Date(message.createdTimestamp));
 		}
 		return false;
 	}
 
 	private isVennInsultingBlu(message: Message): boolean {
-		if (message.author.id !== userID.Venn) return false;
-		if (!getBotPattern('Blue', 'Mean')?.test(message.content)) return false;
-		const lastMurder = this.blueMurderTimestamp.getTime() / 1000;
-		const lastBlue = this.blueTimestamp.getTime() / 1000;
-		const current = new Date(message.createdTimestamp).getTime() / 1000;
-		// if the last murder message was at least 24 hours ago
-		return current - lastMurder > 86400 && current - lastBlue < 2 * 60;
+		const isVenn = message.author.id === userID.Venn;
+		if (!isVenn) return false;
+
+		const content = message.content;
+		const isMean = BlueBotConfig.Patterns.Mean?.test(content);
+		if (!isMean) return false;
+
+		const messageDate = new Date(message.createdTimestamp);
+
+		// Check if the last murder message was at least 24 hours ago
+		const isMurderCooldownOver = isOlderThan(this.blueMurderTimestamp, 1, TimeUnit.DAY, messageDate);
+
+		// Check if there was a blue reference in the last 2 minutes
+		const isRecentBlueReference = isWithinTimeframe(this.blueTimestamp, 2, TimeUnit.MINUTE, messageDate);
+
+		return isMurderCooldownOver && isRecentBlueReference;
 	}
 
 	private async checkIfBlueIsSaid(message: Message): Promise<boolean> {
@@ -137,6 +164,7 @@ export default class BlueBot extends ReplyBot {
 	}
 
 	private isSomeoneAskingYouToBeBlue(message: Message): boolean {
-		return getBotPattern('Blue', 'Nice')?.test(message.content) ?? false;
+		const content = message.content;
+		return BlueBotConfig.Patterns.Nice?.test(content) ?? false;
 	}
 }

@@ -1,6 +1,6 @@
 import { Client } from 'discord.js';
 import { OpenAIClient } from '../openai/openaiClient';
-import BlueBotRefactored from '../starbunk/bots/reply-bots/blueBotRefactored';
+import BlueBot from '../starbunk/bots/reply-bots/blueBot';
 import webhookService from '../webhooks/webhookService';
 import { ILogger } from './Logger';
 import container from './ServiceContainer';
@@ -35,9 +35,8 @@ export function registerBotServices(): void {
 	// The decorator will handle registration, but we need to import them
 	// to ensure the decorators run
 	// In a production app, we'd use a dynamic import system
-	const blueBot = new BlueBotRefactored(
-		container.get<ILogger>(ServiceRegistry.LOGGER)!,
-		container.get(ServiceRegistry.WEBHOOK_SERVICE)!
+	const blueBot = new BlueBot(
+		container.get<ILogger>(ServiceRegistry.LOGGER)!
 	);
 
 	// You could also manually register bots

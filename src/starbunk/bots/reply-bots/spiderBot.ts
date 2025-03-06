@@ -1,16 +1,19 @@
 import { Message, TextChannel } from 'discord.js';
+import { SpiderBotConfig } from '../config/SpiderBotConfig';
 import ReplyBot from '../replyBot';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
 
 export default class SpiderBot extends ReplyBot {
-	public readonly botName: string = getBotName('Spider');
-	public readonly avatarUrl: string = getBotAvatar('Spider', 'Default');
+	public readonly botName: string = SpiderBotConfig.Name;
+	public readonly avatarUrl: string = SpiderBotConfig.Avatars.Default;
 
-	handleMessage(message: Message<boolean>): void {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (getBotPattern('Spider', 'Default')?.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, getBotResponse('Spider', 'Default'));
+		const content = message.content;
+		const hasSpider = SpiderBotConfig.Patterns.Default?.test(content);
+
+		if (hasSpider) {
+			this.sendReply(message.channel as TextChannel, SpiderBotConfig.Responses.Default);
 		}
 	}
 }

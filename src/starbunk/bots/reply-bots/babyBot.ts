@@ -1,16 +1,19 @@
 import { Message, TextChannel } from 'discord.js';
+import { BabyBotConfig } from '../config/BabyBotConfig';
 import ReplyBot from '../replyBot';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
 
 export default class BabyBot extends ReplyBot {
-	public readonly botName: string = getBotName('Baby') ?? 'Baby Bot';
-	public readonly avatarUrl: string = getBotAvatar('Baby', 'Default');
+	public readonly botName: string = BabyBotConfig.Name;
+	public readonly avatarUrl: string = BabyBotConfig.Avatars.Default;
 
-	handleMessage(message: Message<boolean>): void {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
-		const pattern = getBotPattern('Baby', 'Default');
-		if (pattern && pattern.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, getBotResponse('Baby', 'Default'));
+
+		const content = message.content.toLowerCase();
+		const hasBaby = BabyBotConfig.Patterns.Default?.test(content);
+
+		if (hasBaby) {
+			this.sendReply(message.channel as TextChannel, BabyBotConfig.Responses.Default);
 		}
 	}
 }

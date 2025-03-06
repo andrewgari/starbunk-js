@@ -1,16 +1,23 @@
 import { Message, TextChannel } from 'discord.js';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
+import { GundamBotConfig } from '../config/GundamBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class GundamBot extends ReplyBot {
-	public readonly botName: string = getBotName('Gundam');
-	public readonly avatarUrl: string = getBotAvatar('Gundam');
+	public readonly botName: string = GundamBotConfig.Name;
+	public readonly avatarUrl: string = GundamBotConfig.Avatars.Default;
 
-	handleMessage(message: Message<boolean>): void {
+	defaultBotName(): string {
+		return 'GundamBot';
+	}
+
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (getBotPattern('Gundam', 'Default')?.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, getBotResponse('Gundam', 'Default'));
+		const content = message.content;
+		const hasGundam = GundamBotConfig.Patterns.Default?.test(content);
+
+		if (hasGundam) {
+			this.sendReply(message.channel as TextChannel, GundamBotConfig.Responses.Default);
 		}
 	}
 }
