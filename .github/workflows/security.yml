@@ -1,10 +1,42 @@
 name: Security Check
 
-on: [push, pull_request]
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+        paths-ignore:
+            - '**.md'
+            - '.github/ISSUE_TEMPLATE/**'
+            - 'docs/**'
 
 jobs:
-    security:
+    # Initial check to determine what files changed (reusing same pattern)
+    changes:
+        name: '🔍 Security - Detect File Changes'
         runs-on: ubuntu-latest
+        outputs:
+            src: ${{ steps.filter.outputs.src }}
+            package_json: ${{ steps.filter.outputs.package_json }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Check for file changes
+              uses: dorny/paths-filter@v2
+              id: filter
+              with:
+                  filters: |
+                      src:
+                          - 'src/**'
+                      package_json:
+                          - 'package.json'
+                          - 'package-lock.json'
+
+    security:
+        name: '🔒 Security - Check Dependencies'
+        needs: [changes]
+        runs-on: ubuntu-latest
+        if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.package_json == 'true' }}
         continue-on-error: true
         steps:
             - uses: actions/checkout@v4
