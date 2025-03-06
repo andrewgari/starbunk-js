@@ -1,8 +1,28 @@
+// Mock the webhook service
+jest.mock('../../../webhooks/webhookService', () => ({
+	writeMessage: jest.fn()
+}));
+
 // Mock getCurrentMemberIdentity
 jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 	getCurrentMemberIdentity: jest.fn()
 }));
 
+// Mock the SigGreatBotConfig to ensure it returns a consistent response
+jest.mock('../config/SigGreatBotConfig', () => ({
+	SigGreatBotConfig: {
+		Name: 'SigGreatBot',
+		Avatars: {
+			Default: 'https://i.imgur.com/D0czJFu.jpg'
+		},
+		Patterns: {
+			Default: /\b(sig|siggles)\s+(?:is\s+)?(best|greatest|awesome|amazing|cool|fantastic|wonderful|excellent|good|great|brilliant|perfect|the\s+best)\b/i,
+		},
+		Responses: {
+			Default: 'SigGreat.'
+		}
+	}
+}));
 
 import { Message } from 'discord.js';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
