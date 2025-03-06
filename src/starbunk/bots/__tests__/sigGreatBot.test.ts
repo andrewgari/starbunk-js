@@ -20,9 +20,9 @@ jest.mock('../../../utils/random', () => ({
 
 
 import webhookService from '../../../webhooks/webhookService';
+import { getBotPattern, getBotResponse, getCurrentMemberIdentity } from '../botConstants';
 import SigGreatBot from '../reply-bots/sigGreatBot';
 import { mockMessage, setupTestContainer } from './testUtils';
-import { getBotPattern, getCurrentMemberIdentity, getBotResponse } from '../botConstants';
 
 describe('SigGreatBot', () => {
 	let sigGreatBot: SigGreatBot;

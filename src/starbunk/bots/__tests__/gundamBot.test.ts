@@ -8,12 +8,10 @@ jest.mock('../../../utils/random', () => ({
 
 // Import test dependencies
 
-import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
+import { getBotPattern } from '../botConstants';
 import GundamBot from '../reply-bots/gundamBot';
 import { mockMessage, setupTestContainer } from './testUtils';
-import { getBotName, getBotPattern } from '../botConstants';
-import container from '../../../services/ServiceContainer';
 
 describe('GundamBot', () => {
 	let gundamBot: GundamBot;
@@ -43,7 +41,7 @@ describe('GundamBot', () => {
 		const message = mockMessage('test message with gundamBot');
 		// Make sure pattern matches for this test
 		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
-		
+
 		// Act
 		gundamBot.handleMessage(message);
 
@@ -55,7 +53,7 @@ describe('GundamBot', () => {
 		// Arrange
 		const message = mockMessage('hello world');
 		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
-		
+
 		// Act
 		gundamBot.handleMessage(message);
 

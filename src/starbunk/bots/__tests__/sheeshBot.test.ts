@@ -8,12 +8,10 @@ jest.mock('../../../utils/random', () => ({
 
 // Import test dependencies
 
-import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
+import { getBotPattern } from '../botConstants';
 import SheeshBot from '../reply-bots/sheeshBot';
 import { mockMessage, setupTestContainer } from './testUtils';
-import { getBotName, getBotPattern } from '../botConstants';
-import container from '../../../services/ServiceContainer';
 
 describe('SheeshBot', () => {
 	let sheeshBot: SheeshBot;
@@ -43,7 +41,7 @@ describe('SheeshBot', () => {
 		const message = mockMessage('test message with sheeshBot');
 		// Make sure pattern matches for this test
 		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
-		
+
 		// Act
 		sheeshBot.handleMessage(message);
 
@@ -55,7 +53,7 @@ describe('SheeshBot', () => {
 		// Arrange
 		const message = mockMessage('hello world');
 		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
-		
+
 		// Act
 		sheeshBot.handleMessage(message);
 

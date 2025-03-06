@@ -26,12 +26,10 @@ jest.mock('../../../discord/userID', () => ({
 }));
 
 
-import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
+import { getBotPattern, getCurrentMemberIdentity } from '../botConstants';
 import GuyBot from '../reply-bots/guyBot';
 import { mockMessage, setupTestContainer } from './testUtils';
-import { getBotPattern, getCurrentMemberIdentity } from '../botConstants';
-import container from '../../../services/ServiceContainer';
 
 describe('GuyBot', () => {
 	let guyBot: GuyBot;

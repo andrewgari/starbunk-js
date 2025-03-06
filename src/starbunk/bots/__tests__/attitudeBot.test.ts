@@ -8,9 +8,9 @@ jest.mock('../../../utils/random', () => ({
 
 // Import test dependencies
 import webhookService from '../../../webhooks/webhookService';
+import { getBotPattern } from '../botConstants';
 import AttitudeBot from '../reply-bots/attitudeBot';
 import { mockMessage, setupTestContainer } from './testUtils';
-import { getBotPattern } from '../botConstants';
 
 describe('AttitudeBot', () => {
 	let attitudeBot: AttitudeBot;
@@ -40,7 +40,7 @@ describe('AttitudeBot', () => {
 		const message = mockMessage('test message with attitudeBot');
 		// Make sure pattern matches for this test
 		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
-		
+
 		// Act
 		attitudeBot.handleMessage(message);
 
@@ -52,7 +52,7 @@ describe('AttitudeBot', () => {
 		// Arrange
 		const message = mockMessage('hello world');
 		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
-		
+
 		// Act
 		attitudeBot.handleMessage(message);
 

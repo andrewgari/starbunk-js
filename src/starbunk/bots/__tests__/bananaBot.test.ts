@@ -8,12 +8,10 @@ jest.mock('../../../utils/random', () => ({
 
 // Import test dependencies
 
-import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
+import { getBotPattern } from '../botConstants';
 import BananaBot from '../reply-bots/bananaBot';
 import { mockMessage, setupTestContainer } from './testUtils';
-import { getBotName, getBotPattern } from '../botConstants';
-import container from '../../../services/ServiceContainer';
 
 describe('BananaBot', () => {
 	let bananaBot: BananaBot;
@@ -43,7 +41,7 @@ describe('BananaBot', () => {
 		const message = mockMessage('test message with bananaBot');
 		// Make sure pattern matches for this test
 		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
-		
+
 		// Act
 		bananaBot.handleMessage(message);
 
@@ -55,7 +53,7 @@ describe('BananaBot', () => {
 		// Arrange
 		const message = mockMessage('hello world');
 		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
-		
+
 		// Act
 		bananaBot.handleMessage(message);
 

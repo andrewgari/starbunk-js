@@ -63,16 +63,16 @@ export const mockLogger: ILogger = {
 export function setupTestContainer(): void {
 	// Clear any existing services
 	container.clear();
-	
+
 	// Register mock services
 	container.register(ServiceRegistry.LOGGER, mockLogger);
 	container.register(ServiceRegistry.WEBHOOK_SERVICE, mockWebhookService);
-	
+
 	// Also update the default webhookService for direct imports
 	// Import only when needed to avoid circular dependencies
 	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	const webhookServiceModule = require('../../../webhooks/webhookService');
-	
+
 	// Replace the original functions with mocks
 	webhookServiceModule.default.writeMessage = mockWriteMessage;
 	webhookServiceModule.default.getChannelWebhook = mockGetChannelWebhook;
@@ -84,10 +84,10 @@ export function setupTestContainer(): void {
  * in a way that Jest understands for type checking
  * @returns A mocked webhookService with jest.fn() implementations
  */
-export function getMockedWebhookService(): { 
-	writeMessage: jest.Mock; 
-	getChannelWebhook: jest.Mock; 
-	getWebhook: jest.Mock; 
+export function getMockedWebhookService(): {
+	writeMessage: jest.Mock;
+	getChannelWebhook: jest.Mock;
+	getWebhook: jest.Mock;
 } {
 	// Create fresh mock functions for each test
 	return {
@@ -104,14 +104,14 @@ export function getMockedWebhookService(): {
 export function setupBotMocks(): void {
 	// Reset all mocks between tests
 	jest.resetAllMocks();
-	
+
 	// Import only when needed to avoid circular dependencies
 	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	const webhookServiceModule = require('../../../webhooks/webhookService');
-	
+
 	// Create mock functions
 	const mockedService = getMockedWebhookService();
-	
+
 	// Replace the original functions with mocks
 	webhookServiceModule.default.writeMessage = mockedService.writeMessage;
 	webhookServiceModule.default.getChannelWebhook = mockedService.getChannelWebhook;

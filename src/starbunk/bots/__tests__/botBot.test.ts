@@ -10,9 +10,9 @@ jest.mock('../../../utils/random', () => ({
 import { ClientUser } from 'discord.js';
 import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
+import { getBotPattern } from '../botConstants';
 import BotBot from '../reply-bots/botBot';
 import { mockMessage, setupTestContainer } from './testUtils';
-import { getBotPattern } from '../botConstants';
 
 describe('BotBot', () => {
 	let botBot: BotBot;
@@ -56,7 +56,7 @@ describe('BotBot', () => {
 		// Arrange
 		const message = mockMessage('hello world');
 		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
-		
+
 		// Act
 		botBot.handleMessage(message);
 

@@ -8,12 +8,10 @@ jest.mock('../../../utils/random', () => ({
 
 // Import test dependencies
 
-import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
+import { getBotPattern } from '../botConstants';
 import MusicCorrectBot from '../reply-bots/musicCorrectBot';
 import { mockMessage, setupTestContainer } from './testUtils';
-import { getBotName, getBotPattern } from '../botConstants';
-import container from '../../../services/ServiceContainer';
 
 describe('MusicCorrectBot', () => {
 	let musicCorrectBot: MusicCorrectBot;
@@ -43,7 +41,7 @@ describe('MusicCorrectBot', () => {
 		const message = mockMessage('test message with musicCorrectBot');
 		// Make sure pattern matches for this test
 		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
-		
+
 		// Act
 		musicCorrectBot.handleMessage(message);
 
@@ -55,7 +53,7 @@ describe('MusicCorrectBot', () => {
 		// Arrange
 		const message = mockMessage('hello world');
 		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
-		
+
 		// Act
 		musicCorrectBot.handleMessage(message);
 
