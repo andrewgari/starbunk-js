@@ -22,19 +22,25 @@ jest.mock('../../../openai/openaiClient', () => ({
 }));
 
 // Now the imports
-
+import { OpenAIClient } from '../../../openai/openaiClient';
 import webhookService from '../../../webhooks/webhookService';
 import BlueBot from '../reply-bots/blueBot';
-import { mockMessage, setupTestContainer } from './testUtils';
-import container from '../../../services/ServiceContainer';
-import { getBotPattern } from '../botConstants';
-import { OpenAIClient } from '../../../openai/openaiClient';
+import { mockMessage, setupTestContainer, setupBotMocks } from './testUtils';
+import { getBotPattern, getBotResponse } from '../botConstants';
 
 // Mock the bot constants
 jest.mock('../botConstants', () => ({
 	getBotName: jest.fn().mockReturnValue('BlueBot'),
 	getBotAvatar: jest.fn().mockReturnValue('http://example.com/blue.jpg'),
-	getBotPattern: jest.fn().mockReturnValue(/blue/i),
+	getBotPattern: jest.fn().mockImplementation((bot, type) => {
+		if (bot === 'Blue') {
+			if (type === 'Default') return /blue/i;
+			if (type === 'Nice') return /be nice blue/i;
+			if (type === 'Mean') return /blue sucks/i;
+			if (type === 'Confirm') return /yes blue/i;
+		}
+		return null;
+	}),
 	getBotResponse: jest.fn().mockReturnValue('Blue!')
 }));
 
@@ -45,25 +51,79 @@ describe('BlueBot', () => {
 		jest.clearAllMocks();
 		// Set up container with mock services
 		setupTestContainer();
+		// Reset and set up bot-specific mocks
+		setupBotMocks();
 		// Create bot after setting up container
 		blueBot = new BlueBot();
+		
+		// Mock the sendReply method to use our mocked webhook
+		jest.spyOn(blueBot, 'sendReply').mockImplementation(() => Promise.resolve());
 	});
 
-	// Skip tests for now - we can mark these tests as skipped since they're tricky
-	test.skip('should not respond to bot messages', async () => {
+	test('should not respond to bot messages', async () => {
 		const botMessage = mockMessage('blue');
 		botMessage.author.bot = true;
-    
+
 		await blueBot.handleMessage(botMessage);
-    
-		expect(webhookService.writeMessage).not.toHaveBeenCalled();
+
+		expect(blueBot.sendReply).not.toHaveBeenCalled();
 	});
 
-	test.skip('should respond to messages containing "blue"', async () => {
+	test('should respond to messages containing "blue"', async () => {
 		const message = mockMessage('blue');
-    
+		
+		// Ensure pattern will match for this test
+		(getBotPattern as jest.Mock).mockImplementation((bot, type) => {
+			if (bot === 'Blue' && type === 'Default') return /blue/i;
+			return null;
+		});
+
 		await blueBot.handleMessage(message);
-    
-		expect(webhookService.writeMessage).toHaveBeenCalled();
+
+		expect(blueBot.sendReply).toHaveBeenCalled();
+	});
+
+	test('should use AI to detect blue references', async () => {
+		// Mock the AI completion call to respond with "yes"
+		const mockCompletionCreate = jest.fn().mockResolvedValue({
+			choices: [{ message: { content: 'yes' } }]
+		});
+		
+		// Replace the OpenAI API call with our mock
+		jest.spyOn(OpenAIClient.chat.completions, 'create').mockImplementation(mockCompletionCreate);
+		
+		const message = mockMessage('the sky is a nice color');
+		
+		// Make sure all patterns fail to match so it falls through to the AI check
+		(getBotPattern as jest.Mock).mockImplementation(() => null);
+		
+		// Set up private method spy
+		const checkSpy = jest.spyOn(blueBot as any, 'checkIfBlueIsSaid');
+		
+		await blueBot.handleMessage(message);
+		
+		expect(checkSpy).toHaveBeenCalled();
+		expect(mockCompletionCreate).toHaveBeenCalled();
+		expect(blueBot.sendReply).toHaveBeenCalled();
+	});
+	
+	test('should respond to Venn insulting blue', async () => {
+		// Mock to make isVennInsultingBlu return true
+		const message = mockMessage('blue sucks');
+		message.author.id = 'venn123';
+		
+		// Set timestamps to trigger the condition
+		(blueBot as any).blueTimestamp = new Date(Date.now() - 60 * 1000); // 1 minute ago
+		(blueBot as any).blueMurderTimestamp = new Date(Date.now() - 25 * 60 * 60 * 1000); // 25 hours ago
+		
+		// Make sure getBotPattern returns the right pattern for this test
+		(getBotPattern as jest.Mock).mockImplementation((bot, type) => {
+			if (bot === 'Blue' && type === 'Mean') return /blue sucks/i;
+			return null;
+		});
+		
+		await blueBot.handleMessage(message);
+		
+		expect(blueBot.sendReply).toHaveBeenCalled();
 	});
 });
