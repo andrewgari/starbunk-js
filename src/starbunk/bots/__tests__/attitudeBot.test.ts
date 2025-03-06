@@ -7,13 +7,10 @@ jest.mock('../../../utils/random', () => ({
 }));
 
 // Import test dependencies
-import { TextChannel } from 'discord.js';
-import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
 import AttitudeBot from '../reply-bots/attitudeBot';
-import { mockMessage, setupTestContainer, mockLogger } from './testUtils';
-import { getBotName, getBotAvatar, getBotResponse, getBotPattern } from '../botConstants';
-import container from '../../../services/ServiceContainer';
+import { mockMessage, setupTestContainer } from './testUtils';
+import { getBotPattern } from '../botConstants';
 
 describe('AttitudeBot', () => {
 	let attitudeBot: AttitudeBot;

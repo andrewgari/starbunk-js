@@ -7,13 +7,12 @@ jest.mock('../../../utils/random', () => ({
 }));
 
 // Import test dependencies
-import { TextChannel } from 'discord.js';
+import { ClientUser } from 'discord.js';
 import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
 import BotBot from '../reply-bots/botBot';
-import { mockMessage, setupTestContainer, mockLogger } from './testUtils';
-import { getBotName, getBotAvatar, getBotResponse, getBotPattern } from '../botConstants';
-import container from '../../../services/ServiceContainer';
+import { mockMessage, setupTestContainer } from './testUtils';
+import { getBotPattern } from '../botConstants';
 
 describe('BotBot', () => {
 	let botBot: BotBot;
@@ -30,7 +29,7 @@ describe('BotBot', () => {
 		// Arrange
 		const botMessage = mockMessage('self message');
 		botMessage.author.bot = true;
-		botMessage.client.user = { id: botMessage.author.id } as any;
+		botMessage.client.user = { id: botMessage.author.id } as ClientUser;
 
 		// Act
 		botBot.handleMessage(botMessage);
@@ -43,7 +42,7 @@ describe('BotBot', () => {
 		// Arrange
 		const botMessage = mockMessage('other bot message');
 		botMessage.author.bot = true;
-		botMessage.client.user = { id: 'different-id' } as any;
+		botMessage.client.user = { id: 'different-id' } as ClientUser;
 		(random.percentChance as jest.Mock).mockReturnValueOnce(true);
 
 		// Act

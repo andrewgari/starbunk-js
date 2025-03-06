@@ -7,12 +7,12 @@ jest.mock('../../../utils/random', () => ({
 }));
 
 // Import test dependencies
-import { TextChannel } from 'discord.js';
+
 import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
 import ChaosBot from '../reply-bots/chaosBot';
-import { mockMessage, setupTestContainer, mockLogger } from './testUtils';
-import { getBotName, getBotAvatar, getBotResponse, getBotPattern } from '../botConstants';
+import { mockMessage, setupTestContainer } from './testUtils';
+import { getBotName, getBotPattern } from '../botConstants';
 import container from '../../../services/ServiceContainer';
 
 describe('ChaosBot', () => {

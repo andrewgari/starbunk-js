@@ -18,12 +18,11 @@ jest.mock('../../../utils/random', () => ({
 	percentChance: jest.fn().mockReturnValue(true),
 }));
 
-import { TextChannel } from 'discord.js';
+
 import webhookService from '../../../webhooks/webhookService';
 import SigGreatBot from '../reply-bots/sigGreatBot';
 import { mockMessage, setupTestContainer } from './testUtils';
-import { getBotPattern, getBotResponse, getCurrentMemberIdentity } from '../botConstants';
-import container from '../../../services/ServiceContainer';
+import { getBotPattern, getCurrentMemberIdentity, getBotResponse } from '../botConstants';
 
 describe('SigGreatBot', () => {
 	let sigGreatBot: SigGreatBot;
