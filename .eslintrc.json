@@ -64,6 +64,12 @@
 				"@typescript-eslint/no-explicit-any": "off",
 				"no-inline-comments": "off"
 			}
+		},
+		{
+			"files": ["**/ServiceRegistrar.ts", "**/blueBotRefactored.test.ts"],
+			"rules": {
+				"@typescript-eslint/no-explicit-any": "off"
+			}
 		}
 	]
 }
