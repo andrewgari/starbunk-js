@@ -35,51 +35,144 @@ export default class StarbunkClient extends DiscordClient {
 
 	// Registration methods
 	async registerBots(): Promise<void> {
-		const botDir = path.join(__dirname, 'bots/reply-bots');
-		const botFiles = readdirSync(botDir).filter((file) => file.endsWith('.js'));
+		try {
+			const botDir = path.join(__dirname, 'bots/reply-bots');
+			LoggerAdapter.info(`Looking for bots in: ${botDir}`);
+			const botFiles = readdirSync(botDir).filter((file) => file.endsWith('.js'));
+			LoggerAdapter.info(`Found bot files: ${botFiles.join(', ')}`);
 
-		for (const file of botFiles) {
-			try {
-				const botName = file.split('.')[0];
-				const { default: BotClass } = await import(path.join(botDir, file));
-				const bot = new BotClass() as ReplyBot;
-				this.bots.set(botName, bot);
-				LoggerAdapter.success(`Registered Bot: ${botName} 🤖`);
-			} catch (error) {
-				LoggerAdapter.error(`Failed to load bot from ${file}: ${error}`);
+			for (const file of botFiles) {
+				try {
+					const botName = file.split('.')[0];
+					let BotClass;
+					
+					// Try URL-based import first
+					try {
+						const fileUrl = `file://${path.resolve(botDir, file)}`;
+						LoggerAdapter.info(`Importing bot using URL: ${fileUrl}`);
+						const imported = await import(fileUrl);
+						BotClass = imported.default;
+						LoggerAdapter.success(`URL import succeeded for: ${botName}`);
+					} catch (urlImportError) {
+						// Fallback to traditional path if URL import fails
+						LoggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
+						const importPath = path.join(botDir, file);
+						LoggerAdapter.info(`Importing bot using path: ${importPath}`);
+						const imported = await import(importPath);
+						BotClass = imported.default;
+						LoggerAdapter.success(`Traditional import succeeded for: ${botName}`);
+					}
+					
+					if (!BotClass) {
+						throw new Error(`Could not load bot class for ${botName}`);
+					}
+					
+					const bot = new BotClass() as ReplyBot;
+					this.bots.set(botName, bot);
+					LoggerAdapter.success(`Registered Bot: ${botName} 🤖`);
+				} catch (error) {
+					LoggerAdapter.error(`Failed to load bot from ${file}: ${error instanceof Error ? error.message : String(error)}`);
+					if (error instanceof Error && error.stack) {
+						LoggerAdapter.error(`Stack trace: ${error.stack}`);
+					}
+				}
 			}
+		} catch (error) {
+			LoggerAdapter.error(`Error in registerBots: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
 	async registerVoiceBots(): Promise<void> {
-		const botDir = path.join(__dirname, 'bots/voice-bots');
-		const botFiles = readdirSync(botDir).filter((file) => file.endsWith('.js'));
+		try {
+			const botDir = path.join(__dirname, 'bots/voice-bots');
+			LoggerAdapter.info(`Looking for voice bots in: ${botDir}`);
+			const botFiles = readdirSync(botDir).filter((file) => file.endsWith('.js'));
+			LoggerAdapter.info(`Found voice bot files: ${botFiles.join(', ')}`);
 
-		for (const file of botFiles) {
-			try {
-				const botName = file.split('.')[0];
-				const { default: BotClass } = await import(path.join(botDir, file));
-				const bot = new BotClass();
-				this.voiceBots.set(botName, bot);
-				LoggerAdapter.success(`Registered Voice Bot: ${botName} 🎤`);
-			} catch (error) {
-				LoggerAdapter.error(`Failed to load voice bot from ${file}: ${error}`);
+			for (const file of botFiles) {
+				try {
+					const botName = file.split('.')[0];
+					let BotClass;
+					
+					// Try URL-based import first
+					try {
+						const fileUrl = `file://${path.resolve(botDir, file)}`;
+						LoggerAdapter.info(`Importing voice bot using URL: ${fileUrl}`);
+						const imported = await import(fileUrl);
+						BotClass = imported.default;
+						LoggerAdapter.success(`URL import succeeded for voice bot: ${botName}`);
+					} catch (urlImportError) {
+						// Fallback to traditional path if URL import fails
+						LoggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
+						const importPath = path.join(botDir, file);
+						LoggerAdapter.info(`Importing voice bot using path: ${importPath}`);
+						const imported = await import(importPath);
+						BotClass = imported.default;
+						LoggerAdapter.success(`Traditional import succeeded for voice bot: ${botName}`);
+					}
+					
+					if (!BotClass) {
+						throw new Error(`Could not load voice bot class for ${botName}`);
+					}
+					
+					const bot = new BotClass();
+					this.voiceBots.set(botName, bot);
+					LoggerAdapter.success(`Registered Voice Bot: ${botName} 🎤`);
+				} catch (error) {
+					LoggerAdapter.error(`Failed to load voice bot from ${file}: ${error instanceof Error ? error.message : String(error)}`);
+					if (error instanceof Error && error.stack) {
+						LoggerAdapter.error(`Stack trace: ${error.stack}`);
+					}
+				}
 			}
+		} catch (error) {
+			LoggerAdapter.error(`Error in registerVoiceBots: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
 	async registerCommands(): Promise<void> {
-		const commandDir = path.join(__dirname, 'commands');
-		const commandFiles = readdirSync(commandDir).filter((file) => file.endsWith('.js'));
+		try {
+			const commandDir = path.join(__dirname, 'commands');
+			LoggerAdapter.info(`Looking for commands in: ${commandDir}`);
+			const commandFiles = readdirSync(commandDir).filter((file) => file.endsWith('.js'));
+			LoggerAdapter.info(`Found command files: ${commandFiles.join(', ')}`);
 
-		for (const file of commandFiles) {
-			try {
-				const { default: command } = await import(path.join(commandDir, file));
-				this.commands.set(command.data.name, command);
-				LoggerAdapter.success(`Registered Command: ${command.data.name} ⚡`);
-			} catch (error) {
-				LoggerAdapter.error(`Failed to load command from ${file}: ${error}`);
+			for (const file of commandFiles) {
+				try {
+					let command;
+					
+					// Try URL-based import first
+					try {
+						const fileUrl = `file://${path.resolve(commandDir, file)}`;
+						LoggerAdapter.info(`Importing command using URL: ${fileUrl}`);
+						const imported = await import(fileUrl);
+						command = imported.default;
+						LoggerAdapter.success(`URL import succeeded for command: ${file}`);
+					} catch (urlImportError) {
+						// Fallback to traditional path if URL import fails
+						LoggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
+						const importPath = path.join(commandDir, file);
+						LoggerAdapter.info(`Importing command using path: ${importPath}`);
+						const imported = await import(importPath);
+						command = imported.default;
+						LoggerAdapter.success(`Traditional import succeeded for command: ${file}`);
+					}
+					
+					if (!command) {
+						throw new Error(`Could not load command from ${file}`);
+					}
+					
+					this.commands.set(command.data.name, command);
+					LoggerAdapter.success(`Registered Command: ${command.data.name} ⚡`);
+				} catch (error) {
+					LoggerAdapter.error(`Failed to load command from ${file}: ${error instanceof Error ? error.message : String(error)}`);
+					if (error instanceof Error && error.stack) {
+						LoggerAdapter.error(`Stack trace: ${error.stack}`);
+					}
+				}
 			}
+		} catch (error) {
+			LoggerAdapter.error(`Error in registerCommands: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 

@@ -13,8 +13,12 @@ RUN npm ci --ignore-scripts
 # Copy source code before building
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application with special handling for module paths
+RUN npm run build 
+
+# Add a healthcheck to help diagnose issues
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "require('fs').readdirSync('./dist').length ? process.exit(0) : process.exit(1)"
 
 # Use non-global package installation
-CMD ["npm", "start"]
+CMD ["node", "--enable-source-maps", "dist/bunkbot.js"]
