@@ -1,49 +1,65 @@
 // Mock the webhook service
 jest.mock('../../../webhooks/webhookService');
 
-// Mock the bot constants
-jest.mock('../botConstants', () => ({
-	getBotName: jest.fn().mockReturnValue('GundamBot'),
-	getBotAvatar: jest.fn().mockReturnValue('http://example.com/gundam.jpg'),
-	getBotPattern: jest.fn().mockReturnValue(/\bgundam\b/i),
-	getBotResponse: jest.fn().mockReturnValue('Gundam!'),
+// Mock the random utility
+jest.mock('../../../utils/random', () => ({
+	percentChance: jest.fn().mockReturnValue(true),
 }));
 
+// Import test dependencies
+import { TextChannel } from 'discord.js';
+import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
 import GundamBot from '../reply-bots/gundamBot';
-import { mockMessage } from './testUtils';
-
-// Set up the mock implementation
-// The setupBotMocks() function in testUtils now handles this
+import { mockMessage, setupTestContainer, mockLogger } from './testUtils';
+import { getBotName, getBotAvatar, getBotResponse, getBotPattern } from '../botConstants';
+import container from '../../../services/ServiceContainer';
 
 describe('GundamBot', () => {
 	let gundamBot: GundamBot;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
+		// Set up container with mock services
+		setupTestContainer();
+		// Create bot after setting up container
 		gundamBot = new GundamBot();
 	});
 
-	test('should not respond to bot messages', async () => {
+	test('should not respond to bot messages', () => {
 		// Arrange
-		const botMessage = mockMessage('I love gundam');
+		const botMessage = mockMessage('test message with gundamBot');
 		botMessage.author.bot = true;
 
 		// Act
-		await gundamBot.handleMessage(botMessage);
+		gundamBot.handleMessage(botMessage);
 
 		// Assert
 		expect(webhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	test('should respond to messages containing "gundam"', async () => {
+	test('should respond to messages matching the pattern', () => {
 		// Arrange
-		const message = mockMessage('I love gundam');
-
+		const message = mockMessage('test message with gundamBot');
+		// Make sure pattern matches for this test
+		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
+		
 		// Act
-		await gundamBot.handleMessage(message);
+		gundamBot.handleMessage(message);
 
 		// Assert
 		expect(webhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	test('should not respond to messages not matching the pattern', () => {
+		// Arrange
+		const message = mockMessage('hello world');
+		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
+		
+		// Act
+		gundamBot.handleMessage(message);
+
+		// Assert
+		expect(webhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });

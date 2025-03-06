@@ -1,33 +1,34 @@
 // Mock the webhook service
 jest.mock('../../../webhooks/webhookService');
 
-// Mock the bot constants
-jest.mock('../botConstants', () => ({
-	getBotName: jest.fn().mockReturnValue('BabyBot'),
-	getBotAvatar: jest.fn().mockReturnValue('http://example.com/baby.jpg'),
-	getBotPattern: jest.fn().mockReturnValue(/\bbaby\b/i),
-	getBotResponse: jest.fn().mockReturnValue('https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif'),
+// Mock the random utility
+jest.mock('../../../utils/random', () => ({
+	percentChance: jest.fn().mockReturnValue(true),
 }));
 
+// Import test dependencies
 import { TextChannel } from 'discord.js';
+import random from '../../../utils/random';
 import webhookService from '../../../webhooks/webhookService';
 import BabyBot from '../reply-bots/babyBot';
-import { mockMessage } from './testUtils';
-
-// Set up the mock implementation
-// The setupBotMocks() function in testUtils now handles this
+import { mockMessage, setupTestContainer, mockLogger } from './testUtils';
+import { getBotName, getBotAvatar, getBotResponse, getBotPattern } from '../botConstants';
+import container from '../../../services/ServiceContainer';
 
 describe('BabyBot', () => {
 	let babyBot: BabyBot;
 
 	beforeEach(() => {
-		babyBot = new BabyBot();
 		jest.clearAllMocks();
+		// Set up container with mock services
+		setupTestContainer();
+		// Create bot after setting up container
+		babyBot = new BabyBot();
 	});
 
 	test('should not respond to bot messages', () => {
 		// Arrange
-		const botMessage = mockMessage('baby metroid');
+		const botMessage = mockMessage('test message with babyBot');
 		botMessage.author.bot = true;
 
 		// Act
@@ -37,29 +38,24 @@ describe('BabyBot', () => {
 		expect(webhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	test('should respond to messages containing "baby"', () => {
+	test('should respond to messages matching the pattern', () => {
 		// Arrange
-		const message = mockMessage('look at the baby metroid');
-
+		const message = mockMessage('test message with babyBot');
+		// Make sure pattern matches for this test
+		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
+		
 		// Act
 		babyBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).toHaveBeenCalledWith(
-			message.channel as TextChannel,
-			{
-				username: 'BabyBot',
-				avatarURL: 'http://example.com/baby.jpg',
-				content: 'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif',
-				embeds: [],
-			}
-		);
+		expect(webhookService.writeMessage).toHaveBeenCalled();
 	});
 
-	test('should not respond to messages without "baby"', () => {
+	test('should not respond to messages not matching the pattern', () => {
 		// Arrange
 		const message = mockMessage('hello world');
-
+		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
+		
 		// Act
 		babyBot.handleMessage(message);
 

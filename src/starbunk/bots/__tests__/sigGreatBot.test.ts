@@ -1,33 +1,38 @@
 // Mock the webhook service
 jest.mock('../../../webhooks/webhookService');
 
-// Mock the bot constants
-const mockGetCurrentMemberIdentity = jest.fn().mockResolvedValue({
-	userId: 'user123',
-	avatarUrl: 'http://example.com/custom-sig.jpg',
-	botName: 'CustomSigGreatBot',
-});
-
+// Mock getCurrentMemberIdentity and other functions
 jest.mock('../botConstants', () => ({
 	getBotName: jest.fn().mockReturnValue('SigGreatBot'),
 	getBotAvatar: jest.fn().mockReturnValue('http://example.com/siggreat.jpg'),
-	getBotPattern: jest.fn().mockReturnValue(/\bsig\b.*\bgreat\b/i),
+	getBotPattern: jest.fn().mockReturnValue(/\bsig.*great\b/i),
 	getBotResponse: jest.fn().mockReturnValue('Sig is great!'),
-	getCurrentMemberIdentity: jest.fn().mockImplementation(() => mockGetCurrentMemberIdentity()),
+	getCurrentMemberIdentity: jest.fn().mockResolvedValue({
+		avatarUrl: 'http://example.com/custom-siggreat.jpg',
+		botName: 'CustomSigGreatBot'
+	})
 }));
 
+// Mock the random utility
+jest.mock('../../../utils/random', () => ({
+	percentChance: jest.fn().mockReturnValue(true),
+}));
+
+import { TextChannel } from 'discord.js';
 import webhookService from '../../../webhooks/webhookService';
 import SigGreatBot from '../reply-bots/sigGreatBot';
-import { mockMessage } from './testUtils';
-
-// Set up the mock implementation
-// The setupBotMocks() function in testUtils now handles this
+import { mockMessage, setupTestContainer } from './testUtils';
+import { getBotPattern, getBotResponse, getCurrentMemberIdentity } from '../botConstants';
+import container from '../../../services/ServiceContainer';
 
 describe('SigGreatBot', () => {
 	let sigGreatBot: SigGreatBot;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
+		// Set up container with mock services
+		setupTestContainer();
+		// Create bot after setting up container
 		sigGreatBot = new SigGreatBot();
 	});
 
@@ -46,11 +51,30 @@ describe('SigGreatBot', () => {
 	test('should respond to messages containing "sig" and "great"', async () => {
 		// Arrange
 		const message = mockMessage('sig is great');
+		(getBotPattern as jest.Mock).mockReturnValueOnce(/sig.*great/i);
+		(getCurrentMemberIdentity as jest.Mock).mockResolvedValueOnce({
+			avatarUrl: 'http://example.com/custom-sig.jpg',
+			botName: 'CustomSigBot'
+		});
 
 		// Act
 		await sigGreatBot.handleMessage(message);
 
 		// Assert
+		expect(getBotResponse).toHaveBeenCalledWith('SigGreat', 'Default');
 		expect(webhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	test('should not respond if identity is not found', async () => {
+		// Arrange
+		const message = mockMessage('sig is great');
+		(getBotPattern as jest.Mock).mockReturnValueOnce(/sig.*great/i);
+		(getCurrentMemberIdentity as jest.Mock).mockResolvedValueOnce(null);
+
+		// Act
+		await sigGreatBot.handleMessage(message);
+
+		// Assert
+		expect(webhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });
