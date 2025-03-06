@@ -2,61 +2,62 @@
 # Triggers on:
 # - Push to main or develop branches
 # - Merged PRs to main or develop branches
-name: Main Branch Checks
+name: Main Branch Docker Build
 
 on:
-    push:
-        branches: [main, develop]
-    pull_request:
-        types: [closed]
-        branches: [main, develop]
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [closed]
+    branches: [main, develop]
 
 # Add explicit permissions for the GITHUB_TOKEN
 permissions:
-    contents: read
-    packages: write
+  contents: read
+  packages: write
 
 jobs:
-    # Builds and publishes Docker image if all checks pass
-    # Tags images with:
-    # - latest
-    # - YYYY.MM.DD-<git-sha>
-    docker:
-        name: '🐳 Main - Build & Publish Docker Image'
-        if: |
-            ${{
-              needs.changes.outputs.should_run == 'true' &&
-              needs.verify-pr-checks.outputs.checks_passed == 'true' &&
-              (needs.changes.outputs.src == 'true' ||
-               needs.changes.outputs.workflows == 'true' ||
-               needs.changes.outputs.docker == 'true')
-            }}
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  # Builds and publishes Docker image
+  # Tags images with:
+  # - latest
+  # - YYYY.MM.DD-<git-sha>
+  docker:
+    name: '🐳 Build & Publish Docker Image'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-            - name: Login to GitHub Container Registry
-              uses: docker/login-action@v3
-              with:
-                  registry: ghcr.io
-                  username: ${{ github.actor }}
-                  password: ${{ secrets.GITHUB_TOKEN }}
+      # Option 1: Use GITHUB_TOKEN (preferred if it has sufficient permissions)
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Generate Version Tag
-              id: version
-              run: |
-                  echo "tag=$(date +'%Y.%m.%d')-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+      # Option 2: If GITHUB_TOKEN doesn't work, uncomment and use a PAT with packages:write scope
+      # - name: Login to GitHub Container Registry with PAT
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.PAT }}
 
-            - name: Build and Push Release Image
-              uses: docker/build-push-action@v5
-              with:
-                  context: .
-                  push: true
-                  tags: |
-                      ghcr.io/${{ github.repository }}:latest
-                      ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=min
+      - name: Generate Version Tag
+        id: version
+        run: |
+          echo "tag=$(date +'%Y.%m.%d')-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Release Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
