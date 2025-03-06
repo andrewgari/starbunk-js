@@ -2,7 +2,7 @@
 # Triggers on:
 # - Push to main or develop branches
 # - Merged PRs to main or develop branches
-name: Main Branch Checks
+name: Main Branch Docker Build
 
 on:
     push:
@@ -17,20 +17,12 @@ permissions:
     packages: write
 
 jobs:
-    # Builds and publishes Docker image if all checks pass
+    # Builds and publishes Docker image
     # Tags images with:
     # - latest
     # - YYYY.MM.DD-<git-sha>
     docker:
-        name: '🐳 Main - Build & Publish Docker Image'
-        if: |
-            ${{
-              needs.changes.outputs.should_run == 'true' &&
-              needs.verify-pr-checks.outputs.checks_passed == 'true' &&
-              (needs.changes.outputs.src == 'true' ||
-               needs.changes.outputs.workflows == 'true' ||
-               needs.changes.outputs.docker == 'true')
-            }}
+        name: '🐳 Build & Publish Docker Image'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -38,12 +30,21 @@ jobs:
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
 
+            # Option 1: Use GITHUB_TOKEN (preferred if it has sufficient permissions)
             - name: Login to GitHub Container Registry
               uses: docker/login-action@v3
               with:
                   registry: ghcr.io
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
+
+            # Option 2: If GITHUB_TOKEN doesn't work, uncomment and use a PAT with packages:write scope
+            # - name: Login to GitHub Container Registry with PAT
+            #   uses: docker/login-action@v3
+            #   with:
+            #     registry: ghcr.io
+            #     username: ${{ github.actor }}
+            #     password: ${{ secrets.PAT }}
 
             - name: Generate Version Tag
               id: version
