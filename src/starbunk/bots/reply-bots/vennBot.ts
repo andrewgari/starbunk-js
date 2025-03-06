@@ -1,14 +1,13 @@
 import { Message, TextChannel } from 'discord.js';
+import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
 import userID from '../../../discord/userID';
 import random from '../../../utils/random';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
+import { VennBotConfig } from '../config/VennBotConfig';
 import ReplyBot from '../replyBot';
-import { VennDiagram } from '../vennDiagram';
 
 export default class VennBot extends ReplyBot {
-	private _botName: string = getBotName('Venn');
-	private _avatarUrl: string = getBotAvatar('Venn');
-	private diagram: VennDiagram;
+	private _botName: string = VennBotConfig.Name;
+	private _avatarUrl: string = 'https://i.imgur.com/1234567890.png';
 
 	// Public getters
 	get botName(): string {
@@ -20,23 +19,20 @@ export default class VennBot extends ReplyBot {
 	}
 
 	defaultBotName(): string {
-		return 'Venn Bot';
+		return 'VennBot';
 	}
 
-	constructor(diagram: VennDiagram = { leftCircle: 'Cringe', rightCircle: 'Based' }) {
-		super();
-		this.diagram = diagram;
-	}
-
-	handleMessage(message: Message<boolean>): void {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
+		this._avatarUrl = (await getCurrentMemberIdentity(userID.Venn, message.guild!))?.avatarUrl ?? this._avatarUrl;
 
-		if (
-			(message.author.id == userID.Venn && random.percentChance(5)) ||
-			getBotPattern('Venn', 'Default')?.test(message.content)
-		) {
-			const response = `${this.diagram.leftCircle} vs ${this.diagram.rightCircle}: ${getBotResponse('Venn', 'Default')}`;
-			this.sendReply(message.channel as TextChannel, response);
+		const content = message.content.toLowerCase();
+		const isCringe = /cringe/i.test(content);
+		const isVenn = message.author.id === userID.Venn;
+		const shouldReply = (isVenn && random.percentChance(5)) || isCringe;
+
+		if (shouldReply) {
+			this.sendReply(message.channel as TextChannel, VennBotConfig.Responses.Default());
 		}
 	}
 }

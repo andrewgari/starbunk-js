@@ -1,19 +1,27 @@
 import { Message, TextChannel } from 'discord.js';
 import userID from '../../../discord/userID';
 import Random from '../../../utils/random';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
+import { PickleBotConfig } from '../config/PickleBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class PickleBot extends ReplyBot {
-	public readonly botName = getBotName('Pickle');
-	public readonly avatarUrl = getBotAvatar('Pickle', 'Default');
+	public readonly botName: string = PickleBotConfig.Name;
+	public readonly avatarUrl: string = PickleBotConfig.Avatars.Default;
 
-	handleMessage(message: Message<boolean>): void {
+	defaultBotName(): string {
+		return 'PickleBot';
+	}
+
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (getBotPattern('Pickle', 'Default')?.test(message.content) ||
-			(message.author.id === userID.Sig && Random.percentChance(15))) {
-			this.sendReply(message.channel as TextChannel, getBotResponse('Pickle', 'Default'));
+		const content = message.content;
+		const hasPickle = PickleBotConfig.Patterns.Default?.test(content);
+		const isSig = message.author.id === userID.Sig;
+		const shouldReply = hasPickle || (isSig && Random.percentChance(15));
+
+		if (shouldReply) {
+			this.sendReply(message.channel as TextChannel, PickleBotConfig.Responses.Default);
 		}
 	}
 }

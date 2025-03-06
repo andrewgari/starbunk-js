@@ -1,22 +1,25 @@
 import { Message, TextChannel } from 'discord.js';
 import { ILogger } from '../../../services/Logger';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
+import { SheeshBotConfig } from '../config/SheeshBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class SheeshBot extends ReplyBot {
-	public readonly botName: string = getBotName('Sheesh');
-	public readonly avatarUrl: string = getBotAvatar('Sheesh', 'Default');
+	public readonly botName: string = SheeshBotConfig.Name;
+	public readonly avatarUrl: string = SheeshBotConfig.Avatars.Default;
 
 	constructor(logger?: ILogger) {
 		super(logger);
 	}
 
-	handleMessage(message: Message): void {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (getBotPattern('Sheesh', 'Default')?.test(message.content)) {
-			this.logger.debug(`😤 User ${message.author.username} said sheesh in: "${message.content}"`);
-			this.sendReply(message.channel as TextChannel, getBotResponse('Sheesh', 'Default'));
+		const content = message.content;
+		const hasSheesh = SheeshBotConfig.Patterns.Default?.test(content);
+
+		if (hasSheesh) {
+			this.logger.debug(`😤 User ${message.author.username} said sheesh in: "${content}"`);
+			this.sendReply(message.channel as TextChannel, SheeshBotConfig.Responses.Default());
 		}
 	}
 }

@@ -1,63 +1,100 @@
-// Mock the webhook service
-jest.mock('../../../webhooks/webhookService');
-
-// Mock the random utility
-jest.mock('../../../utils/random', () => ({
-	percentChance: jest.fn().mockReturnValue(true),
-}));
-
-// Import test dependencies
-
-import webhookService from '../../../webhooks/webhookService';
-import { getBotPattern } from '../botConstants';
+import { Message } from 'discord.js';
+import container from '../../../services/ServiceContainer';
+import { ServiceRegistry } from '../../../services/ServiceRegistry';
 import SpiderBot from '../reply-bots/spiderBot';
-import { mockMessage, setupTestContainer } from './testUtils';
+import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
 describe('SpiderBot', () => {
 	let spiderBot: SpiderBot;
+	let message: Message<boolean>;
+	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		// Set up container with mock services
 		setupTestContainer();
+		// Get the mock webhook service from the container
+		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		spiderBot = new SpiderBot();
+		// Create a mock message
+		message = createMockMessage('test message', '123456', false);
 	});
 
-	test('should not respond to bot messages', () => {
+	it('should not respond to bot messages', async () => {
 		// Arrange
-		const botMessage = mockMessage('test message with spiderBot');
-		botMessage.author.bot = true;
+		message.author.bot = true;
+		message.content = 'I love spiderman';
 
 		// Act
-		spiderBot.handleMessage(botMessage);
+		await spiderBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).not.toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	test('should respond to messages matching the pattern', () => {
+	it('should respond to messages containing "spiderman"', async () => {
 		// Arrange
-		const message = mockMessage('test message with spiderBot');
-		// Make sure pattern matches for this test
-		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
+		message.content = 'I love spiderman';
+
+		// Spy on the sendReply method
+		const sendReplySpy = jest.spyOn(spiderBot, 'sendReply');
 
 		// Act
-		spiderBot.handleMessage(message);
+		await spiderBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).toHaveBeenCalled();
+		expect(/\b(spider-?man|spider\s+-?\s*man)\b/i.test(message.content)).toBe(true);
+		expect(sendReplySpy).toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
 	});
 
-	test('should not respond to messages not matching the pattern', () => {
+	it('should not respond to messages containing "spider-man"', async () => {
 		// Arrange
-		const message = mockMessage('hello world');
-		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
+		message.content = 'spider-man is awesome';
 
 		// Act
-		spiderBot.handleMessage(message);
+		await spiderBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).not.toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should respond to messages containing "spider man"', async () => {
+		// Arrange
+		message.content = 'spider man is cool';
+
+		// Act
+		await spiderBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	it('should not respond to messages not containing spiderman variations', async () => {
+		// Arrange
+		message.content = 'hello world';
+
+		// Act
+		await spiderBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should respond with the correct message', async () => {
+		// Arrange
+		message.content = 'spiderman is my favorite superhero';
+
+		// Act
+		await spiderBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				content: 'Hey, it\'s "**Spider-Man**"! Don\'t forget the hyphen! Not Spiderman, that\'s dumb'
+			})
+		);
 	});
 });

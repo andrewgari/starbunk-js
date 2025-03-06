@@ -1,12 +1,13 @@
 import { Message, TextChannel } from 'discord.js';
 import userID from '../../../discord/userID';
 import random from '../../../utils/random';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse, getCurrentMemberIdentity } from '../botConstants';
+import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
+import { GuyBotConfig } from '../config/GuyBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class GuyBot extends ReplyBot {
-	private _botName: string = getBotName('Guy');
-	private _avatarUrl: string = getBotAvatar('Guy');
+	private _botName: string = GuyBotConfig.Name;
+	private _avatarUrl: string = GuyBotConfig.Avatars.Default;
 
 	// Public getters
 	get botName(): string {
@@ -18,22 +19,25 @@ export default class GuyBot extends ReplyBot {
 	}
 
 	defaultBotName(): string {
-		return 'Guy Bot'
+		return 'GuyBot';
 	}
 
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
 		const guyIdentity = await getCurrentMemberIdentity(userID.Guy, message.guild!);
-		if (guyIdentity) {
-			this._avatarUrl = guyIdentity.avatarUrl ?? this._avatarUrl;
-			this._botName = guyIdentity?.botName ?? this._botName;
-			if (
-				getBotPattern('Guy', 'Default')?.test(message.content) ||
-				(message.author.id === userID.Guy && random.percentChance(5))
-			) {
-				this.sendReply(message.channel as TextChannel, getBotResponse('Guy', 'Default'));
-			}
+		if (!guyIdentity) return;
+
+		this._avatarUrl = guyIdentity.avatarUrl ?? this._avatarUrl;
+		this._botName = guyIdentity?.botName ?? this._botName;
+
+		const content = message.content;
+		const hasGuy = GuyBotConfig.Patterns.Default?.test(content);
+		const isGuy = message.author.id === userID.Guy;
+		const shouldReply = hasGuy || (isGuy && random.percentChance(5));
+
+		if (shouldReply) {
+			this.sendReply(message.channel as TextChannel, GuyBotConfig.Responses.Default());
 		}
 	}
 }

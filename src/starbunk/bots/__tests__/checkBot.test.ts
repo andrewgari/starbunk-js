@@ -1,63 +1,93 @@
-// Mock the webhook service
-jest.mock('../../../webhooks/webhookService');
-
-// Mock the random utility
-jest.mock('../../../utils/random', () => ({
-	percentChance: jest.fn().mockReturnValue(true),
-}));
-
-// Import test dependencies
-
-import webhookService from '../../../webhooks/webhookService';
-import { getBotPattern } from '../botConstants';
 import CheckBot from '../reply-bots/checkBot';
-import { mockMessage, setupTestContainer } from './testUtils';
+import { MockLogger, MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
 
 describe('CheckBot', () => {
 	let checkBot: CheckBot;
+	let mockLogger: MockLogger;
+	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
+		// Arrange - Set up our test environment
+		mockLogger = new MockLogger();
+		mockWebhookService = new MockWebhookService();
+
+		// Create the bot with our mocks
+		checkBot = new CheckBot(mockLogger);
+		// @ts-expect-error - Set the webhook service property directly
+		checkBot.webhookService = mockWebhookService;
+	});
+
+	afterEach(() => {
 		jest.clearAllMocks();
-		// Set up container with mock services
-		setupTestContainer();
-		// Create bot after setting up container
-		checkBot = new CheckBot();
+	});
+
+	test('should replace "check" with "czech" in messages', () => {
+		// Arrange
+		const message = createMockMessage('I need to check this out');
+		const expectedResponse = "I believe you meant to say: 'I need to czech this out'.";
+
+		// Act
+		checkBot.handleMessage(message);
+
+		// Assert
+		expectWebhookCalledWith(
+			mockWebhookService,
+			checkBot.botName,
+			expectedResponse
+		);
+	});
+
+	test('should replace "Czech" with "Check" in messages', () => {
+		// Arrange
+		const message = createMockMessage('I am going to the Czech Republic');
+		const expectedResponse = "I believe you meant to say: 'I am going to the Check Republic'.";
+
+		// Act
+		checkBot.handleMessage(message);
+
+		// Assert
+		expectWebhookCalledWith(
+			mockWebhookService,
+			checkBot.botName,
+			expectedResponse
+		);
+	});
+
+	test('should preserve capitalization when replacing', () => {
+		// Arrange
+		const message = createMockMessage('Check this out, Czech people!');
+		const expectedResponse = "I believe you meant to say: 'Czech this out, Check people!'.";
+
+		// Act
+		checkBot.handleMessage(message);
+
+		// Assert
+		expectWebhookCalledWith(
+			mockWebhookService,
+			checkBot.botName,
+			expectedResponse
+		);
+	});
+
+	test('should not respond to messages without "check" or "czech"', () => {
+		// Arrange
+		const message = createMockMessage('Hello world');
+
+		// Act
+		checkBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
 	test('should not respond to bot messages', () => {
 		// Arrange
-		const botMessage = mockMessage('test message with checkBot');
-		botMessage.author.bot = true;
-
-		// Act
-		checkBot.handleMessage(botMessage);
-
-		// Assert
-		expect(webhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	test('should respond to messages matching the pattern', () => {
-		// Arrange
-		const message = mockMessage('test message with checkBot');
-		// Make sure pattern matches for this test
-		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
+		const message = createMockMessage('check this out', '123456789', true);
 
 		// Act
 		checkBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).toHaveBeenCalled();
-	});
-
-	test('should not respond to messages not matching the pattern', () => {
-		// Arrange
-		const message = mockMessage('hello world');
-		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
-
-		// Act
-		checkBot.handleMessage(message);
-
-		// Assert
-		expect(webhookService.writeMessage).not.toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });

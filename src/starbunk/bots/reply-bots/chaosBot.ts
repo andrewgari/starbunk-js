@@ -1,16 +1,19 @@
 import { Message, TextChannel } from 'discord.js';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
+import { ChaosBotConfig } from '../config/ChaosBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class ChaosBot extends ReplyBot {
-	public readonly botName = getBotName('Chaos');
-	public readonly avatarUrl = getBotAvatar('Chaos', 'Default');
+	public readonly botName: string = ChaosBotConfig.Name;
+	public readonly avatarUrl: string = ChaosBotConfig.Avatars.Default;
 
-	handleMessage(message: Message<boolean>): void {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (getBotPattern('Chaos', 'Default')?.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, getBotResponse('Chaos', 'Default'));
+		const content = message.content.toLowerCase();
+		const hasChaos = ChaosBotConfig.Patterns.Default?.test(content);
+
+		if (hasChaos) {
+			this.sendReply(message.channel as TextChannel, ChaosBotConfig.Responses.Default);
 		}
 	}
 }

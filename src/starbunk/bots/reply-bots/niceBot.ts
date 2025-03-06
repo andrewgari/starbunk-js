@@ -1,14 +1,23 @@
 import { Message, TextChannel } from 'discord.js';
+import { NiceBotConfig } from '../config/NiceBotConfig';
 import ReplyBot from '../replyBot';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
 
 export default class NiceBot extends ReplyBot {
-	public readonly botName: string = getBotName('Nice');
-	public readonly avatarUrl: string = getBotAvatar('Nice', 'Default');
+	public readonly botName: string = NiceBotConfig.Name;
+	public readonly avatarUrl: string = NiceBotConfig.Avatars.Default;
 
-	handleMessage(message: Message<boolean>): void {
-		if (getBotPattern('Nice', 'Default')?.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, getBotResponse('Nice', 'Default'));
+	defaultBotName(): string {
+		return 'NiceBot';
+	}
+
+	async handleMessage(message: Message<boolean>): Promise<void> {
+		if (message.author.bot) return;
+
+		const content = message.content;
+		const hasNice = NiceBotConfig.Patterns.Default?.test(content);
+
+		if (hasNice) {
+			this.sendReply(message.channel as TextChannel, NiceBotConfig.Responses.Default);
 		}
 	}
 }

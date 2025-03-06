@@ -1,18 +1,21 @@
 import { Message, TextChannel } from 'discord.js';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
+import { EzioBotConfig } from '../config/EzioBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class EzioBot extends ReplyBot {
-	public readonly botName = getBotName('Ezio');
-	public readonly avatarUrl = getBotAvatar('Ezio');
+	public readonly botName: string = EzioBotConfig.Name;
+	public readonly avatarUrl: string = EzioBotConfig.Avatars.Default;
 
-	handleMessage(message: Message<boolean>): void {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (getBotPattern('Ezio', 'Default')?.test(message.content)) {
+		const content = message.content;
+		const hasEzio = EzioBotConfig.Patterns.Default?.test(content);
+
+		if (hasEzio) {
 			this.sendReply(
 				message.channel as TextChannel,
-				getBotResponse('Ezio', 'Default', message.author.displayName)
+				EzioBotConfig.Responses.Default(message.author.displayName)
 			);
 		}
 	}

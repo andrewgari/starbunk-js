@@ -1,63 +1,135 @@
 // Mock the webhook service
-jest.mock('../../../webhooks/webhookService');
-
-// Mock the random utility
-jest.mock('../../../utils/random', () => ({
-	percentChance: jest.fn().mockReturnValue(true),
+jest.mock('../../../webhooks/webhookService', () => ({
+	writeMessage: jest.fn()
 }));
 
-// Import test dependencies
+// Mock Math.random to make the tests deterministic
+const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(0.1);  // Will generate "Sheeeesh 😤"
 
-import webhookService from '../../../webhooks/webhookService';
-import { getBotPattern } from '../botConstants';
+// Mock the SheeshBotConfig to ensure it returns a consistent response
+jest.mock('../config/SheeshBotConfig', () => ({
+	SheeshBotConfig: {
+		Name: 'Sheesh Bot',
+		Avatars: {
+			Default: 'https://i.imgflip.com/5fc2iz.png?a471000'
+		},
+		Patterns: {
+			Default: /\bshee+sh\b/i
+		},
+		Responses: {
+			Default: jest.fn().mockReturnValue('Sheeeesh 😤')
+		}
+	}
+}));
+
+import { Message } from 'discord.js';
+import container from '../../../services/ServiceContainer';
+import { ServiceRegistry } from '../../../services/ServiceRegistry';
 import SheeshBot from '../reply-bots/sheeshBot';
-import { mockMessage, setupTestContainer } from './testUtils';
+import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
 describe('SheeshBot', () => {
 	let sheeshBot: SheeshBot;
+	let message: Message<boolean>;
+	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		// Set up container with mock services
 		setupTestContainer();
+		// Get the mock webhook service from the container
+		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		sheeshBot = new SheeshBot();
+		// Create a mock message
+		message = createMockMessage('test message', '123456', false);
 	});
 
-	test('should not respond to bot messages', () => {
+	it('should not respond to bot messages', async () => {
 		// Arrange
-		const botMessage = mockMessage('test message with sheeshBot');
-		botMessage.author.bot = true;
+		message.author.bot = true;
+		message.content = 'sheesh';
 
 		// Act
-		sheeshBot.handleMessage(botMessage);
+		await sheeshBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).not.toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	test('should respond to messages matching the pattern', () => {
+	it('should respond to messages containing "sheesh"', async () => {
 		// Arrange
-		const message = mockMessage('test message with sheeshBot');
-		// Make sure pattern matches for this test
-		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
+		message.content = 'sheesh that was close';
+
+		// Spy on the sendReply method
+		const sendReplySpy = jest.spyOn(sheeshBot, 'sendReply');
 
 		// Act
-		sheeshBot.handleMessage(message);
+		await sheeshBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).toHaveBeenCalled();
+		expect(/\bshee+sh\b/i.test(message.content)).toBe(true);
+		expect(sendReplySpy).toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
 	});
 
-	test('should not respond to messages not matching the pattern', () => {
+	it('should respond to messages containing "sheeeeesh"', async () => {
 		// Arrange
-		const message = mockMessage('hello world');
-		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
+		message.content = 'sheeeeesh, what happened?';
 
 		// Act
-		sheeshBot.handleMessage(message);
+		await sheeshBot.handleMessage(message);
 
 		// Assert
-		expect(webhookService.writeMessage).not.toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	it('should not respond to messages not containing "sheesh"', async () => {
+		// Arrange
+		message.content = 'hello world';
+
+		// Act
+		await sheeshBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should not match "sheesh" within other words', async () => {
+		// Arrange
+		message.content = 'asheeshb';  // "sheesh" inside a word
+
+		// Act
+		await sheeshBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should not respond to messages partially matching "shsh"', async () => {
+		// Arrange
+		message.content = 'shsh';
+
+		// Act
+		await sheeshBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should respond with the correct message format', async () => {
+		// Arrange
+		message.content = 'sheesh';
+
+		// Act
+		await sheeshBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				content: 'Sheeeesh 😤'
+			})
+		);
 	});
 });

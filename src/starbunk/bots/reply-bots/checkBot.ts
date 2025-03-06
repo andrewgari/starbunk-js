@@ -1,15 +1,23 @@
 import { Message, TextChannel } from 'discord.js';
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from '../botConstants';
+import { CheckBotConfig } from '../config/CheckBotConfig';
 import ReplyBot from '../replyBot';
-export default class BabyBot extends ReplyBot {
-	public readonly botName = getBotName('Check');
-	public readonly avatarUrl = getBotAvatar('Check', 'Default');
 
-	handleMessage(message: Message<boolean>): void {
+export default class CheckBot extends ReplyBot {
+	public readonly botName: string = CheckBotConfig.Name;
+	public readonly avatarUrl: string = CheckBotConfig.Avatars.Default;
+
+	defaultBotName(): string {
+		return 'CheckBot';
+	}
+
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (getBotPattern('Check', 'Default')?.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, getBotResponse('Check', 'Default', message.content));
+		const content = message.content;
+		const hasCheck = CheckBotConfig.Patterns.Default?.test(content);
+
+		if (hasCheck) {
+			this.sendReply(message.channel as TextChannel, CheckBotConfig.Responses.Default(content));
 		}
 	}
 }

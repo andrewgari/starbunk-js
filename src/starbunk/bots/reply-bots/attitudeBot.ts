@@ -1,27 +1,23 @@
 import { Message, TextChannel } from "discord.js";
-import { getBotAvatar, getBotName, getBotPattern, getBotResponse } from "../botConstants";
+import { AttitudeBotConfig } from "../config/AttitudeBotConfig";
 import ReplyBot from "../replyBot";
 
 export default class AttitudeBot extends ReplyBot {
-	public readonly botName: string = getBotName('Attitude');
-	public readonly avatarUrl: string = getBotAvatar('Attitude');
-	private mood: string;
-
-	constructor(mood: string = 'grumpy') {
-		super();
-		this.mood = mood;
-	}
+	public readonly botName: string = AttitudeBotConfig.Name;
+	public readonly avatarUrl: string = AttitudeBotConfig.Avatars.Default;
 
 	defaultBotName(): string {
-		return 'Attitude Bot';
+		return 'AttitudeBot';
 	}
 
-	handleMessage(message: Message): void {
+	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		if (getBotPattern('Attitude', 'Default')?.test(message.content)) {
-			const response = `${this.mood.toUpperCase()}: ${getBotResponse('Attitude', 'Default')}`;
-			this.sendReply(message.channel as TextChannel, response);
+		const content = message.content.toLowerCase();
+		const hasAttitude = AttitudeBotConfig.Patterns.Default?.test(content);
+
+		if (hasAttitude) {
+			this.sendReply(message.channel as TextChannel, AttitudeBotConfig.Responses.Default);
 		}
 	}
 }
