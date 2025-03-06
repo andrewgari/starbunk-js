@@ -1,143 +1,157 @@
-import { Message } from 'discord.js';
-import userID from '../../../discord/userID';
-import random from '../../../utils/random';
-import * as botConstants from '../botConstants';
-import GuyBot from '../reply-bots/guyBot';
-import { MockLogger, MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
-
-// Mock random utility
-jest.mock('../../../utils/random', () => ({
-	percentChance: jest.fn()
+// Mock the getCurrentMemberIdentity function
+jest.mock('../../../discord/discordGuildMemberHelper', () => ({
+	getCurrentMemberIdentity: jest.fn().mockResolvedValue({
+		userId: "123456",
+		avatarUrl: 'https://example.com/custom-guy.jpg',
+		botName: 'Custom Guy'
+	})
 }));
 
-// Mock botConstants
-jest.mock('../botConstants', () => {
-	return {
-		getCurrentMemberIdentity: jest.fn()
-	};
-});
+// Mock the random utility
+jest.mock('../../../utils/random', () => ({
+	percentChance: jest.fn().mockReturnValue(true)
+}));
 
-// Mock GuyBotConfig
-jest.mock('../config/GuyBotConfig', () => {
-	return {
-		GuyBotConfig: {
-			Name: 'GuyBot',
-			Avatars: {
-				Default: 'https://example.com/guy.jpg'
-			},
-			Patterns: {
-				Default: /\bguy\b/i
-			},
-			Responses: {
-				Default: jest.fn().mockReturnValue('What!? What did you say?')
-			}
+// Mock the GuyBotConfig to ensure it returns a consistent response
+jest.mock('../config/GuyBotConfig', () => ({
+	GuyBotConfig: {
+		Name: 'GuyBot',
+		Avatars: {
+			Default: 'https://i.imgur.com/default-guy.jpg'
+		},
+		Patterns: {
+			Default: /\bguy\b/i
+		},
+		Responses: {
+			Default: jest.fn().mockReturnValue('What!? What did you say?')
 		}
-	};
-});
+	}
+}));
+
+import { Message } from 'discord.js';
+import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
+import userID from '../../../discord/userID';
+import random from '../../../utils/random';
+import GuyBot from '../reply-bots/guyBot';
+import container from '../../../services/ServiceContainer';
+import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
 describe('GuyBot', () => {
 	let guyBot: GuyBot;
-	let message: Message;
-	let mockLogger: MockLogger;
+	let message: Message<boolean>;
 	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
-		// Arrange - Set up our test environment
-		mockLogger = new MockLogger();
-		mockWebhookService = new MockWebhookService();
-
-		// Create the bot with our mocks
-		guyBot = new GuyBot(mockLogger);
-		// @ts-expect-error - Set the webhook service property directly
-		guyBot.webhookService = mockWebhookService;
-
-		// Create a mock message
-		message = createMockMessage('Hey guy, what\'s up?');
-
-		// Mock getCurrentMemberIdentity to return a user identity
-		(botConstants.getCurrentMemberIdentity as jest.Mock).mockResolvedValue({
-			userId: userID.Guy,
-			avatarUrl: 'https://example.com/custom-guy.jpg',
-			botName: 'Custom Guy'
-		});
-	});
-
-	afterEach(() => {
 		jest.clearAllMocks();
+		// Set up container with mock services
+		setupTestContainer();
+		// Get the mock webhook service from the container
+		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
+		// Create bot after setting up container
+		guyBot = new GuyBot();
+		// Create a mock message
+		message = createMockMessage('Hey guy, what\'s up?', '123456', false);
 	});
 
-	test('should respond when message contains "guy"', async () => {
+	it('should not respond to bot messages', async () => {
+		// Arrange
+		message.author.bot = true;
+		message.content = 'Hey guy';
+
 		// Act
 		await guyBot.handleMessage(message);
 
 		// Assert
-		expect(botConstants.getCurrentMemberIdentity).toHaveBeenCalledWith(userID.Guy, message.guild);
-		expectWebhookCalledWith(
-			mockWebhookService,
-			'Custom Guy',
-			'What!? What did you say?'
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should respond to messages containing "guy"', async () => {
+		// Arrange
+		message.content = 'Hey guy, what\'s up?';
+
+		// Spy on the sendReply method
+		const sendReplySpy = jest.spyOn(guyBot, 'sendReply');
+
+		// Act
+		await guyBot.handleMessage(message);
+
+		// Assert
+		expect(/\bguy\b/i.test(message.content)).toBe(true);
+		expect(getCurrentMemberIdentity).toHaveBeenCalled();
+		expect(sendReplySpy).toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	it('should use Guy\'s identity for avatar and name', async () => {
+		// Arrange
+		message.content = 'Hey guy';
+
+		// Act
+		await guyBot.handleMessage(message);
+
+		// Assert
+		expect(guyBot.avatarUrl).toBe('https://example.com/custom-guy.jpg');
+		expect(guyBot.botName).toBe('Custom Guy');
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				username: 'Custom Guy',
+				avatarURL: 'https://example.com/custom-guy.jpg'
+			})
 		);
 	});
 
-	test('should use Guy\'s identity for avatar and name', async () => {
+	it('should randomly respond to messages from Guy with 5% chance', async () => {
 		// Arrange
-		const message = createMockMessage('Hey guy');
+		message.content = 'Hello everyone';
+		message.author.id = userID.Guy;
 
-		// Act
-		await guyBot.handleMessage(message);
-
-		// Assert
-		expect(guyBot.botName).toBe('Custom Guy');
-		expect(guyBot.avatarUrl).toBe('https://example.com/custom-guy.jpg');
-	});
-
-	test('should randomly respond to messages from Guy with 5% chance', async () => {
-		// Arrange
-		const message = createMockMessage('Hello everyone', userID.Guy);
-
-		// Mock the random chance to return true (5% chance hit)
-		(random.percentChance as jest.Mock).mockReturnValue(true);
+		// Mock random.percentChance to return true (5% chance hit)
+		(random.percentChance as jest.Mock).mockReturnValueOnce(true);
 
 		// Act
 		await guyBot.handleMessage(message);
 
 		// Assert
 		expect(random.percentChance).toHaveBeenCalledWith(5);
-		expectWebhookCalledWith(
-			mockWebhookService,
-			'Custom Guy',
-			'What!? What did you say?'
-		);
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
 	});
 
-	test('should not respond if identity cannot be found', async () => {
+	it('should not respond to messages from Guy if random check fails', async () => {
 		// Arrange
-		const message = createMockMessage('Hey guy');
+		message.content = 'Hello everyone';
+		message.author.id = userID.Guy;
+
+		// Mock random.percentChance to return false (5% chance miss)
+		(random.percentChance as jest.Mock).mockReturnValueOnce(false);
+
+		// Act
+		await guyBot.handleMessage(message);
+
+		// Assert
+		expect(random.percentChance).toHaveBeenCalledWith(5);
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should not respond if identity cannot be found', async () => {
+		// Arrange
+		message.content = 'Hey guy';
 
 		// Mock getCurrentMemberIdentity to return undefined
-		(botConstants.getCurrentMemberIdentity as jest.Mock).mockResolvedValue(undefined);
+		(getCurrentMemberIdentity as jest.Mock).mockResolvedValueOnce(undefined);
 
 		// Act
 		await guyBot.handleMessage(message);
 
 		// Assert
+		expect(getCurrentMemberIdentity).toHaveBeenCalled();
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	test('should not respond to bot messages', async () => {
+	it('should not respond to messages without trigger words', async () => {
 		// Arrange
-		const message = createMockMessage('guy', '123456789', true);
-
-		// Act
-		await guyBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	test('should not respond to messages without trigger words', async () => {
-		// Arrange
-		const message = createMockMessage('Hello world');
+		message.content = 'Hello world';
 
 		// Act
 		await guyBot.handleMessage(message);

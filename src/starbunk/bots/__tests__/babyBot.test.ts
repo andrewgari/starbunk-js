@@ -1,27 +1,8 @@
 // Mock the webhook service
-jest.mock('../../../webhooks/webhookService', () => ({
-	writeMessage: jest.fn()
-}));
-
-// Mock the BabyBotConfig to ensure it returns a consistent response
-jest.mock('../config/BabyBotConfig', () => ({
-	BabyBotConfig: {
-		Name: 'BabyBot',
-		Avatars: {
-			Default: 'https://i.redd.it/qc9qus78dc581.jpg'
-		},
-		Patterns: {
-			Default: /\bbaby\b/i
-		},
-		Responses: {
-			Default: 'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif'
-		}
-	}
-}));
-
 import { Message } from 'discord.js';
 import container from '../../../services/ServiceContainer';
 import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import { BabyBotConfig } from '../config/BabyBotConfig';
 import BabyBot from '../reply-bots/babyBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -91,7 +72,7 @@ describe('BabyBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif'
+				content: BabyBotConfig.Responses.Default
 			})
 		);
 	});

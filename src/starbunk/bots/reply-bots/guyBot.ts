@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import userID from '../../../discord/userID';
 import random from '../../../utils/random';
-import { getCurrentMemberIdentity } from '../botConstants';
+import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
 import { GuyBotConfig } from '../config/GuyBotConfig';
 import ReplyBot from '../replyBot';
 

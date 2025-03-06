@@ -1,5 +1,5 @@
 import { Guild, Message, TextChannel } from 'discord.js';
-import { getCurrentMemberIdentity } from '../botConstants';
+import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
 import { SigGreatBotConfig } from '../config/SigGreatBotConfig';
 import ReplyBot from '../replyBot';
 

@@ -1,29 +1,3 @@
-// Mock the webhook service
-jest.mock('../../../webhooks/webhookService', () => ({
-	writeMessage: jest.fn()
-}));
-
-// Mock the random utility
-jest.mock('../../../utils/random', () => ({
-	percentChance: jest.fn().mockReturnValue(true),
-}));
-
-// Mock the BotBotConfig to ensure it returns a consistent response
-jest.mock('../config/BotBotConfig', () => ({
-	BotBotConfig: {
-		Name: 'BotBot',
-		Avatars: {
-			Default: 'https://cdn-icons-png.flaticon.com/512/4944/4944377.png'
-		},
-		Patterns: {
-			Default: /bot/i,
-		},
-		Responses: {
-			Default: 'Hello fellow bot!'
-		}
-	}
-}));
-
 import { Message } from 'discord.js';
 import container from '../../../services/ServiceContainer';
 import { ServiceRegistry } from '../../../services/ServiceRegistry';

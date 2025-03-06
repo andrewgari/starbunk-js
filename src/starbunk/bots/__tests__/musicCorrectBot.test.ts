@@ -1,11 +1,11 @@
 import { Message } from 'discord.js';
 import container from '../../../services/ServiceContainer';
 import { ServiceRegistry } from '../../../services/ServiceRegistry';
-import AttitudeBot from '../reply-bots/attitudeBot';
+import MusicCorrectBot from '../reply-bots/musicCorrectBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
-describe('AttitudeBot', () => {
-	let attitudeBot: AttitudeBot;
+describe('MusicCorrectBot', () => {
+	let musicCorrectBot: MusicCorrectBot;
 	let message: Message<boolean>;
 	let mockWebhookService: MockWebhookService;
 
@@ -16,7 +16,7 @@ describe('AttitudeBot', () => {
 		// Get the mock webhook service from the container
 		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
-		attitudeBot = new AttitudeBot();
+		musicCorrectBot = new MusicCorrectBot();
 		// Create a mock message
 		message = createMockMessage('test message', '123456', false);
 	});
@@ -24,53 +24,66 @@ describe('AttitudeBot', () => {
 	it('should not respond to bot messages', async () => {
 		// Arrange
 		message.author.bot = true;
+		message.content = '!play some music';
 
 		// Act
-		await attitudeBot.handleMessage(message);
+		await musicCorrectBot.handleMessage(message);
 
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	it('should respond to messages matching the pattern', async () => {
+	it('should respond to messages starting with "!play"', async () => {
 		// Arrange
-		message.content = 'I can\'t believe this';
+		message.content = '!play some music';
 
 		// Spy on the sendReply method
-		const sendReplySpy = jest.spyOn(attitudeBot, 'sendReply');
+		const sendReplySpy = jest.spyOn(musicCorrectBot, 'sendReply');
 
 		// Act
-		await attitudeBot.handleMessage(message);
+		await musicCorrectBot.handleMessage(message);
 
 		// Assert
-		expect(/(you|I|they|we) can'?t/mi.test(message.content)).toBe(true);
+		expect(/^[?!]play /i.test(message.content)).toBe(true);
 		expect(sendReplySpy).toHaveBeenCalled();
 		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
 	});
 
-	it('should not respond to messages not matching the pattern', async () => {
+	it('should respond to messages starting with "?play"', async () => {
+		// Arrange
+		message.content = '?play some music';
+
+		// Act
+		await musicCorrectBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	it('should not respond to messages not starting with "!play" or "?play"', async () => {
 		// Arrange
 		message.content = 'hello world';
 
 		// Act
-		await attitudeBot.handleMessage(message);
+		await musicCorrectBot.handleMessage(message);
 
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	it('should respond with the correct message', async () => {
+	it('should respond with the correct message including user ID', async () => {
 		// Arrange
-		message.content = 'You can\'t do that';
+		message.content = '!play some music';
+		const userId = '123456';
 
 		// Act
-		await attitudeBot.handleMessage(message);
+		await musicCorrectBot.handleMessage(message);
 
 		// Assert
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'Well, not with *THAT* attitude!!!'
+				content: expect.stringContaining(`<@${userId}>`)
 			})
 		);
 	});

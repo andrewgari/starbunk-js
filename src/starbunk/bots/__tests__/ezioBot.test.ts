@@ -1,24 +1,3 @@
-// Mock the webhook service
-jest.mock('../../../webhooks/webhookService', () => ({
-	writeMessage: jest.fn()
-}));
-
-// Mock the EzioBotConfig to ensure it returns a consistent response
-jest.mock('../config/EzioBotConfig', () => ({
-	EzioBotConfig: {
-		Name: 'Ezio Auditore Da Firenze',
-		Avatars: {
-			Default: 'https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg'
-		},
-		Patterns: {
-			Default: /\bezio|h?assassin.*\b/i
-		},
-		Responses: {
-			Default: jest.fn().mockImplementation((name) => `Remember ${name}, Nothing is true; Everything is permitted.`)
-		}
-	}
-}));
-
 import { Message } from 'discord.js';
 import container from '../../../services/ServiceContainer';
 import { ServiceRegistry } from '../../../services/ServiceRegistry';

@@ -3,13 +3,31 @@ jest.mock('../../../webhooks/webhookService', () => ({
 	writeMessage: jest.fn()
 }));
 
-// Mock the botConstants module
-jest.mock('../botConstants', () => ({
+// Mock getCurrentMemberIdentity
+jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 	getCurrentMemberIdentity: jest.fn()
 }));
 
+// Mock the SigGreatBotConfig to ensure it returns a consistent response
+jest.mock('../config/SigGreatBotConfig', () => ({
+	SigGreatBotConfig: {
+		Name: 'SigGreatBot',
+		Avatars: {
+			Default: 'https://i.imgur.com/D0czJFu.jpg'
+		},
+		Patterns: {
+			Default: /\b(sig|siggles)\s+(?:is\s+)?(best|greatest|awesome|amazing|cool|fantastic|wonderful|excellent|good|great|brilliant|perfect|the\s+best)\b/i,
+		},
+		Responses: {
+			Default: 'SigGreat.'
+		}
+	}
+}));
+
 import { Message } from 'discord.js';
-import { getCurrentMemberIdentity } from '../botConstants';
+import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
+import container from '../../../services/ServiceContainer';
+import { ServiceRegistry } from '../../../services/ServiceRegistry';
 import SigGreatBot from '../reply-bots/sigGreatBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -23,11 +41,9 @@ describe('SigGreatBot', () => {
 		// Set up container with mock services
 		setupTestContainer();
 		// Get the mock webhook service from the container
-		mockWebhookService = new MockWebhookService();
+		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		sigGreatBot = new SigGreatBot();
-		// @ts-expect-error - Set the webhook service property directly
-		sigGreatBot.webhookService = mockWebhookService;
 		// Create a mock message
 		message = createMockMessage('test message', '123456', false);
 	});
@@ -35,6 +51,7 @@ describe('SigGreatBot', () => {
 	it('should not respond to bot messages', async () => {
 		// Arrange
 		message.author.bot = true;
+		message.content = 'sig is the best';
 
 		// Act
 		await sigGreatBot.handleMessage(message);
@@ -43,7 +60,7 @@ describe('SigGreatBot', () => {
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	it('should respond to messages matching the pattern', async () => {
+	it('should respond to messages with "sig is best"', async () => {
 		// Arrange
 		message.content = 'sig is the best';
 		(getCurrentMemberIdentity as jest.Mock).mockResolvedValue({
@@ -59,13 +76,41 @@ describe('SigGreatBot', () => {
 		await sigGreatBot.handleMessage(message);
 
 		// Assert
+		expect(/\b(sig|siggles)\s+(?:is\s+)?(best|greatest|awesome|amazing|cool|fantastic|wonderful|excellent|good|great|brilliant|perfect|the\s+best)\b/i.test(message.content)).toBe(true);
 		expect(sendReplySpy).toHaveBeenCalled();
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	it('should respond to messages with "siggles is awesome"', async () => {
+		// Arrange
+		message.content = 'siggles is awesome';
+		(getCurrentMemberIdentity as jest.Mock).mockResolvedValue({
+			userId: '123456',
+			avatarUrl: 'https://i.imgur.com/D0czJFu.jpg',
+			botName: 'SigGreatBot'
+		});
+
+		// Act
+		await sigGreatBot.handleMessage(message);
+
+		// Assert
 		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
 	});
 
 	it('should not respond to messages not matching the pattern', async () => {
 		// Arrange
 		message.content = 'hello world';
+
+		// Act
+		await sigGreatBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should not respond to "sig" without a positive adjective', async () => {
+		// Arrange
+		message.content = 'sig is here';
 
 		// Act
 		await sigGreatBot.handleMessage(message);
@@ -113,5 +158,22 @@ describe('SigGreatBot', () => {
 		expect(sigGreatBot.avatarUrl).toBe('https://i.imgur.com/D0czJFu.jpg');
 		expect(sigGreatBot.botName).toBe('SigGreatBot');
 		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	it('should respond with "SigGreat."', async () => {
+		// Arrange
+		message.content = 'sig is the best';
+		(getCurrentMemberIdentity as jest.Mock).mockResolvedValue(null);
+
+		// Act
+		await sigGreatBot.handleMessage(message);
+
+		// Assert
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				content: 'SigGreat.'
+			})
+		);
 	});
 });

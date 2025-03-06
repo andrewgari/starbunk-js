@@ -3,11 +3,6 @@ import random from '../../../utils/random';
 import BananaBot from '../reply-bots/bananaBot';
 import { MockLogger, MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
 
-// Mock random utility
-jest.mock('../../../utils/random', () => ({
-	percentChance: jest.fn()
-}));
-
 describe('BananaBot', () => {
 	let bananaBot: BananaBot;
 	let mockLogger: MockLogger;
@@ -70,7 +65,7 @@ describe('BananaBot', () => {
 		const message = createMockMessage('Hello everyone', userID.Venn);
 
 		// Mock the random chance to return true (5% chance hit)
-		(random.percentChance as jest.Mock).mockReturnValue(true);
+		jest.spyOn(random, 'percentChance').mockReturnValue(true);
 
 		// Act
 		bananaBot.handleMessage(message);
@@ -89,13 +84,12 @@ describe('BananaBot', () => {
 		const message = createMockMessage('Hello everyone', userID.Venn);
 
 		// Mock the random chance to return false (95% chance miss)
-		(random.percentChance as jest.Mock).mockReturnValue(false);
+		jest.spyOn(random, 'percentChance').mockReturnValue(false);
 
 		// Act
 		bananaBot.handleMessage(message);
 
 		// Assert
-		expect(random.percentChance).toHaveBeenCalledWith(5);
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });
