@@ -1,4 +1,4 @@
-import userID from "../../../discord/userID";
+import userID from '../../../discord/userId';
 
 export const MacaroniBotConfig = {
 	Name: 'Macaroni Bot',
