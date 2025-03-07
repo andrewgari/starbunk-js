@@ -2,10 +2,10 @@ import { Client } from 'discord.js';
 import { OpenAIClient } from '../openai/openaiClient';
 import BlueBot from '../starbunk/bots/reply-bots/blueBot';
 import webhookService from '../webhooks/webhookService';
-import { ILogger } from './Logger';
-import container from './ServiceContainer';
-import { getLogger } from './ServiceRegistrar';
-import { ServiceRegistry } from './ServiceRegistry';
+import { ILogger } from './logger';
+import container from './serviceContainer';
+import { getLogger } from './serviceRegistrar';
+import { ServiceRegistry } from './serviceRegistry';
 
 /**
  * Registers all core services with the DI container
