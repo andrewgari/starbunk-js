@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
-import userID from '../../../discord/userID';
+import userID from '../../../discord/userId';
 import Random from '../../../utils/random';
-import { PickleBotConfig } from '../config/PickleBotConfig';
+import { PickleBotConfig } from '../config/pickleBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class PickleBot extends ReplyBot {

@@ -1,8 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
-import userID from '../../../discord/userID';
-import { ILogger } from '../../../services/Logger';
+import userID from '../../../discord/userId';
+import { ILogger } from '../../../services/logger';
 import random from '../../../utils/random';
-import { MacaroniBotConfig } from '../config/MacaroniBotConfig';
+import { MacaroniBotConfig } from '../config/macaroniBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class MacaroniBot extends ReplyBot {

@@ -1,8 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
-import userID from '../../../discord/userID';
+import userID from '../../../discord/userId';
 import random from '../../../utils/random';
-import { VennBotConfig } from '../config/VennBotConfig';
+import { VennBotConfig } from '../config/vennBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class VennBot extends ReplyBot {

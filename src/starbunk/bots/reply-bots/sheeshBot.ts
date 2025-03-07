@@ -1,6 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
-import { ILogger } from '../../../services/Logger';
-import { SheeshBotConfig } from '../config/SheeshBotConfig';
+import { ILogger } from '../../../services/logger';
+import { SheeshBotConfig } from '../config/sheeshBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class SheeshBot extends ReplyBot {

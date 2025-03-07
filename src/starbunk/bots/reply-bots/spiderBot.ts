@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import { SpiderBotConfig } from '../config/SpiderBotConfig';
+import { SpiderBotConfig } from '../config/spiderBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class SpiderBot extends ReplyBot {

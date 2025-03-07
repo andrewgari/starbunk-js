@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import { CheckBotConfig } from '../config/CheckBotConfig';
+import { CheckBotConfig } from '../config/checkBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class CheckBot extends ReplyBot {

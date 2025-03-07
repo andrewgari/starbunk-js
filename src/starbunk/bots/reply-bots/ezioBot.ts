@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import { EzioBotConfig } from '../config/EzioBotConfig';
+import { EzioBotConfig } from '../config/ezioBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class EzioBot extends ReplyBot {

@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import { BabyBotConfig } from '../config/BabyBotConfig';
+import { BabyBotConfig } from '../config/babyBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BabyBot extends ReplyBot {
