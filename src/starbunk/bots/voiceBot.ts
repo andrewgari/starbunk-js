@@ -1,6 +1,6 @@
 import { VoiceState } from 'discord.js';
-import { ILogger } from '../../services/Logger';
-import loggerFactory from '../../services/LoggerFactory';
+import { ILogger } from '../../services/logger';
+import loggerFactory from '../../services/loggerFactory';
 
 export default abstract class VoiceBot {
 	protected logger: ILogger;
