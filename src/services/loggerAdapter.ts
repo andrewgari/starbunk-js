@@ -1,5 +1,5 @@
-import { ILogger } from './Logger';
-import loggerFactory from './LoggerFactory';
+import { ILogger } from './logger';
+import loggerFactory from './loggerFactory';
 
 /**
  * LoggerAdapter provides a bridge between the static Logger usage and the new dependency-injected approach.

@@ -1,4 +1,4 @@
-import { ILogger } from './Logger';
+import { ILogger } from './logger';
 
 export class MockLogger implements ILogger {
 	public logs: { level: string; message: string; error?: Error }[] = [];

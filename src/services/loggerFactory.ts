@@ -1,6 +1,6 @@
-import { ILogger, Logger } from './Logger';
-import container from './ServiceContainer';
-import { ServiceRegistry } from './ServiceRegistry';
+import { ILogger, Logger } from './logger';
+import container from './serviceContainer';
+import { ServiceRegistry } from './serviceRegistry';
 
 export class LoggerFactory {
 	private static instance: LoggerFactory;
