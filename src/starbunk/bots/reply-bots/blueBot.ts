@@ -1,9 +1,9 @@
 import { Message, TextChannel } from 'discord.js';
-import userID from '../../../discord/userID';
+import userId from '../../../discord/userId';
 import { OpenAIClient } from '../../../openai/openaiClient';
-import { ILogger } from '../../../services/Logger';
+import { ILogger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
-import { BlueBotConfig } from '../config/BlueBotConfig';
+import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BlueBot extends ReplyBot {
@@ -59,7 +59,7 @@ export default class BlueBot extends ReplyBot {
 		if (this.isSomeoneRespondingToBlu(message)) {
 			this._blueTimestamp = new Date(1);
 			this._avatarUrl = BlueBotConfig.Avatars.Cheeky;
-			this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Cheeky);
+			this.sendReply(message.channel as TextChannel, BlueBotConfig.getRandomCheekyResponse());
 			return;
 		}
 
@@ -89,7 +89,7 @@ export default class BlueBot extends ReplyBot {
 	}
 
 	private isVennInsultingBlu(message: Message): boolean {
-		const isVenn = message.author.id === userID.Venn;
+		const isVenn = message.author.id === userId.Venn;
 		if (!isVenn) return false;
 
 		const content = message.content;

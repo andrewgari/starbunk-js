@@ -1,8 +1,8 @@
 // Mock the webhook service
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
-import { BabyBotConfig } from '../config/BabyBotConfig';
+import container from '../../../services/serviceContainer';
+import { serviceRegistry } from '../../../services/serviceRegistry';
+import { BabyBotConfig } from '../config/babyBotConfig';
 import BabyBot from '../reply-bots/babyBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -16,7 +16,7 @@ describe('BabyBot', () => {
 		// Set up container with mock services
 		setupTestContainer();
 		// Get the mock webhook service from the container
-		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
+		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		babyBot = new BabyBot();
 		// Create a mock message

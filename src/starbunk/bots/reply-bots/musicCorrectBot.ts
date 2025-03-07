@@ -1,6 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
-import { ILogger } from '../../../services/Logger';
-import { MusicCorrectBotConfig } from '../config/MusicCorrectBotConfig';
+import { ILogger } from '../../../services/logger';
+import { MusicCorrectBotConfig } from '../config/musicCorrectBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class MusicCorrectBot extends ReplyBot {

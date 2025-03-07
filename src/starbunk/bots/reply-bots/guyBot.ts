@@ -1,8 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
-import userID from '../../../discord/userID';
+import userId from '../../../discord/userId';
 import random from '../../../utils/random';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
-import { GuyBotConfig } from '../config/GuyBotConfig';
+import { GuyBotConfig } from '../config/guyBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class GuyBot extends ReplyBot {
@@ -25,7 +25,7 @@ export default class GuyBot extends ReplyBot {
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		const guyIdentity = await getCurrentMemberIdentity(userID.Guy, message.guild!);
+		const guyIdentity = await getCurrentMemberIdentity(userId.Guy, message.guild!);
 		if (!guyIdentity) return;
 
 		this._avatarUrl = guyIdentity.avatarUrl ?? this._avatarUrl;
@@ -33,7 +33,7 @@ export default class GuyBot extends ReplyBot {
 
 		const content = message.content;
 		const hasGuy = GuyBotConfig.Patterns.Default?.test(content);
-		const isGuy = message.author.id === userID.Guy;
+		const isGuy = message.author.id === userId.Guy;
 		const shouldReply = hasGuy || (isGuy && random.percentChance(5));
 
 		if (shouldReply) {

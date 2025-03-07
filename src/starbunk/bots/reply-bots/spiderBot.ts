@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import { SpiderBotConfig } from '../config/SpiderBotConfig';
+import { SpiderBotConfig } from '../config/spiderBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class SpiderBot extends ReplyBot {
@@ -13,7 +13,7 @@ export default class SpiderBot extends ReplyBot {
 		const hasSpider = SpiderBotConfig.Patterns.Default?.test(content);
 
 		if (hasSpider) {
-			this.sendReply(message.channel as TextChannel, SpiderBotConfig.Responses.Default);
+			this.sendReply(message.channel as TextChannel, SpiderBotConfig.getRandomCheekyResponse());
 		}
 	}
 }

@@ -1,8 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
-import userID from '../../../discord/userID';
+import userId from '../../../discord/userId';
 import random from '../../../utils/random';
-import { VennBotConfig } from '../config/VennBotConfig';
+import { VennBotConfig } from '../config/vennBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class VennBot extends ReplyBot {
@@ -24,11 +24,11 @@ export default class VennBot extends ReplyBot {
 
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
-		this._avatarUrl = (await getCurrentMemberIdentity(userID.Venn, message.guild!))?.avatarUrl ?? this._avatarUrl;
+		this._avatarUrl = (await getCurrentMemberIdentity(userId.Venn, message.guild!))?.avatarUrl ?? this._avatarUrl;
 
 		const content = message.content.toLowerCase();
 		const isCringe = /cringe/i.test(content);
-		const isVenn = message.author.id === userID.Venn;
+		const isVenn = message.author.id === userId.Venn;
 		const shouldReply = (isVenn && random.percentChance(5)) || isCringe;
 
 		if (shouldReply) {

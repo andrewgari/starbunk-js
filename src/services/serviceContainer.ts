@@ -16,19 +16,19 @@ interface ServiceDescriptor<T> {
 /**
  * Enhanced dependency injection container with lifecycle management and automatic dependency resolution
  */
-export class ServiceContainer {
-	private static instance: ServiceContainer;
+export class serviceContainer {
+	private static instance: serviceContainer;
 	private services: Map<string, ServiceDescriptor<unknown>> = new Map();
 
 	private constructor() {
 		// Private constructor for singleton pattern
 	}
 
-	static getInstance(): ServiceContainer {
-		if (!ServiceContainer.instance) {
-			ServiceContainer.instance = new ServiceContainer();
+	static getInstance(): serviceContainer {
+		if (!serviceContainer.instance) {
+			serviceContainer.instance = new serviceContainer();
 		}
-		return ServiceContainer.instance;
+		return serviceContainer.instance;
 	}
 
 	/**
@@ -171,4 +171,4 @@ export class ServiceContainer {
 	}
 }
 
-export default ServiceContainer.getInstance();
+export default serviceContainer.getInstance();

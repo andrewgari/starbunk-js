@@ -1,4 +1,4 @@
-import userID from "../../../discord/userID";
+import userId from '../../../discord/userId';
 
 export const MacaroniBotConfig = {
 	Name: 'Macaroni Bot',
@@ -18,7 +18,7 @@ export const MacaroniBotConfig = {
 			if (matches[0].toLowerCase() === "venn") {
 				return VennCorrection;
 			} else {
-				return MacaroniMention(userID.Venn);
+				return MacaroniMention(userId.Venn);
 			}
 		}
 	},

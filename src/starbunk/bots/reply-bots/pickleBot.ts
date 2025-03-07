@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
-import userID from '../../../discord/userID';
+import userId from '../../../discord/userId';
 import Random from '../../../utils/random';
-import { PickleBotConfig } from '../config/PickleBotConfig';
+import { PickleBotConfig } from '../config/pickleBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class PickleBot extends ReplyBot {
@@ -17,7 +17,7 @@ export default class PickleBot extends ReplyBot {
 
 		const content = message.content;
 		const hasPickle = PickleBotConfig.Patterns.Default?.test(content);
-		const isSig = message.author.id === userID.Sig;
+		const isSig = message.author.id === userId.Sig;
 		const shouldReply = hasPickle || (isSig && Random.percentChance(15));
 
 		if (shouldReply) {

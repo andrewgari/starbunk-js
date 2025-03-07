@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import { NiceBotConfig } from '../config/NiceBotConfig';
+import { NiceBotConfig } from '../config/niceBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class NiceBot extends ReplyBot {

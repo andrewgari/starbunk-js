@@ -4,10 +4,10 @@ import { readdirSync } from 'fs';
 import path from 'path';
 import { Command } from '../discord/command';
 import DiscordClient from '../discord/discordClient';
-import LoggerAdapter from '../services/LoggerAdapter';
+import loggerAdapter from '../services/loggerAdapter';
 import ReplyBot from './bots/replyBot';
 import VoiceBot from './bots/voiceBot';
-import { DJCova } from './dJCova';
+import { DJCova } from './djCova';
 
 export default class StarbunkClient extends DiscordClient {
 	bots: Collection<string, ReplyBot> = new Collection();
@@ -37,9 +37,9 @@ export default class StarbunkClient extends DiscordClient {
 	async registerBots(): Promise<void> {
 		try {
 			const botDir = path.join(__dirname, 'bots/reply-bots');
-			LoggerAdapter.info(`Looking for bots in: ${botDir}`);
+			loggerAdapter.info(`Looking for bots in: ${botDir}`);
 			const botFiles = readdirSync(botDir).filter((file) => file.endsWith('.js'));
-			LoggerAdapter.info(`Found bot files: ${botFiles.join(', ')}`);
+			loggerAdapter.info(`Found bot files: ${botFiles.join(', ')}`);
 
 			for (const file of botFiles) {
 				try {
@@ -49,18 +49,18 @@ export default class StarbunkClient extends DiscordClient {
 					// Try URL-based import first
 					try {
 						const fileUrl = `file://${path.resolve(botDir, file)}`;
-						LoggerAdapter.info(`Importing bot using URL: ${fileUrl}`);
+						loggerAdapter.info(`Importing bot using URL: ${fileUrl}`);
 						const imported = await import(fileUrl);
 						BotClass = imported.default;
-						LoggerAdapter.success(`URL import succeeded for: ${botName}`);
+						loggerAdapter.success(`URL import succeeded for: ${botName}`);
 					} catch (urlImportError) {
 						// Fallback to traditional path if URL import fails
-						LoggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
+						loggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
 						const importPath = path.join(botDir, file);
-						LoggerAdapter.info(`Importing bot using path: ${importPath}`);
+						loggerAdapter.info(`Importing bot using path: ${importPath}`);
 						const imported = await import(importPath);
 						BotClass = imported.default;
-						LoggerAdapter.success(`Traditional import succeeded for: ${botName}`);
+						loggerAdapter.success(`Traditional import succeeded for: ${botName}`);
 					}
 					
 					if (!BotClass) {
@@ -69,25 +69,25 @@ export default class StarbunkClient extends DiscordClient {
 					
 					const bot = new BotClass() as ReplyBot;
 					this.bots.set(botName, bot);
-					LoggerAdapter.success(`Registered Bot: ${botName} 🤖`);
+					loggerAdapter.success(`Registered Bot: ${botName} 🤖`);
 				} catch (error) {
-					LoggerAdapter.error(`Failed to load bot from ${file}: ${error instanceof Error ? error.message : String(error)}`);
+					loggerAdapter.error(`Failed to load bot from ${file}: ${error instanceof Error ? error.message : String(error)}`);
 					if (error instanceof Error && error.stack) {
-						LoggerAdapter.error(`Stack trace: ${error.stack}`);
+						loggerAdapter.error(`Stack trace: ${error.stack}`);
 					}
 				}
 			}
 		} catch (error) {
-			LoggerAdapter.error(`Error in registerBots: ${error instanceof Error ? error.message : String(error)}`);
+			loggerAdapter.error(`Error in registerBots: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
 	async registerVoiceBots(): Promise<void> {
 		try {
 			const botDir = path.join(__dirname, 'bots/voice-bots');
-			LoggerAdapter.info(`Looking for voice bots in: ${botDir}`);
+			loggerAdapter.info(`Looking for voice bots in: ${botDir}`);
 			const botFiles = readdirSync(botDir).filter((file) => file.endsWith('.js'));
-			LoggerAdapter.info(`Found voice bot files: ${botFiles.join(', ')}`);
+			loggerAdapter.info(`Found voice bot files: ${botFiles.join(', ')}`);
 
 			for (const file of botFiles) {
 				try {
@@ -97,18 +97,18 @@ export default class StarbunkClient extends DiscordClient {
 					// Try URL-based import first
 					try {
 						const fileUrl = `file://${path.resolve(botDir, file)}`;
-						LoggerAdapter.info(`Importing voice bot using URL: ${fileUrl}`);
+						loggerAdapter.info(`Importing voice bot using URL: ${fileUrl}`);
 						const imported = await import(fileUrl);
 						BotClass = imported.default;
-						LoggerAdapter.success(`URL import succeeded for voice bot: ${botName}`);
+						loggerAdapter.success(`URL import succeeded for voice bot: ${botName}`);
 					} catch (urlImportError) {
 						// Fallback to traditional path if URL import fails
-						LoggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
+						loggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
 						const importPath = path.join(botDir, file);
-						LoggerAdapter.info(`Importing voice bot using path: ${importPath}`);
+						loggerAdapter.info(`Importing voice bot using path: ${importPath}`);
 						const imported = await import(importPath);
 						BotClass = imported.default;
-						LoggerAdapter.success(`Traditional import succeeded for voice bot: ${botName}`);
+						loggerAdapter.success(`Traditional import succeeded for voice bot: ${botName}`);
 					}
 					
 					if (!BotClass) {
@@ -117,25 +117,25 @@ export default class StarbunkClient extends DiscordClient {
 					
 					const bot = new BotClass();
 					this.voiceBots.set(botName, bot);
-					LoggerAdapter.success(`Registered Voice Bot: ${botName} 🎤`);
+					loggerAdapter.success(`Registered Voice Bot: ${botName} 🎤`);
 				} catch (error) {
-					LoggerAdapter.error(`Failed to load voice bot from ${file}: ${error instanceof Error ? error.message : String(error)}`);
+					loggerAdapter.error(`Failed to load voice bot from ${file}: ${error instanceof Error ? error.message : String(error)}`);
 					if (error instanceof Error && error.stack) {
-						LoggerAdapter.error(`Stack trace: ${error.stack}`);
+						loggerAdapter.error(`Stack trace: ${error.stack}`);
 					}
 				}
 			}
 		} catch (error) {
-			LoggerAdapter.error(`Error in registerVoiceBots: ${error instanceof Error ? error.message : String(error)}`);
+			loggerAdapter.error(`Error in registerVoiceBots: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
 	async registerCommands(): Promise<void> {
 		try {
 			const commandDir = path.join(__dirname, 'commands');
-			LoggerAdapter.info(`Looking for commands in: ${commandDir}`);
+			loggerAdapter.info(`Looking for commands in: ${commandDir}`);
 			const commandFiles = readdirSync(commandDir).filter((file) => file.endsWith('.js'));
-			LoggerAdapter.info(`Found command files: ${commandFiles.join(', ')}`);
+			loggerAdapter.info(`Found command files: ${commandFiles.join(', ')}`);
 
 			for (const file of commandFiles) {
 				try {
@@ -144,18 +144,18 @@ export default class StarbunkClient extends DiscordClient {
 					// Try URL-based import first
 					try {
 						const fileUrl = `file://${path.resolve(commandDir, file)}`;
-						LoggerAdapter.info(`Importing command using URL: ${fileUrl}`);
+						loggerAdapter.info(`Importing command using URL: ${fileUrl}`);
 						const imported = await import(fileUrl);
 						command = imported.default;
-						LoggerAdapter.success(`URL import succeeded for command: ${file}`);
+						loggerAdapter.success(`URL import succeeded for command: ${file}`);
 					} catch (urlImportError) {
 						// Fallback to traditional path if URL import fails
-						LoggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
+						loggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
 						const importPath = path.join(commandDir, file);
-						LoggerAdapter.info(`Importing command using path: ${importPath}`);
+						loggerAdapter.info(`Importing command using path: ${importPath}`);
 						const imported = await import(importPath);
 						command = imported.default;
-						LoggerAdapter.success(`Traditional import succeeded for command: ${file}`);
+						loggerAdapter.success(`Traditional import succeeded for command: ${file}`);
 					}
 					
 					if (!command) {
@@ -163,23 +163,23 @@ export default class StarbunkClient extends DiscordClient {
 					}
 					
 					this.commands.set(command.data.name, command);
-					LoggerAdapter.success(`Registered Command: ${command.data.name} ⚡`);
+					loggerAdapter.success(`Registered Command: ${command.data.name} ⚡`);
 				} catch (error) {
-					LoggerAdapter.error(`Failed to load command from ${file}: ${error instanceof Error ? error.message : String(error)}`);
+					loggerAdapter.error(`Failed to load command from ${file}: ${error instanceof Error ? error.message : String(error)}`);
 					if (error instanceof Error && error.stack) {
-						LoggerAdapter.error(`Stack trace: ${error.stack}`);
+						loggerAdapter.error(`Stack trace: ${error.stack}`);
 					}
 				}
 			}
 		} catch (error) {
-			LoggerAdapter.error(`Error in registerCommands: ${error instanceof Error ? error.message : String(error)}`);
+			loggerAdapter.error(`Error in registerCommands: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
 	// Main initialization method
 	bootstrap(token: string, clientId: string, guildId: string): void {
 		try {
-			LoggerAdapter.info('🚀 Starting Starbunk initialization...');
+			loggerAdapter.info('🚀 Starting Starbunk initialization...');
 			this.registerBots();
 			this.registerVoiceBots();
 			this.registerCommands();
@@ -187,41 +187,41 @@ export default class StarbunkClient extends DiscordClient {
 			this.registerSlashCommands(token, clientId, guildId);
 			this.login(token);
 		} catch (error) {
-			LoggerAdapter.error(`Error during initialization: ${error}`);
+			loggerAdapter.error(`Error during initialization: ${error}`);
 		}
 	}
 
 	private setupEventListeners(): void {
 		this.on(Events.MessageCreate, (message) => {
-			LoggerAdapter.debug(`Received message: ${message.content.substring(0, 50)}...`);
+			loggerAdapter.debug(`Received message: ${message.content.substring(0, 50)}...`);
 			this.handleMessage(message);
 		});
 
 		this.on(Events.MessageUpdate, (_, message) => {
 			if (message.author?.bot) return;
-			LoggerAdapter.debug(`Message updated: ${message.content.substring(0, 50)}...`);
+			loggerAdapter.debug(`Message updated: ${message.content.substring(0, 50)}...`);
 			this.handleMessage(message as Message);
 		});
 
 		this.on(Events.VoiceStateUpdate, (oldState, newState) => {
-			LoggerAdapter.info('🎤 Registering voice event handlers...');
-			LoggerAdapter.debug('Voice state update detected');
+			loggerAdapter.info('🎤 Registering voice event handlers...');
+			loggerAdapter.debug('Voice state update detected');
 			this.handleVoiceEvent(oldState, newState);
 		});
 
 		this.on(Events.InteractionCreate, async (interaction) => {
 			if (!interaction.isChatInputCommand()) return;
-			LoggerAdapter.info('👂 Listening for commands...');
+			loggerAdapter.info('👂 Listening for commands...');
 
 			const command = this.commands.get(interaction.commandName);
 
 			if (!command) {
-				LoggerAdapter.warn(`Unknown command received: ${interaction.commandName}`);
+				loggerAdapter.warn(`Unknown command received: ${interaction.commandName}`);
 				return;
 			}
 
 			try {
-				LoggerAdapter.debug(`Executing command: ${interaction.commandName}`);
+				loggerAdapter.debug(`Executing command: ${interaction.commandName}`);
 				await command.execute(interaction);
 			} catch (error) {
 				console.error(error);
@@ -234,7 +234,7 @@ export default class StarbunkClient extends DiscordClient {
 	}
 
 	private registerSlashCommands(token: string, clientId: string, guildId: string): void {
-		LoggerAdapter.info('⚡ Registering slash commands...');
+		loggerAdapter.info('⚡ Registering slash commands...');
 		const commands = [];
 		for (const command of this.commands.values()) {
 			commands.push(command.data);
@@ -244,7 +244,7 @@ export default class StarbunkClient extends DiscordClient {
 
 		rest
 			.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands })
-			.then(() => LoggerAdapter.success('Successfully registered application commands.'))
+			.then(() => loggerAdapter.success('Successfully registered application commands.'))
 			.catch(console.error);
 	}
 }

@@ -1,7 +1,7 @@
 /**
  * Registry of all service identifiers for type-safe dependency injection
  */
-export class ServiceRegistry {
+export class serviceRegistry {
 	// Logger services
 	static readonly LOGGER = 'logger';
 	

@@ -1,27 +1,6 @@
-// Mock the webhook service
-jest.mock('../../../webhooks/webhookService', () => ({
-	writeMessage: jest.fn()
-}));
-
-// Mock the GundamBotConfig to ensure it returns a consistent response
-jest.mock('../config/GundamBotConfig', () => ({
-	GundamBotConfig: {
-		Name: 'GundamBot',
-		Avatars: {
-			Default: 'https://a1.cdn.japantravel.com/photo/41317-179698/1440x960!/tokyo-unicorn-gundam-statue-in-odaiba-179698.jpg'
-		},
-		Patterns: {
-			Default: /\bg(u|a)ndam\b/i
-		},
-		Responses: {
-			Default: 'That\'s the famous Unicorn Robot, "Gandum". There, I said it.'
-		}
-	}
-}));
-
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { serviceRegistry } from '../../../services/serviceRegistry';
 import GundamBot from '../reply-bots/gundamBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -35,7 +14,7 @@ describe('GundamBot', () => {
 		// Set up container with mock services
 		setupTestContainer();
 		// Get the mock webhook service from the container
-		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
+		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		gundamBot = new GundamBot();
 		// Create a mock message

@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
-import UserID from '../../../discord/userID';
+import UserID from '../../../discord/userId';
 import random from '../../../utils/random';
-import { BananaBotConfig } from '../config/BananaBotConfig';
+import { BananaBotConfig } from '../config/bananaBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BananaBot extends ReplyBot {
@@ -17,7 +17,8 @@ export default class BananaBot extends ReplyBot {
 		const shouldReply = hasBanana || (isVenn && random.percentChance(5));
 
 		if (shouldReply) {
-			this.sendReply(message.channel as TextChannel, BananaBotConfig.Responses.Default());
+			// Randomly decide between normal and cheeky responses with 50% chance
+			this.sendReply(message.channel as TextChannel, BananaBotConfig.getRandomCheekyResponse());
 		}
 	}
 }

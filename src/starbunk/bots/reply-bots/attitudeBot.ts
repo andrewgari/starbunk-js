@@ -1,5 +1,5 @@
 import { Message, TextChannel } from "discord.js";
-import { AttitudeBotConfig } from "../config/AttitudeBotConfig";
+import { AttitudeBotConfig } from "../config/attitudeBotConfig";
 import ReplyBot from "../replyBot";
 
 export default class AttitudeBot extends ReplyBot {
