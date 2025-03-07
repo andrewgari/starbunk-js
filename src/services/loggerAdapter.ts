@@ -31,6 +31,10 @@ export class loggerAdapter {
 	static debug(message: string): void {
 		loggerAdapter.logger.debug(message);
 	}
+
+	static trace(message: string): void {
+		loggerAdapter.logger.trace(message);
+	}
 }
 
 export default loggerAdapter;
