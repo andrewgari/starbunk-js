@@ -20,7 +20,7 @@ export class WebhookService implements IWebhookService {
 	}
 
 	getWebhookName(channelName: string, isSnowbunk: boolean): string {
-		return `${isSnowbunk ? 'Snowbunk' : 'StarBunk'}Bunkbot-${channelName}`;
+		return `${isSnowbunk ? 'Snowbunk' : 'CovaDax'}Bunkbot-${channelName}`;
 	}
 
 	async getChannelWebhook(channel: TextChannel): Promise<Webhook> {
