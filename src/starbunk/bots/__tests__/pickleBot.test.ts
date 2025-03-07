@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
-import userID from '../../../discord/userID';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import userID from '../../../discord/userId';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
 import Random from '../../../utils/random';
 import PickleBot from '../reply-bots/pickleBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';

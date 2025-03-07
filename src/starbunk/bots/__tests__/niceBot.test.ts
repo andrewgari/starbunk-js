@@ -1,6 +1,6 @@
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
 import NiceBot from '../reply-bots/niceBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 

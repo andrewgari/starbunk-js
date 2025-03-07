@@ -1,5 +1,5 @@
-import userID from '../../../discord/userID';
-import { MacaroniBotConfig } from '../config/MacaroniBotConfig';
+import userID from '../../../discord/userId';
+import { MacaroniBotConfig } from '../config/macaroniBotConfig';
 import MacaroniBot from '../reply-bots/macaroniBot';
 import { MockLogger, MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
 

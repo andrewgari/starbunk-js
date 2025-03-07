@@ -1,5 +1,5 @@
 // Mock the BlueBotConfig
-jest.mock('../config/BlueBotConfig', () => ({
+jest.mock('../config/blueBotConfig', () => ({
 	BlueBotConfig: {
 		Name: 'BluBot',
 		Avatars: {
@@ -30,10 +30,11 @@ jest.mock('../config/BlueBotConfig', () => ({
 	}
 }));
 
-import userID from '../../../discord/userID';
+import userID from '../../../discord/userId';
 import { OpenAIClient } from '../../../openai/openaiClient';
+import { BlueBotConfig } from '../config/blueBotConfig';
 import BlueBot from '../reply-bots/blueBot';
-import { MockLogger, MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
+import { MockLogger, MockWebhookService, createMockMessage } from './testUtils';
 
 // Mock OpenAI client
 jest.mock('../../../openai/openaiClient', () => ({
@@ -189,8 +190,8 @@ describe('BlueBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: 'BluBot',
-				content: 'Did somebody say Blu?'
+				username: BlueBotConfig.Name,
+				content: BlueBotConfig.Responses.Default
 			})
 		);
 	});

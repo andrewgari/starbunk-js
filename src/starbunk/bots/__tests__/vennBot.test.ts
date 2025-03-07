@@ -1,13 +1,3 @@
-// Mock the webhook service
-jest.mock('../../../webhooks/webhookService', () => ({
-	writeMessage: jest.fn()
-}));
-
-// Mock the random utility
-jest.mock('../../../utils/random', () => ({
-	percentChance: jest.fn().mockReturnValue(true),
-}));
-
 // Mock the getCurrentMemberIdentity function
 jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 	getCurrentMemberIdentity: jest.fn().mockResolvedValue({
@@ -15,22 +5,13 @@ jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 	})
 }));
 
-// Mock VennBotConfig to ensure it returns a consistent response
-jest.mock('../config/VennBotConfig', () => ({
-	VennBotConfig: {
-		Name: 'VennBot',
-		Responses: {
-			Default: jest.fn().mockReturnValue('Mock response')
-		}
-	}
-}));
 
 import { Message } from 'discord.js';
 // Import test dependencies
 
-import userID from '../../../discord/userID';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import userID from '../../../discord/userId';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
 import random from '../../../utils/random';
 import VennBot from '../reply-bots/vennBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';

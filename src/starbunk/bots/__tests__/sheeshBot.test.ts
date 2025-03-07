@@ -7,7 +7,7 @@ jest.mock('../../../webhooks/webhookService', () => ({
 const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(0.1);  // Will generate "Sheeeesh 😤"
 
 // Mock the SheeshBotConfig to ensure it returns a consistent response
-jest.mock('../config/SheeshBotConfig', () => ({
+jest.mock('../config/sheeshBotConfig', () => ({
 	SheeshBotConfig: {
 		Name: 'Sheesh Bot',
 		Avatars: {
@@ -23,8 +23,8 @@ jest.mock('../config/SheeshBotConfig', () => ({
 }));
 
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
 import SheeshBot from '../reply-bots/sheeshBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 

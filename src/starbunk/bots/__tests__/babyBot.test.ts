@@ -1,8 +1,8 @@
 // Mock the webhook service
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
-import { BabyBotConfig } from '../config/BabyBotConfig';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
+import { BabyBotConfig } from '../config/babyBotConfig';
 import BabyBot from '../reply-bots/babyBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 

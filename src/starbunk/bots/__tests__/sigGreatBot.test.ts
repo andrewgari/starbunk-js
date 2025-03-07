@@ -9,7 +9,7 @@ jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 }));
 
 // Mock the SigGreatBotConfig to ensure it returns a consistent response
-jest.mock('../config/SigGreatBotConfig', () => ({
+jest.mock('../config/sigGreatBotConfig', () => ({
 	SigGreatBotConfig: {
 		Name: 'SigGreatBot',
 		Avatars: {
@@ -26,8 +26,8 @@ jest.mock('../config/SigGreatBotConfig', () => ({
 
 import { Message } from 'discord.js';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
 import SigGreatBot from '../reply-bots/sigGreatBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 

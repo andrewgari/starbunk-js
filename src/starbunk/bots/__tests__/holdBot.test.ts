@@ -1,6 +1,7 @@
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
+import { HoldBotConfig } from '../config/holdBotConfig';
 import HoldBot from '../reply-bots/holdBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -71,7 +72,7 @@ describe('HoldBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'Hold.'
+				content: HoldBotConfig.Responses.Default
 			})
 		);
 	});

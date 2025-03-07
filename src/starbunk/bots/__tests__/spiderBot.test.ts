@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
-import { SpiderBotConfig } from '../config/SpiderBotConfig';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
+import { SpiderBotConfig } from '../config/spiderBotConfig';
 import SpiderBot from '../reply-bots/spiderBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 describe('SpiderBot', () => {
@@ -93,7 +93,7 @@ describe('SpiderBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: expect.stringMatching(new RegExp(SpiderBotConfig.Responses.Default.map(r =>
+				content: expect.stringMatching(new RegExp(SpiderBotConfig.Responses.Default.map((r: string) =>
 					r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')))
 			})
 		);

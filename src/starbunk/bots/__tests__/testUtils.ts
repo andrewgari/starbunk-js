@@ -1,7 +1,7 @@
 import { Client, Message, TextChannel, User } from 'discord.js';
-import { ILogger } from '../../../services/Logger';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import { ILogger } from '../../../services/logger';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
 import { IWebhookService } from '../../../webhooks/webhookService';
 
 // Mock Logger

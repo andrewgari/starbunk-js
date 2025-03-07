@@ -4,7 +4,7 @@ jest.mock('../../../webhooks/webhookService', () => ({
 }));
 
 // Mock the GundamBotConfig to ensure it returns a consistent response
-jest.mock('../config/GundamBotConfig', () => ({
+jest.mock('../config/gundamBotConfig', () => ({
 	GundamBotConfig: {
 		Name: 'GundamBot',
 		Avatars: {
@@ -20,8 +20,9 @@ jest.mock('../config/GundamBotConfig', () => ({
 }));
 
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
+import { GundamBotConfig } from '../config/gundamBotConfig';
 import GundamBot from '../reply-bots/gundamBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -103,7 +104,7 @@ describe('GundamBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'That\'s the famous Unicorn Robot, "Gandum". There, I said it.'
+				content: GundamBotConfig.Responses.Default
 			})
 		);
 	});

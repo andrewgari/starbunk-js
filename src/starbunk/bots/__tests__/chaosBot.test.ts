@@ -1,6 +1,7 @@
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
+import { ChaosBotConfig } from '../config/chaosBotConfig';
 import ChaosBot from '../reply-bots/chaosBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -70,7 +71,7 @@ describe('ChaosBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: "All I know is...I'm here to kill Chaos"
+				content: ChaosBotConfig.Responses.Default
 			})
 		);
 	});

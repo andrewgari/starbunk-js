@@ -1,6 +1,7 @@
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
+import { AttitudeBotConfig } from '../config/attitudeBotConfig';
 import AttitudeBot from '../reply-bots/attitudeBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -70,7 +71,7 @@ describe('AttitudeBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'Well, not with *THAT* attitude!!!'
+				content: AttitudeBotConfig.Responses.Default
 			})
 		);
 	});

@@ -1,7 +1,8 @@
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { ServiceRegistry } from '../../../services/serviceRegistry';
 import Random from '../../../utils/random';
+import { BotBotConfig } from '../config/botBotConfig';
 import BotBot from '../reply-bots/botBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -99,7 +100,7 @@ describe('BotBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'Hello fellow bot!'
+				content: BotBotConfig.Responses.Default
 			})
 		);
 	});
