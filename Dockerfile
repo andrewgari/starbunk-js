@@ -2,6 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install ffmpeg for audio processing
+RUN apk add --no-cache ffmpeg
+
 # Copy package files first for better layer caching
 COPY package.json ./
 COPY package-lock.json ./
@@ -14,7 +17,7 @@ RUN npm ci --ignore-scripts
 COPY . .
 
 # Build the application with special handling for module paths
-RUN npm run build 
+RUN npm run build
 
 # Add a healthcheck to help diagnose issues
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
