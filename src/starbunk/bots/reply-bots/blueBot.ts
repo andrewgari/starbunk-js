@@ -1,9 +1,9 @@
 import { Message, TextChannel } from 'discord.js';
-import userID from '../../../discord/userID';
+import userID from '../../../discord/userId';
 import { OpenAIClient } from '../../../openai/openaiClient';
-import { ILogger } from '../../../services/Logger';
+import { ILogger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
-import { BlueBotConfig } from '../config/BlueBotConfig';
+import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BlueBot extends ReplyBot {

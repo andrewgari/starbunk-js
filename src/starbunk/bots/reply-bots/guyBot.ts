@@ -1,8 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
-import userID from '../../../discord/userID';
+import userID from '../../../discord/userId';
 import random from '../../../utils/random';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
-import { GuyBotConfig } from '../config/GuyBotConfig';
+import { GuyBotConfig } from '../config/guyBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class GuyBot extends ReplyBot {

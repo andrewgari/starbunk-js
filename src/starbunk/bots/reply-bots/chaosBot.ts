@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import { ChaosBotConfig } from '../config/ChaosBotConfig';
+import { ChaosBotConfig } from '../config/chaosBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class ChaosBot extends ReplyBot {
