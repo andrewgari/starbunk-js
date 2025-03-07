@@ -1,7 +1,7 @@
 import { VoiceChannel, VoiceState } from 'discord.js';
-import channelIDs from '../../../discord/channelIDs';
-import userID from '../../../discord/userID';
-import { ILogger } from '../../../services/Logger';
+import channelIDs from '../../../discord/channelIds';
+import userID from '../../../discord/userId';
+import { ILogger } from '../../../services/logger';
 import VoiceBot from '../voiceBot';
 
 export default class GuyChannelBot extends VoiceBot {
