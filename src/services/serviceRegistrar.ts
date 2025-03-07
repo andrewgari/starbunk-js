@@ -1,5 +1,5 @@
 import container from './serviceContainer';
-import { ServiceRegistry } from './serviceRegistry';
+import { serviceRegistry } from './serviceRegistry';
 
 /**
  * Decorator options for service registration
@@ -77,6 +77,6 @@ export function createServiceGetter<T>(key: string): () => T {
 }
 
 // Typed getters for common services
-export const getLogger = createServiceGetter(ServiceRegistry.LOGGER);
-export const getWebhookService = createServiceGetter(ServiceRegistry.WEBHOOK_SERVICE);
-export const getDiscordClient = createServiceGetter(ServiceRegistry.DISCORD_CLIENT);
+export const getLogger = createServiceGetter(serviceRegistry.LOGGER);
+export const getWebhookService = createServiceGetter(serviceRegistry.WEBHOOK_SERVICE);
+export const getDiscordClient = createServiceGetter(serviceRegistry.DISCORD_CLIENT);

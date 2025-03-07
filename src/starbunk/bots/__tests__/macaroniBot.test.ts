@@ -1,5 +1,5 @@
-import userID from '../../../discord/userID';
-import { MacaroniBotConfig } from '../config/MacaroniBotConfig';
+import userId from '../../../discord/userId';
+import { MacaroniBotConfig } from '../config/macaroniBotConfig';
 import MacaroniBot from '../reply-bots/macaroniBot';
 import { MockLogger, MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
 
@@ -26,7 +26,7 @@ describe('MacaroniBot', () => {
 	test('should respond with mention when message contains "macaroni"', () => {
 		// Arrange
 		const message = createMockMessage('I love macaroni cheese');
-		const expectedResponse = `Are you trying to reach <@${userID.Venn}>`;
+		const expectedResponse = `Are you trying to reach <@${userId.Venn}>`;
 
 		// Act
 		macaroniBot.handleMessage(message);
@@ -42,7 +42,7 @@ describe('MacaroniBot', () => {
 	test('should respond with mention when message contains "pasta"', () => {
 		// Arrange
 		const message = createMockMessage('Pasta is delicious');
-		const expectedResponse = `Are you trying to reach <@${userID.Venn}>`;
+		const expectedResponse = `Are you trying to reach <@${userId.Venn}>`;
 
 		// Act
 		macaroniBot.handleMessage(message);

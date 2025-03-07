@@ -2,10 +2,10 @@ import { Client } from 'discord.js';
 import { OpenAIClient } from '../openai/openaiClient';
 import BlueBot from '../starbunk/bots/reply-bots/blueBot';
 import webhookService from '../webhooks/webhookService';
-import { ILogger } from './Logger';
-import container from './ServiceContainer';
-import { getLogger } from './ServiceRegistrar';
-import { ServiceRegistry } from './ServiceRegistry';
+import { ILogger } from './logger';
+import container from './serviceContainer';
+import { getLogger } from './serviceRegistrar';
+import { serviceRegistry } from './serviceRegistry';
 
 /**
  * Registers all core services with the DI container
@@ -15,14 +15,14 @@ export function registerCoreServices(): void {
 	container.clear();
 
 	// Register logger
-	container.register(ServiceRegistry.LOGGER, getLogger());
+	container.register(serviceRegistry.LOGGER, getLogger());
 
 	// Register webhook service
-	container.register(ServiceRegistry.WEBHOOK_SERVICE, webhookService);
+	container.register(serviceRegistry.WEBHOOK_SERVICE, webhookService);
 
 	// Register OpenAI client with factory to allow for testing
 	container.registerFactory(
-		ServiceRegistry.OPENAI_CLIENT,
+		serviceRegistry.OPENAI_CLIENT,
 		() => OpenAIClient,
 		'singleton'
 	);
@@ -36,7 +36,7 @@ export function registerBotServices(): void {
 	// to ensure the decorators run
 	// In a production app, we'd use a dynamic import system
 	const blueBot = new BlueBot(
-		container.get<ILogger>(ServiceRegistry.LOGGER)!
+		container.get<ILogger>(serviceRegistry.LOGGER)!
 	);
 
 	// You could also manually register bots
@@ -47,7 +47,7 @@ export function registerBotServices(): void {
  * Registers a Discord client with the container
  */
 export function registerDiscordClient(client: Client): void {
-	container.register(ServiceRegistry.DISCORD_CLIENT, client);
+	container.register(serviceRegistry.DISCORD_CLIENT, client);
 }
 
 /**

@@ -1,10 +1,10 @@
 import { Client, Message, TextChannel, Webhook } from 'discord.js';
-import guildIDs from '../discord/guildIDs';
+import guildIds from '../discord/guildIds';
 import { MessageInfo } from '../discord/messageInfo';
-import { ILogger } from '../services/Logger';
-import loggerFactory from '../services/LoggerFactory';
-import container from '../services/ServiceContainer';
-import { ServiceRegistry } from '../services/ServiceRegistry';
+import { ILogger } from '../services/logger';
+import loggerFactory from '../services/loggerFactory';
+import container from '../services/serviceContainer';
+import { serviceRegistry } from '../services/serviceRegistry';
 
 export interface IWebhookService {
 	getChannelWebhook(channel: TextChannel): Promise<Webhook>;
@@ -24,7 +24,7 @@ export class WebhookService implements IWebhookService {
 	}
 
 	async getChannelWebhook(channel: TextChannel): Promise<Webhook> {
-		const isSnowbunk = channel.guild.id === guildIDs.Snowfall;
+		const isSnowbunk = channel.guild.id === guildIds.Snowfall;
 		const channelName = this.getWebhookName(channel.name, isSnowbunk);
 		const channelWebhooks = await channel.fetchWebhooks();
 		for (const pair of channelWebhooks) {
@@ -63,6 +63,6 @@ export class WebhookService implements IWebhookService {
 
 // Create and register the default webhook service
 const webhookService = new WebhookService();
-container.register(ServiceRegistry.WEBHOOK_SERVICE, webhookService);
+container.register(serviceRegistry.WEBHOOK_SERVICE, webhookService);
 
 export default webhookService;

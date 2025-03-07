@@ -1,15 +1,15 @@
 import { ILogger, Logger } from './logger';
 import container from './serviceContainer';
-import { ServiceRegistry } from './serviceRegistry';
+import { serviceRegistry } from './serviceRegistry';
 
-export class LoggerFactory {
-	private static instance: LoggerFactory;
+export class loggerFactory {
+	private static instance: loggerFactory;
 
 	private constructor() {
 		// Register default logger if not already registered
-		if (!container.has(ServiceRegistry.LOGGER)) {
+		if (!container.has(serviceRegistry.LOGGER)) {
 			// Use the default logger instance instead of creating a new one
-			container.register(ServiceRegistry.LOGGER, {
+			container.register(serviceRegistry.LOGGER, {
 				debug: (message: string): void => Logger.debug(message),
 				info: (message: string): void => Logger.info(message),
 				success: (message: string): void => Logger.success(message),
@@ -19,21 +19,21 @@ export class LoggerFactory {
 		}
 	}
 
-	static getInstance(): LoggerFactory {
-		if (!LoggerFactory.instance) {
-			LoggerFactory.instance = new LoggerFactory();
+	static getInstance(): loggerFactory {
+		if (!loggerFactory.instance) {
+			loggerFactory.instance = new loggerFactory();
 		}
-		return LoggerFactory.instance;
+		return loggerFactory.instance;
 	}
 
 	getLogger(): ILogger {
-		return container.get<ILogger>(ServiceRegistry.LOGGER) || new Logger();
+		return container.get<ILogger>(serviceRegistry.LOGGER) || new Logger();
 	}
 
 	// For testing purposes
 	setLogger(logger: ILogger): void {
-		container.register(ServiceRegistry.LOGGER, logger);
+		container.register(serviceRegistry.LOGGER, logger);
 	}
 }
 
-export default LoggerFactory.getInstance();
+export default loggerFactory.getInstance();

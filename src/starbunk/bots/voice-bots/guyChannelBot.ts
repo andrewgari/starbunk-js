@@ -1,6 +1,6 @@
 import { VoiceChannel, VoiceState } from 'discord.js';
-import channelIDs from '../../../discord/channelIds';
-import userID from '../../../discord/userId';
+import channelIds from '../../../discord/channelIds';
+import userId from '../../../discord/userId';
 import { ILogger } from '../../../services/logger';
 import VoiceBot from '../voiceBot';
 
@@ -22,15 +22,15 @@ export default class GuyChannelBot extends VoiceBot {
 		}
 
 		let lounge: VoiceChannel;
-		oldState.client.channels.fetch(channelIDs.Lounge1).then((channel) => {
+		oldState.client.channels.fetch(channelIds.Lounge1).then((channel) => {
 			lounge = channel as VoiceChannel;
 
-			if (member?.id === userID.Guy) {
-				if (newChannelId === channelIDs.NoGuyLounge) {
+			if (member?.id === userId.Guy) {
+				if (newChannelId === channelIds.NoGuyLounge) {
 					this.logger.warn(`🚫 Guy tried to join No-Guy-Lounge, redirecting to ${lounge.name}`);
 					member.voice.setChannel(lounge);
 				}
-			} else if (newChannelId === channelIDs.GuyLounge) {
+			} else if (newChannelId === channelIds.GuyLounge) {
 				this.logger.warn(`🚫 User ${member.displayName} tried to join Guy's lounge, redirecting to ${lounge.name}`);
 				member.voice.setChannel(lounge);
 			}

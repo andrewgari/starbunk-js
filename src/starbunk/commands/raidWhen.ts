@@ -1,6 +1,6 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import roleIDs from '../../discord/roleIDs';
-import userID from '../../discord/userID';
+import roleIds from '../../discord/roleIds';
+import userId from '../../discord/userId';
 
 enum Day {
 	Sunday = 0,
@@ -34,8 +34,8 @@ export default {
 	async execute(interaction: CommandInteraction) {
 		const now = new Date(Date.now());
 		const nextRaid = getNextRaid(now);
-		const ephemeral = interaction.user.id === userID.Cova ? true : false;
-		const tag = ephemeral ? `<@&${roleIDs.RaidTeam}>\n` : '';
+		const ephemeral = interaction.user.id === userId.Cova ? true : false;
+		const tag = ephemeral ? `<@&${roleIds.RaidTeam}>\n` : '';
 		const timestamp = nextRaid.getTime() / 1000;
 		const reply = `${tag}The next Raid Time is set for: <t:${timestamp}:f>\nWhich is <t:${timestamp}:R>.`;
 		await interaction.reply({

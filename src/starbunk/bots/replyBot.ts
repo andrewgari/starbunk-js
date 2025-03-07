@@ -1,8 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
-import { ILogger } from '../../services/Logger';
-import loggerFactory from '../../services/LoggerFactory';
-import container from '../../services/ServiceContainer';
-import { ServiceRegistry } from '../../services/ServiceRegistry';
+import { ILogger } from '../../services/logger';
+import loggerFactory from '../../services/loggerFactory';
+import container from '../../services/serviceContainer';
+import { serviceRegistry } from '../../services/serviceRegistry';
 import { IWebhookService } from '../../webhooks/webhookService';
 
 export default abstract class ReplyBot {
@@ -11,10 +11,10 @@ export default abstract class ReplyBot {
 
 	constructor(logger?: ILogger, webhookService?: IWebhookService) {
 		this.logger = logger || loggerFactory.getLogger();
-		
+
 		// Get webhook service from container
-		const containerWebhookService = container.get<IWebhookService>(ServiceRegistry.WEBHOOK_SERVICE);
-		
+		const containerWebhookService = container.get<IWebhookService>(serviceRegistry.WEBHOOK_SERVICE);
+
 		// Use provided service or container service
 		if (webhookService) {
 			this.webhookService = webhookService;

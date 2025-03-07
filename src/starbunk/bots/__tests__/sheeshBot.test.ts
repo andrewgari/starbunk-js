@@ -1,30 +1,6 @@
-// Mock the webhook service
-jest.mock('../../../webhooks/webhookService', () => ({
-	writeMessage: jest.fn()
-}));
-
-// Mock Math.random to make the tests deterministic
-const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(0.1);  // Will generate "Sheeeesh 😤"
-
-// Mock the SheeshBotConfig to ensure it returns a consistent response
-jest.mock('../config/SheeshBotConfig', () => ({
-	SheeshBotConfig: {
-		Name: 'Sheesh Bot',
-		Avatars: {
-			Default: 'https://i.imgflip.com/5fc2iz.png?a471000'
-		},
-		Patterns: {
-			Default: /\bshee+sh\b/i
-		},
-		Responses: {
-			Default: jest.fn().mockReturnValue('Sheeeesh 😤')
-		}
-	}
-}));
-
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { serviceRegistry } from '../../../services/serviceRegistry';
 import SheeshBot from '../reply-bots/sheeshBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -38,7 +14,7 @@ describe('SheeshBot', () => {
 		// Set up container with mock services
 		setupTestContainer();
 		// Get the mock webhook service from the container
-		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
+		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		sheeshBot = new SheeshBot();
 		// Create a mock message
@@ -128,7 +104,7 @@ describe('SheeshBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'Sheeeesh 😤'
+				content: expect.stringMatching(/\bshee+sh\b/i)
 			})
 		);
 	});

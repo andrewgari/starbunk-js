@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
-import userID from '../../../discord/userID';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import userId from '../../../discord/userId';
+import container from '../../../services/serviceContainer';
+import { serviceRegistry } from '../../../services/serviceRegistry';
 import Random from '../../../utils/random';
 import PickleBot from '../reply-bots/pickleBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
@@ -16,7 +16,7 @@ describe('PickleBot', () => {
 		// Set up container with mock services
 		setupTestContainer();
 		// Get the mock webhook service from the container
-		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
+		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		pickleBot = new PickleBot();
 		// Create a mock message
@@ -54,7 +54,7 @@ describe('PickleBot', () => {
 	it('should respond to messages from Sig with a 15% chance', async () => {
 		// Arrange
 		message.content = 'Hello world';
-		message.author.id = userID.Sig;
+		message.author.id = userId.Sig;
 
 		jest.spyOn(Random, 'percentChance').mockReturnValueOnce(true);
 
@@ -68,7 +68,7 @@ describe('PickleBot', () => {
 	it('should not respond to messages from Sig if random chance fails', async () => {
 		// Arrange
 		message.content = 'Hello world';
-		message.author.id = userID.Sig;
+		message.author.id = userId.Sig;
 
 		// Make sure percentChance returns false
 		jest.spyOn(Random, 'percentChance').mockReturnValueOnce(false);

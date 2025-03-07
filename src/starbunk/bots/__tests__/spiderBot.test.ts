@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
-import { SpiderBotConfig } from '../config/SpiderBotConfig';
+import container from '../../../services/serviceContainer';
+import { serviceRegistry } from '../../../services/serviceRegistry';
+import { SpiderBotConfig } from '../config/spiderBotConfig';
 import SpiderBot from '../reply-bots/spiderBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 describe('SpiderBot', () => {
@@ -14,7 +14,7 @@ describe('SpiderBot', () => {
 		// Set up container with mock services
 		setupTestContainer();
 		// Get the mock webhook service from the container
-		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
+		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		spiderBot = new SpiderBot();
 		// Create a mock message
@@ -93,9 +93,14 @@ describe('SpiderBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: expect.stringMatching(new RegExp(SpiderBotConfig.Responses.Default.map(r =>
-					r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')))
+				content: expect.any(String)
 			})
 		);
+
+		// Get the actual content from the mock call
+		const actualContent = mockWebhookService.writeMessage.mock.calls[0][1].content;
+
+		// Verify the content is one of the possible responses
+		expect(SpiderBotConfig.Responses.Default).toContain(actualContent);
 	});
 });

@@ -1,6 +1,6 @@
 import { getVoiceConnection } from '@discordjs/voice';
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import guildIDs from '../../discord/guildIDs';
+import guildIds from '../../discord/guildIds';
 import { getStarbunkClient } from '../starbunkClient';
 
 export default {
@@ -9,7 +9,7 @@ export default {
 		const client = getStarbunkClient(interaction);
 		if (client) {
 			client.getMusicPlayer().stop();
-			const connection = getVoiceConnection(interaction.guild?.id ?? guildIDs.StarbunkCrusaders);
+			const connection = getVoiceConnection(interaction.guild?.id ?? guildIds.StarbunkCrusaders);
 			connection?.disconnect();
 		}
 	},

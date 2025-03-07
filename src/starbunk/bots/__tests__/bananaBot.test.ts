@@ -1,4 +1,4 @@
-import userID from '../../../discord/userID';
+import userID from '../../../discord/userId';
 import random from '../../../utils/random';
 import BananaBot from '../reply-bots/bananaBot';
 import { MockLogger, MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';

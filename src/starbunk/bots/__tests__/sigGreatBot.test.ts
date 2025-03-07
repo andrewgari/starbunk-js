@@ -1,33 +1,12 @@
-// Mock the webhook service
-jest.mock('../../../webhooks/webhookService', () => ({
-	writeMessage: jest.fn()
-}));
-
 // Mock getCurrentMemberIdentity
 jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 	getCurrentMemberIdentity: jest.fn()
 }));
 
-// Mock the SigGreatBotConfig to ensure it returns a consistent response
-jest.mock('../config/SigGreatBotConfig', () => ({
-	SigGreatBotConfig: {
-		Name: 'SigGreatBot',
-		Avatars: {
-			Default: 'https://i.imgur.com/D0czJFu.jpg'
-		},
-		Patterns: {
-			Default: /\b(sig|siggles)\s+(?:is\s+)?(best|greatest|awesome|amazing|cool|fantastic|wonderful|excellent|good|great|brilliant|perfect|the\s+best)\b/i,
-		},
-		Responses: {
-			Default: 'SigGreat.'
-		}
-	}
-}));
-
 import { Message } from 'discord.js';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { serviceRegistry } from '../../../services/serviceRegistry';
 import SigGreatBot from '../reply-bots/sigGreatBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -41,7 +20,7 @@ describe('SigGreatBot', () => {
 		// Set up container with mock services
 		setupTestContainer();
 		// Get the mock webhook service from the container
-		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
+		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		sigGreatBot = new SigGreatBot();
 		// Create a mock message

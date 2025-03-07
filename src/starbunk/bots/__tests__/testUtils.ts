@@ -1,7 +1,7 @@
 import { Client, Message, TextChannel, User } from 'discord.js';
-import { ILogger } from '../../../services/Logger';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import { ILogger } from '../../../services/logger';
+import container from '../../../services/serviceContainer';
+import { serviceRegistry } from '../../../services/serviceRegistry';
 import { IWebhookService } from '../../../webhooks/webhookService';
 
 // Mock Logger
@@ -67,8 +67,8 @@ export function setupTestContainer(): void {
 	const mockLogger = new MockLogger();
 	const mockWebhookService = new MockWebhookService();
 
-	container.register(ServiceRegistry.LOGGER, mockLogger);
-	container.register(ServiceRegistry.WEBHOOK_SERVICE, mockWebhookService);
+	container.register(serviceRegistry.LOGGER, mockLogger);
+	container.register(serviceRegistry.WEBHOOK_SERVICE, mockWebhookService);
 }
 
 // Setup common bot mocks

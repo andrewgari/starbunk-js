@@ -2,35 +2,35 @@ import { ILogger } from './logger';
 import loggerFactory from './loggerFactory';
 
 /**
- * LoggerAdapter provides a bridge between the static Logger usage and the new dependency-injected approach.
+ * loggerAdapter provides a bridge between the static Logger usage and the new dependency-injected approach.
  * This helps with transitioning the codebase gradually.
  */
-export class LoggerAdapter {
+export class loggerAdapter {
 	private static logger: ILogger = loggerFactory.getLogger();
 
 	static setLogger(logger: ILogger): void {
-		LoggerAdapter.logger = logger;
+		loggerAdapter.logger = logger;
 	}
 
 	static info(message: string): void {
-		LoggerAdapter.logger.info(message);
+		loggerAdapter.logger.info(message);
 	}
 
 	static success(message: string): void {
-		LoggerAdapter.logger.success(message);
+		loggerAdapter.logger.success(message);
 	}
 
 	static warn(message: string): void {
-		LoggerAdapter.logger.warn(message);
+		loggerAdapter.logger.warn(message);
 	}
 
 	static error(message: string, error?: Error): void {
-		LoggerAdapter.logger.error(message, error);
+		loggerAdapter.logger.error(message, error);
 	}
 
 	static debug(message: string): void {
-		LoggerAdapter.logger.debug(message);
+		loggerAdapter.logger.debug(message);
 	}
 }
 
-export default LoggerAdapter;
+export default loggerAdapter;

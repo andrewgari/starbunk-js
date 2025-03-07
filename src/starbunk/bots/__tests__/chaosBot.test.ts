@@ -1,6 +1,6 @@
 import { Message } from 'discord.js';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
+import container from '../../../services/serviceContainer';
+import { serviceRegistry } from '../../../services/serviceRegistry';
 import ChaosBot from '../reply-bots/chaosBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
@@ -14,7 +14,7 @@ describe('ChaosBot', () => {
 		// Set up container with mock services
 		setupTestContainer();
 		// Get the mock webhook service from the container
-		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
+		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		chaosBot = new ChaosBot();
 		// Create a mock message

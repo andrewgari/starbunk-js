@@ -7,34 +7,13 @@ jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 	})
 }));
 
-// Mock the random utility
-jest.mock('../../../utils/random', () => ({
-	percentChance: jest.fn().mockReturnValue(true)
-}));
-
-// Mock the GuyBotConfig to ensure it returns a consistent response
-jest.mock('../config/GuyBotConfig', () => ({
-	GuyBotConfig: {
-		Name: 'GuyBot',
-		Avatars: {
-			Default: 'https://i.imgur.com/default-guy.jpg'
-		},
-		Patterns: {
-			Default: /\bguy\b/i
-		},
-		Responses: {
-			Default: jest.fn().mockReturnValue('What!? What did you say?')
-		}
-	}
-}));
-
 import { Message } from 'discord.js';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
-import userID from '../../../discord/userID';
+import userId from '../../../discord/userId';
+import container from '../../../services/serviceContainer';
+import { serviceRegistry } from '../../../services/serviceRegistry';
 import random from '../../../utils/random';
 import GuyBot from '../reply-bots/guyBot';
-import container from '../../../services/ServiceContainer';
-import { ServiceRegistry } from '../../../services/ServiceRegistry';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
 describe('GuyBot', () => {
@@ -47,7 +26,7 @@ describe('GuyBot', () => {
 		// Set up container with mock services
 		setupTestContainer();
 		// Get the mock webhook service from the container
-		mockWebhookService = container.get(ServiceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
+		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
 		// Create bot after setting up container
 		guyBot = new GuyBot();
 		// Create a mock message
@@ -105,10 +84,10 @@ describe('GuyBot', () => {
 	it('should randomly respond to messages from Guy with 5% chance', async () => {
 		// Arrange
 		message.content = 'Hello everyone';
-		message.author.id = userID.Guy;
+		message.author.id = userId.Guy;
 
 		// Mock random.percentChance to return true (5% chance hit)
-		(random.percentChance as jest.Mock).mockReturnValueOnce(true);
+		jest.spyOn(random, 'percentChance').mockReturnValueOnce(true);
 
 		// Act
 		await guyBot.handleMessage(message);
@@ -121,10 +100,10 @@ describe('GuyBot', () => {
 	it('should not respond to messages from Guy if random check fails', async () => {
 		// Arrange
 		message.content = 'Hello everyone';
-		message.author.id = userID.Guy;
+		message.author.id = userId.Guy;
 
 		// Mock random.percentChance to return false (5% chance miss)
-		(random.percentChance as jest.Mock).mockReturnValueOnce(false);
+		jest.spyOn(random, 'percentChance').mockReturnValueOnce(false);
 
 		// Act
 		await guyBot.handleMessage(message);

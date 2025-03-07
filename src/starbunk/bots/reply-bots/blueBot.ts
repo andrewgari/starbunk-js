@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import userID from '../../../discord/userId';
+import userId from '../../../discord/userId';
 import { OpenAIClient } from '../../../openai/openaiClient';
 import { ILogger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
@@ -89,7 +89,7 @@ export default class BlueBot extends ReplyBot {
 	}
 
 	private isVennInsultingBlu(message: Message): boolean {
-		const isVenn = message.author.id === userID.Venn;
+		const isVenn = message.author.id === userId.Venn;
 		if (!isVenn) return false;
 
 		const content = message.content;

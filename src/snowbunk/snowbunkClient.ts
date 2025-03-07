@@ -1,6 +1,6 @@
 import { Events, Message, TextChannel } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
-import userID from '../discord/userID';
+import userId from '../discord/userId';
 import webhookService from '../webhooks/webhookService';
 
 export default class SnowbunkClient extends DiscordClient {
@@ -55,7 +55,7 @@ export default class SnowbunkClient extends DiscordClient {
 	}
 
 	syncMessage = (message: Message): void => {
-		if (message.author.id === userID.Goose) return;
+		if (message.author.id === userId.Goose) return;
 		if (message.author.bot) return;
 
 		const linkedChannels = this.getSyncedChannels(message.channel.id);
