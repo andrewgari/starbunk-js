@@ -37,6 +37,12 @@ loggerAdapter.info('🔍 Validating environment variables...');
 });
 loggerAdapter.success('✅ Environment validation complete');
 
+// Set default debug mode to false if not explicitly set to 'true'
+process.env.DEBUG_MODE = process.env.DEBUG_MODE === 'true' ? 'true' : 'false';
+if (process.env.DEBUG_MODE === 'true') {
+	loggerAdapter.info('🐛 Debug mode enabled');
+}
+
 interface IProcessEnv {
 	AUTHENTICATION_API_URL: string;
 	GRAPHQL_API_URL: string;
@@ -45,6 +51,7 @@ interface IProcessEnv {
 	SNOWBUNK_TOKEN: string;
 	CLIENT_ID: string;
 	GUILD_ID: string;
+	DEBUG_MODE?: boolean;
 }
 
 export { IProcessEnv };
@@ -59,6 +66,7 @@ declare global {
 			SNOWBUNK_TOKEN: string;
 			CLIENT_ID: string;
 			GUILD_ID: string;
+			DEBUG_MODE?: string;
 		}
 	}
 }

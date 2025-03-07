@@ -12,6 +12,7 @@ export class MockLogger implements ILogger {
 	error = jest.fn();
 	fatal = jest.fn();
 	success = jest.fn();
+	trace = jest.fn();
 }
 
 // Mock WebhookService

@@ -6,12 +6,34 @@ export interface ILogger {
 	warn(message: string): void;
 	error(message: string, error?: Error): void;
 	debug(message: string): void;
+	trace(message: string): void;
 }
 
 export class Logger implements ILogger {
 	private static formatMessage(message: string, emoji: string): string {
 		const timestamp = new Date().toISOString();
 		return `${emoji}  ${chalk.gray(timestamp)} ${message}`;
+	}
+
+	private static getCallerInfo(): string {
+		// Only calculate caller info in debug mode for performance
+		if (process.env.DEBUG_MODE !== 'true') return '';
+
+		const error = new Error();
+		const stack = error.stack?.split('\n') || [];
+		// Skip the first 3 lines (Error, getCallerInfo, and the logger method)
+		const callerLine = stack[3] || '';
+		const match = callerLine.match(/at\s+(.*)\s+\((.*):(\d+):(\d+)\)/) ||
+			callerLine.match(/at\s+()(.*):(\d+):(\d+)/);
+
+		if (!match) return '';
+
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const [, fnName, filePath, line, _col] = match;
+		const fileName = filePath.split('/').pop() || '';
+		const functionName = fnName || 'anonymous';
+
+		return chalk.gray(` [${fileName}:${line} ${functionName}]`);
 	}
 
 	static info(message: string): void {
@@ -36,9 +58,20 @@ export class Logger implements ILogger {
 	}
 
 	static debug(message: string): void {
-		if (process.env.DEBUG) {
+		if (process.env.DEBUG_MODE === 'true') {
+			const callerInfo = this.getCallerInfo();
 			// eslint-disable-next-line no-console
-			console.log(this.formatMessage(chalk.blue(message), '🔍'));
+			console.log(this.formatMessage(chalk.blue(message) + callerInfo, '🔍'));
+		}
+	}
+
+	static trace(message: string): void {
+		if (process.env.DEBUG_MODE === 'true') {
+			const callerInfo = this.getCallerInfo();
+			// eslint-disable-next-line no-console
+			console.log(this.formatMessage(chalk.magenta(message) + callerInfo, '🔬'));
+			// eslint-disable-next-line no-console
+			console.trace();
 		}
 	}
 
@@ -61,6 +94,10 @@ export class Logger implements ILogger {
 
 	debug(message: string): void {
 		Logger.debug(message);
+	}
+
+	trace(message: string): void {
+		Logger.trace(message);
 	}
 }
 

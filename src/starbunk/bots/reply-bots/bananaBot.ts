@@ -13,8 +13,9 @@ export default class BananaBot extends ReplyBot {
 
 		const content = message.content.toLowerCase();
 		const hasBanana = BananaBotConfig.Patterns.Default?.test(content);
-		const isVenn = message.author.id === UserID.Venn;
-		const shouldReply = hasBanana || (isVenn && random.percentChance(5));
+		const targetUserId = process.env.DEBUG_MODE === 'true' ? UserID.Cova : UserID.Venn;
+		const isTargetUser = message.author.id === targetUserId;
+		const shouldReply = hasBanana || (isTargetUser && random.percentChance(5));
 
 		if (shouldReply) {
 			// Randomly decide between normal and cheeky responses with 50% chance

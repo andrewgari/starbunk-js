@@ -33,8 +33,9 @@ export default class GuyBot extends ReplyBot {
 
 		const content = message.content;
 		const hasGuy = GuyBotConfig.Patterns.Default?.test(content);
-		const isGuy = message.author.id === userId.Guy;
-		const shouldReply = hasGuy || (isGuy && random.percentChance(5));
+		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Guy;
+		const isTargetUser = message.author.id === targetUserId;
+		const shouldReply = hasGuy || (isTargetUser && random.percentChance(5));
 
 		if (shouldReply) {
 			this.sendReply(message.channel as TextChannel, GuyBotConfig.Responses.Default());

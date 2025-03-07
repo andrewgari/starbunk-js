@@ -23,6 +23,10 @@ export class MockLogger implements ILogger {
 		this.logs.push({ level: 'debug', message });
 	}
 
+	trace(message: string): void {
+		this.logs.push({ level: 'trace', message });
+	}
+
 	clear(): void {
 		this.logs = [];
 	}

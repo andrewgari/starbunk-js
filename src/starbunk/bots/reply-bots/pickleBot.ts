@@ -17,8 +17,9 @@ export default class PickleBot extends ReplyBot {
 
 		const content = message.content;
 		const hasPickle = PickleBotConfig.Patterns.Default?.test(content);
-		const isSig = message.author.id === userId.Sig;
-		const shouldReply = hasPickle || (isSig && Random.percentChance(15));
+		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Sig;
+		const isTargetUser = message.author.id === targetUserId;
+		const shouldReply = hasPickle || (isTargetUser && Random.percentChance(15));
 
 		if (shouldReply) {
 			this.sendReply(message.channel as TextChannel, PickleBotConfig.Responses.Default);

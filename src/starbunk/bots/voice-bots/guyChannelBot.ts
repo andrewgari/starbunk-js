@@ -22,15 +22,21 @@ export default class GuyChannelBot extends VoiceBot {
 		}
 
 		let lounge: VoiceChannel;
-		oldState.client.channels.fetch(channelIds.Lounge1).then((channel) => {
+		// In debug mode, always use CovaDaxServer.General1
+		const loungeChannelId = process.env.DEBUG_MODE === 'true'
+			? channelIds.CovaDaxServer.General1
+			: channelIds.Starbunk.TheLounge;
+
+		oldState.client.channels.fetch(loungeChannelId).then((channel) => {
 			lounge = channel as VoiceChannel;
 
-			if (member?.id === userId.Guy) {
-				if (newChannelId === channelIds.NoGuyLounge) {
-					this.logger.warn(`🚫 Guy tried to join No-Guy-Lounge, redirecting to ${lounge.name}`);
+			const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Guy;
+			if (member?.id === targetUserId) {
+				if (newChannelId === channelIds.Starbunk.NoGuyLounge) {
+					this.logger.warn(`🚫 ${member.displayName} tried to join No-Guy-Lounge, redirecting to ${lounge.name}`);
 					member.voice.setChannel(lounge);
 				}
-			} else if (newChannelId === channelIds.GuyLounge) {
+			} else if (newChannelId === channelIds.Starbunk.GuyLounge) {
 				this.logger.warn(`🚫 User ${member.displayName} tried to join Guy's lounge, redirecting to ${lounge.name}`);
 				member.voice.setChannel(lounge);
 			}
