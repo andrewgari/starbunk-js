@@ -9,7 +9,7 @@ import {
 	VoiceConnection,
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
-import LoggerAdapter from '../services/LoggerAdapter';
+import LoggerAdapter from '../services/loggerAdapter';
 
 export class DJCova {
 	private player: AudioPlayer;
