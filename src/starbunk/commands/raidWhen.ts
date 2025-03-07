@@ -1,6 +1,6 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import roleIDs from '../../discord/roleIDs';
-import userID from '../../discord/userID';
+import roleIDs from '../../discord/roleIds';
+import userID from '../../discord/userId';
 
 enum Day {
 	Sunday = 0,

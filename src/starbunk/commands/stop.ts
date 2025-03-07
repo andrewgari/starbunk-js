@@ -1,6 +1,6 @@
 import { getVoiceConnection } from '@discordjs/voice';
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import guildIDs from '../../discord/guildIDs';
+import guildIDs from '../../discord/guildIds';
 import { getStarbunkClient } from '../starbunkClient';
 
 export default {

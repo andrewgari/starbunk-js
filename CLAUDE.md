@@ -9,6 +9,8 @@
 - Type check: `npm run type-check`
 - Test: `npm test` or `npx jest path/to/specific/test.test.ts`
 - check:all: `npm run check:all` (ensure code is comittanle)
+- fzf: `fzf` (fuzzy finder)
+- ripgrep: `ripgrep` better grep
 
 ## Code Style
 

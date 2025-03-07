@@ -4,10 +4,10 @@ import { readdirSync } from 'fs';
 import path from 'path';
 import { Command } from '../discord/command';
 import DiscordClient from '../discord/discordClient';
-import LoggerAdapter from '../services/LoggerAdapter';
+import LoggerAdapter from '../services/loggerAdapter';
 import ReplyBot from './bots/replyBot';
 import VoiceBot from './bots/voiceBot';
-import { DJCova } from './dJCova';
+import { DJCova } from './djCova';
 
 export default class StarbunkClient extends DiscordClient {
 	bots: Collection<string, ReplyBot> = new Collection();

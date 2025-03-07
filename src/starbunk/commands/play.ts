@@ -1,6 +1,6 @@
 import { AudioPlayerStatus, joinVoiceChannel } from '@discordjs/voice';
 import { CommandInteraction, GuildMember, SlashCommandBuilder } from 'discord.js';
-import LoggerAdapter from '../../services/LoggerAdapter';
+import LoggerAdapter from '../../services/loggerAdapter';
 import StarbunkClient, { getStarbunkClient } from '../starbunkClient';
 
 export default {

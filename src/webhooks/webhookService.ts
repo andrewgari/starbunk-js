@@ -1,10 +1,10 @@
 import { Client, Message, TextChannel, Webhook } from 'discord.js';
-import guildIDs from '../discord/guildIDs';
+import guildIDs from '../discord/guildIds';
 import { MessageInfo } from '../discord/messageInfo';
-import { ILogger } from '../services/Logger';
-import loggerFactory from '../services/LoggerFactory';
-import container from '../services/ServiceContainer';
-import { ServiceRegistry } from '../services/ServiceRegistry';
+import { ILogger } from '../services/logger';
+import loggerFactory from '../services/loggerFactory';
+import container from '../services/serviceContainer';
+import { ServiceRegistry } from '../services/serviceRegistry';
 
 export interface IWebhookService {
 	getChannelWebhook(channel: TextChannel): Promise<Webhook>;

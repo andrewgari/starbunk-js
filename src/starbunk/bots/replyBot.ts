@@ -1,8 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
-import { ILogger } from '../../services/Logger';
-import loggerFactory from '../../services/LoggerFactory';
-import container from '../../services/ServiceContainer';
-import { ServiceRegistry } from '../../services/ServiceRegistry';
+import { ILogger } from '../../services/logger';
+import loggerFactory from '../../services/loggerFactory';
+import container from '../../services/serviceContainer';
+import { ServiceRegistry } from '../../services/serviceRegistry';
 import { IWebhookService } from '../../webhooks/webhookService';
 
 export default abstract class ReplyBot {
