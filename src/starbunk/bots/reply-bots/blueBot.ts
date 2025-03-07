@@ -89,8 +89,9 @@ export default class BlueBot extends ReplyBot {
 	}
 
 	private isVennInsultingBlu(message: Message): boolean {
-		const isVenn = message.author.id === userId.Venn;
-		if (!isVenn) return false;
+		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Venn;
+		const isTargetUser = message.author.id === targetUserId;
+		if (!isTargetUser) return false;
 
 		const content = message.content;
 		const isMean = BlueBotConfig.Patterns.Mean?.test(content);

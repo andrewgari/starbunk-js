@@ -21,10 +21,11 @@ export default class MacaroniBot extends ReplyBot {
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		const vennRandom = random.percentChance(5) && message.author.id === userId.Venn;
+		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Venn;
+		const targetUserRandom = random.percentChance(5) && message.author.id === targetUserId;
 		const mentionsBanana = MacaroniBotConfig.Patterns.Macaroni?.test(message.content);
 
-		if (vennRandom || mentionsBanana) {
+		if (targetUserRandom || mentionsBanana) {
 			this.logger.debug(`🍝 User ${message.author.username} mentioned macaroni: "${message.content}"`);
 			this.sendReply(message.channel as TextChannel, MacaroniBotConfig.Responses.Default(message.content));
 		}

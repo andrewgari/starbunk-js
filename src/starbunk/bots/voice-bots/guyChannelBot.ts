@@ -25,9 +25,10 @@ export default class GuyChannelBot extends VoiceBot {
 		oldState.client.channels.fetch(channelIds.Lounge1).then((channel) => {
 			lounge = channel as VoiceChannel;
 
-			if (member?.id === userId.Guy) {
+			const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Guy;
+			if (member?.id === targetUserId) {
 				if (newChannelId === channelIds.NoGuyLounge) {
-					this.logger.warn(`🚫 Guy tried to join No-Guy-Lounge, redirecting to ${lounge.name}`);
+					this.logger.warn(`🚫 ${member.displayName} tried to join No-Guy-Lounge, redirecting to ${lounge.name}`);
 					member.voice.setChannel(lounge);
 				}
 			} else if (newChannelId === channelIds.GuyLounge) {
