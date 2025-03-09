@@ -1,5 +1,5 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import loggerAdapter from '../../services/loggerAdapter';
+import { logger } from '../../services/logger';
 import { DebugUtils } from '../../utils/debug';
 
 export default {
@@ -43,7 +43,7 @@ export default {
 				// Toggle debug mode
 				process.env.DEBUG_MODE = process.env.DEBUG_MODE === 'true' ? 'false' : 'true';
 				newStatus = process.env.DEBUG_MODE === 'true' ? 'enabled' : 'disabled';
-				loggerAdapter.info(`Debug mode ${newStatus}`);
+				logger.info(`Debug mode ${newStatus}`);
 				await interaction.reply({
 					content: `Debug mode is now ${newStatus}.`,
 					ephemeral: true

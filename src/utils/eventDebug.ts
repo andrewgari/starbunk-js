@@ -1,5 +1,5 @@
 import { Client } from 'discord.js';
-import loggerAdapter from '../services/loggerAdapter';
+import { logger } from '../services/logger';
 import { DebugUtils } from './debug';
 
 /**
@@ -48,10 +48,10 @@ export class EventDebug {
 
 			// Log the event if it's not a frequent one
 			if (!this.isFrequentEvent(event)) {
-				loggerAdapter.debug(`🔔 Discord Event: ${event} (${currentCount + 1})`);
+				logger.debug(`🔔 Discord Event: ${event} (${currentCount + 1})`);
 
 				if (handlers && handlers.size > 0) {
-					loggerAdapter.debug(`👉 Handlers: ${Array.from(handlers).join(', ')}`);
+					logger.debug(`👉 Handlers: ${Array.from(handlers).join(', ')}`);
 				}
 
 				// Log additional details for specific events
@@ -66,7 +66,7 @@ export class EventDebug {
 			return false;
 		};
 
-		loggerAdapter.debug('🔍 Discord.js event monitoring started');
+		logger.debug('🔍 Discord.js event monitoring started');
 	}
 
 	/**
@@ -79,7 +79,7 @@ export class EventDebug {
 		client.emit = this.originalEmit;
 		this.originalEmit = null;
 
-		loggerAdapter.debug('🔍 Discord.js event monitoring stopped');
+		logger.debug('🔍 Discord.js event monitoring stopped');
 	}
 
 	/**
@@ -124,14 +124,14 @@ export class EventDebug {
 			case 'messageCreate':
 				if (args[0] && typeof args[0] === 'object' && 'author' in args[0] && 'content' in args[0]) {
 					const message = args[0] as { author?: { tag?: string }; content: string };
-					loggerAdapter.debug(`📝 Message from ${message.author?.tag || 'Unknown'}: ${message.content.substring(0, 50)}`);
+					logger.debug(`📝 Message from ${message.author?.tag || 'Unknown'}: ${message.content.substring(0, 50)}`);
 				}
 				break;
 
 			case 'interactionCreate':
 				if (args[0] && typeof args[0] === 'object' && 'type' in args[0] && 'user' in args[0]) {
 					const interaction = args[0] as { type: string; user?: { tag?: string } };
-					loggerAdapter.debug(`🤖 Interaction: ${interaction.type} from ${interaction.user?.tag || 'Unknown'}`);
+					logger.debug(`🤖 Interaction: ${interaction.type} from ${interaction.user?.tag || 'Unknown'}`);
 				}
 				break;
 
@@ -139,13 +139,13 @@ export class EventDebug {
 			case 'guildMemberRemove':
 				if (args[0] && typeof args[0] === 'object' && 'user' in args[0]) {
 					const member = args[0] as { user?: { tag?: string } };
-					loggerAdapter.debug(`👤 Member ${event === 'guildMemberAdd' ? 'joined' : 'left'}: ${member.user?.tag || 'Unknown'}`);
+					logger.debug(`👤 Member ${event === 'guildMemberAdd' ? 'joined' : 'left'}: ${member.user?.tag || 'Unknown'}`);
 				}
 				break;
 
 			case 'error':
 				if (args[0] instanceof Error) {
-					loggerAdapter.error('Discord client error', args[0]);
+					logger.error('Discord client error', args[0]);
 				}
 				break;
 		}
@@ -164,7 +164,7 @@ export class EventDebug {
 		return {
 			emit: (event: string, data: unknown): void => {
 				if (DebugUtils.isDebugMode()) {
-					loggerAdapter.debug(`📢 App Event: ${event}`);
+					logger.debug(`📢 App Event: ${event}`);
 					DebugUtils.logObject(`Event data for ${event}`, data);
 				}
 
@@ -174,7 +174,7 @@ export class EventDebug {
 						try {
 							handler(data);
 						} catch (error) {
-							loggerAdapter.error(`Error in event handler for ${event}`, error as Error);
+							logger.error(`Error in event handler for ${event}`, error as Error);
 						}
 					});
 				}
@@ -188,7 +188,7 @@ export class EventDebug {
 				handlers.get(event)?.add(handler);
 
 				if (DebugUtils.isDebugMode()) {
-					loggerAdapter.debug(`➕ Handler added for app event: ${event}`);
+					logger.debug(`➕ Handler added for app event: ${event}`);
 				}
 			},
 
@@ -196,7 +196,7 @@ export class EventDebug {
 				handlers.get(event)?.delete(handler);
 
 				if (DebugUtils.isDebugMode()) {
-					loggerAdapter.debug(`➖ Handler removed for app event: ${event}`);
+					logger.debug(`➖ Handler removed for app event: ${event}`);
 				}
 			}
 		};

@@ -1,7 +1,5 @@
-import { ILogger } from './logger';
-
-export class MockLogger implements ILogger {
-	public logs: { level: string; message: string; error?: Error }[] = [];
+export class MockLogger {
+	private logs: Array<{ level: string; message: string; error?: Error }> = [];
 
 	info(message: string): void {
 		this.logs.push({ level: 'info', message });
@@ -27,7 +25,11 @@ export class MockLogger implements ILogger {
 		this.logs.push({ level: 'trace', message });
 	}
 
-	clear(): void {
+	getLogs(): Array<{ level: string; message: string; error?: Error }> {
+		return this.logs;
+	}
+
+	clearLogs(): void {
 		this.logs = [];
 	}
 
@@ -37,3 +39,5 @@ export class MockLogger implements ILogger {
 			.map(log => log.message);
 	}
 }
+
+export const mockLogger = new MockLogger();

@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import loggerAdapter from '../services/loggerAdapter';
+import { logger } from '../services/logger';
 
 /**
  * Debug utilities to help with development and troubleshooting
@@ -17,7 +17,7 @@ export class DebugUtils {
    */
 	static logObject(label: string, obj: unknown): void {
 		if (this.isDebugMode()) {
-			loggerAdapter.debug(`🔍 ${label}:`);
+			logger.debug(`🔍 ${label}:`);
 			// eslint-disable-next-line no-console
 			console.dir(obj, { depth: null, colors: true });
 		}
@@ -35,11 +35,11 @@ export class DebugUtils {
 		try {
 			const result = await fn();
 			const end = performance.now();
-			loggerAdapter.debug(`⏱️ ${label} took ${(end - start).toFixed(2)}ms`);
+			logger.debug(`⏱️ ${label} took ${(end - start).toFixed(2)}ms`);
 			return result;
 		} catch (error) {
 			const end = performance.now();
-			loggerAdapter.error(`⏱️ ${label} failed after ${(end - start).toFixed(2)}ms`, error as Error);
+			logger.error(`⏱️ ${label} failed after ${(end - start).toFixed(2)}ms`, error as Error);
 			throw error;
 		}
 	}
@@ -59,7 +59,7 @@ export class DebugUtils {
 
 		const originalEmit = emitter.emit;
 		emitter.emit = function (event: string, ...args: unknown[]): boolean {
-			loggerAdapter.debug(`🔔 ${name} Event: ${event}`);
+			logger.debug(`🔔 ${name} Event: ${event}`);
 			return originalEmit.apply(emitter, [event, ...args]);
 		};
 	}

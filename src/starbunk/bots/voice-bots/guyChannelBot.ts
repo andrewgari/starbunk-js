@@ -1,50 +1,42 @@
-import { VoiceChannel, VoiceState } from 'discord.js';
-import channelIds from '../../../discord/channelIds';
-import userId from '../../../discord/userId';
-import { ILogger } from '../../../services/logger';
-import VoiceBot from '../voiceBot';
+import { ChannelType, Collection, VoiceChannel, VoiceState } from 'discord.js';
+import { logger } from '../../../services/logger';
+import { VoiceBot } from '../voiceBot';
 
 export default class GuyChannelBot extends VoiceBot {
-	public readonly botName = 'Guy Channel Bot';
+	botName = 'GuyChannelBot';
 
-	constructor(logger?: ILogger) {
-		super(logger, 1.0);
-	}
-
-	handleEvent(oldState: VoiceState, newState: VoiceState): void {
-		const member = oldState.member;
-		const newChannelId = newState.channelId;
-		const oldChannelId = oldState.channelId;
-
+	async onVoiceStateUpdate(oldState: VoiceState, newState: VoiceState): Promise<void> {
+		const member = newState.member || oldState.member;
 		if (!member) {
-			this.logger.warn('Received voice state update without member information');
+			logger.warn('Received voice state update without member information');
 			return;
 		}
 
-		let lounge: VoiceChannel;
-		// In debug mode, always use CovaDaxServer.General1
-		const loungeChannelId = process.env.DEBUG_MODE === 'true'
-			? channelIds.CovaDaxServer.General1
-			: channelIds.Starbunk.TheLounge;
+		const oldChannelId = oldState.channelId;
+		const newChannelId = newState.channelId;
 
-		oldState.client.channels.fetch(loungeChannelId).then((channel) => {
-			lounge = channel as VoiceChannel;
+		// If user is not moving between channels, ignore
+		if (oldChannelId === newChannelId) return;
 
-			const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Guy;
-			if (member?.id === targetUserId) {
-				if (newChannelId === channelIds.Starbunk.NoGuyLounge) {
-					this.logger.warn(`🚫 ${member.displayName} tried to join No-Guy-Lounge, redirecting to ${lounge.name}`);
-					member.voice.setChannel(lounge);
-				}
-			} else if (newChannelId === channelIds.Starbunk.GuyLounge) {
-				this.logger.warn(`🚫 User ${member.displayName} tried to join Guy's lounge, redirecting to ${lounge.name}`);
-				member.voice.setChannel(lounge);
+		// Check if user is joining Guy's lounge
+		if (newChannelId && newState.channel?.name.toLowerCase().includes('guy')) {
+			const guild = newState.guild;
+			const lounges = guild.channels.cache.filter(
+				channel =>
+					channel.type === ChannelType.GuildVoice &&
+					!channel.name.toLowerCase().includes('guy')
+			) as Collection<string, VoiceChannel>;
+
+			const loungeArray = Array.from(lounges.values());
+			if (loungeArray.length > 0) {
+				const randomIndex = Math.floor(Math.random() * loungeArray.length);
+				const lounge = loungeArray[randomIndex];
+				logger.warn(`🚫 ${member.displayName} tried to join Guy's lounge, redirecting to ${lounge.name}`);
+				await member.voice.setChannel(lounge);
 			}
+		}
 
-			if (oldChannelId !== newChannelId) {
-				this.logger.debug(`👤 ${member.displayName} moved from ${oldChannelId || 'nowhere'} to ${newChannelId || 'nowhere'}`);
-			}
-		});
+		logger.debug(`👤 ${member.displayName} moved from ${oldChannelId || 'nowhere'} to ${newChannelId || 'nowhere'}`);
 	}
 
 	connectToChannel(): void {

@@ -1,4 +1,4 @@
-import loggerAdapter from '../services/loggerAdapter';
+import { logger } from '../services/logger';
 import { DebugUtils } from './debug';
 
 /**
@@ -19,7 +19,7 @@ export class ApiDebug {
 
 		this.activeRequests.set(requestId, { url, startTime, method });
 
-		loggerAdapter.debug(`🌐 API Request #${requestId} [${method}] ${url}`);
+		logger.debug(`🌐 API Request #${requestId} [${method}] ${url}`);
 		if (body) {
 			DebugUtils.logObject(`Request #${requestId} Body`, body);
 		}
@@ -35,7 +35,7 @@ export class ApiDebug {
 
 		const requestInfo = this.activeRequests.get(requestId);
 		if (!requestInfo) {
-			loggerAdapter.warn(`Cannot find request info for response #${requestId}`);
+			logger.warn(`Cannot find request info for response #${requestId}`);
 			return;
 		}
 
@@ -47,7 +47,7 @@ export class ApiDebug {
 		if (status >= 400) statusEmoji = '❌';
 		else if (status >= 300) statusEmoji = '➡️';
 
-		loggerAdapter.debug(
+		logger.debug(
 			`${statusEmoji} API Response #${requestId} [${requestInfo.method}] ${requestInfo.url} - ${status} (${duration.toFixed(2)}ms)`
 		);
 
@@ -66,14 +66,14 @@ export class ApiDebug {
 
 		const requestInfo = this.activeRequests.get(requestId);
 		if (!requestInfo) {
-			loggerAdapter.warn(`Cannot find request info for error #${requestId}`);
+			logger.warn(`Cannot find request info for error #${requestId}`);
 			return;
 		}
 
 		const endTime = performance.now();
 		const duration = endTime - requestInfo.startTime;
 
-		loggerAdapter.error(
+		logger.error(
 			`❌ API Error #${requestId} [${requestInfo.method}] ${requestInfo.url} (${duration.toFixed(2)}ms)`,
 			error
 		);
@@ -161,7 +161,7 @@ export class ApiDebug {
 		});
 
 		if (Object.keys(rateLimitInfo).length > 0) {
-			loggerAdapter.debug('📊 Rate limit information:');
+			logger.debug('📊 Rate limit information:');
 			// eslint-disable-next-line no-console
 			console.table(rateLimitInfo);
 		}

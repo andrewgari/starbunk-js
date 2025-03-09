@@ -1,7 +1,7 @@
 import { Client, Interaction, Message, TextChannel } from 'discord.js';
 import fs from 'fs/promises';
 import path from 'path';
-import loggerAdapter from '../services/loggerAdapter';
+import { logger } from '../services/logger';
 import { DebugUtils } from './debug';
 
 /**
@@ -41,9 +41,9 @@ export class TestingSupport {
 		try {
 			// Create test case directory if it doesn't exist
 			await fs.mkdir(this.testCaseDirectory, { recursive: true });
-			loggerAdapter.debug(`📝 Test recording initialized. Directory: ${this.testCaseDirectory}`);
+			logger.debug(`📝 Test recording initialized. Directory: ${this.testCaseDirectory}`);
 		} catch (error) {
-			loggerAdapter.error('Failed to initialize test recording', error as Error);
+			logger.error('Failed to initialize test recording', error as Error);
 		}
 	}
 
@@ -78,9 +78,9 @@ export class TestingSupport {
 				data: interactionData
 			});
 
-			loggerAdapter.debug(`📝 Recorded interaction: ${interaction.id}`);
+			logger.debug(`📝 Recorded interaction: ${interaction.id}`);
 		} catch (error) {
-			loggerAdapter.error('Failed to record interaction', error as Error);
+			logger.error('Failed to record interaction', error as Error);
 		}
 	}
 
@@ -98,9 +98,9 @@ export class TestingSupport {
 				channelId: message.channelId
 			});
 
-			loggerAdapter.debug(`📝 Recorded message: ${message.id}`);
+			logger.debug(`📝 Recorded message: ${message.id}`);
 		} catch (error) {
-			loggerAdapter.error('Failed to record message', error as Error);
+			logger.error('Failed to record message', error as Error);
 		}
 	}
 
@@ -119,9 +119,9 @@ export class TestingSupport {
 				replyTo: message.reference?.messageId
 			});
 
-			loggerAdapter.debug(`📝 Recorded response from ${botName}: ${message.id}`);
+			logger.debug(`📝 Recorded response from ${botName}: ${message.id}`);
 		} catch (error) {
-			loggerAdapter.error('Failed to record response', error as Error);
+			logger.error('Failed to record response', error as Error);
 		}
 	}
 
@@ -148,10 +148,10 @@ export class TestingSupport {
 			this.messages = [];
 			this.responses = [];
 
-			loggerAdapter.debug(`✅ Generated test case: ${testCasePath}`);
+			logger.debug(`✅ Generated test case: ${testCasePath}`);
 			return testCasePath;
 		} catch (error) {
-			loggerAdapter.error('Failed to generate test case', error as Error);
+			logger.error('Failed to generate test case', error as Error);
 			return '';
 		}
 	}
@@ -166,25 +166,25 @@ export class TestingSupport {
 			const testCaseContent = await fs.readFile(testCasePath, 'utf-8');
 			const testCase = JSON.parse(testCaseContent);
 
-			loggerAdapter.debug(`▶️ Replaying test case: ${testCase.name}`);
+			logger.debug(`▶️ Replaying test case: ${testCase.name}`);
 
 			// Replay messages
 			for (const message of testCase.messages) {
 				try {
 					const channel = await client.channels.fetch(message.channelId) as TextChannel;
 					if (channel) {
-						loggerAdapter.debug(`▶️ Simulating message: ${message.content}`);
+						logger.debug(`▶️ Simulating message: ${message.content}`);
 						// We can't actually create messages as other users, but we can log what would happen
-						loggerAdapter.debug(`👤 ${message.author} would say: ${message.content}`);
+						logger.debug(`👤 ${message.author} would say: ${message.content}`);
 					}
 				} catch (error) {
-					loggerAdapter.error(`Failed to replay message in channel ${message.channelId}`, error as Error);
+					logger.error(`Failed to replay message in channel ${message.channelId}`, error as Error);
 				}
 			}
 
-			loggerAdapter.debug(`✅ Test case replay completed: ${testCase.name}`);
+			logger.debug(`✅ Test case replay completed: ${testCase.name}`);
 		} catch (error) {
-			loggerAdapter.error('Failed to replay test case', error as Error);
+			logger.error('Failed to replay test case', error as Error);
 		}
 	}
 
@@ -196,7 +196,7 @@ export class TestingSupport {
 			const files = await fs.readdir(this.testCaseDirectory);
 			return files.filter(file => file.endsWith('.json'));
 		} catch (error) {
-			loggerAdapter.error('Failed to list test cases', error as Error);
+			logger.error('Failed to list test cases', error as Error);
 			return [];
 		}
 	}
@@ -250,7 +250,7 @@ export class TestingSupport {
 				mismatches
 			};
 		} catch (error) {
-			loggerAdapter.error('Failed to validate behavior', error as Error);
+			logger.error('Failed to validate behavior', error as Error);
 			return {
 				passed: false,
 				mismatches: ['Error validating behavior']

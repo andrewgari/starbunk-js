@@ -1,5 +1,5 @@
 import { VoiceChannel, VoiceState } from 'discord.js';
-import loggerAdapter from '../services/loggerAdapter';
+import { logger } from '../services/logger';
 import { DebugUtils } from './debug';
 
 /**
@@ -14,7 +14,7 @@ export class VoiceDebug {
 
 		const member = newState.member || oldState.member;
 		if (!member) {
-			loggerAdapter.warn('Voice state change without member information');
+			logger.warn('Voice state change without member information');
 			return;
 		}
 
@@ -70,7 +70,7 @@ export class VoiceDebug {
 
 		// Log the changes if any
 		if (Object.keys(changes).length > 0) {
-			loggerAdapter.debug(`👤 Voice state change for ${member.displayName} (${member.id}):`);
+			logger.debug(`👤 Voice state change for ${member.displayName} (${member.id}):`);
 			// eslint-disable-next-line no-console
 			console.table(changes);
 		}
@@ -85,9 +85,9 @@ export class VoiceDebug {
 		const memberCount = channel.members.size;
 		const members = channel.members.map(m => m.displayName).join(', ');
 
-		loggerAdapter.debug(`🔊 Voice connection to ${channel.name} (${channel.id})`);
-		loggerAdapter.debug(`📝 Reason: ${reason}`);
-		loggerAdapter.debug(`👥 Members (${memberCount}): ${members}`);
+		logger.debug(`🔊 Voice connection to ${channel.name} (${channel.id})`);
+		logger.debug(`📝 Reason: ${reason}`);
+		logger.debug(`👥 Members (${memberCount}): ${members}`);
 	}
 
 	/**
@@ -96,7 +96,7 @@ export class VoiceDebug {
 	static logAudioProcessing(url: string, details: Record<string, unknown>): void {
 		if (!DebugUtils.isDebugMode()) return;
 
-		loggerAdapter.debug(`🎵 Processing audio from: ${url}`);
+		logger.debug(`🎵 Processing audio from: ${url}`);
 		DebugUtils.logObject('Audio processing details', details);
 	}
 
