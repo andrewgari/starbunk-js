@@ -28,8 +28,9 @@ export default class VennBot extends ReplyBot {
 
 		const content = message.content.toLowerCase();
 		const isCringe = /cringe/i.test(content);
-		const isVenn = message.author.id === userId.Venn;
-		const shouldReply = (isVenn && random.percentChance(5)) || isCringe;
+		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Venn;
+		const isTargetUser = message.author.id === targetUserId;
+		const shouldReply = (isTargetUser && random.percentChance(5)) || isCringe;
 
 		if (shouldReply) {
 			this.sendReply(message.channel as TextChannel, VennBotConfig.Responses.Default());

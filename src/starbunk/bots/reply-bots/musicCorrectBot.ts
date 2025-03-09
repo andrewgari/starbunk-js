@@ -1,32 +1,21 @@
 import { Message, TextChannel } from 'discord.js';
-import { ILogger } from '../../../services/logger';
-import { MusicCorrectBotConfig } from '../config/musicCorrectBotConfig';
+import { Logger } from '../../../services/logger';
 import ReplyBot from '../replyBot';
 
 export default class MusicCorrectBot extends ReplyBot {
-	constructor(logger?: ILogger) {
-		super(logger);
+	public readonly botName = 'Music Correct Bot';
+	protected readonly avatarUrl = 'https://imgur.com/Tpo8Ywd.jpg';
+	private readonly logger = Logger.getInstance();
+
+	constructor() {
+		super();
 	}
 
-	public readonly botName: string = MusicCorrectBotConfig.Name;
-	public readonly avatarUrl: string = MusicCorrectBotConfig.Avatars.Default;
-
-	defaultBotName(): string {
-		return 'MusicCorrectBot';
-	}
-
-	async handleMessage(message: Message<boolean>): Promise<void> {
-		if (message.author.bot) return;
-
-		const content = message.content;
-		const hasOldPlayCommand = MusicCorrectBotConfig.Patterns.Default?.test(content);
-
-		if (hasOldPlayCommand) {
+	async handleMessage(message: Message): Promise<void> {
+		const content = message.content.toLowerCase();
+		if (content.startsWith('!play') && message.channel instanceof TextChannel) {
 			this.logger.debug(`🎵 User ${message.author.username} tried using old play command: "${content}"`);
-			this.sendReply(
-				message.channel as TextChannel,
-				MusicCorrectBotConfig.Responses.Default(message.author.id)
-			);
+			await this.sendReply(message.channel, 'Please use /play instead of !play');
 		}
 	}
 }

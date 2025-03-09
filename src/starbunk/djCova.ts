@@ -9,24 +9,24 @@ import {
 	VoiceConnection,
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
-import loggerAdapter from '../services/loggerAdapter';
+import { logger } from '../services/logger';
 
 export class DJCova {
 	private player: AudioPlayer;
 	private resource: AudioResource | undefined;
 
 	constructor() {
-		loggerAdapter.debug('🎵 Initializing DJCova audio player');
+		logger.debug('🎵 Initializing DJCova audio player');
 		this.player = createAudioPlayer();
 	}
 
 	async start(url: string): Promise<void> {
 		if (this.resource) {
-			loggerAdapter.warn('Attempted to start playback while already playing');
+			logger.warn('Attempted to start playback while already playing');
 			return;
 		}
 
-		loggerAdapter.info(`🎵 Starting playback from URL: ${url}`);
+		logger.info(`🎵 Starting playback from URL: ${url}`);
 
 		try {
 			const stream = ytdl(url, {
@@ -52,60 +52,60 @@ export class DJCova {
 				this.resource.volume.setVolume(0.5);
 			}
 
-			loggerAdapter.debug('▶️ Playing resource...');
+			logger.debug('▶️ Playing resource...');
 			this.player.play(this.resource);
-			loggerAdapter.success('🎵 Audio resource created and playback started');
+			logger.success('🎵 Audio resource created and playback started');
 		} catch (error) {
-			loggerAdapter.error('Failed to start audio playback', error as Error);
+			logger.error('Failed to start audio playback', error as Error);
 		}
 	}
 
 	play(): void {
 		if (!this.resource) {
-			loggerAdapter.warn('Attempted to play without an active audio resource');
+			logger.warn('Attempted to play without an active audio resource');
 			return;
 		}
 
-		loggerAdapter.debug('▶️ Playing audio resource');
+		logger.debug('▶️ Playing audio resource');
 		this.player.play(this.resource);
 	}
 
 	stop(): void {
-		loggerAdapter.info('⏹️ Stopping audio playback');
+		logger.info('⏹️ Stopping audio playback');
 		this.player.stop();
 		this.resource = undefined;
 	}
 
 	pause(): void {
-		loggerAdapter.info('⏸️ Pausing audio playback');
+		logger.info('⏸️ Pausing audio playback');
 		this.player.pause();
 	}
 
 	changeVolume(vol: number): void {
-		loggerAdapter.info(`🔊 Adjusting volume to ${vol}%`);
+		logger.info(`🔊 Adjusting volume to ${vol}%`);
 		if (this.resource?.volume) {
 			this.resource.volume.setVolume(vol / 100);
 		} else {
-			loggerAdapter.warn('Attempted to change volume without active resource');
+			logger.warn('Attempted to change volume without active resource');
 		}
 	}
 
 	subscribe(channel: VoiceConnection): PlayerSubscription | undefined {
-		loggerAdapter.debug(`🎧 Subscribing to voice channel`);
+		logger.debug(`🎧 Subscribing to voice channel`);
 		try {
 			const subscription = channel.subscribe(this.player);
 			if (subscription) {
-				loggerAdapter.success('Player successfully subscribed to connection.');
+				logger.success('Player successfully subscribed to connection.');
 			}
 			return subscription;
 		} catch (error) {
-			loggerAdapter.error('Failed to subscribe player to the connection.');
+			logger.error('Failed to subscribe player to the connection.');
 			return undefined;
 		}
 	}
 
 	on(status: AudioPlayerStatus, callback: () => void): void {
-		loggerAdapter.debug(`📡 Registering listener for ${status} status`);
+		logger.debug(`📡 Registering listener for ${status} status`);
 		this.player.on(status, callback);
 	}
 }

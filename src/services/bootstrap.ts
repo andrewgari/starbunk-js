@@ -1,8 +1,8 @@
 import { Client } from 'discord.js';
 import { OpenAIClient } from '../openai/openaiClient';
 import BlueBot from '../starbunk/bots/reply-bots/blueBot';
-import webhookService from '../webhooks/webhookService';
-import { ILogger } from './logger';
+import webhookService, { IWebhookService } from '../webhooks/webhookService';
+import { logger } from './logger';
 import container from './serviceContainer';
 import { getLogger } from './serviceRegistrar';
 import { serviceRegistry } from './serviceRegistry';
@@ -35,12 +35,10 @@ export function registerBotServices(): void {
 	// The decorator will handle registration, but we need to import them
 	// to ensure the decorators run
 	// In a production app, we'd use a dynamic import system
-	const blueBot = new BlueBot(
-		container.get<ILogger>(serviceRegistry.LOGGER)!
-	);
+	const blueBot = new BlueBot();
 
 	// You could also manually register bots
-	container.register('blue-bot', blueBot);
+	container.register(serviceRegistry.BLUE_BOT, blueBot);
 }
 
 /**
@@ -54,10 +52,17 @@ export function registerDiscordClient(client: Client): void {
  * Bootstraps the entire application, registering all services
  * @param client The Discord client instance
  */
-export function bootstrapApplication(client: Client): void {
-	registerCoreServices();
-	registerDiscordClient(client);
-	registerBotServices();
+export async function bootstrapApplication(client: Client): Promise<void> {
+	try {
+		registerCoreServices();
+		registerDiscordClient(client);
+		registerBotServices();
+
+		logger.info('🚀 Services bootstrapped successfully');
+	} catch (error) {
+		logger.error('Failed to bootstrap services', error as Error);
+		throw error;
+	}
 }
 
 /**
@@ -71,4 +76,12 @@ export function getRequiredService<T>(key: string): T {
 		throw new Error(`Required service ${key} not found in container`);
 	}
 	return service;
+}
+
+export function getWebhookService(): IWebhookService | undefined {
+	return container.get<IWebhookService>(serviceRegistry.WEBHOOK_SERVICE);
+}
+
+export function getBlueBot(): BlueBot | undefined {
+	return container.get<BlueBot>(serviceRegistry.BLUE_BOT);
 }

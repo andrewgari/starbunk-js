@@ -1,22 +1,19 @@
 import userID from '../../../discord/userId';
+import { getWebhookService } from '../../../services/bootstrap';
 import random from '../../../utils/random';
 import BananaBot from '../reply-bots/bananaBot';
-import { MockLogger, MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
+import { MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
+
+jest.mock('../../../services/bootstrap');
 
 describe('BananaBot', () => {
 	let bananaBot: BananaBot;
-	let mockLogger: MockLogger;
 	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
-		// Arrange - Set up our test environment
-		mockLogger = new MockLogger();
 		mockWebhookService = new MockWebhookService();
-
-		// Create the bot with our mocks
-		bananaBot = new BananaBot(mockLogger);
-		// @ts-expect-error - Set the webhook service property directly
-		bananaBot.webhookService = mockWebhookService;
+		(getWebhookService as jest.Mock).mockReturnValue(mockWebhookService);
+		bananaBot = new BananaBot();
 	});
 
 	afterEach(() => {

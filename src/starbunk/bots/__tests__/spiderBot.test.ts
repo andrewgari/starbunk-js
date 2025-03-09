@@ -97,10 +97,21 @@ describe('SpiderBot', () => {
 			})
 		);
 
-		// Get the actual content from the mock call
-		const actualContent = mockWebhookService.writeMessage.mock.calls[0][1].content;
+		// Get the actual content from the last message
+		const lastMessage = mockWebhookService.getLastMessage();
+		const actualContent = lastMessage?.content;
 
 		// Verify the content is one of the possible responses
+		expect(SpiderBotConfig.Responses.Default).toContain(actualContent);
+	});
+
+	it('should respond with default message when triggered', async () => {
+		const message = createMockMessage('spider');
+
+		await spiderBot.handleMessage(message);
+
+		const lastMessage = mockWebhookService.getLastMessage();
+		const actualContent = lastMessage?.content;
 		expect(SpiderBotConfig.Responses.Default).toContain(actualContent);
 	});
 });

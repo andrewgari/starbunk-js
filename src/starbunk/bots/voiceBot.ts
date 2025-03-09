@@ -1,17 +1,14 @@
 import { VoiceState } from 'discord.js';
-import { ILogger } from '../../services/logger';
-import loggerFactory from '../../services/loggerFactory';
+import { logger } from '../../services/logger';
 
-export default abstract class VoiceBot {
-	protected logger: ILogger;
+export abstract class VoiceBot {
+	abstract botName: string;
 	private volume: number;
 
-	constructor(logger?: ILogger, volume = 1.0) {
-		this.logger = logger || loggerFactory.getLogger();
-		this.volume = volume;
+	protected constructor(volume = 1.0) {
+		this.volume = Math.max(0, Math.min(volume, 2.0));
 	}
 
-	abstract botName: string;
 	defaultBotName(): string {
 		return this.botName;
 	}
@@ -22,8 +19,8 @@ export default abstract class VoiceBot {
 
 	setVolume(newVolume: number): void {
 		this.volume = Math.max(0, Math.min(newVolume, 2.0));
-		this.logger.debug(`Volume set to ${this.volume}`);
+		logger.debug(`Volume set to ${this.volume}`);
 	}
 
-	abstract handleEvent(oldState: VoiceState, newState: VoiceState): void;
+	abstract onVoiceStateUpdate(oldState: VoiceState, newState: VoiceState): Promise<void>;
 }

@@ -1,5 +1,5 @@
 import { CommandInteraction, GuildMember, PermissionFlagsBits, SlashCommandBuilder, TextChannel } from 'discord.js';
-import webhookService from '../../webhooks/webhookService';
+import { getWebhookService } from '../../services/bootstrap';
 
 export default {
 	data: new SlashCommandBuilder()
@@ -21,6 +21,10 @@ export default {
 			const nickname = member.nickname ?? user.username;
 			const avatar = member.displayAvatarURL() ?? user.displayAvatarURL();
 			const channel = interaction.channel as TextChannel;
+			const webhookService = getWebhookService();
+			if (!webhookService) {
+				throw new Error('WebhookService not found');
+			}
 			await webhookService.writeMessage(channel, {
 				username: nickname,
 				avatarURL: avatar,
