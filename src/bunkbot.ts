@@ -35,7 +35,21 @@ const runSnowbunkBot = async (): Promise<void> => {
 };
 
 const runBots = async (): Promise<void> => {
-	await Promise.race([runStarbunkBot(), runSnowbunkBot()]);
+	try {
+		await Promise.all([
+			runStarbunkBot().catch(error => {
+				console.error('Starbunk Error:', error);
+				throw error;
+			}),
+			runSnowbunkBot().catch(error => {
+				console.error('Snowbunk Error:', error);
+				throw error;
+			})
+		]);
+	} catch (error) {
+		console.error('Failed to start bots:', error);
+		process.exit(1);
+	}
 };
 
 runBots().then();

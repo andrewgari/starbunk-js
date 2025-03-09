@@ -5,6 +5,7 @@ import path from 'path';
 import { Command } from '../discord/command';
 import DiscordClient from '../discord/discordClient';
 import loggerAdapter from '../services/loggerAdapter';
+import { EventDebug } from '../utils/eventDebug';
 import ReplyBot from './bots/replyBot';
 import VoiceBot from './bots/voiceBot';
 import { DJCova } from './djCova';
@@ -15,6 +16,7 @@ export default class StarbunkClient extends DiscordClient {
 	commands: Collection<string, Command> = new Collection();
 	djCova: DJCova = new DJCova();
 	activeSubscription: PlayerSubscription | undefined;
+	private readonly fileExtension: string = process.env.NODE_ENV === 'development' ? '.ts' : '.js';
 
 	constructor(options: ClientOptions) {
 		super(options);
@@ -38,35 +40,22 @@ export default class StarbunkClient extends DiscordClient {
 		try {
 			const botDir = path.join(__dirname, 'bots/reply-bots');
 			loggerAdapter.info(`Looking for bots in: ${botDir}`);
-			const botFiles = readdirSync(botDir).filter((file) => file.endsWith('.js'));
+			const botFiles = readdirSync(botDir).filter((file) => file.endsWith(this.fileExtension));
 			loggerAdapter.info(`Found bot files: ${botFiles.join(', ')}`);
 
 			for (const file of botFiles) {
 				try {
 					const botName = file.split('.')[0];
-					let BotClass;
-					
-					// Try URL-based import first
-					try {
-						const fileUrl = `file://${path.resolve(botDir, file)}`;
-						loggerAdapter.info(`Importing bot using URL: ${fileUrl}`);
-						const imported = await import(fileUrl);
-						BotClass = imported.default;
-						loggerAdapter.success(`URL import succeeded for: ${botName}`);
-					} catch (urlImportError) {
-						// Fallback to traditional path if URL import fails
-						loggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
-						const importPath = path.join(botDir, file);
-						loggerAdapter.info(`Importing bot using path: ${importPath}`);
-						const imported = await import(importPath);
-						BotClass = imported.default;
-						loggerAdapter.success(`Traditional import succeeded for: ${botName}`);
-					}
-					
+					const importPath = path.join(botDir, file);
+					loggerAdapter.info(`Importing bot from: ${importPath}`);
+
+					const imported = await import(importPath);
+					const BotClass = imported.default;
+
 					if (!BotClass) {
 						throw new Error(`Could not load bot class for ${botName}`);
 					}
-					
+
 					const bot = new BotClass() as ReplyBot;
 					this.bots.set(botName, bot);
 					loggerAdapter.success(`Registered Bot: ${botName} 🤖`);
@@ -86,35 +75,22 @@ export default class StarbunkClient extends DiscordClient {
 		try {
 			const botDir = path.join(__dirname, 'bots/voice-bots');
 			loggerAdapter.info(`Looking for voice bots in: ${botDir}`);
-			const botFiles = readdirSync(botDir).filter((file) => file.endsWith('.js'));
+			const botFiles = readdirSync(botDir).filter((file) => file.endsWith(this.fileExtension));
 			loggerAdapter.info(`Found voice bot files: ${botFiles.join(', ')}`);
 
 			for (const file of botFiles) {
 				try {
 					const botName = file.split('.')[0];
-					let BotClass;
-					
-					// Try URL-based import first
-					try {
-						const fileUrl = `file://${path.resolve(botDir, file)}`;
-						loggerAdapter.info(`Importing voice bot using URL: ${fileUrl}`);
-						const imported = await import(fileUrl);
-						BotClass = imported.default;
-						loggerAdapter.success(`URL import succeeded for voice bot: ${botName}`);
-					} catch (urlImportError) {
-						// Fallback to traditional path if URL import fails
-						loggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
-						const importPath = path.join(botDir, file);
-						loggerAdapter.info(`Importing voice bot using path: ${importPath}`);
-						const imported = await import(importPath);
-						BotClass = imported.default;
-						loggerAdapter.success(`Traditional import succeeded for voice bot: ${botName}`);
-					}
-					
+					const importPath = path.join(botDir, file);
+					loggerAdapter.info(`Importing voice bot from: ${importPath}`);
+
+					const imported = await import(importPath);
+					const BotClass = imported.default;
+
 					if (!BotClass) {
 						throw new Error(`Could not load voice bot class for ${botName}`);
 					}
-					
+
 					const bot = new BotClass();
 					this.voiceBots.set(botName, bot);
 					loggerAdapter.success(`Registered Voice Bot: ${botName} 🎤`);
@@ -134,34 +110,21 @@ export default class StarbunkClient extends DiscordClient {
 		try {
 			const commandDir = path.join(__dirname, 'commands');
 			loggerAdapter.info(`Looking for commands in: ${commandDir}`);
-			const commandFiles = readdirSync(commandDir).filter((file) => file.endsWith('.js'));
+			const commandFiles = readdirSync(commandDir).filter((file) => file.endsWith(this.fileExtension));
 			loggerAdapter.info(`Found command files: ${commandFiles.join(', ')}`);
 
 			for (const file of commandFiles) {
 				try {
-					let command;
-					
-					// Try URL-based import first
-					try {
-						const fileUrl = `file://${path.resolve(commandDir, file)}`;
-						loggerAdapter.info(`Importing command using URL: ${fileUrl}`);
-						const imported = await import(fileUrl);
-						command = imported.default;
-						loggerAdapter.success(`URL import succeeded for command: ${file}`);
-					} catch (urlImportError) {
-						// Fallback to traditional path if URL import fails
-						loggerAdapter.warn(`URL import failed for ${file}, trying traditional import`);
-						const importPath = path.join(commandDir, file);
-						loggerAdapter.info(`Importing command using path: ${importPath}`);
-						const imported = await import(importPath);
-						command = imported.default;
-						loggerAdapter.success(`Traditional import succeeded for command: ${file}`);
-					}
-					
+					const importPath = path.join(commandDir, file);
+					loggerAdapter.info(`Importing command from: ${importPath}`);
+
+					const imported = await import(importPath);
+					const command = imported.default;
+
 					if (!command) {
 						throw new Error(`Could not load command from ${file}`);
 					}
-					
+
 					this.commands.set(command.data.name, command);
 					loggerAdapter.success(`Registered Command: ${command.data.name} ⚡`);
 				} catch (error) {
@@ -185,6 +148,7 @@ export default class StarbunkClient extends DiscordClient {
 			this.registerCommands();
 			this.setupEventListeners();
 			this.registerSlashCommands(token, clientId, guildId);
+			EventDebug.monitorEvents(this);
 			this.login(token);
 		} catch (error) {
 			loggerAdapter.error(`Error during initialization: ${error}`);
