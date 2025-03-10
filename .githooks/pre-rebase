@@ -1,0 +1,59 @@
+#!/bin/sh
+
+# Get current branch name
+CURRENT_BRANCH=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
+BASE_BRANCH="$1"
+
+# Prevent rebasing protected branches
+PROTECTED_BRANCHES="^(main|master|develop|release/.*)$"
+if [[ "$CURRENT_BRANCH" =~ $PROTECTED_BRANCHES ]]; then
+  echo "ERROR: Rebasing protected branch '$CURRENT_BRANCH' is not allowed!"
+  echo "Please create a feature branch instead."
+  exit 1
+fi
+
+# Warn when rebasing onto a protected branch
+if [[ "$BASE_BRANCH" =~ $PROTECTED_BRANCHES ]]; then
+  echo "WARNING: You're rebasing onto protected branch '$BASE_BRANCH'."
+  read -p "Are you sure you want to continue? (y/n) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+fi
+
+# Check for uncommitted changes
+if ! git diff-index --quiet HEAD --; then
+  echo "WARNING: You have uncommitted changes that will be lost after rebasing."
+  git status --short
+  read -p "Continue anyway? (y/n) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+fi
+
+# Verify checks pass before rebasing
+echo "Running checks before rebasing..."
+if [ -f "package.json" ]; then
+  # Check if check:all exists in package.json
+  if grep -q "\"check:all\"" package.json; then
+    npm run check:all
+  else
+    npm test
+  fi
+  
+  if [ $? -ne 0 ]; then
+    echo "Checks failed! Fix issues before rebasing."
+    exit 1
+  fi
+fi
+
+# Warn about potential conflicts
+CONFLICTS=$(git rev-list --count --left-right ${BASE_BRANCH}...HEAD)
+if [ "$CONFLICTS" != "0	0" ]; then
+  echo "WARNING: Potential merge conflicts detected!"
+  echo "Consider running: git diff ${BASE_BRANCH}...HEAD"
+fi
+
+exit 0

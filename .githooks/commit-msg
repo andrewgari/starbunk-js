@@ -1,0 +1,47 @@
+#!/bin/sh
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat $COMMIT_MSG_FILE)
+
+# TypeScript specific commit message format including module areas
+TS_PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\((api|ui|auth|core|config|docker|test|types|utils|hooks|state|components|services)\))?: .{1,100}$"
+
+if ! echo "$COMMIT_MSG" | grep -qE "$TS_PATTERN"; then
+  echo "Error: TypeScript commit message format is invalid."
+  echo "Format: <type>(<scope>): <description>"
+  echo ""
+  echo "Valid types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+  echo "Valid scopes: api, ui, auth, core, config, docker, test, types, utils, hooks, state, components, services"
+  echo ""
+  echo "Examples:"
+  echo "  feat(components): add Button component"
+  echo "  fix(api): resolve TypeError in auth endpoint"
+  echo "  docs(hooks): document useQuery hook"
+  exit 1
+fi
+
+# Check for context in commit
+# Good commit messages explain WHY, not just WHAT
+if [ ${#COMMIT_MSG} -lt 20 ]; then
+  echo "Warning: Commit message is quite short. Consider adding more context."
+  read -p "Continue anyway? (y/n) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+fi
+
+# Check for JIRA ticket reference
+JIRA_PATTERN="[A-Z]+-[0-9]+"
+if ! echo "$COMMIT_MSG" | grep -qE "$JIRA_PATTERN"; then
+  echo "Warning: No JIRA ticket reference found in commit message."
+  echo "Consider adding a reference like PROJ-123"
+  
+  read -p "Continue anyway? (y/n) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+fi
+
+exit 0

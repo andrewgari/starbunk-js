@@ -1,0 +1,72 @@
+#!/bin/sh
+
+# Run Jest tests with coverage
+echo "Running Jest tests with coverage..."
+npx jest --coverage --coverageThreshold='{"global":{"branches":80,"functions":80,"lines":80,"statements":80}}'
+if [ $? -ne 0 ]; then
+  echo "Tests failed or coverage thresholds not met!"
+  exit 1
+fi
+
+# Run TypeScript build to ensure it compiles
+echo "Running TypeScript build..."
+npx tsc --project tsconfig.json
+if [ $? -ne 0 ]; then
+  echo "TypeScript build failed!"
+  exit 1
+fi
+
+# Check for Docker image security
+if [ -f Dockerfile ]; then
+  echo "Scanning Docker image for vulnerabilities..."
+  if command -v trivy &> /dev/null; then
+    # Build image for scanning
+    TEMP_IMAGE="temp-scan:$(date +%s)"
+    docker build -t $TEMP_IMAGE .
+    
+    # Scan with Trivy
+    trivy image --severity HIGH,CRITICAL $TEMP_IMAGE
+    if [ $? -ne 0 ]; then
+      echo "Docker image has HIGH or CRITICAL vulnerabilities!"
+      docker rmi $TEMP_IMAGE
+      exit 1
+    fi
+    
+    # Remove temp image
+    docker rmi $TEMP_IMAGE
+  else
+    echo "Trivy not installed. Consider installing for Docker security scanning."
+  fi
+fi
+
+# Check bundle size for frontend projects
+if [ -f webpack.config.js ] || [ -f next.config.js ] || [ -f vite.config.js ]; then
+  echo "Checking bundle size..."
+  if [ -f package.json ] && grep -q "\"build\"" package.json; then
+    npm run build
+    
+    # Check dist directory size
+    DIST_SIZE=$(du -sm dist 2>/dev/null | cut -f1 || echo 0)
+    if [ $DIST_SIZE -gt 5 ]; then
+      echo "Warning: Bundle size is ${DIST_SIZE}MB, which is large."
+      echo "Consider code splitting or lazy loading to reduce size."
+    fi
+  fi
+fi
+
+# Run E2E tests if present
+if [ -d cypress ] || [ -d tests/e2e ] || [ -d __e2e__ ]; then
+  echo "Running E2E tests..."
+  if [ -f cypress.json ]; then
+    npx cypress run
+  elif [ -f package.json ] && grep -q "\"test:e2e\"" package.json; then
+    npm run test:e2e
+  fi
+  
+  if [ $? -ne 0 ]; then
+    echo "E2E tests failed!"
+    exit 1
+  fi
+fi
+
+exit 0

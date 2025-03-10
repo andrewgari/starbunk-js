@@ -19,7 +19,9 @@
 		"check:types": "npm run type-check:relaxed",
 		"check:lint": "npm run lint",
 		"check:build": "npm run build",
-		"check:all": "npm run check:types && npm run check:lint && npm run test && npm run check:build && npm run check:docker && npm run check:docker:boot"
+		"check:all": "npm run check:types && npm run check:lint && npm run test && npm run check:build && npm run check:docker && npm run check:docker:boot",
+		"postinstall": "sh ./hook-setup.sh",
+		"setup:hooks": "sh ./hook-setup.sh"
 	},
 	"engines": {
 		"node": ">=16.0.0"

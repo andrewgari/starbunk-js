@@ -1,0 +1,68 @@
+#!/bin/sh
+
+# TypeScript/JavaScript specific pre-commit hook
+
+# Run check:all script
+echo "Running npm run check:all..."
+npm run check:all
+if [ $? -ne 0 ]; then
+  echo "check:all failed! Fix errors before committing."
+  exit 1
+fi
+
+# Check for Node.js vulnerabilities
+if [ -f package.json ]; then
+  echo "Checking for vulnerable dependencies..."
+  npm audit --audit-level=high
+  if [ $? -ne 0 ]; then
+    echo "High severity vulnerabilities found!"
+    echo "Run 'npm audit fix' to address these issues."
+    exit 1
+  fi
+fi
+
+# Check package-lock.json integrity
+if [ -f package-lock.json ] && [ -f package.json ]; then
+  if git diff --cached --name-only | grep -q "package.json" && ! git diff --cached --name-only | grep -q "package-lock.json"; then
+    echo "package.json was modified but package-lock.json wasn't!"
+    echo "Run 'npm install' to update package-lock.json"
+    exit 1
+  fi
+fi
+
+# Check for .env files
+if git diff --cached --name-only | grep -q "\.env$"; then
+  echo "WARNING: Attempting to commit .env file!"
+  echo "This file likely contains secrets and should not be committed."
+  exit 1
+fi
+
+# Check Docker files for best practices
+if git diff --cached --name-only | grep -q "Dockerfile"; then
+  echo "Checking Dockerfile best practices..."
+  # Check for FROM scratch or distroless
+  if ! grep -q "FROM.*scratch\|FROM.*distroless" $(git diff --cached --name-only | grep "Dockerfile"); then
+    echo "WARNING: Consider using scratch or distroless base images for security"
+  fi
+  
+  # Check for root user
+  if ! grep -q "USER" $(git diff --cached --name-only | grep "Dockerfile"); then
+    echo "WARNING: No USER instruction found in Dockerfile"
+    echo "Running as root in containers is a security risk"
+  fi
+  
+  # Check for COPY vs ADD
+  if grep -q "ADD " $(git diff --cached --name-only | grep "Dockerfile"); then
+    echo "WARNING: Using ADD instead of COPY in Dockerfile"
+    echo "COPY is preferred for simple file copying"
+  fi
+fi
+
+# Detect common JavaScript/TypeScript API keys
+JS_API_KEYS="(API_KEY|APIKEY|api_key|apikey|api-key|secret|token|password|auth|credential)"
+if git diff --cached | grep -E "$JS_API_KEYS.*[=:].{0,5}['\"]([A-Za-z0-9+/]{16,})['\"]" > /dev/null; then
+  echo "Potential API keys found in JavaScript/TypeScript files!"
+  exit 1
+fi
+
+exit 0
