@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import userId from '../../../discord/userId';
 import { OpenAIClient } from '../../../openai/openaiClient';
-import { ILogger } from '../../../services/logger';
+import { logger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
@@ -9,16 +9,12 @@ import ReplyBot from '../replyBot';
 export default class BlueBot extends ReplyBot {
 	private _blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private _blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
-	private _avatarUrl: string = BlueBotConfig.Avatars.Default;
+	protected avatarUrl = BlueBotConfig.Avatars.Default;
 
-	public readonly botName: string = BlueBotConfig.Name;
+	public readonly botName = BlueBotConfig.Name;
 
-	constructor(logger?: ILogger) {
-		super(logger);
-	}
-
-	get avatarUrl(): string {
-		return this._avatarUrl;
+	constructor() {
+		super();
 	}
 
 	get blueTimestamp(): Date {
@@ -29,51 +25,45 @@ export default class BlueBot extends ReplyBot {
 		return this._blueMurderTimestamp;
 	}
 
-	async handleMessage(message: Message<boolean>): Promise<void> {
+	async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
-		if (this.isSomeoneAskingYouToBeBlue(message)) {
-			this.logger.debug(`User ${message.author.username} asked BlueBot to be nice`);
-			const content = message.content;
-			const isNice = BlueBotConfig.Patterns.Nice?.test(content);
+		const content = message.content.toLowerCase();
+		const channel = message.channel as TextChannel;
 
-			if (isNice) {
-				this.logger.debug(`${message.author.username} asked about Venn - responding with contempt`);
-				this.sendReply(
-					message.channel as TextChannel,
-					BlueBotConfig.Responses.Request(content)
-				);
-			}
-
-			return;
-		}
-
-		if (this.isVennInsultingBlu(message)) {
-			this.logger.warn(`Venn is being mean again! Message: "${message.content}"`);
-			this._blueMurderTimestamp = new Date();
-			this._avatarUrl = BlueBotConfig.Avatars.Murder;
-			this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Murder);
-			return;
-		}
-
-		if (this.isSomeoneRespondingToBlu(message)) {
-			this._blueTimestamp = new Date(1);
-			this._avatarUrl = BlueBotConfig.Avatars.Cheeky;
-			this.sendReply(message.channel as TextChannel, BlueBotConfig.getRandomCheekyResponse());
-			return;
-		}
-
-		const content = message.content;
-		const hasBlue = BlueBotConfig.Patterns.Default?.test(content);
-
-		if (hasBlue) {
+		// Check for direct blue references
+		if (content.includes('blue')) {
 			this._blueTimestamp = new Date();
-			this._avatarUrl = BlueBotConfig.Avatars.Default;
-			this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Default);
+			logger.debug(`BlueBot responding to message: ${content}`);
+			await this.sendReply(channel, BlueBotConfig.Responses.Default);
 			return;
-		} else if (await this.checkIfBlueIsSaid(message)) {
-			this.logger.debug('AI detected blue reference in message');
-			this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Default);
+		}
+
+		// Check if Venn is insulting Blu
+		if (this.isVennInsultingBlu(message)) {
+			this._blueMurderTimestamp = new Date();
+			await this.sendReply(channel, BlueBotConfig.Responses.Murder);
+			return;
+		}
+
+		// Check if someone is asking Blu to be nice
+		if (this.isSomeoneAskingYouToBeBlue(message)) {
+			await this.sendReply(channel, BlueBotConfig.Responses.Request(message.content));
+			return;
+		}
+
+		// Check if someone is responding to Blu
+		if (this.isSomeoneRespondingToBlu(message)) {
+			const responses = BlueBotConfig.Responses.Cheeky;
+			const randomIndex = Math.floor(Math.random() * responses.length);
+			await this.sendReply(channel, responses[randomIndex]);
+			return;
+		}
+
+		// Use AI to check for indirect blue references
+		if (await this.checkIfBlueIsSaid(message)) {
+			this._blueTimestamp = new Date();
+			await this.sendReply(channel, BlueBotConfig.Responses.Default);
 		}
 	}
 
@@ -89,8 +79,9 @@ export default class BlueBot extends ReplyBot {
 	}
 
 	private isVennInsultingBlu(message: Message): boolean {
-		const isVenn = message.author.id === userId.Venn;
-		if (!isVenn) return false;
+		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Venn;
+		const isTargetUser = message.author.id === targetUserId;
+		if (!isTargetUser) return false;
 
 		const content = message.content;
 		const isMean = BlueBotConfig.Patterns.Mean?.test(content);
@@ -109,7 +100,7 @@ export default class BlueBot extends ReplyBot {
 
 	private async checkIfBlueIsSaid(message: Message): Promise<boolean> {
 		try {
-			this.logger.debug('Checking message for blue references via AI');
+			logger.debug('Checking message for blue references via AI');
 			const response = await OpenAIClient.chat.completions.create({
 				model: 'gpt-4o-mini',
 				messages: [
@@ -155,10 +146,10 @@ export default class BlueBot extends ReplyBot {
 				temperature: 0.2,
 			});
 
-			this.logger.debug(`AI response: ${response.choices[0].message.content}`);
+			logger.debug(`AI response: ${response.choices[0].message.content}`);
 			return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
 		} catch (error) {
-			this.logger.error('Error checking for blue reference', error as Error);
+			logger.error('Error checking for blue reference', error as Error);
 			return false;
 		}
 	}

@@ -1,32 +1,18 @@
-import { Message, TextChannel } from 'discord.js';
-import userId from '../../../discord/userId';
-import { ILogger } from '../../../services/logger';
-import random from '../../../utils/random';
-import { MacaroniBotConfig } from '../config/macaroniBotConfig';
+import { Message } from 'discord.js';
+import { logger } from '../../../services/logger';
 import ReplyBot from '../replyBot';
 
 export default class MacaroniBot extends ReplyBot {
+	public readonly botName = 'Macaroni Bot';
+	protected readonly avatarUrl = 'https://imgur.com/Tpo8Ywd.jpg';
 
-	constructor(logger?: ILogger) {
-		super(logger);
-	}
-
-	public readonly botName: string = MacaroniBotConfig.Name;
-	public readonly avatarUrl: string = MacaroniBotConfig.Avatars.Default;
-
-	defaultBotName(): string {
-		return 'MacaroniBot';
-	}
-
-	async handleMessage(message: Message<boolean>): Promise<void> {
+	handleMessage(message: Message): void {
 		if (message.author.bot) return;
 
-		const vennRandom = random.percentChance(5) && message.author.id === userId.Venn;
-		const mentionsBanana = MacaroniBotConfig.Patterns.Macaroni?.test(message.content);
-
-		if (vennRandom || mentionsBanana) {
-			this.logger.debug(`🍝 User ${message.author.username} mentioned macaroni: "${message.content}"`);
-			this.sendReply(message.channel as TextChannel, MacaroniBotConfig.Responses.Default(message.content));
+		const content = message.content.toLowerCase();
+		if (content.includes('macaroni')) {
+			logger.debug(`MacaroniBot responding to message: ${content}`);
+			message.reply('🧀 Macaroni and cheese is the best! 🧀');
 		}
 	}
 }

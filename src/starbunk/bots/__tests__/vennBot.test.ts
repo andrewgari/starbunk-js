@@ -6,6 +6,7 @@ jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 }));
 
 import { Message } from 'discord.js';
+
 // Import test dependencies
 
 import userId from '../../../discord/userId';
@@ -15,7 +16,7 @@ import random from '../../../utils/random';
 import VennBot from '../reply-bots/vennBot';
 import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
 
-describe.only('VennBot', () => {
+describe('VennBot', () => {
 	let vennBot: VennBot;
 	let message: Message<boolean>;
 	let mockWebhookService: MockWebhookService;

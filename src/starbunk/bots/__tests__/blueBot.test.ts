@@ -30,10 +30,15 @@ jest.mock('../config/blueBotConfig', () => ({
 	}
 }));
 
+import { Message } from 'discord.js';
 import userID from '../../../discord/userId';
 import { OpenAIClient } from '../../../openai/openaiClient';
+import { getWebhookService } from '../../../services/bootstrap';
+import { BlueBotConfig } from '../config/blueBotConfig';
 import BlueBot from '../reply-bots/blueBot';
-import { MockLogger, MockWebhookService, createMockMessage } from './testUtils';
+import { MockWebhookService, createMockMessage } from './testUtils';
+
+jest.mock('../../../services/bootstrap');
 
 // Mock OpenAI client
 jest.mock('../../../openai/openaiClient', () => ({
@@ -48,22 +53,37 @@ jest.mock('../../../openai/openaiClient', () => ({
 
 describe('BlueBot', () => {
 	let blueBot: BlueBot;
-	let mockLogger: MockLogger;
 	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
-		// Arrange - Set up our test environment
-		mockLogger = new MockLogger();
 		mockWebhookService = new MockWebhookService();
-
-		// Create the bot with our mocks
-		blueBot = new BlueBot(mockLogger);
-		// @ts-expect-error - Set the webhook service property directly
-		blueBot.webhookService = mockWebhookService;
+		(getWebhookService as jest.Mock).mockReturnValue(mockWebhookService);
+		blueBot = new BlueBot();
 	});
 
 	afterEach(() => {
 		jest.clearAllMocks();
+	});
+
+	it('should respond to messages containing "blue"', async () => {
+		const message = createMockMessage('I love blue!') as Message;
+		await blueBot.handleMessage(message);
+		expect(mockWebhookService.messages.length).toBe(1);
+		const lastMessage = mockWebhookService.getLastMessage();
+		expect(lastMessage?.content).toBe(BlueBotConfig.Responses.Default);
+		expect(lastMessage?.username).toBe(BlueBotConfig.Name);
+	});
+
+	it('should not respond to bot messages', async () => {
+		const message = createMockMessage('blue', undefined, true) as Message;
+		await blueBot.handleMessage(message);
+		expect(mockWebhookService.messages.length).toBe(0);
+	});
+
+	it('should not respond to messages without "blue"', async () => {
+		const message = createMockMessage('hello world') as Message;
+		await blueBot.handleMessage(message);
+		expect(mockWebhookService.messages.length).toBe(0);
 	});
 
 	it('should respond when someone says "blue"', async () => {
@@ -93,16 +113,6 @@ describe('BlueBot', () => {
 
 		// Act
 		await blueBot.handleMessage(message);
-	});
-	it('should not respond to bot messages', async () => {
-		// Arrange
-		const message = createMockMessage('blue', '123456789', true);
-
-		// Act
-		await blueBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
 	it('should respond to "be nice about" requests', async () => {
@@ -162,7 +172,6 @@ describe('BlueBot', () => {
 				content: expect.stringContaining("What the fuck did you just fucking say about me")
 			})
 		);
-		expect(blueBot.avatarUrl).toEqual('https://imgur.com/Tpo8Ywd.jpg');
 	});
 
 	it('should respond when AI detects a blue reference', async () => {

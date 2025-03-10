@@ -1,74 +1,113 @@
 import { Client, Message, TextChannel, User } from 'discord.js';
-import { ILogger } from '../../../services/logger';
-import container from '../../../services/serviceContainer';
-import { serviceRegistry } from '../../../services/serviceRegistry';
+import { MessageInfo } from '../../../discord/messageInfo';
 import { IWebhookService } from '../../../webhooks/webhookService';
-
-// Mock Logger
-export class MockLogger implements ILogger {
-	debug = jest.fn();
-	info = jest.fn();
-	warn = jest.fn();
-	error = jest.fn();
-	fatal = jest.fn();
-	success = jest.fn();
-}
 
 // Mock WebhookService
 export class MockWebhookService implements IWebhookService {
-	writeMessage = jest.fn().mockResolvedValue({} as Message<boolean>);
-	getChannelWebhook = jest.fn().mockResolvedValue({});
-	getWebhook = jest.fn().mockResolvedValue({});
-	setWebhook = jest.fn();
-	updateWebhook = jest.fn();
-	createWebhook = jest.fn();
-	deleteWebhook = jest.fn();
-	findExistingWebhook = jest.fn();
-	getAllWebhooks = jest.fn();
+	messages: Array<{ channel?: TextChannel; message: MessageInfo }> = [];
+	
+	writeMessage = jest.fn().mockImplementation(async (channel: TextChannel, message: MessageInfo): Promise<void> => {
+		this.messages.push({ channel, message });
+	});
+
+	sendMessage = jest.fn().mockImplementation(async (message: MessageInfo): Promise<void> => {
+		this.messages.push({ message });
+	});
+
+	clear(): void {
+		this.messages = [];
+		this.writeMessage.mockClear();
+		this.sendMessage.mockClear();
+	}
+
+	getLastMessage(): MessageInfo | undefined {
+		return this.messages[this.messages.length - 1]?.message;
+	}
 }
 
+// Automatically mock the WebhookService for all tests
+jest.mock('../../../webhooks/webhookService', () => {
+	const mockWebhookService = {
+		writeMessage: jest.fn().mockResolvedValue({}),
+		sendMessage: jest.fn().mockResolvedValue({}),
+	};
+	return {
+		__esModule: true,
+		default: mockWebhookService,
+	};
+});
+
+// Mock OpenAI client
+jest.mock('../../../openai/openaiClient', () => ({
+	OpenAIClient: {
+		chat: {
+			completions: {
+				create: jest.fn().mockResolvedValue({
+					choices: [
+						{
+							message: {
+								content: 'yes'
+							}
+						}
+					]
+				})
+			}
+		}
+	}
+}));
+
 // Create a mock Discord message
-export function createMockMessage(content: string, authorId: string = '123456789', isBot: boolean = false): Message {
-	const mockAuthor = {
-		id: authorId,
+export function createMockMessage(content: string, userId?: string, isBot = false): Message {
+	const mockUser = {
 		bot: isBot,
-		username: 'MockUser',
+		id: userId || '123',
+		tag: 'test#1234',
+		username: 'test',
 		displayAvatarURL: () => 'https://example.com/avatar.png'
 	} as User;
 
 	const mockClient = {
 		user: {
-			id: '987654321'
+			id: '456'
 		}
 	} as Client;
 
 	const mockChannel = {
-		id: '111222333',
-		send: jest.fn()
+		id: '789',
+		name: 'test-channel',
+		send: jest.fn(),
+		type: 0,
+		fetchWebhooks: jest.fn().mockResolvedValue([]),
+		createWebhook: jest.fn().mockResolvedValue({
+			id: 'webhook123',
+			name: 'BotWebhook',
+			send: jest.fn().mockResolvedValue({})
+		})
 	} as unknown as TextChannel;
 
 	return {
 		content,
-		author: mockAuthor,
+		author: mockUser,
 		client: mockClient,
 		channel: mockChannel,
 		createdTimestamp: new Date().getTime(),
-		id: '444555666',
-		isSelf: jest.fn().mockReturnValue(false)
+		id: '999',
+		_cacheType: 0,
+		_patch: jest.fn(),
+		delete: jest.fn(),
+		edit: jest.fn(),
+		fetch: jest.fn(),
+		reply: jest.fn(),
+		react: jest.fn(),
+		pin: jest.fn(),
+		unpin: jest.fn()
 	} as unknown as Message;
 }
 
 // Setup test container with mocks
 export function setupTestContainer(): void {
 	// Clear the container first
-	container.clear();
-
-	// Register mock services
-	const mockLogger = new MockLogger();
-	const mockWebhookService = new MockWebhookService();
-
-	container.register(serviceRegistry.LOGGER, mockLogger);
-	container.register(serviceRegistry.WEBHOOK_SERVICE, mockWebhookService);
+	jest.resetModules();
 }
 
 // Setup common bot mocks

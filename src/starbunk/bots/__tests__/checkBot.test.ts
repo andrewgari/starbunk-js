@@ -1,20 +1,17 @@
+import { getWebhookService } from '../../../services/bootstrap';
 import CheckBot from '../reply-bots/checkBot';
-import { MockLogger, MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
+import { MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
+
+jest.mock('../../../services/bootstrap');
 
 describe('CheckBot', () => {
 	let checkBot: CheckBot;
-	let mockLogger: MockLogger;
 	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
-		// Arrange - Set up our test environment
-		mockLogger = new MockLogger();
 		mockWebhookService = new MockWebhookService();
-
-		// Create the bot with our mocks
-		checkBot = new CheckBot(mockLogger);
-		// @ts-expect-error - Set the webhook service property directly
-		checkBot.webhookService = mockWebhookService;
+		(getWebhookService as jest.Mock).mockReturnValue(mockWebhookService);
+		checkBot = new CheckBot();
 	});
 
 	afterEach(() => {

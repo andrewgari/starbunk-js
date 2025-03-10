@@ -9,98 +9,61 @@ export enum LogLevel {
 }
 
 // SUCCESS has the same level as INFO
-const SUCCESS_LEVEL = LogLevel.INFO;
 
-export interface ILogger {
-	info(message: string): void;
-	success(message: string): void;
-	warn(message: string): void;
-	error(message: string, error?: Error): void;
-	debug(message: string): void;
-}
+export class Logger {
+	private static instance: Logger;
 
-export class Logger implements ILogger {
-	private static logLevel: LogLevel = LogLevel.INFO;
-
-	static {
-		// Initialize log level from environment
-		const envLogLevel = process.env.DEBUG_LOG_LEVEL 
-			? parseInt(process.env.DEBUG_LOG_LEVEL, 10) 
-			: undefined;
-			
-		if (envLogLevel !== undefined && !isNaN(envLogLevel) && envLogLevel >= 0 && envLogLevel <= 4) {
-			this.logLevel = envLogLevel;
-		} else if (process.env.DEBUG === 'true') {
-			this.logLevel = LogLevel.DEBUG;
+	static getInstance(): Logger {
+		if (!Logger.instance) {
+			Logger.instance = new Logger();
 		}
+		return Logger.instance;
 	}
 
-	private static formatMessage(message: string, emoji: string): string {
+	private formatMessage(message: string, icon = ''): string {
 		const timestamp = new Date().toISOString();
-		return `${emoji}  ${chalk.gray(timestamp)} ${message}`;
+		return `${icon} [${timestamp}] ${message}`;
 	}
 
-	private static shouldLog(level: LogLevel): boolean {
-		return level <= this.logLevel;
+	private getCallerInfo(): string {
+		const error = new Error();
+		const stack = error.stack?.split('\n')[3];
+		if (!stack) return '';
+		const match = stack.match(/at\s+(\S+)\s+\((.+):(\d+):(\d+)\)/);
+		if (!match) return '';
+		const [, func, file, line] = match;
+		return ` (${func} at ${file}:${line})`;
 	}
 
-	static info(message: string): void {
-		if (this.shouldLog(LogLevel.INFO)) {
-			// eslint-disable-next-line no-console
-			console.log(this.formatMessage(message, '📝'));
-		}
-	}
-
-	static success(message: string): void {
-		if (this.shouldLog(SUCCESS_LEVEL)) {
-			// eslint-disable-next-line no-console
-			console.log(this.formatMessage(chalk.green(message), '✅'));
-		}
-	}
-
-	static warn(message: string): void {
-		if (this.shouldLog(LogLevel.WARN)) {
-			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'));
-		}
-	}
-
-	static error(message: string, error?: Error): void {
-		if (this.shouldLog(LogLevel.ERROR)) {
-			console.error(this.formatMessage(chalk.red(message), '❌'));
-			if (error?.stack) {
-				console.error(chalk.red(error.stack));
-			}
-		}
-	}
-
-	static debug(message: string): void {
-		if (this.shouldLog(LogLevel.DEBUG)) {
-			// eslint-disable-next-line no-console
-			console.log(this.formatMessage(chalk.blue(message), '🔍'));
-		}
-	}
-
-	// Instance methods that delegate to static methods
 	info(message: string): void {
-		Logger.info(message);
+		// eslint-disable-next-line no-console
+		console.log(this.formatMessage(message, '📝'));
 	}
 
 	success(message: string): void {
-		Logger.success(message);
+		// eslint-disable-next-line no-console
+		console.log(this.formatMessage(chalk.green(message), '✅'));
 	}
 
 	warn(message: string): void {
-		Logger.warn(message);
+		console.warn(this.formatMessage(chalk.yellow(message), '⚠️'));
 	}
 
 	error(message: string, error?: Error): void {
-		Logger.error(message, error);
+		console.error(this.formatMessage(chalk.red(message), '❌'));
+		if (error?.stack) {
+			console.error(chalk.red(error.stack));
+		}
 	}
 
 	debug(message: string): void {
-		Logger.debug(message);
+		if (process.env.DEBUG_MODE === 'true') {
+			const callerInfo = this.getCallerInfo();
+			// eslint-disable-next-line no-console
+			console.log(this.formatMessage(chalk.blue(message) + callerInfo, '🔍'));
+		}
 	}
 }
 
-// Singleton instance for backward compatibility
-export const defaultLogger = new Logger();
+// Export a singleton instance
+export const logger = Logger.getInstance();

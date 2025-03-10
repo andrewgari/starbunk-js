@@ -9,7 +9,7 @@ export default {
 		const client = getStarbunkClient(interaction);
 		if (client) {
 			client.getMusicPlayer().stop();
-			const connection = getVoiceConnection(interaction.guild?.id ?? guildIds.StarbunkCrusaders);
+			const connection = getVoiceConnection(interaction.guild?.id ?? guildIds.CovaDaxServer);
 			connection?.disconnect();
 		}
 	},
