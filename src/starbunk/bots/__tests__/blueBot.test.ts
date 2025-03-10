@@ -39,7 +39,6 @@ import BlueBot from '../reply-bots/blueBot';
 import { MockWebhookService, createMockMessage } from './testUtils';
 
 jest.mock('../../../services/bootstrap');
-jest.mock('../../../services/container');
 
 // Mock OpenAI client
 jest.mock('../../../openai/openaiClient', () => ({

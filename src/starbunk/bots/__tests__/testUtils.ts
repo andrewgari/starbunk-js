@@ -5,23 +5,56 @@ import { IWebhookService } from '../../../webhooks/webhookService';
 // Mock WebhookService
 export class MockWebhookService implements IWebhookService {
 	messages: Array<{ channel?: TextChannel; message: MessageInfo }> = [];
-
-	async sendMessage(message: MessageInfo): Promise<void> {
-		this.messages.push({ message });
-	}
-
-	async writeMessage(channel: TextChannel, message: MessageInfo): Promise<void> {
+	
+	writeMessage = jest.fn().mockImplementation(async (channel: TextChannel, message: MessageInfo): Promise<void> => {
 		this.messages.push({ channel, message });
-	}
+	});
+
+	sendMessage = jest.fn().mockImplementation(async (message: MessageInfo): Promise<void> => {
+		this.messages.push({ message });
+	});
 
 	clear(): void {
 		this.messages = [];
+		this.writeMessage.mockClear();
+		this.sendMessage.mockClear();
 	}
 
 	getLastMessage(): MessageInfo | undefined {
 		return this.messages[this.messages.length - 1]?.message;
 	}
 }
+
+// Automatically mock the WebhookService for all tests
+jest.mock('../../../webhooks/webhookService', () => {
+	const mockWebhookService = {
+		writeMessage: jest.fn().mockResolvedValue({}),
+		sendMessage: jest.fn().mockResolvedValue({}),
+	};
+	return {
+		__esModule: true,
+		default: mockWebhookService,
+	};
+});
+
+// Mock OpenAI client
+jest.mock('../../../openai/openaiClient', () => ({
+	OpenAIClient: {
+		chat: {
+			completions: {
+				create: jest.fn().mockResolvedValue({
+					choices: [
+						{
+							message: {
+								content: 'yes'
+							}
+						}
+					]
+				})
+			}
+		}
+	}
+}));
 
 // Create a mock Discord message
 export function createMockMessage(content: string, userId?: string, isBot = false): Message {
@@ -43,7 +76,13 @@ export function createMockMessage(content: string, userId?: string, isBot = fals
 		id: '789',
 		name: 'test-channel',
 		send: jest.fn(),
-		type: 0
+		type: 0,
+		fetchWebhooks: jest.fn().mockResolvedValue([]),
+		createWebhook: jest.fn().mockResolvedValue({
+			id: 'webhook123',
+			name: 'BotWebhook',
+			send: jest.fn().mockResolvedValue({})
+		})
 	} as unknown as TextChannel;
 
 	return {
@@ -51,7 +90,7 @@ export function createMockMessage(content: string, userId?: string, isBot = fals
 		author: mockUser,
 		client: mockClient,
 		channel: mockChannel,
-		createdTimestamp: Date.now(),
+		createdTimestamp: new Date().getTime(),
 		id: '999',
 		_cacheType: 0,
 		_patch: jest.fn(),

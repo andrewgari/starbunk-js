@@ -9,7 +9,6 @@ export enum LogLevel {
 }
 
 // SUCCESS has the same level as INFO
-const SUCCESS_LEVEL = LogLevel.INFO;
 
 export class Logger {
 	private static instance: Logger;

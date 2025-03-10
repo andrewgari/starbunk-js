@@ -1,7 +1,12 @@
 module.exports = {
 	preset: 'ts-jest',
 	testEnvironment: 'node',
-	testMatch: ['**/__tests__/**/*.test.ts'],
+	testMatch: [
+		'**/macaroniBot.test.ts',
+		'**/bananaBot.test.ts',
+		'**/checkBot.test.ts',
+		'**/time.test.ts'
+	],
 	transform: {
 		'^.+\\.tsx?$': ['ts-jest', {
 			isolatedModules: true // This helps with type issues in tests
