@@ -1,6 +1,6 @@
 {
 	"name": "bunkbot",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "it's bot that says blu, among things...",
 	"scripts": {
 		"build": "tsc",

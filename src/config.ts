@@ -4,13 +4,13 @@ import loggerAdapter from './services/loggerAdapter';
 
 switch (process.env.NODE_ENV) {
 	case 'development':
-		loggerAdapter.info('🔧 Loading development environment configuration');
+		loggerAdapter.debug('🔧 Loading development environment configuration');
 		configDotenv({
 			path: resolve(__dirname, '../.env.development'),
 		});
 		break;
 	case 'test':
-		loggerAdapter.info('🧪 Loading test environment configuration');
+		loggerAdapter.debug('🧪 Loading test environment configuration');
 		configDotenv({
 			path: resolve(__dirname, '../.env.test'),
 		});
@@ -31,11 +31,11 @@ const throwIfNot = function <T, K extends keyof T>(obj: Partial<T>, prop: K, msg
 	return obj[prop] as T[K];
 };
 
-loggerAdapter.info('🔍 Validating environment variables...');
+loggerAdapter.debug('🔍 Validating environment variables...');
 ['AUTHENTICATION_API_URL', 'GRAPHQL_API_URL'].forEach((v) => {
 	throwIfNot(process.env, v);
 });
-loggerAdapter.success('✅ Environment validation complete');
+loggerAdapter.debug('✅ Environment validation complete');
 
 interface IProcessEnv {
 	AUTHENTICATION_API_URL: string;
