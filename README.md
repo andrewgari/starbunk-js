@@ -115,7 +115,7 @@ The application includes a comprehensive debug mode that helps with development 
 
 ### Features
 
-- **Log Levels**: Control verbosity (NONE, ERROR, WARN, INFO, DEBUG, TRACE)
+- **Log Levels**: Control verbosity (NONE, ERROR, WARN, INFO, DEBUG)
 - **Command Tracing**: Track command execution with timing information
 - **Event Tracing**: Monitor Discord events with detailed payload logging
 - **API Tracing**: Log API calls with request/response details
@@ -129,8 +129,8 @@ Debug mode can be configured through environment variables:
 
 ```
 # Debug Configuration
-DEBUG=true                      # Master switch for debug mode
-DEBUG_LOG_LEVEL=4               # 0=NONE, 1=ERROR, 2=WARN, 3=INFO, 4=DEBUG, 5=TRACE
+DEBUG=true                      # Master switch for debug mode (sets log level to DEBUG)
+DEBUG_LOG_LEVEL=4               # 0=NONE, 1=ERROR, 2=WARN, 3=INFO, 4=DEBUG
 DEBUG_COMMAND_TRACING=true      # Enable command execution tracing
 DEBUG_EVENT_TRACING=true        # Enable Discord event tracing
 DEBUG_API_TRACING=true          # Enable API call tracing

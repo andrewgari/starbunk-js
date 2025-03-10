@@ -1,5 +1,16 @@
 import chalk from 'chalk';
 
+export enum LogLevel {
+	NONE = 0,
+	ERROR = 1,
+	WARN = 2,
+	INFO = 3,
+	DEBUG = 4,
+}
+
+// SUCCESS has the same level as INFO
+const SUCCESS_LEVEL = LogLevel.INFO;
+
 export class Logger {
 	private static instance: Logger;
 

@@ -1,6 +1,6 @@
 {
 	"name": "bunkbot",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "it's bot that says blu, among things...",
 	"scripts": {
 		"build": "tsc",
@@ -19,7 +19,7 @@
 		"check:types": "npm run type-check:relaxed",
 		"check:lint": "npm run lint",
 		"check:build": "npm run build",
-		"check:all": "npm run check:types && npm run check:lint && npm run check:build && npm run check:docker && npm run check:docker:boot"
+		"check:all": "npm run check:types && npm run check:lint && npm run test && npm run check:build && npm run check:docker && npm run check:docker:boot"
 	},
 	"engines": {
 		"node": ">=16.0.0"
