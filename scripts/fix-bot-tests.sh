@@ -14,7 +14,8 @@ for test_file in $(find src/starbunk/bots/__tests__ -name "*.test.ts" | sort); d
 
   # Extract bot name from filename
   filename=${test_file##*/}
-  bot_name=${filename%%.test.ts}
+  test_name=${filename%%.test.ts}
+  echo "Processing test file: $test_name"
 
   # Add the mock for botConfig module if missing
   if ! grep -q "jest.mock('../botConfig'" "$test_file"; then

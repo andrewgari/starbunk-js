@@ -147,8 +147,7 @@ echo "Updated testUtils.ts with improved mocking"
 # Now fix each bot test file with a base template
 for file in $(find src/starbunk/bots/__tests__/ -name "*.test.ts" -not -name "testUtils.ts" | sort); do
   bot_name=$(basename "$file" .test.ts)
-  snake_name=$(echo "$bot_name" | sed -r 's/(^|-)([a-z])/\U\2/g')
-  pascal_name=$(echo "$snake_name" | sed -r 's/(^|_)([a-z])/\U\2/g')
+  pascal_name=$(echo "$bot_name" | sed -r 's/(^|-)([a-z])/\U\2/g')
   pascal_name="${pascal_name}Bot"
 
   echo "Fixing $file for $pascal_name"
