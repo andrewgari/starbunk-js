@@ -1,11 +1,16 @@
 import { Message, TextChannel } from 'discord.js';
 import userId from '../../../discord/userId';
-import { OpenAIClient } from '../../../openai/openaiClient';
-import { logger } from '../../../services/logger';
+import { Logger } from '../../../services/logger';
+import { OpenAIClient, Service, ServiceId } from '../../../services/services';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
 
+@Service({
+	id: ServiceId.BlueBot,
+	dependencies: [ServiceId.Logger, ServiceId.OpenAIClient],
+	scope: 'singleton'
+})
 export default class BlueBot extends ReplyBot {
 	private _blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private _blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
@@ -13,7 +18,10 @@ export default class BlueBot extends ReplyBot {
 
 	public readonly botName = BlueBotConfig.Name;
 
-	constructor() {
+	constructor(
+		private logger: Logger,
+		private openAIClient: OpenAIClient
+	) {
 		super();
 	}
 
@@ -34,7 +42,7 @@ export default class BlueBot extends ReplyBot {
 		// Check for direct blue references
 		if (content.includes('blue')) {
 			this._blueTimestamp = new Date();
-			logger.debug(`BlueBot responding to message: ${content}`);
+			this.logger.debug(`BlueBot responding to message: ${content}`);
 			await this.sendReply(channel, BlueBotConfig.Responses.Default);
 			return;
 		}
@@ -100,42 +108,42 @@ export default class BlueBot extends ReplyBot {
 
 	private async checkIfBlueIsSaid(message: Message): Promise<boolean> {
 		try {
-			logger.debug('Checking message for blue references via AI');
-			const response = await OpenAIClient.chat.completions.create({
+			this.logger.debug('Checking message for blue references via AI');
+			const response = await this.openAIClient.chat.completions.create({
 				model: 'gpt-4o-mini',
 				messages: [
 					{
 						role: 'system',
 						content: `You are an assistant that analyzes text to determine if it refers to the color blue, including any misspellings, indirect, or deceptive references.
-          Respond only with "yes" if it refers to blue in any way or "no" if it does not. The color blue is a reference to Blue Mage (BLU) from Final Fantasy XIV so pay extra attention when talking about Final Fantasy XIV. Examples:
-          - "bloo" -> yes
-          - "blood" -> no
-          - "blu" -> yes
-          - "bl u" -> yes
-          - "azul" -> yes
-          - "my favorite color is the sky's hue" -> yes
-          - "i really like cova's favorite color" -> yes
-          - "the sky is red" -> yes
-          - "blueberry" -> yes
-          - "blubbery" -> no
-          - "blu mage" -> yes
-          - "my favorite job is blu" -> yes
-          - "my favorite job is blue mage" -> yes
-          - "my favorite job is red mage" -> no
-          - "lets do some blu content" -> yes
-          - "the sky is blue" -> yes
-          - "purple-red" -> yes
-          - "not red" -> yes
-          - "the best content in final fantasy xiv" -> yes
-          - "the worst content in final fantasy xiv" -> yes
-          - "the job with a mask and cane" -> yes
-          - "the job that blows themselves up" -> yes
-          - "the job that sucks" -> yes
-          - "beastmaster" -> yes
-          - "limited job" -> yes
-          - "https://www.the_color_blue.com/blue/bloo/blau/azure/azul" -> no
-          - "strawberries are red" -> no
-          - "#0000FF" -> yes`,
+						Respond only with "yes" if it refers to blue in any way or "no" if it does not. The color blue is a reference to Blue Mage (BLU) from Final Fantasy XIV so pay extra attention when talking about Final Fantasy XIV. Examples:
+						- "bloo" -> yes
+						- "blood" -> no
+						- "blu" -> yes
+						- "bl u" -> yes
+						- "azul" -> yes
+						- "my favorite color is the sky's hue" -> yes
+						- "i really like cova's favorite color" -> yes
+						- "the sky is red" -> yes
+						- "blueberry" -> yes
+						- "blubbery" -> no
+						- "blu mage" -> yes
+						- "my favorite job is blu" -> yes
+						- "my favorite job is blue mage" -> yes
+						- "my favorite job is red mage" -> no
+						- "lets do some blu content" -> yes
+						- "the sky is blue" -> yes
+						- "purple-red" -> yes
+						- "not red" -> yes
+						- "the best content in final fantasy xiv" -> yes
+						- "the worst content in final fantasy xiv" -> yes
+						- "the job with a mask and cane" -> yes
+						- "the job that blows themselves up" -> yes
+						- "the job that sucks" -> yes
+						- "beastmaster" -> yes
+						- "limited job" -> yes
+						- "https://www.the_color_blue.com/blue/bloo/blau/azure/azul" -> no
+						- "strawberries are red" -> no
+						- "#0000FF" -> yes`,
 					},
 					{
 						role: 'user',
@@ -146,10 +154,10 @@ export default class BlueBot extends ReplyBot {
 				temperature: 0.2,
 			});
 
-			logger.debug(`AI response: ${response.choices[0].message.content}`);
+			this.logger.debug(`AI response: ${response.choices[0].message.content}`);
 			return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
 		} catch (error) {
-			logger.error('Error checking for blue reference', error as Error);
+			this.logger.error('Error checking for blue reference', error as Error);
 			return false;
 		}
 	}

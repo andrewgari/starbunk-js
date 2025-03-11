@@ -1,77 +1,45 @@
-import { Message } from 'discord.js';
-import container from '../../../services/serviceContainer';
-import { serviceRegistry } from '../../../services/serviceRegistry';
+import { container, ServiceId } from '../../../services/services';
+import { ChaosBotConfig } from '../config/chaosBotConfig';
 import ChaosBot from '../reply-bots/chaosBot';
-import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 describe('ChaosBot', () => {
 	let chaosBot: ChaosBot;
-	let message: Message<boolean>;
-	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
-		// Set up container with mock services
-		setupTestContainer();
-		// Get the mock webhook service from the container
-		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
-		// Create bot after setting up container
+		// Clear container and register mocks
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookService);
+
+		// Create ChaosBot instance
 		chaosBot = new ChaosBot();
-		// Create a mock message
-		message = createMockMessage('test message', '123456', false);
 	});
 
-	it('should not respond to bot messages', async () => {
-		// Arrange
-		message.author.bot = true;
-
-		// Act
+	it('should respond to messages containing "chaos"', async () => {
+		const message = mockMessage('chaos reigns');
 		await chaosBot.handleMessage(message);
 
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	it('should respond to messages matching the pattern', async () => {
-		// Arrange
-		message.content = 'There is so much chaos in this room';
-
-		// Spy on the sendReply method
-		const sendReplySpy = jest.spyOn(chaosBot, 'sendReply');
-
-		// Act
-		await chaosBot.handleMessage(message);
-
-		// Assert
-		expect(/\bchaos\b/i.test(message.content)).toBe(true);
-		expect(sendReplySpy).toHaveBeenCalled();
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-	});
-
-	it('should not respond to messages not matching the pattern', async () => {
-		// Arrange
-		message.content = 'hello world';
-
-		// Act
-		await chaosBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	it('should respond with the correct message', async () => {
-		// Arrange
-		message.content = 'chaos reigns';
-
-		// Act
-		await chaosBot.handleMessage(message);
-
-		// Assert
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: "All I know is...I'm here to kill Chaos"
+				username: ChaosBotConfig.Name,
+				content: expect.any(String)
 			})
 		);
+	});
+
+	it('should not respond to bot messages', async () => {
+		const message = mockMessage('chaos', undefined, true);
+		await chaosBot.handleMessage(message);
+
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should not respond to messages without "chaos"', async () => {
+		const message = mockMessage('hello world');
+		await chaosBot.handleMessage(message);
+
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });

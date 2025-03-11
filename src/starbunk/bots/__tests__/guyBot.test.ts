@@ -10,11 +10,11 @@ jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 import { Message } from 'discord.js';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
 import userId from '../../../discord/userId';
-import container from '../../../services/serviceContainer';
-import { serviceRegistry } from '../../../services/serviceRegistry';
+import { container, ServiceId } from '../../../services/services';
 import random from '../../../utils/random';
+import { GuyBotConfig } from '../config/guyBotConfig';
 import GuyBot from '../reply-bots/guyBot';
-import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
+import { createMockMessage, mockLogger, MockWebhookService, mockWebhookService as mockWebhookServiceTest } from './testUtils';
 
 describe('GuyBot', () => {
 	let guyBot: GuyBot;
@@ -23,11 +23,12 @@ describe('GuyBot', () => {
 
 	beforeEach(() => {
 		jest.clearAllMocks();
-		// Set up container with mock services
-		setupTestContainer();
-		// Get the mock webhook service from the container
-		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
-		// Create bot after setting up container
+		// Clear container and register mocks
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookServiceTest);
+
+		// Create GuyBot instance
 		guyBot = new GuyBot();
 		// Create a mock message
 		message = createMockMessage('Hey guy, what\'s up?', '123456', false);
@@ -42,7 +43,7 @@ describe('GuyBot', () => {
 		await guyBot.handleMessage(message);
 
 		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		expect(mockWebhookServiceTest.writeMessage).not.toHaveBeenCalled();
 	});
 
 	it('should respond to messages containing "guy"', async () => {
@@ -59,7 +60,13 @@ describe('GuyBot', () => {
 		expect(/\bguy\b/i.test(message.content)).toBe(true);
 		expect(getCurrentMemberIdentity).toHaveBeenCalled();
 		expect(sendReplySpy).toHaveBeenCalled();
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+		expect(mockWebhookServiceTest.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				username: GuyBotConfig.Name,
+				content: expect.any(String)
+			})
+		);
 	});
 
 	it('should use Guy\'s identity for avatar and name', async () => {
@@ -72,7 +79,7 @@ describe('GuyBot', () => {
 		// Assert
 		expect(guyBot.avatarUrl).toBe('https://example.com/custom-guy.jpg');
 		expect(guyBot.botName).toBe('Custom Guy');
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+		expect(mockWebhookServiceTest.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
 				username: 'Custom Guy',
@@ -94,7 +101,7 @@ describe('GuyBot', () => {
 
 		// Assert
 		expect(random.percentChance).toHaveBeenCalledWith(5);
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+		expect(mockWebhookServiceTest.writeMessage).toHaveBeenCalled();
 	});
 
 	it('should not respond to messages from Guy if random check fails', async () => {
@@ -110,7 +117,7 @@ describe('GuyBot', () => {
 
 		// Assert
 		expect(random.percentChance).toHaveBeenCalledWith(5);
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		expect(mockWebhookServiceTest.writeMessage).not.toHaveBeenCalled();
 	});
 
 	it('should not respond if identity cannot be found', async () => {
@@ -125,7 +132,7 @@ describe('GuyBot', () => {
 
 		// Assert
 		expect(getCurrentMemberIdentity).toHaveBeenCalled();
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		expect(mockWebhookServiceTest.writeMessage).not.toHaveBeenCalled();
 	});
 
 	it('should not respond to messages without trigger words', async () => {
@@ -136,6 +143,6 @@ describe('GuyBot', () => {
 		await guyBot.handleMessage(message);
 
 		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		expect(mockWebhookServiceTest.writeMessage).not.toHaveBeenCalled();
 	});
 });

@@ -6,7 +6,7 @@ import ReplyBot from '../replyBot';
 export default class SheeshBot extends ReplyBot {
 	public readonly botName = SheeshBotConfig.Name;
 	protected readonly avatarUrl = SheeshBotConfig.Avatars.Default;
-	private readonly logger = Logger.getInstance();
+	private readonly logger = new Logger();
 
 	constructor() {
 		super();
