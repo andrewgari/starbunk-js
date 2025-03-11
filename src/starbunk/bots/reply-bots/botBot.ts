@@ -4,8 +4,15 @@ import { BotBotConfig } from '../config/botBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BotBot extends ReplyBot {
-	public readonly botName: string = BotBotConfig.Name;
-	public readonly avatarUrl: string = BotBotConfig.Avatars.Default;
+	protected readonly config = BotBotConfig;
+	
+	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+		return {
+			userId: '',
+			botName: BotBotConfig.Name,
+			avatarUrl: BotBotConfig.Avatars.Default
+		};
+	}
 
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (this.isSelf(message)) return;

@@ -1,28 +1,38 @@
+import { Service, ServiceId } from '@/services/services';
 import { Message, TextChannel } from 'discord.js';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
 import userId from '../../../discord/userId';
+import { Logger } from '../../../services/logger';
 import random from '../../../utils/random';
+import { BotIdentity } from '../botIdentity';
 import { VennBotConfig } from '../config/vennBotConfig';
 import ReplyBot from '../replyBot';
 
+@Service({
+	id: ServiceId.VennBot,
+	dependencies: [ServiceId.Logger],
+	scope: 'singleton'
+})
 export default class VennBot extends ReplyBot {
-	private _botName = VennBotConfig.Name;
-	private _avatarUrl = VennBotConfig.Avatars.Default;
-
-	public get botName(): string {
-		return this._botName;
+	constructor(private readonly logger: Logger) {
+		super();
 	}
 
-	protected get avatarUrl(): string {
-		return this._avatarUrl;
+	protected get botIdentity(): BotIdentity {
+		return {
+			userId: '',
+			avatarUrl: VennBotConfig.Avatars.Default,
+			botName: VennBotConfig.Name
+		};
 	}
 
 	public async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
 		const vennIdentity = await getCurrentMemberIdentity(userId.Venn, message.guild!);
-		if (vennIdentity?.avatarUrl) {
-			this._avatarUrl = vennIdentity.avatarUrl;
+		if (!vennIdentity) {
+			this.logger.error(`VennBot could not get identity for user ${userId.Venn}`);
+			return;
 		}
 
 		const content = message.content.toLowerCase();
@@ -32,7 +42,10 @@ export default class VennBot extends ReplyBot {
 		const shouldReply = (isTargetUser && random.percentChance(5)) || isCringe;
 
 		if (shouldReply) {
-			await this.sendReply(message.channel as TextChannel, VennBotConfig.Responses.Default());
+			await this.sendReply(message.channel as TextChannel, {
+				botIdentity: vennIdentity,
+				content: VennBotConfig.Responses.Default()
+			});
 		}
 	}
 }

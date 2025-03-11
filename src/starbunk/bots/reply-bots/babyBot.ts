@@ -8,8 +8,15 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class BabyBot extends ReplyBot {
-	public readonly botName: string = BabyBotConfig.Name;
-	public readonly avatarUrl: string = BabyBotConfig.Avatars.Default;
+	protected readonly config = BabyBotConfig;
+	
+	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+		return {
+			userId: '',
+			botName: BabyBotConfig.Name,
+			avatarUrl: BabyBotConfig.Avatars.Default
+		};
+	}
 
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;

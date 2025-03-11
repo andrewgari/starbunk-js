@@ -8,8 +8,13 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class ChaosBot extends ReplyBot {
-	public readonly botName: string = ChaosBotConfig.Name;
-	public readonly avatarUrl: string = ChaosBotConfig.Avatars.Default;
+	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+		return {
+			userId: '',
+			botName: ChaosBotConfig.Name,
+			avatarUrl: ChaosBotConfig.Avatars.Default
+		};
+	}
 
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
@@ -18,7 +23,9 @@ export default class ChaosBot extends ReplyBot {
 		const hasChaos = ChaosBotConfig.Patterns.Default?.test(content);
 
 		if (hasChaos) {
-			this.sendReply(message.channel as TextChannel, ChaosBotConfig.Responses.Default);
+			this.sendReply(message.channel as TextChannel, {
+				content: ChaosBotConfig.Responses.Default
+			});
 		}
 	}
 }

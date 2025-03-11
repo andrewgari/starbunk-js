@@ -1,10 +1,23 @@
+import { Service, ServiceId } from '@/services/services';
 import { Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/logger';
+import { BotIdentity } from '../botIdentity';
+import { MusicCorrectBotConfig } from '../config/musicCorrectBotConfig';
 import ReplyBot from '../replyBot';
 
+@Service({
+	id: ServiceId.MusicCorrectBot,
+	dependencies: [ServiceId.Logger],
+	scope: 'singleton'
+})
 export default class MusicCorrectBot extends ReplyBot {
-	public readonly botName = 'Music Correct Bot';
-	protected readonly avatarUrl = 'https://imgur.com/Tpo8Ywd.jpg';
+	protected get botIdentity(): BotIdentity {
+		return {
+			userId: '',
+			avatarUrl: MusicCorrectBotConfig.Avatars.Default,
+			botName: MusicCorrectBotConfig.Name
+		};
+	}
 	private readonly logger = new Logger();
 
 	constructor() {
@@ -15,7 +28,10 @@ export default class MusicCorrectBot extends ReplyBot {
 		const content = message.content.toLowerCase();
 		if (content.startsWith('!play') && message.channel instanceof TextChannel) {
 			this.logger.debug(`🎵 User ${message.author.username} tried using old play command: "${content}"`);
-			await this.sendReply(message.channel, 'Please use /play instead of !play');
+			await this.sendReply(message.channel, {
+				botIdentity: this.botIdentity,
+				content: MusicCorrectBotConfig.Responses.Default(message.author.id)
+			});
 		}
 	}
 }
