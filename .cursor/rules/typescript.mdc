@@ -10,3 +10,4 @@ globs:
 - Use discriminated unions for complex types
 - Use `const` instead of `let` when the value is not reassigned
 - Use `async`/`await` for asynchronous operations
+- User Types when possible, this is typescript, use types
