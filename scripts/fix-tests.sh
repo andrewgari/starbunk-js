@@ -152,10 +152,7 @@ for file in $(find src/starbunk/bots/__tests__/ -name "*.test.ts" -not -name "te
 
   echo "Fixing $file for $pascal_name"
 
-  # Get the bot class name from the filename
-  class_name=$(echo "$pascal_name" | sed 's/Bot$//')Bot
-
-  # Create a new test file with the proper structure
+  # Create test file if it doesn't exist
   cat > "$file" << EOF
 // Mock the webhook service
 jest.mock('../../../webhooks/webhookService');
