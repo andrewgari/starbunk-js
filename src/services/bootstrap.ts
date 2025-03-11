@@ -1,48 +1,5 @@
 import { Client } from 'discord.js';
-import { OpenAIClient } from '../openai/openaiClient';
-import type { BotIdentity } from '../starbunk/types/botIdentity';
-import webhookService, { IWebhookService } from '../webhooks/webhookService';
-import { logger } from './logger';
-import container from './serviceContainer';
-import { getLogger } from './serviceRegistrar';
-import { serviceRegistry } from './serviceRegistry';
-
-/**
- * Registers all core services with the DI container
- */
-export function registerCoreServices(): void {
-	// Make sure container is clean
-	container.clear();
-
-	// Register logger
-	container.register(serviceRegistry.LOGGER, getLogger());
-
-	// Register webhook service
-	container.register(serviceRegistry.WEBHOOK_SERVICE, webhookService);
-
-	// Register OpenAI client with factory to allow for testing
-	container.registerFactory(
-		serviceRegistry.OPENAI_CLIENT,
-		() => OpenAIClient,
-		'singleton'
-	);
-}
-
-/**
- * Registers all bot services with the DI container
- */
-export function registerBotServices(): void {
-	// In a real implementation we would import and register all bots
-	// Dynamically imported in the full implementation
-	logger.debug('Registered bot services');
-}
-
-/**
- * Registers a Discord client with the container
- */
-export function registerDiscordClient(client: Client): void {
-	container.register(serviceRegistry.DISCORD_CLIENT, client);
-}
+import { container, Logger, ServiceId, ServiceTypes, WebhookService } from './services';
 
 /**
  * Bootstraps the entire application, registering all services
@@ -50,34 +7,68 @@ export function registerDiscordClient(client: Client): void {
  */
 export async function bootstrapApplication(client: Client): Promise<void> {
 	try {
-		registerCoreServices();
-		registerDiscordClient(client);
-		registerBotServices();
+		// Services are auto-registered via decorators
+		container.register(
+			ServiceId.DiscordClient,
+			() => client
+		);
 
+		const logger = container.get(ServiceId.Logger);
+		if (!isLogger(logger)) {
+			throw new Error('Logger service not found or invalid');
+		}
 		logger.info('🚀 Services bootstrapped successfully');
 	} catch (error) {
+		const logger = container.get(ServiceId.Logger);
+		if (!isLogger(logger)) {
+			console.error('Failed to bootstrap services', error);
+			return;
+		}
 		logger.error('Failed to bootstrap services', error as Error);
 		throw error;
 	}
 }
 
-/**
- * Type-safe way to get a service that's required at runtime
- * This throws an error if the service is not found, making it
- * safer than direct container.get() which returns undefined
- */
-export function getRequiredService<T>(key: string): T {
-	const service = container.get<T>(key);
-	if (!service) {
-		throw new Error(`Required service ${key} not found in container`);
+// Helper functions to get services (type-safe)
+export function getLogger(): Logger {
+	const logger = container.get(ServiceId.Logger);
+	if (!isLogger(logger)) {
+		throw new Error('Logger service not found or invalid');
 	}
-	return service;
+	return logger;
 }
 
-export function getWebhookService(): IWebhookService | undefined {
-	return container.get<IWebhookService>(serviceRegistry.WEBHOOK_SERVICE);
+export function getDiscordClient(): Client {
+	const client = container.get(ServiceId.DiscordClient);
+	if (!isDiscordClient(client)) {
+		throw new Error('Discord client not found or invalid');
+	}
+	return client;
 }
 
-export function getBlueBot(): BotIdentity | undefined {
-	return container.get<BotIdentity>(serviceRegistry.BLUE_BOT);
+export function getWebhookService(): WebhookService {
+	const webhookService = container.get(ServiceId.WebhookService);
+	if (!isWebhookService(webhookService)) {
+		throw new Error('Webhook service not found or invalid');
+	}
+	return webhookService;
+}
+
+/**
+ * Type-safe way to get any service
+ */
+export function getService<K extends keyof ServiceTypes>(id: K): ServiceTypes[K] {
+	return container.get(id);
+}
+
+function isLogger(service: unknown): service is Logger {
+	return service !== null && typeof service === 'object' && 'info' in service && 'error' in service;
+}
+
+function isDiscordClient(service: unknown): service is Client {
+	return service !== null && typeof service === 'object' && 'login' in service;
+}
+
+function isWebhookService(service: unknown): service is WebhookService {
+	return service !== null && typeof service === 'object' && 'writeMessage' in service && 'sendMessage' in service;
 }

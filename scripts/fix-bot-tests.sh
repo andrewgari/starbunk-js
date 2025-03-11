@@ -9,13 +9,14 @@ for test_file in $(find src/starbunk/bots/__tests__ -name "*.test.ts" | sort); d
     echo "Skipping already updated file: $test_file"
     continue
   fi
-  
+
   echo "Updating $test_file..."
-  
+
   # Extract bot name from filename
-  filename=$(basename "$test_file")
-  bot_name=${filename%%.test.ts}
-  
+  filename=${test_file##*/}
+  test_name=${filename%%.test.ts}
+  echo "Processing test file: $test_name"
+
   # Add the mock for botConfig module if missing
   if ! grep -q "jest.mock('../botConfig'" "$test_file"; then
     # Find the right place to insert the mock
@@ -36,7 +37,7 @@ jest.mock("../botConfig", () => {\
 import/' "$test_file"
     fi
   fi
-  
+
   # Update import statements for getBotPattern and other bot functions
   sed -i 's/import { getBotPattern } from.*$/import { getBotPattern } from "..\/botConfig";/' "$test_file"
   sed -i 's/import { getBotName } from.*$/import { getBotName } from "..\/botConfig";/' "$test_file"

@@ -1,6 +1,7 @@
 ---
-description: 
+description: performance
 globs: 
+alwaysApply: false
 ---
 ## Performance
 - Avoid nested subscriptions

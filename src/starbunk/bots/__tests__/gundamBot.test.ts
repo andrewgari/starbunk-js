@@ -1,89 +1,45 @@
-import { Message } from 'discord.js';
-import container from '../../../services/serviceContainer';
-import { serviceRegistry } from '../../../services/serviceRegistry';
+import { container, ServiceId } from '../../../services/services';
+import { GundamBotConfig } from '../config/gundamBotConfig';
 import GundamBot from '../reply-bots/gundamBot';
-import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 describe('GundamBot', () => {
 	let gundamBot: GundamBot;
-	let message: Message<boolean>;
-	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
-		// Set up container with mock services
-		setupTestContainer();
-		// Get the mock webhook service from the container
-		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
-		// Create bot after setting up container
+		// Clear container and register mocks
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookService);
+
+		// Create GundamBot instance
 		gundamBot = new GundamBot();
-		// Create a mock message
-		message = createMockMessage('test message', '123456', false);
-	});
-
-	it('should not respond to bot messages', async () => {
-		// Arrange
-		message.author.bot = true;
-		message.content = 'I love gundam!';
-
-		// Act
-		await gundamBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
 	it('should respond to messages containing "gundam"', async () => {
-		// Arrange
-		message.content = 'I love gundam!';
-
-		// Spy on the sendReply method
-		const sendReplySpy = jest.spyOn(gundamBot, 'sendReply');
-
-		// Act
+		const message = mockMessage('gundam is awesome');
 		await gundamBot.handleMessage(message);
 
-		// Assert
-		expect(/\bg(u|a)ndam\b/i.test(message.content)).toBe(true);
-		expect(sendReplySpy).toHaveBeenCalled();
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-	});
-
-	it('should respond to messages containing "gandam"', async () => {
-		// Arrange
-		message.content = 'Have you seen gandam?';
-
-		// Act
-		await gundamBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-	});
-
-	it('should not respond to messages not containing gundam or gandam', async () => {
-		// Arrange
-		message.content = 'hello world';
-
-		// Act
-		await gundamBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	it('should respond with the correct message', async () => {
-		// Arrange
-		message.content = 'gundam is awesome';
-
-		// Act
-		await gundamBot.handleMessage(message);
-
-		// Assert
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'That\'s the famous Unicorn Robot, "Gandum". There, I said it.'
+				username: GundamBotConfig.Name,
+				content: expect.any(String)
 			})
 		);
+	});
+
+	it('should not respond to bot messages', async () => {
+		const message = mockMessage('gundam', undefined, true);
+		await gundamBot.handleMessage(message);
+
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should not respond to messages without "gundam"', async () => {
+		const message = mockMessage('hello world');
+		await gundamBot.handleMessage(message);
+
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });

@@ -1,18 +1,36 @@
-import { Message } from 'discord.js';
-import { logger } from '../../../services/logger';
-import ReplyBot from '../replyBot';
+import { Message, TextChannel } from 'discord.js';
+import { Logger } from '../../../services/logger';
+import { BaseBot, Service, ServiceId, WebhookService } from '../../../services/services';
+import { MacaroniBotConfig } from '../config/macaroniBotConfig';
 
-export default class MacaroniBot extends ReplyBot {
-	public readonly botName = 'Macaroni Bot';
-	protected readonly avatarUrl = 'https://imgur.com/Tpo8Ywd.jpg';
+@Service({
+	id: ServiceId.MacaroniBot,
+	dependencies: [ServiceId.Logger, ServiceId.WebhookService],
+	scope: 'singleton'
+})
+export default class MacaroniBot implements BaseBot {
+	public readonly botName = MacaroniBotConfig.Name;
 
-	handleMessage(message: Message): void {
-		if (message.author.bot) return;
+	constructor(
+		private readonly logger: Logger,
+		private readonly webhookService: WebhookService
+	) { }
 
+	async handleMessage(message: Message): Promise<void> {
 		const content = message.content.toLowerCase();
+
+		if (message.author.bot) {
+			return;
+		}
+
 		if (content.includes('macaroni')) {
-			logger.debug(`MacaroniBot responding to message: ${content}`);
-			message.reply('🧀 Macaroni and cheese is the best! 🧀');
+			this.logger.debug(`MacaroniBot responding to message: ${content}`);
+			await this.webhookService.writeMessage(message.channel as TextChannel, {
+				username: MacaroniBotConfig.Name,
+				avatarURL: MacaroniBotConfig.Avatars.Default,
+				content: '🧀 Macaroni and cheese is the best! 🧀',
+				embeds: []
+			});
 		}
 	}
 }

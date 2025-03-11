@@ -4,10 +4,12 @@
 	"plugins": ["@typescript-eslint"],
 	"env": {
 		"node": true,
-		"es6": true
+		"es6": true,
+		"browser": true,
+		"es2021": true
 	},
 	"parserOptions": {
-		"ecmaVersion": 2021,
+		"ecmaVersion": "latest",
 		"sourceType": "module"
 	},
 	"rules": {
@@ -49,9 +51,9 @@
 			}
 		],
 		"@typescript-eslint/no-explicit-any": "error",
-		"@typescript-eslint/no-unused-vars": "error",
+		"@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
 		"@typescript-eslint/no-empty-function": "error",
-		"no-console": ["error", { "allow": ["warn", "error"] }],
+		"no-console": ["error", { "allow": ["debug", "info", "warn", "error", "log"] }],
 		"no-empty-function": "off",
 		"no-inline-comments": "error",
 		"@typescript-eslint/no-namespace": ["error", { "allowDeclarations": true }]
@@ -69,6 +71,12 @@
 			"files": ["**/ServiceRegistrar.ts", "**/blueBotRefactored.test.ts"],
 			"rules": {
 				"@typescript-eslint/no-explicit-any": "off"
+			}
+		},
+		{
+			"files": ["src/services/logger.ts"],
+			"rules": {
+				"no-console": "off"
 			}
 		}
 	]

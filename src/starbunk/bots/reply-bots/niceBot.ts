@@ -1,7 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
+import { Service, ServiceId } from '../../../services/services';
 import { NiceBotConfig } from '../config/niceBotConfig';
 import ReplyBot from '../replyBot';
 
+@Service({
+	id: ServiceId.NiceBot,
+	scope: 'singleton'
+})
 export default class NiceBot extends ReplyBot {
 	public readonly botName: string = NiceBotConfig.Name;
 	public readonly avatarUrl: string = NiceBotConfig.Avatars.Default;

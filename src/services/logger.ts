@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { Logger as LoggerInterface, Service, ServiceId } from './services';
 
 export enum LogLevel {
 	NONE = 0,
@@ -10,39 +11,28 @@ export enum LogLevel {
 
 // SUCCESS has the same level as INFO
 
-export class Logger {
-	private static instance: Logger;
+@Service({
+	id: ServiceId.Logger,
+	scope: 'singleton'
+})
+export class Logger implements LoggerInterface {
+	private static instance: Logger | null = null;
 
-	static getInstance(): Logger {
-		if (!Logger.instance) {
-			Logger.instance = new Logger();
+	constructor() {
+		if (Logger.instance) {
+			return Logger.instance;
 		}
-		return Logger.instance;
+		Logger.instance = this;
 	}
 
-	private formatMessage(message: string, icon = ''): string {
-		const timestamp = new Date().toISOString();
-		return `${icon} [${timestamp}] ${message}`;
-	}
-
-	private getCallerInfo(): string {
-		const error = new Error();
-		const stack = error.stack?.split('\n')[3];
-		if (!stack) return '';
-		const match = stack.match(/at\s+(\S+)\s+\((.+):(\d+):(\d+)\)/);
-		if (!match) return '';
-		const [, func, file, line] = match;
-		return ` (${func} at ${file}:${line})`;
+	debug(message: string): void {
+		if (process.env.DEBUG_MODE === 'true') {
+			console.debug(this.formatMessage(chalk.blue(message), '��'));
+		}
 	}
 
 	info(message: string): void {
-		// eslint-disable-next-line no-console
-		console.log(this.formatMessage(message, '📝'));
-	}
-
-	success(message: string): void {
-		// eslint-disable-next-line no-console
-		console.log(this.formatMessage(chalk.green(message), '✅'));
+		console.info(this.formatMessage(chalk.white(message), 'ℹ️'));
 	}
 
 	warn(message: string): void {
@@ -51,19 +41,27 @@ export class Logger {
 
 	error(message: string, error?: Error): void {
 		console.error(this.formatMessage(chalk.red(message), '❌'));
-		if (error?.stack) {
-			console.error(chalk.red(error.stack));
+		if (error) {
+			console.error(error);
 		}
 	}
 
-	debug(message: string): void {
-		if (process.env.DEBUG_MODE === 'true') {
-			const callerInfo = this.getCallerInfo();
-			// eslint-disable-next-line no-console
-			console.log(this.formatMessage(chalk.blue(message) + callerInfo, '🔍'));
-		}
+	success(message: string): void {
+		console.log(this.formatMessage(chalk.green(message), '✅'));
+	}
+
+	formatMessage(message: string, icon = ''): string {
+		const callerInfo = this.getCallerInfo();
+		return `${icon} [${new Date().toISOString()}] ${callerInfo} ${message}`;
+	}
+
+	getCallerInfo(): string {
+		const stackTrace = new Error().stack?.split('\n') || [];
+		const callerLine = stackTrace[3] || '';
+		const match = callerLine.match(/at (\S+)/);
+		return match ? match[1] : 'unknown';
 	}
 }
 
 // Export a singleton instance
-export const logger = Logger.getInstance();
+export const logger = new Logger();

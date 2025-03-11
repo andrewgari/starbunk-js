@@ -1,128 +1,92 @@
-import { Client, Message, TextChannel, User } from 'discord.js';
-import { MessageInfo } from '../../../discord/messageInfo';
-import { IWebhookService } from '../../../webhooks/webhookService';
+import { Client, Guild, Message, TextChannel, User } from 'discord.js';
+import { Logger, WebhookService } from '../../../services/services';
 
-// Mock WebhookService
-export class MockWebhookService implements IWebhookService {
-	messages: Array<{ channel?: TextChannel; message: MessageInfo }> = [];
-	
-	writeMessage = jest.fn().mockImplementation(async (channel: TextChannel, message: MessageInfo): Promise<void> => {
-		this.messages.push({ channel, message });
-	});
-
-	sendMessage = jest.fn().mockImplementation(async (message: MessageInfo): Promise<void> => {
-		this.messages.push({ message });
-	});
-
-	clear(): void {
-		this.messages = [];
-		this.writeMessage.mockClear();
-		this.sendMessage.mockClear();
-	}
-
-	getLastMessage(): MessageInfo | undefined {
-		return this.messages[this.messages.length - 1]?.message;
-	}
-}
-
-// Automatically mock the WebhookService for all tests
-jest.mock('../../../webhooks/webhookService', () => {
-	const mockWebhookService = {
-		writeMessage: jest.fn().mockResolvedValue({}),
-		sendMessage: jest.fn().mockResolvedValue({}),
-	};
-	return {
-		__esModule: true,
-		default: mockWebhookService,
-	};
-});
-
-// Mock OpenAI client
-jest.mock('../../../openai/openaiClient', () => ({
-	OpenAIClient: {
-		chat: {
-			completions: {
-				create: jest.fn().mockResolvedValue({
-					choices: [
-						{
-							message: {
-								content: 'yes'
-							}
-						}
-					]
-				})
-			}
-		}
-	}
-}));
-
-// Create a mock Discord message
-export function createMockMessage(content: string, userId?: string, isBot = false): Message {
+export const mockMessage = (content: string = 'test message', username: string = 'testUser', isBot: boolean = false): Message => {
 	const mockUser = {
 		bot: isBot,
-		id: userId || '123',
-		tag: 'test#1234',
-		username: 'test',
-		displayAvatarURL: () => 'https://example.com/avatar.png'
+		id: 'user123',
+		username,
+		displayName: username,
 	} as User;
 
 	const mockClient = {
 		user: {
-			id: '456'
-		}
+			id: 'bot123',
+		},
 	} as Client;
 
 	const mockChannel = {
-		id: '789',
+		id: 'channel123',
 		name: 'test-channel',
-		send: jest.fn(),
-		type: 0,
 		fetchWebhooks: jest.fn().mockResolvedValue([]),
-		createWebhook: jest.fn().mockResolvedValue({
-			id: 'webhook123',
-			name: 'BotWebhook',
-			send: jest.fn().mockResolvedValue({})
-		})
 	} as unknown as TextChannel;
+
+	const mockGuild = {
+		id: 'guild123',
+	} as Guild;
 
 	return {
 		content,
 		author: mockUser,
 		client: mockClient,
 		channel: mockChannel,
-		createdTimestamp: new Date().getTime(),
-		id: '999',
-		_cacheType: 0,
-		_patch: jest.fn(),
-		delete: jest.fn(),
-		edit: jest.fn(),
-		fetch: jest.fn(),
-		reply: jest.fn(),
-		react: jest.fn(),
-		pin: jest.fn(),
-		unpin: jest.fn()
+		guild: mockGuild,
+		createdTimestamp: Date.now(),
 	} as unknown as Message;
-}
+};
 
-// Setup test container with mocks
+// Need to use jest.fn() to create proper mock functions
+export const mockWriteMessage = jest.fn().mockResolvedValue({} as Message<boolean>);
+export const mockSendMessage = jest.fn().mockResolvedValue({} as Message<boolean>);
+
+export const mockWebhookService: WebhookService = {
+	writeMessage: mockWriteMessage,
+	sendMessage: mockSendMessage,
+	webhookClient: null,
+	logger: {
+		debug: jest.fn(),
+		info: jest.fn(),
+		warn: jest.fn(),
+		error: jest.fn(),
+		success: jest.fn(),
+		formatMessage: jest.fn(),
+		getCallerInfo: jest.fn()
+	},
+};
+
+export const mockLogger: Logger = {
+	debug: jest.fn(),
+	info: jest.fn(),
+	warn: jest.fn(),
+	error: jest.fn(),
+	success: jest.fn(),
+	formatMessage: jest.fn(),
+	getCallerInfo: jest.fn()
+};
+
+// For backward compatibility
+export const createMockMessage = mockMessage;
+export type MockWebhookService = WebhookService;
+
 export function setupTestContainer(): void {
-	// Clear the container first
-	jest.resetModules();
+	// This is now handled by the container.clear() and register calls in each test
 }
 
-// Setup common bot mocks
 export function setupBotMocks(): void {
-	// Mock Date.now() if needed
-	jest.spyOn(Date, 'now').mockImplementation(() => 1625097600000); // Fixed timestamp
+	// This is now handled by the container.clear() and register calls in each test
 }
 
-// Helper to verify webhook service was called with the right parameters
-export function expectWebhookCalledWith(webhookService: MockWebhookService, botName: string, content: string): void {
-	expect(webhookService.writeMessage).toHaveBeenCalledWith(
+export function expectWebhookCalledWith(content: string, username?: string): void {
+	expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 		expect.anything(),
 		expect.objectContaining({
-			username: botName,
-			content
+			content,
+			...(username && { username }),
 		})
 	);
 }
+
+// Reset mock functions before each test
+beforeEach(() => {
+	jest.clearAllMocks();
+});

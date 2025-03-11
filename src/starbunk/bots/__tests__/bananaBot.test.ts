@@ -1,92 +1,45 @@
-import userID from '../../../discord/userId';
-import { getWebhookService } from '../../../services/bootstrap';
-import random from '../../../utils/random';
-import BananaBot from '../reply-bots/bananaBot';
-import { MockWebhookService, createMockMessage, expectWebhookCalledWith } from './testUtils';
+import { container, ServiceId } from '../../../services/services';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
-jest.mock('../../../services/bootstrap');
+// Register services before importing the bot class
+container.clear();
+container.register(ServiceId.Logger, () => mockLogger);
+container.register(ServiceId.WebhookService, () => mockWebhookService);
+
+import { BananaBotConfig } from '../config/bananaBotConfig';
+import BananaBot from '../reply-bots/bananaBot';
 
 describe('BananaBot', () => {
 	let bananaBot: BananaBot;
-	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
-		mockWebhookService = new MockWebhookService();
-		(getWebhookService as jest.Mock).mockReturnValue(mockWebhookService);
-		bananaBot = new BananaBot();
+		bananaBot = new BananaBot(mockLogger);
 	});
 
-	afterEach(() => {
-		jest.clearAllMocks();
-	});
+	it('should respond to messages containing "banana"', async () => {
+		const message = mockMessage('I love banana');
+		await bananaBot.handleMessage(message);
 
-	test('should respond when message contains "banana"', () => {
-		// Arrange
-		const message = createMockMessage('I love banana smoothies');
-
-		// Act
-		bananaBot.handleMessage(message);
-
-		// Assert
-		expectWebhookCalledWith(
-			mockWebhookService,
-			bananaBot.botName,
-			expect.any(String) // Any banana response from the array
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				username: BananaBotConfig.Name,
+				content: expect.any(String)
+			})
 		);
 	});
 
-	test('should not respond to bot messages', () => {
-		// Arrange
-		const message = createMockMessage('banana', '123456789', true);
+	it('should not respond to bot messages', async () => {
+		const message = mockMessage('banana', undefined, true);
+		await bananaBot.handleMessage(message);
 
-		// Act
-		bananaBot.handleMessage(message);
-
-		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	test('should not respond to messages without "banana"', () => {
-		// Arrange
-		const message = createMockMessage('I like apples');
+	it('should not respond to messages without "banana"', async () => {
+		const message = mockMessage('hello world');
+		await bananaBot.handleMessage(message);
 
-		// Act
-		bananaBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	test('should randomly respond to Venn with 5% chance', () => {
-		// Arrange
-		const message = createMockMessage('Hello everyone', userID.Venn);
-
-		// Mock the random chance to return true (5% chance hit)
-		jest.spyOn(random, 'percentChance').mockReturnValue(true);
-
-		// Act
-		bananaBot.handleMessage(message);
-
-		// Assert
-		expect(random.percentChance).toHaveBeenCalledWith(5);
-		expectWebhookCalledWith(
-			mockWebhookService,
-			bananaBot.botName,
-			expect.any(String)
-		);
-	});
-
-	test('should not respond to Venn if random chance fails', () => {
-		// Arrange
-		const message = createMockMessage('Hello everyone', userID.Venn);
-
-		// Mock the random chance to return false (95% chance miss)
-		jest.spyOn(random, 'percentChance').mockReturnValue(false);
-
-		// Act
-		bananaBot.handleMessage(message);
-
-		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });

@@ -6,8 +6,11 @@ export default abstract class ReplyBot {
 	abstract botName: string;
 	protected abstract avatarUrl: string;
 
-	handleMessage(message: Message): void {
-		if (message.author.bot) return;
+	async handleMessage(message: Message): Promise<void> {
+		if (message.author.bot) {
+			logger.debug(`${this.botName} ignoring bot message: ${message.content}`);
+			return;
+		}
 		logger.debug(`${this.botName} received message: ${message.content}`);
 	}
 

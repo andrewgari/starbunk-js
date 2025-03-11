@@ -1,7 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
+import { Service, ServiceId } from '../../../services/services';
 import { HoldBotConfig } from '../config/holdBotConfig';
 import ReplyBot from '../replyBot';
 
+@Service({
+	id: ServiceId.HoldBot,
+	scope: 'singleton'
+})
 export default class HoldBot extends ReplyBot {
 	public readonly botName: string = HoldBotConfig.Name;
 	public readonly avatarUrl: string = HoldBotConfig.Avatars.Default;

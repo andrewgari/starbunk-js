@@ -5,7 +5,7 @@ import ReplyBot from '../replyBot';
 export default class MusicCorrectBot extends ReplyBot {
 	public readonly botName = 'Music Correct Bot';
 	protected readonly avatarUrl = 'https://imgur.com/Tpo8Ywd.jpg';
-	private readonly logger = Logger.getInstance();
+	private readonly logger = new Logger();
 
 	constructor() {
 		super();

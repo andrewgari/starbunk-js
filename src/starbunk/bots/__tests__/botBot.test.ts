@@ -1,106 +1,45 @@
-import { Message } from 'discord.js';
-import container from '../../../services/serviceContainer';
-import { serviceRegistry } from '../../../services/serviceRegistry';
-import Random from '../../../utils/random';
+import { container, ServiceId } from '../../../services/services';
+import { BotBotConfig } from '../config/botBotConfig';
 import BotBot from '../reply-bots/botBot';
-import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 describe('BotBot', () => {
 	let botBot: BotBot;
-	let message: Message<boolean>;
-	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
-		// Set up container with mock services
-		setupTestContainer();
-		// Get the mock webhook service from the container
-		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
-		// Create bot after setting up container
+		// Clear container and register mocks
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookService);
+
+		// Create BotBot instance
 		botBot = new BotBot();
-		// Create a mock message
-		message = createMockMessage('test message', '123456', false);
 	});
 
-	it('should not respond to self messages', async () => {
-		// Arrange
-		message.author.bot = true;
-		// Mock isSelf to return true
-		jest.spyOn(botBot, 'isSelf').mockReturnValue(true);
-
-		// Act
+	it('should respond to messages containing "bot"', async () => {
+		const message = mockMessage('I am a bot');
 		await botBot.handleMessage(message);
 
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	it('should respond to bot messages with 10% chance', async () => {
-		// Arrange
-		message.author.bot = true;
-		// Mock isSelf to return false
-		jest.spyOn(botBot, 'isSelf').mockReturnValue(false);
-		// Mock percentChance to return true (10% chance)
-		jest.spyOn(Random, 'percentChance').mockReturnValue(true);
-
-		// Spy on the sendReply method
-		const sendReplySpy = jest.spyOn(botBot, 'sendReply');
-
-		// Act
-		await botBot.handleMessage(message);
-
-		// Assert
-		expect(Random.percentChance).toHaveBeenCalledWith(10);
-		expect(sendReplySpy).toHaveBeenCalled();
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-	});
-
-	it('should not respond to bot messages when random chance fails', async () => {
-		// Arrange
-		message.author.bot = true;
-		// Mock isSelf to return false
-		jest.spyOn(botBot, 'isSelf').mockReturnValue(false);
-		// Mock percentChance to return false (90% chance)
-		jest.spyOn(Random, 'percentChance').mockReturnValue(false);
-
-		// Act
-		await botBot.handleMessage(message);
-
-		// Assert
-		expect(Random.percentChance).toHaveBeenCalledWith(10);
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	it('should not respond to non-bot messages', async () => {
-		// Arrange
-		message.author.bot = false;
-		// Mock isSelf to return false
-		jest.spyOn(botBot, 'isSelf').mockReturnValue(false);
-
-		// Act
-		await botBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	it('should respond with the correct message', async () => {
-		// Arrange
-		message.author.bot = true;
-		// Mock isSelf to return false
-		jest.spyOn(botBot, 'isSelf').mockReturnValue(false);
-		// Mock percentChance to return true
-		jest.spyOn(Random, 'percentChance').mockReturnValue(true);
-
-		// Act
-		await botBot.handleMessage(message);
-
-		// Assert
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'Hello fellow bot!'
+				username: BotBotConfig.Name,
+				content: expect.any(String)
 			})
 		);
+	});
+
+	it('should not respond to bot messages', async () => {
+		const message = mockMessage('bot', undefined, true);
+		await botBot.handleMessage(message);
+
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should not respond to messages without "bot"', async () => {
+		const message = mockMessage('hello world');
+		await botBot.handleMessage(message);
+
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });

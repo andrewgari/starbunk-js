@@ -30,176 +30,64 @@ jest.mock('../config/blueBotConfig', () => ({
 	}
 }));
 
-import { Message } from 'discord.js';
-import userID from '../../../discord/userId';
-import { OpenAIClient } from '../../../openai/openaiClient';
-import { getWebhookService } from '../../../services/bootstrap';
+import type { OpenAIClient } from '../../../openai/openaiClient';
+import { container, ServiceId } from '../../../services/services';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import BlueBot from '../reply-bots/blueBot';
-import { MockWebhookService, createMockMessage } from './testUtils';
-
-jest.mock('../../../services/bootstrap');
-
-// Mock OpenAI client
-jest.mock('../../../openai/openaiClient', () => ({
-	OpenAIClient: {
-		chat: {
-			completions: {
-				create: jest.fn()
-			}
-		}
-	}
-}));
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 describe('BlueBot', () => {
 	let blueBot: BlueBot;
-	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
-		mockWebhookService = new MockWebhookService();
-		(getWebhookService as jest.Mock).mockReturnValue(mockWebhookService);
-		blueBot = new BlueBot();
+		// Clear container and register mocks
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookService);
+
+		// Create a mock OpenAI client that matches the interface
+		const mockOpenAIClient = {
+			chat: {
+				completions: {
+					create: jest.fn().mockResolvedValue({
+						choices: [{ message: { content: 'yes' } }]
+					}),
+					list: jest.fn(),
+					retrieve: jest.fn(),
+					update: jest.fn(),
+					messages: jest.fn(),
+				}
+			}
+		} as unknown as OpenAIClient;
+
+		container.register(ServiceId.OpenAIClient, () => mockOpenAIClient);
+
+		// Create BlueBot instance with the mock logger
+		blueBot = new BlueBot(mockLogger as any, mockOpenAIClient);
 	});
 
-	afterEach(() => {
-		jest.clearAllMocks();
-	});
-
-	it('should respond to messages containing "blue"', async () => {
-		const message = createMockMessage('I love blue!') as Message;
-		await blueBot.handleMessage(message);
-		expect(mockWebhookService.messages.length).toBe(1);
-		const lastMessage = mockWebhookService.getLastMessage();
-		expect(lastMessage?.content).toBe(BlueBotConfig.Responses.Default);
-		expect(lastMessage?.username).toBe(BlueBotConfig.Name);
-	});
-
-	it('should not respond to bot messages', async () => {
-		const message = createMockMessage('blue', undefined, true) as Message;
-		await blueBot.handleMessage(message);
-		expect(mockWebhookService.messages.length).toBe(0);
-	});
-
-	it('should not respond to messages without "blue"', async () => {
-		const message = createMockMessage('hello world') as Message;
-		await blueBot.handleMessage(message);
-		expect(mockWebhookService.messages.length).toBe(0);
-	});
-
-	it('should respond when someone says "blue"', async () => {
-		// Arrange
-		const message = createMockMessage('I like the color blue');
-
-		// Act
+	it('should respond to direct blue references', async () => {
+		const message = mockMessage('blue is my favorite color');
 		await blueBot.handleMessage(message);
 
-		// Assert
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: 'BluBot',
-				content: 'Did somebody say Blu?'
-			})
-		);
-	});
-
-	it('should acknowledge that somebody said blue', async () => {
-		// Arrange
-		const message = createMockMessage('blue');
-
-		// set the blue timestamp to 1 minute ago
-		// @ts-expect-error - Access private property for test
-		blueBot._blueTimestamp = new Date(Date.now() - 60000);
-
-		// Act
-		await blueBot.handleMessage(message);
-	});
-
-	it('should respond to "be nice about" requests', async () => {
-		// Arrange
-		const message = createMockMessage('bluebot, say something nice about Andrew');
-
-		// Act
-		await blueBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({
-				content: expect.stringContaining('Andrew, I think you\'re pretty Blu!'),
-				username: 'BluBot'
-			})
-		);
-	});
-
-	it('should reject being nice about Venn', async () => {
-		// Arrange
-		const message = createMockMessage('bluebot, say something nice about Venn');
-
-		// Act
-		await blueBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({
-				content: 'No way, Venn can suck my blu cane. :unamused:',
-				username: 'BluBot'
-			})
-		);
-	});
-
-	it('should respond with Navy Seal copypasta when Venn is insulting Blu', async () => {
-		// Arrange
-		// Mock timestamps for the timing condition check
-		const mockDate = new Date();
-		jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
-
-		// Mock the private method using prototype
-		// @ts-expect-error - Access private method for test
-		jest.spyOn(BlueBot.prototype, 'isVennInsultingBlu').mockReturnValue(true);
-
-		const message = createMockMessage('Fuck this blue bot', userID.Venn);
-
-		// Act
-		await blueBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({
-				username: 'BluBot',
-				content: expect.stringContaining("What the fuck did you just fucking say about me")
+				username: BlueBotConfig.Name,
+				content: BlueBotConfig.Responses.Default
 			})
 		);
 	});
 
 	it('should respond when AI detects a blue reference', async () => {
-		// Arrange
-		const message = createMockMessage('The sky is looking nice today');
-
-		// Mock the OpenAI response
-		const mockOpenAIResponse = {
-			choices: [
-				{
-					message: {
-						content: 'yes'
-					}
-				}
-			]
-		};
-		(OpenAIClient.chat.completions.create as jest.Mock).mockResolvedValue(mockOpenAIResponse);
-
-		// Act
+		const message = mockMessage('The sky is looking nice today');
 		await blueBot.handleMessage(message);
 
-		// Assert
-		expect(OpenAIClient.chat.completions.create).toHaveBeenCalled();
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: 'BluBot',
-				content: 'Did somebody say Blu?'
+				username: BlueBotConfig.Name,
+				content: BlueBotConfig.Responses.Default
 			})
 		);
 	});

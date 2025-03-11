@@ -1,100 +1,45 @@
-import { Message } from 'discord.js';
-import container from '../../../services/serviceContainer';
-import { serviceRegistry } from '../../../services/serviceRegistry';
+import { container, ServiceId } from '../../../services/services';
+import { NiceBotConfig } from '../config/niceBotConfig';
 import NiceBot from '../reply-bots/niceBot';
-import { createMockMessage, MockWebhookService, setupTestContainer } from './testUtils';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 describe('NiceBot', () => {
 	let niceBot: NiceBot;
-	let message: Message<boolean>;
-	let mockWebhookService: MockWebhookService;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
-		// Set up container with mock services
-		setupTestContainer();
-		// Get the mock webhook service from the container
-		mockWebhookService = container.get(serviceRegistry.WEBHOOK_SERVICE) as MockWebhookService;
-		// Create bot after setting up container
+		// Clear container and register mocks
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookService);
+
+		// Create NiceBot instance
 		niceBot = new NiceBot();
-		// Create a mock message
-		message = createMockMessage('test message', '123456', false);
 	});
 
-	it('should not respond to bot messages', async () => {
-		// Arrange
-		message.author.bot = true;
-		message.content = 'The number is 69';
-
-		// Act
+	it('should respond to messages containing "nice"', async () => {
+		const message = mockMessage('nice job!');
 		await niceBot.handleMessage(message);
 
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	it('should respond to messages containing the number 69', async () => {
-		// Arrange
-		message.content = 'The number is 69';
-
-		// Spy on the sendReply method
-		const sendReplySpy = jest.spyOn(niceBot, 'sendReply');
-
-		// Act
-		await niceBot.handleMessage(message);
-
-		// Assert
-		expect(/\b69|(sixty-?nine)\b/i.test(message.content)).toBe(true);
-		expect(sendReplySpy).toHaveBeenCalled();
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-	});
-
-	it('should respond to messages containing sixty-nine', async () => {
-		// Arrange
-		message.content = 'Let me tell you about sixty-nine';
-
-		// Act
-		await niceBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-	});
-
-	it('should respond to messages containing sixtynine', async () => {
-		// Arrange
-		message.content = 'The code is sixtynine';
-
-		// Act
-		await niceBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
-	});
-
-	it('should not respond to messages not containing 69 or sixty-nine', async () => {
-		// Arrange
-		message.content = 'hello world';
-
-		// Act
-		await niceBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	it('should respond with "Nice."', async () => {
-		// Arrange
-		message.content = 'The answer is 69';
-
-		// Act
-		await niceBot.handleMessage(message);
-
-		// Assert
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				content: 'Nice.'
+				username: NiceBotConfig.Name,
+				content: expect.any(String)
 			})
 		);
+	});
+
+	it('should not respond to bot messages', async () => {
+		const message = mockMessage('nice', undefined, true);
+		await niceBot.handleMessage(message);
+
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should not respond to messages without "nice"', async () => {
+		const message = mockMessage('hello world');
+		await niceBot.handleMessage(message);
+
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });

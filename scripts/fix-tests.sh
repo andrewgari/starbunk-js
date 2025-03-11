@@ -67,16 +67,16 @@ export const mockLogger: ILogger = {
 export function setupTestContainer(): void {
 	// Clear any existing services
 	container.clear();
-	
+
 	// Register mock services
 	container.register(ServiceRegistry.LOGGER, mockLogger);
 	container.register(ServiceRegistry.WEBHOOK_SERVICE, mockWebhookService);
-	
+
 	// Also update the default webhookService for direct imports
 	// Import only when needed to avoid circular dependencies
 	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	const webhookServiceModule = require('../../../webhooks/webhookService');
-	
+
 	// Replace the original functions with mocks
 	webhookServiceModule.default.writeMessage = mockWriteMessage;
 	webhookServiceModule.default.getChannelWebhook = mockGetChannelWebhook;
@@ -88,10 +88,10 @@ export function setupTestContainer(): void {
  * in a way that Jest understands for type checking
  * @returns A mocked webhookService with jest.fn() implementations
  */
-export function getMockedWebhookService(): { 
-	writeMessage: jest.Mock; 
-	getChannelWebhook: jest.Mock; 
-	getWebhook: jest.Mock; 
+export function getMockedWebhookService(): {
+	writeMessage: jest.Mock;
+	getChannelWebhook: jest.Mock;
+	getWebhook: jest.Mock;
 } {
 	// Create fresh mock functions for each test
 	return {
@@ -108,14 +108,14 @@ export function getMockedWebhookService(): {
 export function setupBotMocks(): void {
 	// Reset all mocks between tests
 	jest.resetAllMocks();
-	
+
 	// Import only when needed to avoid circular dependencies
 	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	const webhookServiceModule = require('../../../webhooks/webhookService');
-	
+
 	// Create mock functions
 	const mockedService = getMockedWebhookService();
-	
+
 	// Replace the original functions with mocks
 	webhookServiceModule.default.writeMessage = mockedService.writeMessage;
 	webhookServiceModule.default.getChannelWebhook = mockedService.getChannelWebhook;
@@ -148,13 +148,11 @@ echo "Updated testUtils.ts with improved mocking"
 for file in $(find src/starbunk/bots/__tests__/ -name "*.test.ts" -not -name "testUtils.ts" | sort); do
   bot_name=$(basename "$file" .test.ts)
   pascal_name=$(echo "$bot_name" | sed -r 's/(^|-)([a-z])/\U\2/g')
-  
+  pascal_name="${pascal_name}Bot"
+
   echo "Fixing $file for $pascal_name"
-  
-  # Get the bot class name from the filename
-  class_name=$(echo "$pascal_name" | sed 's/Bot$//')Bot
-  
-  # Create a new test file with the proper structure
+
+  # Create test file if it doesn't exist
   cat > "$file" << EOF
 // Mock the webhook service
 jest.mock('../../../webhooks/webhookService');
@@ -201,7 +199,7 @@ describe('$pascal_name', () => {
 		const message = mockMessage('test message with ${bot_name}');
 		// Make sure pattern matches for this test
 		(getBotPattern as jest.Mock).mockReturnValueOnce(new RegExp('test message', 'i'));
-		
+
 		// Act
 		${bot_name}.handleMessage(message);
 
@@ -213,7 +211,7 @@ describe('$pascal_name', () => {
 		// Arrange
 		const message = mockMessage('hello world');
 		(getBotPattern as jest.Mock).mockReturnValueOnce(/does-not-match/i);
-		
+
 		// Act
 		${bot_name}.handleMessage(message);
 

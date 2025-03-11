@@ -1,6 +1,7 @@
 ---
-description: 
+description: handle errors
 globs: 
+alwaysApply: false
 ---
 ## Error Handling
 - Never swallow errors

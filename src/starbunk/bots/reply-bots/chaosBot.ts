@@ -1,7 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
+import { Service, ServiceId } from '../../../services/services';
 import { ChaosBotConfig } from '../config/chaosBotConfig';
 import ReplyBot from '../replyBot';
 
+@Service({
+	id: ServiceId.ChaosBot,
+	scope: 'singleton'
+})
 export default class ChaosBot extends ReplyBot {
 	public readonly botName: string = ChaosBotConfig.Name;
 	public readonly avatarUrl: string = ChaosBotConfig.Avatars.Default;

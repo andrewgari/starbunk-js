@@ -4,15 +4,15 @@ import { SigGreatBotConfig } from '../config/sigGreatBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class SigGreatBot extends ReplyBot {
-	private _botName: string = SigGreatBotConfig.Name;
-	private _avatarUrl: string = SigGreatBotConfig.Avatars.Default;
+	private _botName = SigGreatBotConfig.Name;
+	private _avatarUrl = SigGreatBotConfig.Avatars.Default;
 
 	// Public getters
-	get botName(): string {
+	public get botName(): string {
 		return this._botName;
 	}
 
-	get avatarUrl(): string {
+	protected get avatarUrl(): string {
 		return this._avatarUrl;
 	}
 
@@ -20,22 +20,20 @@ export default class SigGreatBot extends ReplyBot {
 		return 'SigGreatBot';
 	}
 
-	async handleMessage(message: Message<boolean>): Promise<void> {
+	public async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
 		const content = message.content;
 		const hasSigGreat = SigGreatBotConfig.Patterns.Default?.test(content);
 
 		if (hasSigGreat) {
-			const identity = await getCurrentMemberIdentity(message.author.id, message.guild as Guild) ?? {
-				avatarUrl: this._avatarUrl,
-				botName: this._botName
-			};
+			const identity = await getCurrentMemberIdentity(message.author.id, message.guild as Guild);
+			if (identity) {
+				this._avatarUrl = identity.avatarUrl ?? this._avatarUrl;
+				this._botName = identity.botName ?? this._botName;
+			}
 
-			this._avatarUrl = identity.avatarUrl ?? this._avatarUrl;
-			this._botName = identity?.botName ?? this._botName;
-
-			this.sendReply(message.channel as TextChannel, SigGreatBotConfig.Responses.Default);
+			await this.sendReply(message.channel as TextChannel, SigGreatBotConfig.Responses.Default);
 		}
 	}
 }

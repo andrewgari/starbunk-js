@@ -1,14 +1,19 @@
 import { Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/logger';
+import { Service, ServiceId } from '../../../services/services';
 import { SheeshBotConfig } from '../config/sheeshBotConfig';
 import ReplyBot from '../replyBot';
 
+@Service({
+	id: ServiceId.SheeshBot,
+	dependencies: [ServiceId.Logger],
+	scope: 'singleton'
+})
 export default class SheeshBot extends ReplyBot {
 	public readonly botName = SheeshBotConfig.Name;
 	protected readonly avatarUrl = SheeshBotConfig.Avatars.Default;
-	private readonly logger = Logger.getInstance();
 
-	constructor() {
+	constructor(private readonly logger: Logger) {
 		super();
 	}
 
