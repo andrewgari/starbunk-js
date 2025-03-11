@@ -12,34 +12,33 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class BlueBot extends ReplyBot {
+	public readonly botName = BlueBotConfig.Name;
+	protected readonly avatarUrl = BlueBotConfig.Avatars.Default;
+
 	private _blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private _blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
-	protected avatarUrl = BlueBotConfig.Avatars.Default;
-
-	public readonly botName = BlueBotConfig.Name;
 
 	constructor(
-		private logger: Logger,
-		private openAIClient: OpenAIClient
+		private readonly logger: Logger,
+		private readonly openAIClient: OpenAIClient
 	) {
 		super();
 	}
 
-	get blueTimestamp(): Date {
+	public get blueTimestamp(): Date {
 		return this._blueTimestamp;
 	}
 
-	get blueMurderTimestamp(): Date {
+	public get blueMurderTimestamp(): Date {
 		return this._blueMurderTimestamp;
 	}
 
-	async handleMessage(message: Message): Promise<void> {
+	public async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
 		const content = message.content.toLowerCase();
 		const channel = message.channel as TextChannel;
 
-		// Check for direct blue references
 		if (content.includes('blue')) {
 			this._blueTimestamp = new Date();
 			this.logger.debug(`BlueBot responding to message: ${content}`);
@@ -47,20 +46,17 @@ export default class BlueBot extends ReplyBot {
 			return;
 		}
 
-		// Check if Venn is insulting Blu
-		if (this.isVennInsultingBlu(message)) {
+		if (await this.isVennInsultingBlu(message)) {
 			this._blueMurderTimestamp = new Date();
 			await this.sendReply(channel, BlueBotConfig.Responses.Murder);
 			return;
 		}
 
-		// Check if someone is asking Blu to be nice
-		if (this.isSomeoneAskingYouToBeBlue(message)) {
+		if (this.isSomeoneAskingToBeBlue(message)) {
 			await this.sendReply(channel, BlueBotConfig.Responses.Request(message.content));
 			return;
 		}
 
-		// Check if someone is responding to Blu
 		if (this.isSomeoneRespondingToBlu(message)) {
 			const responses = BlueBotConfig.Responses.Cheeky;
 			const randomIndex = Math.floor(Math.random() * responses.length);
@@ -68,7 +64,6 @@ export default class BlueBot extends ReplyBot {
 			return;
 		}
 
-		// Use AI to check for indirect blue references
 		if (await this.checkIfBlueIsSaid(message)) {
 			this._blueTimestamp = new Date();
 			await this.sendReply(channel, BlueBotConfig.Responses.Default);
@@ -86,7 +81,7 @@ export default class BlueBot extends ReplyBot {
 		return false;
 	}
 
-	private isVennInsultingBlu(message: Message): boolean {
+	private async isVennInsultingBlu(message: Message): Promise<boolean> {
 		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Venn;
 		const isTargetUser = message.author.id === targetUserId;
 		if (!isTargetUser) return false;
@@ -96,11 +91,7 @@ export default class BlueBot extends ReplyBot {
 		if (!isMean) return false;
 
 		const messageDate = new Date(message.createdTimestamp);
-
-		// Check if the last murder message was at least 24 hours ago
 		const isMurderCooldownOver = isOlderThan(this.blueMurderTimestamp, 1, TimeUnit.DAY, messageDate);
-
-		// Check if there was a blue reference in the last 2 minutes
 		const isRecentBlueReference = isWithinTimeframe(this.blueTimestamp, 2, TimeUnit.MINUTE, messageDate);
 
 		return isMurderCooldownOver && isRecentBlueReference;
@@ -154,7 +145,6 @@ export default class BlueBot extends ReplyBot {
 				temperature: 0.2,
 			});
 
-			this.logger.debug(`AI response: ${response.choices[0].message.content}`);
 			return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
 		} catch (error) {
 			this.logger.error('Error checking for blue reference', error as Error);
@@ -162,7 +152,7 @@ export default class BlueBot extends ReplyBot {
 		}
 	}
 
-	private isSomeoneAskingYouToBeBlue(message: Message): boolean {
+	private isSomeoneAskingToBeBlue(message: Message): boolean {
 		const content = message.content;
 		return BlueBotConfig.Patterns.Nice?.test(content) ?? false;
 	}

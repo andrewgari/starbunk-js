@@ -20,7 +20,9 @@
     "baseUrl": "./",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "files": ["src/bunkbot.ts"],
   "include": ["src/**/*"],

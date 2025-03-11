@@ -1,4 +1,3 @@
-
 export interface MessageInfo {
 	content?: string;
 	username?: string;

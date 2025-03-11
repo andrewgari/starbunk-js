@@ -32,6 +32,10 @@ export interface BlueBot {
 	handleMessage(message: Message): Promise<void>;
 }
 
+export interface BananaBot {
+	handleMessage(message: Message): Promise<void>;
+}
+
 export type OpenAIClient = OpenAI;
 
 // Service identifier symbols
@@ -41,6 +45,7 @@ export const ServiceId = {
 	DiscordClient: Symbol('DiscordClient'),
 	BlueBot: Symbol('BlueBot'),
 	OpenAIClient: Symbol('OpenAIClient'),
+	BananaBot: Symbol('BananaBot'),
 } as const;
 
 // Service type registry
@@ -50,6 +55,7 @@ export interface ServiceTypes {
 	[ServiceId.DiscordClient]: DiscordClient;
 	[ServiceId.BlueBot]: BlueBot;
 	[ServiceId.OpenAIClient]: OpenAIClient;
+	[ServiceId.BananaBot]: BananaBot;
 }
 
 type ServiceScope = 'singleton' | 'transient';

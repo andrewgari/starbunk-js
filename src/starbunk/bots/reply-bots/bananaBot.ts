@@ -1,20 +1,27 @@
 import { Message, TextChannel } from 'discord.js';
 import UserID from '../../../discord/userId';
+import { Logger } from '../../../services/logger';
 import { Service, ServiceId } from '../../../services/services';
 import random from '../../../utils/random';
 import { BananaBotConfig } from '../config/bananaBotConfig';
 import ReplyBot from '../replyBot';
 
 @Service({
-	id: ServiceId.BlueBot,
-	dependencies: [ServiceId.Logger, ServiceId.WebhookService],
+	id: ServiceId.BananaBot,
+	dependencies: [ServiceId.Logger],
 	scope: 'singleton'
 })
 export default class BananaBot extends ReplyBot {
-	public readonly botName: string = BananaBotConfig.Name;
-	public readonly avatarUrl: string = BananaBotConfig.Avatars.Default;
+	public readonly botName = BananaBotConfig.Name;
+	protected readonly avatarUrl = BananaBotConfig.Avatars.Default;
 
-	async handleMessage(message: Message<boolean>): Promise<void> {
+	constructor(
+		private readonly logger: Logger
+	) {
+		super();
+	}
+
+	public async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
 		const content = message.content;
@@ -24,6 +31,7 @@ export default class BananaBot extends ReplyBot {
 		const shouldReply = (match && match.length > 0) || (isTargetUser && random.percentChance(5));
 
 		if (shouldReply) {
+			this.logger.debug(`BananaBot responding to message: ${content}`);
 			await this.sendReply(message.channel as TextChannel, BananaBotConfig.getRandomCheekyResponse());
 		}
 	}

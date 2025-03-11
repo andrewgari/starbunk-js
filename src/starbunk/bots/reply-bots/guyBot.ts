@@ -1,28 +1,23 @@
 import { Message, TextChannel } from 'discord.js';
+import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
 import userId from '../../../discord/userId';
 import random from '../../../utils/random';
-import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
 import { GuyBotConfig } from '../config/guyBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class GuyBot extends ReplyBot {
-	private _botName: string = GuyBotConfig.Name;
-	private _avatarUrl: string = GuyBotConfig.Avatars.Default;
+	private _botName = GuyBotConfig.Name;
+	private _avatarUrl = GuyBotConfig.Avatars.Default;
 
-	// Public getters
-	get botName(): string {
+	public get botName(): string {
 		return this._botName;
 	}
 
-	get avatarUrl(): string {
+	protected get avatarUrl(): string {
 		return this._avatarUrl;
 	}
 
-	defaultBotName(): string {
-		return 'GuyBot';
-	}
-
-	async handleMessage(message: Message<boolean>): Promise<void> {
+	public async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
 		const guyIdentity = await getCurrentMemberIdentity(userId.Guy, message.guild!);
@@ -38,7 +33,7 @@ export default class GuyBot extends ReplyBot {
 		const shouldReply = hasGuy || (isTargetUser && random.percentChance(5));
 
 		if (shouldReply) {
-			this.sendReply(message.channel as TextChannel, GuyBotConfig.Responses.Default());
+			await this.sendReply(message.channel as TextChannel, GuyBotConfig.Responses.Default());
 		}
 	}
 }
