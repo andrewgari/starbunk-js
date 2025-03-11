@@ -1,19 +1,17 @@
 import { Guild, Message, TextChannel } from 'discord.js';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
+import { BotIdentity } from '../botIdentity';
 import { SigGreatBotConfig } from '../config/sigGreatBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class SigGreatBot extends ReplyBot {
-	private _botName = SigGreatBotConfig.Name;
-	private _avatarUrl = SigGreatBotConfig.Avatars.Default;
 
-	// Public getters
-	public get botName(): string {
-		return this._botName;
-	}
-
-	protected get avatarUrl(): string {
-		return this._avatarUrl;
+	protected get botIdentity(): BotIdentity {
+		return {
+			userId: '',
+			avatarUrl: SigGreatBotConfig.Avatars.Default,
+			botName: SigGreatBotConfig.Name
+		};
 	}
 
 	defaultBotName(): string {
@@ -28,12 +26,11 @@ export default class SigGreatBot extends ReplyBot {
 
 		if (hasSigGreat) {
 			const identity = await getCurrentMemberIdentity(message.author.id, message.guild as Guild);
-			if (identity) {
-				this._avatarUrl = identity.avatarUrl ?? this._avatarUrl;
-				this._botName = identity.botName ?? this._botName;
-			}
 
-			await this.sendReply(message.channel as TextChannel, SigGreatBotConfig.Responses.Default);
+			await this.sendReply(message.channel as TextChannel, {
+				botIdentity: identity,
+				content: SigGreatBotConfig.Responses.Default
+			});
 		}
 	}
 }

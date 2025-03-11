@@ -8,8 +8,15 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class EzioBot extends ReplyBot {
-	public readonly botName: string = EzioBotConfig.Name;
-	public readonly avatarUrl: string = EzioBotConfig.Avatars.Default;
+	protected readonly config = EzioBotConfig;
+	
+	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+		return {
+			userId: '',
+			botName: EzioBotConfig.Name,
+			avatarUrl: EzioBotConfig.Avatars.Default
+		};
+	}
 
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;

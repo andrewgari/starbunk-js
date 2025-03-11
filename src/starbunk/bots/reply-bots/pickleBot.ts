@@ -1,12 +1,18 @@
 import { Message, TextChannel } from 'discord.js';
 import userId from '../../../discord/userId';
 import Random from '../../../utils/random';
+import { BotIdentity } from '../botIdentity';
 import { PickleBotConfig } from '../config/pickleBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class PickleBot extends ReplyBot {
-	public readonly botName: string = PickleBotConfig.Name;
-	public readonly avatarUrl: string = PickleBotConfig.Avatars.Default;
+	protected get botIdentity(): BotIdentity {
+		return {
+			userId: '',
+			avatarUrl: PickleBotConfig.Avatars.Default,
+			botName: PickleBotConfig.Name
+		};
+	}
 
 	defaultBotName(): string {
 		return 'PickleBot';
@@ -22,7 +28,10 @@ export default class PickleBot extends ReplyBot {
 		const shouldReply = hasPickle || (isTargetUser && Random.percentChance(15));
 
 		if (shouldReply) {
-			this.sendReply(message.channel as TextChannel, PickleBotConfig.Responses.Default);
+			this.sendReply(message.channel as TextChannel, {
+				botIdentity: this.botIdentity,
+				content: PickleBotConfig.Responses.Default
+			});
 		}
 	}
 }

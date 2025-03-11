@@ -20,7 +20,7 @@ describe('VennBot', () => {
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
 
 		// Create VennBot instance
-		vennBot = new VennBot();
+		vennBot = new VennBot(mockLogger);
 	});
 
 	it('should respond to messages containing "venn"', async () => {

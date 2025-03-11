@@ -9,8 +9,15 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class CheckBot extends ReplyBot {
-	public readonly botName: string = CheckBotConfig.Name;
-	public readonly avatarUrl: string = CheckBotConfig.Avatars.Default;
+	protected readonly config = CheckBotConfig;
+	
+	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+		return {
+			userId: '',
+			botName: CheckBotConfig.Name,
+			avatarUrl: CheckBotConfig.Avatars.Default
+		};
+	}
 
 	defaultBotName(): string {
 		return 'CheckBot';
