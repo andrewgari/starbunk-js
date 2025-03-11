@@ -25,7 +25,7 @@ describe('MacaroniBot', () => {
 			message.channel,
 			expect.objectContaining({
 				username: MacaroniBotConfig.Name,
-				content: '🧀 Macaroni and cheese is the best! 🧀'
+				content: expect.stringContaining("Are you trying to reach")
 			})
 		);
 	});

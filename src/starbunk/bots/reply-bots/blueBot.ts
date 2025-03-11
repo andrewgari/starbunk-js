@@ -13,8 +13,13 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class BlueBot extends ReplyBot {
-	public readonly botName = BlueBotConfig.Name;
-	protected readonly avatarUrl = BlueBotConfig.Avatars.Default;
+	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+		return {
+			userId: '',
+			botName: BlueBotConfig.Name,
+			avatarUrl: BlueBotConfig.Avatars.Default
+		};
+	}
 
 	private _blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private _blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
@@ -43,31 +48,61 @@ export default class BlueBot extends ReplyBot {
 		if (content.includes('blue')) {
 			this._blueTimestamp = new Date();
 			this.logger.debug(`BlueBot responding to message: ${content}`);
-			await this.sendReply(channel, BlueBotConfig.Responses.Default);
+			await this.sendReply(channel, {
+				botIdentity: {
+					...this.botIdentity,
+					avatarUrl: BlueBotConfig.Avatars.Default
+				},
+				content: BlueBotConfig.Responses.Default
+			});
 			return;
 		}
 
 		if (await this.isVennInsultingBlu(message)) {
 			this._blueMurderTimestamp = new Date();
-			await this.sendReply(channel, BlueBotConfig.Responses.Murder);
+			await this.sendReply(channel, {
+				botIdentity: {
+					...this.botIdentity,
+					avatarUrl: BlueBotConfig.Avatars.Murder
+				},
+				content: BlueBotConfig.Responses.Murder
+			});
 			return;
 		}
 
 		if (this.isSomeoneAskingToBeBlue(message)) {
-			await this.sendReply(channel, BlueBotConfig.Responses.Request(message.content));
+			await this.sendReply(channel, {
+				botIdentity: {
+					...this.botIdentity,
+					avatarUrl: BlueBotConfig.Avatars.Default
+				},
+				content: BlueBotConfig.Responses.Request(message.content)
+			});
 			return;
 		}
 
 		if (this.isSomeoneRespondingToBlu(message)) {
 			const responses = BlueBotConfig.Responses.Cheeky;
 			const randomIndex = Math.floor(Math.random() * responses.length);
-			await this.sendReply(channel, responses[randomIndex]);
+			await this.sendReply(channel, {
+				botIdentity: {
+					...this.botIdentity,
+					avatarUrl: BlueBotConfig.Avatars.Cheeky
+				},
+				content: responses[randomIndex]
+			});
 			return;
 		}
 
 		if (await this.checkIfBlueIsSaid(message)) {
 			this._blueTimestamp = new Date();
-			await this.sendReply(channel, BlueBotConfig.Responses.Default);
+			await this.sendReply(channel, {
+				botIdentity: {
+					...this.botIdentity,
+					avatarUrl: BlueBotConfig.Avatars.Default
+				},
+				content: BlueBotConfig.Responses.Default
+			});
 		}
 	}
 

@@ -1,6 +1,9 @@
-import { Message, TextChannel } from 'discord.js';
+import { getCurrentMemberIdentity } from '@/discord/discordGuildMemberHelper';
+import userId from '@/discord/userId';
+import { Guild, Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/logger';
 import { Service, ServiceId } from '../../../services/services';
+import { BotIdentity } from '../botIdentity';
 import { SheeshBotConfig } from '../config/sheeshBotConfig';
 import ReplyBot from '../replyBot';
 
@@ -10,8 +13,13 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class SheeshBot extends ReplyBot {
-	public readonly botName = SheeshBotConfig.Name;
-	protected readonly avatarUrl = SheeshBotConfig.Avatars.Default;
+	protected get botIdentity(): BotIdentity {
+		return {
+			userId: '',
+			avatarUrl: SheeshBotConfig.Avatars.Default,
+			botName: SheeshBotConfig.Name,
+		};
+	}
 
 	constructor(private readonly logger: Logger) {
 		super();
@@ -25,7 +33,11 @@ export default class SheeshBot extends ReplyBot {
 
 		if (hasSheesh && message.channel instanceof TextChannel) {
 			this.logger.debug(`😤 User ${message.author.username} said sheesh in: "${content}"`);
-			await this.sendReply(message.channel, SheeshBotConfig.Responses.Default());
+			const identity = await getCurrentMemberIdentity(userId.Guy, message.guild as Guild);
+			await this.sendReply(message.channel, {
+				botIdentity: identity,
+				content: SheeshBotConfig.Responses.Default()
+			});
 		}
 	}
 }

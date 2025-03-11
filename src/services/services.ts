@@ -50,7 +50,9 @@ export const ServiceId = {
 	MacaroniBot: Symbol('MacaroniBot'),
 	NiceBot: Symbol('NiceBot'),
 	SheeshBot: Symbol('SheeshBot'),
-	SpiderBot: Symbol('SpiderBot')
+	SpiderBot: Symbol('SpiderBot'),
+	VennBot: Symbol('VennBot'),
+	MusicCorrectBot: Symbol('MusicCorrectBot')
 } as const;
 
 // Service type registry

@@ -8,8 +8,13 @@ import ReplyBot from "../replyBot";
 	scope: 'singleton'
 })
 export default class AttitudeBot extends ReplyBot {
-	public readonly botName: string = AttitudeBotConfig.Name;
-	public readonly avatarUrl: string = AttitudeBotConfig.Avatars.Default;
+	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+		return {
+			userId: '',
+			botName: AttitudeBotConfig.Name,
+			avatarUrl: AttitudeBotConfig.Avatars.Default
+		};
+	}
 
 	defaultBotName(): string {
 		return 'AttitudeBot';
@@ -22,7 +27,9 @@ export default class AttitudeBot extends ReplyBot {
 		const hasAttitude = AttitudeBotConfig.Patterns.Default?.test(content);
 
 		if (hasAttitude) {
-			this.sendReply(message.channel as TextChannel, AttitudeBotConfig.Responses.Default);
+			this.sendReply(message.channel as TextChannel, {
+				content: AttitudeBotConfig.Responses.Default
+			});
 		}
 	}
 }

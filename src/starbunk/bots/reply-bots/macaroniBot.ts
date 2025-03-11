@@ -1,20 +1,31 @@
 import { Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/logger';
-import { BaseBot, Service, ServiceId, WebhookService } from '../../../services/services';
+import { Service, ServiceId, WebhookService } from '../../../services/services';
+import { BotIdentity } from '../botIdentity';
 import { MacaroniBotConfig } from '../config/macaroniBotConfig';
+import ReplyBot from '../replyBot';
 
 @Service({
 	id: ServiceId.MacaroniBot,
 	dependencies: [ServiceId.Logger, ServiceId.WebhookService],
 	scope: 'singleton'
 })
-export default class MacaroniBot implements BaseBot {
-	public readonly botName = MacaroniBotConfig.Name;
+export default class MacaroniBot extends ReplyBot {
+	protected get botIdentity(): BotIdentity {
+		return {
+			userId: '',
+			avatarUrl: MacaroniBotConfig.Avatars.Default,
+			botName: MacaroniBotConfig.Name
+		};
+	}
 
 	constructor(
 		private readonly logger: Logger,
-		private readonly webhookService: WebhookService
-	) { }
+		// webhookService is injected but not directly used by this class
+		_webhookService: WebhookService
+	) {
+		super();
+	}
 
 	async handleMessage(message: Message): Promise<void> {
 		const content = message.content.toLowerCase();
@@ -25,11 +36,9 @@ export default class MacaroniBot implements BaseBot {
 
 		if (content.includes('macaroni')) {
 			this.logger.debug(`MacaroniBot responding to message: ${content}`);
-			await this.webhookService.writeMessage(message.channel as TextChannel, {
-				username: MacaroniBotConfig.Name,
-				avatarURL: MacaroniBotConfig.Avatars.Default,
-				content: '🧀 Macaroni and cheese is the best! 🧀',
-				embeds: []
+			await this.sendReply(message.channel as TextChannel, {
+				botIdentity: this.botIdentity,
+				content: MacaroniBotConfig.Responses.Default(content)
 			});
 		}
 	}

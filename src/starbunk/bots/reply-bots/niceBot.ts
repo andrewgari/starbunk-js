@@ -1,5 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
 import { Service, ServiceId } from '../../../services/services';
+import { BotIdentity } from '../botIdentity';
 import { NiceBotConfig } from '../config/niceBotConfig';
 import ReplyBot from '../replyBot';
 
@@ -8,8 +9,13 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class NiceBot extends ReplyBot {
-	public readonly botName: string = NiceBotConfig.Name;
-	public readonly avatarUrl: string = NiceBotConfig.Avatars.Default;
+	protected get botIdentity(): BotIdentity {
+		return {
+			userId: '',
+			avatarUrl: NiceBotConfig.Avatars.Default,
+			botName: NiceBotConfig.Name
+		};
+	}
 
 	defaultBotName(): string {
 		return 'NiceBot';
@@ -22,7 +28,10 @@ export default class NiceBot extends ReplyBot {
 		const hasNice = NiceBotConfig.Patterns.Default?.test(content);
 
 		if (hasNice) {
-			this.sendReply(message.channel as TextChannel, NiceBotConfig.Responses.Default);
+			this.sendReply(message.channel as TextChannel, {
+				botIdentity: this.botIdentity,
+				content: NiceBotConfig.Responses.Default
+			});
 		}
 	}
 }

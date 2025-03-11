@@ -8,8 +8,13 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class GundamBot extends ReplyBot {
-	public readonly botName: string = GundamBotConfig.Name;
-	public readonly avatarUrl: string = GundamBotConfig.Avatars.Default;
+	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+		return {
+			userId: '',
+			botName: GundamBotConfig.Name,
+			avatarUrl: GundamBotConfig.Avatars.Default
+		};
+	}
 
 	defaultBotName(): string {
 		return 'GundamBot';
@@ -22,7 +27,9 @@ export default class GundamBot extends ReplyBot {
 		const hasGundam = GundamBotConfig.Patterns.Default?.test(content);
 
 		if (hasGundam) {
-			this.sendReply(message.channel as TextChannel, GundamBotConfig.Responses.Default);
+			this.sendReply(message.channel as TextChannel, {
+				content: GundamBotConfig.Responses.Default
+			});
 		}
 	}
 }

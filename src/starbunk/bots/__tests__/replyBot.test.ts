@@ -4,8 +4,13 @@ import ReplyBot from '../replyBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 class TestReplyBot extends ReplyBot {
-	public botName = 'TestBot';
-	public avatarUrl = 'https://example.com/avatar.png';
+	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+		return {
+			userId: '',
+			botName: 'TestBot',
+			avatarUrl: 'https://example.com/avatar.png'
+		};
+	}
 
 	public shouldReply(message: Message): boolean {
 		return message.content.includes('test');

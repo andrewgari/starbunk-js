@@ -3,6 +3,7 @@ import UserID from '../../../discord/userId';
 import { Logger } from '../../../services/logger';
 import { Service, ServiceId } from '../../../services/services';
 import random from '../../../utils/random';
+import { BotIdentity } from '../botIdentity';
 import { BananaBotConfig } from '../config/bananaBotConfig';
 import ReplyBot from '../replyBot';
 
@@ -12,12 +13,15 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class BananaBot extends ReplyBot {
-	public readonly botName = BananaBotConfig.Name;
-	protected readonly avatarUrl = BananaBotConfig.Avatars.Default;
+	protected get botIdentity(): BotIdentity {
+		return {
+			userId: '',
+			avatarUrl: BananaBotConfig.Avatars.Default,
+			botName: BananaBotConfig.Name
+		};
+	}
 
-	constructor(
-		private readonly logger: Logger
-	) {
+	constructor(private readonly logger: Logger) {
 		super();
 	}
 
@@ -32,7 +36,7 @@ export default class BananaBot extends ReplyBot {
 
 		if (shouldReply) {
 			this.logger.debug(`BananaBot responding to message: ${content}`);
-			await this.sendReply(message.channel as TextChannel, BananaBotConfig.getRandomCheekyResponse());
+			await this.sendReply(message.channel as TextChannel, BananaBotConfig.Responses.Default());
 		}
 	}
 }

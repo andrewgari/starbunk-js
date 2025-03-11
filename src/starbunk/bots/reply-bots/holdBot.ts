@@ -1,5 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
 import { Service, ServiceId } from '../../../services/services';
+import { BotIdentity } from '../botIdentity';
 import { HoldBotConfig } from '../config/holdBotConfig';
 import ReplyBot from '../replyBot';
 
@@ -8,8 +9,13 @@ import ReplyBot from '../replyBot';
 	scope: 'singleton'
 })
 export default class HoldBot extends ReplyBot {
-	public readonly botName: string = HoldBotConfig.Name;
-	public readonly avatarUrl: string = HoldBotConfig.Avatars.Default;
+	protected get botIdentity(): BotIdentity {
+		return {
+			userId: '',
+			avatarUrl: HoldBotConfig.Avatars.Default,
+			botName: HoldBotConfig.Name
+		};
+	}
 
 	defaultBotName(): string {
 		return 'HoldBot';
@@ -22,7 +28,9 @@ export default class HoldBot extends ReplyBot {
 		const hasHold = HoldBotConfig.Patterns.Default?.test(content);
 
 		if (hasHold) {
-			this.sendReply(message.channel as TextChannel, HoldBotConfig.Responses.Default);
+			this.sendReply(message.channel as TextChannel, {
+				content: HoldBotConfig.Responses.Default
+			});
 		}
 	}
 }
