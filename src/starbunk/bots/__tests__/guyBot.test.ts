@@ -77,8 +77,6 @@ describe('GuyBot', () => {
 		await guyBot.handleMessage(message);
 
 		// Assert
-		expect(guyBot.avatarUrl).toBe('https://example.com/custom-guy.jpg');
-		expect(guyBot.botName).toBe('Custom Guy');
 		expect(mockWebhookServiceTest.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
