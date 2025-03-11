@@ -29,14 +29,40 @@ describe('SpiderBot', () => {
 		);
 	});
 
+	it('should respond with correction to incorrect Spider-Man spelling', async () => {
+		const message = mockMessage('I love spiderman!');
+		await spiderBot.handleMessage(message);
+
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				username: SpiderBotConfig.Name,
+				content: expect.any(String)
+			})
+		);
+	});
+
+	it('should respond positively to correct Spider-Man spelling', async () => {
+		const message = mockMessage('Spider-Man is awesome!');
+		await spiderBot.handleMessage(message);
+
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				username: SpiderBotConfig.Name,
+				content: expect.any(String)
+			})
+		);
+	});
+
 	it('should not respond to bot messages', async () => {
-		const message = mockMessage('spider', undefined, true);
+		const message = mockMessage('spiderman', undefined, true);
 		await spiderBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	it('should not respond to messages without "spider"', async () => {
+	it('should not respond to messages without spider-man reference', async () => {
 		const message = mockMessage('hello world');
 		await spiderBot.handleMessage(message);
 
