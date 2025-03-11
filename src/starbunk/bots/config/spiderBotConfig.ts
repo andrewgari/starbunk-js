@@ -4,7 +4,8 @@ export const SpiderBotConfig = {
 		Default: 'https://i.pinimg.com/736x/33/e0/06/33e00653eb485455ce5121b413b26d3b.jpg'
 	},
 	Patterns: {
-		Default: /spider[^-]?man/i
+		Default: /spider[^-]?man/i,
+		Correct: /Spider-Man/
 	},
 	Responses: {
 		Default: [
@@ -27,10 +28,26 @@ export const SpiderBotConfig = {
 			'Spider-sense... tingling... someone... forgot... the... HYPHEN! It\'s **Spider-Man**!',
 			'With great spelling comes great hyphens! **Spider-Man**! Say it with me!',
 			'*Hangs upside down* From this angle, I can clearly see you\'re missing the hyphen in **Spider-Man**.'
+		],
+		Correct: [
+			'Hey, you used the hyphen! You\'re one of the good ones!',
+			'*wipes away tear* Finally, someone who understands the importance of the hyphen!',
+			'Now that\'s what I call proper Spider-Man spelling! Keep up the good work!',
+			'*happy spider noises* The hyphen! You remembered the hyphen!',
+			'Uncle Ben would be proud of your proper hyphen usage!',
+			'With great power comes great responsibility to use hyphens correctly - and you nailed it!',
+			'My spider-sense is tingling with joy at your proper hyphenation!',
+			'*does a celebratory web-swing* You\'re a true Spider-Fan!',
+			'J. Jonah Jameson might call me a menace, but even he\'d approve of your spelling!',
+			'You\'re the hero the English language deserves!'
 		]
 	},
 	getRandomCheekyResponse: (): string => {
 		const responses = SpiderBotConfig.Responses.Default as string[];
+		return responses[Math.floor(Math.random() * responses.length)];
+	},
+	getRandomPositiveResponse: (): string => {
+		const responses = SpiderBotConfig.Responses.Correct as string[];
 		return responses[Math.floor(Math.random() * responses.length)];
 	}
 };
