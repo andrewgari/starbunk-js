@@ -1,13 +1,16 @@
 import { Message, TextChannel } from 'discord.js';
-import { Logger, Service, ServiceId, WebhookService } from '../../../services/services';
+import { Logger } from '../../../services/logger';
+import { BaseBot, Service, ServiceId, WebhookService } from '../../../services/services';
 import { MacaroniBotConfig } from '../config/macaroniBotConfig';
 
 @Service({
-	id: ServiceId.BlueBot,
+	id: ServiceId.MacaroniBot,
 	dependencies: [ServiceId.Logger, ServiceId.WebhookService],
 	scope: 'singleton'
 })
-export default class MacaroniBot {
+export default class MacaroniBot implements BaseBot {
+	public readonly botName = MacaroniBotConfig.Name;
+
 	constructor(
 		private readonly logger: Logger,
 		private readonly webhookService: WebhookService

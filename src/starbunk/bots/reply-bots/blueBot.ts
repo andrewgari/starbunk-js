@@ -1,7 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
 import userId from '../../../discord/userId';
+import type { OpenAIClient } from '../../../openai/openaiClient';
 import { Logger } from '../../../services/logger';
-import { OpenAIClient, Service, ServiceId } from '../../../services/services';
+import { Service, ServiceId } from '../../../services/services';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';

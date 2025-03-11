@@ -13,7 +13,7 @@ describe('SheeshBot', () => {
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
 
 		// Create SheeshBot instance
-		sheeshBot = new SheeshBot();
+		sheeshBot = new SheeshBot(mockLogger);
 	});
 
 	it('should respond to messages containing "sheesh"', async () => {

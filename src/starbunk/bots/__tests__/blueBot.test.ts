@@ -30,7 +30,8 @@ jest.mock('../config/blueBotConfig', () => ({
 	}
 }));
 
-import { container, OpenAIClient, ServiceId } from '../../../services/services';
+import type { OpenAIClient } from '../../../openai/openaiClient';
+import { container, ServiceId } from '../../../services/services';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import BlueBot from '../reply-bots/blueBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';

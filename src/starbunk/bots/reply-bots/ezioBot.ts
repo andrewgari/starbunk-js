@@ -1,7 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
+import { Service, ServiceId } from '../../../services/services';
 import { EzioBotConfig } from '../config/ezioBotConfig';
 import ReplyBot from '../replyBot';
 
+@Service({
+	id: ServiceId.EzioBot,
+	scope: 'singleton'
+})
 export default class EzioBot extends ReplyBot {
 	public readonly botName: string = EzioBotConfig.Name;
 	public readonly avatarUrl: string = EzioBotConfig.Avatars.Default;

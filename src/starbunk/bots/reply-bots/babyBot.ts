@@ -1,7 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
+import { Service, ServiceId } from '../../../services/services';
 import { BabyBotConfig } from '../config/babyBotConfig';
 import ReplyBot from '../replyBot';
 
+@Service({
+	id: ServiceId.BabyBot,
+	scope: 'singleton'
+})
 export default class BabyBot extends ReplyBot {
 	public readonly botName: string = BabyBotConfig.Name;
 	public readonly avatarUrl: string = BabyBotConfig.Avatars.Default;

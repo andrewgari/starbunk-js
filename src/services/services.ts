@@ -6,12 +6,14 @@ import { Client, Message, TextChannel, WebhookClient } from 'discord.js';
 import OpenAI from 'openai';
 import { MessageInfo } from '../webhooks/types';
 
-// Service interfaces
+export type OpenAIClient = OpenAI;
+
+// Forward declarations of service types
 export interface Logger {
 	debug(message: string): void;
 	info(message: string): void;
 	warn(message: string): void;
-	error(message: string, error?: Error): void;
+	error(message: string | Error, error?: Error): void;
 	success(message: string): void;
 	formatMessage(message: string): string;
 	getCallerInfo(): string;
@@ -19,24 +21,16 @@ export interface Logger {
 
 export interface WebhookService {
 	writeMessage(channel: TextChannel, messageInfo: MessageInfo): Promise<void>;
-	sendMessage(message: MessageInfo): Promise<void>;
+	sendMessage(messageInfo: MessageInfo): Promise<void>;
 	webhookClient: WebhookClient | null;
 	logger: Logger;
 }
 
-export interface DiscordClient extends Client {
-	// Add any additional Discord client methods
-}
-
-export interface BlueBot {
+// Base interface for all bots
+export interface BaseBot {
+	botName: string;
 	handleMessage(message: Message): Promise<void>;
 }
-
-export interface BananaBot {
-	handleMessage(message: Message): Promise<void>;
-}
-
-export type OpenAIClient = OpenAI;
 
 // Service identifier symbols
 export const ServiceId = {
@@ -46,16 +40,38 @@ export const ServiceId = {
 	BlueBot: Symbol('BlueBot'),
 	OpenAIClient: Symbol('OpenAIClient'),
 	BananaBot: Symbol('BananaBot'),
+	AttitudeBot: Symbol('AttitudeBot'),
+	BabyBot: Symbol('BabyBot'),
+	ChaosBot: Symbol('ChaosBot'),
+	CheckBot: Symbol('CheckBot'),
+	EzioBot: Symbol('EzioBot'),
+	GundamBot: Symbol('GundamBot'),
+	HoldBot: Symbol('HoldBot'),
+	MacaroniBot: Symbol('MacaroniBot'),
+	NiceBot: Symbol('NiceBot'),
+	SheeshBot: Symbol('SheeshBot'),
+	SpiderBot: Symbol('SpiderBot')
 } as const;
 
 // Service type registry
 export interface ServiceTypes {
 	[ServiceId.Logger]: Logger;
 	[ServiceId.WebhookService]: WebhookService;
-	[ServiceId.DiscordClient]: DiscordClient;
-	[ServiceId.BlueBot]: BlueBot;
-	[ServiceId.OpenAIClient]: OpenAIClient;
-	[ServiceId.BananaBot]: BananaBot;
+	[ServiceId.DiscordClient]: Client;
+	[ServiceId.BlueBot]: BaseBot;
+	[ServiceId.OpenAIClient]: OpenAI;
+	[ServiceId.BananaBot]: BaseBot;
+	[ServiceId.AttitudeBot]: BaseBot;
+	[ServiceId.BabyBot]: BaseBot;
+	[ServiceId.ChaosBot]: BaseBot;
+	[ServiceId.CheckBot]: BaseBot;
+	[ServiceId.EzioBot]: BaseBot;
+	[ServiceId.GundamBot]: BaseBot;
+	[ServiceId.HoldBot]: BaseBot;
+	[ServiceId.MacaroniBot]: BaseBot;
+	[ServiceId.NiceBot]: BaseBot;
+	[ServiceId.SheeshBot]: BaseBot;
+	[ServiceId.SpiderBot]: BaseBot;
 }
 
 type ServiceScope = 'singleton' | 'transient';
