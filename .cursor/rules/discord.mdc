@@ -1,6 +1,7 @@
 ---
 description: discord specific stuff
-globs: 
+globs: src/
+alwaysApply: false
 ---
 
 ## Discord-Specific

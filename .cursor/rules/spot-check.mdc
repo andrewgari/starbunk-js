@@ -1,14 +1,8 @@
 ---
 description: Run a Spot Check of the application startup to verify working
-globs: 
+globs: **.*
+alwaysApply: false
 ---
-
-# Your rule content
-
-- You can @ files here
-- You can use markdown but dont have to
-[package.json](mdc:package.json)
-
 Please run `npm run dev` before ever commiting. If any errors are detectedin this script, fix them.
 
 The process consists of

@@ -1,6 +1,6 @@
 ---
 description: handle errors
-globs: 
+globs: src/**
 alwaysApply: false
 ---
 ## Error Handling

@@ -2,16 +2,13 @@ import { getCurrentMemberIdentity } from '@/discord/discordGuildMemberHelper';
 import userId from '@/discord/userId';
 import { Guild, Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/logger';
-import { Service, ServiceId } from '../../../services/services';
+;
 import { BotIdentity } from '../botIdentity';
 import { SheeshBotConfig } from '../config/sheeshBotConfig';
 import ReplyBot from '../replyBot';
 
-@Service({
-	id: ServiceId.SheeshBot,
-	dependencies: [ServiceId.Logger],
-	scope: 'singleton'
-})
+
+// This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class SheeshBot extends ReplyBot {
 	protected get botIdentity(): BotIdentity {
 		return {

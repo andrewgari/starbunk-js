@@ -1,6 +1,6 @@
 ---
 description: performance
-globs: 
+globs: src/**
 alwaysApply: false
 ---
 ## Performance

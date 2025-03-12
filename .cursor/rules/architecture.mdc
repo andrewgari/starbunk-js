@@ -1,6 +1,7 @@
 ---
 description: architecture and pattern preferences
-globs: 
+globs: src/**
+alwaysApply: false
 ---
 ## Architecture
 - Use observer pattern for event handling (RxJS preferred)

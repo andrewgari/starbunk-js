@@ -1,17 +1,9 @@
 // Register module aliases for path resolution
 import { GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
-import 'module-alias/register';
-import { resolve } from 'path';
 import { bootstrapApplication } from './services/bootstrap';
 import SnowbunkClient from './snowbunk/snowbunkClient';
 import StarbunkClient from './starbunk/starbunkClient';
-
-// Register path aliases
-import moduleAlias from 'module-alias';
-moduleAlias.addAliases({
-	'@': resolve(__dirname)
-});
 
 dotenv.config();
 

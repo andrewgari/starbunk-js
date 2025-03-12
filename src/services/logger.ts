@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { Logger as LoggerInterface, Service, ServiceId } from './services';
+import { Logger as LoggerInterface } from './services';
 
 export enum LogLevel {
 	NONE = 0,
@@ -11,10 +11,7 @@ export enum LogLevel {
 
 // SUCCESS has the same level as INFO
 
-@Service({
-	id: ServiceId.Logger,
-	scope: 'singleton'
-})
+// Logger is now manually instantiated instead of using the @Service decorator
 export class Logger implements LoggerInterface {
 	debug(message: string): void {
 		if (process.env.DEBUG_MODE === 'true') {
@@ -54,11 +51,13 @@ export class Logger implements LoggerInterface {
 	}
 }
 
-// Helper function to get logger instance from container
+// Singleton instance
+const loggerInstance = new Logger();
+
+// Helper function to get logger instance - now returns the singleton directly
 export function getLogger(): Logger {
-	const container = require('./services').container;
-	return container.get(ServiceId.Logger);
+	return loggerInstance;
 }
 
 // Export a logger instance for convenience
-export const logger = getLogger();
+export const logger = loggerInstance;

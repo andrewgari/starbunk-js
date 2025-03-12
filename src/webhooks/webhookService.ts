@@ -1,11 +1,8 @@
 import { TextChannel, WebhookClient } from 'discord.js';
-import { Logger, Service, ServiceId, WebhookService as WebhookServiceInterface } from '../services/services';
+import { Logger, WebhookService as WebhookServiceInterface } from '../services/services';
 import { MessageInfo } from './types';
 
-@Service({
-	id: ServiceId.WebhookService,
-	dependencies: [ServiceId.Logger]
-})
+// WebhookService is now manually instantiated instead of using the @Service decorator
 export class WebhookService implements WebhookServiceInterface {
 	public webhookClient: WebhookClient | null = null;
 	public logger: Logger;

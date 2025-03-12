@@ -10,7 +10,6 @@
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "noUnusedLocals": false,
-    "noUnusedParameters": false,
     "moduleResolution": "node",
     "esModuleInterop": true,
     "skipLibCheck": true,
