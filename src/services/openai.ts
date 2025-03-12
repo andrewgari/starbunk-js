@@ -1,14 +1,14 @@
 import { Logger } from './logger';
 
 // Import OpenAI directly from the package
-const OpenAI = require('openai').default;
+import OpenAI from 'openai';
 
 /**
  * OpenAI client wrapper
  */
 export class OpenAIClient {
 	private static instance: OpenAIClient | null = null;
-	private client: any;
+	private client: OpenAI | undefined;
 	private logger = new Logger();
 
 	private constructor() {
@@ -37,7 +37,7 @@ export class OpenAIClient {
 	/**
 	 * Access to the chat completions API
 	 */
-	public get chat() {
+	public get chat(): OpenAI['chat'] | undefined {
 		return this.client?.chat;
 	}
 

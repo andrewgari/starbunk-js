@@ -10,9 +10,12 @@ export const ServiceId = {
 	DiscordClient: Symbol.for('DiscordClient')
 };
 
+// Type for service constructor
+export type ServiceConstructor<T> = new (...args: unknown[]) => T;
+
 // Simple container implementation
 class SimpleContainer {
-	private services = new Map<symbol, any>();
+	private services = new Map<symbol, unknown>();
 
 	register<T>(id: symbol, instance: T): void {
 		this.services.set(id, instance);

@@ -54,6 +54,9 @@ export const ServiceId = {
 	OpenAIClient: Symbol.for('OpenAIClient')
 } as const;
 
+// Import the OpenAIClient interface
+import { OpenAIClient } from './openai';
+
 // Service type registry
 export interface ServiceTypes {
 	[ServiceId.Logger]: Logger;
@@ -73,14 +76,14 @@ export interface ServiceTypes {
 	[ServiceId.SpiderBot]: BaseBot;
 	[ServiceId.VennBot]: BaseBot;
 	[ServiceId.MusicCorrectBot]: BaseBot;
-	[ServiceId.OpenAIClient]: any; // Changed to any to avoid import issues
+	[ServiceId.OpenAIClient]: OpenAIClient;
 }
 
 // Simple container implementation
 class SimpleContainer {
-	private services = new Map<symbol, any>();
+	private services = new Map<symbol, unknown>();
 
-	register(id: symbol, instance: any): void {
+	register<T>(id: symbol, instance: T): void {
 		this.services.set(id, instance);
 	}
 
