@@ -49,8 +49,7 @@ export const mockWebhookService: WebhookService = {
 		warn: jest.fn(),
 		error: jest.fn(),
 		success: jest.fn(),
-		formatMessage: jest.fn(),
-		getCallerInfo: jest.fn()
+		formatMessage: jest.fn()
 	},
 };
 
@@ -60,8 +59,7 @@ export const mockLogger: Logger = {
 	warn: jest.fn(),
 	error: jest.fn(),
 	success: jest.fn(),
-	formatMessage: jest.fn(),
-	getCallerInfo: jest.fn()
+	formatMessage: jest.fn()
 };
 
 // For backward compatibility

@@ -52,6 +52,8 @@ interface IProcessEnv {
 	CLIENT_ID: string;
 	GUILD_ID: string;
 	DEBUG_MODE?: boolean;
+	WEBHOOK_URL?: string;
+	OPENAI_API_KEY: string;
 }
 
 export { IProcessEnv };
@@ -67,6 +69,8 @@ declare global {
 			CLIENT_ID: string;
 			GUILD_ID: string;
 			DEBUG_MODE?: string;
+			WEBHOOK_URL?: string;
+			OPENAI_API_KEY: string;
 		}
 	}
 }

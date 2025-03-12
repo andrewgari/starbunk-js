@@ -1,4 +1,5 @@
 import { Client } from 'discord.js';
+import { WebhookService as WebhookServiceImpl } from '../webhooks/webhookService';
 import { container, Logger, ServiceId, ServiceTypes, WebhookService } from './services';
 
 /**
@@ -13,10 +14,25 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 			() => client
 		);
 
+		// Ensure the logger is available
 		const logger = container.get(ServiceId.Logger);
 		if (!isLogger(logger)) {
 			throw new Error('Logger service not found or invalid');
 		}
+
+		// Ensure WebhookService is registered
+		try {
+			container.get(ServiceId.WebhookService);
+		} catch (error) {
+			// If WebhookService is not registered, register it manually
+			logger.info('WebhookService not found, registering manually');
+			container.register(
+				ServiceId.WebhookService,
+				() => new WebhookServiceImpl(logger),
+				{ scope: 'singleton', dependencies: [ServiceId.Logger] }
+			);
+		}
+
 		logger.info('🚀 Services bootstrapped successfully');
 	} catch (error) {
 		const logger = container.get(ServiceId.Logger);

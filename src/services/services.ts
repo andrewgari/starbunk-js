@@ -13,10 +13,10 @@ export interface Logger {
 	debug(message: string): void;
 	info(message: string): void;
 	warn(message: string): void;
-	error(message: string | Error, error?: Error): void;
+	error(message: string, error?: Error): void;
 	success(message: string): void;
-	formatMessage(message: string): string;
-	getCallerInfo(): string;
+	formatMessage(message: string, icon?: string): string;
+	// getCallerInfo is private in the implementation
 }
 
 export interface WebhookService {
@@ -187,16 +187,14 @@ export interface ServiceConfig {
 
 export function Service<K extends keyof ServiceTypes>({ id, dependencies = [], scope = 'transient' }: ServiceConfig & { id: K }) {
 	return function <T extends { prototype: ServiceTypes[K] }>(target: T): T {
-		const deps = dependencies.map(depId => container.get(depId));
 		const Constructor = target as unknown as ServiceConstructor<ServiceTypes[K]>;
 
-		if (scope === 'singleton') {
-			const instance = new Constructor(...deps);
-			container.register(id, () => instance);
-			return target;
-		}
+		container.register(id, () => {
+			// Resolve dependencies at instantiation time
+			const deps = dependencies.map(depId => container.get(depId));
+			return new Constructor(...deps);
+		}, { scope, dependencies });
 
-		container.register(id, (...args) => new Constructor(...args));
 		return target;
 	};
 }
