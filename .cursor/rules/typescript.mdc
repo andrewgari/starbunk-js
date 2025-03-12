@@ -1,6 +1,7 @@
 ---
 description: typescript
-globs: 
+globs: *.ts,*.tsx
+alwaysApply: false
 ---
 ## Typescript
 - Enable strict mode
@@ -11,3 +12,4 @@ globs:
 - Use `const` instead of `let` when the value is not reassigned
 - Use `async`/`await` for asynchronous operations
 - User Types when possible, this is typescript, use types
+- Never use any when avoidable, this is typescript, use types

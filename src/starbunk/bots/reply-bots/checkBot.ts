@@ -1,16 +1,12 @@
 import { Message, TextChannel } from 'discord.js';
-import { Service, ServiceId } from '../../../services/services';
 import { CheckBotConfig } from '../config/checkBotConfig';
 import ReplyBot from '../replyBot';
 
-@Service({
-	id: ServiceId.BlueBot,
-	dependencies: [ServiceId.Logger, ServiceId.WebhookService],
-	scope: 'singleton'
-})
+
+// This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class CheckBot extends ReplyBot {
 	protected readonly config = CheckBotConfig;
-	
+
 	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
 		return {
 			userId: '',

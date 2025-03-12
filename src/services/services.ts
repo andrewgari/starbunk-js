@@ -1,22 +1,22 @@
 /**
  * Type-safe dependency injection container
+ *
+ * NOTE: This file is being replaced by container.ts
+ * It's kept for backward compatibility but will be removed in the future
  */
 
 import { Client, Message, TextChannel, WebhookClient } from 'discord.js';
-import OpenAI from 'openai';
 import { MessageInfo } from '../webhooks/types';
-
-export type OpenAIClient = OpenAI;
 
 // Forward declarations of service types
 export interface Logger {
 	debug(message: string): void;
 	info(message: string): void;
 	warn(message: string): void;
-	error(message: string | Error, error?: Error): void;
+	error(message: string, error?: Error): void;
 	success(message: string): void;
-	formatMessage(message: string): string;
-	getCallerInfo(): string;
+	formatMessage(message: string, icon?: string): string;
+	// getCallerInfo is private in the implementation
 }
 
 export interface WebhookService {
@@ -34,26 +34,28 @@ export interface BaseBot {
 
 // Service identifier symbols
 export const ServiceId = {
-	Logger: Symbol('Logger'),
-	WebhookService: Symbol('WebhookService'),
+	Logger: Symbol.for('Logger'),
+	WebhookService: Symbol.for('WebhookService'),
 	DiscordClient: Symbol('DiscordClient'),
 	BlueBot: Symbol('BlueBot'),
-	OpenAIClient: Symbol('OpenAIClient'),
 	BananaBot: Symbol('BananaBot'),
 	AttitudeBot: Symbol('AttitudeBot'),
 	BabyBot: Symbol('BabyBot'),
-	ChaosBot: Symbol('ChaosBot'),
-	CheckBot: Symbol('CheckBot'),
-	EzioBot: Symbol('EzioBot'),
-	GundamBot: Symbol('GundamBot'),
-	HoldBot: Symbol('HoldBot'),
-	MacaroniBot: Symbol('MacaroniBot'),
-	NiceBot: Symbol('NiceBot'),
-	SheeshBot: Symbol('SheeshBot'),
+	CatBot: Symbol('CatBot'),
+	DadBot: Symbol('DadBot'),
+	DogBot: Symbol('DogBot'),
+	FoodBot: Symbol('FoodBot'),
+	GoodBot: Symbol('GoodBot'),
+	HugBot: Symbol('HugBot'),
+	MomBot: Symbol('MomBot'),
 	SpiderBot: Symbol('SpiderBot'),
 	VennBot: Symbol('VennBot'),
-	MusicCorrectBot: Symbol('MusicCorrectBot')
+	MusicCorrectBot: Symbol('MusicCorrectBot'),
+	OpenAIClient: Symbol.for('OpenAIClient')
 } as const;
+
+// Import the OpenAIClient interface
+import { OpenAIClient } from './openai';
 
 // Service type registry
 export interface ServiceTypes {
@@ -61,172 +63,51 @@ export interface ServiceTypes {
 	[ServiceId.WebhookService]: WebhookService;
 	[ServiceId.DiscordClient]: Client;
 	[ServiceId.BlueBot]: BaseBot;
-	[ServiceId.OpenAIClient]: OpenAI;
 	[ServiceId.BananaBot]: BaseBot;
 	[ServiceId.AttitudeBot]: BaseBot;
 	[ServiceId.BabyBot]: BaseBot;
-	[ServiceId.ChaosBot]: BaseBot;
-	[ServiceId.CheckBot]: BaseBot;
-	[ServiceId.EzioBot]: BaseBot;
-	[ServiceId.GundamBot]: BaseBot;
-	[ServiceId.HoldBot]: BaseBot;
-	[ServiceId.MacaroniBot]: BaseBot;
-	[ServiceId.NiceBot]: BaseBot;
-	[ServiceId.SheeshBot]: BaseBot;
+	[ServiceId.CatBot]: BaseBot;
+	[ServiceId.DadBot]: BaseBot;
+	[ServiceId.DogBot]: BaseBot;
+	[ServiceId.FoodBot]: BaseBot;
+	[ServiceId.GoodBot]: BaseBot;
+	[ServiceId.HugBot]: BaseBot;
+	[ServiceId.MomBot]: BaseBot;
 	[ServiceId.SpiderBot]: BaseBot;
+	[ServiceId.VennBot]: BaseBot;
+	[ServiceId.MusicCorrectBot]: BaseBot;
+	[ServiceId.OpenAIClient]: OpenAIClient;
 }
 
-type ServiceScope = 'singleton' | 'transient';
+// Simple container implementation
+class SimpleContainer {
+	private services = new Map<symbol, unknown>();
 
-interface ServiceDescriptor<K extends keyof ServiceTypes> {
-	factory: () => ServiceTypes[K];
-	scope: ServiceScope;
-	instance?: ServiceTypes[K];
-	dependencies: Array<keyof ServiceTypes>;
-}
-
-class Container {
-	private static instance: Container;
-	private services = new Map<keyof ServiceTypes, ServiceDescriptor<keyof ServiceTypes>>();
-
-	private constructor() {
-		// Private constructor for singleton pattern
+	register<T>(id: symbol, instance: T): void {
+		this.services.set(id, instance);
 	}
 
-	static getInstance(): Container {
-		if (!Container.instance) {
-			Container.instance = new Container();
+	get<T>(id: symbol): T {
+		const service = this.services.get(id);
+		if (!service) {
+			throw new Error(`Service not registered: ${String(id)}`);
 		}
-		return Container.instance;
+		return service as T;
 	}
 
-	/**
-	 * Register a service with its dependencies
-	 */
-	register<K extends keyof ServiceTypes>(
-		id: K,
-		factory: (...deps: ServiceTypes[keyof ServiceTypes][]) => ServiceTypes[K],
-		options: {
-			scope?: ServiceScope;
-			dependencies?: Array<keyof ServiceTypes>;
-		} = {}
-	): void {
-		this.services.set(id, {
-			factory: () => {
-				const deps = (options.dependencies ?? []).map(depId => this.get(depId));
-				return factory(...deps);
-			},
-			scope: options.scope ?? 'singleton',
-			dependencies: options.dependencies ?? [],
-		});
+	has(id: symbol): boolean {
+		return this.services.has(id);
 	}
 
-	/**
-	 * Get a service by its identifier
-	 */
-	get<K extends keyof ServiceTypes>(id: K): ServiceTypes[K] {
-		const descriptor = this.services.get(id);
-		if (!descriptor) {
-			throw new Error(`Service not registered: ${id.toString()}`);
-		}
-
-		if (descriptor.scope === 'singleton' && descriptor.instance) {
-			return descriptor.instance;
-		}
-
-		const instance = this.resolve(id, new Set());
-
-		if (descriptor.scope === 'singleton') {
-			descriptor.instance = instance;
-		}
-
-		return instance;
-	}
-
-	private resolve<K extends keyof ServiceTypes>(
-		id: K,
-		resolving: Set<keyof ServiceTypes>
-	): ServiceTypes[K] {
-		if (resolving.has(id)) {
-			throw new Error(`Circular dependency detected: ${id.toString()}`);
-		}
-
-		const descriptor = this.services.get(id);
-		if (!descriptor) {
-			throw new Error(`Service not registered: ${id.toString()}`);
-		}
-
-		resolving.add(id);
-
-		const instance = descriptor.factory();
-
-		resolving.delete(id);
-
-		return instance;
-	}
-
-	/**
-	 * Clear all services (useful for testing)
-	 */
 	clear(): void {
 		this.services.clear();
 	}
 }
 
 // Export the container instance
-export const container = Container.getInstance();
+export const container = new SimpleContainer();
 
-// Decorator for registering services
-export type ServiceConstructor<T> = new (...args: ServiceTypes[keyof ServiceTypes][]) => T;
-
-export interface ServiceConfig {
-	id: keyof ServiceTypes;
-	dependencies?: Array<keyof ServiceTypes>;
-	scope?: 'singleton' | 'transient';
+// Helper function to get a service
+export function getService<T>(serviceId: symbol): T {
+	return container.get<T>(serviceId);
 }
-
-export function Service<K extends keyof ServiceTypes>({ id, dependencies = [], scope = 'transient' }: ServiceConfig & { id: K }) {
-	return function <T extends { prototype: ServiceTypes[K] }>(target: T): T {
-		const deps = dependencies.map(depId => container.get(depId));
-		const Constructor = target as unknown as ServiceConstructor<ServiceTypes[K]>;
-
-		if (scope === 'singleton') {
-			const instance = new Constructor(...deps);
-			container.register(id, () => instance);
-			return target;
-		}
-
-		container.register(id, (...args) => new Constructor(...args));
-		return target;
-	};
-}
-
-// Example usage:
-/*
-@Service({
-  id: ServiceId.Logger,
-  scope: 'singleton'
-})
-export class Logger {
-  log(message: string) {
-	console.log(message);
-  }
-}
-
-@Service({
-  id: ServiceId.WebhookService,
-  dependencies: [ServiceId.Logger]
-})
-export class WebhookService {
-  constructor(private logger: Logger) {}
-
-  async sendWebhook(data: any) {
-	this.logger.log('Sending webhook...');
-	// Implementation
-  }
-}
-
-// Get a service
-const logger = container.get(ServiceId.Logger);
-const webhookService = container.get(ServiceId.WebhookService);
-*/

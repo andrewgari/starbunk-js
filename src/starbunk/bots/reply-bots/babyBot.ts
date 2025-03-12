@@ -1,15 +1,11 @@
 import { Message, TextChannel } from 'discord.js';
-import { Service, ServiceId } from '../../../services/services';
 import { BabyBotConfig } from '../config/babyBotConfig';
 import ReplyBot from '../replyBot';
 
-@Service({
-	id: ServiceId.BabyBot,
-	scope: 'singleton'
-})
+// This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class BabyBot extends ReplyBot {
 	protected readonly config = BabyBotConfig;
-	
+
 	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
 		return {
 			userId: '',

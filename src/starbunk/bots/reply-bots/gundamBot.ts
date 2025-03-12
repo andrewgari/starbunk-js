@@ -1,12 +1,9 @@
 import { Message, TextChannel } from 'discord.js';
-import { Service, ServiceId } from '../../../services/services';
 import { GundamBotConfig } from '../config/gundamBotConfig';
 import ReplyBot from '../replyBot';
 
-@Service({
-	id: ServiceId.GundamBot,
-	scope: 'singleton'
-})
+
+// This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class GundamBot extends ReplyBot {
 	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
 		return {

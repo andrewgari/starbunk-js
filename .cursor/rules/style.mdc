@@ -1,6 +1,7 @@
 ---
 description: coding style and best practices
-globs: 
+globs: src/**
+alwaysApply: false
 ---
 ## Code Style
 - Use interfaces or types for contracts

@@ -13,7 +13,7 @@ describe('BananaBot', () => {
 	let bananaBot: BananaBot;
 
 	beforeEach(() => {
-		bananaBot = new BananaBot(mockLogger);
+		bananaBot = new BananaBot();
 	});
 
 	it('should respond to messages containing "banana"', async () => {

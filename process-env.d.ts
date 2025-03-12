@@ -5,8 +5,11 @@ declare global {
 			SNOWBUNK_TOKEN: string;
 			CLIENT_ID: string;
 			GUILD_ID: string;
+			WEBHOOK_URL?: string;
+			OPENAI_API_KEY: string;
 		}
 	}
 }
 
-export {};
+export { };
+

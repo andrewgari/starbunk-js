@@ -65,9 +65,12 @@ export default abstract class ReplyBot {
 
 	public async sendReply(channel: TextChannel, content: string | Partial<ReplyOptions>): Promise<void> {
 		try {
-			const webhookService = getWebhookService();
-			if (!webhookService) {
-				throw new Error('WebhookService not found');
+			let webhookService;
+			try {
+				webhookService = getWebhookService();
+			} catch (error) {
+				logger.error('Failed to get WebhookService', error as Error);
+				throw new Error('WebhookService not available');
 			}
 
 			const options: ReplyOptions = typeof content === 'string'

@@ -14,7 +14,7 @@ describe('MacaroniBot', () => {
 
 	beforeEach(() => {
 		// Create MacaroniBot instance
-		macaroniBot = new MacaroniBot(mockLogger, mockWebhookService);
+		macaroniBot = new MacaroniBot();
 	});
 
 	it('should respond to messages containing "macaroni"', async () => {

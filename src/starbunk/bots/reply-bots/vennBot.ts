@@ -1,4 +1,3 @@
-import { Service, ServiceId } from '@/services/services';
 import { Message, TextChannel } from 'discord.js';
 import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
 import userId from '../../../discord/userId';
@@ -8,13 +7,12 @@ import { BotIdentity } from '../botIdentity';
 import { VennBotConfig } from '../config/vennBotConfig';
 import ReplyBot from '../replyBot';
 
-@Service({
-	id: ServiceId.VennBot,
-	dependencies: [ServiceId.Logger],
-	scope: 'singleton'
-})
+
+// This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class VennBot extends ReplyBot {
-	constructor(private readonly logger: Logger) {
+	private readonly logger = new Logger();
+
+	constructor() {
 		super();
 	}
 

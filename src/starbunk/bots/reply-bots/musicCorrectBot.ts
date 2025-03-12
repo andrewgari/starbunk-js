@@ -1,15 +1,11 @@
-import { Service, ServiceId } from '@/services/services';
 import { Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/logger';
 import { BotIdentity } from '../botIdentity';
 import { MusicCorrectBotConfig } from '../config/musicCorrectBotConfig';
 import ReplyBot from '../replyBot';
 
-@Service({
-	id: ServiceId.MusicCorrectBot,
-	dependencies: [ServiceId.Logger],
-	scope: 'singleton'
-})
+
+// This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class MusicCorrectBot extends ReplyBot {
 	protected get botIdentity(): BotIdentity {
 		return {

@@ -1,17 +1,13 @@
 import { Message, TextChannel } from 'discord.js';
 import UserID from '../../../discord/userId';
 import { Logger } from '../../../services/logger';
-import { Service, ServiceId } from '../../../services/services';
 import random from '../../../utils/random';
 import { BotIdentity } from '../botIdentity';
 import { BananaBotConfig } from '../config/bananaBotConfig';
 import ReplyBot from '../replyBot';
 
-@Service({
-	id: ServiceId.BananaBot,
-	dependencies: [ServiceId.Logger],
-	scope: 'singleton'
-})
+
+// This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class BananaBot extends ReplyBot {
 	protected get botIdentity(): BotIdentity {
 		return {
@@ -21,7 +17,9 @@ export default class BananaBot extends ReplyBot {
 		};
 	}
 
-	constructor(private readonly logger: Logger) {
+	private readonly logger = new Logger();
+
+	constructor() {
 		super();
 	}
 

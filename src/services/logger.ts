@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { Logger as LoggerInterface, Service, ServiceId } from './services';
+import { Logger as LoggerInterface } from './services';
 
 export enum LogLevel {
 	NONE = 0,
@@ -11,23 +11,11 @@ export enum LogLevel {
 
 // SUCCESS has the same level as INFO
 
-@Service({
-	id: ServiceId.Logger,
-	scope: 'singleton'
-})
+// Logger is now manually instantiated instead of using the @Service decorator
 export class Logger implements LoggerInterface {
-	private static instance: Logger | null = null;
-
-	constructor() {
-		if (Logger.instance) {
-			return Logger.instance;
-		}
-		Logger.instance = this;
-	}
-
 	debug(message: string): void {
 		if (process.env.DEBUG_MODE === 'true') {
-			console.debug(this.formatMessage(chalk.blue(message), '��'));
+			console.debug(this.formatMessage(chalk.blue(message), '🐛'));
 		}
 	}
 
@@ -55,7 +43,7 @@ export class Logger implements LoggerInterface {
 		return `${icon} [${new Date().toISOString()}] ${callerInfo} ${message}`;
 	}
 
-	getCallerInfo(): string {
+	private getCallerInfo(): string {
 		const stackTrace = new Error().stack?.split('\n') || [];
 		const callerLine = stackTrace[3] || '';
 		const match = callerLine.match(/at (\S+)/);
@@ -63,5 +51,13 @@ export class Logger implements LoggerInterface {
 	}
 }
 
-// Export a singleton instance
-export const logger = new Logger();
+// Singleton instance
+const loggerInstance = new Logger();
+
+// Helper function to get logger instance - now returns the singleton directly
+export function getLogger(): Logger {
+	return loggerInstance;
+}
+
+// Export a logger instance for convenience
+export const logger = loggerInstance;

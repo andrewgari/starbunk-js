@@ -1,12 +1,9 @@
 import { Message, TextChannel } from 'discord.js';
-import { Service, ServiceId } from '../../../services/services';
 import { ChaosBotConfig } from '../config/chaosBotConfig';
 import ReplyBot from '../replyBot';
 
-@Service({
-	id: ServiceId.ChaosBot,
-	scope: 'singleton'
-})
+
+// This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class ChaosBot extends ReplyBot {
 	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
 		return {

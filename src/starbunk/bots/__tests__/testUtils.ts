@@ -1,6 +1,11 @@
 import { Client, Guild, Message, TextChannel, User } from 'discord.js';
 import { Logger, WebhookService } from '../../../services/services';
 
+// Mock the getWebhookService function
+jest.mock('../../../services/bootstrap', () => ({
+	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService)
+}));
+
 export const mockMessage = (content: string = 'test message', username: string = 'testUser', isBot: boolean = false): Message => {
 	const mockUser = {
 		bot: isBot,
@@ -36,23 +41,8 @@ export const mockMessage = (content: string = 'test message', username: string =
 };
 
 // Need to use jest.fn() to create proper mock functions
-export const mockWriteMessage = jest.fn().mockResolvedValue({} as Message<boolean>);
-export const mockSendMessage = jest.fn().mockResolvedValue({} as Message<boolean>);
-
-export const mockWebhookService: WebhookService = {
-	writeMessage: mockWriteMessage,
-	sendMessage: mockSendMessage,
-	webhookClient: null,
-	logger: {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
-		success: jest.fn(),
-		formatMessage: jest.fn(),
-		getCallerInfo: jest.fn()
-	},
-};
+export const mockWriteMessage = jest.fn().mockResolvedValue(undefined);
+export const mockSendMessage = jest.fn().mockResolvedValue(undefined);
 
 export const mockLogger: Logger = {
 	debug: jest.fn(),
@@ -60,8 +50,14 @@ export const mockLogger: Logger = {
 	warn: jest.fn(),
 	error: jest.fn(),
 	success: jest.fn(),
-	formatMessage: jest.fn(),
-	getCallerInfo: jest.fn()
+	formatMessage: jest.fn()
+};
+
+export const mockWebhookService: WebhookService = {
+	writeMessage: mockWriteMessage,
+	sendMessage: mockSendMessage,
+	webhookClient: null,
+	logger: mockLogger
 };
 
 // For backward compatibility
