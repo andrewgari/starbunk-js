@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import OpenAI from 'openai';
+import { OpenAI } from 'openai';
 import userId from '../../../discord/userId';
 import { Logger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
