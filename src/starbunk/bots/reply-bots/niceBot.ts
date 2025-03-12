@@ -1,5 +1,4 @@
 import { Message, TextChannel } from 'discord.js';
-;
 import { BotIdentity } from '../botIdentity';
 import { NiceBotConfig } from '../config/niceBotConfig';
 import ReplyBot from '../replyBot';

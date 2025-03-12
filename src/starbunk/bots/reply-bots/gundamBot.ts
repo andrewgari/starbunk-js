@@ -1,5 +1,4 @@
 import { Message, TextChannel } from 'discord.js';
-;
 import { GundamBotConfig } from '../config/gundamBotConfig';
 import ReplyBot from '../replyBot';
 

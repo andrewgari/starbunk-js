@@ -63,7 +63,7 @@ describe('BlueBot', () => {
 		container.register(ServiceId.OpenAIClient, () => mockOpenAIClient);
 
 		// Create BlueBot instance with the mock logger
-		blueBot = new BlueBot(mockLogger as any, mockOpenAIClient);
+		blueBot = new BlueBot();
 	});
 
 	it('should respond to direct blue references', async () => {

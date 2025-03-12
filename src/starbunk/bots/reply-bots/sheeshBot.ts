@@ -2,7 +2,6 @@ import { getCurrentMemberIdentity } from '@/discord/discordGuildMemberHelper';
 import userId from '@/discord/userId';
 import { Guild, Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/logger';
-;
 import { BotIdentity } from '../botIdentity';
 import { SheeshBotConfig } from '../config/sheeshBotConfig';
 import ReplyBot from '../replyBot';
@@ -18,7 +17,9 @@ export default class SheeshBot extends ReplyBot {
 		};
 	}
 
-	constructor(private readonly logger: Logger) {
+	private readonly logger = new Logger();
+
+	constructor() {
 		super();
 	}
 

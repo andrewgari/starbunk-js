@@ -1,5 +1,4 @@
 import { Message, TextChannel } from 'discord.js';
-;
 import { BotIdentity } from '../botIdentity';
 import { HoldBotConfig } from '../config/holdBotConfig';
 import ReplyBot from '../replyBot';

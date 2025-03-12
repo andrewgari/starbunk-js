@@ -5,7 +5,7 @@ export const SpiderBotConfig = {
 	},
 	Patterns: {
 		Default: /spider[^-]?man/i,
-		Correct: /Spider-Man/
+		Correct: /spider-man/i
 	},
 	Responses: {
 		Default: [

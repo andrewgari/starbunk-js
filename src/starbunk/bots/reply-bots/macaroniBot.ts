@@ -1,6 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/logger';
-import { WebhookService   } from '../../../services/services';
 import { BotIdentity } from '../botIdentity';
 import { MacaroniBotConfig } from '../config/macaroniBotConfig';
 import ReplyBot from '../replyBot';
@@ -16,11 +15,9 @@ export default class MacaroniBot extends ReplyBot {
 		};
 	}
 
-	constructor(
-		private readonly logger: Logger,
-		// webhookService is injected but not directly used by this class
-		_webhookService: WebhookService
-	) {
+	private readonly logger = new Logger();
+
+	constructor() {
 		super();
 	}
 

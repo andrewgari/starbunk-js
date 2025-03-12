@@ -1,9 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
-;
 import { BotIdentity } from '../botIdentity';
 import { SpiderBotConfig } from '../config/spiderBotConfig';
 import ReplyBot from '../replyBot';
-
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class SpiderBot extends ReplyBot {

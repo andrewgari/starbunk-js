@@ -1,12 +1,10 @@
 import { Message, TextChannel } from 'discord.js';
+import OpenAI from 'openai';
 import userId from '../../../discord/userId';
 import { Logger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
-
-// Import OpenAI directly
-const OpenAI = require('openai').default;
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class BlueBot extends ReplyBot {
@@ -21,7 +19,7 @@ export default class BlueBot extends ReplyBot {
 	private _blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private _blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private readonly logger = new Logger();
-	private readonly openAIClient: any;
+	private readonly openAIClient: OpenAI | null;
 
 	constructor() {
 		super();

@@ -1,4 +1,3 @@
-;
 import { Message, TextChannel } from 'discord.js';
 import { Logger } from '../../../services/logger';
 import { BotIdentity } from '../botIdentity';
