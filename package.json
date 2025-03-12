@@ -2,6 +2,7 @@
 	"name": "bunkbot",
 	"version": "0.0.2",
 	"description": "it's bot that says blu, among things...",
+	"type": "commonjs",
 	"scripts": {
 		"build": "tsc && tsc-alias",
 		"start": "node dist/bunkbot.js",
@@ -53,7 +54,7 @@
 		"envalid": "^8.0.0",
 		"ffmpeg-static": "^5.2.0",
 		"module-name": "^0.0.1-security",
-		"openai": "^4.58.2",
+		"openai": "^4.87.3",
 		"opusscript": "^0.0.8",
 		"play-dl": "^1.9.7",
 		"ytdl-core": "^4.11.5"

@@ -6,7 +6,6 @@
 export const ServiceId = {
 	Logger: Symbol.for('Logger'),
 	WebhookService: Symbol.for('WebhookService'),
-	OpenAIClient: Symbol.for('OpenAIClient'),
 	DiscordClient: Symbol.for('DiscordClient')
 };
 
