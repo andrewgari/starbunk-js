@@ -51,11 +51,7 @@ export const ServiceId = {
 	SpiderBot: Symbol('SpiderBot'),
 	VennBot: Symbol('VennBot'),
 	MusicCorrectBot: Symbol('MusicCorrectBot'),
-	OpenAIClient: Symbol.for('OpenAIClient')
 } as const;
-
-// Import the OpenAIClient interface
-import { OpenAIClient } from './openai';
 
 // Service type registry
 export interface ServiceTypes {
@@ -76,7 +72,6 @@ export interface ServiceTypes {
 	[ServiceId.SpiderBot]: BaseBot;
 	[ServiceId.VennBot]: BaseBot;
 	[ServiceId.MusicCorrectBot]: BaseBot;
-	[ServiceId.OpenAIClient]: OpenAIClient;
 }
 
 // Simple container implementation

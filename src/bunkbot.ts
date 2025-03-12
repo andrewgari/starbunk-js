@@ -1,10 +1,13 @@
 // Register module aliases for path resolution
+// Import config first to ensure environment variables are loaded
 import { GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
+import './config';
 import { bootstrapApplication } from './services/bootstrap';
 import SnowbunkClient from './snowbunk/snowbunkClient';
 import StarbunkClient from './starbunk/starbunkClient';
 
+// This is a fallback in case config.ts doesn't load the environment variables
 dotenv.config();
 
 const starbunk = new StarbunkClient({

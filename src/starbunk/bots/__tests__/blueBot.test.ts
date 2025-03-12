@@ -30,7 +30,6 @@ jest.mock('../config/blueBotConfig', () => ({
 	}
 }));
 
-import type { OpenAIClient } from '../../../openai/openaiClient';
 import { container, ServiceId } from '../../../services/services';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import BlueBot from '../reply-bots/blueBot';
@@ -45,22 +44,6 @@ describe('BlueBot', () => {
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
 
-		// Create a mock OpenAI client that matches the interface
-		const mockOpenAIClient = {
-			chat: {
-				completions: {
-					create: jest.fn().mockResolvedValue({
-						choices: [{ message: { content: 'yes' } }]
-					}),
-					list: jest.fn(),
-					retrieve: jest.fn(),
-					update: jest.fn(),
-					messages: jest.fn(),
-				}
-			}
-		} as unknown as OpenAIClient;
-
-		container.register(ServiceId.OpenAIClient, () => mockOpenAIClient);
 
 		// Create BlueBot instance with the mock logger
 		blueBot = new BlueBot();
