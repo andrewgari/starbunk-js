@@ -21,11 +21,16 @@ export default class PickleBot extends ReplyBot {
 	async handleMessage(message: Message<boolean>): Promise<void> {
 		if (message.author.bot) return;
 
-		const content = message.content;
-		const hasPickle = PickleBotConfig.Patterns.Default?.test(content);
-		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Sig;
-		const isTargetUser = message.author.id === targetUserId;
-		const shouldReply = hasPickle || (isTargetUser && Random.percentChance(15));
+		let shouldReply = false;
+		let targetUserId = userId.Sig;
+		if (process.env.DEBUG_MODE === 'true') {
+			shouldReply = true;
+			targetUserId = userId.Cova;
+		} else {
+			const hasPickle = PickleBotConfig.Patterns.Default?.test(message.content);
+			const isTargetUser = message.author.id === targetUserId;
+			shouldReply = hasPickle || (isTargetUser && Random.percentChance(15));
+		}
 
 		if (shouldReply) {
 			this.sendReply(message.channel as TextChannel, {

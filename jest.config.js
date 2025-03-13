@@ -5,7 +5,8 @@ module.exports = {
 		'**/macaroniBot.test.ts',
 		'**/bananaBot.test.ts',
 		'**/checkBot.test.ts',
-		'**/time.test.ts'
+		'**/time.test.ts',
+		'**/interruptBot.test.ts'
 	],
 	transform: {
 		'^.+\\.tsx?$': ['ts-jest', {

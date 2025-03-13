@@ -26,11 +26,17 @@ export default class BananaBot extends ReplyBot {
 	public async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
+		let shouldReply = false;
+		let targetUserId = UserID.Venn;
 		const content = message.content;
 		const match = content.match(BananaBotConfig.Patterns.Default);
-		const targetUserId = process.env.DEBUG_MODE === 'true' ? UserID.Cova : UserID.Venn;
-		const isTargetUser = message.author.id === targetUserId;
-		const shouldReply = (match && match.length > 0) || (isTargetUser && random.percentChance(5));
+		if (process.env.DEBUG_MODE === 'true') {
+			shouldReply = true;
+			targetUserId = UserID.Cova;
+		} else {
+			const isTargetUser = message.author.id === targetUserId;
+			shouldReply = (match && match.length > 0) || (isTargetUser && random.percentChance(5));
+		}
 
 		if (shouldReply) {
 			this.logger.debug(`BananaBot responding to message: ${content}`);
