@@ -27,19 +27,23 @@ export default class VennBot extends ReplyBot {
 	public async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
-		const vennIdentity = await getCurrentMemberIdentity(userId.Venn, message.guild!);
-		if (!vennIdentity) {
-			this.logger.error(`VennBot could not get identity for user ${userId.Venn}`);
-			return;
+		let shouldReply = false;
+		let targetUserId = userId.Venn;
+		const isCringe = VennBotConfig.Patterns.Default.test(message.content.toLowerCase());
+		if (process.env.DEBUG_MODE === 'true') {
+			shouldReply = true;
+			targetUserId = userId.Cova;
+		} else {
+			shouldReply = (message.author.id === targetUserId && random.percentChance(5)) || isCringe;
 		}
 
-		const content = message.content.toLowerCase();
-		const isCringe = /cringe/i.test(content);
-		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Venn;
-		const isTargetUser = message.author.id === targetUserId;
-		const shouldReply = (isTargetUser && random.percentChance(5)) || isCringe;
-
 		if (shouldReply) {
+			const vennIdentity = await getCurrentMemberIdentity(userId.Venn, message.guild!);
+			if (!vennIdentity) {
+				this.logger.error(`VennBot could not get identity for user ${userId.Venn}`);
+				return;
+			}
+
 			await this.sendReply(message.channel as TextChannel, {
 				botIdentity: vennIdentity,
 				content: VennBotConfig.Responses.Default()
