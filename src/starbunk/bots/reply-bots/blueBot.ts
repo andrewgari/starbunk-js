@@ -70,21 +70,7 @@ export default class BlueBot extends ReplyBot {
 	public async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
-		const content = message.content.toLowerCase();
 		const channel = message.channel as TextChannel;
-
-		if (content.includes('blue')) {
-			this._blueTimestamp = new Date();
-			this.logger.debug(`BlueBot responding to message: ${content}`);
-			await this.sendReply(channel, {
-				botIdentity: {
-					...this.botIdentity,
-					avatarUrl: BlueBotConfig.Avatars.Default
-				},
-				content: BlueBotConfig.Responses.Default
-			});
-			return;
-		}
 
 		if (await this.isVennInsultingBlu(message)) {
 			this._blueMurderTimestamp = new Date();
@@ -166,8 +152,7 @@ export default class BlueBot extends ReplyBot {
 		try {
 			// First try a simple check for common blue words
 			const content = message.content.toLowerCase();
-			const blueWords = ['blue', 'blu', 'azul', 'blau', 'azure', 'bloo', 'bl u'];
-			if (blueWords.some(word => content.includes(word))) {
+			if (BlueBotConfig.Patterns.Default?.test(content)) {
 				return true;
 			}
 
@@ -181,7 +166,7 @@ export default class BlueBot extends ReplyBot {
 					// Ensure no leading/trailing spaces
 
 					const response = await this.openAIClient.chat.completions.create({
-						model: "gpt-4o",
+						model: "gpt-4o-mini",
 						// Use gpt-4o unless you need gpt-4o-mini for speed/cost
 						messages: [
 							{
