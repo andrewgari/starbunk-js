@@ -12,10 +12,6 @@ import ReplyBot from '../replyBot';
 export default class VennBot extends ReplyBot {
 	private readonly logger = new Logger();
 
-	constructor() {
-		super();
-	}
-
 	protected get botIdentity(): BotIdentity {
 		return {
 			userId: '',
@@ -30,22 +26,24 @@ export default class VennBot extends ReplyBot {
 		let shouldReply = false;
 		let targetUserId = userId.Venn;
 		const isCringe = VennBotConfig.Patterns.Default.test(message.content.toLowerCase());
+
 		if (process.env.DEBUG_MODE === 'true') {
 			shouldReply = true;
 			targetUserId = userId.Cova;
 		} else {
-			shouldReply = (message.author.id === targetUserId && random.percentChance(5)) || isCringe;
+			const isTargetUser = message.author.id === targetUserId;
+			shouldReply = (isTargetUser && random.percentChance(5)) || isCringe;
 		}
 
 		if (shouldReply) {
-			const vennIdentity = await getCurrentMemberIdentity(userId.Venn, message.guild!);
-			if (!vennIdentity) {
+			const targetIdentity = await getCurrentMemberIdentity(userId.Venn, message.guild!);
+			if (!targetIdentity) {
 				this.logger.error(`VennBot could not get identity for user ${userId.Venn}`);
 				return;
 			}
 
 			await this.sendReply(message.channel as TextChannel, {
-				botIdentity: vennIdentity,
+				botIdentity: targetIdentity,
 				content: VennBotConfig.Responses.Default()
 			});
 		}
