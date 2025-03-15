@@ -7,6 +7,7 @@
 
 import { Client, Message, TextChannel, WebhookClient } from 'discord.js';
 import { MessageInfo } from '../webhooks/types';
+import { LLMManager } from './llm';
 
 // Forward declarations of service types
 export interface Logger {
@@ -37,6 +38,7 @@ export const ServiceId = {
 	Logger: Symbol.for('Logger'),
 	WebhookService: Symbol.for('WebhookService'),
 	DiscordClient: Symbol('DiscordClient'),
+	LLMManager: Symbol('LLMManager'),
 	BlueBot: Symbol('BlueBot'),
 	BananaBot: Symbol('BananaBot'),
 	AttitudeBot: Symbol('AttitudeBot'),
@@ -58,6 +60,7 @@ export interface ServiceTypes {
 	[ServiceId.Logger]: Logger;
 	[ServiceId.WebhookService]: WebhookService;
 	[ServiceId.DiscordClient]: Client;
+	[ServiceId.LLMManager]: LLMManager;
 	[ServiceId.BlueBot]: BaseBot;
 	[ServiceId.BananaBot]: BaseBot;
 	[ServiceId.AttitudeBot]: BaseBot;
