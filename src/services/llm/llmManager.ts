@@ -1,7 +1,7 @@
 import { Logger } from '../logger';
 import { LLMFactory, LLMProviderType } from './llmFactory';
 import { LLMCompletionOptions, LLMCompletionResponse, LLMService } from './llmService';
-import { PromptType, formatPromptMessages, getPromptDefaultOptions } from './promptManager';
+import { PromptRegistry, PromptType, formatPromptMessages, getPromptDefaultOptions } from './promptManager';
 
 /**
  * Error thrown when a provider is not available
@@ -11,6 +11,34 @@ export class ProviderNotAvailableError extends Error {
 		super(`Provider ${providerType} is not available`);
 		this.name = 'ProviderNotAvailableError';
 	}
+}
+
+/**
+ * Error thrown when a prompt is not registered
+ */
+export class PromptNotRegisteredError extends Error {
+	constructor(promptType: PromptType) {
+		super(`Prompt type ${promptType} not registered`);
+		this.name = 'PromptNotRegisteredError';
+	}
+}
+
+/**
+ * Options for prompt completion
+ */
+export interface PromptCompletionOptions {
+	/** Provider type to use (optional, uses default if not specified) */
+	providerType?: LLMProviderType;
+	/** Whether to fall back to default provider if specified provider is not available */
+	fallbackToDefault?: boolean;
+	/** Whether to fall back to direct API call if prompt registry fails */
+	fallbackToDirectCall?: boolean;
+	/** Model to use (optional, uses provider's default if not specified) */
+	model?: string;
+	/** Temperature to use (optional, uses prompt's default if not specified) */
+	temperature?: number;
+	/** Max tokens to use (optional, uses prompt's default if not specified) */
+	maxTokens?: number;
 }
 
 /**
@@ -212,38 +240,99 @@ export class LLMManager {
 	 * Create a completion using a registered prompt
 	 * @param promptType The type of prompt to use
 	 * @param userMessage The user message to format
-	 * @param providerType The provider type to use (optional, uses default if not specified)
-	 * @param fallbackToDefault Whether to fall back to the default provider
+	 * @param options Additional options for the completion
 	 */
 	public async createPromptCompletion(
 		promptType: PromptType,
 		userMessage: string,
-		providerType?: LLMProviderType,
-		fallbackToDefault = true
+		options: PromptCompletionOptions = {}
 	): Promise<string> {
+		const {
+			providerType,
+			fallbackToDefault = true,
+			fallbackToDirectCall = true,
+			model,
+			temperature,
+			maxTokens
+		} = options;
+
+		// Get the provider type
+		const type = providerType || this.defaultProvider;
+
 		try {
-			// Get the provider type
-			const type = providerType || this.defaultProvider;
+			// Try using the prompt registry
+			try {
+				// Format the messages
+				const messages = formatPromptMessages(promptType, userMessage);
 
-			// Format the messages
-			const messages = formatPromptMessages(promptType, userMessage);
+				// Get default options for the prompt
+				const defaultOptions = getPromptDefaultOptions(promptType);
 
-			// Get default options for the prompt
-			const defaultOptions = getPromptDefaultOptions(promptType);
+				// Get an available provider
+				const provider = this.getAvailableProvider(type, fallbackToDefault);
 
-			// Create the completion
-			const response = await this.createCompletion(
-				type,
-				{
-					model: this.getAvailableProvider(type, fallbackToDefault).getAvailableModels()[0],
-					messages,
-					temperature: defaultOptions.temperature,
-					maxTokens: defaultOptions.maxTokens
-				},
-				fallbackToDefault
-			);
+				// Create the completion
+				const response = await this.createCompletion(
+					type,
+					{
+						model: model || provider.getAvailableModels()[0],
+						messages,
+						temperature: temperature ?? defaultOptions.temperature,
+						maxTokens: maxTokens ?? defaultOptions.maxTokens
+					},
+					fallbackToDefault
+				);
 
-			return response.content;
+				return response.content;
+			} catch (error) {
+				// If the error is not related to provider availability or prompt registration, rethrow
+				if (!(error instanceof ProviderNotAvailableError) &&
+					!(error instanceof PromptNotRegisteredError) &&
+					!fallbackToDirectCall) {
+					throw error;
+				}
+
+				// Log the error
+				this.logger.warn(`Error using prompt registry for ${promptType}, falling back to direct call: ${error instanceof Error ? error.message : String(error)}`);
+
+				// Fall back to direct API call if enabled
+				if (fallbackToDirectCall) {
+					// Get the prompt from the registry
+					const prompt = PromptRegistry.getPrompt(promptType);
+					if (!prompt) {
+						throw new PromptNotRegisteredError(promptType);
+					}
+
+					// Get an available provider
+					const provider = this.getAvailableProvider(type, fallbackToDefault);
+
+					// Create the completion
+					const response = await this.createCompletion(
+						type,
+						{
+							model: model || provider.getAvailableModels()[0],
+							messages: [
+								{
+									role: 'system',
+									content: prompt.systemContent
+								},
+								{
+									role: 'user',
+									content: prompt.formatUserMessage(userMessage)
+								}
+							],
+							temperature: temperature ?? prompt.defaultTemperature,
+							maxTokens: maxTokens ?? prompt.defaultMaxTokens
+						},
+						fallbackToDefault
+					);
+
+					return response.content;
+				}
+
+				// Rethrow the error if fallback is not enabled
+				throw error;
+			}
 		} catch (error) {
 			this.logger.error(`Error creating completion for prompt ${promptType}`, error as Error);
 			throw error;

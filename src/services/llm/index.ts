@@ -1,23 +1,25 @@
-// Export interfaces
+// Base interfaces and types
 export * from './llmService';
 
-// Export base classes
+// Base provider
 export * from './baseLlmProvider';
+export * from './genericProvider';
 
-// Export providers
+// Specific providers
 export * from './providers/ollamaProvider';
 export * from './providers/openaiProvider';
 
-// Export factory
+// Factory and manager
 export * from './llmFactory';
-
-// Export manager
 export * from './llmManager';
 
-// Export prompt management
+// Prompt system
 export * from './promptManager';
 
-// Export prompts
-export * from './prompts/blueBotAcknowledgmentPrompt';
-export * from './prompts/blueDetectorPrompt';
+// Export prompts - use the new system
+export * from './prompts/index';
+
+// Initialize prompts
+import { registerAllPrompts } from './prompts/index';
+registerAllPrompts();
 

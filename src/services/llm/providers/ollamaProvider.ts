@@ -1,4 +1,4 @@
-import { BaseLLMProvider } from '../baseLlmProvider';
+import { GenericProvider } from '../genericProvider';
 import { LLMCompletionOptions, LLMCompletionResponse, LLMServiceConfig } from '../llmService';
 
 /**
@@ -10,9 +10,19 @@ interface OllamaModel {
 }
 
 /**
+ * Interface for Ollama API response
+ */
+interface OllamaResponse {
+	message?: {
+		content: string;
+	};
+	[key: string]: unknown;
+}
+
+/**
  * Ollama provider implementation
  */
-export class OllamaProvider extends BaseLLMProvider {
+export class OllamaProvider extends GenericProvider {
 	private baseUrl: string;
 	private availableModels: string[] = [
 		'llama3',
@@ -71,53 +81,57 @@ export class OllamaProvider extends BaseLLMProvider {
 	}
 
 	/**
-	 * Create a completion
+	 * Call the Ollama API
 	 * @param options Completion options
 	 */
-	public async createCompletion(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
-		try {
-			// Convert messages to Ollama format
-			const messages = options.messages.map(msg => ({
-				role: msg.role,
-				content: msg.content
-			}));
+	protected async callProviderAPI(options: LLMCompletionOptions): Promise<OllamaResponse> {
+		// Convert messages to Ollama format
+		const messages = options.messages.map(msg => ({
+			role: msg.role,
+			content: msg.content
+		}));
 
-			// Prepare request body
-			const requestBody = {
-				model: options.model,
-				messages,
-				options: {
-					temperature: options.temperature,
-					top_p: options.topP,
-					frequency_penalty: options.frequencyPenalty,
-					presence_penalty: options.presencePenalty,
-					stop: options.stop
-				}
-			};
-
-			// Call Ollama API
-			const response = await fetch(`${this.baseUrl}/api/chat`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(requestBody)
-			});
-
-			if (!response.ok) {
-				throw new Error(`Ollama API error: ${response.statusText}`);
+		// Prepare request body
+		const requestBody = {
+			model: options.model,
+			messages,
+			options: {
+				temperature: options.temperature,
+				top_p: options.topP,
+				frequency_penalty: options.frequencyPenalty,
+				presence_penalty: options.presencePenalty,
+				stop: options.stop
 			}
+		};
 
-			const data = await response.json();
+		// Call Ollama API
+		const response = await fetch(`${this.baseUrl}/api/chat`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(requestBody)
+		});
 
-			return {
-				content: data.message?.content || '',
-				model: options.model,
-				provider: this.getProviderName()
-			};
-		} catch (error) {
-			this.logger.error('Error calling Ollama API', error as Error);
-			throw error;
+		if (!response.ok) {
+			throw new Error(`Ollama API error: ${response.statusText}`);
 		}
+
+		return await response.json();
+	}
+
+	/**
+	 * Parse the Ollama API response
+	 * @param response Ollama API response
+	 * @param options Original completion options
+	 */
+	protected parseProviderResponse(response: unknown, options: LLMCompletionOptions): LLMCompletionResponse {
+		const ollamaResponse = response as OllamaResponse;
+
+		return {
+			content: ollamaResponse.message?.content || '',
+			model: options.model,
+			provider: this.getProviderName()
+		};
 	}
 }

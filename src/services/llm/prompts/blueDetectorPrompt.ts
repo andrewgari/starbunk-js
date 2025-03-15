@@ -1,4 +1,4 @@
-import { LLMPrompt, PromptRegistry, PromptType } from '../promptManager';
+import { LLMPrompt } from '../promptManager';
 
 /**
  * System content for the blue detector prompt
@@ -66,15 +66,15 @@ function formatUserMessage(message: string): string {
 /**
  * Blue detector prompt definition
  */
-const blueDetectorPrompt: LLMPrompt = {
+const blueDetectorPromptObj: LLMPrompt = {
 	systemContent,
 	formatUserMessage,
 	defaultTemperature: 0.1,
 	defaultMaxTokens: 3
 };
 
-// Register the prompt
-PromptRegistry.registerPrompt(PromptType.BLUE_DETECTOR, blueDetectorPrompt);
-
 // For backward compatibility
 export { systemContent as blueDetectorPrompt, formatUserMessage as formatBlueDetectorUserPrompt };
+// Export the prompt object for use in the registry
+export { blueDetectorPromptObj };
+

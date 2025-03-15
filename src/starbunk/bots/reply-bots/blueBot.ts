@@ -1,7 +1,8 @@
 import { Message, TextChannel } from 'discord.js';
 import userId from '../../../discord/userId';
 import { getLLMManager } from '../../../services/bootstrap';
-import { LLMProviderType, PromptType } from '../../../services/llm';
+import { LLMProviderType, PromptCompletionOptions, PromptType } from '../../../services/llm';
+// Import directly from the specific prompt file for fallback
 import { blueDetectorPrompt, formatBlueDetectorUserPrompt } from '../../../services/llm/prompts/blueDetectorPrompt';
 import { Logger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
@@ -107,10 +108,16 @@ export default class BlueBot extends ReplyBot {
 				const messageContent = message.content.trim();
 
 				// First check if it's acknowledging BlueBot using the prompt registry
+				const options: PromptCompletionOptions = {
+					providerType: LLMProviderType.OLLAMA,
+					fallbackToDefault: true,
+					fallbackToDirectCall: true
+				};
+
 				const acknowledgmentResponse = await llmManager.createPromptCompletion(
 					PromptType.BLUE_ACKNOWLEDGMENT,
 					messageContent,
-					LLMProviderType.OLLAMA
+					options
 				);
 
 				const isAcknowledging = acknowledgmentResponse.trim().toLowerCase() === 'yes';
@@ -122,7 +129,7 @@ export default class BlueBot extends ReplyBot {
 					const sentimentResponse = await llmManager.createPromptCompletion(
 						PromptType.BLUE_SENTIMENT,
 						messageContent,
-						LLMProviderType.OLLAMA
+						options
 					);
 
 					const isNegative = sentimentResponse.trim().toLowerCase() === 'negative';
@@ -179,12 +186,16 @@ export default class BlueBot extends ReplyBot {
 
 				// Use the prompt registry to check for blue references
 				try {
+					const options: PromptCompletionOptions = {
+						providerType: LLMProviderType.OLLAMA,
+						fallbackToDefault: true,
+						fallbackToDirectCall: true
+					};
+
 					const response = await llmManager.createPromptCompletion(
 						PromptType.BLUE_DETECTOR,
 						messageContent,
-						LLMProviderType.OLLAMA,
-						// Fall back to default provider if Ollama is not available
-						true
+						options
 					);
 
 					return response.trim().toLowerCase() === 'yes';

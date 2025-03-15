@@ -1,11 +1,11 @@
 import OpenAI from 'openai';
-import { BaseLLMProvider } from '../baseLlmProvider';
+import { GenericProvider } from '../genericProvider';
 import { LLMCompletionOptions, LLMCompletionResponse, LLMServiceConfig } from '../llmService';
 
 /**
  * OpenAI provider implementation
  */
-export class OpenAIProvider extends BaseLLMProvider {
+export class OpenAIProvider extends GenericProvider {
 	private client: OpenAI | null = null;
 	private availableModels: string[] = [
 		'gpt-4o',
@@ -57,37 +57,44 @@ export class OpenAIProvider extends BaseLLMProvider {
 	}
 
 	/**
-	 * Create a completion
+	 * Call the OpenAI API
 	 * @param options Completion options
 	 */
-	public async createCompletion(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
+	protected async callProviderAPI(options: LLMCompletionOptions): Promise<OpenAI.Chat.Completions.ChatCompletion> {
 		if (!this.client) {
 			throw new Error('OpenAI client not initialized');
 		}
 
-		try {
-			const response = await this.client.chat.completions.create({
-				model: options.model,
-				messages: options.messages.map(msg => ({
-					role: msg.role,
-					content: msg.content
-				})),
-				temperature: options.temperature ?? 0.7,
-				max_tokens: options.maxTokens,
-				top_p: options.topP,
-				frequency_penalty: options.frequencyPenalty,
-				presence_penalty: options.presencePenalty,
-				stop: options.stop
-			});
+		return await this.client.chat.completions.create({
+			model: options.model,
+			messages: options.messages.map(msg => ({
+				role: msg.role,
+				content: msg.content
+			})),
+			temperature: options.temperature ?? 0.7,
+			max_tokens: options.maxTokens,
+			top_p: options.topP,
+			frequency_penalty: options.frequencyPenalty,
+			presence_penalty: options.presencePenalty,
+			stop: options.stop
+		});
+	}
 
-			return {
-				content: response.choices[0].message.content || '',
-				model: options.model,
-				provider: this.getProviderName()
-			};
-		} catch (error) {
-			this.logger.error('Error calling OpenAI API', error as Error);
-			throw error;
-		}
+	/**
+	 * Parse the OpenAI API response
+	 * @param response OpenAI API response
+	 * @param options Original completion options
+	 */
+	protected parseProviderResponse(
+		response: unknown,
+		options: LLMCompletionOptions
+	): LLMCompletionResponse {
+		const openaiResponse = response as OpenAI.Chat.Completions.ChatCompletion;
+
+		return {
+			content: openaiResponse.choices[0].message.content || '',
+			model: options.model,
+			provider: this.getProviderName()
+		};
 	}
 }
