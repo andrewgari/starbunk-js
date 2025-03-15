@@ -39,6 +39,7 @@ export default class GuyBot extends ReplyBot {
 				this.logger.error(`GuyBot could not get identity for user ${targetUserId}`);
 				return;
 			}
+
 			await this.sendReply(message.channel as TextChannel, {
 				botIdentity: targetIdentity,
 				content: GuyBotConfig.Responses.Default()
