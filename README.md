@@ -105,7 +105,10 @@ npm test
 - `/src/starbunk`: Main Starbunk bot implementation
 - `/src/snowbunk`: Snowbunk channel sync implementation
 - `/src/discord`: Discord.js utilities and base client
-- `/src/openai`: OpenAI integration for enhanced responses
+- `/src/services/llm`: LLM service for AI-powered responses
+  - Supports multiple providers (Ollama as primary, OpenAI as fallback)
+  - Extensible architecture for adding new providers
+  - Prompt management system
 - `/src/webhooks`: Webhook utilities for custom messages
 - `/src/services`: Logging and other utilities
 
