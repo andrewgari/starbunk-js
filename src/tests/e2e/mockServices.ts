@@ -35,14 +35,14 @@ export class MockWebhookService implements WebhookService {
 		// Capture the message in the discord mock
 		discordMock.mockWebhookSend(
 			messageInfo.username || 'TestBot',
-			messageInfo.content,
+			messageInfo.content || '',
 			channel.name
 		);
 		return Promise.resolve();
 	});
 
 	sendMessage = jest.fn().mockImplementation((messageInfo: MessageInfo) => {
-		this.logger.info(`Mock sending message: ${messageInfo.content}`);
+		this.logger.info(`Mock sending message: ${messageInfo.content || ''}`);
 		return Promise.resolve();
 	});
 }
@@ -50,10 +50,13 @@ export class MockWebhookService implements WebhookService {
 /**
  * Mock GuildMemberIdentity helper functions
  */
-export function mockGuildMemberHelper() {
+export function mockGuildMemberHelper(): {
+	getCurrentMemberIdentity: jest.Mock;
+	getRandomMemberExcept: jest.Mock;
+} {
 	// Create a mock for getCurrentMemberIdentity
 	const getCurrentMemberIdentity = jest.fn().mockImplementation(
-		async (userId: string, guild: Guild): Promise<BotIdentity | undefined> => {
+		async (userId: string, _guild: Guild): Promise<BotIdentity | undefined> => {
 			const mockUser = discordMock.users.get(userId);
 			if (mockUser) {
 				return {

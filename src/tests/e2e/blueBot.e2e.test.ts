@@ -33,8 +33,11 @@ describe('BlueBot E2E', () => {
 		// Send a specific message that would trigger the cheeky response
 		await discordMock.simulateMessage('blue? definitely blue!');
 
-		// Verify the cheeky response was sent
-		expectBotResponse(BlueBotConfig.Responses.Cheeky, BlueBotConfig.Name);
+		// Verify the cheeky response was sent - use first element if it's an array
+		const cheekyResponse = Array.isArray(BlueBotConfig.Responses.Cheeky)
+			? BlueBotConfig.Responses.Cheeky[0]
+			: BlueBotConfig.Responses.Cheeky;
+		expectBotResponse(cheekyResponse, BlueBotConfig.Name);
 	});
 
 	it('should respond with nice things about a user when asked', async () => {
@@ -54,9 +57,9 @@ describe('BlueBot E2E', () => {
 	});
 
 	afterEach(() => {
-		// Clean up environment variables
-		delete process.env.STARBUNK_TOKEN;
-		delete process.env.CLIENT_ID;
-		delete process.env.GUILD_ID;
+		// Clean up environment variables by setting to empty string
+		process.env.STARBUNK_TOKEN = '';
+		process.env.CLIENT_ID = '';
+		process.env.GUILD_ID = '';
 	});
 });

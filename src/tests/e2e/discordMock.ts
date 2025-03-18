@@ -36,7 +36,7 @@ export class DiscordMock {
 			guilds: this.guilds,
 			on: jest.fn(),
 			once: jest.fn(),
-			emit: jest.fn(),
+			emit: jest.fn().mockReturnValue(true),
 			login: jest.fn().mockResolvedValue('bot-token'),
 		} as unknown as Client;
 
@@ -193,13 +193,11 @@ export class DiscordMock {
 		const message = this.createMessage(content, user, channel);
 		this.messages.push(message);
 
-		// Use a typed assertion to bypass the type checking issues with messageCreate
-		(this.client.emit as jest.Mock).mockImplementation((event, ...args) => {
-			return true;
-		});
-
-		// Emit the event
-		this.client.emit('messageCreate', message);
+		// For tests, we just need to notify listeners, not maintain strict type safety
+		// Use the mock implementation directly
+		const mockEmit = this.client.emit as jest.Mock;
+		mockEmit.mockImplementation(() => true);
+		mockEmit('messageCreate', message);
 
 		return Promise.resolve(message);
 	}
@@ -208,11 +206,10 @@ export class DiscordMock {
    * Simulate the bot receiving a Discord event
    */
 	simulateEvent<K extends keyof ClientEvents>(event: K, ...args: ClientEvents[K]): void {
-		(this.client.emit as jest.Mock).mockImplementation((_event, ..._args) => {
-			return true;
-		});
-
-		this.client.emit(event, ...args);
+		// For tests, cast to mock implementation
+		const mockEmit = this.client.emit as jest.Mock;
+		mockEmit.mockImplementation(() => true);
+		mockEmit(event, ...args);
 	}
 
 	/**

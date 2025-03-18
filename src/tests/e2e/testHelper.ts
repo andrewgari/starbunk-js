@@ -20,19 +20,12 @@ export function setupTestBot(): StarbunkClient {
 	process.env.GUILD_ID = 'mock-guild-id';
 
 	// Override login method to prevent actual Discord connection
-	// @ts-ignore - we're patching a method for testing purposes
-	client.login = jest.fn().mockResolvedValue('mocked-token');
-
-	// Mock REST API for slash commands
-	if (client.restAPI) {
-		// @ts-ignore - we're patching a method for testing purposes
-		client.restAPI.put = jest.fn().mockResolvedValue([]);
-	}
+	jest.spyOn(client, 'login').mockResolvedValue('mocked-token');
 
 	// Initialize the bot without making API calls
 	try {
 		// Bootstrap but don't actually login to Discord
-		client.bootstrap('mock-token', 'mock-client-id', 'mock-guild-id', true);
+		client.bootstrap('mock-token', 'mock-client-id', 'mock-guild-id');
 	} catch (error) {
 		console.warn('Error in bootstrap, but continuing with test:', error);
 	}
@@ -44,7 +37,7 @@ export function setupTestBot(): StarbunkClient {
  * Cleans up environment variables after tests
  */
 export function cleanupTest(): void {
-	// Clean up environment variables
+	// Clean up environment variables by setting them to empty strings
 	process.env.STARBUNK_TOKEN = '';
 	process.env.CLIENT_ID = '';
 	process.env.GUILD_ID = '';
@@ -66,8 +59,8 @@ export interface BotResponseParams {
  * @param username Bot username to check
  * @param responseIndex Which response to check (default: 0)
  */
-export function createBotResponseCheck(username: string, responseIndex = 0): (content: string) => boolean {
-	return (content: string): boolean => {
+export function createBotResponseCheck(username: string, _responseIndex = 0): (content: string) => boolean {
+	return (_content: string): boolean => {
 		// Test function for checking if messages exist
 		return true;
 	};

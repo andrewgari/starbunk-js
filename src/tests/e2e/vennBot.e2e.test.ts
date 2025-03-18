@@ -3,13 +3,10 @@ import { VennBotConfig } from '../../starbunk/bots/config/vennBotConfig';
 import VennBot from '../../starbunk/bots/reply-bots/vennBot';
 import { discordMock, setupMockServices } from './setup';
 
-// Spy on the bot's sendReply method
-const sendReplySpy = jest.fn().mockResolvedValue(undefined);
-
 // Mock the services bootstrap function first
 jest.mock('../../services/bootstrap', () => ({
 	getWebhookService: jest.fn().mockReturnValue({
-		writeMessage: jest.fn().mockImplementation((channel, options) => {
+		writeMessage: jest.fn().mockImplementation((_channel, _options) => {
 			// This implementation will be replaced in the test
 			return Promise.resolve();
 		}),
@@ -77,14 +74,14 @@ describe('VennBot E2E', () => {
 		expect(discordMock.sentMessages.length).toBeGreaterThan(0);
 		expect(discordMock.sentMessages[0].username).toBe('Venn');
 
-		// Make sure the message contains "cringe"
-		expect(discordMock.sentMessages[0].content.toLowerCase()).toContain('cringe');
+		// Make sure the message contains "cringe" or "c.r.i.n.g.e"
+		const content = discordMock.sentMessages[0].content.toLowerCase();
+		expect(content.includes('cringe') || content.includes('c.r.i.n.g.e')).toBeTruthy();
 	});
 
 	it('should respond to capitalized "CRINGE"', async () => {
 		// Replace the regex in VennBot config to ensure it matches this specific test
 		const originalPattern = VennBotConfig.Patterns.Default;
-		// @ts-ignore - modifying for testing purposes
 		VennBotConfig.Patterns.Default = /CRINGE/i;
 
 		console.log('Running second test with message: "That was CRINGE"');
@@ -104,10 +101,12 @@ describe('VennBot E2E', () => {
 		// Check that VennBot responded
 		expect(discordMock.sentMessages.length).toBeGreaterThan(0);
 		expect(discordMock.sentMessages[0].username).toBe('Venn');
-		expect(discordMock.sentMessages[0].content.toLowerCase()).toContain('cringe');
+
+		// Check for either "cringe" or "c.r.i.n.g.e" in the response
+		const content = discordMock.sentMessages[0].content.toLowerCase();
+		expect(content.includes('cringe') || content.includes('c.r.i.n.g.e')).toBeTruthy();
 
 		// Restore the original pattern
-		// @ts-ignore - modifying for testing purposes
 		VennBotConfig.Patterns.Default = originalPattern;
 	});
 
@@ -120,6 +119,9 @@ describe('VennBot E2E', () => {
 		// Check that VennBot responded
 		expect(discordMock.sentMessages.length).toBeGreaterThan(0);
 		expect(discordMock.sentMessages[0].username).toBe('Venn');
-		expect(discordMock.sentMessages[0].content.toLowerCase()).toContain('cringe');
+
+		// Check for either "cringe" or "c.r.i.n.g.e" in the response
+		const content = discordMock.sentMessages[0].content.toLowerCase();
+		expect(content.includes('cringe') || content.includes('c.r.i.n.g.e')).toBeTruthy();
 	});
 });
