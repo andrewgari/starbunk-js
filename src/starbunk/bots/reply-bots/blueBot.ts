@@ -4,7 +4,7 @@ import { getLLMManager } from '../../../services/bootstrap';
 import { LLMProviderType, PromptCompletionOptions, PromptType } from '../../../services/llm';
 // Import directly from the specific prompt file for fallback
 import { blueDetectorPrompt, formatBlueDetectorUserPrompt } from '../../../services/llm/prompts/blueDetectorPrompt';
-import { Logger } from '../../../services/logger';
+import { logger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
@@ -20,7 +20,6 @@ export default class BlueBot extends ReplyBot {
 
 	private _blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private _blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
-	private readonly logger = new Logger();
 
 	public get blueTimestamp(): Date {
 		return this._blueTimestamp;
@@ -34,6 +33,18 @@ export default class BlueBot extends ReplyBot {
 		if (message.author.bot) return;
 
 		const channel = message.channel as TextChannel;
+
+		// Use AI to check for blue references
+		if (await this.checkIfBlueIsSaid(message)) {
+			this._blueTimestamp = new Date();
+			await this.sendReply(channel, {
+				botIdentity: {
+					...this.botIdentity,
+					avatarUrl: BlueBotConfig.Avatars.Default
+				},
+				content: BlueBotConfig.Responses.Default
+			});
+		}
 
 		if (await this.isVennInsultingBlu(message)) {
 			this._blueMurderTimestamp = new Date();
@@ -76,18 +87,6 @@ export default class BlueBot extends ReplyBot {
 			});
 			return;
 		}
-
-		// Use AI to check for blue references
-		if (await this.checkIfBlueIsSaid(message)) {
-			this._blueTimestamp = new Date();
-			await this.sendReply(channel, {
-				botIdentity: {
-					...this.botIdentity,
-					avatarUrl: BlueBotConfig.Avatars.Default
-				},
-				content: BlueBotConfig.Responses.Default
-			});
-		}
 	}
 
 	private async isSomeoneRespondingToBlu(message: Message): Promise<{ isAcknowledging: boolean; isNegative: boolean }> {
@@ -103,7 +102,7 @@ export default class BlueBot extends ReplyBot {
 		try {
 			const llmManager = getLLMManager();
 			if (llmManager.isProviderAvailable(LLMProviderType.OLLAMA)) {
-				this.logger.debug('Checking if message is acknowledging BlueBot via Ollama');
+				logger.debug('Checking if message is acknowledging BlueBot via Ollama');
 
 				const messageContent = message.content.trim();
 
@@ -124,7 +123,7 @@ export default class BlueBot extends ReplyBot {
 
 				// If it's acknowledging, check the sentiment
 				if (isAcknowledging) {
-					this.logger.debug('Message is acknowledging BlueBot, checking sentiment');
+					logger.debug('Message is acknowledging BlueBot, checking sentiment');
 
 					const sentimentResponse = await llmManager.createPromptCompletion(
 						PromptType.BLUE_SENTIMENT,
@@ -140,7 +139,7 @@ export default class BlueBot extends ReplyBot {
 				return { isAcknowledging, isNegative: false };
 			}
 		} catch (error) {
-			this.logger.error('Error checking if acknowledging BlueBot', error as Error);
+			logger.error('Error checking if acknowledging BlueBot', error as Error);
 		}
 
 		// Fall back to regex approach if LLM fails
@@ -172,20 +171,24 @@ export default class BlueBot extends ReplyBot {
 	}
 
 	private async checkIfBlueIsSaid(message: Message): Promise<boolean> {
+		console.log('Checking if blue is said');
 		try {
 			// First try a simple check for common blue words
 			const content = message.content.toLowerCase();
 			if (BlueBotConfig.Patterns.Default?.test(content)) {
+				logger.debug('Simple check for blue reference passed');
 				return true;
 			}
 
 			// Try to use LLM service for more sophisticated detection
 			try {
 				const llmManager = getLLMManager();
+				logger.debug('Checking if blue is said using LLM service');
 				const messageContent = message.content.trim();
 
 				// Use the prompt registry to check for blue references
 				try {
+					logger.debug('Checking if blue is said using prompt registry');
 					const options: PromptCompletionOptions = {
 						providerType: LLMProviderType.OLLAMA,
 						fallbackToDefault: true,
@@ -198,13 +201,14 @@ export default class BlueBot extends ReplyBot {
 						options
 					);
 
+					logger.debug('Prompt registry response', response);
 					return response.trim().toLowerCase() === 'yes';
 				} catch (error) {
-					this.logger.error('Error using prompt registry for blue detection', error as Error);
+					logger.error('Error using prompt registry for blue detection', error as Error);
 
 					// Fall back to direct approach if prompt registry fails
 					if (llmManager.isProviderAvailable(LLMProviderType.OLLAMA)) {
-						this.logger.debug('Falling back to direct Ollama call for blue detection');
+						logger.debug('Falling back to direct Ollama call for blue detection');
 
 						const userPrompt = formatBlueDetectorUserPrompt(messageContent);
 						const response = await llmManager.createCompletion(
@@ -226,12 +230,13 @@ export default class BlueBot extends ReplyBot {
 							}
 						);
 
+						logger.debug('Ollama response', response);
 						return response.content.trim().toLowerCase() === 'yes';
 					}
 
 					// Fall back to OpenAI if Ollama is not available
 					if (llmManager.isProviderAvailable(LLMProviderType.OPENAI)) {
-						this.logger.debug('Falling back to OpenAI for blue detection');
+						logger.debug('Falling back to OpenAI for blue detection');
 
 						const userPrompt = formatBlueDetectorUserPrompt(messageContent);
 						const response = await llmManager.createCompletion(
@@ -253,18 +258,21 @@ export default class BlueBot extends ReplyBot {
 							}
 						);
 
+						logger.debug('OpenAI response', response);
 						return response.content.trim().toLowerCase() === 'yes';
 					}
 				}
 			} catch (llmError) {
-				this.logger.error('Error calling LLM service', llmError as Error);
+				logger.error('Error calling LLM service', llmError as Error);
 			}
 
 			// Fall back to simple check if LLM service fails
+			logger.debug('LLM service failed, falling back to simple check');
 			return false;
 		} catch (error) {
-			this.logger.error('Error checking for blue reference', error as Error);
+			logger.error('Error checking for blue reference', error as Error);
 			// Fall back to simple check if AI fails
+			logger.debug('AI failed, falling back to simple check');
 			return false;
 		}
 	}

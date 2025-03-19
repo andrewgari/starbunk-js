@@ -13,29 +13,27 @@ export enum LogLevel {
 
 // Logger is now manually instantiated instead of using the @Service decorator
 export class Logger implements LoggerInterface {
-	debug(message: string): void {
+	// accept a spread of parameters
+	debug(message: string, ...args: unknown[]): void {
 		if (process.env.DEBUG_MODE === 'true') {
-			console.debug(this.formatMessage(chalk.blue(message), '🐛'));
+			console.debug(this.formatMessage(chalk.blue(message), '🐛'), ...args);
 		}
 	}
 
-	info(message: string): void {
-		console.info(this.formatMessage(chalk.white(message), 'ℹ️'));
+	info(message: string, ...args: unknown[]): void {
+		console.info(this.formatMessage(chalk.white(message), 'ℹ️'), ...args);
 	}
 
-	warn(message: string): void {
-		console.warn(this.formatMessage(chalk.yellow(message), '⚠️'));
+	warn(message: string, ...args: unknown[]): void {
+		console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
 	}
 
-	error(message: string, error?: Error): void {
-		console.error(this.formatMessage(chalk.red(message), '❌'));
-		if (error) {
-			console.error(error);
-		}
+	error(message: string, error?: Error, ...args: unknown[]): void {
+		console.error(this.formatMessage(chalk.red(message), '❌'), error, ...args);
 	}
 
-	success(message: string): void {
-		console.log(this.formatMessage(chalk.green(message), '✅'));
+	success(message: string, ...args: unknown[]): void {
+		console.log(this.formatMessage(chalk.green(message), '✅'), ...args);
 	}
 
 	formatMessage(message: string, icon = ''): string {
