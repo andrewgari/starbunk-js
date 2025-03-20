@@ -4,7 +4,7 @@ export interface HomonymPair {
 }
 
 export class HomonymBotConfig {
-	static readonly Name = 'HomonymBot';
+	static readonly Name = 'Gerald';
 
 	static readonly Avatars = {
 		Default: 'https://i.imgur.com/zh1Jd8c.jpeg'
