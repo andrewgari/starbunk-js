@@ -7,7 +7,7 @@ export class HomonymBotConfig {
 	static readonly Name = 'HomonymBot';
 
 	static readonly Avatars = {
-		Default: 'https://imgur.com/a/0X11DGL'
+		Default: 'https://i.imgur.com/zh1Jd8c.jpeg'
 	};
 
 	static readonly HomonymPairs: HomonymPair[] = [
