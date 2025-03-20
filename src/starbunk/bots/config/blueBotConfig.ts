@@ -6,7 +6,7 @@ export const BlueBotConfig = {
 		Cheeky: 'https://i.imgur.com/dO4a59n.png'
 	},
 	Patterns: {
-		Default: /\b(blu|blue|bl(o+)|azul|blau|bl(u+)|blew|bl\u00f6|\u0441\u0438\u043d\u0438\u0439|\u9752|\u30d6\u30eb\u30fc|\ube14\uB8E8|\u05DB\u05D7\u05D5\u05DC|\u0928\u0940\u0932\u093E|\u84DD)\b/i,
+		Default: /\b(blu|blue|bl(o+)|azul|blau|bl(u+)|blew)\b/i,
 		Confirm: /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|(i did)|(you got it)|(sure did)\b/i,
 		Nice: /blue?bot,? say something nice about (?<n>.+$)/i,
 		Mean: /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i

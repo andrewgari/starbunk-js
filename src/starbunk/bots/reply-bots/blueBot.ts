@@ -1,8 +1,10 @@
 import { Message, TextChannel } from 'discord.js';
-import dotenv from 'dotenv';
-import OpenAI from 'openai';
 import userId from '../../../discord/userId';
-import { Logger } from '../../../services/logger';
+import { getLLMManager } from '../../../services/bootstrap';
+import { LLMProviderType, PromptCompletionOptions, PromptType } from '../../../services/llm';
+// Import directly from the specific prompt file for fallback
+import { blueDetectorPrompt, formatBlueDetectorUserPrompt } from '../../../services/llm/prompts/blueDetectorPrompt';
+import { logger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
@@ -18,46 +20,6 @@ export default class BlueBot extends ReplyBot {
 
 	private _blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private _blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
-	private readonly logger = new Logger();
-
-	private openAIClient: OpenAI | null = null;
-	constructor() {
-		super();
-		// Initialize OpenAI client asynchronously
-		this.initOpenAI();
-	}
-
-	private initOpenAI(): void {
-		try {
-			// Ensure environment variables are loaded
-			this.logger.debug('Loading environment variables');
-			dotenv.config();
-
-			const apiKey = process.env['OPENAI_API_KEY'];
-			this.logger.debug(`Attempting to initialize OpenAI client with API key: ${apiKey ? 'Key exists' : 'Key missing'}`);
-			console.log(`Attempting to initialize OpenAI client with API key: ${apiKey ? 'Key exists' : 'Key missing'}`);
-
-			if (apiKey) {
-
-				this.openAIClient = new OpenAI({
-					apiKey: apiKey
-				});
-
-				this.logger.debug('OpenAI client initialized successfully');
-				console.log('OpenAI client initialized successfully');
-			} else {
-				this.logger.error('OpenAI API key not found in environment variables');
-				console.error('OpenAI API key not found in environment variables');
-				this.openAIClient = null;
-				console.log(this.openAIClient);
-			}
-		} catch (error) {
-			this.logger.error('Error initializing OpenAI client', error as Error);
-			console.error('Error initializing OpenAI client:', error);
-			this.openAIClient = null;
-		}
-
-	}
 
 	public get blueTimestamp(): Date {
 		return this._blueTimestamp;
@@ -71,6 +33,18 @@ export default class BlueBot extends ReplyBot {
 		if (message.author.bot) return;
 
 		const channel = message.channel as TextChannel;
+
+		// Use AI to check for blue references
+		if (await this.checkIfBlueIsSaid(message)) {
+			this._blueTimestamp = new Date();
+			await this.sendReply(channel, {
+				botIdentity: {
+					...this.botIdentity,
+					avatarUrl: BlueBotConfig.Avatars.Default
+				},
+				content: BlueBotConfig.Responses.Default
+			});
+		}
 
 		if (await this.isVennInsultingBlu(message)) {
 			this._blueMurderTimestamp = new Date();
@@ -95,41 +69,89 @@ export default class BlueBot extends ReplyBot {
 			return;
 		}
 
-		if (this.isSomeoneRespondingToBlu(message)) {
-			const responses = BlueBotConfig.Responses.Cheeky;
+		const acknowledgmentResult = await this.isSomeoneRespondingToBlu(message);
+		if (acknowledgmentResult.isAcknowledging) {
+			const responses = acknowledgmentResult.isNegative
+				? BlueBotConfig.Responses.Cheeky
+				: BlueBotConfig.Responses.Cheeky;
+
 			const randomIndex = Math.floor(Math.random() * responses.length);
 			await this.sendReply(channel, {
 				botIdentity: {
 					...this.botIdentity,
-					avatarUrl: BlueBotConfig.Avatars.Cheeky
+					avatarUrl: acknowledgmentResult.isNegative
+						? BlueBotConfig.Avatars.Cheeky
+						: BlueBotConfig.Avatars.Cheeky
 				},
 				content: responses[randomIndex]
 			});
 			return;
 		}
-
-		// Use AI to check for blue references
-		if (await this.checkIfBlueIsSaid(message)) {
-			this._blueTimestamp = new Date();
-			await this.sendReply(channel, {
-				botIdentity: {
-					...this.botIdentity,
-					avatarUrl: BlueBotConfig.Avatars.Default
-				},
-				content: BlueBotConfig.Responses.Default
-			});
-		}
 	}
 
-	private isSomeoneRespondingToBlu(message: Message): boolean {
+	private async isSomeoneRespondingToBlu(message: Message): Promise<{ isAcknowledging: boolean; isNegative: boolean }> {
+		// Default result
+		const defaultResult = { isAcknowledging: false, isNegative: false };
+
+		// Fast check first - if not within timeframe, return false immediately
+		if (!isWithinTimeframe(this.blueTimestamp, 5, TimeUnit.MINUTE, new Date(message.createdTimestamp))) {
+			return defaultResult;
+		}
+
+		// Try LLM approach first
+		try {
+			const llmManager = getLLMManager();
+			if (llmManager.isProviderAvailable(LLMProviderType.OLLAMA)) {
+				logger.debug('Checking if message is acknowledging BlueBot via Ollama');
+
+				const messageContent = message.content.trim();
+
+				// First check if it's acknowledging BlueBot using the prompt registry
+				const options: PromptCompletionOptions = {
+					providerType: LLMProviderType.OLLAMA,
+					fallbackToDefault: true,
+					fallbackToDirectCall: true
+				};
+
+				const acknowledgmentResponse = await llmManager.createPromptCompletion(
+					PromptType.BLUE_ACKNOWLEDGMENT,
+					messageContent,
+					options
+				);
+
+				const isAcknowledging = acknowledgmentResponse.trim().toLowerCase() === 'yes';
+
+				// If it's acknowledging, check the sentiment
+				if (isAcknowledging) {
+					logger.debug('Message is acknowledging BlueBot, checking sentiment');
+
+					const sentimentResponse = await llmManager.createPromptCompletion(
+						PromptType.BLUE_SENTIMENT,
+						messageContent,
+						options
+					);
+
+					const isNegative = sentimentResponse.trim().toLowerCase() === 'negative';
+
+					return { isAcknowledging, isNegative };
+				}
+
+				return { isAcknowledging, isNegative: false };
+			}
+		} catch (error) {
+			logger.error('Error checking if acknowledging BlueBot', error as Error);
+		}
+
+		// Fall back to regex approach if LLM fails
 		const content = message.content;
 		const isConfirm = BlueBotConfig.Patterns.Confirm?.test(content);
 		const isMean = BlueBotConfig.Patterns.Mean?.test(content);
 
 		if (isConfirm || isMean) {
-			return isWithinTimeframe(this.blueTimestamp, 5, TimeUnit.MINUTE, new Date(message.createdTimestamp));
+			return { isAcknowledging: true, isNegative: isMean };
 		}
-		return false;
+
+		return defaultResult;
 	}
 
 	private async isVennInsultingBlu(message: Message): Promise<boolean> {
@@ -149,91 +171,108 @@ export default class BlueBot extends ReplyBot {
 	}
 
 	private async checkIfBlueIsSaid(message: Message): Promise<boolean> {
+		console.log('Checking if blue is said');
 		try {
 			// First try a simple check for common blue words
 			const content = message.content.toLowerCase();
 			if (BlueBotConfig.Patterns.Default?.test(content)) {
+				logger.debug('Simple check for blue reference passed');
 				return true;
 			}
 
-			// If no direct match and OpenAI client is initialized, use AI for more sophisticated detection
-			if (this.openAIClient) {
+			// Try to use LLM service for more sophisticated detection
+			try {
+				const llmManager = getLLMManager();
+				logger.debug('Checking if blue is said using LLM service');
+				const messageContent = message.content.trim();
+
+				// Use the prompt registry to check for blue references
 				try {
-					this.logger.debug('Checking message for blue references via AI');
-					console.log('Calling OpenAI API...');
+					logger.debug('Checking if blue is said using prompt registry');
+					const options: PromptCompletionOptions = {
+						providerType: LLMProviderType.OLLAMA,
+						fallbackToDefault: true,
+						fallbackToDirectCall: true
+					};
 
-					const messageContent = message.content.trim();
-					// Ensure no leading/trailing spaces
+					const response = await llmManager.createPromptCompletion(
+						PromptType.BLUE_DETECTOR,
+						messageContent,
+						options
+					);
 
-					const response = await this.openAIClient.chat.completions.create({
-						model: "gpt-4o-mini",
-						// Use gpt-4o unless you need gpt-4o-mini for speed/cost
-						messages: [
+					logger.debug('Prompt registry response', response);
+					return response.trim().toLowerCase() === 'yes';
+				} catch (error) {
+					logger.error('Error using prompt registry for blue detection', error as Error);
+
+					// Fall back to direct approach if prompt registry fails
+					if (llmManager.isProviderAvailable(LLMProviderType.OLLAMA)) {
+						logger.debug('Falling back to direct Ollama call for blue detection');
+
+						const userPrompt = formatBlueDetectorUserPrompt(messageContent);
+						const response = await llmManager.createCompletion(
+							LLMProviderType.OLLAMA,
 							{
-								role: "system",
-								content: `You are an assistant that determines whether a given text refers to the color blue in any way, including indirect, misspelled, or deceptive references.
+								model: process.env.OLLAMA_DEFAULT_MODEL || "llama3",
+								messages: [
+									{
+										role: "system",
+										content: blueDetectorPrompt
+									},
+									{
+										role: "user",
+										content: userPrompt
+									}
+								],
+								temperature: 0.1,
+								maxTokens: 3
+							}
+						);
 
-Respond only with "yes" or "no". No explanations.
+						logger.debug('Ollama response', response);
+						return response.content.trim().toLowerCase() === 'yes';
+					}
 
-The color blue also refers to Blue Mage (BLU) in Final Fantasy XIV, so pay extra attention in that context.
+					// Fall back to OpenAI if Ollama is not available
+					if (llmManager.isProviderAvailable(LLMProviderType.OPENAI)) {
+						logger.debug('Falling back to OpenAI for blue detection');
 
-Examples:
-- "bloo" -> yes
-- "blood" -> no
-- "blu" -> yes
-- "bl u" -> yes
-- "azul" -> yes
-- "my favorite color is the sky's hue" -> yes
-- "i really like cova's favorite color" -> yes
-- "the sky is red" -> yes
-- "blueberry" -> yes
-- "blubbery" -> no
-- "blu mage" -> yes
-- "my favorite job is blu" -> yes
-- "my favorite job is blue mage" -> yes
-- "my favorite job is red mage" -> no
-- "lets do some blu content" -> yes
-- "the sky is blue" -> yes
-- "purple-red" -> yes
-- "not red" -> yes
-- "the best content in final fantasy xiv" -> yes
-- "the worst content in final fantasy xiv" -> yes
-- "the job with a mask and cane" -> yes
-- "the job that blows themselves up" -> yes
-- "the job that sucks" -> yes
-- "beastmaster" -> yes
-- "limited job" -> yes
-- "https://www.the_color_blue.com/blue/bloo/blau/azure/azul" -> yes
-- "https://example.com/query?=jKsdaf87bLuE29asdmnXzcvaQpwoeir" -> no
-- "strawberries are red" -> no
-- "#0000FF" -> yes`,
-							},
+						const userPrompt = formatBlueDetectorUserPrompt(messageContent);
+						const response = await llmManager.createCompletion(
+							LLMProviderType.OPENAI,
 							{
-								role: 'user',
-								content: `Is the following message referring to the color blue in any form? Message: "${messageContent}"`,
-							},
-						],
-						// Ensure a concise "yes" or "no" response
-						max_tokens: 3,
-						// Reduce randomness for consistency
-						temperature: 0.1,
-					});
+								model: process.env.OPENAI_DEFAULT_MODEL || "gpt-4o-mini",
+								messages: [
+									{
+										role: "system",
+										content: blueDetectorPrompt
+									},
+									{
+										role: "user",
+										content: userPrompt
+									}
+								],
+								temperature: 0.1,
+								maxTokens: 3
+							}
+						);
 
-					console.log('OpenAI API response received:', response);
-					return response.choices[0].message.content?.trim().toLowerCase() === 'yes';
-				} catch (openaiError) {
-					console.error('Error calling OpenAI API:', openaiError);
-					this.logger.error('Error calling OpenAI API', openaiError as Error);
-					return false;
+						logger.debug('OpenAI response', response);
+						return response.content.trim().toLowerCase() === 'yes';
+					}
 				}
+			} catch (llmError) {
+				logger.error('Error calling LLM service', llmError as Error);
 			}
 
-			// Fall back to simple check if OpenAI client is not initialized
+			// Fall back to simple check if LLM service fails
+			logger.debug('LLM service failed, falling back to simple check');
 			return false;
 		} catch (error) {
-			this.logger.error('Error checking for blue reference', error as Error);
-			console.error('Error checking for blue reference:', error);
+			logger.error('Error checking for blue reference', error as Error);
 			// Fall back to simple check if AI fails
+			logger.debug('AI failed, falling back to simple check');
 			return false;
 		}
 	}
