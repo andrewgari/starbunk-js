@@ -1,12 +1,57 @@
-import { Client, Guild, Message, Role, VoiceChannel } from "discord.js";
+import { Client, Guild, Message, MessageReaction, Role, TextChannel, User, VoiceChannel } from "discord.js";
 
 import { BotIdentity } from "@/starbunk/types/botIdentity";
-import { GuildMember, TextChannel, User } from "discord.js";
+import { GuildMember } from "discord.js";
 import { WebhookService } from "./services";
+
+// Custom error class for better error handling
+export class DiscordServiceError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "DiscordServiceError";
+	}
+}
+
+export class ChannelNotFoundError extends DiscordServiceError {
+	constructor(channelId: string) {
+		super(`Channel not found: ${channelId}`);
+	}
+}
+
+export class UserNotFoundError extends DiscordServiceError {
+	constructor(userId: string) {
+		super(`User not found: ${userId}`);
+	}
+}
+
+export class MemberNotFoundError extends DiscordServiceError {
+	constructor(memberId: string) {
+		super(`Member not found: ${memberId}`);
+	}
+}
+
+export class GuildNotFoundError extends DiscordServiceError {
+	constructor(guildId: string) {
+		super(`Guild not found: ${guildId}`);
+	}
+}
+
+export class RoleNotFoundError extends DiscordServiceError {
+	constructor(roleId: string) {
+		super(`Role not found: ${roleId}`);
+	}
+}
+
+export interface BulkMessageOptions {
+	channelIds: string[];
+	message: string;
+	botIdentity?: BotIdentity;
+}
 
 export interface IDiscordService {
 	sendMessage(channelId: string, message: string): Promise<Message>;
 	sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): Promise<void>;
+	sendBulkMessages(options: BulkMessageOptions): Promise<Message[]>;
 
 	getUser(userId: string): Promise<User>;
 	getMember(guildId: string, memberId: string): Promise<GuildMember>;
@@ -19,50 +64,112 @@ export interface IDiscordService {
 
 	getRole(guildId: string, roleId: string): Promise<Role>;
 	getMembersWithRole(guildId: string, roleId: string): Promise<GuildMember[]>;
+
+	addReaction(messageId: string, channelId: string, emoji: string): Promise<MessageReaction>;
+	removeReaction(messageId: string, channelId: string, emoji: string): Promise<void>;
+
+	clearCache(): void;
 }
 
 export class DiscordService implements IDiscordService {
+	private memberCache = new Map<string, GuildMember>();
+	private channelCache = new Map<string, TextChannel | VoiceChannel>();
+	private guildCache = new Map<string, Guild>();
+	private roleCache = new Map<string, Role>();
+
 	constructor(private readonly client: Client, private readonly webhookService: WebhookService) { }
 
-	async sendMessage(channelId: string, message: string): Promise<Message> {
-		const channel = this.client.channels.cache.get(channelId) as TextChannel;
-		if (!channel) {
-			throw new Error(`Channel not found: ${channelId}`);
+	// Retry logic for API operations
+	private async retry<T>(operation: () => Promise<T>, attempts = 3, delay = 1000): Promise<T> {
+		try {
+			return await operation();
+		} catch (error) {
+			if (attempts <= 1) throw error;
+			await new Promise(resolve => setTimeout(resolve, delay));
+			return this.retry(operation, attempts - 1, delay * 1.5);
 		}
-
-		return channel.send(message);
 	}
 
-	async sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): Promise<void> {
-		return this.webhookService.writeMessage(await this.getTextChannel(channelId), {
-			content: message,
-			username: botIdentity.botName,
-			avatarURL: botIdentity.avatarUrl
+	// Clear all caches
+	clearCache(): void {
+		this.memberCache.clear();
+		this.channelCache.clear();
+		this.guildCache.clear();
+		this.roleCache.clear();
+	}
+
+	async sendMessage(channelId: string, message: string): Promise<Message> {
+		return this.retry(async () => {
+			const channel = await this.getTextChannel(channelId);
+			return channel.send(message);
 		});
 	}
 
+	async sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): Promise<void> {
+		return this.retry(async () => {
+			return this.webhookService.writeMessage(await this.getTextChannel(channelId), {
+				content: message,
+				username: botIdentity.botName,
+				avatarURL: botIdentity.avatarUrl
+			});
+		});
+	}
+
+	async sendBulkMessages(options: BulkMessageOptions): Promise<Message[]> {
+		const promises = options.channelIds.map(channelId => {
+			if (options.botIdentity) {
+				return this.sendMessageWithBotIdentity(channelId, options.botIdentity, options.message)
+					.then(() => null);
+			} else {
+				return this.sendMessage(channelId, options.message);
+			}
+		});
+
+		const results = await Promise.allSettled(promises);
+
+		return results
+			.filter((result): result is PromiseFulfilledResult<Message> =>
+				result.status === 'fulfilled' && result.value !== null)
+			.map(result => result.value);
+	}
+
 	async getUser(userId: string): Promise<User> {
-		const user = this.client.users.cache.get(userId);
-		if (!user) {
-			throw new Error(`User not found: ${userId}`);
-		}
-		return user;
+		return this.retry(async () => {
+			const user = this.client.users.cache.get(userId);
+			if (!user) {
+				throw new UserNotFoundError(userId);
+			}
+			return user;
+		});
 	}
 
 	async getMember(guildId: string, memberId: string): Promise<GuildMember> {
-		const member = this.client.guilds.cache.get(guildId)?.members.cache.get(memberId);
-		if (!member) {
-			throw new Error(`Member not found: ${memberId}`);
+		const cacheKey = `${guildId}:${memberId}`;
+
+		if (this.memberCache.has(cacheKey)) {
+			return this.memberCache.get(cacheKey)!;
 		}
-		return member;
+
+		return this.retry(async () => {
+			const member = this.client.guilds.cache.get(guildId)?.members.cache.get(memberId);
+			if (!member) {
+				throw new MemberNotFoundError(memberId);
+			}
+
+			// Cache the result
+			this.memberCache.set(cacheKey, member);
+			return member;
+		});
 	}
 
 	async getMemberByUsername(guildId: string, username: string): Promise<GuildMember> {
-		const member = this.client.guilds.cache.get(guildId)?.members.cache.find(m => m.user.username === username);
-		if (!member) {
-			throw new Error(`Member not found: ${username}`);
-		}
-		return member;
+		return this.retry(async () => {
+			const member = this.client.guilds.cache.get(guildId)?.members.cache.find(m => m.user.username === username);
+			if (!member) {
+				throw new MemberNotFoundError(username);
+			}
+			return member;
+		});
 	}
 
 	async getRandomMember(guildId: string): Promise<GuildMember> {
@@ -71,22 +178,49 @@ export class DiscordService implements IDiscordService {
 	}
 
 	async getTextChannel(channelId: string): Promise<TextChannel> {
-		const channel = this.client.channels.cache.get(channelId);
-		if (!channel) {
-			throw new Error(`Channel not found: ${channelId}`);
+		if (this.channelCache.has(channelId)) {
+			const channel = this.channelCache.get(channelId);
+			if (channel instanceof TextChannel) {
+				return channel;
+			}
 		}
 
-		return channel as TextChannel;
+		return this.retry(async () => {
+			const channel = this.client.channels.cache.get(channelId);
+			if (!channel) {
+				throw new ChannelNotFoundError(channelId);
+			}
+
+			if (!(channel instanceof TextChannel)) {
+				throw new DiscordServiceError(`Channel ${channelId} is not a text channel`);
+			}
+
+			this.channelCache.set(channelId, channel);
+			return channel;
+		});
 	}
 
-
 	async getVoiceChannel(channelId: string): Promise<VoiceChannel> {
-		const channel = this.client.channels.cache.get(channelId);
-		if (!channel) {
-			throw new Error(`Channel not found: ${channelId}`);
+		if (this.channelCache.has(channelId)) {
+			const channel = this.channelCache.get(channelId);
+			if (channel instanceof VoiceChannel) {
+				return channel;
+			}
 		}
 
-		return channel as VoiceChannel;
+		return this.retry(async () => {
+			const channel = this.client.channels.cache.get(channelId);
+			if (!channel) {
+				throw new ChannelNotFoundError(channelId);
+			}
+
+			if (!(channel instanceof VoiceChannel)) {
+				throw new DiscordServiceError(`Channel ${channelId} is not a voice channel`);
+			}
+
+			this.channelCache.set(channelId, channel);
+			return channel;
+		});
 	}
 
 	async getVoiceChannelFromMessage(message: Message): Promise<VoiceChannel> {
@@ -94,25 +228,68 @@ export class DiscordService implements IDiscordService {
 	}
 
 	async getGuild(guildId: string): Promise<Guild> {
-		const guild = this.client.guilds.cache.get(guildId);
-		if (!guild) {
-			throw new Error(`Guild not found: ${guildId}`);
+		if (this.guildCache.has(guildId)) {
+			return this.guildCache.get(guildId)!;
 		}
-		return guild;
+
+		return this.retry(async () => {
+			const guild = this.client.guilds.cache.get(guildId);
+			if (!guild) {
+				throw new GuildNotFoundError(guildId);
+			}
+
+			this.guildCache.set(guildId, guild);
+			return guild;
+		});
 	}
 
-
 	async getRole(guildId: string, roleId: string): Promise<Role> {
-		const role = this.client.guilds.cache.get(guildId)?.roles.cache.get(roleId);
-		if (!role) {
-			throw new Error(`Role not found: ${roleId}`);
+		const cacheKey = `${guildId}:${roleId}`;
+
+		if (this.roleCache.has(cacheKey)) {
+			return this.roleCache.get(cacheKey)!;
 		}
-		return role;
+
+		return this.retry(async () => {
+			const role = this.client.guilds.cache.get(guildId)?.roles.cache.get(roleId);
+			if (!role) {
+				throw new RoleNotFoundError(roleId);
+			}
+
+			this.roleCache.set(cacheKey, role);
+			return role;
+		});
 	}
 
 	async getMembersWithRole(guildId: string, roleId: string): Promise<GuildMember[]> {
-		const members = await (await this.getGuild(guildId)).members.fetch();
-		return members.filter(m => m.roles.cache.has(roleId)).map(m => m as GuildMember);
+		return this.retry(async () => {
+			const guild = await this.getGuild(guildId);
+			const members = await guild.members.fetch();
+			return members.filter(m => m.roles.cache.has(roleId)).map(m => m as GuildMember);
+		});
+	}
+
+	async addReaction(messageId: string, channelId: string, emoji: string): Promise<MessageReaction> {
+		return this.retry(async () => {
+			const channel = await this.getTextChannel(channelId);
+			const message = await channel.messages.fetch(messageId);
+			return message.react(emoji);
+		});
+	}
+
+	async removeReaction(messageId: string, channelId: string, emoji: string): Promise<void> {
+		return this.retry(async () => {
+			const channel = await this.getTextChannel(channelId);
+			const message = await channel.messages.fetch(messageId);
+			const userReactions = message.reactions.cache.get(emoji);
+
+			if (userReactions) {
+				const botUser = this.client.user;
+				if (botUser) {
+					await userReactions.users.remove(botUser.id);
+				}
+			}
+		});
 	}
 }
 
