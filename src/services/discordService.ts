@@ -2,45 +2,15 @@ import { Client, Guild, Message, MessageReaction, Role, TextChannel, User, Voice
 
 import { BotIdentity } from "@/starbunk/types/botIdentity";
 import { GuildMember } from "discord.js";
+import {
+	ChannelNotFoundError,
+	DiscordServiceError,
+	GuildNotFoundError,
+	MemberNotFoundError,
+	RoleNotFoundError,
+	UserNotFoundError
+} from "./errors/discordErrors";
 import { WebhookService } from "./services";
-
-// Custom error class for better error handling
-export class DiscordServiceError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = "DiscordServiceError";
-	}
-}
-
-export class ChannelNotFoundError extends DiscordServiceError {
-	constructor(channelId: string) {
-		super(`Channel not found: ${channelId}`);
-	}
-}
-
-export class UserNotFoundError extends DiscordServiceError {
-	constructor(userId: string) {
-		super(`User not found: ${userId}`);
-	}
-}
-
-export class MemberNotFoundError extends DiscordServiceError {
-	constructor(memberId: string) {
-		super(`Member not found: ${memberId}`);
-	}
-}
-
-export class GuildNotFoundError extends DiscordServiceError {
-	constructor(guildId: string) {
-		super(`Guild not found: ${guildId}`);
-	}
-}
-
-export class RoleNotFoundError extends DiscordServiceError {
-	constructor(roleId: string) {
-		super(`Role not found: ${roleId}`);
-	}
-}
 
 export interface BulkMessageOptions {
 	channelIds: string[];
@@ -48,30 +18,7 @@ export interface BulkMessageOptions {
 	botIdentity?: BotIdentity;
 }
 
-export interface IDiscordService {
-	sendMessage(channelId: string, message: string): Promise<Message>;
-	sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): Promise<void>;
-	sendBulkMessages(options: BulkMessageOptions): Promise<Message[]>;
-
-	getUser(userId: string): Promise<User>;
-	getMember(guildId: string, memberId: string): Promise<GuildMember>;
-	getMemberByUsername(guildId: string, username: string): Promise<GuildMember>;
-	getRandomMember(guildId: string): Promise<GuildMember>;
-
-	getTextChannel(channelId: string): Promise<TextChannel>;
-	getVoiceChannel(channelId: string): Promise<VoiceChannel>;
-	getGuild(guildId: string): Promise<Guild>;
-
-	getRole(guildId: string, roleId: string): Promise<Role>;
-	getMembersWithRole(guildId: string, roleId: string): Promise<GuildMember[]>;
-
-	addReaction(messageId: string, channelId: string, emoji: string): Promise<MessageReaction>;
-	removeReaction(messageId: string, channelId: string, emoji: string): Promise<void>;
-
-	clearCache(): void;
-}
-
-export class DiscordService implements IDiscordService {
+export class DiscordService {
 	private memberCache = new Map<string, GuildMember>();
 	private channelCache = new Map<string, TextChannel | VoiceChannel>();
 	private guildCache = new Map<string, Guild>();
