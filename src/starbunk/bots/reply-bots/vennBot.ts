@@ -9,11 +9,11 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class VennBot extends ReplyBot {
-	protected get defaultBotName(): string {
+	public get defaultBotName(): string {
 		return 'VennBot';
 	}
 
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		const venn = DiscordService.getInstance().getMemberAsBotIdentity(userId.Venn);
 		return {
 			avatarUrl: venn.avatarUrl,
@@ -21,7 +21,7 @@ export default class VennBot extends ReplyBot {
 		};
 	}
 
-	public async processMessage(message: Message): Promise<void> {
+	public async handleMessage(message: Message): Promise<void> {
 		const isCringe = VennBotConfig.Patterns.Default.test(message.content.toLowerCase());
 		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Venn;
 		const isTargetUser = message.author.id === targetUserId;

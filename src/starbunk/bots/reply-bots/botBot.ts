@@ -5,17 +5,17 @@ import { BotBotConfig } from '../config/botBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BotBot extends ReplyBot {
-	protected get defaultBotName(): string {
+	public get defaultBotName(): string {
 		return 'BotBot';
 	}
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		return {
 			botName: BotBotConfig.Name,
 			avatarUrl: BotBotConfig.Avatars.Default
 		};
 	}
 
-	protected async processMessage(message: Message): Promise<void> {
+	public async handleMessage(message: Message): Promise<void> {
 		const isBot = message.author.bot;
 		const shouldReply = isBot && Random.percentChance(10);
 

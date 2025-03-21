@@ -8,17 +8,17 @@ export default abstract class ReplyBot {
 		botName: 'BunkBot'
 	};
 
-	protected get defaultBotName(): string {
+	public get defaultBotName(): string {
 		return 'CovaBot';
 	}
 
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		return this.defaultBotIdentity;
 	}
 
-	protected abstract processMessage(message: Message): Promise<void>;
+	public abstract handleMessage(message: Message): Promise<void>;
 
-	public async sendReply(channel: TextChannel, content: string): Promise<void> {
+	protected async sendReply(channel: TextChannel, content: string): Promise<void> {
 		try {
 			let webhookService;
 			try {

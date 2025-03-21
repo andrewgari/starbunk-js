@@ -6,18 +6,18 @@ import { PickleBotConfig } from '../config/pickleBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class PickleBot extends ReplyBot {
-	protected get defaultBotName(): string {
+	public get defaultBotName(): string {
 		return 'PickleBot';
 	}
 
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		return {
 			avatarUrl: PickleBotConfig.Avatars.Default,
 			botName: PickleBotConfig.Name
 		};
 	}
 
-	async processMessage(message: Message<boolean>): Promise<void> {
+	public async handleMessage(message: Message<boolean>): Promise<void> {
 		const mentionsGremlin = PickleBotConfig.Patterns.Default?.test(message.content);
 		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Sig;
 		const isTargetUser = message.author.id === targetUserId;

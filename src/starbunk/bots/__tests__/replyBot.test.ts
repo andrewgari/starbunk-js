@@ -4,7 +4,7 @@ import ReplyBot from '../replyBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 class TestReplyBot extends ReplyBot {
-	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+	public get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
 		return {
 			userId: '',
 			botName: 'TestBot',
@@ -18,6 +18,14 @@ class TestReplyBot extends ReplyBot {
 
 	protected getReply(): string {
 		return 'Test reply';
+	}
+
+	public async handleMessage(message: Message): Promise<void> {
+		if (message.author.bot) return;
+
+		if (this.shouldReply(message)) {
+			await this.sendReply(message.channel as any, this.getReply());
+		}
 	}
 }
 

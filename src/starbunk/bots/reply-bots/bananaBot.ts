@@ -1,23 +1,22 @@
-import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
 import UserID from '../../../discord/userId';
 import { logger } from '../../../services/logger';
 import random from '../../../utils/random';
+import { BotIdentity } from '../../types/botIdentity';
 import { BananaBotConfig } from '../config/bananaBotConfig';
 import ReplyBot from '../replyBot';
 
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class BananaBot extends ReplyBot {
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		return {
 			avatarUrl: BananaBotConfig.Avatars.Default,
 			botName: BananaBotConfig.Name
 		};
 	}
 
-	protected async processMessage(message: Message): Promise<void> {
-
+	public async handleMessage(message: Message): Promise<void> {
 		const targetUserId = process.env.DEBUG_MODE === 'true' ? UserID.Cova : UserID.Venn;
 		const isTargetUser = message.author.id === targetUserId;
 		const mentionsBanana = BananaBotConfig.Patterns.Default?.test(message.content);

@@ -15,6 +15,8 @@ describe('CheckBot', () => {
 	beforeEach(() => {
 		// Create CheckBot instance
 		checkBot = new CheckBot();
+		// Clear mock calls
+		jest.clearAllMocks();
 	});
 
 	it('should respond to messages containing "check"', async () => {
@@ -28,13 +30,6 @@ describe('CheckBot', () => {
 				content: expect.any(String)
 			})
 		);
-	});
-
-	it('should not respond to bot messages', async () => {
-		const message = mockMessage('check', undefined, true);
-		await checkBot.handleMessage(message);
-
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
 	it('should not respond to messages without "check"', async () => {

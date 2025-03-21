@@ -9,16 +9,16 @@ import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
 export default class BlueBot extends ReplyBot {
-	protected get defaultBotName(): string {
+	public get defaultBotName(): string {
 		return 'BlueBot';
 	}
 
-	protected _botIdentity: BotIdentity = {
+	public _botIdentity: BotIdentity = {
 		botName: BlueBotConfig.Name,
 		avatarUrl: BlueBotConfig.Avatars.Default
 	};
 
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		return this._botIdentity;
 	}
 
@@ -33,7 +33,7 @@ export default class BlueBot extends ReplyBot {
 		return this._blueMurderTimestamp;
 	}
 
-	protected async processMessage(message: Message): Promise<void> {
+	public async handleMessage(message: Message): Promise<void> {
 		if (await this.isVennInsultingBlu(message)) {
 			this._blueMurderTimestamp = new Date();
 			this._botIdentity = {

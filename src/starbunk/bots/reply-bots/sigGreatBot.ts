@@ -5,11 +5,11 @@ import { SigGreatBotConfig } from '../config/sigGreatBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class SigGreatBot extends ReplyBot {
-	protected get defaultBotName(): string {
+	public get defaultBotName(): string {
 		return 'SigGreatBot';
 	}
 
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		const randomMember = DiscordService.getInstance().getRandomMemberAsBotIdentity();
 		return {
 			avatarUrl: randomMember.avatarUrl,
@@ -17,7 +17,7 @@ export default class SigGreatBot extends ReplyBot {
 		};
 	}
 
-	public async processMessage(message: Message): Promise<void> {
+	public async handleMessage(message: Message): Promise<void> {
 		if (SigGreatBotConfig.Patterns.Default?.test(message.content)) {
 			await this.sendReply(message.channel as TextChannel, SigGreatBotConfig.Responses.Default);
 		}

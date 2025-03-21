@@ -4,18 +4,18 @@ import { AttitudeBotConfig } from "../config/attitudeBotConfig";
 import ReplyBot from "../replyBot";
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class AttitudeBot extends ReplyBot {
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		return {
 			botName: AttitudeBotConfig.Name,
 			avatarUrl: AttitudeBotConfig.Avatars.Default
 		};
 	}
 
-	protected get defaultBotName(): string {
+	public get defaultBotName(): string {
 		return 'AttitudeBot';
 	}
 
-	protected async processMessage(message: Message): Promise<void> {
+	public async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
 		const content = message.content.toLowerCase();

@@ -57,19 +57,19 @@ export class DiscordService {
 	}
 
 	// Clear all caches
-	clearCache(): void {
+	public clearCache(): void {
 		this.memberCache.clear();
 		this.channelCache.clear();
 		this.guildCache.clear();
 		this.roleCache.clear();
 	}
 
-	sendMessage(channelId: string, message: string): Message {
+	public sendMessage(channelId: string, message: string): Message {
 		const channel = this.getTextChannel(channelId);
 		return channel.send(message) as unknown as Message;
 	}
 
-	sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): void {
+	public sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): void {
 		const channel = this.getTextChannel(channelId);
 		this.webhookService.writeMessage(channel, {
 			content: message,
@@ -78,7 +78,7 @@ export class DiscordService {
 		});
 	}
 
-	sendBulkMessages(options: BulkMessageOptions): Message[] {
+	public sendBulkMessages(options: BulkMessageOptions): Message[] {
 		const results: Message[] = [];
 
 		for (const channelId of options.channelIds) {
@@ -97,7 +97,7 @@ export class DiscordService {
 		return results;
 	}
 
-	getUser(userId: string): User {
+	public getUser(userId: string): User {
 		const user = this.client.users.cache.get(userId);
 		if (!user) {
 			throw new UserNotFoundError(userId);
@@ -105,7 +105,7 @@ export class DiscordService {
 		return user;
 	}
 
-	getMember(guildId: string, memberId: string): GuildMember {
+	public getMember(guildId: string, memberId: string): GuildMember {
 		const cacheKey = `${guildId}:${memberId}`;
 
 		if (this.memberCache.has(cacheKey)) {
@@ -122,7 +122,7 @@ export class DiscordService {
 		return member;
 	}
 
-	getMemberByUsername(guildId: string, username: string): GuildMember {
+	public getMemberByUsername(guildId: string, username: string): GuildMember {
 		const member = this.client.guilds.cache.get(guildId)?.members.cache.find(m => m.user.username === username);
 		if (!member) {
 			throw new MemberNotFoundError(username);
@@ -130,36 +130,28 @@ export class DiscordService {
 		return member;
 	}
 
-	getRandomMember(guildId: string = DefaultGuildId): GuildMember {
+	public getRandomMember(guildId: string = DefaultGuildId): GuildMember {
 		const members = this.getMembersWithRole(guildId, "member");
 		return members[Math.floor(Math.random() * members.length)];
 	}
 
-	getMemberAsBotIdentity(userId: string): BotIdentity {
+	public getMemberAsBotIdentity(userId: string): BotIdentity {
 		const member = this.getMember(DefaultGuildId, userId);
-		if (!member) {
-			throw new MemberNotFoundError(userId);
-		}
-
 		return {
 			botName: member.nickname ?? member.user.username,
 			avatarUrl: member.displayAvatarURL() ?? member.user.displayAvatarURL()
 		};
 	}
 
-	getRandomMemberAsBotIdentity(): BotIdentity {
+	public getRandomMemberAsBotIdentity(): BotIdentity {
 		const member = this.getRandomMember();
-		if (!member) {
-			throw new MemberNotFoundError("random member");
-		}
-
 		return {
 			botName: member.nickname ?? member.user.username,
 			avatarUrl: member.displayAvatarURL() ?? member.user.displayAvatarURL()
 		};
 	}
 
-	getTextChannel(channelId: string): TextChannel {
+	public getTextChannel(channelId: string): TextChannel {
 		if (this.channelCache.has(channelId)) {
 			const channel = this.channelCache.get(channelId);
 			if (channel instanceof TextChannel) {
@@ -180,7 +172,7 @@ export class DiscordService {
 		return channel;
 	}
 
-	getVoiceChannel(channelId: string): VoiceChannel {
+	public getVoiceChannel(channelId: string): VoiceChannel {
 		if (this.channelCache.has(channelId)) {
 			const channel = this.channelCache.get(channelId);
 			if (channel instanceof VoiceChannel) {
@@ -201,11 +193,11 @@ export class DiscordService {
 		return channel;
 	}
 
-	getVoiceChannelFromMessage(message: Message): VoiceChannel {
+	public getVoiceChannelFromMessage(message: Message): VoiceChannel {
 		return this.getVoiceChannel(message.channel.id);
 	}
 
-	getGuild(guildId: string): Guild {
+	public getGuild(guildId: string): Guild {
 		if (this.guildCache.has(guildId)) {
 			return this.guildCache.get(guildId)!;
 		}
@@ -219,7 +211,7 @@ export class DiscordService {
 		return guild;
 	}
 
-	getRole(guildId: string, roleId: string): Role {
+	public getRole(guildId: string, roleId: string): Role {
 		const cacheKey = `${guildId}:${roleId}`;
 
 		if (this.roleCache.has(cacheKey)) {
@@ -235,14 +227,14 @@ export class DiscordService {
 		return role;
 	}
 
-	getMembersWithRole(guildId: string, roleId: string): GuildMember[] {
+	public getMembersWithRole(guildId: string, roleId: string): GuildMember[] {
 		const guild = this.getGuild(guildId);
 		return Array.from(guild.members.cache.values())
 			.filter(m => m.roles.cache.has(roleId))
 			.map(m => m as GuildMember);
 	}
 
-	addReaction(messageId: string, channelId: string, emoji: string): MessageReaction {
+	public addReaction(messageId: string, channelId: string, emoji: string): MessageReaction {
 		const channel = this.getTextChannel(channelId);
 		const message = channel.messages.cache.get(messageId);
 		if (!message) {
@@ -251,7 +243,7 @@ export class DiscordService {
 		return message.react(emoji) as unknown as MessageReaction;
 	}
 
-	removeReaction(messageId: string, channelId: string, emoji: string): void {
+	public removeReaction(messageId: string, channelId: string, emoji: string): void {
 		const channel = this.getTextChannel(channelId);
 		const message = channel.messages.cache.get(messageId);
 		if (!message) {
@@ -267,7 +259,7 @@ export class DiscordService {
 		}
 	}
 
-	isBunkBotMessage(message: Message): boolean {
+	public isBunkBotMessage(message: Message): boolean {
 		return message.author.bot && message.author.id === this.client.user?.id;
 	}
 }

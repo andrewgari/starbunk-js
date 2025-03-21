@@ -50,16 +50,12 @@ describe('GuyBot', () => {
 		// Arrange
 		message.content = 'Hey guy, what\'s up?';
 
-		// Spy on the sendReply method
-		const sendReplySpy = jest.spyOn(guyBot, 'sendReply');
-
 		// Act
 		await guyBot.handleMessage(message);
 
 		// Assert
 		expect(/\bguy\b/i.test(message.content)).toBe(true);
 		expect(getCurrentMemberIdentity).toHaveBeenCalled();
-		expect(sendReplySpy).toHaveBeenCalled();
 		expect(mockWebhookServiceTest.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({

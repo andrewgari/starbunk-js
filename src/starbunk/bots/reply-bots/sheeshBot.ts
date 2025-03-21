@@ -8,7 +8,7 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class SheeshBot extends ReplyBot {
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		const guy = DiscordService.getInstance().getMemberAsBotIdentity(userId.Guy);
 		return {
 			avatarUrl: guy.avatarUrl,
@@ -16,7 +16,7 @@ export default class SheeshBot extends ReplyBot {
 		};
 	}
 
-	async processMessage(message: Message): Promise<void> {
+	public async handleMessage(message: Message): Promise<void> {
 		if (SheeshBotConfig.Patterns.Default?.test(message.content)) {
 			await this.sendReply(message.channel as TextChannel, SheeshBotConfig.Responses.Default());
 		}

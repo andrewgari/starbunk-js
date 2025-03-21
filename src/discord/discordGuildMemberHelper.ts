@@ -1,6 +1,6 @@
+import { BotIdentity } from "@/starbunk/types/botIdentity";
 import { Guild, GuildMember, User } from "discord.js";
 import { getService, Logger, ServiceId } from "../services/services";
-import { BotIdentity } from "../starbunk/bots/botIdentity";
 
 const logger = getService<Logger>(ServiceId.Logger);
 
@@ -9,7 +9,6 @@ export async function getCurrentMemberIdentity(userId: string, guild: Guild): Pr
 		await guild.members.fetch(userId) ?? await guild.client.users.fetch(userId);
 	if (member) {
 		return {
-			userId: member.id,
 			avatarUrl: member.displayAvatarURL() ?? member.avatarURL,
 			botName: member.displayName ?? member.user.username
 		};

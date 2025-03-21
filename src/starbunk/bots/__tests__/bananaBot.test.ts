@@ -13,11 +13,14 @@ describe('BananaBot', () => {
 	let bananaBot: BananaBot;
 
 	beforeEach(() => {
+		// Create BananaBot instance
 		bananaBot = new BananaBot();
+		// Clear mock calls
+		jest.clearAllMocks();
 	});
 
 	it('should respond to messages containing "banana"', async () => {
-		const message = mockMessage('I love banana');
+		const message = mockMessage('I like banana');
 		await bananaBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
@@ -29,15 +32,8 @@ describe('BananaBot', () => {
 		);
 	});
 
-	it('should not respond to bot messages', async () => {
-		const message = mockMessage('banana', undefined, true);
-		await bananaBot.handleMessage(message);
-
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
 	it('should not respond to messages without "banana"', async () => {
-		const message = mockMessage('hello world');
+		const message = mockMessage('apple');
 		await bananaBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();

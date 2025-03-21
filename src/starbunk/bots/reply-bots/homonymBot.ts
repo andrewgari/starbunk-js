@@ -5,7 +5,7 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class HomonymBot extends ReplyBot {
-	protected get defaultBotName(): string {
+	public get defaultBotName(): string {
 		return 'HomonymBot';
 	}
 
@@ -26,14 +26,14 @@ export default class HomonymBot extends ReplyBot {
 		});
 	}
 
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		return {
 			avatarUrl: HomonymBotConfig.Avatars.Default,
 			botName: HomonymBotConfig.Name
 		};
 	}
 
-	async processMessage(message: Message<boolean>): Promise<void> {
+	public async handleMessage(message: Message<boolean>): Promise<void> {
 		const pair = this.findMatchingHomonymPair(message.content);
 		if (pair) {
 			this.sendReply(message.channel as TextChannel, pair.correction);
