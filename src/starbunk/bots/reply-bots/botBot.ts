@@ -1,22 +1,21 @@
+import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
 import Random from '../../../utils/random';
 import { BotBotConfig } from '../config/botBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BotBot extends ReplyBot {
-	protected readonly config = BotBotConfig;
-	
-	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+	protected get defaultBotName(): string {
+		return 'BotBot';
+	}
+	protected get botIdentity(): BotIdentity {
 		return {
-			userId: '',
 			botName: BotBotConfig.Name,
 			avatarUrl: BotBotConfig.Avatars.Default
 		};
 	}
 
-	async handleMessage(message: Message<boolean>): Promise<void> {
-		if (this.isSelf(message)) return;
-
+	protected async processMessage(message: Message): Promise<void> {
 		const isBot = message.author.bot;
 		const shouldReply = isBot && Random.percentChance(10);
 

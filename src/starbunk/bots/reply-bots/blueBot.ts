@@ -1,21 +1,25 @@
+import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
 import userId from '../../../discord/userId';
 import { getLLMManager } from '../../../services/bootstrap';
 import { LLMProviderType, PromptCompletionOptions, PromptType } from '../../../services/llm';
-// Import directly from the specific prompt file for fallback
 import { blueDetectorPrompt, formatBlueDetectorUserPrompt } from '../../../services/llm/prompts/blueDetectorPrompt';
 import { logger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
-// This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class BlueBot extends ReplyBot {
-	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
-		return {
-			userId: '',
-			botName: BlueBotConfig.Name,
-			avatarUrl: BlueBotConfig.Avatars.Default
-		};
+	protected get defaultBotName(): string {
+		return 'BlueBot';
+	}
+
+	protected _botIdentity: BotIdentity = {
+		botName: BlueBotConfig.Name,
+		avatarUrl: BlueBotConfig.Avatars.Default
+	};
+
+	protected get botIdentity(): BotIdentity {
+		return this._botIdentity;
 	}
 
 	private _blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
@@ -29,63 +33,53 @@ export default class BlueBot extends ReplyBot {
 		return this._blueMurderTimestamp;
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
-		if (message.author.bot) return;
-
-		const channel = message.channel as TextChannel;
-
-		// Use AI to check for blue references
-		if (await this.checkIfBlueIsSaid(message)) {
-			this._blueTimestamp = new Date();
-			await this.sendReply(channel, {
-				botIdentity: {
-					...this.botIdentity,
-					avatarUrl: BlueBotConfig.Avatars.Default
-				},
-				content: BlueBotConfig.Responses.Default
-			});
-		}
-
+	protected async processMessage(message: Message): Promise<void> {
 		if (await this.isVennInsultingBlu(message)) {
 			this._blueMurderTimestamp = new Date();
-			await this.sendReply(channel, {
-				botIdentity: {
-					...this.botIdentity,
-					avatarUrl: BlueBotConfig.Avatars.Murder
-				},
-				content: BlueBotConfig.Responses.Murder
-			});
+			this._botIdentity = {
+				botName: BlueBotConfig.Name,
+				avatarUrl: BlueBotConfig.Avatars.Murder
+			};
+			await this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Murder);
 			return;
 		}
 
 		if (this.isSomeoneAskingToBeBlue(message)) {
-			await this.sendReply(channel, {
-				botIdentity: {
-					...this.botIdentity,
-					avatarUrl: BlueBotConfig.Avatars.Default
-				},
-				content: BlueBotConfig.Responses.Request(message.content)
-			});
+			this._botIdentity = {
+				botName: BlueBotConfig.Name,
+				avatarUrl: BlueBotConfig.Avatars.Default
+			};
+			await this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Request(message.content));
 			return;
 		}
 
 		const acknowledgmentResult = await this.isSomeoneRespondingToBlu(message);
 		if (acknowledgmentResult.isAcknowledging) {
-			const responses = acknowledgmentResult.isNegative
-				? BlueBotConfig.Responses.Cheeky
-				: BlueBotConfig.Responses.Cheeky;
+			if (acknowledgmentResult.isNegative && message.author.id === userId.Venn) {
+				this._botIdentity = {
+					botName: BlueBotConfig.Name,
+					avatarUrl: BlueBotConfig.Avatars.Murder
+				};
+				await this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Murder);
 
-			const randomIndex = Math.floor(Math.random() * responses.length);
-			await this.sendReply(channel, {
-				botIdentity: {
-					...this.botIdentity,
-					avatarUrl: acknowledgmentResult.isNegative
-						? BlueBotConfig.Avatars.Cheeky
-						: BlueBotConfig.Avatars.Cheeky
-				},
-				content: responses[randomIndex]
-			});
+			} else {
+				this._botIdentity = {
+					botName: BlueBotConfig.Name,
+					avatarUrl: BlueBotConfig.Avatars.Cheeky
+				};
+				await this.sendReply(message.channel as TextChannel, BlueBotConfig.getRandomCheekyResponse());
+			}
 			return;
+		}
+
+		// Use AI to check for blue references
+		if (await this.checkIfBlueIsSaid(message)) {
+			this._blueTimestamp = new Date();
+			this._botIdentity = {
+				botName: BlueBotConfig.Name,
+				avatarUrl: BlueBotConfig.Avatars.Cheeky
+			};
+			await this.sendReply(message.channel as TextChannel, BlueBotConfig.Responses.Default);
 		}
 	}
 

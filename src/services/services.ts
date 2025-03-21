@@ -38,6 +38,7 @@ export const ServiceId = {
 	Logger: Symbol.for('Logger'),
 	WebhookService: Symbol.for('WebhookService'),
 	DiscordClient: Symbol('DiscordClient'),
+	DiscordService: Symbol('DiscordService'),
 	LLMManager: Symbol('LLMManager'),
 	BlueBot: Symbol('BlueBot'),
 	BananaBot: Symbol('BananaBot'),
@@ -60,6 +61,7 @@ export interface ServiceTypes {
 	[ServiceId.Logger]: Logger;
 	[ServiceId.WebhookService]: WebhookService;
 	[ServiceId.DiscordClient]: Client;
+	[ServiceId.DiscordService]: import('./discordService').DiscordService;
 	[ServiceId.LLMManager]: LLMManager;
 	[ServiceId.BlueBot]: BaseBot;
 	[ServiceId.BananaBot]: BaseBot;

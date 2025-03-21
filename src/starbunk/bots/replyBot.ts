@@ -1,69 +1,24 @@
+import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
 import { getWebhookService } from '../../services/bootstrap';
 import { logger } from '../../services/logger';
-import { BotIdentity } from './botIdentity';
-
-export interface ReplyOptions {
-	botIdentity?: BotIdentity;
-	content: string;
-	embeds: Array<{
-		title?: string;
-		description?: string;
-		color?: number;
-		fields?: Array<{
-			name: string;
-			value: string;
-			inline?: boolean;
-		}>;
-		footer?: {
-			text: string;
-			icon_url?: string;
-		};
-		thumbnail?: {
-			url: string;
-		};
-		image?: {
-			url: string;
-		};
-	}>;
-}
-
 export default abstract class ReplyBot {
-	protected _botIdentity: BotIdentity = {
-		userId: '',
+	private defaultBotIdentity: BotIdentity = {
 		avatarUrl: 'https://imgur.com/a/qqUlTxI',
 		botName: 'BunkBot'
 	};
 
-	get botName(): string {
-		return this._botIdentity.botName;
-	}
-
-	get avatarUrl(): string {
-		return this._botIdentity.avatarUrl;
+	protected get defaultBotName(): string {
+		return 'CovaBot';
 	}
 
 	protected get botIdentity(): BotIdentity {
-		return this._botIdentity;
+		return this.defaultBotIdentity;
 	}
 
-	async handleMessage(message: Message): Promise<void> {
-		if (message.author.bot) {
-			logger.debug(`${this.botName} ignoring bot message: ${message.content}`);
-			return;
-		}
-		logger.debug(`${this.botName} received message: ${message.content}`);
-	}
+	protected abstract processMessage(message: Message): Promise<void>;
 
-	protected getDefaultOptions(content: string): ReplyOptions {
-		return {
-			botIdentity: this.botIdentity,
-			content,
-			embeds: [],
-		};
-	}
-
-	public async sendReply(channel: TextChannel, content: string | Partial<ReplyOptions>): Promise<void> {
+	public async sendReply(channel: TextChannel, content: string): Promise<void> {
 		try {
 			let webhookService;
 			try {
@@ -73,23 +28,11 @@ export default abstract class ReplyBot {
 				throw new Error('WebhookService not available');
 			}
 
-			const options: ReplyOptions = typeof content === 'string'
-				? this.getDefaultOptions(content)
-				: {
-					botIdentity: content.botIdentity ?? this.botIdentity,
-					content: content.content ?? '',
-					embeds: content.embeds ?? [],
-				};
-
-			// Extract username and avatarURL for webhook service
-			const username = options.botIdentity?.botName ?? this.botName;
-			const avatarURL = options.botIdentity?.avatarUrl ?? this.avatarUrl;
-
 			await webhookService.writeMessage(channel, {
-				username,
-				avatarURL,
-				content: options.content,
-				embeds: options.embeds
+				username: this.botIdentity.botName,
+				avatarURL: this.botIdentity.avatarUrl,
+				content: content,
+				embeds: []
 			});
 		} catch (error) {
 			logger.error(`Failed to send reply to channel ${channel.id}`, error as Error);

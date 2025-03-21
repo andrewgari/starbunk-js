@@ -1,10 +1,14 @@
+import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
-import { BotIdentity } from '../botIdentity';
 import { HomonymBotConfig } from '../config/homonymBotConfig';
 import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class HomonymBot extends ReplyBot {
+	protected get defaultBotName(): string {
+		return 'HomonymBot';
+	}
+
 	// Cache compiled regex patterns for better performance
 	private readonly wordPatterns: Map<string, RegExp> = new Map();
 
@@ -24,20 +28,15 @@ export default class HomonymBot extends ReplyBot {
 
 	protected get botIdentity(): BotIdentity {
 		return {
-			userId: '',
 			avatarUrl: HomonymBotConfig.Avatars.Default,
 			botName: HomonymBotConfig.Name
 		};
 	}
 
-	async handleMessage(message: Message<boolean>): Promise<void> {
-		if (message.author.bot) return;
-
-		const content = message.content;
-		const matchedPair = this.findMatchingHomonymPair(content);
-
-		if (matchedPair) {
-			await this.sendReply(message.channel as TextChannel, `*${matchedPair.correction}`);
+	async processMessage(message: Message<boolean>): Promise<void> {
+		const pair = this.findMatchingHomonymPair(message.content);
+		if (pair) {
+			this.sendReply(message.channel as TextChannel, pair.correction);
 		}
 	}
 
