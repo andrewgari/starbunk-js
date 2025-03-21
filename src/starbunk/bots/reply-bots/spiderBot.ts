@@ -9,7 +9,7 @@ export default class SpiderBot extends ReplyBot {
 		return 'SpiderBot';
 	}
 
-	public get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity | undefined {
 		return {
 			avatarUrl: SpiderBotConfig.Avatars.Default,
 			botName: SpiderBotConfig.Name
@@ -17,6 +17,11 @@ export default class SpiderBot extends ReplyBot {
 	}
 
 	public async handleMessage(message: Message<boolean>): Promise<void> {
+		// Skip bot messages
+		if (message.author.bot) {
+			return;
+		}
+
 		const hasCorrectSpelling = SpiderBotConfig.Patterns.Correct?.test(message.content);
 		const hasIncorrectSpelling = SpiderBotConfig.Patterns.Default?.test(message.content);
 

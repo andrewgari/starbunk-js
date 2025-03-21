@@ -10,7 +10,7 @@ export default class PickleBot extends ReplyBot {
 		return 'PickleBot';
 	}
 
-	public get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity | undefined {
 		return {
 			avatarUrl: PickleBotConfig.Avatars.Default,
 			botName: PickleBotConfig.Name
@@ -18,6 +18,11 @@ export default class PickleBot extends ReplyBot {
 	}
 
 	public async handleMessage(message: Message<boolean>): Promise<void> {
+		// Skip bot messages
+		if (message.author.bot) {
+			return;
+		}
+
 		const mentionsGremlin = PickleBotConfig.Patterns.Default?.test(message.content);
 		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Sig;
 		const isTargetUser = message.author.id === targetUserId;

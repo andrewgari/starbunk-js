@@ -22,6 +22,11 @@ export default class VennBot extends ReplyBot {
 	}
 
 	public async handleMessage(message: Message): Promise<void> {
+		// Skip bot messages
+		if (message.author.bot) {
+			return;
+		}
+
 		const isCringe = VennBotConfig.Patterns.Default.test(message.content.toLowerCase());
 		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Venn;
 		const isTargetUser = message.author.id === targetUserId;

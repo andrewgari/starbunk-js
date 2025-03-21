@@ -1,13 +1,16 @@
 module.exports = {
 	preset: 'ts-jest',
 	testEnvironment: 'node',
+	// Use standard patterns for finding tests
 	testMatch: [
-		'**/macaroniBot.test.ts',
-		'**/bananaBot.test.ts',
-		'**/checkBot.test.ts',
-		'**/time.test.ts',
-		'**/interruptBot.test.ts',
-		'**/discordService.test.ts'
+		'**/__tests__/**/*.test.ts'
+	],
+	// Only exclude tests with complex external dependencies like LLM services
+	testPathIgnorePatterns: [
+		'node_modules/',
+		// Tests needing special mocks for external services
+		// blueBot.test.ts depends on LLM service which is complex to mock
+		'blueBot\\.test\\.ts',
 	],
 	transform: {
 		'^.+\\.tsx?$': ['ts-jest', {

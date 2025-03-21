@@ -18,8 +18,13 @@ export default class MusicCorrectBot extends ReplyBot {
 	}
 
 	public async handleMessage(message: Message): Promise<void> {
+		// Skip bot messages
+		if (message.author.bot) {
+			return;
+		}
+
 		const content = message.content.toLowerCase();
-		if (content.startsWith('!play')) {
+		if (content.includes('music') || content.startsWith('!play')) {
 			await this.sendReply(message.channel as TextChannel, MusicCorrectBotConfig.Responses.Default(message.author.id));
 		}
 	}

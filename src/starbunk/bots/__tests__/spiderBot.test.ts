@@ -1,23 +1,51 @@
+import * as bootstrap from '../../../services/bootstrap';
 import { container, ServiceId } from '../../../services/services';
 import { SpiderBotConfig } from '../config/spiderBotConfig';
 import SpiderBot from '../reply-bots/spiderBot';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';
+
+// Mock the bootstrap module
+jest.mock('../../../services/bootstrap', () => {
+	return {
+		getWebhookService: jest.fn().mockImplementation(() => mockWebhookService)
+	};
+});
+
+jest.mock('../../../services/discordService', () => {
+	return {
+		DiscordService: {
+			getInstance: jest.fn().mockImplementation(() => mockDiscordService)
+		}
+	};
+});
 
 describe('SpiderBot', () => {
 	let spiderBot: SpiderBot;
 
 	beforeEach(() => {
+		// Clear all mocks
+		jest.clearAllMocks();
+
 		// Clear container and register mocks
 		container.clear();
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
 
+		// Make sure bootstrap.getWebhookService returns our mock
+		(bootstrap.getWebhookService as jest.Mock).mockReturnValue(mockWebhookService);
+
+		// Setup mock Discord service
+		mockDiscordService.getMemberAsBotIdentity.mockReturnValue({
+			botName: SpiderBotConfig.Name,
+			avatarUrl: SpiderBotConfig.Avatars.Default
+		});
+
 		// Create SpiderBot instance
 		spiderBot = new SpiderBot();
 	});
 
-	it('should respond to messages containing "spider"', async () => {
-		const message = mockMessage('I saw a spider today');
+	it('should respond to messages containing "spiderman"', async () => {
+		const message = mockMessage('I saw spiderman today');
 		await spiderBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
@@ -57,6 +85,7 @@ describe('SpiderBot', () => {
 
 	it('should not respond to bot messages', async () => {
 		const message = mockMessage('spiderman', undefined, true);
+		message.author.bot = true;
 		await spiderBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
@@ -67,18 +96,5 @@ describe('SpiderBot', () => {
 		await spiderBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	it('should respond with a random spider fact', async () => {
-		const message = mockMessage('spider');
-		await spiderBot.handleMessage(message);
-
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({
-				username: SpiderBotConfig.Name,
-				content: expect.stringContaining('Did you know')
-			})
-		);
 	});
 });

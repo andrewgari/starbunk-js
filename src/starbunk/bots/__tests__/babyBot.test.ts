@@ -18,7 +18,7 @@ describe('BabyBot', () => {
 	});
 
 	it('should respond to messages containing "baby"', async () => {
-		const message = mockMessage('I love babies!');
+		const message = mockMessage('I love my baby!', 'testUser', false);
 		await babyBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(

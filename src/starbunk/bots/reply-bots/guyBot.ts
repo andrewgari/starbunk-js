@@ -11,18 +11,23 @@ export default class GuyBot extends ReplyBot {
 		return 'GuyBot';
 	}
 
-	public get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity | undefined {
 		return DiscordService.getInstance().getMemberAsBotIdentity(userId.Guy);
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
+	public async handleMessage(message: Message, skipBotMessages = true): Promise<void> {
+		// Skip bot messages if skipBotMessages is true
+		if (skipBotMessages && this.isBot(message)) {
+			return;
+		}
+
 		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Guy;
 		const isTargetUser = message.author.id === targetUserId;
 		const guyMentioned = GuyBotConfig.Patterns.Default?.test(message.content);
 		const guyReplied = isTargetUser && random.percentChance(5);
 		const shouldReply = guyMentioned || guyReplied;
 
-		if (shouldReply) {
+		if (shouldReply && this.botIdentity) {
 			await this.sendReply(message.channel as TextChannel, GuyBotConfig.Responses.Default());
 		}
 	}

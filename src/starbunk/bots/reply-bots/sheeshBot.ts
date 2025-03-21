@@ -16,7 +16,12 @@ export default class SheeshBot extends ReplyBot {
 		};
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
+	public async handleMessage(message: Message, skipBotMessages = true): Promise<void> {
+		// Skip bot messages if skipBotMessages is true
+		if (skipBotMessages && this.isBot(message)) {
+			return;
+		}
+
 		if (SheeshBotConfig.Patterns.Default?.test(message.content)) {
 			await this.sendReply(message.channel as TextChannel, SheeshBotConfig.Responses.Default());
 		}

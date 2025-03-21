@@ -17,6 +17,11 @@ export default class BabyBot extends ReplyBot {
 	}
 
 	public async handleMessage(message: Message): Promise<void> {
+		// Skip bot messages
+		if (message.author.bot) {
+			return;
+		}
+
 		if (BabyBotConfig.Patterns.Default?.test(message.content)) {
 			this.sendReply(message.channel as TextChannel, BabyBotConfig.Responses.Default);
 		}

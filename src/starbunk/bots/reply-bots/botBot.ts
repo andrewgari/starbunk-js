@@ -15,12 +15,17 @@ export default class BotBot extends ReplyBot {
 		};
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
+	public async handleMessage(message: Message, skipBotMessages = false): Promise<void> {
+		// BotBot specifically responds to bot messages, so we set skipBotMessages to false by default
+		if (skipBotMessages && this.isBot(message)) {
+			return;
+		}
+
 		const isBot = message.author.bot;
 		const shouldReply = isBot && Random.percentChance(10);
 
 		if (shouldReply) {
-			this.sendReply(message.channel as TextChannel, BotBotConfig.Responses.Default);
+			await this.sendReply(message.channel as TextChannel, BotBotConfig.Responses.Default);
 		}
 	}
 }

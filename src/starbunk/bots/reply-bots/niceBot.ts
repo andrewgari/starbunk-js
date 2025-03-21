@@ -10,7 +10,7 @@ export default class NiceBot extends ReplyBot {
 		return 'NiceBot';
 	}
 
-	public get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity | undefined {
 		return {
 			avatarUrl: NiceBotConfig.Avatars.Default,
 			botName: NiceBotConfig.Name
@@ -18,6 +18,11 @@ export default class NiceBot extends ReplyBot {
 	}
 
 	public async handleMessage(message: Message<boolean>): Promise<void> {
+		// Skip bot messages
+		if (message.author.bot) {
+			return;
+		}
+
 		if (NiceBotConfig.Patterns.Default?.test(message.content)) {
 			this.sendReply(message.channel as TextChannel, NiceBotConfig.Responses.Default);
 		}

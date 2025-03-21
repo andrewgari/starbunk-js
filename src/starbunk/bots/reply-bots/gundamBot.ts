@@ -17,6 +17,11 @@ export default class GundamBot extends ReplyBot {
 	}
 
 	public async handleMessage(message: Message): Promise<void> {
+		// Skip bot messages
+		if (message.author.bot) {
+			return;
+		}
+
 		if (GundamBotConfig.Patterns.Default?.test(message.content)) {
 			this.sendReply(message.channel as TextChannel, GundamBotConfig.Responses.Default);
 		}

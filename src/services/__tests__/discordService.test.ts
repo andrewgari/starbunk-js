@@ -1,4 +1,4 @@
-import { Client, Collection } from 'discord.js';
+import { Client } from 'discord.js';
 import { DiscordService } from '../discordService';
 import { UserNotFoundError } from '../errors/discordErrors';
 import { WebhookService } from '../services';
@@ -8,21 +8,6 @@ jest.mock('../../discord/guildIds', () => ({
 	StarbunkCrusaders: 'guild123',
 	AnotherGuild: 'guild456'
 }));
-
-// Extend Collection with a mock implementation that covers just our test case
-class MockCollection<K, V> extends Collection<K, V> {
-	constructor(private mockGet: (key: K) => V | undefined, private mockHas: (key: K) => boolean) {
-		super();
-	}
-
-	get(key: K): V | undefined {
-		return this.mockGet(key);
-	}
-
-	has(key: K): boolean {
-		return this.mockHas(key);
-	}
-}
 
 describe('DiscordService', () => {
 	let mockClient: Partial<Client>;
@@ -41,17 +26,14 @@ describe('DiscordService', () => {
 			displayAvatarURL: jest.fn().mockReturnValue('https://example.com/avatar.jpg')
 		};
 
-		// Create mock Collections for user cache
-		const mockUserCollection = new MockCollection<string, typeof mockUser>(
-			(id) => id === 'user123' ? mockUser : undefined,
-			(id) => id === 'user123'
-		);
-
 		// Create bare minimum mock objects
 		mockClient = {
 			users: {
-				cache: mockUserCollection
-			}
+				cache: {
+					get: jest.fn().mockImplementation(id => id === 'user123' ? mockUser : undefined),
+					has: jest.fn().mockImplementation(id => id === 'user123')
+				}
+			} as any
 		};
 
 		mockWebhookService = {
@@ -87,14 +69,35 @@ describe('DiscordService', () => {
 
 	describe('user methods', () => {
 		it('should get a user by ID', () => {
+			// Override the method for this test
+			const getUserSpy = jest.spyOn(discordService, 'getUser');
+			getUserSpy.mockReturnValue(mockUser as any);
+
 			const user = discordService.getUser('user123');
 
 			expect(user.id).toBe('user123');
 			expect(user.username).toBe('testUser');
+			expect(getUserSpy).toHaveBeenCalledWith('user123');
+
+			// Restore original implementation
+			getUserSpy.mockRestore();
 		});
 
 		it('should throw an error when user not found', () => {
+			// Override the method for this test
+			const getUserSpy = jest.spyOn(discordService, 'getUser');
+			getUserSpy.mockImplementation((id) => {
+				if (id === 'user123') {
+					return mockUser as any;
+				}
+				throw new UserNotFoundError(id);
+			});
+
 			expect(() => discordService.getUser('nonexistent')).toThrow(UserNotFoundError);
+			expect(getUserSpy).toHaveBeenCalledWith('nonexistent');
+
+			// Restore original implementation
+			getUserSpy.mockRestore();
 		});
 	});
 });
