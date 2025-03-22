@@ -3,6 +3,8 @@ import userId from '../../../discord/userId';
 import { getLLMManager } from '../../../services/bootstrap';
 import { LLMProviderType } from '../../../services/llm';
 import { LLMManager } from '../../../services/llm/llmManager';
+import { PromptRegistry, PromptType } from '../../../services/llm/promptManager';
+import { registerAllPrompts } from '../../../services/llm/prompts';
 import { logger } from '../../../services/logger';
 import { TimeUnit, isOlderThan, isWithinTimeframe } from '../../../utils/time';
 import { BotIdentity } from '../../types/botIdentity';
@@ -10,7 +12,7 @@ import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BlueBot extends ReplyBot {
-	private readonly llmManager?: LLMManager;
+	private readonly llmManager?: LLMManager | null;
 	private readonly botIdentityValue: BotIdentity = {
 		botName: BlueBotConfig.Name,
 		avatarUrl: BlueBotConfig.Avatars.Default
@@ -20,21 +22,83 @@ export default class BlueBot extends ReplyBot {
 	private _blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private _hasLLM: boolean = false;
 
+	// Force responses for testing
+	private FORCE_RESPONSES: boolean = true;
+
 	constructor() {
 		super();
-		logger.debug(`[${this.defaultBotName}] Initializing BlueBot`);
+		logger.info(`[${this.defaultBotName}] Initializing BlueBot`);
+
+		// Ensure all prompts are properly registered
+		this.ensurePromptsRegistered();
 
 		try {
 			this.llmManager = getLLMManager();
-			this._hasLLM = true;
-			logger.debug(`[${this.defaultBotName}] LLM Manager initialized successfully`);
+			this._hasLLM = !!this.llmManager;
+			logger.info(`[${this.defaultBotName}] LLM Manager initialized: ${this._hasLLM ? 'SUCCESS' : 'FAILED'}`);
+
+			if (this._hasLLM && this.llmManager) {
+				// Test LLM availability
+				this.verifyLLMAvailability();
+			}
 		} catch (error) {
 			logger.warn(`[${this.defaultBotName}] LLM Manager not available, will use regex fallback only: ${error instanceof Error ? error.message : String(error)}`);
 			this._hasLLM = false;
 		}
+
+		logger.info(`[${this.defaultBotName}] Force responses mode: ${this.FORCE_RESPONSES ? 'ENABLED' : 'DISABLED'}`);
 	}
 
-	public get botIdentity(): BotIdentity {
+	/**
+	 * Ensure that prompts are properly registered
+	 */
+	private ensurePromptsRegistered(): void {
+		try {
+			// Call the registerAllPrompts function to ensure all prompts are available
+			logger.info(`[${this.defaultBotName}] Registering all prompts...`);
+			registerAllPrompts();
+
+			// Verify the Blue prompts are registered
+			const blueDetectorPrompt = PromptRegistry.getPrompt(PromptType.BLUE_DETECTOR);
+			const blueAcknowledgmentPrompt = PromptRegistry.getPrompt(PromptType.BLUE_ACKNOWLEDGMENT);
+			const blueSentimentPrompt = PromptRegistry.getPrompt(PromptType.BLUE_SENTIMENT);
+
+			logger.info(`[${this.defaultBotName}] Blue prompts status - Detector: ${blueDetectorPrompt ? 'OK' : 'MISSING'}, Acknowledgment: ${blueAcknowledgmentPrompt ? 'OK' : 'MISSING'}, Sentiment: ${blueSentimentPrompt ? 'OK' : 'MISSING'}`);
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error ensuring prompts registered: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	/**
+	 * Verify LLM availability with a quick test
+	 */
+	private async verifyLLMAvailability(): Promise<void> {
+		try {
+			if (!this.llmManager) return;
+
+			// Test with a simple completion to verify it works
+			logger.info(`[${this.defaultBotName}] Testing LLM availability...`);
+			try {
+				const testResult = await this.llmManager.createSimpleCompletion(
+					LLMProviderType.OLLAMA,
+					"Is this message about blue?",
+					"You detect if messages contain the word 'blue'. This message does not mention blue. Answer with yes or no.",
+					true
+				);
+
+				logger.info(`[${this.defaultBotName}] LLM test result: "${testResult}"`);
+				this._hasLLM = true;
+			} catch (testError) {
+				logger.error(`[${this.defaultBotName}] LLM test failed: ${testError instanceof Error ? testError.message : String(testError)}`);
+				this._hasLLM = false;
+			}
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error verifying LLM: ${error instanceof Error ? error.message : String(error)}`);
+			this._hasLLM = false;
+		}
+	}
+
+	public override get botIdentity(): BotIdentity {
 		return this.botIdentityValue;
 	}
 
@@ -113,12 +177,18 @@ export default class BlueBot extends ReplyBot {
 	}
 
 	private async isSomeoneRespondingToBlu(content: string): Promise<boolean> {
-		logger.debug(`[${this.defaultBotName}] Checking if message is responding to Blue`);
+		logger.info(`[${this.defaultBotName}] Checking if message is responding to Blue`);
 		try {
+			// Force responses for testing if needed
+			if (this.FORCE_RESPONSES && content.toLowerCase().includes('respond')) {
+				logger.info(`[${this.defaultBotName}] FORCE_RESPONSES active, detecting 'respond' keyword`);
+				return true;
+			}
+
 			// Try regex first for quick response
 			const regexResult = BlueBotConfig.Patterns.Confirm?.test(content) ?? false;
 			if (regexResult) {
-				logger.debug(`[${this.defaultBotName}] Regex detected response to Blue`);
+				logger.info(`[${this.defaultBotName}] Regex detected response to Blue`);
 				return true;
 			}
 
@@ -133,7 +203,7 @@ export default class BlueBot extends ReplyBot {
 					);
 
 					const result = response.toLowerCase().includes('yes');
-					logger.debug(`[${this.defaultBotName}] LLM response check result: ${result}`);
+					logger.info(`[${this.defaultBotName}] LLM response check result: ${result}`);
 					return result;
 				} catch (error) {
 					logger.warn(`[${this.defaultBotName}] LLM failed for response check, falling back to regex: ${error instanceof Error ? error.message : String(error)}`);
@@ -151,12 +221,18 @@ export default class BlueBot extends ReplyBot {
 	}
 
 	private async checkIfBlueIsSaid(content: string): Promise<boolean> {
-		logger.debug(`[${this.defaultBotName}] Checking if Blue is mentioned`);
+		logger.info(`[${this.defaultBotName}] Checking if Blue is mentioned`);
 		try {
+			// Force responses for testing if needed
+			if (this.FORCE_RESPONSES && content.toLowerCase().includes('test blue')) {
+				logger.info(`[${this.defaultBotName}] FORCE_RESPONSES active, detecting 'test blue' keyword`);
+				return true;
+			}
+
 			// Try regex first for quick response
 			const regexResult = BlueBotConfig.Patterns.Default?.test(content) ?? false;
 			if (regexResult) {
-				logger.debug(`[${this.defaultBotName}] Regex detected Blue mention`);
+				logger.info(`[${this.defaultBotName}] Regex detected Blue mention`);
 				return true;
 			}
 
@@ -171,7 +247,7 @@ export default class BlueBot extends ReplyBot {
 					);
 
 					const result = response.toLowerCase().includes('yes');
-					logger.debug(`[${this.defaultBotName}] LLM mention check result: ${result}`);
+					logger.info(`[${this.defaultBotName}] LLM mention check result: ${result}`);
 					return result;
 				} catch (error) {
 					logger.warn(`[${this.defaultBotName}] LLM failed for mention check, falling back to regex: ${error instanceof Error ? error.message : String(error)}`);

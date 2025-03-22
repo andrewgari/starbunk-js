@@ -1,9 +1,9 @@
 import { Client } from 'discord.js';
 import { WebhookService as WebhookServiceImpl } from '../webhooks/webhookService';
+import { ServiceId, container } from './container';
 import { DiscordService } from './discordService';
 import { LLMManager, LLMProviderType } from './llm';
 import { Logger } from './logger';
-import { container, ServiceId } from './container';
 
 /**
  * Bootstraps the entire application, registering all services
@@ -72,6 +72,12 @@ export function getDiscordService(): DiscordService {
 	return container.get<DiscordService>(ServiceId.DiscordService);
 }
 
-export function getLLMManager(): LLMManager {
-	return container.get<LLMManager>(ServiceId.LLMManager);
-}
+export const getLLMManager = (): LLMManager | null => {
+	try {
+		const llmManager = container.get<LLMManager>(ServiceId.LLMManager);
+		return llmManager;
+	} catch (error) {
+		console.warn(`LLM Manager service not available: ${error instanceof Error ? error.message : String(error)}`);
+		return null;
+	}
+};
