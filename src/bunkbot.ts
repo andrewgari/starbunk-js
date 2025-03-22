@@ -1,25 +1,26 @@
 // Register module aliases for path resolution
 // Import config first to ensure environment variables are loaded
-import { GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables immediately before any other imports
+// Use absolute path to ensure the .env file is found regardless of working directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+import { GatewayIntentBits } from 'discord.js';
 import { logger } from './services/logger';
 import SnowbunkClient from './snowbunk/snowbunkClient';
 import StarbunkClient from './starbunk/starbunkClient';
 
-// This is a fallback in case config.ts doesn't load the environment variables
-if (!process.env.DISCORD_TOKEN) {
-	dotenv.config();
-}
-
 export async function runStarbunkBot(): Promise<void> {
 	logger.info('Starting Starbunk bot');
 	try {
-		const token = process.env.DISCORD_TOKEN;
+		const token = process.env.TOKEN;
 		const clientId = process.env.CLIENT_ID;
 
 		if (!token) {
-			logger.error('DISCORD_TOKEN environment variable is not set');
-			throw new Error('DISCORD_TOKEN environment variable is not set');
+			logger.error('TOKEN environment variable is not set');
+			throw new Error('TOKEN environment variable is not set');
 		}
 
 		if (!clientId) {
@@ -27,31 +28,18 @@ export async function runStarbunkBot(): Promise<void> {
 			throw new Error('CLIENT_ID environment variable is not set');
 		}
 
-		logger.debug('Creating StarbunkClient with required intents');
-		const client = new StarbunkClient({
-			intents: [
-				GatewayIntentBits.Guilds,
-				GatewayIntentBits.GuildMessages,
-				GatewayIntentBits.MessageContent,
-				GatewayIntentBits.GuildVoiceStates
-			]
-		});
+		logger.debug('Creating StarbunkClient');
+		const client = new StarbunkClient();
 
-		logger.info('Registering commands');
-		try {
-			await client.registerCommands();
-			logger.info('Commands registered successfully');
-		} catch (error) {
-			logger.error('Failed to register commands:', error as Error);
-			// Continue startup even if command registration fails
-		}
+		// Initialize the client
+		await client.init();
 
 		logger.info('Logging in to Discord');
 		try {
 			await client.login(token);
 			logger.info('Successfully logged in to Discord');
 		} catch (error) {
-			logger.error('Failed to log in to Discord:', error as Error);
+			logger.error('Failed to log in to Discord:', error instanceof Error ? error : new Error(String(error)));
 			throw error;
 		}
 
@@ -63,7 +51,7 @@ export async function runStarbunkBot(): Promise<void> {
 				logger.info('Bot shutdown complete');
 				process.exit(0);
 			} catch (error) {
-				logger.error('Error during shutdown:', error as Error);
+				logger.error('Error during shutdown:', error instanceof Error ? error : new Error(String(error)));
 				process.exit(1);
 			}
 		});
@@ -75,7 +63,7 @@ export async function runStarbunkBot(): Promise<void> {
 				logger.info('Bot shutdown complete');
 				process.exit(0);
 			} catch (error) {
-				logger.error('Error during shutdown:', error as Error);
+				logger.error('Error during shutdown:', error instanceof Error ? error : new Error(String(error)));
 				process.exit(1);
 			}
 		});
@@ -92,7 +80,7 @@ export async function runStarbunkBot(): Promise<void> {
 
 		logger.info('Bot startup complete');
 	} catch (error) {
-		logger.error('Fatal error during bot startup:', error as Error);
+		logger.error('Fatal error during bot startup:', error instanceof Error ? error : new Error(String(error)));
 		process.exit(1);
 	}
 }
