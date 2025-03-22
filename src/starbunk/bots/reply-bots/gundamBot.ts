@@ -5,10 +5,6 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class GundamBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return 'GundamBot';
-	}
-
 	public get botIdentity(): BotIdentity {
 		return {
 			botName: GundamBotConfig.Name,
@@ -16,14 +12,12 @@ export default class GundamBot extends ReplyBot {
 		};
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
-		// Skip bot messages
-		if (message.author.bot) {
-			return;
-		}
+	protected async processMessage(message: Message): Promise<void> {
+		const content = message.content.toLowerCase();
+		const hasGundam = GundamBotConfig.Patterns.Default?.test(content);
 
-		if (GundamBotConfig.Patterns.Default?.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, GundamBotConfig.Responses.Default);
+		if (hasGundam) {
+			await this.sendReply(message.channel as TextChannel, GundamBotConfig.Responses.Default);
 		}
 	}
 }

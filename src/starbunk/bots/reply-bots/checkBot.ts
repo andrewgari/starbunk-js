@@ -6,10 +6,6 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class CheckBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return 'CheckBot';
-	}
-
 	public get botIdentity(): BotIdentity {
 		return {
 			botName: CheckBotConfig.Name,
@@ -17,7 +13,7 @@ export default class CheckBot extends ReplyBot {
 		};
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
+	public async processMessage(message: Message): Promise<void> {
 		if (CheckBotConfig.Patterns.Default?.test(message.content)) {
 			await this.sendReply(message.channel as TextChannel, CheckBotConfig.Responses.Default(message.content));
 		}

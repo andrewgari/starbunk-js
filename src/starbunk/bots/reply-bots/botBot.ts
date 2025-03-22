@@ -5,9 +5,11 @@ import { BotBotConfig } from '../config/botBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BotBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return 'BotBot';
+	protected shouldSkipMessage(message: Message): boolean {
+		// BotBot only responds to bot messages
+		return !message.author.bot;
 	}
+
 	public get botIdentity(): BotIdentity {
 		return {
 			botName: BotBotConfig.Name,
@@ -15,14 +17,9 @@ export default class BotBot extends ReplyBot {
 		};
 	}
 
-	public async handleMessage(message: Message, skipBotMessages = false): Promise<void> {
-		// BotBot specifically responds to bot messages, so we set skipBotMessages to false by default
-		if (skipBotMessages && this.isBot(message)) {
-			return;
-		}
-
-		const isBot = message.author.bot;
-		const shouldReply = isBot && Random.percentChance(10);
+	protected async processMessage(message: Message): Promise<void> {
+		// BotBot only responds to bot messages with a 10% chance
+		const shouldReply = Random.percentChance(10);
 
 		if (shouldReply) {
 			await this.sendReply(message.channel as TextChannel, BotBotConfig.Responses.Default);

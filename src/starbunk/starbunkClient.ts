@@ -28,7 +28,7 @@ export default class StarbunkClient extends DiscordClient {
 
 	// Event handlers
 	handleMessage(message: Message): void {
-		this.bots.forEach((bot) => bot.handleMessage(message));
+		this.bots.forEach((bot) => bot.auditMessage(message));
 	}
 
 	private handleVoiceEvent(oldState: VoiceState, newState: VoiceState): void {

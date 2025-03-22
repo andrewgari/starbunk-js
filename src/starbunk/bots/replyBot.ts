@@ -6,10 +6,35 @@ import { logger } from '../../services/logger';
 export default abstract class ReplyBot {
 	protected skipBotMessages: boolean = true;
 
-	public abstract get defaultBotName(): string;
+	/**
+	 * Get the default name for this bot. By default, returns the class name.
+	 * Can be overridden if a different name is needed.
+	 */
+	public get defaultBotName(): string {
+		return this.constructor.name;
+	}
+
 	public abstract get botIdentity(): BotIdentity | undefined;
 
-	public abstract handleMessage(message: Message): Promise<void>;
+	public async auditMessage(message: Message): Promise<void> {
+		// Early return if message should be skipped
+		if (this.shouldSkipMessage(message)) {
+			return;
+		}
+
+		await this.handleMessage(message);
+	}
+
+	protected async handleMessage(message: Message): Promise<void> {
+		// Skip bot messages if skipBotMessages is true
+		if (this.shouldSkipMessage(message)) {
+			return;
+		}
+
+		await this.processMessage(message);
+	}
+
+	protected abstract processMessage(message: Message): Promise<void>;
 
 	/**
 	 * Check if a message should be skipped (e.g., from a bot)
@@ -17,7 +42,17 @@ export default abstract class ReplyBot {
 	 * @returns true if the message should be skipped, false otherwise
 	 */
 	protected shouldSkipMessage(message: Message): boolean {
-		return this.skipBotMessages && message.author.bot;
+		// Early reject if message is from self
+		if (message.author.username === this.defaultBotName) {
+			return true;
+		}
+
+		// Skip messages from any bot if skipBotMessages is true
+		if (this.skipBotMessages && message.author.bot) {
+			return true;
+		}
+
+		return false;
 	}
 
 	protected async sendReply(channel: TextChannel, content: string): Promise<void> {

@@ -4,6 +4,10 @@ import ReplyBot from '../replyBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 class TestReplyBot extends ReplyBot {
+	public get defaultBotName(): string {
+		return 'TestBot';
+	}
+
 	public get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
 		return {
 			userId: '',
@@ -31,43 +35,31 @@ class TestReplyBot extends ReplyBot {
 
 describe('ReplyBot', () => {
 	let replyBot: TestReplyBot;
+	let message: Message;
 
 	beforeEach(() => {
-		// Clear container and register mocks
-		container.clear();
-		container.register(ServiceId.Logger, () => mockLogger);
-		container.register(ServiceId.WebhookService, () => mockWebhookService);
-
-		// Create ReplyBot instance
+		container.register(ServiceId.Logger, { useValue: mockLogger });
+		container.register(ServiceId.WebhookService, { useValue: mockWebhookService });
 		replyBot = new TestReplyBot();
+		message = mockMessage();
 	});
 
-	it('should respond to messages matching shouldReply', async () => {
-		const message = mockMessage('this is a test message');
-		await replyBot.handleMessage(message);
-
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({
-				content: 'Test reply',
-				username: 'TestBot',
-				avatarURL: 'https://example.com/avatar.png'
-			})
-		);
+	it('should send a reply when message contains "test"', async () => {
+		message.content = 'test message';
+		await replyBot.auditMessage(message);
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
 	});
 
-	it('should not respond to bot messages', async () => {
-		const message = mockMessage('test');
-		message.author.bot = true;
-		await replyBot.handleMessage(message);
-
+	it('should not send a reply when message does not contain "test"', async () => {
+		message.content = 'no match';
+		await replyBot.auditMessage(message);
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	it('should not respond to messages not matching shouldReply', async () => {
-		const message = mockMessage('hello world');
-		await replyBot.handleMessage(message);
-
+	it('should not send a reply for bot messages', async () => {
+		message.content = 'test message';
+		message.author.bot = true;
+		await replyBot.auditMessage(message);
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });

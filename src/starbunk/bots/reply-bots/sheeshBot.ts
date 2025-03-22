@@ -6,24 +6,18 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class SheeshBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return SheeshBotConfig.Name;
-	}
-
 	public get botIdentity(): BotIdentity {
 		return {
-			botName: this.defaultBotName,
+			botName: SheeshBotConfig.Name,
 			avatarUrl: SheeshBotConfig.Avatars.Default
 		};
 	}
 
-	public async handleMessage(message: Message, skipBotMessages = true): Promise<void> {
-		// Skip bot messages if skipBotMessages is true
-		if (skipBotMessages && this.isBot(message)) {
-			return;
-		}
+	protected async processMessage(message: Message): Promise<void> {
+		const content = message.content.toLowerCase();
+		const hasSheesh = SheeshBotConfig.Patterns.Default?.test(content);
 
-		if (SheeshBotConfig.Patterns.Default?.test(message.content)) {
+		if (hasSheesh) {
 			await this.sendReply(message.channel as TextChannel, SheeshBotConfig.Responses.Default());
 		}
 	}

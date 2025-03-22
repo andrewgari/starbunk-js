@@ -6,15 +6,11 @@ import { InterruptBotConfig } from '../config/interruptBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class InterruptBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return 'InterruptBot';
-	}
-
 	public get botIdentity(): BotIdentity {
 		return DiscordService.getInstance().getRandomMemberAsBotIdentity();
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
+	public async processMessage(message: Message): Promise<void> {
 		const percentChance = process.env.DEBUG_MODE === 'true' ? 100 : 1;
 		const shouldInterrupt = Random.percentChance(percentChance);
 		if (!shouldInterrupt) return;

@@ -12,19 +12,17 @@ export default class HoldBot extends ReplyBot {
 
 	public get botIdentity(): BotIdentity {
 		return {
-			avatarUrl: HoldBotConfig.Avatars.Default,
-			botName: HoldBotConfig.Name
+			botName: HoldBotConfig.Name,
+			avatarUrl: HoldBotConfig.Avatars.Default
 		};
 	}
 
-	public async handleMessage(message: Message<boolean>): Promise<void> {
-		if (message.author.bot) return;
-
-		const content = message.content;
+	protected async processMessage(message: Message): Promise<void> {
+		const content = message.content.toLowerCase();
 		const hasHold = HoldBotConfig.Patterns.Default?.test(content);
 
 		if (hasHold) {
-			this.sendReply(message.channel as TextChannel, HoldBotConfig.Responses.Default);
+			await this.sendReply(message.channel as TextChannel, HoldBotConfig.Responses.Default);
 		}
 	}
 }

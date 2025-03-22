@@ -12,19 +12,26 @@ export default class MusicCorrectBot extends ReplyBot {
 
 	public get botIdentity(): BotIdentity {
 		return {
-			avatarUrl: MusicCorrectBotConfig.Avatars.Default,
-			botName: MusicCorrectBotConfig.Name
+			botName: MusicCorrectBotConfig.Name,
+			avatarUrl: MusicCorrectBotConfig.Avatars.Default
 		};
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
-		// Skip bot messages
-		if (message.author.bot) {
-			return;
-		}
+	constructor() {
+		super();
+		this.skipBotMessages = false;
+	}
 
+	// Allow all messages, including bot messages
+	protected override shouldSkipMessage(_message: Message): boolean {
+		return false;
+	}
+
+	protected async processMessage(message: Message): Promise<void> {
 		const content = message.content.toLowerCase();
-		if (content.includes('music') || content.startsWith('!play')) {
+		const hasMusic = MusicCorrectBotConfig.Patterns.Default?.test(content);
+
+		if (hasMusic) {
 			await this.sendReply(message.channel as TextChannel, MusicCorrectBotConfig.Responses.Default(message.author.id));
 		}
 	}

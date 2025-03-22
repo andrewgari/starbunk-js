@@ -5,15 +5,12 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class HomonymBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return 'HomonymBot';
-	}
-
 	// Cache compiled regex patterns for better performance
 	private readonly wordPatterns: Map<string, RegExp> = new Map();
 
 	constructor() {
 		super();
+		this.skipBotMessages = false;
 		this.initializeWordPatterns();
 	}
 
@@ -33,7 +30,7 @@ export default class HomonymBot extends ReplyBot {
 		};
 	}
 
-	public async handleMessage(message: Message<boolean>): Promise<void> {
+	public async processMessage(message: Message<boolean>): Promise<void> {
 		const pair = this.findMatchingHomonymPair(message.content);
 		if (pair) {
 			this.sendReply(message.channel as TextChannel, pair.correction);

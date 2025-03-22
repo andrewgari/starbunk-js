@@ -9,10 +9,6 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class BananaBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return BananaBotConfig.Name;
-	}
-
 	public get botIdentity(): BotIdentity {
 		return {
 			botName: this.defaultBotName,
@@ -20,7 +16,7 @@ export default class BananaBot extends ReplyBot {
 		};
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
+	public async processMessage(message: Message): Promise<void> {
 		const targetUserId = process.env.DEBUG_MODE === 'true' ? UserID.Cova : UserID.Venn;
 		const isTargetUser = message.author.id === targetUserId;
 		const mentionsBanana = BananaBotConfig.Patterns.Default?.test(message.content);

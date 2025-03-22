@@ -5,10 +5,6 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class BabyBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return 'BabyBot';
-	}
-
 	public get botIdentity(): BotIdentity {
 		return {
 			botName: BabyBotConfig.Name,
@@ -16,14 +12,12 @@ export default class BabyBot extends ReplyBot {
 		};
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
-		// Skip bot messages
-		if (message.author.bot) {
-			return;
-		}
+	protected async processMessage(message: Message): Promise<void> {
+		const content = message.content.toLowerCase();
+		const hasBaby = BabyBotConfig.Patterns.Default?.test(content);
 
-		if (BabyBotConfig.Patterns.Default?.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, BabyBotConfig.Responses.Default);
+		if (hasBaby) {
+			await this.sendReply(message.channel as TextChannel, BabyBotConfig.Responses.Default);
 		}
 	}
 }

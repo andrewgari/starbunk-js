@@ -6,25 +6,19 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class NiceBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return 'NiceBot';
-	}
-
-	public get botIdentity(): BotIdentity | undefined {
+	public get botIdentity(): BotIdentity {
 		return {
-			avatarUrl: NiceBotConfig.Avatars.Default,
-			botName: NiceBotConfig.Name
+			botName: NiceBotConfig.Name,
+			avatarUrl: NiceBotConfig.Avatars.Default
 		};
 	}
 
-	public async handleMessage(message: Message<boolean>): Promise<void> {
-		// Skip bot messages
-		if (message.author.bot) {
-			return;
-		}
+	protected async processMessage(message: Message): Promise<void> {
+		const content = message.content.toLowerCase();
+		const hasNice = NiceBotConfig.Patterns.Default?.test(content);
 
-		if (NiceBotConfig.Patterns.Default?.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, NiceBotConfig.Responses.Default);
+		if (hasNice) {
+			await this.sendReply(message.channel as TextChannel, NiceBotConfig.Responses.Default);
 		}
 	}
 }

@@ -5,10 +5,6 @@ import { SigGreatBotConfig } from '../config/sigGreatBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class SigGreatBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return 'SigGreatBot';
-	}
-
 	public get botIdentity(): BotIdentity {
 		const randomMember = DiscordService.getInstance().getRandomMemberAsBotIdentity();
 		return {
@@ -17,12 +13,7 @@ export default class SigGreatBot extends ReplyBot {
 		};
 	}
 
-	public async handleMessage(message: Message, skipBotMessages = true): Promise<void> {
-		// Skip bot messages if skipBotMessages is true
-		if (skipBotMessages && this.isBot(message)) {
-			return;
-		}
-
+	public async processMessage(message: Message): Promise<void> {
 		if (SigGreatBotConfig.Patterns.Default?.test(message.content)) {
 			await this.sendReply(message.channel as TextChannel, SigGreatBotConfig.Responses.Default);
 		}
