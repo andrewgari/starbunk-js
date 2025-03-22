@@ -10,7 +10,7 @@ yarn-error.log
 .github
 
 # Environment
-.env
+# .env is needed for Docker builds
 .env.*
 .env.local
 .env.development
