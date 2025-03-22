@@ -1,5 +1,5 @@
 import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
-import { join } from 'path';
+import path, { join } from 'path';
 import { Command } from '../discord/command';
 import { logger } from '../services/logger';
 import { loadCommand, scanDirectory } from '../util/moduleLoader';
@@ -31,22 +31,42 @@ export class CommandHandler {
 				(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
 			logger.debug(`Running with ts-node: ${isTsNode}`);
 
-			// Get the appropriate directory path
-			const commandsPath = join(__dirname, 'commands');
-			logger.debug(`Looking for commands in: ${commandsPath}`);
+			// We need to check both src and dist directories
+			const srcPath = join(__dirname.replace('/dist/', '/src/'), 'commands');
+			const distPath = join(__dirname, 'commands');
 
-			// When running with ts-node, we should look for .ts files
-			// Otherwise when running compiled code, even in development mode, we use .js
-			const fileExtension = isTsNode ? '.ts' : '.js';
+			// Try src directory first in development mode or when using ts-node
+			const primaryPath = (isDev || isTsNode) ? srcPath : distPath;
+			const primaryExt = (isDev || isTsNode) ? '.ts' : '.js';
+			const backupPath = (isDev || isTsNode) ? distPath : srcPath;
+			const backupExt = (isDev || isTsNode) ? '.js' : '.ts';
 
-			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
+			logger.debug(`Primary directory: ${primaryPath} with extension ${primaryExt}`);
+			logger.debug(`Backup directory: ${backupPath} with extension ${backupExt}`);
 
-			const commandFiles = scanDirectory(
-				commandsPath,
-				fileExtension
-			).filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
+			// First try the primary path
+			let commandFiles = scanDirectory(primaryPath, primaryExt)
+				.filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
 
-			logger.info(`Found ${commandFiles.length} command files to load`);
+			// If no files found, try the backup path
+			if (commandFiles.length === 0) {
+				logger.debug(`No files found in primary path, trying backup path: ${backupPath}`);
+				commandFiles = scanDirectory(backupPath, backupExt)
+					.filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
+			}
+
+			// Last resort: try both extensions in both directories
+			if (commandFiles.length === 0) {
+				logger.debug(`Still no files found, trying all combinations`);
+				commandFiles = [
+					...scanDirectory(primaryPath, '.ts'),
+					...scanDirectory(primaryPath, '.js'),
+					...scanDirectory(backupPath, '.ts'),
+					...scanDirectory(backupPath, '.js')
+				].filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
+			}
+
+			logger.info(`Found ${commandFiles.length} command files to load: ${commandFiles.map(f => path.basename(f)).join(', ')}`);
 
 			let successCount = 0;
 			for (const commandFile of commandFiles) {

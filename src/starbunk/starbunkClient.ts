@@ -1,6 +1,6 @@
 import { PlayerSubscription } from '@discordjs/voice';
 import { Base, Client, Collection, Events, GatewayIntentBits, Interaction, Message, VoiceState } from 'discord.js';
-import { join } from 'path';
+import path, { join } from 'path';
 import { logger } from '../services/logger';
 import { loadBot, scanDirectory } from '../util/moduleLoader';
 import ReplyBot from './bots/replyBot';
@@ -172,22 +172,40 @@ export default class StarbunkClient extends Client {
 				(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
 			logger.debug(`Running with ts-node: ${isTsNode}`);
 
-			// Get the appropriate directory path based on environment
-			const botsPath = join(__dirname, 'bots', 'reply-bots');
-			logger.debug(`Looking for bots in: ${botsPath}`);
+			// We need to check both src and dist directories
+			const srcPath = join(__dirname.replace('/dist/', '/src/'), 'bots', 'reply-bots');
+			const distPath = join(__dirname, 'bots', 'reply-bots');
 
-			// When running with ts-node, we should look for .ts files
-			// Otherwise when running compiled code, even in development mode, we use .js
-			const fileExtension = isTsNode ? '.ts' : '.js';
+			// Try src directory first in development mode or when using ts-node
+			const primaryPath = (isDev || isTsNode) ? srcPath : distPath;
+			const primaryExt = (isDev || isTsNode) ? '.ts' : '.js';
+			const backupPath = (isDev || isTsNode) ? distPath : srcPath;
+			const backupExt = (isDev || isTsNode) ? '.js' : '.ts';
 
-			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
+			logger.debug(`Primary directory: ${primaryPath} with extension ${primaryExt}`);
+			logger.debug(`Backup directory: ${backupPath} with extension ${backupExt}`);
 
-			const botFiles = scanDirectory(
-				botsPath,
-				fileExtension
-			);
+			// First try the primary path
+			let botFiles = scanDirectory(primaryPath, primaryExt);
 
-			logger.info(`Found ${botFiles.length} bot files to load`);
+			// If no files found, try the backup path
+			if (botFiles.length === 0) {
+				logger.debug(`No files found in primary path, trying backup path: ${backupPath}`);
+				botFiles = scanDirectory(backupPath, backupExt);
+			}
+
+			// Last resort: try both extensions in both directories
+			if (botFiles.length === 0) {
+				logger.debug(`Still no files found, trying all combinations`);
+				botFiles = [
+					...scanDirectory(primaryPath, '.ts'),
+					...scanDirectory(primaryPath, '.js'),
+					...scanDirectory(backupPath, '.ts'),
+					...scanDirectory(backupPath, '.js')
+				];
+			}
+
+			logger.info(`Found ${botFiles.length} bot files to load: ${botFiles.map(f => path.basename(f)).join(', ')}`);
 
 			let successCount = 0;
 			for (const botFile of botFiles) {
