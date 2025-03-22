@@ -1,5 +1,6 @@
 import { Message } from 'discord.js';
-import { container, ServiceId } from '../../../services/container';
+import userId from '../../../discord/userId';
+import { ServiceId, container } from '../../../services/container';
 import Random from '../../../utils/random';
 import InterruptBot from '../reply-bots/interruptBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
@@ -90,13 +91,30 @@ describe('InterruptBot', () => {
 	it('should always trigger in debug mode', async () => {
 		// Arrange
 		process.env.DEBUG_MODE = 'true';
-		// Mock Random.percentChance to return true in debug mode
+
+		// We need to mock the userId.Cova value that's checked in shouldSkipMessage
+		const mockCovaMessage = mockMessage('This is a test message', 'covadax');
+
+		// Manually patch the id to match the debug mode check
+		Object.defineProperty(mockCovaMessage.author, 'id', {
+			value: userId.Cova, // Use the actual Cova ID from userId module
+			configurable: true
+		});
+
+		// Manually patch the guild and channel properties to match what shouldSkipMessage expects
+		Object.defineProperty(mockCovaMessage.channel, 'name', {
+			value: 'bot-test-channel',
+			configurable: true
+		});
+
+		// Override Random.percentChance to ensure it returns true
 		(Random.percentChance as jest.Mock).mockReturnValueOnce(true);
 
 		// Act
-		await interruptBot.handleMessage(message);
+		await interruptBot.handleMessage(mockCovaMessage);
 
 		// Assert
+		expect(Random.percentChance).toHaveBeenCalledWith(1);
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
