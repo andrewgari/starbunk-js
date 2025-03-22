@@ -21,7 +21,10 @@ export enum PromptType {
 	BLUE_DETECTOR = 'blueDetector',
 	BLUE_ACKNOWLEDGMENT = 'blueAcknowledgment',
 	BLUE_SENTIMENT = 'blueSentiment',
-	COVA_EMULATOR = 'covaEmulator'
+	COVA_EMULATOR = 'covaEmulator',
+	GERALD_PERSONA = 'geraldPersona',
+	GERALD_DECISION = 'geraldDecision',
+	GERALD_RESPONSE = 'geraldResponse'
 }
 
 /**
