@@ -1,30 +1,55 @@
+import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
-import UserID from '../../../discord/userId';
 import { logger } from '../../../services/logger';
-import random from '../../../utils/random';
-import { BotIdentity } from '../../types/botIdentity';
 import { BananaBotConfig } from '../config/bananaBotConfig';
 import ReplyBot from '../replyBot';
 
-
-// This class is registered by StarbunkClient.registerBots() rather than through the service container
+/**
+ * Bot that responds to mentions of bananas with configured responses.
+ * Registered automatically by StarbunkClient.registerBots().
+ */
 export default class BananaBot extends ReplyBot {
-	public get botIdentity(): BotIdentity {
+	public override get botIdentity(): BotIdentity {
 		return {
-			botName: this.defaultBotName,
+			botName: BananaBotConfig.Name,
 			avatarUrl: BananaBotConfig.Avatars.Default
 		};
 	}
 
-	public async processMessage(message: Message): Promise<void> {
-		const targetUserId = process.env.DEBUG_MODE === 'true' ? UserID.Cova : UserID.Venn;
-		const isTargetUser = message.author.id === targetUserId;
-		const mentionsBanana = BananaBotConfig.Patterns.Default?.test(message.content);
-		const shouldReply = (isTargetUser && random.percentChance(5)) || mentionsBanana;
+	protected override async processMessage(message: Message): Promise<void> {
+		const truncatedContent = message.content.substring(0, 100);
+		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${truncatedContent}..."`);
 
-		if (shouldReply) {
-			logger.debug(`BananaBot responding to message: ${message.content}`);
-			await this.sendReply(message.channel as TextChannel, BananaBotConfig.Responses.Default());
+		try {
+			await this.handleBananaMention(message);
+		} catch (error) {
+			const typedError = error instanceof Error ? error : new Error(String(error));
+			logger.error(`[${this.defaultBotName}] Error processing message:`, typedError);
+			throw typedError;
+		}
+	}
+
+	/**
+	 * Checks for and handles banana mentions in messages.
+	 * @param message - The Discord message to process
+	 */
+	private async handleBananaMention(message: Message): Promise<void> {
+		const content = message.content.toLowerCase();
+		const pattern = BananaBotConfig.Patterns.Default;
+
+		if (!pattern) {
+			logger.warn(`[${this.defaultBotName}] No pattern configured for banana detection`);
+			return;
+		}
+
+		const hasBanana = pattern.test(content);
+		logger.debug(`[${this.defaultBotName}] Banana pattern match result: ${hasBanana}`);
+
+		if (hasBanana) {
+			logger.info(`[${this.defaultBotName}] Found banana mention from ${message.author.tag}`);
+			const response = BananaBotConfig.Responses.Default();
+			await this.sendReply(message.channel as TextChannel, response);
+			logger.debug(`[${this.defaultBotName}] Sent response successfully`);
 		}
 	}
 }

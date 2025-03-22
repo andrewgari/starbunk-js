@@ -1,4 +1,4 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { SheeshBotConfig } from '../config/sheeshBotConfig';
 import SheeshBot from '../reply-bots/sheeshBot';
 import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';

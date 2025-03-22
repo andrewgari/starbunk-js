@@ -1,5 +1,5 @@
 // Mock the webhook service
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { BabyBotConfig } from '../config/babyBotConfig';
 import BabyBot from '../reply-bots/babyBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';

@@ -1,6 +1,6 @@
 import { Client, Guild, Message, TextChannel, User } from 'discord.js';
 import * as bootstrap from '../../../services/bootstrap';
-import { Logger, ServiceId, WebhookService } from '../../../services/services';
+import { Logger, ServiceId, WebhookService } from '../../../services/container';
 import { BotIdentity } from '../../../starbunk/types/botIdentity';
 
 // Mock the getWebhookService function

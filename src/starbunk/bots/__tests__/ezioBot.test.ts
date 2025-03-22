@@ -1,4 +1,4 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { EzioBotConfig } from '../config/ezioBotConfig';
 import EzioBot from '../reply-bots/ezioBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';

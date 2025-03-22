@@ -11,7 +11,7 @@ import {
 	RoleNotFoundError,
 	UserNotFoundError
 } from "./errors/discordErrors";
-import { WebhookService } from "./services";
+import { WebhookService } from "./container";
 
 export interface BulkMessageOptions {
 	channelIds: string[];

@@ -3,7 +3,7 @@ import { WebhookService as WebhookServiceImpl } from '../webhooks/webhookService
 import { DiscordService } from './discordService';
 import { LLMManager, LLMProviderType } from './llm';
 import { Logger } from './logger';
-import { container, ServiceId } from './services';
+import { container, ServiceId } from './container';
 
 /**
  * Bootstraps the entire application, registering all services

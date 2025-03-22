@@ -152,8 +152,8 @@ export class EventDebug {
 	}
 
 	/**
-   * Create a debug event bus for custom application events
-   */
+	 * Create a debug event bus for custom application events
+	 */
 	static createEventBus(): {
 		emit: (event: string, data: unknown) => void;
 		on: (event: string, handler: (data: unknown) => void) => void;

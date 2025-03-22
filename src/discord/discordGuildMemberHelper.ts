@@ -1,22 +1,7 @@
-import { BotIdentity } from "@/starbunk/types/botIdentity";
-import { Guild, GuildMember, User } from "discord.js";
-import { getService, Logger, ServiceId } from "../services/services";
+import { Guild, GuildMember } from "discord.js";
+import { getService, Logger, ServiceId } from "../services/container";
 
 const logger = getService<Logger>(ServiceId.Logger);
-
-export async function getCurrentMemberIdentity(userId: string, guild: Guild): Promise<BotIdentity | undefined> {
-	const member: GuildMember | User | undefined =
-		await guild.members.fetch(userId) ?? await guild.client.users.fetch(userId);
-	if (member) {
-		return {
-			avatarUrl: member.displayAvatarURL() ?? member.avatarURL,
-			botName: member.displayName ?? member.user.username
-		};
-
-	}
-	return undefined;
-}
-
 /**
  * Gets a random guild member excluding the specified user ID
  */

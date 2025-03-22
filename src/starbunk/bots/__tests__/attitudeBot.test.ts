@@ -1,5 +1,5 @@
 import * as bootstrap from '../../../services/bootstrap';
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { AttitudeBotConfig } from '../config/attitudeBotConfig';
 import AttitudeBot from '../reply-bots/attitudeBot';
 import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';

@@ -1,5 +1,5 @@
 import * as bootstrap from '../../../services/bootstrap';
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { SpiderBotConfig } from '../config/spiderBotConfig';
 import SpiderBot from '../reply-bots/spiderBot';
 import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';

@@ -1,4 +1,4 @@
-import { container } from '../../../services/services';
+import { container } from '../../../services/container';
 import { HoldBotConfig } from '../config/holdBotConfig';
 import HoldBot from '../reply-bots/holdBot';
 import { mockMessage, mockWebhookService, setupBotTest } from './testUtils';
@@ -39,7 +39,7 @@ describe('HoldBot', () => {
 	});
 
 	it('should not respond to messages that don\'t exactly match "Hold"', async () => {
-		const message = mockMessage('Please hold on for a moment');
+		const message = mockMessage('Please wait on for a moment');
 		await holdBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();

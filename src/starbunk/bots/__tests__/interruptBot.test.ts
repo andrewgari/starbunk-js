@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import Random from '../../../utils/random';
 import InterruptBot from '../reply-bots/interruptBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';

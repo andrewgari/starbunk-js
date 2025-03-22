@@ -30,7 +30,7 @@ jest.mock('../config/blueBotConfig', () => ({
 	}
 }));
 
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { BlueBotConfig } from '../config/blueBotConfig';
 import BlueBot from '../reply-bots/blueBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';

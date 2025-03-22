@@ -1,4 +1,4 @@
-import { container } from '../../../services/services';
+import { container } from '../../../services/container';
 import { PickleBotConfig } from '../config/pickleBotConfig';
 import PickleBot from '../reply-bots/pickleBot';
 import { mockMessage, mockWebhookService, setupBotTest } from './testUtils';

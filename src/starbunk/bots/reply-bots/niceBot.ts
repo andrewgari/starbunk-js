@@ -1,5 +1,6 @@
 import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
+import { logger } from '../../../services/logger';
 import { NiceBotConfig } from '../config/niceBotConfig';
 import ReplyBot from '../replyBot';
 
@@ -14,11 +15,21 @@ export default class NiceBot extends ReplyBot {
 	}
 
 	protected async processMessage(message: Message): Promise<void> {
-		const content = message.content.toLowerCase();
-		const hasNice = NiceBotConfig.Patterns.Default?.test(content);
+		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
 
-		if (hasNice) {
-			await this.sendReply(message.channel as TextChannel, NiceBotConfig.Responses.Default);
+		try {
+			const content = message.content.toLowerCase();
+			const hasNice = NiceBotConfig.Patterns.Default?.test(content);
+			logger.debug(`[${this.defaultBotName}] Nice pattern match result: ${hasNice}`);
+
+			if (hasNice) {
+				logger.info(`[${this.defaultBotName}] Found nice from ${message.author.tag}`);
+				await this.sendReply(message.channel as TextChannel, NiceBotConfig.Responses.Default);
+				logger.debug(`[${this.defaultBotName}] Sent response successfully`);
+			}
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error processing message:`, error as Error);
+			throw error;
 		}
 	}
 }

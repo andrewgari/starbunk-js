@@ -1,19 +1,35 @@
 {
-	"parser": "@typescript-eslint/parser",
-	"extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier"],
-	"plugins": ["@typescript-eslint"],
 	"env": {
+		"es2021": true,
 		"node": true,
-		"es6": true,
-		"browser": true,
-		"es2021": true
+		"jest": true
 	},
+	"extends": [
+		"eslint:recommended",
+		"plugin:@typescript-eslint/recommended"
+	],
+	"parser": "@typescript-eslint/parser",
 	"parserOptions": {
 		"ecmaVersion": "latest",
 		"sourceType": "module"
 	},
+	"plugins": [
+		"@typescript-eslint"
+	],
 	"rules": {
-		"@typescript-eslint/indent": ["error", "tab"],
+		"indent": "off",
+		"@typescript-eslint/indent": ["error", "tab", {
+			"SwitchCase": 1,
+			"FunctionDeclaration": {
+				"parameters": 1,
+				"body": 1
+			},
+			"FunctionExpression": {
+				"parameters": 1,
+				"body": 1
+			},
+			"ignoredNodes": ["TSTypeParameterInstantiation"]
+		}],
 		"@typescript-eslint/member-delimiter-style": [
 			"error",
 			{
@@ -40,44 +56,53 @@
 				}
 			}
 		],
-		"@typescript-eslint/explicit-function-return-type": [
+		"@typescript-eslint/explicit-function-return-type": "off",
+		"@typescript-eslint/no-unused-vars": [
 			"error",
 			{
-				"allowExpressions": true,
-				"allowTypedFunctionExpressions": true,
-				"allowHigherOrderFunctions": true,
-				"allowDirectConstAssertionInArrowFunctions": true,
-				"allowConciseArrowFunctionExpressionsStartingWithVoid": true
+				"argsIgnorePattern": "^_",
+				"varsIgnorePattern": "^_"
 			}
 		],
-		"@typescript-eslint/no-explicit-any": "error",
-		"@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
-		"@typescript-eslint/no-empty-function": "error",
-		"no-console": ["error", { "allow": ["debug", "info", "warn", "error", "log"] }],
-		"no-empty-function": "off",
-		"no-inline-comments": "error",
-		"@typescript-eslint/no-namespace": ["error", { "allowDeclarations": true }]
+		"@typescript-eslint/no-var-requires": "off",
+		"@typescript-eslint/no-namespace": ["error", { "allowDeclarations": true }],
+		"no-console": "off",
+		"no-constant-condition": "off",
+		"no-empty": "off"
 	},
 	"overrides": [
 		{
-			"files": ["**/__tests__/**/*.ts"],
-			"rules": {
-				"@typescript-eslint/no-unused-vars": "off",
-				"@typescript-eslint/no-explicit-any": "off",
-				"no-inline-comments": "off"
-			}
-		},
-		{
-			"files": ["**/ServiceRegistrar.ts", "**/blueBotRefactored.test.ts"],
+			"files": ["**/__tests__/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)"],
 			"rules": {
 				"@typescript-eslint/no-explicit-any": "off"
 			}
 		},
 		{
-			"files": ["src/services/logger.ts"],
+			"files": ["**/services/**/*.[jt]s?(x)"],
 			"rules": {
-				"no-console": "off"
+				"@typescript-eslint/no-explicit-any": "off"
+			}
+		},
+		{
+			"files": ["dist/**/*"],
+			"rules": {
+				"@typescript-eslint/no-explicit-any": "off",
+				"@typescript-eslint/no-unused-vars": "off",
+				"indent": "off",
+				"@typescript-eslint/indent": ["error", "tab", {
+					"SwitchCase": 1,
+					"FunctionDeclaration": {
+						"parameters": 1,
+						"body": 1
+					},
+					"FunctionExpression": {
+						"parameters": 1,
+						"body": 1
+					},
+					"ignoredNodes": ["TSTypeParameterInstantiation"]
+				}]
 			}
 		}
-	]
+	],
+	"ignorePatterns": ["dist/**/*"]
 }

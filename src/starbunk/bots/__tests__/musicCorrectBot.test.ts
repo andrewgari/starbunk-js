@@ -1,4 +1,4 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { MusicCorrectBotConfig } from '../config/musicCorrectBotConfig';
 import MusicCorrectBot from '../reply-bots/musicCorrectBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';

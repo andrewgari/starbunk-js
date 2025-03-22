@@ -1,7 +1,7 @@
 import { Client } from 'discord.js';
 import { DiscordService } from '../discordService';
 import { UserNotFoundError } from '../errors/discordErrors';
-import { WebhookService } from '../services';
+import { WebhookService } from '../container';
 
 // Mock guild IDs
 jest.mock('../../discord/guildIds', () => ({

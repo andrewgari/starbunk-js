@@ -1,4 +1,4 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import Random from '../../../utils/random';
 import { BotBotConfig } from '../config/botBotConfig';
 import BotBot from '../reply-bots/botBot';

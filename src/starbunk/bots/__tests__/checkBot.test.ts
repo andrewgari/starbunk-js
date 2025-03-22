@@ -1,4 +1,4 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 // Register services before importing the bot class

@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import ReplyBot from '../replyBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
 

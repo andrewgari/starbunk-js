@@ -1,4 +1,4 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { SigGreatBotConfig } from '../config/sigGreatBotConfig';
 import SigGreatBot from '../reply-bots/sigGreatBot';
 import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';

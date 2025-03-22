@@ -1,4 +1,4 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { HomonymBotConfig } from '../config/homonymBotConfig';
 import HomonymBot from '../reply-bots/homonymBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';

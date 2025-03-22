@@ -5,7 +5,7 @@ jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 	})
 }));
 
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { VennBotConfig } from '../config/vennBotConfig';
 import VennBot from '../reply-bots/vennBot';
 import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';

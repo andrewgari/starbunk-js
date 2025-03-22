@@ -1,4 +1,4 @@
-import { container } from '../../../services/services';
+import { container } from '../../../services/container';
 import { NiceBotConfig } from '../config/niceBotConfig';
 import NiceBot from '../reply-bots/niceBot';
 import { mockMessage, mockWebhookService, setupBotTest } from './testUtils';
