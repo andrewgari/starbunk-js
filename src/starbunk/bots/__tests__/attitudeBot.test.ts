@@ -44,7 +44,6 @@ describe('AttitudeBot', () => {
 		attitudeBot = new AttitudeBot();
 
 		// Check the pattern
-		console.log('AttitudeBot regex pattern:', AttitudeBotConfig.Patterns.Default);
 	});
 
 	it('should respond to messages containing phrases like "I can\'t"', async () => {
