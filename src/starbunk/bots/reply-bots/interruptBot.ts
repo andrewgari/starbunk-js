@@ -1,57 +1,36 @@
+import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
-import { getRandomMemberExcept } from '../../../discord/discordGuildMemberHelper';
-import { Logger } from '../../../services/services';
+import { DiscordService } from '../../../services/discordService';
+import { logger } from '../../../services/logger';
 import Random from '../../../utils/random';
-import { BotIdentity } from '../botIdentity';
 import { InterruptBotConfig } from '../config/interruptBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class InterruptBot extends ReplyBot {
-	constructor(private readonly logger: Logger) {
-		super();
+	public get botIdentity(): BotIdentity {
+		return DiscordService.getInstance().getRandomMemberAsBotIdentity();
 	}
 
-	protected get botIdentity(): BotIdentity {
-		return this._botIdentity = {
-			userId: '',
-			avatarUrl: InterruptBotConfig.Avatars.Default,
-			botName: InterruptBotConfig.Name
-		};
-	}
-
-	async handleMessage(message: Message): Promise<void> {
-		// Ignore bot messages and self messages
-		if (message.author.bot || this.isSelf(message)) return;
-
-		// In debug mode, always trigger (100% chance)
-		// Otherwise, 1% chance to trigger
-		const percentChance = process.env.DEBUG_MODE === 'true' ? 100 : 1;
-		const shouldInterrupt = Random.percentChance(percentChance);
-		if (!shouldInterrupt) return;
-
-		// Get guild members
-		const guild = message.guild;
-		if (!guild) return;
+	public async processMessage(message: Message): Promise<void> {
+		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
 
 		try {
-			// Get a random member that's not the message author
-			const randomMember = await getRandomMemberExcept(guild, message.author.id);
-			if (!randomMember) return;
+			const percentChance = process.env.DEBUG_MODE === 'true' ? 100 : 1;
+			const shouldInterrupt = Random.percentChance(percentChance);
+			logger.debug(`[${this.defaultBotName}] Interrupt check: chance=${percentChance}%, result=${shouldInterrupt}`);
 
-			// Create the interrupted message
+			if (!shouldInterrupt) {
+				logger.debug(`[${this.defaultBotName}] Skipping interrupt based on random chance`);
+				return;
+			}
+
+			logger.info(`[${this.defaultBotName}] Interrupting message from ${message.author.tag}`);
 			const interruptedMessage = InterruptBotConfig.Responses.createInterruptedMessage(message.content);
-
-			// Send the reply with the random member's identity
-			await this.sendReply(message.channel as TextChannel, {
-				botIdentity: {
-					userId: '',
-					botName: randomMember.displayName || randomMember.user.username,
-					avatarUrl: randomMember.displayAvatarURL() || randomMember.user.displayAvatarURL()
-				},
-				content: interruptedMessage
-			});
+			await this.sendReply(message.channel as TextChannel, interruptedMessage);
+			logger.debug(`[${this.defaultBotName}] Interrupt response sent successfully`);
 		} catch (error) {
-			this.logger.error(`InterruptBot: ${error instanceof Error ? error.message : String(error)}`);
+			logger.error(`[${this.defaultBotName}] Error processing message:`, error as Error);
+			throw error;
 		}
 	}
 }

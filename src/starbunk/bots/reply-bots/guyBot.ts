@@ -1,49 +1,55 @@
-import { Logger } from '@/services/logger';
+import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
-import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
-import userId from '../../../discord/userId';
-import random from '../../../utils/random';
-import { BotIdentity } from '../botIdentity';
+import { logger } from '../../../services/logger';
 import { GuyBotConfig } from '../config/guyBotConfig';
 import ReplyBot from '../replyBot';
 
+/**
+ * Bot that responds to mentions of "guy" with configured responses.
+ * Registered automatically by StarbunkClient.registerBots().
+ */
 export default class GuyBot extends ReplyBot {
-	private readonly logger = new Logger();
-
-	protected get botIdentity(): BotIdentity {
+	public override get botIdentity(): BotIdentity {
 		return {
-			userId: '',
 			botName: GuyBotConfig.Name,
 			avatarUrl: GuyBotConfig.Avatars.Default
 		};
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
-		if (message.author.bot) return;
+	protected override async processMessage(message: Message): Promise<void> {
+		const truncatedContent = message.content.substring(0, 100);
+		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${truncatedContent}..."`);
 
-		let shouldReply = false;
-		let targetUserId = userId.Guy;
-		const isAboutGuy = GuyBotConfig.Patterns.Default?.test(message.content);
+		try {
+			await this.handleGuyMention(message);
+		} catch (error) {
+			const typedError = error instanceof Error ? error : new Error(String(error));
+			logger.error(`[${this.defaultBotName}] Error processing message:`, typedError);
+			throw typedError;
+		}
+	}
 
-		if (process.env.DEBUG_MODE === 'true') {
-			shouldReply = true;
-			targetUserId = userId.Cova;
-		} else {
-			const isTargetUser = message.author.id === targetUserId;
-			shouldReply = (isTargetUser && random.percentChance(5)) || isAboutGuy;
+	/**
+	 * Checks for and handles "guy" mentions in messages.
+	 * @param message - The Discord message to process
+	 */
+	private async handleGuyMention(message: Message): Promise<void> {
+		const content = message.content.toLowerCase();
+		const pattern = GuyBotConfig.Patterns.Default;
+
+		if (!pattern) {
+			logger.warn(`[${this.defaultBotName}] No pattern configured for guy detection`);
+			return;
 		}
 
-		if (shouldReply) {
-			const targetIdentity = await getCurrentMemberIdentity(targetUserId, message.guild!);
-			if (!targetIdentity) {
-				this.logger.error(`GuyBot could not get identity for user ${targetUserId}`);
-				return;
-			}
+		const hasGuy = pattern.test(content);
+		logger.debug(`[${this.defaultBotName}] Guy pattern match result: ${hasGuy}`);
 
-			await this.sendReply(message.channel as TextChannel, {
-				botIdentity: targetIdentity,
-				content: GuyBotConfig.Responses.Default()
-			});
+		if (hasGuy) {
+			logger.info(`[${this.defaultBotName}] Found guy mention from ${message.author.tag}`);
+			const response = GuyBotConfig.Responses.Default();
+			await this.sendReply(message.channel as TextChannel, response);
+			logger.debug(`[${this.defaultBotName}] Sent response successfully`);
 		}
 	}
 }

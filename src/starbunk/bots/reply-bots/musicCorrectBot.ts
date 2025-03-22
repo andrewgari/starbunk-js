@@ -1,33 +1,53 @@
+import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
-import { Logger } from '../../../services/logger';
-import { BotIdentity } from '../botIdentity';
+import { logger } from '../../../services/logger';
 import { MusicCorrectBotConfig } from '../config/musicCorrectBotConfig';
 import ReplyBot from '../replyBot';
 
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class MusicCorrectBot extends ReplyBot {
-	protected get botIdentity(): BotIdentity {
+	public get defaultBotName(): string {
+		return 'MusicCorrectBot';
+	}
+
+	public get botIdentity(): BotIdentity {
 		return {
-			userId: '',
-			avatarUrl: MusicCorrectBotConfig.Avatars.Default,
-			botName: MusicCorrectBotConfig.Name
+			botName: MusicCorrectBotConfig.Name,
+			avatarUrl: MusicCorrectBotConfig.Avatars.Default
 		};
 	}
-	private readonly logger = new Logger();
 
 	constructor() {
 		super();
+		logger.debug(`[${this.defaultBotName}] Initializing MusicCorrectBot`);
+		this.skipBotMessages = false;
+		logger.debug(`[${this.defaultBotName}] Bot messages will not be skipped`);
 	}
 
-	async handleMessage(message: Message): Promise<void> {
-		const content = message.content.toLowerCase();
-		if (content.startsWith('!play') && message.channel instanceof TextChannel) {
-			this.logger.debug(`🎵 User ${message.author.username} tried using old play command: "${content}"`);
-			await this.sendReply(message.channel, {
-				botIdentity: this.botIdentity,
-				content: MusicCorrectBotConfig.Responses.Default(message.author.id)
-			});
+	// Allow all messages, including bot messages
+	protected override shouldSkipMessage(_message: Message): boolean {
+		logger.debug(`[${this.defaultBotName}] Checking if message should be skipped (always false)`);
+		return false;
+	}
+
+	protected async processMessage(message: Message): Promise<void> {
+		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
+
+		try {
+			const content = message.content.toLowerCase();
+			const hasMusic = MusicCorrectBotConfig.Patterns.Default?.test(content);
+			logger.debug(`[${this.defaultBotName}] Music pattern match result: ${hasMusic}`);
+
+			if (hasMusic) {
+				logger.info(`[${this.defaultBotName}] Found music correction opportunity from ${message.author.tag}`);
+				const response = MusicCorrectBotConfig.Responses.Default(message.author.id);
+				await this.sendReply(message.channel as TextChannel, response);
+				logger.debug(`[${this.defaultBotName}] Sent music correction response successfully`);
+			}
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error processing message:`, error as Error);
+			throw error;
 		}
 	}
 }

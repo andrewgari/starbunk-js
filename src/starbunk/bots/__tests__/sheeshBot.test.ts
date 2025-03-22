@@ -1,16 +1,23 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { SheeshBotConfig } from '../config/sheeshBotConfig';
 import SheeshBot from '../reply-bots/sheeshBot';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 describe('SheeshBot', () => {
 	let sheeshBot: SheeshBot;
 
 	beforeEach(() => {
+		jest.clearAllMocks();
 		// Clear container and register mocks
 		container.clear();
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
+
+		// Set up custom bot identity for Sheesh
+		mockDiscordService.getMemberAsBotIdentity.mockReturnValue({
+			botName: SheeshBotConfig.Name,
+			avatarUrl: 'https://example.com/sheesh.jpg'
+		});
 
 		// Create SheeshBot instance
 		sheeshBot = new SheeshBot();

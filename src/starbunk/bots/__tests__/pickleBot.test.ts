@@ -1,23 +1,24 @@
-import { container, ServiceId } from '../../../services/services';
+import { container } from '../../../services/container';
 import { PickleBotConfig } from '../config/pickleBotConfig';
 import PickleBot from '../reply-bots/pickleBot';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockMessage, mockWebhookService, setupBotTest } from './testUtils';
 
 describe('PickleBot', () => {
 	let pickleBot: PickleBot;
 
 	beforeEach(() => {
-		// Clear container and register mocks
-		container.clear();
-		container.register(ServiceId.Logger, () => mockLogger);
-		container.register(ServiceId.WebhookService, () => mockWebhookService);
+		// Use the utility function to set up mocks
+		setupBotTest(container, {
+			botName: PickleBotConfig.Name,
+			avatarUrl: PickleBotConfig.Avatars.Default
+		});
 
 		// Create PickleBot instance
 		pickleBot = new PickleBot();
 	});
 
-	it('should respond to messages containing "pickle"', async () => {
-		const message = mockMessage('I love pickles');
+	it('should respond to messages containing "gremlin"', async () => {
+		const message = mockMessage('I saw a gremlin yesterday');
 		await pickleBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
@@ -30,13 +31,14 @@ describe('PickleBot', () => {
 	});
 
 	it('should not respond to bot messages', async () => {
-		const message = mockMessage('pickle', undefined, true);
+		const message = mockMessage('gremlin', undefined, true);
+		message.author.bot = true;
 		await pickleBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	it('should not respond to messages without "pickle"', async () => {
+	it('should not respond to messages without "gremlin"', async () => {
 		const message = mockMessage('hello world');
 		await pickleBot.handleMessage(message);
 

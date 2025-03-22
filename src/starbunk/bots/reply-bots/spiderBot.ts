@@ -1,32 +1,41 @@
 import { Message, TextChannel } from 'discord.js';
-import { BotIdentity } from '../botIdentity';
+import { logger } from '../../../services/logger';
+import { BotIdentity } from '../../types/botIdentity';
 import { SpiderBotConfig } from '../config/spiderBotConfig';
 import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class SpiderBot extends ReplyBot {
-	protected get botIdentity(): BotIdentity {
+	public get botIdentity(): BotIdentity {
 		return {
-			userId: '',
-			avatarUrl: SpiderBotConfig.Avatars.Default,
-			botName: SpiderBotConfig.Name
+			botName: SpiderBotConfig.Name,
+			avatarUrl: SpiderBotConfig.Avatars.Default
 		};
 	}
 
-	async handleMessage(message: Message<boolean>): Promise<void> {
-		if (message.author.bot) return;
+	public async processMessage(message: Message): Promise<void> {
+		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
 
-		const content = message.content;
-		const hasCorrectSpelling = SpiderBotConfig.Patterns.Correct?.test(content);
-		const hasIncorrectSpelling = SpiderBotConfig.Patterns.Default?.test(content);
+		try {
+			const hasCorrectSpelling = SpiderBotConfig.Patterns.Correct?.test(message.content);
+			const hasIncorrectSpelling = SpiderBotConfig.Patterns.Default?.test(message.content);
+			logger.debug(`[${this.defaultBotName}] Spider mention check: correct=${hasCorrectSpelling}, incorrect=${hasIncorrectSpelling}`);
 
-		// Only respond if there's a match
-		if (hasCorrectSpelling || hasIncorrectSpelling) {
-			if (hasCorrectSpelling) {
-				this.sendReply(message.channel as TextChannel, SpiderBotConfig.getRandomPositiveResponse());
-			} else if (hasIncorrectSpelling) {
-				this.sendReply(message.channel as TextChannel, SpiderBotConfig.getRandomCheekyResponse());
+			// Only respond if there's a match
+			if (hasCorrectSpelling || hasIncorrectSpelling) {
+				if (hasCorrectSpelling) {
+					logger.info(`[${this.defaultBotName}] Detected correct spider spelling from ${message.author.tag}`);
+					await this.sendReply(message.channel as TextChannel, SpiderBotConfig.getRandomPositiveResponse());
+					logger.debug(`[${this.defaultBotName}] Sent positive response`);
+				} else if (hasIncorrectSpelling) {
+					logger.info(`[${this.defaultBotName}] Detected incorrect spider spelling from ${message.author.tag}`);
+					await this.sendReply(message.channel as TextChannel, SpiderBotConfig.getRandomCheekyResponse());
+					logger.debug(`[${this.defaultBotName}] Sent cheeky response`);
+				}
 			}
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error processing message:`, error as Error);
+			throw error;
 		}
 	}
 }

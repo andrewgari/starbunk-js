@@ -5,10 +5,19 @@ jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 	})
 }));
 
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { VennBotConfig } from '../config/vennBotConfig';
 import VennBot from '../reply-bots/vennBot';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';
+
+// Mock DiscordService
+jest.mock('../../../services/discordService', () => {
+	return {
+		DiscordService: {
+			getInstance: jest.fn().mockImplementation(() => mockDiscordService)
+		}
+	};
+});
 
 describe('VennBot', () => {
 	let vennBot: VennBot;
@@ -19,12 +28,18 @@ describe('VennBot', () => {
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
 
+		// Setup mock for Venn's identity
+		mockDiscordService.getMemberAsBotIdentity.mockReturnValue({
+			botName: VennBotConfig.Name,
+			avatarUrl: 'https://i.imgur.com/venn-avatar.png'
+		});
+
 		// Create VennBot instance
 		vennBot = new VennBot();
 	});
 
-	it('should respond to messages containing "venn"', async () => {
-		const message = mockMessage('venn is awesome');
+	it('should respond to messages containing "cringe"', async () => {
+		const message = mockMessage('this is so cringe', 'testUser', false);
 		await vennBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
@@ -37,13 +52,13 @@ describe('VennBot', () => {
 	});
 
 	it('should not respond to bot messages', async () => {
-		const message = mockMessage('venn', undefined, true);
+		const message = mockMessage('cringe', undefined, true);
 		await vennBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	it('should not respond to messages without "venn"', async () => {
+	it('should not respond to messages without "cringe"', async () => {
 		const message = mockMessage('hello world');
 		await vennBot.handleMessage(message);
 

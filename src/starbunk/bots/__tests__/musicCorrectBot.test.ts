@@ -1,4 +1,4 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { MusicCorrectBotConfig } from '../config/musicCorrectBotConfig';
 import MusicCorrectBot from '../reply-bots/musicCorrectBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
@@ -17,8 +17,8 @@ describe('MusicCorrectBot', () => {
 	});
 
 	it('should respond to messages containing "music"', async () => {
-		const message = mockMessage('I love music');
-		await musicCorrectBot.handleMessage(message);
+		const message = mockMessage('?play https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'testUser', false);
+		await musicCorrectBot.auditMessage(message);
 
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
@@ -29,16 +29,16 @@ describe('MusicCorrectBot', () => {
 		);
 	});
 
-	it('should not respond to bot messages', async () => {
-		const message = mockMessage('music', undefined, true);
-		await musicCorrectBot.handleMessage(message);
+	it('should not respond to messages without "music"', async () => {
+		const message = mockMessage('Hello there!', 'testUser', false);
+		await musicCorrectBot.auditMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	it('should not respond to messages without "music"', async () => {
-		const message = mockMessage('hello world');
-		await musicCorrectBot.handleMessage(message);
+	it('should not respond to bot messages', async () => {
+		const message = mockMessage('I love music!', 'testUser', true);
+		await musicCorrectBot.auditMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

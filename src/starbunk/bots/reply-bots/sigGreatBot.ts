@@ -1,36 +1,44 @@
-import { Guild, Message, TextChannel } from 'discord.js';
-import { getCurrentMemberIdentity } from '../../../discord/discordGuildMemberHelper';
-import { BotIdentity } from '../botIdentity';
+import { DiscordService } from '@/services/discordService';
+import { BotIdentity } from '@/starbunk/types/botIdentity';
+import { Message, TextChannel } from 'discord.js';
+import { logger } from '../../../services/logger';
 import { SigGreatBotConfig } from '../config/sigGreatBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class SigGreatBot extends ReplyBot {
-
-	protected get botIdentity(): BotIdentity {
-		return {
-			userId: '',
-			avatarUrl: SigGreatBotConfig.Avatars.Default,
-			botName: SigGreatBotConfig.Name
-		};
+	public get botIdentity(): BotIdentity {
+		try {
+			logger.debug(`[${this.defaultBotName}] Getting random member as bot identity`);
+			const randomMember = DiscordService.getInstance().getRandomMemberAsBotIdentity();
+			logger.debug(`[${this.defaultBotName}] Using identity: ${randomMember.botName}`);
+			return {
+				avatarUrl: randomMember.avatarUrl,
+				botName: randomMember.botName
+			};
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error getting bot identity:`, error as Error);
+			return {
+				avatarUrl: SigGreatBotConfig.Avatars.Default,
+				botName: SigGreatBotConfig.Name
+			};
+		}
 	}
 
-	defaultBotName(): string {
-		return 'SigGreatBot';
-	}
+	public async processMessage(message: Message): Promise<void> {
+		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
 
-	public async handleMessage(message: Message): Promise<void> {
-		if (message.author.bot) return;
+		try {
+			const hasSigGreat = SigGreatBotConfig.Patterns.Default?.test(message.content);
+			logger.debug(`[${this.defaultBotName}] SigGreat pattern match result: ${hasSigGreat}`);
 
-		const content = message.content;
-		const hasSigGreat = SigGreatBotConfig.Patterns.Default?.test(content);
-
-		if (hasSigGreat) {
-			const identity = await getCurrentMemberIdentity(message.author.id, message.guild as Guild);
-
-			await this.sendReply(message.channel as TextChannel, {
-				botIdentity: identity,
-				content: SigGreatBotConfig.Responses.Default
-			});
+			if (hasSigGreat) {
+				logger.info(`[${this.defaultBotName}] Found SigGreat mention from ${message.author.tag}`);
+				await this.sendReply(message.channel as TextChannel, SigGreatBotConfig.Responses.Default);
+				logger.debug(`[${this.defaultBotName}] Sent response successfully`);
+			}
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error processing message:`, error as Error);
+			throw error;
 		}
 	}
 }

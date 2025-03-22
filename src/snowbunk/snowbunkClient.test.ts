@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, TextChannel } from 'discord.js';
-import { container, ServiceId } from '../services/services';
+import { container, ServiceId } from '../services/container';
 import { mockLogger, mockMessage, mockWebhookService } from '../starbunk/bots/__tests__/testUtils';
 import SnowbunkClient from './snowbunkClient';
 

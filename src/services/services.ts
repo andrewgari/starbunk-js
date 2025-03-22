@@ -5,9 +5,11 @@
  * It's kept for backward compatibility but will be removed in the future
  */
 
-import { Client, Message, TextChannel, WebhookClient } from 'discord.js';
+import { Client, TextChannel, WebhookClient } from 'discord.js';
+import ReplyBot from '../starbunk/bots/replyBot';
 import { MessageInfo } from '../webhooks/types';
-import { LLMManager } from './llm';
+import { DiscordService } from './discordService';
+import { LLMManager } from './llm/llmManager';
 
 // Forward declarations of service types
 export interface Logger {
@@ -27,85 +29,82 @@ export interface WebhookService {
 	logger: Logger;
 }
 
-// Base interface for all bots
-export interface BaseBot {
-	botName: string;
-	handleMessage(message: Message): Promise<void>;
-}
-
 // Service identifier symbols
 export const ServiceId = {
-	Logger: Symbol.for('Logger'),
-	WebhookService: Symbol.for('WebhookService'),
-	DiscordClient: Symbol('DiscordClient'),
-	LLMManager: Symbol('LLMManager'),
-	BlueBot: Symbol('BlueBot'),
-	BananaBot: Symbol('BananaBot'),
-	AttitudeBot: Symbol('AttitudeBot'),
-	BabyBot: Symbol('BabyBot'),
-	CatBot: Symbol('CatBot'),
-	DadBot: Symbol('DadBot'),
-	DogBot: Symbol('DogBot'),
-	FoodBot: Symbol('FoodBot'),
-	GoodBot: Symbol('GoodBot'),
-	HugBot: Symbol('HugBot'),
-	MomBot: Symbol('MomBot'),
-	SpiderBot: Symbol('SpiderBot'),
-	VennBot: Symbol('VennBot'),
-	MusicCorrectBot: Symbol('MusicCorrectBot'),
+	Logger: 'Logger',
+	WebhookService: 'WebhookService',
+	DiscordClient: 'DiscordClient',
+	DiscordService: 'DiscordService',
+	LLMManager: 'LLMManager',
+	BlueBot: 'BlueBot',
+	BananaBot: 'BananaBot',
+	AttitudeBot: 'AttitudeBot',
+	BabyBot: 'BabyBot',
+	CatBot: 'CatBot',
+	DadBot: 'DadBot',
+	DogBot: 'DogBot',
+	FoodBot: 'FoodBot',
+	GoodBot: 'GoodBot',
+	HugBot: 'HugBot',
+	MomBot: 'MomBot',
+	SpiderBot: 'SpiderBot',
+	VennBot: 'VennBot',
+	MusicCorrectBot: 'MusicCorrectBot'
 } as const;
 
+export type ServiceId = typeof ServiceId[keyof typeof ServiceId];
+
 // Service type registry
-export interface ServiceTypes {
+interface ServiceMap {
 	[ServiceId.Logger]: Logger;
 	[ServiceId.WebhookService]: WebhookService;
 	[ServiceId.DiscordClient]: Client;
+	[ServiceId.DiscordService]: DiscordService;
 	[ServiceId.LLMManager]: LLMManager;
-	[ServiceId.BlueBot]: BaseBot;
-	[ServiceId.BananaBot]: BaseBot;
-	[ServiceId.AttitudeBot]: BaseBot;
-	[ServiceId.BabyBot]: BaseBot;
-	[ServiceId.CatBot]: BaseBot;
-	[ServiceId.DadBot]: BaseBot;
-	[ServiceId.DogBot]: BaseBot;
-	[ServiceId.FoodBot]: BaseBot;
-	[ServiceId.GoodBot]: BaseBot;
-	[ServiceId.HugBot]: BaseBot;
-	[ServiceId.MomBot]: BaseBot;
-	[ServiceId.SpiderBot]: BaseBot;
-	[ServiceId.VennBot]: BaseBot;
-	[ServiceId.MusicCorrectBot]: BaseBot;
+	[ServiceId.BlueBot]: ReplyBot;
+	[ServiceId.BananaBot]: ReplyBot;
+	[ServiceId.AttitudeBot]: ReplyBot;
+	[ServiceId.BabyBot]: ReplyBot;
+	[ServiceId.CatBot]: ReplyBot;
+	[ServiceId.DadBot]: ReplyBot;
+	[ServiceId.DogBot]: ReplyBot;
+	[ServiceId.FoodBot]: ReplyBot;
+	[ServiceId.GoodBot]: ReplyBot;
+	[ServiceId.HugBot]: ReplyBot;
+	[ServiceId.MomBot]: ReplyBot;
+	[ServiceId.SpiderBot]: ReplyBot;
+	[ServiceId.VennBot]: ReplyBot;
+	[ServiceId.MusicCorrectBot]: ReplyBot;
 }
 
 // Simple container implementation
-class SimpleContainer {
-	private services = new Map<symbol, unknown>();
+class ServiceContainer {
+	private services: Partial<ServiceMap> = {};
 
-	register<T>(id: symbol, instance: T): void {
-		this.services.set(id, instance);
+	public register<K extends keyof ServiceMap>(
+		serviceId: K,
+		factory: () => ServiceMap[K]
+	): void {
+		this.services[serviceId] = factory();
 	}
 
-	get<T>(id: symbol): T {
-		const service = this.services.get(id);
+	public get<K extends keyof ServiceMap>(serviceId: K): ServiceMap[K] {
+		const service = this.services[serviceId];
 		if (!service) {
-			throw new Error(`Service not registered: ${String(id)}`);
+			throw new Error(`Service ${serviceId} not registered`);
 		}
-		return service as T;
+		return service as ServiceMap[K];
 	}
 
-	has(id: symbol): boolean {
-		return this.services.has(id);
-	}
-
-	clear(): void {
-		this.services.clear();
+	public clear(): void {
+		this.services = {};
 	}
 }
 
 // Export the container instance
-export const container = new SimpleContainer();
+export const container = new ServiceContainer();
 
 // Helper function to get a service
-export function getService<T>(serviceId: symbol): T {
-	return container.get<T>(serviceId);
+export function getService<K extends keyof ServiceMap>(serviceId: K): ServiceMap[K] {
+	return container.get(serviceId);
 }

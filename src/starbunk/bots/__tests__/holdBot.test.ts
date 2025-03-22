@@ -1,23 +1,24 @@
-import { container, ServiceId } from '../../../services/services';
+import { container } from '../../../services/container';
 import { HoldBotConfig } from '../config/holdBotConfig';
 import HoldBot from '../reply-bots/holdBot';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockMessage, mockWebhookService, setupBotTest } from './testUtils';
 
 describe('HoldBot', () => {
 	let holdBot: HoldBot;
 
 	beforeEach(() => {
-		// Clear container and register mocks
-		container.clear();
-		container.register(ServiceId.Logger, () => mockLogger);
-		container.register(ServiceId.WebhookService, () => mockWebhookService);
+		// Use the utility function to set up mocks
+		setupBotTest(container, {
+			botName: HoldBotConfig.Name,
+			avatarUrl: HoldBotConfig.Avatars.Default
+		});
 
 		// Create HoldBot instance
 		holdBot = new HoldBot();
 	});
 
-	it('should respond to messages containing "hold"', async () => {
-		const message = mockMessage('hold on a second');
+	it('should respond to messages exactly matching "Hold"', async () => {
+		const message = mockMessage('Hold');
 		await holdBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
@@ -30,14 +31,15 @@ describe('HoldBot', () => {
 	});
 
 	it('should not respond to bot messages', async () => {
-		const message = mockMessage('hold', undefined, true);
+		const message = mockMessage('Hold', undefined, true);
+		message.author.bot = true;
 		await holdBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
-	it('should not respond to messages without "hold"', async () => {
-		const message = mockMessage('hello world');
+	it('should not respond to messages that don\'t exactly match "Hold"', async () => {
+		const message = mockMessage('Please wait on for a moment');
 		await holdBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();

@@ -40,7 +40,7 @@ export default {
 
 		switch (subcommand) {
 			case 'toggle':
-				// Toggle debug mode
+			// Toggle debug mode
 				process.env.DEBUG_MODE = process.env.DEBUG_MODE === 'true' ? 'false' : 'true';
 				newStatus = process.env.DEBUG_MODE === 'true' ? 'enabled' : 'disabled';
 				logger.info(`Debug mode ${newStatus}`);
@@ -51,7 +51,7 @@ export default {
 				break;
 
 			case 'status':
-				// Get current debug status
+			// Get current debug status
 				status = DebugUtils.isDebugMode() ? 'enabled' : 'disabled';
 				await interaction.reply({
 					content: `Debug mode is currently ${status}.`,
@@ -60,7 +60,7 @@ export default {
 				break;
 
 			case 'info':
-				// Get detailed debug information
+			// Get detailed debug information
 				debugInfo = {
 					debugMode: DebugUtils.isDebugMode(),
 					environment: process.env.NODE_ENV,

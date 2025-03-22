@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { Logger as LoggerInterface } from './services';
+import { Logger as LoggerInterface } from './container';
 
 export enum LogLevel {
 	NONE = 0,

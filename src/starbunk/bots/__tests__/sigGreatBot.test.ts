@@ -1,19 +1,28 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { SigGreatBotConfig } from '../config/sigGreatBotConfig';
 import SigGreatBot from '../reply-bots/sigGreatBot';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';
 
 describe('SigGreatBot', () => {
 	let sigGreatBot: SigGreatBot;
 
 	beforeEach(() => {
+		jest.clearAllMocks();
 		// Clear container and register mocks
 		container.clear();
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
 
+		// Set up custom bot identity for SigGreat
+		mockDiscordService.getRandomMemberAsBotIdentity.mockReturnValue({
+			botName: SigGreatBotConfig.Name,
+			avatarUrl: 'https://example.com/siggreat.jpg'
+		});
+
 		// Create SigGreatBot instance
 		sigGreatBot = new SigGreatBot();
+		// Mock the isBot method to control when it should return true/false
+		jest.spyOn(sigGreatBot, 'isBot').mockImplementation((msg) => msg.author.bot);
 	});
 
 	it('should respond to messages containing "sig"', async () => {

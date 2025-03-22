@@ -1,4 +1,4 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { GundamBotConfig } from '../config/gundamBotConfig';
 import GundamBot from '../reply-bots/gundamBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';

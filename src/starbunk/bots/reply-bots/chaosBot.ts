@@ -1,28 +1,34 @@
+import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
+import { logger } from '../../../services/logger';
 import { ChaosBotConfig } from '../config/chaosBotConfig';
 import ReplyBot from '../replyBot';
 
-
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class ChaosBot extends ReplyBot {
-	protected get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+	public get botIdentity(): BotIdentity {
 		return {
-			userId: '',
 			botName: ChaosBotConfig.Name,
 			avatarUrl: ChaosBotConfig.Avatars.Default
 		};
 	}
 
-	async handleMessage(message: Message<boolean>): Promise<void> {
-		if (message.author.bot) return;
+	protected async processMessage(message: Message): Promise<void> {
+		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
 
-		const content = message.content.toLowerCase();
-		const hasChaos = ChaosBotConfig.Patterns.Default?.test(content);
+		try {
+			const content = message.content.toLowerCase();
+			const hasChaos = ChaosBotConfig.Patterns.Default?.test(content);
+			logger.debug(`[${this.defaultBotName}] Chaos pattern match result: ${hasChaos}`);
 
-		if (hasChaos) {
-			this.sendReply(message.channel as TextChannel, {
-				content: ChaosBotConfig.Responses.Default
-			});
+			if (hasChaos) {
+				logger.info(`[${this.defaultBotName}] Found chaos mention from ${message.author.tag}`);
+				await this.sendReply(message.channel as TextChannel, ChaosBotConfig.Responses.Default);
+				logger.debug(`[${this.defaultBotName}] Sent response successfully`);
+			}
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error processing message:`, error as Error);
+			throw error;
 		}
 	}
 }

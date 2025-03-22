@@ -1,5 +1,5 @@
 // Mock the webhook service
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { BabyBotConfig } from '../config/babyBotConfig';
 import BabyBot from '../reply-bots/babyBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
@@ -18,7 +18,7 @@ describe('BabyBot', () => {
 	});
 
 	it('should respond to messages containing "baby"', async () => {
-		const message = mockMessage('I love babies!');
+		const message = mockMessage('I love my baby!', 'testUser', false);
 		await babyBot.handleMessage(message);
 
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(

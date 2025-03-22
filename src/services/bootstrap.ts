@@ -1,8 +1,9 @@
 import { Client } from 'discord.js';
 import { WebhookService as WebhookServiceImpl } from '../webhooks/webhookService';
+import { DiscordService } from './discordService';
 import { LLMManager, LLMProviderType } from './llm';
 import { Logger } from './logger';
-import { container, ServiceId } from './services';
+import { container, ServiceId } from './container';
 
 /**
  * Bootstraps the entire application, registering all services
@@ -32,6 +33,13 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 			webhookService
 		);
 
+		// Initialize and register DiscordService singleton
+		const discordService = DiscordService.initialize(client, webhookService);
+		container.register(
+			ServiceId.DiscordService,
+			discordService
+		);
+
 		// Register LLM Manager with Ollama as the default provider
 		const llmManager = new LLMManager(logger, LLMProviderType.OLLAMA);
 		await llmManager.initializeAllProviders();
@@ -58,6 +66,10 @@ export function getDiscordClient(): Client {
 
 export function getWebhookService(): WebhookServiceImpl {
 	return container.get<WebhookServiceImpl>(ServiceId.WebhookService);
+}
+
+export function getDiscordService(): DiscordService {
+	return container.get<DiscordService>(ServiceId.DiscordService);
 }
 
 export function getLLMManager(): LLMManager {

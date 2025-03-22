@@ -1,4 +1,4 @@
-import { container, ServiceId } from '../../../services/services';
+import { container, ServiceId } from '../../../services/container';
 import { ChaosBotConfig } from '../config/chaosBotConfig';
 import ChaosBot from '../reply-bots/chaosBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
