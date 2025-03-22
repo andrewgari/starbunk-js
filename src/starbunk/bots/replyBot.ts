@@ -1,5 +1,8 @@
 import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
+import channelIds from '../../discord/channelIds';
+import guildIds from '../../discord/guildIds';
+import userId from '../../discord/userId';
 import { getWebhookService } from '../../services/bootstrap';
 import { logger } from '../../services/logger';
 
@@ -70,6 +73,33 @@ export default abstract class ReplyBot {
 			return true;
 		}
 
+		// In debug mode, only process messages from Cova or in the testing channel
+		if (process.env.DEBUG_MODE === 'true') {
+			const isFromCova = message.author.id === userId.Cova;
+			const isInTestingChannel = message.channelId === channelIds.Starbunk.BotChannelAdmin;
+			const isInStarbunkGuild = message.guild?.id === guildIds.StarbunkCrusaders;
+
+			// Get channel name safely
+			const channelName = 'name' in message.channel ? message.channel.name : 'unknown';
+
+			logger.debug(`[${this.defaultBotName}] DEBUG MODE - Message details:
+				Author: ${message.author.tag} (ID: ${message.author.id})
+				Is from Cova: ${isFromCova}
+				Channel: ${channelName} (ID: ${message.channelId})
+				Is in testing channel: ${isInTestingChannel}
+				Guild: ${message.guild?.name || 'unknown'} (ID: ${message.guild?.id || 'unknown'})
+				Is in Starbunk guild: ${isInStarbunkGuild}
+			`);
+
+			// Allow messages from Cova or in the testing channel in the Starbunk guild
+			if (!isFromCova && !(isInTestingChannel && isInStarbunkGuild)) {
+				logger.debug(`[${this.defaultBotName}] Skipping message in debug mode (not from Cova and not in testing channel)`);
+				return true;
+			} else {
+				logger.debug(`[${this.defaultBotName}] Processing message in debug mode (from Cova or in testing channel)`);
+			}
+		}
+
 		return false;
 	}
 
@@ -78,30 +108,37 @@ export default abstract class ReplyBot {
 			const identity = this.botIdentity;
 
 			if (!identity) {
-				logger.error(`[${this.defaultBotName}] No bot identity available`);
-				return;
+				logger.warn(`[${this.defaultBotName}] No bot identity available, using default name`);
+				// Continue with a generic identity
 			}
 
-			let webhookService;
+			// Try to use webhook service
 			try {
-				webhookService = getWebhookService();
+				const webhookService = getWebhookService();
 				logger.debug(`[${this.defaultBotName}] Got webhook service successfully`);
+
+				logger.debug(`[${this.defaultBotName}] Sending reply to channel ${channel.name}: "${content.substring(0, 100)}..."`);
+				await webhookService.writeMessage(channel, {
+					username: identity?.botName || this.defaultBotName,
+					avatarURL: identity?.avatarUrl,
+					content: content,
+					embeds: []
+				});
+				logger.debug(`[${this.defaultBotName}] Reply sent successfully via webhook`);
+				return; // Success, exit early
 			} catch (error) {
-				logger.error(`[${this.defaultBotName}] Failed to get WebhookService`, error as Error);
-				throw new Error('WebhookService not available');
+				// Just log the webhook error, we'll fall back to direct channel message
+				logger.warn(`[${this.defaultBotName}] Failed to use webhook service, falling back to direct message: ${error instanceof Error ? error.message : String(error)}`);
 			}
 
-			logger.debug(`[${this.defaultBotName}] Sending reply to channel ${channel.name}: "${content.substring(0, 100)}..."`);
-			await webhookService.writeMessage(channel, {
-				username: identity.botName,
-				avatarURL: identity.avatarUrl,
-				content: content,
-				embeds: []
-			});
-			logger.debug(`[${this.defaultBotName}] Reply sent successfully`);
+			// Fallback to direct channel message
+			logger.debug(`[${this.defaultBotName}] Sending fallback direct message to channel ${channel.name}`);
+			const formattedMessage = `**[${identity?.botName || this.defaultBotName}]**: ${content}`;
+			await channel.send(formattedMessage);
+			logger.debug(`[${this.defaultBotName}] Fallback direct message sent successfully`);
 		} catch (error) {
-			logger.error(`[${this.defaultBotName}] Failed to send reply to channel ${channel.id}`, error as Error);
-			throw error;
+			logger.error(`[${this.defaultBotName}] Failed to send any reply to channel ${channel.id}: ${error instanceof Error ? error.message : String(error)}`);
+			// Don't throw here - just log the error and continue
 		}
 	}
 

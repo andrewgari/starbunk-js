@@ -34,6 +34,18 @@ export async function runStarbunkBot(): Promise<void> {
 		// Initialize the client
 		await client.init();
 
+		// Bootstrap application services
+		logger.info('Bootstrapping application services');
+		try {
+			// Import here to avoid circular dependencies
+			const { bootstrapApplication } = require('./services/bootstrap');
+			await bootstrapApplication(client);
+			logger.info('Application services bootstrapped successfully');
+		} catch (error) {
+			logger.error('Failed to bootstrap application services:', error instanceof Error ? error : new Error(String(error)));
+			throw error;
+		}
+
 		logger.info('Logging in to Discord');
 		try {
 			await client.login(token);
@@ -86,6 +98,10 @@ export async function runStarbunkBot(): Promise<void> {
 }
 
 const runSnowbunkBot = async (): Promise<void> => {
+	// Import logger to ensure it's available
+	const { logger } = require('./services/logger');
+	logger.info('Starting Snowbunk bot');
+
 	const snowbunk = new SnowbunkClient({
 		intents: [
 			GatewayIntentBits.Guilds,
@@ -94,6 +110,18 @@ const runSnowbunkBot = async (): Promise<void> => {
 			GatewayIntentBits.GuildVoiceStates
 		]
 	});
+
+	// Bootstrap application services
+	logger.info('Bootstrapping application services for Snowbunk');
+	try {
+		// Import here to avoid circular dependencies
+		const { bootstrapApplication } = require('./services/bootstrap');
+		await bootstrapApplication(snowbunk);
+		logger.info('Snowbunk application services bootstrapped successfully');
+	} catch (error) {
+		logger.error('Failed to bootstrap Snowbunk application services:', error instanceof Error ? error : new Error(String(error)));
+		throw error;
+	}
 
 	await snowbunk.login(process.env.SNOWBUNK_TOKEN);
 };

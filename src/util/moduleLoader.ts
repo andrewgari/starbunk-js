@@ -14,21 +14,32 @@ export async function loadModule(modulePath: string): Promise<unknown> {
 		// Remove file extension for consistent imports
 		const modulePathWithoutExt = modulePath.replace(/\.(js|ts)$/, '');
 
-		// Try dynamic import first (works for ESM)
-		try {
-			// For production (compiled JS files)
-			if (modulePath.endsWith('.js')) {
-				const module = await import(`file://${modulePath}`);
-				return module.default || module;
-			}
+		// Check if we're running under ts-node
+		const isTsNode = process.argv[0].includes('ts-node') ||
+			(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
 
-			// For development (TS files)
-			// In development, we'll use require because dynamic import doesn't support .ts files directly
-			if (modulePath.endsWith('.ts')) {
+		// Log the module loading attempt
+		logger.debug(`Loading module: ${modulePath} (ts-node: ${isTsNode})`);
+
+		// Direct require for ts-node (handles .ts files natively)
+		if (isTsNode) {
+			try {
+				logger.debug(`Using direct require for ts-node: ${modulePathWithoutExt}`);
 				// eslint-disable-next-line @typescript-eslint/no-var-requires
 				const module = require(modulePathWithoutExt);
 				return module.default || module;
+			} catch (requireError: unknown) {
+				logger.error(`Failed to require module with ts-node: ${modulePathWithoutExt}`, requireError instanceof Error ? requireError : new Error(String(requireError)));
+				throw requireError;
 			}
+		}
+
+		// Standard node.js (compiled code)
+		// Try dynamic import first (works for ESM)
+		try {
+			logger.debug(`Loading JS module with dynamic import: ${modulePath}`);
+			const module = await import(`file://${modulePath}`);
+			return module.default || module;
 		} catch (importError) {
 			logger.debug(`Dynamic import failed for ${modulePath}, trying require: ${importError instanceof Error ? importError.message : String(importError)}`);
 
@@ -414,9 +425,27 @@ function isValidCommand(obj: unknown): obj is Command {
  * Scans a directory for modules matching the file extension
  */
 export function scanDirectory(dirPath: string, fileExtension: string): string[] {
-	logger.debug(`Scanning directory: ${dirPath} for files with extension: ${fileExtension}`);
+	// Check if we're running under ts-node
+	const isTsNode = process.argv[0].includes('ts-node') ||
+		(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
+
+	logger.debug(`Scanning directory: ${dirPath} for files with extension: ${fileExtension} (ts-node: ${isTsNode})`);
 
 	if (!fs.existsSync(dirPath)) {
+		// If using ts-node and looking for .ts files, no need to adjust paths
+		if (isTsNode && fileExtension === '.ts') {
+			logger.warn(`Directory not found with ts-node: ${dirPath}`);
+			return [];
+		}
+
+		// In development mode running compiled code, we might be looking in dist when we should look in src
+		const isDev = process.env.NODE_ENV === 'development';
+		if (isDev && dirPath.includes('/dist/')) {
+			const srcPath = dirPath.replace('/dist/', '/src/');
+			logger.debug(`Development mode: Directory not found in dist, trying src path: ${srcPath}`);
+			return scanDirectory(srcPath, fileExtension === '.js' ? '.ts' : fileExtension);
+		}
+
 		logger.warn(`Directory not found: ${dirPath}`);
 		return [];
 	}
@@ -424,6 +453,12 @@ export function scanDirectory(dirPath: string, fileExtension: string): string[] 
 	try {
 		const allFiles = fs.readdirSync(dirPath);
 		logger.debug(`Found ${allFiles.length} total files in directory`);
+
+		// Log some sample file names for debugging
+		if (allFiles.length > 0) {
+			const sampleSize = Math.min(5, allFiles.length);
+			logger.debug(`Sample files in directory: ${allFiles.slice(0, sampleSize).join(', ')}${allFiles.length > sampleSize ? ', ...' : ''}`);
+		}
 
 		const matchingFiles = allFiles
 			.filter(file => file.endsWith(fileExtension));

@@ -2,7 +2,7 @@ import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCo
 import { join } from 'path';
 import { Command } from '../discord/command';
 import { logger } from '../services/logger';
-import { loadCommand, scanDirectory } from '../util/moduleLoader.js';
+import { loadCommand, scanDirectory } from '../util/moduleLoader';
 
 export class CommandHandler {
 	private commands: Collection<string, Command> = new Collection();
@@ -23,33 +23,57 @@ export class CommandHandler {
 
 		logger.info('Loading commands...');
 		try {
+			// Determine if we're in development mode
+			const isDev = process.env.NODE_ENV === 'development';
+
+			// Check if we're running under ts-node
+			const isTsNode = process.argv[0].includes('ts-node') ||
+				(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
+			logger.debug(`Running with ts-node: ${isTsNode}`);
+
+			// Get the appropriate directory path
 			const commandsPath = join(__dirname, 'commands');
 			logger.debug(`Looking for commands in: ${commandsPath}`);
 
+			// When running with ts-node, we should look for .ts files
+			// Otherwise when running compiled code, even in development mode, we use .js
+			const fileExtension = isTsNode ? '.ts' : '.js';
+
+			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
+
 			const commandFiles = scanDirectory(
 				commandsPath,
-				'.js' // Always use .js for compiled files in the dist directory
+				fileExtension
 			).filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
 
-			logger.debug(`Found ${commandFiles.length} command files`);
+			logger.info(`Found ${commandFiles.length} command files to load`);
 
 			let successCount = 0;
 			for (const commandFile of commandFiles) {
 				try {
-					logger.debug(`Loading command from: ${commandFile}`);
+					logger.info(`Loading command from file: ${commandFile}`);
 					const command = await loadCommand(commandFile);
 
 					if (command) {
-						logger.debug(`Command loaded successfully: ${command.data.name}`);
+						logger.info(`✅ Command loaded successfully: ${command.data.name}`);
 						this.commands.set(command.data.name, command);
 						successCount++;
+					} else {
+						logger.warn(`⚠️ No command instance returned from: ${commandFile}`);
 					}
 				} catch (error) {
-					logger.error(`Failed to load command: ${commandFile}`, error instanceof Error ? error : new Error(String(error)));
+					logger.error(`❌ Failed to load command: ${commandFile}`, error instanceof Error ? error : new Error(String(error)));
 				}
 			}
 
-			logger.info(`Successfully loaded ${successCount} out of ${commandFiles.length} commands`);
+			logger.info(`📊 Successfully loaded ${successCount} out of ${commandFiles.length} commands`);
+
+			if (successCount > 0) {
+				logger.info('📋 Loaded commands summary:');
+				this.commands.forEach((_, name) => {
+					logger.info(`   - ${name}`);
+				});
+			}
 
 			// Register commands with Discord API
 			if (this.commands.size > 0) {

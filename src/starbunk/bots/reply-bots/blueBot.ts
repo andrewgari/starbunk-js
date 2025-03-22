@@ -10,7 +10,7 @@ import { BlueBotConfig } from '../config/blueBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class BlueBot extends ReplyBot {
-	private readonly llmManager: LLMManager;
+	private readonly llmManager?: LLMManager;
 	private readonly botIdentityValue: BotIdentity = {
 		botName: BlueBotConfig.Name,
 		avatarUrl: BlueBotConfig.Avatars.Default
@@ -18,12 +18,20 @@ export default class BlueBot extends ReplyBot {
 
 	private _blueTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
 	private _blueMurderTimestamp: Date = new Date(Number.MIN_SAFE_INTEGER);
+	private _hasLLM: boolean = false;
 
 	constructor() {
 		super();
 		logger.debug(`[${this.defaultBotName}] Initializing BlueBot`);
-		this.llmManager = getLLMManager();
-		logger.debug(`[${this.defaultBotName}] LLM Manager initialized`);
+
+		try {
+			this.llmManager = getLLMManager();
+			this._hasLLM = true;
+			logger.debug(`[${this.defaultBotName}] LLM Manager initialized successfully`);
+		} catch (error) {
+			logger.warn(`[${this.defaultBotName}] LLM Manager not available, will use regex fallback only: ${error instanceof Error ? error.message : String(error)}`);
+			this._hasLLM = false;
+		}
 	}
 
 	public get botIdentity(): BotIdentity {
@@ -114,17 +122,27 @@ export default class BlueBot extends ReplyBot {
 				return true;
 			}
 
-			// Use LLM for more complex analysis
-			const response = await this.llmManager.createSimpleCompletion(
-				LLMProviderType.OLLAMA,
-				`Is this message responding to a previous "blu?" message? Message: "${content}"`,
-				undefined,
-				true
-			);
+			// Use LLM for more complex analysis if available
+			if (this._hasLLM && this.llmManager) {
+				try {
+					const response = await this.llmManager.createSimpleCompletion(
+						LLMProviderType.OLLAMA,
+						`Is this message responding to a previous "blu?" message? Message: "${content}"`,
+						undefined,
+						true
+					);
 
-			const result = response.toLowerCase().includes('yes');
-			logger.debug(`[${this.defaultBotName}] LLM response check result: ${result}`);
-			return result;
+					const result = response.toLowerCase().includes('yes');
+					logger.debug(`[${this.defaultBotName}] LLM response check result: ${result}`);
+					return result;
+				} catch (error) {
+					logger.warn(`[${this.defaultBotName}] LLM failed for response check, falling back to regex: ${error instanceof Error ? error.message : String(error)}`);
+					return regexResult;
+				}
+			}
+
+			// Fall back to regex result if LLM not available
+			return regexResult;
 		} catch (error) {
 			logger.error(`[${this.defaultBotName}] Error checking response:`, error as Error);
 			// Fall back to regex result
@@ -142,17 +160,27 @@ export default class BlueBot extends ReplyBot {
 				return true;
 			}
 
-			// Use LLM for more complex analysis
-			const response = await this.llmManager.createSimpleCompletion(
-				LLMProviderType.OLLAMA,
-				`Does this message mention or refer to "blu"? Message: "${content}"`,
-				undefined,
-				true
-			);
+			// Use LLM for more complex analysis if available
+			if (this._hasLLM && this.llmManager) {
+				try {
+					const response = await this.llmManager.createSimpleCompletion(
+						LLMProviderType.OLLAMA,
+						`Does this message mention or refer to "blu"? Message: "${content}"`,
+						undefined,
+						true
+					);
 
-			const result = response.toLowerCase().includes('yes');
-			logger.debug(`[${this.defaultBotName}] LLM mention check result: ${result}`);
-			return result;
+					const result = response.toLowerCase().includes('yes');
+					logger.debug(`[${this.defaultBotName}] LLM mention check result: ${result}`);
+					return result;
+				} catch (error) {
+					logger.warn(`[${this.defaultBotName}] LLM failed for mention check, falling back to regex: ${error instanceof Error ? error.message : String(error)}`);
+					return regexResult;
+				}
+			}
+
+			// Fall back to regex result if LLM not available
+			return regexResult;
 		} catch (error) {
 			logger.error(`[${this.defaultBotName}] Error checking mention:`, error as Error);
 			// Fall back to regex result

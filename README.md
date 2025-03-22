@@ -68,6 +68,13 @@ The application uses an Observer pattern where the main clients (StarbunkClient 
     SNOWBUNK_TOKEN=your_discord_token
     CLIENT_ID=your_client_id
     GUILD_ID=your_guild_id
+
+    # Optional webhook for bot impersonation (without this, fallback to regular messages)
+    WEBHOOK_URL=https://discord.com/api/webhooks/{webhook_id}/{webhook_token}
+
+    # LLM configurations
+    OLLAMA_API_URL=http://localhost:11434
+    OLLAMA_DEFAULT_MODEL=llama3
     OPENAI_API_KEY=your_openai_key
     ```
 

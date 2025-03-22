@@ -10,6 +10,7 @@ export default {
 		AFK: '753251583902482637',
 		BotChannel: '753251583084724366',
 		BotChannelAdmin: '1014170827601748048',
+		StarbunkTesting: '1014170827601748048',
 	},
 	StarbunkStaging: {
 		BotCommmands: '856617421942030361',

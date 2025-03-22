@@ -2,10 +2,10 @@ import { PlayerSubscription } from '@discordjs/voice';
 import { Base, Client, Collection, Events, GatewayIntentBits, Interaction, Message, VoiceState } from 'discord.js';
 import { join } from 'path';
 import { logger } from '../services/logger';
-import { loadBot, scanDirectory } from '../util/moduleLoader.js';
+import { loadBot, scanDirectory } from '../util/moduleLoader';
 import ReplyBot from './bots/replyBot';
 import { VoiceBot } from './bots/voiceBot';
-import { CommandHandler } from './commandHandler.js';
+import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
 
 export default class StarbunkClient extends Client {
@@ -27,6 +27,18 @@ export default class StarbunkClient extends Client {
 
 		this.audioPlayer = new DJCova();
 		this.commandHandler = new CommandHandler();
+
+		// Import bootstrapApplication dynamically to avoid circular dependency
+		try {
+			const { bootstrapApplication } = require('../services/bootstrap');
+			bootstrapApplication(this).then(() => {
+				logger.info('Services bootstrapped successfully within StarbunkClient');
+			}).catch((error: unknown) => {
+				logger.error('Failed to bootstrap services within StarbunkClient:', error instanceof Error ? error : new Error(String(error)));
+			});
+		} catch (error: unknown) {
+			logger.error('Error importing or executing bootstrapApplication:', error instanceof Error ? error : new Error(String(error)));
+		}
 
 		this.once(Events.ClientReady, this.onReady.bind(this));
 		this.on(Events.MessageCreate, this.handleMessage.bind(this));
@@ -152,33 +164,57 @@ export default class StarbunkClient extends Client {
 
 		logger.info('Loading reply bots...');
 		try {
+			// Determine if we're in development mode
+			const isDev = process.env.NODE_ENV === 'development';
+
+			// Check if we're running under ts-node
+			const isTsNode = process.argv[0].includes('ts-node') ||
+				(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
+			logger.debug(`Running with ts-node: ${isTsNode}`);
+
+			// Get the appropriate directory path based on environment
 			const botsPath = join(__dirname, 'bots', 'reply-bots');
 			logger.debug(`Looking for bots in: ${botsPath}`);
 
+			// When running with ts-node, we should look for .ts files
+			// Otherwise when running compiled code, even in development mode, we use .js
+			const fileExtension = isTsNode ? '.ts' : '.js';
+
+			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
+
 			const botFiles = scanDirectory(
 				botsPath,
-				'.js' // Always use .js for compiled files in the dist directory
+				fileExtension
 			);
 
-			logger.debug(`Found ${botFiles.length} bot files`);
+			logger.info(`Found ${botFiles.length} bot files to load`);
 
 			let successCount = 0;
 			for (const botFile of botFiles) {
 				try {
-					logger.debug(`Loading bot from: ${botFile}`);
+					logger.info(`Loading bot from file: ${botFile}`);
 					const bot = await loadBot(botFile);
 
 					if (bot) {
-						logger.debug(`Bot loaded successfully: ${bot.defaultBotName}`);
+						logger.info(`✅ Bot loaded successfully: ${bot.defaultBotName} (${bot.constructor.name})`);
 						this.bots.set(bot.defaultBotName, bot);
 						successCount++;
+					} else {
+						logger.warn(`⚠️ No bot instance returned from: ${botFile}`);
 					}
 				} catch (error) {
-					logger.error(`Failed to load bot: ${botFile}`, error instanceof Error ? error : new Error(String(error)));
+					logger.error(`❌ Failed to load bot: ${botFile}`, error instanceof Error ? error : new Error(String(error)));
 				}
 			}
 
-			logger.info(`Successfully loaded ${successCount} out of ${botFiles.length} bots`);
+			logger.info(`📊 Successfully loaded ${successCount} out of ${botFiles.length} bots`);
+
+			if (successCount > 0) {
+				logger.info('📋 Loaded bots summary:');
+				this.bots.forEach((bot, name) => {
+					logger.info(`   - ${name} (${bot.constructor.name})`);
+				});
+			}
 		} catch (error) {
 			logger.error('Error loading bots:', error instanceof Error ? error : new Error(String(error)));
 		}
