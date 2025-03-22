@@ -1,11 +1,11 @@
 import { PlayerSubscription } from '@discordjs/voice';
 import { Base, Client, Collection, Events, GatewayIntentBits, Interaction, Message, VoiceState } from 'discord.js';
-import { join } from 'path';
+import path, { join } from 'path';
 import { logger } from '../services/logger';
-import { loadBot, scanDirectory } from '../util/moduleLoader.js';
+import { loadBot, scanDirectory } from '../util/moduleLoader';
 import ReplyBot from './bots/replyBot';
 import { VoiceBot } from './bots/voiceBot';
-import { CommandHandler } from './commandHandler.js';
+import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
 
 export default class StarbunkClient extends Client {
@@ -27,6 +27,18 @@ export default class StarbunkClient extends Client {
 
 		this.audioPlayer = new DJCova();
 		this.commandHandler = new CommandHandler();
+
+		// Import bootstrapApplication dynamically to avoid circular dependency
+		try {
+			const { bootstrapApplication } = require('../services/bootstrap');
+			bootstrapApplication(this).then(() => {
+				logger.info('Services bootstrapped successfully within StarbunkClient');
+			}).catch((error: unknown) => {
+				logger.error('Failed to bootstrap services within StarbunkClient:', error instanceof Error ? error : new Error(String(error)));
+			});
+		} catch (error: unknown) {
+			logger.error('Error importing or executing bootstrapApplication:', error instanceof Error ? error : new Error(String(error)));
+		}
 
 		this.once(Events.ClientReady, this.onReady.bind(this));
 		this.on(Events.MessageCreate, this.handleMessage.bind(this));
@@ -152,33 +164,75 @@ export default class StarbunkClient extends Client {
 
 		logger.info('Loading reply bots...');
 		try {
-			const botsPath = join(__dirname, 'bots', 'reply-bots');
-			logger.debug(`Looking for bots in: ${botsPath}`);
+			// Determine if we're in development mode
+			const isDev = process.env.NODE_ENV === 'development';
 
-			const botFiles = scanDirectory(
-				botsPath,
-				'.js' // Always use .js for compiled files in the dist directory
-			);
+			// Check if we're running under ts-node
+			const isTsNode = process.argv[0].includes('ts-node') ||
+				(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
+			logger.debug(`Running with ts-node: ${isTsNode}`);
 
-			logger.debug(`Found ${botFiles.length} bot files`);
+			// We need to check both src and dist directories
+			const srcPath = join(__dirname.replace('/dist/', '/src/'), 'bots', 'reply-bots');
+			const distPath = join(__dirname, 'bots', 'reply-bots');
+
+			// Try src directory first in development mode or when using ts-node
+			const primaryPath = (isDev || isTsNode) ? srcPath : distPath;
+			const primaryExt = (isDev || isTsNode) ? '.ts' : '.js';
+			const backupPath = (isDev || isTsNode) ? distPath : srcPath;
+			const backupExt = (isDev || isTsNode) ? '.js' : '.ts';
+
+			logger.debug(`Primary directory: ${primaryPath} with extension ${primaryExt}`);
+			logger.debug(`Backup directory: ${backupPath} with extension ${backupExt}`);
+
+			// First try the primary path
+			let botFiles = scanDirectory(primaryPath, primaryExt);
+
+			// If no files found, try the backup path
+			if (botFiles.length === 0) {
+				logger.debug(`No files found in primary path, trying backup path: ${backupPath}`);
+				botFiles = scanDirectory(backupPath, backupExt);
+			}
+
+			// Last resort: try both extensions in both directories
+			if (botFiles.length === 0) {
+				logger.debug(`Still no files found, trying all combinations`);
+				botFiles = [
+					...scanDirectory(primaryPath, '.ts'),
+					...scanDirectory(primaryPath, '.js'),
+					...scanDirectory(backupPath, '.ts'),
+					...scanDirectory(backupPath, '.js')
+				];
+			}
+
+			logger.info(`Found ${botFiles.length} bot files to load: ${botFiles.map(f => path.basename(f)).join(', ')}`);
 
 			let successCount = 0;
 			for (const botFile of botFiles) {
 				try {
-					logger.debug(`Loading bot from: ${botFile}`);
+					logger.info(`Loading bot from file: ${botFile}`);
 					const bot = await loadBot(botFile);
 
 					if (bot) {
-						logger.debug(`Bot loaded successfully: ${bot.defaultBotName}`);
+						logger.info(`✅ Bot loaded successfully: ${bot.defaultBotName} (${bot.constructor.name})`);
 						this.bots.set(bot.defaultBotName, bot);
 						successCount++;
+					} else {
+						logger.warn(`⚠️ No bot instance returned from: ${botFile}`);
 					}
 				} catch (error) {
-					logger.error(`Failed to load bot: ${botFile}`, error instanceof Error ? error : new Error(String(error)));
+					logger.error(`❌ Failed to load bot: ${botFile}`, error instanceof Error ? error : new Error(String(error)));
 				}
 			}
 
-			logger.info(`Successfully loaded ${successCount} out of ${botFiles.length} bots`);
+			logger.info(`📊 Successfully loaded ${successCount} out of ${botFiles.length} bots`);
+
+			if (successCount > 0) {
+				logger.info('📋 Loaded bots summary:');
+				this.bots.forEach((bot, name) => {
+					logger.info(`   - ${name} (${bot.constructor.name})`);
+				});
+			}
 		} catch (error) {
 			logger.error('Error loading bots:', error instanceof Error ? error : new Error(String(error)));
 		}

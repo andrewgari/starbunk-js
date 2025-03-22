@@ -6,10 +6,19 @@ import {
 	formatBlueBotSentimentPrompt
 } from './blueBotAcknowledgmentPrompt';
 import { blueDetectorPrompt, formatBlueDetectorUserPrompt } from './blueDetectorPrompt';
+import { covaEmulatorPrompt } from './covaEmulatorPrompt';
 
 // Export all prompts
 export * from './blueBotAcknowledgmentPrompt';
 export * from './blueDetectorPrompt';
+export * from './covaEmulatorPrompt';
+
+/**
+ * Format user message for Cova Emulator prompt
+ */
+export function formatCovaEmulatorUserPrompt(message: string): string {
+	return message;
+}
 
 /**
  * Register all prompts with the PromptRegistry
@@ -37,5 +46,13 @@ export function registerAllPrompts(): void {
 		formatUserMessage: formatBlueBotSentimentPrompt,
 		defaultTemperature: 0.1,
 		defaultMaxTokens: 10
+	});
+
+	// Register Cova Emulator prompt
+	PromptRegistry.registerPrompt(PromptType.COVA_EMULATOR, {
+		systemContent: covaEmulatorPrompt,
+		formatUserMessage: formatCovaEmulatorUserPrompt,
+		defaultTemperature: 0.7,
+		defaultMaxTokens: 150
 	});
 }

@@ -25,6 +25,7 @@ interface OllamaResponse {
 export class OllamaProvider extends GenericProvider {
 	private baseUrl: string;
 	private availableModels: string[] = [
+		'gemma3:4b',
 		'llama3',
 		'llama3:8b',
 		'llama3:70b',
@@ -85,8 +86,7 @@ export class OllamaProvider extends GenericProvider {
 	 * @param options Completion options
 	 */
 	protected async callProviderAPI(options: LLMCompletionOptions): Promise<OllamaResponse> {
-		// put debug logs in this method
-		this.logger.debug('Calling Ollama API with options:', options);
+		this.logger.debug(`Calling Ollama API at ${this.baseUrl} with model: ${options.model}`);
 
 		// Convert messages to Ollama format
 		const messages = options.messages.map(msg => ({
@@ -109,48 +109,109 @@ export class OllamaProvider extends GenericProvider {
 			}
 		};
 
-		// Call Ollama API
-		const response = await fetch(`${this.baseUrl}/api/chat`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(requestBody)
-		});
+		// Add retry mechanism
+		const maxRetries = 3;
+		let attempts = 0;
+		let lastError: Error | null = null;
 
-		if (!response.ok) {
-			throw new Error(`Ollama API error: ${response.statusText}`);
-		}
+		while (attempts < maxRetries) {
+			attempts++;
+			try {
+				this.logger.debug(`Attempt ${attempts}/${maxRetries} to call Ollama API`);
 
-		// Handle the response with extra care for JSON parsing
-		try {
-			const contentType = response.headers.get('content-type');
-			this.logger.debug(`Ollama API response content-type: ${contentType}`);
+				// Call Ollama API
+				const response = await fetch(`${this.baseUrl}/api/chat`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(requestBody)
+				});
 
-			if (contentType && contentType.includes('application/json')) {
-				return await response.json();
-			} else {
-				// For non-JSON responses, try to parse the text
-				const text = await response.text();
-				this.logger.debug(`Ollama API returned non-JSON response. First 100 chars: ${text.substring(0, 100)}`);
+				// Log detailed response information
+				this.logger.debug(`Ollama API response status: ${response.status} ${response.statusText}`);
 
-				try {
-					// Sometimes the response might be a JSON string but with wrong content type
-					return JSON.parse(text);
-				} catch (jsonError) {
-					// If it's not parseable JSON, create a suitable response object
-					this.logger.warn('Could not parse Ollama response as JSON, creating fallback response');
-					// Limit length for safety
-					return {
-						message: {
-							content: text.slice(0, 500)
+				if (response.status === 404) {
+					this.logger.error(`Ollama API 404 Not Found error - URL: ${this.baseUrl}/api/chat, model: ${options.model}`);
+
+					// Try a model list request to verify API connectivity
+					try {
+						const modelResponse = await fetch(`${this.baseUrl}/api/tags`);
+						if (modelResponse.ok) {
+							const modelData = await modelResponse.json();
+							this.logger.debug(`Available Ollama models: ${JSON.stringify(modelData)}`);
+							this.logger.error(`Model "${options.model}" may not be available on the Ollama server`);
+						} else {
+							this.logger.error(`Ollama server is not responding correctly to model list request: ${modelResponse.status}`);
 						}
-					};
+					} catch (modelCheckError) {
+						this.logger.error(`Failed to check Ollama models: ${modelCheckError instanceof Error ? modelCheckError.message : String(modelCheckError)}`);
+					}
+
+					// Fall back to a default model if specified model is not found
+					if (options.model !== 'llama3') {
+						this.logger.warn(`Attempting to fall back to llama3 model instead of ${options.model}`);
+						requestBody.model = 'llama3';
+						// Continue to the next attempt
+						continue;
+					}
+				}
+
+				if (!response.ok) {
+					throw new Error(`Ollama API error: ${response.statusText} (${response.status})`);
+				}
+
+				// Handle the response with extra care for JSON parsing
+				try {
+					const contentType = response.headers.get('content-type');
+					this.logger.debug(`Ollama API response content-type: ${contentType}`);
+
+					if (contentType && contentType.includes('application/json')) {
+						return await response.json();
+					} else {
+						// For non-JSON responses, try to parse the text
+						const text = await response.text();
+						this.logger.debug(`Ollama API returned non-JSON response. First 100 chars: ${text.substring(0, 100)}`);
+
+						try {
+							// Sometimes the response might be a JSON string but with wrong content type
+							return JSON.parse(text);
+						} catch (jsonError) {
+							// If it's not parseable JSON, create a suitable response object
+							this.logger.warn('Could not parse Ollama response as JSON, creating fallback response');
+							// Limit length for safety
+							return {
+								message: {
+									content: text.slice(0, 500)
+								}
+							};
+						}
+					}
+				} catch (error) {
+					this.logger.error(`Error processing Ollama API response: ${error instanceof Error ? error.message : String(error)}`);
+					throw error;
+				}
+			} catch (error) {
+				lastError = error instanceof Error ? error : new Error(String(error));
+				this.logger.warn(`Attempt ${attempts}/${maxRetries} failed: ${lastError.message}`);
+
+				// Wait before retrying (exponential backoff)
+				if (attempts < maxRetries) {
+					const backoffTime = Math.min(1000 * Math.pow(2, attempts - 1), 5000);
+					this.logger.debug(`Retrying in ${backoffTime}ms...`);
+					await new Promise(resolve => setTimeout(resolve, backoffTime));
 				}
 			}
-		} catch (error) {
-			this.logger.error('Error calling Ollama API', error as Error);
-			throw error;
+		}
+
+		// If we got here, all attempts failed
+		this.logger.error(`All ${maxRetries} attempts to call Ollama API failed`);
+
+		// Fall back to a static response if all attempts fail
+		if (lastError) {
+			throw new Error(`Ollama API failed after ${maxRetries} attempts: ${lastError.message}`);
+		} else {
+			throw new Error(`Ollama API failed after ${maxRetries} attempts with unknown error`);
 		}
 	}
 

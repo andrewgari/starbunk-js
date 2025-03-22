@@ -68,6 +68,13 @@ The application uses an Observer pattern where the main clients (StarbunkClient 
     SNOWBUNK_TOKEN=your_discord_token
     CLIENT_ID=your_client_id
     GUILD_ID=your_guild_id
+
+    # Optional webhook for bot impersonation (without this, fallback to regular messages)
+    WEBHOOK_URL=https://discord.com/api/webhooks/{webhook_id}/{webhook_token}
+
+    # LLM configurations
+    OLLAMA_API_URL=http://localhost:11434
+    OLLAMA_DEFAULT_MODEL=llama3
     OPENAI_API_KEY=your_openai_key
     ```
 
@@ -82,11 +89,48 @@ The application uses an Observer pattern where the main clients (StarbunkClient 
     npm start
     ```
 
-## Docker Deployment
+## Docker Setup
 
+### Environment Configuration
+
+Before running the bot with Docker, make sure to set up your environment:
+
+1. Copy `.env_sample` to `.env`:
+   ```bash
+   cp .env_sample .env
+   ```
+
+2. Edit `.env` and add your Discord bot token, client ID, and other required credentials:
+   ```
+   STARBUNK_TOKEN=your_discord_bot_token_here
+   CLIENT_ID=your_discord_client_id_here
+   GUILD_ID=your_discord_guild_id_here
+   ```
+
+### Running with Docker Compose
+
+To build and run the bot with Docker Compose:
+
+```bash
+docker-compose up --build
 ```
-docker-compose up -d
+
+For development mode with hot reloading:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.override.yml up --build
 ```
+
+### Troubleshooting Docker Issues
+
+If you encounter issues with Docker:
+
+1. Make sure your `.env` file is properly configured with all required variables
+2. Verify that `.env` isn't being ignored during the Docker build process
+3. Check container logs for specific error messages:
+   ```bash
+   docker-compose logs
+   ```
 
 ## Development
 

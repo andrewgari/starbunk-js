@@ -1,4 +1,5 @@
 import { Logger } from '../logger';
+import { LLMProviderType } from './llmFactory';
 
 /**
  * Interface for LLM completion request options
@@ -12,6 +13,7 @@ export interface LLMCompletionOptions {
 	frequencyPenalty?: number;
 	presencePenalty?: number;
 	stop?: string[];
+	provider?: LLMProviderType;
 }
 
 /**

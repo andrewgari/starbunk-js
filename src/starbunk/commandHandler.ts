@@ -1,8 +1,8 @@
 import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
-import { join } from 'path';
+import path, { join } from 'path';
 import { Command } from '../discord/command';
 import { logger } from '../services/logger';
-import { loadCommand, scanDirectory } from '../util/moduleLoader.js';
+import { loadCommand, scanDirectory } from '../util/moduleLoader';
 
 export class CommandHandler {
 	private commands: Collection<string, Command> = new Collection();
@@ -23,33 +23,77 @@ export class CommandHandler {
 
 		logger.info('Loading commands...');
 		try {
-			const commandsPath = join(__dirname, 'commands');
-			logger.debug(`Looking for commands in: ${commandsPath}`);
+			// Determine if we're in development mode
+			const isDev = process.env.NODE_ENV === 'development';
 
-			const commandFiles = scanDirectory(
-				commandsPath,
-				'.js' // Always use .js for compiled files in the dist directory
-			).filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
+			// Check if we're running under ts-node
+			const isTsNode = process.argv[0].includes('ts-node') ||
+				(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
+			logger.debug(`Running with ts-node: ${isTsNode}`);
 
-			logger.debug(`Found ${commandFiles.length} command files`);
+			// We need to check both src and dist directories
+			const srcPath = join(__dirname.replace('/dist/', '/src/'), 'commands');
+			const distPath = join(__dirname, 'commands');
+
+			// Try src directory first in development mode or when using ts-node
+			const primaryPath = (isDev || isTsNode) ? srcPath : distPath;
+			const primaryExt = (isDev || isTsNode) ? '.ts' : '.js';
+			const backupPath = (isDev || isTsNode) ? distPath : srcPath;
+			const backupExt = (isDev || isTsNode) ? '.js' : '.ts';
+
+			logger.debug(`Primary directory: ${primaryPath} with extension ${primaryExt}`);
+			logger.debug(`Backup directory: ${backupPath} with extension ${backupExt}`);
+
+			// First try the primary path
+			let commandFiles = scanDirectory(primaryPath, primaryExt)
+				.filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
+
+			// If no files found, try the backup path
+			if (commandFiles.length === 0) {
+				logger.debug(`No files found in primary path, trying backup path: ${backupPath}`);
+				commandFiles = scanDirectory(backupPath, backupExt)
+					.filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
+			}
+
+			// Last resort: try both extensions in both directories
+			if (commandFiles.length === 0) {
+				logger.debug(`Still no files found, trying all combinations`);
+				commandFiles = [
+					...scanDirectory(primaryPath, '.ts'),
+					...scanDirectory(primaryPath, '.js'),
+					...scanDirectory(backupPath, '.ts'),
+					...scanDirectory(backupPath, '.js')
+				].filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
+			}
+
+			logger.info(`Found ${commandFiles.length} command files to load: ${commandFiles.map(f => path.basename(f)).join(', ')}`);
 
 			let successCount = 0;
 			for (const commandFile of commandFiles) {
 				try {
-					logger.debug(`Loading command from: ${commandFile}`);
+					logger.info(`Loading command from file: ${commandFile}`);
 					const command = await loadCommand(commandFile);
 
 					if (command) {
-						logger.debug(`Command loaded successfully: ${command.data.name}`);
+						logger.info(`✅ Command loaded successfully: ${command.data.name}`);
 						this.commands.set(command.data.name, command);
 						successCount++;
+					} else {
+						logger.warn(`⚠️ No command instance returned from: ${commandFile}`);
 					}
 				} catch (error) {
-					logger.error(`Failed to load command: ${commandFile}`, error instanceof Error ? error : new Error(String(error)));
+					logger.error(`❌ Failed to load command: ${commandFile}`, error instanceof Error ? error : new Error(String(error)));
 				}
 			}
 
-			logger.info(`Successfully loaded ${successCount} out of ${commandFiles.length} commands`);
+			logger.info(`📊 Successfully loaded ${successCount} out of ${commandFiles.length} commands`);
+
+			if (successCount > 0) {
+				logger.info('📋 Loaded commands summary:');
+				this.commands.forEach((_, name) => {
+					logger.info(`   - ${name}`);
+				});
+			}
 
 			// Register commands with Discord API
 			if (this.commands.size > 0) {

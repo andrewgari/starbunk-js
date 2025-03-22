@@ -15,9 +15,13 @@ export default class InterruptBot extends ReplyBot {
 		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
 
 		try {
-			const percentChance = process.env.DEBUG_MODE === 'true' ? 100 : 1;
-			const shouldInterrupt = Random.percentChance(percentChance);
-			logger.debug(`[${this.defaultBotName}] Interrupt check: chance=${percentChance}%, result=${shouldInterrupt}`);
+			// Base chance of interruption - percentChance already handles DEBUG_MODE
+			const baseInterruptChance = 1; // 1% chance in normal mode, 100% in debug mode
+			const shouldInterrupt = Random.percentChance(baseInterruptChance);
+
+			// For debugging, log the effective chance (will be 100% in debug mode)
+			const effectiveChance = process.env.DEBUG_MODE === 'true' ? 100 : baseInterruptChance;
+			logger.debug(`[${this.defaultBotName}] Interrupt check: base=${baseInterruptChance}%, effective=${effectiveChance}%, result=${shouldInterrupt}`);
 
 			if (!shouldInterrupt) {
 				logger.debug(`[${this.defaultBotName}] Skipping interrupt based on random chance`);

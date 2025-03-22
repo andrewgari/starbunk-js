@@ -117,67 +117,95 @@ export class LLMManager {
 	}
 
 	/**
-	 * Get an available provider, with fallback to default if specified
-	 * @param type Preferred provider type
-	 * @param fallbackToDefault Whether to fall back to the default provider
-	 * @throws ProviderNotAvailableError if no provider is available
+	 * Get an available provider, using fallback if necessary
+	 * @param type Provider type
+	 * @param allowFallback Whether to fall back to the default provider
+	 * @deprecated Use getProvider with appropriate error handling instead
 	 */
-	private getAvailableProvider(type: LLMProviderType, fallbackToDefault = false): LLMService {
-		// Try the specified provider
-		if (this.isProviderAvailable(type)) {
-			return this.providers.get(type)!;
+	private getAvailableProvider(type: LLMProviderType, allowFallback = true): LLMService {
+		const provider = this.getProvider(type);
+		if (provider && provider.isInitialized()) {
+			return provider;
 		}
 
-		// Try the default provider if fallback is enabled
-		if (fallbackToDefault && type !== this.defaultProvider && this.isProviderAvailable(this.defaultProvider)) {
+		if (allowFallback && type !== this.defaultProvider) {
 			this.logger.warn(`Provider ${type} not available, falling back to ${this.defaultProvider}`);
-			return this.providers.get(this.defaultProvider)!;
+			const defaultProvider = this.getProvider(this.defaultProvider);
+			if (defaultProvider && defaultProvider.isInitialized()) {
+				return defaultProvider;
+			}
 		}
 
-		// No provider available
+		this.logger.error(`No available provider found for ${type}`);
 		throw new ProviderNotAvailableError(type);
 	}
 
 	/**
 	 * Create a completion using a provider
-	 * @param type Provider type (optional, uses default if not specified)
 	 * @param options Completion options
-	 * @param fallbackToDefault Whether to fall back to the default provider
+	 * @param fallbackOptions Additional options for fallback handling
 	 */
 	public async createCompletion(
-		typeOrOptions: LLMProviderType | LLMCompletionOptions,
-		optionsOrFallback?: LLMCompletionOptions | boolean,
-		fallbackToDefault = true
+		options: LLMCompletionOptions,
+		fallbackOptions?: { useOpenAiFallback?: boolean }
 	): Promise<LLMCompletionResponse> {
-		try {
-			// Handle overloaded parameters
-			let type: LLMProviderType;
-			let options: LLMCompletionOptions;
-			let fallback: boolean;
+		// Parse the args
+		const useOpenAiFallback = fallbackOptions?.useOpenAiFallback ?? true;
+		// Parse provider from options or use default
+		const requestedProviderType = options.provider || this.defaultProvider;
 
-			if (typeof typeOrOptions === 'string') {
-				// First overload: (type, options, fallback)
-				type = typeOrOptions as LLMProviderType;
-				options = optionsOrFallback as LLMCompletionOptions;
-				fallback = fallbackToDefault;
-			} else {
-				// Second overload: (options, fallback)
-				type = this.defaultProvider;
-				options = typeOrOptions as LLMCompletionOptions;
-				fallback = optionsOrFallback as boolean ?? true;
+		try {
+			// Try the primary provider
+			const provider = this.getProvider(requestedProviderType);
+			if (!provider) {
+				this.logger.warn(`Provider ${requestedProviderType} not found, using default`);
+				throw new ProviderNotAvailableError(requestedProviderType);
 			}
 
-			// Get an available provider
-			const provider = this.getAvailableProvider(type, fallback);
-
-			// Create the completion
 			return await provider.createCompletion(options);
 		} catch (error) {
-			if (error instanceof ProviderNotAvailableError) {
-				this.logger.error(error.message);
-			} else {
-				this.logger.error('Error creating completion', error as Error);
+			this.logger.error(
+				`Error with provider ${requestedProviderType}:`,
+				error instanceof Error ? error : new Error(String(error))
+			);
+
+			// Handle fallback to OpenAI if Ollama is not available
+			if (
+				useOpenAiFallback &&
+				requestedProviderType === LLMProviderType.OLLAMA &&
+				this.isProviderAvailable(LLMProviderType.OPENAI)
+			) {
+				this.logger.info('Falling back to OpenAI provider');
+
+				// Make a copy of the options to modify for OpenAI
+				const openAiOptions = { ...options };
+
+				// If the model is llama-based, switch to a GPT model
+				if (openAiOptions.model.toLowerCase().startsWith('llama')) {
+					openAiOptions.model = 'gpt-3.5-turbo';
+				}
+
+				// Set the provider to OpenAI
+				openAiOptions.provider = LLMProviderType.OPENAI;
+
+				try {
+					const openAiProvider = this.getProvider(LLMProviderType.OPENAI);
+					if (!openAiProvider) {
+						throw new ProviderNotAvailableError(LLMProviderType.OPENAI);
+					}
+					return await openAiProvider.createCompletion(openAiOptions);
+				} catch (fallbackError) {
+					this.logger.error(
+						'Error with OpenAI fallback:',
+						fallbackError instanceof Error ? fallbackError : new Error(String(fallbackError))
+					);
+					throw new Error(
+						`Failed to create completion with primary and fallback providers: ${error instanceof Error ? error.message : String(error)
+						}, ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
+					);
+				}
 			}
+
 			throw error;
 		}
 	}
@@ -273,14 +301,13 @@ export class LLMManager {
 
 				// Create the completion
 				const response = await this.createCompletion(
-					type,
 					{
 						model: model || provider.getAvailableModels()[0],
 						messages,
 						temperature: temperature ?? defaultOptions.temperature,
 						maxTokens: maxTokens ?? defaultOptions.maxTokens
 					},
-					fallbackToDefault
+					{ useOpenAiFallback: false }
 				);
 
 				return response.content;
@@ -308,7 +335,6 @@ export class LLMManager {
 
 					// Create the completion
 					const response = await this.createCompletion(
-						type,
 						{
 							model: model || provider.getAvailableModels()[0],
 							messages: [
@@ -324,7 +350,7 @@ export class LLMManager {
 							temperature: temperature ?? prompt.defaultTemperature,
 							maxTokens: maxTokens ?? prompt.defaultMaxTokens
 						},
-						fallbackToDefault
+						{ useOpenAiFallback: false }
 					);
 
 					return response.content;

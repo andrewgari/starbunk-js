@@ -1,11 +1,17 @@
 // Register module aliases for path resolution
 // Import config first to ensure environment variables are loaded
 import dotenv from 'dotenv';
+import fs from 'fs';
 import path from 'path';
 
-// Load environment variables immediately before any other imports
-// Use absolute path to ensure the .env file is found regardless of working directory
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// More robust .env loading with better error messages
+const envPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(envPath)) {
+	dotenv.config({ path: envPath });
+	console.log(`Loaded environment from ${envPath}`);
+} else {
+	console.warn(`No .env file found at ${envPath}, relying on system environment variables`);
+}
 
 import { GatewayIntentBits } from 'discord.js';
 import { logger } from './services/logger';
@@ -15,16 +21,17 @@ import StarbunkClient from './starbunk/starbunkClient';
 export async function runStarbunkBot(): Promise<void> {
 	logger.info('Starting Starbunk bot');
 	try {
-		const token = process.env.TOKEN;
+		const token = process.env.STARBUNK_TOKEN;
 		const clientId = process.env.CLIENT_ID;
 
+		// More informative error message for troubleshooting
 		if (!token) {
-			logger.error('TOKEN environment variable is not set');
-			throw new Error('TOKEN environment variable is not set');
+			logger.error('STARBUNK_TOKEN environment variable is not set. Check your .env file or container environment variables.');
+			throw new Error('STARBUNK_TOKEN environment variable is not set');
 		}
 
 		if (!clientId) {
-			logger.error('CLIENT_ID environment variable is not set');
+			logger.error('CLIENT_ID environment variable is not set. Check your .env file or container environment variables.');
 			throw new Error('CLIENT_ID environment variable is not set');
 		}
 
@@ -33,6 +40,18 @@ export async function runStarbunkBot(): Promise<void> {
 
 		// Initialize the client
 		await client.init();
+
+		// Bootstrap application services
+		logger.info('Bootstrapping application services');
+		try {
+			// Import here to avoid circular dependencies
+			const { bootstrapApplication } = require('./services/bootstrap');
+			await bootstrapApplication(client);
+			logger.info('Application services bootstrapped successfully');
+		} catch (error) {
+			logger.error('Failed to bootstrap application services:', error instanceof Error ? error : new Error(String(error)));
+			throw error;
+		}
 
 		logger.info('Logging in to Discord');
 		try {
@@ -86,6 +105,10 @@ export async function runStarbunkBot(): Promise<void> {
 }
 
 const runSnowbunkBot = async (): Promise<void> => {
+	// Import logger to ensure it's available
+	const { logger } = require('./services/logger');
+	logger.info('Starting Snowbunk bot');
+
 	const snowbunk = new SnowbunkClient({
 		intents: [
 			GatewayIntentBits.Guilds,
@@ -94,6 +117,18 @@ const runSnowbunkBot = async (): Promise<void> => {
 			GatewayIntentBits.GuildVoiceStates
 		]
 	});
+
+	// Bootstrap application services
+	logger.info('Bootstrapping application services for Snowbunk');
+	try {
+		// Import here to avoid circular dependencies
+		const { bootstrapApplication } = require('./services/bootstrap');
+		await bootstrapApplication(snowbunk);
+		logger.info('Snowbunk application services bootstrapped successfully');
+	} catch (error) {
+		logger.error('Failed to bootstrap Snowbunk application services:', error instanceof Error ? error : new Error(String(error)));
+		throw error;
+	}
 
 	await snowbunk.login(process.env.SNOWBUNK_TOKEN);
 };

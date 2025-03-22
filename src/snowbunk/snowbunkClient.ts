@@ -49,6 +49,18 @@ export default class SnowbunkClient extends DiscordClient {
 	}
 
 	bootstrap(): void {
+		// Import bootstrapApplication dynamically to avoid circular dependency
+		try {
+			const { bootstrapApplication } = require('../services/bootstrap');
+			bootstrapApplication(this).then(() => {
+				console.log('Services bootstrapped successfully within SnowbunkClient');
+			}).catch((error: unknown) => {
+				console.error('Failed to bootstrap services within SnowbunkClient:', error instanceof Error ? error : new Error(String(error)));
+			});
+		} catch (error: unknown) {
+			console.error('Error importing or executing bootstrapApplication:', error instanceof Error ? error : new Error(String(error)));
+		}
+
 		this.on(Events.MessageCreate, async (message: Message) => {
 			this.syncMessage(message);
 		});
@@ -81,15 +93,29 @@ export default class SnowbunkClient extends DiscordClient {
 			message.member?.avatarURL() ??
 			message.author.defaultAvatarURL;
 
-		const webhookService = getWebhookService();
-		if (!webhookService) {
-			throw new Error('WebhookService not found');
+		try {
+			// Try to use webhook service
+			try {
+				const webhookService = getWebhookService();
+				webhookService.writeMessage(linkedChannel, {
+					username: displayName,
+					avatarURL: avatarUrl,
+					content: message.content,
+					embeds: [],
+				});
+				return; // Success, exit early
+			} catch (error: unknown) {
+				// Just log the webhook error, we'll fall back to direct channel message
+				console.warn(`[SnowbunkClient] Failed to use webhook service, falling back to direct message: ${error instanceof Error ? error.message : String(error)}`);
+			}
+
+			// Fallback to direct channel message
+			console.debug(`[SnowbunkClient] Sending fallback direct message to channel ${linkedChannel.name}`);
+			const formattedMessage = `**[${displayName}]**: ${message.content}`;
+			linkedChannel.send(formattedMessage);
+		} catch (error: unknown) {
+			console.error(`[SnowbunkClient] Failed to send any message to channel ${linkedChannel.id}: ${error instanceof Error ? error.message : String(error)}`);
+			// Don't throw here - just log the error and continue
 		}
-		webhookService.writeMessage(linkedChannel, {
-			username: displayName,
-			avatarURL: avatarUrl,
-			content: message.content,
-			embeds: [],
-		});
 	}
 }

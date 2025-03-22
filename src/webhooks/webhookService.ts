@@ -6,49 +6,88 @@ import { MessageInfo } from './types';
 export class WebhookService implements WebhookServiceInterface {
 	public webhookClient: WebhookClient | null = null;
 	public logger: Logger;
+	private _webhookAvailable: boolean = false;
+	private _hasLoggedWebhookWarning: boolean = false;
 
 	constructor(logger: Logger) {
 		this.logger = logger;
 		const webhookUrl = process.env.WEBHOOK_URL;
 		if (webhookUrl) {
-			this.webhookClient = new WebhookClient({ url: webhookUrl });
-			this.logger.debug('Webhook service initialized with URL');
+			try {
+				this.webhookClient = new WebhookClient({ url: webhookUrl });
+				this._webhookAvailable = true;
+				this.logger.debug('Webhook service initialized with URL');
+			} catch (error) {
+				this.logger.warn('Invalid webhook URL provided');
+				this._webhookAvailable = false;
+			}
 		} else {
-			this.logger.debug('Webhook service initialized without URL');
+			this.logger.warn('Webhook service initialized without URL - will use channel.send fallback');
+			this._webhookAvailable = false;
 		}
 	}
 
 	async writeMessage(channel: TextChannel, messageInfo: MessageInfo): Promise<void> {
 		try {
+			// Try to use webhooks
 			const webhooks = await channel.fetchWebhooks();
 			let webhook = webhooks.first();
 
 			if (!webhook) {
-				webhook = await channel.createWebhook({
-					name: 'BotWebhook',
-					avatar: messageInfo.avatarURL,
-				});
+				try {
+					webhook = await channel.createWebhook({
+						name: 'BotWebhook',
+						avatar: messageInfo.avatarURL,
+					});
+				} catch (webhookCreationError) {
+					// If creating webhook fails, fall back to regular message
+					this.logger.warn('Failed to create webhook, falling back to regular message');
+					await this.fallbackToRegularMessage(channel, messageInfo);
+					return;
+				}
 			}
 
 			await webhook.send(messageInfo);
-			this.logger.debug(`Message sent to channel ${channel.name}`);
+			this.logger.debug(`Message sent to channel ${channel.name} via webhook`);
 		} catch (error) {
-			this.logger.error('Failed to send webhook message', error as Error);
+			this.logger.warn('Failed to send webhook message, falling back to regular message');
+			await this.fallbackToRegularMessage(channel, messageInfo);
 		}
 	}
 
 	async sendMessage(messageInfo: MessageInfo): Promise<void> {
-		if (!this.webhookClient) {
-			this.logger.error('Webhook URL not found in environment variables');
-			throw new Error('Webhook URL not found in environment variables');
+		if (!this._webhookAvailable || !this.webhookClient) {
+			// Log this warning only once to avoid spam
+			if (!this._hasLoggedWebhookWarning) {
+				this.logger.warn('Webhook URL not configured properly. Messages will not be sent via global webhook.');
+				this._hasLoggedWebhookWarning = true;
+			}
+			return;
 		}
 
 		try {
 			await this.webhookClient.send(messageInfo);
 			this.logger.debug('Message sent via webhook');
 		} catch (error) {
-			this.logger.error('Failed to send message via webhook', error as Error);
-			throw error;
+			this.logger.error('Failed to send message via webhook');
+			// We don't have a channel reference here, so we can't fallback
+		}
+	}
+
+	private async fallbackToRegularMessage(channel: TextChannel, messageInfo: MessageInfo): Promise<void> {
+		try {
+			// Extract content from messageInfo
+			const { content, username, ...rest } = messageInfo;
+
+			// Send a regular message with content only
+			await channel.send({
+				content: `**${username || 'Bot'}**: ${content || ''}`,
+				...rest
+			});
+
+			this.logger.debug(`Message sent to channel ${channel.name} via regular message (webhook fallback)`);
+		} catch (error) {
+			this.logger.error('Failed to send regular message (webhook fallback)');
 		}
 	}
 }

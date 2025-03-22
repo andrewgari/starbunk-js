@@ -20,7 +20,8 @@ export interface LLMPrompt {
 export enum PromptType {
 	BLUE_DETECTOR = 'blueDetector',
 	BLUE_ACKNOWLEDGMENT = 'blueAcknowledgment',
-	BLUE_SENTIMENT = 'blueSentiment'
+	BLUE_SENTIMENT = 'blueSentiment',
+	COVA_EMULATOR = 'covaEmulator'
 }
 
 /**
