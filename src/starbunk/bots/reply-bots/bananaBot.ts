@@ -9,10 +9,14 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class BananaBot extends ReplyBot {
+	public get defaultBotName(): string {
+		return BananaBotConfig.Name;
+	}
+
 	public get botIdentity(): BotIdentity {
 		return {
-			avatarUrl: BananaBotConfig.Avatars.Default,
-			botName: BananaBotConfig.Name
+			botName: this.defaultBotName,
+			avatarUrl: BananaBotConfig.Avatars.Default
 		};
 	}
 

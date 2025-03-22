@@ -4,11 +4,6 @@ import { getWebhookService } from '../../services/bootstrap';
 import { logger } from '../../services/logger';
 
 export default abstract class ReplyBot {
-	private defaultBotIdentity: BotIdentity = {
-		avatarUrl: 'https://imgur.com/a/qqUlTxI',
-		botName: 'BunkBot'
-	};
-
 	protected skipBotMessages: boolean = true;
 
 	public abstract get defaultBotName(): string;
