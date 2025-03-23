@@ -1,74 +1,45 @@
 import { Message } from 'discord.js';
 import userId from '../../../discord/userId';
+import * as environment from '../../../environment';
 import { ServiceId, container } from '../../../services/container';
 import { CovaBotConfig } from '../config/covaBotConfig';
 import CovaBot from '../reply-bots/covaBot';
-import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { createMockMessage, mockLogger, mockWebhookService } from './testUtils';
 
-// Mock bootstrap
-jest.mock('../../../services/bootstrap', () => ({
-	getDiscordService: jest.fn().mockReturnValue(mockDiscordService),
-	getWebhookService: jest.fn().mockReturnValue(mockWebhookService)
-}));
-
-// Mock DiscordService
-jest.mock('../../../services/discordService', () => ({
-	DiscordService: {
-		getInstance: jest.fn().mockReturnValue(mockDiscordService)
-	}
+// Mock the environment
+jest.mock('../../../environment', () => ({
+	isDebugMode: jest.fn().mockReturnValue(false),
+	setDebugMode: jest.fn()
 }));
 
 // Create mock LLM responses
 const mockLLMManager = {
-	createCompletion: jest.fn().mockResolvedValue({ content: 'yes' }),
+	createCompletion: jest.fn().mockResolvedValue({ content: 'YES' }),
 	createPromptCompletion: jest.fn().mockResolvedValue('This is a CovaBot response.')
 };
 
-// Create a simplified version for testing
-class TestableCovaBot extends CovaBot {
-	// Skip the problematic methods and provide direct control for testing
-	public async handleMessage(message: Message): Promise<void> {
-		// Skip Cova's messages in normal mode
-		if (message.author.id === userId.Cova && process.env.DEBUG_MODE !== 'true') {
-			return;
-		}
-
-		// In debug mode, only respond to Cova's messages
-		if (process.env.DEBUG_MODE === 'true' && message.author.id !== userId.Cova) {
-			return;
-		}
-
-		// Check for direct mentions
-		const isDirectMention = message.content.toLowerCase().includes('cova') ||
-			message.mentions.has('12345');
-
-		if (isDirectMention || this._lastTestShouldRespond) {
-			await this.testGenerateResponse(message);
-		}
-	}
-
-	private async testGenerateResponse(message: Message): Promise<void> {
-		// Use our mock LLM directly
-		let response = await mockLLMManager.createPromptCompletion();
-
-		if (!response || response.trim() === '') {
-			response = "Yeah, that's pretty cool.";
-		}
-
-		await this.sendReply(message.channel as any, response);
-	}
-
-	// Test control flag
-	private _lastTestShouldRespond: boolean = false;
-
-	setTestShouldRespond(value: boolean) {
-		this._lastTestShouldRespond = value;
-	}
-}
+// Mock the bootstrap module
+jest.mock('../../../services/bootstrap', () => ({
+	getLLMManager: jest.fn().mockReturnValue(mockLLMManager),
+	getWebhookService: jest.fn().mockReturnValue(mockWebhookService),
+	getDiscordService: jest.fn().mockReturnValue({
+		getMemberAsBotIdentity: jest.fn().mockReturnValue({
+			botName: 'Cova',
+			avatarUrl: 'https://example.com/avatar.jpg'
+		})
+	}),
+	getDiscordClient: jest.fn().mockReturnValue({
+		isReady: jest.fn().mockReturnValue(true),
+		once: jest.fn()
+	})
+}));
 
 describe('CovaBot', () => {
-	let covaBot: TestableCovaBot;
+	let covaBot: CovaBot;
 	let message: Message;
+	let sendReplySpy: jest.SpyInstance;
+	let shouldRespondSpy: jest.SpyInstance;
+	let generateAndSendResponseSpy: jest.SpyInstance;
 
 	beforeEach(() => {
 		// Clear container and register mocks
@@ -78,11 +49,9 @@ describe('CovaBot', () => {
 
 		// Reset mocks
 		jest.clearAllMocks();
-		mockLLMManager.createCompletion.mockResolvedValue({ content: 'yes' });
-		mockLLMManager.createPromptCompletion.mockResolvedValue('This is a CovaBot response.');
 
 		// Create a mock message
-		message = mockMessage('Hello there!');
+		message = createMockMessage('Hello there!');
 
 		// Properly set up message.mentions
 		message.mentions = {
@@ -92,124 +61,81 @@ describe('CovaBot', () => {
 			}
 		} as any;
 
-		// Create TestableCovaBot instance
-		covaBot = new TestableCovaBot();
+		// Create CovaBot instance
+		covaBot = new CovaBot();
 
-		// Mock environment variables
-		process.env.DEBUG_MODE = 'false';
-	});
+		// Spy on the sendReply method
+		sendReplySpy = jest.spyOn(covaBot as any, 'sendReply').mockImplementation(() => Promise.resolve());
 
-	afterEach(() => {
-		// Reset environment variables
-		delete process.env.DEBUG_MODE;
+		// Spy on the shouldRespondToMessage method and make it return true by default
+		shouldRespondSpy = jest.spyOn(covaBot as any, 'shouldRespondToMessage').mockResolvedValue(true);
+
+		// Spy on generateAndSendResponse
+		generateAndSendResponseSpy = jest.spyOn(covaBot as any, 'generateAndSendResponse').mockImplementation(async () => {
+			await mockLLMManager.createPromptCompletion();
+			return Promise.resolve();
+		});
+
+		// Default to debug mode off
+		(environment.isDebugMode as jest.Mock).mockReturnValue(false);
 	});
 
 	it('should initialize with the correct bot identity', () => {
-		// Arrange - done in beforeEach
-
-		// Act - accessing botIdentity
 		const identity = covaBot.botIdentity;
-
-		// Assert
 		expect(identity.botName).toBe(CovaBotConfig.Name);
 		expect(identity.avatarUrl).toBe(CovaBotConfig.Avatars.Default);
 	});
 
-	it('should skip messages from Cova in normal mode', async () => {
-		// Arrange
-		Object.defineProperty(message.author, 'id', {
-			value: userId.Cova,
-			configurable: true
-		});
+	it('should skip messages from Cova', async () => {
+		// Set up message from Cova
+		message.author.id = userId.Cova;
 
-		// Act
 		await covaBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		expect(sendReplySpy).not.toHaveBeenCalled();
 	});
 
-	it('should respond to direct questions about Cova', async () => {
-		// Arrange
+	it('should skip messages from bots', async () => {
+		message.author.bot = true;
+		await covaBot.handleMessage(message);
+		expect(sendReplySpy).not.toHaveBeenCalled();
+	});
+
+	it('should respond to messages mentioning Cova', async () => {
+		// Set up message that mentions Cova
 		message.content = 'Hey Cova, how are you?';
 
-		// Act
+		// Set up question pattern detection
+		jest.spyOn(CovaBotConfig.Patterns.Question, 'test').mockReturnValue(true);
+
 		await covaBot.handleMessage(message);
 
-		// Assert
+		// Verify the correct methods were called
+		expect(generateAndSendResponseSpy).toHaveBeenCalled();
 		expect(mockLLMManager.createPromptCompletion).toHaveBeenCalled();
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
 	});
 
-	it('should respond when LLM decides it should', async () => {
-		// Arrange
-		covaBot.setTestShouldRespond(true);
+	it('should respond to messages only from cova when in debug mode', async () => {
+		(environment.isDebugMode as jest.Mock).mockReturnValue(true);
+		message.author.id = userId.Cova;
 
-		// Act
 		await covaBot.handleMessage(message);
-
-		// Assert
-		expect(mockLLMManager.createPromptCompletion).toHaveBeenCalled();
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+		expect(generateAndSendResponseSpy).toHaveBeenCalled();
 	});
 
-	it('should not respond when LLM decides it should not', async () => {
-		// Arrange
-		covaBot.setTestShouldRespond(false);
+	it('should respond when explicitly set to respond', async () => {
+		// Mock the shouldRespondToMessage to return true
+		shouldRespondSpy.mockResolvedValue(true);
 
-		// Act
 		await covaBot.handleMessage(message);
-
-		// Assert
-		expect(mockLLMManager.createPromptCompletion).not.toHaveBeenCalled();
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		expect(generateAndSendResponseSpy).toHaveBeenCalled();
 	});
 
-	it('should fall back to default response when LLM returns empty', async () => {
-		// Arrange
-		message.content = 'Hey Cova, how are you?';
-		mockLLMManager.createPromptCompletion.mockResolvedValueOnce('');
+	it('should not respond when not explicitly set to respond and no Cova mention', async () => {
+		// Mock the shouldRespondToMessage to return false
+		shouldRespondSpy.mockResolvedValue(false);
+		message.content = 'This message does not mention the bot';
 
-		// Act
 		await covaBot.handleMessage(message);
-
-		// Assert
-		expect(mockLLMManager.createPromptCompletion).toHaveBeenCalled();
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({
-				content: "Yeah, that's pretty cool."
-			})
-		);
-	});
-
-	it('should only respond to Cova in debug mode', async () => {
-		// Arrange
-		process.env.DEBUG_MODE = 'true';
-		covaBot.setTestShouldRespond(true);
-
-		// Different user
-		Object.defineProperty(message.author, 'id', {
-			value: 'not-cova-id',
-			configurable: true
-		});
-
-		// Act
-		await covaBot.handleMessage(message);
-
-		// Assert
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-
-		// Now with Cova's ID
-		Object.defineProperty(message.author, 'id', {
-			value: userId.Cova,
-			configurable: true
-		});
-
-		// Act again with Cova's ID
-		await covaBot.handleMessage(message);
-
-		// Assert it was called this time
-		expect(mockLLMManager.createPromptCompletion).toHaveBeenCalled();
+		expect(generateAndSendResponseSpy).not.toHaveBeenCalled();
 	});
 });

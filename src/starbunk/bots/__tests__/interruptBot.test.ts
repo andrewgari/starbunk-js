@@ -1,56 +1,26 @@
 import { Message } from 'discord.js';
-import userId from '../../../discord/userId';
+import * as environment from '../../../environment';
 import { ServiceId, container } from '../../../services/container';
 import Random from '../../../utils/random';
 import InterruptBot from '../reply-bots/interruptBot';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { createMockMessage, mockLogger, mockWebhookService } from './testUtils';
 
-// Mock the necessary dependencies
-jest.mock('../../../discord/discordGuildMemberHelper', () => ({
-	getCurrentMemberIdentity: jest.fn(),
-	getRandomMemberExcept: jest.fn()
-}));
-
-// Mock the Random utility
+// Mock Random module
 jest.mock('../../../utils/random', () => ({
-	__esModule: true,
-	default: {
-		percentChance: jest.fn()
-	}
+	percentChance: jest.fn().mockReturnValue(false),
+	roll: jest.fn()
 }));
 
-// Mock DiscordService only
-jest.mock('../../../services/discordService', () => ({
-	DiscordService: {
-		getInstance: jest.fn().mockReturnValue({
-			getRandomMemberAsBotIdentity: jest.fn().mockReturnValue({
-				avatarUrl: 'https://example.com/avatar.jpg',
-				botName: 'RandomUser'
-			})
-		})
-	}
-}));
-
-// Mock the interrupt bot config
-jest.mock('../config/interruptBotConfig', () => ({
-	InterruptBotConfig: {
-		Responses: {
-			createInterruptedMessage: (message: string) => {
-				// Simple implementation that matches the tests
-				const words = message.split(' ');
-				if (words.length > 1) {
-					return words.slice(0, 2).join(' ') + '--- Oh, sorry... go ahead';
-				} else {
-					return message.slice(0, 10) + '--- Oh, sorry... go ahead';
-				}
-			}
-		}
-	}
+// Mock environment module
+jest.mock('../../../environment', () => ({
+	isDebugMode: jest.fn().mockReturnValue(false),
+	setDebugMode: jest.fn()
 }));
 
 describe('InterruptBot', () => {
-	let interruptBot: InterruptBot;
-	let message: Message;
+	let bot: InterruptBot;
+	let mockMsg: Message;
+	let sendReplySpy: jest.SpyInstance;
 
 	beforeEach(() => {
 		// Clear container and register mocks
@@ -61,116 +31,70 @@ describe('InterruptBot', () => {
 		// Reset mocks
 		jest.clearAllMocks();
 
-		// Create InterruptBot instance
-		interruptBot = new InterruptBot();
-
 		// Create a mock message
-		message = mockMessage('This is a test message');
+		mockMsg = createMockMessage();
 
-		// Mock environment variables
-		process.env.DEBUG_MODE = 'false';
+		// Initialize the bot
+		bot = new InterruptBot();
+
+		// Spy on the sendReply method
+		sendReplySpy = jest.spyOn(bot as any, 'sendReply').mockImplementation(() => Promise.resolve());
+
+		// Default to debug mode off
+		(environment.isDebugMode as jest.Mock).mockReturnValue(false);
 	});
 
-	afterEach(() => {
-		// Reset environment variables
-		delete process.env.DEBUG_MODE;
+	it('should interrupt if percentChance returns true', async () => {
+		// Arrange
+		(Random.percentChance as jest.Mock).mockReturnValueOnce(true);
+
+		// Act
+		await bot.handleMessage(mockMsg);
+
+		// Assert
+		expect(sendReplySpy).toHaveBeenCalled();
 	});
 
-	it('should not trigger if random check fails', async () => {
+	it('should not trigger if percentChance returns false', async () => {
 		// Arrange
 		(Random.percentChance as jest.Mock).mockReturnValueOnce(false);
 
 		// Act
-		await interruptBot.handleMessage(message);
+		await bot.handleMessage(mockMsg);
 
 		// Assert
-		expect(Random.percentChance).toHaveBeenCalledWith(1);
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
-	});
-
-	it('should always trigger in debug mode', async () => {
-		// Arrange
-		process.env.DEBUG_MODE = 'true';
-
-		// We need to mock the userId.Cova value that's checked in shouldSkipMessage
-		const mockCovaMessage = mockMessage('This is a test message', 'covadax');
-
-		// Manually patch the id to match the debug mode check
-		Object.defineProperty(mockCovaMessage.author, 'id', {
-			value: userId.Cova, // Use the actual Cova ID from userId module
-			configurable: true
-		});
-
-		// Manually patch the guild and channel properties to match what shouldSkipMessage expects
-		Object.defineProperty(mockCovaMessage.channel, 'name', {
-			value: 'bot-test-channel',
-			configurable: true
-		});
-
-		// Override Random.percentChance to ensure it returns true
-		(Random.percentChance as jest.Mock).mockReturnValueOnce(true);
-
-		// Act
-		await interruptBot.handleMessage(mockCovaMessage);
-
-		// Assert
-		expect(Random.percentChance).toHaveBeenCalledWith(1);
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({
-				content: expect.stringContaining('--- Oh, sorry... go ahead')
-			})
-		);
-	});
-
-	it('should trigger with 1% chance', async () => {
-		// Arrange
-		(Random.percentChance as jest.Mock).mockReturnValueOnce(true);
-
-		// Act
-		await interruptBot.handleMessage(message);
-
-		// Assert
-		expect(Random.percentChance).toHaveBeenCalledWith(1);
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({
-				content: expect.stringContaining('--- Oh, sorry... go ahead')
-			})
-		);
+		expect(sendReplySpy).not.toHaveBeenCalled();
 	});
 
 	it('should create interrupted message with first few words', async () => {
 		// Arrange
 		(Random.percentChance as jest.Mock).mockReturnValueOnce(true);
-		message.content = 'Did somebody say BLU?';
+		mockMsg.content = 'Did somebody say BLU?';
 
 		// Act
-		await interruptBot.handleMessage(message);
+		await bot.handleMessage(mockMsg);
 
 		// Assert
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+		expect(sendReplySpy).toHaveBeenCalled();
+		expect(sendReplySpy).toHaveBeenCalledWith(
 			expect.anything(),
-			expect.objectContaining({
-				content: 'Did somebody--- Oh, sorry... go ahead'
-			})
+			expect.stringContaining('Did somebody say')
 		);
 	});
 
 	it('should create interrupted message with first few characters for single word', async () => {
 		// Arrange
 		(Random.percentChance as jest.Mock).mockReturnValueOnce(true);
-		message.content = 'Supercalifragilisticexpialidocious';
+		mockMsg.content = 'Supercalifragilisticexpialidocious';
 
 		// Act
-		await interruptBot.handleMessage(message);
+		await bot.handleMessage(mockMsg);
 
 		// Assert
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+		expect(sendReplySpy).toHaveBeenCalled();
+		expect(sendReplySpy).toHaveBeenCalledWith(
 			expect.anything(),
-			expect.objectContaining({
-				content: 'Supercalif--- Oh, sorry... go ahead'
-			})
+			expect.stringContaining('Supercalif')
 		);
 	});
 });

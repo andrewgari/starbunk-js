@@ -1,11 +1,11 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { isDebugMode, setDebugMode } from '../../environment';
 import { logger } from '../../services/logger';
-import { DebugUtils } from '../../utils/debug';
 
 export default {
 	data: new SlashCommandBuilder()
 		.setName('debug')
-		.setDescription('Toggle debug mode or get debug information')
+		.setDescription('Debug utilities')
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName('toggle')
@@ -14,16 +14,18 @@ export default {
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName('status')
-				.setDescription('Get current debug status')
+				.setDescription('Check current debug status')
 		)
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName('info')
-				.setDescription('Get detailed debug information')
+				.setDescription('Show debugging information')
 		),
+
 	async execute(interaction: CommandInteraction) {
-		// Only allow admins to use this command
-		if (!interaction.memberPermissions?.has('Administrator')) {
+		// Only allow certain users to use this command
+		const allowedUsers = ['139592376443338752']; // Cova's user ID
+		if (!allowedUsers.includes(interaction.user.id)) {
 			await interaction.reply({
 				content: 'You do not have permission to use this command.',
 				ephemeral: true
@@ -31,7 +33,7 @@ export default {
 			return;
 		}
 
-		// @ts-expect-error - getSubcommand exists on CommandInteractionOptionResolver
+		// @ts-expect-error - ChattySlashCommandBuilder does not generate proper types
 		const subcommand = interaction.options.getSubcommand();
 		let newStatus: string;
 		let status: string;
@@ -40,9 +42,9 @@ export default {
 
 		switch (subcommand) {
 			case 'toggle':
-			// Toggle debug mode
-				process.env.DEBUG_MODE = process.env.DEBUG_MODE === 'true' ? 'false' : 'true';
-				newStatus = process.env.DEBUG_MODE === 'true' ? 'enabled' : 'disabled';
+				// Toggle debug mode
+				setDebugMode(!isDebugMode());
+				newStatus = isDebugMode() ? 'enabled' : 'disabled';
 				logger.info(`Debug mode ${newStatus}`);
 				await interaction.reply({
 					content: `Debug mode is now ${newStatus}.`,
@@ -51,8 +53,8 @@ export default {
 				break;
 
 			case 'status':
-			// Get current debug status
-				status = DebugUtils.isDebugMode() ? 'enabled' : 'disabled';
+				// Get current debug status
+				status = isDebugMode() ? 'enabled' : 'disabled';
 				await interaction.reply({
 					content: `Debug mode is currently ${status}.`,
 					ephemeral: true
@@ -60,21 +62,21 @@ export default {
 				break;
 
 			case 'info':
-			// Get detailed debug information
+				// Get debug information
 				debugInfo = {
-					debugMode: DebugUtils.isDebugMode(),
-					environment: process.env.NODE_ENV,
+					nodeEnv: process.env.NODE_ENV,
+					debugMode: isDebugMode(),
 					platform: process.platform,
+					arch: process.arch,
 					nodeVersion: process.version,
 					uptime: Math.floor(process.uptime()) + ' seconds',
 					memoryUsage: process.memoryUsage(),
-					guildId: interaction.guildId,
-					channelId: interaction.channelId
+					timestamp: new Date().toISOString()
 				};
 
-				infoMessage = '**Debug Information:**\n```json\n';
-				infoMessage += JSON.stringify(debugInfo, null, 2);
-				infoMessage += '\n```';
+				infoMessage = '**Debug Information:**\n```json\n' +
+					JSON.stringify(debugInfo, null, 2) +
+					'\n```';
 
 				await interaction.reply({
 					content: infoMessage,
@@ -84,7 +86,7 @@ export default {
 
 			default:
 				await interaction.reply({
-					content: 'Unknown subcommand.',
+					content: 'Unknown subcommand',
 					ephemeral: true
 				});
 		}

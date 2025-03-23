@@ -1,3 +1,4 @@
+import { isDebugMode } from '@/environment';
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import roleIds from '../../discord/roleIds';
 import userId from '../../discord/userId';
@@ -34,7 +35,7 @@ export default {
 	async execute(interaction: CommandInteraction) {
 		const now = new Date(Date.now());
 		const nextRaid = getNextRaid(now);
-		const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Cova;
+		const targetUserId = isDebugMode() ? userId.Cova : userId.Cova;
 		const ephemeral = interaction.user.id === targetUserId ? true : false;
 		const tag = ephemeral ? `<@&${roleIds.RaidTeam}>\n` : '';
 		const timestamp = nextRaid.getTime() / 1000;

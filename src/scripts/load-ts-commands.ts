@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { Command } from '../discord/command';
+import { setDebugMode } from '../environment';
 import { logger } from '../services/logger';
 import { loadCommand } from '../util/moduleLoader';
 
 // Setup environment
 process.env.NODE_ENV = 'development';
-process.env.DEBUG = 'true';
+setDebugMode(true);
 process.env.TS_NODE_DEV = 'true';
 
 // Helper function to validate a command object

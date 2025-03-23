@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { isDebugMode } from '../environment';
 import { logger } from '../services/logger';
 
 /**
@@ -9,7 +10,7 @@ export class DebugUtils {
    * Check if debug mode is enabled
    */
 	static isDebugMode(): boolean {
-		return process.env.DEBUG_MODE === 'true';
+		return isDebugMode();
 	}
 
 	/**

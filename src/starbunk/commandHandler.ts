@@ -2,6 +2,7 @@ import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCo
 import fs from 'fs';
 import path from 'path';
 import { Command } from '../discord/command';
+import { isDebugMode } from '../environment';
 import { logger } from '../services/logger';
 import { loadCommand } from '../util/moduleLoader';
 
@@ -26,7 +27,7 @@ export class CommandHandler {
 		try {
 			// Determine if we're in development mode
 			const isDev = process.env.NODE_ENV === 'development';
-			const isDebug = process.env.DEBUG === 'true';
+			const isDebug = isDebugMode();
 
 			// Check if we're running under ts-node
 			const isTsNode = process.argv[0].includes('ts-node') ||

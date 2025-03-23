@@ -62,7 +62,8 @@
 		"openai": "^4.87.3",
 		"opusscript": "^0.0.8",
 		"play-dl": "^1.9.7",
-		"ytdl-core": "^4.11.5"
+		"ytdl-core": "^4.11.5",
+		"zod": "^3.24.2"
 	},
 	"devDependencies": {
 		"@testing-library/jest-dom": "^6.6.3",

@@ -1,4 +1,5 @@
 import { TextChannel, WebhookClient } from 'discord.js';
+import environment from '../environment';
 import { Logger, WebhookService as WebhookServiceInterface } from '../services/container';
 import { MessageInfo } from './types';
 
@@ -11,7 +12,7 @@ export class WebhookService implements WebhookServiceInterface {
 
 	constructor(logger: Logger) {
 		this.logger = logger;
-		const webhookUrl = process.env.WEBHOOK_URL;
+		const webhookUrl = environment.discord.WEBHOOK_URL;
 		if (webhookUrl) {
 			try {
 				this.webhookClient = new WebhookClient({ url: webhookUrl });

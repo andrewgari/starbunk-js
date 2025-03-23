@@ -3,6 +3,7 @@ import { Message, TextChannel } from 'discord.js';
 import channelIds from '../../discord/channelIds';
 import guildIds from '../../discord/guildIds';
 import userId from '../../discord/userId';
+import { isDebugMode } from '../../environment';
 import { getWebhookService } from '../../services/bootstrap';
 import { logger } from '../../services/logger';
 
@@ -74,7 +75,7 @@ export default abstract class ReplyBot {
 		}
 
 		// In debug mode, only process messages from Cova or in the testing channel
-		if (process.env.DEBUG_MODE === 'true') {
+		if (isDebugMode()) {
 			const isFromCova = message.author.id === userId.Cova;
 			const isInTestingChannel = message.channelId === channelIds.Starbunk.BotChannelAdmin;
 			const isInStarbunkGuild = message.guild?.id === guildIds.StarbunkCrusaders;

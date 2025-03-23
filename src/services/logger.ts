@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { isDebugMode } from '../environment';
 import { Logger as LoggerInterface } from './container';
 
 export enum LogLevel {
@@ -15,7 +16,7 @@ export enum LogLevel {
 export class Logger implements LoggerInterface {
 	// accept a spread of parameters
 	debug(message: string, ...args: unknown[]): void {
-		if (process.env.DEBUG_MODE === 'true') {
+		if (isDebugMode()) {
 			console.debug(this.formatMessage(chalk.blue(message), '🐛'), ...args);
 		}
 	}

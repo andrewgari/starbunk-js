@@ -1,3 +1,4 @@
+import environment from '../../environment';
 import { Logger } from '../logger';
 import { LLMService, LLMServiceConfig } from './llmService';
 import { OllamaProvider } from './providers/ollamaProvider';
@@ -9,6 +10,16 @@ import { OpenAIProvider } from './providers/openaiProvider';
 export enum LLMProviderType {
 	OPENAI = 'openai',
 	OLLAMA = 'ollama'
+}
+
+/**
+ * Error class for LLM provider errors
+ */
+export class LLMProviderError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'LLMProviderError';
+	}
 }
 
 /**
@@ -27,7 +38,7 @@ export class LLMFactory {
 			case LLMProviderType.OLLAMA:
 				return new OllamaProvider(config);
 			default:
-				throw new Error(`Unsupported LLM provider type: ${type}`);
+				throw new LLMProviderError(`Unknown LLM provider type: ${type}`);
 		}
 	}
 
@@ -40,22 +51,22 @@ export class LLMFactory {
 		switch (type) {
 			case LLMProviderType.OPENAI: {
 				const config: LLMServiceConfig = {
-					defaultModel: process.env.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini',
-					apiKey: process.env.OPENAI_API_KEY,
-					logger
+					logger,
+					defaultModel: environment.llm.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini',
+					apiKey: environment.llm.OPENAI_API_KEY || '',
 				};
-				return new OpenAIProvider(config);
+				return this.createProvider(type, config);
 			}
 			case LLMProviderType.OLLAMA: {
 				const config: LLMServiceConfig = {
-					defaultModel: process.env.OLLAMA_DEFAULT_MODEL || 'llama3',
-					apiUrl: process.env.OLLAMA_API_URL || 'http://localhost:11434',
-					logger
+					logger,
+					defaultModel: environment.llm.OLLAMA_DEFAULT_MODEL || 'llama3:4b',
+					apiUrl: environment.llm.OLLAMA_API_URL || 'http://localhost:11434',
 				};
-				return new OllamaProvider(config);
+				return this.createProvider(type, config);
 			}
 			default:
-				throw new Error(`Unsupported LLM provider type: ${type}`);
+				throw new LLMProviderError(`Unknown LLM provider type: ${type}`);
 		}
 	}
 }
