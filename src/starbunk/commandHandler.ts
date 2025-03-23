@@ -29,6 +29,11 @@ export class CommandHandler {
 			const isDev = process.env.NODE_ENV === 'development';
 			const isDebug = isDebugMode();
 
+			// Setting TS_NODE_DEV for path resolution in TypeScript modules
+			if (isDev) {
+				process.env.TS_NODE_DEV = 'true';
+			}
+
 			// Check if we're running under ts-node
 			const isTsNode = process.argv[0].includes('ts-node') ||
 				(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
@@ -70,6 +75,9 @@ export class CommandHandler {
 				try {
 					logger.info(`Loading command from file: ${path.basename(commandFile)}`);
 
+					// Try more approaches to load the command
+					let command = null;
+
 					// Try direct require first which works better in our diagnostic script
 					try {
 						logger.info(`Attempting direct require for ${path.basename(commandFile)}`);
@@ -77,8 +85,6 @@ export class CommandHandler {
 						const commandModule = require(commandFile.replace(/\.ts$/, ''));
 
 						if (commandModule) {
-							let command = null;
-
 							// Check if it's a direct command object
 							if (commandModule.data && commandModule.execute) {
 								command = commandModule;
@@ -108,14 +114,41 @@ export class CommandHandler {
 					}
 
 					// Fall back to loadCommand utility
-					const command = await loadCommand(commandFile);
+					command = await loadCommand(commandFile);
 
 					if (command) {
 						this.registerCommand(command);
 						logger.info(`✅ Command loaded successfully via loadCommand: ${command.data.name}`);
 						successCount++;
 					} else {
-						logger.warn(`⚠️ No command object returned from: ${commandFile}`);
+						// Final fallback: use an import statement
+						try {
+							// For .ts files specifically in development
+							if (isDev && commandFile.endsWith('.ts')) {
+								// Use the script in src/scripts/load-ts-commands.ts as a reference
+								// Using import() dynamically
+								const filePath = path.basename(commandFile);
+								logger.info(`Attempting dynamic import for: ${filePath}`);
+
+								// This is the last attempt to load the command
+								import(`../starbunk/commands/${filePath.replace(/\.ts$/, '')}`).then((module) => {
+									const cmd = module.default;
+									if (cmd && cmd.data && cmd.execute) {
+										this.registerCommand(cmd);
+										logger.info(`✅ Command loaded successfully via import(): ${cmd.data.name}`);
+										successCount++;
+									} else {
+										logger.warn(`⚠️ No valid command found in module via import(): ${filePath}`);
+									}
+								}).catch((err) => {
+									logger.warn(`⚠️ Dynamic import failed for ${filePath}: ${err.message}`);
+								});
+							} else {
+								logger.warn(`⚠️ No command object returned from: ${commandFile}`);
+							}
+						} catch (importError) {
+							logger.warn(`⚠️ Final import attempt failed for ${path.basename(commandFile)}: ${importError instanceof Error ? importError.message : String(importError)}`);
+						}
 					}
 				} catch (error) {
 					logger.error(`❌ Failed to load command: ${commandFile}`, error instanceof Error ? error : new Error(String(error)));
@@ -128,6 +161,8 @@ export class CommandHandler {
 				// Register commands with Discord API
 				await this.registerDiscordCommands();
 				logger.info('Commands registered successfully');
+			} else {
+				logger.warn('No commands were loaded, skipping Discord API registration');
 			}
 		} catch (error) {
 			logger.error('Error loading commands:', error instanceof Error ? error : new Error(String(error)));
@@ -144,7 +179,9 @@ export class CommandHandler {
 				throw new Error('GUILD_ID not set in environment variables');
 			}
 
-			const rest = new REST({ version: '9' }).setToken(process.env.TOKEN || '');
+			// Use STARBUNK_TOKEN instead of TOKEN
+			const token = process.env.STARBUNK_TOKEN || process.env.TOKEN || '';
+			const rest = new REST({ version: '9' }).setToken(token);
 			const commandData: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 
 			// Collect all command data, converting SlashCommandBuilder to JSON if needed
@@ -161,6 +198,7 @@ export class CommandHandler {
 			});
 
 			logger.debug(`Registering ${commandData.length} commands with Discord API`);
+			logger.debug(`Command data: ${JSON.stringify(commandData.map(cmd => cmd.name))}`);
 
 			// Only register commands if we have some
 			if (commandData.length > 0) {
