@@ -171,7 +171,7 @@ function isReplyBot(obj: unknown): boolean {
 	const possibleBot = obj as Record<string, unknown>;
 
 	// Debug: Log the keys to help diagnose issues
-	if (process.env.DEBUG === 'true') {
+	if (isDebugMode()) {
 		logger.debug(`Checking if object is ReplyBot. Keys: ${Object.keys(possibleBot).join(', ')}`);
 
 		// Check each required property and log the result
@@ -389,7 +389,7 @@ export function scanDirectory(dirPath: string, fileExtension: string): string[] 
 	const isTsNode = process.argv[0].includes('ts-node') ||
 		(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
 	const isDev = process.env.NODE_ENV === 'development';
-	const isDebug = process.env.DEBUG === 'true';
+	const isDebug = isDebugMode();
 
 	logger.info(`Scanning directory: ${dirPath} for files with extension ${fileExtension}`);
 	logger.info(`Environment: ts-node=${isTsNode}, dev=${isDev}, debug=${isDebug}`);

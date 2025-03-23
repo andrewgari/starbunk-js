@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
+import { setDebugMode } from '../environment';
 import { logger } from '../services/logger';
 import ReplyBot from '../starbunk/bots/replyBot';
 import { loadBot } from '../util/moduleLoader';
 
 // Setup environment
 process.env.NODE_ENV = 'development';
-process.env.DEBUG = 'true';
+setDebugMode(true);
 process.env.TS_NODE_DEV = 'true';
 
 // Helper function to validate a bot instance

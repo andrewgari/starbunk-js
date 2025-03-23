@@ -42,7 +42,7 @@ export function integer(min: number, max: number): number {
  */
 export function percentChance(percent: number): boolean {
 	// In debug mode, always return true
-	if (process.env.DEBUG === 'true') {
+	if (isDebugMode()) {
 		return true;
 	}
 

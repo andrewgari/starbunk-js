@@ -2,6 +2,7 @@ import { PlayerSubscription } from '@discordjs/voice';
 import { Base, Client, Collection, Events, GatewayIntentBits, Interaction, Message, VoiceState } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
+import { isDebugMode } from '../environment';
 import { logger } from '../services/logger';
 import { loadBot } from '../util/moduleLoader';
 import ReplyBot from './bots/replyBot';
@@ -167,7 +168,7 @@ export default class StarbunkClient extends Client {
 		try {
 			// Determine if we're in development mode
 			const isDev = process.env.NODE_ENV === 'development';
-			const isDebug = process.env.DEBUG === 'true';
+			const isDebug = isDebugMode();
 
 			// Setting TS_NODE_DEV for path resolution in TypeScript modules
 			if (isDev) {
