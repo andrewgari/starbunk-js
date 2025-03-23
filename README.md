@@ -2,6 +2,10 @@
 
 A Discord bot system built using Discord.js, featuring two main bots (Starbunk and Snowbunk) with multiple specialized reply bots.
 
+## Recent Changes
+- **Fixed Module Loading**: Fixed an issue where bots and commands weren't loading in production mode. The path resolution now properly checks if running in development or production mode and uses the appropriate directory (src vs dist).
+- **Removed Unused Scripts**: Removed the `scripts/check-docker-boot.js` script which was no longer needed. Updated package.json to remove references to this script.
+
 ## Architecture
 
 The application uses an Observer pattern where the main clients (StarbunkClient and SnowbunkClient) act as observable subjects that notify various bot observers when messages or voice events occur.

@@ -197,7 +197,9 @@ export default class StarbunkClient extends Client {
 			const fileExtension = (isDev || isTsNode) ? devExtension : prodExtension;
 
 			// When running in development or using ts-node, we use the src directory path
-			const botDir = path.resolve('./src/starbunk/bots/reply-bots');
+			// In production, use the dist directory
+			const baseDir = (isDev || isTsNode) ? './src' : './dist';
+			const botDir = path.resolve(`${baseDir}/starbunk/bots/reply-bots`);
 
 			logger.debug(`Looking for bots in: ${botDir}`);
 			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
