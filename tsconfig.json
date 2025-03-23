@@ -17,7 +17,7 @@
     "forceConsistentCasingInFileNames": true,
     "removeComments": true,
     "sourceMap": true,
-    "baseUrl": "./",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     },
@@ -26,5 +26,9 @@
   },
   "files": ["src/bunkbot.ts"],
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/**/__tests__/*"]
+  "exclude": ["node_modules", "dist", "src/**/__tests__/*"],
+  "ts-node": {
+    "require": ["tsconfig-paths/register"],
+    "transpileOnly": true
+  }
 }
