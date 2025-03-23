@@ -51,7 +51,9 @@ export class CommandHandler {
 			const fileExtension = (isDev || isTsNode) ? devExtension : prodExtension;
 
 			// When running in development or using ts-node, we use the src directory path
-			const commandDir = path.resolve('./src/starbunk/commands');
+			// In production, use the dist directory
+			const baseDir = (isDev || isTsNode) ? './src' : './dist';
+			const commandDir = path.resolve(`${baseDir}/starbunk/commands`);
 
 			logger.debug(`Looking for commands in: ${commandDir}`);
 			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
