@@ -116,6 +116,15 @@ export default class BlueBot extends ReplyBot {
 	private async isSomeoneRespondingToBlu(content: string): Promise<boolean> {
 		logger.debug(`[${this.defaultBotName}] Checking if message is responding to Blue`);
 		try {
+			// Check if this is within a recent timeframe of the last blue mention
+			const now = new Date();
+			const isRecentBlueReference = isWithinTimeframe(this._blueTimestamp, 2, TimeUnit.MINUTE, now);
+
+			if (!isRecentBlueReference) {
+				logger.debug(`[${this.defaultBotName}] Not a recent reference to Blue`);
+				return false;
+			}
+
 			// Try regex first for quick response
 			const regexResult = BlueBotConfig.Patterns.Confirm?.test(content) ?? false;
 			if (regexResult) {
@@ -123,24 +132,24 @@ export default class BlueBot extends ReplyBot {
 				return true;
 			}
 
-			// Use LLM for more complex analysis if available
-			if (this._hasLLM && this.llmManager) {
-				try {
-					const response = await this.llmManager.createSimpleCompletion(
-						LLMProviderType.OLLAMA,
-						`Is this message responding to a previous "blu?" message? Message: "${content}"`,
-						undefined,
-						true
-					);
+			// // Use LLM for more complex analysis if available
+			// if (this._hasLLM && this.llmManager) {
+			// 	try {
+			// 		const response = await this.llmManager.createSimpleCompletion(
+			// 			LLMProviderType.OLLAMA,
+			// 			`Is this message responding to a previous "blu?" message? Message: "${content}"`,
+			// 			undefined,
+			// 			true
+			// 		);
 
-					const result = response.toLowerCase().includes('yes');
-					logger.debug(`[${this.defaultBotName}] LLM response check result: ${result}`);
-					return result;
-				} catch (error) {
-					logger.warn(`[${this.defaultBotName}] LLM failed for response check, falling back to regex: ${error instanceof Error ? error.message : String(error)}`);
-					return regexResult;
-				}
-			}
+			// 		const result = response.toLowerCase().includes('yes');
+			// 		logger.debug(`[${this.defaultBotName}] LLM response check result: ${result}`);
+			// 		return result;
+			// 	} catch (error) {
+			// 		logger.warn(`[${this.defaultBotName}] LLM failed for response check, falling back to regex: ${error instanceof Error ? error.message : String(error)}`);
+			// 		return regexResult;
+			// 	}
+			// }
 
 			// Fall back to regex result if LLM not available
 			return regexResult;
