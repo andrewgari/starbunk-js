@@ -155,45 +155,15 @@ export default class CovaBot extends ReplyBot {
 		const isFromCova = authorId === userId.Cova;
 		// In debug mode, ONLY respond to Cova's messages
 		if (isDebugMode()) {
-			logger.debug(`[${this.defaultBotName}] DEBUG MODE: Message from ${authorUsername} (${authorId}), isFromCova=${isFromCova}`);
 			if (!isFromCova) {
-				logger.debug(`[${this.defaultBotName}] DEBUG MODE: Skipping message from ${authorUsername} (not Cova)`);
-				if (mentionsCova) {
-					console.log(`[${this.defaultBotName}] ❌ DEBUG MODE: SKIPPING MESSAGE CONTAINING 'COVA' (not from Cova): "${message.content}"`);
-				}
 				return true;
-			} else {
-				logger.debug(`[${this.defaultBotName}] DEBUG MODE: Processing message from Cova`);
-				return false;
 			}
 		}
 
-		// Regular mode: skip messages from the real Cova and ignored users
-		const isFromRealCova = authorId === userId.Cova;
-		const isIgnoredUser = CovaBotConfig.IgnoreUsers && CovaBotConfig.IgnoreUsers.includes(authorId);
-
-		logger.debug(`[${this.defaultBotName}] shouldSkipMessage: isFromRealCova=${isFromRealCova}, isIgnoredUser=${isIgnoredUser}`);
-
-		if (isFromRealCova) {
-			logger.debug(`[${this.defaultBotName}] shouldSkipMessage: Skipping message from the real Cova`);
-			if (mentionsCova) {
-				console.log(`[${this.defaultBotName}] ❌ SKIPPING MESSAGE CONTAINING 'COVA' (from real Cova): "${message.content}"`);
-			}
+		if (isFromCova) {
 			return true;
 		}
 
-		if (isIgnoredUser) {
-			logger.debug(`[${this.defaultBotName}] shouldSkipMessage: Skipping message from ignored user ${authorUsername} (${authorId})`);
-			if (mentionsCova) {
-				console.log(`[${this.defaultBotName}] ❌ SKIPPING MESSAGE CONTAINING 'COVA' (from ignored user): "${message.content}"`);
-			}
-			return true;
-		}
-
-		logger.debug(`[${this.defaultBotName}] shouldSkipMessage: Message will be processed`);
-		if (mentionsCova) {
-			console.log(`[${this.defaultBotName}] ✅ WILL PROCESS MESSAGE CONTAINING 'COVA': "${message.content}"`);
-		}
 		return false;
 	}
 

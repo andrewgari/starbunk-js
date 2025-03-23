@@ -1,6 +1,5 @@
 import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
-import channelIds from '../../discord/channelIds';
 import guildIds from '../../discord/guildIds';
 import userId from '../../discord/userId';
 import { isDebugMode } from '../../environment';
@@ -62,12 +61,6 @@ export default abstract class ReplyBot {
 	 * @returns true if the message should be skipped, false otherwise
 	 */
 	protected shouldSkipMessage(message: Message): boolean {
-		// Early reject if message is from self
-		if (message.author.username === this.defaultBotName) {
-			logger.debug(`[${this.defaultBotName}] Skipping message from self`);
-			return true;
-		}
-
 		// Skip messages from any bot if skipBotMessages is true
 		if (this.skipBotMessages && message.author.bot) {
 			logger.debug(`[${this.defaultBotName}] Skipping message from bot (skipBotMessages=true)`);
@@ -76,28 +69,23 @@ export default abstract class ReplyBot {
 
 		// In debug mode, only process messages from Cova or in the testing channel
 		if (isDebugMode()) {
-			const isFromCova = message.author.id === userId.Cova;
-			const isInTestingChannel = message.channelId === channelIds.Starbunk.BotChannelAdmin;
-			const isInStarbunkGuild = message.guild?.id === guildIds.StarbunkCrusaders;
-
-			// Get channel name safely
-			const channelName = 'name' in message.channel ? message.channel.name : 'unknown';
-
+			// log message details
 			logger.debug(`[${this.defaultBotName}] DEBUG MODE - Message details:
 				Author: ${message.author.tag} (ID: ${message.author.id})
-				Is from Cova: ${isFromCova}
-				Channel: ${channelName} (ID: ${message.channelId})
-				Is in testing channel: ${isInTestingChannel}
-				Guild: ${message.guild?.name || 'unknown'} (ID: ${message.guild?.id || 'unknown'})
-				Is in Starbunk guild: ${isInStarbunkGuild}
+				Channel: ${message.channel.type === 0 ? message.channel.name : 'DM/unknown'} (ID: ${message.channelId})
+				Guild: ${message.guild?.name} (ID: ${message.guild?.id})
 			`);
 
-			// Allow messages from Cova or in the testing channel in the Starbunk guild
-			if (!isFromCova && !(isInTestingChannel && isInStarbunkGuild)) {
-				logger.debug(`[${this.defaultBotName}] Skipping message in debug mode (not from Cova and not in testing channel)`);
+			// Skip messages from Starbunk guild
+			logger.debug(`[${this.defaultBotName}] DEBUG MODE - Message guild ID: ${message.guild?.id}`);
+			if (message.guild?.id === guildIds.StarbunkCrusaders) {
 				return true;
-			} else {
-				logger.debug(`[${this.defaultBotName}] Processing message in debug mode (from Cova or in testing channel)`);
+			}
+
+			// Skip messages from Cova
+			logger.debug(`[${this.defaultBotName}] DEBUG MODE - Message author ID: ${message.author.id}`);
+			if (message.author.id === userId.Cova) {
+				return true;
 			}
 		}
 
