@@ -42,25 +42,17 @@ describe('AttitudeBot', () => {
 
 		// Create AttitudeBot instance
 		attitudeBot = new AttitudeBot();
-
-		// Check the pattern
 	});
 
 	it('should respond to messages containing phrases like "I can\'t"', async () => {
 		const message = mockMessage('I can\'t do this anymore');
 
-		// Log for debugging
-		console.log('Message content:', message.content);
-		console.log('Regex test result:', AttitudeBotConfig.Patterns.Default?.test(message.content));
-
 		// Add a spy to the sendReply method
-		const sendReplySpy = jest.spyOn(attitudeBot, 'sendReply');
+		const sendReplySpy = jest.spyOn(attitudeBot as any, 'sendReply');
 
 		await attitudeBot.handleMessage(message);
 
-		// Check if sendReply was called
-		console.log('sendReply called:', sendReplySpy.mock.calls.length);
-
+		expect(sendReplySpy).toHaveBeenCalled();
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({

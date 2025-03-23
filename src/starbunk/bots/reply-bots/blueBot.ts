@@ -1,3 +1,4 @@
+import { isDebugMode } from '@/environment';
 import { Message, TextChannel } from 'discord.js';
 import userId from '../../../discord/userId';
 import { getLLMManager } from '../../../services/bootstrap';
@@ -191,7 +192,7 @@ export default class BlueBot extends ReplyBot {
 	private async isVennInsultingBlu(message: Message): Promise<boolean> {
 		logger.debug(`[${this.defaultBotName}] Checking if Venn is insulting Blue`);
 		try {
-			const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Venn;
+			const targetUserId = isDebugMode() ? userId.Cova : userId.Venn;
 			const isTargetUser = message.author.id === targetUserId;
 			if (!isTargetUser) {
 				logger.debug(`[${this.defaultBotName}] Message not from target user for insult check`);

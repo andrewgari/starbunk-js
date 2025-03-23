@@ -1,3 +1,4 @@
+import { isDebugMode } from '@/environment';
 import { Message, TextChannel } from 'discord.js';
 import userId from '../../../discord/userId';
 import { DiscordService } from '../../../services/discordService';
@@ -33,7 +34,7 @@ export default class VennBot extends ReplyBot {
 			const isCringe = VennBotConfig.Patterns.Default?.test(content) ?? false;
 			logger.debug(`[${this.defaultBotName}] Cringe check result: ${isCringe}`);
 
-			const targetUserId = process.env.DEBUG_MODE === 'true' ? userId.Cova : userId.Venn;
+			const targetUserId = isDebugMode() ? userId.Cova : userId.Venn;
 			const isTargetUser = message.author.id === targetUserId;
 			logger.debug(`[${this.defaultBotName}] Target user check: isTarget=${isTargetUser}`);
 

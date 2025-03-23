@@ -1,13 +1,27 @@
 import { Message, TextChannel } from 'discord.js';
 import userId from '../../../discord/userId';
+import { isDebugMode } from '../../../environment';
 import { getDiscordClient, getDiscordService, getLLMManager } from '../../../services/bootstrap';
-import { LLMProviderType } from '../../../services/llm';
+import { LLMProviderType } from '../../../services/llm/llmFactory';
 import { PromptType } from '../../../services/llm/promptManager';
-import { covaResponseDecisionPrompt } from '../../../services/llm/prompts/covaEmulatorPrompt';
 import { logger } from '../../../services/logger';
 import { BotIdentity } from '../../types/botIdentity';
 import { CovaBotConfig } from '../config/covaBotConfig';
 import ReplyBot from '../replyBot';
+
+// Decision prompt for CovaBot response
+const covaResponseDecisionPrompt = `You are helping determine if a Discord message should get a response from a bot.
+Answer with ONE of these options only: YES, LIKELY, UNLIKELY, or NO.
+Respond to messages that:
+- Ask the bot a direct question
+- Explicitly invite the bot to comment
+- Discuss topics the bot would have interesting input on
+- Continue a conversation the bot is already in
+Do NOT respond to:
+- Messages that aren't looking for a response
+- Commands for other bots
+- Technical discussions or code that don't need the bot's input
+- Messages that don't seem to be seeking further conversation`;
 
 export default class CovaBot extends ReplyBot {
 	private _botIdentity: BotIdentity;
@@ -26,22 +40,15 @@ export default class CovaBot extends ReplyBot {
 		};
 		logger.debug(`[${this.defaultBotName}] Initial bot identity: ${JSON.stringify(this._botIdentity)}`);
 
-		// Try to get Cova's real identity
-		this.updateBotIdentity();
-
 		// Very explicit debug mode check for verification
-		if (process.env.DEBUG === 'true') {
+		if (isDebugMode()) {
+			this.updateBotIdentity();
+
 			logger.warn(`[${this.defaultBotName}] DEBUG MODE IS ACTIVE - WILL ONLY RESPOND TO COVA MESSAGES`);
 			console.log(`[${this.defaultBotName}] DEBUG MODE IS ACTIVE - WILL ONLY RESPOND TO COVA MESSAGES`);
 		} else {
 			logger.warn(`[${this.defaultBotName}] Normal mode - will ignore messages from Cova`);
 			console.log(`[${this.defaultBotName}] Normal mode - will ignore messages from Cova`);
-		}
-
-		// Add testing mode check
-		if (process.env.TESTING_MODE === 'true') {
-			logger.warn(`[${this.defaultBotName}] TESTING MODE IS ACTIVE - WILL RESPOND TO MESSAGES MENTIONING COVA`);
-			console.log(`[${this.defaultBotName}] TESTING MODE IS ACTIVE - WILL RESPOND TO MESSAGES MENTIONING COVA`);
 		}
 
 		logger.debug(`[${this.defaultBotName}] Configuration loaded: ResponseRate=${CovaBotConfig.ResponseRate}, IgnoreUsers=${JSON.stringify(CovaBotConfig.IgnoreUsers)}`);
@@ -131,25 +138,8 @@ export default class CovaBot extends ReplyBot {
 			return true;
 		}
 
-		// In testing mode, respond to messages mentioning Cova
-		if (process.env.TESTING_MODE === 'true') {
-			const messageContent = message.content.toLowerCase();
-			const mentionsCova = messageContent.includes('cova');
-			logger.debug(`[${this.defaultBotName}] TESTING MODE: Message from ${authorUsername} (${authorId}), mentionsCova=${mentionsCova}`);
-
-			if (mentionsCova) {
-				logger.debug(`[${this.defaultBotName}] TESTING MODE: Processing message mentioning Cova: "${message.content}"`);
-				console.log(`[${this.defaultBotName}] ✅ TESTING MODE: WILL PROCESS MESSAGE MENTIONING COVA: "${message.content}"`);
-				return false;
-			} else {
-				if (mentionsCova) {
-					console.log(`[${this.defaultBotName}] ❌ SKIPPING MESSAGE CONTAINING 'COVA' (testing mode - logic error): "${message.content}"`);
-				}
-			}
-		}
-
 		// In debug mode, ONLY respond to Cova's messages
-		if (process.env.DEBUG === 'true') {
+		if (isDebugMode()) {
 			const isFromCova = authorId === userId.Cova;
 			logger.debug(`[${this.defaultBotName}] DEBUG MODE: Message from ${authorUsername} (${authorId}), isFromCova=${isFromCova}`);
 			if (!isFromCova) {

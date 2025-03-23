@@ -68,12 +68,12 @@ describe('InterruptBot', () => {
 		message = mockMessage('This is a test message');
 
 		// Mock environment variables
-		process.env.DEBUG_MODE = 'false';
+		process.env.DEBUG = 'false';
 	});
 
 	afterEach(() => {
 		// Reset environment variables
-		delete process.env.DEBUG_MODE;
+		delete process.env.DEBUG;
 	});
 
 	it('should not trigger if random check fails', async () => {
@@ -90,7 +90,7 @@ describe('InterruptBot', () => {
 
 	it('should always trigger in debug mode', async () => {
 		// Arrange
-		process.env.DEBUG_MODE = 'true';
+		process.env.DEBUG = 'true';
 
 		// We need to mock the userId.Cova value that's checked in shouldSkipMessage
 		const mockCovaMessage = mockMessage('This is a test message', 'covadax');

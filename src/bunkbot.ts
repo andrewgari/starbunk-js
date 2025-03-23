@@ -1,19 +1,7 @@
 // Register module aliases for path resolution
-// Import config first to ensure environment variables are loaded
-import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
-
-// More robust .env loading with better error messages
-const envPath = path.resolve(__dirname, '../.env');
-if (fs.existsSync(envPath)) {
-	dotenv.config({ path: envPath });
-	console.log(`Loaded environment from ${envPath}`);
-} else {
-	console.warn(`No .env file found at ${envPath}, relying on system environment variables`);
-}
-
+// Import environment first to ensure environment variables are loaded
 import { GatewayIntentBits } from 'discord.js';
+import environment, { isDebugMode } from './environment';
 import { logger } from './services/logger';
 import SnowbunkClient from './snowbunk/snowbunkClient';
 import StarbunkClient from './starbunk/starbunkClient';
@@ -21,19 +9,7 @@ import StarbunkClient from './starbunk/starbunkClient';
 export async function runStarbunkBot(): Promise<void> {
 	logger.info('Starting Starbunk bot');
 	try {
-		const token = process.env.STARBUNK_TOKEN;
-		const clientId = process.env.CLIENT_ID;
-
-		// More informative error message for troubleshooting
-		if (!token) {
-			logger.error('STARBUNK_TOKEN environment variable is not set. Check your .env file or container environment variables.');
-			throw new Error('STARBUNK_TOKEN environment variable is not set');
-		}
-
-		if (!clientId) {
-			logger.error('CLIENT_ID environment variable is not set. Check your .env file or container environment variables.');
-			throw new Error('CLIENT_ID environment variable is not set');
-		}
+		const token = environment.discord.STARBUNK_TOKEN;
 
 		logger.debug('Creating StarbunkClient');
 		const client = new StarbunkClient();
@@ -53,12 +29,19 @@ export async function runStarbunkBot(): Promise<void> {
 			throw error;
 		}
 
+		// If we're in testing mode, don't try to connect to Discord
+		if (isDebugMode()) {
+			logger.info('Running in testing mode - skipping Discord login');
+			return;
+		}
+
+		// Log in to Discord
 		logger.info('Logging in to Discord');
 		try {
 			await client.login(token);
-			logger.info('Successfully logged in to Discord');
 		} catch (error) {
 			logger.error('Failed to log in to Discord:', error instanceof Error ? error : new Error(String(error)));
+			client.destroy();
 			throw error;
 		}
 
@@ -100,7 +83,7 @@ export async function runStarbunkBot(): Promise<void> {
 		logger.info('Bot startup complete');
 	} catch (error) {
 		logger.error('Fatal error during bot startup:', error instanceof Error ? error : new Error(String(error)));
-		process.exit(1);
+		throw error;
 	}
 }
 
@@ -130,7 +113,19 @@ const runSnowbunkBot = async (): Promise<void> => {
 		throw error;
 	}
 
-	await snowbunk.login(process.env.SNOWBUNK_TOKEN);
+	// If we're in testing mode, don't try to connect to Discord
+	if (isDebugMode()) {
+		logger.info('Running in testing mode - skipping Snowbunk Discord login');
+		return;
+	}
+
+	// Login to Discord
+	try {
+		await snowbunk.login(environment.discord.SNOWBUNK_TOKEN);
+	} catch (error) {
+		logger.error('Failed to log in to Discord with Snowbunk:', error instanceof Error ? error : new Error(String(error)));
+		throw error;
+	}
 };
 
 const runBots = async (): Promise<void> => {

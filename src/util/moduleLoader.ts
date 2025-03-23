@@ -1,3 +1,4 @@
+import { isDebugMode } from '@/environment';
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
@@ -329,7 +330,7 @@ export async function loadCommand(commandPath: string): Promise<Command | null> 
 
 		// If we've reached here, we couldn't find a valid command object
 		// Create a placeholder command for testing
-		if (process.env.DEBUG_MODE === 'true') {
+		if (isDebugMode()) {
 			logger.warn(`Creating placeholder command for ${path.basename(commandPath)}`);
 
 			const fileName = path.basename(commandPath, path.extname(commandPath));
