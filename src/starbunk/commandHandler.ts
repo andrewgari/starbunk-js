@@ -1,8 +1,9 @@
 import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
-import path, { join } from 'path';
+import fs from 'fs';
+import path from 'path';
 import { Command } from '../discord/command';
 import { logger } from '../services/logger';
-import { loadCommand, scanDirectory } from '../util/moduleLoader';
+import { loadCommand } from '../util/moduleLoader';
 
 export class CommandHandler {
 	private commands: Collection<string, Command> = new Collection();
@@ -25,61 +26,93 @@ export class CommandHandler {
 		try {
 			// Determine if we're in development mode
 			const isDev = process.env.NODE_ENV === 'development';
+			const isDebug = process.env.DEBUG === 'true';
 
 			// Check if we're running under ts-node
 			const isTsNode = process.argv[0].includes('ts-node') ||
 				(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
 			logger.debug(`Running with ts-node: ${isTsNode}`);
 
-			// We need to check both src and dist directories
-			const srcPath = join(__dirname.replace('/dist/', '/src/'), 'commands');
-			const distPath = join(__dirname, 'commands');
-
-			// Try src directory first in development mode or when using ts-node
-			const primaryPath = (isDev || isTsNode) ? srcPath : distPath;
-			const primaryExt = (isDev || isTsNode) ? '.ts' : '.js';
-			const backupPath = (isDev || isTsNode) ? distPath : srcPath;
-			const backupExt = (isDev || isTsNode) ? '.js' : '.ts';
-
-			logger.debug(`Primary directory: ${primaryPath} with extension ${primaryExt}`);
-			logger.debug(`Backup directory: ${backupPath} with extension ${backupExt}`);
-
-			// First try the primary path
-			let commandFiles = scanDirectory(primaryPath, primaryExt)
-				.filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
-
-			// If no files found, try the backup path
-			if (commandFiles.length === 0) {
-				logger.debug(`No files found in primary path, trying backup path: ${backupPath}`);
-				commandFiles = scanDirectory(backupPath, backupExt)
-					.filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
+			// Debug more information about environment
+			if (isDebug) {
+				logger.debug(`Loading commands with: NODE_ENV=${process.env.NODE_ENV}, ts-node=${isTsNode}, __dirname=${__dirname}`);
+				logger.debug(`Command: ${process.argv.join(' ')}`);
+				if (process.env.npm_lifecycle_script) {
+					logger.debug(`npm script: ${process.env.npm_lifecycle_script}`);
+				}
 			}
 
-			// Last resort: try both extensions in both directories
-			if (commandFiles.length === 0) {
-				logger.debug(`Still no files found, trying all combinations`);
-				commandFiles = [
-					...scanDirectory(primaryPath, '.ts'),
-					...scanDirectory(primaryPath, '.js'),
-					...scanDirectory(backupPath, '.ts'),
-					...scanDirectory(backupPath, '.js')
-				].filter(file => !file.endsWith('adapter.js') && !file.endsWith('adapter.ts'));
-			}
+			// In dev mode, we want to use .ts files
+			const devExtension = '.ts';
+			const prodExtension = '.js';
+
+			// Determine the file extension to use based on environment
+			const fileExtension = (isDev || isTsNode) ? devExtension : prodExtension;
+
+			// When running in development or using ts-node, we use the src directory path
+			const commandDir = path.resolve('./src/starbunk/commands');
+
+			logger.debug(`Looking for commands in: ${commandDir}`);
+			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
+
+			// Find all command files using the direct path
+			const commandFiles = fs.readdirSync(commandDir)
+				.filter(file => file.endsWith(fileExtension) && !file.endsWith('.d.ts') && !file.endsWith('adapter.ts'))
+				.map(file => path.join(commandDir, file));
 
 			logger.info(`Found ${commandFiles.length} command files to load: ${commandFiles.map(f => path.basename(f)).join(', ')}`);
 
 			let successCount = 0;
 			for (const commandFile of commandFiles) {
 				try {
-					logger.info(`Loading command from file: ${commandFile}`);
+					logger.info(`Loading command from file: ${path.basename(commandFile)}`);
+
+					// Try direct require first which works better in our diagnostic script
+					try {
+						logger.info(`Attempting direct require for ${path.basename(commandFile)}`);
+						// eslint-disable-next-line @typescript-eslint/no-var-requires
+						const commandModule = require(commandFile.replace(/\.ts$/, ''));
+
+						if (commandModule) {
+							let command = null;
+
+							// Check if it's a direct command object
+							if (commandModule.data && commandModule.execute) {
+								command = commandModule;
+							}
+							// Check if it's in the default export
+							else if (commandModule.default && commandModule.default.data && commandModule.default.execute) {
+								command = commandModule.default;
+							}
+
+							if (command) {
+								this.registerCommand(command);
+								logger.info(`✅ Command loaded successfully via require: ${command.data.name}`);
+								successCount++;
+								continue; // Skip to next command file
+							} else {
+								logger.warn(`⚠️ No valid command found in module: ${path.basename(commandFile)}`);
+							}
+						} else {
+							logger.warn(`⚠️ No module loaded from require: ${path.basename(commandFile)}`);
+						}
+					} catch (requireError: unknown) {
+						const errorMessage = requireError instanceof Error
+							? requireError.message
+							: 'Unknown error';
+						logger.warn(`⚠️ Direct require failed for ${path.basename(commandFile)}: ${errorMessage}`);
+						// Continue to try the loadCommand utility
+					}
+
+					// Fall back to loadCommand utility
 					const command = await loadCommand(commandFile);
 
 					if (command) {
-						logger.info(`✅ Command loaded successfully: ${command.data.name}`);
-						this.commands.set(command.data.name, command);
+						this.registerCommand(command);
+						logger.info(`✅ Command loaded successfully via loadCommand: ${command.data.name}`);
 						successCount++;
 					} else {
-						logger.warn(`⚠️ No command instance returned from: ${commandFile}`);
+						logger.warn(`⚠️ No command object returned from: ${commandFile}`);
 					}
 				} catch (error) {
 					logger.error(`❌ Failed to load command: ${commandFile}`, error instanceof Error ? error : new Error(String(error)));
@@ -89,18 +122,9 @@ export class CommandHandler {
 			logger.info(`📊 Successfully loaded ${successCount} out of ${commandFiles.length} commands`);
 
 			if (successCount > 0) {
-				logger.info('📋 Loaded commands summary:');
-				this.commands.forEach((_, name) => {
-					logger.info(`   - ${name}`);
-				});
-			}
-
-			// Register commands with Discord API
-			if (this.commands.size > 0) {
-				logger.info('Registering commands with Discord API');
+				// Register commands with Discord API
 				await this.registerDiscordCommands();
-			} else {
-				logger.warn('No commands to register with Discord API');
+				logger.info('Commands registered successfully');
 			}
 		} catch (error) {
 			logger.error('Error loading commands:', error instanceof Error ? error : new Error(String(error)));

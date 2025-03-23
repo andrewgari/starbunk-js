@@ -1,0 +1,157 @@
+
+> bunkbot@0.0.2 dev:debug
+> cross-env NODE_ENV=development DEBUG=true TS_NODE_DEV=true ts-node -r tsconfig-paths/register src/bunkbot.ts
+
+Loaded environment from /home/andrewgari/Repos/starbunk-js/.env
+ℹ️ [2025-03-23T00:37:23.123Z] Logger.info Starting Starbunk bot
+ℹ️ [2025-03-23T00:37:23.139Z] Logger.info Initializing CommandHandler
+ℹ️ [2025-03-23T00:37:23.145Z] Logger.info Initializing StarbunkClient
+ℹ️ [2025-03-23T00:37:23.146Z] Logger.info Loading reply bots...
+ℹ️ [2025-03-23T00:37:23.146Z] Logger.info Running in development mode, looking for .ts files
+ℹ️ [2025-03-23T00:37:23.146Z] Logger.info Found 22 bot files to load: attitudeBot.ts, babyBot.ts, bananaBot.ts, blueBot.ts, botBot.ts, chaosBot.ts, checkBot.ts, covaBot.ts, ezioBot.ts, gundamBot.ts, guyBot.ts, holdBot.ts, homonymBot.ts, interruptBot.ts, macaroniBot.ts, musicCorrectBot.ts, niceBot.ts, pickleBot.ts, sheeshBot.ts, sigGreatBot.ts, spiderBot.ts, vennBot.ts
+ℹ️ [2025-03-23T00:37:23.146Z] Logger.info Loading bot from file: attitudeBot.ts
+ℹ️ [2025-03-23T00:37:23.146Z] Logger.info Attempting direct require for attitudeBot.ts
+ℹ️ [2025-03-23T00:37:23.161Z] Logger.info ✅ Bot loaded successfully: Xander Crews (AttitudeBot)
+ℹ️ [2025-03-23T00:37:23.162Z] Logger.info Loading bot from file: babyBot.ts
+ℹ️ [2025-03-23T00:37:23.162Z] Logger.info Attempting direct require for babyBot.ts
+ℹ️ [2025-03-23T00:37:23.168Z] Logger.info ✅ Bot loaded successfully: BabyBot (BabyBot)
+ℹ️ [2025-03-23T00:37:23.168Z] Logger.info Loading bot from file: bananaBot.ts
+ℹ️ [2025-03-23T00:37:23.168Z] Logger.info Attempting direct require for bananaBot.ts
+ℹ️ [2025-03-23T00:37:23.174Z] Logger.info ✅ Bot loaded successfully: BananaBot (BananaBot)
+ℹ️ [2025-03-23T00:37:23.175Z] Logger.info Loading bot from file: blueBot.ts
+ℹ️ [2025-03-23T00:37:23.175Z] Logger.info Attempting direct require for blueBot.ts
+ℹ️ [2025-03-23T00:37:23.197Z] Logger.info ✅ Bot loaded successfully: BlueBot (BlueBot)
+ℹ️ [2025-03-23T00:37:23.197Z] Logger.info Loading bot from file: botBot.ts
+ℹ️ [2025-03-23T00:37:23.197Z] Logger.info Attempting direct require for botBot.ts
+ℹ️ [2025-03-23T00:37:23.204Z] Logger.info ✅ Bot loaded successfully: BotBot (BotBot)
+ℹ️ [2025-03-23T00:37:23.204Z] Logger.info Loading bot from file: chaosBot.ts
+ℹ️ [2025-03-23T00:37:23.204Z] Logger.info Attempting direct require for chaosBot.ts
+ℹ️ [2025-03-23T00:37:23.209Z] Logger.info ✅ Bot loaded successfully: ChaosBot (ChaosBot)
+ℹ️ [2025-03-23T00:37:23.209Z] Logger.info Loading bot from file: checkBot.ts
+ℹ️ [2025-03-23T00:37:23.209Z] Logger.info Attempting direct require for checkBot.ts
+ℹ️ [2025-03-23T00:37:23.215Z] Logger.info ✅ Bot loaded successfully: CheckBot (CheckBot)
+ℹ️ [2025-03-23T00:37:23.215Z] Logger.info Loading bot from file: covaBot.ts
+ℹ️ [2025-03-23T00:37:23.215Z] Logger.info Attempting direct require for covaBot.ts
+[CovaBot] Initializing CovaBot with extensive logging
+[CovaBot] DEBUG MODE IS ACTIVE - WILL ONLY RESPOND TO COVA MESSAGES
+ℹ️ [2025-03-23T00:37:23.249Z] Logger.info ✅ Bot loaded successfully: CovaBot (CovaBot)
+ℹ️ [2025-03-23T00:37:23.249Z] Logger.info Loading bot from file: ezioBot.ts
+ℹ️ [2025-03-23T00:37:23.249Z] Logger.info Attempting direct require for ezioBot.ts
+ℹ️ [2025-03-23T00:37:23.253Z] Logger.info ✅ Bot loaded successfully: Ezio Auditore da Firenze (EzioBot)
+ℹ️ [2025-03-23T00:37:23.254Z] Logger.info Loading bot from file: gundamBot.ts
+ℹ️ [2025-03-23T00:37:23.254Z] Logger.info Attempting direct require for gundamBot.ts
+ℹ️ [2025-03-23T00:37:23.260Z] Logger.info ✅ Bot loaded successfully: GundamBot (GundamBot)
+ℹ️ [2025-03-23T00:37:23.260Z] Logger.info Loading bot from file: guyBot.ts
+ℹ️ [2025-03-23T00:37:23.260Z] Logger.info Attempting direct require for guyBot.ts
+ℹ️ [2025-03-23T00:37:23.266Z] Logger.info ✅ Bot loaded successfully: GuyBot (GuyBot)
+ℹ️ [2025-03-23T00:37:23.266Z] Logger.info Loading bot from file: holdBot.ts
+ℹ️ [2025-03-23T00:37:23.266Z] Logger.info Attempting direct require for holdBot.ts
+ℹ️ [2025-03-23T00:37:23.270Z] Logger.info ✅ Bot loaded successfully: HoldBot (HoldBot)
+ℹ️ [2025-03-23T00:37:23.270Z] Logger.info Loading bot from file: homonymBot.ts
+ℹ️ [2025-03-23T00:37:23.270Z] Logger.info Attempting direct require for homonymBot.ts
+ℹ️ [2025-03-23T00:37:23.279Z] Logger.info ✅ Bot loaded successfully: HomonymBot (HomonymBot)
+ℹ️ [2025-03-23T00:37:23.279Z] Logger.info Loading bot from file: interruptBot.ts
+ℹ️ [2025-03-23T00:37:23.279Z] Logger.info Attempting direct require for interruptBot.ts
+ℹ️ [2025-03-23T00:37:23.285Z] Logger.info ✅ Bot loaded successfully: InterruptBot (InterruptBot)
+ℹ️ [2025-03-23T00:37:23.286Z] Logger.info Loading bot from file: macaroniBot.ts
+ℹ️ [2025-03-23T00:37:23.286Z] Logger.info Attempting direct require for macaroniBot.ts
+ℹ️ [2025-03-23T00:37:23.291Z] Logger.info ✅ Bot loaded successfully: MacaroniBot (MacaroniBot)
+ℹ️ [2025-03-23T00:37:23.292Z] Logger.info Loading bot from file: musicCorrectBot.ts
+ℹ️ [2025-03-23T00:37:23.292Z] Logger.info Attempting direct require for musicCorrectBot.ts
+ℹ️ [2025-03-23T00:37:23.296Z] Logger.info ✅ Bot loaded successfully: MusicCorrectBot (MusicCorrectBot)
+ℹ️ [2025-03-23T00:37:23.296Z] Logger.info Loading bot from file: niceBot.ts
+ℹ️ [2025-03-23T00:37:23.296Z] Logger.info Attempting direct require for niceBot.ts
+ℹ️ [2025-03-23T00:37:23.300Z] Logger.info ✅ Bot loaded successfully: NiceBot (NiceBot)
+ℹ️ [2025-03-23T00:37:23.300Z] Logger.info Loading bot from file: pickleBot.ts
+ℹ️ [2025-03-23T00:37:23.300Z] Logger.info Attempting direct require for pickleBot.ts
+ℹ️ [2025-03-23T00:37:23.305Z] Logger.info ✅ Bot loaded successfully: PickleBot (PickleBot)
+ℹ️ [2025-03-23T00:37:23.305Z] Logger.info Loading bot from file: sheeshBot.ts
+ℹ️ [2025-03-23T00:37:23.305Z] Logger.info Attempting direct require for sheeshBot.ts
+ℹ️ [2025-03-23T00:37:23.309Z] Logger.info ✅ Bot loaded successfully: SheeshBot (SheeshBot)
+ℹ️ [2025-03-23T00:37:23.309Z] Logger.info Loading bot from file: sigGreatBot.ts
+ℹ️ [2025-03-23T00:37:23.309Z] Logger.info Attempting direct require for sigGreatBot.ts
+ℹ️ [2025-03-23T00:37:23.314Z] Logger.info ✅ Bot loaded successfully: SigGreatBot (SigGreatBot)
+ℹ️ [2025-03-23T00:37:23.314Z] Logger.info Loading bot from file: spiderBot.ts
+ℹ️ [2025-03-23T00:37:23.314Z] Logger.info Attempting direct require for spiderBot.ts
+ℹ️ [2025-03-23T00:37:23.321Z] Logger.info ✅ Bot loaded successfully: SpiderBot (SpiderBot)
+ℹ️ [2025-03-23T00:37:23.321Z] Logger.info Loading bot from file: vennBot.ts
+ℹ️ [2025-03-23T00:37:23.321Z] Logger.info Attempting direct require for vennBot.ts
+ℹ️ [2025-03-23T00:37:23.327Z] Logger.info ✅ Bot loaded successfully: VennBot (VennBot)
+ℹ️ [2025-03-23T00:37:23.327Z] Logger.info 📊 Successfully loaded 22 out of 22 bots
+ℹ️ [2025-03-23T00:37:23.327Z] Logger.info 📋 Loaded bots summary:
+ℹ️ [2025-03-23T00:37:23.327Z] Logger.info    - Xander Crews (AttitudeBot)
+ℹ️ [2025-03-23T00:37:23.327Z] Logger.info    - BabyBot (BabyBot)
+ℹ️ [2025-03-23T00:37:23.327Z] Logger.info    - BananaBot (BananaBot)
+ℹ️ [2025-03-23T00:37:23.327Z] Logger.info    - BlueBot (BlueBot)
+ℹ️ [2025-03-23T00:37:23.328Z] Logger.info    - BotBot (BotBot)
+ℹ️ [2025-03-23T00:37:23.328Z] Logger.info    - ChaosBot (ChaosBot)
+ℹ️ [2025-03-23T00:37:23.328Z] Logger.info    - CheckBot (CheckBot)
+ℹ️ [2025-03-23T00:37:23.328Z] Logger.info    - CovaBot (CovaBot)
+ℹ️ [2025-03-23T00:37:23.328Z] Logger.info    - Ezio Auditore da Firenze (EzioBot)
+ℹ️ [2025-03-23T00:37:23.328Z] Logger.info    - GundamBot (GundamBot)
+ℹ️ [2025-03-23T00:37:23.328Z] Logger.info    - GuyBot (GuyBot)
+ℹ️ [2025-03-23T00:37:23.328Z] Logger.info    - HoldBot (HoldBot)
+ℹ️ [2025-03-23T00:37:23.328Z] Logger.info    - HomonymBot (HomonymBot)
+ℹ️ [2025-03-23T00:37:23.329Z] Logger.info    - InterruptBot (InterruptBot)
+ℹ️ [2025-03-23T00:37:23.329Z] Logger.info    - MacaroniBot (MacaroniBot)
+ℹ️ [2025-03-23T00:37:23.329Z] Logger.info    - MusicCorrectBot (MusicCorrectBot)
+ℹ️ [2025-03-23T00:37:23.329Z] Logger.info    - NiceBot (NiceBot)
+ℹ️ [2025-03-23T00:37:23.329Z] Logger.info    - PickleBot (PickleBot)
+ℹ️ [2025-03-23T00:37:23.329Z] Logger.info    - SheeshBot (SheeshBot)
+ℹ️ [2025-03-23T00:37:23.329Z] Logger.info    - SigGreatBot (SigGreatBot)
+ℹ️ [2025-03-23T00:37:23.329Z] Logger.info    - SpiderBot (SpiderBot)
+ℹ️ [2025-03-23T00:37:23.329Z] Logger.info    - VennBot (VennBot)
+ℹ️ [2025-03-23T00:37:23.330Z] Logger.info Starting Snowbunk bot
+ℹ️ [2025-03-23T00:37:23.330Z] Logger.info Bootstrapping application services for Snowbunk
+ℹ️ [2025-03-23T00:37:23.332Z] Logger.info Loading commands...
+ℹ️ [2025-03-23T00:37:23.332Z] Logger.info Running in development mode, looking for .ts files
+ℹ️ [2025-03-23T00:37:23.333Z] Logger.info Found 9 command files to load: clearWebhooks.ts, command.ts, debug.ts, monkeySay.ts, ping.ts, play.ts, raidWhen.ts, setVolume.ts, stop.ts
+ℹ️ [2025-03-23T00:37:23.333Z] Logger.info Loading command from file: clearWebhooks.ts
+ℹ️ [2025-03-23T00:37:23.333Z] Logger.info Attempting direct require for clearWebhooks.ts
+ℹ️ [2025-03-23T00:37:23.336Z] Logger.info ✅ Command loaded successfully via require: clearwebhooks
+ℹ️ [2025-03-23T00:37:23.336Z] Logger.info Loading command from file: command.ts
+ℹ️ [2025-03-23T00:37:23.336Z] Logger.info Attempting direct require for command.ts
+ℹ️ [2025-03-23T00:37:23.341Z] Logger.info Attempting to load module: /home/andrewgari/Repos/starbunk-js/src/starbunk/commands/command.ts
+ℹ️ [2025-03-23T00:37:23.353Z] Logger.info Loading command from file: debug.ts
+ℹ️ [2025-03-23T00:37:23.353Z] Logger.info Attempting direct require for debug.ts
+ℹ️ [2025-03-23T00:37:23.366Z] Logger.info ✅ Command loaded successfully via require: debug
+ℹ️ [2025-03-23T00:37:23.366Z] Logger.info Loading command from file: monkeySay.ts
+ℹ️ [2025-03-23T00:37:23.366Z] Logger.info Attempting direct require for monkeySay.ts
+ℹ️ [2025-03-23T00:37:23.370Z] Logger.info ✅ Command loaded successfully via require: monkeysay
+ℹ️ [2025-03-23T00:37:23.370Z] Logger.info Loading command from file: ping.ts
+ℹ️ [2025-03-23T00:37:23.370Z] Logger.info Attempting direct require for ping.ts
+ℹ️ [2025-03-23T00:37:23.372Z] Logger.info ✅ Command loaded successfully via require: ping
+ℹ️ [2025-03-23T00:37:23.372Z] Logger.info Loading command from file: play.ts
+ℹ️ [2025-03-23T00:37:23.372Z] Logger.info Attempting direct require for play.ts
+ℹ️ [2025-03-23T00:37:23.376Z] Logger.info ✅ Command loaded successfully via require: play
+ℹ️ [2025-03-23T00:37:23.376Z] Logger.info Loading command from file: raidWhen.ts
+ℹ️ [2025-03-23T00:37:23.376Z] Logger.info Attempting direct require for raidWhen.ts
+ℹ️ [2025-03-23T00:37:23.381Z] Logger.info ✅ Command loaded successfully via require: raidwhen
+ℹ️ [2025-03-23T00:37:23.381Z] Logger.info Loading command from file: setVolume.ts
+ℹ️ [2025-03-23T00:37:23.381Z] Logger.info Attempting direct require for setVolume.ts
+ℹ️ [2025-03-23T00:37:23.384Z] Logger.info ✅ Command loaded successfully via require: volume
+ℹ️ [2025-03-23T00:37:23.384Z] Logger.info Loading command from file: stop.ts
+ℹ️ [2025-03-23T00:37:23.384Z] Logger.info Attempting direct require for stop.ts
+ℹ️ [2025-03-23T00:37:23.386Z] Logger.info ✅ Command loaded successfully via require: stop
+ℹ️ [2025-03-23T00:37:23.387Z] Logger.info 📊 Successfully loaded 8 out of 9 commands
+ℹ️ [2025-03-23T00:37:23.402Z] Logger.info 🚀 Services bootstrapped successfully
+ℹ️ [2025-03-23T00:37:23.402Z] Logger.info Services bootstrapped successfully within StarbunkClient
+ℹ️ [2025-03-23T00:37:23.403Z] Logger.info 🚀 Services bootstrapped successfully
+ℹ️ [2025-03-23T00:37:23.403Z] Logger.info Snowbunk application services bootstrapped successfully
+ℹ️ [2025-03-23T00:37:23.610Z] Logger.info Successfully registered application commands with Discord
+ℹ️ [2025-03-23T00:37:23.610Z] Logger.info Commands registered successfully
+ℹ️ [2025-03-23T00:37:23.610Z] Logger.info StarbunkClient initialized successfully
+ℹ️ [2025-03-23T00:37:23.610Z] Logger.info Bootstrapping application services
+ℹ️ [2025-03-23T00:37:23.618Z] Logger.info 🚀 Services bootstrapped successfully
+ℹ️ [2025-03-23T00:37:23.618Z] Logger.info Application services bootstrapped successfully
+ℹ️ [2025-03-23T00:37:23.618Z] Logger.info Logging in to Discord
+ℹ️ [2025-03-23T00:37:23.878Z] Logger.info Successfully logged in to Discord
+ℹ️ [2025-03-23T00:37:23.878Z] Logger.info Bot startup complete
+ℹ️ [2025-03-23T00:37:23.905Z] Logger.info Logged in as CovaBot#6486
+ℹ️ [2025-03-23T00:37:23.905Z] Logger.info Client initialization complete
+ℹ️ [2025-03-23T00:45:43.950Z] Logger.info [HomonymBot] Found homonym match: "where" -> "wear"
+ℹ️ [2025-03-23T00:51:34.451Z] Logger.info Received SIGTERM signal
+ℹ️ [2025-03-23T00:51:34.451Z] Logger.info Destroying StarbunkClient
+ℹ️ [2025-03-23T00:51:34.453Z] Logger.info Received SIGTERM signal
+ℹ️ [2025-03-23T00:51:34.453Z] Logger.info Destroying StarbunkClient
+ℹ️ [2025-03-23T00:51:34.453Z] Logger.info Bot shutdown complete
