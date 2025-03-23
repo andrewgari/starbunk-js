@@ -147,7 +147,7 @@ export default class CovaBot extends ReplyBot {
 		if (super.shouldSkipMessage(message)) {
 			logger.debug(`[${this.defaultBotName}] shouldSkipMessage: Base class says to skip message from ${authorUsername}`);
 			if (mentionsCova) {
-				console.log(`[${this.defaultBotName}] ❌ SKIPPING MESSAGE CONTAINING 'COVA' (base class rule): "${message.content}"`);
+				logger.debug(`[${this.defaultBotName}] ❌ SKIPPING MESSAGE CONTAINING 'COVA' (base class rule): "${message.content}"`);
 			}
 			return true;
 		}
@@ -188,9 +188,9 @@ export default class CovaBot extends ReplyBot {
 		const containsCova = messageContent.includes('cova');
 
 		// Global log for ALL messages, regardless of processing
-		console.log(`[${this.defaultBotName}] 👁️ SAW MESSAGE: ${messageId} from ${authorUsername} (${authorId}) in ${channelName} (${channelId})`);
+		logger.debug(`[${this.defaultBotName}] 👁️ SAW MESSAGE: ${messageId} from ${authorUsername} (${authorId}) in ${channelName} (${channelId})`);
 		if (containsCova) {
-			console.log(`[${this.defaultBotName}] 🔍 MESSAGE CONTAINS 'COVA': "${message.content}"`);
+			logger.debug(`[${this.defaultBotName}] 🔍 MESSAGE CONTAINS 'COVA': "${message.content}"`);
 		}
 
 		const startTime = Date.now();

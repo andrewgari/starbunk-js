@@ -1,4 +1,4 @@
-import { TimeUnit, getTimeDifference, isNewerThan, isOlderThan, isWithinTimeframe } from '../time';
+import { TimeUnit, formatRelativeTime, getTimeDifference, isNewerThan, isOlderThan, isWithinTimeframe } from '../time';
 
 describe('Time Utils', () => {
 	beforeEach(() => {
@@ -89,6 +89,55 @@ describe('Time Utils', () => {
 			const date1 = new Date('2023-01-01T10:00:00Z');
 			const date2 = new Date('2023-01-01T12:00:00Z');
 			expect(getTimeDifference(date1, date2, TimeUnit.HOUR)).toBe(2);
+		});
+	});
+
+	describe('formatRelativeTime', () => {
+		test('formats past time in seconds', () => {
+			const date = new Date('2023-01-01T11:59:40Z'); // 20 seconds ago
+			expect(formatRelativeTime(date)).toBe('20 seconds ago');
+		});
+
+		test('formats past time in minutes', () => {
+			const date = new Date('2023-01-01T11:58:00Z'); // 2 minutes ago
+			expect(formatRelativeTime(date)).toBe('2 minutes ago');
+		});
+
+		test('formats past time in hours', () => {
+			const date = new Date('2023-01-01T10:00:00Z'); // 2 hours ago
+			expect(formatRelativeTime(date)).toBe('2 hours ago');
+		});
+
+		test('formats future time in seconds', () => {
+			const date = new Date('2023-01-01T12:00:20Z'); // 20 seconds in future
+			expect(formatRelativeTime(date)).toBe('in 20 seconds');
+		});
+
+		test('formats future time in minutes', () => {
+			const date = new Date('2023-01-01T12:02:00Z'); // 2 minutes in future
+			expect(formatRelativeTime(date)).toBe('in 2 minutes');
+		});
+
+		test('formats future time in hours', () => {
+			const date = new Date('2023-01-01T14:00:00Z'); // 2 hours in future
+			expect(formatRelativeTime(date)).toBe('in 2 hours');
+		});
+
+		test('handles singular units correctly', () => {
+			const oneSecondAgo = new Date('2023-01-01T11:59:59Z');
+			expect(formatRelativeTime(oneSecondAgo)).toBe('1 second ago');
+
+			const oneMinuteAgo = new Date('2023-01-01T11:59:00Z');
+			expect(formatRelativeTime(oneMinuteAgo)).toBe('1 minute ago');
+
+			const oneHourAgo = new Date('2023-01-01T11:00:00Z');
+			expect(formatRelativeTime(oneHourAgo)).toBe('1 hour ago');
+		});
+
+		test('works with custom comparison date', () => {
+			const date = new Date('2023-01-01T10:00:00Z');
+			const comparisonDate = new Date('2023-01-01T12:00:00Z');
+			expect(formatRelativeTime(date, comparisonDate)).toBe('2 hours ago');
 		});
 	});
 });
