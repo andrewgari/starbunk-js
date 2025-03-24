@@ -450,16 +450,16 @@ ${mentionContext}`;
 				let probability = 0;
 				let probabilitySource = "";
 				if (response.includes("YES")) {
-					probability = isReplyToEither ? 0.8 : (isNameMention ? 0.7 : (inConversation ? 0.6 : 0.5));
+					probability = isNameMention ? 0.4 : (inConversation ? 0.3 : 0.2);
 					probabilitySource = "YES response";
 				} else if (response.includes("LIKELY")) {
-					probability = isReplyToEither ? 0.6 : (isNameMention ? 0.5 : (inConversation ? 0.3 : 0.2));
+					probability = isNameMention ? 0.2 : (inConversation ? 0.15 : 0.1);
 					probabilitySource = "LIKELY response";
 				} else if (response.includes("UNLIKELY")) {
-					probability = isReplyToEither ? 0.3 : (isNameMention ? 0.2 : (inConversation ? 0.1 : 0.05));
+					probability = isNameMention ? 0.1 : (inConversation ? 0.05 : 0.02);
 					probabilitySource = "UNLIKELY response";
 				} else {
-					probability = isReplyToEither ? 0.2 : (isNameMention ? 0.1 : (inConversation ? 0.05 : 0.01));
+					probability = isNameMention ? 0.05 : (inConversation ? 0.02 : 0.01);
 					probabilitySource = "NO/unrecognized response";
 				}
 
@@ -489,8 +489,8 @@ ${mentionContext}`;
 				logger.error(`[${this.defaultBotName}] Error deciding whether to respond:`, error as Error);
 				logger.debug(`[${this.defaultBotName}] Error stack: ${(error as Error).stack}`);
 
-				// Fall back to simple randomization with higher probability for name mentions and replies
-				const baseRate = isReplyToEither ? 0.6 : (isNameMention ? 0.4 : (inConversation ? 0.15 : CovaBotConfig.ResponseRate));
+				// Fall back to simple randomization with lower probability for name mentions
+				const baseRate = isNameMention ? 0.2 : (inConversation ? 0.1 : CovaBotConfig.ResponseRate);
 				const random = Math.random();
 				const shouldRespond = random < baseRate;
 				logger.debug(`[${this.defaultBotName}] Fallback random roll: ${random} vs threshold ${baseRate} = ${shouldRespond ? "RESPOND" : "DON'T RESPOND"}`);

@@ -1,5 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
 import { logger } from '../../../services/logger';
+import { percentChance } from '../../../utils/random';
 import { BotIdentity } from '../../types/botIdentity';
 import { HomonymBotConfig } from '../config/homonymBotConfig';
 import ReplyBot from '../replyBot';
@@ -52,6 +53,13 @@ export default class HomonymBot extends ReplyBot {
 		try {
 			const pair = this.findMatchingHomonymPair(message.content);
 			if (pair) {
+				// Add 15% chance to respond
+				const shouldRespond = percentChance(15);
+				if (!shouldRespond) {
+					logger.debug(`[${this.defaultBotName}] Found match but skipping due to probability check (15% chance)`);
+					return;
+				}
+
 				logger.info(`[${this.defaultBotName}] Found homonym match: "${pair.word}" -> "${pair.correction}"`);
 				await this.sendReply(message.channel as TextChannel, pair.correction);
 				logger.debug(`[${this.defaultBotName}] Sent correction successfully`);
