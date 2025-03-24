@@ -1,3 +1,6 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-if git diff-tree --name-only --no-commit-id ORIG_HEAD HEAD | grep --quiet "package.json"; then echo "📦 package.json changed. Running npm install..." && npm install; fi
+
+if git diff-tree --name-only --no-commit-id ORIG_HEAD HEAD | grep --quiet "package.json"; then
+  echo "📦 package.json changed. Running npm install..."
+  npm install
+fi
