@@ -11,8 +11,8 @@ export const CovaBotConfig = {
 		// Patterns to detect @mentions in raw message content (sometimes needed for backup)
 		AtMention: /<@!?139592376443338752>/
 	},
-	// Reduced base probability from 0.015 to 0.005 for responding to random messages
-	ResponseRate: 0.005,
+	// Reduced base probability from 0.005 to 0.002 for responding to random messages
+	ResponseRate: 0.002,
 	// List of user IDs that CovaBot shouldn't respond to (including other bots)
 	IgnoreUsers: [] as string[],
 	Personality:

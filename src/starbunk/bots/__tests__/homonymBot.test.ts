@@ -1,7 +1,12 @@
 import { container, ServiceId } from '../../../services/container';
+import { percentChance } from '../../../utils/random';
 import { HomonymBotConfig } from '../config/homonymBotConfig';
 import HomonymBot from '../reply-bots/homonymBot';
 import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+
+jest.mock('../../../utils/random', () => ({
+	percentChance: jest.fn()
+}));
 
 describe('HomonymBot', () => {
 	let homonymBot: HomonymBot;
@@ -12,8 +17,15 @@ describe('HomonymBot', () => {
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
 
+		// Default to passing probability check
+		(percentChance as jest.Mock).mockReturnValue(true);
+
 		// Create HomonymBot instance
 		homonymBot = new HomonymBot();
+	});
+
+	afterEach(() => {
+		jest.clearAllMocks();
 	});
 
 	it('should correctly initialize word patterns from config', () => {
@@ -105,5 +117,30 @@ describe('HomonymBot', () => {
 	it('should handle multiple homonym pairs in config correctly', () => {
 		// Test that different homonym pairs don't interfere with each other
 		expect(HomonymBotConfig.HomonymPairs.length).toBeGreaterThan(1);
+	});
+
+	describe('probability check', () => {
+		it('should respond when probability check passes', async () => {
+			(percentChance as jest.Mock).mockReturnValue(true);
+			const message = mockMessage('their car');
+			await homonymBot.handleMessage(message);
+
+			expect(percentChance).toHaveBeenCalledWith(15);
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.objectContaining({
+					content: 'there'
+				})
+			);
+		});
+
+		it('should not respond when probability check fails', async () => {
+			(percentChance as jest.Mock).mockReturnValue(false);
+			const message = mockMessage('their car');
+			await homonymBot.handleMessage(message);
+
+			expect(percentChance).toHaveBeenCalledWith(15);
+			expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		});
 	});
 });
