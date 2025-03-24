@@ -66,8 +66,8 @@ export default class BlueBot extends ReplyBot {
 				return;
 			}
 
-			// Check if someone is responding to Blue
-			const isResponse = await this.isSomeoneRespondingToBlu(message.content);
+			// Check if someone is responding to Blue (including replies to BlueBot's messages)
+			const isResponse = await this.isSomeoneRespondingToBlu(message.content, message);
 			logger.debug(`[${this.defaultBotName}] Response check result: ${isResponse}`);
 
 			if (isResponse) {
@@ -113,9 +113,23 @@ export default class BlueBot extends ReplyBot {
 		}
 	}
 
-	private async isSomeoneRespondingToBlu(content: string): Promise<boolean> {
+	private async isSomeoneRespondingToBlu(content: string, message?: Message): Promise<boolean> {
 		logger.debug(`[${this.defaultBotName}] Checking if message is responding to Blue`);
 		try {
+			// Check if this message is a direct reply to BlueBot
+			if (message) {
+				const isReplyToBlueBot = Boolean(
+					message.reference?.messageId &&
+					message.channel.messages.cache.get(message.reference.messageId)?.author.id === message.client.user?.id
+				);
+
+				if (isReplyToBlueBot) {
+					logger.debug(`[${this.defaultBotName}] Message is a direct reply to BlueBot`);
+					this._blueTimestamp = new Date();
+					return true;
+				}
+			}
+
 			// Check if this is within a recent timeframe of the last blue mention
 			const now = new Date();
 			const isRecentBlueReference = isWithinTimeframe(this._blueTimestamp, 2, TimeUnit.MINUTE, now);

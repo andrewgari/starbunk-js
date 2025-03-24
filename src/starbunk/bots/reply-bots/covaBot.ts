@@ -213,16 +213,42 @@ export default class CovaBot extends ReplyBot {
 			// Parse message for different types of mentions
 			const isDirectMention = message.mentions.has(message.client.user?.id || '');
 			const isRawAtMention = CovaBotConfig.Patterns.AtMention?.test(message.content) || false;
-			const isNameMention = CovaBotConfig.Patterns.Mention.test(message.content);
-			const isQuestion = CovaBotConfig.Patterns.Question.test(message.content);
+
+			// Get Cova's current nickname from botIdentity
+			const covaNickname = this._botIdentity.botName;
+
+			// Create a dynamic pattern for the current nickname (case-insensitive)
+			const dynamicNamePattern = new RegExp(`\\b${covaNickname}\\b`, 'i');
+
+			// Create a dynamic question pattern with the current nickname
+			const questionIndicators = '\\?|what|how|why|when|where|who|which|is|are|can|could|should|would|will';
+			const dynamicQuestionPattern = new RegExp(`\\b${covaNickname}\\b.*(${questionIndicators})`, 'i');
+
+			// Check for mentions using both the config pattern and the dynamic nickname pattern
+			const isNameMention = CovaBotConfig.Patterns.Mention.test(message.content) || dynamicNamePattern.test(message.content);
+			const isQuestion = CovaBotConfig.Patterns.Question.test(message.content) || dynamicQuestionPattern.test(message.content);
+
+			// Check if this is a reply to Cova or CovaBot's message
+			const isReplyToCova = message.reference?.messageId &&
+				message.channel.messages.cache.get(message.reference.messageId)?.author.id === userId.Cova;
+			const isReplyToCovaBot = message.reference?.messageId &&
+				message.channel.messages.cache.get(message.reference.messageId)?.author.id === message.client.user?.id;
+			const isReplyToEither = isReplyToCova || isReplyToCovaBot;
 
 			// Log all mention details
 			logger.debug(`[${this.defaultBotName}] FULL Message content: "${message.content}"`);
 			logger.debug(`[${this.defaultBotName}] Mention detection results:`);
 			logger.debug(`[${this.defaultBotName}]   - Direct @ mention (Discord API): ${isDirectMention}`);
 			logger.debug(`[${this.defaultBotName}]   - Raw @ mention (regex): ${isRawAtMention}`);
-			logger.debug(`[${this.defaultBotName}]   - Name mention: ${isNameMention}`);
-			logger.debug(`[${this.defaultBotName}]   - Question for Cova: ${isQuestion}`);
+			logger.debug(`[${this.defaultBotName}]   - Current nickname: ${covaNickname}`);
+			logger.debug(`[${this.defaultBotName}]   - Dynamic nickname match: ${dynamicNamePattern.test(message.content)}`);
+			logger.debug(`[${this.defaultBotName}]   - Config pattern match: ${CovaBotConfig.Patterns.Mention.test(message.content)}`);
+			logger.debug(`[${this.defaultBotName}]   - Name mention (either pattern): ${isNameMention}`);
+			logger.debug(`[${this.defaultBotName}]   - Dynamic question match: ${dynamicQuestionPattern.test(message.content)}`);
+			logger.debug(`[${this.defaultBotName}]   - Config question match: ${CovaBotConfig.Patterns.Question.test(message.content)}`);
+			logger.debug(`[${this.defaultBotName}]   - Question for Cova (either pattern): ${isQuestion}`);
+			logger.debug(`[${this.defaultBotName}]   - Reply to Cova: ${isReplyToCova}`);
+			logger.debug(`[${this.defaultBotName}]   - Reply to CovaBot: ${isReplyToCovaBot}`);
 
 			if (isNameMention) {
 				const nameMatch = message.content.match(CovaBotConfig.Patterns.Mention);
@@ -255,6 +281,19 @@ export default class CovaBot extends ReplyBot {
 				return;
 			}
 
+			// High priority for replies to Cova's or CovaBot's messages
+			if (isReplyToEither) {
+				logger.debug(`[${this.defaultBotName}] Reply to ${isReplyToCova ? 'Cova' : 'CovaBot'} detected, responding with high priority`);
+				const responseStart = Date.now();
+				await this.generateAndSendResponse(message);
+				logger.debug(`[${this.defaultBotName}] Reply response generated and sent in ${Date.now() - responseStart}ms`);
+				this.updateRecentResponses(message.channelId);
+				logger.debug(`[${this.defaultBotName}] Updated recent responses for channel ${channelId}`);
+				logger.debug(`[${this.defaultBotName}] Total reply processing time: ${Date.now() - startTime}ms`);
+				logger.debug(`[${this.defaultBotName}] ========== PROCESS MESSAGE END (REPLY) ==========`);
+				return;
+			}
+
 			// High priority for direct questions that include Cova's name
 			if (isQuestion) {
 				logger.debug(`[${this.defaultBotName}] Question directed at Cova detected, responding with high priority`);
@@ -271,7 +310,13 @@ export default class CovaBot extends ReplyBot {
 			// For name mentions or other messages, use LLM to decide if it's worth responding
 			logger.debug(`[${this.defaultBotName}] Invoking LLM decision for response worthiness`);
 			const llmDecisionStart = Date.now();
-			const shouldRespond = await this.shouldRespondToMessage(message.content, inConversation, isNameMention);
+			const shouldRespond = await this.shouldRespondToMessage(
+				message.content,
+				inConversation,
+				isNameMention,
+				Boolean(isReplyToEither),
+				dynamicNamePattern
+			);
 			logger.debug(`[${this.defaultBotName}] LLM decision completed in ${Date.now() - llmDecisionStart}ms: shouldRespond=${shouldRespond}`);
 
 			if (shouldRespond) {
@@ -331,19 +376,19 @@ export default class CovaBot extends ReplyBot {
 		}
 	}
 
-	private async shouldRespondToMessage(content: string, inConversation: boolean, isNameMention: boolean = false): Promise<boolean> {
+	private async shouldRespondToMessage(content: string, inConversation: boolean, isNameMention: boolean = false, isReplyToEither: boolean = false, dynamicNamePattern: RegExp): Promise<boolean> {
 		// Use performance timer for this operation
 		return await PerformanceTimer.time('shouldRespondToMessage', async () => {
 			const startTime = Date.now();
 			logger.debug(`[${this.defaultBotName}] ========== SHOULD RESPOND EVALUATION START ==========`);
 			logger.debug(`[${this.defaultBotName}] Evaluating whether to respond to: "${content.substring(0, 100)}${content.length > 100 ? '...' : ''}"`);
-			logger.debug(`[${this.defaultBotName}] Context: inConversation=${inConversation}, isNameMention=${isNameMention}`);
+			logger.debug(`[${this.defaultBotName}] Context: inConversation=${inConversation}, isNameMention=${isNameMention}, isReplyToEither=${isReplyToEither}`);
 
 			try {
 				// Create a cache key from the content and context
 				// Normalize content to reduce redundant cache entries for similar messages
 				const normalizedContent = content.toLowerCase().trim().substring(0, 50);
-				const cacheKey = `${normalizedContent}|${inConversation}|${isNameMention}`;
+				const cacheKey = `${normalizedContent}|${inConversation}|${isNameMention}|${isReplyToEither}|${dynamicNamePattern.test(content)}`;
 
 				// Check cache first
 				const cachedDecision = this._decisionCache.get(cacheKey);
@@ -353,9 +398,19 @@ export default class CovaBot extends ReplyBot {
 				}
 
 				// Add context about mentions to help the LLM make better decisions
-				const mentionContext = isNameMention
-					? "The message mentions Cova by name (not with @)."
-					: "The message does not directly mention Cova.";
+				let mentionContext = "";
+				if (isReplyToEither) {
+					mentionContext = "The message is a reply to Cova or CovaBot.";
+				} else if (isNameMention) {
+					// Include the current nickname information
+					if (dynamicNamePattern.test(content)) {
+						mentionContext = `The message mentions Cova by current nickname "${this._botIdentity.botName}".`;
+					} else {
+						mentionContext = "The message mentions Cova by a known name (not with @).";
+					}
+				} else {
+					mentionContext = "The message does not directly mention Cova.";
+				}
 
 				const userPrompt = `Message: "${content}"
 ${inConversation ? "Part of an ongoing conversation where Cova recently replied." : "New conversation Cova hasn't joined yet."}
@@ -391,25 +446,25 @@ ${mentionContext}`;
 				logger.debug(`[${this.defaultBotName}] Raw LLM response: "${rawResponse}"`);
 				logger.debug(`[${this.defaultBotName}] Normalized response: "${response}"`);
 
-				// Determine probability based on the response, with higher probabilities for name mentions
+				// Determine probability based on the response, with higher probabilities for replies and name mentions
 				let probability = 0;
 				let probabilitySource = "";
 				if (response.includes("YES")) {
-					probability = isNameMention ? 0.7 : (inConversation ? 0.6 : 0.5);
+					probability = isReplyToEither ? 0.8 : (isNameMention ? 0.7 : (inConversation ? 0.6 : 0.5));
 					probabilitySource = "YES response";
 				} else if (response.includes("LIKELY")) {
-					probability = isNameMention ? 0.5 : (inConversation ? 0.3 : 0.2);
+					probability = isReplyToEither ? 0.6 : (isNameMention ? 0.5 : (inConversation ? 0.3 : 0.2));
 					probabilitySource = "LIKELY response";
 				} else if (response.includes("UNLIKELY")) {
-					probability = isNameMention ? 0.2 : (inConversation ? 0.1 : 0.05);
+					probability = isReplyToEither ? 0.3 : (isNameMention ? 0.2 : (inConversation ? 0.1 : 0.05));
 					probabilitySource = "UNLIKELY response";
 				} else {
-					probability = isNameMention ? 0.1 : (inConversation ? 0.05 : 0.01);
+					probability = isReplyToEither ? 0.2 : (isNameMention ? 0.1 : (inConversation ? 0.05 : 0.01));
 					probabilitySource = "NO/unrecognized response";
 				}
 
 				logger.debug(`[${this.defaultBotName}] Assigned probability ${probability} based on ${probabilitySource}`);
-				logger.debug(`[${this.defaultBotName}] Factors: isNameMention=${isNameMention}, inConversation=${inConversation}`);
+				logger.debug(`[${this.defaultBotName}] Factors: isReplyToEither=${isReplyToEither}, isNameMention=${isNameMention}, inConversation=${inConversation}`);
 
 				// Apply randomization to avoid predictability
 				const random = Math.random();
@@ -434,8 +489,8 @@ ${mentionContext}`;
 				logger.error(`[${this.defaultBotName}] Error deciding whether to respond:`, error as Error);
 				logger.debug(`[${this.defaultBotName}] Error stack: ${(error as Error).stack}`);
 
-				// Fall back to simple randomization with higher probability for name mentions
-				const baseRate = isNameMention ? 0.4 : (inConversation ? 0.15 : CovaBotConfig.ResponseRate);
+				// Fall back to simple randomization with higher probability for name mentions and replies
+				const baseRate = isReplyToEither ? 0.6 : (isNameMention ? 0.4 : (inConversation ? 0.15 : CovaBotConfig.ResponseRate));
 				const random = Math.random();
 				const shouldRespond = random < baseRate;
 				logger.debug(`[${this.defaultBotName}] Fallback random roll: ${random} vs threshold ${baseRate} = ${shouldRespond ? "RESPOND" : "DON'T RESPOND"}`);

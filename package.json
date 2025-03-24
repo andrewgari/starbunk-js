@@ -23,6 +23,7 @@
 		"check:docker": "docker build -t starbunk-js:latest .",
 		"check:types": "npm run type-check:relaxed",
 		"check:lint": "npm run lint",
+		"check:test": "npm run test",
 		"check:build": "npm run build",
 		"check:all": "npm run check:types && npm run check:lint && npm run test && npm run check:build && npm run check:docker"
 	},
