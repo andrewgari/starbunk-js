@@ -1,4 +1,4 @@
-import { AutocompleteInteraction, ChatInputCommandInteraction, CommandInteractionOptionResolver, PermissionFlagsBits, PermissionsBitField } from 'discord.js';
+import { AutocompleteInteraction, ChatInputCommandInteraction, CommandInteractionOptionResolver, PermissionFlagsBits, PermissionsBitField, TextChannel } from 'discord.js';
 import { BotRegistry } from '../../bots/botRegistry';
 import botCommand from '../bot';
 
@@ -9,7 +9,8 @@ jest.mock('../../bots/botRegistry', () => {
 		disableBot: jest.fn(),
 		getAllBotNames: jest.fn(),
 		isBotEnabled: jest.fn(),
-		getBotFrequency: jest.fn()
+		getBotFrequency: jest.fn(),
+		setBotFrequency: jest.fn()
 	};
 	return {
 		BotRegistry: {
@@ -32,9 +33,27 @@ describe('Bot Command', () => {
 			reply: jest.fn(),
 			options: {
 				getSubcommand: jest.fn(),
-				getString: jest.fn()
+				getString: jest.fn(),
+				getInteger: jest.fn()
 			} as unknown as CommandInteractionOptionResolver,
 			memberPermissions: new PermissionsBitField([PermissionFlagsBits.Administrator]),
+			client: {
+				users: {
+					fetch: jest.fn()
+				}
+			},
+			user: {
+				tag: 'testUser#1234',
+				id: '123456789'
+			},
+			guild: {
+				name: 'Test Server',
+				id: '987654321'
+			},
+			channel: {
+				name: 'test-channel',
+				id: '456789123'
+			} as unknown as TextChannel,
 			valueOf: () => 'ChatInputCommandInteraction'
 		} as unknown as jest.Mocked<ChatInputCommandInteraction>;
 
@@ -42,14 +61,7 @@ describe('Bot Command', () => {
 		mockAutocompleteInteraction = {
 			respond: jest.fn(),
 			options: {
-				getFocused: jest.fn(),
-				get: jest.fn(),
-				getString: jest.fn(),
-				getNumber: jest.fn(),
-				getInteger: jest.fn(),
-				getBoolean: jest.fn(),
-				getSubcommand: jest.fn(),
-				getSubcommandGroup: jest.fn()
+				getFocused: jest.fn()
 			} as unknown as CommandInteractionOptionResolver,
 			valueOf: () => 'AutocompleteInteraction'
 		} as unknown as jest.Mocked<AutocompleteInteraction>;
@@ -63,14 +75,91 @@ describe('Bot Command', () => {
 	});
 
 	describe('execute', () => {
-		it('should reject non-admin users', async () => {
-			mockInteraction.memberPermissions = new PermissionsBitField([]);
+		describe('permission handling', () => {
+			it('should allow non-admin users to use report command', async () => {
+				mockInteraction.memberPermissions = new PermissionsBitField([]);
+				(mockInteraction.options.getSubcommand as jest.Mock).mockReturnValue('report');
+				(mockInteraction.options.getString as jest.Mock)
+					.mockReturnValueOnce('TestBot1') // bot_name
+					.mockReturnValueOnce('Test report message'); // message
 
-			await botCommand.execute(mockInteraction);
+				const mockCova = { send: jest.fn().mockResolvedValue(undefined) };
+				(mockInteraction.client.users.fetch as jest.Mock).mockResolvedValue(mockCova);
 
-			expect(mockInteraction.reply).toHaveBeenCalledWith({
-				content: expect.stringContaining('need administrator permissions'),
-				ephemeral: true
+				await botCommand.execute(mockInteraction);
+
+				expect(mockInteraction.reply).toHaveBeenCalledWith({
+					content: expect.stringContaining('Report about `TestBot1` has been sent to Cova'),
+					ephemeral: true
+				});
+			});
+
+			it('should reject non-admin users for admin commands', async () => {
+				mockInteraction.memberPermissions = new PermissionsBitField([]);
+				const adminCommands = ['enable', 'disable', 'frequency', 'list-bots'];
+
+				for (const command of adminCommands) {
+					(mockInteraction.options.getSubcommand as jest.Mock).mockReturnValue(command);
+					await botCommand.execute(mockInteraction);
+
+					expect(mockInteraction.reply).toHaveBeenCalledWith({
+						content: expect.stringContaining('need administrator permissions'),
+						ephemeral: true
+					});
+				}
+			});
+		});
+
+		describe('report subcommand', () => {
+			beforeEach(() => {
+				(mockInteraction.options.getSubcommand as jest.Mock).mockReturnValue('report');
+			});
+
+			it('should send report to Cova successfully', async () => {
+				const mockCova = { send: jest.fn().mockResolvedValue(undefined) };
+				(mockInteraction.client.users.fetch as jest.Mock).mockResolvedValue(mockCova);
+				(mockInteraction.options.getString as jest.Mock)
+					.mockReturnValueOnce('TestBot1') // bot_name
+					.mockReturnValueOnce('Test report message'); // message
+
+				await botCommand.execute(mockInteraction);
+
+				expect(mockCova.send).toHaveBeenCalledWith(expect.stringContaining('Bot Report'));
+				expect(mockCova.send).toHaveBeenCalledWith(expect.stringContaining('TestBot1'));
+				expect(mockCova.send).toHaveBeenCalledWith(expect.stringContaining('Test report message'));
+				expect(mockInteraction.reply).toHaveBeenCalledWith({
+					content: expect.stringContaining('Report about `TestBot1` has been sent to Cova'),
+					ephemeral: true
+				});
+			});
+
+			it('should handle case when Cova cannot be found', async () => {
+				(mockInteraction.client.users.fetch as jest.Mock).mockResolvedValue(null);
+				(mockInteraction.options.getString as jest.Mock)
+					.mockReturnValueOnce('TestBot1')
+					.mockReturnValueOnce('Test report message');
+
+				await botCommand.execute(mockInteraction);
+
+				expect(mockInteraction.reply).toHaveBeenCalledWith({
+					content: expect.stringContaining('Could not find Cova'),
+					ephemeral: true
+				});
+			});
+
+			it('should handle DM send failure', async () => {
+				const mockCova = { send: jest.fn().mockRejectedValue(new Error('Failed to send DM')) };
+				(mockInteraction.client.users.fetch as jest.Mock).mockResolvedValue(mockCova);
+				(mockInteraction.options.getString as jest.Mock)
+					.mockReturnValueOnce('TestBot1')
+					.mockReturnValueOnce('Test report message');
+
+				await botCommand.execute(mockInteraction);
+
+				expect(mockInteraction.reply).toHaveBeenCalledWith({
+					content: expect.stringContaining('Failed to send DM to Cova'),
+					ephemeral: true
+				});
 			});
 		});
 
@@ -171,15 +260,35 @@ describe('Bot Command', () => {
 
 		describe('default/help', () => {
 			beforeEach(() => {
-				mockInteraction.memberPermissions = new PermissionsBitField([PermissionFlagsBits.Administrator]);
-				(mockInteraction.options as any).getSubcommand.mockReturnValue('unknown');
+				(mockInteraction.options.getSubcommand as jest.Mock).mockReturnValue('unknown');
 			});
 
-			it('should show help text for unknown subcommand', async () => {
+			it('should show admin help text for administrators', async () => {
+				mockInteraction.memberPermissions = new PermissionsBitField([PermissionFlagsBits.Administrator]);
 				await botCommand.execute(mockInteraction);
 
 				expect(mockInteraction.reply).toHaveBeenCalledWith({
-					content: expect.stringContaining('Bot Manager Commands'),
+					content: expect.stringContaining('Bot Manager Commands') &&
+						expect.stringContaining('/bot enable') &&
+						expect.stringContaining('/bot disable') &&
+						expect.stringContaining('/bot frequency') &&
+						expect.stringContaining('/bot list-bots') &&
+						expect.stringContaining('/bot report'),
+					ephemeral: true
+				});
+			});
+
+			it('should show limited help text for non-administrators', async () => {
+				mockInteraction.memberPermissions = new PermissionsBitField([]);
+				await botCommand.execute(mockInteraction);
+
+				expect(mockInteraction.reply).toHaveBeenCalledWith({
+					content: expect.stringContaining('Bot Commands') &&
+						expect.stringContaining('/bot report') &&
+						expect.not.stringContaining('/bot enable') &&
+						expect.not.stringContaining('/bot disable') &&
+						expect.not.stringContaining('/bot frequency') &&
+						expect.not.stringContaining('/bot list-bots'),
 					ephemeral: true
 				});
 			});
