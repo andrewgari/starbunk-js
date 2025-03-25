@@ -38,6 +38,10 @@ export default class BlueBot extends ReplyBot {
 	public get botIdentity(): BotIdentity {
 		return this.botIdentityValue;
 	}
+	
+	public get description(): string {
+		return "Responds when someone says 'blu?'";
+	}
 
 	public get blueTimestamp(): Date {
 		return this._blueTimestamp;

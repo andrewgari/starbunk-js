@@ -106,6 +106,30 @@ const botCommand = {
 				const botName = interaction.options.getString('bot_name', true);
 				const success = registry.disableBot(botName);
 				if (success) {
+					try {
+						// Send a notification to Cova
+						const cova = await interaction.client.users.fetch(userId.Cova);
+						if (cova) {
+							const adminName = interaction.user.tag;
+							const serverId = interaction.guild?.id || 'Unknown';
+							const serverName = interaction.guild?.name || 'Unknown';
+							const notification = [
+								`**Bot Disabled Notification**`,
+								`**Bot:** ${botName}`,
+								`**Disabled by:** ${adminName} (${interaction.user.id})`,
+								`**Server:** ${serverName} (${serverId})`,
+								`**Time:** ${new Date().toISOString()}`
+							].join('\n');
+							
+							await cova.send(notification);
+							logger.info(`[BotCommand] Sent notification to Cova about disabling ${botName}`);
+						} else {
+							logger.warn(`[BotCommand] Could not find Cova to send bot disable notification`);
+						}
+					} catch (error) {
+						logger.error(`[BotCommand] Error sending bot disable notification to Cova:`, error instanceof Error ? error : new Error(String(error)));
+					}
+					
 					await interaction.reply({ content: `✅ Bot \`${botName}\` has been disabled.`, ephemeral: true });
 				} else {
 					await interaction.reply({ content: `❌ Bot \`${botName}\` not found.`, ephemeral: true });
@@ -137,8 +161,9 @@ const botCommand = {
 					.map(name => {
 						const status = registry.isBotEnabled(name) ? '✅' : '❌';
 						const rate = registry.getBotFrequency(name);
-						logger.debug(`[BotCommand] Bot ${name}: status=${status}, rate=${rate}%`);
-						return `• \`${name}\` ${status} (${rate}%)`;
+						const description = registry.getBotDescription(name);
+						logger.debug(`[BotCommand] Bot ${name}: status=${status}, rate=${rate}%, description=${description}`);
+						return `• \`${name}\` ${status} (${rate}%) - ${description}`;
 					})
 					.join('\n');
 
@@ -222,4 +247,3 @@ const botCommand = {
 };
 
 export default botCommand;
-

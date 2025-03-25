@@ -16,6 +16,10 @@ export default class PickleBot extends ReplyBot {
 		};
 	}
 
+	public override get description(): string {
+		return "Reacts to pickle-related messages";
+	}
+
 	protected override async processMessage(message: Message): Promise<void> {
 		const truncatedContent = message.content.substring(0, 100);
 		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${truncatedContent}..."`);

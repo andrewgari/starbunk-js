@@ -14,6 +14,10 @@ export default class NiceBot extends ReplyBot {
 		};
 	}
 
+	public get description(): string {
+		return "Responds to nice things with 'Nice!'";
+	}
+
 	protected async processMessage(message: Message): Promise<void> {
 		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
 

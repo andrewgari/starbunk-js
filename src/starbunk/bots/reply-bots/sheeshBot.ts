@@ -14,6 +14,10 @@ export default class SheeshBot extends ReplyBot {
 		};
 	}
 
+	public get description(): string {
+		return "Responds with 'SHEESH' to messages containing sheesh";
+	}
+
 	protected async processMessage(message: Message): Promise<void> {
 		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
 
