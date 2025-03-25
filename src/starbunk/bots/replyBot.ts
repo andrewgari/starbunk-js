@@ -5,6 +5,7 @@ import userId from '../../discord/userId';
 import { isDebugMode } from '../../environment';
 import { getWebhookService } from '../../services/bootstrap';
 import { logger } from '../../services/logger';
+import { BotRegistry } from './botRegistry';
 
 export default abstract class ReplyBot {
 	protected skipBotMessages: boolean = true;
@@ -61,6 +62,12 @@ export default abstract class ReplyBot {
 	 * @returns true if the message should be skipped, false otherwise
 	 */
 	protected shouldSkipMessage(message: Message): boolean {
+		// Check if bot is enabled in registry
+		if (!BotRegistry.getInstance().isBotEnabled(this.defaultBotName)) {
+			logger.debug(`[${this.defaultBotName}] Skipping message - bot is disabled`);
+			return true;
+		}
+
 		// Skip messages from any bot if skipBotMessages is true
 		if (this.skipBotMessages && message.author.bot) {
 			logger.debug(`[${this.defaultBotName}] Skipping message from bot (skipBotMessages=true)`);
