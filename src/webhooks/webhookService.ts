@@ -45,7 +45,7 @@ export class WebhookService implements WebhookServiceInterface {
 			};
 			delete transformedInfo.botName;
 			delete transformedInfo.avatarUrl;
-			
+
 			// Create a unique webhook name based on the bot's username
 			// This prevents identity conflicts between different bots
 			const webhookName = `${transformedInfo.username?.replace(/\s+/g, '-')}-webhook`.substring(0, 32);
@@ -76,23 +76,23 @@ export class WebhookService implements WebhookServiceInterface {
 			await this.fallbackToRegularMessage(channel, messageInfo);
 		}
 	}
-	
+
 	/**
 	 * Validates that the message info contains all required fields with valid values
 	 */
 	private validateMessageInfo(messageInfo: MessageInfo): boolean {
 		// Check if we have either username or botName
 		const hasName = !!(messageInfo.username || messageInfo.botName);
-		
+
 		// Check if we have either avatarURL or avatarUrl
 		const hasAvatar = !!(messageInfo.avatarURL || messageInfo.avatarUrl);
-		
+
 		// Check if we have content
 		const hasContent = !!messageInfo.content;
-		
+
 		return hasName && hasAvatar && hasContent;
 	}
-	
+
 	/**
 	 * Ensures the message info has valid values, adding defaults when needed
 	 */

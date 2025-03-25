@@ -208,7 +208,7 @@ describe('Bot Command', () => {
 			it('should disable an existing bot and notify Cova', async () => {
 				(mockInteraction.options as any).getString.mockReturnValue('TestBot1');
 				(registry.disableBot as jest.Mock).mockReturnValue(true);
-				
+
 				// Mock Cova user for notification
 				const mockCova = { send: jest.fn().mockResolvedValue(undefined) };
 				(mockInteraction.client.users.fetch as jest.Mock).mockResolvedValue(mockCova);
@@ -235,11 +235,11 @@ describe('Bot Command', () => {
 					ephemeral: true
 				});
 			});
-			
+
 			it('should still disable the bot when notification to Cova fails', async () => {
 				(mockInteraction.options as any).getString.mockReturnValue('TestBot1');
 				(registry.disableBot as jest.Mock).mockReturnValue(true);
-				
+
 				// Mock Cova user with failed send
 				const mockCova = { send: jest.fn().mockRejectedValue(new Error('Failed to send DM')) };
 				(mockInteraction.client.users.fetch as jest.Mock).mockResolvedValue(mockCova);
@@ -269,7 +269,7 @@ describe('Bot Command', () => {
 				await botCommand.execute(mockInteraction);
 
 				expect(mockInteraction.reply).toHaveBeenCalledWith({
-					content: expect.stringMatching(/TestBot1.*✅.*\(50%\).*Test bot 1 description/) && 
+					content: expect.stringMatching(/TestBot1.*✅.*\(50%\).*Test bot 1 description/) &&
 						expect.stringMatching(/TestBot2.*❌.*\(25%\).*Test bot 2 description/),
 					ephemeral: true
 				});

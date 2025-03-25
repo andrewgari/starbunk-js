@@ -120,7 +120,7 @@ const botCommand = {
 								`**Server:** ${serverName} (${serverId})`,
 								`**Time:** ${new Date().toISOString()}`
 							].join('\n');
-							
+
 							await cova.send(notification);
 							logger.info(`[BotCommand] Sent notification to Cova about disabling ${botName}`);
 						} else {
@@ -129,7 +129,7 @@ const botCommand = {
 					} catch (error) {
 						logger.error(`[BotCommand] Error sending bot disable notification to Cova:`, error instanceof Error ? error : new Error(String(error)));
 					}
-					
+
 					await interaction.reply({ content: `✅ Bot \`${botName}\` has been disabled.`, ephemeral: true });
 				} else {
 					await interaction.reply({ content: `❌ Bot \`${botName}\` not found.`, ephemeral: true });

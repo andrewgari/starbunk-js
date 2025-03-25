@@ -93,14 +93,14 @@ describe('ReplyBot', () => {
 			expect(bot['shouldTriggerResponse']()).toBe(false);
 		});
 	});
-	
+
 	describe('bot identity validation', () => {
 		// Create a class with invalid botIdentity to test validation
 		class BrokenBotIdentity extends ReplyBot {
 			public get defaultBotName(): string {
 				return 'BrokenBot';
 			}
-			
+
 			public get botIdentity() {
 				return {
 					botName: '',  // Empty bot name
@@ -117,7 +117,7 @@ describe('ReplyBot', () => {
 			const brokenBot = new BrokenBotIdentity();
 			message.content = 'test message';
 			await brokenBot.handleMessage(message);
-			
+
 			// Check that webhookService was called with fallback values
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				expect.anything(),
@@ -125,17 +125,17 @@ describe('ReplyBot', () => {
 					content: 'Test reply'
 				})
 			);
-			
+
 			// Verify that the fallback values were used
 			const callArgs = mockWebhookService.writeMessage.mock.calls[0][1];
 			expect(callArgs.botName || callArgs.username).toBe('BrokenBot');
 			expect(callArgs.avatarUrl || callArgs.avatarURL).toContain('http');
 		});
-		
+
 		it('should use valid bot identity when all fields are valid', async () => {
 			message.content = 'test message';
 			await bot.handleMessage(message);
-			
+
 			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 				expect.anything(),
 				expect.objectContaining({

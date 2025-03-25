@@ -26,15 +26,24 @@ export default abstract class ReplyBot {
 
 	public abstract get botIdentity(): BotIdentity | undefined;
 
-	public getResponseRate(): number {
-		return this.responseRate;
-	}
-
+	/**
+	 * Set the response rate for this bot.
+	 * @param rate The response rate (0-100)
+	 * @throws Error if rate is invalid
+	 */
 	public setResponseRate(rate: number): void {
 		if (rate < 0 || rate > 100) {
 			throw new Error(`Invalid response rate: ${rate}. Must be between 0 and 100.`);
 		}
 		this.responseRate = rate;
+	}
+
+	/**
+	 * Get the current response rate for this bot.
+	 * @returns The response rate (0-100)
+	 */
+	public getResponseRate(): number {
+		return this.responseRate;
 	}
 
 	public async auditMessage(message: Message): Promise<void> {
@@ -106,15 +115,15 @@ export default abstract class ReplyBot {
 		// Validate the bot identity
 		if (!this.botIdentity.botName || !this.botIdentity.avatarUrl) {
 			logger.warn(`[${this.defaultBotName}] Invalid bot identity detected: ${JSON.stringify(this.botIdentity)}`);
-			
+
 			// Create a valid identity with fallbacks
 			const validIdentity: BotIdentity = {
 				botName: this.botIdentity.botName || this.defaultBotName,
 				avatarUrl: this.botIdentity.avatarUrl || 'https://i.imgur.com/NtfJZP5.png'
 			};
-			
+
 			logger.info(`[${this.defaultBotName}] Using fallback identity: ${JSON.stringify(validIdentity)}`);
-			
+
 			try {
 				await getWebhookService().writeMessage(channel, {
 					...validIdentity,
@@ -124,7 +133,7 @@ export default abstract class ReplyBot {
 				logger.error(`[${this.defaultBotName}] Error sending reply with fallback identity:`, error as Error);
 				throw error;
 			}
-			
+
 			return;
 		}
 
