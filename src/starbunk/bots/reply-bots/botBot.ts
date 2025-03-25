@@ -7,7 +7,7 @@ import ReplyBot from '../replyBot';
 export default class BotBot extends ReplyBot {
 	constructor() {
 		super();
-		this.responseRate = 10;
+		this.responseRate = 5; // 5% chance to respond to any bot message
 	}
 
 	protected shouldSkipMessage(message: Message): boolean {
@@ -29,19 +29,14 @@ export default class BotBot extends ReplyBot {
 		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
 
 		try {
-			const shouldRespond = BotBotConfig.Patterns.Default?.test(message.content);
-			logger.debug(`[${this.defaultBotName}] Bot mention check result: ${shouldRespond}`);
-
-			if (shouldRespond) {
-				if (!this.shouldTriggerResponse()) {
-					logger.debug(`[${this.defaultBotName}] Skipping response due to probability check`);
-					return;
-				}
-
-				logger.info(`[${this.defaultBotName}] Responding to bot mention from ${message.author.tag}`);
-				await this.sendReply(message.channel as TextChannel, BotBotConfig.Responses.Default);
-				logger.debug(`[${this.defaultBotName}] Response sent successfully`);
+			if (!this.shouldTriggerResponse()) {
+				logger.debug(`[${this.defaultBotName}] Skipping response due to probability check`);
+				return;
 			}
+
+			logger.info(`[${this.defaultBotName}] Responding to bot message from ${message.author.tag}`);
+			await this.sendReply(message.channel as TextChannel, BotBotConfig.Responses.Default);
+			logger.debug(`[${this.defaultBotName}] Response sent successfully`);
 		} catch (error) {
 			logger.error(`[${this.defaultBotName}] Error processing message:`, error as Error);
 			throw error;
