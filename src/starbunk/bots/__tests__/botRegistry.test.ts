@@ -37,10 +37,9 @@ describe('BotRegistry', () => {
 	let testBot: MockBot;
 
 	beforeEach(() => {
-		// Reset the singleton instance by creating a new instance
-		const newRegistry = new BotRegistry();
-		(BotRegistry as any).instance = newRegistry;
-		registry = newRegistry;
+		// Reset the singleton instance using the dedicated reset method
+		BotRegistry.reset();
+		registry = BotRegistry.getInstance();
 		testBot = new MockBot('TestBot');
 	});
 

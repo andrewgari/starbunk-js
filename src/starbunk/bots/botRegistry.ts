@@ -75,4 +75,13 @@ export class BotRegistry {
 		logger.debug(`[BotRegistry] Retrieved response rate for ${botName}: ${rate}%`);
 		return rate;
 	}
+
+	/**
+	 * Reset the singleton instance to a fresh state.
+	 * This method should only be used in tests.
+	 */
+	public static reset(): void {
+		logger.debug('[BotRegistry] Resetting singleton instance');
+		BotRegistry.instance = new BotRegistry();
+	}
 }
