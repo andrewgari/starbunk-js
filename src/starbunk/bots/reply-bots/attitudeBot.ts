@@ -5,10 +5,6 @@ import { AttitudeBotConfig } from "../config/attitudeBotConfig";
 import ReplyBot from "../replyBot";
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class AttitudeBot extends ReplyBot {
-	public get defaultBotName(): string {
-		return 'Xander Crews';
-	}
-
 	public get botIdentity(): BotIdentity {
 		return {
 			botName: AttitudeBotConfig.Name,

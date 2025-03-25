@@ -24,7 +24,7 @@ describe('NiceBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: NiceBotConfig.Name,
+				botName: NiceBotConfig.Name,
 				content: expect.any(String)
 			})
 		);
@@ -37,7 +37,7 @@ describe('NiceBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: NiceBotConfig.Name,
+				botName: NiceBotConfig.Name,
 				content: expect.any(String)
 			})
 		);

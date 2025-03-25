@@ -6,6 +6,9 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class SpiderBot extends ReplyBot {
+	public get defaultBotName(): string {
+		return 'Spider-Bot';
+	}
 	public get botIdentity(): BotIdentity {
 		return {
 			botName: SpiderBotConfig.Name,

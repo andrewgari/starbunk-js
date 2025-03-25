@@ -32,7 +32,7 @@ describe('SigGreatBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: SigGreatBotConfig.Name,
+				botName: SigGreatBotConfig.Name,
 				content: expect.any(String)
 			})
 		);

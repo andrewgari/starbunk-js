@@ -5,6 +5,7 @@ import path from 'path';
 import { isDebugMode } from '../environment';
 import { logger } from '../services/logger';
 import { loadBot } from '../util/moduleLoader';
+import { BotRegistry } from './bots/botRegistry';
 import ReplyBot from './bots/replyBot';
 import { VoiceBot } from './bots/voiceBot';
 import { CommandHandler } from './commandHandler';
@@ -74,8 +75,6 @@ export default class StarbunkClient extends Client {
 	};
 
 	private async handleMessage(message: Message): Promise<void> {
-		if (message.author.bot) return;
-
 		logger.debug(`Processing message "${message.content.substring(0, 100)}..." through ${this.bots.size} bots`);
 
 		try {
@@ -226,6 +225,7 @@ export default class StarbunkClient extends Client {
 							if (bot && typeof bot.handleMessage === 'function' && typeof bot.defaultBotName !== 'undefined') {
 								logger.info(`✅ Bot loaded successfully: ${bot.defaultBotName} (${bot.constructor.name})`);
 								this.bots.set(bot.defaultBotName, bot);
+								BotRegistry.getInstance().registerBot(bot);
 								successCount++;
 								continue; // Skip to next bot file
 							}
@@ -246,6 +246,7 @@ export default class StarbunkClient extends Client {
 					if (bot) {
 						logger.info(`✅ Bot loaded successfully via loadBot: ${bot.defaultBotName} (${bot.constructor.name})`);
 						this.bots.set(bot.defaultBotName, bot);
+						BotRegistry.getInstance().registerBot(bot);
 						successCount++;
 					} else {
 						logger.warn(`⚠️ No bot instance returned from: ${botFile}`);

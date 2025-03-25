@@ -8,8 +8,9 @@ jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 }));
 
 import { Message } from 'discord.js';
+import userId from '../../../discord/userId';
 import { container, ServiceId } from '../../../services/container';
-import random from '../../../utils/random';
+import { percentChance } from '../../../utils/random';
 import { GuyBotConfig } from '../config/guyBotConfig';
 import GuyBot from '../reply-bots/guyBot';
 import { createMockMessage, mockDiscordService, mockLogger, mockWebhookService } from './testUtils';
@@ -21,9 +22,14 @@ jest.mock('../../../services/discordService', () => ({
 	}
 }));
 
+jest.mock('../../../utils/random', () => ({
+	percentChance: jest.fn()
+}));
+
 describe('GuyBot', () => {
-	let guyBot: GuyBot;
-	let message: Message<boolean>;
+	let bot: GuyBot;
+	let mockMsg: Message;
+	let sendReplySpy: jest.SpyInstance;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -36,38 +42,80 @@ describe('GuyBot', () => {
 			avatarUrl: GuyBotConfig.Avatars.Default
 		});
 
-		guyBot = new GuyBot();
-		message = createMockMessage('Hey guy, what\'s up?', '123456', false);
+		mockMsg = createMockMessage();
+		bot = new GuyBot();
+		sendReplySpy = jest.spyOn(bot as any, 'sendReply').mockImplementation(() => Promise.resolve());
 	});
 
-	it('should trigger on "guy" mentions', async () => {
-		message.content = 'Hey guy';
-		await guyBot.handleMessage(message);
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+	it('should have 15% response rate for Guy\'s messages', () => {
+		expect(bot['responseRate']).toBe(15);
 	});
 
-	it('should trigger on guys messages 5% of the time', async () => {
-		message.content = 'Hey guy';
-		jest.spyOn(random, 'percentChance').mockReturnValue(true);
-		await guyBot.handleMessage(message);
-		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+	describe('when message contains "guy"', () => {
+		beforeEach(() => {
+			mockMsg.content = 'hey guy what is up';
+		});
+
+		it('should always respond regardless of probability', async () => {
+			(percentChance as jest.Mock).mockReturnValue(false);
+			await bot.handleMessage(mockMsg);
+			expect(sendReplySpy).toHaveBeenCalled();
+			expect(percentChance).not.toHaveBeenCalled();
+		});
+
+		it('should respond even if from non-Guy user', async () => {
+			mockMsg.author.id = 'other-user';
+			await bot.handleMessage(mockMsg);
+			expect(sendReplySpy).toHaveBeenCalled();
+		});
 	});
 
-	it('should not trigger on other messages', async () => {
-		message.content = 'Hey';
-		jest.spyOn(random, 'percentChance').mockReturnValue(false);
-		await guyBot.handleMessage(message);
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	describe('when message is from Guy', () => {
+		beforeEach(() => {
+			mockMsg.author.id = userId.Guy;
+			mockMsg.content = 'normal message';
+		});
+
+		it('should respond when probability check passes', async () => {
+			(percentChance as jest.Mock).mockReturnValue(true);
+			await bot.handleMessage(mockMsg);
+
+			expect(percentChance).toHaveBeenCalledWith(15);
+			expect(sendReplySpy).toHaveBeenCalled();
+		});
+
+		it('should not respond when probability check fails', async () => {
+			(percentChance as jest.Mock).mockReturnValue(false);
+			await bot.handleMessage(mockMsg);
+
+			expect(percentChance).toHaveBeenCalledWith(15);
+			expect(sendReplySpy).not.toHaveBeenCalled();
+		});
 	});
 
-	it('should retrieve the correct bot identity', async () => {
-		expect(guyBot.botIdentity).toEqual({
+	describe('when message is from other users', () => {
+		beforeEach(() => {
+			mockMsg.author.id = 'other-user';
+			mockMsg.content = 'normal message';
+		});
+
+		it('should never respond', async () => {
+			(percentChance as jest.Mock).mockReturnValue(true);
+			await bot.handleMessage(mockMsg);
+
+			expect(percentChance).not.toHaveBeenCalled();
+			expect(sendReplySpy).not.toHaveBeenCalled();
+		});
+	});
+
+	it('should retrieve the correct bot identity', () => {
+		expect(bot.botIdentity).toEqual({
 			botName: GuyBotConfig.Name,
 			avatarUrl: GuyBotConfig.Avatars.Default
 		});
 	});
 	// it('should handle missing bot identity', () => {
 	// 	mockDiscordService.getMemberAsBotIdentity.mockReturnValueOnce(undefined);
-	// 	expect(guyBot.botIdentity).toBeUndefined();
+	// 	expect(bot.botIdentity).toBeUndefined();
 	// });
 });

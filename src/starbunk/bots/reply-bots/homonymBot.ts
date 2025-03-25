@@ -1,6 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
 import { logger } from '../../../services/logger';
-import { percentChance } from '../../../utils/random';
 import { BotIdentity } from '../../types/botIdentity';
 import { HomonymBotConfig } from '../config/homonymBotConfig';
 import ReplyBot from '../replyBot';
@@ -12,38 +11,16 @@ interface HomonymMatch {
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class HomonymBot extends ReplyBot {
-	// Cache compiled regex patterns for better performance
-	private readonly wordPatterns: Map<string, RegExp> = new Map();
+	protected override responseRate = 15; // Set 15% response rate
 
-	constructor() {
-		super();
-		logger.debug(`[${this.defaultBotName}] Initializing HomonymBot`);
-		this.skipBotMessages = false;
-		this.initializeWordPatterns();
-		logger.debug(`[${this.defaultBotName}] Initialized ${this.wordPatterns.size} word patterns`);
-	}
-
-	private initializeWordPatterns(): void {
-		logger.debug(`[${this.defaultBotName}] Initializing word patterns`);
-		try {
-			// Pre-compile all regex patterns for better performance
-			HomonymBotConfig.HomonymPairs.forEach(pair => {
-				pair.words.forEach(word => {
-					const pattern = new RegExp(`\\b${word}\\b`, "i");
-					this.wordPatterns.set(word, pattern);
-					logger.debug(`[${this.defaultBotName}] Added pattern for word: ${word}`);
-				});
-			});
-		} catch (error) {
-			logger.error(`[${this.defaultBotName}] Error initializing word patterns:`, error as Error);
-			throw error;
-		}
+	protected override shouldSkipMessage(_message: Message): boolean {
+		return false; // Never skip messages, we want to check all messages for homonyms
 	}
 
 	public get botIdentity(): BotIdentity {
 		return {
-			avatarUrl: HomonymBotConfig.Avatars.Default,
-			botName: HomonymBotConfig.Name
+			botName: HomonymBotConfig.Name,
+			avatarUrl: HomonymBotConfig.Avatars.Default
 		};
 	}
 
@@ -53,10 +30,8 @@ export default class HomonymBot extends ReplyBot {
 		try {
 			const pair = this.findMatchingHomonymPair(message.content);
 			if (pair) {
-				// Add 15% chance to respond
-				const shouldRespond = percentChance(15);
-				if (!shouldRespond) {
-					logger.debug(`[${this.defaultBotName}] Found match but skipping due to probability check (15% chance)`);
+				if (!this.shouldTriggerResponse()) {
+					logger.debug(`[${this.defaultBotName}] Found match but skipping due to probability check`);
 					return;
 				}
 
@@ -73,29 +48,19 @@ export default class HomonymBot extends ReplyBot {
 	}
 
 	private findMatchingHomonymPair(content: string): HomonymMatch | null {
-		logger.debug(`[${this.defaultBotName}] Looking for homonym matches`);
-		try {
-			for (const pair of HomonymBotConfig.HomonymPairs) {
-				for (const word of pair.words) {
-					const pattern = this.wordPatterns.get(word);
-					if (!pattern) {
-						logger.warn(`[${this.defaultBotName}] Missing pattern for word: ${word}`);
-						continue;
-					}
+		const words = content.toLowerCase().split(/\s+/);
 
-					if (pattern.test(content)) {
-						logger.debug(`[${this.defaultBotName}] Found match for word: ${word}`);
-						return {
-							word,
-							correction: pair.corrections[word]
-						};
-					}
+		for (const pair of HomonymBotConfig.HomonymPairs) {
+			for (const word of pair.words) {
+				if (words.includes(word)) {
+					return {
+						word,
+						correction: pair.corrections[word]
+					};
 				}
 			}
-			return null;
-		} catch (error) {
-			logger.error(`[${this.defaultBotName}] Error finding homonym match:`, error as Error);
-			return null;
 		}
+
+		return null;
 	}
 }

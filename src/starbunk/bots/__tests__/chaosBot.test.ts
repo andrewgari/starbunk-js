@@ -23,7 +23,7 @@ describe('ChaosBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: ChaosBotConfig.Name,
+				botName: ChaosBotConfig.Name,
 				content: expect.any(String)
 			})
 		);

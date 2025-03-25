@@ -24,7 +24,7 @@ describe('BlueBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: BlueBotConfig.Name,
+				botName: BlueBotConfig.Name,
 				content: BlueBotConfig.Responses.Default
 			})
 		);
@@ -37,7 +37,7 @@ describe('BlueBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: BlueBotConfig.Name,
+				botName: BlueBotConfig.Name,
 				content: BlueBotConfig.Responses.Default
 			})
 		);
