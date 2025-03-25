@@ -23,7 +23,7 @@ describe('MusicCorrectBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: MusicCorrectBotConfig.Name,
+				botName: MusicCorrectBotConfig.Name,
 				content: expect.any(String)
 			})
 		);

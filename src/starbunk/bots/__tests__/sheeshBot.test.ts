@@ -30,7 +30,7 @@ describe('SheeshBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: SheeshBotConfig.Name,
+				botName: SheeshBotConfig.Name,
 				content: expect.any(String)
 			})
 		);

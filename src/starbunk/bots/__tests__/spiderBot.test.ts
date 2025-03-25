@@ -51,7 +51,7 @@ describe('SpiderBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: SpiderBotConfig.Name,
+				botName: SpiderBotConfig.Name,
 				content: expect.any(String)
 			})
 		);
@@ -64,7 +64,7 @@ describe('SpiderBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: SpiderBotConfig.Name,
+				botName: SpiderBotConfig.Name,
 				content: expect.any(String)
 			})
 		);
@@ -77,7 +77,7 @@ describe('SpiderBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: SpiderBotConfig.Name,
+				botName: SpiderBotConfig.Name,
 				content: expect.any(String)
 			})
 		);

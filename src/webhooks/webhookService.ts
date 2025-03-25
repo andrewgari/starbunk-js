@@ -30,6 +30,15 @@ export class WebhookService implements WebhookServiceInterface {
 
 	async writeMessage(channel: TextChannel, messageInfo: MessageInfo): Promise<void> {
 		try {
+			// Transform botName/avatarUrl to username/avatarURL if needed
+			const transformedInfo: MessageInfo = {
+				...messageInfo,
+				username: messageInfo.username || messageInfo.botName,
+				avatarURL: messageInfo.avatarURL || messageInfo.avatarUrl
+			};
+			delete transformedInfo.botName;
+			delete transformedInfo.avatarUrl;
+
 			// Try to use webhooks
 			const webhooks = await channel.fetchWebhooks();
 			let webhook = webhooks.first();
@@ -38,17 +47,17 @@ export class WebhookService implements WebhookServiceInterface {
 				try {
 					webhook = await channel.createWebhook({
 						name: 'BotWebhook',
-						avatar: messageInfo.avatarURL,
+						avatar: transformedInfo.avatarURL,
 					});
 				} catch (webhookCreationError) {
 					// If creating webhook fails, fall back to regular message
 					this.logger.warn('Failed to create webhook, falling back to regular message');
-					await this.fallbackToRegularMessage(channel, messageInfo);
+					await this.fallbackToRegularMessage(channel, transformedInfo);
 					return;
 				}
 			}
 
-			await webhook.send(messageInfo);
+			await webhook.send(transformedInfo);
 			this.logger.debug(`Message sent to channel ${channel.name} via webhook`);
 		} catch (error) {
 			this.logger.warn('Failed to send webhook message, falling back to regular message');

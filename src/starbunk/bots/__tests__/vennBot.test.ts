@@ -5,10 +5,12 @@ jest.mock('../../../discord/discordGuildMemberHelper', () => ({
 	})
 }));
 
+import { Message } from 'discord.js';
+import userId from '../../../discord/userId';
 import { container, ServiceId } from '../../../services/container';
-import { VennBotConfig } from '../config/vennBotConfig';
+import { percentChance } from '../../../utils/random';
 import VennBot from '../reply-bots/vennBot';
-import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { createMockMessage, mockDiscordService, mockLogger, mockWebhookService } from './testUtils';
 
 // Mock DiscordService
 jest.mock('../../../services/discordService', () => {
@@ -19,49 +21,66 @@ jest.mock('../../../services/discordService', () => {
 	};
 });
 
+jest.mock('../../../utils/random', () => ({
+	percentChance: jest.fn()
+}));
+
+jest.mock('../../../environment', () => ({
+	isDebugMode: jest.fn().mockReturnValue(false)
+}));
+
 describe('VennBot', () => {
-	let vennBot: VennBot;
+	let bot: VennBot;
+	let mockMsg: Message;
+	let sendReplySpy: jest.SpyInstance;
 
 	beforeEach(() => {
-		// Clear container and register mocks
+		jest.clearAllMocks();
 		container.clear();
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
 
-		// Setup mock for Venn's identity
-		mockDiscordService.getMemberAsBotIdentity.mockReturnValue({
-			botName: VennBotConfig.Name,
-			avatarUrl: 'https://i.imgur.com/venn-avatar.png'
-		});
-
-		// Create VennBot instance
-		vennBot = new VennBot();
+		mockMsg = createMockMessage();
+		bot = new VennBot();
+		sendReplySpy = jest.spyOn(bot as any, 'sendReply').mockImplementation(() => Promise.resolve());
 	});
 
-	it('should respond to messages containing "cringe"', async () => {
-		const message = mockMessage('this is so cringe', 'testUser', false);
-		await vennBot.handleMessage(message);
-
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({
-				username: VennBotConfig.Name,
-				content: expect.any(String)
-			})
-		);
+	it('should have 5% response rate', () => {
+		expect(bot['responseRate']).toBe(5);
 	});
 
-	it('should not respond to bot messages', async () => {
-		const message = mockMessage('cringe', undefined, true);
-		await vennBot.handleMessage(message);
+	it('should respond to cringe messages regardless of probability', async () => {
+		(percentChance as jest.Mock).mockReturnValue(false);
+		mockMsg.content = 'venn is cringe';
+		await bot.handleMessage(mockMsg);
 
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		expect(sendReplySpy).toHaveBeenCalled();
 	});
 
-	it('should not respond to messages without "cringe"', async () => {
-		const message = mockMessage('hello world');
-		await vennBot.handleMessage(message);
+	it('should respond to target user when probability check passes', async () => {
+		(percentChance as jest.Mock).mockReturnValue(true);
+		mockMsg.author.id = userId.Venn;
+		await bot.handleMessage(mockMsg);
 
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		expect(percentChance).toHaveBeenCalledWith(5);
+		expect(sendReplySpy).toHaveBeenCalled();
+	});
+
+	it('should not respond to target user when probability check fails', async () => {
+		(percentChance as jest.Mock).mockReturnValue(false);
+		mockMsg.author.id = userId.Venn;
+		await bot.handleMessage(mockMsg);
+
+		expect(percentChance).toHaveBeenCalledWith(5);
+		expect(sendReplySpy).not.toHaveBeenCalled();
+	});
+
+	it('should not respond to non-target users without cringe', async () => {
+		(percentChance as jest.Mock).mockReturnValue(true);
+		mockMsg.author.id = 'other-user';
+		mockMsg.content = 'normal message';
+		await bot.handleMessage(mockMsg);
+
+		expect(sendReplySpy).not.toHaveBeenCalled();
 	});
 });

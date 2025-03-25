@@ -24,7 +24,7 @@ describe('PickleBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: PickleBotConfig.Name,
+				botName: PickleBotConfig.Name,
 				content: expect.any(String)
 			})
 		);

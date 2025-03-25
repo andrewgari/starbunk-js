@@ -1,4 +1,5 @@
 import { AutocompleteInteraction, ChatInputCommandInteraction, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import { logger } from '../../services/logger';
 import { BotRegistry } from '../bots/botRegistry';
 
 const botCommand = {
@@ -28,6 +29,26 @@ const botCommand = {
 						.setDescription('Name of the bot to disable')
 						.setRequired(true)
 						.setAutocomplete(true)
+				)
+		)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName('frequency')
+				.setDescription('Set a bot\'s response frequency')
+				.addStringOption(option =>
+					option
+						.setName('bot_name')
+						.setDescription('Name of the bot to adjust')
+						.setRequired(true)
+						.setAutocomplete(true)
+				)
+				.addIntegerOption(option =>
+					option
+						.setName('rate')
+						.setDescription('Response rate (0-100)')
+						.setRequired(true)
+						.setMinValue(0)
+						.setMaxValue(100)
 				)
 		)
 		.addSubcommand(subcommand =>
@@ -66,16 +87,41 @@ const botCommand = {
 				}
 				break;
 			}
+			case 'frequency': {
+				const botName = interaction.options.getString('bot_name', true);
+				const rate = interaction.options.getInteger('rate', true);
+				const success = registry.setBotFrequency(botName, rate);
+				if (success) {
+					await interaction.reply({
+						content: `✅ Bot \`${botName}\` response rate set to ${rate}%.`,
+						ephemeral: true
+					});
+				} else {
+					await interaction.reply({
+						content: `❌ Bot \`${botName}\` not found.`,
+						ephemeral: true
+					});
+				}
+				break;
+			}
 			case 'list-bots': {
 				const botNames = registry.getAllBotNames();
+				logger.debug(`[BotCommand] Found ${botNames.length} bots`);
+
 				const botList = botNames
-					.map(name => `• \`${name}\`: ${registry.isBotEnabled(name) ? '✅ Enabled' : '❌ Disabled'}`)
+					.map(name => {
+						const status = registry.isBotEnabled(name) ? '✅' : '❌';
+						const rate = registry.getBotFrequency(name);
+						logger.debug(`[BotCommand] Bot ${name}: status=${status}, rate=${rate}%`);
+						return `• \`${name}\` ${status} (${rate}%)`;
+					})
 					.join('\n');
 
 				const content = botList.length > 0
 					? `**Available Bots:**\n${botList}`
 					: 'No bots registered.';
 
+				logger.debug(`[BotCommand] Sending bot list:\n${content}`);
 				await interaction.reply({ content, ephemeral: true });
 				break;
 			}
@@ -84,6 +130,7 @@ const botCommand = {
 **Bot Manager Commands**
 • \`/bot enable <bot_name>\` - Enable a specific bot
 • \`/bot disable <bot_name>\` - Disable a specific bot
+• \`/bot frequency <bot_name> <rate>\` - Set bot response rate (0-100%)
 • \`/bot list-bots\` - List all available bots and their status
                 `.trim();
 				await interaction.reply({ content: helpText, ephemeral: true });

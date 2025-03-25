@@ -2,16 +2,11 @@ import { logger } from '../../services/logger';
 import ReplyBot from './replyBot';
 
 export class BotRegistry {
-	private static instance: BotRegistry;
-	private botStates: Map<string, boolean> = new Map();
-	private bots: Map<string, ReplyBot> = new Map();
-
-	private constructor() { }
+	private static instance = new BotRegistry();
+	private botStates = new Map<string, boolean>();
+	private bots = new Map<string, ReplyBot>();
 
 	public static getInstance(): BotRegistry {
-		if (!BotRegistry.instance) {
-			BotRegistry.instance = new BotRegistry();
-		}
 		return BotRegistry.instance;
 	}
 
@@ -20,7 +15,8 @@ export class BotRegistry {
 		this.bots.set(botName, bot);
 		// Initialize as enabled
 		this.botStates.set(botName, true);
-		logger.debug(`[BotRegistry] Registered bot: ${botName}`);
+		const rate = bot.getResponseRate();
+		logger.debug(`[BotRegistry] Registered bot: ${botName} with response rate ${rate}%`);
 	}
 
 	public enableBot(botName: string): boolean {
@@ -48,6 +44,35 @@ export class BotRegistry {
 	}
 
 	public getAllBotNames(): string[] {
-		return Array.from(this.bots.keys());
+		const names = Array.from(this.bots.keys());
+		logger.debug(`[BotRegistry] Retrieved ${names.length} bot names: ${names.join(', ')}`);
+		return names;
+	}
+
+	public setBotFrequency(botName: string, rate: number): boolean {
+		const bot = this.bots.get(botName);
+		if (!bot) {
+			logger.warn(`[BotRegistry] Attempted to set frequency for non-existent bot: ${botName}`);
+			return false;
+		}
+		try {
+			bot.setResponseRate(rate);
+			logger.info(`[BotRegistry] Set response rate for ${botName} to ${rate}%`);
+			return true;
+		} catch (error) {
+			logger.error(`[BotRegistry] Error setting response rate for ${botName}:`, error as Error);
+			return false;
+		}
+	}
+
+	public getBotFrequency(botName: string): number {
+		const bot = this.bots.get(botName);
+		if (!bot) {
+			logger.warn(`[BotRegistry] Attempted to get frequency for non-existent bot: ${botName}`);
+			return 0;
+		}
+		const rate = bot.getResponseRate();
+		logger.debug(`[BotRegistry] Retrieved response rate for ${botName}: ${rate}%`);
+		return rate;
 	}
 }

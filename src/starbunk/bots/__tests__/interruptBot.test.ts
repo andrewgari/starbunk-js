@@ -1,20 +1,17 @@
 import { Message } from 'discord.js';
-import * as environment from '../../../environment';
 import { ServiceId, container } from '../../../services/container';
-import Random from '../../../utils/random';
+import { percentChance } from '../../../utils/random';
 import InterruptBot from '../reply-bots/interruptBot';
 import { createMockMessage, mockLogger, mockWebhookService } from './testUtils';
 
 // Mock Random module
 jest.mock('../../../utils/random', () => ({
-	percentChance: jest.fn().mockReturnValue(false),
-	roll: jest.fn()
+	percentChance: jest.fn()
 }));
 
 // Mock environment module
 jest.mock('../../../environment', () => ({
-	isDebugMode: jest.fn().mockReturnValue(false),
-	setDebugMode: jest.fn()
+	isDebugMode: jest.fn().mockReturnValue(false)
 }));
 
 describe('InterruptBot', () => {
@@ -39,42 +36,33 @@ describe('InterruptBot', () => {
 
 		// Spy on the sendReply method
 		sendReplySpy = jest.spyOn(bot as any, 'sendReply').mockImplementation(() => Promise.resolve());
-
-		// Default to debug mode off
-		(environment.isDebugMode as jest.Mock).mockReturnValue(false);
 	});
 
-	it('should interrupt if percentChance returns true', async () => {
-		// Arrange
-		(Random.percentChance as jest.Mock).mockReturnValueOnce(true);
+	it('should have 1% response rate in normal mode', () => {
+		expect(bot['responseRate']).toBe(1);
+	});
 
-		// Act
+	it('should interrupt when probability check passes', async () => {
+		(percentChance as jest.Mock).mockReturnValue(true);
 		await bot.handleMessage(mockMsg);
 
-		// Assert
+		expect(percentChance).toHaveBeenCalledWith(1);
 		expect(sendReplySpy).toHaveBeenCalled();
 	});
 
-	it('should not trigger if percentChance returns false', async () => {
-		// Arrange
-		(Random.percentChance as jest.Mock).mockReturnValueOnce(false);
-
-		// Act
+	it('should not interrupt when probability check fails', async () => {
+		(percentChance as jest.Mock).mockReturnValue(false);
 		await bot.handleMessage(mockMsg);
 
-		// Assert
+		expect(percentChance).toHaveBeenCalledWith(1);
 		expect(sendReplySpy).not.toHaveBeenCalled();
 	});
 
 	it('should create interrupted message with first few words', async () => {
-		// Arrange
-		(Random.percentChance as jest.Mock).mockReturnValueOnce(true);
+		(percentChance as jest.Mock).mockReturnValue(true);
 		mockMsg.content = 'Did somebody say BLU?';
-
-		// Act
 		await bot.handleMessage(mockMsg);
 
-		// Assert
 		expect(sendReplySpy).toHaveBeenCalled();
 		expect(sendReplySpy).toHaveBeenCalledWith(
 			expect.anything(),
@@ -83,14 +71,10 @@ describe('InterruptBot', () => {
 	});
 
 	it('should create interrupted message with first few characters for single word', async () => {
-		// Arrange
-		(Random.percentChance as jest.Mock).mockReturnValueOnce(true);
+		(percentChance as jest.Mock).mockReturnValue(true);
 		mockMsg.content = 'Supercalifragilisticexpialidocious';
-
-		// Act
 		await bot.handleMessage(mockMsg);
 
-		// Assert
 		expect(sendReplySpy).toHaveBeenCalled();
 		expect(sendReplySpy).toHaveBeenCalledWith(
 			expect.anything(),

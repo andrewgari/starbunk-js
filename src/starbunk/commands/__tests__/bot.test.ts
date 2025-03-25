@@ -8,7 +8,8 @@ jest.mock('../../bots/botRegistry', () => {
 		enableBot: jest.fn(),
 		disableBot: jest.fn(),
 		getAllBotNames: jest.fn(),
-		isBotEnabled: jest.fn()
+		isBotEnabled: jest.fn(),
+		getBotFrequency: jest.fn()
 	};
 	return {
 		BotRegistry: {
@@ -56,6 +57,9 @@ describe('Bot Command', () => {
 		// Setup default registry mock responses
 		(registry.getAllBotNames as jest.Mock).mockReturnValue(['TestBot1', 'TestBot2']);
 		(registry.isBotEnabled as jest.Mock).mockReturnValue(true);
+		(registry.getBotFrequency as jest.Mock)
+			.mockReturnValueOnce(50)  // TestBot1
+			.mockReturnValueOnce(25); // TestBot2
 	});
 
 	describe('execute', () => {
@@ -148,7 +152,7 @@ describe('Bot Command', () => {
 				await botCommand.execute(mockInteraction);
 
 				expect(mockInteraction.reply).toHaveBeenCalledWith({
-					content: expect.stringContaining('TestBot1') && expect.stringContaining('TestBot2'),
+					content: expect.stringMatching(/TestBot1.*✅.*\(50%\)/) && expect.stringMatching(/TestBot2.*❌.*\(25%\)/),
 					ephemeral: true
 				});
 			});

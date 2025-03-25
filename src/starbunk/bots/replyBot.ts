@@ -1,14 +1,12 @@
 import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
-import guildIds from '../../discord/guildIds';
-import userId from '../../discord/userId';
-import { isDebugMode } from '../../environment';
 import { getWebhookService } from '../../services/bootstrap';
 import { logger } from '../../services/logger';
-import { BotRegistry } from './botRegistry';
+import { percentChance } from '../../utils/random';
 
 export default abstract class ReplyBot {
 	protected skipBotMessages: boolean = true;
+	protected responseRate: number = 100; // Default to 100% response rate
 
 	/**
 	 * Get the default name for this bot. By default, returns the class name.
@@ -19,6 +17,17 @@ export default abstract class ReplyBot {
 	}
 
 	public abstract get botIdentity(): BotIdentity | undefined;
+
+	public getResponseRate(): number {
+		return this.responseRate;
+	}
+
+	public setResponseRate(rate: number): void {
+		if (rate < 0 || rate > 100) {
+			throw new Error(`Invalid response rate: ${rate}. Must be between 0 and 100.`);
+		}
+		this.responseRate = rate;
+	}
 
 	public async auditMessage(message: Message): Promise<void> {
 		logger.debug(`[${this.defaultBotName}] Auditing message from ${message.author.tag}`);
@@ -37,104 +46,63 @@ export default abstract class ReplyBot {
 		}
 	}
 
-	public async handleMessage(message: Message): Promise<void> {
-		logger.debug(`[${this.defaultBotName}] Handling message from ${message.author.tag}`);
-
-		// Skip bot messages if skipBotMessages is true
-		if (this.shouldSkipMessage(message)) {
-			logger.debug(`[${this.defaultBotName}] Skipping message from ${message.author.tag} (shouldSkipMessage=true)`);
-			return;
-		}
-
-		try {
-			await this.processMessage(message);
-		} catch (error) {
-			logger.error(`[${this.defaultBotName}] Error processing message`, error as Error);
-			logger.debug(`[${this.defaultBotName}] Message content that caused error: "${message.content.substring(0, 100)}..."`);
-		}
+	/**
+	 * Determines if a message should be skipped based on bot settings.
+	 * Can be overridden by child classes for custom skip logic.
+	 */
+	protected shouldSkipMessage(message: Message): boolean {
+		return this.skipBotMessages && message.author.bot;
 	}
 
+	/**
+	 * Determines if the bot should respond based on its response rate.
+	 * Will always return true in debug mode.
+	 */
+	protected shouldTriggerResponse(): boolean {
+		const shouldTrigger = percentChance(this.responseRate);
+		logger.debug(`[${this.defaultBotName}] Response rate check (${this.responseRate}%): ${shouldTrigger}`);
+		return shouldTrigger;
+	}
+
+	/**
+	 * Handles the message processing. Child classes should implement this method
+	 * to define their specific message handling logic.
+	 */
 	protected abstract processMessage(message: Message): Promise<void>;
 
 	/**
-	 * Check if a message should be skipped (e.g., from a bot)
-	 * @param message The message to check
-	 * @returns true if the message should be skipped, false otherwise
+	 * Main message handling method. This should not be overridden by child classes.
+	 * Instead, override processMessage() for custom handling logic.
 	 */
-	protected shouldSkipMessage(message: Message): boolean {
-		// Check if bot is enabled in registry
-		if (!BotRegistry.getInstance().isBotEnabled(this.defaultBotName)) {
-			logger.debug(`[${this.defaultBotName}] Skipping message - bot is disabled`);
-			return true;
-		}
-
-		// Skip messages from any bot if skipBotMessages is true
-		if (this.skipBotMessages && message.author.bot) {
-			logger.debug(`[${this.defaultBotName}] Skipping message from bot (skipBotMessages=true)`);
-			return true;
-		}
-
-		// In debug mode, only process messages from Cova or in the testing channel
-		if (isDebugMode()) {
-			// log message details
-			logger.debug(`[${this.defaultBotName}] DEBUG MODE - Message details:
-				Author: ${message.author.tag} (ID: ${message.author.id})
-				Channel: ${message.channel.type === 0 ? message.channel.name : 'DM/unknown'} (ID: ${message.channelId})
-				Guild: ${message.guild?.name} (ID: ${message.guild?.id})
-			`);
-
-			// Skip messages from Starbunk guild
-			logger.debug(`[${this.defaultBotName}] DEBUG MODE - Message guild ID: ${message.guild?.id}`);
-			if (message.guild?.id === guildIds.StarbunkCrusaders) {
-				return true;
+	public async handleMessage(message: Message): Promise<void> {
+		try {
+			if (this.shouldSkipMessage(message)) {
+				logger.debug(`[${this.defaultBotName}] Skipping message from ${message.author.tag} (shouldSkipMessage=true)`);
+				return;
 			}
-
-			// Skip messages from Cova
-			logger.debug(`[${this.defaultBotName}] DEBUG MODE - Message author ID: ${message.author.id}`);
-			if (message.author.id === userId.Cova) {
-				return true;
-			}
+			await this.processMessage(message);
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error in handleMessage:`, error as Error);
+			throw error;
 		}
-
-		return false;
 	}
 
+	/**
+	 * Sends a reply to the specified channel using the bot's identity.
+	 */
 	protected async sendReply(channel: TextChannel, content: string): Promise<void> {
+		if (!this.botIdentity) {
+			throw new Error(`[${this.defaultBotName}] No bot identity configured`);
+		}
+
 		try {
-			const identity = this.botIdentity;
-
-			if (!identity) {
-				logger.warn(`[${this.defaultBotName}] No bot identity available, using default name`);
-				// Continue with a generic identity
-			}
-
-			// Try to use webhook service
-			try {
-				const webhookService = getWebhookService();
-				logger.debug(`[${this.defaultBotName}] Got webhook service successfully`);
-
-				logger.debug(`[${this.defaultBotName}] Sending reply to channel ${channel.name}: "${content.substring(0, 100)}..."`);
-				await webhookService.writeMessage(channel, {
-					username: identity?.botName || this.defaultBotName,
-					avatarURL: identity?.avatarUrl,
-					content: content,
-					embeds: []
-				});
-				logger.debug(`[${this.defaultBotName}] Reply sent successfully via webhook`);
-				return; // Success, exit early
-			} catch (error) {
-				// Just log the webhook error, we'll fall back to direct channel message
-				logger.warn(`[${this.defaultBotName}] Failed to use webhook service, falling back to direct message: ${error instanceof Error ? error.message : String(error)}`);
-			}
-
-			// Fallback to direct channel message
-			logger.debug(`[${this.defaultBotName}] Sending fallback direct message to channel ${channel.name}`);
-			const formattedMessage = `**[${identity?.botName || this.defaultBotName}]**: ${content}`;
-			await channel.send(formattedMessage);
-			logger.debug(`[${this.defaultBotName}] Fallback direct message sent successfully`);
+			await getWebhookService().writeMessage(channel, {
+				...this.botIdentity,
+				content
+			});
 		} catch (error) {
-			logger.error(`[${this.defaultBotName}] Failed to send any reply to channel ${channel.id}: ${error instanceof Error ? error.message : String(error)}`);
-			// Don't throw here - just log the error and continue
+			logger.error(`[${this.defaultBotName}] Error sending reply:`, error as Error);
+			throw error;
 		}
 	}
 
