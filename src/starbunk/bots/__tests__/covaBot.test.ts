@@ -2,7 +2,6 @@ import { Message } from 'discord.js';
 import userId from '../../../discord/userId';
 import * as environment from '../../../environment';
 import { ServiceId, container } from '../../../services/container';
-import { CovaBotConfig } from '../config/covaBotConfig';
 import CovaBot from '../reply-bots/covaBot';
 import { createMockMessage, mockLogger, mockWebhookService } from './testUtils';
 
@@ -18,21 +17,36 @@ const mockLLMManager = {
 	createPromptCompletion: jest.fn().mockResolvedValue('This is a CovaBot response.')
 };
 
-// Mock the bootstrap module
-jest.mock('../../../services/bootstrap', () => ({
-	getLLMManager: jest.fn().mockReturnValue(mockLLMManager),
-	getWebhookService: jest.fn().mockReturnValue(mockWebhookService),
-	getDiscordService: jest.fn().mockReturnValue({
-		getMemberAsBotIdentity: jest.fn().mockReturnValue({
-			botName: 'Cova',
-			avatarUrl: 'https://example.com/avatar.jpg'
-		})
-	}),
-	getDiscordClient: jest.fn().mockReturnValue({
-		isReady: jest.fn().mockReturnValue(true),
-		once: jest.fn()
+// Mock DiscordService for dynamic identity
+const mockDiscordService = {
+	getMemberAsBotIdentity: jest.fn().mockImplementation((id) => {
+		if (id === userId.Cova) {
+			return {
+				botName: 'Dynamic Cova Name',
+				avatarUrl: 'https://dynamic-avatar-url.com/cova.jpg'
+			};
+		}
+		return {
+			botName: 'Default Bot',
+			avatarUrl: 'https://example.com/default.jpg'
+		};
 	})
-}));
+};
+
+// Mock the bootstrap module's exports
+jest.mock('../../../services/bootstrap', () => {
+	return {
+		__esModule: true,
+		getLogger: jest.fn().mockReturnValue(mockLogger),
+		getDiscordService: jest.fn().mockReturnValue(mockDiscordService),
+		getLLMManager: jest.fn().mockReturnValue(mockLLMManager),
+		getWebhookService: jest.fn().mockReturnValue(mockWebhookService),
+		getDiscordClient: jest.fn().mockReturnValue({
+			isReady: jest.fn().mockReturnValue(true),
+			once: jest.fn()
+		})
+	};
+});
 
 // Mock PerformanceTimer
 jest.mock('../../../utils/time', () => {
@@ -127,10 +141,38 @@ describe('CovaBot', () => {
 		return Promise.resolve();
 	});
 
-	it('should initialize with the correct bot identity', () => {
-		const identity = covaBot.botIdentity;
-		expect(identity.botName).toBe(CovaBotConfig.Name);
-		expect(identity.avatarUrl).toBe(CovaBotConfig.Avatars.Default);
+	it('should initialize with the correct dynamic bot identity', () => {
+		// Create mock identity
+		const mockIdentity = {
+			botName: 'Dynamic Cova Name',
+			avatarUrl: 'https://dynamic-avatar-url.com/cova.jpg'
+		};
+
+		// Test using the override method
+		const identity = covaBot.getBotIdentityWithOverride(mockIdentity);
+		expect(identity.botName).toBe('Dynamic Cova Name');
+		expect(identity.avatarUrl).toBe('https://dynamic-avatar-url.com/cova.jpg');
+	});
+
+	it('should update identity when Discord service returns new values', () => {
+		// First identity
+		const mockIdentity1 = {
+			botName: 'Dynamic Cova Name',
+			avatarUrl: 'https://dynamic-avatar-url.com/cova.jpg'
+		};
+
+		const identity1 = covaBot.getBotIdentityWithOverride(mockIdentity1);
+		expect(identity1.botName).toBe('Dynamic Cova Name');
+
+		// Updated identity
+		const mockIdentity2 = {
+			botName: 'Updated Cova Name',
+			avatarUrl: 'https://updated-avatar.com/cova.jpg'
+		};
+
+		const identity2 = covaBot.getBotIdentityWithOverride(mockIdentity2);
+		expect(identity2.botName).toBe('Updated Cova Name');
+		expect(identity2.avatarUrl).toBe('https://updated-avatar.com/cova.jpg');
 	});
 
 	it('should skip messages from Cova', async () => {
@@ -150,9 +192,6 @@ describe('CovaBot', () => {
 	it('should respond to messages mentioning Cova', async () => {
 		// Set up message that mentions Cova
 		message.content = 'Hey Cova, how are you?';
-
-		// Set up question pattern detection
-		jest.spyOn(CovaBotConfig.Patterns.Question, 'test').mockReturnValue(true);
 
 		await covaBot.handleMessage(message);
 

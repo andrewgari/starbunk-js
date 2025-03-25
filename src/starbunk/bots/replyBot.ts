@@ -24,7 +24,7 @@ export default abstract class ReplyBot {
 		return "A Starbunk reply bot";
 	}
 
-	public abstract get botIdentity(): BotIdentity | undefined;
+	public abstract get botIdentity(): BotIdentity;
 
 	/**
 	 * Set the response rate for this bot.
