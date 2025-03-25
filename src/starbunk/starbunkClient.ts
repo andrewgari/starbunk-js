@@ -75,8 +75,6 @@ export default class StarbunkClient extends Client {
 	};
 
 	private async handleMessage(message: Message): Promise<void> {
-		if (message.author.bot) return;
-
 		logger.debug(`Processing message "${message.content.substring(0, 100)}..." through ${this.bots.size} bots`);
 
 		try {
