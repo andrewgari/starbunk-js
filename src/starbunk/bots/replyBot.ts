@@ -16,6 +16,14 @@ export default abstract class ReplyBot {
 		return this.constructor.name;
 	}
 
+	/**
+	 * Get the description for this bot.
+	 * Should be overridden by child classes to provide a meaningful description.
+	 */
+	public get description(): string {
+		return "A Starbunk reply bot";
+	}
+
 	public abstract get botIdentity(): BotIdentity | undefined;
 
 	public getResponseRate(): number {
@@ -95,6 +103,32 @@ export default abstract class ReplyBot {
 			throw new Error(`[${this.defaultBotName}] No bot identity configured`);
 		}
 
+		// Validate the bot identity
+		if (!this.botIdentity.botName || !this.botIdentity.avatarUrl) {
+			logger.warn(`[${this.defaultBotName}] Invalid bot identity detected: ${JSON.stringify(this.botIdentity)}`);
+			
+			// Create a valid identity with fallbacks
+			const validIdentity: BotIdentity = {
+				botName: this.botIdentity.botName || this.defaultBotName,
+				avatarUrl: this.botIdentity.avatarUrl || 'https://i.imgur.com/NtfJZP5.png'
+			};
+			
+			logger.info(`[${this.defaultBotName}] Using fallback identity: ${JSON.stringify(validIdentity)}`);
+			
+			try {
+				await getWebhookService().writeMessage(channel, {
+					...validIdentity,
+					content
+				});
+			} catch (error) {
+				logger.error(`[${this.defaultBotName}] Error sending reply with fallback identity:`, error as Error);
+				throw error;
+			}
+			
+			return;
+		}
+
+		// Use the bot's identity if valid
 		try {
 			await getWebhookService().writeMessage(channel, {
 				...this.botIdentity,

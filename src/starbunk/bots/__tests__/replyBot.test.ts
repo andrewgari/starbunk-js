@@ -13,9 +13,8 @@ class TestReplyBot extends ReplyBot {
 		return 'TestBot';
 	}
 
-	public get botIdentity(): { userId: string; botName: string; avatarUrl: string } {
+	public get botIdentity(): { botName: string; avatarUrl: string } {
 		return {
-			userId: '',
 			botName: 'TestBot',
 			avatarUrl: 'https://example.com/avatar.png'
 		};
@@ -92,6 +91,59 @@ describe('ReplyBot', () => {
 		it('should return false when percentChance returns false', () => {
 			(percentChance as jest.Mock).mockReturnValueOnce(false);
 			expect(bot['shouldTriggerResponse']()).toBe(false);
+		});
+	});
+	
+	describe('bot identity validation', () => {
+		// Create a class with invalid botIdentity to test validation
+		class BrokenBotIdentity extends ReplyBot {
+			public get defaultBotName(): string {
+				return 'BrokenBot';
+			}
+			
+			public get botIdentity() {
+				return {
+					botName: '',  // Empty bot name
+					avatarUrl: '' // Empty avatar URL
+				};
+			}
+
+			protected async processMessage(message: Message): Promise<void> {
+				await this.sendReply(message.channel as any, 'Test reply');
+			}
+		}
+
+		it('should use fallback identity when bot identity is invalid', async () => {
+			const brokenBot = new BrokenBotIdentity();
+			message.content = 'test message';
+			await brokenBot.handleMessage(message);
+			
+			// Check that webhookService was called with fallback values
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.objectContaining({
+					content: 'Test reply'
+				})
+			);
+			
+			// Verify that the fallback values were used
+			const callArgs = mockWebhookService.writeMessage.mock.calls[0][1];
+			expect(callArgs.botName || callArgs.username).toBe('BrokenBot');
+			expect(callArgs.avatarUrl || callArgs.avatarURL).toContain('http');
+		});
+		
+		it('should use valid bot identity when all fields are valid', async () => {
+			message.content = 'test message';
+			await bot.handleMessage(message);
+			
+			expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.objectContaining({
+					botName: 'TestBot',
+					avatarUrl: 'https://example.com/avatar.png',
+					content: 'Test reply'
+				})
+			);
 		});
 	});
 });

@@ -84,8 +84,16 @@ export default class CovaBot extends ReplyBot {
 
 			try {
 				// Try to get Cova's identity
-				this._botIdentity = getDiscordService().getMemberAsBotIdentity(userId.Cova);
-				logger.debug(`[${this.defaultBotName}] Bot identity updated: ${previousIdentity} -> ${JSON.stringify(this._botIdentity)}`);
+				const discordIdentity = getDiscordService().getMemberAsBotIdentity(userId.Cova);
+				
+				// Validate the identity values - ensure we have a valid avatar URL and name
+				// Only update if we got valid values
+				if (discordIdentity.avatarUrl && discordIdentity.botName) {
+					this._botIdentity = discordIdentity;
+					logger.debug(`[${this.defaultBotName}] Bot identity updated: ${previousIdentity} -> ${JSON.stringify(this._botIdentity)}`);
+				} else {
+					logger.warn(`[${this.defaultBotName}] Got incomplete identity from Discord service, keeping current identity`);
+				}
 			} catch (idError) {
 				// If we can't find the member during initialization, set up a one-time retry when the client is ready
 				logger.warn(`[${this.defaultBotName}] Failed to update bot identity: ${idError instanceof Error ? idError.message : String(idError)}`);
@@ -100,8 +108,15 @@ export default class CovaBot extends ReplyBot {
 					setTimeout(() => {
 						try {
 							logger.debug(`[${this.defaultBotName}] Retry: Attempting to update bot identity...`);
-							this._botIdentity = getDiscordService().getMemberAsBotIdentity(userId.Cova);
-							logger.debug(`[${this.defaultBotName}] Retry successful, bot identity updated: ${JSON.stringify(this._botIdentity)}`);
+							const retryIdentity = getDiscordService().getMemberAsBotIdentity(userId.Cova);
+							
+							// Only update if we got valid values
+							if (retryIdentity.avatarUrl && retryIdentity.botName) {
+								this._botIdentity = retryIdentity;
+								logger.debug(`[${this.defaultBotName}] Retry successful, bot identity updated: ${JSON.stringify(this._botIdentity)}`);
+							} else {
+								logger.warn(`[${this.defaultBotName}] Retry got incomplete identity, keeping fallback identity`);
+							}
 						} catch (retryError) {
 							logger.warn(`[${this.defaultBotName}] Retry failed to update bot identity: ${retryError instanceof Error ? retryError.message : String(retryError)}`);
 							logger.debug(`[${this.defaultBotName}] Continuing with fallback identity: ${JSON.stringify(this._botIdentity)}`);
@@ -114,8 +129,15 @@ export default class CovaBot extends ReplyBot {
 						setTimeout(() => {
 							try {
 								logger.debug(`[${this.defaultBotName}] Client now ready, attempting to update bot identity...`);
-								this._botIdentity = getDiscordService().getMemberAsBotIdentity(userId.Cova);
-								logger.debug(`[${this.defaultBotName}] Client ready event: bot identity updated: ${JSON.stringify(this._botIdentity)}`);
+								const readyIdentity = getDiscordService().getMemberAsBotIdentity(userId.Cova);
+								
+								// Only update if we got valid values
+								if (readyIdentity.avatarUrl && readyIdentity.botName) {
+									this._botIdentity = readyIdentity;
+									logger.debug(`[${this.defaultBotName}] Client ready event: bot identity updated: ${JSON.stringify(this._botIdentity)}`);
+								} else {
+									logger.warn(`[${this.defaultBotName}] Ready event got incomplete identity, keeping fallback identity`);
+								}
 							} catch (readyError) {
 								logger.warn(`[${this.defaultBotName}] Ready event failed to update bot identity: ${readyError instanceof Error ? readyError.message : String(readyError)}`);
 								logger.debug(`[${this.defaultBotName}] Continuing with fallback identity: ${JSON.stringify(this._botIdentity)}`);

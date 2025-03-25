@@ -30,6 +30,13 @@ export class WebhookService implements WebhookServiceInterface {
 
 	async writeMessage(channel: TextChannel, messageInfo: MessageInfo): Promise<void> {
 		try {
+			// Validate the messageInfo to ensure it has all required fields with valid values
+			if (!this.validateMessageInfo(messageInfo)) {
+				this.logger.warn('Invalid message info provided, using fallback values');
+				// Set fallback values to ensure we don't use undefined values
+				messageInfo = this.ensureValidMessageInfo(messageInfo);
+			}
+
 			// Transform botName/avatarUrl to username/avatarURL if needed
 			const transformedInfo: MessageInfo = {
 				...messageInfo,
@@ -38,31 +45,64 @@ export class WebhookService implements WebhookServiceInterface {
 			};
 			delete transformedInfo.botName;
 			delete transformedInfo.avatarUrl;
+			
+			// Create a unique webhook name based on the bot's username
+			// This prevents identity conflicts between different bots
+			const webhookName = `${transformedInfo.username?.replace(/\s+/g, '-')}-webhook`.substring(0, 32);
 
-			// Try to use webhooks
+			// Try to use webhooks - find a matching webhook for this bot if possible
 			const webhooks = await channel.fetchWebhooks();
-			let webhook = webhooks.first();
+			let webhook = webhooks.find(wh => wh.name === webhookName);
 
 			if (!webhook) {
 				try {
 					webhook = await channel.createWebhook({
-						name: 'BotWebhook',
+						name: webhookName,
 						avatar: transformedInfo.avatarURL,
 					});
+					this.logger.debug(`Created new webhook "${webhookName}" for ${transformedInfo.username}`);
 				} catch (webhookCreationError) {
 					// If creating webhook fails, fall back to regular message
-					this.logger.warn('Failed to create webhook, falling back to regular message');
+					this.logger.warn(`Failed to create webhook "${webhookName}", falling back to regular message: ${webhookCreationError instanceof Error ? webhookCreationError.message : String(webhookCreationError)}`);
 					await this.fallbackToRegularMessage(channel, transformedInfo);
 					return;
 				}
 			}
 
 			await webhook.send(transformedInfo);
-			this.logger.debug(`Message sent to channel ${channel.name} via webhook`);
+			this.logger.debug(`Message sent to channel ${channel.name} via webhook "${webhookName}"`);
 		} catch (error) {
-			this.logger.warn('Failed to send webhook message, falling back to regular message');
+			this.logger.warn(`Failed to send webhook message: ${error instanceof Error ? error.message : String(error)}`);
 			await this.fallbackToRegularMessage(channel, messageInfo);
 		}
+	}
+	
+	/**
+	 * Validates that the message info contains all required fields with valid values
+	 */
+	private validateMessageInfo(messageInfo: MessageInfo): boolean {
+		// Check if we have either username or botName
+		const hasName = !!(messageInfo.username || messageInfo.botName);
+		
+		// Check if we have either avatarURL or avatarUrl
+		const hasAvatar = !!(messageInfo.avatarURL || messageInfo.avatarUrl);
+		
+		// Check if we have content
+		const hasContent = !!messageInfo.content;
+		
+		return hasName && hasAvatar && hasContent;
+	}
+	
+	/**
+	 * Ensures the message info has valid values, adding defaults when needed
+	 */
+	private ensureValidMessageInfo(messageInfo: MessageInfo): MessageInfo {
+		return {
+			...messageInfo,
+			content: messageInfo.content || 'No message content provided',
+			username: messageInfo.username || messageInfo.botName || 'Unknown Bot',
+			avatarURL: messageInfo.avatarURL || messageInfo.avatarUrl || 'https://i.imgur.com/NtfJZP5.png' // Default avatar
+		};
 	}
 
 	async sendMessage(messageInfo: MessageInfo): Promise<void> {

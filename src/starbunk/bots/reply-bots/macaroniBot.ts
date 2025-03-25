@@ -7,11 +7,14 @@ import ReplyBot from '../replyBot';
 
 // This class is registered by StarbunkClient.registerBots() rather than through the service container
 export default class MacaroniBot extends ReplyBot {
+	private readonly _botIdentity: BotIdentity = {
+		avatarUrl: MacaroniBotConfig.Avatars.Default,
+		botName: MacaroniBotConfig.Name
+	};
+
 	public get botIdentity(): BotIdentity {
-		return {
-			avatarUrl: MacaroniBotConfig.Avatars.Default,
-			botName: MacaroniBotConfig.Name
-		};
+		// Return a copy of the identity to prevent unexpected mutations
+		return { ...this._botIdentity };
 	}
 
 	public async processMessage(message: Message): Promise<void> {
