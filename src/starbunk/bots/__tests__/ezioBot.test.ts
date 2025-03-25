@@ -23,7 +23,7 @@ describe('EzioBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: EzioBotConfig.Name,
+				botName: EzioBotConfig.Name,
 				content: expect.any(String)
 			})
 		);

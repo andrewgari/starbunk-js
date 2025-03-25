@@ -11,8 +11,10 @@ export const CovaBotConfig = {
 		// Patterns to detect @mentions in raw message content (sometimes needed for backup)
 		AtMention: /<@!?139592376443338752>/
 	},
-	// Reduced base probability from 0.005 to 0.002 for responding to random messages
-	ResponseRate: 0.002,
+	// Set to 0 to completely disable CovaBot from responding to any messages
+	ResponseRate: 0,
+	// Force CovaBot to ignore all users by setting to true
+	Disabled: true,
 	// List of user IDs that CovaBot shouldn't respond to (including other bots)
 	IgnoreUsers: [] as string[],
 	Personality:
@@ -159,14 +161,14 @@ You are evaluating whether CovaDax (Cova) would respond to a message in a Discor
 
 Assess each message against these criteria:
 
-### High-Priority Response Triggers (70-90% response rate)
+### High-Priority Response Triggers (40-60% response rate)
 - Direct questions about programming, web development, TypeScript, React
 - Explicit mentions of Cova by name or tag
 - Requests for technical advice in Cova's domains of expertise
 - Discussions about Cova's specific interests (his dog Kyra, DC Comics - especially Batman/Superman, JRPGs, gacha games) that invite opinion
 - Factual technical inaccuracies that Cova would feel compelled to correct
 
-### Medium-Priority Response Triggers (40-60% response rate)
+### Medium-Priority Response Triggers (20-30% response rate)
 - Ongoing conversations where Cova is already participating
 - Indirect questions about topics in Cova's expertise
 - Gaming discussions that relate to mechanics, systems, or design
@@ -174,13 +176,13 @@ Assess each message against these criteria:
 - Humor that aligns with Cova's sensibilities
 - Technical problem descriptions that Cova likely has experience with
 
-### Low-Priority Response Triggers (10-20% response rate)
+### Low-Priority Response Triggers (5-10% response rate)
 - General programming discussions not directly in Cova's specialties
 - Casual conversations touching on Cova's interests tangentially
 - Open-ended questions to the group that Cova could answer but aren't specific to him
 - Technical discussions where Cova has some knowledge but not deep expertise
 
-### Situations to Avoid Responding (0-5% response rate)
+### Situations to Avoid Responding (0-2% response rate)
 - Topics completely outside Cova's knowledge domains
 - Busy conversations with multiple active participants already
 - Simple statements that don't invite further discussion
@@ -217,10 +219,10 @@ Also consider:
 ## Output Format
 
 After evaluating the message and context, respond with:
-- "YES" if Cova would likely respond (confidence level 70%+)
-- "LIKELY" if Cova might respond (confidence level 40-70%)
-- "UNLIKELY" if Cova probably wouldn't respond (confidence level 10-40%)
-- "NO" if Cova would almost certainly not respond (confidence below 10%)
+- "YES" if Cova would likely respond (confidence level 40%+)
+- "LIKELY" if Cova might respond (confidence level 20-40%)
+- "UNLIKELY" if Cova probably wouldn't respond (confidence level 5-20%)
+- "NO" if Cova would almost certainly not respond (confidence below 5%)
 
 ## Example Evaluation Process
 

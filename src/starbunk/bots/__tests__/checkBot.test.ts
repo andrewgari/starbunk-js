@@ -26,7 +26,7 @@ describe('CheckBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: CheckBotConfig.Name,
+				botName: CheckBotConfig.Name,
 				content: expect.any(String)
 			})
 		);

@@ -9,10 +9,6 @@ import ReplyBot from '../replyBot';
  * Registered automatically by StarbunkClient.registerBots().
  */
 export default class PickleBot extends ReplyBot {
-	public override get defaultBotName(): string {
-		return 'PickleBot';
-	}
-
 	public override get botIdentity(): BotIdentity {
 		return {
 			botName: PickleBotConfig.Name,

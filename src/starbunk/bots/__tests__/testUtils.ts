@@ -2,6 +2,7 @@ import { Client, Guild, Message, TextChannel, User } from 'discord.js';
 import * as bootstrap from '../../../services/bootstrap';
 import { Logger, ServiceId, WebhookService } from '../../../services/container';
 import { BotIdentity } from '../../../starbunk/types/botIdentity';
+import { MessageInfo } from '../../../webhooks/types';
 
 // Mock the getWebhookService function
 jest.mock('../../../services/bootstrap', () => ({
@@ -85,7 +86,16 @@ export const mockLogger: Logger = {
 };
 
 export const mockWebhookService: WebhookService = {
-	writeMessage: mockWriteMessage,
+	writeMessage: jest.fn().mockImplementation((channel: TextChannel, messageInfo: any) => {
+		const transformedMessageInfo: MessageInfo = {
+			...messageInfo,
+			username: messageInfo.botName || messageInfo.username,
+			avatarURL: messageInfo.avatarUrl || messageInfo.avatarURL,
+		};
+		delete (transformedMessageInfo as any).botName;
+		delete (transformedMessageInfo as any).avatarUrl;
+		return mockWriteMessage(channel, transformedMessageInfo);
+	}),
 	sendMessage: mockSendMessage,
 	webhookClient: null,
 	logger: mockLogger
@@ -108,7 +118,7 @@ export function expectWebhookCalledWith(content: string, username?: string): voi
 		expect.anything(),
 		expect.objectContaining({
 			content,
-			...(username && { username }),
+			...(username && { botName: username }),
 		})
 	);
 }

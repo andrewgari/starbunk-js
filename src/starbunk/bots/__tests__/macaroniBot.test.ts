@@ -26,7 +26,7 @@ describe('MacaroniBot', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			message.channel,
 			expect.objectContaining({
-				username: MacaroniBotConfig.Name,
+				botName: MacaroniBotConfig.Name,
 				content: expect.any(String)
 			})
 		);

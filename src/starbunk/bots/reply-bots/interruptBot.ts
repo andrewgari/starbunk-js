@@ -1,13 +1,13 @@
-import { isDebugMode } from '@/environment';
 import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
 import { DiscordService } from '../../../services/discordService';
 import { logger } from '../../../services/logger';
-import Random from '../../../utils/random';
 import { InterruptBotConfig } from '../config/interruptBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class InterruptBot extends ReplyBot {
+	protected override responseRate = 1; // 1% chance in normal mode, 100% in debug mode
+
 	public get botIdentity(): BotIdentity {
 		return DiscordService.getInstance().getRandomMemberAsBotIdentity();
 	}
@@ -16,15 +16,7 @@ export default class InterruptBot extends ReplyBot {
 		logger.debug(`[${this.defaultBotName}] Processing message from ${message.author.tag}: "${message.content.substring(0, 100)}..."`);
 
 		try {
-			// Base chance of interruption - percentChance already handles DEBUG
-			const baseInterruptChance = 1; // 1% chance in normal mode, 100% in debug mode
-			const shouldInterrupt = Random.percentChance(baseInterruptChance);
-
-			// For debugging, log the effective chance (will be 100% in debug mode)
-			const effectiveChance = isDebugMode() ? 100 : baseInterruptChance;
-			logger.debug(`[${this.defaultBotName}] Interrupt check: base=${baseInterruptChance}%, effective=${effectiveChance}%, result=${shouldInterrupt}`);
-
-			if (!shouldInterrupt) {
+			if (!this.shouldTriggerResponse()) {
 				logger.debug(`[${this.defaultBotName}] Skipping interrupt based on random chance`);
 				return;
 			}
