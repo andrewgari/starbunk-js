@@ -113,7 +113,10 @@ export default abstract class ReplyBot {
 		}
 
 		// Validate the bot identity
-		if (!this.botIdentity.botName || !this.botIdentity.avatarUrl) {
+		const trimmedBotName = this.botIdentity.botName?.trim();
+		const trimmedAvatarUrl = this.botIdentity.avatarUrl?.trim();
+
+		if (!trimmedBotName || !trimmedAvatarUrl) {
 			logger.warn(`[${this.defaultBotName}] Invalid bot identity detected: ${JSON.stringify(this.botIdentity)}`);
 
 			// Create a valid identity with fallbacks
