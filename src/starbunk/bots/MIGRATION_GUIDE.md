@@ -99,7 +99,7 @@ export default class HoldBot extends ReplyBot {
       avatarUrl: HoldBotConfig.Avatars.Default
     };
   }
-  
+
   protected async processMessage(message: Message): Promise<void> {
     const hasHold = HoldBotConfig.Patterns.Default?.test(message.content);
     if (hasHold) {
@@ -172,3 +172,151 @@ The core module provides many reusable components:
 ## Need Help?
 
 See the `strategy-bots/README.md` file for more examples and usage details.
+
+## Voice Bot Migration
+
+### Why Migrate Voice Bots?
+
+The new voice bot strategy pattern offers several advantages:
+
+- **Composable Triggers**: Mix and match voice event conditions
+- **Cleaner Code**: Less boilerplate, more focused logic
+- **Better Testing**: Easier to test individual triggers
+- **Shared Logic**: Reuse common voice event conditions
+- **Consistent Pattern**: Aligns with strategy bot pattern
+
+### Step 1: Create Bot Directory Structure
+
+Under `voice-bots`, create a directory for your bot:
+
+```
+src/starbunk/bots/voice-bots/your-bot-name/
+```
+
+### Step 2: Convert Constants
+
+Create a `constants.ts` file to hold all static data:
+
+```typescript
+// constants.ts
+export const YOUR_BOT_NAME = 'Your Bot';
+export const YOUR_BOT_AVATAR = 'https://example.com/avatar.png';
+```
+
+### Step 3: Create Triggers
+
+Create a `triggers.ts` file with your voice event triggers:
+
+```typescript
+// triggers.ts
+import { createVoiceTrigger } from '../../core/voice-bot-builder';
+import { userJoinedVoiceChannel } from '../../core/voice-conditions';
+
+export const joinTrigger = createVoiceTrigger({
+  name: 'join-trigger',
+  condition: userJoinedVoiceChannel(),
+  handler: async (oldState, newState) => {
+    // Handle voice state change
+  }
+});
+```
+
+### Step 4: Create Bot Instance
+
+Create an `index.ts` file that exports your bot:
+
+```typescript
+// index.ts
+import { createVoiceBot } from '../../core/voice-bot-builder';
+import { YOUR_BOT_AVATAR, YOUR_BOT_NAME } from './constants';
+import { joinTrigger } from './triggers';
+
+export default createVoiceBot({
+  name: 'YourBot',
+  description: 'Description of your bot',
+  defaultIdentity: {
+    botName: YOUR_BOT_NAME,
+    avatarUrl: YOUR_BOT_AVATAR
+  },
+  triggers: [joinTrigger]
+});
+```
+
+## Example Voice Bot Migration
+
+### Simple Voice Bot (GuyChannelBot)
+
+**Old Approach:**
+```typescript
+// voice-bots/guyChannelBot.ts
+export default class GuyChannelBot extends VoiceBot {
+  public readonly botName = 'Guy Channel Bot';
+
+  handleEvent(oldState: VoiceState, newState: VoiceState): void {
+    const member = oldState.member;
+    const newChannelId = newState.channelId;
+
+    if (member?.id === userId.Guy && newChannelId === channelId.NoGuyLounge) {
+      this.moveToRandomVoiceChannel(member);
+    }
+  }
+}
+```
+
+**New Approach:**
+```typescript
+// voice-bots/guy-channel-bot/constants.ts
+export const GUY_BOT_NAME = 'Guy Channel Bot';
+export const GUY_BOT_AVATAR = 'https://example.com/guy.png';
+
+// voice-bots/guy-channel-bot/triggers.ts
+export const guyChannelTrigger = createVoiceTrigger({
+  name: 'guy-channel-trigger',
+  condition: and(
+    userJoinedVoiceChannel(),
+    isUser(userId.Guy),
+    isChannel(channelId.NoGuyLounge)
+  ),
+  handler: async (oldState, newState) => {
+    await moveToRandomVoiceChannel(newState.member);
+  }
+});
+
+// voice-bots/guy-channel-bot/index.ts
+export default createVoiceBot({
+  name: 'GuyChannelBot',
+  description: 'Enforces Guy channel access rules',
+  defaultIdentity: {
+    botName: GUY_BOT_NAME,
+    avatarUrl: GUY_BOT_AVATAR
+  },
+  triggers: [guyChannelTrigger]
+});
+```
+
+## Available Voice Utilities
+
+The core module provides reusable components for voice bots:
+
+### Voice Conditions
+- `userJoinedVoiceChannel()` - User joined a voice channel
+- `userLeftVoiceChannel()` - User left a voice channel
+- `userMovedChannel()` - User moved between channels
+- `isUser(userId)` - Match specific user
+- `isChannel(channelId)` - Match specific channel
+- `hasPermission(permission)` - Check user permissions
+
+### Combining Conditions
+- `and(condition1, condition2, ...)` - All conditions must be true
+- `or(condition1, condition2, ...)` - Any condition must be true
+- `not(condition)` - Negates a condition
+
+### Voice Actions
+- `moveToChannel(channelId)` - Move user to specific channel
+- `moveToRandomVoiceChannel()` - Move user to random channel
+- `disconnectUser()` - Disconnect user from voice
+- `setUserVolume(volume)` - Adjust user volume
+
+## Need Help?
+
+See the `voice-bots/README.md` file for more examples and usage details.

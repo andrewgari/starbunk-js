@@ -2,14 +2,14 @@ import { PlayerSubscription } from '@discordjs/voice';
 import { Base, Client, Collection, Events, GatewayIntentBits, Interaction, Message, VoiceState } from 'discord.js';
 import { isDebugMode } from '../environment';
 import { logger } from '../services/logger';
+import { BaseVoiceBot } from './bots/core/voice-bot-adapter';
 import ReplyBot from './bots/replyBot';
-import { VoiceBot } from './bots/voiceBot';
 import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
 
 export default class StarbunkClient extends Client {
 	private bots: Collection<string, ReplyBot> = new Collection();
-	private voiceBots: Collection<string, VoiceBot> = new Collection();
+	private voiceBots: Collection<string, BaseVoiceBot> = new Collection();
 	private readonly audioPlayer: DJCova;
 	private readonly commandHandler: CommandHandler;
 	public activeSubscription: PlayerSubscription | undefined;
@@ -150,7 +150,7 @@ export default class StarbunkClient extends Client {
 	}
 
 	private async loadBots(): Promise<void> {
-		logger.info('Loading strategy bots...');
+		logger.info('Loading bots...');
 		try {
 			// Check if we're in debug mode
 			const isDebug = isDebugMode();
@@ -173,7 +173,7 @@ export default class StarbunkClient extends Client {
 				// eslint-disable-next-line @typescript-eslint/no-var-requires
 				const { loadStrategyBots } = require('./bots/strategy-loader');
 				const strategyBots = await loadStrategyBots();
-				
+
 				// Add strategy bots to the collection
 				strategyBots.forEach((bot: ReplyBot) => {
 					if (bot && typeof bot.defaultBotName === 'string') {
@@ -181,8 +181,8 @@ export default class StarbunkClient extends Client {
 						logger.debug(`Added strategy bot: ${bot.defaultBotName}`);
 					}
 				});
-				
-				// Show summary of all loaded bots
+
+				// Show summary of all loaded strategy bots
 				if (this.bots.size > 0) {
 					logger.info(`📊 Successfully loaded ${this.bots.size} strategy bots`);
 					logger.info('📋 Strategy bots summary:');
@@ -194,6 +194,35 @@ export default class StarbunkClient extends Client {
 				}
 			} catch (error) {
 				logger.error('Error loading strategy bots:', error instanceof Error ? error : new Error(String(error)));
+			}
+
+			// Load voice bots
+			try {
+				// Import the voice bot loader
+				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				const { loadVoiceBots } = require('./bots/voice-loader');
+				const voiceBots = await loadVoiceBots();
+
+				// Add voice bots to the collection
+				voiceBots.forEach((bot: BaseVoiceBot) => {
+					if (bot && typeof bot.name === 'string') {
+						this.voiceBots.set(bot.name, bot);
+						logger.debug(`Added voice bot: ${bot.name}`);
+					}
+				});
+
+				// Show summary of all loaded voice bots
+				if (this.voiceBots.size > 0) {
+					logger.info(`📊 Successfully loaded ${this.voiceBots.size} voice bots`);
+					logger.info('📋 Voice bots summary:');
+					this.voiceBots.forEach((bot, name) => {
+						logger.info(`   - ${name} (${bot.constructor.name})`);
+					});
+				} else {
+					logger.warn('⚠️ No voice bots were loaded');
+				}
+			} catch (error) {
+				logger.error('Error loading voice bots:', error instanceof Error ? error : new Error(String(error)));
 			}
 		} catch (error) {
 			logger.error('Error loading bots:', error instanceof Error ? error : new Error(String(error)));
