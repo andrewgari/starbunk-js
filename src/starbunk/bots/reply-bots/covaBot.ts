@@ -13,21 +13,355 @@ import ReplyBot from '../replyBot';
 // Create performance timer for CovaBot operations
 const perfTimer = PerformanceTimer.getInstance();
 
+// Strategy interfaces
+interface ResponseConditionStrategy {
+	shouldRespond(message: Message, context: MessageContext): Promise<boolean>;
+}
+
+interface ResponseGenerationStrategy {
+	generateResponse(message: Message): Promise<string>;
+}
+
+interface CacheStrategy {
+	getCachedDecision(key: string): { decision: boolean; timestamp: Date } | undefined;
+	cacheDecision(key: string, decision: boolean): void;
+	cleanup(): void;
+}
+
+// Context object for decision making
+interface MessageContext {
+	inConversation: boolean;
+	containsCova: boolean;
+	isDirectMention: boolean;
+	lastResponseTime?: Date;
+}
+
+// Implementation of cache strategy
+class TimeBasedDecisionCache implements CacheStrategy {
+	private cache: Map<string, { decision: boolean; timestamp: Date }> = new Map();
+	private readonly botName: string;
+
+	constructor(botName: string) {
+		this.botName = botName;
+	}
+
+	getCachedDecision(key: string): { decision: boolean; timestamp: Date } | undefined {
+		const cachedDecision = this.cache.get(key);
+		if (cachedDecision && !isOlderThan(cachedDecision.timestamp, 30, TimeUnit.SECOND)) {
+			logger.debug(`[${this.botName}] Using cached decision from ${formatRelativeTime(cachedDecision.timestamp)}: ${cachedDecision.decision}`);
+			return cachedDecision;
+		}
+		return undefined;
+	}
+
+	cacheDecision(key: string, decision: boolean): void {
+		this.cache.set(key, {
+			decision,
+			timestamp: new Date()
+		});
+
+		// Cleanup old cache entries periodically
+		if (this.cache.size > 20) {
+			this.cleanup();
+		}
+	}
+
+	cleanup(): void {
+		const now = new Date();
+		let cleanupCount = 0;
+
+		// Remove entries older than 2 minutes
+		for (const [cacheKey, cacheEntry] of this.cache.entries()) {
+			if (isOlderThan(cacheEntry.timestamp, 2, TimeUnit.MINUTE, now)) {
+				this.cache.delete(cacheKey);
+				cleanupCount++;
+			}
+		}
+
+		if (cleanupCount > 0) {
+			logger.debug(`[${this.botName}] Cleaned up ${cleanupCount} expired decision cache entries, ${this.cache.size} remaining`);
+		}
+	}
+}
+
+// Implementation of conversation tracking
+class ConversationTracker {
+	private recentResponses: Map<string, Date> = new Map();
+	private readonly botName: string;
+
+	constructor(botName: string) {
+		this.botName = botName;
+	}
+
+	isInConversation(channelId: string): boolean {
+		const lastResponseTime = this.recentResponses.get(channelId);
+		return lastResponseTime ? !isOlderThan(lastResponseTime, 60, TimeUnit.SECOND) : false;
+	}
+
+	getLastResponseTime(channelId: string): Date | undefined {
+		return this.recentResponses.get(channelId);
+	}
+
+	updateRecentResponses(channelId: string): void {
+		const now = new Date();
+		logger.debug(`[${this.botName}] Adding channel ${channelId} to recent responses at ${now.toISOString()}`);
+
+		// Store current timestamp for this channel
+		this.recentResponses.set(channelId, now);
+
+		// Clean up old entries periodically
+		this.cleanupOldResponses();
+	}
+
+	private cleanupOldResponses(): void {
+		// Only run cleanup if we have enough entries to be worth checking
+		if (this.recentResponses.size > 10) {
+			const now = new Date();
+			let cleanupCount = 0;
+
+			// Remove entries older than 2 minutes
+			for (const [channelId, timestamp] of this.recentResponses.entries()) {
+				if (isOlderThan(timestamp, 2, TimeUnit.MINUTE, now)) {
+					this.recentResponses.delete(channelId);
+					cleanupCount++;
+					logger.debug(`[${this.botName}] Removed channel ${channelId} from recent responses - ${formatRelativeTime(timestamp, now)}`);
+				}
+			}
+
+			if (cleanupCount > 0) {
+				logger.debug(`[${this.botName}] Cleaned up ${cleanupCount} expired channel entries, ${this.recentResponses.size} remaining`);
+			}
+		}
+	}
+}
+
+// Strategy for direct mention handling
+class DirectMentionStrategy implements ResponseConditionStrategy {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	async shouldRespond(message: Message, context: MessageContext): Promise<boolean> {
+		return context.isDirectMention;
+	}
+}
+
+// Strategy for LLM-based response decision
+class LLMDecisionStrategy implements ResponseConditionStrategy {
+	private cache: CacheStrategy;
+	private readonly botName: string;
+
+	constructor(botName: string, cache: CacheStrategy) {
+		this.botName = botName;
+		this.cache = cache;
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	async shouldRespond(message: Message, context: MessageContext): Promise<boolean> {
+		// Use performance timer for this operation
+		return await PerformanceTimer.time('shouldRespondToMessage', async () => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const _startTime = Date.now();
+			logger.debug(`[${this.botName}] ========== SHOULD RESPOND EVALUATION START ==========`);
+			logger.debug(`[${this.botName}] Evaluating whether to respond to: "${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}"`);
+			logger.debug(`[${this.botName}] Context: inConversation=${context.inConversation}, containsCova=${context.containsCova}`);
+
+			try {
+				// Create a cache key from the content and message context
+				const normalizedContent = message.content.toLowerCase().trim().substring(0, 50);
+				const cacheKey = `${normalizedContent}|${context.inConversation}|${context.containsCova}`;
+
+				// Check cache first
+				const cachedDecision = this.cache.getCachedDecision(cacheKey);
+				if (cachedDecision) {
+					return cachedDecision.decision;
+				}
+
+				// Create prompt for LLM with context about the message
+				const mentionContext = context.containsCova
+					? "The message contains the word 'cova' or similar."
+					: "The message does not contain 'cova' or similar.";
+
+				const userPrompt = `Message: "${message.content}"
+${context.inConversation ? "Part of an ongoing conversation where Cova recently replied." : "New conversation Cova hasn't joined yet."}
+${mentionContext}
+
+Using the Response Decision System, should Cova respond to this message?`;
+
+				logger.debug(`[${this.botName}] Prompt for LLM decision:\n${userPrompt}`);
+				logger.debug(`[${this.botName}] Sending LLM request for response decision`);
+
+				let llmResponse;
+				try {
+					const llmStartTime = Date.now();
+					llmResponse = await getLLMManager().createCompletion({
+						model: process.env.OLLAMA_DEFAULT_MODEL || 'gemma3:4b',
+						messages: [
+							{ role: "system", content: CovaBotConfig.DecisionPrompt },
+							{ role: "user", content: userPrompt },
+						],
+						temperature: 0.1,
+						maxTokens: 5
+					});
+					logger.debug(`[${this.botName}] LLM response received in ${Date.now() - llmStartTime}ms`);
+				} catch (llmError) {
+					logger.warn(`[${this.botName}] LLM service error: ${llmError instanceof Error ? llmError.message : String(llmError)}`);
+					throw new Error('LLM service unavailable');
+				}
+
+				const rawResponse = llmResponse.content;
+				const response = rawResponse.toUpperCase();
+				logger.debug(`[${this.botName}] Raw LLM response: "${rawResponse}"`);
+				logger.debug(`[${this.botName}] Normalized response: "${response}"`);
+
+				// Determine probability based on the response
+				let probability = 0;
+				let probabilitySource = "";
+				if (response.includes("YES")) {
+					probability = 0.8;
+					probabilitySource = "YES response";
+				} else if (response.includes("LIKELY")) {
+					probability = 0.5;
+					probabilitySource = "LIKELY response";
+				} else if (response.includes("UNLIKELY")) {
+					probability = 0.15;
+					probabilitySource = "UNLIKELY response";
+				} else {
+					probability = 0.05;
+					probabilitySource = "NO/unrecognized response";
+				}
+
+				// Apply context-based modifiers
+				if (context.containsCova) probability *= 1.2;
+				if (context.inConversation) probability *= 1.1;
+
+				// Cap at 0.9
+				probability = Math.min(probability, 0.9);
+
+				logger.debug(`[${this.botName}] Assigned probability ${probability} based on ${probabilitySource}`);
+				logger.debug(`[${this.botName}] Factors: containsCova=${context.containsCova}, inConversation=${context.inConversation}`);
+
+				// Apply randomization to avoid predictability
+				const random = Math.random();
+				const shouldRespond = random < probability;
+				logger.debug(`[${this.botName}] Random roll: ${random} vs threshold ${probability} = ${shouldRespond ? "RESPOND" : "DON'T RESPOND"}`);
+
+				// Cache the decision for future similar messages
+				this.cache.cacheDecision(cacheKey, shouldRespond);
+
+				logger.debug(`[${this.botName}] Total evaluation time: ${Date.now() - _startTime}ms`);
+				logger.debug(`[${this.botName}] ========== SHOULD RESPOND EVALUATION END ==========`);
+				return shouldRespond;
+			} catch (error) {
+				logger.error(`[${this.botName}] Error deciding whether to respond:`, error as Error);
+				logger.debug(`[${this.botName}] Error stack: ${(error as Error).stack}`);
+
+				// Fall back to simple randomization with context-based probabilities
+				const baseRate = context.containsCova ? 0.2 : (context.inConversation ? 0.1 : CovaBotConfig.ResponseRate);
+				const random = Math.random();
+				const shouldRespond = random < baseRate;
+				logger.debug(`[${this.botName}] Fallback random roll: ${random} vs threshold ${baseRate} = ${shouldRespond ? "RESPOND" : "DON'T RESPOND"}`);
+
+				logger.debug(`[${this.botName}] Total evaluation time (with error): ${Date.now() - _startTime}ms`);
+				logger.debug(`[${this.botName}] ========== SHOULD RESPOND EVALUATION END (ERROR) ==========`);
+				return shouldRespond;
+			}
+		});
+	}
+}
+
+// Strategy for LLM-based response generation
+class LLMResponseStrategy implements ResponseGenerationStrategy {
+	private readonly botName: string;
+
+	constructor(botName: string) {
+		this.botName = botName;
+	}
+
+	async generateResponse(message: Message): Promise<string> {
+		return await PerformanceTimer.time('generateAndSendResponse', async () => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const _startTime = Date.now();
+			logger.debug(`[${this.botName}] ========== GENERATE RESPONSE START ==========`);
+			logger.debug(`[${this.botName}] Generating response for message: "${message.content}"`);
+
+			try {
+				logger.debug(`[${this.botName}] Sending request to LLM for Cova emulation`);
+				const llmStartTime = Date.now();
+				let response;
+
+				try {
+					response = await getLLMManager().createPromptCompletion(
+						PromptType.COVA_EMULATOR,
+						message.content,
+						{
+							temperature: 0.7,
+							maxTokens: 150,
+							providerType: LLMProviderType.OLLAMA,
+							fallbackToDefault: true
+						}
+					);
+					logger.debug(`[${this.botName}] LLM response received in ${Date.now() - llmStartTime}ms`);
+				} catch (llmError) {
+					logger.warn(`[${this.botName}] LLM service error: ${llmError instanceof Error ? llmError.message : String(llmError)}`);
+					// If LLM fails, use one of these fallback responses
+					const fallbackResponses = [
+						"Yeah, that's pretty cool.",
+						"Interesting.",
+						"Hmm, I see what you mean.",
+						"I'm not sure about that.",
+						"That's wild.",
+						"Neat.",
+						"lol",
+						"👀",
+						"Tell me more about that."
+					];
+					response = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+					logger.debug(`[${this.botName}] Using fallback response: "${response}"`);
+				}
+
+				logger.debug(`[${this.botName}] Raw LLM response: "${response}"`);
+
+				if (!response || response.trim() === '') {
+					logger.debug(`[${this.botName}] Received empty response from LLM, using fallback response`);
+					response = "Yeah, that's pretty cool.";
+				}
+
+				logger.debug(`[${this.botName}] Final response to generate: "${response}"`);
+				logger.debug(`[${this.botName}] ========== GENERATE RESPONSE END ==========`);
+				return response;
+			} catch (error) {
+				logger.error(`[${this.botName}] Error generating response:`, error as Error);
+				return "Hmm, interesting.";
+			}
+		});
+	}
+}
+
+// Main CovaBot implementation using the strategies
 export default class CovaBot extends ReplyBot {
 	private _lastProcessedMessageId: string = '';
-	// Store timestamps of recent responses by channel ID
-	private _recentResponses: Map<string, Date> = new Map();
-	// LLM decision cache to avoid repeated similar requests
-	private _decisionCache: Map<string, { decision: boolean; timestamp: Date }> = new Map();
+	private readonly conversationTracker: ConversationTracker;
+	private readonly decisionCache: CacheStrategy;
+	private readonly responseConditionStrategies: ResponseConditionStrategy[];
+	private readonly responseGenerationStrategy: ResponseGenerationStrategy;
 
 	constructor() {
 		super();
 		perfTimer.mark('covabot-init');
-		logger.debug(`[${this.defaultBotName}] Initializing CovaBot with extensive logging`);
-		console.log(`[${this.defaultBotName}] Initializing CovaBot with extensive logging`);
+		logger.debug(`[${this.defaultBotName}] Initializing CovaBot with strategy pattern`);
 
-		logger.debug(`[${this.defaultBotName}] Configuration loaded: ResponseRate=${CovaBotConfig.ResponseRate}, IgnoreUsers=${JSON.stringify(CovaBotConfig.IgnoreUsers)}`);
-		logger.debug(`[${this.defaultBotName}] Patterns: Mention=${CovaBotConfig.Patterns.Mention}, Question=${CovaBotConfig.Patterns.Question}, AtMention=${CovaBotConfig.Patterns.AtMention}`);
+		// Set up conversation tracking
+		this.conversationTracker = new ConversationTracker(this.defaultBotName);
+
+		// Set up the decision cache
+		this.decisionCache = new TimeBasedDecisionCache(this.defaultBotName);
+
+		// Set up response condition strategies
+		this.responseConditionStrategies = [
+			new DirectMentionStrategy(),
+			new LLMDecisionStrategy(this.defaultBotName, this.decisionCache)
+		];
+
+		// Set up response generation strategy
+		this.responseGenerationStrategy = new LLMResponseStrategy(this.defaultBotName);
 
 		// Register the Cova Emulator prompt
 		PromptRegistry.registerPrompt(PromptType.COVA_EMULATOR, {
@@ -118,7 +452,8 @@ export default class CovaBot extends ReplyBot {
 			logger.debug(`[${this.defaultBotName}] 🔍 MESSAGE CONTAINS 'COVA': "${message.content}"`);
 		}
 
-		const startTime = Date.now();
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const _startTime = Date.now();
 		logger.debug(`[${this.defaultBotName}] ========== PROCESS MESSAGE START ==========`);
 		logger.debug(`[${this.defaultBotName}] Processing message ${messageId} from ${authorUsername} (${authorId})`);
 		logger.debug(`[${this.defaultBotName}] Channel: ${channelName} (${channelId})`);
@@ -135,49 +470,50 @@ export default class CovaBot extends ReplyBot {
 			logger.debug(`[${this.defaultBotName}] Setting last processed message ID: ${messageId}`);
 			this._lastProcessedMessageId = message.id;
 
-			// Only check for direct @ mentions using Discord API
+			// Check for direct mentions
 			const isDirectMention = message.mentions.has(message.client.user?.id || '');
-
-			// Log mention details
-			logger.debug(`[${this.defaultBotName}] FULL Message content: "${message.content}"`);
 			logger.debug(`[${this.defaultBotName}] Direct @ mention (Discord API): ${isDirectMention}`);
 
-			// Check if we've recently replied in this channel (within last 60 seconds)
-			const lastResponseTime = this._recentResponses.get(message.channelId);
-			const inConversation = lastResponseTime ? !isOlderThan(lastResponseTime, 60, TimeUnit.SECOND) : false;
-			logger.debug(`[${this.defaultBotName}] In active conversation: ${inConversation}`);
-			if (inConversation) {
+			// Create context for response decision strategies
+			const context: MessageContext = {
+				inConversation: this.conversationTracker.isInConversation(channelId),
+				containsCova,
+				isDirectMention,
+				lastResponseTime: this.conversationTracker.getLastResponseTime(channelId)
+			};
+
+			logger.debug(`[${this.defaultBotName}] In active conversation: ${context.inConversation}`);
+			if (context.inConversation) {
 				logger.debug(`[${this.defaultBotName}] Recently active in channel ${channelName} (${channelId})`);
 			}
 
-			// Always respond to direct @ mentions with highest priority
-			if (isDirectMention) {
-				logger.debug(`[${this.defaultBotName}] @ mention detected, responding with highest priority`);
-				const responseStart = Date.now();
-				await this.generateAndSendResponse(message);
-				logger.debug(`[${this.defaultBotName}] @ mention response generated and sent in ${Date.now() - responseStart}ms`);
-				this.updateRecentResponses(message.channelId);
-				logger.debug(`[${this.defaultBotName}] Updated recent responses for channel ${channelId}`);
-				logger.debug(`[${this.defaultBotName}] Total @ mention processing time: ${Date.now() - startTime}ms`);
-				logger.debug(`[${this.defaultBotName}] ========== PROCESS MESSAGE END (@ MENTION) ==========`);
-				return;
+			// Evaluate each response condition strategy in order
+			let shouldRespond = false;
+			for (const strategy of this.responseConditionStrategies) {
+				const result = await strategy.shouldRespond(message, context);
+				if (result) {
+					shouldRespond = true;
+					break;
+				}
 			}
 
-			// For all other messages, use LLM to decide if it's worth responding
-			logger.debug(`[${this.defaultBotName}] Invoking LLM decision for response worthiness`);
-			const llmDecisionStart = Date.now();
-			const shouldRespond = await this.shouldRespondToMessage(message.content, inConversation, containsCova);
-			logger.debug(`[${this.defaultBotName}] LLM decision completed in ${Date.now() - llmDecisionStart}ms: shouldRespond=${shouldRespond}`);
-
 			if (shouldRespond) {
-				logger.debug(`[${this.defaultBotName}] LLM decided to respond to this message`);
+				logger.debug(`[${this.defaultBotName}] Decision: Will respond to this message`);
+
+				// Generate response using strategy
 				const responseStart = Date.now();
-				await this.generateAndSendResponse(message);
+				const response = await this.responseGenerationStrategy.generateResponse(message);
+
+				// Send the response
+				logger.debug(`[${this.defaultBotName}] Sending reply via ReplyBot.sendReply`);
+				await this.sendReply(message.channel as TextChannel, response);
 				logger.debug(`[${this.defaultBotName}] Response generated and sent in ${Date.now() - responseStart}ms`);
-				this.updateRecentResponses(message.channelId);
+
+				// Update conversation tracking
+				this.conversationTracker.updateRecentResponses(channelId);
 				logger.debug(`[${this.defaultBotName}] Updated recent responses for channel ${channelId}`);
 			} else {
-				logger.debug(`[${this.defaultBotName}] LLM decided not to respond to this message`);
+				logger.debug(`[${this.defaultBotName}] Decision: Will NOT respond to this message`);
 			}
 
 			// Add performance timing at the end
@@ -193,245 +529,9 @@ export default class CovaBot extends ReplyBot {
 		}
 	}
 
-	private updateRecentResponses(channelId: string): void {
-		const now = new Date();
-		logger.debug(`[${this.defaultBotName}] Adding channel ${channelId} to recent responses at ${now.toISOString()}`);
-
-		// Store current timestamp for this channel
-		this._recentResponses.set(channelId, now);
-
-		// Clean up old entries every 10 minutes to prevent memory leaks
-		// No need for immediate timeouts that can be missed if the process restarts
-		this.cleanupOldResponses();
-	}
-
-	private cleanupOldResponses(): void {
-		// Only run cleanup if we have enough entries to be worth checking
-		if (this._recentResponses.size > 10) {
-			const now = new Date();
-			let cleanupCount = 0;
-
-			// Remove entries older than 2 minutes
-			for (const [channelId, timestamp] of this._recentResponses.entries()) {
-				if (isOlderThan(timestamp, 2, TimeUnit.MINUTE, now)) {
-					this._recentResponses.delete(channelId);
-					cleanupCount++;
-					logger.debug(`[${this.defaultBotName}] Removed channel ${channelId} from recent responses - ${formatRelativeTime(timestamp, now)}`);
-				}
-			}
-
-			if (cleanupCount > 0) {
-				logger.debug(`[${this.defaultBotName}] Cleaned up ${cleanupCount} expired channel entries, ${this._recentResponses.size} remaining`);
-			}
-		}
-	}
-
-	private async shouldRespondToMessage(content: string, inConversation: boolean, containsCova: boolean = false): Promise<boolean> {
-		// Use performance timer for this operation
-		return await PerformanceTimer.time('shouldRespondToMessage', async () => {
-			const startTime = Date.now();
-			logger.debug(`[${this.defaultBotName}] ========== SHOULD RESPOND EVALUATION START ==========`);
-			logger.debug(`[${this.defaultBotName}] Evaluating whether to respond to: "${content.substring(0, 100)}${content.length > 100 ? '...' : ''}"`);
-			logger.debug(`[${this.defaultBotName}] Context: inConversation=${inConversation}, containsCova=${containsCova}`);
-
-			try {
-				// Create a cache key from the content and context
-				// Normalize content to reduce redundant cache entries for similar messages
-				const normalizedContent = content.toLowerCase().trim().substring(0, 50);
-				const cacheKey = `${normalizedContent}|${inConversation}|${containsCova}`;
-
-				// Check cache first
-				const cachedDecision = this._decisionCache.get(cacheKey);
-				if (cachedDecision && !isOlderThan(cachedDecision.timestamp, 30, TimeUnit.SECOND)) {
-					logger.debug(`[${this.defaultBotName}] Using cached decision from ${formatRelativeTime(cachedDecision.timestamp)}: ${cachedDecision.decision}`);
-					return cachedDecision.decision;
-				}
-
-				// Create prompt for LLM with context about the message
-				const mentionContext = containsCova
-					? "The message contains the word 'cova' or similar."
-					: "The message does not contain 'cova' or similar.";
-
-				const userPrompt = `Message: "${content}"
-${inConversation ? "Part of an ongoing conversation where Cova recently replied." : "New conversation Cova hasn't joined yet."}
-${mentionContext}
-
-Using the Response Decision System, should Cova respond to this message?`;
-
-				logger.debug(`[${this.defaultBotName}] Prompt for LLM decision:\n${userPrompt}`);
-				logger.debug(`[${this.defaultBotName}] Sending LLM request for response decision`);
-
-				let llmResponse;
-				try {
-					const llmStartTime = Date.now();
-					llmResponse = await getLLMManager().createCompletion({
-						model: process.env.OLLAMA_DEFAULT_MODEL || 'gemma3:4b',
-						messages: [
-							{ role: "system", content: CovaBotConfig.DecisionPrompt },
-							{ role: "user", content: userPrompt },
-						],
-						temperature: 0.1,
-						maxTokens: 5
-					});
-					logger.debug(`[${this.defaultBotName}] LLM response received in ${Date.now() - llmStartTime}ms`);
-				} catch (llmError) {
-					logger.warn(`[${this.defaultBotName}] LLM service error: ${llmError instanceof Error ? llmError.message : String(llmError)}`);
-					throw new Error('LLM service unavailable');
-				}
-
-				const rawResponse = llmResponse.content;
-				const response = rawResponse.toUpperCase();
-				logger.debug(`[${this.defaultBotName}] Raw LLM response: "${rawResponse}"`);
-				logger.debug(`[${this.defaultBotName}] Normalized response: "${response}"`);
-
-				// Determine probability based on the response, with higher probabilities for name mentions
-				let probability = 0;
-				let probabilitySource = "";
-				if (response.includes("YES")) {
-					probability = 0.8;
-					probabilitySource = "YES response";
-				} else if (response.includes("LIKELY")) {
-					probability = 0.5;
-					probabilitySource = "LIKELY response";
-				} else if (response.includes("UNLIKELY")) {
-					probability = 0.15;
-					probabilitySource = "UNLIKELY response";
-				} else {
-					probability = 0.05;
-					probabilitySource = "NO/unrecognized response";
-				}
-
-				// Apply context-based modifiers
-				if (containsCova) probability *= 1.2;
-				if (inConversation) probability *= 1.1;
-
-				// Cap at 0.9
-				probability = Math.min(probability, 0.9);
-
-				logger.debug(`[${this.defaultBotName}] Assigned probability ${probability} based on ${probabilitySource}`);
-				logger.debug(`[${this.defaultBotName}] Factors: containsCova=${containsCova}, inConversation=${inConversation}`);
-
-				// Apply randomization to avoid predictability
-				const random = Math.random();
-				const shouldRespond = random < probability;
-				logger.debug(`[${this.defaultBotName}] Random roll: ${random} vs threshold ${probability} = ${shouldRespond ? "RESPOND" : "DON'T RESPOND"}`);
-
-				// Cache the decision for future similar messages
-				this._decisionCache.set(cacheKey, {
-					decision: shouldRespond,
-					timestamp: new Date()
-				});
-
-				// Cleanup old cache entries periodically
-				if (this._decisionCache.size > 20) {
-					this.cleanupDecisionCache();
-				}
-
-				logger.debug(`[${this.defaultBotName}] Total evaluation time: ${Date.now() - startTime}ms`);
-				logger.debug(`[${this.defaultBotName}] ========== SHOULD RESPOND EVALUATION END ==========`);
-				return shouldRespond;
-			} catch (error) {
-				logger.error(`[${this.defaultBotName}] Error deciding whether to respond:`, error as Error);
-				logger.debug(`[${this.defaultBotName}] Error stack: ${(error as Error).stack}`);
-
-				// Fall back to simple randomization with lower probability for name mentions
-				const baseRate = containsCova ? 0.2 : (inConversation ? 0.1 : CovaBotConfig.ResponseRate);
-				const random = Math.random();
-				const shouldRespond = random < baseRate;
-				logger.debug(`[${this.defaultBotName}] Fallback random roll: ${random} vs threshold ${baseRate} = ${shouldRespond ? "RESPOND" : "DON'T RESPOND"}`);
-
-				logger.debug(`[${this.defaultBotName}] Total evaluation time (with error): ${Date.now() - startTime}ms`);
-				logger.debug(`[${this.defaultBotName}] ========== SHOULD RESPOND EVALUATION END (ERROR) ==========`);
-				return shouldRespond;
-			}
-		});
-	}
-
-	private cleanupDecisionCache(): void {
-		const now = new Date();
-		let cleanupCount = 0;
-
-		// Remove entries older than 2 minutes
-		for (const [cacheKey, cacheEntry] of this._decisionCache.entries()) {
-			if (isOlderThan(cacheEntry.timestamp, 2, TimeUnit.MINUTE, now)) {
-				this._decisionCache.delete(cacheKey);
-				cleanupCount++;
-			}
-		}
-
-		if (cleanupCount > 0) {
-			logger.debug(`[${this.defaultBotName}] Cleaned up ${cleanupCount} expired decision cache entries, ${this._decisionCache.size} remaining`);
-		}
-	}
-
-	private async generateAndSendResponse(message: Message): Promise<void> {
-		// Use performance timer for this operation
-		return await PerformanceTimer.time('generateAndSendResponse', async () => {
-			const startTime = Date.now();
-			logger.debug(`[${this.defaultBotName}] ========== GENERATE AND SEND RESPONSE START ==========`);
-			logger.debug(`[${this.defaultBotName}] Generating response for message: "${message.content}"`);
-
-			try {
-				logger.debug(`[${this.defaultBotName}] Sending request to LLM for Cova emulation`);
-				const llmStartTime = Date.now();
-				let response;
-
-				try {
-					response = await getLLMManager().createPromptCompletion(
-						PromptType.COVA_EMULATOR,
-						message.content,
-						{
-							temperature: 0.7,
-							maxTokens: 150,
-							providerType: LLMProviderType.OLLAMA,
-							fallbackToDefault: true
-						}
-					);
-					logger.debug(`[${this.defaultBotName}] LLM response received in ${Date.now() - llmStartTime}ms`);
-				} catch (llmError) {
-					logger.warn(`[${this.defaultBotName}] LLM service error: ${llmError instanceof Error ? llmError.message : String(llmError)}`);
-					// If LLM fails, use one of these fallback responses
-					const fallbackResponses = [
-						"Yeah, that's pretty cool.",
-						"Interesting.",
-						"Hmm, I see what you mean.",
-						"I'm not sure about that.",
-						"That's wild.",
-						"Neat.",
-						"lol",
-						"👀",
-						"Tell me more about that."
-					];
-					response = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-					logger.debug(`[${this.defaultBotName}] Using fallback response: "${response}"`);
-				}
-
-				logger.debug(`[${this.defaultBotName}] Raw LLM response: "${response}"`);
-
-				if (!response || response.trim() === '') {
-					logger.debug(`[${this.defaultBotName}] Received empty response from LLM, using fallback response`);
-					response = "Yeah, that's pretty cool.";
-				}
-
-				logger.debug(`[${this.defaultBotName}] Final response to send: "${response}"`);
-				logger.debug(`[${this.defaultBotName}] Sending reply via ReplyBot.sendReply`);
-
-				const sendStartTime = Date.now();
-				await this.sendReply(message.channel as TextChannel, response);
-				logger.debug(`[${this.defaultBotName}] Reply sent in ${Date.now() - sendStartTime}ms`);
-
-				logger.debug(`[${this.defaultBotName}] Total response generation and sending time: ${Date.now() - startTime}ms`);
-				logger.debug(`[${this.defaultBotName}] ========== GENERATE AND SEND RESPONSE END ==========`);
-			} catch (error) {
-				logger.error(`[${this.defaultBotName}] Error generating/sending response:`, error as Error);
-				throw error;
-			}
-		});
-	}
-
 	/**
-	 * Send performance statistics to a channel
-	 */
+   * Send performance statistics to a channel
+   */
 	private async sendPerformanceStats(channel: TextChannel): Promise<void> {
 		const stats = perfTimer.getStatsString();
 		logger.debug(`[${this.defaultBotName}] Sending performance stats to ${channel.name} (${channel.id})`);
@@ -455,4 +555,3 @@ Using the Response Decision System, should Cova respond to this message?`;
 		}, TimeUnit.HOUR);
 	}
 }
-

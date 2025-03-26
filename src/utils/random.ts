@@ -49,3 +49,12 @@ export function percentChance(percent: number): boolean {
 	// Normal random chance
 	return Math.random() * 100 < percent;
 }
+
+/**
+ * Returns a random element from an array
+ * @param arr Array to select from
+ * @returns Random element from the array
+ */
+export function randomElement<T>(arr: T[]): T {
+	return arr[Math.floor(Math.random() * arr.length)];
+}

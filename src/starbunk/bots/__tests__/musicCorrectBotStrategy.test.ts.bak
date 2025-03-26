@@ -1,0 +1,56 @@
+import { container, ServiceId } from '../../../services/container';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import musicCorrectBot from '../strategy-bots/music-correct-bot';
+import { 
+	MUSIC_CORRECT_BOT_NAME, 
+	MUSIC_CORRECT_BOT_AVATAR_URL,
+	MUSIC_CORRECT_BOT_PATTERNS
+} from '../strategy-bots/music-correct-bot/constants';
+
+// Mock the WebhookService
+jest.mock('../../../services/bootstrap', () => ({
+	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),
+}));
+
+describe('MusicCorrectBot Strategy', () => {
+	beforeEach(() => {
+		// Clear mocks and reset container
+		jest.clearAllMocks();
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookService);
+	});
+
+	it('should have the correct name', () => {
+		expect(musicCorrectBot.name).toBe(MUSIC_CORRECT_BOT_NAME);
+	});
+
+	it('should respond to trigger messages', async () => {
+		// Arrange
+		const message = mockMessage('Music Correct Bot');
+		
+		// Act
+		await musicCorrectBot.processMessage(message);
+		
+		// Assert
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledTimes(1);
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				username: expect.stringContaining(MUSIC_CORRECT_BOT_NAME.replace('Bot', '')),
+				content: expect.any(String)
+			})
+		);
+	});
+	
+	it('should not respond to unrelated messages', async () => {
+		// Arrange
+		const message = mockMessage('A completely unrelated message');
+		
+		// Act
+		await musicCorrectBot.processMessage(message);
+		
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+});

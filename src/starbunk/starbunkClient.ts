@@ -258,8 +258,27 @@ export default class StarbunkClient extends Client {
 
 			logger.info(`📊 Successfully loaded ${successCount} out of ${botFiles.length} bots`);
 
-			if (successCount > 0) {
-				logger.info('📋 Loaded bots summary:');
+			// Load strategy bots
+			try {
+				// Import the strategy bot loader
+				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				const { loadStrategyBots } = require('./bots/strategy-loader');
+				const strategyBots = await loadStrategyBots();
+				
+				// Add strategy bots to the collection
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				strategyBots.forEach((bot: any) => {
+					this.bots.set(bot.defaultBotName, bot);
+				});
+				
+				logger.info(`Added ${strategyBots.length} strategy bots to the client`);
+			} catch (error) {
+				logger.error('Error loading strategy bots:', error instanceof Error ? error : new Error(String(error)));
+			}
+			
+			// Show summary of all loaded bots
+			if (this.bots.size > 0) {
+				logger.info('📋 All loaded bots summary:');
 				this.bots.forEach((bot, name) => {
 					logger.info(`   - ${name} (${bot.constructor.name})`);
 				});

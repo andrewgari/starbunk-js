@@ -1,0 +1,56 @@
+import { container, ServiceId } from '../../../services/container';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import pickleBot from '../strategy-bots/pickle-bot';
+import { 
+	PICKLE_BOT_NAME, 
+	PICKLE_BOT_AVATAR_URL,
+	PICKLE_BOT_PATTERNS, PICKLE_BOT_RESPONSES // eslint-disable-line @typescript-eslint/no-unused-vars
+} from '../strategy-bots/pickle-bot/constants';
+
+// Mock the WebhookService
+jest.mock('../../../services/bootstrap', () => ({
+	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),
+}));
+
+describe('PickleBot Strategy', () => {
+	beforeEach(() => {
+		// Clear mocks and reset container
+		jest.clearAllMocks();
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookService);
+	});
+
+	it('should have the correct name', () => {
+		expect(pickleBot.name).toBe(PICKLE_BOT_NAME);
+	});
+
+	it('should respond to trigger messages', async () => {
+		// Arrange
+		const message = mockMessage('GremlinBot');
+		
+		// Act
+		await pickleBot.processMessage(message);
+		
+		// Assert
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledTimes(1);
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				username: expect.stringContaining(PICKLE_BOT_NAME.replace('Bot', '')),
+				content: expect.any(String)
+			})
+		);
+	});
+	
+	it('should not respond to unrelated messages', async () => {
+		// Arrange
+		const message = mockMessage('A completely unrelated message');
+		
+		// Act
+		await pickleBot.processMessage(message);
+		
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+});

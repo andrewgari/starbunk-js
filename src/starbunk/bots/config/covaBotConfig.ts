@@ -270,7 +270,6 @@ CASUAL
 - Relevant anecdotes
 - Clarifying questions
 
-## Quality Control
 - Verify technical accuracy
 - Maintain conversational tone
 - Balance detail vs brevity

@@ -1,0 +1,56 @@
+import { container, ServiceId } from '../../../services/container';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import babyBot from '../strategy-bots/baby-bot';
+import { 
+	BABY_BOT_NAME, 
+	BABY_BOT_AVATAR_URL,
+	BABY_BOT_PATTERNS, BABY_BOT_RESPONSES // eslint-disable-line @typescript-eslint/no-unused-vars
+} from '../strategy-bots/baby-bot/constants';
+
+// Mock the WebhookService
+jest.mock('../../../services/bootstrap', () => ({
+	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),
+}));
+
+describe('BabyBot Strategy', () => {
+	beforeEach(() => {
+		// Clear mocks and reset container
+		jest.clearAllMocks();
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookService);
+	});
+
+	it('should have the correct name', () => {
+		expect(babyBot.name).toBe(BABY_BOT_NAME);
+	});
+
+	it('should respond to trigger messages', async () => {
+		// Arrange
+		const message = mockMessage('BabyBot');
+		
+		// Act
+		await babyBot.processMessage(message);
+		
+		// Assert
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledTimes(1);
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				username: expect.stringContaining(BABY_BOT_NAME.replace('Bot', '')),
+				content: expect.any(String)
+			})
+		);
+	});
+	
+	it('should not respond to unrelated messages', async () => {
+		// Arrange
+		const message = mockMessage('A completely unrelated message');
+		
+		// Act
+		await babyBot.processMessage(message);
+		
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+});

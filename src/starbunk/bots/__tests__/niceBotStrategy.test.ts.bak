@@ -1,0 +1,56 @@
+import { container, ServiceId } from '../../../services/container';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import niceBot from '../strategy-bots/nice-bot';
+import { 
+	NICE_BOT_NAME, 
+	NICE_BOT_AVATAR_URL,
+	NICE_BOT_PATTERNS, NICE_BOT_RESPONSES // eslint-disable-line @typescript-eslint/no-unused-vars
+} from '../strategy-bots/nice-bot/constants';
+
+// Mock the WebhookService
+jest.mock('../../../services/bootstrap', () => ({
+	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),
+}));
+
+describe('NiceBot Strategy', () => {
+	beforeEach(() => {
+		// Clear mocks and reset container
+		jest.clearAllMocks();
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookService);
+	});
+
+	it('should have the correct name', () => {
+		expect(niceBot.name).toBe(NICE_BOT_NAME);
+	});
+
+	it('should respond to trigger messages', async () => {
+		// Arrange
+		const message = mockMessage('BunkBot');
+		
+		// Act
+		await niceBot.processMessage(message);
+		
+		// Assert
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledTimes(1);
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				username: expect.stringContaining(NICE_BOT_NAME.replace('Bot', '')),
+				content: expect.any(String)
+			})
+		);
+	});
+	
+	it('should not respond to unrelated messages', async () => {
+		// Arrange
+		const message = mockMessage('A completely unrelated message');
+		
+		// Act
+		await niceBot.processMessage(message);
+		
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+});

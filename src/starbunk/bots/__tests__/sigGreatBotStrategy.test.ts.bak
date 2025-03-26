@@ -1,0 +1,56 @@
+import { container, ServiceId } from '../../../services/container';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import sigGreatBot from '../strategy-bots/sig-great-bot';
+import { 
+	SIG_GREAT_BOT_NAME, 
+	SIG_GREAT_BOT_AVATAR_URL,
+	SIG_GREAT_BOT_PATTERNS, SIG_GREAT_BOT_RESPONSES // eslint-disable-line @typescript-eslint/no-unused-vars
+} from '../strategy-bots/sig-great-bot/constants';
+
+// Mock the WebhookService
+jest.mock('../../../services/bootstrap', () => ({
+	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),
+}));
+
+describe('SigGreatBot Strategy', () => {
+	beforeEach(() => {
+		// Clear mocks and reset container
+		jest.clearAllMocks();
+		container.clear();
+		container.register(ServiceId.Logger, () => mockLogger);
+		container.register(ServiceId.WebhookService, () => mockWebhookService);
+	});
+
+	it('should have the correct name', () => {
+		expect(sigGreatBot.name).toBe(SIG_GREAT_BOT_NAME);
+	});
+
+	it('should respond to trigger messages', async () => {
+		// Arrange
+		const message = mockMessage('SigGreatBot');
+		
+		// Act
+		await sigGreatBot.processMessage(message);
+		
+		// Assert
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledTimes(1);
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				username: expect.stringContaining(SIG_GREAT_BOT_NAME.replace('Bot', '')),
+				content: expect.any(String)
+			})
+		);
+	});
+	
+	it('should not respond to unrelated messages', async () => {
+		// Arrange
+		const message = mockMessage('A completely unrelated message');
+		
+		// Act
+		await sigGreatBot.processMessage(message);
+		
+		// Assert
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+});
