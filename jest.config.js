@@ -5,6 +5,17 @@ module.exports = {
 	testMatch: [
 		'**/__tests__/**/*.test.ts'
 	],
+	collectCoverageFrom: [
+		'src/**/*.ts',
+		'!src/**/*.d.ts',
+		'!src/bunkbot.ts',
+		'!src/**/index.ts',
+		'!src/tests/**',
+		'!src/**/__tests__/**',
+		'!src/**/__mocks__/**'
+	],
+	coverageDirectory: 'coverage',
+	coverageReporters: ['text', 'lcov', 'clover', 'html'],
 	// Only exclude tests with complex external dependencies like LLM services
 	testPathIgnorePatterns: [
 		'node_modules/',
