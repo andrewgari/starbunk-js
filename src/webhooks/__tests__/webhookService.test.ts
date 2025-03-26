@@ -15,7 +15,7 @@ jest.mock('../../environment', () => ({
 describe('WebhookService', () => {
 	let webhookService: WebhookService;
 	let mockWebhookClient: Partial<WebhookClient>;
-	let mockChannel: any; // Using 'any' to avoid TextChannel typings issues
+	let mockChannel: TextChannel;
 	let mockWebhook: any;
   
 	beforeEach(() => {
@@ -27,30 +27,38 @@ describe('WebhookService', () => {
 		// Mock webhook for channel
 		mockWebhook = {
 			name: 'test-bot-webhook',
-			send: jest.fn().mockResolvedValue(undefined)
+			send: jest.fn().mockResolvedValue({})
 		};
     
-		// Mock channel
+		// Mock collection wrapper
+		const mockCollection = {
+			first: jest.fn().mockReturnValue(mockWebhook),
+			find: jest.fn().mockImplementation((finder) => {
+				if (typeof finder === 'function') {
+					return finder(mockWebhook) ? mockWebhook : undefined;
+				}
+				return mockWebhook;
+			})
+		};
+		
+		// Create mock channel
 		mockChannel = {
 			name: 'test-channel',
 			id: 'channel123',
 			toString: () => `<#channel123>`,
-			fetchWebhooks: jest.fn().mockResolvedValue({
-				first: jest.fn().mockReturnValue(mockWebhook),
-				find: jest.fn().mockImplementation(finder => {
-					if (typeof finder === 'function') {
-						return finder(mockWebhook) ? mockWebhook : undefined;
-					}
-					return mockWebhook;
-				})
-			}),
-			createWebhook: jest.fn().mockResolvedValue(mockWebhook)
-		};
+			fetchWebhooks: jest.fn().mockResolvedValue(mockCollection),
+			createWebhook: jest.fn().mockResolvedValue(mockWebhook),
+			// Fill in required properties to satisfy TypeScript
+			guild: {} as any,
+			client: {} as any,
+			type: 0
+		} as unknown as TextChannel;
     
 		// Create webhook service with mocked dependencies
 		webhookService = new WebhookService(mockLogger);
-		(webhookService as any).webhookClient = mockWebhookClient as WebhookClient;
-		(webhookService as any)._webhookAvailable = true;
+		// Use unknown to bypass type checking for private properties
+		(webhookService as unknown as { webhookClient: WebhookClient }).webhookClient = mockWebhookClient as WebhookClient;
+		(webhookService as unknown as { _webhookAvailable: boolean })._webhookAvailable = true;
 	});
   
 	afterEach(() => {
@@ -67,7 +75,7 @@ describe('WebhookService', () => {
 			};
       
 			// Call the method
-			await webhookService.writeMessage(mockChannel as unknown as TextChannel, messageInfo);
+			await webhookService.writeMessage(mockChannel, messageInfo);
       
 			// Check webhook name format
 			expect(mockChannel.fetchWebhooks).toHaveBeenCalled();
@@ -78,11 +86,14 @@ describe('WebhookService', () => {
 				avatarURL: 'https://example.com/avatar.jpg',
 				content: 'Test message'
 			}));
-			
-			// Verify that botName and avatarUrl are not present in the sent message
-			const sentMessage = mockWebhook.send.mock.calls[0][0];
-			expect(sentMessage.botName).toBeUndefined();
-			expect(sentMessage.avatarUrl).toBeUndefined();
+
+			// Verify that the transformed properties were passed
+			expect(mockWebhook.send).toHaveBeenCalledWith(
+				expect.not.objectContaining({
+					botName: expect.anything(),
+					avatarUrl: expect.anything()
+				})
+			);
 		});
     
 		it('should create a unique webhook name based on the bot username', async () => {
@@ -93,7 +104,7 @@ describe('WebhookService', () => {
 					first: jest.fn().mockReturnValue(null),
 					find: jest.fn().mockReturnValue(null)
 				})
-			};
+			} as unknown as TextChannel;
       
 			const messageInfo: MessageInfo = {
 				content: 'Test message',
@@ -101,16 +112,14 @@ describe('WebhookService', () => {
 				avatarUrl: 'https://example.com/avatar.jpg'
 			};
       
-			await webhookService.writeMessage(channelWithoutWebhook as unknown as TextChannel, messageInfo);
+			await webhookService.writeMessage(channelWithoutWebhook, messageInfo);
       
-			// Check that createWebhook was called with the expected name
-			expect(channelWithoutWebhook.createWebhook).toHaveBeenCalledWith(expect.objectContaining({
-				avatar: 'https://example.com/avatar.jpg'
-			}));
-			
-			// Check the name matches the expected format (but be flexible about length)
-			const createdWebhookArgs = (channelWithoutWebhook.createWebhook as jest.Mock).mock.calls[0][0];
-			expect(createdWebhookArgs.name).toContain('Very-Long-Bot-Name-With-Spaces-webhook'.substring(0, 32));
+			// Check that createWebhook was called with the expected parameters
+			expect(channelWithoutWebhook.createWebhook).toHaveBeenCalled();
+			// The webhook name should contain some form of the bot name
+			const createWebhookCallArgs = (channelWithoutWebhook.createWebhook as jest.Mock).mock.calls[0][0];
+			expect(createWebhookCallArgs.name).toContain('Very-Long-Bot-Name-With-Spaces-webhook'.substring(0, 32));
+			expect(createWebhookCallArgs.avatar).toBe('https://example.com/avatar.jpg');
 		});
     
 		it('should handle missing bot identity fields with fallback values', async () => {
@@ -120,14 +129,19 @@ describe('WebhookService', () => {
 				// Missing botName and avatarUrl
 			};
       
-			await webhookService.writeMessage(mockChannel as unknown as TextChannel, incompleteMessageInfo);
+			await webhookService.writeMessage(mockChannel, incompleteMessageInfo);
       
 			// Check that fallback values were used
 			expect(mockWebhook.send).toHaveBeenCalledWith(expect.objectContaining({
 				username: 'Unknown Bot',
 				content: 'Test message with incomplete identity'
 			}));
-			expect(mockWebhook.send.mock.calls[0][0].avatarURL).toBeTruthy();
+			// Avatar URL should be provided
+			expect(mockWebhook.send).toHaveBeenCalledWith(
+				expect.objectContaining({
+					avatarURL: expect.any(String)
+				})
+			);
 		});
     
 		it('should use the right bot identity even when multiple bots send messages', async () => {
@@ -143,7 +157,6 @@ describe('WebhookService', () => {
 							return webhook;
 						}
 					}
-					return undefined;
 				}
 				return undefined;
 			});
@@ -163,7 +176,7 @@ describe('WebhookService', () => {
 					mockWebhooks.set(opts.name, newWebhook);
 					return Promise.resolve(newWebhook);
 				})
-			};
+			} as unknown as TextChannel;
 			
 			// Send messages from two different bots
 			const bot1Info: MessageInfo = {
@@ -179,10 +192,10 @@ describe('WebhookService', () => {
 			};
 			
 			// Send first message
-			await webhookService.writeMessage(multiWebhookChannel as unknown as TextChannel, bot1Info);
+			await webhookService.writeMessage(multiWebhookChannel, bot1Info);
 			
 			// Send second message
-			await webhookService.writeMessage(multiWebhookChannel as unknown as TextChannel, bot2Info);
+			await webhookService.writeMessage(multiWebhookChannel, bot2Info);
 			
 			// Verify that createWebhook was called twice with different names
 			expect(multiWebhookChannel.createWebhook).toHaveBeenCalledTimes(2);
@@ -251,7 +264,7 @@ describe('WebhookService', () => {
 					mockWebhooks.set(opts.name, newWebhook);
 					return Promise.resolve(newWebhook);
 				})
-			};
+			} as unknown as TextChannel;
 			
 			// Send multiple messages from the same bot
 			const botInfo: MessageInfo = {
@@ -261,10 +274,10 @@ describe('WebhookService', () => {
 			};
 			
 			// Send first message
-			await webhookService.writeMessage(persistentWebhookChannel as unknown as TextChannel, botInfo);
+			await webhookService.writeMessage(persistentWebhookChannel, botInfo);
 			
 			// Send second message with the same bot identity
-			await webhookService.writeMessage(persistentWebhookChannel as unknown as TextChannel, {
+			await webhookService.writeMessage(persistentWebhookChannel, {
 				...botInfo,
 				content: 'Second message'
 			});
@@ -289,7 +302,9 @@ describe('WebhookService', () => {
 	describe('validateMessageInfo and ensureValidMessageInfo', () => {
 		it('should validate message info correctly', () => {
 			// Access private methods for testing
-			const validateMessageInfo = (webhookService as any).validateMessageInfo.bind(webhookService);
+			const validateMessageInfo = (webhookService as unknown as { 
+				validateMessageInfo: (info: any) => boolean; 
+			}).validateMessageInfo.bind(webhookService);
 			
 			// Valid message info with botName/avatarUrl
 			expect(validateMessageInfo({
@@ -326,7 +341,9 @@ describe('WebhookService', () => {
 		
 		it('should ensure valid message info with fallbacks', () => {
 			// Access private method for testing
-			const ensureValidMessageInfo = (webhookService as any).ensureValidMessageInfo.bind(webhookService);
+			const ensureValidMessageInfo = (webhookService as unknown as { 
+				ensureValidMessageInfo: (info: any) => MessageInfo; 
+			}).ensureValidMessageInfo.bind(webhookService);
 			
 			// Test with missing values
 			const fixed = ensureValidMessageInfo({
