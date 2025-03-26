@@ -1,6 +1,6 @@
 import { TextChannel, WebhookClient } from 'discord.js';
 import { WebhookService } from '../webhookService';
-import { mockLogger } from '../../services/mockLogger';
+import { logger } from '../../services/logger';
 import { MessageInfo } from '../types';
 
 // Mock environment module
@@ -55,7 +55,7 @@ describe('WebhookService', () => {
 		} as unknown as TextChannel;
     
 		// Create webhook service with mocked dependencies
-		webhookService = new WebhookService(mockLogger);
+		webhookService = new WebhookService(logger);
 		// Use unknown to bypass type checking for private properties
 		(webhookService as unknown as { webhookClient: WebhookClient }).webhookClient = mockWebhookClient as WebhookClient;
 		(webhookService as unknown as { _webhookAvailable: boolean })._webhookAvailable = true;
