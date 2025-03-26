@@ -51,8 +51,8 @@ export class WebhookService implements WebhookServiceInterface {
 
 			// Create a unique webhook name based on the bot's username
 			// This prevents identity conflicts between different bots
-			const webhookName = `${transformedInfo.username?.replace(/\s+/g, '-')}-webhook`.substring(0, 32);
-
+			const usernameHash = crypto.createHash('md5').update(transformedInfo.username || '').digest('hex').substring(0, 8);
+			const webhookName = `${transformedInfo.username?.replace(/\s+/g, '-')}-${usernameHash}-webhook`.substring(0, 32);
 			// Try to use webhooks - find a matching webhook for this bot if possible
 			const webhooks = await channel.fetchWebhooks();
 			let webhook = webhooks.find(wh => wh.name === webhookName);
