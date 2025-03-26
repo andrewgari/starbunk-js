@@ -1,5 +1,5 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 import spiderBot from '../strategy-bots/spider-bot';
 import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars

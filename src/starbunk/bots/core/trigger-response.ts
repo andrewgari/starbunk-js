@@ -2,36 +2,85 @@ import { Message } from 'discord.js';
 import { logger } from '../../../services/logger';
 import { BotIdentity } from '../../types/botIdentity';
 
+/**
+ * Typed TriggerName for better type safety and debugging
+ */
+export type TriggerName = string;
+
+export function createTriggerName(name: string): TriggerName {
+	if (!name || name.trim().length === 0) {
+		throw new Error('Trigger name cannot be empty');
+	}
+	return name;
+}
+
+/**
+ * Function that determines whether a trigger should activate
+ */
 export interface TriggerCondition {
 	(message: Message): Promise<boolean> | boolean;
 }
 
+/**
+ * Function that generates a response message
+ */
 export interface ResponseGenerator {
 	(message: Message): Promise<string> | string;
 }
 
+/**
+ * Function or value that provides a bot identity
+ */
+export type IdentityProvider = BotIdentity | ((message: Message) => Promise<BotIdentity> | BotIdentity);
+
+/**
+ * Priority level for trigger execution order
+ */
+export type Priority = number;
+
+export function createPriority(value: number): Priority {
+	if (value < 0) {
+		throw new Error('Priority must be a non-negative number');
+	}
+	return value;
+}
+
+/**
+ * Complete trigger-response definition with strong typing
+ */
 export interface TriggerResponse {
+	name: TriggerName;
+	condition: TriggerCondition;
+	response: ResponseGenerator;
+	identity?: IdentityProvider;
+	priority?: Priority;
+}
+
+/**
+ * Configuration for creating a new TriggerResponse
+ */
+export interface TriggerResponseConfig {
 	name: string;
 	condition: TriggerCondition;
 	response: ResponseGenerator;
-	identity?: BotIdentity | ((message: Message) => Promise<BotIdentity> | BotIdentity);
-	priority?: number; // Higher numbers = higher priority
+	identity?: IdentityProvider;
+	priority?: number;
 }
 
 // Class representing a single trigger-response pair
 export class TriggerResponseClass {
-	public readonly name: string;
+	public readonly name: TriggerName;
 	public readonly condition: TriggerCondition;
 	public readonly response: ResponseGenerator;
-	public readonly priority: number;
-	private readonly identity?: BotIdentity | ((message: Message) => Promise<BotIdentity> | BotIdentity);
+	public readonly priority: Priority;
+	private readonly identity?: IdentityProvider;
 
-	constructor(config: TriggerResponse) {
-		this.name = config.name;
+	constructor(config: TriggerResponseConfig) {
+		this.name = createTriggerName(config.name);
 		this.condition = config.condition;
 		this.response = config.response;
 		this.identity = config.identity;
-		this.priority = config.priority || 0;
+		this.priority = createPriority(config.priority || 0);
 	}
 
 	// Check if this trigger matches the message
@@ -83,9 +132,9 @@ export class TriggerResponseClass {
 			// Generate and send response
 			const responseText = await this.response(message);
 			const channel = message.channel;
-			
+      
 			logger.debug(`[${botName}] Sending response: "${responseText.substring(0, 100)}..."`);
-			
+      
 			// Use the discord service to send the message
 			const DiscordService = (await import('../../../services/discordService.js')).DiscordService;
 			await DiscordService.getInstance().sendMessageWithBotIdentity(
@@ -102,10 +151,13 @@ export class TriggerResponseClass {
 	}
 }
 
-// Factory function to create a trigger-response pair
-export function createTriggerResponse(config: TriggerResponse): TriggerResponse {
+// Factory function to create a trigger-response pair with validation
+export function createTriggerResponse(config: TriggerResponseConfig): TriggerResponse {
 	return {
-		...config,
-		priority: config.priority ?? 0
+		name: createTriggerName(config.name),
+		condition: config.condition,
+		response: config.response,
+		identity: config.identity,
+		priority: config.priority !== undefined ? createPriority(config.priority) : createPriority(0)
 	};
 }

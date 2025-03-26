@@ -1,27 +1,8 @@
 {
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "rootDir": "./src/",
-    "outDir": "./dist/",
-    "noUnusedParameters": false,
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "noUnusedLocals": false,
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "removeComments": true,
-    "sourceMap": true,
-    "baseUrl": "./",
-    "paths": {
-      "@/*": ["src/*"]
-    }
-  },
-  "files": ["src/bunkbot.ts"],
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/**/__tests__/**/*"]
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"allowJs": false
+	}
 }

@@ -1,17 +1,13 @@
-import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
-import macaroniBot from '../strategy-bots/macaroni-bot';
-import { 
-	MACARONI_BOT_NAME, 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	MACARONI_BOT_AVATAR_URL,
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	MACARONI_BOT_PATTERNS,
+import macaroniBot from '..';
+import { container, ServiceId } from '../../../../../services/container';
+import { mockLogger, mockMessage, mockWebhookService } from '../../../test-utils/testUtils';
+import {
+	MACARONI_BOT_NAME,
 	MACARONI_BOT_RESPONSES
-} from '../strategy-bots/macaroni-bot/constants';
+} from '../constants';
 
 // Mock the WebhookService
-jest.mock('../../../services/bootstrap', () => ({
+jest.mock('../../../../../services/bootstrap', () => ({
 	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),
 }));
 
@@ -31,10 +27,10 @@ describe('macaroniBot Strategy', () => {
 	it('should respond to pasta mentions', async () => {
 		// Arrange
 		const message = mockMessage('I like pasta and spaghetti');
-		
+
 		// Act
 		await macaroniBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledTimes(1);
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
@@ -45,14 +41,14 @@ describe('macaroniBot Strategy', () => {
 			})
 		);
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await macaroniBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

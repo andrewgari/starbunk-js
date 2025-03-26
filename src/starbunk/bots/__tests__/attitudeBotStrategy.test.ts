@@ -1,5 +1,5 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 import attitudeBot from '../strategy-bots/attitude-bot';
 import {
 	ATTITUDE_BOT_NAME, 

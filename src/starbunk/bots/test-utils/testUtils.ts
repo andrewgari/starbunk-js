@@ -15,6 +15,7 @@ export const mockWebhookService = {
 	writeMessage: jest.fn().mockResolvedValue(undefined),
 	sendMessage: jest.fn().mockResolvedValue(undefined),
 	webhookClient: null,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	logger: null as any
 };
 

@@ -3,7 +3,8 @@ module.exports = {
 	testEnvironment: 'node',
 	// Use standard patterns for finding tests
 	testMatch: [
-		'**/__tests__/**/*.test.ts'
+		'**/__tests__/**/*.test.ts',
+		'**/strategy-bots/**/*.test.ts'
 	],
 	collectCoverageFrom: [
 		'src/**/*.ts',

@@ -1,5 +1,5 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 import bananaBot from '../strategy-bots/banana-bot';
 import { 
 	BANANA_BOT_NAME, 

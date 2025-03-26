@@ -1,5 +1,5 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 import chaosBot from '../strategy-bots/chaos-bot';
 import { 
 	CHAOS_BOT_NAME, 

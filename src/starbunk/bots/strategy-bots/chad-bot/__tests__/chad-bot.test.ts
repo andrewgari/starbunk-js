@@ -1,16 +1,16 @@
-import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import chadBot from '../strategy-bots/chad-bot';
+import { container, ServiceId } from '../../../../../services/container';
+import { mockLogger, mockMessage, mockWebhookService } from '../../../test-utils/testUtils';
+import chadBot from '../index';
 import { 
 	CHAD_BOT_NAME, 
 	CHAD_AVATAR_URL,
 	CHAD_RESPONSES,
 	CHAD_TRIGGER_REGEX,
 	CHAD_SPECIFIC_PHRASES
-} from '../strategy-bots/chad-bot/constants';
+} from '../constants';
 
 // Mock the WebhookService and Logger
-jest.mock('../../../services/bootstrap', () => ({
+jest.mock('../../../../../services/bootstrap', () => ({
 	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),
 }));
 
