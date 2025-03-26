@@ -1,12 +1,12 @@
 services:
-    bunkbot-ts:
+    bunkbot:
         build:
             context: .
             dockerfile: Dockerfile
         container_name: bunkbot
         env_file:
             - .env
-        command: npm run start
+        command: node --enable-source-maps dist/bunkbot.js
         # Improve performance with resource limits
         deploy:
             resources:

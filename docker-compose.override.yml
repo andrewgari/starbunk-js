@@ -1,5 +1,5 @@
 services:
-  bunkbot-ts:
+  bunkbot:
     environment:
       # Include explicit environment variables for development
       # These will override values from .env
@@ -10,9 +10,7 @@ services:
       - GUILD_ID=${GUILD_ID}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
-      # Mount source code for live development
-      - ./src:/app/src:delegated
       # Mount .env file directly to ensure it's available
       - ./.env:/app/.env:ro
     # In development, you can use dev mode for hot reloading
-    command: npm run dev
+    # command: npm run dev
