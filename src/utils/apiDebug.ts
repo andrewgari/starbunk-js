@@ -87,7 +87,7 @@ export class ApiDebug {
 	static createDebugFetch(): typeof fetch {
 		const originalFetch = global.fetch;
 
-		return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+		return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
 			if (!DebugUtils.isDebugMode()) {
 				return originalFetch(input, init);
 			}

@@ -6,8 +6,6 @@ import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	BOT_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	BOT_BOT_PATTERNS,
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	BOT_BOT_RESPONSES
 } from '../strategy-bots/bot-bot/constants';
 

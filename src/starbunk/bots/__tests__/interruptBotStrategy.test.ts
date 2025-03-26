@@ -3,14 +3,11 @@ import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testU
 import interruptBot from '../strategy-bots/interrupt-bot';
 import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	
-
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	INTERRUPT_BOT_NAME, 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	INTERRUPT_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	INTERRUPT_BOT_PATTERNS
+	INTERRUPT_BOT_RESPONSES
 } from '../strategy-bots/interrupt-bot/constants';
 
 // Mock the WebhookService

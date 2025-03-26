@@ -15,7 +15,7 @@ jest.mock('../../environment', () => ({
 describe('WebhookService', () => {
 	let webhookService: WebhookService;
 	let mockWebhookClient: Partial<WebhookClient>;
-	let mockChannel: Partial<TextChannel>;
+	let mockChannel: any; // Using 'any' to avoid TextChannel typings issues
 	let mockWebhook: any;
   
 	beforeEach(() => {
@@ -34,6 +34,7 @@ describe('WebhookService', () => {
 		mockChannel = {
 			name: 'test-channel',
 			id: 'channel123',
+			toString: () => `<#channel123>`,
 			fetchWebhooks: jest.fn().mockResolvedValue({
 				first: jest.fn().mockReturnValue(mockWebhook),
 				find: jest.fn().mockImplementation(finder => {
@@ -66,7 +67,7 @@ describe('WebhookService', () => {
 			};
       
 			// Call the method
-			await webhookService.writeMessage(mockChannel as TextChannel, messageInfo);
+			await webhookService.writeMessage(mockChannel as unknown as TextChannel, messageInfo);
       
 			// Check webhook name format
 			expect(mockChannel.fetchWebhooks).toHaveBeenCalled();
@@ -100,7 +101,7 @@ describe('WebhookService', () => {
 				avatarUrl: 'https://example.com/avatar.jpg'
 			};
       
-			await webhookService.writeMessage(channelWithoutWebhook as TextChannel, messageInfo);
+			await webhookService.writeMessage(channelWithoutWebhook as unknown as TextChannel, messageInfo);
       
 			// Check that createWebhook was called with the expected name
 			expect(channelWithoutWebhook.createWebhook).toHaveBeenCalledWith(expect.objectContaining({
@@ -119,7 +120,7 @@ describe('WebhookService', () => {
 				// Missing botName and avatarUrl
 			};
       
-			await webhookService.writeMessage(mockChannel as TextChannel, incompleteMessageInfo);
+			await webhookService.writeMessage(mockChannel as unknown as TextChannel, incompleteMessageInfo);
       
 			// Check that fallback values were used
 			expect(mockWebhook.send).toHaveBeenCalledWith(expect.objectContaining({
@@ -178,10 +179,10 @@ describe('WebhookService', () => {
 			};
 			
 			// Send first message
-			await webhookService.writeMessage(multiWebhookChannel as TextChannel, bot1Info);
+			await webhookService.writeMessage(multiWebhookChannel as unknown as TextChannel, bot1Info);
 			
 			// Send second message
-			await webhookService.writeMessage(multiWebhookChannel as TextChannel, bot2Info);
+			await webhookService.writeMessage(multiWebhookChannel as unknown as TextChannel, bot2Info);
 			
 			// Verify that createWebhook was called twice with different names
 			expect(multiWebhookChannel.createWebhook).toHaveBeenCalledTimes(2);
@@ -260,10 +261,10 @@ describe('WebhookService', () => {
 			};
 			
 			// Send first message
-			await webhookService.writeMessage(persistentWebhookChannel as TextChannel, botInfo);
+			await webhookService.writeMessage(persistentWebhookChannel as unknown as TextChannel, botInfo);
 			
 			// Send second message with the same bot identity
-			await webhookService.writeMessage(persistentWebhookChannel as TextChannel, {
+			await webhookService.writeMessage(persistentWebhookChannel as unknown as TextChannel, {
 				...botInfo,
 				content: 'Second message'
 			});

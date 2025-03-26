@@ -11,6 +11,8 @@ jest.mock('../../discord/guildIds', () => ({
 
 describe('DiscordService', () => {
 	let mockClient: Partial<Client>;
+	// Not used but kept for reference
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let mockWebhookService: Partial<WebhookService>;
 	let discordService: DiscordService;
 	let mockUser: { id: string; username: string; displayAvatarURL: jest.Mock };
@@ -42,8 +44,7 @@ describe('DiscordService', () => {
 
 		// Initialize with type assertions
 		discordService = DiscordService.initialize(
-			mockClient as unknown as Client,
-			mockWebhookService as WebhookService
+			mockClient as unknown as Client
 		);
 	});
 
@@ -54,13 +55,11 @@ describe('DiscordService', () => {
 	describe('initialization', () => {
 		it('should create a singleton instance', () => {
 			const instance1 = DiscordService.initialize(
-				mockClient as unknown as Client,
-				mockWebhookService as WebhookService
+				mockClient as unknown as Client
 			);
 
 			const instance2 = DiscordService.initialize(
-				mockClient as unknown as Client,
-				mockWebhookService as WebhookService
+				mockClient as unknown as Client
 			);
 
 			expect(instance1).toBe(instance2);

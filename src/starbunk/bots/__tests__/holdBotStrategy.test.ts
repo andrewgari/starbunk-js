@@ -3,14 +3,11 @@ import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testU
 import holdBot from '../strategy-bots/hold-bot';
 import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	
-
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	HOLD_BOT_NAME, 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	HOLD_BOT_AVATAR_URL,
+	HOLD_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	HOLD_BOT_PATTERNS
+	HOLD_PATTERN
 } from '../strategy-bots/hold-bot/constants';
 
 // Mock the WebhookService

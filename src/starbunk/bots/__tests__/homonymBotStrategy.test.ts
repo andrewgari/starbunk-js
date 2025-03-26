@@ -3,14 +3,11 @@ import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testU
 import homonymBot from '../strategy-bots/homonym-bot';
 import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	
-
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	HOMONYM_BOT_NAME, 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	HOMONYM_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	HOMONYM_BOT_PATTERNS
+	HOMONYM_PAIRS
 } from '../strategy-bots/homonym-bot/constants';
 
 // Mock the WebhookService
