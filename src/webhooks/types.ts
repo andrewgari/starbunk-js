@@ -4,6 +4,7 @@ export interface MessageInfo {
 	avatarURL?: string;
 	botName?: string;
 	avatarUrl?: string;
+	_defaultBotName?: string;
 	embeds?: Array<{
 		title?: string;
 		description?: string;

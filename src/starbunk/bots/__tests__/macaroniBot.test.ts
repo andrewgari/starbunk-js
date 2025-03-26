@@ -20,11 +20,15 @@ describe('MacaroniBot', () => {
 	});
 
 	it('should respond to messages containing "macaroni"', async () => {
+		// Arrange
 		const message = mockMessage('I love macaroni');
+		
+		// Act
 		await macaroniBot.handleMessage(message);
 
+		// Assert
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			message.channel,
+			expect.objectContaining({ id: message.channel.id }),
 			expect.objectContaining({
 				botName: MacaroniBotConfig.Name,
 				content: expect.any(String)

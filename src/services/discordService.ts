@@ -1,4 +1,4 @@
-import { Client, Guild, Message, MessageReaction, Role, TextChannel, User, VoiceChannel } from "discord.js";
+import { Client, Guild, Message, MessageReaction, Role, TextChannel, User, VoiceChannel, Webhook } from "discord.js";
 
 import guildIds from "@/discord/guildIds";
 import { BotIdentity } from "@/starbunk/types/botIdentity";
@@ -11,7 +11,6 @@ import {
 	RoleNotFoundError,
 	UserNotFoundError
 } from "./errors/discordErrors";
-import { WebhookService } from "./container";
 
 export interface BulkMessageOptions {
 	channelIds: string[];
@@ -28,18 +27,94 @@ export class DiscordService {
 	private channelCache = new Map<string, TextChannel | VoiceChannel>();
 	private guildCache = new Map<string, Guild>();
 	private roleCache = new Map<string, Role>();
+	private botProfileCache = new Map<string, BotIdentity>();
+	private webhookCache = new Map<string, Webhook>();
+	private botProfileRefreshInterval: NodeJS.Timeout | null = null;
 
-	private constructor(private readonly client: Client, private readonly webhookService: WebhookService) { }
+	private constructor(private readonly client: Client) {
+		this.startBotProfileRefresh();
+	}
+
+	private async getOrCreateWebhook(channel: TextChannel): Promise<Webhook> {
+		const cacheKey = channel.id;
+		const cachedWebhook = this.webhookCache.get(cacheKey);
+		if (cachedWebhook) {
+			return cachedWebhook;
+		}
+
+		// Try to find existing webhook
+		const webhooks = await channel.fetchWebhooks();
+		const existingWebhook = webhooks.find(w => w.owner?.id === this.client.user?.id);
+		if (existingWebhook) {
+			this.webhookCache.set(cacheKey, existingWebhook);
+			return existingWebhook;
+		}
+
+		// Create new webhook if none exists
+		const newWebhook = await channel.createWebhook({
+			name: 'Starbunk Bot',
+			avatar: this.client.user?.displayAvatarURL()
+		});
+		this.webhookCache.set(cacheKey, newWebhook);
+		return newWebhook;
+	}
+
+	private startBotProfileRefresh(): void {
+		// Initial refresh
+		this.refreshBotProfiles().catch(error => {
+			console.error('Failed to refresh bot profiles:', error);
+		});
+
+		// Set up hourly refresh
+		this.botProfileRefreshInterval = setInterval(() => {
+			this.refreshBotProfiles().catch(error => {
+				console.error('Failed to refresh bot profiles:', error);
+			});
+		}, 60 * 60 * 1000); // 1 hour
+	}
+
+	private async refreshBotProfiles(): Promise<void> {
+		const guild = this.getGuild(DefaultGuildId);
+		const members = Array.from(guild.members.cache.values());
+
+		// Clear existing cache
+		this.botProfileCache.clear();
+
+		// Update cache with fresh data
+		for (const member of members) {
+			this.botProfileCache.set(member.id, {
+				botName: member.nickname ?? member.user.username,
+				avatarUrl: member.displayAvatarURL() ?? member.user.displayAvatarURL()
+			});
+		}
+	}
+
+	public getBotProfile(userId: string): BotIdentity {
+		const profile = this.botProfileCache.get(userId);
+		if (!profile) {
+			// Fallback to direct fetch if not in cache
+			return this.getMemberAsBotIdentity(userId);
+		}
+		return profile;
+	}
+
+	public getRandomBotProfile(): BotIdentity {
+		const profiles = Array.from(this.botProfileCache.values());
+		if (profiles.length === 0) {
+			// Fallback to getting a random member's identity if cache is empty
+			return this.getRandomMemberAsBotIdentity();
+		}
+		return profiles[Math.floor(Math.random() * profiles.length)];
+	}
 
 	/**
 	 * Initialize the Discord service singleton
 	 * @param client Discord.js client
-	 * @param webhookService Webhook service
 	 * @returns The DiscordService instance
 	 */
-	public static initialize(client: Client, webhookService: WebhookService): DiscordService {
+	public static initialize(client: Client): DiscordService {
 		if (!discordServiceInstance) {
-			discordServiceInstance = new DiscordService(client, webhookService);
+			discordServiceInstance = new DiscordService(client);
 		}
 		return discordServiceInstance;
 	}
@@ -62,6 +137,7 @@ export class DiscordService {
 		this.channelCache.clear();
 		this.guildCache.clear();
 		this.roleCache.clear();
+		this.webhookCache.clear();
 	}
 
 	public sendMessage(channelId: string, message: string): Message {
@@ -69,9 +145,10 @@ export class DiscordService {
 		return channel.send(message) as unknown as Message;
 	}
 
-	public sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): void {
+	public async sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): Promise<void> {
 		const channel = this.getTextChannel(channelId);
-		this.webhookService.writeMessage(channel, {
+		const webhook = await this.getOrCreateWebhook(channel);
+		await webhook.send({
 			content: message,
 			username: botIdentity.botName,
 			avatarURL: botIdentity.avatarUrl
@@ -261,6 +338,15 @@ export class DiscordService {
 
 	public isBunkBotMessage(message: Message): boolean {
 		return message.author.bot && message.author.id === this.client.user?.id;
+	}
+
+	// Cleanup on service shutdown
+	public cleanup(): void {
+		if (this.botProfileRefreshInterval) {
+			clearInterval(this.botProfileRefreshInterval);
+			this.botProfileRefreshInterval = null;
+		}
+		this.clearCache();
 	}
 }
 

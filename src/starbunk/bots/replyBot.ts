@@ -1,6 +1,6 @@
+import { DiscordService } from '@/services/discordService';
 import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
-import { getWebhookService } from '../../services/bootstrap';
 import { logger } from '../../services/logger';
 import { percentChance } from '../../utils/random';
 
@@ -16,17 +16,34 @@ export default abstract class ReplyBot {
 		return this.constructor.name;
 	}
 
-	public abstract get botIdentity(): BotIdentity | undefined;
-
-	public getResponseRate(): number {
-		return this.responseRate;
+	/**
+	 * Get the description for this bot.
+	 * Should be overridden by child classes to provide a meaningful description.
+	 */
+	public get description(): string {
+		return "A Starbunk reply bot";
 	}
 
+	public abstract get botIdentity(): BotIdentity;
+
+	/**
+	 * Set the response rate for this bot.
+	 * @param rate The response rate (0-100)
+	 * @throws Error if rate is invalid
+	 */
 	public setResponseRate(rate: number): void {
 		if (rate < 0 || rate > 100) {
 			throw new Error(`Invalid response rate: ${rate}. Must be between 0 and 100.`);
 		}
 		this.responseRate = rate;
+	}
+
+	/**
+	 * Get the current response rate for this bot.
+	 * @returns The response rate (0-100)
+	 */
+	public getResponseRate(): number {
+		return this.responseRate;
 	}
 
 	public async auditMessage(message: Message): Promise<void> {
@@ -90,16 +107,9 @@ export default abstract class ReplyBot {
 	/**
 	 * Sends a reply to the specified channel using the bot's identity.
 	 */
-	protected async sendReply(channel: TextChannel, content: string): Promise<void> {
-		if (!this.botIdentity) {
-			throw new Error(`[${this.defaultBotName}] No bot identity configured`);
-		}
-
+	public async sendReply(channel: TextChannel, content: string): Promise<void> {
 		try {
-			await getWebhookService().writeMessage(channel, {
-				...this.botIdentity,
-				content
-			});
+			await DiscordService.getInstance().sendMessageWithBotIdentity(channel.id, this.botIdentity, content);
 		} catch (error) {
 			logger.error(`[${this.defaultBotName}] Error sending reply:`, error as Error);
 			throw error;

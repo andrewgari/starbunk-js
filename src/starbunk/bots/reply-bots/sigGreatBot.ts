@@ -6,15 +6,10 @@ import { SigGreatBotConfig } from '../config/sigGreatBotConfig';
 import ReplyBot from '../replyBot';
 
 export default class SigGreatBot extends ReplyBot {
-	public get botIdentity(): BotIdentity {
+	public override get botIdentity(): BotIdentity {
 		try {
 			logger.debug(`[${this.defaultBotName}] Getting random member as bot identity`);
-			const randomMember = DiscordService.getInstance().getRandomMemberAsBotIdentity();
-			logger.debug(`[${this.defaultBotName}] Using identity: ${randomMember.botName}`);
-			return {
-				avatarUrl: randomMember.avatarUrl,
-				botName: randomMember.botName
-			};
+			return DiscordService.getInstance().getRandomBotProfile();
 		} catch (error) {
 			logger.error(`[${this.defaultBotName}] Error getting bot identity:`, error as Error);
 			return {

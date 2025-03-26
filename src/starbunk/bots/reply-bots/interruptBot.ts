@@ -8,8 +8,16 @@ import ReplyBot from '../replyBot';
 export default class InterruptBot extends ReplyBot {
 	protected override responseRate = 1; // 1% chance in normal mode, 100% in debug mode
 
-	public get botIdentity(): BotIdentity {
-		return DiscordService.getInstance().getRandomMemberAsBotIdentity();
+	public override get botIdentity(): BotIdentity {
+		try {
+			return DiscordService.getInstance().getRandomBotProfile();
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error getting bot identity:`, error as Error);
+			return {
+				avatarUrl: InterruptBotConfig.Avatars.Default,
+				botName: InterruptBotConfig.Name
+			};
+		}
 	}
 
 	public async processMessage(message: Message): Promise<void> {

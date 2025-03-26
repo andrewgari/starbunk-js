@@ -76,6 +76,15 @@ export class BotRegistry {
 		return rate;
 	}
 
+	public getBotDescription(botName: string): string {
+		const bot = this.bots.get(botName);
+		if (!bot) {
+			logger.warn(`[BotRegistry] Attempted to get description for non-existent bot: ${botName}`);
+			return "";
+		}
+		return bot.description;
+	}
+
 	/**
 	 * Reset the singleton instance to a fresh state.
 	 * This method should only be used in tests.

@@ -22,6 +22,10 @@ class MockBot extends ReplyBot {
 		};
 	}
 
+	public getResponseRate(): number {
+		return this.responseRate;
+	}
+
 	protected async processMessage(_message: Message): Promise<void> {
 		// Mock implementation
 	}

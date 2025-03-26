@@ -9,9 +9,9 @@ import ReplyBot from '../replyBot';
 export default class MacaroniBot extends ReplyBot {
 	public get botIdentity(): BotIdentity {
 		return {
-			avatarUrl: MacaroniBotConfig.Avatars.Default,
-			botName: MacaroniBotConfig.Name
-		};
+			botName: MacaroniBotConfig.Name,
+			avatarUrl: MacaroniBotConfig.Avatars.Default
+		}
 	}
 
 	public async processMessage(message: Message): Promise<void> {

@@ -1,9 +1,9 @@
 import { Message, TextChannel } from 'discord.js';
 import userId from '../../../discord/userId';
 import { isDebugMode } from '../../../environment';
-import { getDiscordClient, getDiscordService, getLLMManager } from '../../../services/bootstrap';
+import { getDiscordService, getLLMManager } from '../../../services/bootstrap';
 import { LLMProviderType } from '../../../services/llm/llmFactory';
-import { PromptType } from '../../../services/llm/promptManager';
+import { PromptRegistry, PromptType } from '../../../services/llm/promptManager';
 import { logger } from '../../../services/logger';
 import { PerformanceTimer, TimeUnit, formatRelativeTime, isOlderThan } from '../../../utils/time';
 import { BotIdentity } from '../../types/botIdentity';
@@ -13,22 +13,7 @@ import ReplyBot from '../replyBot';
 // Create performance timer for CovaBot operations
 const perfTimer = PerformanceTimer.getInstance();
 
-// Decision prompt for CovaBot response
-const covaResponseDecisionPrompt = `You are helping determine if a Discord message should get a response from a bot.
-Answer with ONE of these options only: YES, LIKELY, UNLIKELY, or NO.
-Respond to messages that:
-- Ask the bot a direct question
-- Explicitly invite the bot to comment
-- Discuss topics the bot would have interesting input on
-- Continue a conversation the bot is already in
-Do NOT respond to:
-- Messages that aren't looking for a response
-- Commands for other bots
-- Technical discussions or code that don't need the bot's input
-- Messages that don't seem to be seeking further conversation`;
-
 export default class CovaBot extends ReplyBot {
-	private _botIdentity: BotIdentity;
 	private _lastProcessedMessageId: string = '';
 	// Store timestamps of recent responses by channel ID
 	private _recentResponses: Map<string, Date> = new Map();
@@ -41,26 +26,16 @@ export default class CovaBot extends ReplyBot {
 		logger.debug(`[${this.defaultBotName}] Initializing CovaBot with extensive logging`);
 		console.log(`[${this.defaultBotName}] Initializing CovaBot with extensive logging`);
 
-		// Initialize with default values
-		this._botIdentity = {
-			botName: CovaBotConfig.Name,
-			avatarUrl: CovaBotConfig.Avatars.Default
-		};
-		logger.debug(`[${this.defaultBotName}] Initial bot identity: ${JSON.stringify(this._botIdentity)}`);
-
-		// Very explicit debug mode check for verification
-		if (isDebugMode()) {
-			this.updateBotIdentity();
-
-			logger.warn(`[${this.defaultBotName}] DEBUG MODE IS ACTIVE - WILL ONLY RESPOND TO COVA MESSAGES`);
-			console.log(`[${this.defaultBotName}] DEBUG MODE IS ACTIVE - WILL ONLY RESPOND TO COVA MESSAGES`);
-		} else {
-			logger.warn(`[${this.defaultBotName}] Normal mode - will ignore messages from Cova`);
-			console.log(`[${this.defaultBotName}] Normal mode - will ignore messages from Cova`);
-		}
-
 		logger.debug(`[${this.defaultBotName}] Configuration loaded: ResponseRate=${CovaBotConfig.ResponseRate}, IgnoreUsers=${JSON.stringify(CovaBotConfig.IgnoreUsers)}`);
 		logger.debug(`[${this.defaultBotName}] Patterns: Mention=${CovaBotConfig.Patterns.Mention}, Question=${CovaBotConfig.Patterns.Question}, AtMention=${CovaBotConfig.Patterns.AtMention}`);
+
+		// Register the Cova Emulator prompt
+		PromptRegistry.registerPrompt(PromptType.COVA_EMULATOR, {
+			systemContent: CovaBotConfig.EmulatorPrompt,
+			formatUserMessage: (message: string): string => message,
+			defaultTemperature: 0.7,
+			defaultMaxTokens: 150
+		});
 
 		// Initialize periodic stats logging
 		this.logPeriodicStats();
@@ -69,65 +44,15 @@ export default class CovaBot extends ReplyBot {
 		logger.debug(`[${this.defaultBotName}] Initialization completed in ${initTime}ms`);
 	}
 
-	public get botIdentity(): BotIdentity {
-		logger.debug(`[${this.defaultBotName}] Getting bot identity`);
-		// Update identity before returning
-		this.updateBotIdentity();
-		logger.debug(`[${this.defaultBotName}] Returning bot identity: ${JSON.stringify(this._botIdentity)}`);
-		return this._botIdentity;
-	}
-
-	private updateBotIdentity(): void {
+	public override get botIdentity(): BotIdentity {
 		try {
-			logger.debug(`[${this.defaultBotName}] Attempting to update bot identity from Discord service...`);
-			const previousIdentity = JSON.stringify(this._botIdentity);
-
-			try {
-				// Try to get Cova's identity
-				this._botIdentity = getDiscordService().getMemberAsBotIdentity(userId.Cova);
-				logger.debug(`[${this.defaultBotName}] Bot identity updated: ${previousIdentity} -> ${JSON.stringify(this._botIdentity)}`);
-			} catch (idError) {
-				// If we can't find the member during initialization, set up a one-time retry when the client is ready
-				logger.warn(`[${this.defaultBotName}] Failed to update bot identity: ${idError instanceof Error ? idError.message : String(idError)}`);
-				logger.debug(`[${this.defaultBotName}] Using fallback identity: ${JSON.stringify(this._botIdentity)}`);
-
-				// Set up a one-time retry when Discord client is fully ready and connected
-				const client = getDiscordClient();
-
-				// If client is already ready, set a timeout to try again in a few seconds
-				if (client.isReady()) {
-					logger.debug(`[${this.defaultBotName}] Client is ready, scheduling identity update in 5 seconds`);
-					setTimeout(() => {
-						try {
-							logger.debug(`[${this.defaultBotName}] Retry: Attempting to update bot identity...`);
-							this._botIdentity = getDiscordService().getMemberAsBotIdentity(userId.Cova);
-							logger.debug(`[${this.defaultBotName}] Retry successful, bot identity updated: ${JSON.stringify(this._botIdentity)}`);
-						} catch (retryError) {
-							logger.warn(`[${this.defaultBotName}] Retry failed to update bot identity: ${retryError instanceof Error ? retryError.message : String(retryError)}`);
-							logger.debug(`[${this.defaultBotName}] Continuing with fallback identity: ${JSON.stringify(this._botIdentity)}`);
-						}
-					}, 5000);
-				} else {
-					// If client isn't ready yet, wait for the ready event
-					logger.debug(`[${this.defaultBotName}] Client not ready, setting up identity update on ready event`);
-					client.once('ready', () => {
-						setTimeout(() => {
-							try {
-								logger.debug(`[${this.defaultBotName}] Client now ready, attempting to update bot identity...`);
-								this._botIdentity = getDiscordService().getMemberAsBotIdentity(userId.Cova);
-								logger.debug(`[${this.defaultBotName}] Client ready event: bot identity updated: ${JSON.stringify(this._botIdentity)}`);
-							} catch (readyError) {
-								logger.warn(`[${this.defaultBotName}] Ready event failed to update bot identity: ${readyError instanceof Error ? readyError.message : String(readyError)}`);
-								logger.debug(`[${this.defaultBotName}] Continuing with fallback identity: ${JSON.stringify(this._botIdentity)}`);
-							}
-						}, 2000); // Wait a bit after ready event to ensure guilds are loaded
-					});
-				}
-			}
+			return getDiscordService().getBotProfile(userId.Cova);
 		} catch (error) {
-			// Silently keep using existing identity
-			logger.warn(`[${this.defaultBotName}] Error in updateBotIdentity: ${error instanceof Error ? error.message : String(error)}`);
-			logger.debug(`[${this.defaultBotName}] Continuing with existing identity: ${JSON.stringify(this._botIdentity)}`);
+			logger.error(`[${this.defaultBotName}] Error getting bot identity:`, error as Error);
+			return {
+				avatarUrl: CovaBotConfig.Avatars.Default,
+				botName: CovaBotConfig.Name
+			};
 		}
 	}
 
@@ -210,29 +135,12 @@ export default class CovaBot extends ReplyBot {
 			logger.debug(`[${this.defaultBotName}] Setting last processed message ID: ${messageId}`);
 			this._lastProcessedMessageId = message.id;
 
-			// Parse message for different types of mentions
+			// Only check for direct @ mentions using Discord API
 			const isDirectMention = message.mentions.has(message.client.user?.id || '');
-			const isRawAtMention = CovaBotConfig.Patterns.AtMention?.test(message.content) || false;
-			const isNameMention = CovaBotConfig.Patterns.Mention.test(message.content);
-			const isQuestion = CovaBotConfig.Patterns.Question.test(message.content);
 
-			// Log all mention details
+			// Log mention details
 			logger.debug(`[${this.defaultBotName}] FULL Message content: "${message.content}"`);
-			logger.debug(`[${this.defaultBotName}] Mention detection results:`);
-			logger.debug(`[${this.defaultBotName}]   - Direct @ mention (Discord API): ${isDirectMention}`);
-			logger.debug(`[${this.defaultBotName}]   - Raw @ mention (regex): ${isRawAtMention}`);
-			logger.debug(`[${this.defaultBotName}]   - Name mention: ${isNameMention}`);
-			logger.debug(`[${this.defaultBotName}]   - Question for Cova: ${isQuestion}`);
-
-			if (isNameMention) {
-				const nameMatch = message.content.match(CovaBotConfig.Patterns.Mention);
-				logger.debug(`[${this.defaultBotName}]   - Name match found: "${nameMatch?.[0] || 'unknown match'}"`);
-			}
-
-			if (isQuestion) {
-				const questionMatch = message.content.match(CovaBotConfig.Patterns.Question);
-				logger.debug(`[${this.defaultBotName}]   - Question match found: "${questionMatch?.[0] || 'unknown match'}"`);
-			}
+			logger.debug(`[${this.defaultBotName}] Direct @ mention (Discord API): ${isDirectMention}`);
 
 			// Check if we've recently replied in this channel (within last 60 seconds)
 			const lastResponseTime = this._recentResponses.get(message.channelId);
@@ -243,7 +151,7 @@ export default class CovaBot extends ReplyBot {
 			}
 
 			// Always respond to direct @ mentions with highest priority
-			if (isDirectMention || isRawAtMention) {
+			if (isDirectMention) {
 				logger.debug(`[${this.defaultBotName}] @ mention detected, responding with highest priority`);
 				const responseStart = Date.now();
 				await this.generateAndSendResponse(message);
@@ -255,23 +163,10 @@ export default class CovaBot extends ReplyBot {
 				return;
 			}
 
-			// High priority for direct questions that include Cova's name
-			if (isQuestion) {
-				logger.debug(`[${this.defaultBotName}] Question directed at Cova detected, responding with high priority`);
-				const responseStart = Date.now();
-				await this.generateAndSendResponse(message);
-				logger.debug(`[${this.defaultBotName}] Question response generated and sent in ${Date.now() - responseStart}ms`);
-				this.updateRecentResponses(message.channelId);
-				logger.debug(`[${this.defaultBotName}] Updated recent responses for channel ${channelId}`);
-				logger.debug(`[${this.defaultBotName}] Total question processing time: ${Date.now() - startTime}ms`);
-				logger.debug(`[${this.defaultBotName}] ========== PROCESS MESSAGE END (QUESTION) ==========`);
-				return;
-			}
-
-			// For name mentions or other messages, use LLM to decide if it's worth responding
+			// For all other messages, use LLM to decide if it's worth responding
 			logger.debug(`[${this.defaultBotName}] Invoking LLM decision for response worthiness`);
 			const llmDecisionStart = Date.now();
-			const shouldRespond = await this.shouldRespondToMessage(message.content, inConversation, isNameMention);
+			const shouldRespond = await this.shouldRespondToMessage(message.content, inConversation, containsCova);
 			logger.debug(`[${this.defaultBotName}] LLM decision completed in ${Date.now() - llmDecisionStart}ms: shouldRespond=${shouldRespond}`);
 
 			if (shouldRespond) {
@@ -331,19 +226,19 @@ export default class CovaBot extends ReplyBot {
 		}
 	}
 
-	private async shouldRespondToMessage(content: string, inConversation: boolean, isNameMention: boolean = false): Promise<boolean> {
+	private async shouldRespondToMessage(content: string, inConversation: boolean, containsCova: boolean = false): Promise<boolean> {
 		// Use performance timer for this operation
 		return await PerformanceTimer.time('shouldRespondToMessage', async () => {
 			const startTime = Date.now();
 			logger.debug(`[${this.defaultBotName}] ========== SHOULD RESPOND EVALUATION START ==========`);
 			logger.debug(`[${this.defaultBotName}] Evaluating whether to respond to: "${content.substring(0, 100)}${content.length > 100 ? '...' : ''}"`);
-			logger.debug(`[${this.defaultBotName}] Context: inConversation=${inConversation}, isNameMention=${isNameMention}`);
+			logger.debug(`[${this.defaultBotName}] Context: inConversation=${inConversation}, containsCova=${containsCova}`);
 
 			try {
 				// Create a cache key from the content and context
 				// Normalize content to reduce redundant cache entries for similar messages
 				const normalizedContent = content.toLowerCase().trim().substring(0, 50);
-				const cacheKey = `${normalizedContent}|${inConversation}|${isNameMention}`;
+				const cacheKey = `${normalizedContent}|${inConversation}|${containsCova}`;
 
 				// Check cache first
 				const cachedDecision = this._decisionCache.get(cacheKey);
@@ -352,20 +247,18 @@ export default class CovaBot extends ReplyBot {
 					return cachedDecision.decision;
 				}
 
-				// Add context about mentions to help the LLM make better decisions
-				const mentionContext = isNameMention
-					? "The message mentions Cova by name (not with @)."
-					: "The message does not directly mention Cova.";
+				// Create prompt for LLM with context about the message
+				const mentionContext = containsCova
+					? "The message contains the word 'cova' or similar."
+					: "The message does not contain 'cova' or similar.";
 
 				const userPrompt = `Message: "${content}"
 ${inConversation ? "Part of an ongoing conversation where Cova recently replied." : "New conversation Cova hasn't joined yet."}
-${mentionContext}`;
+${mentionContext}
+
+Using the Response Decision System, should Cova respond to this message?`;
 
 				logger.debug(`[${this.defaultBotName}] Prompt for LLM decision:\n${userPrompt}`);
-				logger.debug(`[${this.defaultBotName}] System prompt length: ${covaResponseDecisionPrompt.length} characters`);
-				logger.debug(`[${this.defaultBotName}] User prompt length: ${userPrompt.length} characters`);
-
-				// Use a fast, small model for quick decision
 				logger.debug(`[${this.defaultBotName}] Sending LLM request for response decision`);
 
 				let llmResponse;
@@ -374,8 +267,8 @@ ${mentionContext}`;
 					llmResponse = await getLLMManager().createCompletion({
 						model: process.env.OLLAMA_DEFAULT_MODEL || 'gemma3:4b',
 						messages: [
-							{ role: "system", content: covaResponseDecisionPrompt },
-							{ role: "user", content: userPrompt }
+							{ role: "system", content: CovaBotConfig.DecisionPrompt },
+							{ role: "user", content: userPrompt },
 						],
 						temperature: 0.1,
 						maxTokens: 5
@@ -395,21 +288,28 @@ ${mentionContext}`;
 				let probability = 0;
 				let probabilitySource = "";
 				if (response.includes("YES")) {
-					probability = isNameMention ? 0.4 : (inConversation ? 0.3 : 0.2);
+					probability = 0.8;
 					probabilitySource = "YES response";
 				} else if (response.includes("LIKELY")) {
-					probability = isNameMention ? 0.2 : (inConversation ? 0.15 : 0.1);
+					probability = 0.5;
 					probabilitySource = "LIKELY response";
 				} else if (response.includes("UNLIKELY")) {
-					probability = isNameMention ? 0.1 : (inConversation ? 0.05 : 0.02);
+					probability = 0.15;
 					probabilitySource = "UNLIKELY response";
 				} else {
-					probability = isNameMention ? 0.05 : (inConversation ? 0.02 : 0.01);
+					probability = 0.05;
 					probabilitySource = "NO/unrecognized response";
 				}
 
+				// Apply context-based modifiers
+				if (containsCova) probability *= 1.2;
+				if (inConversation) probability *= 1.1;
+
+				// Cap at 0.9
+				probability = Math.min(probability, 0.9);
+
 				logger.debug(`[${this.defaultBotName}] Assigned probability ${probability} based on ${probabilitySource}`);
-				logger.debug(`[${this.defaultBotName}] Factors: isNameMention=${isNameMention}, inConversation=${inConversation}`);
+				logger.debug(`[${this.defaultBotName}] Factors: containsCova=${containsCova}, inConversation=${inConversation}`);
 
 				// Apply randomization to avoid predictability
 				const random = Math.random();
@@ -435,7 +335,7 @@ ${mentionContext}`;
 				logger.debug(`[${this.defaultBotName}] Error stack: ${(error as Error).stack}`);
 
 				// Fall back to simple randomization with lower probability for name mentions
-				const baseRate = isNameMention ? 0.2 : (inConversation ? 0.1 : CovaBotConfig.ResponseRate);
+				const baseRate = containsCova ? 0.2 : (inConversation ? 0.1 : CovaBotConfig.ResponseRate);
 				const random = Math.random();
 				const shouldRespond = random < baseRate;
 				logger.debug(`[${this.defaultBotName}] Fallback random roll: ${random} vs threshold ${baseRate} = ${shouldRespond ? "RESPOND" : "DON'T RESPOND"}`);
@@ -468,16 +368,8 @@ ${mentionContext}`;
 		// Use performance timer for this operation
 		return await PerformanceTimer.time('generateAndSendResponse', async () => {
 			const startTime = Date.now();
-			const authorId = message.author.id;
-			const authorUsername = message.author.username;
-			const channelId = message.channelId;
-			const channelName = message.channel.type === 0 ? (message.channel as TextChannel).name : 'DM/unknown';
-			const contentPreview = message.content.substring(0, 100) + (message.content.length > 100 ? '...' : '');
-
-			logger.debug(`[${this.defaultBotName}] ========== RESPONSE GENERATION START ==========`);
-			logger.debug(`[${this.defaultBotName}] Generating response to message from ${authorUsername} (${authorId})`);
-			logger.debug(`[${this.defaultBotName}] Message content: "${contentPreview}"`);
-			logger.debug(`[${this.defaultBotName}] Channel: ${channelName} (${channelId})`);
+			logger.debug(`[${this.defaultBotName}] ========== GENERATE AND SEND RESPONSE START ==========`);
+			logger.debug(`[${this.defaultBotName}] Generating response for message: "${message.content}"`);
 
 			try {
 				logger.debug(`[${this.defaultBotName}] Sending request to LLM for Cova emulation`);
@@ -529,11 +421,10 @@ ${mentionContext}`;
 				logger.debug(`[${this.defaultBotName}] Reply sent in ${Date.now() - sendStartTime}ms`);
 
 				logger.debug(`[${this.defaultBotName}] Total response generation and sending time: ${Date.now() - startTime}ms`);
-				logger.debug(`[${this.defaultBotName}] ========== RESPONSE GENERATION END ==========`);
+				logger.debug(`[${this.defaultBotName}] ========== GENERATE AND SEND RESPONSE END ==========`);
 			} catch (error) {
-				logger.error(`[${this.defaultBotName}] Error generating response:`, error as Error);
-				logger.debug(`[${this.defaultBotName}] Error stack: ${(error as Error).stack}`);
-				logger.debug(`[${this.defaultBotName}] ========== RESPONSE GENERATION END (ERROR) ==========`);
+				logger.error(`[${this.defaultBotName}] Error generating/sending response:`, error as Error);
+				throw error;
 			}
 		});
 	}

@@ -10,7 +10,8 @@ jest.mock('../../bots/botRegistry', () => {
 		getAllBotNames: jest.fn(),
 		isBotEnabled: jest.fn(),
 		getBotFrequency: jest.fn(),
-		setBotFrequency: jest.fn()
+		setBotFrequency: jest.fn(),
+		getBotDescription: jest.fn()
 	};
 	return {
 		BotRegistry: {
@@ -72,6 +73,9 @@ describe('Bot Command', () => {
 		(registry.getBotFrequency as jest.Mock)
 			.mockReturnValueOnce(50)  // TestBot1
 			.mockReturnValueOnce(25); // TestBot2
+		(registry.getBotDescription as jest.Mock)
+			.mockReturnValueOnce('Test bot 1 description')  // TestBot1
+			.mockReturnValueOnce('Test bot 2 description'); // TestBot2
 	});
 
 	describe('execute', () => {
@@ -201,13 +205,19 @@ describe('Bot Command', () => {
 				(mockInteraction.options as any).getSubcommand.mockReturnValue('disable');
 			});
 
-			it('should disable an existing bot', async () => {
+			it('should disable an existing bot and notify Cova', async () => {
 				(mockInteraction.options as any).getString.mockReturnValue('TestBot1');
 				(registry.disableBot as jest.Mock).mockReturnValue(true);
+
+				// Mock Cova user for notification
+				const mockCova = { send: jest.fn().mockResolvedValue(undefined) };
+				(mockInteraction.client.users.fetch as jest.Mock).mockResolvedValue(mockCova);
 
 				await botCommand.execute(mockInteraction);
 
 				expect(registry.disableBot).toHaveBeenCalledWith('TestBot1');
+				expect(mockCova.send).toHaveBeenCalledWith(expect.stringContaining('Bot Disabled Notification'));
+				expect(mockCova.send).toHaveBeenCalledWith(expect.stringContaining('TestBot1'));
 				expect(mockInteraction.reply).toHaveBeenCalledWith({
 					content: expect.stringContaining('has been disabled'),
 					ephemeral: true
@@ -222,6 +232,24 @@ describe('Bot Command', () => {
 
 				expect(mockInteraction.reply).toHaveBeenCalledWith({
 					content: expect.stringContaining('not found'),
+					ephemeral: true
+				});
+			});
+
+			it('should still disable the bot when notification to Cova fails', async () => {
+				(mockInteraction.options as any).getString.mockReturnValue('TestBot1');
+				(registry.disableBot as jest.Mock).mockReturnValue(true);
+
+				// Mock Cova user with failed send
+				const mockCova = { send: jest.fn().mockRejectedValue(new Error('Failed to send DM')) };
+				(mockInteraction.client.users.fetch as jest.Mock).mockResolvedValue(mockCova);
+
+				await botCommand.execute(mockInteraction);
+
+				expect(registry.disableBot).toHaveBeenCalledWith('TestBot1');
+				expect(mockCova.send).toHaveBeenCalled();
+				expect(mockInteraction.reply).toHaveBeenCalledWith({
+					content: expect.stringContaining('has been disabled'),
 					ephemeral: true
 				});
 			});
@@ -241,7 +269,8 @@ describe('Bot Command', () => {
 				await botCommand.execute(mockInteraction);
 
 				expect(mockInteraction.reply).toHaveBeenCalledWith({
-					content: expect.stringMatching(/TestBot1.*✅.*\(50%\)/) && expect.stringMatching(/TestBot2.*❌.*\(25%\)/),
+					content: expect.stringMatching(/TestBot1.*✅.*\(50%\).*Test bot 1 description/) &&
+						expect.stringMatching(/TestBot2.*❌.*\(25%\).*Test bot 2 description/),
 					ephemeral: true
 				});
 			});
