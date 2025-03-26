@@ -41,7 +41,8 @@ The application uses an Observer pattern where the main clients (StarbunkClient 
 2. **Bot Types**
 
     - **Reply Bots**: Respond to specific message patterns
-    - **Voice Bots**: React to voice channel events
+    - **Voice Bots**: React to voice channel events and manage voice channel behavior
+    - **Strategy Bots**: Advanced bots using composable triggers and responses
     - **DJ Cova**: Music playback functionality
 
 3. **Event Flow**
@@ -223,3 +224,20 @@ DebugManager.logCommandCompletion('myCommand', startTime);
 import DiscordDebugWrapper from './utils/DiscordDebugWrapper';
 const channel = await DiscordDebugWrapper.getTextChannel(client, channelId);
 ```
+
+## Bot Commands
+
+The bot system includes several commands for managing bot behavior:
+
+### Reply Bot Commands
+- `/bot enable <bot_name>` - Enable a bot
+- `/bot disable <bot_name>` - Disable a bot
+- `/bot frequency <bot_name> <rate>` - Set a reply bot's response rate (0-100%)
+- `/bot list-bots` - List all available bots and their status
+- `/bot report <bot_name> <message>` - Report a bot issue to Cova
+
+### Voice Bot Commands
+- `/bot volume <bot_name> <volume>` - Set a voice bot's volume (0-100%)
+- `/bot enable <bot_name>` - Enable a voice bot
+- `/bot disable <bot_name>` - Disable a voice bot
+- `/bot list-bots` - List all available bots (includes voice bots)

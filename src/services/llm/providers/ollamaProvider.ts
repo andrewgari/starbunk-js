@@ -55,7 +55,7 @@ export class OllamaProvider extends GenericProvider {
 			const data = await response.json();
 
 			// Update available models from Ollama server if possible
-			if (data.models) {
+			if (data && typeof data === 'object' && 'models' in data && Array.isArray(data.models)) {
 				this.availableModels = data.models.map((model: OllamaModel) => model.name);
 			}
 
@@ -167,22 +167,22 @@ export class OllamaProvider extends GenericProvider {
 					this.logger.debug(`Ollama API response content-type: ${contentType}`);
 
 					if (contentType && contentType.includes('application/json')) {
-						return await response.json();
+						return await response.json() as OllamaResponse;
 					} else {
 						// For non-JSON responses, try to parse the text
-						const text = await response.text();
-						this.logger.debug(`Ollama API returned non-JSON response. First 100 chars: ${text.substring(0, 100)}`);
+						const responseText = await response.text();
+						this.logger.debug(`Ollama API returned non-JSON response. First 100 chars: ${responseText.substring(0, 100)}`);
 
 						try {
 							// Sometimes the response might be a JSON string but with wrong content type
-							return JSON.parse(text);
+							return JSON.parse(responseText) as OllamaResponse;
 						} catch (jsonError) {
 							// If it's not parseable JSON, create a suitable response object
 							this.logger.warn('Could not parse Ollama response as JSON, creating fallback response');
 							// Limit length for safety
 							return {
 								message: {
-									content: text.slice(0, 500)
+									content: responseText.slice(0, 500)
 								}
 							};
 						}

@@ -1,69 +1,48 @@
+import { Message } from 'discord.js';
 import { logger } from '../../services/logger';
+import { BotIdentity } from '../types/botIdentity';
+import { StrategyBot } from './core/bot-builder';
 import ReplyBot from './replyBot';
 
 /**
- * This utility helps adapt different bot formats
- * It handles both class-based and module exports
+ * Adapter class that wraps a StrategyBot to make it compatible with ReplyBot interface.
+ * This allows strategy bots to work with the existing message processing pipeline.
  */
-export function createBotAdapter(botObj: unknown): ReplyBot | null {
-	if (!botObj || typeof botObj !== 'object') {
-		return null;
+export class StrategyBotAdapter extends ReplyBot {
+	private strategyBot: StrategyBot;
+
+	constructor(strategyBot: StrategyBot) {
+		super();
+		this.strategyBot = strategyBot;
+		logger.debug(`[StrategyBotAdapter] Created adapter for ${strategyBot.name}`);
 	}
 
-	try {
-		// Check if it's already a ReplyBot
-		const bot = botObj as Partial<ReplyBot>;
-		if (bot && typeof bot.defaultBotName === 'string' && typeof bot.auditMessage === 'function') {
-			return botObj as ReplyBot;
-		}
-	} catch (error) {
-		logger.error('Error creating bot adapter:', error instanceof Error ? error : new Error(String(error)));
+	get defaultBotName(): string {
+		return this.strategyBot.name;
 	}
 
-	return null;
-}
+	get description(): string {
+		return this.strategyBot.description;
+	}
 
-/**
- * Try to import a bot module and adapt it to the ReplyBot interface
- */
-export async function importAndAdaptBot(modulePath: string): Promise<ReplyBot | null> {
-	try {
-		const botModule = await import(modulePath);
+	get botIdentity(): BotIdentity {
+		// We can't easily access the default identity from the strategy bot
+		// So we'll use a placeholder that will be overridden by the specific trigger's identity
+		return {
+			botName: this.strategyBot.name,
+			avatarUrl: '' // Will be provided by the specific trigger
+		};
+	}
 
-		// Handle CommonJS default export
-		if (botModule && botModule.__esModule && botModule.default) {
-			if (typeof botModule.default === 'function') {
-				try {
-					// Try to instantiate the class
-					const BotClass = botModule.default;
-					const bot = new BotClass();
-					return createBotAdapter(bot);
-				} catch (error) {
-					logger.error(`Error instantiating bot class from ${modulePath}:`, error instanceof Error ? error : new Error(String(error)));
-				}
-			}
-			else if (typeof botModule.default === 'object') {
-				return createBotAdapter(botModule.default);
-			}
+	/**
+	 * Implementation of the abstract processMessage method from ReplyBot
+	 */
+	protected async processMessage(message: Message): Promise<void> {
+		try {
+			// The strategy bot has its own logic for processing messages
+			await this.strategyBot.processMessage(message);
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error in strategy bot message handling:`, error instanceof Error ? error : new Error(String(error)));
 		}
-		// Handle direct export
-		else if (botModule) {
-			if (typeof botModule === 'function') {
-				try {
-					const bot = new botModule();
-					return createBotAdapter(bot);
-				} catch (error) {
-					logger.error(`Error instantiating bot from ${modulePath}:`, error instanceof Error ? error : new Error(String(error)));
-				}
-			}
-			else if (typeof botModule === 'object') {
-				return createBotAdapter(botModule);
-			}
-		}
-
-		return null;
-	} catch (error) {
-		logger.error(`Error importing bot module from ${modulePath}:`, error instanceof Error ? error : new Error(String(error)));
-		return null;
 	}
 }

@@ -107,12 +107,112 @@ npm start
 3. Each bot checks if the message matches its trigger pattern
 4. If matched, the bot responds using the webhook service
 
+## Creating a Voice Bot
+
+You can create a voice bot that responds to voice channel events:
+
+### Step 1: Create Bot Directory
+
+Create a directory structure for your voice bot:
+
+```bash
+mkdir -p src/starbunk/bots/voice-bots/your-voice-bot
+cd src/starbunk/bots/voice-bots/your-voice-bot
+```
+
+### Step 2: Create Bot Files
+
+Create three files:
+
+1. `constants.ts`:
+```typescript
+export const YOUR_BOT_NAME = 'Your Voice Bot';
+export const YOUR_BOT_AVATAR = 'https://example.com/avatar.png';
+```
+
+2. `triggers.ts`:
+```typescript
+import { createVoiceTrigger } from '../../core/voice-bot-builder';
+import { userJoinedVoiceChannel } from '../../core/voice-conditions';
+
+export const joinTrigger = createVoiceTrigger({
+  name: 'join-trigger',
+  condition: userJoinedVoiceChannel(),
+  handler: async (oldState, newState) => {
+    const member = newState.member;
+    const channel = newState.channel;
+
+    // Example: Log when users join voice channels
+    console.log(`${member?.displayName} joined ${channel?.name}`);
+  }
+});
+```
+
+3. `index.ts`:
+```typescript
+import { createVoiceBot } from '../../core/voice-bot-builder';
+import { YOUR_BOT_AVATAR, YOUR_BOT_NAME } from './constants';
+import { joinTrigger } from './triggers';
+
+export default createVoiceBot({
+  name: 'YourVoiceBot',
+  description: 'A bot that responds to voice events',
+  defaultIdentity: {
+    botName: YOUR_BOT_NAME,
+    avatarUrl: YOUR_BOT_AVATAR
+  },
+  triggers: [joinTrigger]
+});
+```
+
+### Step 3: Test Your Bot
+
+Create a test file in `__tests__/your-voice-bot.test.ts`:
+
+```typescript
+import { VoiceState } from 'discord.js';
+import { createMockLogger } from '../../../../services/logger';
+import { createMockVoiceState } from '../../../../discord/testUtils';
+import YourVoiceBot from '../index';
+
+describe('YourVoiceBot', () => {
+  let bot: YourVoiceBot;
+  let mockLogger: jest.Mocked<ILogger>;
+
+  beforeEach(() => {
+    mockLogger = createMockLogger();
+    bot = new YourVoiceBot(mockLogger);
+  });
+
+  it('should handle user joining voice channel', () => {
+    const oldState = createMockVoiceState({ channelId: null });
+    const newState = createMockVoiceState({ channelId: '123' });
+
+    bot.handleVoiceStateUpdate(oldState, newState);
+
+    expect(mockLogger.debug).toHaveBeenCalled();
+  });
+});
+```
+
+### Step 4: Managing Your Bot
+
+Your voice bot can be managed using Discord slash commands:
+
+```
+/bot enable YourVoiceBot    # Enable the bot
+/bot disable YourVoiceBot   # Disable the bot
+/bot volume YourVoiceBot 50 # Set volume to 50%
+/bot list-bots             # List all bots including voice bots
+```
+
 ## Next Steps
 
-- Add more complex patterns to trigger your bot
-- Add different response types based on message content
-- Explore creating a voice bot that responds to voice channel events
-- Implement slash commands for interactive functionality
+- Add more complex voice event triggers
+- Implement channel management logic
+- Add voice state tracking
+- Create voice channel utilities
+- Explore voice bot interactions with other bots
 
 ## Debugging
 

@@ -1,22 +1,48 @@
 import { logger } from '../../services/logger';
+import { BaseVoiceBot } from './core/voice-bot-adapter';
 import ReplyBot from './replyBot';
+
+type Bot = ReplyBot | BaseVoiceBot;
 
 export class BotRegistry {
 	private static instance = new BotRegistry();
 	private botStates = new Map<string, boolean>();
-	private bots = new Map<string, ReplyBot>();
+	private bots = new Map<string, Bot>();
+	private replyBots = new Map<string, ReplyBot>();
+	private voiceBots = new Map<string, BaseVoiceBot>();
 
 	public static getInstance(): BotRegistry {
 		return BotRegistry.instance;
 	}
 
-	public registerBot(bot: ReplyBot): void {
-		const botName = bot.defaultBotName;
+	public registerBot(bot: Bot): void {
+		const botName = this.getBotName(bot);
 		this.bots.set(botName, bot);
+
+		// Add to specific collection
+		if (bot instanceof ReplyBot) {
+			this.replyBots.set(botName, bot);
+		} else if (bot instanceof BaseVoiceBot) {
+			this.voiceBots.set(botName, bot);
+		}
+
 		// Initialize as enabled
 		this.botStates.set(botName, true);
-		const rate = bot.getResponseRate();
-		logger.debug(`[BotRegistry] Registered bot: ${botName} with response rate ${rate}%`);
+
+		// Log registration
+		if (bot instanceof ReplyBot) {
+			const rate = bot.getResponseRate();
+			logger.debug(`[BotRegistry] Registered reply bot: ${botName} with response rate ${rate}%`);
+		} else {
+			logger.debug(`[BotRegistry] Registered voice bot: ${botName}`);
+		}
+	}
+
+	private getBotName(bot: Bot): string {
+		if (bot instanceof ReplyBot) {
+			return bot.defaultBotName;
+		}
+		return bot.name;
 	}
 
 	public enableBot(botName: string): boolean {
@@ -49,10 +75,18 @@ export class BotRegistry {
 		return names;
 	}
 
+	public getReplyBotNames(): string[] {
+		return Array.from(this.replyBots.keys());
+	}
+
+	public getVoiceBotNames(): string[] {
+		return Array.from(this.voiceBots.keys());
+	}
+
 	public setBotFrequency(botName: string, rate: number): boolean {
-		const bot = this.bots.get(botName);
+		const bot = this.replyBots.get(botName);
 		if (!bot) {
-			logger.warn(`[BotRegistry] Attempted to set frequency for non-existent bot: ${botName}`);
+			logger.warn(`[BotRegistry] Attempted to set frequency for non-existent reply bot: ${botName}`);
 			return false;
 		}
 		try {
@@ -66,9 +100,9 @@ export class BotRegistry {
 	}
 
 	public getBotFrequency(botName: string): number {
-		const bot = this.bots.get(botName);
+		const bot = this.replyBots.get(botName);
 		if (!bot) {
-			logger.warn(`[BotRegistry] Attempted to get frequency for non-existent bot: ${botName}`);
+			logger.warn(`[BotRegistry] Attempted to get frequency for non-existent reply bot: ${botName}`);
 			return 0;
 		}
 		const rate = bot.getResponseRate();
@@ -82,7 +116,15 @@ export class BotRegistry {
 			logger.warn(`[BotRegistry] Attempted to get description for non-existent bot: ${botName}`);
 			return "";
 		}
-		return bot.description;
+		return bot instanceof ReplyBot ? bot.description : bot.description;
+	}
+
+	public getVoiceBot(botName: string): BaseVoiceBot | undefined {
+		return this.voiceBots.get(botName);
+	}
+
+	public getReplyBot(botName: string): ReplyBot | undefined {
+		return this.replyBots.get(botName);
 	}
 
 	/**

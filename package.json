@@ -9,10 +9,8 @@
 		"dev": "cross-env NODE_ENV=development DEBUG=true TS_NODE_DEV=true ts-node -r tsconfig-paths/register src/bunkbot.ts",
 		"dev:debug": "cross-env NODE_ENV=development DEBUG=true TS_NODE_DEV=true ts-node -r tsconfig-paths/register src/bunkbot.ts",
 		"dev:testing": "cross-env NODE_ENV=development DEBUG=true TESTING_MODE=true TS_NODE_DEV=true ts-node -r tsconfig-paths/register src/bunkbot.ts",
-		"diagnostic:bots": "cross-env NODE_ENV=development DEBUG=true TS_NODE_DEV=true ts-node -r tsconfig-paths/register src/scripts/load-ts-bots.ts",
-		"diagnostic:commands": "cross-env NODE_ENV=development DEBUG=true TS_NODE_DEV=true ts-node -r tsconfig-paths/register src/scripts/load-ts-commands.ts",
-		"diagnostic": "npm run diagnostic:bots && npm run diagnostic:commands",
 		"test": "jest",
+		"test:coverage": "jest --coverage",
 		"lint": "eslint . --ext .ts",
 		"lint:fix": "eslint . --ext .ts --fix",
 		"format": "prettier --write \"src/**/*.ts\"",
@@ -24,7 +22,8 @@
 		"check:types": "npm run type-check:relaxed",
 		"check:lint": "npm run lint",
 		"check:build": "npm run build",
-		"check:all": "npm run check:types && npm run check:lint && npm run test && npm run check:build && npm run check:docker"
+		"check:all": "npm run check:types && npm run check:lint && npm run test && npm run check:build && npm run check:docker",
+		"check:coverage": "npm run test:coverage && npm run check:types && npm run check:lint"
 	},
 	"engines": {
 		"node": ">=16.0.0"

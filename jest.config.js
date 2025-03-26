@@ -3,8 +3,20 @@ module.exports = {
 	testEnvironment: 'node',
 	// Use standard patterns for finding tests
 	testMatch: [
-		'**/__tests__/**/*.test.ts'
+		'**/__tests__/**/*.test.ts',
+		'**/strategy-bots/**/*.test.ts'
 	],
+	collectCoverageFrom: [
+		'src/**/*.ts',
+		'!src/**/*.d.ts',
+		'!src/bunkbot.ts',
+		'!src/**/index.ts',
+		'!src/tests/**',
+		'!src/**/__tests__/**',
+		'!src/**/__mocks__/**'
+	],
+	coverageDirectory: 'coverage',
+	coverageReporters: ['text', 'lcov', 'clover', 'html'],
 	// Only exclude tests with complex external dependencies like LLM services
 	testPathIgnorePatterns: [
 		'node_modules/',

@@ -72,7 +72,7 @@
 	},
 	"overrides": [
 		{
-			"files": ["**/__tests__/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)"],
+			"files": ["**/__tests__/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)", "**/test-utils/**/*.[jt]s?(x)"],
 			"rules": {
 				"@typescript-eslint/no-explicit-any": "off"
 			}
@@ -104,5 +104,5 @@
 			}
 		}
 	],
-	"ignorePatterns": ["dist/**/*"]
+	"ignorePatterns": ["dist/**/*", "unused_files/**/*"]
 }

@@ -1,19 +1,15 @@
 import { PlayerSubscription } from '@discordjs/voice';
 import { Base, Client, Collection, Events, GatewayIntentBits, Interaction, Message, VoiceState } from 'discord.js';
-import fs from 'fs';
-import path from 'path';
 import { isDebugMode } from '../environment';
 import { logger } from '../services/logger';
-import { loadBot } from '../util/moduleLoader';
-import { BotRegistry } from './bots/botRegistry';
+import { BaseVoiceBot } from './bots/core/voice-bot-adapter';
 import ReplyBot from './bots/replyBot';
-import { VoiceBot } from './bots/voiceBot';
 import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
 
 export default class StarbunkClient extends Client {
 	private bots: Collection<string, ReplyBot> = new Collection();
-	private voiceBots: Collection<string, VoiceBot> = new Collection();
+	private voiceBots: Collection<string, BaseVoiceBot> = new Collection();
 	private readonly audioPlayer: DJCova;
 	private readonly commandHandler: CommandHandler;
 	public activeSubscription: PlayerSubscription | undefined;
@@ -154,33 +150,16 @@ export default class StarbunkClient extends Client {
 	}
 
 	private async loadBots(): Promise<void> {
-		// Feature flag to skip loading until module format issues are resolved
-		const usePlaceholderBots = false;
-
-		if (usePlaceholderBots) {
-			logger.warn('Using placeholder bots due to module loading issues');
-			logger.info(`Loaded 0 bots successfully`);
-			return;
-		}
-
-		logger.info('Loading reply bots...');
+		logger.info('Loading bots...');
 		try {
-			// Determine if we're in development mode
-			const isDev = process.env.NODE_ENV === 'development';
+			// Check if we're in debug mode
 			const isDebug = isDebugMode();
-
-			// Setting TS_NODE_DEV for path resolution in TypeScript modules
-			if (isDev) {
-				process.env.TS_NODE_DEV = 'true';
-			}
-
-			// Check if we're running under ts-node
-			const isTsNode = process.argv[0].includes('ts-node') ||
-				(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
-			logger.debug(`Running with ts-node: ${isTsNode}`);
 
 			// Debug more information about environment
 			if (isDebug) {
+				const isTsNode = process.argv[0].includes('ts-node') ||
+					(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
+				logger.debug(`Running with ts-node: ${isTsNode}`);
 				logger.debug(`Loading bots with: NODE_ENV=${process.env.NODE_ENV}, ts-node=${isTsNode}, __dirname=${__dirname}`);
 				logger.debug(`Command: ${process.argv.join(' ')}`);
 				if (process.env.npm_lifecycle_script) {
@@ -188,81 +167,62 @@ export default class StarbunkClient extends Client {
 				}
 			}
 
-			// In dev mode, we want to use .ts files
-			const devExtension = '.ts';
-			const prodExtension = '.js';
+			// Load strategy bots
+			try {
+				// Import the strategy bot loader
+				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				const { loadStrategyBots } = require('./bots/strategy-loader');
+				const strategyBots = await loadStrategyBots();
 
-			// Determine the file extension to use based on environment
-			const fileExtension = (isDev || isTsNode) ? devExtension : prodExtension;
-
-			// When running in development or using ts-node, we use the src directory path
-			// In production, use the dist directory
-			const baseDir = (isDev || isTsNode) ? './src' : './dist';
-			const botDir = path.resolve(`${baseDir}/starbunk/bots/reply-bots`);
-
-			logger.debug(`Looking for bots in: ${botDir}`);
-			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
-
-			// Find all bot files using the direct path
-			const botFiles = fs.readdirSync(botDir)
-				.filter(file => file.endsWith(fileExtension) && !file.endsWith('.d.ts'))
-				.map(file => path.join(botDir, file));
-
-			logger.info(`Found ${botFiles.length} bot files to load: ${botFiles.map(f => path.basename(f)).join(', ')}`);
-
-			let successCount = 0;
-			for (const botFile of botFiles) {
-				try {
-					logger.info(`Loading bot from file: ${path.basename(botFile)}`);
-
-					// Try direct require first which works better in our diagnostic script
-					try {
-						logger.info(`Attempting direct require for ${path.basename(botFile)}`);
-						// eslint-disable-next-line @typescript-eslint/no-var-requires
-						const BotClass = require(botFile.replace(/\.ts$/, '')).default;
-						if (BotClass) {
-							const bot = new BotClass();
-							if (bot && typeof bot.handleMessage === 'function' && typeof bot.defaultBotName !== 'undefined') {
-								logger.info(`✅ Bot loaded successfully: ${bot.defaultBotName} (${bot.constructor.name})`);
-								this.bots.set(bot.defaultBotName, bot);
-								BotRegistry.getInstance().registerBot(bot);
-								successCount++;
-								continue; // Skip to next bot file
-							}
-						} else {
-							logger.warn(`⚠️ No default export found in ${path.basename(botFile)}`);
-						}
-					} catch (requireError: unknown) {
-						const errorMessage = requireError instanceof Error
-							? requireError.message
-							: 'Unknown error';
-						logger.warn(`⚠️ Direct require failed for ${path.basename(botFile)}: ${errorMessage}`);
-						// Continue to try the loadBot utility
-					}
-
-					// Fall back to loadBot utility
-					const bot = await loadBot(botFile);
-
-					if (bot) {
-						logger.info(`✅ Bot loaded successfully via loadBot: ${bot.defaultBotName} (${bot.constructor.name})`);
+				// Add strategy bots to the collection
+				strategyBots.forEach((bot: ReplyBot) => {
+					if (bot && typeof bot.defaultBotName === 'string') {
 						this.bots.set(bot.defaultBotName, bot);
-						BotRegistry.getInstance().registerBot(bot);
-						successCount++;
-					} else {
-						logger.warn(`⚠️ No bot instance returned from: ${botFile}`);
+						logger.debug(`Added strategy bot: ${bot.defaultBotName}`);
 					}
-				} catch (error) {
-					logger.error(`❌ Failed to load bot: ${botFile}`, error instanceof Error ? error : new Error(String(error)));
+				});
+
+				// Show summary of all loaded strategy bots
+				if (this.bots.size > 0) {
+					logger.info(`📊 Successfully loaded ${this.bots.size} strategy bots`);
+					logger.info('📋 Strategy bots summary:');
+					this.bots.forEach((bot, name) => {
+						logger.info(`   - ${name} (${bot.constructor.name})`);
+					});
+				} else {
+					logger.warn('⚠️ No strategy bots were loaded');
 				}
+			} catch (error) {
+				logger.error('Error loading strategy bots:', error instanceof Error ? error : new Error(String(error)));
 			}
 
-			logger.info(`📊 Successfully loaded ${successCount} out of ${botFiles.length} bots`);
+			// Load voice bots
+			try {
+				// Import the voice bot loader
+				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				const { loadVoiceBots } = require('./bots/voice-loader');
+				const voiceBots = await loadVoiceBots();
 
-			if (successCount > 0) {
-				logger.info('📋 Loaded bots summary:');
-				this.bots.forEach((bot, name) => {
-					logger.info(`   - ${name} (${bot.constructor.name})`);
+				// Add voice bots to the collection
+				voiceBots.forEach((bot: BaseVoiceBot) => {
+					if (bot && typeof bot.name === 'string') {
+						this.voiceBots.set(bot.name, bot);
+						logger.debug(`Added voice bot: ${bot.name}`);
+					}
 				});
+
+				// Show summary of all loaded voice bots
+				if (this.voiceBots.size > 0) {
+					logger.info(`📊 Successfully loaded ${this.voiceBots.size} voice bots`);
+					logger.info('📋 Voice bots summary:');
+					this.voiceBots.forEach((bot, name) => {
+						logger.info(`   - ${name} (${bot.constructor.name})`);
+					});
+				} else {
+					logger.warn('⚠️ No voice bots were loaded');
+				}
+			} catch (error) {
+				logger.error('Error loading voice bots:', error instanceof Error ? error : new Error(String(error)));
 			}
 		} catch (error) {
 			logger.error('Error loading bots:', error instanceof Error ? error : new Error(String(error)));
@@ -273,4 +233,3 @@ export default class StarbunkClient extends Client {
 export const getStarbunkClient = (base: Base): StarbunkClient => {
 	return base.client as StarbunkClient;
 };
-
