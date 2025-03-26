@@ -4,32 +4,42 @@ import { Logger, ServiceId, WebhookService } from '../../../services/container';
 import { BotIdentity } from '../../../starbunk/types/botIdentity';
 import { MessageInfo } from '../../../webhooks/types';
 
-// Mock the getWebhookService function
-jest.mock('../../../services/bootstrap', () => ({
-	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService)
-}));
-
-// Mock the DiscordService
-jest.mock('../../../services/discordService', () => {
-	return {
-		DiscordService: {
-			getInstance: jest.fn().mockImplementation(() => mockDiscordService),
-			initialize: jest.fn().mockImplementation(() => mockDiscordService)
-		}
-	};
-});
-
 // Create a mock bot identity
 export const mockBotIdentity: BotIdentity = {
 	botName: 'MockBot',
 	avatarUrl: 'https://example.com/avatar.jpg'
 };
 
-// Create a mock DiscordService
-export const mockDiscordService = {
+// Mock WebhookService for test compatibility
+export const mockWebhookService = {
+	writeMessage: jest.fn().mockResolvedValue(undefined),
+	sendMessage: jest.fn().mockResolvedValue(undefined),
+	webhookClient: null,
+	logger: null as any
+};
+
+// Create a mock Discord service implementation with backward compatibility
+export const mockDiscordServiceImpl = {
 	getMemberAsBotIdentity: jest.fn().mockImplementation(() => mockBotIdentity),
 	getRandomMemberAsBotIdentity: jest.fn().mockImplementation(() => mockBotIdentity),
-	sendMessageWithBotIdentity: jest.fn(),
+	getBotProfile: jest.fn().mockImplementation(() => mockBotIdentity),
+	getRandomBotProfile: jest.fn().mockImplementation(() => mockBotIdentity),
+	// This is the key change for backward compatibility:
+	// Route DiscordService.sendMessageWithBotIdentity calls to mockWebhookService.writeMessage
+	sendMessageWithBotIdentity: jest.fn().mockImplementation((channelId, botIdentity, content) => {
+		// Get the channel from the mock message
+		const channel = { id: channelId } as any;
+		
+		// Create a message payload that matches what the webhook service expects
+		const messageInfo = {
+			botName: botIdentity.botName,
+			avatarUrl: botIdentity.avatarUrl,
+			content: content
+		};
+		
+		// Call the webhook service's writeMessage method
+		return mockWebhookService.writeMessage(channel, messageInfo);
+	}),
 	getUser: jest.fn(),
 	getMember: jest.fn(),
 	getGuild: jest.fn(),
@@ -37,6 +47,23 @@ export const mockDiscordService = {
 	getVoiceChannel: jest.fn(),
 	clearCache: jest.fn()
 };
+
+// Mock the getWebhookService function
+jest.mock('../../../services/bootstrap', () => ({
+	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),
+	getDiscordService: jest.fn().mockImplementation(() => mockDiscordServiceImpl)
+}));
+
+// Mock the DiscordService
+jest.mock('../../../services/discordService', () => ({
+	DiscordService: {
+		getInstance: jest.fn().mockImplementation(() => mockDiscordServiceImpl),
+		initialize: jest.fn().mockImplementation(() => mockDiscordServiceImpl)
+	}
+}));
+
+// For backward compatibility
+export const mockDiscordService = mockDiscordServiceImpl;
 
 export const mockMessage = (content: string = 'test message', username: string = 'testUser', isBot: boolean = false): Message => {
 	const mockUser = {
@@ -85,21 +112,19 @@ export const mockLogger: Logger = {
 	formatMessage: jest.fn()
 };
 
-export const mockWebhookService: WebhookService = {
-	writeMessage: jest.fn().mockImplementation((channel: TextChannel, messageInfo: any) => {
-		const transformedMessageInfo: MessageInfo = {
-			...messageInfo,
-			username: messageInfo.botName || messageInfo.username,
-			avatarURL: messageInfo.avatarUrl || messageInfo.avatarURL,
-		};
-		delete (transformedMessageInfo as any).botName;
-		delete (transformedMessageInfo as any).avatarUrl;
-		return mockWriteMessage(channel, transformedMessageInfo);
-	}),
-	sendMessage: mockSendMessage,
-	webhookClient: null,
-	logger: mockLogger
-};
+// Update our mockWebhookService to use the write/send message functions
+mockWebhookService.writeMessage = jest.fn().mockImplementation((channel: TextChannel, messageInfo: any) => {
+	const transformedMessageInfo: MessageInfo = {
+		...messageInfo,
+		username: messageInfo.botName || messageInfo.username,
+		avatarURL: messageInfo.avatarUrl || messageInfo.avatarURL,
+	};
+	delete (transformedMessageInfo as any).botName;
+	delete (transformedMessageInfo as any).avatarUrl;
+	return mockWriteMessage(channel, transformedMessageInfo);
+});
+mockWebhookService.sendMessage = mockSendMessage;
+mockWebhookService.logger = mockLogger;
 
 // For backward compatibility
 export const createMockMessage = mockMessage;

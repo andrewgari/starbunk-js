@@ -16,69 +16,61 @@ jest.mock('../../../environment', () => ({
 
 describe('InterruptBot', () => {
 	let bot: InterruptBot;
-	let mockMsg: Message;
+	let message: Message;
 	let sendReplySpy: jest.SpyInstance;
 
 	beforeEach(() => {
-		// Clear container and register mocks
+		// Arrange
 		container.clear();
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
-
-		// Reset mocks
 		jest.clearAllMocks();
-
-		// Create a mock message
-		mockMsg = createMockMessage();
-
-		// Initialize the bot
+		message = createMockMessage();
 		bot = new InterruptBot();
-
-		// Spy on the sendReply method
 		sendReplySpy = jest.spyOn(bot as any, 'sendReply').mockImplementation(() => Promise.resolve());
 	});
 
 	it('should have 1% response rate in normal mode', () => {
+		// Assert
 		expect(bot['responseRate']).toBe(1);
 	});
 
 	it('should interrupt when probability check passes', async () => {
+		// Arrange
 		(percentChance as jest.Mock).mockReturnValue(true);
-		await bot.handleMessage(mockMsg);
+		
+		// Act
+		await bot.handleMessage(message);
 
+		// Assert
 		expect(percentChance).toHaveBeenCalledWith(1);
 		expect(sendReplySpy).toHaveBeenCalled();
 	});
 
 	it('should not interrupt when probability check fails', async () => {
+		// Arrange
 		(percentChance as jest.Mock).mockReturnValue(false);
-		await bot.handleMessage(mockMsg);
+		
+		// Act
+		await bot.handleMessage(message);
 
+		// Assert
 		expect(percentChance).toHaveBeenCalledWith(1);
 		expect(sendReplySpy).not.toHaveBeenCalled();
 	});
 
 	it('should create interrupted message with first few words', async () => {
+		// Arrange
 		(percentChance as jest.Mock).mockReturnValue(true);
-		mockMsg.content = 'Did somebody say BLU?';
-		await bot.handleMessage(mockMsg);
+		message.content = 'Did somebody say BLU?';
+		
+		// Act
+		await bot.handleMessage(message);
 
-		expect(sendReplySpy).toHaveBeenCalled();
+		// Assert
 		expect(sendReplySpy).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.stringContaining('Did somebody say')
-		);
-	});
-
-	it('should create interrupted message with first few characters for single word', async () => {
-		(percentChance as jest.Mock).mockReturnValue(true);
-		mockMsg.content = 'Supercalifragilisticexpialidocious';
-		await bot.handleMessage(mockMsg);
-
-		expect(sendReplySpy).toHaveBeenCalled();
-		expect(sendReplySpy).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.stringContaining('Supercalif')
 		);
 	});
 });

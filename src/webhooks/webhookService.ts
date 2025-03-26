@@ -40,11 +40,14 @@ export class WebhookService implements WebhookServiceInterface {
 			// Transform botName/avatarUrl to username/avatarURL if needed
 			const transformedInfo: MessageInfo = {
 				...messageInfo,
-				username: messageInfo.username || messageInfo.botName,
+				username: messageInfo.username || messageInfo.botName || messageInfo._defaultBotName,
 				avatarURL: messageInfo.avatarURL || messageInfo.avatarUrl
 			};
+
+			// Remove internal properties from the transformed info
 			delete transformedInfo.botName;
 			delete transformedInfo.avatarUrl;
+			delete transformedInfo._defaultBotName;
 
 			// Create a unique webhook name based on the bot's username
 			// This prevents identity conflicts between different bots
@@ -100,7 +103,7 @@ export class WebhookService implements WebhookServiceInterface {
 		return {
 			...messageInfo,
 			content: messageInfo.content || 'No message content provided',
-			username: messageInfo.username || messageInfo.botName || 'Unknown Bot',
+			username: messageInfo.username || messageInfo.botName || messageInfo._defaultBotName || 'Unknown Bot',
 			avatarURL: messageInfo.avatarURL || messageInfo.avatarUrl || 'https://i.imgur.com/NtfJZP5.png' // Default avatar
 		};
 	}

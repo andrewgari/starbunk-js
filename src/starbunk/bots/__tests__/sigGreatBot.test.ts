@@ -1,54 +1,72 @@
 import { container, ServiceId } from '../../../services/container';
+import { DiscordService } from '../../../services/discordService';
 import { SigGreatBotConfig } from '../config/sigGreatBotConfig';
 import SigGreatBot from '../reply-bots/sigGreatBot';
-import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from './testUtils';
+import { mockLogger, mockMessage, mockWebhookService } from './testUtils';
+
+// Mock DiscordService
+jest.mock('../../../services/discordService', () => {
+	return {
+		DiscordService: {
+			getInstance: jest.fn().mockReturnValue({
+				getRandomBotProfile: jest.fn().mockReturnValue({
+					botName: 'RandomBot',
+					avatarUrl: 'https://example.com/random.png'
+				}),
+				sendMessageWithBotIdentity: jest.fn().mockResolvedValue(undefined)
+			})
+		}
+	};
+});
 
 describe('SigGreatBot', () => {
-	let sigGreatBot: SigGreatBot;
+	let bot: SigGreatBot;
+	let discordServiceMock: any;
 
 	beforeEach(() => {
+		// Arrange
 		jest.clearAllMocks();
-		// Clear container and register mocks
 		container.clear();
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
-
-		// Set up custom bot identity for SigGreat
-		mockDiscordService.getRandomMemberAsBotIdentity.mockReturnValue({
-			botName: SigGreatBotConfig.Name,
-			avatarUrl: 'https://example.com/siggreat.jpg'
-		});
-
-		// Create SigGreatBot instance
-		sigGreatBot = new SigGreatBot();
-		// Mock the isBot method to control when it should return true/false
-		jest.spyOn(sigGreatBot, 'isBot').mockImplementation((msg) => msg.author.bot);
+		discordServiceMock = DiscordService.getInstance();
+		bot = new SigGreatBot();
 	});
 
 	it('should respond to messages containing "sig"', async () => {
+		// Arrange
 		const message = mockMessage('sig is great');
-		await sigGreatBot.handleMessage(message);
+		
+		// Act
+		await bot.handleMessage(message);
 
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
+		// Assert
+		expect(discordServiceMock.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+			message.channel.id,
 			expect.anything(),
-			expect.objectContaining({
-				botName: SigGreatBotConfig.Name,
-				content: expect.any(String)
-			})
+			SigGreatBotConfig.Responses.Default
 		);
 	});
 
 	it('should not respond to bot messages', async () => {
+		// Arrange
 		const message = mockMessage('sig', undefined, true);
-		await sigGreatBot.handleMessage(message);
+		
+		// Act
+		await bot.handleMessage(message);
 
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		// Assert
+		expect(discordServiceMock.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 	});
 
 	it('should not respond to messages without "sig"', async () => {
+		// Arrange
 		const message = mockMessage('hello world');
-		await sigGreatBot.handleMessage(message);
+		
+		// Act
+		await bot.handleMessage(message);
 
-		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+		// Assert
+		expect(discordServiceMock.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 	});
 });

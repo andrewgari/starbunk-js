@@ -11,13 +11,9 @@ import ReplyBot from '../replyBot';
 export default class VennBot extends ReplyBot {
 	protected override responseRate = 5; // 5% chance for random responses
 
-	public get botIdentity(): BotIdentity {
+	public override get botIdentity(): BotIdentity {
 		try {
-			const venn = DiscordService.getInstance().getMemberAsBotIdentity(userId.Venn);
-			return {
-				avatarUrl: venn.avatarUrl,
-				botName: venn.botName
-			};
+			return DiscordService.getInstance().getBotProfile(userId.Venn);
 		} catch (error) {
 			logger.error(`[${this.defaultBotName}] Error getting bot identity:`, error as Error);
 			return {

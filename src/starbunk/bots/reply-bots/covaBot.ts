@@ -44,20 +44,16 @@ export default class CovaBot extends ReplyBot {
 		logger.debug(`[${this.defaultBotName}] Initialization completed in ${initTime}ms`);
 	}
 
-	public get botIdentity(): BotIdentity {
-		const identity = getDiscordService().getMemberAsBotIdentity(userId.Cova);
-		return {
-			botName: identity.botName,
-			avatarUrl: identity.avatarUrl
-		};
-	}
-
-	// Test utility for injecting a different identity - only used in tests
-	public getBotIdentityWithOverride(mockIdentity?: BotIdentity): BotIdentity {
-		if (mockIdentity) {
-			return mockIdentity;
+	public override get botIdentity(): BotIdentity {
+		try {
+			return getDiscordService().getBotProfile(userId.Cova);
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error getting bot identity:`, error as Error);
+			return {
+				avatarUrl: CovaBotConfig.Avatars.Default,
+				botName: CovaBotConfig.Name
+			};
 		}
-		return this.botIdentity;
 	}
 
 	protected shouldSkipMessage(message: Message): boolean {

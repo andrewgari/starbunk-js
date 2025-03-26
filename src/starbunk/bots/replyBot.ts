@@ -1,6 +1,6 @@
+import { DiscordService } from '@/services/discordService';
 import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message, TextChannel } from 'discord.js';
-import { getWebhookService } from '../../services/bootstrap';
 import { logger } from '../../services/logger';
 import { percentChance } from '../../utils/random';
 
@@ -107,42 +107,9 @@ export default abstract class ReplyBot {
 	/**
 	 * Sends a reply to the specified channel using the bot's identity.
 	 */
-	protected async sendReply(channel: TextChannel, content: string): Promise<void> {
-		if (!this.botIdentity) {
-			throw new Error(`[${this.defaultBotName}] No bot identity configured`);
-		}
-
-		// Validate the bot identity
-		if (!this.botIdentity.botName || !this.botIdentity.avatarUrl) {
-			logger.warn(`[${this.defaultBotName}] Invalid bot identity detected: ${JSON.stringify(this.botIdentity)}`);
-
-			// Create a valid identity with fallbacks
-			const validIdentity: BotIdentity = {
-				botName: this.botIdentity.botName || this.defaultBotName,
-				avatarUrl: this.botIdentity.avatarUrl || 'https://i.imgur.com/NtfJZP5.png'
-			};
-
-			logger.info(`[${this.defaultBotName}] Using fallback identity: ${JSON.stringify(validIdentity)}`);
-
-			try {
-				await getWebhookService().writeMessage(channel, {
-					...validIdentity,
-					content
-				});
-			} catch (error) {
-				logger.error(`[${this.defaultBotName}] Error sending reply with fallback identity:`, error as Error);
-				throw error;
-			}
-
-			return;
-		}
-
-		// Use the bot's identity if valid
+	public async sendReply(channel: TextChannel, content: string): Promise<void> {
 		try {
-			await getWebhookService().writeMessage(channel, {
-				...this.botIdentity,
-				content
-			});
+			await DiscordService.getInstance().sendMessageWithBotIdentity(channel.id, this.botIdentity, content);
 		} catch (error) {
 			logger.error(`[${this.defaultBotName}] Error sending reply:`, error as Error);
 			throw error;
