@@ -100,6 +100,10 @@ export class DiscordService {
 
 	public getRandomBotProfile(): BotIdentity {
 		const profiles = Array.from(this.botProfileCache.values());
+		if (profiles.length === 0) {
+			// Fallback to getting a random member's identity if cache is empty
+			return this.getRandomMemberAsBotIdentity();
+		}
 		return profiles[Math.floor(Math.random() * profiles.length)];
 	}
 
