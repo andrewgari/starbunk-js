@@ -3,6 +3,7 @@ import { ServiceId, container } from './container';
 import { DiscordService } from './discordService';
 import { LLMManager, LLMProviderType } from './llm';
 import { Logger } from './logger';
+import { WebhookService } from '../webhooks/webhookService';
 
 /**
  * Bootstraps the entire application, registering all services
@@ -29,6 +30,12 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 		container.register(
 			ServiceId.DiscordService,
 			DiscordService.initialize(client)
+		);
+
+		// Register WebhookService
+		container.register(
+			ServiceId.WebhookService,
+			new WebhookService(logger)
 		);
 
 		// Register LLM Manager with Ollama as the default provider
