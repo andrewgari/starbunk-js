@@ -1,120 +1,182 @@
-import os
+#!/usr/bin/env python3
+
+from pathlib import Path
+from sentence_transformers import SentenceTransformer
+from typing import Dict, List, Optional, TypedDict, Union
+import argparse
 import json
 import numpy as np
-import fitz  # PyMuPDF for PDF processing
-import argparse
-from sentence_transformers import SentenceTransformer
+import os
+import sys
 
-def get_embeddings(texts, model_name='all-mpnet-base-v2'):
-    """Generates embeddings for a list of texts."""
-    model = SentenceTransformer(model_name)
-    embeddings = model.encode(texts)
-    return embeddings
+class VectorMetadata(TypedDict):
+    file: str
+    is_gm_content: bool
+    chunk_size: int
 
-def chunk_text(text, chunk_size=512):
-    """Chunks text into smaller pieces."""
-    words = text.split()
-    chunks = []
-    for i in range(0, len(words), chunk_size):
-        chunk = ' '.join(words[i:i + chunk_size])
-        chunks.append(chunk)
-    return chunks
+class TextWithMetadata(TypedDict):
+    text: str
+    metadata: VectorMetadata
 
-def extract_text_from_pdf(pdf_path):
-    """Extracts text from a PDF file."""
-    text = ''
-    try:
-        with fitz.open(pdf_path) as doc:
-            for page in doc:
-                text += page.get_text()
-    except Exception as e:
-        print(f"Error extracting text from {pdf_path}: {e}")
-    return text
+def get_embeddings(texts: List[str], model: SentenceTransformer) -> np.ndarray:
+    """Generate embeddings for a list of texts."""
+    return model.encode(texts, show_progress_bar=False)
 
-def process_directory(directory_path, metadata, file_count, chunk_count):
-    """Process all files in a directory."""
-    for file in os.listdir(directory_path):
-        file_path = os.path.join(directory_path, file)
-        if os.path.isfile(file_path) and file.lower().endswith(('.txt', '.md', '.json', '.pdf')):
-            print(f"Processing: {file_path}")
-            try:
-                if file.lower().endswith('.pdf'):
-                    text = extract_text_from_pdf(file_path)
-                else:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        text = f.read()
+def process_directory(
+    directory: Path,
+    model: SentenceTransformer,
+    chunk_size: int = 512,
+    is_gm_content: bool = False
+) -> List[TextWithMetadata]:
+    """Process all text files in a directory and return content with metadata."""
+    content: List[TextWithMetadata] = []
 
-                chunks = chunk_text(text)
-                embeddings = get_embeddings(chunks)
-
-                for i, embedding in enumerate(embeddings):
-                    embedding_filename = f'embedding_{file_count}_{chunk_count}.npy'
-                    embedding_path = os.path.join(context_dir, embedding_filename)
-                    np.save(embedding_path, embedding)
-
-                    metadata.append({
-                        'file_path': file_path,
-                        'chunk_id': i,
-                        'embedding_filename': embedding_filename,
-                    })
-                    chunk_count += 1
-                file_count += 1
-            except Exception as e:
-                print(f"Error processing {file_path}: {e}")
-    return file_count, chunk_count
-
-def process_campaign(campaign_dir, context_dir, include_gm=False, model_name='all-mpnet-base-v2', chunk_size=512):
-    """Process a campaign directory and generate embeddings."""
-    os.makedirs(context_dir, exist_ok=True)
-    metadata = []
-    file_count = 0
-    chunk_count = 0
-
-    # Process each category directory
-    for category in ['core_rules', 'textbooks', 'characters', 'session_recaps', 'notes']:
-        category_dir = os.path.join(campaign_dir, category)
-        if not os.path.exists(category_dir):
+    for file_path in directory.rglob('*'):
+        if not file_path.is_file():
             continue
 
-        # Always process player content
-        player_dir = os.path.join(category_dir, 'player')
-        if os.path.exists(player_dir):
-            print(f"Processing player content in {category}")
-            file_count, chunk_count = process_directory(player_dir, metadata, file_count, chunk_count)
+        if file_path.suffix.lower() not in ['.txt', '.md']:
+            continue
 
-        # Process GM content if included
-        if include_gm:
-            gm_dir = os.path.join(category_dir, 'gm')
-            if os.path.exists(gm_dir):
-                print(f"Processing GM content in {category}")
-                file_count, chunk_count = process_directory(gm_dir, metadata, file_count, chunk_count)
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
 
-    # Save metadata
-    metadata_path = os.path.join(context_dir, 'metadata.json')
-    with open(metadata_path, 'w') as f:
-        json.dump(metadata, f, indent=4)
+            # Split into chunks if needed
+            if len(text) > chunk_size:
+                chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+            else:
+                chunks = [text]
 
-    print(f"Processed {file_count} files and generated {chunk_count} chunks")
-    print("Vector generation complete.")
+            # Add each chunk with metadata
+            for chunk in chunks:
+                content.append({
+                    'text': chunk,
+                    'metadata': {
+                        'file': str(file_path.relative_to(directory)),
+                        'is_gm_content': is_gm_content,
+                        'chunk_size': chunk_size
+                    }
+                })
 
-def main():
-    parser = argparse.ArgumentParser(description='Generate embeddings for campaign content.')
-    parser.add_argument('--campaign-dir', required=True, help='Path to campaign directory')
-    parser.add_argument('--context-dir', required=True, help='Path to output context directory')
-    parser.add_argument('--include-gm', type=str, default='false', help='Include GM content (true/false)')
-    parser.add_argument('--model-name', default='all-mpnet-base-v2', help='Model name for sentence transformer')
-    parser.add_argument('--chunk-size', type=int, default=512, help='Chunk size for text splitting')
+        except Exception as e:
+            print(json.dumps({
+                'error': f'Error processing {file_path}: {str(e)}'
+            }), file=sys.stderr)
 
+    return content
+
+def save_vectors(
+    vectors: np.ndarray,
+    metadata: List[VectorMetadata],
+    texts: List[str],
+    output_dir: Path
+) -> None:
+    """Save vectors, metadata, and texts to the output directory."""
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save vectors
+        np.save(output_dir / 'vectors.npy', vectors)
+
+        # Save metadata
+        with open(output_dir / 'metadata.json', 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, ensure_ascii=False)
+
+        # Save texts
+        with open(output_dir / 'texts.json', 'w', encoding='utf-8') as f:
+            json.dump(texts, f, ensure_ascii=False)
+    except Exception as e:
+        print(json.dumps({
+            'error': f'Error saving vectors: {str(e)}'
+        }), file=sys.stderr)
+        raise
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description='Generate vector embeddings for campaign content')
+    parser.add_argument('--campaign-dir', required=True, help='Campaign directory to process')
+    parser.add_argument('--context-dir', required=True, help='Output directory for vectors')
+    parser.add_argument('--include-gm', type=str, default='false', help='Whether to include GM content')
+    parser.add_argument('--model-name', default='all-MiniLM-L6-v2', help='Model to use for embeddings')
+    parser.add_argument('--chunk-size', type=int, default=512, help='Size of text chunks')
+    parser.add_argument('--namespace', help='Optional namespace for vectors')
+    parser.add_argument('--text-file', help='Optional JSON file containing texts to process')
     args = parser.parse_args()
-    include_gm = args.include_gm.lower() == 'true'
 
-    process_campaign(
-        args.campaign_dir,
-        args.context_dir,
-        include_gm=include_gm,
-        model_name=args.model_name,
-        chunk_size=args.chunk_size
-    )
+    try:
+        # Load model
+        model = SentenceTransformer(args.model_name)
+
+        campaign_dir = Path(args.campaign_dir)
+        context_dir = Path(args.context_dir)
+        include_gm = args.include_gm.lower() == 'true'
+
+        if args.text_file:
+            # Process texts from file
+            with open(args.text_file, 'r', encoding='utf-8') as f:
+                texts_with_metadata: List[TextWithMetadata] = json.load(f)
+
+            texts = [item['text'] for item in texts_with_metadata]
+            metadata = [item['metadata'] for item in texts_with_metadata]
+            vectors = get_embeddings(texts, model)
+
+            output_dir = context_dir
+            if args.namespace:
+                output_dir = output_dir / args.namespace
+
+            save_vectors(vectors, metadata, texts, output_dir)
+        else:
+            # Process directory content
+            # Process player content
+            player_dir = campaign_dir / 'player'
+            if player_dir.exists():
+                player_content = process_directory(
+                    player_dir,
+                    model,
+                    args.chunk_size,
+                    is_gm_content=False
+                )
+
+                if player_content:
+                    texts = [item['text'] for item in player_content]
+                    metadata = [item['metadata'] for item in player_content]
+                    vectors = get_embeddings(texts, model)
+
+                    output_dir = context_dir
+                    if args.namespace:
+                        output_dir = output_dir / args.namespace
+
+                    save_vectors(vectors, metadata, texts, output_dir)
+
+            # Process GM content if requested
+            if include_gm:
+                gm_dir = campaign_dir / 'gm'
+                if gm_dir.exists():
+                    gm_content = process_directory(
+                        gm_dir,
+                        model,
+                        args.chunk_size,
+                        is_gm_content=True
+                    )
+
+                    if gm_content:
+                        texts = [item['text'] for item in gm_content]
+                        metadata = [item['metadata'] for item in gm_content]
+                        vectors = get_embeddings(texts, model)
+
+                        output_dir = context_dir
+                        if args.namespace:
+                            output_dir = output_dir / args.namespace
+
+                        save_vectors(vectors, metadata, texts, output_dir)
+
+        print(json.dumps({'status': 'success'}))
+
+    except Exception as e:
+        print(json.dumps({
+            'error': str(e)
+        }), file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()

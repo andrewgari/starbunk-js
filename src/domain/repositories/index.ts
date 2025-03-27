@@ -2,6 +2,21 @@ import { Campaign, Message, Note, StoredFile, TimeEntry } from '../models';
 
 export type CreateCampaignData = Omit<Campaign, 'id' | 'createdAt' | 'updatedAt'>;
 
+export interface CampaignMetadata {
+	characters: Array<{
+		name: string;
+		class: string;
+	}>;
+	sessions: Array<{
+		date: string;
+		description?: string;
+	}>;
+	reminders: Array<{
+		message: string;
+		time: string;
+	}>;
+}
+
 export interface CampaignRepository {
 	create(campaign: CreateCampaignData): Promise<Campaign>;
 	findById(id: string): Promise<Campaign | null>;
@@ -9,6 +24,8 @@ export interface CampaignRepository {
 	list(): Promise<Campaign[]>;
 	update(id: string, campaign: Partial<Campaign>): Promise<Campaign>;
 	delete(id: string): Promise<void>;
+	getMetadata(campaignId: string): Promise<CampaignMetadata | null>;
+	updateMetadata(campaignId: string, metadata: CampaignMetadata): Promise<void>;
 }
 
 export interface MessageRepository {

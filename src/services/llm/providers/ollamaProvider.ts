@@ -95,7 +95,7 @@ export class OllamaProvider extends GenericProvider {
 		}));
 
 		// Prepare request body
-		const requestBody = {
+		const requestBody: any = {
 			model: options.model,
 			messages,
 			// Explicitly set streaming to false
@@ -108,6 +108,13 @@ export class OllamaProvider extends GenericProvider {
 				stop: options.stop
 			}
 		};
+		
+		// Add personality embedding if available
+		if (options.contextData?.personalityEmbedding) {
+			// Add personality embedding as context
+			requestBody.context = options.contextData.personalityEmbedding;
+			this.logger.debug(`Adding personality embedding with ${options.contextData.personalityEmbedding.length} dimensions to request`);
+		}
 
 		// Add retry mechanism
 		const maxRetries = 3;
@@ -222,10 +229,11 @@ export class OllamaProvider extends GenericProvider {
 	 */
 	protected parseProviderResponse(response: unknown, options: LLMCompletionOptions): LLMCompletionResponse {
 		const ollamaResponse = response as OllamaResponse;
+		const defaultModel = this.getAvailableModels()[0];
 
 		return {
 			content: ollamaResponse.message?.content || '',
-			model: options.model,
+			model: options.model || defaultModel,
 			provider: this.getProviderName()
 		};
 	}

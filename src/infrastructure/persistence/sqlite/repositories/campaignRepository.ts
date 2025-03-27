@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { Campaign } from '../../../../domain/models';
-import { CampaignRepository, CreateCampaignData } from '../../../../domain/repositories';
+import { CampaignMetadata, CampaignRepository, CreateCampaignData } from '../../../../domain/repositories';
 import { GameSystem } from '../../../../starbunk/types/game';
 
 type PrismaCampaign = {
@@ -16,6 +16,14 @@ type PrismaCampaign = {
 };
 
 export class SQLiteCampaignRepository implements CampaignRepository {
+	async getMetadata(_campaignId: string): Promise<CampaignMetadata | null> {
+		// This method will be implemented later
+		return null;
+	}
+
+	async updateMetadata(_campaignId: string, _metadata: CampaignMetadata): Promise<void> {
+		// This method will be implemented later
+	}
 	constructor(private prisma: PrismaClient) { }
 
 	private toDomainModel(prismaCampaign: PrismaCampaign): Campaign {

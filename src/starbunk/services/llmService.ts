@@ -36,7 +36,12 @@ export class GameLLMService {
 				throw new Error('No LLM provider available');
 			}
 
-			const response = await provider.createSimpleCompletion(prompt, systemPrompt);
+			const response = await provider.createCompletion({
+				messages: [
+					...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+					{ role: 'user' as const, content: prompt }
+				]
+			}).then(res => res.content);
 			logger.debug('[GameLLMService] Raw LLM response:', response);
 			return response.trim();
 		} catch (error) {

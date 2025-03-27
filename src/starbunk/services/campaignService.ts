@@ -1,6 +1,6 @@
 import { Channel } from 'discord.js';
 import { Campaign } from '../../domain/models';
-import { CampaignRepository, CreateCampaignData } from '../../domain/repositories';
+import { CampaignMetadata, CampaignRepository, CreateCampaignData } from '../../domain/repositories';
 import { RepositoryFactory } from '../../infrastructure/persistence/repositoryFactory';
 import { logger } from '../../services/logger';
 import { GameSystem, SUPPORTED_SYSTEMS } from '../types/game';
@@ -100,5 +100,71 @@ export class CampaignService {
 
 	public getSupportedSystems(): GameSystem[] {
 		return Object.values(SUPPORTED_SYSTEMS);
+	}
+
+	public async scheduleSession(campaignId: string, date: string, description?: string): Promise<void> {
+		const campaign = await this.getCampaign(campaignId);
+		if (!campaign) {
+			throw new Error('Campaign not found');
+		}
+
+		const metadata = await this.campaignRepository.getMetadata(campaignId) || {
+			characters: [],
+			sessions: [],
+			reminders: []
+		};
+
+		metadata.sessions = [...metadata.sessions, { date, description }];
+		await this.campaignRepository.updateMetadata(campaignId, metadata);
+		logger.info(`Scheduled session for campaign ${campaignId} on ${date}`);
+	}
+
+	public async addReminder(campaignId: string, message: string, time: string): Promise<void> {
+		const campaign = await this.getCampaign(campaignId);
+		if (!campaign) {
+			throw new Error('Campaign not found');
+		}
+
+		const metadata = await this.campaignRepository.getMetadata(campaignId) || {
+			characters: [],
+			sessions: [],
+			reminders: []
+		};
+
+		metadata.reminders = [...metadata.reminders, { message, time }];
+		await this.campaignRepository.updateMetadata(campaignId, metadata);
+		logger.info(`Added reminder for campaign ${campaignId}: ${message} at ${time}`);
+	}
+
+	public async createCharacter(campaignId: string, name: string, characterClass: string): Promise<void> {
+		const campaign = await this.getCampaign(campaignId);
+		if (!campaign) {
+			throw new Error('Campaign not found');
+		}
+
+		const metadata = await this.campaignRepository.getMetadata(campaignId) || {
+			characters: [],
+			sessions: [],
+			reminders: []
+		};
+
+		metadata.characters = [...metadata.characters, { name, class: characterClass }];
+		await this.campaignRepository.updateMetadata(campaignId, metadata);
+		logger.info(`Created character ${name} (${characterClass}) for campaign ${campaignId}`);
+	}
+
+	public async getCharacters(campaignId: string): Promise<CampaignMetadata['characters']> {
+		const campaign = await this.getCampaign(campaignId);
+		if (!campaign) {
+			throw new Error('Campaign not found');
+		}
+
+		const metadata = await this.campaignRepository.getMetadata(campaignId) || {
+			characters: [],
+			sessions: [],
+			reminders: []
+		};
+
+		return metadata.characters;
 	}
 }

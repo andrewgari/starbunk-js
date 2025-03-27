@@ -1,41 +1,31 @@
-// Contains all the static data from CovaBotConfig
+import os
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
-export const COVA_BOT_NAME = 'CovaBot';
+def vectorize_text(text, model_name='all-mpnet-base-v2', filename="cova_personality.npy"):
+    """Vectorizes a block of text and saves it to a file next to the script."""
+    try:
+        model = SentenceTransformer(model_name)
+        embedding = model.encode([text])[0]  # Encode the text and get the first element
 
-export const COVA_BOT_AVATARS = {
-	Default: 'https://i.imgur.com/NtfJZP5.png'
-};
+        # Get the directory of the current script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
 
-export const COVA_BOT_PATTERNS = {
-	Mention: /\b(cova|covadax|cove|covs|covie)\b/i,
-	Question: /\b(cova|covadax|cove|covs|covie).*(\?|what|how|why|when|where|who|which|is|are|can|could|should|would|will)/i,
-	AtMention: /<@!?139592376443338752>/
-};
+        # Create the full file path
+        file_path = os.path.join(script_dir, filename)
 
-export const COVA_BOT_CONFIG = {
-	ResponseRate: 0,
-	// Cooldown periods for rate limiting
-	Cooldowns: {
-		ConversationTimeout: 60, // seconds
-		CacheDecisionTimeout: 30, // seconds
-		CacheCleanupThreshold: 20 // entries
-	}
-};
+        # Save the embedding to the file
+        np.save(file_path, embedding)
 
-export const COVA_BOT_FALLBACK_RESPONSES = [
-	"Yeah, that's pretty cool.",
-	"Interesting.",
-	"Hmm, I see what you mean.",
-	"I'm not sure about that.",
-	"That's wild.",
-	"Neat.",
-	"lol",
-	"👀",
-	"Tell me more about that."
-];
+        print(f"Embedding saved to: {file_path}")
+        return embedding
 
-export const COVA_BOT_PROMPTS = {
-	EmulatorPrompt: `
+    except Exception as e:
+        print(f"Error vectorizing text: {e}")
+        return None
+
+# Example usage
+text_to_vectorize = """
 # CovaDax (Cova) Comprehensive Personality Profile
 
 ## Core Identity and Background
@@ -167,63 +157,6 @@ export const COVA_BOT_PROMPTS = {
 - Use natural language processing to detect relevance to Cova's knowledge domains
 - Balance technical accuracy with conversational naturalness
 - Allow for subtle personality evolution over time to avoid stagnation
-`,
+"""
 
-	DecisionPrompt: `
-# Response Decision System
-
-Evaluate if Cova would respond to a Discord message based on these criteria:
-
-## Priority Levels
-RESPOND (70-90%)
-- Direct name mentions
-- Technical questions in expertise
-- Clear inaccuracies to correct
-- Direct requests for help
-
-LIKELY (40-60%)
-- Active conversation
-- Gaming/comics discussions
-- Technical topics
-- Follow-up questions
-
-UNLIKELY (10-20%)
-- General chat
-- Tangential topics
-- Group questions
-- Basic observations
-
-NO (0-5%)
-- Off-topic
-- Basic questions
-- Arguments
-- Busy threads
-
-## Context Impact
-POSITIVE
-- Technical focus
-- Direct relevance
-- Unique insight
-- Natural flow
-- Channel quiet
-
-NEGATIVE
-- Many participants
-- Recent response
-- Basic question
-- Off-expertise
-- Heated discussion
-
-## Output Format
-Respond ONLY with:
-"YES" (70%+)
-"LIKELY" (40-70%)
-"UNLIKELY" (10-40%)
-"NO" (<10%)
-
-## Decision Process
-1. Check priority level
-2. Apply context modifiers
-3. Consider current conversation state
-4. Output single-word decision`
-};
+vectorize_text(text_to_vectorize)
