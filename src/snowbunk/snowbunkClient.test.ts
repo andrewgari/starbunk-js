@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, TextChannel } from 'discord.js';
-import { container, ServiceId } from '../services/container';
+import { ServiceId, container } from '../services/container';
 import { mockLogger, mockMessage, mockWebhookService } from '../starbunk/bots/test-utils/testUtils';
 import SnowbunkClient from './snowbunkClient';
 
@@ -29,29 +29,22 @@ describe('SnowbunkClient', () => {
 		container.register(ServiceId.DiscordClient, () => mockDiscordClient);
 
 		// Create SnowbunkClient instance with client options
-		snowbunkClient = new SnowbunkClient({
-			intents: [
-				GatewayIntentBits.Guilds,
-				GatewayIntentBits.GuildMessages,
-				GatewayIntentBits.MessageContent,
-			]
-		});
+		snowbunkClient = new SnowbunkClient();
 	});
 
 	it('should initialize and register message handler', () => {
-		snowbunkClient.bootstrap();
-
 		expect(mockDiscordClient.on).toHaveBeenCalledWith('messageCreate', expect.any(Function));
 	});
 
-	it('should sync messages between channels', () => {
+	it('should sync messages between channels', async () => {
 		const message = mockMessage('test message');
 		const linkedChannel = {
 			id: '856617421942030364',
 			send: jest.fn(),
 		} as unknown as TextChannel;
 
-		snowbunkClient.writeMessage(message, linkedChannel);
+		// Access the private method through type assertion
+		(snowbunkClient as any).writeMessage(message, linkedChannel);
 
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			linkedChannel,

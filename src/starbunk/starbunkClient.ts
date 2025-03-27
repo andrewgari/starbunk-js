@@ -1,6 +1,7 @@
 import { PlayerSubscription } from '@discordjs/voice';
 import { Base, Client, Collection, Events, GatewayIntentBits, Interaction, Message, VoiceState } from 'discord.js';
 import { isDebugMode } from '../environment';
+import { bootstrapApplication } from '../services/bootstrap';
 import { logger } from '../services/logger';
 import { BaseVoiceBot } from './bots/core/voice-bot-adapter';
 import ReplyBot from './bots/replyBot';
@@ -26,18 +27,6 @@ export default class StarbunkClient extends Client {
 
 		this.audioPlayer = new DJCova();
 		this.commandHandler = new CommandHandler();
-
-		// Import bootstrapApplication dynamically to avoid circular dependency
-		try {
-			const { bootstrapApplication } = require('../services/bootstrap');
-			bootstrapApplication(this).then(() => {
-				logger.info('Services bootstrapped successfully within StarbunkClient');
-			}).catch((error: unknown) => {
-				logger.error('Failed to bootstrap services within StarbunkClient:', error instanceof Error ? error : new Error(String(error)));
-			});
-		} catch (error: unknown) {
-			logger.error('Error importing or executing bootstrapApplication:', error instanceof Error ? error : new Error(String(error)));
-		}
 
 		this.once(Events.ClientReady, this.onReady.bind(this));
 		this.on(Events.MessageCreate, this.handleMessage.bind(this));
@@ -136,6 +125,16 @@ export default class StarbunkClient extends Client {
 	public async init(): Promise<void> {
 		logger.info('Initializing StarbunkClient');
 		try {
+			// Bootstrap application services
+			logger.info('Bootstrapping application services');
+			try {
+				await bootstrapApplication(this);
+				logger.info('Application services bootstrapped successfully');
+			} catch (error) {
+				logger.error('Failed to bootstrap application services:', error instanceof Error ? error : new Error(String(error)));
+				throw error;
+			}
+
 			// Load bots and commands
 			await this.loadBots();
 

@@ -1,6 +1,5 @@
 // Register module aliases for path resolution
 // Import environment first to ensure environment variables are loaded
-import { GatewayIntentBits } from 'discord.js';
 import environment, { isDebugMode } from './environment';
 import { logger } from './services/logger';
 import SnowbunkClient from './snowbunk/snowbunkClient';
@@ -16,18 +15,6 @@ export async function runStarbunkBot(): Promise<void> {
 
 		// Initialize the client
 		await client.init();
-
-		// Bootstrap application services
-		logger.info('Bootstrapping application services');
-		try {
-			// Import here to avoid circular dependencies
-			const { bootstrapApplication } = require('./services/bootstrap');
-			await bootstrapApplication(client);
-			logger.info('Application services bootstrapped successfully');
-		} catch (error) {
-			logger.error('Failed to bootstrap application services:', error instanceof Error ? error : new Error(String(error)));
-			throw error;
-		}
 
 		// If we're in testing mode, don't try to connect to Discord
 		if (isDebugMode()) {
@@ -92,26 +79,7 @@ const runSnowbunkBot = async (): Promise<void> => {
 	const { logger } = require('./services/logger');
 	logger.info('Starting Snowbunk bot');
 
-	const snowbunk = new SnowbunkClient({
-		intents: [
-			GatewayIntentBits.Guilds,
-			GatewayIntentBits.GuildMessages,
-			GatewayIntentBits.MessageContent,
-			GatewayIntentBits.GuildVoiceStates
-		]
-	});
-
-	// Bootstrap application services
-	logger.info('Bootstrapping application services for Snowbunk');
-	try {
-		// Import here to avoid circular dependencies
-		const { bootstrapApplication } = require('./services/bootstrap');
-		await bootstrapApplication(snowbunk);
-		logger.info('Snowbunk application services bootstrapped successfully');
-	} catch (error) {
-		logger.error('Failed to bootstrap Snowbunk application services:', error instanceof Error ? error : new Error(String(error)));
-		throw error;
-	}
+	const snowbunk = new SnowbunkClient();
 
 	// If we're in testing mode, don't try to connect to Discord
 	if (isDebugMode()) {

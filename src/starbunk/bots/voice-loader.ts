@@ -40,6 +40,8 @@ export async function loadVoiceBots(): Promise<VoiceBotAdapter[]> {
 		const baseDir = (isDev || isTsNode) ? './src' : './dist';
 		const voiceBotsDir = path.resolve(`${baseDir}/starbunk/bots/voice-bots`);
 
+		logger.debug(`Environment: NODE_ENV=${process.env.NODE_ENV}, ts-node=${isTsNode}, fileExtension=${fileExtension}`);
+		logger.debug(`Base directory: ${baseDir}`);
 		logger.debug(`Looking for voice bots in: ${voiceBotsDir}`);
 
 		// Get all directories in the voice-bots folder
@@ -57,6 +59,7 @@ export async function loadVoiceBots(): Promise<VoiceBotAdapter[]> {
 		for (const botDir of botDirs) {
 			try {
 				const botIndexPath = path.join(voiceBotsDir, botDir, `index${fileExtension}`);
+				logger.debug(`Checking for bot index at: ${botIndexPath}`);
 
 				// Skip if index file doesn't exist
 				if (!fs.existsSync(botIndexPath)) {
@@ -70,6 +73,8 @@ export async function loadVoiceBots(): Promise<VoiceBotAdapter[]> {
 				try {
 					// Add .js extension for Node.js ES modules
 					const modulePath = botIndexPath.replace(/\.ts$/, '.js');
+					logger.debug(`Attempting to require module from: ${modulePath}`);
+
 					// eslint-disable-next-line @typescript-eslint/no-var-requires
 					const botObj = require(modulePath.replace(/\.js$/, '')).default;
 
@@ -83,16 +88,18 @@ export async function loadVoiceBots(): Promise<VoiceBotAdapter[]> {
 							continue;
 						}
 
-						// Not a valid voice bot
-						logger.warn(`⚠️ Not a valid voice bot: ${botIndexPath}`);
+						logger.warn(`⚠️ Object found but not a valid voice bot: ${botIndexPath}`);
+						logger.debug('Bot object properties:', Object.keys(botObj).join(', '));
 					} else {
 						logger.warn(`⚠️ No default export found in: ${botIndexPath}`);
 					}
 				} catch (error) {
 					logger.error(`❌ Failed to load voice bot: ${botIndexPath}`, error instanceof Error ? error : new Error(String(error)));
+					logger.debug('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
 				}
 			} catch (error) {
 				logger.error(`Error processing bot directory ${botDir}:`, error instanceof Error ? error : new Error(String(error)));
+				logger.debug('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
 			}
 		}
 
@@ -106,6 +113,7 @@ export async function loadVoiceBots(): Promise<VoiceBotAdapter[]> {
 		}
 	} catch (error) {
 		logger.error('Error loading voice bots:', error instanceof Error ? error : new Error(String(error)));
+		logger.debug('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
 	}
 
 	return loadedBots;

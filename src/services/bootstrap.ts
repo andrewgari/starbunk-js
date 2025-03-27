@@ -79,9 +79,31 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 			llmManager
 		);
 
-		logger.info('🚀 Services bootstrapped successfully');
+		logger.info('🚀 Core services bootstrapped successfully');
 	} catch (error) {
 		console.error('Failed to bootstrap services', error);
+		throw error;
+	}
+}
+
+/**
+ * Bootstraps only the basic services needed for Snowbunk
+ * @param client The Discord client instance
+ */
+export async function bootstrapSnowbunkApplication(client: Client): Promise<void> {
+	try {
+		// Register minimal services needed for Snowbunk
+		const logger = new Logger();
+		container.register(ServiceId.Logger, logger);
+		container.register(ServiceId.DiscordClient, client);
+
+		// Initialize webhook service
+		const webhookService = new WebhookService(logger);
+		container.register(ServiceId.WebhookService, webhookService);
+
+		logger.info('Snowbunk services bootstrapped successfully');
+	} catch (error) {
+		console.error('Failed to bootstrap Snowbunk services:', error instanceof Error ? error : new Error(String(error)));
 		throw error;
 	}
 }
