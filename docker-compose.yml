@@ -17,6 +17,8 @@ services:
             - /mnt/user/vault/ttrpg/campaigns:/app/data/campaigns
             - ./scripts:/app/scripts
             - ./data/llm_context:/app/data/llm_context
+            - ./data:/app/data
+            - ./src/starbunk/bots/strategy-bots:/app/dist/starbunk/bots/strategy-bots
         environment:
             - PYTHONPATH=/app/scripts
             - VECTOR_CONTEXT_DIR=/app/data/llm_context
