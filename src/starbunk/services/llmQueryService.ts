@@ -51,27 +51,22 @@ export class LLMQueryService {
 			const relevantNotes = await this.noteService.searchNotes(campaign, query, { isGM });
 			logger.debug(`[LLMQueryService] Found ${relevantNotes.length} relevant notes`);
 
-			if (relevantNotes.length === 0) {
-				logger.info(`[LLMQueryService] No relevant notes found for query`);
-				return {
-					answer: "I don't have enough information to answer that question for this campaign.",
-					sources: []
-				};
+			// Build context from relevant notes if any exist
+			let context = '';
+			if (relevantNotes.length > 0) {
+				logger.debug(`[LLMQueryService] Building context from notes...`);
+				context = relevantNotes
+					.map(note => {
+						logger.debug(`[LLMQueryService] Processing note: ${JSON.stringify(note)}`);
+						return `[${note.category.toUpperCase()}] ${note.content}`;
+					})
+					.join('\n\n');
+				logger.debug(`[LLMQueryService] Built context length: ${context.length} characters`);
 			}
 
-			// Build context from relevant notes
-			logger.debug(`[LLMQueryService] Building context from notes...`);
-			const context = relevantNotes
-				.map(note => {
-					logger.debug(`[LLMQueryService] Processing note: ${JSON.stringify(note)}`);
-					return `[${note.category.toUpperCase()}] ${note.content}`;
-				})
-				.join('\n\n');
-			logger.debug(`[LLMQueryService] Built context length: ${context.length} characters`);
-
-			// Get answer from LLM
+			// Get answer from LLM (will use system knowledge if no context available)
 			logger.debug(`[LLMQueryService] Requesting answer from LLM service...`);
-			const answer = await this.llmService.answerQuestion(query, context, isGM);
+			const answer = await this.llmService.answerQuestion(query, context, isGM, campaign);
 			logger.debug(`[LLMQueryService] Received answer from LLM service`);
 
 			const response = {

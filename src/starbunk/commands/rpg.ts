@@ -49,6 +49,17 @@ const rpgCommand = {
 				)
 				.addSubcommand(subcommand =>
 					subcommand
+						.setName('rename')
+						.setDescription('Rename a campaign')
+						.addStringOption(option =>
+							option
+								.setName('new-name')
+								.setDescription('New name for the campaign')
+								.setRequired(true)
+						)
+				)
+				.addSubcommand(subcommand =>
+					subcommand
 						.setName('set-active')
 						.setDescription('Set the active campaign for this channel')
 						.addStringOption(option =>
@@ -292,6 +303,61 @@ const rpgCommand = {
 							logger.error('Error setting active campaign:', error instanceof Error ? error : new Error(String(error)));
 							await interaction.reply({
 								content: 'Failed to set active campaign. Please try again later.',
+								ephemeral: true
+							});
+						}
+						break;
+					}
+					case 'rename': {
+						if (!permissions.canManageCampaign) {
+							await interaction.reply({
+								content: 'Only GMs can rename campaigns.',
+								ephemeral: true
+							});
+							return;
+						}
+
+						const newName = interaction.options.getString('new-name', true);
+
+						try {
+							// Get the current campaign in this channel
+							const campaign = await campaignService.getCampaignByChannel(interaction.channelId);
+							if (!campaign) {
+								await interaction.reply({
+									content: 'No active campaign found in this channel.',
+									ephemeral: true
+								});
+								return;
+							}
+
+							// Check if a campaign with the new name already exists
+							const allCampaigns = await campaignService.listCampaigns();
+							const existingCampaign = allCampaigns.find(
+								c => c.name.toLowerCase() === newName.toLowerCase() && c.id !== campaign.id
+							);
+
+							if (existingCampaign) {
+								await interaction.reply({
+									content: `A campaign named "${newName}" already exists.`,
+									ephemeral: true
+								});
+								return;
+							}
+
+							// Update the campaign name
+							const oldName = campaign.name;
+							await campaignService.updateCampaign(campaign.id, {
+								name: newName
+							});
+
+							await interaction.reply({
+								content: `Campaign "${oldName}" has been renamed to "${newName}".`,
+								ephemeral: false
+							});
+						} catch (error) {
+							logger.error('Error renaming campaign:', error instanceof Error ? error : new Error(String(error)));
+							await interaction.reply({
+								content: 'Failed to rename campaign. Please try again later.',
 								ephemeral: true
 							});
 						}
