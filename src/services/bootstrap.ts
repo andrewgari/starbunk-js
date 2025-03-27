@@ -1,9 +1,12 @@
+import { PrismaClient } from '@prisma/client';
 import { Client } from 'discord.js';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { WebhookService } from '../webhooks/webhookService';
 import { ServiceId, container } from './container';
 import { DiscordService } from './discordService';
 import { LLMManager, LLMProviderType } from './llm';
 import { Logger } from './logger';
-import { WebhookService } from '../webhooks/webhookService';
 
 /**
  * Bootstraps the entire application, registering all services
@@ -19,6 +22,36 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 			ServiceId.Logger,
 			logger
 		);
+
+		// Ensure data directory exists
+		const dataDir = path.join(process.cwd(), 'data');
+		await fs.mkdir(dataDir, { recursive: true });
+
+		// Initialize Prisma and ensure database exists
+		const prisma = new PrismaClient();
+		try {
+			// Test database connection and create if not exists
+			await prisma.$connect();
+			logger.info('Database connection established');
+		} catch (error) {
+			logger.error('Database connection failed, attempting to create:', error instanceof Error ? error : new Error(String(error)));
+			// Ensure the database file exists
+			const dbPath = path.join(dataDir, 'starbunk.db');
+			await fs.writeFile(dbPath, '');
+			logger.info('Created empty database file');
+
+			// Run migrations
+			const { execSync } = require('child_process');
+			try {
+				execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+				logger.info('Database migrations applied successfully');
+			} catch (migrationError) {
+				logger.error('Failed to apply migrations:', migrationError instanceof Error ? migrationError : new Error(String(migrationError)));
+				throw migrationError;
+			}
+		} finally {
+			await prisma.$disconnect();
+		}
 
 		// Register the Discord client
 		container.register(

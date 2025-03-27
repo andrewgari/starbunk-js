@@ -213,7 +213,50 @@ const rpgCommand = {
 
 	async execute(interaction: ChatInputCommandInteraction): Promise<void> {
 		const group = interaction.options.getSubcommandGroup();
-		const subcommand = interaction.options.getSubcommand();
+		const subcommand = interaction.options.getSubcommand(false);
+
+		// If no subcommand is provided, show help message
+		if (!subcommand) {
+			const helpMessage = [
+				"🎲 **Starbunk RPG Assistant**",
+				"A comprehensive Discord bot for managing your TTRPG campaigns.",
+				"",
+				"📚 **Command Groups:**",
+				"",
+				"🏰 **Campaign Management** `/rpg campaign`",
+				"• `/rpg campaign create` - Create a new campaign",
+				"• `/rpg campaign list` - List all campaigns",
+				"• `/rpg campaign rename` - Rename a campaign",
+				"• `/rpg campaign set-active` - Set active campaign for this channel",
+				"",
+				"🎮 **Game Commands** `/rpg game` *(requires active campaign)*",
+				"• `/rpg game build` - Build vector database for campaign content",
+				"• `/rpg game create` - Create a new game session",
+				"• `/rpg game ask` - Ask a question about the campaign or game system",
+				"• `/rpg game ask-gm` - (GM only) Ask a question with access to all information",
+				"• `/rpg game note` - Add a player note",
+				"• `/rpg game note-gm` - (GM only) Add a GM note",
+				"",
+				"📅 **Session Management** `/rpg session`",
+				"• `/rpg session schedule` - Schedule the next session",
+				"• `/rpg session reminder` - Set a reminder message",
+				"",
+				"💡 **Tips:**",
+				"• Start by creating a campaign with `/rpg campaign create`",
+				"• Set it as active in your channel with `/rpg campaign set-active`",
+				"• Use notes to keep track of important information",
+				"• Ask questions about rules or campaign content using `/rpg game ask`",
+				"",
+				"For more details about a specific command, use it without options to see its help message."
+			].join("\n");
+
+			await interaction.reply({
+				content: helpMessage,
+				ephemeral: true
+			});
+			return;
+		}
+
 		const campaignService = CampaignService.getInstance();
 		const gameContentService = GameContentService.getInstance();
 
