@@ -2,13 +2,17 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { logger } from '../../services/logger';
 
+interface DirectoryWithAccess {
+	gm: string;
+	player: string;
+}
+
 export interface CampaignDirectoryStructure {
-	coreRules: string;
-	textbooks: string;
-	characters: string;
-	sessionRecaps: string;
-	generalNotes: string;
-	gmNotes: string;
+	coreRules: DirectoryWithAccess;
+	textbooks: DirectoryWithAccess;
+	characters: DirectoryWithAccess;
+	sessionRecaps: DirectoryWithAccess;
+	notes: DirectoryWithAccess;
 }
 
 export class CampaignFileService {
@@ -26,15 +30,26 @@ export class CampaignFileService {
 		return CampaignFileService.instance;
 	}
 
+	public getCampaignBasePath(): string {
+		return this.baseDir;
+	}
+
+	private createAccessStructure(basePath: string): DirectoryWithAccess {
+		return {
+			gm: path.join(basePath, 'gm'),
+			player: path.join(basePath, 'player')
+		};
+	}
+
 	public getCampaignDirectoryStructure(campaignId: string): CampaignDirectoryStructure {
 		const campaignDir = path.join(this.baseDir, campaignId);
+
 		return {
-			coreRules: path.join(campaignDir, 'core_rules'),
-			textbooks: path.join(campaignDir, 'textbooks'),
-			characters: path.join(campaignDir, 'characters'),
-			sessionRecaps: path.join(campaignDir, 'session_recaps'),
-			generalNotes: path.join(campaignDir, 'general_notes'),
-			gmNotes: path.join(campaignDir, 'gm_notes')
+			coreRules: this.createAccessStructure(path.join(campaignDir, 'core_rules')),
+			textbooks: this.createAccessStructure(path.join(campaignDir, 'textbooks')),
+			characters: this.createAccessStructure(path.join(campaignDir, 'characters')),
+			sessionRecaps: this.createAccessStructure(path.join(campaignDir, 'session_recaps')),
+			notes: this.createAccessStructure(path.join(campaignDir, 'notes'))
 		};
 	}
 
@@ -44,20 +59,33 @@ export class CampaignFileService {
 		const structure = this.getCampaignDirectoryStructure(campaignId);
 
 		try {
-			// Create all directories
+			// Create all directories with their GM and player subdirectories
 			await Promise.all([
-				fs.mkdir(structure.coreRules, { recursive: true }),
-				fs.mkdir(structure.textbooks, { recursive: true }),
-				fs.mkdir(structure.characters, { recursive: true }),
-				fs.mkdir(structure.sessionRecaps, { recursive: true }),
-				fs.mkdir(structure.generalNotes, { recursive: true }),
-				fs.mkdir(structure.gmNotes, { recursive: true })
+				// Core Rules
+				fs.mkdir(structure.coreRules.gm, { recursive: true }),
+				fs.mkdir(structure.coreRules.player, { recursive: true }),
+
+				// Textbooks
+				fs.mkdir(structure.textbooks.gm, { recursive: true }),
+				fs.mkdir(structure.textbooks.player, { recursive: true }),
+
+				// Characters
+				fs.mkdir(structure.characters.gm, { recursive: true }),
+				fs.mkdir(structure.characters.player, { recursive: true }),
+
+				// Session Recaps
+				fs.mkdir(structure.sessionRecaps.gm, { recursive: true }),
+				fs.mkdir(structure.sessionRecaps.player, { recursive: true }),
+
+				// Notes
+				fs.mkdir(structure.notes.gm, { recursive: true }),
+				fs.mkdir(structure.notes.player, { recursive: true })
 			]);
 
 			logger.info('[CampaignFileService] Campaign directory structure created successfully', { campaignId });
 			return structure;
-		} catch (error) {
-			logger.error('[CampaignFileService] Error creating campaign directory structure:', error);
+		} catch (error: unknown) {
+			logger.error('[CampaignFileService] Error creating campaign directory structure:', error instanceof Error ? error : new Error(String(error)));
 			throw new Error('Failed to create campaign directory structure');
 		}
 	}
@@ -70,12 +98,25 @@ export class CampaignFileService {
 		try {
 			// Check if all directories exist
 			await Promise.all([
-				fs.access(structure.coreRules),
-				fs.access(structure.textbooks),
-				fs.access(structure.characters),
-				fs.access(structure.sessionRecaps),
-				fs.access(structure.generalNotes),
-				fs.access(structure.gmNotes)
+				// Core Rules
+				fs.access(structure.coreRules.gm),
+				fs.access(structure.coreRules.player),
+
+				// Textbooks
+				fs.access(structure.textbooks.gm),
+				fs.access(structure.textbooks.player),
+
+				// Characters
+				fs.access(structure.characters.gm),
+				fs.access(structure.characters.player),
+
+				// Session Recaps
+				fs.access(structure.sessionRecaps.gm),
+				fs.access(structure.sessionRecaps.player),
+
+				// Notes
+				fs.access(structure.notes.gm),
+				fs.access(structure.notes.player)
 			]);
 
 			logger.info('[CampaignFileService] Campaign directory structure is valid', { campaignId });
@@ -83,6 +124,59 @@ export class CampaignFileService {
 		} catch (error) {
 			logger.debug('[CampaignFileService] Campaign directory structure is invalid or missing', { campaignId });
 			return false;
+		}
+	}
+
+	public getNotePath(campaignId: string, isGM: boolean): string {
+		const structure = this.getCampaignDirectoryStructure(campaignId);
+		return isGM ? structure.notes.gm : structure.notes.player;
+	}
+
+	public async saveToDirectory(filePath: string, content: string): Promise<void> {
+		try {
+			await fs.writeFile(filePath, content, 'utf-8');
+			logger.debug('[CampaignFileService] Successfully wrote file:', { filePath });
+		} catch (error: unknown) {
+			logger.error('[CampaignFileService] Error writing file:', error instanceof Error ? error : new Error(String(error)));
+			throw new Error(`Failed to write file to ${filePath}`);
+		}
+	}
+
+	public async readFromDirectory(filePath: string): Promise<string> {
+		try {
+			const content = await fs.readFile(filePath, 'utf-8');
+			logger.debug('[CampaignFileService] Successfully read file:', { filePath });
+			return content;
+		} catch (error: unknown) {
+			if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+				return '';
+			}
+			logger.error('[CampaignFileService] Error reading file:', error instanceof Error ? error : new Error(String(error)));
+			throw new Error(`Failed to read file from ${filePath}`);
+		}
+	}
+
+	public async listFiles(directoryPath: string): Promise<string[]> {
+		try {
+			const files = await fs.readdir(directoryPath);
+			logger.debug('[CampaignFileService] Successfully listed files:', { directoryPath, count: files.length });
+			return files;
+		} catch (error: unknown) {
+			if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+				return [];
+			}
+			logger.error('[CampaignFileService] Error listing files:', error instanceof Error ? error : new Error(String(error)));
+			throw new Error(`Failed to list files in ${directoryPath}`);
+		}
+	}
+
+	public async deleteDirectory(directoryPath: string): Promise<void> {
+		try {
+			await fs.rm(directoryPath, { recursive: true, force: true });
+			logger.debug('[CampaignFileService] Successfully deleted directory:', { directoryPath });
+		} catch (error: unknown) {
+			logger.error('[CampaignFileService] Error deleting directory:', error instanceof Error ? error : new Error(String(error)));
+			throw new Error(`Failed to delete directory ${directoryPath}`);
 		}
 	}
 }

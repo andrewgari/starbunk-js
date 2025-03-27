@@ -2,8 +2,17 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install ffmpeg for audio processing
-RUN apk add --no-cache ffmpeg
+# Install system dependencies including Python and build tools
+RUN apk add --no-cache \
+    ffmpeg \
+    python3 \
+    py3-pip \
+    build-base \
+    python3-dev
+
+# Install Python dependencies
+COPY scripts/requirements.txt ./scripts/
+RUN pip3 install --no-cache-dir -r scripts/requirements.txt
 
 # Copy package files first for better layer caching
 COPY package.json ./

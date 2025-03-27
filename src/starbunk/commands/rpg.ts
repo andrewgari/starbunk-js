@@ -4,6 +4,7 @@ import { Campaign } from '../../domain/models';
 import { logger } from '../../services/logger';
 import { CampaignService } from '../services/campaignService';
 import { GameContentService } from '../services/gameContentService';
+import { VectorService } from '../services/vectorService';
 import { SUPPORTED_SYSTEMS } from '../types/game';
 import { getCampaignContext, getCampaignPermissions, validateCampaignAccess } from '../utils/campaignChecks';
 
@@ -76,6 +77,29 @@ const rpgCommand = {
 			group
 				.setName('game')
 				.setDescription('Game commands (requires active campaign in channel)')
+				.addSubcommand(subcommand =>
+					subcommand
+						.setName('build')
+						.setDescription('Build vector database for campaign content')
+						.addBooleanOption(option =>
+							option
+								.setName('include_gm')
+								.setDescription('Include GM content in the build')
+								.setRequired(false)
+						)
+						.addStringOption(option =>
+							option
+								.setName('model')
+								.setDescription('Model to use for embeddings')
+								.setRequired(false)
+						)
+						.addIntegerOption(option =>
+							option
+								.setName('chunk_size')
+								.setDescription('Size of text chunks for processing')
+								.setRequired(false)
+						)
+				)
 				.addSubcommand(subcommand =>
 					subcommand
 						.setName('create')
@@ -390,6 +414,41 @@ const rpgCommand = {
 				}
 
 				switch (subcommand) {
+					case 'build': {
+						// Check if user has GM permissions
+						if (!permissions.canManageCampaign) {
+							await interaction.reply({
+								content: 'Only GMs can build the vector database.',
+								ephemeral: true
+							});
+							return;
+						}
+
+						await interaction.deferReply({ ephemeral: true });
+
+						try {
+							const includeGM = interaction.options.getBoolean('include_gm') ?? false;
+							const model = interaction.options.getString('model');
+							const chunkSize = interaction.options.getInteger('chunk_size');
+
+							const vectorService = VectorService.getInstance();
+							await vectorService.generateVectors(campaign.id, {
+								includeGMContent: includeGM,
+								...(model && { modelName: model }),
+								...(chunkSize && { chunkSize })
+							});
+
+							await interaction.editReply({
+								content: `Successfully built vector database for campaign "${campaign.name}".${includeGM ? ' GM content included.' : ''}`
+							});
+						} catch (error) {
+							logger.error('Error building vector database:', error instanceof Error ? error : new Error(String(error)));
+							await interaction.editReply({
+								content: 'Failed to build vector database. Please check the logs for details.'
+							});
+						}
+						break;
+					}
 					case 'create': {
 						// Check if user has permission to create game
 						if (!permissions.canManageCampaign) {

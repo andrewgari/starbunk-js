@@ -15,3 +15,8 @@ services:
                     memory: 1G
         volumes:
             - /mnt/user/vault/ttrpg/campaigns:/app/data/campaigns
+            - ./scripts:/app/scripts
+            - ./data/llm_context:/app/data/llm_context
+        environment:
+            - PYTHONPATH=/app/scripts
+            - VECTOR_CONTEXT_DIR=/app/data/llm_context
