@@ -13,3 +13,5 @@ services:
                 limits:
                     cpus: '2'
                     memory: 1G
+        volumes:
+            - /mnt/user/vault/ttrpg/campaigns:/app/data/campaigns
