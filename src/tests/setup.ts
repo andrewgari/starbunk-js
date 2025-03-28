@@ -74,14 +74,3 @@ jest.mock('../environment', () => ({
 		}
 	}
 }));
-
-// Mock @xenova/transformers
-jest.mock('@xenova/transformers', () => {
-	return {
-		pipeline: jest.fn().mockImplementation(() => ({
-			embedder: jest.fn().mockImplementation(() => ({
-				encode: jest.fn().mockResolvedValue([new Float32Array(384).fill(0.1)])
-			}))
-		}))
-	};
-});

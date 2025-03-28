@@ -30,10 +30,6 @@ module.exports = {
 			isolatedModules: true
 		}]
 	},
-	// Transform ESM modules in node_modules that use 'export' syntax
-	transformIgnorePatterns: [
-		'/node_modules/(?!@xenova/transformers)/'
-	],
 	moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 	setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],
 	moduleNameMapper: {
