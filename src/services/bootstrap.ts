@@ -6,6 +6,7 @@ import { WebhookService } from '../webhooks/webhookService';
 import { ServiceId, container } from './container';
 import { DiscordService } from './discordService';
 import { LLMManager, LLMProviderType } from './llm';
+import { registerPrompts } from './llm/prompts';
 import { Logger } from './logger';
 
 /**
@@ -74,6 +75,8 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 		// Register LLM Manager with Ollama as the default provider
 		const llmManager = new LLMManager(logger, LLMProviderType.OLLAMA);
 		await llmManager.initializeAllProviders();
+		// Register all prompts
+		registerPrompts();
 		container.register(
 			ServiceId.LLMManager,
 			llmManager
@@ -100,6 +103,13 @@ export async function bootstrapSnowbunkApplication(client: Client): Promise<void
 		// Initialize webhook service
 		const webhookService = new WebhookService(logger);
 		container.register(ServiceId.WebhookService, webhookService);
+
+		// Initialize LLM manager
+		const llmManager = new LLMManager(logger, LLMProviderType.OLLAMA);
+		await llmManager.initializeAllProviders();
+		// Register all prompts
+		registerPrompts();
+		container.register(ServiceId.LLMManager, llmManager);
 
 		logger.info('Snowbunk services bootstrapped successfully');
 	} catch (error) {

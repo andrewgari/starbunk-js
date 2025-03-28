@@ -32,7 +32,7 @@ export class LLMQueryService {
 	}
 
 	public async queryGameContext(
-		campaign: Campaign,
+		campaign: import('../../domain/models').Campaign,
 		query: string,
 		userId: string,
 		isGM: boolean

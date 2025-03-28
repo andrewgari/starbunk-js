@@ -2,25 +2,27 @@ import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { isDebugMode, setDebugMode } from '../../environment';
 import { logger } from '../../services/logger';
 
+const commandBuilder = new SlashCommandBuilder()
+	.setName('debug')
+	.setDescription('Debug utilities')
+	.addSubcommand(subcommand =>
+		subcommand
+			.setName('toggle')
+			.setDescription('Toggle debug mode on/off')
+	)
+	.addSubcommand(subcommand =>
+		subcommand
+			.setName('status')
+			.setDescription('Check current debug status')
+	)
+	.addSubcommand(subcommand =>
+		subcommand
+			.setName('info')
+			.setDescription('Show debugging information')
+	);
+
 export default {
-	data: new SlashCommandBuilder()
-		.setName('debug')
-		.setDescription('Debug utilities')
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('toggle')
-				.setDescription('Toggle debug mode on/off')
-		)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('status')
-				.setDescription('Check current debug status')
-		)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('info')
-				.setDescription('Show debugging information')
-		),
+	data: commandBuilder.toJSON(),
 
 	async execute(interaction: CommandInteraction) {
 		// Only allow certain users to use this command

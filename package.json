@@ -9,6 +9,7 @@
 		"dev": "cross-env NODE_ENV=development DEBUG=true TS_NODE_DEV=true ts-node -r tsconfig-paths/register src/bunkbot.ts",
 		"dev:debug": "cross-env NODE_ENV=development DEBUG=true TS_NODE_DEV=true ts-node -r tsconfig-paths/register src/bunkbot.ts",
 		"dev:testing": "cross-env NODE_ENV=development DEBUG=true TESTING_MODE=true TS_NODE_DEV=true ts-node -r tsconfig-paths/register src/bunkbot.ts",
+		"dev:nodebug": "cross-env NODE_ENV=development DEBUG=false TS_NODE_DEV=true ts-node -r tsconfig-paths/register src/bunkbot.ts",
 		"test": "jest",
 		"test:coverage": "jest --coverage",
 		"lint": "eslint . --ext .ts",

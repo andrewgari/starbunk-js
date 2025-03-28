@@ -81,13 +81,45 @@ data.addSubcommandGroup(group =>
 				)
 				.addStringOption(option =>
 					option
+						.setName('title')
+						.setDescription('Session title')
+						.setRequired(true)
+				)
+				.addStringOption(option =>
+					option
 						.setName('description')
 						.setDescription('Session description')
+				)
+				.addBooleanOption(option =>
+					option
+						.setName('recurring')
+						.setDescription('Whether this is a recurring session')
+				)
+				.addStringOption(option =>
+					option
+						.setName('interval')
+						.setDescription('Recurring interval (if recurring)')
+						.addChoices(
+							{ name: 'Weekly', value: 'weekly' },
+							{ name: 'Biweekly', value: 'biweekly' },
+							{ name: 'Monthly', value: 'monthly' }
+						)
 				)
 				.addStringOption(option =>
 					option
 						.setName('help')
 						.setDescription('Get help about session scheduling')
+				)
+		)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName('skip')
+				.setDescription('Skip a recurring session')
+				.addStringOption(option =>
+					option
+						.setName('date')
+						.setDescription('Date to skip (YYYY-MM-DD)')
+						.setRequired(true)
 				)
 		)
 		.addSubcommand(subcommand =>
@@ -153,8 +185,8 @@ data.addSubcommandGroup(group =>
 		)
 );
 
-export const rpgCommand = {
-	data: data as SlashCommandBuilder,
+export default {
+	data: data.toJSON(),
 	async execute(interaction: ChatInputCommandInteraction): Promise<void> {
 		try {
 			const group = interaction.options.getSubcommandGroup(false);
@@ -206,17 +238,42 @@ export const rpgCommand = {
 						const name = interaction.options.getString('name', true);
 						const systemId = interaction.options.getString('system', true);
 
-						const campaign = await campaignService.createCampaign(
-							name,
-							systemId,
-							interaction.channel!,
-							interaction.user.id
-						);
+						if (!interaction.channel || !('guild' in interaction.channel) || !interaction.channel.guild || !('permissionOverwrites' in interaction.channel)) {
+							await interaction.reply({
+								content: 'This command can only be used in a guild text channel.',
+								ephemeral: true
+							});
+							return;
+						}
 
-						await interaction.reply({
-							content: `Created new campaign: ${campaign.name} (${campaign.system.name} ${campaign.system.version})`,
-							ephemeral: true
-						});
+						const system = SUPPORTED_SYSTEMS[systemId];
+						if (!system) {
+							await interaction.reply({
+								content: `Invalid system ID: ${systemId}. Supported systems are: ${Object.keys(SUPPORTED_SYSTEMS).join(', ')}`,
+								ephemeral: true
+							});
+							return;
+						}
+
+						try {
+							const campaign = await campaignService.createCampaign(
+								interaction.channel,
+								name,
+								system,
+								interaction.user.id
+							);
+
+							await interaction.reply({
+								content: `Created new campaign: ${campaign.name} (${campaign.system.name} ${campaign.system.version})\nVoice channel created for sessions.`,
+								ephemeral: false
+							});
+						} catch (error) {
+							logger.error('Error creating campaign:', error instanceof Error ? error : new Error(String(error)));
+							await interaction.reply({
+								content: 'Failed to create campaign. Please try again later.',
+								ephemeral: true
+							});
+						}
 						break;
 					}
 					case 'set-active': {
@@ -251,7 +308,7 @@ export const rpgCommand = {
 							// Activate the selected campaign and set its channel
 							await campaignService.updateCampaign(campaignId, {
 								isActive: true,
-								channelId: interaction.channelId
+								textChannelId: interaction.channelId
 							});
 
 							await interaction.reply({
@@ -507,18 +564,39 @@ export const rpgCommand = {
 				switch (subcommand) {
 					case 'schedule': {
 						const date = interaction.options.getString('date', true);
+						const title = interaction.options.getString('title', true);
 						const description = interaction.options.getString('description') ?? undefined;
+						const recurring = interaction.options.getBoolean('recurring') ?? undefined;
+						const interval = interaction.options.getString('interval') as 'weekly' | 'biweekly' | 'monthly' | undefined;
 
 						try {
-							await campaignService.scheduleSession(campaign.id, date, description);
+							await campaignService.scheduleSession(campaign.id, date, title, description, recurring, interval);
 							await interaction.reply({
-								content: `Scheduled next session for ${date}${description ? `\nDescription: ${description}` : ''}`,
+								content: `Scheduled next session for ${date}${title ? `\nTitle: ${title}` : ''}${description ? `\nDescription: ${description}` : ''}${recurring ? `\nRecurring: ${recurring ? 'Yes' : 'No'}` : ''}${interval ? `\nInterval: ${interval}` : ''}`,
 								ephemeral: false
 							});
 						} catch (error) {
 							logger.error('Error scheduling session:', error instanceof Error ? error : new Error(String(error)));
 							await interaction.reply({
 								content: 'Failed to schedule session. Please try again later.',
+								ephemeral: true
+							});
+						}
+						break;
+					}
+					case 'skip': {
+						const date = interaction.options.getString('date', true);
+
+						try {
+							await campaignService.skipSession(campaign.id, date);
+							await interaction.reply({
+								content: `Session on ${date} has been skipped.`,
+								ephemeral: false
+							});
+						} catch (error) {
+							logger.error('Error skipping session:', error instanceof Error ? error : new Error(String(error)));
+							await interaction.reply({
+								content: 'Failed to skip session. Please try again later.',
 								ephemeral: true
 							});
 						}

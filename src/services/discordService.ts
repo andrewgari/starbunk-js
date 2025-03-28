@@ -3,6 +3,7 @@ import { Client, Guild, Message, MessageReaction, Role, TextChannel, User, Voice
 import guildIds from "@/discord/guildIds";
 import { BotIdentity } from "@/starbunk/types/botIdentity";
 import { GuildMember } from "discord.js";
+import { logger } from "../services/logger";
 import {
 	ChannelNotFoundError,
 	DiscordServiceError,
@@ -32,7 +33,10 @@ export class DiscordService {
 	private botProfileRefreshInterval: NodeJS.Timeout | null = null;
 
 	private constructor(private readonly client: Client) {
-		this.startBotProfileRefresh();
+		// Wait for ready event before starting bot profile refresh
+		this.client.once('ready', () => {
+			this.startBotProfileRefresh();
+		});
 	}
 
 	private async getOrCreateWebhook(channel: TextChannel): Promise<Webhook> {
@@ -74,18 +78,21 @@ export class DiscordService {
 	}
 
 	private async refreshBotProfiles(): Promise<void> {
-		const guild = this.getGuild(DefaultGuildId);
-		const members = Array.from(guild.members.cache.values());
+		try {
+			const guild = await this.getGuild(DefaultGuildId);
+			if (!guild) {
+				logger.warn(`Default guild ${DefaultGuildId} not found. Bot profile refresh will be skipped.`);
+				return;
+			}
 
-		// Clear existing cache
-		this.botProfileCache.clear();
-
-		// Update cache with fresh data
-		for (const member of members) {
-			this.botProfileCache.set(member.id, {
-				botName: member.nickname ?? member.user.username,
-				avatarUrl: member.displayAvatarURL() ?? member.user.displayAvatarURL()
+			const members = await guild.members.fetch();
+			this.memberCache.clear();
+			members.forEach(member => {
+				this.memberCache.set(member.id, member);
 			});
+			logger.debug(`Refreshed bot profiles for ${members.size} members`);
+		} catch (error) {
+			logger.warn('Failed to refresh bot profiles:', error instanceof Error ? error : new Error(String(error)));
 		}
 	}
 

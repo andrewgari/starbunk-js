@@ -7,7 +7,8 @@ type PrismaCampaign = {
 	id: string;
 	name: string;
 	system: string;
-	channelId: string;
+	textChannelId: string;
+	voiceChannelId: string;
 	gmId: string;
 	adventureId: string | null;
 	isActive: boolean;
@@ -16,14 +17,27 @@ type PrismaCampaign = {
 };
 
 export class SQLiteCampaignRepository implements CampaignRepository {
-	async getMetadata(_campaignId: string): Promise<CampaignMetadata | null> {
-		// This method will be implemented later
-		return null;
+	async getMetadata(campaignId: string): Promise<CampaignMetadata | null> {
+		const campaign = await this.prisma.campaign.findUnique({
+			where: { id: campaignId }
+		});
+
+		if (!campaign || !campaign.metadata) {
+			return null;
+		}
+
+		return JSON.parse(campaign.metadata) as CampaignMetadata;
 	}
 
-	async updateMetadata(_campaignId: string, _metadata: CampaignMetadata): Promise<void> {
-		// This method will be implemented later
+	async updateMetadata(campaignId: string, metadata: CampaignMetadata): Promise<void> {
+		await this.prisma.campaign.update({
+			where: { id: campaignId },
+			data: {
+				metadata: JSON.stringify(metadata)
+			}
+		});
 	}
+
 	constructor(private prisma: PrismaClient) { }
 
 	private toDomainModel(prismaCampaign: PrismaCampaign): Campaign {
@@ -67,7 +81,12 @@ export class SQLiteCampaignRepository implements CampaignRepository {
 
 	async findByChannel(channelId: string): Promise<Campaign | null> {
 		const result = await this.prisma.campaign.findFirst({
-			where: { channelId }
+			where: {
+				OR: [
+					{ textChannelId: channelId },
+					{ voiceChannelId: channelId }
+				]
+			}
 		}) as PrismaCampaign | null;
 
 		if (!result) {

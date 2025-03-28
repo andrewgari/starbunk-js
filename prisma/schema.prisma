@@ -14,20 +14,22 @@ datasource db {
 }
 
 model Campaign {
-  id          String       @id @default(uuid())
-  name        String
-  system      String       // Stored as JSON string
-  channelId   String
-  gmId        String
-  adventureId String?
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id            String       @id @default(uuid())
+  name          String
+  system        String       // Stored as JSON string
+  textChannelId String
+  voiceChannelId String
+  gmId          String
+  adventureId   String?
+  isActive      Boolean      @default(true)
+  metadata      String?      // Stored as JSON string
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
-  messages    Message[]
-  notes       Note[]
-  files       StoredFile[]
-  gameSessions GameSession[]
+  messages      Message[]
+  notes         Note[]
+  files         StoredFile[]
+  gameSessions  GameSession[]
 }
 
 model GameSession {
