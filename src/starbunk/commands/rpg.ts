@@ -494,7 +494,6 @@ export default {
 							await campaignService.updateCampaign(campaignId, {
 								isActive: true,
 								textChannelId: interaction.channelId
-								textChannelId: interaction.channelId
 							});
 
 							await interaction.reply({
