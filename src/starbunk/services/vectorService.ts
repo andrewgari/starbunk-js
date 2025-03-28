@@ -111,14 +111,14 @@ export class VectorService {
 		}
 	): Promise<void> {
 		try {
-			logger.info('[VectorService] Generating vectors from directory...', { 
+			logger.info('[VectorService] Generating vectors from directory...', {
 				directory,
 				isGMContent: options.isGMContent || false,
 				namespace: options.namespace
 			});
 
 			const embeddingService = VectorEmbeddingService.getInstance();
-			
+
 			// Initialize with the specified model if provided
 			if (options.modelName) {
 				await embeddingService.initialize(options.modelName);
@@ -147,13 +147,13 @@ export class VectorService {
 			const embeddings = await embeddingService.generateEmbeddings(texts);
 
 			// Ensure output directory exists
-			const outputDirPath = options.namespace 
+			const outputDirPath = options.namespace
 				? path.join(options.outputDir, options.namespace)
 				: options.outputDir;
 
 			// Save vectors, metadata, and texts
 			await embeddingService.saveVectors(embeddings, metadata, texts, outputDirPath);
-			
+
 			logger.info('[VectorService] Vector generation completed', {
 				directory,
 				outputDir: outputDirPath,
@@ -178,9 +178,7 @@ export class VectorService {
 			await this.fileService.ensureCampaignDirectoryStructure(campaignId);
 			const campaignContextDir = path.join(this.contextDir, campaignId);
 			const campaignBasePath = path.join(this.fileService.getCampaignBasePath(), campaignId);
-			
-			const structure = this.fileService.getCampaignDirectoryStructure(campaignId);
-			
+
 			// Always process player content
 			const playerDir = path.join(campaignBasePath, 'player');
 			if (await this.directoryExists(playerDir)) {
@@ -192,7 +190,7 @@ export class VectorService {
 					...(options.namespace && { namespace: options.namespace })
 				});
 			}
-			
+
 			// Process GM content if requested
 			if (options.includeGMContent) {
 				const gmDir = path.join(campaignBasePath, 'gm');
@@ -210,7 +208,7 @@ export class VectorService {
 			throw VectorServiceError.fromError('Failed to generate vectors', error);
 		}
 	}
-	
+
 	/**
 	 * Check if a directory exists
 	 */
@@ -222,7 +220,7 @@ export class VectorService {
 			return false;
 		}
 	}
-	
+
 	private spawnPythonProcess(args: string[]): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			let errorOutput = '';
