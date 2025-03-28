@@ -1,15 +1,36 @@
+import { GameSystem } from '../../starbunk/types/game';
 import { Campaign, Message, Note, StoredFile, TimeEntry } from '../models';
 
-export type CreateCampaignData = Omit<Campaign, 'id' | 'createdAt' | 'updatedAt'>;
+export type CreateCampaignData = {
+	name: string;
+	system: GameSystem;
+	textChannelId: string;
+	voiceChannelId: string;
+	gmId: string;
+	isActive: boolean;
+	adventureId: string;
+};
 
 export interface CampaignMetadata {
+	name: string;
+	system: GameSystem;
+	textChannelId: string;  // Text channel where commands are issued
+	voiceChannelId: string; // Voice channel for events and voice chat
+	gmId: string;
+	isActive: boolean;
+	adventureId: string;
+	sessions: Array<{
+		title: string;
+		date: string;
+		description?: string;
+		discordEventId?: string;
+		isRecurring?: boolean;
+		recurringInterval?: 'weekly' | 'biweekly' | 'monthly';
+		skippedDates?: string[];
+	}>;
 	characters: Array<{
 		name: string;
 		class: string;
-	}>;
-	sessions: Array<{
-		date: string;
-		description?: string;
 	}>;
 	reminders: Array<{
 		message: string;

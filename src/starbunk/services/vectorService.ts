@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { logger } from '../../services/logger';
 import { CampaignFileService } from './campaignFileService';
+import { VectorEmbeddingService } from './vectorEmbeddingService';
 
 export interface VectorServiceErrorDetails {
 	error: string;
@@ -96,6 +97,132 @@ export class VectorService {
 		return VectorService.instance;
 	}
 
+	/**
+	 * Generate vector embeddings for a directory using TypeScript implementation
+	 */
+	public async generateVectorsFromDirectory(
+		directory: string,
+		options: {
+			isGMContent?: boolean;
+			outputDir: string;
+			modelName?: string;
+			chunkSize?: number;
+			namespace?: string;
+		}
+	): Promise<void> {
+		try {
+			logger.info('[VectorService] Generating vectors from directory...', { 
+				directory,
+				isGMContent: options.isGMContent || false,
+				namespace: options.namespace
+			});
+
+			const embeddingService = VectorEmbeddingService.getInstance();
+			
+			// Initialize with the specified model if provided
+			if (options.modelName) {
+				await embeddingService.initialize(options.modelName);
+			} else {
+				await embeddingService.initialize();
+			}
+
+			// Process the directory to get content with metadata
+			const contentWithMetadata = await embeddingService.processDirectory(
+				directory,
+				options.isGMContent || false,
+				options.chunkSize || 512
+			);
+
+			if (contentWithMetadata.length === 0) {
+				logger.warn('[VectorService] No content found in directory', { directory });
+				return;
+			}
+
+			// Extract texts and metadata
+			const texts = contentWithMetadata.map(item => item.text);
+			const metadata = contentWithMetadata.map(item => item.metadata);
+
+			// Generate embeddings
+			logger.info('[VectorService] Generating embeddings for texts...', { count: texts.length });
+			const embeddings = await embeddingService.generateEmbeddings(texts);
+
+			// Ensure output directory exists
+			const outputDirPath = options.namespace 
+				? path.join(options.outputDir, options.namespace)
+				: options.outputDir;
+
+			// Save vectors, metadata, and texts
+			await embeddingService.saveVectors(embeddings, metadata, texts, outputDirPath);
+			
+			logger.info('[VectorService] Vector generation completed', {
+				directory,
+				outputDir: outputDirPath,
+				textCount: texts.length,
+				embeddingCount: embeddings.length
+			});
+		} catch (error) {
+			throw VectorServiceError.fromError('Failed to generate vectors from directory', error);
+		}
+	}
+
+	public async generateVectors(
+		campaignId: string,
+		options: VectorGenerationOptions = { includeGMContent: false }
+	): Promise<void> {
+		logger.debug('[VectorService] Starting vector generation...', {
+			campaignId,
+			includeGMContent: options.includeGMContent
+		});
+
+		try {
+			await this.fileService.ensureCampaignDirectoryStructure(campaignId);
+			const campaignContextDir = path.join(this.contextDir, campaignId);
+			const campaignBasePath = path.join(this.fileService.getCampaignBasePath(), campaignId);
+			
+			const structure = this.fileService.getCampaignDirectoryStructure(campaignId);
+			
+			// Always process player content
+			const playerDir = path.join(campaignBasePath, 'player');
+			if (await this.directoryExists(playerDir)) {
+				await this.generateVectorsFromDirectory(playerDir, {
+					isGMContent: false,
+					outputDir: campaignContextDir,
+					...(options.modelName && { modelName: options.modelName }),
+					...(options.chunkSize && { chunkSize: options.chunkSize }),
+					...(options.namespace && { namespace: options.namespace })
+				});
+			}
+			
+			// Process GM content if requested
+			if (options.includeGMContent) {
+				const gmDir = path.join(campaignBasePath, 'gm');
+				if (await this.directoryExists(gmDir)) {
+					await this.generateVectorsFromDirectory(gmDir, {
+						isGMContent: true,
+						outputDir: campaignContextDir,
+						...(options.modelName && { modelName: options.modelName }),
+						...(options.chunkSize && { chunkSize: options.chunkSize }),
+						...(options.namespace && { namespace: options.namespace })
+					});
+				}
+			}
+		} catch (error) {
+			throw VectorServiceError.fromError('Failed to generate vectors', error);
+		}
+	}
+	
+	/**
+	 * Check if a directory exists
+	 */
+	private async directoryExists(directory: string): Promise<boolean> {
+		try {
+			const stats = await fs.stat(directory);
+			return stats.isDirectory();
+		} catch (error) {
+			return false;
+		}
+	}
+	
 	private spawnPythonProcess(args: string[]): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			let errorOutput = '';
@@ -130,42 +257,6 @@ export class VectorService {
 				reject(VectorServiceError.fromProcessError(error));
 			});
 		});
-	}
-
-	public async generateVectors(
-		campaignId: string,
-		options: VectorGenerationOptions = { includeGMContent: false }
-	): Promise<void> {
-		logger.debug('[VectorService] Starting vector generation...', {
-			campaignId,
-			includeGMContent: options.includeGMContent
-		});
-
-		try {
-			await this.fileService.ensureCampaignDirectoryStructure(campaignId);
-			const campaignContextDir = path.join(this.contextDir, campaignId);
-
-			const args: string[] = [
-				path.join(process.cwd(), 'scripts', 'generate_vectors.py'),
-				'--campaign-dir', path.join(this.fileService.getCampaignBasePath(), campaignId),
-				'--context-dir', campaignContextDir,
-				'--include-gm', options.includeGMContent ? 'true' : 'false'
-			];
-
-			if (options.modelName) {
-				args.push('--model-name', options.modelName);
-			}
-			if (options.chunkSize) {
-				args.push('--chunk-size', options.chunkSize.toString());
-			}
-			if (options.namespace) {
-				args.push('--namespace', options.namespace);
-			}
-
-			await this.spawnPythonProcess(args);
-		} catch (error) {
-			throw VectorServiceError.fromError('Failed to generate vectors', error);
-		}
 	}
 
 	public async generateVectorsFromTexts(

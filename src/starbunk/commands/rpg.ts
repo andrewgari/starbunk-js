@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import {
 	ChatInputCommandInteraction,
 	GuildMember,
@@ -6,9 +8,12 @@ import {
 } from 'discord.js';
 import { logger } from '../../services/logger';
 import { CampaignService } from '../services/campaignService';
+import { CampaignFileService } from '../services/campaignFileService';
 import { GameContentService } from '../services/gameContentService';
 import { HelpService } from '../services/helpService';
-import { VectorService } from '../services/vectorService';
+import { VectorService, VectorGenerationOptions } from '../services/vectorService';
+import { VectorEmbeddingService } from '../services/vectorEmbeddingService';
+import { NoteService } from '../services/noteService';
 import { SUPPORTED_SYSTEMS } from '../types/game';
 import { getCampaignContext, getCampaignPermissions } from '../utils/campaignChecks';
 
@@ -81,13 +86,45 @@ data.addSubcommandGroup(group =>
 				)
 				.addStringOption(option =>
 					option
+						.setName('title')
+						.setDescription('Session title')
+						.setRequired(true)
+				)
+				.addStringOption(option =>
+					option
 						.setName('description')
 						.setDescription('Session description')
+				)
+				.addBooleanOption(option =>
+					option
+						.setName('recurring')
+						.setDescription('Whether this is a recurring session')
+				)
+				.addStringOption(option =>
+					option
+						.setName('interval')
+						.setDescription('Recurring interval (if recurring)')
+						.addChoices(
+							{ name: 'Weekly', value: 'weekly' },
+							{ name: 'Biweekly', value: 'biweekly' },
+							{ name: 'Monthly', value: 'monthly' }
+						)
 				)
 				.addStringOption(option =>
 					option
 						.setName('help')
 						.setDescription('Get help about session scheduling')
+				)
+		)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName('skip')
+				.setDescription('Skip a recurring session')
+				.addStringOption(option =>
+					option
+						.setName('date')
+						.setDescription('Date to skip (YYYY-MM-DD)')
+						.setRequired(true)
 				)
 		)
 		.addSubcommand(subcommand =>
@@ -153,8 +190,122 @@ data.addSubcommandGroup(group =>
 		)
 );
 
-export const rpgCommand = {
-	data: data as SlashCommandBuilder,
+// Game Management Commands
+data.addSubcommandGroup(group =>
+	group
+		.setName('game')
+		.setDescription('Game management commands')
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName('create')
+				.setDescription('Create a new game session')
+				.addStringOption(option =>
+					option
+						.setName('name')
+						.setDescription('Game session name')
+						.setRequired(true)
+				)
+		)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName('ask')
+				.setDescription('Ask a question about the game')
+				.addStringOption(option =>
+					option
+						.setName('question')
+						.setDescription('The question to ask')
+						.setRequired(true)
+				)
+		)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName('ask-gm')
+				.setDescription('Ask a GM-only question about the game')
+				.addStringOption(option =>
+					option
+						.setName('question')
+						.setDescription('The question to ask')
+						.setRequired(true)
+				)
+		)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName('note')
+				.setDescription('Add a note that will be saved as vector embedding')
+				.addStringOption(option =>
+					option
+						.setName('content')
+						.setDescription('The content of the note')
+						.setRequired(true)
+				)
+				.addStringOption(option =>
+					option
+						.setName('tags')
+						.setDescription('Optional comma-separated tags')
+				)
+		)
+);
+
+// Vector Management Commands
+data.addSubcommandGroup(group =>
+	group
+		.setName('vector')
+		.setDescription('Vector database management commands')
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName('build')
+				.setDescription('Build vector database from campaign documents')
+				.addBooleanOption(option =>
+					option
+						.setName('include_gm')
+						.setDescription('Include GM-only content')
+				)
+				.addStringOption(option =>
+					option
+						.setName('model')
+						.setDescription('Vector model to use')
+				)
+				.addIntegerOption(option =>
+					option
+						.setName('chunk_size')
+						.setDescription('Size of text chunks')
+				)
+		)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName('directory')
+				.setDescription('Convert all documents in a directory to vector embeddings')
+				.addStringOption(option =>
+					option
+						.setName('path')
+						.setDescription('Directory path (relative to campaign dir)')
+						.setRequired(true)
+				)
+				.addBooleanOption(option =>
+					option
+						.setName('is_gm')
+						.setDescription('Mark as GM-only content')
+				)
+				.addStringOption(option =>
+					option
+						.setName('model')
+						.setDescription('Vector model to use')
+				)
+				.addIntegerOption(option =>
+					option
+						.setName('chunk_size')
+						.setDescription('Size of text chunks')
+				)
+				.addStringOption(option =>
+					option
+						.setName('namespace')
+						.setDescription('Custom namespace for the vectors')
+				)
+		)
+);
+
+export default {
+	data: data.toJSON(),
 	async execute(interaction: ChatInputCommandInteraction): Promise<void> {
 		try {
 			const group = interaction.options.getSubcommandGroup(false);
@@ -194,6 +345,7 @@ export const rpgCommand = {
 			// Campaign Management Commands
 			if (group === 'campaign') {
 				switch (subcommand) {
+
 					case 'create': {
 						if (!permissions.canManageCampaign) {
 							await interaction.reply({
@@ -206,17 +358,42 @@ export const rpgCommand = {
 						const name = interaction.options.getString('name', true);
 						const systemId = interaction.options.getString('system', true);
 
-						const campaign = await campaignService.createCampaign(
-							name,
-							systemId,
-							interaction.channel!,
-							interaction.user.id
-						);
+						if (!interaction.channel || !('guild' in interaction.channel) || !interaction.channel.guild || !('permissionOverwrites' in interaction.channel)) {
+							await interaction.reply({
+								content: 'This command can only be used in a guild text channel.',
+								ephemeral: true
+							});
+							return;
+						}
 
-						await interaction.reply({
-							content: `Created new campaign: ${campaign.name} (${campaign.system.name} ${campaign.system.version})`,
-							ephemeral: true
-						});
+						const system = SUPPORTED_SYSTEMS[systemId];
+						if (!system) {
+							await interaction.reply({
+								content: `Invalid system ID: ${systemId}. Supported systems are: ${Object.keys(SUPPORTED_SYSTEMS).join(', ')}`,
+								ephemeral: true
+							});
+							return;
+						}
+
+						try {
+							const campaign = await campaignService.createCampaign(
+								interaction.channel,
+								name,
+								system,
+								interaction.user.id
+							);
+
+							await interaction.reply({
+								content: `Created new campaign: ${campaign.name} (${campaign.system.name} ${campaign.system.version})\nVoice channel created for sessions.`,
+								ephemeral: false
+							});
+						} catch (error) {
+							logger.error('Error creating campaign:', error instanceof Error ? error : new Error(String(error)));
+							await interaction.reply({
+								content: 'Failed to create campaign. Please try again later.',
+								ephemeral: true
+							});
+						}
 						break;
 					}
 					case 'set-active': {
@@ -251,7 +428,7 @@ export const rpgCommand = {
 							// Activate the selected campaign and set its channel
 							await campaignService.updateCampaign(campaignId, {
 								isActive: true,
-								channelId: interaction.channelId
+								textChannelId: interaction.channelId
 							});
 
 							await interaction.reply({
@@ -349,39 +526,13 @@ export const rpgCommand = {
 				}
 
 				switch (subcommand) {
+
 					case 'build': {
-						// Check if user has GM permissions
-						if (!permissions.canManageCampaign) {
-							await interaction.reply({
-								content: 'Only GMs can build the vector database.',
-								ephemeral: true
-							});
-							return;
-						}
-
-						await interaction.deferReply({ ephemeral: true });
-
-						try {
-							const includeGM = interaction.options.getBoolean('include_gm') ?? false;
-							const model = interaction.options.getString('model');
-							const chunkSize = interaction.options.getInteger('chunk_size');
-
-							const vectorService = VectorService.getInstance();
-							await vectorService.generateVectors(campaign.id, {
-								includeGMContent: includeGM,
-								...(model && { modelName: model }),
-								...(chunkSize && { chunkSize })
-							});
-
-							await interaction.editReply({
-								content: `Successfully built vector database for campaign "${campaign.name}".${includeGM ? ' GM content included.' : ''}`
-							});
-						} catch (error) {
-							logger.error('Error building vector database:', error instanceof Error ? error : new Error(String(error)));
-							await interaction.editReply({
-								content: 'Failed to build vector database. Please check the logs for details.'
-							});
-						}
+						// Inform user of the new command
+						await interaction.reply({
+							content: 'The build command has been moved to `/rpg vector build`. Please use the new command.',
+							ephemeral: true
+						});
 						break;
 					}
 					case 'create': {
@@ -494,6 +645,119 @@ export const rpgCommand = {
 				return;
 			}
 
+			// Vector Management Commands
+			if (group === 'vector') {
+				// Check if user has GM permissions
+				if (!permissions.canManageCampaign) {
+					await interaction.reply({
+						content: 'Only GMs can manage the vector database.',
+						ephemeral: true
+					});
+					return;
+				}
+
+				// Validate campaign context
+				const campaign = await campaignService.getCampaignByChannel(interaction.channelId);
+				if (!campaign) {
+					await interaction.reply({
+						content: 'This channel is not associated with any active campaign. Use `/rpg campaign create` to create one.',
+						ephemeral: true
+					});
+					return;
+				}
+
+				switch (subcommand) {
+
+					case 'build': {
+						await interaction.deferReply({ ephemeral: true });
+
+						try {
+							const includeGM = interaction.options.getBoolean('include_gm') ?? false;
+							const model = interaction.options.getString('model');
+							const chunkSize = interaction.options.getInteger('chunk_size');
+
+							const vectorService = VectorService.getInstance();
+							await vectorService.generateVectors(campaign.id, {
+								includeGMContent: includeGM,
+								...(model && { modelName: model }),
+								...(chunkSize && { chunkSize })
+							});
+
+							await interaction.editReply({
+								content: `Successfully built vector database for campaign "${campaign.name}".${includeGM ? ' GM content included.' : ''}`
+							});
+						} catch (error) {
+							logger.error('Error building vector database:', error instanceof Error ? error : new Error(String(error)));
+							await interaction.editReply({
+								content: 'Failed to build vector database. Please check the logs for details.'
+							});
+						}
+						break;
+					}
+					case 'directory': {
+						await interaction.deferReply({ ephemeral: true });
+
+						try {
+							const dirPath = interaction.options.getString('path', true);
+							const isGM = interaction.options.getBoolean('is_gm') ?? false;
+							const model = interaction.options.getString('model');
+							const chunkSize = interaction.options.getInteger('chunk_size');
+							const namespace = interaction.options.getString('namespace');
+
+							// Get the campaign file service to resolve paths
+							const fileService = CampaignFileService.getInstance();
+							const campaignBasePath = path.join(fileService.getCampaignBasePath(), campaign.id);
+							const dirFullPath = path.join(campaignBasePath, dirPath);
+							
+							// Validate that the directory exists
+							try {
+								await fs.access(dirFullPath);
+							} catch (error) {
+								await interaction.editReply({
+									content: `Directory "${dirPath}" does not exist in campaign ${campaign.id}.`
+								});
+								return;
+							}
+
+							// Use a custom namespace if provided, otherwise generate one
+							const vectorNamespace = namespace || `${campaign.id}_${dirPath.replace(/[^a-zA-Z0-9]/g, '_')}`; 
+
+							// Use the TypeScript implementation
+							const vectorService = VectorService.getInstance();
+							const contextDir = path.join(process.cwd(), 'data', 'llm_context');
+							
+							try {
+								await vectorService.generateVectorsFromDirectory(dirFullPath, {
+									isGMContent: isGM,
+									outputDir: contextDir,
+									namespace: vectorNamespace,
+									...(model && { modelName: model }),
+									...(chunkSize && { chunkSize })
+								});
+								
+								await interaction.editReply({
+									content: `Successfully created vector embeddings for "${dirPath}" in campaign "${campaign.name}".
+${isGM ? 'Content marked as GM-only.' : ''}
+Namespace: ${vectorNamespace}`
+								});
+							} catch (error) {
+								logger.error('Vector generation error:', error instanceof Error ? error : new Error(String(error)));
+								await interaction.editReply({
+									content: `Failed to create vector embeddings. Please check the logs for details.`
+								});
+							}
+						} catch (error) {
+							logger.error('Error creating vector embeddings:', error instanceof Error ? error : new Error(String(error)));
+							await interaction.editReply({
+								content: 'Failed to create vector embeddings. Please check the logs for details.'
+							});
+						}
+						break;
+					}
+				}
+				return;
+			}
+
 			// Session Management Commands
 			if (group === 'session') {
 				if (!permissions.canManageCampaign) {
@@ -505,20 +769,42 @@ export const rpgCommand = {
 				}
 
 				switch (subcommand) {
+
 					case 'schedule': {
 						const date = interaction.options.getString('date', true);
+						const title = interaction.options.getString('title', true);
 						const description = interaction.options.getString('description') ?? undefined;
+						const recurring = interaction.options.getBoolean('recurring') ?? undefined;
+						const interval = interaction.options.getString('interval') as 'weekly' | 'biweekly' | 'monthly' | undefined;
 
 						try {
-							await campaignService.scheduleSession(campaign.id, date, description);
+							await campaignService.scheduleSession(campaign.id, date, title, description, recurring, interval);
 							await interaction.reply({
-								content: `Scheduled next session for ${date}${description ? `\nDescription: ${description}` : ''}`,
+								content: `Scheduled next session for ${date}${title ? `\nTitle: ${title}` : ''}${description ? `\nDescription: ${description}` : ''}${recurring ? `\nRecurring: ${recurring ? 'Yes' : 'No'}` : ''}${interval ? `\nInterval: ${interval}` : ''}`,
 								ephemeral: false
 							});
 						} catch (error) {
 							logger.error('Error scheduling session:', error instanceof Error ? error : new Error(String(error)));
 							await interaction.reply({
 								content: 'Failed to schedule session. Please try again later.',
+								ephemeral: true
+							});
+						}
+						break;
+					}
+					case 'skip': {
+						const date = interaction.options.getString('date', true);
+
+						try {
+							await campaignService.skipSession(campaign.id, date);
+							await interaction.reply({
+								content: `Session on ${date} has been skipped.`,
+								ephemeral: false
+							});
+						} catch (error) {
+							logger.error('Error skipping session:', error instanceof Error ? error : new Error(String(error)));
+							await interaction.reply({
+								content: 'Failed to skip session. Please try again later.',
 								ephemeral: true
 							});
 						}
@@ -550,6 +836,7 @@ export const rpgCommand = {
 			// Character Management Commands
 			if (group === 'character') {
 				switch (subcommand) {
+
 					case 'create': {
 						if (!permissions.canManageCampaign) {
 							await interaction.reply({

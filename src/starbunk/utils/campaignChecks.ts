@@ -85,8 +85,8 @@ export async function getCampaignPermissions(context: CampaignContext): Promise<
 	const campaignService = CampaignService.getInstance();
 	const campaigns = await campaignService.getActiveCampaigns();
 	const campaign = campaigns.find(c =>
-		(context.campaign === 'hotsprings' && c.channelId === channelIds.Campaigns.HotSprings) ||
-		(context.campaign === 'madmage' && c.channelId === channelIds.Campaigns.MadMage)
+		(context.campaign === 'hotsprings' && c.textChannelId === channelIds.Campaigns.HotSprings) ||
+		(context.campaign === 'madmage' && c.textChannelId === channelIds.Campaigns.MadMage)
 	);
 
 	return {

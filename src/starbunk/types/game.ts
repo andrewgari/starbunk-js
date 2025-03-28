@@ -10,7 +10,8 @@ export interface Campaign {
 	name: string;
 	system: GameSystem;
 	gmId: string;
-	channelId: string;
+	textChannelId: string;
+	voiceChannelId: string;
 	adventureId: string;
 	isActive: boolean;
 	createdAt: Date;
