@@ -147,17 +147,15 @@ jest.mock('discord.js', () => {
 	};
 });
 
-import { BotRegistry } from '../bots/botRegistry';
-import StarbunkClient from '../starbunkClient';
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
 import { container } from '../../services/container';
 import { CommandHandler } from '../commandHandler';
 
 describe('Starbunk startup', () => {
 	const { loadStrategyBots } = require('../bots/strategy-loader');
 	const { loadVoiceBots } = require('../bots/voice-loader');
-	
+
 	// Reset all mocks before each test
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -168,14 +166,14 @@ describe('Starbunk startup', () => {
 		it('should load all reply bots successfully', async () => {
 			// Call loadStrategyBots directly to test bot loading
 			const replyBots = await loadStrategyBots();
-			
+
 			// Verify that loadStrategyBots was called
 			expect(loadStrategyBots).toHaveBeenCalled();
-			
+
 			// Verify that bots are returned
 			expect(replyBots).toBeDefined();
 			expect(replyBots.length).toBe(4); // We mocked 4 bots
-			
+
 			// Check if each bot has the expected name
 			const botNames = replyBots.map((bot: any) => bot.defaultBotName);
 			expect(botNames).toContain('BabyBot');
@@ -183,18 +181,18 @@ describe('Starbunk startup', () => {
 			expect(botNames).toContain('BlueBot');
 			expect(botNames).toContain('ChaosBot');
 		});
-		
+
 		it('should load all voice bots successfully', async () => {
 			// Call loadVoiceBots directly to test bot loading
 			const voiceBots = await loadVoiceBots();
-			
+
 			// Verify that loadVoiceBots was called
 			expect(loadVoiceBots).toHaveBeenCalled();
-			
+
 			// Verify that bots are returned
 			expect(voiceBots).toBeDefined();
 			expect(voiceBots.length).toBe(2); // We mocked 2 voice bots
-			
+
 			// Check if each bot has the expected name
 			const botNames = voiceBots.map((bot: any) => bot.name);
 			expect(botNames).toContain('VoiceBot1');
@@ -209,27 +207,27 @@ describe('Starbunk startup', () => {
 			const commandFiles = fs.readdirSync(commandsDir)
 				.filter(file => file.endsWith('.ts') || file.endsWith('.js'))
 				.filter(file => !file.startsWith('adapter') && !file.includes('__tests__'));
-			
+
 			// Our mock fs returns three command files
 			expect(commandFiles).toHaveLength(3);
 			expect(commandFiles).toContain('ping.ts');
 			expect(commandFiles).toContain('bot.ts');
 			expect(commandFiles).toContain('debug.ts');
 		});
-		
+
 		it('should register all commands in CommandHandler', async () => {
 			// Create a new command handler instance
 			const mockCommandHandler = new CommandHandler();
-			
+
 			// Call registerCommands directly
 			await mockCommandHandler.registerCommands();
-			
+
 			// Verify command registration by checking if the registerCommands function was called
 			expect(mockCommandHandler.registerCommands).toHaveBeenCalled();
-			
+
 			// Access the commands map using type assertion to avoid TypeScript errors
 			const commandsMap = (mockCommandHandler as any).commands;
-			
+
 			// Verify the mock CommandHandler's commands map
 			expect(commandsMap).toBeDefined();
 			expect(commandsMap.size).toBe(3);
