@@ -140,6 +140,53 @@ const data = new SlashCommandBuilder()
 							.setDescription('Get help with this command')
 					)
 			)
+	)
+	.addSubcommandGroup(group =>
+		group
+			.setName('session')
+			.setDescription('Session management commands')
+			.addSubcommand(subcommand =>
+				subcommand
+					.setName('schedule')
+					.setDescription('Schedule a gaming session')
+					.addStringOption(option =>
+						option
+							.setName('date')
+							.setDescription('Session date and time (YYYY-MM-DD HH:mm)')
+							.setRequired(true)
+					)
+					.addStringOption(option =>
+						option
+							.setName('title')
+							.setDescription('Session title')
+							.setRequired(true)
+					)
+					.addStringOption(option =>
+						option
+							.setName('description')
+							.setDescription('Session description')
+					)
+					.addBooleanOption(option =>
+						option
+							.setName('recurring')
+							.setDescription('Whether this is a recurring session')
+					)
+					.addStringOption(option =>
+						option
+							.setName('interval')
+							.setDescription('Recurring interval (if recurring)')
+							.addChoices(
+								{ name: 'Weekly', value: 'weekly' },
+								{ name: 'Biweekly', value: 'biweekly' },
+								{ name: 'Monthly', value: 'monthly' }
+							)
+					)
+					.addStringOption(option =>
+						option
+							.setName('help')
+							.setDescription('Get help with this command')
+					)
+			)
 	);
 
 export default {
@@ -391,6 +438,66 @@ export default {
 							logger.error('Error answering game question:', error instanceof Error ? error : new Error(String(error)));
 							await interaction.editReply({
 								content: 'Failed to answer your question. Please try again later.'
+							});
+						}
+						break;
+					}
+				}
+			}
+
+			// Session Management Commands
+			if (group === 'session') {
+				switch (subcommand) {
+					case 'schedule': {
+						if (!permissions.canManageCampaign) {
+							await interaction.reply({
+								content: 'Only GMs can schedule sessions.',
+								ephemeral: true
+							});
+							return;
+						}
+
+						if (!activeCampaign) {
+							await interaction.reply({
+								content: 'No active campaign in this channel.',
+								ephemeral: true
+							});
+							return;
+						}
+
+						const date = interaction.options.getString('date', true);
+						const title = interaction.options.getString('title', true);
+						const description = interaction.options.getString('description');
+						const isRecurring = interaction.options.getBoolean('recurring') ?? false;
+						const recurringInterval = isRecurring ? interaction.options.getString('interval') as 'weekly' | 'biweekly' | 'monthly' | null : null;
+
+						if (isRecurring && !recurringInterval) {
+							await interaction.reply({
+								content: 'Please specify a recurring interval (weekly, biweekly, or monthly) for recurring sessions.',
+								ephemeral: true
+							});
+							return;
+						}
+
+						try {
+							await campaignService.scheduleSession(
+								activeCampaign.id,
+								date,
+								title,
+								description ?? undefined,
+								isRecurring,
+								recurringInterval ?? undefined
+							);
+
+							await interaction.reply({
+								content: `Session "${title}" scheduled for ${date}${isRecurring ? ` (recurring ${recurringInterval})` : ''}.`,
+								ephemeral: false
+							});
+						} catch (error) {
+							logger.error('Error scheduling session:', error instanceof Error ? error : new Error(String(error)));
+							await interaction.reply({
+								content: 'Failed to schedule session. Please check the date format (YYYY-MM-DD HH:mm) and try again.',
+								ephemeral: true
 							});
 						}
 						break;
