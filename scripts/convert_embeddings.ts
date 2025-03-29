@@ -79,7 +79,10 @@ async function processDocumentToVector(
 
 		// Create namespace based on file path
 		const relativeToType = path.relative(path.join(CAMPAIGNS_DIR, campaignId), filePath);
-		const dirName = path.dirname(relativeToType);
+		let dirName = path.dirname(relativeToType);
+		if (dirName === '.') {
+			dirName = '';
+		}
 		const namespace = `${campaignId}_${dirName.replace(/[\\]/g, '_')}`;
 
 		// Determine vector output location
