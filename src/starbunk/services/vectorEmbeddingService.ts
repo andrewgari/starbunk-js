@@ -4,6 +4,12 @@ import * as path from 'path';
 import { logger } from '../../services/logger';
 import { TextWithMetadata, VectorMetadata } from './vectorService';
 
+export interface LoadedVectors {
+	vectors: Float32Array[];
+	metadata: VectorMetadata[];
+	texts: string[];
+}
+
 /**
  * Service for generating vector embeddings from text using TypeScript
  */
@@ -242,6 +248,40 @@ export class VectorEmbeddingService {
 		} catch (error) {
 			logger.error('[VectorEmbeddingService] Error saving vectors:', error instanceof Error ? error : new Error(String(error)));
 			throw new Error(`Error saving vectors: ${error}`);
+		}
+	}
+
+	/**
+	 * Load vectors from a directory
+	 */
+	public async loadVectors(directory: string): Promise<LoadedVectors> {
+		try {
+			// Read vectors
+			const vectorsJson = await fs.readFile(
+				path.join(directory, 'vectors.json'),
+				'utf-8'
+			);
+			const vectorsArray = JSON.parse(vectorsJson) as number[][];
+			const vectors = vectorsArray.map(arr => new Float32Array(arr));
+
+			// Read metadata
+			const metadataJson = await fs.readFile(
+				path.join(directory, 'metadata.json'),
+				'utf-8'
+			);
+			const metadata = JSON.parse(metadataJson) as VectorMetadata[];
+
+			// Read texts
+			const textsJson = await fs.readFile(
+				path.join(directory, 'texts.json'),
+				'utf-8'
+			);
+			const texts = JSON.parse(textsJson) as string[];
+
+			return { vectors, metadata, texts };
+		} catch (error) {
+			logger.error('[VectorEmbeddingService] Error loading vectors:', error instanceof Error ? error : new Error(String(error)));
+			throw new Error(`Error loading vectors: ${error}`);
 		}
 	}
 }

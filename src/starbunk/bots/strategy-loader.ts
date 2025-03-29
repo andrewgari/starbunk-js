@@ -14,6 +14,16 @@ export async function loadStrategyBots(): Promise<ReplyBot[]> {
 	const loadedBots: ReplyBot[] = [];
 
 	try {
+		// Initialize CovaBot first
+		try {
+			const { initializeCovaBot } = require('./strategy-bots/cova-bot');
+			await initializeCovaBot();
+			logger.info('CovaBot initialization complete');
+		} catch (error) {
+			logger.error('Failed to initialize CovaBot:', error instanceof Error ? error : new Error(String(error)));
+			// Continue loading other bots even if CovaBot fails
+		}
+
 		const isDev = process.env.NODE_ENV === 'development';
 		const isTsNode = process.argv[0].includes('ts-node') ||
 			(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));

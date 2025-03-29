@@ -1,4 +1,3 @@
-import { ChildProcess, spawn } from 'child_process';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { logger } from '../../services/logger';
@@ -23,28 +22,6 @@ export class VectorServiceError extends Error {
 	static fromError(message: string, error: unknown): VectorServiceError {
 		return new VectorServiceError(message, {
 			error: error instanceof Error ? error.message : String(error),
-			status: 'error'
-		});
-	}
-
-	static fromProcessError(error: unknown): VectorServiceError {
-		if (error instanceof Error) {
-			try {
-				const parsedError = JSON.parse(error.message);
-				return new VectorServiceError('Python process error', {
-					error: parsedError.error || error.message,
-					status: parsedError.status || 'error',
-					code: parsedError.code
-				});
-			} catch {
-				return new VectorServiceError('Python process error', {
-					error: error.message,
-					status: 'error'
-				});
-			}
-		}
-		return new VectorServiceError('Python process error', {
-			error: String(error),
 			status: 'error'
 		});
 	}
@@ -74,19 +51,15 @@ export interface TextWithMetadata {
 	metadata: VectorMetadata;
 }
 
-interface PythonProcessResult {
-	error?: string;
-	status?: string;
-	results?: VectorSearchResult[];
-}
-
 export class VectorService {
 	private static instance: VectorService | null = null;
 	private readonly fileService: CampaignFileService;
 	private readonly contextDir: string;
+	private readonly embeddingService: VectorEmbeddingService;
 
 	private constructor() {
 		this.fileService = CampaignFileService.getInstance();
+		this.embeddingService = VectorEmbeddingService.getInstance();
 		this.contextDir = process.env.VECTOR_CONTEXT_DIR || path.join(process.cwd(), 'data', 'llm_context');
 	}
 
@@ -98,7 +71,7 @@ export class VectorService {
 	}
 
 	/**
-	 * Generate vector embeddings for a directory using TypeScript implementation
+	 * Generate vector embeddings for a directory
 	 */
 	public async generateVectorsFromDirectory(
 		directory: string,
@@ -117,17 +90,15 @@ export class VectorService {
 				namespace: options.namespace
 			});
 
-			const embeddingService = VectorEmbeddingService.getInstance();
-
 			// Initialize with the specified model if provided
 			if (options.modelName) {
-				await embeddingService.initialize(options.modelName);
+				await this.embeddingService.initialize(options.modelName);
 			} else {
-				await embeddingService.initialize();
+				await this.embeddingService.initialize();
 			}
 
 			// Process the directory to get content with metadata
-			const contentWithMetadata = await embeddingService.processDirectory(
+			const contentWithMetadata = await this.embeddingService.processDirectory(
 				directory,
 				options.isGMContent || false,
 				options.chunkSize || 512
@@ -144,7 +115,7 @@ export class VectorService {
 
 			// Generate embeddings
 			logger.info('[VectorService] Generating embeddings for texts...', { count: texts.length });
-			const embeddings = await embeddingService.generateEmbeddings(texts);
+			const embeddings = await this.embeddingService.generateEmbeddings(texts);
 
 			// Ensure output directory exists
 			const outputDirPath = options.namespace
@@ -152,7 +123,7 @@ export class VectorService {
 				: options.outputDir;
 
 			// Save vectors, metadata, and texts
-			await embeddingService.saveVectors(embeddings, metadata, texts, outputDirPath);
+			await this.embeddingService.saveVectors(embeddings, metadata, texts, outputDirPath);
 
 			logger.info('[VectorService] Vector generation completed', {
 				directory,
@@ -204,87 +175,45 @@ export class VectorService {
 					});
 				}
 			}
+
+			logger.info('[VectorService] Vector generation completed for campaign', { campaignId });
 		} catch (error) {
 			throw VectorServiceError.fromError('Failed to generate vectors', error);
 		}
 	}
 
-	/**
-	 * Check if a directory exists
-	 */
 	private async directoryExists(directory: string): Promise<boolean> {
 		try {
 			const stats = await fs.stat(directory);
 			return stats.isDirectory();
-		} catch (error) {
+		} catch {
 			return false;
 		}
-	}
-
-	private spawnPythonProcess(args: string[]): Promise<void> {
-		return new Promise<void>((resolve, reject) => {
-			let errorOutput = '';
-			const pythonProcess: ChildProcess = spawn('python3', args);
-
-			if (!pythonProcess.stderr || !pythonProcess.stdout) {
-				reject(new VectorServiceError('Failed to spawn Python process', {
-					error: 'Process streams not available',
-					status: 'error'
-				}));
-				return;
-			}
-
-			pythonProcess.stderr.on('data', (data: Buffer) => {
-				errorOutput += data.toString();
-			});
-
-			pythonProcess.on('close', (code: number | null) => {
-				if (code !== 0) {
-					try {
-						const parsedError = JSON.parse(errorOutput);
-						reject(VectorServiceError.fromProcessError(new Error(parsedError.error || errorOutput)));
-					} catch {
-						reject(VectorServiceError.fromProcessError(new Error(errorOutput || 'Unknown Python process error')));
-					}
-				} else {
-					resolve();
-				}
-			});
-
-			pythonProcess.on('error', (error: Error) => {
-				reject(VectorServiceError.fromProcessError(error));
-			});
-		});
 	}
 
 	public async generateVectorsFromTexts(
 		namespace: string,
 		texts: readonly TextWithMetadata[]
 	): Promise<void> {
-		const tempDir = path.join(process.cwd(), 'data', 'temp');
-		const tempFile = path.join(tempDir, `${namespace}_texts.json`);
-		const contextDir = path.join(process.cwd(), 'data', 'vectors', namespace);
-
 		try {
-			await fs.mkdir(tempDir, { recursive: true });
-			await fs.writeFile(tempFile, JSON.stringify(texts), 'utf-8');
+			const contextDir = path.join(process.cwd(), 'data', 'vectors', namespace);
+			await fs.mkdir(contextDir, { recursive: true });
 
-			const args: string[] = [
-				path.join(process.cwd(), 'scripts', 'generate_vectors.py'),
-				'--text-file', tempFile,
-				'--context-dir', contextDir,
-				'--namespace', namespace
-			];
+			const textContents = texts.map(item => item.text);
+			const metadata = texts.map(item => item.metadata);
 
-			await this.spawnPythonProcess(args);
+			// Generate embeddings
+			const embeddings = await this.embeddingService.generateEmbeddings(textContents);
+
+			// Save vectors, metadata, and texts
+			await this.embeddingService.saveVectors(embeddings, metadata, textContents, contextDir);
+
+			logger.info('[VectorService] Vector generation completed for texts', {
+				namespace,
+				textCount: texts.length
+			});
 		} catch (error) {
 			throw VectorServiceError.fromError('Failed to generate vectors from texts', error);
-		} finally {
-			try {
-				await fs.unlink(tempFile);
-			} catch (error) {
-				logger.warn('[VectorService] Failed to clean up temporary file:', { error });
-			}
 		}
 	}
 
@@ -293,89 +222,46 @@ export class VectorService {
 		query: string,
 		limit = 5
 	): Promise<VectorSearchResult[]> {
-		const contextDir = path.join(process.cwd(), 'data', 'vectors', namespace);
+		try {
+			const contextDir = path.join(process.cwd(), 'data', 'vectors', namespace);
 
-		return new Promise<VectorSearchResult[]>((resolve, reject) => {
-			const args = [
-				path.join(process.cwd(), 'scripts', 'search_vectors.py'),
-				'--context-dir', contextDir,
-				'--query', query,
-				'--limit', limit.toString()
-			] as const;
+			// Load vectors, metadata, and texts
+			const { vectors, metadata, texts } = await this.embeddingService.loadVectors(contextDir);
 
-			const pythonProcess: ChildProcess = spawn('python3', args);
-			let stdout = '';
-			let stderr = '';
+			// Generate query vector
+			const queryVector = (await this.embeddingService.generateEmbeddings([query]))[0];
 
-			if (!pythonProcess.stdout || !pythonProcess.stderr) {
-				reject(new VectorServiceError('Failed to spawn Python process', {
-					error: 'Process streams not available',
-					status: 'error'
-				}));
-				return;
-			}
+			// Calculate similarities
+			const similarities = vectors.map((vec: Float32Array) => this.embeddingService.calculateCosineSimilarity(vec, queryVector));
 
-			pythonProcess.stdout.on('data', (data: Buffer) => {
-				stdout += data.toString();
-			});
+			// Get top k results
+			const topIndices = this.getTopKIndices(similarities, limit);
 
-			pythonProcess.stderr.on('data', (data: Buffer) => {
-				stderr += data.toString();
-			});
+			// Format results
+			return topIndices.map(idx => ({
+				text: texts[idx],
+				metadata: metadata[idx],
+				similarity: similarities[idx]
+			}));
+		} catch (error) {
+			throw VectorServiceError.fromError('Failed to find similar texts', error);
+		}
+	}
 
-			pythonProcess.on('close', (code: number | null) => {
-				if (code === 0) {
-					try {
-						const result = JSON.parse(stdout) as PythonProcessResult;
-						if (result.error) {
-							reject(VectorServiceError.fromProcessError(new Error(result.error)));
-						} else if (result.results) {
-							resolve(result.results);
-						} else {
-							reject(VectorServiceError.fromProcessError(new Error('Invalid response format')));
-						}
-					} catch (error) {
-						reject(VectorServiceError.fromProcessError(new Error(stderr || 'Failed to parse Python output')));
-					}
-				} else {
-					reject(VectorServiceError.fromProcessError(new Error(stderr || 'Python process failed')));
-				}
-			});
-
-			pythonProcess.on('error', (error: Error) => {
-				reject(VectorServiceError.fromProcessError(error));
-			});
-		});
+	private getTopKIndices(arr: number[], k: number): number[] {
+		return arr
+			.map((value, index) => ({ value, index }))
+			.sort((a, b) => b.value - a.value)
+			.slice(0, k)
+			.map(item => item.index);
 	}
 
 	public async vectorizeCampaignContent(
 		campaignId: string,
 		options: VectorGenerationOptions = { includeGMContent: false }
 	): Promise<void> {
-		logger.info('[VectorService] Starting campaign content vectorization', {
-			campaignId,
-			includeGMContent: options.includeGMContent
-		});
-
 		try {
-			const playerNamespace = `campaign_${campaignId}_player` as const;
-			const gmNamespace = `campaign_${campaignId}_gm` as const;
-
-			await this.generateVectors(campaignId, {
-				...options,
-				includeGMContent: false,
-				namespace: playerNamespace
-			});
-
-			if (options.includeGMContent) {
-				await this.generateVectors(campaignId, {
-					...options,
-					includeGMContent: true,
-					namespace: gmNamespace
-				});
-			}
-
-			logger.info('[VectorService] Campaign content vectorization completed', { campaignId });
+			await this.generateVectors(campaignId, options);
 		} catch (error) {
 			throw VectorServiceError.fromError('Failed to vectorize campaign content', error);
 		}
@@ -388,29 +274,14 @@ export class VectorService {
 		limit = 5
 	): Promise<readonly VectorSearchResult[]> {
 		try {
-			const results: VectorSearchResult[] = [];
+			const results = await this.findSimilarTexts(campaignId, query, limit);
 
-			const playerResults = await this.findSimilarTexts(
-				`campaign_${campaignId}_player`,
-				query,
-				limit
-			);
-			results.push(...playerResults);
-
-			if (hasGMAccess) {
-				const gmResults = await this.findSimilarTexts(
-					`campaign_${campaignId}_gm`,
-					query,
-					limit
-				);
-				results.push(...gmResults);
+			// Filter out GM content if user doesn't have access
+			if (!hasGMAccess) {
+				return results.filter(result => !result.metadata.is_gm_content);
 			}
 
-			return Object.freeze(
-				results
-					.sort((a, b) => b.similarity - a.similarity)
-					.slice(0, limit)
-			);
+			return results;
 		} catch (error) {
 			throw VectorServiceError.fromError('Failed to search campaign content', error);
 		}
