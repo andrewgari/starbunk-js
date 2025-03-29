@@ -36,10 +36,9 @@ async function convertNpyToJson(filePath: string): Promise<void> {
 		// Read the .npy file
 		const buffer = await fs.readFile(filePath);
 
-		// Parse the .npy file format (simplified approach)
-		// Skip the header (first 128 bytes is usually sufficient for simple .npy files)
-		const dataBuffer = buffer.slice(128);
-
+		// Parse the .npy file format to determine the correct header size
+		const headerLength = buffer.readUInt32LE(8) + 10;
+		const dataBuffer = buffer.slice(headerLength);
 		// Convert to Float32Array
 		const embedding = new Float32Array(dataBuffer.buffer, dataBuffer.byteOffset, dataBuffer.length / 4);
 
