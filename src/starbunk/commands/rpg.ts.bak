@@ -321,27 +321,12 @@ export default {
 
 			// Get the campaign for the current channel
 			const campaign = await campaignService.getCampaignByChannel(interaction.channelId);
-			// Skip campaign check for campaign create and list commands
-			const skipCampaignCheck = group === "campaign" && (subcommand === "create" || subcommand === "list");
-
-			// Early validation of campaign existence for commands that require it
-			if (!skipCampaignCheck) {
-				if (!campaign) {
-					await interaction.reply({
-						content: 'This channel is not associated with any active campaign. Use `/rpg campaign create` to create one.',
-						ephemeral: true
-					});
-					return;
-				}
-
-				// Skip campaign ID validation in testing channel
-				if (!context.isTestingChannel && campaign.id !== permissions.campaignId) {
-					await interaction.reply({
-						content: 'Campaign mismatch. Please use the appropriate channel for this campaign.',
-						ephemeral: true
-					});
-					return;
-				}
+			if (!campaign) {
+				await interaction.reply({
+					content: 'This channel is not associated with any active campaign.',
+					ephemeral: true
+				});
+				return;
 			}
 
 			// Handle help option for any subcommand
@@ -422,8 +407,8 @@ export default {
 
 						try {
 							// Get the campaign to activate
-							const targetCampaign = await campaignService.getCampaign(campaignId);
-							if (!targetCampaign) {
+							const campaign = await campaignService.getCampaign(campaignId);
+							if (!campaign) {
 								await interaction.reply({
 									content: `Campaign with ID ${campaignId} not found.`,
 									ephemeral: true
@@ -445,7 +430,7 @@ export default {
 							});
 
 							await interaction.reply({
-								content: `Campaign "${targetCampaign.name}" is now active in this channel.`,
+								content: `Campaign "${campaign.name}" is now active in this channel.`,
 								ephemeral: false
 							});
 						} catch (error) {
@@ -469,6 +454,8 @@ export default {
 						const newName = interaction.options.getString('new-name', true);
 
 						try {
+							// Get the current campaign in this channel
+							const campaign = await campaignService.getCampaignByChannel(interaction.channelId);
 							if (!campaign) {
 								await interaction.reply({
 									content: 'No active campaign found in this channel.',
@@ -519,7 +506,7 @@ export default {
 				// Get the actual campaign - no special testing campaign needed
 				const campaign = await campaignService.getCampaignByChannel(interaction.channelId);
 
-				if (!campaign && !skipCampaignCheck) {
+				if (!campaign) {
 					await interaction.reply({
 						content: 'This channel is not associated with any active campaign. Use `/rpg campaign create` to create one.',
 						ephemeral: true
@@ -528,7 +515,7 @@ export default {
 				}
 
 				// Skip campaign ID validation in testing channel
-				if (campaign && !context.isTestingChannel && campaign.id !== permissions.campaignId) {
+				if (!context.isTestingChannel && campaign.id !== permissions.campaignId) {
 					await interaction.reply({
 						content: 'Campaign mismatch. Please use the appropriate channel for this campaign.',
 						ephemeral: true
@@ -551,15 +538,6 @@ export default {
 						if (!permissions.canManageCampaign) {
 							await interaction.reply({
 								content: 'Only GMs can create game sessions.',
-								ephemeral: true
-							});
-							return;
-						}
-
-						// Ensure campaign exists before proceeding
-						if (!campaign) {
-							await interaction.reply({
-								content: 'No active campaign found in this channel.',
 								ephemeral: true
 							});
 							return;
@@ -629,14 +607,6 @@ export default {
 							return;
 						}
 
-						if (!campaign) {
-							await interaction.reply({
-								content: 'No active campaign found in this channel.',
-								ephemeral: true
-							});
-							return;
-						}
-
 						const question = interaction.options.getString('question', true);
 
 						// Defer the reply since LLM processing might take time
@@ -686,9 +656,9 @@ export default {
 
 				// Validate campaign context
 				const campaign = await campaignService.getCampaignByChannel(interaction.channelId);
-				if (!campaign && !skipCampaignCheck) {
+				if (!campaign) {
 					await interaction.reply({
-						content: 'This channel is not associated with any active campaign. Use `/rpg campaign create` to create one. Use `/rpg campaign create` to create one.',
+						content: 'This channel is not associated with any active campaign. Use `/rpg campaign create` to create one.',
 						ephemeral: true
 					});
 					return;
@@ -700,13 +670,6 @@ export default {
 						await interaction.deferReply({ ephemeral: true });
 
 						try {
-							if (!campaign) {
-								await interaction.editReply({
-									content: 'No active campaign found in this channel.',
-								});
-								return;
-							}
-
 							const includeGM = interaction.options.getBoolean('include_gm') ?? false;
 							const model = interaction.options.getString('model');
 							const chunkSize = interaction.options.getInteger('chunk_size');
@@ -733,13 +696,6 @@ export default {
 						await interaction.deferReply({ ephemeral: true });
 
 						try {
-							if (!campaign) {
-								await interaction.editReply({
-									content: 'No active campaign found in this channel.',
-								});
-								return;
-							}
-
 							const dirPath = interaction.options.getString('path', true);
 							const isGM = interaction.options.getBoolean('is_gm') ?? false;
 							const model = interaction.options.getString('model');
@@ -813,14 +769,6 @@ Namespace: ${vectorNamespace}`
 				switch (subcommand) {
 
 					case 'schedule': {
-						if (!campaign) {
-							await interaction.reply({
-								content: 'No active campaign found in this channel.',
-								ephemeral: true
-							});
-							return;
-						}
-
 						const date = interaction.options.getString('date', true);
 						const title = interaction.options.getString('title', true);
 						const description = interaction.options.getString('description') ?? undefined;
@@ -843,14 +791,6 @@ Namespace: ${vectorNamespace}`
 						break;
 					}
 					case 'skip': {
-						if (!campaign) {
-							await interaction.reply({
-								content: 'No active campaign found in this channel.',
-								ephemeral: true
-							});
-							return;
-						}
-
 						const date = interaction.options.getString('date', true);
 
 						try {
@@ -869,14 +809,6 @@ Namespace: ${vectorNamespace}`
 						break;
 					}
 					case 'reminder': {
-						if (!campaign) {
-							await interaction.reply({
-								content: 'No active campaign found in this channel.',
-								ephemeral: true
-							});
-							return;
-						}
-
 						const message = interaction.options.getString('message', true);
 						const time = interaction.options.getString('time', true);
 
@@ -904,14 +836,6 @@ Namespace: ${vectorNamespace}`
 				switch (subcommand) {
 
 					case 'create': {
-						if (!campaign) {
-							await interaction.reply({
-								content: 'No active campaign found in this channel.',
-								ephemeral: true
-							});
-							return;
-						}
-
 						if (!permissions.canManageCampaign) {
 							await interaction.reply({
 								content: 'Only GMs can create characters.',
@@ -939,14 +863,6 @@ Namespace: ${vectorNamespace}`
 						break;
 					}
 					case 'list': {
-						if (!campaign) {
-							await interaction.reply({
-								content: 'No active campaign found in this channel.',
-								ephemeral: true
-							});
-							return;
-						}
-
 						try {
 							const characters = await campaignService.getCharacters(campaign.id);
 							if (characters.length === 0) {
