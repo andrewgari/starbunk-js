@@ -43,26 +43,52 @@ export class OllamaProvider extends GenericProvider {
 	 * Initialize the Ollama provider
 	 */
 	protected async initializeProvider(): Promise<boolean> {
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
 		try {
-			// Test connection to Ollama API
-			const response = await fetch(`${this.baseUrl}/api/tags`);
+			this.logger.debug(`Attempting to connect to Ollama API at ${this.baseUrl}`);
+			const response = await fetch(`${this.baseUrl}/api/tags`, {
+				signal: controller.signal
+			});
 
 			if (!response.ok) {
-				this.logger.error(`Failed to connect to Ollama API: ${response.statusText}`);
+				this.logger.error(`Failed to connect to Ollama API: ${response.statusText} (${response.status})`);
 				return false;
 			}
 
 			const data = await response.json();
+			this.logger.debug('Received response from Ollama API:', data);
 
 			// Update available models from Ollama server if possible
 			if (data && typeof data === 'object' && 'models' in data && Array.isArray(data.models)) {
 				this.availableModels = data.models.map((model: OllamaModel) => model.name);
+				this.logger.debug('Updated available models:', this.availableModels);
 			}
 
 			this.logger.debug('Ollama client initialized successfully');
 			return true;
 		} catch (error) {
-			this.logger.error('Error initializing Ollama client', error as Error);
+			if (error instanceof Error && error.name === 'AbortError') {
+				this.logger.error(`Ollama API connection timed out after 5 seconds: ${this.baseUrl}`);
+			} else {
+				this.logger.error('Error connecting to Ollama API:', error instanceof Error ? error : new Error(String(error)));
+			}
+			return false;
+		} finally {
+			clearTimeout(timeout);
+		}
+	}
+
+	/**
+	 * Check if provider is healthy and ready to handle requests
+	 */
+	public async isHealthy(): Promise<boolean> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/tags`);
+			return response.ok;
+		} catch (error) {
+			this.logger.error('Health check failed', error as Error);
 			return false;
 		}
 	}
@@ -82,38 +108,38 @@ export class OllamaProvider extends GenericProvider {
 	}
 
 	/**
-	 * Call the Ollama API
+	 * Call the Ollama API using the Generate endpoint
 	 * @param options Completion options
 	 */
 	protected async callProviderAPI(options: LLMCompletionOptions): Promise<OllamaResponse> {
+		// Check health before proceeding
+		if (!await this.isHealthy()) {
+			throw new Error('Ollama service is not available. Please ensure Ollama is running (`ollama serve`)');
+		}
+
 		this.logger.debug(`Calling Ollama API at ${this.baseUrl} with model: ${options.model}`);
 
-		// Convert messages to Ollama format
-		const messages = options.messages.map(msg => ({
-			role: msg.role,
-			content: msg.content
-		}));
+		// Use the generate endpoint instead of chat for simpler request format
+		// Extract the last message from the messages array (typically the user's query)
+		const lastMessage = options.messages[options.messages.length - 1];
+		let prompt = lastMessage.content;
 
-		// Prepare request body
-		const requestBody: any = {
-			model: options.model,
-			messages,
-			// Explicitly set streaming to false
-			stream: false,
-			options: {
-				temperature: options.temperature,
-				top_p: options.topP,
-				frequency_penalty: options.frequencyPenalty,
-				presence_penalty: options.presencePenalty,
-				stop: options.stop
-			}
+		// If there's a system message, prepend it
+		const systemMessage = options.messages.find(msg => msg.role === 'system');
+		if (systemMessage) {
+			prompt = `${systemMessage.content}\n\n${prompt}`;
+		}
+
+		// Very simple request body for generate endpoint
+		const requestBody = {
+			model: options.model || this.config.defaultModel || 'llama3',
+			prompt: prompt
 		};
-		
-		// Add personality embedding if available
-		if (options.contextData?.personalityEmbedding) {
-			// Add personality embedding as context
-			requestBody.context = options.contextData.personalityEmbedding;
-			this.logger.debug(`Adding personality embedding with ${options.contextData.personalityEmbedding.length} dimensions to request`);
+
+		// Make sure we have a model specified
+		if (!requestBody.model) {
+			this.logger.warn('No model specified, defaulting to llama3');
+			requestBody.model = 'llama3';
 		}
 
 		// Add retry mechanism
@@ -125,9 +151,10 @@ export class OllamaProvider extends GenericProvider {
 			attempts++;
 			try {
 				this.logger.debug(`Attempt ${attempts}/${maxRetries} to call Ollama API`);
+				this.logger.debug(`Request body: ${JSON.stringify(requestBody)}`);
 
-				// Call Ollama API
-				const response = await fetch(`${this.baseUrl}/api/chat`, {
+				// Call Ollama API using the generate endpoint instead of chat
+				const response = await fetch(`${this.baseUrl}/api/generate`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json'
@@ -139,21 +166,7 @@ export class OllamaProvider extends GenericProvider {
 				this.logger.debug(`Ollama API response status: ${response.status} ${response.statusText}`);
 
 				if (response.status === 404) {
-					this.logger.error(`Ollama API 404 Not Found error - URL: ${this.baseUrl}/api/chat, model: ${options.model}`);
-
-					// Try a model list request to verify API connectivity
-					try {
-						const modelResponse = await fetch(`${this.baseUrl}/api/tags`);
-						if (modelResponse.ok) {
-							const modelData = await modelResponse.json();
-							this.logger.debug(`Available Ollama models: ${JSON.stringify(modelData)}`);
-							this.logger.error(`Model "${options.model}" may not be available on the Ollama server`);
-						} else {
-							this.logger.error(`Ollama server is not responding correctly to model list request: ${modelResponse.status}`);
-						}
-					} catch (modelCheckError) {
-						this.logger.error(`Failed to check Ollama models: ${modelCheckError instanceof Error ? modelCheckError.message : String(modelCheckError)}`);
-					}
+					this.logger.error(`Ollama API 404 Not Found error - URL: ${this.baseUrl}/api/generate, model: ${options.model}`);
 
 					// Fall back to a default model if specified model is not found
 					if (options.model !== 'llama3') {
@@ -165,39 +178,50 @@ export class OllamaProvider extends GenericProvider {
 				}
 
 				if (!response.ok) {
-					throw new Error(`Ollama API error: ${response.statusText} (${response.status})`);
+					// Try to get more error details from response body
+					try {
+						const errorText = await response.text();
+						throw new Error(`Ollama API error: ${response.statusText} (${response.status}). Details: ${errorText}`);
+					} catch (e) {
+						throw new Error(`Ollama API error: ${response.statusText} (${response.status})`);
+					}
 				}
 
-				// Handle the response with extra care for JSON parsing
+				// Handle the response
+				const responseText = await response.text();
+				this.logger.debug(`Ollama API response length: ${responseText.length}`);
+
+				// Parse the response properly - Ollama /api/generate returns streaming data in JSON lines format
+				let parsedContent = '';
+
 				try {
-					const contentType = response.headers.get('content-type');
-					this.logger.debug(`Ollama API response content-type: ${contentType}`);
+					// The response is a sequence of JSON objects, one per line
+					const lines = responseText.trim().split('\n');
 
-					if (contentType && contentType.includes('application/json')) {
-						return await response.json() as OllamaResponse;
-					} else {
-						// For non-JSON responses, try to parse the text
-						const responseText = await response.text();
-						this.logger.debug(`Ollama API returned non-JSON response. First 100 chars: ${responseText.substring(0, 100)}`);
-
+					// Extract just the actual generated text from each line
+					for (const line of lines) {
 						try {
-							// Sometimes the response might be a JSON string but with wrong content type
-							return JSON.parse(responseText) as OllamaResponse;
-						} catch (jsonError) {
-							// If it's not parseable JSON, create a suitable response object
-							this.logger.warn('Could not parse Ollama response as JSON, creating fallback response');
-							// Limit length for safety
-							return {
-								message: {
-									content: responseText.slice(0, 500)
-								}
-							};
+							const chunk = JSON.parse(line);
+							if (chunk && typeof chunk === 'object' && 'response' in chunk) {
+								parsedContent += chunk.response;
+							}
+						} catch (parseError) {
+							this.logger.warn(`Failed to parse JSON line: ${line}`);
 						}
 					}
-				} catch (error) {
-					this.logger.error(`Error processing Ollama API response: ${error instanceof Error ? error.message : String(error)}`);
-					throw error;
+
+					this.logger.debug(`Extracted content length: ${parsedContent.length}`);
+				} catch (e) {
+					this.logger.warn(`Error parsing Ollama generate response, using raw response: ${e instanceof Error ? e.message : String(e)}`);
+					parsedContent = responseText.trim().substring(0, 1500); // Fallback with truncation
 				}
+
+				// Adapt the generate response to match the expected format
+				return {
+					message: {
+						content: parsedContent
+					}
+				};
 			} catch (error) {
 				lastError = error instanceof Error ? error : new Error(String(error));
 				this.logger.warn(`Attempt ${attempts}/${maxRetries} failed: ${lastError.message}`);

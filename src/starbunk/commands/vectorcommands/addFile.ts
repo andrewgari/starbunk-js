@@ -4,7 +4,8 @@ import * as path from 'path';
 import { logger } from '../../../services/logger';
 import { CampaignFileService } from '../../services/campaignFileService';
 import { VectorEmbeddingService } from '../../services/vectorEmbeddingService';
-import { TextWithMetadata, VectorService } from '../../services/vectorService';
+import { VectorService } from '../../services/vectorService';
+import { TextWithMetadata } from '../../types/text';
 import { getCampaignContext, getCampaignPermissions } from '../../utils/campaignChecks';
 
 // Define the command

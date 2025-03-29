@@ -14,11 +14,27 @@ import {
 export async function initializeCovaBot(): Promise<void> {
 	try {
 		const personalityService = getPersonalityService();
-		await personalityService.loadPersonalityEmbedding('personality.npy');
-		logger.info('[CovaBot] Personality embedding loaded successfully');
+		// Try to load NPY file first, fall back to JSON if not found
+		const embedding = await personalityService.loadPersonalityEmbedding('personality.npy');
+		
+		if (!embedding) {
+			// Try fallback to JSON format
+			logger.info('[CovaBot] NPY personality embedding not found, trying JSON format...');
+			const jsonEmbedding = await personalityService.loadPersonalityEmbedding('personality.json');
+			
+			if (!jsonEmbedding) {
+				logger.warn('[CovaBot] No personality embedding files found. Using default behavior.');
+				// Don't throw error, just continue with default behavior
+			} else {
+				logger.info('[CovaBot] JSON personality embedding loaded successfully');
+			}
+		} else {
+			logger.info('[CovaBot] NPY personality embedding loaded successfully');
+		}
 	} catch (error) {
-		logger.error(`[CovaBot] Failed to load personality embedding: ${error instanceof Error ? error.message : String(error)}`);
-		throw error;
+		logger.error(`[CovaBot] Error during personality initialization: ${error instanceof Error ? error.message : String(error)}`);
+		logger.warn('[CovaBot] Continuing with default behavior due to embedding initialization error');
+		// Don't throw error, continue with default behavior
 	}
 }
 

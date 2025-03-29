@@ -1,4 +1,5 @@
 import { ChannelType, GuildChannel, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel } from 'discord.js';
+import fs from 'fs/promises';
 import guildIds from '../../discord/guildIds';
 import { Campaign } from '../../domain/models';
 import { CampaignMetadata, CampaignRepository, CreateCampaignData } from '../../domain/repositories';
@@ -6,14 +7,17 @@ import { RepositoryFactory } from '../../infrastructure/persistence/repositoryFa
 import { DiscordService } from '../../services/discordService';
 import { logger } from '../../services/logger';
 import { GameSystem, SUPPORTED_SYSTEMS } from '../types/game';
+import { CampaignFileService } from './campaignFileService';
 
 export class CampaignService {
 	private static instance: CampaignService;
 	private campaignRepository: CampaignRepository;
+	private fileService: CampaignFileService;
 
 	private constructor() {
 		const factory = RepositoryFactory.getInstance();
 		this.campaignRepository = factory.getCampaignRepository();
+		this.fileService = CampaignFileService.getInstance();
 	}
 
 	public static getInstance(): CampaignService {
@@ -23,11 +27,17 @@ export class CampaignService {
 		return CampaignService.instance;
 	}
 
-	public async createCampaign(channel: GuildChannel, name: string, system: GameSystem, gmId: string): Promise<Campaign> {
+	public async createCampaign(
+		channel: GuildChannel,
+		name: string,
+		system: GameSystem,
+		gmId: string,
+		existingVoiceChannel?: GuildChannel
+	): Promise<Campaign> {
 		const guild = channel.guild;
 
-		// Create voice channel
-		const voiceChannel = await guild.channels.create({
+		// Use existing voice channel or create a new one
+		const voiceChannel = existingVoiceChannel || await guild.channels.create({
 			name: `${name}-voice`,
 			type: ChannelType.GuildVoice,
 			parent: channel.parent
@@ -243,5 +253,33 @@ export class CampaignService {
 
 		const metadata = await this.getCampaignMetadata(campaignId);
 		return metadata.characters;
+	}
+
+	/**
+	 * Get all campaigns
+	 */
+	public async getCampaigns(): Promise<Campaign[]> {
+		try {
+			const baseDir = this.fileService.getCampaignBasePath();
+			const campaignDirs = await fs.readdir(baseDir);
+
+			const campaigns: Campaign[] = [];
+			for (const dir of campaignDirs) {
+				try {
+					const campaign = await this.getCampaign(dir);
+					if (campaign) {
+						campaigns.push(campaign);
+					}
+				} catch (error) {
+					logger.error(`Error loading campaign from directory ${dir}:`, error instanceof Error ? error : new Error(String(error)));
+					// Continue with other campaigns even if one fails
+				}
+			}
+
+			return campaigns;
+		} catch (error) {
+			logger.error('Error getting campaigns:', error instanceof Error ? error : new Error(String(error)));
+			throw new Error('Failed to get campaigns');
+		}
 	}
 }

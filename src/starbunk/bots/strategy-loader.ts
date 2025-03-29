@@ -20,7 +20,9 @@ export async function loadStrategyBots(): Promise<ReplyBot[]> {
 			await initializeCovaBot();
 			logger.info('CovaBot initialization complete');
 		} catch (error) {
-			logger.error('Failed to initialize CovaBot:', error instanceof Error ? error : new Error(String(error)));
+			const err = error instanceof Error ? error : new Error(String(error));
+			logger.error('Failed to initialize CovaBot:', err);
+			logger.warn('CovaBot will use default behavior without personality embedding');
 			// Continue loading other bots even if CovaBot fails
 		}
 

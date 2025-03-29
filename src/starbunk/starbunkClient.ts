@@ -122,7 +122,25 @@ export default class StarbunkClient extends Client {
 			// Initialize personality service first
 			const { getPersonalityService } = await import('../services/personalityService');
 			const personalityService = getPersonalityService();
-			await personalityService.loadPersonalityEmbedding('personality.npy');
+			
+			try {
+				// Try to load NPY file first, then JSON as fallback
+				const npyEmbedding = await personalityService.loadPersonalityEmbedding('personality.npy');
+				if (!npyEmbedding) {
+					logger.info('NPY personality embedding not found, trying JSON format...');
+					const jsonEmbedding = await personalityService.loadPersonalityEmbedding('personality.json');
+					if (!jsonEmbedding) {
+						logger.warn('No personality embedding files found. Using default behavior.');
+					} else {
+						logger.info('JSON personality embedding loaded successfully');
+					}
+				} else {
+					logger.info('NPY personality embedding loaded successfully');
+				}
+			} catch (error) {
+				logger.warn('Error loading personality embeddings, using default behavior');
+			}
+			
 			logger.info('Personality service initialized successfully');
 
 			// Load strategy bots

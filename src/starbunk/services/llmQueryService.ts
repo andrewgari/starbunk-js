@@ -9,19 +9,18 @@ import { NoteService } from './noteService';
 import { StorageService } from './storageService';
 
 export class LLMQueryService {
-	private static instance: LLMQueryService;
+	private static instance: LLMQueryService | null = null;
 	private storageService: StorageService;
 	private adventureService: AdventureService;
 	private campaignService: CampaignService;
 	private noteService: NoteService;
-	private llmService: GameLLMService;
+	private llmService: GameLLMService | null = null;
 
 	private constructor() {
 		this.storageService = StorageService.getInstance();
 		this.adventureService = AdventureService.getInstance();
 		this.campaignService = CampaignService.getInstance();
 		this.noteService = NoteService.getInstance();
-		this.llmService = GameLLMService.getInstance();
 	}
 
 	public static getInstance(): LLMQueryService {
@@ -31,8 +30,15 @@ export class LLMQueryService {
 		return LLMQueryService.instance;
 	}
 
+	private async ensureLLMService(): Promise<GameLLMService> {
+		if (!this.llmService) {
+			this.llmService = await GameLLMService.getInstance();
+		}
+		return this.llmService;
+	}
+
 	public async queryGameContext(
-		campaign: import('../../domain/models').Campaign,
+		campaign: Campaign,
 		query: string,
 		userId: string,
 		isGM: boolean
@@ -46,6 +52,7 @@ export class LLMQueryService {
 	}> {
 		logger.info(`[LLMQueryService] Starting query for campaign "${campaign.name}" by user ${userId}. Query: "${query}"`);
 		try {
+			const llmService = await this.ensureLLMService();
 			// Search for relevant notes
 			logger.debug(`[LLMQueryService] Searching for relevant notes...`);
 			const relevantNotes = await this.noteService.searchNotes(campaign, query, { isGM });
@@ -66,7 +73,7 @@ export class LLMQueryService {
 
 			// Get answer from LLM (will use system knowledge if no context available)
 			logger.debug(`[LLMQueryService] Requesting answer from LLM service...`);
-			const answer = await this.llmService.answerQuestion(query, context, isGM, campaign);
+			const answer = await llmService.answerQuestion(query, context, isGM, campaign);
 			logger.debug(`[LLMQueryService] Received answer from LLM service`);
 
 			const response = {

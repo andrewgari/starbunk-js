@@ -1,13 +1,49 @@
 import { pipeline } from '@xenova/transformers';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { execFile } from 'child_process';
+import fs from 'fs/promises';
+import path from 'path';
+import mammoth from 'mammoth';
 import { logger } from '../../services/logger';
-import { TextWithMetadata, VectorMetadata } from './vectorService';
+import { TextWithMetadata } from '../types/text';
+import { VectorMetadata } from './vectorService';
 
 export interface LoadedVectors {
 	vectors: Float32Array[];
 	metadata: VectorMetadata[];
 	texts: string[];
+}
+
+// Custom error classes with additional properties
+export class PythonScriptError extends Error {
+	scriptPath: string;
+	timeout?: number;
+	stderr?: string;
+
+	constructor(message: string, scriptPath: string, options?: { timeout?: number; stderr?: string }) {
+		super(message);
+		this.name = 'PythonScriptError';
+		this.scriptPath = scriptPath;
+		if (options?.timeout) this.timeout = options.timeout;
+		if (options?.stderr) this.stderr = options.stderr;
+	}
+}
+
+export class VectorFileError extends Error {
+	directoryPath: string;
+	fileDetails: Record<string, boolean>;
+
+	constructor(message: string, directoryPath: string, fileDetails: Record<string, boolean>) {
+		super(message);
+		this.name = 'VectorFileError';
+		this.directoryPath = directoryPath;
+		this.fileDetails = fileDetails;
+	}
+}
+
+// Type for Python script execution result
+interface PythonScriptResult {
+	stdout: string;
+	stderr: string;
 }
 
 /**
@@ -22,8 +58,10 @@ export class VectorEmbeddingService {
 
 	private constructor() {
 		// Default model to use for embeddings
-
 		this.modelName = 'Xenova/all-MiniLM-L6-v2';
+		logger.info('[VectorEmbeddingService] 🧠 Service instantiated with default model', { 
+			model: this.modelName 
+		});
 	}
 
 	public static getInstance(): VectorEmbeddingService {
@@ -37,24 +75,31 @@ export class VectorEmbeddingService {
 	 * Initialize the embedding pipeline
 	 */
 	public async initialize(modelName?: string): Promise<void> {
-		if (this.initialized) return;
+		if (this.initialized) {
+			logger.debug('[VectorEmbeddingService] 🔄 Embedding service already initialized', {
+				model: this.modelName
+			});
+			return;
+		}
 
 		if (this.initPromise) {
+			logger.debug('[VectorEmbeddingService] 🔄 Initialization already in progress, waiting...');
 			return this.initPromise;
 		}
 
 		this.initPromise = (async () => {
 			try {
 				if (modelName) {
+					logger.info('[VectorEmbeddingService] 🔄 Changing model to', { model: modelName });
 					this.modelName = modelName;
 				}
 
-				logger.info('[VectorEmbeddingService] Initializing embedding pipeline with model:', { model: this.modelName });
+				logger.info('[VectorEmbeddingService] 🚀 Initializing embedding pipeline with model:', { model: this.modelName });
 				this.embeddingPipeline = await pipeline('feature-extraction', this.modelName);
 				this.initialized = true;
-				logger.info('[VectorEmbeddingService] Embedding pipeline initialized successfully');
+				logger.info('[VectorEmbeddingService] ✅ Embedding pipeline initialized successfully');
 			} catch (error) {
-				logger.error('[VectorEmbeddingService] Failed to initialize embedding pipeline:', error instanceof Error ? error : new Error(String(error)));
+				logger.error('[VectorEmbeddingService] ❌ Failed to initialize embedding pipeline:', error instanceof Error ? error : new Error(String(error)));
 				throw new Error(`Failed to initialize embedding pipeline: ${error}`);
 			}
 		})();
@@ -67,17 +112,24 @@ export class VectorEmbeddingService {
 	 */
 	public async generateEmbeddings(texts: string[]): Promise<Float32Array[]> {
 		if (!this.initialized) {
+			logger.info('[VectorEmbeddingService] 🔄 Embedding service not initialized, initializing now...');
 			await this.initialize();
 		}
 
 		try {
 			const embeddings: Float32Array[] = [];
+			logger.debug(`[VectorEmbeddingService] 🔍 Generating embeddings for ${texts.length} texts`);
 
 			// Process in batches to avoid memory issues
 			const batchSize = 32;
+			const totalBatches = Math.ceil(texts.length / batchSize);
+			
+			logger.debug(`[VectorEmbeddingService] 📊 Processing in ${totalBatches} batches of ${batchSize}`);
+			
 			for (let i = 0; i < texts.length; i += batchSize) {
 				const batch = texts.slice(i, i + batchSize);
-				logger.debug(`[VectorEmbeddingService] Processing batch ${i / batchSize + 1}/${Math.ceil(texts.length / batchSize)}`);
+				const batchNumber = Math.floor(i / batchSize) + 1;
+				logger.debug(`[VectorEmbeddingService] 🔄 Processing batch ${batchNumber}/${totalBatches} (${batch.length} texts)`);
 
 				const results = await Promise.all(
 					batch.map(async (text) => {
@@ -90,11 +142,14 @@ export class VectorEmbeddingService {
 				);
 
 				embeddings.push(...results);
+				logger.debug(`[VectorEmbeddingService] ✅ Batch ${batchNumber}/${totalBatches} complete, dimensions: ${results[0]?.length || 0}`);
 			}
+			
+			logger.info(`[VectorEmbeddingService] ✅ Generated ${embeddings.length} embeddings successfully`);
 
 			return embeddings;
 		} catch (error) {
-			logger.error('[VectorEmbeddingService] Error generating embeddings:', error instanceof Error ? error : new Error(String(error)));
+			logger.error('[VectorEmbeddingService] ❌ Error generating embeddings:', error instanceof Error ? error : new Error(String(error)));
 			throw new Error(`Error generating embeddings: ${error}`);
 		}
 	}
@@ -108,21 +163,62 @@ export class VectorEmbeddingService {
 		chunkSize: number = 512
 	): Promise<TextWithMetadata[]> {
 		try {
+			logger.info(`[VectorEmbeddingService] 📂 Processing directory ${directory}`, {
+				directory,
+				isGMContent,
+				chunkSize
+			});
+			
 			const contentWithMetadata: TextWithMetadata[] = [];
 
 			// Get all files recursively
+			logger.debug('[VectorEmbeddingService] 🔍 Finding all files recursively...');
 			const files = await this.getFilesRecursively(directory);
+			logger.info(`[VectorEmbeddingService] 📊 Found ${files.length} files`, {
+				directory,
+				fileExtensions: Array.from(new Set(files.map(f => path.extname(f)))).join(', ')
+			});
 
 			// Process each file
-			for (const file of files) {
-				// Only process text and markdown files
-				if (!['.txt', '.md'].includes(path.extname(file).toLowerCase())) {
-					continue;
-				}
-
+			const supportedExtensions = ['.txt', '.md', '.json', '.docx'];
+			const textFiles = files.filter(file => 
+				supportedExtensions.includes(path.extname(file).toLowerCase())
+			);
+			
+			logger.info(`[VectorEmbeddingService] 📄 Processing ${textFiles.length} text files of ${files.length} total files`);
+			
+			let processedCount = 0;
+			let errorCount = 0;
+			
+			for (const file of textFiles) {
 				try {
-					const content = await fs.readFile(file, 'utf-8');
+					const fileExtension = path.extname(file).toLowerCase();
 					const relativeFilePath = path.relative(directory, file);
+					
+					logger.debug(`[VectorEmbeddingService] 📝 Processing file: ${relativeFilePath}`, {
+						extension: fileExtension
+					});
+					
+					let content = '';
+					
+					// Process based on file type
+					if (fileExtension === '.docx') {
+						// Extract text from DOCX using mammoth
+						logger.debug(`[VectorEmbeddingService] 📄 Extracting text from DOCX file: ${relativeFilePath}`);
+						const buffer = await fs.readFile(file);
+						const result = await mammoth.extractRawText({ buffer });
+						content = result.value;
+						logger.debug(`[VectorEmbeddingService] ✅ Extracted ${content.length} characters from DOCX`);
+					} else {
+						// Read regular text files
+						content = await fs.readFile(file, 'utf-8');
+					}
+					
+					logger.debug(`[VectorEmbeddingService] 📄 Read file content`, {
+						file: relativeFilePath,
+						contentLength: content.length,
+						firstChars: content.substring(0, 50) + '...'
+					});
 
 					// Split into chunks if needed
 					if (content.length > chunkSize) {
@@ -130,13 +226,20 @@ export class VectorEmbeddingService {
 						for (let i = 0; i < content.length; i += chunkSize) {
 							chunks.push(content.substring(i, i + chunkSize));
 						}
+						
+						logger.debug(`[VectorEmbeddingService] 🧩 Split into ${chunks.length} chunks`, {
+							file: relativeFilePath,
+							contentLength: content.length,
+							chunkSize,
+							chunkCount: chunks.length
+						});
 
 						// Add each chunk with metadata
-						for (const chunk of chunks) {
+						for (const [index, chunk] of chunks.entries()) {
 							contentWithMetadata.push({
 								text: chunk,
 								metadata: {
-									file: relativeFilePath,
+									file: `${relativeFilePath}:chunk${index+1}`,
 									is_gm_content: isGMContent,
 									chunk_size: chunkSize
 								}
@@ -153,14 +256,29 @@ export class VectorEmbeddingService {
 							}
 						});
 					}
+					
+					processedCount++;
+					logger.debug(`[VectorEmbeddingService] ✅ File processed successfully`, {
+						file: relativeFilePath
+					});
 				} catch (error) {
-					logger.error(`[VectorEmbeddingService] Error processing file ${file}:`, error instanceof Error ? error : new Error(String(error)));
+					errorCount++;
+					logger.error(`[VectorEmbeddingService] ❌ Error processing file ${file}:`, error instanceof Error ? error : new Error(String(error)));
 				}
 			}
+			
+			logger.info(`[VectorEmbeddingService] 📊 Directory processing complete`, {
+				directory,
+				totalFiles: files.length,
+				textFiles: textFiles.length,
+				processedCount,
+				errorCount,
+				chunksCreated: contentWithMetadata.length
+			});
 
 			return contentWithMetadata;
 		} catch (error) {
-			logger.error('[VectorEmbeddingService] Error processing directory:', error instanceof Error ? error : new Error(String(error)));
+			logger.error('[VectorEmbeddingService] ❌ Error processing directory:', error instanceof Error ? error : new Error(String(error)));
 			throw new Error(`Error processing directory: ${error}`);
 		}
 	}
@@ -169,14 +287,19 @@ export class VectorEmbeddingService {
 	 * Get all files recursively in a directory
 	 */
 	private async getFilesRecursively(dir: string): Promise<string[]> {
-		const dirents = await fs.readdir(dir, { withFileTypes: true });
-		const files = await Promise.all(
-			dirents.map((dirent) => {
-				const res = path.resolve(dir, dirent.name);
-				return dirent.isDirectory() ? this.getFilesRecursively(res) : res;
-			})
-		);
-		return files.flat();
+		try {
+			const dirents = await fs.readdir(dir, { withFileTypes: true });
+			const files = await Promise.all(
+				dirents.map((dirent) => {
+					const res = path.resolve(dir, dirent.name);
+					return dirent.isDirectory() ? this.getFilesRecursively(res) : res;
+				})
+			);
+			return files.flat();
+		} catch (error) {
+			logger.error(`[VectorEmbeddingService] ❌ Error reading directory ${dir}:`, error instanceof Error ? error : new Error(String(error)));
+			return [];
+		}
 	}
 
 	/**
@@ -210,78 +333,378 @@ export class VectorEmbeddingService {
 	/**
 	 * Save vectors to a file
 	 */
-	public async saveVectors(
-		vectors: Float32Array[],
-		metadata: VectorMetadata[],
-		texts: string[],
-		outputDir: string
-	): Promise<void> {
+	public async saveVectors(vectors: number[][], metadata: VectorMetadata[], texts: string[], outputDir: string): Promise<void> {
+		const tempVectorsPath = path.join(outputDir, 'temp_vectors.json');
+		const outputPath = path.join(outputDir, 'vectors.npy');
+		const metadataPath = path.join(outputDir, 'metadata.json');
+		const textsPath = path.join(outputDir, 'texts.json');
+		
+		logger.info('[VectorEmbeddingService] 💾 Saving vectors and metadata...', {
+			outputDir,
+			vectorCount: vectors.length,
+			vectorDimensions: vectors[0]?.length || 0
+		});
+
 		try {
 			// Create output directory if it doesn't exist
 			await fs.mkdir(outputDir, { recursive: true });
+			logger.debug('[VectorEmbeddingService] 📁 Output directory created/verified', { outputDir });
 
-			// Convert vectors to a format that can be saved
-			const vectorsArray = vectors.map(v => Array.from(v));
+			// Save vectors to temporary JSON file
+			logger.debug('[VectorEmbeddingService] 💾 Writing vectors to temporary JSON file...');
+			await fs.writeFile(tempVectorsPath, JSON.stringify(vectors));
+			logger.debug('[VectorEmbeddingService] ✅ Temporary JSON file created', { tempVectorsPath });
 
-			// Save vectors
-			await fs.writeFile(
-				path.join(outputDir, 'vectors.json'),
-				JSON.stringify(vectorsArray),
-				'utf-8'
+			// Execute Python script
+			const scriptPath = path.join(process.cwd(), 'scripts', 'save_vectors.py');
+			logger.info('[VectorEmbeddingService] 🐍 Executing Python script', { 
+				scriptPath, 
+				tempVectorsPath, 
+				outputPath
+			});
+
+			const { stdout, stderr } = await this.runPythonScript(
+				scriptPath,
+				['--vectors', tempVectorsPath, '--output', outputPath],
+				30000
 			);
+			
+			logger.debug('[VectorEmbeddingService] 📝 Python script stdout:', { 
+				stdout: stdout.substring(0, 1000) + (stdout.length > 1000 ? '...(truncated)' : '')
+			});
 
-			// Save metadata
-			await fs.writeFile(
-				path.join(outputDir, 'metadata.json'),
-				JSON.stringify(metadata),
-				'utf-8'
-			);
+			// Parse stdout as JSON
+			try {
+				logger.debug('[VectorEmbeddingService] 🔄 Parsing Python script output...');
+				const result = JSON.parse(stdout);
+				if (result.status === 'success') {
+					logger.info('[VectorEmbeddingService] ✅ Vectors saved successfully', {
+						outputPath: result.output_path,
+						shape: result.shape,
+						dtype: result.dtype,
+						fileSize: result.file_size_bytes || 'unknown'
+					});
+				} else if (result.status === 'warning') {
+					logger.warn('[VectorEmbeddingService] ⚠️ Vectors saved with warnings:', {
+						message: result.message,
+						outputPath: result.output_path
+					});
+				} else {
+					throw new Error(`Python script returned error status: ${JSON.stringify(result)}`);
+				}
+			} catch (e) {
+				if (e instanceof SyntaxError) {
+					logger.warn('[VectorEmbeddingService] ⚠️ Failed to parse Python script output:', {
+						stdout: stdout.substring(0, 300),
+						stderr: stderr.substring(0, 300),
+						error: e
+					});
+					throw new Error('Failed to parse Python script output');
+				}
+				throw e;
+			}
 
-			// Save texts
-			await fs.writeFile(
-				path.join(outputDir, 'texts.json'),
-				JSON.stringify(texts),
-				'utf-8'
-			);
+			// Save metadata and texts
+			logger.debug('[VectorEmbeddingService] 💾 Saving metadata and texts...');
+			await fs.writeFile(metadataPath, JSON.stringify(metadata));
+			await fs.writeFile(textsPath, JSON.stringify(texts));
+			logger.debug('[VectorEmbeddingService] ✅ Metadata and text files saved', {
+				metadataPath,
+				textsPath
+			});
+			
+			// Verify all files exist
+			const [vectorsNpyExists, vectorsJsonExists, metadataExists, textsExists] = await Promise.all([
+				fs.access(outputPath).then(() => true).catch(() => false),
+				fs.access(outputPath.replace('.npy', '.json')).then(() => true).catch(() => false),
+				fs.access(metadataPath).then(() => true).catch(() => false),
+				fs.access(textsPath).then(() => true).catch(() => false)
+			]);
+			
+			logger.info('[VectorEmbeddingService] 📊 File verification results', {
+				vectorsNpy: vectorsNpyExists ? '✅' : '❌',
+				vectorsJson: vectorsJsonExists ? '✅' : '❌',
+				metadata: metadataExists ? '✅' : '❌',
+				texts: textsExists ? '✅' : '❌'
+			});
 
-			logger.info('[VectorEmbeddingService] Saved vectors, metadata, and texts to:', { outputDir });
 		} catch (error) {
-			logger.error('[VectorEmbeddingService] Error saving vectors:', error instanceof Error ? error : new Error(String(error)));
-			throw new Error(`Error saving vectors: ${error}`);
+			if (error instanceof PythonScriptError) {
+				const logInfo = {
+					scriptPath: error.scriptPath,
+					outputDir,
+					errorMessage: error.message,
+					stderr: error.stderr
+				};
+				logger.error('[VectorEmbeddingService] ❌ Failed to execute Python script:', error, logInfo);
+			} else {
+				const logInfo = {
+					outputDir,
+					errorMessage: error instanceof Error ? error.message : String(error)
+				};
+				logger.error('[VectorEmbeddingService] ❌ Failed to save vectors:', error instanceof Error ? error : new Error(String(error)), logInfo);
+			}
+			throw error;
+		} finally {
+			// Clean up temporary file
+			try {
+				logger.debug('[VectorEmbeddingService] 🧹 Cleaning up temporary file...');
+				await fs.unlink(tempVectorsPath);
+				logger.debug('[VectorEmbeddingService] ✅ Temporary file cleaned up');
+			} catch (error) {
+				logger.warn('[VectorEmbeddingService] ⚠️ Failed to clean up temporary file:', {
+					tempVectorsPath,
+					error: error instanceof Error ? error.message : String(error)
+				});
+			}
 		}
+	}
+
+	/**
+	 * Helper method to run Python scripts with timeout
+	 */
+	private async runPythonScript(scriptPath: string, args: string[], timeout: number): Promise<PythonScriptResult> {
+		return new Promise<PythonScriptResult>((resolve, reject) => {
+			const timer = setTimeout(() => {
+				const timeoutError = new PythonScriptError(
+					`Python script execution timed out after ${timeout}ms`,
+					scriptPath,
+					{ timeout }
+				);
+				
+				const logInfo = { scriptPath, timeoutMs: timeout };
+				logger.error('[VectorEmbeddingService] ⏱️ Python script execution timed out', timeoutError, logInfo);
+				
+				reject(timeoutError);
+			}, timeout);
+			
+			execFile('python3', [scriptPath, ...args], { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+				clearTimeout(timer);
+				
+				// Log stderr output for debugging
+				if (stderr) {
+					logger.debug('[VectorEmbeddingService] 📝 Python script stderr:', { 
+						stderr: stderr.substring(0, 1000) + (stderr.length > 1000 ? '...(truncated)' : '')
+					});
+				}
+				
+				if (error) {
+					const pythonError = new PythonScriptError(
+						error.message,
+						scriptPath,
+						{ stderr }
+					);
+					
+					const logInfo = {
+						message: error.message,
+						stderr: stderr?.substring(0, 500) || 'No stderr output'
+					};
+					logger.error('[VectorEmbeddingService] ❌ Python script error:', pythonError, logInfo);
+					
+					reject(pythonError);
+				} else {
+					resolve({ stdout, stderr });
+				}
+			});
+		});
 	}
 
 	/**
 	 * Load vectors from a directory
 	 */
 	public async loadVectors(directory: string): Promise<LoadedVectors> {
+		const tempVectorsPath = path.join(directory, 'temp_vectors.json');
+		const vectorsPath = path.join(directory, 'vectors.npy');
+		const metadataPath = path.join(directory, 'metadata.json');
+		const textsPath = path.join(directory, 'texts.json');
+		
+		logger.info('[VectorEmbeddingService] 📂 Loading vectors from directory...', { directory });
+
 		try {
-			// Read vectors
-			const vectorsJson = await fs.readFile(
-				path.join(directory, 'vectors.json'),
-				'utf-8'
-			);
-			const vectorsArray = JSON.parse(vectorsJson) as number[][];
-			const vectors = vectorsArray.map(arr => new Float32Array(arr));
+			// First check if all required files exist
+			logger.debug('[VectorEmbeddingService] 🔍 Checking for required files...');
+			
+			// Check for metadata and texts files
+			const [metadataExists, textsExists] = await Promise.all([
+				fs.access(metadataPath).then(() => true).catch(() => false),
+				fs.access(textsPath).then(() => true).catch(() => false)
+			]);
+			
+			if (!metadataExists || !textsExists) {
+				const fileDetails = { metadataExists, textsExists };
+				const errorMsg = `Required files missing in ${directory}: metadata=${metadataExists}, texts=${textsExists}`;
+				
+				const fileError = new VectorFileError(errorMsg, directory, fileDetails);
+				const logInfo = { directory, metadataExists, textsExists };
+				logger.error('[VectorEmbeddingService] ❌ Required metadata or texts files missing', fileError, logInfo);
+				
+				throw fileError;
+			}
+			
+			// Load metadata and texts
+			logger.debug('[VectorEmbeddingService] 📄 Loading metadata and texts...');
+			const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8')) as VectorMetadata[];
+			const texts = JSON.parse(await fs.readFile(textsPath, 'utf-8')) as string[];
+			
+			logger.debug('[VectorEmbeddingService] ✅ Metadata and texts loaded', {
+				metadataCount: metadata.length,
+				textsCount: texts.length
+			});
+			
+			// Try NPY file first, then fall back to JSON
+			const vectorsNpyExists = await fs.access(vectorsPath).then(() => true).catch(() => false);
+			const vectorsJsonExists = await fs.access(vectorsPath.replace('.npy', '.json')).then(() => true).catch(() => false);
+			
+			logger.debug('[VectorEmbeddingService] 📊 Vector file availability', {
+				npy: vectorsNpyExists ? '✅' : '❌',
+				json: vectorsJsonExists ? '✅' : '❌'
+			});
+			
+			let vectors: number[][] = [];
+			
+			// Try loading vectors from NPY
+			if (vectorsNpyExists) {
+				try {
+					// Execute Python script to load vectors
+					const scriptPath = path.join(process.cwd(), 'scripts', 'load_vectors.py');
+					logger.info('[VectorEmbeddingService] 🐍 Executing Python script to load NPY', { 
+						scriptPath, 
+						vectorsPath,
+						tempVectorsPath 
+					});
 
-			// Read metadata
-			const metadataJson = await fs.readFile(
-				path.join(directory, 'metadata.json'),
-				'utf-8'
-			);
-			const metadata = JSON.parse(metadataJson) as VectorMetadata[];
+					const { stdout } = await this.runPythonScript(
+						scriptPath,
+						['--input', vectorsPath, '--output', tempVectorsPath],
+						30000
+					);
 
-			// Read texts
-			const textsJson = await fs.readFile(
-				path.join(directory, 'texts.json'),
-				'utf-8'
-			);
-			const texts = JSON.parse(textsJson) as string[];
+					// Parse stdout as JSON
+					try {
+						const result = JSON.parse(stdout);
+						if (result.status === 'success') {
+							logger.info('[VectorEmbeddingService] ✅ NPY vectors loaded successfully', {
+								shape: result.shape,
+								dtype: result.dtype,
+								outputPath: result.output_path
+							});
+							
+							// Load vectors from temporary JSON file
+							vectors = JSON.parse(await fs.readFile(tempVectorsPath, 'utf-8')) as number[][];
+							logger.debug('[VectorEmbeddingService] ✅ Vectors loaded from temp JSON', {
+								count: vectors.length,
+								dimensions: vectors[0]?.length || 0
+							});
+						} else if (result.status === 'warning') {
+							logger.warn('[VectorEmbeddingService] ⚠️ Python script warning:', {
+								message: result.message,
+								outputPath: result.output_path
+							});
+							throw new Error(`Python script returned warning: ${result.message}`);
+						} else {
+							throw new Error(`Python script returned unexpected status: ${result.status}`);
+						}
+					} catch (e) {
+						const parseError = new Error(`Failed to parse Python script output: ${e instanceof Error ? e.message : String(e)}`);
+						const logInfo = {
+							errorDetails: e instanceof Error ? e.message : String(e),
+							stdoutSnippet: stdout.substring(0, 500)
+						};
+						logger.error('[VectorEmbeddingService] ❌ Failed to parse Python output:', parseError, logInfo);
+						throw parseError;
+					}
+				} catch (npyError) {
+					logger.warn('[VectorEmbeddingService] ⚠️ Failed to load NPY file:', {
+						errorDetails: npyError instanceof Error ? npyError.message : String(npyError),
+						fallback: vectorsJsonExists ? 'Using JSON backup' : 'No fallback available'
+					});
+					
+					// Fall back to JSON if available
+					if (vectorsJsonExists) {
+						logger.info('[VectorEmbeddingService] 🔄 Falling back to JSON vector format');
+						vectors = JSON.parse(await fs.readFile(vectorsPath.replace('.npy', '.json'), 'utf-8')) as number[][];
+						logger.debug('[VectorEmbeddingService] ✅ Vectors loaded from JSON backup', {
+							count: vectors.length,
+							dimensions: vectors[0]?.length || 0
+						});
+					} else {
+						const fileDetails = { vectorsNpyExists, vectorsJsonExists };
+						const errorMsg = 'No vector data available - both NPY and JSON formats missing or invalid';
+						const fileError = new VectorFileError(errorMsg, directory, fileDetails);
+						throw fileError;
+					}
+				} finally {
+					// Clean up temporary file
+					try {
+						await fs.unlink(tempVectorsPath);
+					} catch (error) {
+						logger.warn('[VectorEmbeddingService] ⚠️ Failed to clean up temporary file:', {
+							tempVectorsPath,
+							errorDetails: error instanceof Error ? error.message : String(error)
+						});
+					}
+				}
+			} else if (vectorsJsonExists) {
+				// Load directly from JSON
+				logger.info('[VectorEmbeddingService] 📄 Loading vectors directly from JSON file');
+				vectors = JSON.parse(await fs.readFile(vectorsPath.replace('.npy', '.json'), 'utf-8')) as number[][];
+				logger.debug('[VectorEmbeddingService] ✅ Vectors loaded from JSON', {
+					count: vectors.length,
+					dimensions: vectors[0]?.length || 0
+				});
+			} else {
+				const fileDetails = { vectorsNpyExists, vectorsJsonExists };
+				const errorMsg = `No vector data found in ${directory} - neither NPY nor JSON format exists`;
+				const fileError = new VectorFileError(errorMsg, directory, fileDetails);
+				
+				const logInfo = { directory, vectorsNpyExists, vectorsJsonExists };
+				logger.error('[VectorEmbeddingService] ❌ No vector data available', fileError, logInfo);
+				
+				throw fileError;
+			}
 
-			return { vectors, metadata, texts };
+			// Convert to Float32Array
+			logger.debug('[VectorEmbeddingService] 🔄 Converting vectors to Float32Array...');
+			const vectorsFloat32 = vectors.map(v => new Float32Array(v));
+			
+			const result = {
+				vectors: vectorsFloat32,
+				metadata,
+				texts
+			};
+			
+			logger.info('[VectorEmbeddingService] ✅ Vector loading complete', {
+				vectorCount: vectorsFloat32.length,
+				metadataCount: metadata.length,
+				textsCount: texts.length,
+				dimensions: vectorsFloat32[0]?.length || 0
+			});
+
+			return result;
 		} catch (error) {
-			logger.error('[VectorEmbeddingService] Error loading vectors:', error instanceof Error ? error : new Error(String(error)));
-			throw new Error(`Error loading vectors: ${error}`);
+			if (error instanceof VectorFileError) {
+				const logInfo = {
+					directory: error.directoryPath,
+					fileStatus: error.fileDetails,
+					errorMessage: error.message
+				};
+				logger.error('[VectorEmbeddingService] ❌ Failed to load vectors:', error, logInfo);
+			} else {
+				const logInfo = {
+					directory,
+					errorMessage: error instanceof Error ? error.message : String(error)
+				};
+				logger.error('[VectorEmbeddingService] ❌ Failed to load vectors:', error instanceof Error ? error : new Error(String(error)), logInfo);
+			}
+			throw error;
 		}
+	}
+
+	public isInitialized(): boolean {
+		return this.initialized;
+	}
+
+	public getModelName(): string {
+		return this.modelName;
 	}
 }

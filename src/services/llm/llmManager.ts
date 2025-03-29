@@ -1,8 +1,8 @@
 import { Logger } from '../logger';
+import { LLMFactory } from './llmFactory';
 import { LLMProvider, LLMProviderType } from './llmProvider';
 import { LLMCompletion, LLMCompletionOptions } from './llmService';
 import { PromptType, formatPromptMessages, getPromptDefaultOptions } from './promptManager';
-import { LLMFactory } from './llmFactory';
 
 /**
  * Error thrown when a provider is not available
@@ -67,42 +67,62 @@ export class LLMManager {
 	 */
 	public async initializeProvider(type: LLMProviderType): Promise<boolean> {
 		try {
+			this.logger.debug(`Initializing ${type} provider...`);
 			const provider = this.createProvider(type);
 			const initialized = await provider.initialize();
 
 			if (initialized) {
 				this.providers.set(type, provider);
-				this.logger.debug(`Initialized ${type} provider`);
+				this.logger.info(`Successfully initialized ${type} provider`);
 			} else {
-				this.logger.error(`Failed to initialize ${type} provider`);
+				this.logger.error(`Failed to initialize ${type} provider - provider.initialize() returned false`);
 			}
 
 			return initialized;
 		} catch (error) {
-			this.logger.error(`Error initializing ${type} provider`, error as Error);
+			this.logger.error(`Error initializing ${type} provider:`, error instanceof Error ? error : new Error(String(error)));
 			return false;
 		}
 	}
 
 	private createProvider(type: LLMProviderType): LLMProvider {
-		// Use the factory to create the provider
-		const provider = LLMFactory.createProviderFromEnv(type, this.logger);
-		return provider;
+		try {
+			this.logger.debug(`Creating provider of type ${type}...`);
+			// Use the factory to create the provider
+			const provider = LLMFactory.createProviderFromEnv(type, this.logger);
+			this.logger.debug(`Successfully created ${type} provider`);
+			return provider;
+		} catch (error) {
+			this.logger.error(`Error creating ${type} provider:`, error instanceof Error ? error : new Error(String(error)));
+			throw error;
+		}
 	}
 
 	/**
 	 * Initialize all supported providers
 	 */
 	public async initializeAllProviders(): Promise<void> {
+		this.logger.debug('Initializing all providers...');
+
 		// Always try to initialize the default provider first
-		await this.initializeProvider(this.defaultProvider);
+		this.logger.info(`Attempting to initialize default provider: ${this.defaultProvider}`);
+		const defaultInitialized = await this.initializeProvider(this.defaultProvider);
+
+		if (!defaultInitialized) {
+			this.logger.warn(`Failed to initialize default provider ${this.defaultProvider}, will try other providers`);
+		}
 
 		// Initialize other providers
 		for (const type of Object.values(LLMProviderType)) {
 			if (type !== this.defaultProvider) {
+				this.logger.debug(`Attempting to initialize provider: ${type}`);
 				await this.initializeProvider(type as LLMProviderType);
 			}
 		}
+
+		// Log final provider status
+		this.logger.info('Provider initialization complete. Available providers:',
+			Array.from(this.providers.keys()).join(', ') || 'None');
 	}
 
 	/**
@@ -117,6 +137,8 @@ export class LLMManager {
 	 * Get the default provider
 	 */
 	public getDefaultProvider(): LLMProvider | undefined {
+		this.logger.debug(`Getting default provider: ${this.defaultProvider}`);
+		this.logger.debug(`Providers: ${JSON.stringify(this.providers)}`);
 		return this.providers.get(this.defaultProvider);
 	}
 

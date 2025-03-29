@@ -6,24 +6,55 @@ import { Campaign } from '../types/game';
 export class GameLLMService {
 	private static instance: GameLLMService;
 	private llmManager: LLMManager;
+	private isInitialized = false;
 
 	private constructor() {
 		this.llmManager = new LLMManager(logger, LLMProviderType.OLLAMA);
-		this.initialize();
 	}
 
-	public static getInstance(): GameLLMService {
+	private async initialize(): Promise<void> {
+		if (this.isInitialized) {
+			return;
+		}
+
+		try {
+			logger.info('[GameLLMService] Initializing LLM providers...');
+			await this.llmManager.initializeAllProviders();
+
+			// Check if we have any providers available
+			const defaultProvider = this.llmManager.getDefaultProvider();
+			if (!defaultProvider) {
+				logger.error('[GameLLMService] No default LLM provider available after initialization');
+			} else {
+				logger.info('[GameLLMService] Successfully initialized with default provider:', defaultProvider.getProviderName());
+				this.isInitialized = true;
+			}
+		} catch (error) {
+			logger.error('[GameLLMService] Error during initialization:', error instanceof Error ? error : new Error(String(error)));
+			throw error;
+		}
+	}
+
+	public static async getInstance(): Promise<GameLLMService> {
 		if (!GameLLMService.instance) {
+			logger.debug('[GameLLMService] Creating new instance...');
 			GameLLMService.instance = new GameLLMService();
+			await GameLLMService.instance.initialize();
+		} else if (!GameLLMService.instance.isInitialized) {
+			await GameLLMService.instance.initialize();
 		}
 		return GameLLMService.instance;
 	}
 
-	private async initialize(): Promise<void> {
-		await this.llmManager.initializeAllProviders();
+	private async ensureInitialized(): Promise<void> {
+		if (!this.isInitialized) {
+			await this.initialize();
+		}
 	}
 
 	private async generateResponse(prompt: string, systemPrompt?: string): Promise<string> {
+		await this.ensureInitialized();
+
 		logger.debug('[GameLLMService] Generating response...', {
 			promptLength: prompt.length,
 			hasSystemPrompt: !!systemPrompt
@@ -63,16 +94,51 @@ export class GameLLMService {
 
 Note content: "${content}"
 
-Format your response exactly like this example:
+IMPORTANT: Your response must be ONLY valid JSON in this exact format:
 {
     "category": "npc",
     "suggestedTags": ["friendly", "merchant", "quest-giver"],
     "isGMContent": false
 }`;
 
-		const response = await this.generateResponse(prompt);
 		try {
-			return JSON.parse(response);
+			const response = await this.generateResponse(prompt);
+			logger.debug('[GameLLMService] Raw categorization response:', response);
+
+			// Try to extract JSON from the response
+			const jsonMatch = response.match(/\{[\s\S]*\}/);
+			if (!jsonMatch) {
+				logger.warn('[GameLLMService] No JSON found in response, using default');
+				return {
+					category: 'general',
+					suggestedTags: [],
+					isGMContent: false
+				};
+			}
+
+			const parsed = JSON.parse(jsonMatch[0]);
+
+			// Validate the parsed response
+			if (!parsed.category || !Array.isArray(parsed.suggestedTags) || typeof parsed.isGMContent !== 'boolean') {
+				logger.warn('[GameLLMService] Invalid response format, using default');
+				return {
+					category: 'general',
+					suggestedTags: [],
+					isGMContent: false
+				};
+			}
+
+			// Ensure category is valid
+			const validCategories = ['location', 'npc', 'quest', 'lore', 'item', 'general'];
+			if (!validCategories.includes(parsed.category.toLowerCase())) {
+				parsed.category = 'general';
+			}
+
+			return {
+				category: parsed.category.toLowerCase(),
+				suggestedTags: parsed.suggestedTags,
+				isGMContent: parsed.isGMContent
+			};
 		} catch (error) {
 			logger.error('Error parsing categorization response:', error instanceof Error ? error : new Error(String(error)));
 			return {

@@ -2,17 +2,20 @@ import path from 'path';
 import { Campaign } from '../../domain/models';
 import { logger } from '../../services/logger';
 import { Note } from '../types/game';
+import { TextWithMetadata } from '../types/text';
 import { CampaignFileService } from './campaignFileService';
 import { GameLLMService } from './llmService';
+import { VectorService } from './vectorService';
 
 export class NoteService {
-	private static instance: NoteService;
-	private llmService: GameLLMService;
+	private static instance: NoteService | null = null;
+	private llmService: GameLLMService | null = null;
 	private fileService: CampaignFileService;
+	private vectorService: VectorService;
 
 	private constructor() {
-		this.llmService = GameLLMService.getInstance();
 		this.fileService = CampaignFileService.getInstance();
+		this.vectorService = VectorService.getInstance();
 	}
 
 	public static getInstance(): NoteService {
@@ -20,6 +23,13 @@ export class NoteService {
 			NoteService.instance = new NoteService();
 		}
 		return NoteService.instance;
+	}
+
+	private async ensureLLMService(): Promise<GameLLMService> {
+		if (!this.llmService) {
+			this.llmService = await GameLLMService.getInstance();
+		}
+		return this.llmService;
 	}
 
 	private generateNoteFilename(note: Note): string {
@@ -45,49 +55,119 @@ export class NoteService {
 		});
 
 		try {
-			// Ensure campaign directory structure exists
+			// Ensure campaign directory structure exists first (fast operation)
 			await this.fileService.ensureCampaignDirectoryStructure(data.campaignId);
 
-			// Use LLM to categorize the note
-			logger.debug('[NoteService] Requesting note categorization from LLM...');
-			const categorization = await this.llmService.categorizeNote(data.content);
-			logger.debug('[NoteService] Received note categorization:', categorization);
-
-			// Create the note
+			// Create a basic note first with default category
 			const note: Note = {
 				content: data.content,
 				userId: data.userId,
-				category: categorization.category,
-				tags: [...new Set([...data.tags, ...categorization.suggestedTags])],
-				isGMOnly: data.isGM && categorization.isGMContent,
+				category: 'general', // Default category
+				tags: data.tags,
+				isGMOnly: data.isGM, // Default to user's GM status
 				timestamp: new Date()
 			};
-			logger.debug('[NoteService] Created note object:', {
-				category: note.category,
-				tags: note.tags,
-				isGMOnly: note.isGMOnly
-			});
 
-			// Save the note
-			logger.debug('[NoteService] Saving note...');
+			// Save the note immediately with basic info
+			logger.debug('[NoteService] Saving initial note...');
 			await this.saveNote(data.campaignId, note);
-			logger.info('[NoteService] Successfully saved note');
+			logger.info('[NoteService] Successfully saved initial note');
+
+			// Start async operations after initial save
+			this.processNoteAsync(data.campaignId, note).catch(error => {
+				logger.error('[NoteService] Error in async note processing:', error instanceof Error ? error : new Error(String(error)));
+			});
 
 			return note;
 		} catch (error) {
 			logger.error('[NoteService] Error adding note:', error instanceof Error ? error : new Error(String(error)));
-			logger.debug('[NoteService] Context:', {
-				campaignId: data.campaignId,
-				userId: data.userId
-			});
-			if (error instanceof Error) {
-				logger.error('[NoteService] Error details:', {
-					message: error.message,
-					stack: error.stack,
-					name: error.name
-				});
-			}
 			throw new Error('Failed to add note');
+		}
+	}
+
+	private async processNoteAsync(campaignId: string, note: Note): Promise<void> {
+		try {
+			// Get LLM categorization
+			const llmService = await this.ensureLLMService();
+			const { category, suggestedTags, isGMContent } = await llmService.categorizeNote(note.content);
+
+			// Update note with LLM-provided info
+			note.category = category;
+			note.tags = [...new Set([...note.tags, ...suggestedTags])];
+			note.isGMOnly = note.isGMOnly && isGMContent;
+
+			// Save updated note
+			await this.saveNote(campaignId, note);
+			logger.info('[NoteService] Successfully updated note with categorization');
+
+			// Save vector data
+			await this.saveNoteAsVector(campaignId, note);
+		} catch (error) {
+			logger.error('[NoteService] Error in async note processing:', error instanceof Error ? error : new Error(String(error)));
+		}
+	}
+
+	/**
+	 * Save note as vector embedding for semantic search
+	 */
+	private async saveNoteAsVector(campaignId: string, note: Note): Promise<void> {
+		try {
+			logger.debug('[NoteService] Creating vector embedding for note...');
+
+			// Create metadata for the note
+			const noteMetadata = {
+				file: `note_${note.timestamp.toISOString()}.json`,
+				is_gm_content: note.isGMOnly,
+				chunk_size: note.content.length
+			};
+
+			// Create text with metadata object
+			const textWithMetadata: TextWithMetadata = {
+				text: note.content,
+				metadata: noteMetadata
+			};
+
+			// Generate vectors and save
+			await this.vectorService.generateVectorsFromTexts(
+				campaignId,
+				[textWithMetadata]
+			);
+
+			logger.debug('[NoteService] Vector embedding created and saved successfully');
+		} catch (error) {
+			logger.error('[NoteService] Error saving note as vector:', error instanceof Error ? error : new Error(String(error)));
+			throw error;
+		}
+	}
+
+	/**
+	 * Convert an existing note to vector format
+	 */
+	public async convertNoteToVector(campaignId: string, note: Note): Promise<void> {
+		try {
+			// Create metadata for the note
+			const noteMetadata = {
+				file: `note_${note.timestamp.toISOString()}.json`,
+				is_gm_content: note.isGMOnly,
+				chunk_size: note.content.length
+			};
+
+			// Create text with metadata object
+			const textWithMetadata: TextWithMetadata = {
+				text: note.content,
+				metadata: noteMetadata
+			};
+
+			// Generate vectors and save
+			await this.vectorService.generateVectorsFromTexts(
+				campaignId,
+				[textWithMetadata]
+			);
+
+			logger.info('[NoteService] Successfully converted note to vector format');
+		} catch (error) {
+			logger.error('[NoteService] Error converting note to vector:', error instanceof Error ? error : new Error(String(error)));
+			throw error;
 		}
 	}
 
@@ -110,62 +190,32 @@ export class NoteService {
 		}
 	}
 
-	public async searchNotes(campaign: Campaign, query: string, options: { isGM: boolean }): Promise<Note[]> {
-		logger.debug('[NoteService] Searching notes...', {
-			campaignId: campaign.id,
-			query,
-			isGM: options.isGM
-		});
-
+	public async searchNotes(
+		campaign: Campaign,
+		query: string,
+		options: { isGM: boolean }
+	): Promise<Note[]> {
 		try {
-			// Validate directory structure
-			const isValid = await this.fileService.validateDirectoryStructure(campaign.id);
-			if (!isValid) {
-				await this.fileService.ensureCampaignDirectoryStructure(campaign.id);
-			}
-
-			logger.debug('[NoteService] Getting all notes...');
-			const notes = await this.getNotes(campaign.id, options);
-			logger.debug(`[NoteService] Found ${notes.length} total notes`);
-
-			// If no notes found, return empty array
+			// Load all notes for the campaign
+			const notes = await this.loadNotes(campaign.id, options.isGM);
 			if (notes.length === 0) {
-				logger.debug('[NoteService] No notes found, returning empty array');
 				return [];
 			}
 
-			// Use LLM to find relevant notes
-			const noteContexts = notes.map(note => ({
-				category: note.category,
-				content: note.content,
-				tags: note.tags
-			}));
-			logger.debug('[NoteService] Prepared note contexts for relevance check');
+			// Filter out GM-only notes if user is not GM
+			const accessibleNotes = options.isGM
+				? notes
+				: notes.filter(note => !note.isGMOnly);
 
-			logger.debug('[NoteService] Requesting relevant context from LLM...');
-			const relevantIndices = await this.llmService.determineRelevantContext(query, noteContexts);
-			logger.debug('[NoteService] Received relevant indices:', relevantIndices);
-
-			const relevantNotes = relevantIndices
-				.filter(i => i >= 1 && i <= notes.length) // Extra safety check
-				.map(i => notes[i - 1]); // -1 because indices are 1-based in the response
-
-			logger.debug(`[NoteService] Found ${relevantNotes.length} relevant notes`);
-			return relevantNotes;
+			// Simple text search
+			const searchTerms = query.toLowerCase().split(/\s+/);
+			return accessibleNotes.filter(note => {
+				const noteText = `${note.content} ${note.category} ${note.tags.join(' ')}`.toLowerCase();
+				return searchTerms.every(term => noteText.includes(term));
+			});
 		} catch (error) {
 			logger.error('[NoteService] Error searching notes:', error instanceof Error ? error : new Error(String(error)));
-			logger.debug('[NoteService] Context:', {
-				campaignId: campaign.id,
-				query
-			});
-			if (error instanceof Error) {
-				logger.error('[NoteService] Error details:', {
-					message: error.message,
-					stack: error.stack,
-					name: error.name
-				});
-			}
-			throw new Error('Failed to search notes');
+			return [];
 		}
 	}
 
@@ -202,7 +252,9 @@ export class NoteService {
 			for (const file of playerNoteFiles) {
 				const content = await this.fileService.readFromDirectory(path.join(playerNotesDir, file));
 				if (content) {
-					notes.push(JSON.parse(content));
+					const note = JSON.parse(content);
+					note.timestamp = new Date(note.timestamp);
+					notes.push(note);
 				}
 			}
 
@@ -214,7 +266,9 @@ export class NoteService {
 				for (const file of gmNoteFiles) {
 					const content = await this.fileService.readFromDirectory(path.join(gmNotesDir, file));
 					if (content) {
-						notes.push(JSON.parse(content));
+						const note = JSON.parse(content);
+						note.timestamp = new Date(note.timestamp);
+						notes.push(note);
 					}
 				}
 			}

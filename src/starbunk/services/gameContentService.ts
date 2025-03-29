@@ -10,7 +10,7 @@ interface GameContentSource {
 }
 
 export class GameContentService {
-	private static instance: GameContentService;
+	private static instance: GameContentService | null = null;
 	private content: Map<string, GameContent>;
 	private noteService: NoteService;
 	private llmQueryService: LLMQueryService;

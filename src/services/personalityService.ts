@@ -3,6 +3,17 @@ import * as path from 'path';
 import { logger } from './logger';
 import { VectorEmbeddingService } from '../starbunk/services/vectorEmbeddingService';
 
+// Custom error for personality embedding errors
+export class PersonalityEmbeddingError extends Error {
+	filePath: string;
+	
+	constructor(message: string, filePath: string) {
+		super(message);
+		this.name = 'PersonalityEmbeddingError';
+		this.filePath = filePath;
+	}
+}
+
 export class PersonalityService {
 	private static instance: PersonalityService | null = null;
 	private personalityEmbedding: Float32Array | null = null;
@@ -35,7 +46,11 @@ export class PersonalityService {
 			try {
 				await fs.access(filePath);
 			} catch (error) {
-				logger.error(`[PersonalityService] Personality embedding file not found: ${filePath}`);
+				const fileError = new PersonalityEmbeddingError(
+					`Personality embedding file not found: ${filePath}`,
+					filePath
+				);
+				logger.warn(`[PersonalityService] ${fileError.message}`);
 				return null;
 			}
 
@@ -43,34 +58,70 @@ export class PersonalityService {
 			if (filename.endsWith('.json')) {
 				// Read the .json file
 				const fileContent = await fs.readFile(filePath, 'utf-8');
-				const data = JSON.parse(fileContent);
 				
-				// Convert to Float32Array
-				if (Array.isArray(data)) {
-					this.personalityEmbedding = new Float32Array(data);
-				} else {
-					logger.error(`[PersonalityService] Invalid JSON format for personality embedding: ${filePath}`);
+				try {
+					const data = JSON.parse(fileContent);
+					
+					// Convert to Float32Array
+					if (Array.isArray(data)) {
+						this.personalityEmbedding = new Float32Array(data);
+					} else {
+						const formatError = new PersonalityEmbeddingError(
+							`Invalid JSON format for personality embedding: ${filePath}`,
+							filePath
+						);
+						logger.error(`[PersonalityService] ${formatError.message}`);
+						return null;
+					}
+				} catch (parseError) {
+					const jsonError = new PersonalityEmbeddingError(
+						`Failed to parse JSON personality embedding: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+						filePath
+					);
+					logger.error(`[PersonalityService] ${jsonError.message}`);
 					return null;
 				}
 			} else if (filename.endsWith('.npy')) {
-				// Read the .npy file
-				const buffer = await fs.readFile(filePath);
+				try {
+					// Read the .npy file
+					const buffer = await fs.readFile(filePath);
 
-				// Parse the .npy file format (simplified approach)
-				// Skip the header (first 128 bytes is usually sufficient for simple .npy files)
-				const dataBuffer = buffer.slice(128);
+					// Parse the .npy file format (simplified approach)
+					// Skip the header (first 128 bytes is usually sufficient for simple .npy files)
+					const dataBuffer = buffer.slice(128);
 
-				// Convert to Float32Array
-				this.personalityEmbedding = new Float32Array(dataBuffer.buffer, dataBuffer.byteOffset, dataBuffer.length / 4);
+					// Convert to Float32Array
+					this.personalityEmbedding = new Float32Array(dataBuffer.buffer, dataBuffer.byteOffset, dataBuffer.length / 4);
+					
+					// Basic verification - check if the array has a reasonable length
+					if (this.personalityEmbedding.length < 10) {
+						throw new Error(`Invalid NPY file: embedding length (${this.personalityEmbedding.length}) too small`);
+					}
+				} catch (npyError) {
+					const formatError = new PersonalityEmbeddingError(
+						`Failed to load NPY personality embedding: ${npyError instanceof Error ? npyError.message : String(npyError)}`,
+						filePath
+					);
+					logger.error(`[PersonalityService] ${formatError.message}`);
+					return null;
+				}
 			} else {
-				logger.error(`[PersonalityService] Unsupported file format: ${filename}`);
+				const extensionError = new PersonalityEmbeddingError(
+					`Unsupported file format: ${filename}`,
+					filePath
+				);
+				logger.error(`[PersonalityService] ${extensionError.message}`);
 				return null;
 			}
 
-			logger.info(`[PersonalityService] Successfully loaded personality embedding with ${this.personalityEmbedding.length} dimensions`);
+			logger.info(`[PersonalityService] Successfully loaded personality embedding from ${filePath} with ${this.personalityEmbedding.length} dimensions`);
 			return this.personalityEmbedding;
 		} catch (error) {
-			logger.error(`[PersonalityService] Error loading personality embedding: ${error instanceof Error ? error.message : String(error)}`);
+			const err = error instanceof Error ? error : new Error(String(error));
+			const dataDir = path.join(process.cwd(), 'data', 'llm_context', 'covaBot');
+			const filePath = path.join(dataDir, filename);
+			const customError = new PersonalityEmbeddingError(`Error loading personality embedding: ${err.message}`, filePath);
+			logger.error(`[PersonalityService] ${customError.message}`, customError);
 			return null;
 		}
 	}
@@ -128,7 +179,8 @@ export class PersonalityService {
 			
 			return this.personalityEmbedding;
 		} catch (error) {
-			logger.error(`[PersonalityService] Error generating personality embedding: ${error instanceof Error ? error.message : String(error)}`);
+			const err = error instanceof Error ? error : new Error(String(error));
+			logger.error(`[PersonalityService] Error generating personality embedding: ${err.message}`, err);
 			return null;
 		}
 	}

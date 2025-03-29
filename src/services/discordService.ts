@@ -1,9 +1,8 @@
 import { Client, Guild, Message, MessageReaction, Role, TextChannel, User, VoiceChannel, Webhook } from "discord.js";
 
-import guildIds from "@/discord/guildIds";
 import { BotIdentity } from "@/starbunk/types/botIdentity";
 import { GuildMember } from "discord.js";
-import { logger } from "../services/logger";
+import guildIds from '../discord/guildIds';
 import {
 	ChannelNotFoundError,
 	DiscordServiceError,
@@ -12,6 +11,7 @@ import {
 	RoleNotFoundError,
 	UserNotFoundError
 } from "./errors/discordErrors";
+import { logger } from './logger';
 
 export interface BulkMessageOptions {
 	channelIds: string[];

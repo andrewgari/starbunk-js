@@ -52,8 +52,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			const results = await vectorService.searchCampaignContent(
 				campaignId,
 				query,
-				permissions.canManageCampaign, // Only GM can see GM content
-				limit
+				{
+					limit,
+					includeGMContent: permissions.canManageCampaign // Only GM can see GM content
+				}
 			);
 
 			if (results.length === 0) {

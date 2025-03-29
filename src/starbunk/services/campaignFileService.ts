@@ -13,6 +13,7 @@ export interface CampaignDirectoryStructure {
 	characters: DirectoryWithAccess;
 	sessionRecaps: DirectoryWithAccess;
 	notes: DirectoryWithAccess;
+	vectors: DirectoryWithAccess;
 }
 
 export class CampaignFileService {
@@ -49,7 +50,8 @@ export class CampaignFileService {
 			textbooks: this.createAccessStructure(path.join(campaignDir, 'textbooks')),
 			characters: this.createAccessStructure(path.join(campaignDir, 'characters')),
 			sessionRecaps: this.createAccessStructure(path.join(campaignDir, 'session_recaps')),
-			notes: this.createAccessStructure(path.join(campaignDir, 'notes'))
+			notes: this.createAccessStructure(path.join(campaignDir, 'notes')),
+			vectors: this.createAccessStructure(path.join(campaignDir, 'vectors'))
 		};
 	}
 
@@ -79,7 +81,11 @@ export class CampaignFileService {
 
 				// Notes
 				fs.mkdir(structure.notes.gm, { recursive: true }),
-				fs.mkdir(structure.notes.player, { recursive: true })
+				fs.mkdir(structure.notes.player, { recursive: true }),
+				
+				// Vector embeddings
+				fs.mkdir(structure.vectors.gm, { recursive: true }),
+				fs.mkdir(structure.vectors.player, { recursive: true })
 			]);
 
 			logger.info('[CampaignFileService] Campaign directory structure created successfully', { campaignId });
@@ -116,7 +122,11 @@ export class CampaignFileService {
 
 				// Notes
 				fs.access(structure.notes.gm),
-				fs.access(structure.notes.player)
+				fs.access(structure.notes.player),
+				
+				// Vectors
+				fs.access(structure.vectors.gm),
+				fs.access(structure.vectors.player)
 			]);
 
 			logger.info('[CampaignFileService] Campaign directory structure is valid', { campaignId });
@@ -130,6 +140,11 @@ export class CampaignFileService {
 	public getNotePath(campaignId: string, isGM: boolean): string {
 		const structure = this.getCampaignDirectoryStructure(campaignId);
 		return isGM ? structure.notes.gm : structure.notes.player;
+	}
+	
+	public getVectorPath(campaignId: string, isGM: boolean): string {
+		const structure = this.getCampaignDirectoryStructure(campaignId);
+		return isGM ? structure.vectors.gm : structure.vectors.player;
 	}
 
 	public async saveToDirectory(filePath: string, content: string): Promise<void> {

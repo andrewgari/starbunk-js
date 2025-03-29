@@ -118,7 +118,7 @@ export class HelpService {
 
 	public async getRelevantHelp(query: string, isGM: boolean): Promise<HelpContent[]> {
 		try {
-			const results = await this.vectorService.findSimilarTexts('help', query, 3);
+			const results = await this.vectorService.findSimilarTexts('help', query, { limit: 3 });
 
 			return results
 				.map(result => {
