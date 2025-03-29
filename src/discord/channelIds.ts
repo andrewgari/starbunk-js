@@ -25,4 +25,9 @@ export default {
 	Snowfall: {
 		Starbunk: '696689954759245915',
 	},
+	// TTRPG Campaigns
+	Campaigns: {
+		MadMage: '1300829674854809692',
+		HotSprings: '869410394089869312',
+	},
 };

@@ -1,15 +1,6 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 import interruptBot from '../strategy-bots/interrupt-bot';
-import {
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	INTERRUPT_BOT_NAME, 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	INTERRUPT_BOT_AVATAR_URL,
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	INTERRUPT_BOT_RESPONSES
-} from '../strategy-bots/interrupt-bot/constants';
-
+import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
 	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),
@@ -34,14 +25,14 @@ describe('interruptBot Strategy', () => {
 		expect(interruptBot.name).toBe('Interrupt Bot');
 		expect(typeof interruptBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await interruptBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

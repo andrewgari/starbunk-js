@@ -1,3 +1,4 @@
+import { LLMProviderType } from './index';
 import { LLMMessage } from './llmService';
 
 /**
@@ -21,7 +22,8 @@ export enum PromptType {
 	BLUE_DETECTOR = 'blueDetector',
 	BLUE_ACKNOWLEDGMENT = 'blueAcknowledgment',
 	BLUE_SENTIMENT = 'blueSentiment',
-	COVA_EMULATOR = 'covaEmulator'
+	COVA_EMULATOR = 'covaEmulator',
+	CONDITION_CHECK = 'conditionCheck'
 }
 
 /**
@@ -99,5 +101,16 @@ export function getPromptDefaultOptions(promptType: PromptType): { temperature?:
 	return {
 		temperature: prompt.defaultTemperature,
 		maxTokens: prompt.defaultMaxTokens
+	};
+}
+
+export interface PromptCompletionOptions {
+	temperature?: number;
+	maxTokens?: number;
+	providerType?: LLMProviderType;
+	fallbackToDefault?: boolean;
+	contextData?: {
+		personalityEmbedding?: number[];
+		[key: string]: unknown;
 	};
 }

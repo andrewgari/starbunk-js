@@ -241,3 +241,21 @@ The bot system includes several commands for managing bot behavior:
 - `/bot enable <bot_name>` - Enable a voice bot
 - `/bot disable <bot_name>` - Disable a voice bot
 - `/bot list-bots` - List all available bots (includes voice bots)
+
+## Commands
+
+The bot provides various commands to interact with its functionality:
+
+### General Commands
+- `/ping`: Check if the bot is working properly
+- `/rpghelp`: Lists all available RPG game management commands and their descriptions
+
+### RPG Game Management
+The bot includes comprehensive RPG game management commands for tabletop role-playing games:
+- Campaign management
+- Session scheduling
+- Character management
+- Game content organization
+- Vector-based knowledge search
+
+For a complete list of all RPG commands and their descriptions, use the `/rpghelp` command.

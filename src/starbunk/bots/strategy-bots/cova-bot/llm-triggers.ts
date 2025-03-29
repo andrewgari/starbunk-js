@@ -3,13 +3,14 @@ import { getLLMManager } from '../../../../services/bootstrap';
 import { LLMProviderType } from '../../../../services/llm';
 import { PromptRegistry, PromptType } from '../../../../services/llm/promptManager';
 import { logger } from '../../../../services/logger';
+import { getPersonalityService } from '../../../../services/personalityService';
 import { and, not, or, withChance, withinTimeframeOf } from '../../core/conditions';
 import { createLLMCondition } from '../../core/llm-conditions';
 import { ResponseGenerator, randomResponse } from '../../core/responses';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { COVA_BOT_CONFIG, COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_PATTERNS, COVA_BOT_PROMPTS, COVA_BOT_AVATARS, COVA_BOT_NAME } from './constants';
+import { COVA_BOT_AVATARS, COVA_BOT_CONFIG, COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_NAME, COVA_BOT_PATTERNS, COVA_BOT_PROMPTS } from './constants';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { TimeUnit as _TimeUnit, PerformanceTimer } from '../../../../utils/time';
+import { PerformanceTimer } from '../../../../utils/time';
 
 // Default identity for CovaBot
 const DEFAULT_IDENTITY = {
@@ -42,6 +43,12 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 		return await PerformanceTimer.time('llm-emulator', async () => {
 			try {
 				logger.debug(`[CovaBot] Getting LLM response using emulator prompt`);
+
+				// Get personality embedding
+				const personalityService = getPersonalityService();
+				const personalityEmbedding = personalityService.getPersonalityEmbedding();
+
+				// Create completion with personality context
 				const response = await getLLMManager().createPromptCompletion(
 					PromptType.COVA_EMULATOR,
 					message.content,
@@ -49,15 +56,18 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 						temperature: 0.7,
 						maxTokens: 150,
 						providerType: LLMProviderType.OLLAMA,
-						fallbackToDefault: true
+						fallbackToDefault: true,
+						contextData: {
+							personalityEmbedding: personalityEmbedding ? Array.from(personalityEmbedding) : undefined
+						}
 					}
 				);
-        
+
 				if (!response || response.trim() === '') {
 					logger.debug(`[CovaBot] Received empty response from LLM, using fallback`);
 					return randomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 				}
-        
+
 				return response;
 			} catch (error) {
 				logger.warn(`[CovaBot] LLM service error: ${error instanceof Error ? error.message : String(error)}`);
@@ -78,7 +88,7 @@ export const createLLMResponseDecisionCondition = (containsCova: boolean = false
 					COVA_BOT_CONFIG.Cooldowns.ConversationTimeout,
 					's'
 				)(message);
-        
+
 				// Create prompt for LLM with context about the message
 				const mentionContext = containsCova
 					? "The message contains the word 'cova' or similar."
@@ -102,7 +112,7 @@ Using the Response Decision System, should Cova respond to this message?`;
 
 				const rawResponse = llmResponse.content;
 				const response = rawResponse.toUpperCase();
-        
+
 				// Determine probability based on the response, with higher probabilities for name mentions
 				let probability = 0;
 				if (response.includes("YES")) {
@@ -121,13 +131,13 @@ Using the Response Decision System, should Cova respond to this message?`;
 
 				// Cap at 0.9
 				probability = Math.min(probability, 0.9);
-        
+
 				// Apply randomization to avoid predictability
 				const random = Math.random();
 				const shouldRespond = random < probability;
-        
+
 				logger.debug(`[CovaBot] LLM decision: ${response} → ${probability.toFixed(2)} → ${shouldRespond ? "RESPOND" : "DON'T RESPOND"}`);
-        
+
 				return shouldRespond;
 			} catch (error) {
 				// Fall back to simple randomization with lower probability for name mentions
@@ -147,7 +157,7 @@ export const covaMentionTrigger = createTriggerResponse({
 		// Match explicit Cova mention
 		createLLMCondition(
 			'Does this message directly reference, mention, or ask about Cova/CovaDax?',
-			COVA_BOT_PATTERNS.Mention
+			{ regexFallback: COVA_BOT_PATTERNS.Mention }
 		),
 		// Also match with higher chance if it contains the word 'cova'
 		and(

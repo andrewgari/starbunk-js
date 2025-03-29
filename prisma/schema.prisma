@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/starbunk.db"
+}
+
+model Campaign {
+  id            String       @id @default(uuid())
+  name          String
+  system        String       // Stored as JSON string
+  textChannelId String
+  voiceChannelId String
+  gmId          String
+  adventureId   String?
+  isActive      Boolean      @default(true)
+  metadata      String?      // Stored as JSON string
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  messages      Message[]
+  notes         Note[]
+  files         StoredFile[]
+  gameSessions  GameSession[]
+}
+
+model GameSession {
+  id          String     @id @default(uuid())
+  campaignId  String
+  name        String
+  channelId   String
+  createdBy   String
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  campaign    Campaign   @relation(fields: [campaignId], references: [id])
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  campaignId  String
+  content     String
+  userId      String
+  messageId   String
+  timestamp   DateTime @default(now())
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+}
+
+model Note {
+  id          String   @id @default(uuid())
+  campaignId  String
+  content     String
+  userId      String
+  isGM        Boolean  @default(false)
+  tags        String   // Stored as comma-separated
+  createdAt   DateTime @default(now())
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+}
+
+model TimeEntry {
+  id           String   @id @default(uuid())
+  userId       String
+  activityType String
+  startTime    DateTime
+  endTime      DateTime?
+}
+
+model StoredFile {
+  id          String   @id @default(uuid())
+  campaignId  String
+  name        String
+  path        String
+  mimeType    String
+  size        Int
+  createdAt   DateTime @default(now())
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+}

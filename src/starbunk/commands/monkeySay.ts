@@ -1,17 +1,19 @@
 import { CommandInteraction, GuildMember, PermissionFlagsBits, SlashCommandBuilder, TextChannel } from 'discord.js';
 import { getWebhookService } from '../../services/bootstrap';
 
+const commandBuilder = new SlashCommandBuilder()
+	.setName('monkeysay')
+	.setDescription('monkeydo')
+	.setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+	.addUserOption((option) =>
+		option.setName('user').setDescription('the monkey you want to make speak').setRequired(true),
+	)
+	.addStringOption((option) =>
+		option.setName('message').setDescription('what you want the monkey to say').setRequired(true),
+	);
+
 export default {
-	data: new SlashCommandBuilder()
-		.setName('monkeysay')
-		.setDescription('monkeydo')
-		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-		.addUserOption((option) =>
-			option.setName('user').setDescription('the monkey you want to make speak').setRequired(true),
-		)
-		.addStringOption((option) =>
-			option.setName('message').setDescription('what you want the monkey to say').setRequired(true),
-		),
+	data: commandBuilder.toJSON(),
 	async execute(interaction: CommandInteraction) {
 		const user = interaction.options.get('user')?.user;
 		const member = interaction.options.get('user')?.member as GuildMember;

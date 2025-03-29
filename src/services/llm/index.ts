@@ -10,9 +10,9 @@ export * from './providers/ollamaProvider';
 export * from './providers/openaiProvider';
 
 // Factory and manager
-export * from './llmFactory';
 export * from './llmManager';
+export * from './llmProvider';
 
 // Prompt system
-export * from './promptManager';
+export { PromptType, formatPromptMessages, getPromptDefaultOptions } from './promptManager';
 

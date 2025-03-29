@@ -3,98 +3,100 @@ import userId from '../../discord/userId';
 import { logger } from '../../services/logger';
 import { BotRegistry } from '../bots/botRegistry';
 
-const botCommand = {
-	data: new SlashCommandBuilder()
-		.setName('bot')
-		.setDescription('Manage bot settings')
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('enable')
-				.setDescription('Enable a bot')
-				.addStringOption(option =>
-					option
-						.setName('bot_name')
-						.setDescription('Name of the bot to enable')
-						.setRequired(true)
-						.setAutocomplete(true)
-				)
-		)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('disable')
-				.setDescription('Disable a bot')
-				.addStringOption(option =>
-					option
-						.setName('bot_name')
-						.setDescription('Name of the bot to disable')
-						.setRequired(true)
-						.setAutocomplete(true)
-				)
-		)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('frequency')
-				.setDescription('Set a reply bot\'s response frequency')
-				.addStringOption(option =>
-					option
-						.setName('bot_name')
-						.setDescription('Name of the bot to adjust')
-						.setRequired(true)
-						.setAutocomplete(true)
-				)
-				.addIntegerOption(option =>
-					option
-						.setName('rate')
-						.setDescription('Response rate (0-100)')
-						.setRequired(true)
-						.setMinValue(0)
-						.setMaxValue(100)
-				)
-		)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('volume')
-				.setDescription('Set a voice bot\'s volume')
-				.addStringOption(option =>
-					option
-						.setName('bot_name')
-						.setDescription('Name of the bot to adjust')
-						.setRequired(true)
-						.setAutocomplete(true)
-				)
-				.addIntegerOption(option =>
-					option
-						.setName('volume')
-						.setDescription('Volume level (0-100)')
-						.setRequired(true)
-						.setMinValue(0)
-						.setMaxValue(100)
-				)
-		)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('list-bots')
-				.setDescription('List all available bots and their status')
-		)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('report')
-				.setDescription('Report a bot to Cova')
-				.addStringOption(option =>
-					option
-						.setName('bot_name')
-						.setDescription('Name of the bot to report')
-						.setRequired(true)
-						.setAutocomplete(true)
-				)
-				.addStringOption(option =>
-					option
-						.setName('message')
-						.setDescription('Report message explaining the issue')
-						.setRequired(true)
-				)
-		)
-		.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+const commandBuilder = new SlashCommandBuilder()
+	.setName('bot')
+	.setDescription('Manage bot settings')
+	.addSubcommand(subcommand =>
+		subcommand
+			.setName('enable')
+			.setDescription('Enable a bot')
+			.addStringOption(option =>
+				option
+					.setName('bot_name')
+					.setDescription('Name of the bot to enable')
+					.setRequired(true)
+					.setAutocomplete(true)
+			)
+	)
+	.addSubcommand(subcommand =>
+		subcommand
+			.setName('disable')
+			.setDescription('Disable a bot')
+			.addStringOption(option =>
+				option
+					.setName('bot_name')
+					.setDescription('Name of the bot to disable')
+					.setRequired(true)
+					.setAutocomplete(true)
+			)
+	)
+	.addSubcommand(subcommand =>
+		subcommand
+			.setName('frequency')
+			.setDescription('Set a reply bot\'s response frequency')
+			.addStringOption(option =>
+				option
+					.setName('bot_name')
+					.setDescription('Name of the bot to adjust')
+					.setRequired(true)
+					.setAutocomplete(true)
+			)
+			.addIntegerOption(option =>
+				option
+					.setName('rate')
+					.setDescription('Response rate (0-100)')
+					.setRequired(true)
+					.setMinValue(0)
+					.setMaxValue(100)
+			)
+	)
+	.addSubcommand(subcommand =>
+		subcommand
+			.setName('volume')
+			.setDescription('Set a voice bot\'s volume')
+			.addStringOption(option =>
+				option
+					.setName('bot_name')
+					.setDescription('Name of the bot to adjust')
+					.setRequired(true)
+					.setAutocomplete(true)
+			)
+			.addIntegerOption(option =>
+				option
+					.setName('volume')
+					.setDescription('Volume level (0-100)')
+					.setRequired(true)
+					.setMinValue(0)
+					.setMaxValue(100)
+			)
+	)
+	.addSubcommand(subcommand =>
+		subcommand
+			.setName('list-bots')
+			.setDescription('List all available bots and their status')
+	)
+	.addSubcommand(subcommand =>
+		subcommand
+			.setName('report')
+			.setDescription('Report a bot to Cova')
+			.addStringOption(option =>
+				option
+					.setName('bot_name')
+					.setDescription('Name of the bot to report')
+					.setRequired(true)
+					.setAutocomplete(true)
+			)
+			.addStringOption(option =>
+				option
+					.setName('message')
+					.setDescription('Report message explaining the issue')
+					.setRequired(true)
+			)
+	)
+	.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages);
+
+export default {
+	data: commandBuilder.toJSON(),
 
 	async execute(interaction: ChatInputCommandInteraction): Promise<void> {
 		const subcommand = interaction.options.getSubcommand();
@@ -319,5 +321,3 @@ const botCommand = {
 		}
 	}
 };
-
-export default botCommand;

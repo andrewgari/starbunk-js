@@ -58,3 +58,13 @@ Thumbs.db
 *.tgz
 *.tar.gz
 *.zip
+
+# Exclude unnecessary files from the build context
+*.md
+__tests__
+**/*.test.ts
+cypress
+cypress.config.ts
+jest.config.js
+README.md
+LICENSE

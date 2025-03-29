@@ -29,8 +29,12 @@ const getNextRaid = (now: Date): Date => {
 	}
 };
 
+const commandBuilder = new SlashCommandBuilder()
+	.setName('raidwhen')
+	.setDescription('how long until raid');
+
 export default {
-	data: new SlashCommandBuilder().setName('raidwhen').setDescription('how long until raid'),
+	data: commandBuilder.toJSON(),
 	permissions: [],
 	async execute(interaction: CommandInteraction) {
 		const now = new Date(Date.now());

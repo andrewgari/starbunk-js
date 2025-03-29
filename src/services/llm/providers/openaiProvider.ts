@@ -65,8 +65,13 @@ export class OpenAIProvider extends GenericProvider {
 			throw new Error('OpenAI client not initialized');
 		}
 
+		const defaultModel = this.getAvailableModels()[0];
+		if (!defaultModel) {
+			throw new Error('No models available for OpenAI provider');
+		}
+
 		return await this.client.chat.completions.create({
-			model: options.model,
+			model: options.model || defaultModel,
 			messages: options.messages.map(msg => ({
 				role: msg.role,
 				content: msg.content
@@ -90,10 +95,11 @@ export class OpenAIProvider extends GenericProvider {
 		options: LLMCompletionOptions
 	): LLMCompletionResponse {
 		const openaiResponse = response as OpenAI.Chat.Completions.ChatCompletion;
+		const defaultModel = this.getAvailableModels()[0];
 
 		return {
 			content: openaiResponse.choices[0].message.content || '',
-			model: options.model,
+			model: options.model || defaultModel,
 			provider: this.getProviderName()
 		};
 	}

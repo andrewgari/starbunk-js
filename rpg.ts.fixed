@@ -1,0 +1,97 @@
+import { PrismaClient } from '@prisma/client';
+import {
+	ChatInputCommandInteraction,
+	GuildMember,
+	SlashCommandBuilder
+} from 'discord.js';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { logger } from '../../services/logger';
+import { CampaignFileService } from '../services/campaignFileService';
+import { CampaignService } from '../services/campaignService';
+import { GameContentService } from '../services/gameContentService';
+import { HelpService } from '../services/helpService';
+import { VectorService } from '../services/vectorService';
+import { SUPPORTED_SYSTEMS } from '../types/game';
+import { getCampaignContext, getCampaignPermissions } from '../utils/campaignChecks';
+
+// Initialize Prisma client
+const prisma = new PrismaClient();
+
+const data = new SlashCommandBuilder()
+	.setName('rpg')
+	.setDescription('RPG game management commands');
+
+// [Rest of your command definitions would go here]
+
+export default {
+	data: data.toJSON(),
+	async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+		try {
+			const group = interaction.options.getSubcommandGroup(false);
+			const subcommand = interaction.options.getSubcommand();
+
+			// Get campaign context and permissions
+			const member = interaction.member as GuildMember;
+			const context = getCampaignContext(member, interaction.channelId);
+			const permissions = await getCampaignPermissions(context);
+
+			// Get campaign service instance
+			const campaignService = CampaignService.getInstance();
+			const helpService = HelpService.getInstance();
+			const gameContentService = GameContentService.getInstance();
+
+			// Skip campaign check for campaign create and list commands
+			const skipCampaignCheck = group === 'campaign' && (subcommand === 'create' || subcommand === 'list');
+
+			// Get the campaign for the current channel
+			const campaign = await campaignService.getCampaignByChannel(interaction.channelId);
+			if (!campaign && !skipCampaignCheck) {
+				await interaction.reply({
+					content: 'This channel is not associated with any active campaign. Use `/rpg campaign create` to create one.',
+					ephemeral: true
+				});
+				return;
+			}
+
+			// Handle help option for any subcommand
+			const helpTopic = interaction.options.getString('help');
+			if (helpTopic !== null) {
+				const helpContent = await helpService.getRelevantHelp(`${group} ${subcommand}`, permissions.canManageCampaign);
+				await interaction.reply({
+					content: helpService.formatHelpContent(helpContent),
+					ephemeral: true
+				});
+				return;
+			}
+
+			// Campaign Management Commands
+			if (group === 'campaign') {
+				switch (subcommand) {
+					// [Rest of the command implementations would go here]
+				}
+			}
+
+			// [Rest of your command handler would go here]
+		} catch (error) {
+			logger.error('Error executing rpg command:', error instanceof Error ? error : new Error(String(error)));
+
+			try {
+				await interaction.reply({
+					content: 'An error occurred while processing the command. Please try again later.',
+					ephemeral: true
+				});
+			} catch (replyError) {
+				// If we can't reply normally, try to follow up
+				try {
+					await interaction.followUp({
+						content: 'An error occurred while processing the command. Please try again later.',
+						ephemeral: true
+					});
+				} catch (followUpError) {
+					logger.error('Failed to respond to command error:', followUpError);
+				}
+			}
+		}
+	}
+};

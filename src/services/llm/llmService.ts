@@ -5,7 +5,7 @@ import { LLMProviderType } from './llmFactory';
  * Interface for LLM completion request options
  */
 export interface LLMCompletionOptions {
-	model: string;
+	model?: string;
 	messages: LLMMessage[];
 	temperature?: number;
 	maxTokens?: number;
@@ -14,6 +14,10 @@ export interface LLMCompletionOptions {
 	presencePenalty?: number;
 	stop?: string[];
 	provider?: LLMProviderType;
+	contextData?: {
+		personalityEmbedding?: number[];
+		[key: string]: unknown;
+	};
 }
 
 /**
@@ -44,6 +48,18 @@ export interface LLMServiceConfig {
 }
 
 /**
+ * Interface for LLM completion
+ */
+export interface LLMCompletion {
+	content: string;
+	usage?: {
+		promptTokens: number;
+		completionTokens: number;
+		totalTokens: number;
+	};
+}
+
+/**
  * Interface for LLM service
  */
 export interface LLMService {
@@ -71,7 +87,7 @@ export interface LLMService {
 	 * Create a completion
 	 * @param options Completion options
 	 */
-	createCompletion(options: LLMCompletionOptions): Promise<LLMCompletionResponse>;
+	createCompletion(options: LLMCompletionOptions): Promise<LLMCompletion>;
 
 	/**
 	 * Create a simple completion with just a prompt
