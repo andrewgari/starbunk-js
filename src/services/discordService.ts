@@ -27,6 +27,10 @@ export interface MemberFetchOptions {
 	withPresences?: boolean;
 }
 
+/**
+ * Interface for accessing protected methods in tests
+ * This allows the tests to access protected methods without changing their visibility
+ */
 export interface ProtectedMethods {
 	refreshBotProfiles: () => Promise<void>;
 	retryBotProfileRefresh: (attempts?: number) => Promise<void>;
@@ -86,18 +90,19 @@ export class DiscordService {
 
 	private startBotProfileRefresh(): void {
 		// Initial refresh with retry
-		this.retryBotProfileRefresh();
+		this._test_retryBotProfileRefresh();
 
 		// Set up periodic refresh
 		this.botProfileRefreshInterval = setInterval(() => {
-			this.retryBotProfileRefresh();
+			this._test_retryBotProfileRefresh();
 		}, 60 * 60 * 1000); // 1 hour
 	}
 
-	protected async retryBotProfileRefresh(attempts: number = 3): Promise<void> {
+	// For testing purposes - public method with a test prefix
+	public async _test_retryBotProfileRefresh(attempts: number = 3): Promise<void> {
 		for (let i = 0; i < attempts; i++) {
 			try {
-				await this.refreshBotProfiles();
+				await this._test_refreshBotProfiles();
 				return;
 			} catch (error) {
 				if (i === attempts - 1) {
@@ -112,7 +117,8 @@ export class DiscordService {
 		}
 	}
 
-	protected async refreshBotProfiles(): Promise<void> {
+	// For testing purposes - public method with a test prefix
+	public async _test_refreshBotProfiles(): Promise<void> {
 		try {
 			const guild = await this.getGuild(DefaultGuildId);
 
@@ -199,19 +205,8 @@ export class DiscordService {
 		}
 		return discordServiceInstance;
 	}
-
-	/**
-	 * TODO: Improve testability of this class
-	 * 
-	 * Currently, the test suite discordService.test.ts is skipped because
-	 * there's an issue accessing the protected methods in the test environment
-	 * due to how JavaScript handles protected members in compiled output.
-	 * 
-	 * Options to fix:
-	 * 1. Use proper dependency injection to make testing easier
-	 * 2. Make protected methods public with a clear test naming convention
-	 * 3. Create a proper test interface that's exported at compile time
-	 */
+	
+	// Methods with _test_ prefix are test-only public implementations of protected methods
 
 	// Clear all caches
 	public clearCache(): void {
@@ -450,4 +445,3 @@ export class DiscordService {
 		this.clearCache();
 	}
 }
-

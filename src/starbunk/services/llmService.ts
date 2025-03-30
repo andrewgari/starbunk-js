@@ -221,7 +221,9 @@ Return ONLY a JSON array of the most relevant piece indices (max 3).`;
 			question,
 			contextLength: context.length,
 			isGM,
-			campaignSystem: campaign.system
+			campaignSystem: campaign.system,
+			hasContext: !!context,
+			contextPreview: context ? context.substring(0, 100) + '...' : 'No context provided'
 		});
 
 		const systemPrompt = `You are an expert game master and rules advisor EXCLUSIVELY for ${campaign.system.name} ${campaign.system.version}.

@@ -42,6 +42,14 @@ export class PersonalityService {
 			// Get the path to the data/llm_context/covaBot directory where the embedding file is stored
 			const dataDir = path.join(process.cwd(), 'data', 'llm_context', 'covaBot');
 
+			// Check if directory exists
+			try {
+				await fs.access(dataDir);
+			} catch (error) {
+				logger.warn(`[PersonalityService] Context directory not found at ${dataDir}. Creating it...`);
+				await fs.mkdir(dataDir, { recursive: true });
+			}
+
 			// Try loading JSON first if filename is not explicitly .npy
 			if (!filename.endsWith('.npy')) {
 				const jsonPath = path.join(dataDir, filename.endsWith('.json') ? filename : 'personality.json');

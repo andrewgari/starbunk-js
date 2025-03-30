@@ -239,4 +239,4 @@ setInterval(() => {
 		logger.info(`[CovaBot] Resetting performance stats after reaching threshold`);
 		perfTimer.reset();
 	}
-}, 60 * 60 * 1000); // 1 hour in milliseconds
+}, 60 * 60 * 1000).unref(); // 1 hour in milliseconds, unref to allow process to exit during tests

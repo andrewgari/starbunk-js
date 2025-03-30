@@ -1,7 +1,8 @@
 import { ChatInputCommandInteraction, EmbedBuilder, GuildMember, SlashCommandBuilder } from 'discord.js';
 import * as path from 'path';
 import { logger } from '../../../services/logger';
-import { VectorSearchResult, VectorService } from '../../services/vectorService';
+import { VectorService } from '../../services/vectorService';
+import { TextWithMetadata } from '../../types/text';
 import { getCampaignContext, getCampaignPermissions } from '../../utils/campaignChecks';
 
 // Define the command
@@ -96,7 +97,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 }
 
 // Helper function to create a Discord embed from search results
-function createResultsEmbed(query: string, results: readonly VectorSearchResult[]): EmbedBuilder {
+function createResultsEmbed(query: string, results: readonly TextWithMetadata[]): EmbedBuilder {
 	const embed = new EmbedBuilder()
 		.setTitle(`Search Results for: "${query}"`)
 		.setColor('#0099ff')
@@ -104,8 +105,10 @@ function createResultsEmbed(query: string, results: readonly VectorSearchResult[
 
 	results.forEach((result, index) => {
 		const fileName = path.basename(result.metadata.file);
-		const isGM = result.metadata.is_gm_content ? ' 🔒 (GM Only)' : '';
-		const similarity = (result.similarity * 100).toFixed(1);
+		// Handle both metadata formats (isGMContent and is_gm_content)
+		const isGM = (result.metadata.is_gm_content || result.metadata.isGMContent) ? ' 🔒 (GM Only)' : '';
+		const similarity = (result.similarity || 0) * 100;
+		const similarityPercent = similarity.toFixed(1);
 
 		// Truncate text if too long
 		let text = result.text;
@@ -114,7 +117,7 @@ function createResultsEmbed(query: string, results: readonly VectorSearchResult[
 		}
 
 		embed.addFields({
-			name: `${index + 1}. ${fileName}${isGM} (${similarity}% match)`,
+			name: `${index + 1}. ${fileName}${isGM} (${similarityPercent}% match)`,
 			value: text
 		});
 	});

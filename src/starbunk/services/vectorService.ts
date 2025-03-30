@@ -47,11 +47,7 @@ export interface VectorGenerationOptions {
 	namespace?: string;
 }
 
-export interface VectorSearchResult {
-	text: string;
-	metadata: VectorMetadata;
-	similarity: number;
-}
+// Export VectorSearchResult from text.ts instead of defining it here
 
 export class VectorService {
 	private static instance: VectorService | null = null;
@@ -391,7 +387,7 @@ export class VectorService {
 		namespace: string,
 		query: string,
 		options: { limit?: number } = {}
-	): Promise<VectorSearchResult[]> {
+	): Promise<TextWithMetadata[]> {
 		try {
 			let contextDir;
 
@@ -491,72 +487,58 @@ export class VectorService {
 	public async searchCampaignContent(
 		campaignId: string,
 		query: string,
-		options: { limit?: number; includeGMContent?: boolean } = {}
-	): Promise<VectorSearchResult[]> {
+		options: {
+			limit?: number;
+			includeGMContent?: boolean;
+		} = {}
+	): Promise<TextWithMetadata[]> {
 		try {
-			logger.info('[VectorService] 🔍 Searching campaign content', {
+			logger.debug('[VectorService] Searching campaign content...', {
 				campaignId,
-				query: query.substring(0, 30) + (query.length > 30 ? '...' : ''),
-				includeGMContent: options.includeGMContent,
-				limit: options.limit
+				query,
+				limit: options.limit,
+				includeGMContent: options.includeGMContent
 			});
 
-			// Get the player vectors directory
-			const _playerVectorDir = this.fileService.getVectorPath(campaignId, false);
-			let allResults: VectorSearchResult[] = [];
-
-			// Always search player content
-			try {
-				logger.debug('[VectorService] 🧑‍🤝‍🧑 Searching player vectors...', { campaignId });
-				const playerResults = await this.findSimilarTexts(`${campaignId}/player`, query, { limit: options.limit });
-				allResults = allResults.concat(playerResults);
-				logger.debug('[VectorService] ✅ Player search complete', {
-					resultCount: playerResults.length,
-					campaignId
-				});
-			} catch (playerError) {
-				logger.warn('[VectorService] ⚠️ Error searching player vectors', {
-					campaignId,
-					error: playerError instanceof Error ? playerError.message : String(playerError)
-				});
+			// Get embeddings for query
+			const queryEmbedding = await this.embeddingService.generateEmbeddings([query]);
+			if (!queryEmbedding || queryEmbedding.length === 0) {
+				throw new Error('Failed to generate query embedding');
 			}
 
-			// Search GM content if user has access
+			// Search in player content first
+			const playerResults = await this.findSimilarTexts(
+				`${campaignId}_player`,
+				query,
+				{ limit: options.limit }
+			);
+
+			// If GM content is allowed, search in GM content too
+			let gmResults: TextWithMetadata[] = [];
 			if (options.includeGMContent) {
-				try {
-					logger.debug('[VectorService] 🧙‍♂️ Searching GM vectors...', { campaignId });
-					const gmResults = await this.findSimilarTexts(`${campaignId}/gm`, query, { limit: options.limit });
-					allResults = allResults.concat(gmResults);
-					logger.debug('[VectorService] ✅ GM search complete', {
-						resultCount: gmResults.length,
-						campaignId
-					});
-				} catch (gmError) {
-					logger.warn('[VectorService] ⚠️ Error searching GM vectors', {
-						campaignId,
-						error: gmError instanceof Error ? gmError.message : String(gmError)
-					});
-				}
-			} else {
-				logger.debug('[VectorService] 🔒 Skipping GM vectors (no access)', { campaignId });
+				logger.debug('[VectorService] Including GM content in search...');
+				gmResults = await this.findSimilarTexts(
+					`${campaignId}_gm`,
+					query,
+					{ limit: options.limit }
+				);
 			}
 
-			// Sort by similarity and limit results
-			const sortedResults = allResults
-				.sort((a, b) => b.similarity - a.similarity)
+			// Combine and sort results
+			const allResults = [...playerResults, ...gmResults]
+				.sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
 				.slice(0, options.limit || 5);
 
-			logger.info('[VectorService] ✅ Campaign content search completed', {
-				campaignId,
-				totalResultCount: allResults.length,
-				returnedResultCount: sortedResults.length,
-				topSimilarity: sortedResults.length > 0 ? sortedResults[0].similarity : 0
+			logger.debug('[VectorService] Search complete', {
+				totalResults: allResults.length,
+				playerResults: playerResults.length,
+				gmResults: gmResults.length
 			});
 
-			return sortedResults;
+			return allResults;
 		} catch (error) {
-			this.logError('[VectorService] ❌ Error searching campaign content', error, { campaignId });
-			throw VectorServiceError.fromError('Failed to search campaign content', error, { campaignId });
+			logger.error('[VectorService] Error searching campaign content:', error instanceof Error ? error : new Error(String(error)));
+			throw error;
 		}
 	}
 }

@@ -9,7 +9,7 @@ import { VectorMetadata } from './vectorService';
 
 export interface LoadedVectors {
 	vectors: Float32Array[];
-	metadata: VectorMetadata[];
+	metadata: any[];
 	texts: string[];
 }
 
@@ -381,7 +381,7 @@ export class VectorEmbeddingService {
 	/**
 	 * Save vectors to a file
 	 */
-	public async saveVectors(vectors: number[][], metadata: VectorMetadata[], texts: string[], outputDir: string): Promise<void> {
+	public async saveVectors(vectors: number[][], metadata: any[], texts: string[], outputDir: string): Promise<void> {
 		const tempVectorsPath = path.join(outputDir, 'temp_vectors.json');
 		const outputPath = path.join(outputDir, 'vectors.npy');
 		const metadataPath = path.join(outputDir, 'metadata.json');
