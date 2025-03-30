@@ -35,12 +35,16 @@ export class PersonalityService {
 	 * Load a personality embedding from disk
 	 *
 	 * @param filename The embedding file to load (supports .json or .npy)
+	 * @param botName The bot name to load the embedding for (default: 'covaBot')
 	 * @returns The loaded embedding as a Float32Array
 	 */
-	public async loadPersonalityEmbedding(filename: string = 'personality.json'): Promise<Float32Array | null> {
+	public async loadPersonalityEmbedding(
+		filename: string = 'personality.json',
+		botName: string = 'covaBot'
+	): Promise<Float32Array | null> {
 		try {
-			// Get the path to the data/llm_context/covaBot directory where the embedding file is stored
-			const dataDir = path.join(process.cwd(), 'data', 'llm_context', 'covaBot');
+			// Get the path to the data/llm_context/{botName} directory where the embedding file is stored
+			const dataDir = path.join(process.cwd(), 'data', 'llm_context', botName);
 
 			// Check if directory exists
 			try {
@@ -59,6 +63,10 @@ export class PersonalityService {
 
 					if (Array.isArray(data)) {
 						this.personalityEmbedding = new Float32Array(data);
+						// Validate the embedding size - MiniLM-L6-v2 has 384 dimensions
+						if (this.personalityEmbedding.length < 10) {
+							logger.warn(`[PersonalityService] Loaded embedding has suspiciously few dimensions (${this.personalityEmbedding.length}). Expected ~384 for MiniLM-L6-v2.`);
+						}
 						logger.info(`[PersonalityService] Successfully loaded personality embedding from ${jsonPath} with ${this.personalityEmbedding.length} dimensions`);
 						return this.personalityEmbedding;
 					}
@@ -88,6 +96,7 @@ export class PersonalityService {
 					// Only log NPY warning once per service instance
 					if (!this.hasLoggedNpyWarning) {
 						logger.debug(`[PersonalityService] NPY format not available, using JSON format instead`);
+						logger.info(`[${botName}] NPY personality embedding not found, trying JSON format...`);
 						this.hasLoggedNpyWarning = true;
 					}
 				}
@@ -111,11 +120,13 @@ export class PersonalityService {
 	 *
 	 * @param description The text description to generate an embedding from
 	 * @param saveToFile Whether to save the embedding to disk (optional filename)
+	 * @param botName Optional bot name (defaults to 'covaBot')
 	 * @returns The generated embedding as a Float32Array
 	 */
 	public async generatePersonalityEmbedding(
 		description: string,
-		saveToFile: string | boolean = false
+		saveToFile: string | boolean = false,
+		botName: string = 'covaBot'
 	): Promise<Float32Array | null> {
 		try {
 			// Initialize the embedding service if needed
@@ -131,7 +142,7 @@ export class PersonalityService {
 
 			// Save to file if requested
 			if (saveToFile) {
-				const dataDir = path.join(process.cwd(), 'data', 'llm_context', 'covaBot');
+				const dataDir = path.join(process.cwd(), 'data', 'llm_context', botName);
 
 				// Create directory if it doesn't exist
 				await fs.mkdir(dataDir, { recursive: true });

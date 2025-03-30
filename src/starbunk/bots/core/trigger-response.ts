@@ -1,6 +1,7 @@
 import { Message } from 'discord.js';
 import { logger } from '../../../services/logger';
 import { BotIdentity } from '../../types/botIdentity';
+import { DiscordService } from '../../../services/discordService';
 
 /**
  * Typed TriggerName for better type safety and debugging
@@ -136,7 +137,7 @@ export class TriggerResponseClass {
 			logger.debug(`[${botName}] Sending response: "${responseText.substring(0, 100)}..."`);
       
 			// Use the discord service to send the message
-			const DiscordService = (await import('../../../services/discordService.js')).DiscordService;
+			// Use pre-imported DiscordService for better performance
 			await DiscordService.getInstance().sendMessageWithBotIdentity(
 				channel.id,
 				identity,
