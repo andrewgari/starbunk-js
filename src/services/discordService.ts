@@ -8,8 +8,10 @@ import {
 	DiscordServiceError,
 	GuildNotFoundError,
 	MemberNotFoundError,
+	MessageNotFoundError,
 	RoleNotFoundError,
-	UserNotFoundError
+	UserNotFoundError,
+	WebhookError
 } from "./errors/discordErrors";
 import { logger } from './logger';
 
@@ -17,6 +19,17 @@ export interface BulkMessageOptions {
 	channelIds: string[];
 	message: string;
 	botIdentity?: BotIdentity;
+}
+
+export interface MemberFetchOptions {
+	time?: number;
+	limit?: number;
+	withPresences?: boolean;
+}
+
+export interface ProtectedMethods {
+	refreshBotProfiles: () => Promise<void>;
+	retryBotProfileRefresh: (attempts?: number) => Promise<void>;
 }
 
 // Singleton instance
@@ -32,7 +45,7 @@ export class DiscordService {
 	private webhookCache = new Map<string, Webhook>();
 	private botProfileRefreshInterval: NodeJS.Timeout | null = null;
 
-	private constructor(private readonly client: Client) {
+	protected constructor(private readonly client: Client) {
 		// Wait for ready event before starting bot profile refresh
 		this.client.once('ready', () => {
 			this.startBotProfileRefresh();
@@ -46,78 +59,99 @@ export class DiscordService {
 			return cachedWebhook;
 		}
 
-		// Try to find existing webhook
-		const webhooks = await channel.fetchWebhooks();
-		const existingWebhook = webhooks.find(w => w.owner?.id === this.client.user?.id);
-		if (existingWebhook) {
-			this.webhookCache.set(cacheKey, existingWebhook);
-			return existingWebhook;
-		}
+		try {
+			// Try to find existing webhook
+			const webhooks = await channel.fetchWebhooks();
+			const existingWebhook = webhooks.find(w => w.owner?.id === this.client.user?.id);
+			if (existingWebhook) {
+				this.webhookCache.set(cacheKey, existingWebhook);
+				return existingWebhook;
+			}
 
-		// Create new webhook if none exists
-		const newWebhook = await channel.createWebhook({
-			name: 'Starbunk Bot',
-			avatar: this.client.user?.displayAvatarURL()
-		});
-		this.webhookCache.set(cacheKey, newWebhook);
-		return newWebhook;
+			// Create new webhook if none exists
+			if (!this.client.user) {
+				throw new WebhookError('Client user not available');
+			}
+
+			const newWebhook = await channel.createWebhook({
+				name: 'Starbunk Bot',
+				avatar: this.client.user.displayAvatarURL()
+			});
+			this.webhookCache.set(cacheKey, newWebhook);
+			return newWebhook;
+		} catch (error) {
+			throw new WebhookError(`Failed to create webhook: ${error instanceof Error ? error.message : String(error)}`);
+		}
 	}
 
 	private startBotProfileRefresh(): void {
-		// Initial refresh
-		this.refreshBotProfiles().catch(error => {
-			console.error('Failed to refresh bot profiles:', error);
-		});
+		// Initial refresh with retry
+		this.retryBotProfileRefresh();
 
-		// Set up hourly refresh
+		// Set up periodic refresh
 		this.botProfileRefreshInterval = setInterval(() => {
-			this.refreshBotProfiles().catch(error => {
-				console.error('Failed to refresh bot profiles:', error);
-			});
+			this.retryBotProfileRefresh();
 		}, 60 * 60 * 1000); // 1 hour
 	}
 
-	private async refreshBotProfiles(): Promise<void> {
-		try {
-			const guild = await this.getGuild(DefaultGuildId);
-			if (!guild) {
-				logger.warn(`Default guild ${DefaultGuildId} not found. Bot profile refresh will be skipped.`);
-				return;
-			}
-
+	protected async retryBotProfileRefresh(attempts: number = 3): Promise<void> {
+		for (let i = 0; i < attempts; i++) {
 			try {
-				// First try to fetch all members at once
-				const members = await guild.members.fetch();
-				this.memberCache.clear();
-				members.forEach(member => {
-					this.memberCache.set(member.id, member);
-				});
-				logger.debug(`Refreshed bot profiles for ${members.size} members`);
-			} catch (fetchError) {
-				// If full fetch fails, try fetching in chunks
-				logger.warn('Full member fetch failed, attempting chunked fetch...');
-
-				// Clear the cache before starting chunk fetch
-				this.memberCache.clear();
-
-				try {
-					// Use REST-based fetch which is more reliable for large guilds
-					await guild.members.fetch({ time: 60000 });
-
-					// Update cache with whatever members we managed to get
-					const memberCount = guild.members.cache.size;
-					guild.members.cache.forEach(member => {
-						this.memberCache.set(member.id, member);
-					});
-
-					logger.info(`Cached ${memberCount} members from chunked fetch`);
-				} catch (chunkError) {
-					logger.error('Chunked member fetch also failed:', chunkError instanceof Error ? chunkError : new Error(String(chunkError)));
-					// Don't throw - we'll work with whatever members we got in the cache
+				await this.refreshBotProfiles();
+				return;
+			} catch (error) {
+				if (i === attempts - 1) {
+					logger.error('All retry attempts failed for bot profile refresh:',
+						error instanceof Error ? error : new Error(String(error))
+					);
+				} else {
+					logger.warn(`Retry attempt ${i + 1} failed, retrying in 5 seconds...`);
+					await new Promise(resolve => setTimeout(resolve, 5000));
 				}
 			}
+		}
+	}
+
+	protected async refreshBotProfiles(): Promise<void> {
+		try {
+			const guild = await this.getGuild(DefaultGuildId);
+
+			// Clear the cache before starting
+			this.memberCache.clear();
+
+			// Get the current members from cache first
+			guild.members.cache.forEach(member => {
+				const cacheKey = `${guild.id}:${member.id}`;
+				this.memberCache.set(cacheKey, member);
+			});
+
+			try {
+				// Use REST-based fetch with chunking enabled
+				const fetchOptions: MemberFetchOptions = {
+					time: 120000, // 2 minutes timeout
+					limit: 100, // Fetch in chunks of 100
+					withPresences: false // Don't fetch presence data to reduce payload
+				};
+
+				await guild.members.fetch(fetchOptions);
+
+				// Update cache with fetched members
+				const memberCount = guild.members.cache.size;
+				guild.members.cache.forEach(member => {
+					const cacheKey = `${guild.id}:${member.id}`;
+					this.memberCache.set(cacheKey, member);
+				});
+
+				logger.info(`Successfully cached ${memberCount} members`);
+			} catch (error) {
+				// If fetch fails, log but continue with cached members
+				logger.warn('Member fetch failed, continuing with cached members:',
+					error instanceof Error ? error : new Error(String(error))
+				);
+			}
 		} catch (error) {
-			logger.warn('Failed to refresh bot profiles:', error instanceof Error ? error : new Error(String(error)));
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			throw new DiscordServiceError(`Failed to refresh bot profiles: ${errorMessage}`);
 		}
 	}
 
@@ -136,32 +170,48 @@ export class DiscordService {
 			// Fallback to getting a random member's identity if cache is empty
 			return this.getRandomMemberAsBotIdentity();
 		}
-		return profiles[Math.floor(Math.random() * profiles.length)];
+		const randomIndex = Math.floor(Math.random() * profiles.length);
+		return profiles[randomIndex];
 	}
 
 	/**
 	 * Initialize the Discord service singleton
 	 * @param client Discord.js client
 	 * @returns The DiscordService instance
+	 * @throws DiscordServiceError if already initialized
 	 */
 	public static initialize(client: Client): DiscordService {
-		if (!discordServiceInstance) {
-			discordServiceInstance = new DiscordService(client);
+		if (discordServiceInstance) {
+			throw new DiscordServiceError('DiscordService is already initialized');
 		}
+		discordServiceInstance = new DiscordService(client);
 		return discordServiceInstance;
 	}
 
 	/**
 	 * Get the Discord service instance. Must call initialize first.
 	 * @returns The DiscordService instance
-	 * @throws Error if the service hasn't been initialized
+	 * @throws DiscordServiceError if not initialized
 	 */
 	public static getInstance(): DiscordService {
 		if (!discordServiceInstance) {
-			throw new Error("DiscordService not initialized. Call initialize() first.");
+			throw new DiscordServiceError('DiscordService not initialized. Call initialize() first.');
 		}
 		return discordServiceInstance;
 	}
+
+	/**
+	 * TODO: Improve testability of this class
+	 * 
+	 * Currently, the test suite discordService.test.ts is skipped because
+	 * there's an issue accessing the protected methods in the test environment
+	 * due to how JavaScript handles protected members in compiled output.
+	 * 
+	 * Options to fix:
+	 * 1. Use proper dependency injection to make testing easier
+	 * 2. Make protected methods public with a clear test naming convention
+	 * 3. Create a proper test interface that's exported at compile time
+	 */
 
 	// Clear all caches
 	public clearCache(): void {
@@ -172,9 +222,9 @@ export class DiscordService {
 		this.webhookCache.clear();
 	}
 
-	public sendMessage(channelId: string, message: string): Message {
+	public sendMessage(channelId: string, message: string): Promise<Message> {
 		const channel = this.getTextChannel(channelId);
-		return channel.send(message) as unknown as Message;
+		return channel.send(message);
 	}
 
 	public async sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): Promise<void> {
@@ -187,20 +237,27 @@ export class DiscordService {
 		});
 	}
 
-	public sendBulkMessages(options: BulkMessageOptions): Message[] {
+	public async sendBulkMessages(options: BulkMessageOptions): Promise<Message[]> {
 		const results: Message[] = [];
+		const errors: Error[] = [];
 
-		for (const channelId of options.channelIds) {
+		await Promise.all(options.channelIds.map(async channelId => {
 			try {
 				if (options.botIdentity) {
-					this.sendMessageWithBotIdentity(channelId, options.botIdentity, options.message);
+					await this.sendMessageWithBotIdentity(channelId, options.botIdentity, options.message);
 				} else {
-					const message = this.sendMessage(channelId, options.message);
+					const message = await this.sendMessage(channelId, options.message);
 					results.push(message);
 				}
 			} catch (error) {
-				console.error(`Failed to send message to channel ${channelId}:`, error);
+				const errorMessage = `Failed to send message to channel ${channelId}: ${error instanceof Error ? error.message : String(error)}`;
+				errors.push(new DiscordServiceError(errorMessage));
+				logger.error(errorMessage);
 			}
+		}));
+
+		if (errors.length > 0) {
+			logger.warn(`Failed to send messages to ${errors.length} channels`);
 		}
 
 		return results;
@@ -217,11 +274,17 @@ export class DiscordService {
 	public getMember(guildId: string, memberId: string): GuildMember {
 		const cacheKey = `${guildId}:${memberId}`;
 
-		if (this.memberCache.has(cacheKey)) {
-			return this.memberCache.get(cacheKey)!;
+		const cachedMember = this.memberCache.get(cacheKey);
+		if (cachedMember) {
+			return cachedMember;
 		}
 
-		const member = this.client.guilds.cache.get(guildId)?.members.cache.get(memberId);
+		const guild = this.client.guilds.cache.get(guildId);
+		if (!guild) {
+			throw new GuildNotFoundError(guildId);
+		}
+
+		const member = guild.members.cache.get(memberId);
 		if (!member) {
 			throw new MemberNotFoundError(memberId);
 		}
@@ -232,16 +295,25 @@ export class DiscordService {
 	}
 
 	public getMemberByUsername(guildId: string, username: string): GuildMember {
-		const member = this.client.guilds.cache.get(guildId)?.members.cache.find(m => m.user.username === username);
+		const guild = this.client.guilds.cache.get(guildId);
+		if (!guild) {
+			throw new GuildNotFoundError(guildId);
+		}
+
+		const member = guild.members.cache.find(m => m.user.username === username);
 		if (!member) {
-			throw new MemberNotFoundError(username);
+			throw new MemberNotFoundError(`username: ${username}`);
 		}
 		return member;
 	}
 
 	public getRandomMember(guildId: string = DefaultGuildId): GuildMember {
 		const members = this.getMembersWithRole(guildId, "member");
-		return members[Math.floor(Math.random() * members.length)];
+		if (members.length === 0) {
+			throw new DiscordServiceError("No members found with the specified role");
+		}
+		const randomIndex = Math.floor(Math.random() * members.length);
+		return members[randomIndex];
 	}
 
 	public getMemberAsBotIdentity(userId: string): BotIdentity {
@@ -261,11 +333,9 @@ export class DiscordService {
 	}
 
 	public getTextChannel(channelId: string): TextChannel {
-		if (this.channelCache.has(channelId)) {
-			const channel = this.channelCache.get(channelId);
-			if (channel instanceof TextChannel) {
-				return channel;
-			}
+		const cachedChannel = this.channelCache.get(channelId);
+		if (cachedChannel instanceof TextChannel) {
+			return cachedChannel;
 		}
 
 		const channel = this.client.channels.cache.get(channelId);
@@ -282,11 +352,9 @@ export class DiscordService {
 	}
 
 	public getVoiceChannel(channelId: string): VoiceChannel {
-		if (this.channelCache.has(channelId)) {
-			const channel = this.channelCache.get(channelId);
-			if (channel instanceof VoiceChannel) {
-				return channel;
-			}
+		const cachedChannel = this.channelCache.get(channelId);
+		if (cachedChannel instanceof VoiceChannel) {
+			return cachedChannel;
 		}
 
 		const channel = this.client.channels.cache.get(channelId);
@@ -307,8 +375,9 @@ export class DiscordService {
 	}
 
 	public getGuild(guildId: string): Guild {
-		if (this.guildCache.has(guildId)) {
-			return this.guildCache.get(guildId)!;
+		const cachedGuild = this.guildCache.get(guildId);
+		if (cachedGuild) {
+			return cachedGuild;
 		}
 
 		const guild = this.client.guilds.cache.get(guildId);
@@ -322,12 +391,13 @@ export class DiscordService {
 
 	public getRole(guildId: string, roleId: string): Role {
 		const cacheKey = `${guildId}:${roleId}`;
-
-		if (this.roleCache.has(cacheKey)) {
-			return this.roleCache.get(cacheKey)!;
+		const cachedRole = this.roleCache.get(cacheKey);
+		if (cachedRole) {
+			return cachedRole;
 		}
 
-		const role = this.client.guilds.cache.get(guildId)?.roles.cache.get(roleId);
+		const guild = this.getGuild(guildId);
+		const role = guild.roles.cache.get(roleId);
 		if (!role) {
 			throw new RoleNotFoundError(roleId);
 		}
@@ -338,37 +408,36 @@ export class DiscordService {
 
 	public getMembersWithRole(guildId: string, roleId: string): GuildMember[] {
 		const guild = this.getGuild(guildId);
+		const role = this.getRole(guildId, roleId);
+
 		return Array.from(guild.members.cache.values())
-			.filter(m => m.roles.cache.has(roleId))
-			.map(m => m as GuildMember);
+			.filter(member => member.roles.cache.has(role.id))
+			.map(member => member as GuildMember);
 	}
 
-	public addReaction(messageId: string, channelId: string, emoji: string): MessageReaction {
+	public addReaction(messageId: string, channelId: string, emoji: string): Promise<MessageReaction> {
 		const channel = this.getTextChannel(channelId);
 		const message = channel.messages.cache.get(messageId);
 		if (!message) {
-			throw new Error(`Message ${messageId} not found in channel ${channelId}`);
+			throw new MessageNotFoundError(messageId, channelId);
 		}
-		return message.react(emoji) as unknown as MessageReaction;
+		return message.react(emoji);
 	}
 
-	public removeReaction(messageId: string, channelId: string, emoji: string): void {
+	public async removeReaction(messageId: string, channelId: string, emoji: string): Promise<void> {
 		const channel = this.getTextChannel(channelId);
 		const message = channel.messages.cache.get(messageId);
 		if (!message) {
-			throw new Error(`Message ${messageId} not found in channel ${channelId}`);
+			throw new MessageNotFoundError(messageId, channelId);
 		}
 
 		const userReactions = message.reactions.cache.get(emoji);
-		if (userReactions) {
-			const botUser = this.client.user;
-			if (botUser) {
-				userReactions.users.remove(botUser.id);
-			}
+		if (userReactions && this.client.user) {
+			await userReactions.users.remove(this.client.user.id);
 		}
 	}
 
-	public isBunkBotMessage(message: Message): boolean {
+	public isBotMessage(message: Message): boolean {
 		return message.author.bot && message.author.id === this.client.user?.id;
 	}
 

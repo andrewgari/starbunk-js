@@ -3,23 +3,121 @@ import { Campaign } from '../../../../domain/models';
 import { CampaignMetadata, CampaignRepository, CreateCampaignData } from '../../../../domain/repositories';
 import { GameSystem } from '../../../../starbunk/types/game';
 
-type PrismaCampaign = {
-	id: string;
-	name: string;
-	system: string;
-	textChannelId: string;
-	voiceChannelId: string;
-	gmId: string;
-	adventureId: string | null;
-	isActive: boolean;
-	createdAt: Date;
-	updatedAt: Date;
-};
-
 export class SQLiteCampaignRepository implements CampaignRepository {
-	async getMetadata(campaignId: string): Promise<CampaignMetadata | null> {
+	constructor(private prisma: PrismaClient) { }
+
+	public async create(data: CreateCampaignData): Promise<Campaign> {
+		const campaign = await this.prisma.campaign.create({
+			data: {
+				name: data.name,
+				system: JSON.stringify(data.system),
+				textChannelId: data.textChannelId,
+				voiceChannelId: data.voiceChannelId,
+				gmId: data.gmId,
+				adventureId: data.adventureId,
+				isActive: data.isActive
+			}
+		});
+
+		return {
+			id: campaign.id,
+			name: campaign.name,
+			system: JSON.parse(campaign.system) as GameSystem,
+			textChannelId: campaign.textChannelId,
+			voiceChannelId: campaign.voiceChannelId,
+			gmId: campaign.gmId,
+			adventureId: campaign.adventureId || 'default',
+			isActive: campaign.isActive,
+			createdAt: campaign.createdAt,
+			updatedAt: campaign.updatedAt
+		};
+	}
+
+	public async findById(id: string): Promise<Campaign | null> {
 		const campaign = await this.prisma.campaign.findUnique({
-			where: { id: campaignId }
+			where: { id }
+		});
+
+		if (!campaign) {
+			return null;
+		}
+
+		return {
+			id: campaign.id,
+			name: campaign.name,
+			system: JSON.parse(campaign.system) as GameSystem,
+			textChannelId: campaign.textChannelId,
+			voiceChannelId: campaign.voiceChannelId,
+			gmId: campaign.gmId,
+			adventureId: campaign.adventureId || 'default',
+			isActive: campaign.isActive,
+			createdAt: campaign.createdAt,
+			updatedAt: campaign.updatedAt
+		};
+	}
+
+	public async findAll(): Promise<Campaign[]> {
+		const campaigns = await this.prisma.campaign.findMany();
+		return campaigns.map(campaign => ({
+			id: campaign.id,
+			name: campaign.name,
+			system: JSON.parse(campaign.system) as GameSystem,
+			textChannelId: campaign.textChannelId,
+			voiceChannelId: campaign.voiceChannelId,
+			gmId: campaign.gmId,
+			adventureId: campaign.adventureId || 'default',
+			isActive: campaign.isActive,
+			createdAt: campaign.createdAt,
+			updatedAt: campaign.updatedAt
+		}));
+	}
+
+	public async update(id: string, data: Partial<Campaign>): Promise<Campaign> {
+		const campaign = await this.prisma.campaign.update({
+			where: { id },
+			data: {
+				name: data.name,
+				system: data.system ? JSON.stringify(data.system) : undefined,
+				textChannelId: data.textChannelId,
+				voiceChannelId: data.voiceChannelId,
+				gmId: data.gmId,
+				adventureId: data.adventureId,
+				isActive: data.isActive
+			}
+		});
+
+		return {
+			id: campaign.id,
+			name: campaign.name,
+			system: JSON.parse(campaign.system) as GameSystem,
+			textChannelId: campaign.textChannelId,
+			voiceChannelId: campaign.voiceChannelId,
+			gmId: campaign.gmId,
+			adventureId: campaign.adventureId || 'default',
+			isActive: campaign.isActive,
+			createdAt: campaign.createdAt,
+			updatedAt: campaign.updatedAt
+		};
+	}
+
+	public async delete(id: string): Promise<void> {
+		await this.prisma.campaign.delete({
+			where: { id }
+		});
+	}
+
+	public async updateMetadata(id: string, metadata: CampaignMetadata): Promise<void> {
+		await this.prisma.campaign.update({
+			where: { id },
+			data: {
+				metadata: JSON.stringify(metadata)
+			}
+		});
+	}
+
+	public async getMetadata(id: string): Promise<CampaignMetadata | null> {
+		const campaign = await this.prisma.campaign.findUnique({
+			where: { id }
 		});
 
 		if (!campaign || !campaign.metadata) {
@@ -27,92 +125,5 @@ export class SQLiteCampaignRepository implements CampaignRepository {
 		}
 
 		return JSON.parse(campaign.metadata) as CampaignMetadata;
-	}
-
-	async updateMetadata(campaignId: string, metadata: CampaignMetadata): Promise<void> {
-		await this.prisma.campaign.update({
-			where: { id: campaignId },
-			data: {
-				metadata: JSON.stringify(metadata)
-			}
-		});
-	}
-
-	constructor(private prisma: PrismaClient) { }
-
-	private toDomainModel(prismaCampaign: PrismaCampaign): Campaign {
-		return {
-			...prismaCampaign,
-			system: JSON.parse(prismaCampaign.system) as GameSystem,
-			adventureId: prismaCampaign.adventureId || 'default'
-		};
-	}
-
-	private toPrismaData(campaign: Partial<Campaign>): Partial<PrismaCampaign> {
-		const { system, ...rest } = campaign;
-		return {
-			...rest,
-			system: system ? JSON.stringify(system) : undefined
-		};
-	}
-
-	async create(campaign: CreateCampaignData): Promise<Campaign> {
-		const result = await this.prisma.campaign.create({
-			data: {
-				...campaign,
-				system: JSON.stringify(campaign.system)
-			}
-		}) as PrismaCampaign;
-
-		return this.toDomainModel(result);
-	}
-
-	async findById(id: string): Promise<Campaign | null> {
-		const result = await this.prisma.campaign.findUnique({
-			where: { id }
-		}) as PrismaCampaign | null;
-
-		if (!result) {
-			return null;
-		}
-
-		return this.toDomainModel(result);
-	}
-
-	async findByChannel(channelId: string): Promise<Campaign | null> {
-		const result = await this.prisma.campaign.findFirst({
-			where: {
-				OR: [
-					{ textChannelId: channelId },
-					{ voiceChannelId: channelId }
-				]
-			}
-		}) as PrismaCampaign | null;
-
-		if (!result) {
-			return null;
-		}
-
-		return this.toDomainModel(result);
-	}
-
-	async list(): Promise<Campaign[]> {
-		const results = await this.prisma.campaign.findMany() as PrismaCampaign[];
-		return results.map(result => this.toDomainModel(result));
-	}
-
-	async update(id: string, campaign: Partial<Campaign>): Promise<Campaign> {
-		const result = await this.prisma.campaign.update({
-			where: { id },
-			data: this.toPrismaData(campaign)
-		}) as PrismaCampaign;
-
-		return this.toDomainModel(result);
-	}
-
-	async delete(id: string): Promise<void> {
-		await this.prisma.campaign.delete({
-			where: { id }
-		});
 	}
 }

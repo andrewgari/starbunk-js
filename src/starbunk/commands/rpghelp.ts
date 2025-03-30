@@ -14,7 +14,8 @@ const commands = [
 			{ name: '/rpg campaign create', description: 'Create a new campaign with a specified name and system' },
 			{ name: '/rpg campaign list', description: 'View all available campaigns' },
 			{ name: '/rpg campaign set-active', description: 'Set a campaign as active in the current channel' },
-			{ name: '/rpg campaign rename', description: 'Rename the current campaign' }
+			{ name: '/rpg campaign rename', description: 'Rename the current campaign' },
+			{ name: '/rpg campaign link-channels', description: 'Link text and voice channels for a campaign' }
 		]
 	},
 	{

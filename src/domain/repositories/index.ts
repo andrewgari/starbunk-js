@@ -39,14 +39,13 @@ export interface CampaignMetadata {
 }
 
 export interface CampaignRepository {
-	create(campaign: CreateCampaignData): Promise<Campaign>;
+	create(data: CreateCampaignData): Promise<Campaign>;
 	findById(id: string): Promise<Campaign | null>;
-	findByChannel(channelId: string): Promise<Campaign | null>;
-	list(): Promise<Campaign[]>;
-	update(id: string, campaign: Partial<Campaign>): Promise<Campaign>;
+	findAll(): Promise<Campaign[]>;
+	update(id: string, data: Partial<Campaign>): Promise<Campaign>;
 	delete(id: string): Promise<void>;
-	getMetadata(campaignId: string): Promise<CampaignMetadata | null>;
-	updateMetadata(campaignId: string, metadata: CampaignMetadata): Promise<void>;
+	updateMetadata(id: string, metadata: CampaignMetadata): Promise<void>;
+	getMetadata(id: string): Promise<CampaignMetadata | null>;
 }
 
 export interface MessageRepository {

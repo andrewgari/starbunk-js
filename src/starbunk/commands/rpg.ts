@@ -1,4 +1,5 @@
 import {
+	ChannelType,
 	ChatInputCommandInteraction,
 	GuildChannel,
 	GuildMember,
@@ -81,6 +82,22 @@ const data = new SlashCommandBuilder()
 						option
 							.setName('name')
 							.setDescription('New campaign name')
+							.setRequired(true)
+					)
+					.addStringOption(option =>
+						option
+							.setName('help')
+							.setDescription('Get help with this command')
+					)
+			)
+			.addSubcommand(subcommand =>
+				subcommand
+					.setName('link-channels')
+					.setDescription('Link text and voice channels for a campaign')
+					.addChannelOption(option =>
+						option
+							.setName('voice_channel')
+							.setDescription('Voice channel to link')
 							.setRequired(true)
 					)
 					.addStringOption(option =>
@@ -343,6 +360,54 @@ export default {
 
 						await interaction.reply({
 							content: `Campaign renamed to "${newName}".`,
+							ephemeral: true
+						});
+						break;
+					}
+
+					case 'link-channels': {
+						if (!permissions.canManageCampaign) {
+							await interaction.reply({
+								content: 'You do not have permission to manage campaigns.',
+								ephemeral: true
+							});
+							return;
+						}
+
+						const voiceChannel = interaction.options.getChannel('voice_channel', true);
+
+						if (voiceChannel.type !== ChannelType.GuildVoice || !(voiceChannel instanceof GuildChannel)) {
+							await interaction.reply({
+								content: 'Please select a voice channel from this server.',
+								ephemeral: true
+							});
+							return;
+						}
+
+						if (!interaction.channel?.isTextBased() || !(interaction.channel instanceof GuildChannel)) {
+							await interaction.reply({
+								content: 'This command can only be used in server text channels.',
+								ephemeral: true
+							});
+							return;
+						}
+
+						// Check if either channel is already linked to a campaign
+						const existingCampaignByText = await campaignService.getCampaignByChannel(interaction.channelId);
+						const existingCampaignByVoice = await campaignService.getCampaignByVoiceChannel(voiceChannel.id);
+
+						if (existingCampaignByText || existingCampaignByVoice) {
+							await interaction.reply({
+								content: 'One or both channels are already linked to a campaign. Please unlink them first.',
+								ephemeral: true
+							});
+							return;
+						}
+
+						await campaignService.linkChannels(interaction.channel, voiceChannel);
+
+						await interaction.reply({
+							content: `Successfully linked text channel ${interaction.channel} with voice channel ${voiceChannel}!`,
 							ephemeral: true
 						});
 						break;

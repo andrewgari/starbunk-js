@@ -82,21 +82,22 @@ export class CampaignService {
 	}
 
 	public async getCampaignByChannel(channelId: string): Promise<Campaign | null> {
-		return this.campaignRepository.findByChannel(channelId);
+		const campaigns = await this.campaignRepository.findAll();
+		return campaigns.find((campaign: Campaign) => campaign.textChannelId === channelId) || null;
 	}
 
 	public async listCampaigns(): Promise<Campaign[]> {
-		return this.campaignRepository.list();
+		return this.campaignRepository.findAll();
 	}
 
 	public async getActiveCampaigns(): Promise<Campaign[]> {
-		const campaigns = await this.campaignRepository.list();
-		return campaigns.filter(campaign => campaign.isActive);
+		const campaigns = await this.campaignRepository.findAll();
+		return campaigns.filter((campaign: Campaign) => campaign.isActive);
 	}
 
 	public async getCampaignsBySystem(systemId: string): Promise<Campaign[]> {
-		const campaigns = await this.campaignRepository.list();
-		return campaigns.filter(campaign => campaign.system.id === systemId);
+		const campaigns = await this.campaignRepository.findAll();
+		return campaigns.filter((campaign: Campaign) => campaign.system.id === systemId);
 	}
 
 	public async updateCampaign(id: string, updates: Partial<Campaign>): Promise<Campaign> {
@@ -281,5 +282,26 @@ export class CampaignService {
 			logger.error('Error getting campaigns:', error instanceof Error ? error : new Error(String(error)));
 			throw new Error('Failed to get campaigns');
 		}
+	}
+
+	public async getCampaignByVoiceChannel(voiceChannelId: string): Promise<Campaign | null> {
+		const campaigns = await this.campaignRepository.findAll();
+		return campaigns.find((campaign: Campaign) => campaign.voiceChannelId === voiceChannelId) || null;
+	}
+
+	public async linkChannels(textChannel: GuildChannel, voiceChannel: GuildChannel): Promise<void> {
+		// Create a new campaign with default settings
+		const campaignData: CreateCampaignData = {
+			name: textChannel.name,
+			system: SUPPORTED_SYSTEMS.dnd5e, // Default to D&D 5e
+			textChannelId: textChannel.id,
+			voiceChannelId: voiceChannel.id,
+			gmId: textChannel.guild.ownerId, // Default to server owner as GM
+			isActive: true,
+			adventureId: 'default'
+		};
+
+		await this.campaignRepository.create(campaignData);
+		logger.info(`Linked channels: text ${textChannel.id} and voice ${voiceChannel.id}`);
 	}
 }
