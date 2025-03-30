@@ -37,6 +37,7 @@ export interface StrategyBotConfig {
 	defaultIdentity: BotIdentity;
 	triggers: TriggerResponse[];
 	skipBotMessages?: boolean;
+	responseRate?: number; // Add response rate at the bot level
 }
 
 /**
@@ -48,6 +49,7 @@ export interface ValidatedStrategyBotConfig {
 	defaultIdentity: BotIdentity;
 	triggers: TriggerResponse[];
 	skipBotMessages: boolean;
+	responseRate: number; // Add default response rate
 }
 
 /**
@@ -74,7 +76,8 @@ function validateBotConfig(config: StrategyBotConfig): ValidatedStrategyBotConfi
 		description: config.description,
 		defaultIdentity: config.defaultIdentity,
 		triggers: config.triggers,
-		skipBotMessages: config.skipBotMessages ?? true
+		skipBotMessages: config.skipBotMessages ?? true,
+		responseRate: config.responseRate ?? 100 // Default to 100% if not specified
 	};
 }
 
@@ -84,6 +87,10 @@ function validateBotConfig(config: StrategyBotConfig): ValidatedStrategyBotConfi
 export interface StrategyBot {
 	readonly name: BotStrategyName;
 	readonly description: BotDescription;
+	readonly metadata?: {
+		responseRate: number;
+		[key: string]: unknown;
+	};
 	processMessage(message: Message): Promise<void>;
 }
 
@@ -105,6 +112,9 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 	return {
 		name: validConfig.name,
 		description: validConfig.description,
+		metadata: {
+			responseRate: validConfig.responseRate
+		},
 
 		async processMessage(message: Message): Promise<void> {
 			logger.debug(`[${validConfig.name}] Processing message from ${message.author.tag}`);

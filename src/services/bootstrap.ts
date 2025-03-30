@@ -11,6 +11,29 @@ import { registerPrompts } from './llm/prompts';
 import { Logger } from './logger';
 
 /**
+ * Gets the Discord service or initializes it if it doesn't exist yet
+ * This ensures we only initialize the service once
+ */
+function getOrInitializeDiscordService(client: Client, logger: Logger): DiscordService {
+	let discordService: DiscordService;
+	try {
+		// Try to initialize a new service
+		discordService = DiscordService.initialize(client);
+		logger.info('DiscordService initialized');
+	} catch (error) {
+		// If already initialized, get the existing instance
+		if (error instanceof Error && error.message.includes('already initialized')) {
+			logger.info('DiscordService already initialized, using existing instance');
+			discordService = DiscordService.getInstance();
+		} else {
+			// If it's another error, rethrow it
+			throw error;
+		}
+	}
+	return discordService;
+}
+
+/**
  * Bootstraps the entire application, registering all services
  * @param client The Discord client instance
  */
@@ -62,7 +85,7 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 		);
 
 		// Initialize and register DiscordService singleton
-		const discordService = DiscordService.initialize(client);
+		const discordService = getOrInitializeDiscordService(client, logger);
 		container.register(
 			ServiceId.DiscordService,
 			discordService
@@ -109,7 +132,7 @@ export async function bootstrapSnowbunkApplication(client: Client): Promise<void
 		container.register(ServiceId.DiscordClient, client);
 
 		// Initialize Discord service
-		const discordService = DiscordService.initialize(client);
+		const discordService = getOrInitializeDiscordService(client, logger);
 		container.register(ServiceId.DiscordService, discordService);
 
 		// Initialize Discord GM service

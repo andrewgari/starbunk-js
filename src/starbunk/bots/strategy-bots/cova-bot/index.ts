@@ -1,7 +1,7 @@
 import { logger } from '../../../../services/logger';
 import { getPersonalityService } from '../../../../services/personalityService';
 import { createStrategyBot } from '../../core/bot-builder';
-import { COVA_BOT_AVATARS, COVA_BOT_NAME } from './constants';
+import { COVA_BOT_AVATARS, COVA_BOT_CONFIG, COVA_BOT_NAME } from './constants';
 import {
 	covaContextualTrigger,
 	covaConversationTrigger,
@@ -46,6 +46,8 @@ export default createStrategyBot({
 		botName: COVA_BOT_NAME,
 		avatarUrl: COVA_BOT_AVATARS.Default
 	},
+	// Use the response rate from the config
+	responseRate: COVA_BOT_CONFIG.ResponseRate,
 	triggers: [
 		covaStatsCommandTrigger,
 		covaDirectMentionTrigger,

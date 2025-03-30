@@ -1,5 +1,5 @@
 import { createStrategyBot } from '../../core/bot-builder';
-import { VENN_AVATAR_URL, VENN_BOT_NAME } from './constants';
+import { VENN_AVATAR_URL, VENN_BOT_NAME, VENN_RESPONSE_RATE } from './constants';
 import { cringeTrigger, randomVennTrigger } from './triggers';
 
 // Create the Venn Bot with cringe detection and random responses
@@ -12,6 +12,8 @@ export default createStrategyBot({
 	},
 	// Skip bot messages to avoid loops
 	skipBotMessages: true,
+	// Set the response rate to match the trigger
+	responseRate: VENN_RESPONSE_RATE,
 	// Ordered by priority (higher number = higher priority)
 	triggers: [cringeTrigger, randomVennTrigger]
 });

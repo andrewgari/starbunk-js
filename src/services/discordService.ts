@@ -92,10 +92,20 @@ export class DiscordService {
 		// Initial refresh with retry
 		this._test_retryBotProfileRefresh();
 
+		// Prevent multiple interval setups
+		if (this.botProfileRefreshInterval) {
+			logger.info('Bot profile refresh interval already set up, skipping');
+			return;
+		}
+
 		// Set up periodic refresh
+		logger.info('Setting up periodic bot profile refresh (every hour)');
 		this.botProfileRefreshInterval = setInterval(() => {
 			this._test_retryBotProfileRefresh();
 		}, 60 * 60 * 1000); // 1 hour
+		
+		// Allow process to exit during tests
+		this.botProfileRefreshInterval.unref();
 	}
 
 	// For testing purposes - public method with a test prefix
