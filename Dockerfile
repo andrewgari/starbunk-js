@@ -3,9 +3,10 @@ FROM node:20-alpine AS deps
 
 WORKDIR /app
 
-# Install npm dependencies with caching
+# Install latest npm and dependencies with caching
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
+    npm install -g npm@latest && \
     npm ci --prefer-offline --no-audit
 
 FROM deps AS builder
@@ -30,8 +31,9 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/prisma ./prisma
 COPY package*.json ./
 
-# Install production dependencies with caching
-RUN npm ci --prefer-offline --no-audit --production
+# Install latest npm and production dependencies
+RUN npm install -g npm@latest && \
+    npm ci --prefer-offline --no-audit --production
 
 # Environment variables
 ENV NODE_ENV="production"
