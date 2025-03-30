@@ -1,12 +1,12 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { logger } from './logger';
 import { VectorEmbeddingService } from '../starbunk/services/vectorEmbeddingService';
+import { logger } from './logger';
 
 // Custom error for personality embedding errors
 export class PersonalityEmbeddingError extends Error {
 	filePath: string;
-	
+
 	constructor(message: string, filePath: string) {
 		super(message);
 		this.name = 'PersonalityEmbeddingError';
@@ -18,6 +18,7 @@ export class PersonalityService {
 	private static instance: PersonalityService | null = null;
 	private personalityEmbedding: Float32Array | null = null;
 	private embeddingService: VectorEmbeddingService;
+	private hasLoggedNpyWarning = false;
 
 	private constructor() {
 		this.embeddingService = VectorEmbeddingService.getInstance();
@@ -32,7 +33,7 @@ export class PersonalityService {
 
 	/**
 	 * Load a personality embedding from disk
-	 * 
+	 *
 	 * @param filename The embedding file to load (supports .json or .npy)
 	 * @returns The loaded embedding as a Float32Array
 	 */
@@ -40,143 +41,114 @@ export class PersonalityService {
 		try {
 			// Get the path to the data/llm_context/covaBot directory where the embedding file is stored
 			const dataDir = path.join(process.cwd(), 'data', 'llm_context', 'covaBot');
-			const filePath = path.join(dataDir, filename);
 
-			// Check if file exists
-			try {
-				await fs.access(filePath);
-			} catch (error) {
-				const fileError = new PersonalityEmbeddingError(
-					`Personality embedding file not found: ${filePath}`,
-					filePath
-				);
-				logger.warn(`[PersonalityService] ${fileError.message}`);
-				return null;
-			}
-
-			// Handle different file formats
-			if (filename.endsWith('.json')) {
-				// Read the .json file
-				const fileContent = await fs.readFile(filePath, 'utf-8');
-				
+			// Try loading JSON first if filename is not explicitly .npy
+			if (!filename.endsWith('.npy')) {
+				const jsonPath = path.join(dataDir, filename.endsWith('.json') ? filename : 'personality.json');
 				try {
+					const fileContent = await fs.readFile(jsonPath, 'utf-8');
 					const data = JSON.parse(fileContent);
-					
-					// Convert to Float32Array
+
 					if (Array.isArray(data)) {
 						this.personalityEmbedding = new Float32Array(data);
-					} else {
-						const formatError = new PersonalityEmbeddingError(
-							`Invalid JSON format for personality embedding: ${filePath}`,
-							filePath
-						);
-						logger.error(`[PersonalityService] ${formatError.message}`);
-						return null;
+						logger.info(`[PersonalityService] Successfully loaded personality embedding from ${jsonPath} with ${this.personalityEmbedding.length} dimensions`);
+						return this.personalityEmbedding;
 					}
-				} catch (parseError) {
-					const jsonError = new PersonalityEmbeddingError(
-						`Failed to parse JSON personality embedding: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
-						filePath
-					);
-					logger.error(`[PersonalityService] ${jsonError.message}`);
-					return null;
+				} catch (jsonError) {
+					// Only log if we're explicitly trying to load a JSON file
+					if (filename.endsWith('.json')) {
+						logger.error(`[PersonalityService] Failed to load JSON personality embedding: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`);
+					}
 				}
-			} else if (filename.endsWith('.npy')) {
+			}
+
+			// Try NPY format if JSON failed or NPY was explicitly requested
+			if (filename.endsWith('.npy')) {
+				const npyPath = path.join(dataDir, filename);
 				try {
-					// Read the .npy file
-					const buffer = await fs.readFile(filePath);
-
-					// Parse the .npy file format (simplified approach)
-					// Skip the header (first 128 bytes is usually sufficient for simple .npy files)
+					const buffer = await fs.readFile(npyPath);
 					const dataBuffer = buffer.slice(128);
-
-					// Convert to Float32Array
 					this.personalityEmbedding = new Float32Array(dataBuffer.buffer, dataBuffer.byteOffset, dataBuffer.length / 4);
-					
-					// Basic verification - check if the array has a reasonable length
+
 					if (this.personalityEmbedding.length < 10) {
 						throw new Error(`Invalid NPY file: embedding length (${this.personalityEmbedding.length}) too small`);
 					}
+
+					logger.info(`[PersonalityService] Successfully loaded personality embedding from ${npyPath} with ${this.personalityEmbedding.length} dimensions`);
+					return this.personalityEmbedding;
 				} catch (npyError) {
-					const formatError = new PersonalityEmbeddingError(
-						`Failed to load NPY personality embedding: ${npyError instanceof Error ? npyError.message : String(npyError)}`,
-						filePath
-					);
-					logger.error(`[PersonalityService] ${formatError.message}`);
-					return null;
+					// Only log NPY warning once per service instance
+					if (!this.hasLoggedNpyWarning) {
+						logger.debug(`[PersonalityService] NPY format not available, using JSON format instead`);
+						this.hasLoggedNpyWarning = true;
+					}
 				}
-			} else {
-				const extensionError = new PersonalityEmbeddingError(
-					`Unsupported file format: ${filename}`,
-					filePath
-				);
-				logger.error(`[PersonalityService] ${extensionError.message}`);
-				return null;
 			}
 
-			logger.info(`[PersonalityService] Successfully loaded personality embedding from ${filePath} with ${this.personalityEmbedding.length} dimensions`);
+			// If we get here and haven't returned, no valid embedding was loaded
+			if (!this.personalityEmbedding) {
+				logger.error(`[PersonalityService] Failed to load personality embedding from any format`);
+			}
+
 			return this.personalityEmbedding;
 		} catch (error) {
 			const err = error instanceof Error ? error : new Error(String(error));
-			const dataDir = path.join(process.cwd(), 'data', 'llm_context', 'covaBot');
-			const filePath = path.join(dataDir, filename);
-			const customError = new PersonalityEmbeddingError(`Error loading personality embedding: ${err.message}`, filePath);
-			logger.error(`[PersonalityService] ${customError.message}`, customError);
+			logger.error(`[PersonalityService] Unexpected error loading personality embedding: ${err.message}`, err);
 			return null;
 		}
 	}
 
 	/**
 	 * Generate a new personality embedding from a text description
-	 * 
+	 *
 	 * @param description The text description to generate an embedding from
 	 * @param saveToFile Whether to save the embedding to disk (optional filename)
 	 * @returns The generated embedding as a Float32Array
 	 */
 	public async generatePersonalityEmbedding(
-		description: string, 
+		description: string,
 		saveToFile: string | boolean = false
 	): Promise<Float32Array | null> {
 		try {
 			// Initialize the embedding service if needed
 			await this.embeddingService.initialize();
-			
+
 			// Generate the embedding
 			const embeddings = await this.embeddingService.generateEmbeddings([description]);
 			if (embeddings.length === 0) {
 				throw new Error('Failed to generate embedding');
 			}
-			
+
 			this.personalityEmbedding = embeddings[0];
-			
+
 			// Save to file if requested
 			if (saveToFile) {
 				const dataDir = path.join(process.cwd(), 'data', 'llm_context', 'covaBot');
-				
+
 				// Create directory if it doesn't exist
 				await fs.mkdir(dataDir, { recursive: true });
-				
+
 				// Determine filename
-				const filename = typeof saveToFile === 'string' 
-					? saveToFile 
+				const filename = typeof saveToFile === 'string'
+					? saveToFile
 					: 'personality.json';
-					
+
 				const filePath = path.join(dataDir, filename);
-				
+
 				// Save as JSON
 				if (filename.endsWith('.json')) {
 					await fs.writeFile(
-						filePath, 
+						filePath,
 						JSON.stringify(Array.from(this.personalityEmbedding)),
 						'utf-8'
 					);
 				} else {
 					throw new Error(`Unsupported file format for saving: ${filename}`);
 				}
-				
+
 				logger.info(`[PersonalityService] Saved personality embedding to ${filePath}`);
 			}
-			
+
 			return this.personalityEmbedding;
 		} catch (error) {
 			const err = error instanceof Error ? error : new Error(String(error));

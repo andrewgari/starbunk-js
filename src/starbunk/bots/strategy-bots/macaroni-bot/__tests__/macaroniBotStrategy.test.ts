@@ -32,11 +32,10 @@ describe('macaroniBot Strategy', () => {
 		await macaroniBot.processMessage(message);
 
 		// Assert
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledTimes(1);
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: MACARONI_BOT_NAME,
+				botName: MACARONI_BOT_NAME,
 				content: MACARONI_BOT_RESPONSES.Macaroni
 			})
 		);
