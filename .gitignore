@@ -151,3 +151,8 @@ completed_pr_comments.txt
 cypress/screenshots/
 cypress/videos/
 cypress/downloads/
+
+data/**
+
+*.bak
+.mcp.json

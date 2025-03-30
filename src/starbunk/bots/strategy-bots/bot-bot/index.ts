@@ -1,5 +1,5 @@
 import { createStrategyBot } from '../../core/bot-builder';
-import { BOT_BOT_AVATAR_URL, BOT_BOT_NAME } from './constants';
+import { BOT_BOT_AVATAR_URL, BOT_BOT_NAME, BOT_BOT_RESPONSE_RATE } from './constants';
 import { botTrigger } from './triggers';
 
 // Create the Bot Bot that responds to other bots
@@ -12,5 +12,6 @@ export default createStrategyBot({
 	},
 	// Don't skip bot messages since this bot specifically responds to bots
 	skipBotMessages: false,
+	responseRate: BOT_BOT_RESPONSE_RATE,
 	triggers: [botTrigger]
 });

@@ -1,7 +1,8 @@
-import { Events, Message, TextChannel } from 'discord.js';
+import { Events, GatewayIntentBits, Message, TextChannel } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
 import userId from '../discord/userId';
-import { getWebhookService } from '../services/bootstrap';
+import { bootstrapSnowbunkApplication, getWebhookService } from '../services/bootstrap';
+import { logger } from '../services/logger';
 
 export default class SnowbunkClient extends DiscordClient {
 	private readonly channelMap: Record<string, Array<string>> = {
@@ -44,29 +45,34 @@ export default class SnowbunkClient extends DiscordClient {
 		'755578835122126898': ['696948305586028544'],
 	};
 
+	constructor() {
+		super({
+			intents: [
+				GatewayIntentBits.Guilds,
+				GatewayIntentBits.GuildMessages,
+				GatewayIntentBits.MessageContent
+			]
+		});
+
+		// Initialize with minimal services
+		try {
+			bootstrapSnowbunkApplication(this).then(() => {
+				logger.info('Snowbunk services bootstrapped successfully');
+			}).catch((error: unknown) => {
+				logger.error('Failed to bootstrap Snowbunk services:', error instanceof Error ? error : new Error(String(error)));
+			});
+		} catch (error: unknown) {
+			logger.error('Error bootstrapping Snowbunk services:', error instanceof Error ? error : new Error(String(error)));
+		}
+
+		this.on(Events.MessageCreate, this.syncMessage.bind(this));
+	}
+
 	getSyncedChannels(channelID: string): string[] {
 		return this.channelMap[channelID] ?? [];
 	}
 
-	bootstrap(): void {
-		// Import bootstrapApplication dynamically to avoid circular dependency
-		try {
-			const { bootstrapApplication } = require('../services/bootstrap');
-			bootstrapApplication(this).then(() => {
-				console.log('Services bootstrapped successfully within SnowbunkClient');
-			}).catch((error: unknown) => {
-				console.error('Failed to bootstrap services within SnowbunkClient:', error instanceof Error ? error : new Error(String(error)));
-			});
-		} catch (error: unknown) {
-			console.error('Error importing or executing bootstrapApplication:', error instanceof Error ? error : new Error(String(error)));
-		}
-
-		this.on(Events.MessageCreate, async (message: Message) => {
-			this.syncMessage(message);
-		});
-	}
-
-	syncMessage = (message: Message): void => {
+	private syncMessage = (message: Message): void => {
 		if (message.author.id === userId.Goose) return;
 		if (message.author.bot) return;
 
@@ -78,12 +84,12 @@ export default class SnowbunkClient extends DiscordClient {
 					this.writeMessage(message, channel as TextChannel);
 				})
 				.catch((error) => {
-					console.error(error);
+					logger.error('Error fetching channel:', error instanceof Error ? error : new Error(String(error)));
 				});
 		});
 	};
 
-	writeMessage(message: Message, linkedChannel: TextChannel): void {
+	private writeMessage(message: Message, linkedChannel: TextChannel): void {
 		const userid = message.author.id;
 		const displayName =
 			linkedChannel.members.get(userid)?.displayName ?? message.member?.displayName ?? message.author.displayName;
@@ -106,15 +112,15 @@ export default class SnowbunkClient extends DiscordClient {
 				return; // Success, exit early
 			} catch (error: unknown) {
 				// Just log the webhook error, we'll fall back to direct channel message
-				console.warn(`[SnowbunkClient] Failed to use webhook service, falling back to direct message: ${error instanceof Error ? error.message : String(error)}`);
+				logger.warn(`[SnowbunkClient] Failed to use webhook service, falling back to direct message: ${error instanceof Error ? error.message : String(error)}`);
 			}
 
 			// Fallback to direct channel message
-			console.debug(`[SnowbunkClient] Sending fallback direct message to channel ${linkedChannel.name}`);
+			logger.debug(`[SnowbunkClient] Sending fallback direct message to channel ${linkedChannel.name}`);
 			const formattedMessage = `**[${displayName}]**: ${message.content}`;
 			linkedChannel.send(formattedMessage);
 		} catch (error: unknown) {
-			console.error(`[SnowbunkClient] Failed to send any message to channel ${linkedChannel.id}: ${error instanceof Error ? error.message : String(error)}`);
+			logger.error(`[SnowbunkClient] Failed to send any message to channel ${linkedChannel.id}: ${error instanceof Error ? error.message : String(error)}`);
 			// Don't throw here - just log the error and continue
 		}
 	}

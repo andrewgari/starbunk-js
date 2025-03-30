@@ -1,9 +1,37 @@
+import { PrismaClient } from '@prisma/client';
 import { Client } from 'discord.js';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { WebhookService } from '../webhooks/webhookService';
 import { ServiceId, container } from './container';
+import { DiscordGMService } from './discordGMService';
 import { DiscordService } from './discordService';
 import { LLMManager, LLMProviderType } from './llm';
+import { registerPrompts } from './llm/prompts';
 import { Logger } from './logger';
-import { WebhookService } from '../webhooks/webhookService';
+
+/**
+ * Gets the Discord service or initializes it if it doesn't exist yet
+ * This ensures we only initialize the service once
+ */
+function getOrInitializeDiscordService(client: Client, logger: Logger): DiscordService {
+	let discordService: DiscordService;
+	try {
+		// Try to initialize a new service
+		discordService = DiscordService.initialize(client);
+		logger.info('DiscordService initialized');
+	} catch (error) {
+		// If already initialized, get the existing instance
+		if (error instanceof Error && error.message.includes('already initialized')) {
+			logger.info('DiscordService already initialized, using existing instance');
+			discordService = DiscordService.getInstance();
+		} else {
+			// If it's another error, rethrow it
+			throw error;
+		}
+	}
+	return discordService;
+}
 
 /**
  * Bootstraps the entire application, registering all services
@@ -20,6 +48,36 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 			logger
 		);
 
+		// Ensure data directory exists
+		const dataDir = path.join(process.cwd(), 'data');
+		await fs.mkdir(dataDir, { recursive: true });
+
+		// Initialize Prisma and ensure database exists
+		const prisma = new PrismaClient();
+		try {
+			// Test database connection and create if not exists
+			await prisma.$connect();
+			logger.info('Database connection established');
+		} catch (error) {
+			logger.error('Database connection failed, attempting to create:', error instanceof Error ? error : new Error(String(error)));
+			// Ensure the database file exists
+			const dbPath = path.join(dataDir, 'starbunk.db');
+			await fs.writeFile(dbPath, '');
+			logger.info('Created empty database file');
+
+			// Run migrations
+			const { execSync } = require('child_process');
+			try {
+				execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+				logger.info('Database migrations applied successfully');
+			} catch (migrationError) {
+				logger.error('Failed to apply migrations:', migrationError instanceof Error ? migrationError : new Error(String(migrationError)));
+				throw migrationError;
+			}
+		} finally {
+			await prisma.$disconnect();
+		}
+
 		// Register the Discord client
 		container.register(
 			ServiceId.DiscordClient,
@@ -27,9 +85,16 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 		);
 
 		// Initialize and register DiscordService singleton
+		const discordService = getOrInitializeDiscordService(client, logger);
 		container.register(
 			ServiceId.DiscordService,
-			DiscordService.initialize(client)
+			discordService
+		);
+
+		// Initialize and register DiscordGMService
+		container.register(
+			ServiceId.DiscordGMService,
+			DiscordGMService.initialize(client, discordService)
 		);
 
 		// Register WebhookService
@@ -41,14 +106,55 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 		// Register LLM Manager with Ollama as the default provider
 		const llmManager = new LLMManager(logger, LLMProviderType.OLLAMA);
 		await llmManager.initializeAllProviders();
+		// Register all prompts
+		registerPrompts();
 		container.register(
 			ServiceId.LLMManager,
 			llmManager
 		);
 
-		logger.info('🚀 Services bootstrapped successfully');
+		logger.info('🚀 Core services bootstrapped successfully');
 	} catch (error) {
 		console.error('Failed to bootstrap services', error);
+		throw error;
+	}
+}
+
+/**
+ * Bootstraps only the basic services needed for Snowbunk
+ * @param client The Discord client instance
+ */
+export async function bootstrapSnowbunkApplication(client: Client): Promise<void> {
+	try {
+		// Register minimal services needed for Snowbunk
+		const logger = new Logger();
+		container.register(ServiceId.Logger, logger);
+		container.register(ServiceId.DiscordClient, client);
+
+		// Initialize Discord service
+		const discordService = getOrInitializeDiscordService(client, logger);
+		container.register(ServiceId.DiscordService, discordService);
+
+		// Initialize Discord GM service
+		container.register(
+			ServiceId.DiscordGMService,
+			DiscordGMService.initialize(client, discordService)
+		);
+
+		// Initialize webhook service
+		const webhookService = new WebhookService(logger);
+		container.register(ServiceId.WebhookService, webhookService);
+
+		// Initialize LLM manager
+		const llmManager = new LLMManager(logger, LLMProviderType.OLLAMA);
+		await llmManager.initializeAllProviders();
+		// Register all prompts
+		registerPrompts();
+		container.register(ServiceId.LLMManager, llmManager);
+
+		logger.info('Snowbunk services bootstrapped successfully');
+	} catch (error) {
+		console.error('Failed to bootstrap Snowbunk services:', error instanceof Error ? error : new Error(String(error)));
 		throw error;
 	}
 }
@@ -64,6 +170,10 @@ export function getDiscordClient(): Client {
 
 export function getDiscordService(): DiscordService {
 	return container.get<DiscordService>(ServiceId.DiscordService);
+}
+
+export function getDiscordGMService(): DiscordGMService {
+	return container.get<DiscordGMService>(ServiceId.DiscordGMService);
 }
 
 export function getLLMManager(): LLMManager {

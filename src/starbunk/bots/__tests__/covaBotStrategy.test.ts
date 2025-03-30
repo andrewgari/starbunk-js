@@ -1,55 +1,97 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 import covaBot from '../strategy-bots/cova-bot';
-import { COVA_BOT_NAME } from '../strategy-bots/cova-bot/constants';
+import { COVA_BOT_NAME, COVA_BOT_PATTERNS } from '../strategy-bots/cova-bot/constants';
+import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 
-// Mock the WebhookService and other required services
+// Minimal mock for LLM
+const mockLLM = {
+	createPromptCompletion: jest.fn().mockResolvedValue("Cova's response"),
+	createCompletion: jest.fn().mockResolvedValue({ content: 'YES' })
+};
+
+// Basic mocks that don't try to do too much
 jest.mock('../../../services/bootstrap', () => ({
-	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),
-	getLLMManager: jest.fn().mockImplementation(() => ({
-		createPromptCompletion: jest.fn().mockResolvedValue('Mocked LLM response'),
-		createCompletion: jest.fn().mockResolvedValue({ content: 'YES' })
-	})),
+	getWebhookService: jest.fn().mockReturnValue(mockWebhookService),
+	getLLMManager: jest.fn().mockReturnValue(mockLLM)
 }));
 
-// Mock the client user for mentions
-jest.mock('discord.js', () => {
-	const original = jest.requireActual('discord.js');
-	return {
-		...original,
-		Client: jest.fn().mockImplementation(() => ({
-			user: { id: 'mockClientId' }
-		}))
-	};
-});
+// Simple mock for any other services
+jest.mock('../../../services/personalityService', () => ({
+	getPersonalityService: jest.fn().mockReturnValue({
+		loadPersonalityEmbedding: jest.fn(),
+		getPersonalityEmbedding: jest.fn()
+	})
+}));
 
 describe('covaBot Strategy', () => {
+	// Original Math.random implementation
+	const originalRandom = Math.random;
+
 	beforeEach(() => {
-		// Clear mocks and reset container
 		jest.clearAllMocks();
 		container.clear();
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
+
+		// Reset mocks
+		mockLLM.createPromptCompletion.mockResolvedValue("Cova's response");
+		mockLLM.createCompletion.mockResolvedValue({ content: 'YES' });
+
+		// Mock Math.random to always return 0 (ensures probability checks pass)
+		Math.random = jest.fn().mockReturnValue(0);
+	});
+
+	afterEach(() => {
+		// Restore original Math.random
+		Math.random = originalRandom;
 	});
 
 	it('should have the correct name', () => {
 		expect(covaBot.name).toBe(COVA_BOT_NAME);
 	});
 
-	// For this test, we'll just verify the bot doesn't crash
-	// We don't test actual response behavior since it depends on an LLM
 	it('exists and has proper structure', () => {
 		expect(covaBot).toBeDefined();
 		expect(covaBot.name).toBe(COVA_BOT_NAME);
 		expect(typeof covaBot.processMessage).toBe('function');
 	});
-	
-	// Skip actual response tests as they depend on an LLM service
-	it.skip('should not respond to unrelated messages', async () => {
-		// This test is skipped because CovaBot's behavior depends on LLM responses
-		// which are mocked but not in a way that guarantees deterministic behavior
-		const message = mockMessage('A completely unrelated message');
+
+	it('should not throw errors when processing a message', async () => {
+		const message = mockMessage('Hey cova');
+		await expect(covaBot.processMessage(message)).resolves.not.toThrow();
+	});
+
+	it('should respond to messages containing "cova"', async () => {
+		const message = mockMessage('Hey cova, how are you?');
+		await covaBot.processMessage(message);
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	it('should not respond to unrelated messages', async () => {
+		// Make LLM return NO and Math.random return 1 to ensure no match
+		mockLLM.createCompletion.mockResolvedValue({ content: 'NO' });
+		Math.random = jest.fn().mockReturnValue(1);
+
+		const message = mockMessage('This message has nothing to do with the bot');
 		await covaBot.processMessage(message);
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+	});
+
+	it('should handle errors gracefully', async () => {
+		// Make LLM throw an error
+		mockLLM.createPromptCompletion.mockRejectedValue(new Error('Test error'));
+
+		const message = mockMessage('Hey cova');
+		await expect(covaBot.processMessage(message)).resolves.not.toThrow();
+
+		// Should still attempt to send a response (using fallback)
+		expect(mockWebhookService.writeMessage).toHaveBeenCalled();
+	});
+
+	it('should handle regex pattern matches correctly', () => {
+		// Test the bot's regex patterns
+		expect(COVA_BOT_PATTERNS.Mention.test('Hey cova!')).toBe(true);
+		expect(COVA_BOT_PATTERNS.Mention.test('Who is covadax?')).toBe(true);
+		expect(COVA_BOT_PATTERNS.Mention.test('unrelated message')).toBe(false);
 	});
 });

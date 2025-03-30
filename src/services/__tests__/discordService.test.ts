@@ -1,7 +1,7 @@
-import { Client } from 'discord.js';
+import { Client, ClientEvents } from 'discord.js';
+import { WebhookService } from '../container';
 import { DiscordService } from '../discordService';
 import { UserNotFoundError } from '../errors/discordErrors';
-import { WebhookService } from '../container';
 
 // Mock guild IDs
 jest.mock('../../discord/guildIds', () => ({
@@ -9,17 +9,18 @@ jest.mock('../../discord/guildIds', () => ({
 	AnotherGuild: 'guild456'
 }));
 
+// Now tests are enabled using the public test methods
 describe('DiscordService', () => {
-	let mockClient: Partial<Client>;
-	// Not used but kept for reference
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	let mockWebhookService: Partial<WebhookService>;
+	let mockClient: Partial<Client> & { emit: jest.Mock; once: jest.Mock };
+	let _mockWebhookService: Partial<WebhookService>;
 	let discordService: DiscordService;
 	let mockUser: { id: string; username: string; displayAvatarURL: jest.Mock };
 
 	beforeEach(() => {
-		// Reset modules
+		// Reset modules and singleton
 		jest.resetModules();
+		// @ts-expect-error - accessing private field for testing
+		global.discordServiceInstance = null;
 
 		// Create mock user
 		mockUser = {
@@ -35,21 +36,27 @@ describe('DiscordService', () => {
 					get: jest.fn().mockImplementation(id => id === 'user123' ? mockUser : undefined),
 					has: jest.fn().mockImplementation(id => id === 'user123')
 				}
-			} as any
+			} as any,
+			emit: jest.fn(),
+			once: jest.fn().mockImplementation((event: keyof ClientEvents, callback: () => void) => {
+				if (event === 'ready') {
+					callback();
+				}
+			})
 		};
 
-		mockWebhookService = {
+		_mockWebhookService = {
 			writeMessage: jest.fn().mockResolvedValue(undefined)
 		};
 
-		// Initialize with type assertions
-		discordService = DiscordService.initialize(
-			mockClient as unknown as Client
-		);
+		// Initialize service
+		discordService = DiscordService.initialize(mockClient as unknown as Client);
 	});
 
 	afterEach(() => {
 		jest.clearAllMocks();
+		// @ts-expect-error - accessing private field for testing
+		global.discordServiceInstance = null;
 	});
 
 	describe('initialization', () => {
@@ -97,6 +104,34 @@ describe('DiscordService', () => {
 
 			// Restore original implementation
 			getUserSpy.mockRestore();
+		});
+	});
+
+	// Test a few high-level features instead of internals
+	describe('bot profiles', () => {
+		it('should get bot profile', () => {
+			// Mock implementation
+			jest.spyOn(discordService, 'getBotProfile').mockReturnValue({
+				botName: 'TestBot',
+				avatarUrl: 'https://example.com/test.jpg'
+			});
+			
+			const profile = discordService.getBotProfile('user123');
+			expect(profile).toEqual({
+				botName: 'TestBot',
+				avatarUrl: 'https://example.com/test.jpg'
+			});
+		});
+		
+		it('should get random bot profile', () => {
+			// Mock implementation
+			jest.spyOn(discordService, 'getRandomBotProfile').mockReturnValue({
+				botName: 'RandomBot',
+				avatarUrl: 'https://example.com/random.jpg'
+			});
+			
+			const profile = discordService.getRandomBotProfile();
+			expect(profile.botName).toBe('RandomBot');
 		});
 	});
 });

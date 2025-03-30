@@ -1,6 +1,5 @@
-import { DiscordService } from '@/services/discordService';
 import { BotIdentity } from '@/starbunk/types/botIdentity';
-import { Message, TextChannel } from 'discord.js';
+import { Message } from 'discord.js';
 import { logger } from '../../services/logger';
 import { percentChance } from '../../utils/random';
 
@@ -105,17 +104,8 @@ export default abstract class ReplyBot {
 	}
 
 	/**
-	 * Sends a reply to the specified channel using the bot's identity.
+	 * Determines if a message is from this bot.
 	 */
-	public async sendReply(channel: TextChannel, content: string): Promise<void> {
-		try {
-			await DiscordService.getInstance().sendMessageWithBotIdentity(channel.id, this.botIdentity, content);
-		} catch (error) {
-			logger.error(`[${this.defaultBotName}] Error sending reply:`, error as Error);
-			throw error;
-		}
-	}
-
 	public isSelf(message: Message): boolean {
 		const isSelf = message.author.bot && message.author.id === message.client.user?.id;
 		logger.debug(`[${this.defaultBotName}] Checking if message is from self: ${isSelf}`);

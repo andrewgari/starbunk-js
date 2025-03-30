@@ -1,32 +1,46 @@
-FROM node:20-alpine
+# Build stage
+FROM node:20-alpine AS deps
 
 WORKDIR /app
 
-# Install ffmpeg for audio processing
-RUN apk add --no-cache ffmpeg
+# Install latest npm and dependencies with caching
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g npm@latest && \
+    npm ci --prefer-offline --no-audit
 
-# Copy package files first for better layer caching
-COPY package.json ./
-COPY package-lock.json ./
-COPY tsconfig.json ./
-COPY process-env.d.ts ./
-
-# Install dependencies including dev dependencies (needed for build)
-# Use --ignore-scripts to bypass @distube/yt-dlp postinstall script that's failing
-RUN npm ci --ignore-scripts
-
-# Copy source code before building
+FROM deps AS builder
 COPY . .
+RUN npx prisma generate
+RUN npm run build
 
-# Clean and build the application
-RUN npm run build:clean
+# Runtime stage
+FROM node:20-slim AS runner
 
-# Verify the build was created
-RUN ls -la dist && test -f dist/bunkbot.js
+WORKDIR /app
 
-# Add a healthcheck to help diagnose issues
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD test -f dist/bunkbot.js && node -e "process.exit(0)" || process.exit(1)
+# Install ffmpeg only
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# Command to run the application
+# Copy build artifacts and node modules in a single layer
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/prisma ./prisma
+COPY package*.json ./
+
+# Install latest npm and production dependencies
+RUN npm install -g npm@latest && \
+    npm ci --prefer-offline --no-audit --production
+
+# Environment variables
+ENV NODE_ENV="production"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD node healthcheck.js
+
+# Run the bot
 CMD ["node", "--enable-source-maps", "dist/bunkbot.js"]

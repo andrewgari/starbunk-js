@@ -35,3 +35,17 @@ export class RoleNotFoundError extends DiscordServiceError {
 		super(`Role not found: ${roleId}`);
 	}
 }
+
+export class WebhookError extends DiscordServiceError {
+	constructor(message: string) {
+		super(message);
+		this.name = "WebhookError";
+	}
+}
+
+export class MessageNotFoundError extends DiscordServiceError {
+	constructor(messageId: string, channelId: string) {
+		super(`Message ${messageId} not found in channel ${channelId}`);
+		this.name = "MessageNotFoundError";
+	}
+}

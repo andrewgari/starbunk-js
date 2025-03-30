@@ -1,5 +1,5 @@
-import { Message, TextChannel } from 'discord.js';
-import { getWebhookService } from '../../../services/bootstrap';
+import { Message } from 'discord.js';
+import { getDiscordService } from '../../../services/bootstrap';
 import { logger } from '../../../services/logger';
 import { BotIdentity } from '../../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
@@ -37,6 +37,7 @@ export interface StrategyBotConfig {
 	defaultIdentity: BotIdentity;
 	triggers: TriggerResponse[];
 	skipBotMessages?: boolean;
+	responseRate?: number; // Add response rate at the bot level
 }
 
 /**
@@ -48,37 +49,35 @@ export interface ValidatedStrategyBotConfig {
 	defaultIdentity: BotIdentity;
 	triggers: TriggerResponse[];
 	skipBotMessages: boolean;
+	responseRate: number; // Add default response rate
 }
 
 /**
- * Validate the bot configuration
+ * Validate bot configuration and provide defaults
  */
 function validateBotConfig(config: StrategyBotConfig): ValidatedStrategyBotConfig {
-	// Validate name and description
-	const name = createBotStrategyName(config.name);
-	const description = createBotDescription(config.description);
-  
-	// Validate that we have at least one trigger
-	if (!config.triggers || config.triggers.length === 0) {
-		throw new Error(`Bot ${config.name} must have at least one trigger`);
+	// Validate required fields
+	if (!config.name) {
+		throw new Error('Bot name is required');
 	}
-  
-	// Ensure all triggers have unique names
-	const triggerNames = new Set<string>();
-	for (const trigger of config.triggers) {
-		const nameStr = trigger.name.toString();
-		if (triggerNames.has(nameStr)) {
-			throw new Error(`Bot ${config.name} has duplicate trigger name: ${nameStr}`);
-		}
-		triggerNames.add(nameStr);
+	if (!config.description) {
+		throw new Error('Bot description is required');
+	}
+	if (!config.defaultIdentity) {
+		throw new Error('Default bot identity is required');
+	}
+	if (!config.triggers || config.triggers.length === 0) {
+		throw new Error('At least one trigger is required');
 	}
 
+	// Return validated config with defaults
 	return {
-		name,
-		description,
+		name: config.name,
+		description: config.description,
 		defaultIdentity: config.defaultIdentity,
 		triggers: config.triggers,
-		skipBotMessages: config.skipBotMessages ?? true
+		skipBotMessages: config.skipBotMessages ?? true,
+		responseRate: config.responseRate ?? 100 // Default to 100% if not specified
 	};
 }
 
@@ -88,6 +87,10 @@ function validateBotConfig(config: StrategyBotConfig): ValidatedStrategyBotConfi
 export interface StrategyBot {
 	readonly name: BotStrategyName;
 	readonly description: BotDescription;
+	readonly metadata?: {
+		responseRate: number;
+		[key: string]: unknown;
+	};
 	processMessage(message: Message): Promise<void>;
 }
 
@@ -97,7 +100,7 @@ export interface StrategyBot {
 export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 	// Validate the configuration
 	const validConfig = validateBotConfig(config);
-  
+
 	// Sort triggers by priority (higher first)
 	const sortedTriggers = [...validConfig.triggers].sort((a, b) => {
 		const priorityA = a.priority || 0;
@@ -109,7 +112,10 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 	return {
 		name: validConfig.name,
 		description: validConfig.description,
-    
+		metadata: {
+			responseRate: validConfig.responseRate
+		},
+
 		async processMessage(message: Message): Promise<void> {
 			logger.debug(`[${validConfig.name}] Processing message from ${message.author.tag}`);
 
@@ -136,24 +142,24 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 									: trigger.identity)
 								: validConfig.defaultIdentity;
 
-							// Send response
-							await getWebhookService().writeMessage(message.channel as TextChannel, {
-								content: responseText,
-								username: identity.botName,
-								avatarURL: identity.avatarUrl
-							});
+							// Send response using DiscordService
+							await getDiscordService().sendMessageWithBotIdentity(
+								message.channel.id,
+								identity,
+								responseText
+							);
 
 							logger.debug(`[${validConfig.name}] Response sent successfully`);
 							return;
 						}
 					} catch (triggerError) {
 						// Log but continue with other triggers if one fails
-						logger.error(`[${validConfig.name}] Error in trigger "${trigger.name}":`, 
+						logger.error(`[${validConfig.name}] Error in trigger "${trigger.name}":`,
 							triggerError instanceof Error ? triggerError : new Error(String(triggerError)));
 					}
 				}
 			} catch (error) {
-				logger.error(`[${validConfig.name}] Error processing message:`, 
+				logger.error(`[${validConfig.name}] Error processing message:`,
 					error instanceof Error ? error : new Error(String(error)));
 				// Don't re-throw to prevent crashes in the main message handling loop
 			}

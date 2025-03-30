@@ -14,7 +14,14 @@ export class StrategyBotAdapter extends ReplyBot {
 	constructor(strategyBot: StrategyBot) {
 		super();
 		this.strategyBot = strategyBot;
-		logger.debug(`[StrategyBotAdapter] Created adapter for ${strategyBot.name}`);
+		
+		// Set response rate based on bot configuration
+		// We'll extract it from the strategyBot's metadata if available
+		if (strategyBot.metadata && typeof strategyBot.metadata.responseRate === 'number') {
+			this.responseRate = strategyBot.metadata.responseRate;
+		}
+		
+		logger.debug(`[StrategyBotAdapter] Created adapter for ${strategyBot.name} with response rate ${this.responseRate}%`);
 	}
 
 	get defaultBotName(): string {

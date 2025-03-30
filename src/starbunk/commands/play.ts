@@ -3,11 +3,13 @@ import { CommandInteraction, GuildMember, SlashCommandBuilder } from 'discord.js
 import { logger } from '../../services/logger';
 import StarbunkClient, { getStarbunkClient } from '../starbunkClient';
 
+const commandBuilder = new SlashCommandBuilder()
+	.setName('play')
+	.setDescription('Play a YouTube link in voice chat')
+	.addStringOption((option) => option.setName('song').setDescription('YouTube video URL').setRequired(true));
+
 export default {
-	data: new SlashCommandBuilder()
-		.setName('play')
-		.setDescription('Play a YouTube link in voice chat')
-		.addStringOption((option) => option.setName('song').setDescription('YouTube video URL').setRequired(true)),
+	data: commandBuilder.toJSON(),
 	async execute(interaction: CommandInteraction) {
 		const url = interaction.options.get('song')?.value as string;
 		const member = interaction.member as GuildMember;

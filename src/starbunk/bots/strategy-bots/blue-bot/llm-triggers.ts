@@ -14,7 +14,7 @@ export const blueMentionLLMTrigger = createTriggerResponse({
 		// LLM-enhanced detection
 		createLLMCondition(
 			'Does this message mention or refer to "blu"?',
-			BLUE_BOT_PATTERNS.Default
+			{ regexFallback: BLUE_BOT_PATTERNS.Default }
 		)
 	),
 	response: blueMentionTrigger.response,

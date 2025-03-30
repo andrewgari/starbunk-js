@@ -1,7 +1,8 @@
 import { Logger } from '../logger';
-import { LLMFactory, LLMProviderType } from './llmFactory';
-import { LLMCompletionOptions, LLMCompletionResponse, LLMService } from './llmService';
-import { PromptRegistry, PromptType, formatPromptMessages, getPromptDefaultOptions } from './promptManager';
+import { LLMFactory } from './llmFactory';
+import { LLMProvider, LLMProviderType } from './llmProvider';
+import { LLMCompletion, LLMCompletionOptions } from './llmService';
+import { PromptType, formatPromptMessages, getPromptDefaultOptions } from './promptManager';
 
 /**
  * Error thrown when a provider is not available
@@ -39,19 +40,25 @@ export interface PromptCompletionOptions {
 	temperature?: number;
 	/** Max tokens to use (optional, uses prompt's default if not specified) */
 	maxTokens?: number;
+	/** Context data for the prompt */
+	contextData?: {
+		personalityEmbedding?: number[];
+		[key: string]: unknown;
+	};
 }
 
 /**
  * Manager for LLM services
  */
 export class LLMManager {
-	private providers: Map<LLMProviderType, LLMService> = new Map();
-	private logger: Logger;
-	private defaultProvider: LLMProviderType;
+	private readonly defaultProvider: LLMProviderType;
+	private readonly providers: Map<LLMProviderType, LLMProvider>;
+	private readonly logger: Logger;
 
-	constructor(logger: Logger, defaultProvider: LLMProviderType) {
-		this.logger = logger;
+	constructor(logger: Logger, defaultProvider: LLMProviderType = LLMProviderType.OLLAMA) {
 		this.defaultProvider = defaultProvider;
+		this.providers = new Map();
+		this.logger = logger;
 	}
 
 	/**
@@ -60,20 +67,34 @@ export class LLMManager {
 	 */
 	public async initializeProvider(type: LLMProviderType): Promise<boolean> {
 		try {
-			const provider = LLMFactory.createProviderFromEnv(type, this.logger);
+			this.logger.debug(`Initializing ${type} provider...`);
+			const provider = this.createProvider(type);
 			const initialized = await provider.initialize();
 
 			if (initialized) {
 				this.providers.set(type, provider);
-				this.logger.debug(`Initialized ${type} provider`);
+				this.logger.info(`Successfully initialized ${type} provider`);
 			} else {
-				this.logger.error(`Failed to initialize ${type} provider`);
+				this.logger.error(`Failed to initialize ${type} provider - provider.initialize() returned false`);
 			}
 
 			return initialized;
 		} catch (error) {
-			this.logger.error(`Error initializing ${type} provider`, error as Error);
+			this.logger.error(`Error initializing ${type} provider:`, error instanceof Error ? error : new Error(String(error)));
 			return false;
+		}
+	}
+
+	private createProvider(type: LLMProviderType): LLMProvider {
+		try {
+			this.logger.debug(`Creating provider of type ${type}...`);
+			// Use the factory to create the provider
+			const provider = LLMFactory.createProviderFromEnv(type, this.logger);
+			this.logger.debug(`Successfully created ${type} provider`);
+			return provider;
+		} catch (error) {
+			this.logger.error(`Error creating ${type} provider:`, error instanceof Error ? error : new Error(String(error)));
+			throw error;
 		}
 	}
 
@@ -81,29 +102,43 @@ export class LLMManager {
 	 * Initialize all supported providers
 	 */
 	public async initializeAllProviders(): Promise<void> {
+		this.logger.debug('Initializing all providers...');
+
 		// Always try to initialize the default provider first
-		await this.initializeProvider(this.defaultProvider);
+		this.logger.info(`Attempting to initialize default provider: ${this.defaultProvider}`);
+		const defaultInitialized = await this.initializeProvider(this.defaultProvider);
+
+		if (!defaultInitialized) {
+			this.logger.warn(`Failed to initialize default provider ${this.defaultProvider}, will try other providers`);
+		}
 
 		// Initialize other providers
 		for (const type of Object.values(LLMProviderType)) {
 			if (type !== this.defaultProvider) {
+				this.logger.debug(`Attempting to initialize provider: ${type}`);
 				await this.initializeProvider(type as LLMProviderType);
 			}
 		}
+
+		// Log final provider status
+		this.logger.info('Provider initialization complete. Available providers:',
+			Array.from(this.providers.keys()).join(', ') || 'None');
 	}
 
 	/**
 	 * Get a provider
 	 * @param type Provider type
 	 */
-	public getProvider(type: LLMProviderType): LLMService | undefined {
+	public getProvider(type: LLMProviderType): LLMProvider | undefined {
 		return this.providers.get(type);
 	}
 
 	/**
 	 * Get the default provider
 	 */
-	public getDefaultProvider(): LLMService | undefined {
+	public getDefaultProvider(): LLMProvider | undefined {
+		this.logger.debug(`Getting default provider: ${this.defaultProvider}`);
+		this.logger.debug(`Providers: ${JSON.stringify(this.providers)}`);
 		return this.providers.get(this.defaultProvider);
 	}
 
@@ -117,30 +152,6 @@ export class LLMManager {
 	}
 
 	/**
-	 * Get an available provider, using fallback if necessary
-	 * @param type Provider type
-	 * @param allowFallback Whether to fall back to the default provider
-	 * @deprecated Use getProvider with appropriate error handling instead
-	 */
-	private getAvailableProvider(type: LLMProviderType, allowFallback = true): LLMService {
-		const provider = this.getProvider(type);
-		if (provider && provider.isInitialized()) {
-			return provider;
-		}
-
-		if (allowFallback && type !== this.defaultProvider) {
-			this.logger.warn(`Provider ${type} not available, falling back to ${this.defaultProvider}`);
-			const defaultProvider = this.getProvider(this.defaultProvider);
-			if (defaultProvider && defaultProvider.isInitialized()) {
-				return defaultProvider;
-			}
-		}
-
-		this.logger.error(`No available provider found for ${type}`);
-		throw new ProviderNotAvailableError(type);
-	}
-
-	/**
 	 * Create a completion using a provider
 	 * @param options Completion options
 	 * @param fallbackOptions Additional options for fallback handling
@@ -148,7 +159,7 @@ export class LLMManager {
 	public async createCompletion(
 		options: LLMCompletionOptions,
 		fallbackOptions?: { useOpenAiFallback?: boolean }
-	): Promise<LLMCompletionResponse> {
+	): Promise<LLMCompletion> {
 		// Parse the args
 		const useOpenAiFallback = fallbackOptions?.useOpenAiFallback ?? true;
 		// Parse provider from options or use default
@@ -178,15 +189,11 @@ export class LLMManager {
 				this.logger.info('Falling back to OpenAI provider');
 
 				// Make a copy of the options to modify for OpenAI
-				const openAiOptions = { ...options };
-
-				// If the model is llama-based, switch to a GPT model
-				if (openAiOptions.model.toLowerCase().startsWith('llama')) {
-					openAiOptions.model = 'gpt-3.5-turbo';
-				}
-
-				// Set the provider to OpenAI
-				openAiOptions.provider = LLMProviderType.OPENAI;
+				const openAiOptions: LLMCompletionOptions = {
+					...options,
+					model: 'gpt-3.5-turbo', // Always use a safe default
+					provider: LLMProviderType.OPENAI
+				};
 
 				try {
 					const openAiProvider = this.getProvider(LLMProviderType.OPENAI);
@@ -211,60 +218,6 @@ export class LLMManager {
 	}
 
 	/**
-	 * Create a simple completion with just a prompt
-	 * @param typeOrPrompt Provider type or prompt text
-	 * @param promptOrSystemPrompt Prompt text or system prompt
-	 * @param systemPromptOrFallback System prompt or fallback flag
-	 * @param fallbackToDefault Whether to fall back to the default provider
-	 */
-	public async createSimpleCompletion(
-		typeOrPrompt: LLMProviderType | string,
-		promptOrSystemPrompt?: string | boolean,
-		systemPromptOrFallback?: string | boolean,
-		fallbackToDefault = true
-	): Promise<string> {
-		try {
-			// Handle overloaded parameters
-			let type: LLMProviderType;
-			let prompt: string;
-			let systemPrompt: string | undefined;
-			let fallback: boolean;
-
-			if (typeof typeOrPrompt === 'string' && (typeof promptOrSystemPrompt === 'string' || promptOrSystemPrompt === undefined)) {
-				if (Object.values(LLMProviderType).includes(typeOrPrompt as LLMProviderType)) {
-					// First overload: (type, prompt, systemPrompt, fallback)
-					type = typeOrPrompt as LLMProviderType;
-					prompt = promptOrSystemPrompt as string;
-					systemPrompt = systemPromptOrFallback as string;
-					fallback = fallbackToDefault;
-				} else {
-					// Second overload: (prompt, systemPrompt, fallback)
-					type = this.defaultProvider;
-					prompt = typeOrPrompt;
-					systemPrompt = promptOrSystemPrompt as string;
-					fallback = systemPromptOrFallback as boolean ?? true;
-				}
-			} else {
-				// Invalid parameters
-				throw new Error('Invalid parameters for createSimpleCompletion');
-			}
-
-			// Get an available provider
-			const provider = this.getAvailableProvider(type, fallback);
-
-			// Create the completion
-			return await provider.createSimpleCompletion(prompt, systemPrompt);
-		} catch (error) {
-			if (error instanceof ProviderNotAvailableError) {
-				this.logger.error(error.message);
-			} else {
-				this.logger.error('Error creating simple completion', error as Error);
-			}
-			throw error;
-		}
-	}
-
-	/**
 	 * Create a completion using a registered prompt
 	 * @param promptType The type of prompt to use
 	 * @param userMessage The user message to format
@@ -275,93 +228,47 @@ export class LLMManager {
 		userMessage: string,
 		options: PromptCompletionOptions = {}
 	): Promise<string> {
-		const {
-			providerType,
-			fallbackToDefault = true,
-			fallbackToDirectCall = true,
-			model,
-			temperature,
-			maxTokens
-		} = options;
+		const messages = formatPromptMessages(promptType, userMessage);
+		const defaultOptions = getPromptDefaultOptions(promptType);
 
-		// Get the provider type
-		const type = providerType || this.defaultProvider;
+		const completionOptions: LLMCompletionOptions = {
+			messages,
+			temperature: options.temperature ?? defaultOptions.temperature,
+			maxTokens: options.maxTokens ?? defaultOptions.maxTokens,
+			contextData: options.contextData
+		};
 
 		try {
-			// Try using the prompt registry
-			try {
-				// Format the messages
-				const messages = formatPromptMessages(promptType, userMessage);
-
-				// Get default options for the prompt
-				const defaultOptions = getPromptDefaultOptions(promptType);
-
-				// Get an available provider
-				const provider = this.getAvailableProvider(type, fallbackToDefault);
-
-				// Create the completion
-				const response = await this.createCompletion(
-					{
-						model: model || provider.getAvailableModels()[0],
-						messages,
-						temperature: temperature ?? defaultOptions.temperature,
-						maxTokens: maxTokens ?? defaultOptions.maxTokens
-					},
-					{ useOpenAiFallback: false }
-				);
-
-				return response.content;
-			} catch (error) {
-				// If the error is not related to provider availability or prompt registration, rethrow
-				if (!(error instanceof ProviderNotAvailableError) &&
-					!(error instanceof PromptNotRegisteredError) &&
-					!fallbackToDirectCall) {
-					throw error;
-				}
-
-				// Log the error
-				this.logger.warn(`Error using prompt registry for ${promptType}, falling back to direct call: ${error instanceof Error ? error.message : String(error)}`);
-
-				// Fall back to direct API call if enabled
-				if (fallbackToDirectCall) {
-					// Get the prompt from the registry
-					const prompt = PromptRegistry.getPrompt(promptType);
-					if (!prompt) {
-						throw new PromptNotRegisteredError(promptType);
-					}
-
-					// Get an available provider
-					const provider = this.getAvailableProvider(type, fallbackToDefault);
-
-					// Create the completion
-					const response = await this.createCompletion(
-						{
-							model: model || provider.getAvailableModels()[0],
-							messages: [
-								{
-									role: 'system',
-									content: prompt.systemContent
-								},
-								{
-									role: 'user',
-									content: prompt.formatUserMessage(userMessage)
-								}
-							],
-							temperature: temperature ?? prompt.defaultTemperature,
-							maxTokens: maxTokens ?? prompt.defaultMaxTokens
-						},
-						{ useOpenAiFallback: false }
-					);
-
-					return response.content;
-				}
-
-				// Rethrow the error if fallback is not enabled
-				throw error;
-			}
+			const completion = await this.createCompletion(completionOptions);
+			return completion.content;
 		} catch (error) {
-			this.logger.error(`Error creating completion for prompt ${promptType}`, error as Error);
+			if (options.fallbackToDefault) {
+				this.logger.warn(`[LLMManager] Failed to get completion, falling back to default provider: ${error instanceof Error ? error.message : String(error)}`);
+				const fallbackCompletion = await this.createCompletionWithDefaultProvider(completionOptions);
+				return fallbackCompletion.content;
+			}
 			throw error;
 		}
+	}
+
+	private async createCompletionWithDefaultProvider(options: LLMCompletionOptions): Promise<LLMCompletion> {
+		const provider = this.getProvider(this.defaultProvider);
+		if (!provider) {
+			throw new Error(`Default provider ${this.defaultProvider} not available`);
+		}
+
+		const defaultModel = provider.getAvailableModels()[0];
+		if (!defaultModel) {
+			throw new Error(`No models available for provider ${this.defaultProvider}`);
+		}
+
+		return provider.createCompletion({
+			...options,
+			model: defaultModel
+		});
+	}
+
+	public registerProvider(type: LLMProviderType, provider: LLMProvider): void {
+		this.providers.set(type, provider);
 	}
 }

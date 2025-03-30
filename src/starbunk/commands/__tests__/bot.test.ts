@@ -1,7 +1,7 @@
 import { AutocompleteInteraction, ChatInputCommandInteraction, CommandInteractionOptionResolver, PermissionFlagsBits, PermissionsBitField } from 'discord.js';
 import { BotRegistry } from '../../bots/botRegistry';
 import { BaseVoiceBot } from '../../bots/core/voice-bot-adapter';
-import botCommand from '../bot';
+import botCommand from '../botCommandHandler';
 
 // Mock the BotRegistry
 jest.mock('../../bots/botRegistry', () => {
