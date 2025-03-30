@@ -68,6 +68,12 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 					return randomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 				}
 
+				// Truncate response to Discord's 2000 character limit
+				if (response.length > 1900) {
+					logger.warn(`[CovaBot] Response exceeded Discord's character limit (${response.length} chars), truncating`);
+					return response.substring(0, 1900) + "... (truncated)";
+				}
+
 				return response;
 			} catch (error) {
 				logger.warn(`[CovaBot] LLM service error: ${error instanceof Error ? error.message : String(error)}`);

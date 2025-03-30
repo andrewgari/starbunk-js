@@ -15,16 +15,33 @@ export async function initializeCovaBot(): Promise<void> {
 	try {
 		const personalityService = getPersonalityService();
 		// Try to load NPY file first, fall back to JSON if not found
-		const embedding = await personalityService.loadPersonalityEmbedding('personality.npy');
+		const embedding = await personalityService.loadPersonalityEmbedding('personality.npy', 'covaBot');
 		
 		if (!embedding) {
 			// Try fallback to JSON format
 			logger.info('[CovaBot] NPY personality embedding not found, trying JSON format...');
-			const jsonEmbedding = await personalityService.loadPersonalityEmbedding('personality.json');
+			const jsonEmbedding = await personalityService.loadPersonalityEmbedding('personality.json', 'covaBot');
 			
 			if (!jsonEmbedding) {
 				logger.warn('[CovaBot] No personality embedding files found. Using default behavior.');
-				// Don't throw error, just continue with default behavior
+				
+				// Generate a new embedding from the prompt if none exists
+				logger.info('[CovaBot] Attempting to generate new personality embedding from prompt...');
+				const promptText = require('./constants').COVA_BOT_PROMPTS.EmulatorPrompt;
+				
+				if (promptText) {
+					const newEmbedding = await personalityService.generatePersonalityEmbedding(
+						promptText,
+						'personality.json',
+						'covaBot'
+					);
+					
+					if (newEmbedding) {
+						logger.info('[CovaBot] Successfully generated and saved new personality embedding');
+					} else {
+						logger.warn('[CovaBot] Failed to generate new personality embedding, continuing with default behavior');
+					}
+				}
 			} else {
 				logger.info('[CovaBot] JSON personality embedding loaded successfully');
 			}

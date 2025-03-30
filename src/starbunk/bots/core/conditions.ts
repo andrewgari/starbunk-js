@@ -203,16 +203,11 @@ export function contextWithinTimeframeOf(
 
 // Creates a condition using an LLM to analyze message content
 export function llmDetects(prompt: string): TriggerCondition {
-	return async (message: Message): Promise<boolean> => {
-		try {
-			logger.debug(`LLM detection with prompt: ${prompt}`);
-			// Simple implementation without real LLM calls for now
-			return message.content.toLowerCase().includes(prompt.toLowerCase());
-		} catch (error) {
-			logger.error(`LLM detection error with prompt "${prompt.substring(0, 50)}...":`, 
-				error instanceof Error ? error : new Error(String(error)));
-			return false;
-		}
+	// Use a simple implementation for non-LLM bots to avoid unnecessary LLM service initialization
+	return (message: Message): boolean => {
+		// Skip actual LLM call and just use string matching for better performance
+		// This is used by standard bots that don't need real LLM capabilities
+		return message.content.toLowerCase().includes(prompt.toLowerCase());
 	};
 }
 
@@ -227,14 +222,19 @@ export function contextLlmDetects(prompt: string): ContextualTriggerCondition {
 // Combine multiple conditions with AND logic
 export function and(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
+		// First evaluate conditions in order (for simplicity and safety)
 		for (const condition of conditions) {
-			if (!(await condition(message))) {
-				return false;
+			const result = condition(message);
+			const isMatch = result instanceof Promise ? await result : result;
+			if (!isMatch) {
+				return false; // Short-circuit if any condition fails
 			}
 		}
 		return true;
 	};
 }
+
+// Helper removed as it's unused
 
 // Contextual version of and
 export function contextAnd(...conditions: ContextualTriggerCondition[]): ContextualTriggerCondition {
@@ -251,9 +251,17 @@ export function contextAnd(...conditions: ContextualTriggerCondition[]): Context
 // Combine multiple conditions with OR logic
 export function or(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
+		// Evaluate conditions with error handling
 		for (const condition of conditions) {
-			if (await condition(message)) {
-				return true;
+			try {
+				const result = condition(message);
+				const isMatch = result instanceof Promise ? await result : result;
+				if (isMatch) {
+					return true; // Short-circuit if any condition passes
+				}
+			} catch (error) {
+				logger.debug(`Error in condition: ${error instanceof Error ? error.message : String(error)}`);
+				// Continue to next condition if one fails
 			}
 		}
 		return false;
