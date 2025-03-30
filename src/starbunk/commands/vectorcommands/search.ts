@@ -2,7 +2,7 @@ import { ChatInputCommandInteraction, EmbedBuilder, GuildMember, SlashCommandBui
 import * as path from 'path';
 import { logger } from '../../../services/logger';
 import { VectorService } from '../../services/vectorService';
-import { TextWithMetadata } from '../../types/text';
+import { TextWithMetadata } from '../../types/textWithMetadata';
 import { getCampaignContext, getCampaignPermissions } from '../../utils/campaignChecks';
 
 // Define the command

@@ -3,7 +3,7 @@ import { logger } from '../src/services/logger';
 import { CampaignService } from '../src/starbunk/services/campaignService';
 import { NoteService } from '../src/starbunk/services/noteService';
 import { VectorService } from '../src/starbunk/services/vectorService';
-import { TextWithMetadata } from '../src/starbunk/types/text';
+import { TextWithMetadata } from '../src/starbunk/types/textWithMetadata';
 
 interface ExtendedError extends Error {
 	campaignId?: string;

@@ -5,7 +5,7 @@ import { logger } from '../../../services/logger';
 import { CampaignFileService } from '../../services/campaignFileService';
 import { VectorEmbeddingService } from '../../services/vectorEmbeddingService';
 import { VectorService } from '../../services/vectorService';
-import { TextWithMetadata } from '../../types/text';
+import { TextWithMetadata } from '../../types/textWithMetadata';
 import { getCampaignContext, getCampaignPermissions } from '../../utils/campaignChecks';
 
 // Define the command

@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { logger } from '../../services/logger';
-import { TextWithMetadata } from '../types/text';
+import { TextWithMetadata } from '../types/textWithMetadata';
 import { CampaignFileService } from './campaignFileService';
 import { VectorEmbeddingService } from './vectorEmbeddingService';
 

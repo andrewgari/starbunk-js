@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import mammoth from 'mammoth';
 import { logger } from '../../services/logger';
-import { TextWithMetadata } from '../types/text';
+import { TextWithMetadata } from '../types/textWithMetadata';
 import { VectorMetadata } from './vectorService';
 
 export interface LoadedVectors {
