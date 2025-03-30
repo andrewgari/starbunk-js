@@ -35,21 +35,42 @@ async function convertNpyToJson(filePath: string): Promise<void> {
 
 		// Read the .npy file
 		const buffer = await fs.readFile(filePath);
+		console.log(`[NPY Info] File size: ${buffer.length} bytes`);
 
 		// Parse the .npy file format to determine the correct header size
 		const headerLength = buffer.readUInt32LE(8) + 10;
+		console.log(`[NPY Info] Detected header length: ${headerLength} bytes`);
+		
+		// Log first 20 bytes of header for debugging
+		const headerPrefix = Array.from(buffer.slice(0, Math.min(20, headerLength)))
+			.map(b => b.toString(16).padStart(2, '0'))
+			.join(' ');
+		console.log(`[NPY Info] Header prefix (hex): ${headerPrefix}...`);
+		
 		const dataBuffer = buffer.slice(headerLength);
+		console.log(`[NPY Info] Data buffer size: ${dataBuffer.length} bytes`);
+		
 		// Convert to Float32Array
 		const embedding = new Float32Array(dataBuffer.buffer, dataBuffer.byteOffset, dataBuffer.length / 4);
+		console.log(`[NPY Info] Converted to Float32Array with ${embedding.length} elements`);
+		
+		// Debug sample of embedding values
+		if (embedding.length > 0) {
+			const sampleValues = Array.from(embedding.slice(0, 5)).map(v => v.toFixed(4));
+			console.log(`[NPY Info] First 5 embedding values: [${sampleValues.join(', ')}...]`);
+		}
 
 		// Convert to array and JSON
 		const jsonData = Array.from(embedding);
+		console.log(`[NPY Info] Vector dimensions: ${jsonData.length}`);
 
 		// Create output path
 		const jsonPath = filePath.replace('.npy', '.json');
 
 		// Write to JSON file
 		await fs.writeFile(jsonPath, JSON.stringify(jsonData), 'utf-8');
+		const stats = await fs.stat(jsonPath);
+		console.log(`[NPY Info] JSON file size: ${stats.size} bytes (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
 
 		console.log(`Successfully converted to: ${jsonPath}`);
 	} catch (error) {
@@ -91,6 +112,9 @@ async function processDocumentToVector(
 		const vectorJsonPath = path.join(vectorDir, 'vectors.json');
 		const metadataPath = path.join(vectorDir, 'metadata.json');
 
+		console.log(`[TokenizeDoc] Processing: ${relativePath}`);
+		console.log(`[TokenizeDoc] Output location: ${vectorDir}`);
+
 		// Check if vectorization is needed by comparing file modification times
 		if (!force && await fileExists(vectorJsonPath) && await fileExists(metadataPath)) {
 			// Get the modification times
@@ -99,59 +123,107 @@ async function processDocumentToVector(
 
 			// Skip if vector file is newer than document
 			if (vectorStats.mtime > docStats.mtime) {
-				console.log(`Skipping unchanged document: ${relativePath}`);
+				console.log(`[TokenizeDoc] Skipping unchanged document: ${relativePath} (doc: ${docStats.mtime.toISOString()}, vector: ${vectorStats.mtime.toISOString()})`);
 				return;
 			}
+			console.log(`[TokenizeDoc] File has been modified, regenerating vectors`);
 		}
 
-		console.log(`Processing document: ${relativePath}`);
+		console.log(`[TokenizeDoc] Reading file content: ${relativePath}`);
 
 		// Read file
 		const content = await fs.readFile(filePath, 'utf-8');
+		console.log(`[TokenizeDoc] File size: ${content.length} characters`);
+
+		// Log file content sample
+		const contentPreview = content.length > 200 ? 
+			`${content.substring(0, 200)}...` : content;
+		console.log(`[TokenizeDoc] Content preview: ${contentPreview}`);
 
 		// Skip if empty
 		if (!content.trim()) {
-			console.log(`Skipping empty file: ${relativePath}`);
+			console.log(`[TokenizeDoc] Skipping empty file: ${relativePath}`);
 			return;
 		}
 
 		// Process content in chunks if larger than chunk size
 		let chunks: string[] = [];
 		if (content.length > CHUNK_SIZE) {
-			console.log(`Chunking large file (${content.length} chars): ${relativePath}`);
+			console.log(`[TokenizeDoc] Chunking large file (${content.length} chars) into ${Math.ceil(content.length / CHUNK_SIZE)} chunks`);
+			
 			// Simple chunking by characters
 			for (let i = 0; i < content.length; i += CHUNK_SIZE) {
-				chunks.push(content.substring(i, i + CHUNK_SIZE));
+				const chunk = content.substring(i, i + CHUNK_SIZE);
+				chunks.push(chunk);
+				
+				// Log first and last chunk for verification
+				if (i === 0 || i + CHUNK_SIZE >= content.length) {
+					const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+					const totalChunks = Math.ceil(content.length / CHUNK_SIZE);
+					const chunkPreview = chunk.length > 100 ? `${chunk.substring(0, 100)}...` : chunk;
+					
+					console.log(`[TokenizeDoc] Chunk ${chunkNum}/${totalChunks} preview (${chunk.length} chars): ${chunkPreview}`);
+				}
 			}
 		} else {
 			chunks = [content];
+			console.log(`[TokenizeDoc] Content fits in a single chunk (${content.length} < ${CHUNK_SIZE})`);
 		}
 
+		// Token count estimation (rough estimate)
+		const estimatedTokens = chunks.reduce((sum, chunk) => sum + Math.round(chunk.length / 4), 0);
+		console.log(`[TokenizeDoc] Estimated token count: ~${estimatedTokens} tokens (${chunks.length} chunks)`);
+
 		// Ensure output directory exists
-		await fs.mkdir(outputDir, { recursive: true });
+		console.log(`[TokenizeDoc] Creating output directory: ${vectorDir}`);
+		await fs.mkdir(vectorDir, { recursive: true });
 
 		// Generate embeddings
-		console.log(`Generating embeddings for ${chunks.length} chunks...`);
+		console.log(`[TokenizeDoc] Generating embeddings for ${chunks.length} chunks...`);
+		const startTime = Date.now();
 		const embeddings = await embeddingService.generateEmbeddings(chunks);
+		const processingTime = Date.now() - startTime;
+		
+		console.log(`[TokenizeDoc] Embedding generation complete in ${processingTime}ms`);
+		console.log(`[TokenizeDoc] Generated ${embeddings.length} embeddings, each with ${embeddings[0]?.length || 0} dimensions`);
 
 		// Build metadata
-		const metadata = chunks.map(() => ({
+		const metadata = chunks.map((_, index) => ({
 			file: path.relative(path.join(CAMPAIGNS_DIR, campaignId), filePath),
 			is_gm_content: isGM,
-			chunk_size: CHUNK_SIZE
+			chunk_size: CHUNK_SIZE,
+			chunk_index: index,
+			total_chunks: chunks.length
 		}));
 
-		// Save vectors
+		console.log(`[TokenizeDoc] Saving vectors and metadata to: ${vectorDir}`);
+
+		// Save vectors - convert Float32Array to number[][]
 		await embeddingService.saveVectors(
-			embeddings,
+			embeddings.map(arr => Array.from(arr)),
 			metadata,
 			chunks,
 			vectorDir
 		);
 
-		console.log(`Successfully created embeddings for: ${relativePath}`);
+		console.log(`[TokenizeDoc] Successfully created embeddings for: ${relativePath}`);
+		
+		// Verify files were created properly
+		const [npyExists, jsonExists, metaExists, textsExists] = await Promise.all([
+			fileExists(path.join(vectorDir, 'vectors.npy')),
+			fileExists(path.join(vectorDir, 'vectors.json')),
+			fileExists(path.join(vectorDir, 'metadata.json')),
+			fileExists(path.join(vectorDir, 'texts.json'))
+		]);
+		
+		console.log(`[TokenizeDoc] Verification results:`, {
+			'vectors.npy': npyExists ? '✅' : '❌',
+			'vectors.json': jsonExists ? '✅' : '❌',
+			'metadata.json': metaExists ? '✅' : '❌',
+			'texts.json': textsExists ? '✅' : '❌'
+		});
 	} catch (error) {
-		console.error(`Error processing document ${filePath}:`, error);
+		console.error(`[TokenizeDoc] ❌ Error processing document ${filePath}:`, error);
 	}
 }
 

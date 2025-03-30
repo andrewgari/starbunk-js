@@ -35,8 +35,9 @@ export const ServiceId = {
 	WebhookService: Symbol.for('WebhookService'),
 	DiscordClient: Symbol.for('DiscordClient'),
 	DiscordService: Symbol.for('DiscordService'),
+	DiscordGMService: Symbol.for('DiscordGMService'),
 	LLMManager: Symbol.for('LLMManager'),
-	
+
 	// Bots
 	BlueBot: Symbol.for('BlueBot'),
 	BananaBot: Symbol.for('BananaBot'),
@@ -75,7 +76,7 @@ class SimpleContainer {
 	has(id: symbol): boolean {
 		return this.services.has(id);
 	}
-	
+
 	clear(): void {
 		this.services.clear();
 	}

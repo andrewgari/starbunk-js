@@ -1,13 +1,11 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 import attitudeBot from '../strategy-bots/attitude-bot';
 import {
-	ATTITUDE_BOT_NAME, 
 	ATTITUDE_BOT_AVATAR_URL,
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	ATTITUDE_BOT_PATTERNS,
+	ATTITUDE_BOT_NAME,
 	ATTITUDE_BOT_RESPONSES
 } from '../strategy-bots/attitude-bot/constants';
+import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -30,29 +28,29 @@ describe('AttitudeBot Strategy', () => {
 	it('should respond to "can\'t" statements', async () => {
 		// Arrange
 		const message = mockMessage('I can\'t do this');
-		
+
 		// Act
 		await attitudeBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledTimes(1);
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: ATTITUDE_BOT_NAME,
-				avatarURL: ATTITUDE_BOT_AVATAR_URL,
+				botName: ATTITUDE_BOT_NAME,
+				avatarUrl: ATTITUDE_BOT_AVATAR_URL,
 				content: ATTITUDE_BOT_RESPONSES.Default
 			})
 		);
 	});
-	
+
 	it('should not respond to messages without negative statements', async () => {
 		// Arrange
 		const message = mockMessage('I am able to do this');
-		
+
 		// Act
 		await attitudeBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

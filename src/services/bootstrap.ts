@@ -4,6 +4,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { WebhookService } from '../webhooks/webhookService';
 import { ServiceId, container } from './container';
+import { DiscordGMService } from './discordGMService';
 import { DiscordService } from './discordService';
 import { LLMManager, LLMProviderType } from './llm';
 import { registerPrompts } from './llm/prompts';
@@ -61,9 +62,16 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 		);
 
 		// Initialize and register DiscordService singleton
+		const discordService = DiscordService.initialize(client);
 		container.register(
 			ServiceId.DiscordService,
-			DiscordService.initialize(client)
+			discordService
+		);
+
+		// Initialize and register DiscordGMService
+		container.register(
+			ServiceId.DiscordGMService,
+			DiscordGMService.initialize(client, discordService)
 		);
 
 		// Register WebhookService
@@ -100,6 +108,16 @@ export async function bootstrapSnowbunkApplication(client: Client): Promise<void
 		container.register(ServiceId.Logger, logger);
 		container.register(ServiceId.DiscordClient, client);
 
+		// Initialize Discord service
+		const discordService = DiscordService.initialize(client);
+		container.register(ServiceId.DiscordService, discordService);
+
+		// Initialize Discord GM service
+		container.register(
+			ServiceId.DiscordGMService,
+			DiscordGMService.initialize(client, discordService)
+		);
+
 		// Initialize webhook service
 		const webhookService = new WebhookService(logger);
 		container.register(ServiceId.WebhookService, webhookService);
@@ -129,6 +147,10 @@ export function getDiscordClient(): Client {
 
 export function getDiscordService(): DiscordService {
 	return container.get<DiscordService>(ServiceId.DiscordService);
+}
+
+export function getDiscordGMService(): DiscordGMService {
+	return container.get<DiscordGMService>(ServiceId.DiscordGMService);
 }
 
 export function getLLMManager(): LLMManager {

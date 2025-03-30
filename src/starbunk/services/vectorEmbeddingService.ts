@@ -120,6 +120,18 @@ export class VectorEmbeddingService {
 			const embeddings: Float32Array[] = [];
 			logger.debug(`[VectorEmbeddingService] 🔍 Generating embeddings for ${texts.length} texts`);
 
+			// Log some sample text snippets for verification
+			if (texts.length > 0) {
+				logger.info('[VectorEmbeddingService] 📝 Sample input texts:', {
+					totalTexts: texts.length,
+					samples: texts.slice(0, 3).map(text => ({
+						length: text.length,
+						preview: text.length > 100 ? `${text.substring(0, 100)}...` : text,
+						tokenEstimate: Math.round(text.length / 4) // Rough estimate of token count
+					}))
+				});
+			}
+
 			// Process in batches to avoid memory issues
 			const batchSize = 32;
 			const totalBatches = Math.ceil(texts.length / batchSize);
@@ -131,21 +143,57 @@ export class VectorEmbeddingService {
 				const batchNumber = Math.floor(i / batchSize) + 1;
 				logger.debug(`[VectorEmbeddingService] 🔄 Processing batch ${batchNumber}/${totalBatches} (${batch.length} texts)`);
 
+				// Log first text in each batch for verification
+				if (batch.length > 0) {
+					const sampleText = batch[0];
+					logger.debug(`[VectorEmbeddingService] 📝 Batch ${batchNumber} first text:`, {
+						length: sampleText.length,
+						preview: sampleText.length > 200 ? `${sampleText.substring(0, 200)}...` : sampleText,
+						tokenEstimate: Math.round(sampleText.length / 4) // Rough estimate of token count
+					});
+				}
+
 				const results = await Promise.all(
-					batch.map(async (text) => {
+					batch.map(async (text, idx) => {
+						// Log start of individual text tokenization
+						const startTime = Date.now();
+						logger.debug(`[VectorEmbeddingService] 🔄 Tokenizing text ${idx+1}/${batch.length} in batch ${batchNumber} (length: ${text.length})`);
+						
 						const output = await this.embeddingPipeline(text, {
 							pooling: 'mean',
 							normalize: true
 						});
+						
+						const processingTime = Date.now() - startTime;
+						// Log detailed embedding information for the first few texts
+						if (idx === 0 || idx === batch.length - 1) {
+							logger.debug(`[VectorEmbeddingService] ✅ Text ${idx+1} embedding complete`, {
+								processingTimeMs: processingTime,
+								dimensions: output.data.length,
+								embeddingSample: Array.from(output.data).slice(0, 5).map(v => (v as number).toFixed(4)) // Show first 5 values
+							});
+						}
+						
 						return output.data;
 					})
 				);
 
 				embeddings.push(...results);
-				logger.debug(`[VectorEmbeddingService] ✅ Batch ${batchNumber}/${totalBatches} complete, dimensions: ${results[0]?.length || 0}`);
+				logger.info(`[VectorEmbeddingService] ✅ Batch ${batchNumber}/${totalBatches} complete`, {
+					dimensions: results[0]?.length || 0,
+					processedTexts: batch.length,
+					samplesGenerated: embeddings.length
+				});
 			}
 			
-			logger.info(`[VectorEmbeddingService] ✅ Generated ${embeddings.length} embeddings successfully`);
+			// Show stats on the entire embedding set
+			const embeddingSizeBytes = embeddings.length * (embeddings[0]?.length || 0) * 4; // 4 bytes per float32
+			logger.info(`[VectorEmbeddingService] ✅ Generated ${embeddings.length} embeddings successfully`, {
+				dimensions: embeddings[0]?.length || 0,
+				totalSizeBytes: embeddingSizeBytes,
+				totalSizeMB: (embeddingSizeBytes / (1024 * 1024)).toFixed(2) + 'MB',
+				bytesPerEmbedding: embeddings[0] ? embeddings[0].length * 4 : 0
+			});
 
 			return embeddings;
 		} catch (error) {
@@ -350,27 +398,65 @@ export class VectorEmbeddingService {
 			await fs.mkdir(outputDir, { recursive: true });
 			logger.debug('[VectorEmbeddingService] 📁 Output directory created/verified', { outputDir });
 
+			// Log vector data information
+			const vectorSizeBytes = vectors.length * (vectors[0]?.length || 0) * 8; // 8 bytes per double in JSON
+			logger.debug('[VectorEmbeddingService] 📊 Vector data information', {
+				vectorCount: vectors.length,
+				dimensions: vectors[0]?.length || 0,
+				estimatedSizeBytes: vectorSizeBytes,
+				estimatedSizeMB: (vectorSizeBytes / (1024 * 1024)).toFixed(2) + 'MB',
+				firstVectorSample: vectors[0]?.slice(0, 5).map(v => (v as number).toFixed(4))
+			});
+
+			// Log texts information
+			logger.debug('[VectorEmbeddingService] 📝 Text data information', {
+				textCount: texts.length,
+				averageLength: texts.length > 0 ? 
+					Math.round(texts.reduce((sum, text) => sum + text.length, 0) / texts.length) : 0,
+				totalCharacters: texts.reduce((sum, text) => sum + text.length, 0),
+				firstTextSample: texts[0]?.length > 100 ? 
+					`${texts[0].substring(0, 100)}...` : texts[0] || 'No text data'
+			});
+
 			// Save vectors to temporary JSON file
+			const startTimeJson = Date.now();
 			logger.debug('[VectorEmbeddingService] 💾 Writing vectors to temporary JSON file...');
 			await fs.writeFile(tempVectorsPath, JSON.stringify(vectors));
-			logger.debug('[VectorEmbeddingService] ✅ Temporary JSON file created', { tempVectorsPath });
+			const jsonWriteTime = Date.now() - startTimeJson;
+			
+			// Get file size
+			const tempFileStats = await fs.stat(tempVectorsPath);
+			logger.debug('[VectorEmbeddingService] ✅ Temporary JSON file created', { 
+				tempVectorsPath,
+				sizeBytes: tempFileStats.size,
+				sizeMB: (tempFileStats.size / (1024 * 1024)).toFixed(2) + 'MB',
+				writeTimeMs: jsonWriteTime
+			});
 
 			// Execute Python script
 			const scriptPath = path.join(process.cwd(), 'scripts', 'save_vectors.py');
 			logger.info('[VectorEmbeddingService] 🐍 Executing Python script', { 
 				scriptPath, 
 				tempVectorsPath, 
-				outputPath
+				outputPath,
+				vectorCount: vectors.length,
+				dimensions: vectors[0]?.length || 0
 			});
 
+			const pythonStartTime = Date.now();
 			const { stdout, stderr } = await this.runPythonScript(
 				scriptPath,
 				['--vectors', tempVectorsPath, '--output', outputPath],
 				30000
 			);
+			const pythonExecutionTime = Date.now() - pythonStartTime;
 			
-			logger.debug('[VectorEmbeddingService] 📝 Python script stdout:', { 
-				stdout: stdout.substring(0, 1000) + (stdout.length > 1000 ? '...(truncated)' : '')
+			logger.debug('[VectorEmbeddingService] 📝 Python script execution', { 
+				executionTimeMs: pythonExecutionTime,
+				stdoutLength: stdout.length,
+				stderrLength: stderr.length,
+				stdout: stdout.substring(0, 1000) + (stdout.length > 1000 ? '...(truncated)' : ''),
+				stderr: stderr ? stderr.substring(0, 500) : 'No stderr output'
 			});
 
 			// Parse stdout as JSON
@@ -382,7 +468,10 @@ export class VectorEmbeddingService {
 						outputPath: result.output_path,
 						shape: result.shape,
 						dtype: result.dtype,
-						fileSize: result.file_size_bytes || 'unknown'
+						fileSize: result.file_size_bytes || 'unknown',
+						fileSizeMB: result.file_size_bytes ? 
+							(result.file_size_bytes / (1024 * 1024)).toFixed(2) + 'MB' : 'unknown',
+						conversionTimeMs: pythonExecutionTime
 					});
 				} else if (result.status === 'warning') {
 					logger.warn('[VectorEmbeddingService] ⚠️ Vectors saved with warnings:', {
@@ -405,12 +494,26 @@ export class VectorEmbeddingService {
 			}
 
 			// Save metadata and texts
+			const startTimeMetadata = Date.now();
 			logger.debug('[VectorEmbeddingService] 💾 Saving metadata and texts...');
 			await fs.writeFile(metadataPath, JSON.stringify(metadata));
 			await fs.writeFile(textsPath, JSON.stringify(texts));
+			const metadataWriteTime = Date.now() - startTimeMetadata;
+			
+			// Get file sizes
+			const [metadataStats, textsStats] = await Promise.all([
+				fs.stat(metadataPath),
+				fs.stat(textsPath)
+			]);
+			
 			logger.debug('[VectorEmbeddingService] ✅ Metadata and text files saved', {
 				metadataPath,
-				textsPath
+				metadataSizeBytes: metadataStats.size,
+				metadataSizeKB: (metadataStats.size / 1024).toFixed(2) + 'KB',
+				textsPath,
+				textsSizeBytes: textsStats.size,
+				textsSizeKB: (textsStats.size / 1024).toFixed(2) + 'KB',
+				writeTimeMs: metadataWriteTime
 			});
 			
 			// Verify all files exist
@@ -421,11 +524,22 @@ export class VectorEmbeddingService {
 				fs.access(textsPath).then(() => true).catch(() => false)
 			]);
 			
+			// Get NPY file size if it exists
+			let npySizeInfo = {};
+			if (vectorsNpyExists) {
+				const npyStats = await fs.stat(outputPath);
+				npySizeInfo = {
+					sizeBytes: npyStats.size,
+					sizeMB: (npyStats.size / (1024 * 1024)).toFixed(2) + 'MB'
+				};
+			}
+			
 			logger.info('[VectorEmbeddingService] 📊 File verification results', {
 				vectorsNpy: vectorsNpyExists ? '✅' : '❌',
 				vectorsJson: vectorsJsonExists ? '✅' : '❌',
 				metadata: metadataExists ? '✅' : '❌',
-				texts: textsExists ? '✅' : '❌'
+				texts: textsExists ? '✅' : '❌',
+				npyInfo: vectorsNpyExists ? npySizeInfo : 'N/A'
 			});
 
 		} catch (error) {

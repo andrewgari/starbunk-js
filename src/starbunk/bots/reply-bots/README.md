@@ -22,11 +22,17 @@ export default class ExampleBot extends ReplyBot {
 		super(logger);
 	}
 
-	handleMessage(message: Message): void {
+	async handleMessage(message: Message): Promise<void> {
 		if (message.author.bot) return;
 
 		if (getBotPattern('Example', 'Default')?.test(message.content)) {
-			this.sendReply(message.channel as TextChannel, getBotResponse('Example', 'Default'));
+			const channel = message.channel as TextChannel;
+			const response = getBotResponse('Example', 'Default');
+			await DiscordService.getInstance().sendMessageWithBotIdentity(
+				channel.id,
+				{ botName: this.botName, avatarUrl: this.avatarUrl },
+				response
+			);
 		}
 	}
 }

@@ -85,12 +85,37 @@ export class DiscordService {
 				return;
 			}
 
-			const members = await guild.members.fetch();
-			this.memberCache.clear();
-			members.forEach(member => {
-				this.memberCache.set(member.id, member);
-			});
-			logger.debug(`Refreshed bot profiles for ${members.size} members`);
+			try {
+				// First try to fetch all members at once
+				const members = await guild.members.fetch();
+				this.memberCache.clear();
+				members.forEach(member => {
+					this.memberCache.set(member.id, member);
+				});
+				logger.debug(`Refreshed bot profiles for ${members.size} members`);
+			} catch (fetchError) {
+				// If full fetch fails, try fetching in chunks
+				logger.warn('Full member fetch failed, attempting chunked fetch...');
+
+				// Clear the cache before starting chunk fetch
+				this.memberCache.clear();
+
+				try {
+					// Use REST-based fetch which is more reliable for large guilds
+					await guild.members.fetch({ time: 60000 });
+
+					// Update cache with whatever members we managed to get
+					const memberCount = guild.members.cache.size;
+					guild.members.cache.forEach(member => {
+						this.memberCache.set(member.id, member);
+					});
+
+					logger.info(`Cached ${memberCount} members from chunked fetch`);
+				} catch (chunkError) {
+					logger.error('Chunked member fetch also failed:', chunkError instanceof Error ? chunkError : new Error(String(chunkError)));
+					// Don't throw - we'll work with whatever members we got in the cache
+				}
+			}
 		} catch (error) {
 			logger.warn('Failed to refresh bot profiles:', error instanceof Error ? error : new Error(String(error)));
 		}
