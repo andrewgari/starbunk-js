@@ -26,10 +26,11 @@ export const HOMONYM_PAIRS: HomonymPair[] = [
 		}
 	},
 	{
-		words: ["where", "wear"],
+		words: ["where", "wear", "ware"],
 		corrections: {
 			"where": "wear",
-			"wear": "where"
+			"wear": "ware",
+			"ware": "where"
 		}
 	},
 	{
@@ -40,11 +41,11 @@ export const HOMONYM_PAIRS: HomonymPair[] = [
 		}
 	},
 	{
-		words: ["sense", "cents", "scent"],
+		words: ["sense", "cents", "scents"],
 		corrections: {
 			"sense": "cents",
-			"cents": "sense",
-			"scent": "sense"
+			"cents": "scents",
+			"scents": "sense"
 		}
 	},
 	{
@@ -74,5 +75,128 @@ export const HOMONYM_PAIRS: HomonymPair[] = [
 			"lose": "loose",
 			"loose": "lose"
 		}
+	},
+	{
+		words: ["to", "too", "two"],
+		corrections: {
+			"to": "two",
+			"too": "to",
+			"two": "too"
+		}
+	},
+	{
+		words: ["hear", "here"],
+		corrections: {
+			"hear": "here",
+			"here": "hear"
+		}
+	},
+	{
+		words: ["write", "right", "rite"],
+		corrections: {
+			"write": "right",
+			"right": "rite",
+			"rite": "write"
+		}
+	},
+	{
+		words: ["its", "it's"],
+		corrections: {
+			"its": "it's",
+			"it's": "its"
+		}
+	},
+	{
+		words: ["accept", "except"],
+		corrections: {
+			"accept": "except",
+			"except": "accept"
+		}
+	},
+	{
+		words: ["brake", "break"],
+		corrections: {
+			"brake": "break",
+			"break": "brake"
+		}
+	},
+	{
+		words: ["complement", "compliment"],
+		corrections: {
+			"complement": "compliment",
+			"compliment": "complement"
+		}
+	},
+	{
+		words: ["desert", "dessert"],
+		corrections: {
+			"desert": "dessert",
+			"dessert": "desert"
+		}
+	},
+	{
+		words: ["principal", "principle"],
+		corrections: {
+			"principal": "principle",
+			"principle": "principal"
+		}
+	},
+	{
+		words: ["stationary", "stationery"],
+		corrections: {
+			"stationary": "stationery",
+			"stationery": "stationary"
+		}
+	},
+	{
+		words: ["who's", "whose"],
+		corrections: {
+			"who's": "whose",
+			"whose": "who's"
+		}
+	},
+	{
+		words: ["past", "passed"],
+		corrections: {
+			"past": "passed",
+			"passed": "past"
+		}
+	},
+	{
+		words: ["peace", "piece"],
+		corrections: {
+			"peace": "piece",
+			"piece": "peace"
+		}
+	},
+	{
+		words: ["bare", "bear"],
+		corrections: {
+			"bare": "bear",
+			"bear": "bare"
+		}
+	},
+	{
+		words: ["role", "roll"],
+		corrections: {
+			"role": "roll",
+			"roll": "role"
+		}
+	},
+	{
+		words: ["cite", "site", "sight"],
+		corrections: {
+			"cite": "site",
+			"site": "sight",
+			"sight": "cite"
+		}
 	}
 ];
+
+// Helper function to get a random correction for a word
+export function getRandomCorrection(word: string): string | null {
+	const lowerWord = word.toLowerCase();
+	const pair = HOMONYM_PAIRS.find(p => p.words.includes(lowerWord));
+	if (!pair) return null;
+	return pair.corrections[lowerWord];
+}

@@ -5,3 +5,7 @@ export const GUY_CHANNEL_BOT_AVATAR_URL = 'https://i.imgur.com/YPFGEzM.png'; // 
 export const GUY_CHANNEL_PATTERNS = {
 	GuyChannel: /guy/i
 } as const;
+
+// Constants for Guy Bot
+export const GUY_TRIGGER_CHANCE = 1; // 1% chance to respond
+export const GUY_RESPONSE = 'Heh...';

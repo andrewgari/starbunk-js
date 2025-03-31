@@ -10,5 +10,6 @@ export default createStrategyBot({
 		botName: HOLD_BOT_NAME,
 		avatarUrl: HOLD_AVATAR_URL
 	},
+	skipBotMessages: true,
 	triggers: [holdTrigger]
 });

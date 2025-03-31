@@ -23,6 +23,7 @@ export enum PromptType {
 	BLUE_ACKNOWLEDGMENT = 'blueAcknowledgment',
 	BLUE_SENTIMENT = 'blueSentiment',
 	COVA_EMULATOR = 'covaEmulator',
+	COVA_DECISION = 'covaDecision',
 	CONDITION_CHECK = 'conditionCheck'
 }
 

@@ -2,7 +2,7 @@ import { or } from '../../core/conditions';
 import { createLLMCondition } from '../../core/llm-conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { BLUE_BOT_PATTERNS } from './constants';
-import { blueMentionTrigger } from './triggers';
+import { blueStandardTrigger } from './triggers';
 
 // Enhanced version of blue mention trigger with LLM
 export const blueMentionLLMTrigger = createTriggerResponse({
@@ -10,13 +10,13 @@ export const blueMentionLLMTrigger = createTriggerResponse({
 	priority: 1,
 	condition: or(
 		// Original regex condition
-		blueMentionTrigger.condition,
+		blueStandardTrigger.condition,
 		// LLM-enhanced detection
 		createLLMCondition(
 			'Does this message mention or refer to "blu"?',
 			{ regexFallback: BLUE_BOT_PATTERNS.Default }
 		)
 	),
-	response: blueMentionTrigger.response,
-	identity: blueMentionTrigger.identity
+	response: blueStandardTrigger.response,
+	identity: blueStandardTrigger.identity
 });
