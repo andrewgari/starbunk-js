@@ -25,6 +25,7 @@ export interface MemberFetchOptions {
 	time?: number;
 	limit?: number;
 	withPresences?: boolean;
+	nonce?: string;
 }
 
 /**
@@ -103,7 +104,7 @@ export class DiscordService {
 		this.botProfileRefreshInterval = setInterval(() => {
 			this._test_retryBotProfileRefresh();
 		}, 60 * 60 * 1000); // 1 hour
-		
+
 		// Allow process to exit during tests
 		this.botProfileRefreshInterval.unref();
 	}
@@ -132,36 +133,76 @@ export class DiscordService {
 		try {
 			const guild = await this.getGuild(DefaultGuildId);
 
-			// Clear the cache before starting
-			this.memberCache.clear();
+			// Create a temporary cache for the new fetch
+			const tempCache = new Map<string, GuildMember>();
 
-			// Get the current members from cache first
-			guild.members.cache.forEach(member => {
-				const cacheKey = `${guild.id}:${member.id}`;
-				this.memberCache.set(cacheKey, member);
-			});
+			// Get the current members from cache first as backup
+			const previousCache = new Map(this.memberCache);
 
 			try {
-				// Use REST-based fetch with chunking enabled
-				const fetchOptions: MemberFetchOptions = {
-					time: 120000, // 2 minutes timeout
-					limit: 100, // Fetch in chunks of 100
-					withPresences: false // Don't fetch presence data to reduce payload
-				};
+				let lastId: string | undefined;
+				let totalMembers = 0;
+				const chunkSize = 50;
 
-				await guild.members.fetch(fetchOptions);
+				while (true) {
+					try {
+						const fetchOptions: MemberFetchOptions = {
+							time: 180000, // 3 minutes timeout
+							limit: chunkSize,
+							withPresences: false // Don't fetch presence data to reduce payload
+						};
 
-				// Update cache with fetched members
-				const memberCount = guild.members.cache.size;
-				guild.members.cache.forEach(member => {
-					const cacheKey = `${guild.id}:${member.id}`;
-					this.memberCache.set(cacheKey, member);
-				});
+						if (lastId) {
+							// @ts-expect-error Discord.js types don't include after option but it's supported
+							fetchOptions.after = lastId;
+						}
 
-				logger.info(`Successfully cached ${memberCount} members`);
+						const members = await guild.members.fetch(fetchOptions);
+
+						if (members.size === 0) {
+							break;
+						}
+
+						// Add to temporary cache
+						members.forEach(member => {
+							const cacheKey = `${guild.id}:${member.id}`;
+							tempCache.set(cacheKey, member);
+						});
+
+						totalMembers += members.size;
+						lastId = members.last()?.id;
+
+						// Log progress
+						logger.debug(`Fetched ${members.size} members (total: ${totalMembers})`);
+
+						if (members.size < chunkSize) {
+							break;
+						}
+
+						// Prevent rate limiting
+						await new Promise(resolve => setTimeout(resolve, 1000));
+					} catch (error) {
+						logger.warn('Chunk fetch failed, using previous cache:',
+							error instanceof Error ? error : new Error(String(error))
+						);
+						// On any chunk error, revert to previous cache state
+						this.memberCache = new Map(previousCache);
+						return;
+					}
+				}
+
+				// Only update the main cache if we successfully fetched all members
+				if (totalMembers > 0) {
+					this.memberCache = tempCache;
+					logger.info(`Successfully cached ${totalMembers} members`);
+				} else {
+					logger.warn('No members fetched, keeping previous cache');
+					this.memberCache = new Map(previousCache);
+				}
 			} catch (error) {
-				// If fetch fails, log but continue with cached members
-				logger.warn('Member fetch failed, continuing with cached members:',
+				// If fetch fails, restore previous cache
+				this.memberCache = new Map(previousCache);
+				logger.warn('Member fetch failed, restored previous cache:',
 					error instanceof Error ? error : new Error(String(error))
 				);
 			}
@@ -215,7 +256,7 @@ export class DiscordService {
 		}
 		return discordServiceInstance;
 	}
-	
+
 	// Methods with _test_ prefix are test-only public implementations of protected methods
 
 	// Clear all caches
