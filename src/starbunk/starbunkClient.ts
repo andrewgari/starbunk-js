@@ -19,7 +19,9 @@ export default class StarbunkClient extends Client {
 				GatewayIntentBits.Guilds,
 				GatewayIntentBits.GuildMessages,
 				GatewayIntentBits.GuildVoiceStates,
-				GatewayIntentBits.MessageContent
+				GatewayIntentBits.MessageContent,
+				GatewayIntentBits.GuildMembers,
+				GatewayIntentBits.GuildPresences
 			]
 		});
 
@@ -122,7 +124,7 @@ export default class StarbunkClient extends Client {
 			// Initialize personality service first
 			const { getPersonalityService } = await import('../services/personalityService');
 			const personalityService = getPersonalityService();
-			
+
 			try {
 				// Try to load NPY file first, then JSON as fallback
 				const npyEmbedding = await personalityService.loadPersonalityEmbedding('personality.npy');
@@ -140,7 +142,7 @@ export default class StarbunkClient extends Client {
 			} catch (error) {
 				logger.warn('Error loading personality embeddings, using default behavior');
 			}
-			
+
 			logger.info('Personality service initialized successfully');
 
 			// Load strategy bots
