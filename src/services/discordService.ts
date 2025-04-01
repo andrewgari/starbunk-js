@@ -129,7 +129,12 @@ export class DiscordService {
 
 	protected async refreshBotProfiles(): Promise<void> {
 		try {
+			logger.info('[DiscordService] Starting bot profile refresh');
 			const guild = await this.getGuild(DefaultGuildId);
+			logger.debug(`[DiscordService] Using guild: ${guild.name} (${guild.id})`);
+
+			// Log current cache state
+			logger.debug(`[DiscordService] Current cache state - Members: ${this.memberCache.size}, Bot Profiles: ${this.botProfileCache.size}`);
 
 			// Create a temporary cache for the new fetch
 			const tempCache = new Map<string, GuildMember>();
@@ -138,13 +143,16 @@ export class DiscordService {
 			// Get the current members from cache first as backup
 			const previousCache = new Map(this.memberCache);
 			const previousBotCache = new Map(this.botProfileCache);
+			logger.debug(`[DiscordService] Backup cache created - Members: ${previousCache.size}, Bot Profiles: ${previousBotCache.size}`);
 
 			try {
 				let lastId: string | undefined;
 				let totalMembers = 0;
+				let attemptCount = 0;
 				const chunkSize = 50;
 
 				while (true) {
+					attemptCount++;
 					try {
 						const fetchOptions: MemberFetchOptions = {
 							time: 180000, // 3 minutes timeout
@@ -157,41 +165,63 @@ export class DiscordService {
 							fetchOptions.after = lastId;
 						}
 
+						logger.debug(`[DiscordService] Fetching chunk ${attemptCount} (after: ${lastId || 'initial'})`);
 						const members = await guild.members.fetch(fetchOptions);
 
 						if (members.size === 0) {
+							logger.debug('[DiscordService] No more members to fetch');
 							break;
 						}
 
 						// Add to temporary cache
+						let validMembers = 0;
+						let invalidMembers = 0;
 						members.forEach(member => {
-							const cacheKey = `${guild.id}:${member.id}`;
-							tempCache.set(cacheKey, member);
+							try {
+								const cacheKey = `${guild.id}:${member.id}`;
+								tempCache.set(cacheKey, member);
 
-							// Also cache bot identity
-							tempBotCache.set(member.id, {
-								botName: member.displayName,
-								avatarUrl: member.displayAvatarURL({ extension: 'png', size: 128 })
-							});
+								// Also cache bot identity
+								const avatarUrl = member.displayAvatarURL({ extension: 'png', size: 128 });
+								if (!member.displayName || !avatarUrl) {
+									logger.warn(`[DiscordService] Invalid member data - ID: ${member.id}, DisplayName: ${member.displayName || 'missing'}, AvatarUrl: ${avatarUrl || 'missing'}`);
+									invalidMembers++;
+									return;
+								}
+
+								tempBotCache.set(member.id, {
+									botName: member.displayName,
+									avatarUrl
+								});
+								validMembers++;
+							} catch (memberError) {
+								logger.error(`[DiscordService] Failed to process member ${member.id}: ${memberError instanceof Error ? memberError.message : String(memberError)}`);
+								invalidMembers++;
+							}
 						});
 
 						totalMembers += members.size;
 						lastId = members.last()?.id;
 
-						// Log progress
-						logger.debug(`Fetched ${members.size} members (total: ${totalMembers})`);
+						// Log detailed progress
+						logger.debug(`[DiscordService] Chunk ${attemptCount} complete - Size: ${members.size}, Valid: ${validMembers}, Invalid: ${invalidMembers}, Total so far: ${totalMembers}`);
 
 						if (members.size < chunkSize) {
+							logger.debug('[DiscordService] Received less than chunk size, finishing fetch');
 							break;
 						}
 
 						// Prevent rate limiting
 						await new Promise(resolve => setTimeout(resolve, 1000));
 					} catch (error) {
-						logger.warn('Chunk fetch failed, using previous cache:',
-							error instanceof Error ? error : new Error(String(error))
-						);
-						// On any chunk error, revert to previous cache state
+						const errorMessage = error instanceof Error ? error.message : String(error);
+						logger.warn(`[DiscordService] Chunk ${attemptCount} fetch failed: ${errorMessage}`);
+						logger.warn('[DiscordService] Using previous cache state due to chunk failure');
+
+						// Log cache states for debugging
+						logger.debug(`[DiscordService] Failed temp cache state - Members: ${tempCache.size}, Bot Profiles: ${tempBotCache.size}`);
+						logger.debug(`[DiscordService] Reverting to previous cache - Members: ${previousCache.size}, Bot Profiles: ${previousBotCache.size}`);
+
 						this.memberCache = new Map(previousCache);
 						this.botProfileCache = new Map(previousBotCache);
 						return;
@@ -202,9 +232,11 @@ export class DiscordService {
 				if (totalMembers > 0) {
 					this.memberCache = tempCache;
 					this.botProfileCache = tempBotCache;
-					logger.info(`Successfully cached ${totalMembers} members and bot profiles`);
+					logger.info(`[DiscordService] Cache refresh complete - Cached ${totalMembers} members and bot profiles`);
+					logger.debug(`[DiscordService] New cache state - Members: ${this.memberCache.size}, Bot Profiles: ${this.botProfileCache.size}`);
 				} else {
-					logger.warn('No members fetched, keeping previous cache');
+					logger.warn('[DiscordService] No members fetched, keeping previous cache');
+					logger.debug(`[DiscordService] Retained cache state - Members: ${previousCache.size}, Bot Profiles: ${previousBotCache.size}`);
 					this.memberCache = new Map(previousCache);
 					this.botProfileCache = new Map(previousBotCache);
 				}
@@ -212,12 +244,13 @@ export class DiscordService {
 				// If fetch fails, restore previous cache
 				this.memberCache = new Map(previousCache);
 				this.botProfileCache = new Map(previousBotCache);
-				logger.warn('Member fetch failed, restored previous cache:',
+				logger.error('[DiscordService] Member fetch failed completely, restored previous cache:',
 					error instanceof Error ? error : new Error(String(error))
 				);
 			}
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error);
+			const errorMessage = error instanceof Error ? error.stack : String(error);
+			logger.error(`[DiscordService] Critical failure in bot profile refresh: ${errorMessage}`);
 			throw new DiscordServiceError(`Failed to refresh bot profiles: ${errorMessage}`);
 		}
 	}
