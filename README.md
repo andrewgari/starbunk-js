@@ -1,261 +1,298 @@
-# Starbunk-JS
+# StarBunk Discord Bot
 
-A Discord bot system built using Discord.js, featuring two main bots (Starbunk and Snowbunk) with multiple specialized reply bots.
+A sophisticated Discord bot built with TypeScript that combines personality-driven bots, community management tools, and advanced LLM-powered analysis capabilities.
 
-## Recent Changes
-- **Fixed Module Loading**: Fixed an issue where bots and commands weren't loading in production mode. The path resolution now properly checks if running in development or production mode and uses the appropriate directory (src vs dist).
-- **Removed Unused Scripts**: Removed the `scripts/check-docker-boot.js` script which was no longer needed. Updated package.json to remove references to this script.
+## 🌟 Key Features
 
-## Architecture
+### 🤖 Personality Bots
+- **Multiple Bot Personas**: Includes various themed bots that react to messages based on unique trigger patterns
+- **Strategy Pattern**: Each bot implements a consistent interface but with unique behaviors
+- **Dynamic Loading**: Bots are loaded at runtime from their respective directories
 
-The application uses an Observer pattern where the main clients (StarbunkClient and SnowbunkClient) act as observable subjects that notify various bot observers when messages or voice events occur.
+### 🧠 LLM Integration
+- **Personality Analysis Command**: Generate detailed profiles of users based on their message history
+- **Custom Focus Areas**: Analyze specific aspects of users' communication and skills
+- **Concurrent Request Limiting**: Prevents system overload with a locking mechanism
 
+### 🛠️ Command System
+- **Slash Commands**: Modern Discord interaction patterns
+- **Role-Based Permissions**: Commands restricted by user roles
+- **Command Categories**: Organized by functionality
+
+### 📊 Technical Features
+- **Dependency Injection**: Service container for better testability and modularity
+- **Type Safety**: Full TypeScript implementation with strict typing
+- **Repository Pattern**: Data access abstraction for different storage mechanisms
+
+## 📋 Commands
+
+### `/personality @user [focus]`
+Analyzes a user's message history to create a comprehensive personality profile.
+
+**Parameters:**
+- `@user`: The user to analyze (required)
+- `focus`: Optional custom focus area for the analysis (e.g., "programming skills", "communication style")
+
+**Permissions:**
+- Users can only analyze themselves
+- Administrators can analyze any user
+- Only one analysis can run at a time
+
+**Example Usage:**
 ```
-┌─────────────────┐     ┌─────────────────┐
-│  StarbunkClient │     │  SnowbunkClient │
-└────────┬────────┘     └────────┬────────┘
-         │                       │
-         │   Observer Pattern    │
-         ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐
-│   Event Stream   │     │  Channel Sync   │
-└────────┬────────┘     └─────────────────┘
-         │
-         ▼
-┌──────────────────────────────────────────┐
-│              Bot Collections              │
-├──────────────────┬───────────────────────┤
-│   Reply Bots     │     Voice Bots        │
-├──────────────────┴───────────────────────┤
-│            Command Handlers              │
-└──────────────────────────────────────────┘
+/personality @JohnDoe
+/personality @JaneDoe focus:technical skills
 ```
 
-### Core Components
+**Command Flow:**
+```mermaid
+flowchart TD
+    A[User Types Command] --> B{Check Permissions}
+    B -->|Admin or Self| C{Check Lock}
+    B -->|No Permission| Z[Error: Permission Denied]
+    
+    C -->|Lock Available| D[Acquire Lock]
+    C -->|Lock Unavailable| Y[Error: Analysis in Progress]
+    
+    D --> E[Fetch Channels]
+    E --> F[Fetch Messages]
+    F --> G[Process with LLM]
+    G --> H[Generate Embeds]
+    H --> I[Send Results]
+    I --> J[Release Lock]
+    
+    style A fill:#f9f,stroke:#333
+    style G fill:#bfb,stroke:#333
+    style Z fill:#f99,stroke:#333
+    style Y fill:#f99,stroke:#333
+    style J fill:#bbf,stroke:#333
+```
 
-1. **Discord Clients**
+## 🚀 Development
 
-    - `StarbunkClient`: Main bot for reactions and commands
-    - `SnowbunkClient`: Channel synchronization bot
+### Prerequisites
+- Node.js 16.x or higher
+- Discord Bot Token
+- LLM provider access (Ollama or OpenAI)
 
-2. **Bot Types**
-
-    - **Reply Bots**: Respond to specific message patterns
-    - **Voice Bots**: React to voice channel events and manage voice channel behavior
-    - **Strategy Bots**: Advanced bots using composable triggers and responses
-    - **DJ Cova**: Music playback functionality
-
-3. **Event Flow**
-    1. Discord events (messages, voice state changes) are received by clients
-    2. Clients notify registered bots through the observer pattern
-    3. Each bot processes the event according to its specific logic
-    4. Responses are sent via webhook service for customized appearances
-
-## Setup
-
+### Setup
 1. Clone the repository:
-
-    ```
-    git clone https://github.com/andrewgari/starbunk-js.git
-    cd starbunk-js
-    ```
+```bash
+git clone https://github.com/yourusername/starbunk-js.git
+cd starbunk-js
+```
 
 2. Install dependencies:
-
-    ```
-    npm install
-    ```
-
-3. Create a `.env` file based on `.env_sample`:
-
-    ```
-    STARBUNK_TOKEN=your_discord_token
-    SNOWBUNK_TOKEN=your_discord_token
-    CLIENT_ID=your_client_id
-    GUILD_ID=your_guild_id
-
-    # Optional webhook for bot impersonation (without this, fallback to regular messages)
-    WEBHOOK_URL=https://discord.com/api/webhooks/{webhook_id}/{webhook_token}
-
-    # LLM configurations
-    OLLAMA_API_URL=http://localhost:11434
-    OLLAMA_DEFAULT_MODEL=llama3
-    OPENAI_API_KEY=your_openai_key
-    ```
-
-4. Build the project:
-
-    ```
-    npm run build
-    ```
-
-5. Start the bots:
-    ```
-    npm start
-    ```
-
-## Docker Setup
-
-### Environment Configuration
-
-Before running the bot with Docker, make sure to set up your environment:
-
-1. Copy `.env_sample` to `.env`:
-   ```bash
-   cp .env_sample .env
-   ```
-
-2. Edit `.env` and add your Discord bot token, client ID, and other required credentials:
-   ```
-   STARBUNK_TOKEN=your_discord_bot_token_here
-   CLIENT_ID=your_discord_client_id_here
-   GUILD_ID=your_discord_guild_id_here
-   ```
-
-### Running with Docker Compose
-
-To build and run the bot with Docker Compose:
-
 ```bash
-docker-compose up --build
+npm install
 ```
 
-For development mode with hot reloading:
+3. Create a `.env` file with your credentials:
+```
+STARBUNK_TOKEN=your_discord_bot_token
+CLIENT_ID=your_discord_client_id
+GUILD_ID=your_discord_server_id
+OPENAI_API_KEY=your_openai_api_key # Optional
+OLLAMA_API_URL=http://localhost:11434 # For local Ollama
+```
 
+4. Start the development server:
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.override.yml up --build
-```
-
-### Troubleshooting Docker Issues
-
-If you encounter issues with Docker:
-
-1. Make sure your `.env` file is properly configured with all required variables
-2. Verify that `.env` isn't being ignored during the Docker build process
-3. Check container logs for specific error messages:
-   ```bash
-   docker-compose logs
-   ```
-
-## Development
-
-```
 npm run dev
 ```
 
-## Testing
+### Key NPM Commands
+- `npm run build`: Compile TypeScript
+- `npm run dev`: Start development server
+- `npm run lint`: Run ESLint
+- `npm run check:all`: Run all checks (lint, typecheck, tests, build)
+- `npm test`: Run Jest tests
+
+## 📁 Project Structure
 
 ```
+src/
+├── bunkbot.ts                # Main entry point
+├── config.ts                 # Configuration loader
+├── discord/                  # Discord-specific utilities
+├── domain/                   # Domain models
+├── infrastructure/           # Data access and repositories
+├── services/                 # Core application services
+│   ├── llm/                  # LLM integration 
+│   └── bootstrap.ts          # Service initialization
+├── starbunk/                 # Bot-specific code
+│   ├── bots/                 # Bot strategies
+│   ├── commands/             # Command implementations
+│   └── starbunkClient.ts     # Discord client wrapper
+└── utils/                    # Utility functions
+```
+
+## 📊 Architecture Diagrams
+
+### System Architecture
+
+```mermaid
+graph TD
+    User([Discord User]) <-->|Interacts with| Discord[Discord Platform]
+    Discord <-->|APIs| Bot[StarBunk Bot]
+    
+    subgraph "StarBunk Application"
+        Bot --> Commands[Command Handler]
+        Bot --> Bots[Bot Strategies]
+        Commands --> Services[Services]
+        Bots --> Services
+        Services --> LLM[LLM Provider]
+        Services --> Database[(Database)]
+    end
+    
+    LLM <-->|API| LLMService[LLM Service<br>Ollama/OpenAI]
+    
+    style Bot fill:#f9f,stroke:#333,stroke-width:2px
+    style Services fill:#bbf,stroke:#333,stroke-width:1px
+    style LLM fill:#bfb,stroke:#333,stroke-width:1px
+```
+
+### Personality Analysis Sequence
+
+```mermaid
+sequenceDiagram
+    participant User as Discord User
+    participant Bot as StarBunk Bot
+    participant Lock as Analysis Lock
+    participant Service as LLM Service
+    participant Discord as Discord API
+    
+    User->>Bot: /personality @user [focus]
+    
+    Bot->>Lock: Check if available
+    alt Lock Acquired
+        Lock-->>Bot: Lock granted
+        Bot->>Discord: Fetch channels
+        Discord-->>Bot: Return channels
+        
+        loop For each channel
+            Bot->>Discord: Fetch messages
+            Discord-->>Bot: Return messages
+        end
+        
+        Bot->>Service: Generate profile
+        Service-->>Bot: Return analysis
+        Bot->>User: Send embed with profile
+        Bot->>Lock: Release lock
+    else Lock Denied
+        Lock-->>Bot: Already in use
+        Bot->>User: Send "try again later" message
+    end
+```
+
+### Bot Strategy Pattern
+
+```mermaid
+classDiagram
+    class BotStrategy {
+        <<interface>>
+        +processMessage(message)
+        +getName()
+        +getDescription()
+    }
+    
+    class BaseBotStrategy {
+        #conditions
+        #responses
+        +processMessage(message)
+        +getName()
+        +getDescription()
+    }
+    
+    class SpecificBotStrategy {
+        -specificConditions
+        -specificResponses
+        +processMessage(message)
+    }
+    
+    BotStrategy <|-- BaseBotStrategy
+    BaseBotStrategy <|-- SpecificBotStrategy
+    BaseBotStrategy <|-- AnotherBotStrategy
+    
+    class BotRegistry {
+        -bots
+        +registerBot(bot)
+        +processMessage(message)
+    }
+    
+    BotRegistry o-- BotStrategy : contains
+```
+
+## 🧪 Testing
+
+The codebase uses Jest for testing. Run the tests with:
+
+```bash
 npm test
 ```
 
-## Project Organization
+To run specific tests:
 
-- `/src/starbunk`: Main Starbunk bot implementation
-- `/src/snowbunk`: Snowbunk channel sync implementation
-- `/src/discord`: Discord.js utilities and base client
-- `/src/services/llm`: LLM service for AI-powered responses
-  - Supports multiple providers (Ollama as primary, OpenAI as fallback)
-  - Extensible architecture for adding new providers
-  - Prompt management system
-- `/src/webhooks`: Webhook utilities for custom messages
-- `/src/services`: Logging and other utilities
-
-## Debug Mode
-
-The application includes a comprehensive debug mode that helps with development and troubleshooting.
-
-### Features
-
-- **Log Levels**: Control verbosity (NONE, ERROR, WARN, INFO, DEBUG)
-- **Command Tracing**: Track command execution with timing information
-- **Event Tracing**: Monitor Discord events with detailed payload logging
-- **API Tracing**: Log API calls with request/response details
-- **Memory Monitoring**: Track memory usage statistics
-- **Performance Metrics**: Measure execution time of critical operations
-- **Channel Redirection**: Redirect all operations to test channels when enabled
-
-### Configuration
-
-Debug mode can be configured through environment variables:
-
-```
-# Debug Configuration
-DEBUG=true                      # Master switch for debug mode (sets log level to DEBUG)
-DEBUG_LOG_LEVEL=4               # 0=NONE, 1=ERROR, 2=WARN, 3=INFO, 4=DEBUG
-DEBUG_COMMAND_TRACING=true      # Enable command execution tracing
-DEBUG_EVENT_TRACING=true        # Enable Discord event tracing
-DEBUG_API_TRACING=true          # Enable API call tracing
-DEBUG_MEMORY_MONITORING=true    # Enable memory usage monitoring
-DEBUG_PERFORMANCE_METRICS=true  # Enable performance timing
-DEBUG_CHANNEL_REDIRECT=true     # Enable channel redirection to test channels
+```bash
+npx jest path/to/specific/test.test.ts
 ```
 
-### Discord Command
+## 🔐 Permissions
 
-Debug mode can also be controlled through the `/debug` Discord command:
+For the `/personality` command:
+- Regular users can only analyze their own messages
+- Users with Administrator permission can analyze any user
+- All analysis results are only visible to the requesting user
+- Only one analysis can run at a time (lock system)
 
-- `/debug status`: Show current debug configuration
-- `/debug toggle`: Toggle all debug features on/off
-- `/debug set feature:commandTracing enabled:true`: Enable a specific feature
-- `/debug loglevel level:4`: Set the log level
+## 🧩 Dependency Injection
 
-### Channel Redirection
+StarBunk uses a service container for dependency injection, making the code more modular and testable.
 
-When channel redirection is enabled, all operations that would normally target production channels are redirected to test channels. This allows for safe testing without affecting production channels.
-
-To configure test channels, edit the `src/discord/testIDs.ts` file with your test server's channel, guild, and user IDs.
-
-### Usage Example
-
-```typescript
-// Import the debug manager
-import DebugManager from './utils/DebugManager';
-
-// Log a trace message (only shown at TRACE level)
-DebugManager.trace('Detailed trace information');
-
-// Track command execution time
-const startTime = DebugManager.logCommandExecution('myCommand', { arg1: 'value' }, 'guildId');
-// ... command logic ...
-DebugManager.logCommandCompletion('myCommand', startTime);
-
-// Use the Discord debug wrapper to automatically redirect channels
-import DiscordDebugWrapper from './utils/DiscordDebugWrapper';
-const channel = await DiscordDebugWrapper.getTextChannel(client, channelId);
+```mermaid
+graph TD
+    Container[Service Container]
+    
+    subgraph "Core Services"
+        Logger[Logger Service]
+        Discord[Discord Service]
+        LLM[LLM Manager]
+        Webhook[Webhook Service]
+    end
+    
+    subgraph "Commands"
+        PersCmd[Personality Command]
+        OtherCmds[Other Commands]
+    end
+    
+    subgraph "Bot Strategies"
+        Bots[Bot Strategies]
+    end
+    
+    Container -->|registers| Logger
+    Container -->|registers| Discord
+    Container -->|registers| LLM
+    Container -->|registers| Webhook
+    
+    PersCmd -->|injects| Logger
+    PersCmd -->|injects| LLM
+    OtherCmds -->|injects| Logger
+    OtherCmds -->|injects| Discord
+    
+    Bots -->|injects| Logger
+    Bots -->|injects| LLM
+    
+    style Container fill:#f9f,stroke:#333,stroke-width:2px
+    style LLM fill:#bfb,stroke:#333,stroke-width:1px
+    style PersCmd fill:#bbf,stroke:#333,stroke-width:1px
 ```
 
-## Bot Commands
+## 📜 License
 
-The bot system includes several commands for managing bot behavior:
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-### Reply Bot Commands
-- `/bot enable <bot_name>` - Enable a bot
-- `/bot disable <bot_name>` - Disable a bot
-- `/bot frequency <bot_name> <rate>` - Set a reply bot's response rate (0-100%)
-- `/bot list-bots` - List all available bots and their status
-- `/bot report <bot_name> <message>` - Report a bot issue to Cova
+## 🙏 Acknowledgments
 
-### Voice Bot Commands
-- `/bot volume <bot_name> <volume>` - Set a voice bot's volume (0-100%)
-- `/bot enable <bot_name>` - Enable a voice bot
-- `/bot disable <bot_name>` - Disable a voice bot
-- `/bot list-bots` - List all available bots (includes voice bots)
-
-## Commands
-
-The bot provides various commands to interact with its functionality:
-
-### General Commands
-- `/ping`: Check if the bot is working properly
-- `/rpghelp`: Lists all available RPG game management commands and their descriptions
-
-### RPG Game Management
-The bot includes comprehensive RPG game management commands for tabletop role-playing games:
-- Campaign management
-- Session scheduling
-- Character management
-- Game content organization
-- Vector-based knowledge search
-
-For a complete list of all RPG commands and their descriptions, use the `/rpghelp` command.
+- Discord.js team for their excellent library
+- Ollama and OpenAI for LLM capabilities
+- All contributors to the project
