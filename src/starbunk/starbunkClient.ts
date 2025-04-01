@@ -1,5 +1,6 @@
 import { PlayerSubscription } from '@discordjs/voice';
-import { Client, CommandInteraction, Events, GatewayIntentBits, Interaction, Message, VoiceState } from 'discord.js';
+import { CommandInteraction, Events, GatewayIntentBits, Interaction, Message, VoiceState } from 'discord.js';
+import DiscordClient from '../discord/discordClient';
 import { bootstrapApplication } from '../services/bootstrap';
 import { logger } from '../services/logger';
 import { BotRegistry } from './bots/botRegistry';
@@ -7,7 +8,7 @@ import ReplyBot from './bots/replyBot';
 import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
 
-export default class StarbunkClient extends Client {
+export default class StarbunkClient extends DiscordClient {
 	private readonly commandHandler: CommandHandler;
 	private hasInitialized = false;
 	private musicPlayer: DJCova | null = null;

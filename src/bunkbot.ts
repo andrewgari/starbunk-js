@@ -56,6 +56,7 @@ function registerProcessHandlers(): void {
 async function initializeClients(): Promise<void> {
 	try {
 		// Initialize Starbunk
+		logger.debug('Initializing Starbunk client with token:', environment.discord.STARBUNK_TOKEN ? 'Token present' : 'Token missing');
 		starbunkClient = new StarbunkClient();
 		await starbunkClient.init();
 		await starbunkClient.login(environment.discord.STARBUNK_TOKEN);
@@ -65,6 +66,7 @@ async function initializeClients(): Promise<void> {
 
 		// Initialize Snowbunk if token is available
 		if (environment.discord.SNOWBUNK_TOKEN) {
+			logger.debug('Initializing Snowbunk client with token:', environment.discord.SNOWBUNK_TOKEN ? 'Token present' : 'Token missing');
 			snowbunkClient = new SnowbunkClient();
 			await snowbunkClient.login(environment.discord.SNOWBUNK_TOKEN);
 			logger.info('Snowbunk client initialized');
