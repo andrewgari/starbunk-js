@@ -1,16 +1,16 @@
 import { createStrategyBot } from '../../core/bot-builder';
-import { chadRandomTrigger } from './triggers';
+import { chadKeywordTrigger } from './triggers';
 
-// Create the Chad Bot with just random trigger
+// Create the Chad Bot with keyword trigger
 export default createStrategyBot({
 	name: 'Chad Bot',
-	description: 'Randomly asks what someone is yapping about',
+	description: 'Responds to mentions of gym, protein, and other chad topics',
 	defaultIdentity: {
 		botName: 'Chad',
-		avatarUrl: '' // Will be overridden by dynamic identity
+		avatarUrl: 'https://i.imgur.com/XFDYZYz.png'
 	},
-	// We don't want to skip bot messages to allow Chad to react to other bots
+	// We don't want Chad to respond to other bots
 	skipBotMessages: true,
 	// All triggers with their priorities
-	triggers: [chadRandomTrigger]
+	triggers: [chadKeywordTrigger]
 });

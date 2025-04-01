@@ -17,6 +17,15 @@ module.exports = {
 	],
 	coverageDirectory: 'coverage',
 	coverageReporters: ['text', 'lcov', 'clover', 'html'],
+	// Setting minimum coverage goals - adjust these numbers upward over time
+	coverageThreshold: {
+		global: {
+			branches: 10,
+			functions: 13,
+			lines: 18,
+			statements: 17
+		}
+	},
 	// Only exclude tests with complex external dependencies like LLM services
 	testPathIgnorePatterns: [
 		'node_modules/',

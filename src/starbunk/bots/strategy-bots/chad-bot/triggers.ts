@@ -1,37 +1,43 @@
-import userId from '../../../../discord/userId';
-import { getDiscordService } from '../../../../services/bootstrap';
 import { withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { CHAD_RESPONSE, CHAD_TRIGGER_CHANCE } from './constants';
+import { CHAD_BOT_NAME, CHAD_BOT_AVATAR_URL, CHAD_PATTERNS, CHAD_RESPONSES } from './constants';
+import { randomElement } from '../../../../utils/random';
 
-// Get Chad's identity from Discord
-async function getChadIdentity() {
-	try {
-		const discordService = getDiscordService();
-		const identity = await discordService.getMemberAsBotIdentity(userId.Chad);
-		
-		// Validate identity
-		if (!identity || !identity.botName || !identity.avatarUrl) {
-			throw new Error('Invalid bot identity retrieved for Chad');
-		}
-		
-		return identity;
-	} catch (error) {
-		console.error(`Error getting Chad's identity from Discord:`, error instanceof Error ? error : new Error(String(error)));
-		
-		// Fallback to a valid default identity
-		return {
-			botName: 'Chad',
-			avatarUrl: 'https://cdn.discordapp.com/embed/avatars/1.png'
-		};
-	}
+// Fixed bot identity
+function getChadIdentity() {
+  return {
+    botName: CHAD_BOT_NAME,
+    avatarUrl: CHAD_BOT_AVATAR_URL
+  };
 }
 
-// Random chance trigger - 1% chance to respond to any message
-export const chadRandomTrigger = createTriggerResponse({
-	name: 'chad-random-trigger',
-	priority: 1,
-	condition: withChance(CHAD_TRIGGER_CHANCE),
-	response: () => CHAD_RESPONSE,
-	identity: getChadIdentity
+// Select the appropriate response based on matched pattern
+function selectResponse(content: string): string {
+  if (CHAD_PATTERNS.BRO.test(content)) {
+    return randomElement(CHAD_RESPONSES.BRO);
+  }
+  
+  if (CHAD_PATTERNS.GYM.test(content)) {
+    return randomElement(CHAD_RESPONSES.GYM);
+  }
+  
+  if (CHAD_PATTERNS.PROTEIN.test(content)) {
+    return randomElement(CHAD_RESPONSES.PROTEIN);
+  }
+  
+  return CHAD_RESPONSES.DEFAULT;
+}
+
+// Keyword trigger - responds to bro, gym, and protein
+export const chadKeywordTrigger = createTriggerResponse({
+  name: 'chad-keyword-trigger',
+  priority: 1,
+  condition: (message) => {
+    const content = message.content.toLowerCase();
+    return CHAD_PATTERNS.BRO.test(content) || 
+           CHAD_PATTERNS.GYM.test(content) || 
+           CHAD_PATTERNS.PROTEIN.test(content);
+  },
+  response: (msg) => selectResponse(msg.content.toLowerCase()),
+  identity: getChadIdentity
 });

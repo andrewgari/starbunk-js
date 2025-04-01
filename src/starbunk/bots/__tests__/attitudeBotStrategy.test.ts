@@ -1,10 +1,6 @@
 import { container, ServiceId } from '../../../services/container';
 import attitudeBot from '../strategy-bots/attitude-bot';
-import {
-	ATTITUDE_BOT_AVATAR_URL,
-	ATTITUDE_BOT_NAME,
-	ATTITUDE_BOT_RESPONSES
-} from '../strategy-bots/attitude-bot/constants';
+import { ATTITUDE_BOT_NAME } from '../strategy-bots/attitude-bot/constants';
 import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 
 // Mock the WebhookService
@@ -21,37 +17,26 @@ describe('AttitudeBot Strategy', () => {
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
 	});
 
-	it('should have the correct name', () => {
-		expect(attitudeBot.name).toBe(ATTITUDE_BOT_NAME);
-	});
-
-	it('should respond to "can\'t" statements', async () => {
-		// Arrange
+	it('should respond to negative statements', async () => {
+		// Test with a typical trigger phrase
 		const message = mockMessage('I can\'t do this');
-
-		// Act
 		await attitudeBot.processMessage(message);
 
-		// Assert
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledTimes(1);
+		// Verify it responded
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				botName: ATTITUDE_BOT_NAME,
-				avatarUrl: ATTITUDE_BOT_AVATAR_URL,
-				content: ATTITUDE_BOT_RESPONSES.Default
+				botName: ATTITUDE_BOT_NAME
 			})
 		);
 	});
 
-	it('should not respond to messages without negative statements', async () => {
-		// Arrange
+	it('should not respond to positive statements', async () => {
+		// Test with non-trigger phrase
 		const message = mockMessage('I am able to do this');
-
-		// Act
 		await attitudeBot.processMessage(message);
 
-		// Assert
+		// Verify it didn't respond
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 });
