@@ -1,4 +1,4 @@
-import { Events, GatewayIntentBits, Message, TextChannel } from 'discord.js';
+import { Events, GatewayIntentBits, IntentsBitField, Message, TextChannel } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
 import userId from '../discord/userId';
 import { bootstrapSnowbunkApplication, getDiscordService } from '../services/bootstrap';
@@ -46,14 +46,16 @@ export default class SnowbunkClient extends DiscordClient {
 	};
 
 	constructor() {
-		super({
-			intents: [
-				GatewayIntentBits.Guilds,
-				GatewayIntentBits.GuildMessages,
-				GatewayIntentBits.MessageContent,
-				GatewayIntentBits.GuildMembers,
-			]
-		});
+		const intents = new IntentsBitField();
+		intents.add(
+			GatewayIntentBits.Guilds,
+			GatewayIntentBits.GuildMessages,
+			GatewayIntentBits.MessageContent,
+			GatewayIntentBits.GuildMembers,
+			GatewayIntentBits.GuildWebhooks
+		);
+
+		super({ intents });
 
 		// Initialize with minimal services
 		try {

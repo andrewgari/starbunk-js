@@ -1,5 +1,5 @@
 import { PlayerSubscription } from '@discordjs/voice';
-import { CommandInteraction, Events, GatewayIntentBits, Interaction, Message, VoiceState } from 'discord.js';
+import { CommandInteraction, Events, GatewayIntentBits, IntentsBitField, Interaction, Message, VoiceState } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
 import { bootstrapApplication } from '../services/bootstrap';
 import { logger } from '../services/logger';
@@ -15,15 +15,17 @@ export default class StarbunkClient extends DiscordClient {
 	public activeSubscription: PlayerSubscription | null = null;
 
 	constructor() {
-		super({
-			intents: [
-				GatewayIntentBits.Guilds,
-				GatewayIntentBits.GuildMessages,
-				GatewayIntentBits.GuildVoiceStates,
-				GatewayIntentBits.MessageContent,
-				GatewayIntentBits.GuildMembers
-			]
-		});
+		const intents = new IntentsBitField();
+		intents.add(
+			GatewayIntentBits.Guilds,
+			GatewayIntentBits.GuildMessages,
+			GatewayIntentBits.GuildVoiceStates,
+			GatewayIntentBits.MessageContent,
+			GatewayIntentBits.GuildMembers,
+			GatewayIntentBits.GuildWebhooks
+		);
+
+		super({ intents });
 
 		this.commandHandler = new CommandHandler();
 
