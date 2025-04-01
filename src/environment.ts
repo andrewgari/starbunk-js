@@ -31,7 +31,8 @@ console.log(`[Environment] - Is Debug Mode Active: ${isDebugMode()}`);
 
 // Helper function to check debug mode
 export function isDebugMode(): boolean {
-	return process.env.DEBUG === 'true';
+	// return process.env.DEBUG === 'true';
+	return true;
 }
 
 // Helper function to set debug mode (for tests or runtime changes)
