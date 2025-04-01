@@ -1,6 +1,6 @@
 import { container, ServiceId } from '../../../services/container';
 import chadBot from '../strategy-bots/chad-bot';
-import { CHAD_BOT_NAME, CHAD_PATTERNS } from '../strategy-bots/chad-bot/constants';
+import { CHAD_BOT_NAME } from '../strategy-bots/chad-bot/constants';
 import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
 
 // Mock the WebhookService
