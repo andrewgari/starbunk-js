@@ -152,7 +152,19 @@ cypress/screenshots/
 cypress/videos/
 cypress/downloads/
 
-data/**
+data
 
 *.bak
 .mcp.json
+.idea
+.venv
+data/*
+
+*.debug
+dist
+dist-test
+logs
+logs-dev
+
+*/prisma
+*/scripts
