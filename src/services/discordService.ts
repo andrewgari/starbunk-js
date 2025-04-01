@@ -237,18 +237,18 @@ export class DiscordService {
 			return;
 		}
 
-		// Run immediately on startup
+		// Run immediately on startup with increased retries
 		logger.info('[DiscordService] Initiating immediate bot profile refresh on startup');
-		this.retryBotProfileRefresh().catch(error => {
+		this.retryBotProfileRefresh(5).catch(error => {
 			logger.error('[DiscordService] Initial refresh failed:',
 				error instanceof Error ? error : new Error(String(error))
 			);
 		});
 
-		// Set up periodic refresh - run every 5 seconds
-		logger.info('[DiscordService] Configuring periodic bot profile refresh (every 5 seconds)');
+		// Set up periodic refresh - run every 30 minutes
+		logger.info('[DiscordService] Configuring periodic bot profile refresh (every 30 minutes)');
 		const rule = new schedule.RecurrenceRule();
-		rule.second = new schedule.Range(0, 59, 5); // Run when seconds = 0, 5, 10, 15, etc.
+		rule.minute = [0, 30]; // Run at 0 and 30 minutes of every hour
 
 		this.botProfileRefreshJob = schedule.scheduleJob(rule, async () => {
 			const startTime = Date.now();
@@ -260,21 +260,39 @@ export class DiscordService {
 				roles: this.roleCache.size
 			});
 
-			try {
-				await this.retryBotProfileRefresh();
-				const duration = Date.now() - startTime;
-				logger.info(`[DiscordService] Completed scheduled refresh in ${duration}ms`);
-				logger.debug('[DiscordService] Updated cache stats:', {
-					members: this.memberCache.size,
-					botProfiles: this.botProfileCache.size,
-					channels: this.channelCache.size,
-					roles: this.roleCache.size
-				});
-			} catch (error) {
-				const duration = Date.now() - startTime;
-				logger.error(`[DiscordService] Failed periodic refresh after ${duration}ms:`,
-					error instanceof Error ? error : new Error(String(error))
-				);
+			let success = false;
+			let attempts = 0;
+			const maxAttempts = 5;
+			const retryDelay = 60000; // 1 minute between retries
+
+			while (!success && attempts < maxAttempts) {
+				attempts++;
+				try {
+					await this.retryBotProfileRefresh(3); // 3 retries per attempt
+					success = true;
+					const duration = Date.now() - startTime;
+					logger.info(`[DiscordService] Completed scheduled refresh in ${duration}ms after ${attempts} attempt(s)`);
+					logger.debug('[DiscordService] Updated cache stats:', {
+						members: this.memberCache.size,
+						botProfiles: this.botProfileCache.size,
+						channels: this.channelCache.size,
+						roles: this.roleCache.size
+					});
+				} catch (error) {
+					const duration = Date.now() - startTime;
+					logger.error(`[DiscordService] Attempt ${attempts}/${maxAttempts} failed after ${duration}ms:`,
+						error instanceof Error ? error : new Error(String(error))
+					);
+
+					if (attempts < maxAttempts) {
+						logger.info(`[DiscordService] Waiting ${retryDelay / 1000} seconds before next attempt...`);
+						await new Promise(resolve => setTimeout(resolve, retryDelay));
+					}
+				}
+			}
+
+			if (!success) {
+				logger.error(`[DiscordService] Failed to refresh after ${maxAttempts} attempts. Will try again next scheduled run.`);
 			}
 
 			if (this.botProfileRefreshJob) {
@@ -364,8 +382,25 @@ export class DiscordService {
 
 		try {
 			logger.debug('[DiscordService] Starting chunked member fetch');
-			await guild.members.fetch({ time: 30000 });
-			this.updateCachesFromGuild(guild);
+
+			// First, get all current member IDs in the cache
+			const cachedMemberIds = new Set(Array.from(this.memberCache.keys()).map(key => key.split(':')[1]));
+
+			// Fetch all members
+			const members = await guild.members.fetch({ time: 60000 }); // Increased timeout to 60s
+
+			// Sort members to prioritize uncached ones
+			const sortedMembers = Array.from(members.values()).sort((a, b) => {
+				const aIsCached = cachedMemberIds.has(a.id);
+				const bIsCached = cachedMemberIds.has(b.id);
+				if (aIsCached === bIsCached) return 0;
+				return aIsCached ? 1 : -1; // Uncached members come first
+			});
+
+			// Process members in sorted order
+			logger.info(`[DiscordService] Processing ${sortedMembers.length} members (${sortedMembers.filter(m => !cachedMemberIds.has(m.id)).length} uncached)`);
+			this.updateCachesFromGuild(guild, sortedMembers);
+
 		} catch (error) {
 			logger.error('[DiscordService] Chunked fetch failed, restoring previous cache:',
 				error instanceof Error ? error : new Error(String(error))
@@ -375,15 +410,33 @@ export class DiscordService {
 		}
 	}
 
-	private updateCachesFromGuild(guild: Guild): void {
+	private updateCachesFromGuild(guild: Guild, members?: GuildMember[]): void {
 		const tempCache = new Map<string, GuildMember>();
 		const tempBotCache = new Map<string, BotIdentity>();
 		let validMembers = 0;
 		let invalidMembers = 0;
+		let newMembers = 0;
+		let updatedMembers = 0;
 
-		guild.members.cache.forEach((member) => {
+		// Use provided members array or fall back to guild cache
+		const membersToProcess = members || Array.from(guild.members.cache.values());
+
+		membersToProcess.forEach((member) => {
 			try {
 				const cacheKey = `${guild.id}:${member.id}`;
+				const existingMember = this.memberCache.get(cacheKey);
+
+				// Check if this is a new or updated member
+				if (!existingMember) {
+					newMembers++;
+				} else if (
+					existingMember.nickname !== member.nickname ||
+					existingMember.displayName !== member.displayName ||
+					existingMember.avatar !== member.avatar
+				) {
+					updatedMembers++;
+				}
+
 				tempCache.set(cacheKey, member);
 
 				const avatarUrl = member.displayAvatarURL({ extension: 'png', size: 128 });
@@ -408,10 +461,12 @@ export class DiscordService {
 		this.memberCache = tempCache;
 		this.botProfileCache = tempBotCache;
 
-		logger.info(`[DiscordService] Updated caches - Valid: ${validMembers}, Invalid: ${invalidMembers}`);
+		logger.info(`[DiscordService] Updated caches - Valid: ${validMembers}, Invalid: ${invalidMembers}, New: ${newMembers}, Updated: ${updatedMembers}`);
 		logger.debug('[DiscordService] Cache sizes:', {
 			members: this.memberCache.size,
-			botProfiles: this.botProfileCache.size
+			botProfiles: this.botProfileCache.size,
+			newMembers,
+			updatedMembers
 		});
 	}
 
