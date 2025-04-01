@@ -1,45 +1,17 @@
-import { Message } from 'discord.js';
 import userId from '../../../../discord/userId';
-import { getDiscordService } from '../../../../services/bootstrap';
-import { logger } from '../../../../services/logger';
 import { BotIdentity } from '../../../types/botIdentity';
 import { and, fromUser, matchesPattern, withChance } from '../../core/conditions';
+import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
 import { randomResponse } from '../../core/responses';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { VENN_BOT_NAME, VENN_PATTERNS, VENN_RESPONSE, VENN_RESPONSES, VENN_RESPONSE_RATE, VENN_TRIGGER_CHANCE, VENN_USER_ID } from './constants';
+import { VENN_BOT_NAME, VENN_PATTERNS, VENN_RESPONSES, VENN_RESPONSE_RATE, VENN_USER_ID } from './constants';
 
-// Cache for Venn's avatar URL
-let cachedAvatarUrl: string | null = null;
-
-// Helper function to get Venn's identity
-async function getVennIdentity(message: Message): Promise<BotIdentity> {
-	// Return cached avatar if available
-	if (cachedAvatarUrl) {
-		return {
-			botName: VENN_BOT_NAME,
-			avatarUrl: cachedAvatarUrl
-		};
-	}
-
-	try {
-		// Try to fetch Venn's user
-		const user = await message.client.users.fetch(VENN_USER_ID);
-		if (user) {
-			cachedAvatarUrl = user.displayAvatarURL({ extension: 'png', size: 128 });
-			return {
-				botName: VENN_BOT_NAME,
-				avatarUrl: cachedAvatarUrl
-			};
-		}
-	} catch (error) {
-		logger.error(`Error fetching Venn's avatar:`, error as Error);
-	}
-
-	// Default fallback
-	return {
-		botName: VENN_BOT_NAME,
-		avatarUrl: 'https://cdn.discordapp.com/embed/avatars/0.png'
-	};
+// Get Venn's identity from Discord
+async function getVennIdentityFromDiscord(): Promise<BotIdentity> {
+	return getBotIdentityFromDiscord({
+		userId: userId.Venn,
+		fallbackName: VENN_BOT_NAME
+	});
 }
 
 // Trigger for cringe messages
@@ -47,7 +19,7 @@ export const cringeTrigger = createTriggerResponse({
 	name: 'cringe-trigger',
 	condition: matchesPattern(VENN_PATTERNS.Cringe),
 	response: randomResponse(VENN_RESPONSES.Cringe),
-	identity: getVennIdentity,
+	identity: getVennIdentityFromDiscord,
 	priority: 2
 });
 
@@ -59,38 +31,7 @@ export const randomVennTrigger = createTriggerResponse({
 		withChance(VENN_RESPONSE_RATE)
 	),
 	response: randomResponse(VENN_RESPONSES.Cringe),
-	identity: getVennIdentity,
+	identity: getVennIdentityFromDiscord,
 	priority: 1
 });
 
-// Get Venn's identity from Discord
-async function getVennIdentityFromDiscord() {
-	try {
-		const discordService = getDiscordService();
-		const identity = await discordService.getMemberAsBotIdentity(userId.Venn);
-		
-		// Validate identity
-		if (!identity || !identity.botName || !identity.avatarUrl) {
-			throw new Error('Invalid bot identity retrieved for Venn');
-		}
-		
-		return identity;
-	} catch (error) {
-		logger.error(`Error getting Venn's identity from Discord:`, error instanceof Error ? error : new Error(String(error)));
-		
-		// Fallback to a valid default identity
-		return {
-			botName: VENN_BOT_NAME,
-			avatarUrl: 'https://cdn.discordapp.com/embed/avatars/0.png'
-		};
-	}
-}
-
-// Random chance trigger - 1% chance to say "Hmm..."
-export const vennTrigger = createTriggerResponse({
-	name: 'venn-trigger',
-	priority: 1,
-	condition: withChance(VENN_TRIGGER_CHANCE),
-	response: () => VENN_RESPONSE,
-	identity: getVennIdentityFromDiscord
-});

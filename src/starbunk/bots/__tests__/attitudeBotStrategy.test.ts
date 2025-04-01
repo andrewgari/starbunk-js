@@ -26,7 +26,7 @@ describe('AttitudeBot Strategy', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				botName: ATTITUDE_BOT_NAME
+				username: ATTITUDE_BOT_NAME
 			})
 		);
 	});

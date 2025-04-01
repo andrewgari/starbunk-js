@@ -44,10 +44,10 @@ export class WebhookService implements WebhookServiceInterface {
 				avatarURL: messageInfo.avatarURL || messageInfo.avatarUrl
 			};
 
-			// Remove internal properties from the transformed info
+			// Remove internal and original properties from the transformed info
+			delete transformedInfo._defaultBotName;
 			delete transformedInfo.botName;
 			delete transformedInfo.avatarUrl;
-			delete transformedInfo._defaultBotName;
 
 			// Create a unique webhook name based on the bot's username
 			// This prevents identity conflicts between different bots

@@ -1,44 +1,30 @@
-// Import conditions core functionality but not using withChance
-import {} from '../../core/conditions';
+import { BotIdentity } from '@/starbunk/types/botIdentity';
+import userId from '../../../../discord/userId';
+import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { CHAD_BOT_NAME, CHAD_BOT_AVATAR_URL, CHAD_PATTERNS, CHAD_RESPONSES } from './constants';
-import { randomElement } from '../../../../utils/random';
+import { CHAD_BOT_NAME, CHAD_RESPONSE, CHAD_RESPONSE_CHANCE } from './constants';
 
-// Fixed bot identity
-function getChadIdentity() {
-	return {
-		botName: CHAD_BOT_NAME,
-		avatarUrl: CHAD_BOT_AVATAR_URL
-	};
+// Get Chad's identity from Discord
+async function getChadIdentity(): Promise<BotIdentity> {
+	return getBotIdentityFromDiscord({
+		userId: userId.Chad,
+		fallbackName: CHAD_BOT_NAME
+	});
 }
 
-// Select the appropriate response based on matched pattern
-function selectResponse(content: string): string {
-	if (CHAD_PATTERNS.BRO.test(content)) {
-		return randomElement(CHAD_RESPONSES.BRO);
-	}
-  
-	if (CHAD_PATTERNS.GYM.test(content)) {
-		return randomElement(CHAD_RESPONSES.GYM);
-	}
-  
-	if (CHAD_PATTERNS.PROTEIN.test(content)) {
-		return randomElement(CHAD_RESPONSES.PROTEIN);
-	}
-  
-	return CHAD_RESPONSES.DEFAULT;
-}
-
-// Keyword trigger - responds to bro, gym, and protein
+// Chad bot trigger - 10% chance to respond, but always responds to the real Chad
 export const chadKeywordTrigger = createTriggerResponse({
 	name: 'chad-keyword-trigger',
 	priority: 1,
 	condition: (message) => {
-		const content = message.content.toLowerCase();
-		return CHAD_PATTERNS.BRO.test(content) || 
-           CHAD_PATTERNS.GYM.test(content) || 
-           CHAD_PATTERNS.PROTEIN.test(content);
+		// Always respond to the real Chad
+		if (message.author.id === userId.Chad) {
+			return true;
+		}
+
+		// For everyone else, 10% chance to respond
+		return Math.random() < CHAD_RESPONSE_CHANCE;
 	},
-	response: (msg) => selectResponse(msg.content.toLowerCase()),
+	response: () => CHAD_RESPONSE,
 	identity: getChadIdentity
 });

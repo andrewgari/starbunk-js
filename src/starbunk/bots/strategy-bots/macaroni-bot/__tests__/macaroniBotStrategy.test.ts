@@ -35,7 +35,7 @@ describe('macaroniBot Strategy', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				botName: MACARONI_BOT_NAME,
+				username: MACARONI_BOT_NAME,
 				content: MACARONI_BOT_RESPONSES.Macaroni
 			})
 		);

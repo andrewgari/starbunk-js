@@ -1,5 +1,5 @@
 import { createStrategyBot } from '../../core/bot-builder';
-import { vennTrigger } from './triggers';
+import { cringeTrigger, randomVennTrigger } from './triggers';
 
 // Create the Venn Bot that randomly says "Hmm..."
 export default createStrategyBot({
@@ -12,5 +12,5 @@ export default createStrategyBot({
 	// Skip bot messages to avoid loops
 	skipBotMessages: true,
 	// Ordered by priority (higher number = higher priority)
-	triggers: [vennTrigger]
+	triggers: [cringeTrigger, randomVennTrigger]
 });

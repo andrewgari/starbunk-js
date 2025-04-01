@@ -1,32 +1,19 @@
-import userId from '../../../../discord/userId';
 import guildIds from '../../../../discord/guildIds';
-import { getLLMManager, getDiscordService } from '../../../../services/bootstrap';
+import userId from '../../../../discord/userId';
+import { getLLMManager } from '../../../../services/bootstrap';
 import { and } from '../../core/conditions';
+import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { createLLMResponseDecisionCondition, createLLMEmulatorResponse } from './llm-triggers';
 import { COVA_BOT_PATTERNS } from './constants';
+import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './llm-triggers';
 
 // Get Cova's identity from Discord
 async function getCovaIdentity() {
-	try {
-		const discordService = getDiscordService();
-		const identity = await discordService.getMemberAsBotIdentity(userId.Cova, true);
-		
-		// Validate identity
-		if (!identity || !identity.botName || !identity.avatarUrl) {
-			throw new Error('Invalid bot identity retrieved for Cova');
-		}
-		
-		return identity;
-	} catch (error) {
-		console.error(`Error getting Cova's identity from Discord:`, error instanceof Error ? error : new Error(String(error)));
-		
-		// Fallback to a valid default identity - critical for CovaBot
-		return {
-			botName: 'Cova',
-			avatarUrl: 'https://cdn.discordapp.com/embed/avatars/3.png'
-		};
-	}
+	return getBotIdentityFromDiscord({
+		userId: userId.Cova,
+		fallbackName: 'Cova',
+		fallbackAvatarUrl: 'https://cdn.discordapp.com/embed/avatars/3.png'
+	});
 }
 
 // Main trigger for CovaBot - uses LLM to decide if it should respond

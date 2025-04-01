@@ -32,7 +32,7 @@ describe('blueBot Strategy', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				botName: BLUE_BOT_NAME,
+				username: BLUE_BOT_NAME,
 			})
 		);
 	});
@@ -44,7 +44,7 @@ describe('blueBot Strategy', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				botName: BLUE_BOT_NAME,
+				username: BLUE_BOT_NAME,
 				content: expect.stringContaining('Claude')
 			})
 		);
@@ -54,7 +54,7 @@ describe('blueBot Strategy', () => {
 	it('should not respond to unrelated messages', async () => {
 		const message = mockMessage('This has nothing to do with the bot trigger');
 		await blueBot.processMessage(message);
-		
+
 		// This could vary due to random chance, but generally it shouldn't respond
 		// We're testing the bot handles unrelated messages without errors
 	});

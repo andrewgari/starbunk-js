@@ -35,8 +35,7 @@ module.exports = {
 	],
 	transform: {
 		'^.+\\.tsx?$': ['ts-jest', {
-			// This helps with type issues in tests
-			isolatedModules: true
+			isolatedModules: false
 		}]
 	},
 	moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
