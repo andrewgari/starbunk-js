@@ -14,27 +14,45 @@ export enum LogLevel {
 
 // Logger is now manually instantiated instead of using the @Service decorator
 export class Logger implements LoggerInterface {
+	private currentLogLevel: LogLevel = LogLevel.INFO;
+
+	setLogLevel(level: LogLevel): void {
+		this.currentLogLevel = level;
+	}
+
+	private shouldLog(level: LogLevel): boolean {
+		return level <= this.currentLogLevel;
+	}
+
 	// accept a spread of parameters
 	debug(message: string, ...args: unknown[]): void {
-		if (isDebugMode()) {
+		if (isDebugMode() && this.shouldLog(LogLevel.DEBUG)) {
 			console.debug(this.formatMessage(chalk.blue(message), '🐛'), ...args);
 		}
 	}
 
 	info(message: string, ...args: unknown[]): void {
-		console.info(this.formatMessage(chalk.white(message), 'ℹ️'), ...args);
+		if (this.shouldLog(LogLevel.INFO)) {
+			console.info(this.formatMessage(chalk.white(message), 'ℹ️'), ...args);
+		}
 	}
 
 	warn(message: string, ...args: unknown[]): void {
-		console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+		if (this.shouldLog(LogLevel.WARN)) {
+			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+		}
 	}
 
 	error(message: string, error?: Error, ...args: unknown[]): void {
-		console.error(this.formatMessage(chalk.red(message), '❌'), error, ...args);
+		if (this.shouldLog(LogLevel.ERROR)) {
+			console.error(this.formatMessage(chalk.red(message), '❌'), error, ...args);
+		}
 	}
 
 	success(message: string, ...args: unknown[]): void {
-		console.log(this.formatMessage(chalk.green(message), '✅'), ...args);
+		if (this.shouldLog(LogLevel.INFO)) { // Success uses INFO level
+			console.log(this.formatMessage(chalk.green(message), '✅'), ...args);
+		}
 	}
 
 	formatMessage(message: string, icon = ''): string {

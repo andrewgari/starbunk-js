@@ -51,8 +51,7 @@ export default class SnowbunkClient extends DiscordClient {
 				GatewayIntentBits.Guilds,
 				GatewayIntentBits.GuildMessages,
 				GatewayIntentBits.MessageContent,
-				GatewayIntentBits.GuildMembers,
-				GatewayIntentBits.GuildPresences
+				GatewayIntentBits.GuildMembers
 			]
 		});
 

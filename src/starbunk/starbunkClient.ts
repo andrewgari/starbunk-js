@@ -20,8 +20,7 @@ export default class StarbunkClient extends Client {
 				GatewayIntentBits.GuildMessages,
 				GatewayIntentBits.GuildVoiceStates,
 				GatewayIntentBits.MessageContent,
-				GatewayIntentBits.GuildMembers,
-				GatewayIntentBits.GuildPresences
+				GatewayIntentBits.GuildMembers
 			]
 		});
 
