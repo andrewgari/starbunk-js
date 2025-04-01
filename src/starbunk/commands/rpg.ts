@@ -262,6 +262,14 @@ export default {
 						const systemId = interaction.options.getString('system', true);
 						const system = SUPPORTED_SYSTEMS[systemId];
 
+						if (!system) {
+							await interaction.reply({
+								content: `Invalid system ID "${systemId}". Supported systems are: ${Object.keys(SUPPORTED_SYSTEMS).join(', ')}`,
+								ephemeral: true
+							});
+							return;
+						}
+
 						if (!interaction.channel?.isTextBased() || !(interaction.channel instanceof GuildChannel)) {
 							await interaction.reply({
 								content: 'This command can only be used in guild text channels.',
@@ -270,17 +278,35 @@ export default {
 							return;
 						}
 
-						await campaignService.createCampaign(
-							interaction.channel,
-							name,
-							system,
-							interaction.user.id
-						);
+						try {
+							// Check if a campaign already exists in this channel
+							const existingCampaign = await campaignService.getCampaignByChannel(interaction.channelId);
+							if (existingCampaign) {
+								await interaction.reply({
+									content: `There is already a campaign "${existingCampaign.name}" active in this channel. Please use a different channel or deactivate the existing campaign first.`,
+									ephemeral: true
+								});
+								return;
+							}
 
-						await interaction.reply({
-							content: `Campaign "${name}" created successfully! Use \`/rpg campaign set-active\` to set it as the active campaign in a channel.`,
-							ephemeral: true
-						});
+							await campaignService.createCampaign(
+								interaction.channel,
+								name,
+								system,
+								interaction.user.id
+							);
+
+							await interaction.reply({
+								content: `Campaign "${name}" created successfully! Use \`/rpg campaign set-active\` to set it as the active campaign in a channel.`,
+								ephemeral: true
+							});
+						} catch (error: unknown) {
+							logger.error('Error creating campaign:', error instanceof Error ? error : new Error(String(error)));
+							await interaction.reply({
+								content: `Failed to create campaign: ${error instanceof Error ? error.message : 'Unknown error'}`,
+								ephemeral: true
+							});
+						}
 						break;
 					}
 
