@@ -2,7 +2,7 @@ import { createStrategyBot } from '../../core/bot-builder';
 import { BLUE_BOT_AVATARS, BLUE_BOT_NAME } from './constants';
 import { 
 	blueConfirmTrigger, 
-	blueMentionTrigger, 
+	blueStandardTrigger, 
 	blueMurderTrigger, 
 	blueNiceTrigger 
 } from './triggers';
@@ -15,11 +15,12 @@ export default createStrategyBot({
 		botName: BLUE_BOT_NAME,
 		avatarUrl: BLUE_BOT_AVATARS.Default
 	},
+	skipBotMessages: true,
 	triggers: [
 		// Order matters for processing, but priority is also considered
 		blueMurderTrigger,  // Highest priority
 		blueNiceTrigger,    // Next priority  
 		blueConfirmTrigger, // Next priority
-		blueMentionTrigger  // Lowest priority
+		blueStandardTrigger  // Lowest priority
 	]
 });

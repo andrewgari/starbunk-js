@@ -6,6 +6,8 @@ export const VENN_BOT_NAME = 'VennBot';
 export const VENN_AVATAR_URL = 'https://i.imgur.com/1234567890.png';
 export const VENN_USER_ID = userId.Venn;
 export const VENN_RESPONSE_RATE = 5; // 5% chance to respond
+export const VENN_TRIGGER_CHANCE = 1; // 1% chance to respond
+export const VENN_RESPONSE = 'Hmm...';
 
 export const VENN_PATTERNS = {
 	Cringe: /cringe/gi

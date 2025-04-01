@@ -1,47 +1,45 @@
 import { Message } from 'discord.js';
-import { and, matchesPattern, withChance } from '../../core/conditions';
+import { createBotIdentity } from '../../../../starbunk/types/botIdentity';
+import { withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { HOMONYM_BOT_RESPONSE_RATE, HOMONYM_PAIRS } from './constants';
+import { HOMONYM_BOT_AVATAR_URL, HOMONYM_BOT_NAME, HOMONYM_BOT_RESPONSE_RATE, HOMONYM_PAIRS, getRandomCorrection } from './constants';
 
-interface HomonymMatch {
-	word: string;
-	correction: string;
-}
+// Helper function to find homonyms in a message
+function findHomonymsInMessage(message: string): string[] {
+	const words = message.toLowerCase().split(/\s+/);
+	const foundHomonyms: string[] = [];
 
-// Helper function to find matching homonym pair
-function findMatchingHomonymPair(content: string): HomonymMatch | null {
-	const words = content.toLowerCase().split(/\s+/);
-
-	for (const pair of HOMONYM_PAIRS) {
-		for (const word of pair.words) {
-			if (words.includes(word)) {
-				return {
-					word,
-					correction: pair.corrections[word]
-				};
-			}
+	for (const word of words) {
+		// Clean the word from punctuation
+		const cleanWord = word.replace(/[.,!?]$/, '');
+		const pair = HOMONYM_PAIRS.find(p => p.words.includes(cleanWord));
+		if (pair) {
+			foundHomonyms.push(cleanWord);
 		}
 	}
 
-	return null;
+	return foundHomonyms;
 }
 
-// Create a pattern that matches any homonym word
-const homonymPattern = new RegExp(
-	`\\b(${HOMONYM_PAIRS.flatMap(pair => pair.words).join('|')})\\b`,
-	'i'
-);
-
-// Trigger for homonym corrections
+// Trigger for homonym detection
 export const homonymTrigger = createTriggerResponse({
 	name: 'homonym-trigger',
-	condition: and(
-		matchesPattern(homonymPattern),
-		withChance(HOMONYM_BOT_RESPONSE_RATE)
-	),
-	response: (message: Message) => {
-		const match = findMatchingHomonymPair(message.content);
-		return match ? match.correction : 'No correction needed.';
+	condition: (message: Message) => {
+		const homonyms = findHomonymsInMessage(message.content);
+		return homonyms.length > 0 && withChance(HOMONYM_BOT_RESPONSE_RATE)(message);
 	},
+	response: async (message: Message) => {
+		const homonyms = findHomonymsInMessage(message.content);
+		if (homonyms.length === 0) return '';
+
+		// Get a random homonym from the found ones
+		const randomHomonym = homonyms[Math.floor(Math.random() * homonyms.length)];
+		const correction = getRandomCorrection(randomHomonym);
+
+		if (!correction) return '';
+
+		return `You mean "${correction}"*`;
+	},
+	identity: createBotIdentity(HOMONYM_BOT_NAME, HOMONYM_BOT_AVATAR_URL),
 	priority: 1
 });

@@ -25,6 +25,7 @@ export interface MemberFetchOptions {
 	time?: number;
 	limit?: number;
 	withPresences?: boolean;
+	nonce?: string;
 }
 
 /**
@@ -90,7 +91,7 @@ export class DiscordService {
 
 	private startBotProfileRefresh(): void {
 		// Initial refresh with retry
-		this._test_retryBotProfileRefresh();
+		this.retryBotProfileRefresh();
 
 		// Prevent multiple interval setups
 		if (this.botProfileRefreshInterval) {
@@ -101,18 +102,17 @@ export class DiscordService {
 		// Set up periodic refresh
 		logger.info('Setting up periodic bot profile refresh (every hour)');
 		this.botProfileRefreshInterval = setInterval(() => {
-			this._test_retryBotProfileRefresh();
+			this.retryBotProfileRefresh();
 		}, 60 * 60 * 1000); // 1 hour
-		
+
 		// Allow process to exit during tests
 		this.botProfileRefreshInterval.unref();
 	}
 
-	// For testing purposes - public method with a test prefix
-	public async _test_retryBotProfileRefresh(attempts: number = 3): Promise<void> {
+	protected async retryBotProfileRefresh(attempts: number = 3): Promise<void> {
 		for (let i = 0; i < attempts; i++) {
 			try {
-				await this._test_refreshBotProfiles();
+				await this.refreshBotProfiles();
 				return;
 			} catch (error) {
 				if (i === attempts - 1) {
@@ -127,41 +127,92 @@ export class DiscordService {
 		}
 	}
 
-	// For testing purposes - public method with a test prefix
-	public async _test_refreshBotProfiles(): Promise<void> {
+	protected async refreshBotProfiles(): Promise<void> {
 		try {
 			const guild = await this.getGuild(DefaultGuildId);
 
-			// Clear the cache before starting
-			this.memberCache.clear();
+			// Create a temporary cache for the new fetch
+			const tempCache = new Map<string, GuildMember>();
+			const tempBotCache = new Map<string, BotIdentity>();
 
-			// Get the current members from cache first
-			guild.members.cache.forEach(member => {
-				const cacheKey = `${guild.id}:${member.id}`;
-				this.memberCache.set(cacheKey, member);
-			});
+			// Get the current members from cache first as backup
+			const previousCache = new Map(this.memberCache);
+			const previousBotCache = new Map(this.botProfileCache);
 
 			try {
-				// Use REST-based fetch with chunking enabled
-				const fetchOptions: MemberFetchOptions = {
-					time: 120000, // 2 minutes timeout
-					limit: 100, // Fetch in chunks of 100
-					withPresences: false // Don't fetch presence data to reduce payload
-				};
+				let lastId: string | undefined;
+				let totalMembers = 0;
+				const chunkSize = 50;
 
-				await guild.members.fetch(fetchOptions);
+				while (true) {
+					try {
+						const fetchOptions: MemberFetchOptions = {
+							time: 180000, // 3 minutes timeout
+							limit: chunkSize,
+							withPresences: false // Don't fetch presence data to reduce payload
+						};
 
-				// Update cache with fetched members
-				const memberCount = guild.members.cache.size;
-				guild.members.cache.forEach(member => {
-					const cacheKey = `${guild.id}:${member.id}`;
-					this.memberCache.set(cacheKey, member);
-				});
+						if (lastId) {
+							// @ts-expect-error Discord.js types don't include after option but it's supported
+							fetchOptions.after = lastId;
+						}
 
-				logger.info(`Successfully cached ${memberCount} members`);
+						const members = await guild.members.fetch(fetchOptions);
+
+						if (members.size === 0) {
+							break;
+						}
+
+						// Add to temporary cache
+						members.forEach(member => {
+							const cacheKey = `${guild.id}:${member.id}`;
+							tempCache.set(cacheKey, member);
+
+							// Also cache bot identity
+							tempBotCache.set(member.id, {
+								botName: member.displayName,
+								avatarUrl: member.displayAvatarURL({ extension: 'png', size: 128 })
+							});
+						});
+
+						totalMembers += members.size;
+						lastId = members.last()?.id;
+
+						// Log progress
+						logger.debug(`Fetched ${members.size} members (total: ${totalMembers})`);
+
+						if (members.size < chunkSize) {
+							break;
+						}
+
+						// Prevent rate limiting
+						await new Promise(resolve => setTimeout(resolve, 1000));
+					} catch (error) {
+						logger.warn('Chunk fetch failed, using previous cache:',
+							error instanceof Error ? error : new Error(String(error))
+						);
+						// On any chunk error, revert to previous cache state
+						this.memberCache = new Map(previousCache);
+						this.botProfileCache = new Map(previousBotCache);
+						return;
+					}
+				}
+
+				// Only update the main cache if we successfully fetched all members
+				if (totalMembers > 0) {
+					this.memberCache = tempCache;
+					this.botProfileCache = tempBotCache;
+					logger.info(`Successfully cached ${totalMembers} members and bot profiles`);
+				} else {
+					logger.warn('No members fetched, keeping previous cache');
+					this.memberCache = new Map(previousCache);
+					this.botProfileCache = new Map(previousBotCache);
+				}
 			} catch (error) {
-				// If fetch fails, log but continue with cached members
-				logger.warn('Member fetch failed, continuing with cached members:',
+				// If fetch fails, restore previous cache
+				this.memberCache = new Map(previousCache);
+				this.botProfileCache = new Map(previousBotCache);
+				logger.warn('Member fetch failed, restored previous cache:',
 					error instanceof Error ? error : new Error(String(error))
 				);
 			}
@@ -171,23 +222,38 @@ export class DiscordService {
 		}
 	}
 
-	public getBotProfile(userId: string): BotIdentity {
-		const profile = this.botProfileCache.get(userId);
-		if (!profile) {
-			// Fallback to direct fetch if not in cache
-			return this.getMemberAsBotIdentity(userId);
+	public async getBotProfile(userId: string, forceRefresh: boolean = false): Promise<BotIdentity> {
+		try {
+			const profile = this.botProfileCache.get(userId);
+			if (!profile || !profile.botName || !profile.avatarUrl || forceRefresh) {
+				// Fallback to direct fetch if not in cache or invalid cache entry
+				logger.debug(`[DiscordService] Bot profile for ${userId} not in cache or refresh requested, fetching directly`);
+				return await this.getMemberAsBotIdentity(userId, forceRefresh);
+			}
+			return profile;
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to get bot profile for ${userId}: ${error instanceof Error ? error.message : String(error)}`);
+			throw error;
 		}
-		return profile;
 	}
 
-	public getRandomBotProfile(): BotIdentity {
-		const profiles = Array.from(this.botProfileCache.values());
-		if (profiles.length === 0) {
-			// Fallback to getting a random member's identity if cache is empty
-			return this.getRandomMemberAsBotIdentity();
+	public async getRandomBotProfile(): Promise<BotIdentity> {
+		try {
+			const profiles = Array.from(this.botProfileCache.values())
+				.filter(profile => profile.botName && profile.avatarUrl); // Only consider valid profiles
+
+			if (profiles.length === 0) {
+				// Fallback to getting a random member's identity if cache is empty
+				logger.debug('[DiscordService] No valid bot profiles in cache, fetching random member');
+				return await this.getRandomMemberAsBotIdentity();
+			}
+
+			const randomIndex = Math.floor(Math.random() * profiles.length);
+			return profiles[randomIndex];
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to get random bot profile: ${error instanceof Error ? error.message : String(error)}`);
+			throw error;
 		}
-		const randomIndex = Math.floor(Math.random() * profiles.length);
-		return profiles[randomIndex];
 	}
 
 	/**
@@ -215,7 +281,7 @@ export class DiscordService {
 		}
 		return discordServiceInstance;
 	}
-	
+
 	// Methods with _test_ prefix are test-only public implementations of protected methods
 
 	// Clear all caches
@@ -233,13 +299,53 @@ export class DiscordService {
 	}
 
 	public async sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): Promise<void> {
-		const channel = this.getTextChannel(channelId);
-		const webhook = await this.getOrCreateWebhook(channel);
-		await webhook.send({
-			content: message,
-			username: botIdentity.botName,
-			avatarURL: botIdentity.avatarUrl
-		});
+		if (!botIdentity || !botIdentity.botName || !botIdentity.avatarUrl) {
+			logger.error(`[DiscordService] Invalid bot identity provided for message to channel ${channelId}`);
+			return; // Skip sending the message with invalid identity
+		}
+
+		try {
+			const channel = this.getTextChannel(channelId);
+			const webhook = await this.getOrCreateWebhook(channel);
+			await webhook.send({
+				content: message,
+				username: botIdentity.botName,
+				avatarURL: botIdentity.avatarUrl
+			});
+			logger.debug(`[DiscordService] Message sent to channel ${channelId} via webhook as ${botIdentity.botName}`);
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to send message with bot identity to channel ${channelId}: ${error instanceof Error ? error.message : String(error)}`);
+			// Intentionally not attempting fallback to protect identity
+		}
+	}
+
+	/**
+	 * Wrapper method for the WebhookService to ensure all webhook communication goes through DiscordService
+	 * @param channel Text channel to send the message to
+	 * @param messageInfo Message information including content, username, and avatar URL
+	 */
+	public async sendWebhookMessage(channel: TextChannel, messageInfo: any): Promise<void> {
+		// Ensure the WebhookService module is loaded via require to avoid circular dependencies
+		const { getWebhookService } = require('./bootstrap');
+		const webhookService = getWebhookService();
+
+		// Validate identity information before sending
+		if (!messageInfo.username && !messageInfo.botName) {
+			logger.error('[DiscordService] Missing username/botName in webhook message');
+			return;
+		}
+
+		if (!messageInfo.avatarURL && !messageInfo.avatarUrl) {
+			logger.error('[DiscordService] Missing avatarURL/avatarUrl in webhook message');
+			return;
+		}
+
+		try {
+			await webhookService.writeMessage(channel, messageInfo);
+			logger.debug(`[DiscordService] Webhook message sent to channel ${channel.name}`);
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to send webhook message: ${error instanceof Error ? error.message : String(error)}`);
+		}
 	}
 
 	public async sendBulkMessages(options: BulkMessageOptions): Promise<Message[]> {
@@ -321,20 +427,96 @@ export class DiscordService {
 		return members[randomIndex];
 	}
 
-	public getMemberAsBotIdentity(userId: string): BotIdentity {
-		const member = this.getMember(DefaultGuildId, userId);
-		return {
-			botName: member.nickname ?? member.user.username,
-			avatarUrl: member.displayAvatarURL() ?? member.user.displayAvatarURL()
-		};
+	public async getMemberAsBotIdentity(userId: string, forceRefresh: boolean = false): Promise<BotIdentity> {
+		try {
+			// First check if we have a cached bot profile
+			const cachedProfile = this.botProfileCache.get(userId);
+			if (cachedProfile && !forceRefresh) {
+				// Validate the cached profile
+				if (cachedProfile.botName && cachedProfile.avatarUrl) {
+					return cachedProfile;
+				} else {
+					logger.warn(`[DiscordService] Found invalid cached profile for user ${userId}, forcing refresh`);
+					// Invalid cache entry, continue to force refresh
+				}
+			}
+
+			// If we need to refresh or don't have a cached profile
+			let member: GuildMember;
+			try {
+				if (forceRefresh) {
+					// Fetch directly from API to bypass all caches
+					const guild = this.getGuild(DefaultGuildId);
+					member = await guild.members.fetch({ user: userId, force: true });
+
+					// Update our cache with this fresh data
+					const cacheKey = `${DefaultGuildId}:${userId}`;
+					this.memberCache.set(cacheKey, member);
+
+					logger.debug(`[DiscordService] Forced refresh of member ${userId} successful`);
+				} else {
+					// Use normal getMember which uses cache with fallback to fetch
+					member = this.getMember(DefaultGuildId, userId);
+				}
+			} catch (memberError) {
+				logger.error(`[DiscordService] Failed to get member ${userId}: ${memberError instanceof Error ? memberError.message : String(memberError)}`);
+				throw memberError;
+			}
+
+			// Validate data before creating identity
+			if (!member || !member.user) {
+				throw new Error(`Invalid member data for user ${userId}`);
+			}
+
+			// Ensure we have valid display name
+			const botName = member.nickname ?? member.user.username;
+			if (!botName) {
+				throw new Error(`No valid display name found for user ${userId}`);
+			}
+
+			// Ensure we have valid avatar URL
+			const avatarUrl = member.displayAvatarURL() ?? member.user.displayAvatarURL();
+			if (!avatarUrl) {
+				throw new Error(`No valid avatar URL found for user ${userId}`);
+			}
+
+			// Create and cache the bot identity
+			const identity: BotIdentity = { botName, avatarUrl };
+			this.botProfileCache.set(userId, identity);
+
+			return identity;
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to get bot identity for user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
+			throw error;
+		}
 	}
 
-	public getRandomMemberAsBotIdentity(): BotIdentity {
-		const member = this.getRandomMember();
-		return {
-			botName: member.nickname ?? member.user.username,
-			avatarUrl: member.displayAvatarURL() ?? member.user.displayAvatarURL()
-		};
+	public async getRandomMemberAsBotIdentity(): Promise<BotIdentity> {
+		try {
+			const member = this.getRandomMember();
+
+			// Validate data before creating identity
+			if (!member || !member.user) {
+				throw new Error('Invalid random member data');
+			}
+
+			// Ensure we have valid display name
+			const botName = member.nickname ?? member.user.username;
+			if (!botName) {
+				throw new Error(`No valid display name found for random member ${member.id}`);
+			}
+
+			// Ensure we have valid avatar URL
+			const avatarUrl = member.displayAvatarURL() ?? member.user.displayAvatarURL();
+			if (!avatarUrl) {
+				throw new Error(`No valid avatar URL found for random member ${member.id}`);
+			}
+
+			return { botName, avatarUrl };
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to get random bot identity: ${error instanceof Error ? error.message : String(error)}`);
+			throw error;
+		}
 	}
 
 	public getTextChannel(channelId: string): TextChannel {

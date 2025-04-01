@@ -1,7 +1,7 @@
 import { Events, GatewayIntentBits, Message, TextChannel } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
 import userId from '../discord/userId';
-import { bootstrapSnowbunkApplication, getWebhookService } from '../services/bootstrap';
+import { bootstrapSnowbunkApplication, getDiscordService } from '../services/bootstrap';
 import { logger } from '../services/logger';
 
 export default class SnowbunkClient extends DiscordClient {
@@ -100,10 +100,10 @@ export default class SnowbunkClient extends DiscordClient {
 			message.author.defaultAvatarURL;
 
 		try {
-			// Try to use webhook service
+			// Try to use Discord service (which will use webhook service internally)
 			try {
-				const webhookService = getWebhookService();
-				webhookService.writeMessage(linkedChannel, {
+				const discordService = getDiscordService();
+				discordService.sendWebhookMessage(linkedChannel, {
 					username: displayName,
 					avatarURL: avatarUrl,
 					content: message.content,
@@ -111,8 +111,8 @@ export default class SnowbunkClient extends DiscordClient {
 				});
 				return; // Success, exit early
 			} catch (error: unknown) {
-				// Just log the webhook error, we'll fall back to direct channel message
-				logger.warn(`[SnowbunkClient] Failed to use webhook service, falling back to direct message: ${error instanceof Error ? error.message : String(error)}`);
+				// Just log the error, we'll fall back to direct channel message
+				logger.warn(`[SnowbunkClient] Failed to use Discord service, falling back to direct message: ${error instanceof Error ? error.message : String(error)}`);
 			}
 
 			// Fallback to direct channel message

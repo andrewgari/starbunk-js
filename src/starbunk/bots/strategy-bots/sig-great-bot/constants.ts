@@ -9,3 +9,7 @@ export const SIG_GREAT_BOT_PATTERNS = {
 export const SIG_GREAT_BOT_RESPONSES = {
 	Default: 'SigGreat.'
 };
+
+// Constants for Sig Great Bot
+export const SIG_GREAT_CHANCE = 1; // 1% chance to respond
+export const SIG_GREAT_RESPONSE = 'Yeah, Sig is pretty great! :wink:';

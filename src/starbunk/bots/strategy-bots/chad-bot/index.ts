@@ -1,22 +1,16 @@
 import { createStrategyBot } from '../../core/bot-builder';
-import { CHAD_AVATAR_URL, CHAD_BOT_NAME } from './constants';
-import { chadPhraseTrigger, chadRandomTrigger, chadWordTrigger } from './triggers';
+import { chadKeywordTrigger } from './triggers';
 
-// Create the Chad Bot with all its triggers
+// Create the Chad Bot with keyword trigger
 export default createStrategyBot({
-	name: 'ChadBot',
-	description: 'Responds with gym bro / sigma male comments',
-	// Default identity
+	name: 'Chad Bot',
+	description: 'Responds to mentions of gym, protein, and other chad topics',
 	defaultIdentity: {
-		botName: CHAD_BOT_NAME,
-		avatarUrl: CHAD_AVATAR_URL
+		botName: 'Chad',
+		avatarUrl: 'https://i.imgur.com/XFDYZYz.png'
 	},
-	// We don't want to skip bot messages to allow Chad to react to other bots
-	skipBotMessages: false,
+	// We don't want Chad to respond to other bots
+	skipBotMessages: true,
 	// All triggers with their priorities
-	triggers: [
-		chadPhraseTrigger,   // Highest priority - specific phrases
-		chadWordTrigger,     // Medium priority - regex matches 
-		chadRandomTrigger    // Lowest priority - random chance
-	]
+	triggers: [chadKeywordTrigger]
 });

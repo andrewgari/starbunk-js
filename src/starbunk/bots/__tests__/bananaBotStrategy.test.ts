@@ -38,8 +38,8 @@ describe('bananaBot Strategy', () => {
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				botName: BANANA_BOT_NAME,
-				avatarUrl: BANANA_BOT_AVATAR_URL,
+				username: BANANA_BOT_NAME,
+				avatarURL: BANANA_BOT_AVATAR_URL,
 				content: expect.any(String)
 			})
 		);

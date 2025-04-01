@@ -1,5 +1,5 @@
 import { CommandInteraction, GuildMember, PermissionFlagsBits, SlashCommandBuilder, TextChannel } from 'discord.js';
-import { getWebhookService } from '../../services/bootstrap';
+import { getDiscordService } from '../../services/bootstrap';
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('monkeysay')
@@ -23,20 +23,28 @@ export default {
 			const nickname = member.nickname ?? user.username;
 			const avatar = member.displayAvatarURL() ?? user.displayAvatarURL();
 			const channel = interaction.channel as TextChannel;
-			const webhookService = getWebhookService();
-			if (!webhookService) {
-				throw new Error('WebhookService not found');
+			
+			// Use DiscordService instead of directly accessing WebhookService
+			const discordService = getDiscordService();
+			
+			try {
+				await discordService.sendWebhookMessage(channel, {
+					username: nickname,
+					avatarURL: avatar,
+					content: message,
+					embeds: [],
+				});
+				
+				await interaction.reply({
+					content: 'Message sent!',
+					ephemeral: true,
+				});
+			} catch (error) {
+				await interaction.reply({
+					content: 'Failed to send message. Please try again.',
+					ephemeral: true,
+				});
 			}
-			await webhookService.writeMessage(channel, {
-				username: nickname,
-				avatarURL: avatar,
-				content: message,
-				embeds: [],
-			});
-			await interaction.reply({
-				content: 'Message sent!',
-				ephemeral: true,
-			});
 		}
 	},
 };

@@ -43,3 +43,18 @@ export const BLUE_BOT_RESPONSES = {
 		'*falls from the sky* I have been summoned by the ancient word... BLUE!'
 	]
 };
+
+export const BLUE_BOT_PROMPTS = {
+	DeceptiveCheck: `As BluBot, analyze if this message is trying to sneakily reference the color blue without directly saying it.
+Consider:
+- Color-related metaphors (like "sky" or "ocean")
+- Indirect references (RGB values, hex codes)
+- Coded language or puns
+- References to things commonly associated with blue
+
+Respond with either:
+- If deceptive: A witty callout message about catching them trying to sneak blue past you
+- If not deceptive: null
+
+Keep responses playful and in character as BluBot.`
+};

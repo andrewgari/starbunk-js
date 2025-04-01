@@ -30,14 +30,14 @@ export const mockDiscordServiceImpl = {
 	sendMessageWithBotIdentity: jest.fn().mockImplementation((channelId, botIdentity, content) => {
 		// Get the channel from the mock message
 		const channel = { id: channelId } as any;
-		
+
 		// Create a message payload that matches what the webhook service expects
 		const messageInfo = {
-			botName: botIdentity.botName,
-			avatarUrl: botIdentity.avatarUrl,
-			content: content
+			content: content,
+			username: botIdentity.botName,
+			avatarURL: botIdentity.avatarUrl
 		};
-		
+
 		// Call the webhook service's writeMessage method
 		return mockWebhookService.writeMessage(channel, messageInfo);
 	}),
@@ -116,12 +116,10 @@ export const mockLogger: Logger = {
 // Update our mockWebhookService to use the write/send message functions
 mockWebhookService.writeMessage = jest.fn().mockImplementation((channel: TextChannel, messageInfo: any) => {
 	const transformedMessageInfo: MessageInfo = {
-		...messageInfo,
-		username: messageInfo.botName || messageInfo.username,
-		avatarURL: messageInfo.avatarUrl || messageInfo.avatarURL,
+		content: messageInfo.content,
+		username: messageInfo.username || messageInfo.botName,
+		avatarURL: messageInfo.avatarURL || messageInfo.avatarUrl
 	};
-	delete (transformedMessageInfo as any).botName;
-	delete (transformedMessageInfo as any).avatarUrl;
 	return mockWriteMessage(channel, transformedMessageInfo);
 });
 mockWebhookService.sendMessage = mockSendMessage;
