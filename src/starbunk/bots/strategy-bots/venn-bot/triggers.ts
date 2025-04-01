@@ -65,8 +65,25 @@ export const randomVennTrigger = createTriggerResponse({
 
 // Get Venn's identity from Discord
 async function getVennIdentityFromDiscord() {
-	const discordService = getDiscordService();
-	return discordService.getMemberAsBotIdentity(userId.Venn);
+	try {
+		const discordService = getDiscordService();
+		const identity = await discordService.getMemberAsBotIdentity(userId.Venn);
+		
+		// Validate identity
+		if (!identity || !identity.botName || !identity.avatarUrl) {
+			throw new Error('Invalid bot identity retrieved for Venn');
+		}
+		
+		return identity;
+	} catch (error) {
+		logger.error(`Error getting Venn's identity from Discord:`, error instanceof Error ? error : new Error(String(error)));
+		
+		// Fallback to a valid default identity
+		return {
+			botName: VENN_BOT_NAME,
+			avatarUrl: 'https://cdn.discordapp.com/embed/avatars/0.png'
+		};
+	}
 }
 
 // Random chance trigger - 1% chance to say "Hmm..."

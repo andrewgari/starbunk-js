@@ -8,8 +8,25 @@ import { COVA_BOT_PATTERNS } from './constants';
 
 // Get Cova's identity from Discord
 async function getCovaIdentity() {
-	const discordService = getDiscordService();
-	return discordService.getMemberAsBotIdentity(userId.Cova);
+	try {
+		const discordService = getDiscordService();
+		const identity = await discordService.getMemberAsBotIdentity(userId.Cova, true);
+		
+		// Validate identity
+		if (!identity || !identity.botName || !identity.avatarUrl) {
+			throw new Error('Invalid bot identity retrieved for Cova');
+		}
+		
+		return identity;
+	} catch (error) {
+		console.error(`Error getting Cova's identity from Discord:`, error instanceof Error ? error : new Error(String(error)));
+		
+		// Fallback to a valid default identity - critical for CovaBot
+		return {
+			botName: 'Cova',
+			avatarUrl: 'https://cdn.discordapp.com/embed/avatars/3.png'
+		};
+	}
 }
 
 // Main trigger for CovaBot - uses LLM to decide if it should respond

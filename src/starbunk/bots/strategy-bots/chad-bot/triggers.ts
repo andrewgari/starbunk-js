@@ -6,8 +6,25 @@ import { CHAD_RESPONSE, CHAD_TRIGGER_CHANCE } from './constants';
 
 // Get Chad's identity from Discord
 async function getChadIdentity() {
-	const discordService = getDiscordService();
-	return discordService.getMemberAsBotIdentity(userId.Chad);
+	try {
+		const discordService = getDiscordService();
+		const identity = await discordService.getMemberAsBotIdentity(userId.Chad);
+		
+		// Validate identity
+		if (!identity || !identity.botName || !identity.avatarUrl) {
+			throw new Error('Invalid bot identity retrieved for Chad');
+		}
+		
+		return identity;
+	} catch (error) {
+		console.error(`Error getting Chad's identity from Discord:`, error instanceof Error ? error : new Error(String(error)));
+		
+		// Fallback to a valid default identity
+		return {
+			botName: 'Chad',
+			avatarUrl: 'https://cdn.discordapp.com/embed/avatars/1.png'
+		};
+	}
 }
 
 // Random chance trigger - 1% chance to respond to any message

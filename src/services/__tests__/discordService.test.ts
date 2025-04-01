@@ -109,28 +109,28 @@ describe('DiscordService', () => {
 
 	// Test a few high-level features instead of internals
 	describe('bot profiles', () => {
-		it('should get bot profile', () => {
-			// Mock implementation
-			jest.spyOn(discordService, 'getBotProfile').mockReturnValue({
+		it('should get bot profile', async () => {
+			// Mock implementation for async method
+			jest.spyOn(discordService, 'getBotProfile').mockResolvedValue({
 				botName: 'TestBot',
 				avatarUrl: 'https://example.com/test.jpg'
 			});
 			
-			const profile = discordService.getBotProfile('user123');
+			const profile = await discordService.getBotProfile('user123');
 			expect(profile).toEqual({
 				botName: 'TestBot',
 				avatarUrl: 'https://example.com/test.jpg'
 			});
 		});
 		
-		it('should get random bot profile', () => {
-			// Mock implementation
-			jest.spyOn(discordService, 'getRandomBotProfile').mockReturnValue({
+		it('should get random bot profile', async () => {
+			// Mock implementation for async method
+			jest.spyOn(discordService, 'getRandomBotProfile').mockResolvedValue({
 				botName: 'RandomBot',
 				avatarUrl: 'https://example.com/random.jpg'
 			});
 			
-			const profile = discordService.getRandomBotProfile();
+			const profile = await discordService.getRandomBotProfile();
 			expect(profile.botName).toBe('RandomBot');
 		});
 	});

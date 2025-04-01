@@ -212,23 +212,38 @@ export class DiscordService {
 		}
 	}
 
-	public getBotProfile(userId: string): BotIdentity {
-		const profile = this.botProfileCache.get(userId);
-		if (!profile) {
-			// Fallback to direct fetch if not in cache
-			return this.getMemberAsBotIdentity(userId);
+	public async getBotProfile(userId: string, forceRefresh: boolean = false): Promise<BotIdentity> {
+		try {
+			const profile = this.botProfileCache.get(userId);
+			if (!profile || !profile.botName || !profile.avatarUrl || forceRefresh) {
+				// Fallback to direct fetch if not in cache or invalid cache entry
+				logger.debug(`[DiscordService] Bot profile for ${userId} not in cache or refresh requested, fetching directly`);
+				return await this.getMemberAsBotIdentity(userId, forceRefresh);
+			}
+			return profile;
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to get bot profile for ${userId}: ${error instanceof Error ? error.message : String(error)}`);
+			throw error;
 		}
-		return profile;
 	}
 
-	public getRandomBotProfile(): BotIdentity {
-		const profiles = Array.from(this.botProfileCache.values());
-		if (profiles.length === 0) {
-			// Fallback to getting a random member's identity if cache is empty
-			return this.getRandomMemberAsBotIdentity();
+	public async getRandomBotProfile(): Promise<BotIdentity> {
+		try {
+			const profiles = Array.from(this.botProfileCache.values())
+				.filter(profile => profile.botName && profile.avatarUrl); // Only consider valid profiles
+				
+			if (profiles.length === 0) {
+				// Fallback to getting a random member's identity if cache is empty
+				logger.debug('[DiscordService] No valid bot profiles in cache, fetching random member');
+				return await this.getRandomMemberAsBotIdentity();
+			}
+			
+			const randomIndex = Math.floor(Math.random() * profiles.length);
+			return profiles[randomIndex];
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to get random bot profile: ${error instanceof Error ? error.message : String(error)}`);
+			throw error;
 		}
-		const randomIndex = Math.floor(Math.random() * profiles.length);
-		return profiles[randomIndex];
 	}
 
 	/**
@@ -274,13 +289,53 @@ export class DiscordService {
 	}
 
 	public async sendMessageWithBotIdentity(channelId: string, botIdentity: BotIdentity, message: string): Promise<void> {
-		const channel = this.getTextChannel(channelId);
-		const webhook = await this.getOrCreateWebhook(channel);
-		await webhook.send({
-			content: message,
-			username: botIdentity.botName,
-			avatarURL: botIdentity.avatarUrl
-		});
+		if (!botIdentity || !botIdentity.botName || !botIdentity.avatarUrl) {
+			logger.error(`[DiscordService] Invalid bot identity provided for message to channel ${channelId}`);
+			return; // Skip sending the message with invalid identity
+		}
+
+		try {
+			const channel = this.getTextChannel(channelId);
+			const webhook = await this.getOrCreateWebhook(channel);
+			await webhook.send({
+				content: message,
+				username: botIdentity.botName,
+				avatarURL: botIdentity.avatarUrl
+			});
+			logger.debug(`[DiscordService] Message sent to channel ${channelId} via webhook as ${botIdentity.botName}`);
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to send message with bot identity to channel ${channelId}: ${error instanceof Error ? error.message : String(error)}`);
+			// Intentionally not attempting fallback to protect identity
+		}
+	}
+	
+	/**
+	 * Wrapper method for the WebhookService to ensure all webhook communication goes through DiscordService
+	 * @param channel Text channel to send the message to
+	 * @param messageInfo Message information including content, username, and avatar URL
+	 */
+	public async sendWebhookMessage(channel: TextChannel, messageInfo: any): Promise<void> {
+		// Ensure the WebhookService module is loaded via require to avoid circular dependencies
+		const { getWebhookService } = require('./bootstrap');
+		const webhookService = getWebhookService();
+		
+		// Validate identity information before sending
+		if (!messageInfo.username && !messageInfo.botName) {
+			logger.error('[DiscordService] Missing username/botName in webhook message');
+			return;
+		}
+		
+		if (!messageInfo.avatarURL && !messageInfo.avatarUrl) {
+			logger.error('[DiscordService] Missing avatarURL/avatarUrl in webhook message');
+			return;
+		}
+		
+		try {
+			await webhookService.writeMessage(channel, messageInfo);
+			logger.debug(`[DiscordService] Webhook message sent to channel ${channel.name}`);
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to send webhook message: ${error instanceof Error ? error.message : String(error)}`);
+		}
 	}
 
 	public async sendBulkMessages(options: BulkMessageOptions): Promise<Message[]> {
@@ -362,20 +417,96 @@ export class DiscordService {
 		return members[randomIndex];
 	}
 
-	public getMemberAsBotIdentity(userId: string): BotIdentity {
-		const member = this.getMember(DefaultGuildId, userId);
-		return {
-			botName: member.nickname ?? member.user.username,
-			avatarUrl: member.displayAvatarURL() ?? member.user.displayAvatarURL()
-		};
+	public async getMemberAsBotIdentity(userId: string, forceRefresh: boolean = false): Promise<BotIdentity> {
+		try {
+			// First check if we have a cached bot profile
+			const cachedProfile = this.botProfileCache.get(userId);
+			if (cachedProfile && !forceRefresh) {
+				// Validate the cached profile
+				if (cachedProfile.botName && cachedProfile.avatarUrl) {
+					return cachedProfile;
+				} else {
+					logger.warn(`[DiscordService] Found invalid cached profile for user ${userId}, forcing refresh`);
+					// Invalid cache entry, continue to force refresh
+				}
+			}
+			
+			// If we need to refresh or don't have a cached profile
+			let member: GuildMember;
+			try {
+				if (forceRefresh) {
+					// Fetch directly from API to bypass all caches
+					const guild = this.getGuild(DefaultGuildId);
+					member = await guild.members.fetch({ user: userId, force: true });
+					
+					// Update our cache with this fresh data
+					const cacheKey = `${DefaultGuildId}:${userId}`;
+					this.memberCache.set(cacheKey, member);
+					
+					logger.debug(`[DiscordService] Forced refresh of member ${userId} successful`);
+				} else {
+					// Use normal getMember which uses cache with fallback to fetch
+					member = this.getMember(DefaultGuildId, userId);
+				}
+			} catch (memberError) {
+				logger.error(`[DiscordService] Failed to get member ${userId}: ${memberError instanceof Error ? memberError.message : String(memberError)}`);
+				throw memberError;
+			}
+			
+			// Validate data before creating identity
+			if (!member || !member.user) {
+				throw new Error(`Invalid member data for user ${userId}`);
+			}
+			
+			// Ensure we have valid display name
+			const botName = member.nickname ?? member.user.username;
+			if (!botName) {
+				throw new Error(`No valid display name found for user ${userId}`);
+			}
+			
+			// Ensure we have valid avatar URL
+			const avatarUrl = member.displayAvatarURL() ?? member.user.displayAvatarURL();
+			if (!avatarUrl) {
+				throw new Error(`No valid avatar URL found for user ${userId}`);
+			}
+			
+			// Create and cache the bot identity
+			const identity: BotIdentity = { botName, avatarUrl };
+			this.botProfileCache.set(userId, identity);
+			
+			return identity;
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to get bot identity for user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
+			throw error;
+		}
 	}
 
-	public getRandomMemberAsBotIdentity(): BotIdentity {
-		const member = this.getRandomMember();
-		return {
-			botName: member.nickname ?? member.user.username,
-			avatarUrl: member.displayAvatarURL() ?? member.user.displayAvatarURL()
-		};
+	public async getRandomMemberAsBotIdentity(): Promise<BotIdentity> {
+		try {
+			const member = this.getRandomMember();
+			
+			// Validate data before creating identity
+			if (!member || !member.user) {
+				throw new Error('Invalid random member data');
+			}
+			
+			// Ensure we have valid display name
+			const botName = member.nickname ?? member.user.username;
+			if (!botName) {
+				throw new Error(`No valid display name found for random member ${member.id}`);
+			}
+			
+			// Ensure we have valid avatar URL
+			const avatarUrl = member.displayAvatarURL() ?? member.user.displayAvatarURL();
+			if (!avatarUrl) {
+				throw new Error(`No valid avatar URL found for random member ${member.id}`);
+			}
+			
+			return { botName, avatarUrl };
+		} catch (error) {
+			logger.error(`[DiscordService] Failed to get random bot identity: ${error instanceof Error ? error.message : String(error)}`);
+			throw error;
+		}
 	}
 
 	public getTextChannel(channelId: string): TextChannel {

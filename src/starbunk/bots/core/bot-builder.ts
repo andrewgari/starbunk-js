@@ -134,13 +134,31 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 
 							// Get response text
 							const responseText = await trigger.response(message);
+							
+							// Skip if response is empty
+							if (!responseText || responseText.trim() === '') {
+								logger.debug(`[${validConfig.name}] Empty response from trigger "${trigger.name}", skipping`);
+								return;
+							}
 
 							// Get bot identity (use trigger-specific or default)
-							const identity = trigger.identity
-								? (typeof trigger.identity === 'function'
-									? await trigger.identity(message)
-									: trigger.identity)
-								: validConfig.defaultIdentity;
+							let identity: BotIdentity | null = null;
+							try {
+								identity = trigger.identity
+									? (typeof trigger.identity === 'function'
+										? await trigger.identity(message)
+										: trigger.identity)
+									: validConfig.defaultIdentity;
+								
+								// If identity couldn't be retrieved (null or undefined)
+								if (!identity || !identity.botName || !identity.avatarUrl) {
+									throw new Error('Failed to retrieve valid bot identity');
+								}
+							} catch (identityError) {
+								logger.error(`[${validConfig.name}] Failed to get bot identity for trigger "${trigger.name}":`, 
+									identityError instanceof Error ? identityError : new Error(String(identityError)));
+								return; // Skip sending the message
+							}
 
 							// Send response using DiscordService
 							await DiscordService.getInstance().sendMessageWithBotIdentity(
