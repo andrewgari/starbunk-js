@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
+import { DiscordService } from '../../../services/discordService';
 import { logger } from '../../../services/logger';
 import { BotIdentity } from '../../types/botIdentity';
-import { DiscordService } from '../../../services/discordService';
 
 /**
  * Typed TriggerName for better type safety and debugging
@@ -21,7 +21,6 @@ export function createTriggerName(name: string): TriggerName {
 export interface TriggerCondition {
 	(message: Message): Promise<boolean> | boolean;
 }
-
 /**
  * Function that generates a response message
  */
@@ -133,9 +132,9 @@ export class TriggerResponseClass {
 			// Generate and send response
 			const responseText = await this.response(message);
 			const channel = message.channel;
-      
+
 			logger.debug(`[${botName}] Sending response: "${responseText.substring(0, 100)}..."`);
-      
+
 			// Use the discord service to send the message
 			// Use pre-imported DiscordService for better performance
 			await DiscordService.getInstance().sendMessageWithBotIdentity(

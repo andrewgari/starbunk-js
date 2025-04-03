@@ -42,40 +42,44 @@ export function contextStaticResponse(text: string | StaticMessage): ContextualR
 // Keep track of last responses to avoid repetition
 const lastResponses = new Map<string, string>();
 
+export function randomResponse(responses: (string | StaticMessage)[]): string {
+	return responses[Math.floor(Math.random() * responses.length)].toString();
+}
+
 // Creates a random response from an array of options
-export function randomResponse(
+export function weightedRandomResponse(
 	options: (string | StaticMessage)[],
 	config: RandomResponseOptions = {}
 ): ResponseGenerator {
 	if (!options || options.length === 0) {
 		throw new Error('Random response options array cannot be empty');
 	}
-  
+
 	// Validate weights if provided
 	if (config.weights && config.weights.length !== options.length) {
 		throw new Error('Weights array length must match options array length');
 	}
-  
+
 	// Convert all string options to StaticMessage
-	const validatedOptions = options.map(opt => 
+	const validatedOptions = options.map(opt =>
 		typeof opt === 'string' ? createStaticMessage(opt) : opt
 	);
-  
+
 	// Create a unique ID for this response set based on content
 	const responseSetId = validatedOptions.map(o => o.toString()).join('|');
-  
+
 	return (message: Message): string => {
 		// Get the key for this message context
 		const contextKey = `${responseSetId}:${message.channel.id}`;
-    
+
 		// Get the last response for this context
 		const lastResponse = lastResponses.get(contextKey);
-    
+
 		// Choose a response, avoiding repetition if configured
 		let response: string;
 		let attempts = 0;
 		const maxAttempts = validatedOptions.length * 2;
-    
+
 		do {
 			// Select a response based on weights or randomly
 			let index: number;
@@ -84,7 +88,7 @@ export function randomResponse(
 				const totalWeight = config.weights.reduce((sum, w) => sum + w, 0);
 				let rand = Math.random() * totalWeight;
 				index = 0;
-        
+
 				while (index < config.weights.length - 1) {
 					rand -= config.weights[index];
 					if (rand <= 0) break;
@@ -94,19 +98,19 @@ export function randomResponse(
 				// Uniform random selection
 				index = Math.floor(Math.random() * validatedOptions.length);
 			}
-      
+
 			response = validatedOptions[index].toString();
 			attempts++;
 		} while (
-			!config.allowRepetition && 
-      response === lastResponse && 
-      attempts < maxAttempts && 
-      validatedOptions.length > 1
+			!config.allowRepetition &&
+			response === lastResponse &&
+			attempts < maxAttempts &&
+			validatedOptions.length > 1
 		);
-    
+
 		// Remember this response to avoid repetition next time
 		lastResponses.set(contextKey, response);
-    
+
 		// Limit the cache size
 		if (lastResponses.size > 1000) {
 			// Remove the oldest entries
@@ -115,7 +119,7 @@ export function randomResponse(
 				lastResponses.delete(keys[i]);
 			}
 		}
-    
+
 		return response;
 	};
 }
@@ -125,7 +129,7 @@ export function contextRandomResponse(
 	options: (string | StaticMessage)[],
 	config: RandomResponseOptions = {}
 ): ContextualResponseGenerator {
-	const standardGenerator = randomResponse(options, config);
+	const standardGenerator = weightedRandomResponse(options, config);
 	return (context: ResponseContext) => standardGenerator(context.message);
 }
 
@@ -142,7 +146,7 @@ export function templateResponse(
 	if (!template || template.trim().length === 0) {
 		throw new Error('Template string cannot be empty');
 	}
-  
+
 	return (message: Message): string => {
 		try {
 			const variables = variablesFn(message);
@@ -169,7 +173,7 @@ export function contextTemplateResponse(
 	if (!template || template.trim().length === 0) {
 		throw new Error('Template string cannot be empty');
 	}
-  
+
 	return (context: ResponseContext): string => {
 		try {
 			const variables = variablesFn(context);
@@ -193,7 +197,7 @@ export function regexCaptureResponse(pattern: RegExp, template: string): Respons
 	if (!template || template.trim().length === 0) {
 		throw new Error('Template string cannot be empty');
 	}
-  
+
 	return (message: Message) => {
 		try {
 			const match = message.content.match(pattern);
@@ -216,7 +220,7 @@ export function contextRegexCaptureResponse(pattern: RegExp, template: string): 
 	if (!template || template.trim().length === 0) {
 		throw new Error('Template string cannot be empty');
 	}
-  
+
 	return (context: ResponseContext) => {
 		try {
 			const match = context.content.match(pattern);

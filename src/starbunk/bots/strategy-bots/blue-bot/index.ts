@@ -1,10 +1,12 @@
 import { createStrategyBot } from '../../core/bot-builder';
 import { BLUE_BOT_AVATARS, BLUE_BOT_NAME } from './constants';
-import { 
-	blueConfirmTrigger, 
-	blueStandardTrigger, 
-	blueMurderTrigger, 
-	blueNiceTrigger 
+import {
+	triggerBlueBotAcknowledgeOther,
+	triggerBlueBotAcknowledgeVennMean,
+	triggerBlueBotLlmDetection,
+	triggerBlueBotMention,
+	triggerBlueBotNice,
+	triggerBlueBotNiceVenn
 } from './triggers';
 
 // Create the Blue Bot with all its triggers
@@ -18,9 +20,11 @@ export default createStrategyBot({
 	skipBotMessages: true,
 	triggers: [
 		// Order matters for processing, but priority is also considered
-		blueMurderTrigger,  // Highest priority
-		blueNiceTrigger,    // Next priority  
-		blueConfirmTrigger, // Next priority
-		blueStandardTrigger  // Lowest priority
+		triggerBlueBotNiceVenn,            // Priority 1
+		triggerBlueBotNice,                // Priority 2
+		triggerBlueBotAcknowledgeVennMean, // Priority 3
+		triggerBlueBotAcknowledgeOther,    // Priority 4
+		triggerBlueBotMention,             // Priority 5
+		triggerBlueBotLlmDetection         // Priority 6
 	]
 });

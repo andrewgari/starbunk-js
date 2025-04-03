@@ -1,13 +1,13 @@
 import { Message } from 'discord.js';
+import userId from '../../../../discord/userId';
 import { getLLMManager } from '../../../../services/bootstrap';
 import { LLMProviderType } from '../../../../services/llm';
 import { PromptRegistry, PromptType } from '../../../../services/llm/promptManager';
 import { logger } from '../../../../services/logger';
 import { getPersonalityService } from '../../../../services/personalityService';
-import { ResponseGenerator, randomResponse } from '../../core/responses';
 import { PerformanceTimer } from '../../../../utils/time';
+import { ResponseGenerator, weightedRandomResponse } from '../../core/responses';
 import { COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_PROMPTS } from './constants';
-import userId from '../../../../discord/userId';
 
 // Create performance timer for CovaBot operations
 const perfTimer = PerformanceTimer.getInstance();
@@ -90,7 +90,7 @@ Respond as Cova would to this message.`;
 
 				if (!response || response.trim() === '') {
 					logger.debug(`[CovaBot] Received empty response from LLM, using fallback`);
-					return randomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
+					return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 				}
 
 				// Truncate response to Discord's 2000 character limit
@@ -102,7 +102,7 @@ Respond as Cova would to this message.`;
 				return response;
 			} catch (error) {
 				logger.warn(`[CovaBot] LLM service error: ${error instanceof Error ? error.message : String(error)}`);
-				return randomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
+				return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 			}
 		});
 	};
@@ -130,7 +130,7 @@ export const createLLMResponseDecisionCondition = () => {
 				const lastResponseMs = Date.now() - getLastResponseTime(message.channelId);
 				const lastResponseMinutes = Math.floor(lastResponseMs / 60000);
 				const isRecentConversation = lastResponseMs < 10 * 60 * 1000; // 10 minutes
-        
+
 				// Get channel name safely
 				let channelName = 'Unknown Channel';
 				try {
@@ -165,7 +165,7 @@ Based on the Response Decision System, should Cova respond to this message?`;
 				);
 
 				const response = llmResponse.trim().toUpperCase();
-        
+
 				// Determine probability based on the response
 				let probability = 0;
 				if (response.includes("YES")) {
@@ -189,7 +189,7 @@ Based on the Response Decision System, should Cova respond to this message?`;
 
 				// Cap probability
 				probability = Math.min(probability, 0.9);
-        
+
 				// Apply randomization to avoid predictability
 				const random = Math.random();
 				const shouldRespond = random < probability;
@@ -216,7 +216,7 @@ setInterval(() => {
 		logger.info(`[CovaBot] Resetting performance stats after threshold`);
 		perfTimer.reset();
 	}
-  
+
 	// Clean up old entries from last response tracking
 	const now = Date.now();
 	for (const [channelId, time] of lastResponseTime.entries()) {

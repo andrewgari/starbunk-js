@@ -1,6 +1,7 @@
-import { createStrategyBot, createBotStrategyName, createBotDescription } from '../bot-builder';
-import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
+import { DiscordService } from '../../../../services/discordService';
 import { logger } from '../../../../services/logger';
+import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
+import { createBotDescription, createBotStrategyName, createStrategyBot } from '../bot-builder';
 
 // Mock the logger
 jest.mock('../../../../services/logger');
@@ -53,7 +54,7 @@ describe('Bot builder', () => {
 			};
 
 			const bot = createStrategyBot(config);
-			
+
 			expect(bot.name).toBe('TestBot');
 			expect(bot.description).toBe('A test bot');
 			expect(bot.metadata?.responseRate).toBe(100); // Default response rate
@@ -127,20 +128,23 @@ describe('Bot builder', () => {
 				triggers: [trigger1, trigger2]
 			};
 
+			// Mock discord service
+			const mockDiscordService = DiscordService.getInstance() as jest.Mocked<DiscordService>; // Assuming it's already mocked
+
+			// Create bot and process message
 			const bot = createStrategyBot(config);
-			const message = mockMessage('Test message');
-			
-			// Process the message
-			await bot.processMessage(message);
-			
+			const message = mockMessage(); // Create the mock message
+			await bot.processMessage(message); // Use the created message
+
 			// The high priority trigger should be checked first and short-circuit
 			expect(trigger2.condition).toHaveBeenCalled();
 			expect(trigger2.response).toHaveBeenCalled();
-			expect(trigger1.condition).not.toHaveBeenCalled();
+			expect(trigger1.condition).not.toHaveBeenCalled(); // Lower priority should NOT be called
+			expect(trigger1.response).not.toHaveBeenCalled(); // Lower priority should NOT be called
 			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
-				message.channel.id,
-				mockBotIdentity,
-				'High priority response'
+				message.channel.id, // Use the created message's channel id
+				config.defaultIdentity, // Expect default identity as triggers don't define one
+				'High priority response' // Expect response from trigger2
 			);
 		});
 
@@ -181,9 +185,9 @@ describe('Bot builder', () => {
 
 			const bot = createStrategyBot(config);
 			const botMessage = mockMessage('Test message', 'BotUser', true);
-			
+
 			await bot.processMessage(botMessage);
-			
+
 			// Should skip the message without checking triggers
 			expect(trigger.condition).not.toHaveBeenCalled();
 			expect(trigger.response).not.toHaveBeenCalled();
@@ -212,9 +216,9 @@ describe('Bot builder', () => {
 
 			const bot = createStrategyBot(config);
 			const message = mockMessage('Test message');
-			
+
 			await bot.processMessage(message);
-			
+
 			// Should check both triggers but only call response on the matching one
 			expect(trigger1.condition).toHaveBeenCalled();
 			expect(trigger1.response).not.toHaveBeenCalled();
@@ -243,9 +247,9 @@ describe('Bot builder', () => {
 
 			const bot = createStrategyBot(config);
 			const message = mockMessage('Test message');
-			
+
 			await bot.processMessage(message);
-			
+
 			expect(trigger.condition).toHaveBeenCalled();
 			expect(trigger.response).toHaveBeenCalled();
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
@@ -278,9 +282,9 @@ describe('Bot builder', () => {
 
 			const bot = createStrategyBot(config);
 			const message = mockMessage('Test message');
-			
+
 			await bot.processMessage(message);
-			
+
 			// Should log the error and continue to the next trigger
 			expect(errorTrigger.condition).toHaveBeenCalled();
 			expect(errorTrigger.response).not.toHaveBeenCalled();
@@ -288,7 +292,7 @@ describe('Bot builder', () => {
 				expect.stringMatching(/Error in trigger/),
 				expect.any(Error)
 			);
-			
+
 			// Should fall back to the next trigger
 			expect(fallbackTrigger.condition).toHaveBeenCalled();
 			expect(fallbackTrigger.response).toHaveBeenCalled();
@@ -304,7 +308,7 @@ describe('Bot builder', () => {
 				botName: 'CustomBot',
 				avatarUrl: 'https://example.com/custom.jpg'
 			};
-			
+
 			const trigger = {
 				name: 'custom-identity',
 				condition: jest.fn().mockReturnValue(true),
@@ -321,9 +325,9 @@ describe('Bot builder', () => {
 
 			const bot = createStrategyBot(config);
 			const message = mockMessage('Test message');
-			
+
 			await bot.processMessage(message);
-			
+
 			// Should use the trigger-specific identity
 			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
@@ -337,7 +341,7 @@ describe('Bot builder', () => {
 				botName: 'DynamicBot',
 				avatarUrl: 'https://example.com/dynamic.jpg'
 			};
-			
+
 			const trigger = {
 				name: 'dynamic-identity',
 				condition: jest.fn().mockReturnValue(true),
@@ -354,9 +358,9 @@ describe('Bot builder', () => {
 
 			const bot = createStrategyBot(config);
 			const message = mockMessage('Test message');
-			
+
 			await bot.processMessage(message);
-			
+
 			// Should call the identity function and use its result
 			expect(trigger.identity).toHaveBeenCalledWith(message);
 			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
@@ -385,9 +389,9 @@ describe('Bot builder', () => {
 
 			const bot = createStrategyBot(config);
 			const message = mockMessage('Test message');
-			
+
 			await bot.processMessage(message);
-			
+
 			// Should log the error and skip sending the message
 			expect(trigger.identity).toHaveBeenCalled();
 			expect(logger.error).toHaveBeenCalledWith(
@@ -414,9 +418,9 @@ describe('Bot builder', () => {
 
 			const bot = createStrategyBot(config);
 			const message = mockMessage('Test message');
-			
+
 			await bot.processMessage(message);
-			
+
 			// Should log the error and skip sending the message
 			expect(trigger.identity).toHaveBeenCalled();
 			expect(logger.error).toHaveBeenCalledWith(
@@ -424,6 +428,66 @@ describe('Bot builder', () => {
 				expect.any(Error)
 			);
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+		});
+
+		// Add tests specifically for responseRate
+		describe('responseRate handling', () => {
+			it('should not respond when responseRate is 0', async () => {
+				const trigger = {
+					name: 'always-true',
+					condition: jest.fn().mockReturnValue(true),
+					response: jest.fn().mockReturnValue('Should not send'),
+				};
+				const config = {
+					name: 'ZeroRateBot',
+					description: 'A bot that never responds',
+					defaultIdentity: mockBotIdentity,
+					triggers: [trigger],
+					responseRate: 0,
+				};
+
+				const bot = createStrategyBot(config);
+				const message = mockMessage('Test message');
+
+				await bot.processMessage(message);
+
+				// Should exit due to responseRate before checking condition
+				expect(trigger.condition).not.toHaveBeenCalled();
+				expect(trigger.response).not.toHaveBeenCalled();
+				expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+				expect(logger.debug).toHaveBeenCalledWith(
+					expect.stringMatching(/Skipping message due to response rate/)
+				);
+			});
+
+			it('should always attempt to respond when responseRate is 100', async () => {
+				const trigger = {
+					name: 'always-true',
+					condition: jest.fn().mockReturnValue(true),
+					response: jest.fn().mockReturnValue('Should send'),
+				};
+				const config = {
+					name: 'FullRateBot',
+					description: 'A bot that always responds',
+					defaultIdentity: mockBotIdentity,
+					triggers: [trigger],
+					responseRate: 100,
+				};
+
+				const bot = createStrategyBot(config);
+				const message = mockMessage('Test message');
+
+				await bot.processMessage(message);
+
+				// Should proceed past responseRate check and process the trigger
+				expect(trigger.condition).toHaveBeenCalled();
+				expect(trigger.response).toHaveBeenCalled();
+				expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+					message.channel.id,
+					mockBotIdentity,
+					'Should send'
+				);
+			});
 		});
 	});
 });
