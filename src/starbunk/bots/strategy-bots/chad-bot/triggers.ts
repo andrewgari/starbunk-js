@@ -19,7 +19,7 @@ export const chadKeywordTrigger = createTriggerResponse({
 	condition: (message) => {
 		// Always respond to the real Chad
 		if (message.author.id === userId.Chad) {
-			return true;
+			return false;
 		}
 
 		// For everyone else, 10% chance to respond

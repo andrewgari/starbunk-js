@@ -13,19 +13,13 @@ describe('Chad Bot Strategy', () => {
 		});
 	});
 
-	it('should always respond to messages from Chad user', async () => {
+	it('should never respond to messages from Chad user', async () => {
 		const message = mockMessage('Hello everyone');
 		message.author.id = userId.Chad;
 
 		await chadBot.processMessage(message);
 
-		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
-			expect.anything(),
-			expect.objectContaining({
-				username: CHAD_BOT_NAME,
-				content: CHAD_RESPONSE
-			})
-		);
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});
 
 	it('should respond to messages with 10% chance', async () => {
