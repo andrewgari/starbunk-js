@@ -13,7 +13,7 @@ export type Condition = (message: Message) => boolean | Promise<boolean>;
 /**
  * Strongly typed user ID
  */
-export type UserId = string;
+type UserId = string;
 
 export function createUserId(id: string): UserId {
 	if (!id || !/^\d{17,19}$/.test(id)) {
@@ -25,7 +25,7 @@ export function createUserId(id: string): UserId {
 /**
  * Strongly typed channel ID
  */
-export type ChannelId = string;
+type ChannelId = string;
 
 export function createChannelId(id: string): ChannelId {
 	if (!id || !/^\d{17,19}$/.test(id)) {
@@ -37,7 +37,7 @@ export function createChannelId(id: string): ChannelId {
 /**
  * Percentage between 0 and 100
  */
-export type Percentage = number;
+type Percentage = number;
 
 export function createPercentage(value: number): Percentage {
 	if (value < 0 || value > 100) {
@@ -49,12 +49,12 @@ export function createPercentage(value: number): Percentage {
 /**
  * Time units for duration-based conditions
  */
-export type TimeUnit = 'ms' | 's' | 'm' | 'h' | 'd';
+type TimeUnit = 'ms' | 's' | 'm' | 'h' | 'd';
 
 /**
  * Duration for time-based conditions
  */
-export type Duration = number;
+type Duration = number;
 
 export function createDuration(value: number): Duration {
 	if (value < 0) {
@@ -64,30 +64,22 @@ export function createDuration(value: number): Duration {
 }
 
 // Check if message matches regex pattern
-export function matchesPattern(pattern: RegExp): TriggerCondition {
-	const matches = (message: Message) => {
-		const match = pattern.test(message.content);
-		console.log(`matchesPattern: ${message.content} - ${match}`);
-		return match;
-	};
-	return matches;
-}
+export const matchesPattern = (pattern: RegExp): TriggerCondition =>
+	(message: Message) => pattern.test(message.content);
 
 // Contextual version of matchesPattern
-export function contextMatchesPattern(pattern: RegExp): ContextualTriggerCondition {
-	return (context: ResponseContext) => pattern.test(context.content);
-}
+export const contextMatchesPattern = (pattern: RegExp): ContextualTriggerCondition =>
+	(context: ResponseContext) => pattern.test(context.content);
 
 // Check if message contains a specific word (not substring)
-export function containsWord(word: string): TriggerCondition {
+export const containsWord = (word: string): TriggerCondition => {
 	const wordRegex = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'i');
 	return (message: Message) => wordRegex.test(message.content);
-}
+};
 
 // Contextual version of containsWord
-export function contextContainsWord(word: string): ContextualTriggerCondition {
-	return (context: ResponseContext) => context.hasWord(word);
-}
+export const contextContainsWord = (word: string): ContextualTriggerCondition =>
+	(context: ResponseContext) => context.hasWord(word);
 
 // Check if message contains a phrase (substring)
 export function containsPhrase(phrase: string): TriggerCondition {
