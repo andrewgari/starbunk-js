@@ -52,16 +52,21 @@ export const triggerBlueBotAcknowledgeVennMean = createTriggerResponse({
 	condition: and(
 		or(matchesPattern(BLUE_BOT_PATTERNS.Confirm), matchesPattern(BLUE_BOT_PATTERNS.Mean)),
 		fromUser(isDebugMode() ? userId.Cova : userId.Venn),
-		withinTimeframeOf(getBlueTimestamp, 2, 'm'),
-		not(withinTimeframeOf(getBlueMurderTimestamp, 1, 'm'))
+		withinTimeframeOf(getBlueTimestamp, 2, 'm')
 	),
-	response: () => {
-		blueMurderTimestamp = new Date();
-		return BLUE_BOT_RESPONSES.Murder;
+	response: (message) => {
+		const isMurderMode = withinTimeframeOf(getBlueMurderTimestamp, 1, 'm')(message);
+		if (isMurderMode) {
+			blueMurderTimestamp = new Date();
+			return BLUE_BOT_RESPONSES.Murder;
+		}
+		return "Oh, somebody definitely said blue...";
 	},
-	identity: (_message: Message) => ({
+	identity: (message: Message) => ({
 		botName: BLUE_BOT_NAME,
-		avatarUrl: BLUE_BOT_AVATARS.Murder
+		avatarUrl: withinTimeframeOf(getBlueMurderTimestamp, 1, 'm')(message)
+			? BLUE_BOT_AVATARS.Murder
+			: BLUE_BOT_AVATARS.Default
 	})
 });
 
