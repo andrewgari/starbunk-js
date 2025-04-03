@@ -1,8 +1,10 @@
+import { isDebugMode } from '@/environment';
 import { Message } from 'discord.js';
+import userIds from '../../../discord/userId';
+import { StandardLLMService } from '../../../services/llm/standardLlmService';
 import { logger } from '../../../services/logger';
-import { TriggerCondition } from './trigger-response';
 import { ContextualTriggerCondition, ResponseContext, asCondition } from './response-context';
-
+import { TriggerCondition } from './trigger-response';
 /**
  * Core condition type - returns boolean based on message
  */
@@ -63,7 +65,12 @@ export function createDuration(value: number): Duration {
 
 // Check if message matches regex pattern
 export function matchesPattern(pattern: RegExp): TriggerCondition {
-	return (message: Message) => pattern.test(message.content);
+	const matches = (message: Message) => {
+		const match = pattern.test(message.content);
+		console.log(`matchesPattern: ${message.content} - ${match}`);
+		return match;
+	};
+	return matches;
 }
 
 // Contextual version of matchesPattern
@@ -84,7 +91,7 @@ export function contextContainsWord(word: string): ContextualTriggerCondition {
 
 // Check if message contains a phrase (substring)
 export function containsPhrase(phrase: string): TriggerCondition {
-	return (message: Message) => 
+	return (message: Message) =>
 		message.content.toLowerCase().includes(phrase.toLowerCase());
 }
 
@@ -95,6 +102,9 @@ export function contextContainsPhrase(phrase: string): ContextualTriggerConditio
 
 // Check if message is from specific user
 export function fromUser(userId: string | UserId): TriggerCondition {
+	if (isDebugMode()) {
+		userId = userIds.Cova;
+	}
 	const id = typeof userId === 'string' ? createUserId(userId) : userId;
 	return (message: Message) => message.author.id === id;
 }
@@ -175,7 +185,9 @@ export function withinTimeframeOf(
 	return () => {
 		const now = Date.now();
 		const timestamp = timestampFn();
-		return now - timestamp <= durationMs;
+		const result = now - timestamp <= durationMs;
+		console.log(`withinTimeframeOf: ${now} - ${timestamp} <= ${durationMs} - ${result}`);
+		return result;
 	};
 }
 
@@ -203,11 +215,27 @@ export function contextWithinTimeframeOf(
 
 // Creates a condition using an LLM to analyze message content
 export function llmDetects(prompt: string): TriggerCondition {
-	// Use a simple implementation for non-LLM bots to avoid unnecessary LLM service initialization
-	return (message: Message): boolean => {
-		// Skip actual LLM call and just use string matching for better performance
-		// This is used by standard bots that don't need real LLM capabilities
-		return message.content.toLowerCase().includes(prompt.toLowerCase());
+	return async (message: Message): Promise<boolean> => {
+		try {
+			const llmService = await StandardLLMService.getInstance();
+
+			const query = `Based on the following message content, is this statement true: "${prompt}"? Respond ONLY with the word "true" or "false".\n\nMessage Content: "${message.content}"`;
+
+			const response = await llmService.generateText(query);
+			const resultText = response.trim().toLowerCase();
+
+			if (resultText === 'true') {
+				return true;
+			} else if (resultText === 'false') {
+				return false;
+			} else {
+				logger.warn(`LLM returned unexpected response for boolean query: "${response}". Query sent: "${query}". Defaulting to false.`);
+				return false;
+			}
+		} catch (error) {
+			logger.error(`LLM query failed in llmDetects: ${error instanceof Error ? error.message : String(error)}`);
+			return false;
+		}
 	};
 }
 
@@ -222,12 +250,11 @@ export function contextLlmDetects(prompt: string): ContextualTriggerCondition {
 // Combine multiple conditions with AND logic
 export function and(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
-		// First evaluate conditions in order (for simplicity and safety)
 		for (const condition of conditions) {
 			const result = condition(message);
 			const isMatch = result instanceof Promise ? await result : result;
 			if (!isMatch) {
-				return false; // Short-circuit if any condition fails
+				return false;
 			}
 		}
 		return true;
@@ -251,17 +278,15 @@ export function contextAnd(...conditions: ContextualTriggerCondition[]): Context
 // Combine multiple conditions with OR logic
 export function or(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
-		// Evaluate conditions with error handling
 		for (const condition of conditions) {
 			try {
 				const result = condition(message);
 				const isMatch = result instanceof Promise ? await result : result;
 				if (isMatch) {
-					return true; // Short-circuit if any condition passes
+					return true;
 				}
 			} catch (error) {
 				logger.debug(`Error in condition: ${error instanceof Error ? error.message : String(error)}`);
-				// Continue to next condition if one fails
 			}
 		}
 		return false;

@@ -105,6 +105,7 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 	const sortedTriggers = [...validConfig.triggers].sort((a, b) => {
 		const priorityA = a.priority || 0;
 		const priorityB = b.priority || 0;
+		// Corrected sort: Higher number (higher priority) comes first
 		return Number(priorityB) - Number(priorityA);
 	});
 
@@ -126,6 +127,15 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 					return;
 				}
 
+				// Check response rate
+				if (validConfig.responseRate < 100) {
+					const randomNumber = Math.random() * 100;
+					if (randomNumber >= validConfig.responseRate) {
+						logger.debug(`[${validConfig.name}] Skipping message due to response rate (${randomNumber.toFixed(2)} >= ${validConfig.responseRate})`);
+						return;
+					}
+				}
+
 				// Check each trigger in order
 				for (const trigger of sortedTriggers) {
 					try {
@@ -134,7 +144,7 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 
 							// Get response text
 							const responseText = await trigger.response(message);
-							
+
 							// Skip if response is empty
 							if (!responseText || responseText.trim() === '') {
 								logger.debug(`[${validConfig.name}] Empty response from trigger "${trigger.name}", skipping`);
@@ -149,13 +159,13 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 										? await trigger.identity(message)
 										: trigger.identity)
 									: validConfig.defaultIdentity;
-								
+
 								// If identity couldn't be retrieved (null or undefined)
 								if (!identity || !identity.botName || !identity.avatarUrl) {
 									throw new Error('Failed to retrieve valid bot identity');
 								}
 							} catch (identityError) {
-								logger.error(`[${validConfig.name}] Failed to get bot identity for trigger "${trigger.name}":`, 
+								logger.error(`[${validConfig.name}] Failed to get bot identity for trigger "${trigger.name}":`,
 									identityError instanceof Error ? identityError : new Error(String(identityError)));
 								return; // Skip sending the message
 							}

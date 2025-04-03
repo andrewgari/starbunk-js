@@ -1,13 +1,13 @@
-import { 
-	staticResponse, 
-	randomResponse, 
-	createStaticMessage, 
-	templateResponse, 
-	regexCaptureResponse, 
-	sendBotResponse 
-} from '../responses';
-import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { logger } from '../../../../services/logger';
+import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
+import {
+	createStaticMessage,
+	regexCaptureResponse,
+	sendBotResponse,
+	staticResponse,
+	templateResponse,
+	weightedRandomResponse
+} from '../responses';
 
 // Mock Math.random for deterministic tests
 const originalRandom = global.Math.random;
@@ -18,7 +18,7 @@ jest.mock('../../../../services/logger');
 
 beforeEach(() => {
 	jest.clearAllMocks();
-	
+
 	// Mock Math.random
 	global.Math.random = jest.fn().mockImplementation(() => mockRandomValue);
 });
@@ -45,7 +45,7 @@ describe('Response functions', () => {
 		it('should create a function that returns static text', () => {
 			const responseGen = staticResponse('Hello world');
 			const message = mockMessage();
-			
+
 			const response = responseGen(message);
 			expect(response).toBe('Hello world');
 		});
@@ -54,7 +54,7 @@ describe('Response functions', () => {
 			const staticMsg = createStaticMessage('Hello world');
 			const responseGen = staticResponse(staticMsg);
 			const message = mockMessage();
-			
+
 			const response = responseGen(message);
 			expect(response).toBe('Hello world');
 		});
@@ -63,9 +63,9 @@ describe('Response functions', () => {
 	describe('randomResponse', () => {
 		it('should select a random response from options', () => {
 			const options = ['Response 1', 'Response 2', 'Response 3'];
-			const responseGen = randomResponse(options);
+			const responseGen = weightedRandomResponse(options);
 			const message = mockMessage();
-			
+
 			// Default mock value 0.5 should select the middle option
 			// (Math.floor(0.5 * 3) = 1)
 			const response = responseGen(message);
@@ -73,15 +73,15 @@ describe('Response functions', () => {
 		});
 
 		it('should throw an error for empty options', () => {
-			expect(() => randomResponse([])).toThrow('Random response options array cannot be empty');
+			expect(() => weightedRandomResponse([])).toThrow('Random response options array cannot be empty');
 		});
 
 		it('should avoid repeating the last response when configured', () => {
 			// Skip actual test of non-repetition logic, focusing on the function interface
 			const options = ['Response 1', 'Response 2', 'Response 3'];
-			const responseGen = randomResponse(options, { allowRepetition: false });
+			const responseGen = weightedRandomResponse(options, { allowRepetition: false });
 			const message = mockMessage();
-			
+
 			// We can at least verify the response is one of the valid options
 			const response = responseGen(message);
 			expect(options).toContain(response);
@@ -90,9 +90,9 @@ describe('Response functions', () => {
 		it('should support weighted selection', () => {
 			const options = ['Response 1', 'Response 2', 'Response 3'];
 			const weights = [1, 0, 1]; // Never select Response 2
-			const responseGen = randomResponse(options, { weights });
+			const responseGen = weightedRandomResponse(options, { weights });
 			const message = mockMessage();
-			
+
 			// We should get a valid response and not Response 2
 			// (since its weight is 0)
 			const response = responseGen(message);
@@ -103,8 +103,8 @@ describe('Response functions', () => {
 		it('should throw an error if weights length doesn\'t match options', () => {
 			const options = ['Response 1', 'Response 2', 'Response 3'];
 			const weights = [1, 2]; // Too short
-			
-			expect(() => randomResponse(options, { weights })).toThrow(
+
+			expect(() => weightedRandomResponse(options, { weights })).toThrow(
 				'Weights array length must match options array length'
 			);
 		});
@@ -116,7 +116,7 @@ describe('Response functions', () => {
 			const variablesFn = () => ({ name: 'John', place: 'Discord' });
 			const responseGen = templateResponse(template, variablesFn);
 			const message = mockMessage();
-			
+
 			const response = responseGen(message);
 			expect(response).toBe('Hello John, welcome to Discord!');
 		});
@@ -126,7 +126,7 @@ describe('Response functions', () => {
 			const variablesFn = () => ({ name: 'John' });
 			const responseGen = templateResponse(template, variablesFn);
 			const message = mockMessage();
-			
+
 			const response = responseGen(message);
 			expect(response).toBe('Hello John! How are you John?');
 		});
@@ -136,7 +136,7 @@ describe('Response functions', () => {
 			const variablesFn = () => ({ name: 'John' }); // Missing 'place'
 			const responseGen = templateResponse(template, variablesFn);
 			const message = mockMessage();
-			
+
 			const response = responseGen(message);
 			expect(response).toBe('Hello John, welcome to {place}!');
 		});
@@ -148,7 +148,7 @@ describe('Response functions', () => {
 			};
 			const responseGen = templateResponse(template, variablesFn);
 			const message = mockMessage();
-			
+
 			const response = responseGen(message);
 			expect(response).toBe('Hello {name}!');
 			expect(logger.error).toHaveBeenCalled();
@@ -166,7 +166,7 @@ describe('Response functions', () => {
 			const template = 'Hi $1!';
 			const responseGen = regexCaptureResponse(pattern, template);
 			const message = mockMessage('Hello John');
-			
+
 			const response = responseGen(message);
 			expect(response).toBe('Hi John!');
 		});
@@ -176,7 +176,7 @@ describe('Response functions', () => {
 			const template = '$2 is liked by $1';
 			const responseGen = regexCaptureResponse(pattern, template);
 			const message = mockMessage('John likes pizza');
-			
+
 			const response = responseGen(message);
 			expect(response).toBe('pizza is liked by John');
 		});
@@ -186,7 +186,7 @@ describe('Response functions', () => {
 			const template = 'Hi $1!';
 			const responseGen = regexCaptureResponse(pattern, template);
 			const message = mockMessage('Goodbye John'); // Doesn't match
-			
+
 			const response = responseGen(message);
 			expect(response).toBe('Hi $1!');
 		});
@@ -199,11 +199,11 @@ describe('Response functions', () => {
 					throw new Error('Test error');
 				}
 			});
-			
+
 			const pattern = /Hello (\w+)/i;
 			const template = 'Hi $1!';
 			const responseGen = regexCaptureResponse(pattern, template);
-			
+
 			const response = responseGen(badMessage);
 			expect(response).toBe('Hi $1!');
 			expect(logger.error).toHaveBeenCalled();
@@ -220,9 +220,9 @@ describe('Response functions', () => {
 			const responseGen = staticResponse('Hello world');
 			const message = mockMessage();
 			const botName = 'TestBot';
-			
+
 			await sendBotResponse(message, mockBotIdentity, responseGen, botName);
-			
+
 			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				mockBotIdentity,
@@ -237,9 +237,9 @@ describe('Response functions', () => {
 			const responseGen = jest.fn().mockReturnValue('');
 			const message = mockMessage();
 			const botName = 'TestBot';
-			
+
 			await sendBotResponse(message, mockBotIdentity, responseGen, botName);
-			
+
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 			expect(logger.warn).toHaveBeenCalledWith(
 				expect.stringMatching(/Empty response generated/)
@@ -252,9 +252,9 @@ describe('Response functions', () => {
 			});
 			const message = mockMessage();
 			const botName = 'TestBot';
-			
+
 			await expect(sendBotResponse(message, mockBotIdentity, responseGen, botName)).rejects.toThrow();
-			
+
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 			expect(logger.error).toHaveBeenCalledWith(
 				expect.stringContaining('Error sending response'),
@@ -266,9 +266,9 @@ describe('Response functions', () => {
 			const responseGen = jest.fn().mockResolvedValue('Async response');
 			const message = mockMessage();
 			const botName = 'TestBot';
-			
+
 			await sendBotResponse(message, mockBotIdentity, responseGen, botName);
-			
+
 			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				mockBotIdentity,

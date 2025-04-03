@@ -1,15 +1,13 @@
-import { LLMProviderType } from '../../services/llm/llmFactory';
-import { LLMManager } from '../../services/llm/llmManager';
+import { StandardLLMService } from '../../services/llm/standardLlmService';
 import { logger } from '../../services/logger';
 import { Campaign } from '../types/game';
 
 export class GameLLMService {
 	private static instance: GameLLMService;
-	private llmManager: LLMManager;
+	private standardLlmService!: StandardLLMService;
 	private isInitialized = false;
 
 	private constructor() {
-		this.llmManager = new LLMManager(logger, LLMProviderType.OLLAMA);
 	}
 
 	private async initialize(): Promise<void> {
@@ -18,19 +16,14 @@ export class GameLLMService {
 		}
 
 		try {
-			logger.info('[GameLLMService] Initializing LLM providers...');
-			await this.llmManager.initializeAllProviders();
+			logger.info('[GameLLMService] Initializing by obtaining StandardLLMService instance...');
+			this.standardLlmService = await StandardLLMService.getInstance();
+			this.isInitialized = true;
+			logger.info('[GameLLMService] Successfully initialized.');
 
-			// Check if we have any providers available
-			const defaultProvider = this.llmManager.getDefaultProvider();
-			if (!defaultProvider) {
-				logger.error('[GameLLMService] No default LLM provider available after initialization');
-			} else {
-				logger.info('[GameLLMService] Successfully initialized with default provider:', defaultProvider.getProviderName());
-				this.isInitialized = true;
-			}
 		} catch (error) {
-			logger.error('[GameLLMService] Error during initialization:', error instanceof Error ? error : new Error(String(error)));
+			logger.error('[GameLLMService] Error during initialization (failed to get StandardLLMService):', error instanceof Error ? error : new Error(String(error)));
+			this.isInitialized = false;
 			throw error;
 		}
 	}
@@ -55,30 +48,18 @@ export class GameLLMService {
 	private async generateResponse(prompt: string, systemPrompt?: string): Promise<string> {
 		await this.ensureInitialized();
 
-		logger.debug('[GameLLMService] Generating response...', {
+		logger.debug('[GameLLMService] Delegating response generation to StandardLLMService...', {
 			promptLength: prompt.length,
-			hasSystemPrompt: !!systemPrompt
+			hasSystemPrompt: !!systemPrompt,
 		});
 
 		try {
-			const provider = this.llmManager.getDefaultProvider();
-			if (!provider) {
-				logger.error('[GameLLMService] No LLM provider available');
-				throw new Error('No LLM provider available');
-			}
-
-			const response = await provider.createCompletion({
-				messages: [
-					...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
-					{ role: 'user' as const, content: prompt }
-				]
-			}).then(res => res.content);
-			logger.debug('[GameLLMService] Raw LLM response:', response);
-			return response.trim();
+			const response = await this.standardLlmService.generateText(prompt, systemPrompt);
+			logger.debug('[GameLLMService] Received response from StandardLLMService');
+			return response;
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error);
-			logger.error('[GameLLMService] Error generating response:', new Error(errorMessage));
-			throw error; // Let the caller handle the error
+			logger.error('[GameLLMService] Error during delegated response generation:', error instanceof Error ? error : new Error(String(error)));
+			throw error;
 		}
 	}
 
