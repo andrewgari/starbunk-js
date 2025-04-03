@@ -178,7 +178,7 @@ export function withinTimeframeOf(
 		const now = Date.now();
 		const timestamp = timestampFn();
 		const result = now - timestamp <= durationMs;
-		console.log(`withinTimeframeOf: ${now} - ${timestamp} <= ${durationMs} - ${result}`);
+		logger.debug(`withinTimeframeOf: ${now} - ${timestamp} <= ${durationMs} - ${result}`);
 		return result;
 	};
 }
