@@ -96,9 +96,9 @@ describe('Strategy Bot Loader', () => {
 		const loadedBots = await StrategyBotLoader.loadBots();
 
 		// Verify
-		// IMPORTANT: If initialize fails, the loop shouldn't run
-		expect(mockGetInstance).not.toHaveBeenCalled();
-		expect(mockRegisterBot).not.toHaveBeenCalled();
+		// If initialize fails, the loader might still get the instance, but shouldn't register bots
+		expect(mockGetInstance).not.toHaveBeenCalled(); // Should not be called if init fails
+		expect(mockRegisterBot).not.toHaveBeenCalled(); // Ensure no bot registration happens
 		expect(loadedBots).toHaveLength(0); // No bots should be loaded if init fails
 	});
 
