@@ -19,6 +19,17 @@ FROM node:20-slim AS runner
 
 WORKDIR /app
 
+# Create app user/group and required directories with proper permissions
+RUN groupadd -r bunkbot && \
+    useradd -r -g bunkbot -s /bin/false bunkbot && \
+    mkdir -p /app/data \
+            /app/data/campaigns \
+            /app/data/llm_context \
+            /app/scripts && \
+    chown -R bunkbot:bunkbot /app && \
+    chmod -R 755 /app && \
+    chmod 777 /app/data  # Ensure data directory is writable
+
 # Install ffmpeg only
 RUN apt-get update && apt-get install -y \
     ffmpeg \
@@ -33,10 +44,14 @@ COPY package*.json ./
 
 # Install latest npm and production dependencies
 RUN npm install -g npm@latest && \
-    npm ci --prefer-offline --no-audit --production
+    npm ci --prefer-offline --no-audit --production && \
+    chown -R bunkbot:bunkbot /app
 
 # Environment variables
 ENV NODE_ENV="production"
+
+# Switch to non-root user
+USER bunkbot
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
