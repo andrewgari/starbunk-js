@@ -198,18 +198,26 @@ export default class StarbunkClient extends DiscordClient {
 			const registry = BotRegistry.getInstance();
 			const replyBots = Array.from(registry['replyBots'].values()) as ReplyBot[];
 
-			// Process message through each enabled bot
-			for (const bot of replyBots) {
-				if (registry.isBotEnabled(bot.defaultBotName)) {
-					try {
-						await bot.handleMessage(message);
-					} catch (error) {
-						logger.error(`Error in bot ${bot.defaultBotName} while handling message:`, error instanceof Error ? error : new Error(String(error)));
-					}
-				}
-			}
+			// Create an array of promises for each enabled bot's message handling
+			const processingPromises = replyBots
+				.filter(bot => registry.isBotEnabled(bot.defaultBotName))
+				.map(bot => {
+					// Wrap the call in an async IIFE to handle potential errors individually
+					return (async () => {
+						try {
+							await bot.handleMessage(message);
+						} catch (error) {
+							logger.error(`Error in bot ${bot.defaultBotName} while handling message:`, error instanceof Error ? error : new Error(String(error)));
+							// We log the error but don't re-throw, allowing Promise.allSettled to continue
+						}
+					})();
+				});
+
+			// Wait for all bot processing to settle (complete or error out)
+			await Promise.allSettled(processingPromises);
 		} catch (error) {
-			logger.error('Error handling message:', error instanceof Error ? error : new Error(String(error)));
+			// Catch errors related to getting the registry or bots list
+			logger.error('Error preparing to handle message:', error instanceof Error ? error : new Error(String(error)));
 		}
 	}
 }

@@ -51,13 +51,13 @@ export class StrategyBotLoader {
 
 		try {
 			// Initialize CovaBot first. If this fails, the outer catch will handle it.
-			await this.initializeCovaBot();
+			// await this.initializeCovaBot(); // REMOVED - Redundant call, initialization should happen via instance creation or module import
 
 			// Load and adapt all other bots
 			for (const bot of strategyBots) {
 				try {
-					if (this.validateBot(bot)) {
-						const adaptedBot = this.adaptBot(bot);
+					if (StrategyBotLoader.validateBot(bot)) {
+						const adaptedBot = StrategyBotLoader.adaptBot(bot);
 						const registryInstance = BotRegistry.getInstance();
 						registryInstance.registerBot(adaptedBot);
 						// Only push the bot if adaptation and registration succeed
