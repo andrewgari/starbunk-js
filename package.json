@@ -29,7 +29,7 @@
 		"vectorize-campaigns": "ts-node scripts/convert_embeddings.ts",
 		"vectorize-force": "ts-node scripts/convert_embeddings.ts --force",
 		"vectorize-campaign": "ts-node scripts/convert_embeddings.ts --campaign",
-		"docker:build": "podman build -t starbunk-js:latest .",
+		"docker:build": "npm run setup:dirs && podman build -t starbunk-js:latest .",
 		"docker:run": "podman run -d --name starbunk-js --env-file .env starbunk-js:latest",
 		"docker:run:dev": "podman run -d --name starbunk-js-dev --env-file .env.development starbunk-js:latest",
 		"docker:stop": "podman stop starbunk-js || true && podman rm starbunk-js || true",
@@ -41,8 +41,8 @@
 		"docker:shell": "podman exec -it starbunk-js sh",
 		"docker:clean": "podman system prune -f",
 		"docker:dev": "npm run docker:build && npm run docker:restart:dev",
-		"compose:up": "podman-compose up -d",
-		"compose:up:dev": "podman-compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
+		"compose:up": "npm run setup:dirs && podman-compose up -d",
+		"compose:up:dev": "npm run setup:dirs && podman-compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
 		"compose:down": "podman-compose down",
 		"compose:down:dev": "podman-compose -f docker-compose.yml -f docker-compose.dev.yml down",
 		"compose:logs": "podman-compose logs -f",
@@ -53,7 +53,8 @@
 		"compose:restart:dev": "podman-compose -f docker-compose.yml -f docker-compose.dev.yml restart",
 		"compose:ps": "podman-compose ps",
 		"compose:shell": "podman-compose exec bunkbot sh",
-		"compose:shell:dev": "podman-compose -f docker-compose.yml -f docker-compose.dev.yml exec bunkbot-dev sh"
+		"compose:shell:dev": "podman-compose -f docker-compose.yml -f docker-compose.dev.yml exec bunkbot-dev sh",
+		"setup:dirs": "./scripts/ensure-directories.sh"
 	},
 	"engines": {
 		"node": ">=16.0.0"

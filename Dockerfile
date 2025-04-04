@@ -19,11 +19,16 @@ FROM node:20-slim AS runner
 
 WORKDIR /app
 
-# Create app user/group and data directory
+# Create app user/group and required directories with proper permissions
 RUN groupadd -r bunkbot && \
     useradd -r -g bunkbot -s /bin/false bunkbot && \
-    mkdir -p /app/data && \
-    chown -R bunkbot:bunkbot /app
+    mkdir -p /app/data \
+            /app/data/campaigns \
+            /app/data/llm_context \
+            /app/scripts && \
+    chown -R bunkbot:bunkbot /app && \
+    chmod -R 755 /app && \
+    chmod 777 /app/data  # Ensure data directory is writable
 
 # Install ffmpeg only
 RUN apt-get update && apt-get install -y \
