@@ -14,11 +14,13 @@ services:
                     cpus: '2'
                     memory: 1G
         volumes:
-            - /mnt/user/vault/ttrpg/campaigns:/app/data/campaigns
-            - ./scripts:/app/scripts
-            - ./data/llm_context:/app/data/llm_context
-            - ./data:/app/data
-            - ./src/starbunk/bots/strategy-bots:/app/dist/starbunk/bots/strategy-bots
+            - ./data:/app/data:Z
+            - /mnt/user/vault/ttrpg/campaigns:/app/data/campaigns:Z,ro
+            - ./scripts:/app/scripts:Z,ro
+            - ./data/llm_context:/app/data/llm_context:Z
+            - ./src/starbunk/bots/strategy-bots:/app/dist/starbunk/bots/strategy-bots:Z,ro
         environment:
             - PYTHONPATH=/app/scripts
             - VECTOR_CONTEXT_DIR=/app/data/llm_context
+        # Add user mapping for rootless operation
+        user: "1000:1000"  # Adjust these IDs to match your host user/group IDs
