@@ -1,61 +1,60 @@
-# Build stage
-FROM node:20-alpine AS deps
+FROM node:20-slim AS builder
+
+ARG NODE_ENV=development
+ENV NODE_ENV=$NODE_ENV
 
 WORKDIR /app
 
-# Install latest npm and dependencies with caching
+# Install global dependencies
+RUN npm install -g typescript tsc-alias
+
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm install -g npm@latest && \
-    npm ci --prefer-offline --no-audit
-
-FROM deps AS builder
+COPY src/starbunk/bots/strategy-bots/package*.json ./src/starbunk/bots/strategy-bots/
+RUN npm ci
+RUN cd src/starbunk/bots/strategy-bots && npm ci
 COPY . .
-RUN npx prisma generate
-RUN npm run build
+RUN cd src/starbunk/bots/strategy-bots && npm run build
+RUN npm run type-check:relaxed && tsc -p tsconfig-check.json && tsc-alias
 
-# Runtime stage
-FROM node:20-slim AS runner
+FROM node:20-slim AS runtime
+
+ARG NODE_ENV=development
+ENV NODE_ENV=$NODE_ENV
 
 WORKDIR /app
 
-# Create app user/group and required directories with proper permissions
-RUN groupadd -r bunkbot && \
-    useradd -r -g bunkbot -s /bin/false bunkbot && \
-    mkdir -p /app/data \
-            /app/data/campaigns \
-            /app/data/llm_context \
-            /app/scripts && \
+# Create non-root user
+RUN groupadd -r bunkbot && useradd -r -g bunkbot bunkbot
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y ffmpeg && \
+    npm install -g ts-node typescript ts-node-dev prisma && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy files from builder
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/tsconfig*.json ./
+COPY --from=builder /app/prisma ./prisma
+
+# Create directories and set permissions
+RUN mkdir -p /app/data /app/data/campaigns /app/data/llm_context && \
     chown -R bunkbot:bunkbot /app && \
     chmod -R 755 /app && \
-    chmod 777 /app/data  # Ensure data directory is writable
+    chmod 777 /app/data && \
+    chmod 777 /app/node_modules/@prisma && \
+    touch /app/data/starbunk.db && \
+    chown bunkbot:bunkbot /app/data/starbunk.db && \
+    chmod 666 /app/data/starbunk.db
 
-# Install ffmpeg only
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy build artifacts and node modules in a single layer
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/prisma ./prisma
-COPY package*.json ./
-
-# Install latest npm and production dependencies
-RUN npm install -g npm@latest && \
-    npm ci --prefer-offline --no-audit --production && \
-    chown -R bunkbot:bunkbot /app
-
-# Environment variables
-ENV NODE_ENV="production"
-
-# Switch to non-root user
 USER bunkbot
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD node healthcheck.js
+# Generate Prisma client as bunkbot user
+RUN npx prisma generate && \
+    npx prisma migrate deploy
 
-# Run the bot
-CMD ["node", "--enable-source-maps", "dist/bunkbot.js"]
+CMD ["npm", "run", "dev"]

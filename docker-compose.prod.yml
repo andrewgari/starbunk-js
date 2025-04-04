@@ -1,0 +1,23 @@
+services:
+    bunkbot:
+        build:
+            context: .
+            dockerfile: Dockerfile.prod
+        container_name: bunkbot-prod
+        env_file:
+            - .env
+        command: node --enable-source-maps dist/bunkbot.js
+        deploy:
+            resources:
+                limits:
+                    cpus: '2'
+                    memory: 1G
+        volumes:
+            - ./data:/app/data:Z
+            - /mnt/user/vault/ttrpg/campaigns:/app/data/campaigns:Z,ro
+            - ./data/llm_context:/app/data/llm_context:Z
+        environment:
+            - NODE_ENV=production
+            - PYTHONPATH=/app/scripts
+            - VECTOR_CONTEXT_DIR=/app/data/llm_context
+        user: "1000:1000"
