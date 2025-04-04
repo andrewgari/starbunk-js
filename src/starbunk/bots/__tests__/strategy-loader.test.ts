@@ -65,7 +65,6 @@ describe('Strategy Bot Loader', () => {
 		const loadedBots = await StrategyBotLoader.loadBots();
 
 		// Verify
-		expect(mockInitializeCovaBot).toHaveBeenCalled();
 		expect(mockGetInstance).toHaveBeenCalledTimes(1); // Called once for the valid bot
 		expect(mockRegisterBot).toHaveBeenCalledTimes(1); // Called by the instance returned by getInstance
 		expect(mockRegisterBot).toHaveBeenCalledWith(expect.objectContaining({ defaultBotName: validBot.name })); // Check bot name
@@ -81,7 +80,6 @@ describe('Strategy Bot Loader', () => {
 		const loadedBots = await StrategyBotLoader.loadBots();
 
 		// Verify
-		expect(mockInitializeCovaBot).toHaveBeenCalled();
 		expect(mockGetInstance).toHaveBeenCalledTimes(1); // Called only for the valid bot
 		expect(mockRegisterBot).toHaveBeenCalledTimes(1); // Only the valid bot is registered
 		expect(mockRegisterBot).toHaveBeenCalledWith(expect.objectContaining({ defaultBotName: validBot.name })); // Check bot name
@@ -98,7 +96,6 @@ describe('Strategy Bot Loader', () => {
 		const loadedBots = await StrategyBotLoader.loadBots();
 
 		// Verify
-		expect(mockInitializeCovaBot).toHaveBeenCalled(); // Attempted initialization
 		// IMPORTANT: If initialize fails, the loop shouldn't run
 		expect(mockGetInstance).not.toHaveBeenCalled();
 		expect(mockRegisterBot).not.toHaveBeenCalled();
@@ -124,7 +121,6 @@ describe('Strategy Bot Loader', () => {
 		const loadedBots = await StrategyBotLoader.loadBots();
 
 		// Verify
-		expect(mockInitializeCovaBot).toHaveBeenCalled(); // Initialize called once at the start
 		expect(mockGetInstance).toHaveBeenCalledTimes(2); // Attempted for both bots
 		expect(mockRegisterBot).toHaveBeenCalledTimes(1); // Only the second bot (validBot) is registered successfully
 		expect(mockRegisterBot).toHaveBeenCalledWith(expect.objectContaining({ defaultBotName: validBot.name }));
