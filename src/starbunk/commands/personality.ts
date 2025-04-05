@@ -117,7 +117,6 @@ Auxiliary Data:
 [USER WILL PROVIDE AUXILIARY DATA HERE, OR STATE 'NONE']"`;
 
 const MAX_MESSAGES_PER_CHANNEL = 100; // Maximum allowed by Discord API per fetch
-const MAX_CHANNELS_TO_SCAN = 50; // Scan all channels in typical server
 const MAX_CHANNEL_HISTORY_FETCHES = 10; // Will fetch up to 1,000 messages per channel (10 × 100)
 // Using larger context window for modern models - max tokens available for processing
 const _MAX_TOKENS = 32000;
@@ -193,10 +192,19 @@ export default {
 			// Collect messages from channels
 			const userMessages = await collectUserMessages(guild, targetUser, interaction);
 
+			// Check if we have enough messages for meaningful analysis
 			if (userMessages.length === 0) {
 				// Release the lock before returning
 				analysisLock.release();
 				await interaction.editReply(`No messages found from ${targetUser.username} in accessible channels.`);
+				return;
+			}
+			
+			// Require at least 10 messages for a meaningful analysis
+			if (userMessages.length < 10) {
+				// Release the lock before returning
+				analysisLock.release();
+				await interaction.editReply(`Not enough messages found from ${targetUser.username}. Found ${userMessages.length} messages, but at least 10 are needed for a meaningful analysis.`);
 				return;
 			}
 
@@ -254,7 +262,7 @@ async function collectUserMessages(guild: Guild, targetUser: User, interaction: 
 	const userMessages: string[] = [];
 
 	try {
-		// Get all text channels
+		// Get all text channels without limit
 		const channels = Array.from(guild.channels.cache.values())
 			.filter(channel =>
 				channel.isTextBased() &&
@@ -262,8 +270,7 @@ async function collectUserMessages(guild: Guild, targetUser: User, interaction: 
 					PermissionFlagsBits.ViewChannel,
 					PermissionFlagsBits.ReadMessageHistory
 				])
-			)
-			.slice(0, MAX_CHANNELS_TO_SCAN);
+			);
 
 		// Initialize progress state
 		const progressState: ProgressState = {
@@ -299,7 +306,7 @@ async function collectUserMessages(guild: Guild, targetUser: User, interaction: 
 					if (messages.size === 0) break;
 
 					const userChannelMessages = messages
-						.filter(msg => msg.author.id === targetUser.id)
+						.filter(msg => msg.author.id === targetUser.id && msg.content.trim().length > 0)
 						.map(msg => {
 							return `[${msg.createdAt.toISOString()}] ${msg.content}${msg.attachments.size > 0 ? ` [Has ${msg.attachments.size} attachments]` : ''}${msg.embeds.length > 0 ? ` [Has ${msg.embeds.length} embeds]` : ''}`;
 						});
