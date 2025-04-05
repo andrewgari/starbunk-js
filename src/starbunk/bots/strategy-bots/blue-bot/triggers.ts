@@ -108,7 +108,10 @@ export const triggerBlueBotMention = createTriggerResponse({
 export const triggerBlueBotLlmDetection = createTriggerResponse({
 	name: 'blue-ai-generated',
 	priority: 6,
-	condition: llmDetects(BLUE_BOT_PROMPTS.DeceptiveCheck),
+	condition: and(
+		(message: Message) => message.content.trim().length > 0,
+		llmDetects(BLUE_BOT_PROMPTS.DeceptiveCheck)
+	),
 	response: () => BLUE_BOT_RESPONSES.Default,
 	identity: {
 		botName: BLUE_BOT_NAME,

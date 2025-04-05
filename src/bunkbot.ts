@@ -1,5 +1,6 @@
 // Register module aliases for path resolution
 // Import environment first to ensure environment variables are loaded
+import { execSync } from 'child_process';
 import { environment } from './config';
 import { logger } from './services/logger';
 import SnowbunkClient from './snowbunk/snowbunkClient';
@@ -79,6 +80,18 @@ async function initializeClients(): Promise<void> {
 
 async function runBots(): Promise<void> {
 	try {
+		// Ensure database schema is up-to-date
+		logger.info('Checking and applying database schema...');
+		try {
+			execSync('npx prisma db push', { stdio: 'inherit' });
+			logger.info('Database schema is up-to-date.');
+		} catch (dbError) {
+			logger.error('Failed to apply database schema:', dbError instanceof Error ? dbError : new Error(String(dbError)));
+			// Depending on the desired behavior, you might want to exit here
+			// process.exit(1);
+			// Or allow the application to continue if the database isn't strictly required for all functions
+		}
+
 		// Register process handlers once at startup
 		registerProcessHandlers();
 
