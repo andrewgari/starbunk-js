@@ -1,0 +1,139 @@
+name: Docker Build and Publish
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+    types: [opened, synchronize, reopened, closed] # Added 'closed' trigger
+
+env:
+  REGISTRY: ghcr.io
+  # IMAGE_NAME will be set dynamically using github.repository
+  # Example: ghcr.io/andrewgari/starbunk-js
+
+jobs:
+  build-and-push:
+    # Only run on push to main or open/sync/reopen PRs, not on PR close
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    # Grant permissions to write packages (Docker images)
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} # Use the built-in GITHUB_TOKEN
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} # Use IMAGE_NAME env var
+          tags: |
+            # tag as :pr-<pr-number> on PR events
+            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+            # tag as :latest on push to main branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Set Dockerfile path based on event
+        id: dockerfile
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "DOCKERFILE_PATH=Dockerfile.dev" >> $GITHUB_OUTPUT
+            echo "Using Dockerfile.dev for PR build"
+          else # Push to main
+            echo "DOCKERFILE_PATH=Dockerfile.prod" >> $GITHUB_OUTPUT
+            echo "Using Dockerfile.prod for main branch build"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ steps.dockerfile.outputs.DOCKERFILE_PATH }}
+          push: true # Push the image
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha # Enable GitHub Actions cache for builds
+          cache-to: type=gha,mode=max
+
+  delete-pr-image:
+    # Run this job only when a PR targeting main is closed AND merged
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write # Needs permission to delete packages
+      contents: read  # Needed to use gh api (might access repo info)
+
+    steps:
+      - name: Get PR Number
+        id: pr_number
+        run: echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+
+      - name: Get Package Version ID for PR tag
+        id: pkg
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_FULL_NAME: ${{ github.repository }} # e.g., owner/repo
+          PR_TAG: pr-${{ steps.pr_number.outputs.PR_NUMBER }}
+        run: |
+          # Split OWNER/REPO
+          OWNER=$(echo $REPO_FULL_NAME | cut -d '/' -f 1)
+          PACKAGE_NAME=$(echo $REPO_FULL_NAME | cut -d '/' -f 2)
+          echo "Looking for tag: $PR_TAG in package $PACKAGE_NAME owned by $OWNER"
+
+          # Determine if owner is org or user (heuristic: check account type via API)
+          OWNER_TYPE=$(gh api /users/$OWNER --jq '.type')
+
+          API_PATH=""
+          if [[ "$OWNER_TYPE" == "Organization" ]]; then
+            API_PATH="/orgs/$OWNER/packages/container/$PACKAGE_NAME/versions"
+          else # Assume User
+            API_PATH="/users/$OWNER/packages/container/$PACKAGE_NAME/versions"
+          fi
+          echo "Using API path: $API_PATH"
+
+          VERSION_ID=$(gh api \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            $API_PATH \
+            --jq ".[] | select(.metadata.container.tags[] == \"$PR_TAG\") | .id")
+
+          if [ -z "$VERSION_ID" ]; then
+            echo "Could not find version ID for tag $PR_TAG. Skipping deletion."
+            # Exit successfully if tag not found (it might have been deleted manually or never created)
+            echo "VERSION_ID=" >> $GITHUB_OUTPUT # Set empty VERSION_ID
+            echo "API_PATH=" >> $GITHUB_OUTPUT
+          else
+            echo "Found Version ID: $VERSION_ID"
+            echo "VERSION_ID=$VERSION_ID" >> $GITHUB_OUTPUT
+            echo "API_PATH=$API_PATH" >> $GITHUB_OUTPUT # Pass API path to next step
+          fi
+
+      - name: Delete package version using gh CLI
+        # Only run if a VERSION_ID was found
+        if: steps.pkg.outputs.VERSION_ID != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          API_PATH: ${{ steps.pkg.outputs.API_PATH }} # Use path determined previously
+          VERSION_ID: ${{ steps.pkg.outputs.VERSION_ID }}
+        run: |
+          echo "Deleting package version ID $VERSION_ID using path $API_PATH/$VERSION_ID"
+          gh api \
+            --method DELETE \
+            $API_PATH/$VERSION_ID \
+            --silent # Suppress output unless error
+
+          echo "Deletion attempt complete for tag pr-${{ steps.pr_number.outputs.PR_NUMBER }}"

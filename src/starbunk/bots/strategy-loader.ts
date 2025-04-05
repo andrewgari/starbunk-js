@@ -92,4 +92,4 @@ export class StrategyBotLoader {
 	}
 }
 
-export const loadStrategyBots = StrategyBotLoader.loadBots;
+export const loadStrategyBots = StrategyBotLoader.loadBots.bind(StrategyBotLoader);
