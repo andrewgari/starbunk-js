@@ -24,6 +24,15 @@ RUN apt-get update && apt-get install -y \
 # Install global npm packages needed for development
 RUN npm install -g npm@latest ts-node typescript ts-node-dev
 
+# Copy package files first to leverage Docker cache
+COPY --chown=bunkbot:bunkbot package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm install
+
+# Copy the rest of the application source code
+COPY --chown=bunkbot:bunkbot . .
+
 # Switch to non-root user
 USER bunkbot
 
