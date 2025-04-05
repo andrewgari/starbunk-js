@@ -26,21 +26,41 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Add step to create package if it doesn't exist
-      - name: Create package if not exists
+      # Check if owner is org or user and set package visibility
+      - name: Configure package settings
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
         run: |
-          # Check if package exists
-          package_exists=$(gh api -H "Accept: application/vnd.github+json" \
-            /user/packages/container/${{ github.event.repository.name }} --silent || echo "false")
+          # Determine if owner is org or user
+          owner_type=$(gh api /users/$OWNER --jq .type)
+          echo "Owner type is: $owner_type"
+
+          # Set API path based on owner type
+          if [ "$owner_type" = "Organization" ]; then
+            base_path="/orgs/$OWNER"
+          else
+            base_path="/users/$OWNER"
+          fi
+
+          # Try to get package info first
+          echo "Checking package existence..."
+          package_exists=$(gh api $base_path/packages/container/${{ github.event.repository.name }} --silent && echo "true" || echo "false")
 
           if [ "$package_exists" = "false" ]; then
-            echo "Creating package..."
-            gh api --method POST -H "Accept: application/vnd.github+json" \
-              /user/packages/container/${{ github.event.repository.name }} \
-              -f visibility='public'
+            echo "Package doesn't exist, ensuring proper visibility..."
+            # For organizations
+            if [ "$owner_type" = "Organization" ]; then
+              gh api --method POST $base_path/packages/container/${{ github.event.repository.name }}/visibility \
+                -f visibility='public' || true
+            fi
           fi
+
+          # Ensure repository has access to the package
+          echo "Setting up repository access..."
+          gh api --method PUT $base_path/packages/container/${{ github.event.repository.name }}/actions-access \
+            -f repository_id=${{ github.repository_id }} \
+            -f permission='write' || true
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
