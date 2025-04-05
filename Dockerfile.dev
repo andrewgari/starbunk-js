@@ -1,54 +1,53 @@
 # Development image
-FROM node:20-slim
+FROM node:20-slim as builder
 
 WORKDIR /app
 
-# Create app user/group and required directories with proper permissions
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install global npm packages
+RUN npm install -g npm@latest typescript@latest ts-node ts-node-dev && \
+    npm cache clean --force
+
+# Copy package files
+COPY package*.json ./
+COPY src/starbunk/bots/strategy-bots/package*.json ./src/starbunk/bots/strategy-bots/
+
+# Install dependencies
+RUN npm ci && \
+    cd src/starbunk/bots/strategy-bots && \
+    npm ci && \
+    cd /app && \
+    npm cache clean --force
+
+# Copy source code
+COPY . .
+
+# Build TypeScript code
+RUN npm run build && \
+    npx prisma generate
+
+# Create non-root user
 RUN groupadd -r bunkbot && \
-    useradd -r -g bunkbot -s /bin/false bunkbot && \
-    mkdir -p /app/data \
-            /app/data/campaigns \
-            /app/data/llm_context \
-            /app/scripts \
-            /app/src \
-            /app/dist && \
-    chown -R bunkbot:bunkbot /app && \
-    chmod -R 755 /app && \
-    chmod 777 /app/data
-
-# Install ffmpeg and development dependencies
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install global npm packages needed for development
-RUN npm install -g npm@latest ts-node typescript ts-node-dev
-
-# Copy package files first to leverage Docker cache
-COPY --chown=bunkbot:bunkbot package*.json ./
-COPY --chown=bunkbot:bunkbot src/starbunk/bots/strategy-bots/package*.json ./src/starbunk/bots/strategy-bots/
-
-# Install all dependencies (including dev dependencies)
-RUN npm install
-RUN cd src/starbunk/bots/strategy-bots && npm install
-
-# Copy the rest of the application source code
-COPY --chown=bunkbot:bunkbot . .
-
-# Build the TypeScript code including strategy-bots
-RUN npm run build
+    useradd -r -g bunkbot -d /home/bunkbot -m bunkbot && \
+    mkdir -p /app/data /app/data/campaigns /app/data/llm /app/data/vectors && \
+    chown -R bunkbot:bunkbot /app
 
 # Switch to non-root user
 USER bunkbot
+
+# Set environment variables
+ENV NODE_ENV=development \
+    DEBUG=true \
+    TS_NODE_DEV=true
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD node healthcheck.js
 
-# Default to development mode
-ENV NODE_ENV=development \
-    DEBUG=true \
-    TS_NODE_DEV=true
-
-# Run in development mode using the dev script which includes tsconfig-paths/register
+# Start development server
 CMD ["npm", "run", "dev"]
