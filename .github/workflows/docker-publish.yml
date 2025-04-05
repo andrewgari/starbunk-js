@@ -16,10 +16,11 @@ jobs:
     # Only run on push to main or open/sync/reopen PRs, not on PR close
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
-    # Grant permissions to write packages (Docker images)
-    permissions:
+    permissions: # Explicitly set all required permissions
       contents: read
       packages: write
+      actions: write # Needed for cache operations
+      security-events: write # If you're using any security scanning
 
     steps:
       - name: Checkout repository
