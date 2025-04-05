@@ -7,16 +7,21 @@ WORKDIR /app
 COPY package*.json ./
 COPY src/starbunk/bots/strategy-bots/package*.json ./src/starbunk/bots/strategy-bots/
 
-# Install dependencies before copying the source code
-RUN npm ci
-RUN cd src/starbunk/bots/strategy-bots && npm ci
+# Install dependencies and global tools needed for build
+RUN npm ci && \
+    npm install -g typescript@latest ts-node tsc-alias && \
+    cd src/starbunk/bots/strategy-bots && npm ci
 
 # Copy the rest of the source code
 COPY . .
 
 # Build the TypeScript project
-RUN cd src/starbunk/bots/strategy-bots && npm run build
-RUN npm run type-check:relaxed && tsc -p tsconfig-check.json && tsc-alias
+# First build strategy-bots, then run type checks from root
+RUN cd src/starbunk/bots/strategy-bots && npm run build && \
+    cd ../../../.. && \
+    npm run type-check:relaxed && \
+    npx tsc -p tsconfig-check.json && \
+    npx tsc-alias
 
 # Stage 2: Runtime image
 FROM node:20-slim AS runtime
