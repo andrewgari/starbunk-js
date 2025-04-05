@@ -9,8 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # IMAGE_NAME will be set dynamically using github.repository
-  # Example: ghcr.io/andrewgari/starbunk-js
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push:
@@ -37,7 +36,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} # Use IMAGE_NAME env var
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
           tags: |
             # tag as :pr-<pr-number> on PR events
             type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
