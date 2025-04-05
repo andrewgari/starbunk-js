@@ -58,4 +58,4 @@ jobs:
           gh api \
             --method DELETE \
             /user/packages/container/${{ github.event.repository.name }}/versions \
-            -f package_version_id=$(gh api /user/packages/container/${{ github.event.repository.name }}/versions --jq ".[] | select(.metadata.container.tags[] == \"pr-${PR_NUMBER}\") | .id")
+            -f package_version_id="$(gh api /user/packages/container/${{ github.event.repository.name }}/versions --jq ".[] | select(.metadata.container.tags[] == \"pr-${PR_NUMBER}\") | .id")"
