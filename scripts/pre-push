@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Get the current branch name
+current_branch=$(git symbolic-ref --short HEAD)
+
+# Get the remote branch we're pushing to
+remote_branch=$(git rev-parse --abbrev-ref @{u} 2>/dev/null || echo "origin/main")
+
+# Get list of changed files between current branch and remote
+changed_files=$(git diff --name-only $remote_branch...HEAD)
+
+# Function to check if core app files were modified
+check_core_files() {
+    echo "$changed_files" | grep -qE '^(src/|tests/|package\.json|package-lock\.json|tsconfig.*\.json|jest\.config\.js|vite\.config\.ts)'
+}
+
+# Function to check if only skippable files were modified
+only_skippable_files_changed() {
+    # If there are no changes, return false
+    if [ -z "$changed_files" ]; then
+        return 1
+    fi
+
+    # Check if all changed files are in .github/workflows/ or scripts/
+    for file in $changed_files; do
+        if [[ ! "$file" =~ ^(\.github/workflows/|scripts/) ]]; then
+            return 1
+        fi
+    done
+    return 0
+}
+
+# Main logic
+if only_skippable_files_changed; then
+    echo "✅ Only GitHub Actions workflows or scripts were modified. Skipping checks."
+    exit 0
+fi
+
+if check_core_files; then
+    echo "🔍 Core application files were modified. Running all checks..."
+    npm run check:all
+    exit_code=$?
+
+    if [ $exit_code -ne 0 ]; then
+        echo "❌ Checks failed. Please fix the issues before pushing."
+        exit $exit_code
+    fi
+    echo "✅ All checks passed!"
+else
+    echo "✅ No core application files were modified. Skipping checks."
+fi
+
+exit 0

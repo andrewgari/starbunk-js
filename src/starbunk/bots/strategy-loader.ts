@@ -6,6 +6,13 @@ import ReplyBot from './replyBot';
 import { strategyBots } from './strategy-bots';
 import { initializeCovaBot } from './strategy-bots/cova-bot';
 
+class StrategyBotError extends Error {
+	constructor(message: string, public readonly cause?: unknown) {
+		super(message);
+		this.name = 'StrategyBotError';
+	}
+}
+
 interface StrategyLoaderConfig {
 	covaConfig?: {
 		personalityEmbedding?: Float32Array;
@@ -20,29 +27,49 @@ interface StrategyLoaderConfig {
 export class StrategyBotLoader {
 	// Let errors propagate up from the underlying initializeCovaBot
 	private static async initializeCovaBot(): Promise<StrategyLoaderConfig> {
-		const covaConfig = await initializeCovaBot();
-		return { covaConfig };
+		try {
+			const covaConfig = await initializeCovaBot();
+			return { covaConfig };
+		} catch (error) {
+			throw new StrategyBotError('Failed to initialize CovaBot', error);
+		}
 	}
 
 	private static validateBot(bot: unknown): bot is StrategyBot {
-		const strategyBot = bot as Partial<StrategyBot>;
-		const isValid = !!(
-			strategyBot &&
-			typeof strategyBot.name === 'string' &&
-			typeof strategyBot.description === 'string' &&
-			typeof strategyBot.processMessage === 'function'
-		);
-
-		if (!isValid) {
-			logger.warn(`Invalid strategy bot detected: ${JSON.stringify(strategyBot)}`);
+		if (!bot || typeof bot !== 'object') {
+			logger.warn('Invalid strategy bot: not an object');
+			return false;
 		}
 
-		return isValid;
+		const requiredProps = {
+			name: 'string',
+			description: 'string',
+			processMessage: 'function'
+		} as const;
+
+		const missingProps = Object.entries(requiredProps).filter(([prop, type]) => {
+			const value = (bot as Record<string, unknown>)[prop];
+			return typeof value !== type;
+		});
+
+		if (missingProps.length > 0) {
+			logger.warn(
+				`Invalid strategy bot: missing or invalid properties: ${missingProps.map(([prop]) => prop).join(', ')
+				}`
+			);
+			return false;
+		}
+
+		return true;
 	}
 
 	private static adaptBot(bot: StrategyBot): ReplyBot {
-		logger.debug(`Adapting strategy bot: ${bot.name}`);
-		return new StrategyBotAdapter(bot);
+		try {
+			logger.debug(`Adapting strategy bot: ${bot.name}`);
+			return new StrategyBotAdapter(bot);
+		} catch (error) {
+			throw new StrategyBotError(`Failed to adapt bot ${bot.name}`, error);
+		}
 	}
 
 	public static async loadBots(): Promise<ReplyBot[]> {
@@ -50,46 +77,50 @@ export class StrategyBotLoader {
 		const loadedBots: ReplyBot[] = [];
 
 		try {
-			// Initialize CovaBot first. If this fails, the outer catch will handle it.
+			// Initialize CovaBot first
 			await this.initializeCovaBot();
 
 			// Load and adapt all other bots
 			for (const bot of strategyBots) {
 				try {
-					if (StrategyBotLoader.validateBot(bot)) {
-						const adaptedBot = StrategyBotLoader.adaptBot(bot);
+					if (this.validateBot(bot)) {
+						const adaptedBot = this.adaptBot(bot);
 						const registryInstance = BotRegistry.getInstance();
 						registryInstance.registerBot(adaptedBot);
-						// Only push the bot if adaptation and registration succeed
 						loadedBots.push(adaptedBot);
 						logger.debug(`Successfully loaded bot: ${bot.name}`);
 					}
 				} catch (error) {
-					// Log the error for the specific bot but continue loading others
+					const botName = this.validateBot(bot) ? bot.name : 'unknown';
 					logger.error(
-						`Failed to load bot: ${(bot as Partial<StrategyBot>)?.name || 'unknown'}`,
-						error instanceof Error ? error : new Error(String(error))
+						`Failed to load bot: ${botName}`,
+						error instanceof Error ? error : new StrategyBotError(`Unknown error loading bot ${botName}`, error)
 					);
 				}
 			}
 
-			// Log summary
-			logger.info(`📊 Successfully loaded ${loadedBots.length} strategy bots`);
-			if (loadedBots.length > 0) {
-				logger.info('📋 Strategy bots summary:');
-				loadedBots.forEach(bot => {
-					logger.info(`   - ${bot.defaultBotName} (${bot.constructor.name})`);
-				});
-			}
+			this.logLoadingSummary(loadedBots);
 		} catch (error) {
-			// Catch errors from initializeCovaBot or other unexpected critical errors
-			logger.error('Critical error loading strategy bots:', error instanceof Error ? error : new Error(String(error)));
-			// Return empty array as loading failed critically
+			logger.error(
+				'Critical error loading strategy bots:',
+				error instanceof Error ? error : new StrategyBotError('Unknown critical error', error)
+			);
 			return [];
 		}
 
 		return loadedBots;
 	}
+
+	private static logLoadingSummary(loadedBots: ReplyBot[]): void {
+		logger.info(`📊 Successfully loaded ${loadedBots.length} strategy bots`);
+		if (loadedBots.length > 0) {
+			logger.info('📋 Strategy bots summary:');
+			loadedBots.forEach(bot => {
+				logger.info(`   - ${bot.defaultBotName} (${bot.constructor.name})`);
+			});
+		}
+	}
 }
 
-export const loadStrategyBots = StrategyBotLoader.loadBots;
+// Bind the static method to its class to preserve 'this' context
+export const loadStrategyBots = StrategyBotLoader.loadBots.bind(StrategyBotLoader);

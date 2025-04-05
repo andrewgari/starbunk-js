@@ -1,4 +1,32 @@
-# Development image
+# Stage 1: Build the application
+FROM node:20-slim AS builder
+
+WORKDIR /app
+
+# Install build tools (if needed for dependencies like node-gyp)
+# RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+
+# Copy package files and install production dependencies
+COPY package*.json ./
+# Ensure clean install of only production deps
+RUN npm ci --omit=dev
+
+# Copy the rest of the application source code
+# Copy only necessary files for build to optimize layer caching
+COPY tsconfig.json ./
+COPY src ./src
+COPY scripts ./scripts
+# Copy other necessary config files if any
+
+# Build the application
+RUN npm run build
+
+# Clean up unnecessary build files if possible
+# RUN rm -rf src tsconfig.json
+
+# ---
+
+# Stage 2: Production image
 FROM node:20-slim
 
 WORKDIR /app
@@ -8,33 +36,36 @@ RUN groupadd -r bunkbot && \
     useradd -r -g bunkbot -s /bin/false bunkbot && \
     mkdir -p /app/data \
             /app/data/campaigns \
-            /app/data/llm_context \
-            /app/scripts \
-            /app/src \
-            /app/dist && \
-    chown -R bunkbot:bunkbot /app && \
+            /app/data/llm_context && \
+    chown -R bunkbot:bunkbot /app/data && \
     chmod -R 755 /app && \
     chmod 777 /app/data
 
-# Install ffmpeg and development dependencies
-RUN apt-get update && apt-get install -y \
+# Install ffmpeg (needed at runtime)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install global npm packages needed for development
-RUN npm install -g npm@latest ts-node typescript ts-node-dev
+# Copy built application and necessary node_modules from the builder stage
+COPY --from=builder --chown=bunkbot:bunkbot /app/dist ./dist
+COPY --from=builder --chown=bunkbot:bunkbot /app/node_modules ./node_modules
+COPY --from=builder --chown=bunkbot:bunkbot /app/package.json ./package.json
+# Copy healthcheck script if it exists and is needed
+# COPY --from=builder --chown=bunkbot:bunkbot /app/healthcheck.js ./healthcheck.js
+# Copy any other necessary runtime files (e.g., static assets, .env files are usually handled outside the image)
 
 # Switch to non-root user
 USER bunkbot
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD node healthcheck.js
+# Health check (adjust CMD if healthcheck.js path or command differs)
+# HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+#     CMD node healthcheck.js
 
-# Default to development mode
-ENV NODE_ENV=development \
-    DEBUG=true \
-    TS_NODE_DEV=true
+# Set environment to production
+ENV NODE_ENV=production
 
-# Run in development mode
-CMD ["npm", "run", "dev"]
+# Expose port if needed
+# EXPOSE 3000
+
+# Run the application using the start script defined in package.json
+CMD ["npm", "run", "start"]

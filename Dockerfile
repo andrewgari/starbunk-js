@@ -1,25 +1,30 @@
+# Stage 1: Install dependencies and build (builder stage)
 FROM node:20-slim AS builder
-
-ARG NODE_ENV=development
-ENV NODE_ENV=$NODE_ENV
 
 WORKDIR /app
 
-# Install global dependencies
-RUN npm install -g typescript tsc-alias
-
+# Copy package.json and lockfiles first to leverage caching
 COPY package*.json ./
 COPY src/starbunk/bots/strategy-bots/package*.json ./src/starbunk/bots/strategy-bots/
-RUN npm ci
-RUN cd src/starbunk/bots/strategy-bots && npm ci
+
+# Install dependencies and global tools needed for build
+RUN npm ci && \
+    npm install -g typescript@latest ts-node tsc-alias && \
+    cd src/starbunk/bots/strategy-bots && npm ci
+
+# Copy the rest of the source code
 COPY . .
-RUN cd src/starbunk/bots/strategy-bots && npm run build
-RUN npm run type-check:relaxed && tsc -p tsconfig-check.json && tsc-alias
 
+# Build the TypeScript project
+# First build strategy-bots, then run type checks from root
+RUN cd src/starbunk/bots/strategy-bots && npm run build && \
+    cd ../../../.. && \
+    npm run type-check:relaxed && \
+    npx tsc -p tsconfig-check.json && \
+    npx tsc-alias
+
+# Stage 2: Runtime image
 FROM node:20-slim AS runtime
-
-ARG NODE_ENV=development
-ENV NODE_ENV=$NODE_ENV
 
 WORKDIR /app
 
@@ -33,10 +38,9 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy files from builder
+# Copy only the necessary files from the builder stage
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/src ./src
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/tsconfig*.json ./
 COPY --from=builder /app/prisma ./prisma
@@ -53,7 +57,7 @@ RUN mkdir -p /app/data /app/data/campaigns /app/data/llm_context && \
 
 USER bunkbot
 
-# Generate Prisma client as bunkbot user
+# Generate Prisma client and run migrations
 RUN npx prisma generate && \
     npx prisma migrate deploy
 
