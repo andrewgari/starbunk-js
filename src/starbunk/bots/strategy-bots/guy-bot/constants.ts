@@ -1,6 +1,7 @@
 // Constants for Guy Bot
 export const GUY_BOT_NAME = 'GuyBot';
 export const GUY_BOT_AVATAR_URL = 'https://i.imgur.com/default-guy.jpg';
+export const GUY_TRIGGER_CHANCE = 10; // 10% chance to respond to Guy's messages
 
 export const GUY_BOT_PATTERNS = {
 	Default: /\bguy\b/i
