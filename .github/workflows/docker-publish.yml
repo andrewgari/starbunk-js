@@ -1,8 +1,6 @@
-name: Docker Build and Publish
+name: PR Docker Image Publisher
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
     types: [opened, synchronize, reopened, closed]
@@ -12,14 +10,12 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+  publish-pr-image:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
     runs-on: ubuntu-latest
-
-    # Set permissions at job level
     permissions:
-      contents: read
       packages: write
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -33,29 +29,20 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
-      - name: Set Dockerfile path based on event
-        id: dockerfile
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "DOCKERFILE_PATH=Dockerfile.dev" >> $GITHUB_OUTPUT
-          else
-            echo "DOCKERFILE_PATH=Dockerfile.prod" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build and push Docker image
+      - name: Tag and Push PR Image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ steps.dockerfile.outputs.DOCKERFILE_PATH }}
+          file: Dockerfile.dev  # Always use dev Dockerfile for PRs
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'latest' }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   delete-pr-image:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -64,7 +51,7 @@ jobs:
     steps:
       - name: Delete PR image
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GHCR_PAT }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           echo "Attempting to delete PR image tag pr-${PR_NUMBER}..."
