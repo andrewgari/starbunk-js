@@ -14,16 +14,16 @@ check_core_files() {
     echo "$changed_files" | grep -qE '^(src/|tests/|package\.json|package-lock\.json|tsconfig.*\.json|jest\.config\.js|vite\.config\.ts)'
 }
 
-# Function to check if only GitHub Actions files were modified
-only_github_actions_changed() {
+# Function to check if only skippable files were modified
+only_skippable_files_changed() {
     # If there are no changes, return false
     if [ -z "$changed_files" ]; then
         return 1
     fi
 
-    # Check if all changed files are in .github/workflows/
+    # Check if all changed files are in .github/workflows/ or scripts/
     for file in $changed_files; do
-        if [[ ! "$file" =~ ^\.github/workflows/ ]]; then
+        if [[ ! "$file" =~ ^(\.github/workflows/|scripts/) ]]; then
             return 1
         fi
     done
@@ -31,8 +31,8 @@ only_github_actions_changed() {
 }
 
 # Main logic
-if only_github_actions_changed; then
-    echo "✅ Only GitHub Actions workflows were modified. Skipping checks."
+if only_skippable_files_changed; then
+    echo "✅ Only GitHub Actions workflows or scripts were modified. Skipping checks."
     exit 0
 fi
 
