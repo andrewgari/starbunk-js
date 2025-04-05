@@ -38,9 +38,14 @@ module.exports = {
 			isolatedModules: false
 		}]
 	},
+	transformIgnorePatterns: [
+		'node_modules/(?!@xenova/transformers)'
+	],
 	moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 	setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],
 	moduleNameMapper: {
-		'^@/(.*)$': '<rootDir>/src/$1'
+		'^@/(.*)$': '<rootDir>/src/$1',
+		// Mock @xenova/transformers for tests
+		'^@xenova/transformers$': '<rootDir>/src/tests/mocks/transformers.ts'
 	}
 };

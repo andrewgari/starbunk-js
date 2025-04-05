@@ -58,7 +58,19 @@ export class SQLiteCampaignRepository implements CampaignRepository {
 
 	public async findAll(): Promise<Campaign[]> {
 		const campaigns = await this.prisma.campaign.findMany();
-		return campaigns.map(campaign => ({
+		return campaigns.map((campaign: {
+			id: string;
+			name: string;
+			system: string;
+			textChannelId: string;
+			voiceChannelId: string;
+			gmId: string;
+			adventureId: string | null;
+			isActive: boolean;
+			createdAt: Date;
+			updatedAt: Date;
+			metadata: string | null;
+		}) => ({
 			id: campaign.id,
 			name: campaign.name,
 			system: JSON.parse(campaign.system) as GameSystem,

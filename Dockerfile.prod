@@ -1,0 +1,40 @@
+# Development image
+FROM node:20-slim
+
+WORKDIR /app
+
+# Create app user/group and required directories with proper permissions
+RUN groupadd -r bunkbot && \
+    useradd -r -g bunkbot -s /bin/false bunkbot && \
+    mkdir -p /app/data \
+            /app/data/campaigns \
+            /app/data/llm_context \
+            /app/scripts \
+            /app/src \
+            /app/dist && \
+    chown -R bunkbot:bunkbot /app && \
+    chmod -R 755 /app && \
+    chmod 777 /app/data
+
+# Install ffmpeg and development dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install global npm packages needed for development
+RUN npm install -g npm@latest ts-node typescript ts-node-dev
+
+# Switch to non-root user
+USER bunkbot
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD node healthcheck.js
+
+# Default to development mode
+ENV NODE_ENV=development \
+    DEBUG=true \
+    TS_NODE_DEV=true
+
+# Run in development mode
+CMD ["npm", "run", "dev"]

@@ -3,10 +3,13 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
+            args:
+                NODE_ENV: development
         container_name: bunkbot
+        privileged: true
         env_file:
             - .env
-        command: node --enable-source-maps dist/bunkbot.js
+        command: npm run dev
         # Improve performance with resource limits
         deploy:
             resources:
@@ -14,13 +17,23 @@ services:
                     cpus: '2'
                     memory: 1G
         volumes:
-            - ./data:/app/data:Z
-            - /mnt/user/vault/ttrpg/campaigns:/app/data/campaigns:Z,ro
+            # Mount source code
+            - ./src:/app/src:Z
+            - ./dist:/app/dist:Z
+            - ./node_modules:/app/node_modules:Z
+            - ./package.json:/app/package.json:Z
+            - ./package-lock.json:/app/package-lock.json:Z
+            - ./tsconfig.json:/app/tsconfig.json:Z
+            # Data and config directories
+            - ./data:/app/data:Z,rw
+            - ./data/campaigns:/app/data/campaigns:Z,rw
             - ./scripts:/app/scripts:Z,ro
-            - ./data/llm_context:/app/data/llm_context:Z
-            - ./src/starbunk/bots/strategy-bots:/app/dist/starbunk/bots/strategy-bots:Z,ro
+            - ./data/llm_context:/app/data/llm_context:Z,rw
         environment:
             - PYTHONPATH=/app/scripts
             - VECTOR_CONTEXT_DIR=/app/data/llm_context
+            - NODE_ENV=development
+            - DEBUG=true
+            - TS_NODE_DEV=true
         # Add user mapping for rootless operation
         user: "1000:1000"  # Adjust these IDs to match your host user/group IDs

@@ -163,8 +163,7 @@ export async function bootstrapSnowbunkApplication(client: Client): Promise<void
 
 async function setUpDatabase(): Promise<void> {
 	// Ensure data directory exists
-	// Ensure data directory exists
-	const dataDir = path.join(process.cwd(), 'data');
+	const dataDir = path.join('/app', 'data');
 	await fs.mkdir(dataDir, { recursive: true });
 
 	// Initialize Prisma and ensure database exists
@@ -183,7 +182,7 @@ async function setUpDatabase(): Promise<void> {
 		// Run migrations
 		const { execSync } = require('child_process');
 		try {
-			execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+			execSync('npx prisma migrate deploy', { stdio: 'inherit', cwd: '/app' });
 			logger.info('Database migrations applied successfully');
 		} catch (migrationError) {
 			logger.error('Failed to apply migrations:', migrationError instanceof Error ? migrationError : new Error(String(migrationError)));
@@ -192,8 +191,6 @@ async function setUpDatabase(): Promise<void> {
 	} finally {
 		await prisma.$disconnect();
 	}
-
-	// Initialize Prisma and ensure database exists
 }
 
 // Helper functions to get services (type-safe)
