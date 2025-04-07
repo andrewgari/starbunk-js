@@ -8,7 +8,7 @@ export interface BotDefaults {
 }
 
 export const defaultBotConfig: BotDefaults = {
-	responseRate: 50, // Default to 50% response rate
+	responseRate: 100, // Default to 100% response rate
 	enabled: true,
 };
 

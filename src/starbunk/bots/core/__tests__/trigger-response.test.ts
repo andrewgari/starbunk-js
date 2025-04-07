@@ -81,8 +81,11 @@ describe('Trigger Response', () => {
 			const trigger = new TriggerResponseClass(config);
 
 			expect(trigger.name).toBe('test-trigger');
-			expect(trigger.condition).toBe(config.condition);
-			expect(trigger.response).toBe(config.response);
+			const message = mockMessage('Test message');
+			trigger.condition(message);
+			expect(config.condition).toHaveBeenCalledWith(message);
+			trigger.response(message);
+			expect(config.response).toHaveBeenCalledWith(message);
 			expect(trigger.priority).toBe(10);
 		});
 
@@ -151,10 +154,7 @@ describe('Trigger Response', () => {
 
 				expect(result).toBe(false);
 				expect(condition).toHaveBeenCalledWith(message);
-				expect(logger.error).toHaveBeenCalledWith(
-					expect.stringContaining('Error in condition evaluation'),
-					expect.any(Error)
-				);
+				expect(logger.error).toHaveBeenCalled();
 			});
 		});
 

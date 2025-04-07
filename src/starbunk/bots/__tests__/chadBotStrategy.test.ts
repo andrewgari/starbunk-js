@@ -23,7 +23,7 @@ describe('Chad Bot Strategy', () => {
 	});
 
 	it('should respond to messages with 10% chance', async () => {
-		const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(CHAD_RESPONSE_CHANCE - 0.01);
+		const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(CHAD_RESPONSE_CHANCE / 100 - 0.01);
 
 		const message = mockMessage('Any random message');
 		await chadBot.processMessage(message);
@@ -40,7 +40,7 @@ describe('Chad Bot Strategy', () => {
 	});
 
 	it('should not respond to messages if random value is above threshold', async () => {
-		const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(CHAD_RESPONSE_CHANCE + 0.01);
+		const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(CHAD_RESPONSE_CHANCE / 100 + 0.01);
 
 		const message = mockMessage('Any random message');
 		await chadBot.processMessage(message);

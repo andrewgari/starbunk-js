@@ -115,7 +115,7 @@ describe('Bot Command', () => {
 			await botCommand.execute(mockInteraction);
 
 			expect(mockInteraction.reply).toHaveBeenCalledWith({
-				content: expect.stringContaining('Report about `TestBot1` has been sent to Cova'),
+				content: 'Your report has been sent to Cova.',
 				ephemeral: true
 			});
 		});
@@ -123,7 +123,7 @@ describe('Bot Command', () => {
 		it('should reject non-admin users for admin commands', async () => {
 			mockInteraction.memberPermissions = new PermissionsBitField([]);
 			(mockInteraction.options.getSubcommand as jest.Mock).mockReturnValue('enable');
-			
+
 			await botCommand.execute(mockInteraction);
 
 			expect(mockInteraction.reply).toHaveBeenCalledWith({

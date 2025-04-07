@@ -66,7 +66,7 @@ jest.mock('../strategy-bots/blue-bot/triggers', () => {
 				}
 				return false;
 			}),
-			response: jest.fn().mockReturnValue(BLUE_BOT_RESPONSES.Cheeky[0]),
+			response: jest.fn().mockReturnValue(BLUE_BOT_RESPONSES.Default),
 			identity: jest.fn().mockReturnValue({
 				botName: BLUE_BOT_NAME,
 				avatarUrl: BLUE_BOT_AVATARS.Default
@@ -79,9 +79,7 @@ jest.mock('../strategy-bots/blue-bot/triggers', () => {
 				// Match any message that mentions blue
 				return /blue|blu/i.test(message.content);
 			}),
-			response: jest.fn().mockImplementation(() => {
-				return BLUE_BOT_RESPONSES.Default;
-			}),
+			response: jest.fn().mockReturnValue(BLUE_BOT_RESPONSES.Default),
 			identity: {
 				botName: BLUE_BOT_NAME,
 				avatarUrl: BLUE_BOT_AVATARS.Default

@@ -13,7 +13,7 @@ async function getChadIdentity(): Promise<BotIdentity> {
 	});
 }
 
-// Chad bot trigger - 10% chance to respond, but always responds to the real Chad
+// Chad bot trigger - 10% chance to respond, but never responds to the real Chad
 export const chadKeywordTrigger = createTriggerResponse({
 	name: 'chad-keyword-trigger',
 	priority: 1,

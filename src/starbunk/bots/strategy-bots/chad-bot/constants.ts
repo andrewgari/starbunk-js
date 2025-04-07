@@ -6,4 +6,4 @@ export const CHAD_BOT_AVATAR_URL = 'https://i.imgur.com/XFDYZYz.png';
 export const CHAD_RESPONSE = "What is bro *yappin* about?...";
 
 // Chance that Chad will respond (10%)
-export const CHAD_RESPONSE_CHANCE = 0.10;
+export const CHAD_RESPONSE_CHANCE = 10;

@@ -92,9 +92,9 @@ export class TriggerResponseClass {
 	// Check if this trigger matches the message
 	public async matches(message: Message): Promise<boolean> {
 		try {
-			return await this.condition(message);
+			return this.condition(message);
 		} catch (error) {
-			logger.error(`[TriggerResponse:${this.name}] Error in condition evaluation:`, error as Error);
+			logger.error('Error in condition evaluation', error as Error);
 			return false;
 		}
 	}

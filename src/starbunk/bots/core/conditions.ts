@@ -120,15 +120,15 @@ export function contextInChannel(channelId: string | ChannelId): ContextualTrigg
 }
 
 // Check based on random chance
-export function withChance(percentage: number | Percentage): TriggerCondition {
-	const chance = typeof percentage === 'number' ? createPercentage(percentage) : percentage;
-	return () => Math.random() * 100 < chance;
+export function withChance(chance: number): Condition {
+	const percentage = createPercentage(chance);
+	return () => Math.random() <= percentage / 100;
 }
 
 // Contextual version of withChance
 export function contextWithChance(percentage: number | Percentage): ContextualTriggerCondition {
 	const chance = typeof percentage === 'number' ? createPercentage(percentage) : percentage;
-	return () => Math.random() * 100 < chance;
+	return () => Math.random() <= chance / 100;
 }
 
 // Check if message is from a bot
@@ -322,22 +322,30 @@ export function convertContextualConditions(conditions: ContextualTriggerConditi
  * - Only processes bot messages if the condition explicitly includes fromBot()
  */
 export function withDefaultBotBehavior(botName: string, condition: TriggerCondition): TriggerCondition {
-	return async (message: Message) => {
-		// Check if the condition chain includes fromBot
-		const conditionString = condition.toString();
-		const explicitlyHandlesBots = conditionString.includes('fromBot');
+	return async (message: Message): Promise<boolean> => {
+		try {
+			// Skip bot messages if configured
+			if (message.author.bot) {
+				logger.debug(`[${botName}] Skipping message from bot user`);
+				return false;
+			}
 
-		// If message is from a bot and condition doesn't explicitly handle bots, ignore it
-		if (message.author.bot && !explicitlyHandlesBots) {
-			logger.debug(`[${botName}] Ignoring bot message (no explicit bot handling)`);
+			// Check the condition
+			const result = await condition(message);
+
+			// Log the result
+			if (result) {
+				logger.debug(`[${botName}] Condition matched`);
+			} else {
+				logger.debug(`[${botName}] Condition did not match`);
+			}
+
+			return result;
+		} catch (error) {
+			logger.error(`[${botName}] Error in condition:`,
+				error instanceof Error ? error : new Error(String(error)));
 			return false;
 		}
-
-		// If we get here, either:
-		// 1. Message is not from a bot
-		// 2. Condition explicitly handles bots with fromBot()
-		const result = condition(message);
-		return result instanceof Promise ? await result : result;
 	};
 }
 
