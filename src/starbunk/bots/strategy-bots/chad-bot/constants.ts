@@ -1,5 +1,5 @@
 // Constants for Chad Bot
-export const CHAD_BOT_NAME = 'Chad';
+export const CHAD_BOT_NAME = 'ChadBot';
 export const CHAD_BOT_AVATAR_URL = 'https://i.imgur.com/XFDYZYz.png';
 
 // Chad's single response

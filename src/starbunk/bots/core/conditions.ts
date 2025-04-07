@@ -315,3 +315,49 @@ function escapeRegExp(string: string): string {
 export function convertContextualConditions(conditions: ContextualTriggerCondition[]): TriggerCondition[] {
 	return conditions.map(condition => asCondition(condition));
 }
+
+/**
+ * Wraps a condition with the default bot behavior:
+ * - By default, ignores all bot messages
+ * - Only processes bot messages if the condition explicitly includes fromBot()
+ */
+export function withDefaultBotBehavior(botName: string, condition: TriggerCondition): TriggerCondition {
+	return async (message: Message) => {
+		// Check if the condition chain includes fromBot
+		const conditionString = condition.toString();
+		const explicitlyHandlesBots = conditionString.includes('fromBot');
+
+		// If message is from a bot and condition doesn't explicitly handle bots, ignore it
+		if (message.author.bot && !explicitlyHandlesBots) {
+			logger.debug(`[${botName}] Ignoring bot message (no explicit bot handling)`);
+			return false;
+		}
+
+		// If we get here, either:
+		// 1. Message is not from a bot
+		// 2. Condition explicitly handles bots with fromBot()
+		const result = condition(message);
+		return result instanceof Promise ? await result : result;
+	};
+}
+
+// Contextual version of withDefaultBotBehavior
+export function contextWithDefaultBotBehavior(botName: string, condition: ContextualTriggerCondition): ContextualTriggerCondition {
+	return async (context: ResponseContext) => {
+		// Check if the condition chain includes fromBot
+		const conditionString = condition.toString();
+		const explicitlyHandlesBots = conditionString.includes('fromBot');
+
+		// If message is from a bot and condition doesn't explicitly handle bots, ignore it
+		if (context.isFromBot && !explicitlyHandlesBots) {
+			logger.debug(`[${botName}] Ignoring bot message (no explicit bot handling)`);
+			return false;
+		}
+
+		// If we get here, either:
+		// 1. Message is not from a bot
+		// 2. Condition explicitly handles bots with fromBot()
+		const result = condition(context);
+		return result instanceof Promise ? await result : result;
+	};
+}

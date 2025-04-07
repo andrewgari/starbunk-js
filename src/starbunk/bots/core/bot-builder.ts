@@ -1,7 +1,9 @@
 import { Message } from 'discord.js';
 import { DiscordService } from '../../../services/discordService';
 import { logger } from '../../../services/logger';
+import { getBotDefaults } from '../../config/botDefaults';
 import { BotIdentity } from '../../types/botIdentity';
+import { withDefaultBotBehavior } from './conditions';
 import { TriggerResponse } from './trigger-response';
 
 /**
@@ -36,8 +38,8 @@ export interface StrategyBotConfig {
 	description: string;
 	defaultIdentity: BotIdentity;
 	triggers: TriggerResponse[];
-	skipBotMessages?: boolean;
-	responseRate?: number; // Add response rate at the bot level
+	defaultResponseRate?: number; // Bot's default response rate (overrides global default)
+	skipBotMessages?: boolean; // Whether to skip processing messages from other bots
 }
 
 /**
@@ -48,8 +50,7 @@ export interface ValidatedStrategyBotConfig {
 	description: BotDescription;
 	defaultIdentity: BotIdentity;
 	triggers: TriggerResponse[];
-	skipBotMessages: boolean;
-	responseRate: number; // Add default response rate
+	defaultResponseRate: number; // Bot's default response rate
 }
 
 /**
@@ -70,14 +71,16 @@ function validateBotConfig(config: StrategyBotConfig): ValidatedStrategyBotConfi
 		throw new Error('At least one trigger is required');
 	}
 
+	// Get global defaults
+	const globalDefaults = getBotDefaults();
+
 	// Return validated config with defaults
 	return {
 		name: config.name,
 		description: config.description,
 		defaultIdentity: config.defaultIdentity,
 		triggers: config.triggers,
-		skipBotMessages: config.skipBotMessages ?? true,
-		responseRate: config.responseRate ?? 100 // Default to 100% if not specified
+		defaultResponseRate: config.defaultResponseRate ?? globalDefaults.responseRate
 	};
 }
 
@@ -101,8 +104,13 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 	// Validate the configuration
 	const validConfig = validateBotConfig(config);
 
-	// Sort triggers by priority (higher first)
-	const sortedTriggers = [...validConfig.triggers].sort((a, b) => {
+	// Sort triggers by priority (higher first) and add bot name
+	const sortedTriggers = [...validConfig.triggers].map(trigger => ({
+		...trigger,
+		botName: validConfig.name,
+		// Wrap the condition with default bot behavior
+		condition: withDefaultBotBehavior(validConfig.name, trigger.condition)
+	})).sort((a, b) => {
 		const priorityA = a.priority || 0;
 		const priorityB = b.priority || 0;
 		// Corrected sort: Higher number (higher priority) comes first
@@ -114,24 +122,18 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 		name: validConfig.name,
 		description: validConfig.description,
 		metadata: {
-			responseRate: validConfig.responseRate
+			responseRate: validConfig.defaultResponseRate
 		},
 
 		async processMessage(message: Message): Promise<void> {
 			logger.debug(`[${validConfig.name}] Processing message from ${message.author.tag}`);
 
 			try {
-				// Skip bot messages if configured
-				if (validConfig.skipBotMessages && message.author.bot) {
-					logger.debug(`[${validConfig.name}] Skipping bot message`);
-					return;
-				}
-
 				// Check response rate
-				if (validConfig.responseRate < 100) {
+				if (validConfig.defaultResponseRate < 100) {
 					const randomNumber = Math.random() * 100;
-					if (randomNumber >= validConfig.responseRate) {
-						logger.debug(`[${validConfig.name}] Skipping message due to response rate (${randomNumber.toFixed(2)} >= ${validConfig.responseRate})`);
+					if (randomNumber >= validConfig.defaultResponseRate) {
+						logger.debug(`[${validConfig.name}] Skipping message due to response rate (${randomNumber.toFixed(2)} >= ${validConfig.defaultResponseRate})`);
 						return;
 					}
 				}
