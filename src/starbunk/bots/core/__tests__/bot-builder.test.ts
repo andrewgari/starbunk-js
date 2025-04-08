@@ -1,5 +1,6 @@
 import { DiscordService } from '../../../../services/discordService';
 import { logger } from '../../../../services/logger';
+import { getDiscordService } from '@/services/bootstrap';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { createBotDescription, createBotStrategyName, createStrategyBot } from '../bot-builder';
 
@@ -128,7 +129,7 @@ describe('Bot builder', () => {
 			};
 
 			// Mock discord service
-			const mockDiscordService = DiscordService.getInstance() as jest.Mocked<DiscordService>; // Assuming it's already mocked
+			const mockDiscordService = getDiscordService() as jest.Mocked<DiscordService>; // Assuming it's already mocked
 
 			// Create bot and process message
 			const bot = createStrategyBot(config);

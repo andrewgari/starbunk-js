@@ -4,7 +4,7 @@ import guildIds from '../../discord/guildIds';
 import { Campaign } from '../../domain/models';
 import { CampaignMetadata, CampaignRepository, CreateCampaignData } from '../../domain/repositories';
 import { RepositoryFactory } from '../../infrastructure/persistence/repositoryFactory';
-import { DiscordService } from '../../services/discordService';
+import { getDiscordService } from '@/services/bootstrap';
 import { logger } from '../../services/logger';
 import { GameSystem, SUPPORTED_SYSTEMS } from '../types/game';
 import { CampaignFileService } from './campaignFileService';
@@ -138,7 +138,7 @@ export class CampaignService {
 		const eventDate = new Date(date);
 
 		// Create Discord event
-		const discordService = DiscordService.getInstance();
+		const discordService = getDiscordService();
 		const guild = discordService.getGuild(guildIds.StarbunkCrusaders);
 		const channel = guild.channels.cache.get(campaign.voiceChannelId);
 
@@ -189,7 +189,7 @@ export class CampaignService {
 
 		// If there's a Discord event for this date, delete it
 		if (session.discordEventId) {
-			const discordService = DiscordService.getInstance();
+			const discordService = getDiscordService();
 			const guild = discordService.getGuild(guildIds.StarbunkCrusaders);
 			await guild.scheduledEvents.delete(session.discordEventId);
 		}

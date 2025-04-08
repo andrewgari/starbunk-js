@@ -44,8 +44,6 @@ export interface ProtectedMethods {
 	retryBotProfileRefresh: (attempts?: number) => Promise<void>;
 }
 
-// Singleton instance
-let _discordServiceInstance: DiscordService | null = null;
 const DefaultGuildId = guildIds.StarbunkCrusaders;
 
 export class DiscordService {
@@ -59,7 +57,7 @@ export class DiscordService {
 	private lastFetchTimestamp: number = 0;
 	private readonly FETCH_COOLDOWN = 5000; // 5 seconds cooldown between fetches
 
-	protected constructor(private readonly client: Client) {
+	constructor(private readonly client: Client) {
 		// Verify we have the right intents and caching setup
 		if (!client.options.intents.has(GatewayIntentBits.GuildMembers)) {
 			throw new Error('[DiscordService] GuildMembers intent is required for member fetching');
@@ -569,32 +567,6 @@ export class DiscordService {
 		// Cache the result
 		this.memberCache.set(cacheKey, member);
 		return member;
-	}
-
-	/**
-	 * Initialize the Discord service singleton
-	 * @param client Discord.js client
-	 * @returns The DiscordService instance
-	 * @throws DiscordServiceError if already initialized
-	 */
-	public static initialize(client: Client): DiscordService {
-		if (_discordServiceInstance) {
-			throw new DiscordServiceError('DiscordService is already initialized');
-		}
-		_discordServiceInstance = new DiscordService(client);
-		return _discordServiceInstance;
-	}
-
-	/**
-	 * Get the Discord service instance. Must call initialize first.
-	 * @returns The DiscordService instance
-	 * @throws DiscordServiceError if not initialized
-	 */
-	public static getInstance(): DiscordService {
-		if (!_discordServiceInstance) {
-			throw new DiscordServiceError('DiscordService not initialized. Call initialize() first.');
-		}
-		return _discordServiceInstance;
 	}
 
 	public async sendMessage(channelId: string, message: string): Promise<Message> {

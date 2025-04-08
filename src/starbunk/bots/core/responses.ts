@@ -1,5 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
-import { DiscordService } from '../../../services/discordService';
+import { getDiscordService } from '@/services/bootstrap';
 import { logger } from '../../../services/logger';
 import { BotIdentity } from '../../types/botIdentity';
 import { ContextualResponseGenerator, ResponseContext, asResponseGenerator } from './response-context';
@@ -255,7 +255,7 @@ export async function sendBotResponse(
 		}
 
 		logger.debug(`[${botName}] Sending response: "${responseText.substring(0, 100)}..."`);
-		await DiscordService.getInstance().sendMessageWithBotIdentity(
+		await getDiscordService().sendMessageWithBotIdentity(
 			channel.id,
 			identity,
 			responseText
@@ -284,7 +284,7 @@ export async function sendContextBotResponse(
 		}
 
 		logger.debug(`[${botName}] Sending contextual response: "${responseText.substring(0, 100)}..."`);
-		await DiscordService.getInstance().sendMessageWithBotIdentity(
+		await getDiscordService().sendMessageWithBotIdentity(
 			channel.id,
 			identity,
 			responseText
