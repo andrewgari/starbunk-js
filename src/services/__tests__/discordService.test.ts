@@ -1,7 +1,5 @@
 import { Client, ClientEvents } from 'discord.js';
-import { WebhookService } from '../container';
-// Import the type for type checking, but require the implementation dynamically
-import { DiscordService as DiscordServiceType } from '../discordService';
+import { DiscordService } from '../discordService'; // Use standard import
 import { UserNotFoundError } from '../errors/discordErrors';
 
 // Mock guild IDs
@@ -13,8 +11,7 @@ jest.mock('../../discord/guildIds', () => ({
 // Now tests are enabled using the public test methods
 describe('DiscordService', () => {
 	let mockClient: Partial<Client> & { emit: jest.Mock; once: jest.Mock };
-	let _mockWebhookService: Partial<WebhookService>;
-	let discordService: DiscordServiceType;
+	let discordService: DiscordService; // Use standard type
 	let mockUser: { id: string; username: string; displayAvatarURL: jest.Mock };
 
 	beforeEach(() => {
@@ -41,15 +38,8 @@ describe('DiscordService', () => {
 			})
 		};
 
-		_mockWebhookService = {
-			writeMessage: jest.fn().mockResolvedValue(undefined)
-		};
-
-		// Dynamically require DiscordService here
-		const DiscordService = require('../discordService').DiscordService;
-
-		// Initialize service
-		discordService = new DiscordService(mockClient as unknown as Client);
+		// Initialize service using the imported module
+		discordService = new DiscordService(mockClient as unknown as Client); // Use standard constructor
 	});
 
 	afterEach(() => {

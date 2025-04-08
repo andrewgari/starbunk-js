@@ -35,7 +35,7 @@ module.exports = {
 	],
 	transform: {
 		'^.+\\.tsx?$': ['ts-jest', {
-			isolatedModules: false
+			isolatedModules: true
 		}]
 	},
 	transformIgnorePatterns: [
