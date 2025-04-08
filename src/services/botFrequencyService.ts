@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { logger } from './logger';
 
 export class BotFrequencyService {
@@ -63,7 +63,7 @@ export class BotFrequencyService {
 			logger.info(`[BotFrequencyService] Reset ${botName} frequency to default`);
 		} catch (error) {
 			// If record doesn't exist, that's fine
-			if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+			if (error instanceof Error && 'code' in error && error.code === 'P2025') {
 				return;
 			}
 			logger.error(`[BotFrequencyService] Error resetting frequency for ${botName}:`, error instanceof Error ? error : new Error(String(error)));
