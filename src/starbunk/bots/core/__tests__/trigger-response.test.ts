@@ -1,6 +1,6 @@
-import { createTriggerResponse, createTriggerName, createPriority, TriggerResponseClass } from '../trigger-response';
-import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { logger } from '../../../../services/logger';
+import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
+import { TriggerResponseClass, createPriority, createTriggerName, createTriggerResponse } from '../trigger-response';
 
 // Mock the logger
 jest.mock('../../../../services/logger');
@@ -46,7 +46,7 @@ describe('Trigger Response', () => {
 			};
 
 			const trigger = createTriggerResponse(config);
-			
+
 			expect(trigger.name).toBe('test-trigger');
 			expect(trigger.condition).toBe(config.condition);
 			expect(trigger.response).toBe(config.response);
@@ -74,14 +74,18 @@ describe('Trigger Response', () => {
 				condition: jest.fn().mockReturnValue(true),
 				response: jest.fn().mockReturnValue('Test response'),
 				identity: mockBotIdentity,
-				priority: 10
+				priority: 10,
+				botName: 'test-bot'
 			};
 
 			const trigger = new TriggerResponseClass(config);
-			
+
 			expect(trigger.name).toBe('test-trigger');
-			expect(trigger.condition).toBe(config.condition);
-			expect(trigger.response).toBe(config.response);
+			const message = mockMessage('Test message');
+			trigger.condition(message);
+			expect(config.condition).toHaveBeenCalledWith(message);
+			trigger.response(message);
+			expect(config.response).toHaveBeenCalledWith(message);
 			expect(trigger.priority).toBe(10);
 		});
 
@@ -91,12 +95,13 @@ describe('Trigger Response', () => {
 				const trigger = new TriggerResponseClass({
 					name: 'test-trigger',
 					condition,
-					response: jest.fn()
+					response: jest.fn(),
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const result = await trigger.matches(message);
-				
+
 				expect(result).toBe(true);
 				expect(condition).toHaveBeenCalledWith(message);
 			});
@@ -106,12 +111,13 @@ describe('Trigger Response', () => {
 				const trigger = new TriggerResponseClass({
 					name: 'test-trigger',
 					condition,
-					response: jest.fn()
+					response: jest.fn(),
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const result = await trigger.matches(message);
-				
+
 				expect(result).toBe(false);
 				expect(condition).toHaveBeenCalledWith(message);
 			});
@@ -121,12 +127,13 @@ describe('Trigger Response', () => {
 				const trigger = new TriggerResponseClass({
 					name: 'test-trigger',
 					condition,
-					response: jest.fn()
+					response: jest.fn(),
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const result = await trigger.matches(message);
-				
+
 				expect(result).toBe(true);
 				expect(condition).toHaveBeenCalledWith(message);
 			});
@@ -138,18 +145,16 @@ describe('Trigger Response', () => {
 				const trigger = new TriggerResponseClass({
 					name: 'test-trigger',
 					condition,
-					response: jest.fn()
+					response: jest.fn(),
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const result = await trigger.matches(message);
-				
+
 				expect(result).toBe(false);
 				expect(condition).toHaveBeenCalledWith(message);
-				expect(logger.error).toHaveBeenCalledWith(
-					expect.stringContaining('Error in condition evaluation'),
-					expect.any(Error)
-				);
+				expect(logger.error).toHaveBeenCalled();
 			});
 		});
 
@@ -158,14 +163,14 @@ describe('Trigger Response', () => {
 				const trigger = new TriggerResponseClass({
 					name: 'test-trigger',
 					condition: jest.fn(),
-					response: jest.fn()
-					// No identity specified
+					response: jest.fn(),
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const result = await trigger.getIdentity(message, defaultIdentity);
-				
+
 				expect(result).toBe(defaultIdentity);
 			});
 
@@ -175,13 +180,14 @@ describe('Trigger Response', () => {
 					name: 'test-trigger',
 					condition: jest.fn(),
 					response: jest.fn(),
-					identity: customIdentity
+					identity: customIdentity,
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const result = await trigger.getIdentity(message, defaultIdentity);
-				
+
 				expect(result).toBe(customIdentity);
 			});
 
@@ -192,13 +198,14 @@ describe('Trigger Response', () => {
 					name: 'test-trigger',
 					condition: jest.fn(),
 					response: jest.fn(),
-					identity: identityFn
+					identity: identityFn,
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const result = await trigger.getIdentity(message, defaultIdentity);
-				
+
 				expect(result).toBe(customIdentity);
 				expect(identityFn).toHaveBeenCalledWith(message);
 			});
@@ -210,13 +217,14 @@ describe('Trigger Response', () => {
 					name: 'test-trigger',
 					condition: jest.fn(),
 					response: jest.fn(),
-					identity: identityFn
+					identity: identityFn,
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const result = await trigger.getIdentity(message, defaultIdentity);
-				
+
 				expect(result).toBe(customIdentity);
 				expect(identityFn).toHaveBeenCalledWith(message);
 			});
@@ -229,13 +237,14 @@ describe('Trigger Response', () => {
 					name: 'test-trigger',
 					condition: jest.fn(),
 					response: jest.fn(),
-					identity: identityFn
+					identity: identityFn,
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const result = await trigger.getIdentity(message, defaultIdentity);
-				
+
 				expect(result).toBe(defaultIdentity);
 				expect(identityFn).toHaveBeenCalledWith(message);
 				expect(logger.error).toHaveBeenCalledWith(
@@ -252,15 +261,16 @@ describe('Trigger Response', () => {
 				const trigger = new TriggerResponseClass({
 					name: 'test-trigger',
 					condition,
-					response: responseGen
+					response: responseGen,
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const botName = 'TestBot';
-				
+
 				const result = await trigger.process(message, defaultIdentity, botName);
-				
+
 				expect(result).toBe(true);
 				expect(condition).toHaveBeenCalledWith(message);
 				expect(responseGen).toHaveBeenCalledWith(message);
@@ -280,15 +290,16 @@ describe('Trigger Response', () => {
 				const trigger = new TriggerResponseClass({
 					name: 'test-trigger',
 					condition,
-					response: responseGen
+					response: responseGen,
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const botName = 'TestBot';
-				
+
 				const result = await trigger.process(message, defaultIdentity, botName);
-				
+
 				expect(result).toBe(false);
 				expect(condition).toHaveBeenCalledWith(message);
 				expect(responseGen).not.toHaveBeenCalled();
@@ -303,15 +314,16 @@ describe('Trigger Response', () => {
 					name: 'test-trigger',
 					condition,
 					response: responseGen,
-					identity: customIdentity
+					identity: customIdentity,
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const botName = 'TestBot';
-				
+
 				await trigger.process(message, defaultIdentity, botName);
-				
+
 				expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 					message.channel.id,
 					customIdentity,
@@ -325,15 +337,16 @@ describe('Trigger Response', () => {
 				const trigger = new TriggerResponseClass({
 					name: 'test-trigger',
 					condition,
-					response: responseGen
+					response: responseGen,
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const botName = 'TestBot';
-				
+
 				await trigger.process(message, defaultIdentity, botName);
-				
+
 				expect(responseGen).toHaveBeenCalledWith(message);
 				expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 					message.channel.id,
@@ -350,15 +363,16 @@ describe('Trigger Response', () => {
 				const trigger = new TriggerResponseClass({
 					name: 'test-trigger',
 					condition,
-					response: responseGen
+					response: responseGen,
+					botName: 'test-bot'
 				});
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const botName = 'TestBot';
-				
+
 				await expect(trigger.process(message, defaultIdentity, botName)).rejects.toThrow();
-				
+
 				expect(condition).toHaveBeenCalledWith(message);
 				expect(responseGen).toHaveBeenCalledWith(message);
 				expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();

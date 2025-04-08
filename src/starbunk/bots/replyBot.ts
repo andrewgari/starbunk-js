@@ -1,11 +1,31 @@
 import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message } from 'discord.js';
+import { BotFrequencyService } from '../../services/botFrequencyService';
 import { logger } from '../../services/logger';
 import { percentChance } from '../../utils/random';
+import { getBotDefaults } from '../config/botDefaults';
 
 export default abstract class ReplyBot {
 	protected skipBotMessages: boolean = true;
-	protected responseRate: number = 100; // Default to 100% response rate
+	protected responseRate: number = 100; // Default to 100%
+	private commandSetResponseRate: number | null = null; // Track rate set by command
+
+	constructor() {
+		// Start with the global default
+		const defaults = getBotDefaults();
+		this.responseRate = defaults.responseRate;
+
+		// Allow bot implementation to override with its own default
+		this.initializeResponseRate();
+	}
+
+	/**
+	 * Initialize response rate from bot-specific constants.
+	 * Bot implementations can override this to set their own default rate.
+	 */
+	protected initializeResponseRate(): void {
+		// Default implementation uses 100%
+	}
 
 	/**
 	 * Get the default name for this bot. By default, returns the class name.
@@ -26,23 +46,65 @@ export default abstract class ReplyBot {
 	public abstract get botIdentity(): BotIdentity;
 
 	/**
-	 * Set the response rate for this bot.
+	 * Set the response rate for this bot via command.
+	 * This takes highest priority and is stored in the database.
 	 * @param rate The response rate (0-100)
 	 * @throws Error if rate is invalid
 	 */
-	public setResponseRate(rate: number): void {
+	public async setResponseRate(rate: number): Promise<void> {
 		if (rate < 0 || rate > 100) {
 			throw new Error(`Invalid response rate: ${rate}. Must be between 0 and 100.`);
 		}
-		this.responseRate = rate;
+
+		try {
+			await BotFrequencyService.getInstance().setBotFrequency(this.defaultBotName, rate);
+			logger.info(`[${this.defaultBotName}] Response rate set to ${rate}%`);
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error setting response rate:`, error instanceof Error ? error : new Error(String(error)));
+			throw error;
+		}
 	}
 
 	/**
-	 * Get the current response rate for this bot.
+	 * Get the current effective response rate for this bot.
+	 * Priority order:
+	 * 1. Database stored rate (from command)
+	 * 2. Bot's own default (from initializeResponseRate)
 	 * @returns The response rate (0-100)
 	 */
-	public getResponseRate(): number {
-		return this.responseRate;
+	public async getResponseRate(): Promise<number> {
+		try {
+			// Get rate from database (returns 100 if not set)
+			const rate = await BotFrequencyService.getInstance().getBotFrequency(this.defaultBotName);
+			return rate;
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error getting response rate:`, error instanceof Error ? error : new Error(String(error)));
+			return this.responseRate; // Fall back to bot's default rate
+		}
+	}
+
+	/**
+	 * Reset the response rate to the bot's default.
+	 * This removes any command-set rate from the database.
+	 */
+	public async resetResponseRate(): Promise<void> {
+		try {
+			await BotFrequencyService.getInstance().resetBotFrequency(this.defaultBotName);
+			logger.info(`[${this.defaultBotName}] Response rate reset to default ${this.responseRate}%`);
+		} catch (error) {
+			logger.error(`[${this.defaultBotName}] Error resetting response rate:`, error instanceof Error ? error : new Error(String(error)));
+			throw error;
+		}
+	}
+
+	/**
+	 * Check if we should process this message based on response rate
+	 */
+	protected async shouldProcessMessage(): Promise<boolean> {
+		const rate = await this.getResponseRate();
+		const shouldProcess = percentChance(rate);
+		logger.debug(`[${this.defaultBotName}] Response rate check (${rate}%): ${shouldProcess}`);
+		return shouldProcess;
 	}
 
 	public async auditMessage(message: Message): Promise<void> {
@@ -57,7 +119,7 @@ export default abstract class ReplyBot {
 		try {
 			await this.handleMessage(message);
 		} catch (error) {
-			logger.error(`[${this.defaultBotName}] Error handling message`, error as Error);
+			logger.error(`[${this.defaultBotName}] Error handling message`, error instanceof Error ? error : new Error(String(error)));
 			logger.debug(`[${this.defaultBotName}] Message content that caused error: "${message.content.substring(0, 100)}..."`);
 		}
 	}
@@ -68,16 +130,6 @@ export default abstract class ReplyBot {
 	 */
 	protected shouldSkipMessage(message: Message): boolean {
 		return this.skipBotMessages && message.author.bot;
-	}
-
-	/**
-	 * Determines if the bot should respond based on its response rate.
-	 * Will always return true in debug mode.
-	 */
-	protected shouldTriggerResponse(): boolean {
-		const shouldTrigger = percentChance(this.responseRate);
-		logger.debug(`[${this.defaultBotName}] Response rate check (${this.responseRate}%): ${shouldTrigger}`);
-		return shouldTrigger;
 	}
 
 	/**
@@ -92,13 +144,14 @@ export default abstract class ReplyBot {
 	 */
 	public async handleMessage(message: Message): Promise<void> {
 		try {
-			if (this.shouldSkipMessage(message)) {
-				logger.debug(`[${this.defaultBotName}] Skipping message from ${message.author.tag} (shouldSkipMessage=true)`);
+			// Check response rate first
+			if (!await this.shouldProcessMessage()) {
 				return;
 			}
+
 			await this.processMessage(message);
 		} catch (error) {
-			logger.error(`[${this.defaultBotName}] Error in handleMessage:`, error as Error);
+			logger.error(`[${this.defaultBotName}] Error in handleMessage:`, error instanceof Error ? error : new Error(String(error)));
 			throw error;
 		}
 	}

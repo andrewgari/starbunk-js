@@ -88,3 +88,11 @@ model StoredFile {
 
   campaign    Campaign @relation(fields: [campaignId], references: [id])
 }
+
+model BotFrequency {
+  id          String   @id @default(uuid())
+  botName     String   @unique
+  frequency   Int      // 0-100
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}

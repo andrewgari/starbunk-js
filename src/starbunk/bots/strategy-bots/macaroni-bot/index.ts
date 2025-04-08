@@ -10,6 +10,5 @@ export default createStrategyBot({
 		botName: MACARONI_BOT_NAME,
 		avatarUrl: MACARONI_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
 	triggers: [macaroniTrigger, vennTrigger]
 });

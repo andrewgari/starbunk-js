@@ -52,6 +52,18 @@ const commandBuilder = new SlashCommandBuilder()
 	)
 	.addSubcommand(subcommand =>
 		subcommand
+			.setName('reset-frequency')
+			.setDescription('Reset a reply bot\'s response frequency to default')
+			.addStringOption(option =>
+				option
+					.setName('bot_name')
+					.setDescription('Name of the bot to reset')
+					.setRequired(true)
+					.setAutocomplete(true)
+			)
+	)
+	.addSubcommand(subcommand =>
+		subcommand
 			.setName('volume')
 			.setDescription('Set a voice bot\'s volume')
 			.addStringOption(option =>
@@ -104,7 +116,7 @@ export default {
 
 		// Check permissions for admin commands
 		const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
-		const adminCommands = ['enable', 'disable', 'frequency', 'volume', 'list-bots'];
+		const adminCommands = ['enable', 'disable', 'frequency', 'reset-frequency', 'volume', 'list-bots'];
 		if (adminCommands.includes(subcommand) && !isAdmin) {
 			await interaction.reply({
 				content: 'You need administrator permissions to use this command.',
@@ -161,11 +173,36 @@ export default {
 				case 'frequency': {
 					const botName = interaction.options.getString('bot_name', true);
 					const rate = interaction.options.getInteger('rate', true);
-					botRegistry.setBotFrequency(botName, rate);
-					await interaction.reply({
-						content: `Set ${botName}'s response rate to ${rate}%`,
-						ephemeral: true
-					});
+					const success = await botRegistry.setBotFrequency(botName, rate);
+					if (success) {
+						await interaction.reply({
+							content: `Set ${botName}'s response rate to ${rate}%`,
+							ephemeral: true
+						});
+					} else {
+						await interaction.reply({
+							content: `Failed to set response rate for ${botName}. Bot not found or invalid rate.`,
+							ephemeral: true
+						});
+					}
+					break;
+				}
+				case 'reset-frequency': {
+					const botName = interaction.options.getString('bot_name', true);
+					const bot = botRegistry.getReplyBot(botName);
+					if (bot) {
+						await bot.resetResponseRate();
+						const newRate = await bot.getResponseRate();
+						await interaction.reply({
+							content: `Reset ${botName}'s response rate to default (${newRate}%)`,
+							ephemeral: true
+						});
+					} else {
+						await interaction.reply({
+							content: `Bot ${botName} not found or is not a reply bot.`,
+							ephemeral: true
+						});
+					}
 					break;
 				}
 				case 'volume': {
@@ -204,7 +241,7 @@ export default {
 						message += '**Reply Bots:**\n';
 						for (const botName of replyBots) {
 							const isEnabled = botRegistry.isBotEnabled(botName);
-							const frequency = botRegistry.getBotFrequency(botName);
+							const frequency = await botRegistry.getBotFrequency(botName);
 							message += `- ${botName}: ${isEnabled ? '✅' : '❌'} (${frequency}% response rate)\n`;
 						}
 						message += '\n';
@@ -228,38 +265,29 @@ export default {
 				}
 				case 'report': {
 					const botName = interaction.options.getString('bot_name', true);
-					const message = interaction.options.getString('message', true);
-
-					const cova = await interaction.client.users.fetch(userId.Cova);
-					if (!cova) {
-						await interaction.reply({
-							content: '❌ Unable to send report: Could not find Cova.',
-							ephemeral: true
-						});
-						return;
-					}
-
-					const channelName = interaction.channel instanceof TextChannel ? interaction.channel.name : 'Unknown Channel';
-					const report = [
-						`**Bot Report**`,
-						`**Bot:** ${botName}`,
-						`**Reporter:** ${interaction.user.tag} (${interaction.user.id})`,
-						`**Server:** ${interaction.guild?.name} (${interaction.guild?.id})`,
-						`**Channel:** ${channelName} (${interaction.channel?.id})`,
-						`**Message:**`,
-						message
-					].join('\n');
+					const reportMessage = interaction.options.getString('message', true);
 
 					try {
-						await cova.send(report);
-						await interaction.reply({
-							content: `✅ Report about \`${botName}\` has been sent to Cova.`,
-							ephemeral: true
-						});
+						const cova = await interaction.client.users.fetch(userId.Cova);
+						if (cova) {
+							const reporter = interaction.user.tag;
+							const channel = interaction.channel as TextChannel;
+							const reportContent = `Bot Report from ${reporter} in #${channel.name}:\n` +
+								`Bot: ${botName}\n` +
+								`Message: ${reportMessage}`;
+							await cova.send(reportContent);
+
+							await interaction.reply({
+								content: 'Your report has been sent to Cova.',
+								ephemeral: true
+							});
+						} else {
+							throw new Error('Could not find Cova');
+						}
 					} catch (error) {
-						logger.error('[BotCommand] Error sending report to Cova:', error instanceof Error ? error : new Error(String(error)));
+						logger.error('[BotCommand] Error sending bot report:', error instanceof Error ? error : new Error(String(error)));
 						await interaction.reply({
-							content: '❌ Unable to send report: Failed to send DM to Cova.',
+							content: 'Failed to send report. Please try again later.',
 							ephemeral: true
 						});
 					}
@@ -274,6 +302,7 @@ export default {
 						helpText += '/bot enable <bot_name> - Enable a bot\n';
 						helpText += '/bot disable <bot_name> - Disable a bot\n';
 						helpText += '/bot frequency <bot_name> <rate> - Set reply bot response rate\n';
+						helpText += '/bot reset-frequency <bot_name> - Reset reply bot response rate\n';
 						helpText += '/bot volume <bot_name> <volume> - Set voice bot volume\n';
 						helpText += '/bot list-bots - List all available bots\n';
 					}
@@ -305,7 +334,7 @@ export default {
 			// Get appropriate bot names based on subcommand
 			if (subcommand === 'volume') {
 				choices = botRegistry.getVoiceBotNames();
-			} else if (subcommand === 'frequency') {
+			} else if (subcommand === 'frequency' || subcommand === 'reset-frequency') {
 				choices = botRegistry.getReplyBotNames();
 			} else {
 				choices = [...botRegistry.getReplyBotNames(), ...botRegistry.getVoiceBotNames()];

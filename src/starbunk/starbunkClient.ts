@@ -1,6 +1,7 @@
 import { PlayerSubscription } from '@discordjs/voice';
 import { CommandInteraction, Events, GatewayIntentBits, IntentsBitField, Interaction, Message, VoiceState } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
+import { setStarbunkClient } from '../discord/getStarbunkClient';
 import { bootstrapApplication } from '../services/bootstrap';
 import { logger } from '../services/logger';
 import { BotRegistry } from './bots/botRegistry';
@@ -26,6 +27,9 @@ export default class StarbunkClient extends DiscordClient {
 		);
 
 		super({ intents });
+
+		// Set the global instance
+		setStarbunkClient(this);
 
 		this.commandHandler = new CommandHandler();
 

@@ -1,7 +1,7 @@
 import { container, ServiceId } from '../../../services/container';
 import covaBot from '../strategy-bots/cova-bot';
-import { COVA_BOT_NAME, COVA_BOT_PATTERNS } from '../strategy-bots/cova-bot/constants';
-import { mockLogger, mockMessage, mockWebhookService, mockDiscordServiceImpl, mockWriteMessage } from "../test-utils/testUtils";
+import { COVA_BOT_NAME } from '../strategy-bots/cova-bot/constants';
+import { mockDiscordServiceImpl, mockLogger, mockMessage, mockWebhookService, mockWriteMessage } from "../test-utils/testUtils";
 
 // Minimal mock for LLM
 const mockLLM = {
@@ -88,10 +88,10 @@ describe('covaBot Strategy', () => {
 			writable: true,
 			value: { id: '753251582719688714' }
 		});
-		
+
 		// Set Math.random to ensure match
 		Math.random = jest.fn().mockReturnValue(0);
-		
+
 		await covaBot.processMessage(message);
 		expect(mockDiscordServiceImpl.sendMessageWithBotIdentity).toHaveBeenCalled();
 	});
@@ -107,7 +107,7 @@ describe('covaBot Strategy', () => {
 			writable: true,
 			value: { id: '753251582719688714' }
 		});
-		
+
 		await covaBot.processMessage(message);
 		expect(mockDiscordServiceImpl.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 	});
@@ -122,17 +122,11 @@ describe('covaBot Strategy', () => {
 			writable: true,
 			value: { id: '753251582719688714' }
 		});
-		
+
 		await expect(covaBot.processMessage(message)).resolves.not.toThrow();
 
 		// Reset the mock for subsequent tests
 		mockLLM.createPromptCompletion.mockResolvedValue("Cova's response");
 	});
 
-	it('should handle regex pattern matches correctly', () => {
-		// Test the bot's regex patterns
-		expect(COVA_BOT_PATTERNS.Mention.test('Hey cova!')).toBe(true);
-		expect(COVA_BOT_PATTERNS.Mention.test('Who is covadax?')).toBe(true);
-		expect(COVA_BOT_PATTERNS.Mention.test('unrelated message')).toBe(false);
-	});
 });

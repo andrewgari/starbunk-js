@@ -10,8 +10,7 @@ export default createStrategyBot({
 		botName: BOT_BOT_NAME,
 		avatarUrl: BOT_BOT_AVATAR_URL
 	},
-	// Don't skip bot messages since this bot specifically responds to bots
-	skipBotMessages: false,
-	responseRate: BOT_BOT_RESPONSE_RATE,
+	// Set bot-specific default response rate
+	defaultResponseRate: BOT_BOT_RESPONSE_RATE,
 	triggers: [botTrigger]
 });

@@ -2,6 +2,7 @@ import { Message } from 'discord.js';
 import { DiscordService } from '../../../services/discordService';
 import { logger } from '../../../services/logger';
 import { BotIdentity } from '../../types/botIdentity';
+import { withDefaultBotBehavior } from './conditions';
 
 /**
  * Typed TriggerName for better type safety and debugging
@@ -54,6 +55,7 @@ export interface TriggerResponse {
 	response: ResponseGenerator;
 	identity?: IdentityProvider;
 	priority?: Priority;
+	botName?: string;
 }
 
 /**
@@ -65,6 +67,7 @@ export interface TriggerResponseConfig {
 	response: ResponseGenerator;
 	identity?: IdentityProvider;
 	priority?: number;
+	botName?: string;
 }
 
 // Class representing a single trigger-response pair
@@ -74,10 +77,13 @@ export class TriggerResponseClass {
 	public readonly response: ResponseGenerator;
 	public readonly priority: Priority;
 	private readonly identity?: IdentityProvider;
+	private readonly botName: string;
 
-	constructor(config: TriggerResponseConfig) {
+	constructor(config: TriggerResponseConfig & { botName: string }) {
 		this.name = createTriggerName(config.name);
-		this.condition = config.condition;
+		this.botName = config.botName;
+		// Wrap the condition with default bot behavior
+		this.condition = withDefaultBotBehavior(this.botName, config.condition);
 		this.response = config.response;
 		this.identity = config.identity;
 		this.priority = createPriority(config.priority || 0);
@@ -86,9 +92,9 @@ export class TriggerResponseClass {
 	// Check if this trigger matches the message
 	public async matches(message: Message): Promise<boolean> {
 		try {
-			return await this.condition(message);
+			return this.condition(message);
 		} catch (error) {
-			logger.error(`[TriggerResponse:${this.name}] Error in condition evaluation:`, error as Error);
+			logger.error('Error in condition evaluation', error as Error);
 			return false;
 		}
 	}
@@ -158,6 +164,7 @@ export function createTriggerResponse(config: TriggerResponseConfig): TriggerRes
 		condition: config.condition,
 		response: config.response,
 		identity: config.identity,
-		priority: config.priority !== undefined ? createPriority(config.priority) : createPriority(0)
+		priority: config.priority !== undefined ? createPriority(config.priority) : createPriority(0),
+		botName: config.botName
 	};
 }

@@ -13,6 +13,12 @@ describe('interruptBot Strategy', () => {
 		container.clear();
 		container.register(ServiceId.Logger, () => mockLogger);
 		container.register(ServiceId.WebhookService, () => mockWebhookService);
+		// Mock Math.random to return 0.02 (above the 1% chance)
+		jest.spyOn(Math, 'random').mockReturnValue(0.02);
+	});
+
+	afterEach(() => {
+		jest.restoreAllMocks();
 	});
 
 	it('should have the correct name', () => {
