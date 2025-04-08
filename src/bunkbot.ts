@@ -5,6 +5,7 @@ import { environment } from './config';
 import { logger } from './services/logger';
 import SnowbunkClient from './snowbunk/snowbunkClient';
 import StarbunkClient from './starbunk/starbunkClient';
+import { ensureError } from './utils/errorUtils';
 
 // Global references to clients for cleanup
 let starbunkClient: StarbunkClient | null = null;
@@ -25,7 +26,7 @@ async function cleanup(): Promise<void> {
 			snowbunkClient = null;
 		}
 	} catch (error) {
-		logger.error('Error during cleanup:', error instanceof Error ? error : new Error(String(error)));
+		logger.error('Error during cleanup:', ensureError(error));
 	}
 }
 
@@ -44,11 +45,11 @@ function registerProcessHandlers(): void {
 	});
 
 	process.on('unhandledRejection', (error: Error) => {
-		logger.error('Unhandled promise rejection:', error);
+		logger.error('Unhandled promise rejection:', ensureError(error));
 	});
 
 	process.on('uncaughtException', async (error: Error) => {
-		logger.error('Uncaught exception:', error);
+		logger.error('Uncaught exception:', ensureError(error));
 		await cleanup();
 		process.exit(1);
 	});
@@ -73,7 +74,7 @@ async function initializeClients(): Promise<void> {
 			logger.info('Snowbunk client initialized');
 		}
 	} catch (error) {
-		logger.error('Error during client initialization:', error instanceof Error ? error : new Error(String(error)));
+		logger.error('Error during client initialization:', ensureError(error));
 		throw error;
 	}
 }
@@ -86,7 +87,7 @@ async function runBots(): Promise<void> {
 			execSync('npx prisma db push', { stdio: 'inherit' });
 			logger.info('Database schema is up-to-date.');
 		} catch (dbError) {
-			logger.error('Failed to apply database schema:', dbError instanceof Error ? dbError : new Error(String(dbError)));
+			logger.error('Failed to apply database schema:', ensureError(dbError));
 			// Depending on the desired behavior, you might want to exit here
 			// process.exit(1);
 			// Or allow the application to continue if the database isn't strictly required for all functions
@@ -100,7 +101,7 @@ async function runBots(): Promise<void> {
 
 		logger.info('All bots started successfully');
 	} catch (error) {
-		logger.error('Failed to start bots:', error instanceof Error ? error : new Error(String(error)));
+		logger.error('Failed to start bots:', ensureError(error));
 		await cleanup();
 		process.exit(1);
 	}
@@ -109,10 +110,9 @@ async function runBots(): Promise<void> {
 // Only run if this is the main module
 if (require.main === module) {
 	runBots().catch(error => {
-		console.error('Fatal error:', error);
+		console.error('Fatal error:', ensureError(error));
 		process.exit(1);
 	});
 }
 
 export { runBots };
-

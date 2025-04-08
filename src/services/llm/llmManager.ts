@@ -3,6 +3,7 @@ import { LLMFactory } from './llmFactory';
 import { LLMProvider, LLMProviderType } from './llmProvider';
 import { LLMCompletion, LLMCompletionOptions } from './llmService';
 import { PromptType, formatPromptMessages, getPromptDefaultOptions } from './promptManager';
+import { ensureError } from '@/utils/errorUtils';
 
 /**
  * Error thrown when a provider is not available
@@ -80,7 +81,7 @@ export class LLMManager {
 
 			return initialized;
 		} catch (error) {
-			this.logger.error(`Error initializing ${type} provider:`, error instanceof Error ? error : new Error(String(error)));
+			this.logger.error(`Error initializing ${type} provider:`, ensureError(error));
 			return false;
 		}
 	}
@@ -93,7 +94,7 @@ export class LLMManager {
 			this.logger.debug(`Successfully created ${type} provider`);
 			return provider;
 		} catch (error) {
-			this.logger.error(`Error creating ${type} provider:`, error instanceof Error ? error : new Error(String(error)));
+			this.logger.error(`Error creating ${type} provider:`, ensureError(error));
 			throw error;
 		}
 	}
@@ -177,7 +178,7 @@ export class LLMManager {
 		} catch (error) {
 			this.logger.error(
 				`Error with provider ${requestedProviderType}:`,
-				error instanceof Error ? error : new Error(String(error))
+				ensureError(error)
 			);
 
 			// Handle fallback to OpenAI if Ollama is not available
@@ -204,11 +205,10 @@ export class LLMManager {
 				} catch (fallbackError) {
 					this.logger.error(
 						'Error with OpenAI fallback:',
-						fallbackError instanceof Error ? fallbackError : new Error(String(fallbackError))
+						ensureError(fallbackError)
 					);
 					throw new Error(
-						`Failed to create completion with primary and fallback providers: ${error instanceof Error ? error.message : String(error)
-						}, ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
+						`Failed to create completion with primary and fallback providers: ${ensureError(error).message}, ${ensureError(fallbackError).message}`
 					);
 				}
 			}
@@ -243,7 +243,7 @@ export class LLMManager {
 			return completion.content;
 		} catch (error) {
 			if (options.fallbackToDefault) {
-				this.logger.warn(`[LLMManager] Failed to get completion, falling back to default provider: ${error instanceof Error ? error.message : String(error)}`);
+				this.logger.warn(`[LLMManager] Failed to get completion, falling back to default provider: ${ensureError(error).message}`);
 				const fallbackCompletion = await this.createCompletionWithDefaultProvider(completionOptions);
 				return fallbackCompletion.content;
 			}

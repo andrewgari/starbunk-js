@@ -12,6 +12,7 @@ import {
 	WebhookError
 } from "./errors/discordErrors";
 import { logger } from './logger';
+import { ensureError } from '@/utils/errorUtils';
 
 export interface BulkMessageOptions {
 	channelIds: string[];
@@ -122,8 +123,7 @@ export class DiscordService {
 				logger.debug(`[DiscordService] Cache sweep completed: ${beforeSize - afterSize} members removed`);
 			}, 30 * 60 * 1000); // Run every 30 minutes
 		} catch (error) {
-			const err = error instanceof Error ? error : new Error(String(error));
-			logger.error('[DiscordService] Failed to setup guild caching:', err);
+			logger.error('[DiscordService] Failed to setup guild caching:', ensureError(error));
 			throw new DiscordServiceError('Failed to setup guild caching');
 		}
 	}
@@ -220,7 +220,8 @@ export class DiscordService {
 			this.webhookCache.set(cacheKey, newWebhook);
 			return newWebhook;
 		} catch (error) {
-			throw new WebhookError(`Failed to create webhook: ${error instanceof Error ? error.message : String(error)}`);
+			logger.error(`[DiscordService] Error in getOrCreateWebhook: ${ensureError(error).message}`);
+			throw new WebhookError(`Could not get or create webhook: ${ensureError(error).message}`);
 		}
 	}
 
@@ -238,9 +239,7 @@ export class DiscordService {
 		// Run immediately on startup with increased retries
 		logger.info('[DiscordService] Initiating immediate bot profile refresh on startup');
 		this.retryBotProfileRefresh(5).catch(error => {
-			logger.error('[DiscordService] Initial refresh failed:',
-				error instanceof Error ? error : new Error(String(error))
-			);
+			logger.error('[DiscordService] Initial refresh failed:', ensureError(error));
 		});
 
 		// Set up periodic refresh - run every 30 minutes
@@ -278,9 +277,7 @@ export class DiscordService {
 					});
 				} catch (error) {
 					const duration = Date.now() - startTime;
-					logger.error(`[DiscordService] Attempt ${attempts}/${maxAttempts} failed after ${duration}ms:`,
-						error instanceof Error ? error : new Error(String(error))
-					);
+					logger.error(`[DiscordService] Attempt ${attempts}/${maxAttempts} failed after ${duration}ms:`, ensureError(error));
 
 					if (attempts < maxAttempts) {
 						logger.info(`[DiscordService] Waiting ${retryDelay / 1000} seconds before next attempt...`);
@@ -317,12 +314,11 @@ export class DiscordService {
 				return;
 			} catch (error) {
 				const duration = Date.now() - attemptStartTime;
-				const errorObj = error instanceof Error ? error : new Error(String(error));
+				logger.error(`[DiscordService] Attempt ${i + 1} failed after ${duration}ms:`, ensureError(error));
 
 				if (i === attempts - 1) {
-					logger.error(`[DiscordService] All ${attempts} retry attempts failed. Last attempt took ${duration}ms. Error: ${errorObj.message}`);
+					logger.error(`[DiscordService] All ${attempts} retry attempts failed. Last attempt took ${duration}ms.`);
 				} else {
-					logger.warn(`[DiscordService] Attempt ${i + 1}/${attempts} failed after ${duration}ms: ${errorObj.message}`);
 					logger.info('[DiscordService] Waiting 5 seconds before next attempt...');
 					await new Promise(resolve => setTimeout(resolve, 5000));
 				}
@@ -358,9 +354,7 @@ export class DiscordService {
 					this.updateCachesFromGuild(guild);
 					return;
 				} catch (error) {
-					logger.warn('[DiscordService] WebSocket fetch failed:',
-						error instanceof Error ? error.message : String(error)
-					);
+					logger.warn('[DiscordService] WebSocket fetch failed:', ensureError(error));
 				}
 			}
 
@@ -368,7 +362,7 @@ export class DiscordService {
 			logger.debug('[DiscordService] Falling back to chunked member fetching');
 			await this.fetchMembersInChunks(guild);
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.stack : String(error);
+			const errorMessage = ensureError(error);
 			logger.error(`[DiscordService] Critical failure in bot profile refresh: ${errorMessage}`);
 			throw new DiscordServiceError(`Failed to refresh bot profiles: ${errorMessage}`);
 		}
@@ -400,9 +394,7 @@ export class DiscordService {
 			this.updateCachesFromGuild(guild, sortedMembers);
 
 		} catch (error) {
-			logger.error('[DiscordService] Chunked fetch failed, restoring previous cache:',
-				error instanceof Error ? error : new Error(String(error))
-			);
+			logger.error('[DiscordService] Chunked fetch failed, restoring previous cache:', ensureError(error));
 			this.memberCache = previousCache;
 			this.botProfileCache = previousBotCache;
 		}
@@ -450,7 +442,7 @@ export class DiscordService {
 				});
 				validMembers++;
 			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
+				const errorMessage = ensureError(error);
 				logger.error(`[DiscordService] Failed to process member ${member.id}: ${errorMessage}`);
 				invalidMembers++;
 			}
@@ -478,9 +470,9 @@ export class DiscordService {
 			}
 			return profile;
 		} catch (error) {
-			const err = error instanceof Error ? error : new Error(String(error));
-			logger.error(`[DiscordService] Failed to get bot profile for ${userId}:`, err);
-			throw err;
+			const errorMessage = ensureError(error);
+			logger.error(`[DiscordService] Failed to get bot profile for ${userId}:`, errorMessage);
+			throw errorMessage;
 		}
 	}
 
@@ -516,9 +508,9 @@ export class DiscordService {
 					member = this.getMember(DefaultGuildId, userId);
 				}
 			} catch (memberError) {
-				const err = memberError instanceof Error ? memberError : new Error(String(memberError));
-				logger.error(`[DiscordService] Failed to get member ${userId}:`, err);
-				throw err;
+				const errorMessage = ensureError(memberError);
+				logger.error(`[DiscordService] Failed to get member ${userId}:`, errorMessage);
+				throw errorMessage;
 			}
 
 			// Validate data before creating identity
@@ -544,9 +536,9 @@ export class DiscordService {
 
 			return identity;
 		} catch (error) {
-			const err = error instanceof Error ? error : new Error(String(error));
-			logger.error(`[DiscordService] Failed to get bot identity for user ${userId}:`, err);
-			throw err;
+			const errorMessage = ensureError(error);
+			logger.error(`[DiscordService] Failed to get bot identity for user ${userId}:`, errorMessage);
+			throw errorMessage;
 		}
 	}
 
@@ -590,10 +582,10 @@ export class DiscordService {
 			});
 			logger.debug(`[DiscordService] Message sent to channel ${channelId} via webhook as ${botIdentity.botName}`);
 		} catch (error) {
-			const err = error instanceof Error ? error : new Error(String(error));
-			logger.error(`[DiscordService] Failed to send message with bot identity to channel ${channelId}:`, err);
+			const errorMessage = ensureError(error);
+			logger.error(`[DiscordService] Failed to send message with bot identity to channel ${channelId}:`, errorMessage);
 			// Intentionally not attempting fallback to protect identity
-			throw err;
+			throw errorMessage;
 		}
 	}
 
@@ -617,9 +609,9 @@ export class DiscordService {
 			});
 			logger.debug(`[DiscordService] Webhook message sent to channel ${channel.name}`);
 		} catch (error) {
-			const err = error instanceof Error ? error : new Error(String(error));
-			logger.error(`[DiscordService] Failed to send webhook message:`, err);
-			throw err;
+			const errorMessage = ensureError(error);
+			logger.error(`[DiscordService] Failed to send webhook message:`, errorMessage);
+			throw errorMessage;
 		}
 	}
 
@@ -645,9 +637,9 @@ export class DiscordService {
 			const randomIndex = Math.floor(Math.random() * profiles.length);
 			return profiles[randomIndex];
 		} catch (error) {
-			const err = error instanceof Error ? error : new Error(String(error));
-			logger.error(`[DiscordService] Failed to get random bot profile:`, err);
-			throw err;
+			const errorMessage = ensureError(error);
+			logger.error(`[DiscordService] Failed to get random bot profile:`, errorMessage);
+			throw errorMessage;
 		}
 	}
 
@@ -677,9 +669,9 @@ export class DiscordService {
 
 			return { botName, avatarUrl };
 		} catch (error) {
-			const err = error instanceof Error ? error : new Error(String(error));
-			logger.error(`[DiscordService] Failed to get random member as bot identity:`, err);
-			throw err;
+			const errorMessage = ensureError(error);
+			logger.error(`[DiscordService] Failed to get random member as bot identity:`, errorMessage);
+			throw errorMessage;
 		}
 	}
 
