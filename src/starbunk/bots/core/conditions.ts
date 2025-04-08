@@ -3,12 +3,15 @@ import { Message } from 'discord.js';
 import userIds from '../../../discord/userId';
 import { StandardLLMService } from '../../../services/llm/standardLlmService';
 import { logger } from '../../../services/logger';
-import { ContextualTriggerCondition, ResponseContext, asCondition } from './response-context';
+import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
 /**
  * Core condition type - returns boolean based on message
  */
 export type Condition = (message: Message) => boolean | Promise<boolean>;
+
+export type ConditionTrue = () => true;
+export type ConditionFalse = () => false;
 
 /**
  * Strongly typed user ID
@@ -34,17 +37,7 @@ export function createChannelId(id: string): ChannelId {
 	return id;
 }
 
-/**
- * Percentage between 0 and 100
- */
-type Percentage = number;
 
-export function createPercentage(value: number): Percentage {
-	if (value < 0 || value > 100) {
-		throw new Error('Percentage must be between 0 and 100');
-	}
-	return value;
-}
 
 /**
  * Time units for duration-based conditions
@@ -95,16 +88,10 @@ export function contextContainsPhrase(phrase: string): ContextualTriggerConditio
 // Check if message is from specific user
 export function fromUser(userId: string | UserId): TriggerCondition {
 	if (isDebugMode()) {
-		userId = userIds.Cova;
+		return () => userId === userIds.Cova;
 	}
 	const id = typeof userId === 'string' ? createUserId(userId) : userId;
 	return (message: Message) => message.author.id === id;
-}
-
-// Contextual version of fromUser
-export function contextFromUser(userId: string | UserId): ContextualTriggerCondition {
-	const id = typeof userId === 'string' ? createUserId(userId) : userId;
-	return (context: ResponseContext) => context.author.id === id;
 }
 
 // Check if message is in a specific channel
@@ -121,14 +108,16 @@ export function contextInChannel(channelId: string | ChannelId): ContextualTrigg
 
 // Check based on random chance
 export function withChance(chance: number): Condition {
-	const percentage = createPercentage(chance);
-	return () => Math.random() <= percentage / 100;
-}
+	return () => {
+		if (isDebugMode()) {
+			return true;
+		}
 
-// Contextual version of withChance
-export function contextWithChance(percentage: number | Percentage): ContextualTriggerCondition {
-	const chance = typeof percentage === 'number' ? createPercentage(percentage) : percentage;
-	return () => Math.random() <= chance / 100;
+		const random = Math.random() * 100;
+		const result = random <= chance;
+		logger.debug(`withChance(${chance}): random=${random}, result=${result}`);
+		return result;
+	};
 }
 
 // Check if message is from a bot
@@ -252,20 +241,6 @@ export function and(...conditions: TriggerCondition[]): TriggerCondition {
 	};
 }
 
-// Helper removed as it's unused
-
-// Contextual version of and
-export function contextAnd(...conditions: ContextualTriggerCondition[]): ContextualTriggerCondition {
-	return async (context: ResponseContext) => {
-		for (const condition of conditions) {
-			if (!(await condition(context))) {
-				return false;
-			}
-		}
-		return true;
-	};
-}
-
 // Combine multiple conditions with OR logic
 export function or(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
@@ -284,26 +259,9 @@ export function or(...conditions: TriggerCondition[]): TriggerCondition {
 	};
 }
 
-// Contextual version of or
-export function contextOr(...conditions: ContextualTriggerCondition[]): ContextualTriggerCondition {
-	return async (context: ResponseContext) => {
-		for (const condition of conditions) {
-			if (await condition(context)) {
-				return true;
-			}
-		}
-		return false;
-	};
-}
-
 // Negate a condition
 export function not(condition: TriggerCondition): TriggerCondition {
 	return async (message: Message) => !(await condition(message));
-}
-
-// Contextual version of not
-export function contextNot(condition: ContextualTriggerCondition): ContextualTriggerCondition {
-	return async (context: ResponseContext) => !(await condition(context));
 }
 
 // Helper to escape regex special characters
@@ -311,10 +269,6 @@ function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Convert contextual conditions to standard conditions
-export function convertContextualConditions(conditions: ContextualTriggerCondition[]): TriggerCondition[] {
-	return conditions.map(condition => asCondition(condition));
-}
 
 /**
  * Wraps a condition with the default bot behavior:
@@ -349,23 +303,3 @@ export function withDefaultBotBehavior(botName: string, condition: TriggerCondit
 	};
 }
 
-// Contextual version of withDefaultBotBehavior
-export function contextWithDefaultBotBehavior(botName: string, condition: ContextualTriggerCondition): ContextualTriggerCondition {
-	return async (context: ResponseContext) => {
-		// Check if the condition chain includes fromBot
-		const conditionString = condition.toString();
-		const explicitlyHandlesBots = conditionString.includes('fromBot');
-
-		// If message is from a bot and condition doesn't explicitly handle bots, ignore it
-		if (context.isFromBot && !explicitlyHandlesBots) {
-			logger.debug(`[${botName}] Ignoring bot message (no explicit bot handling)`);
-			return false;
-		}
-
-		// If we get here, either:
-		// 1. Message is not from a bot
-		// 2. Condition explicitly handles bots with fromBot()
-		const result = condition(context);
-		return result instanceof Promise ? await result : result;
-	};
-}

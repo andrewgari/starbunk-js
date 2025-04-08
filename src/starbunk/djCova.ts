@@ -14,6 +14,7 @@ import { logger } from '../services/logger';
 export class DJCova {
 	private player: AudioPlayer;
 	private resource: AudioResource | undefined;
+	private volume: number = 50; // Default volume 50%
 
 	constructor() {
 		logger.debug('🎵 Initializing DJCova audio player');
@@ -49,7 +50,7 @@ export class DJCova {
 			});
 
 			if (this.resource.volume) {
-				this.resource.volume.setVolume(0.5);
+				this.resource.volume.setVolume(this.volume / 100);
 			}
 
 			logger.debug('▶️ Playing resource...');
@@ -83,11 +84,16 @@ export class DJCova {
 
 	changeVolume(vol: number): void {
 		logger.info(`🔊 Adjusting volume to ${vol}%`);
+		this.volume = Math.max(0, Math.min(vol, 100));
 		if (this.resource?.volume) {
-			this.resource.volume.setVolume(vol / 100);
+			this.resource.volume.setVolume(this.volume / 100);
 		} else {
 			logger.warn('Attempted to change volume without active resource');
 		}
+	}
+
+	getVolume(): number {
+		return this.volume;
 	}
 
 	subscribe(channel: VoiceConnection): PlayerSubscription | undefined {

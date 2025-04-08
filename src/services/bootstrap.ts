@@ -8,7 +8,7 @@ import { DiscordGMService } from './discordGMService';
 import { DiscordService } from './discordService';
 import { LLMManager, LLMProviderType } from './llm';
 import { registerPrompts } from './llm/prompts';
-import { Logger, logger } from './logger';
+import { Logger } from './logger';
 
 /**
  * Gets the Discord service or initializes it if it doesn't exist yet
@@ -126,8 +126,6 @@ export async function bootstrapApplication(client: Client): Promise<void> {
  */
 export async function bootstrapSnowbunkApplication(client: Client): Promise<void> {
 	try {
-		await setUpDatabase();
-
 		// Register minimal services needed for Snowbunk
 		const logger = new Logger();
 		container.register(ServiceId.Logger, logger);
@@ -137,59 +135,14 @@ export async function bootstrapSnowbunkApplication(client: Client): Promise<void
 		const discordService = getOrInitializeDiscordService(client, logger);
 		container.register(ServiceId.DiscordService, discordService);
 
-		// Initialize Discord GM service
-		container.register(
-			ServiceId.DiscordGMService,
-			DiscordGMService.initialize(client, discordService)
-		);
-
 		// Initialize webhook service
 		const webhookService = new WebhookService(logger);
 		container.register(ServiceId.WebhookService, webhookService);
-
-		// Initialize LLM manager
-		const llmManager = new LLMManager(logger, LLMProviderType.OLLAMA);
-		await llmManager.initializeAllProviders();
-		// Register all prompts
-		registerPrompts();
-		container.register(ServiceId.LLMManager, llmManager);
 
 		logger.info('Snowbunk services bootstrapped successfully');
 	} catch (error) {
 		console.error('Failed to bootstrap Snowbunk services:', error instanceof Error ? error : new Error(String(error)));
 		throw error;
-	}
-}
-
-async function setUpDatabase(): Promise<void> {
-	// Ensure data directory exists
-	const dataDir = path.join('/app', 'data');
-	await fs.mkdir(dataDir, { recursive: true });
-
-	// Initialize Prisma and ensure database exists
-	const prisma = new PrismaClient();
-	try {
-		// Test database connection and create if not exists
-		await prisma.$connect();
-		logger.info('Database connection established');
-	} catch (error) {
-		logger.error('Database connection failed, attempting to create:', error instanceof Error ? error : new Error(String(error)));
-		// Ensure the database file exists
-		const dbPath = path.join(dataDir, 'starbunk.db');
-		await fs.writeFile(dbPath, '');
-		logger.info('Created empty database file');
-
-		// Run migrations
-		const { execSync } = require('child_process');
-		try {
-			execSync('npx prisma migrate deploy', { stdio: 'inherit', cwd: '/app' });
-			logger.info('Database migrations applied successfully');
-		} catch (migrationError) {
-			logger.error('Failed to apply migrations:', migrationError instanceof Error ? migrationError : new Error(String(migrationError)));
-			throw migrationError;
-		}
-	} finally {
-		await prisma.$disconnect();
 	}
 }
 

@@ -1,5 +1,5 @@
-import { createChannelId, createDuration, createPercentage, createUserId, matchesPattern, containsWord, containsPhrase, fromUser, inChannel, withChance, fromBot, withinTimeframeOf, and, or, not } from '../conditions';
 import { mockMessage } from '../../test-utils/testUtils';
+import { and, containsPhrase, containsWord, createChannelId, createDuration, createUserId, fromBot, fromUser, inChannel, matchesPattern, not, or, withChance, withinTimeframeOf } from '../conditions';
 
 // Mock Math.random for deterministic tests
 const originalRandom = global.Math.random;
@@ -7,7 +7,7 @@ let mockRandomValue = 0.5;
 
 beforeEach(() => {
 	jest.clearAllMocks();
-	
+
 	// Mock Math.random
 	global.Math.random = jest.fn().mockImplementation(() => mockRandomValue);
 });
@@ -42,17 +42,6 @@ describe('Type creators', () => {
 		});
 	});
 
-	describe('createPercentage', () => {
-		it('should create a valid percentage', () => {
-			const percentage = createPercentage(50);
-			expect(percentage).toBe(50);
-		});
-
-		it('should throw an error for invalid percentage', () => {
-			expect(() => createPercentage(-1)).toThrow('Percentage must be between 0 and 100');
-			expect(() => createPercentage(101)).toThrow('Percentage must be between 0 and 100');
-		});
-	});
 
 	describe('createDuration', () => {
 		it('should create a valid duration', () => {
@@ -126,7 +115,7 @@ describe('Condition functions', () => {
 			// Override the user ID for this test
 			const message = mockMessage('test');
 			Object.defineProperty(message.author, 'id', { value: '123456789012345678' });
-			
+
 			const condition = fromUser('123456789012345678');
 			expect(condition(message)).toBe(true);
 		});
@@ -134,7 +123,7 @@ describe('Condition functions', () => {
 		it('should return false when message is not from specified user', () => {
 			const message = mockMessage('test');
 			Object.defineProperty(message.author, 'id', { value: '987654321098765432' });
-			
+
 			const condition = fromUser('123456789012345678');
 			expect(condition(message)).toBe(false);
 		});
@@ -144,7 +133,7 @@ describe('Condition functions', () => {
 		it('should return true when message is in specified channel', () => {
 			const message = mockMessage('test');
 			Object.defineProperty(message.channel, 'id', { value: '123456789012345678' });
-			
+
 			const condition = inChannel('123456789012345678');
 			expect(condition(message)).toBe(true);
 		});
@@ -152,7 +141,7 @@ describe('Condition functions', () => {
 		it('should return false when message is not in specified channel', () => {
 			const message = mockMessage('test');
 			Object.defineProperty(message.channel, 'id', { value: '987654321098765432' });
-			
+
 			const condition = inChannel('123456789012345678');
 			expect(condition(message)).toBe(false);
 		});
@@ -189,7 +178,7 @@ describe('Condition functions', () => {
 			const message = mockMessage('test', 'testUser', true);
 			// Set the author ID to match the client user ID
 			Object.defineProperty(message.author, 'id', { value: 'bot123' });
-			
+
 			const condition = fromBot(false);
 			expect(condition(message)).toBe(false);
 		});
@@ -213,11 +202,11 @@ describe('Condition functions', () => {
 		it('should handle different time units', () => {
 			const now = Date.now();
 			const timestampFn = () => now - 30 * 1000; // 30 seconds ago
-			
+
 			// Should be within 1 minute
 			const condition1 = withinTimeframeOf(timestampFn, 1, 'm');
 			expect(condition1(mockMessage())).toBe(true);
-			
+
 			// Should not be within 20 seconds
 			const condition2 = withinTimeframeOf(timestampFn, 20, 's');
 			expect(condition2(mockMessage())).toBe(false);
@@ -227,7 +216,7 @@ describe('Condition functions', () => {
 	describe('llmDetects', () => {
 		// Note: We're testing the non-LLM implementation which uses string matching
 		it('should be properly exported from conditions.ts', () => {
-			// This is implicitly tested by other tests, 
+			// This is implicitly tested by other tests,
 			// but we don't export it directly so we don't test it here
 		});
 	});
@@ -239,7 +228,7 @@ describe('Condition combiners', () => {
 			const condition1 = () => true;
 			const condition2 = () => true;
 			const combined = and(condition1, condition2);
-			
+
 			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 		});
@@ -248,7 +237,7 @@ describe('Condition combiners', () => {
 			const condition1 = () => true;
 			const condition2 = () => false;
 			const combined = and(condition1, condition2);
-			
+
 			const result = await combined(mockMessage());
 			expect(result).toBe(false);
 		});
@@ -257,7 +246,7 @@ describe('Condition combiners', () => {
 			const condition1 = jest.fn().mockReturnValue(false);
 			const condition2 = jest.fn().mockReturnValue(true);
 			const combined = and(condition1, condition2);
-			
+
 			const result = await combined(mockMessage());
 			expect(result).toBe(false);
 			expect(condition1).toHaveBeenCalled();
@@ -268,7 +257,7 @@ describe('Condition combiners', () => {
 			const condition1 = jest.fn().mockResolvedValue(true);
 			const condition2 = jest.fn().mockResolvedValue(true);
 			const combined = and(condition1, condition2);
-			
+
 			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 			expect(condition1).toHaveBeenCalled();
@@ -281,7 +270,7 @@ describe('Condition combiners', () => {
 			const condition1 = () => false;
 			const condition2 = () => true;
 			const combined = or(condition1, condition2);
-			
+
 			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 		});
@@ -290,7 +279,7 @@ describe('Condition combiners', () => {
 			const condition1 = () => false;
 			const condition2 = () => false;
 			const combined = or(condition1, condition2);
-			
+
 			const result = await combined(mockMessage());
 			expect(result).toBe(false);
 		});
@@ -299,7 +288,7 @@ describe('Condition combiners', () => {
 			const condition1 = jest.fn().mockReturnValue(true);
 			const condition2 = jest.fn().mockReturnValue(false);
 			const combined = or(condition1, condition2);
-			
+
 			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 			expect(condition1).toHaveBeenCalled();
@@ -310,7 +299,7 @@ describe('Condition combiners', () => {
 			const condition1 = jest.fn().mockResolvedValue(false);
 			const condition2 = jest.fn().mockResolvedValue(true);
 			const combined = or(condition1, condition2);
-			
+
 			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 		});
@@ -321,7 +310,7 @@ describe('Condition combiners', () => {
 			});
 			const condition2 = jest.fn().mockReturnValue(true);
 			const combined = or(errorFn, condition2);
-			
+
 			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 			expect(errorFn).toHaveBeenCalled();
@@ -333,7 +322,7 @@ describe('Condition combiners', () => {
 		it('should negate a true condition', async () => {
 			const condition = () => true;
 			const negated = not(condition);
-			
+
 			const result = await negated(mockMessage());
 			expect(result).toBe(false);
 		});
@@ -341,7 +330,7 @@ describe('Condition combiners', () => {
 		it('should negate a false condition', async () => {
 			const condition = () => false;
 			const negated = not(condition);
-			
+
 			const result = await negated(mockMessage());
 			expect(result).toBe(true);
 		});
@@ -349,7 +338,7 @@ describe('Condition combiners', () => {
 		it('should work with async conditions', async () => {
 			const condition = jest.fn().mockResolvedValue(true);
 			const negated = not(condition);
-			
+
 			const result = await negated(mockMessage());
 			expect(result).toBe(false);
 			expect(condition).toHaveBeenCalled();
