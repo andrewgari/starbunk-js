@@ -15,11 +15,11 @@ RUN npm install -g npm@latest typescript@latest ts-node ts-node-dev && \
 
 # Copy package files
 COPY package*.json ./
-COPY src/starbunk/bots/strategy-bots/package*.json ./src/starbunk/bots/strategy-bots/
+COPY src/starbunk/bots/reply-bots/package*.json ./src/starbunk/bots/reply-bots/
 
 # Install dependencies
 RUN npm ci && \
-    cd src/starbunk/bots/strategy-bots && \
+    cd src/starbunk/bots/reply-bots && \
     npm ci && \
     cd /app && \
     npm cache clean --force

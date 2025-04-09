@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copy package.json and lockfiles first to leverage caching
 COPY package*.json ./
-COPY src/starbunk/bots/reply-bots/package*.json ./src/starbunk/bots/strategy-bots/
+COPY src/starbunk/bots/reply-bots/package*.json ./src/starbunk/bots/reply-bots/
 
 # Install dependencies and global tools needed for build
 RUN npm ci && \

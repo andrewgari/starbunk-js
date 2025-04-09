@@ -1,4 +1,4 @@
-# Strategy-Based Bots
+# Reply-Based Bots
 
 This directory contains bots implemented using the strategy pattern. This approach allows for creating bots with varying levels of complexity while minimizing boilerplate code.
 
@@ -18,7 +18,7 @@ Each bot follows a similar structure:
 
 ```
 /bot-name/
-  index.ts      - Main bot definition using createStrategyBot
+  index.ts      - Main bot definition using createReplyBot
   constants.ts  - Static data (optional)
   triggers.ts   - Trigger-response definitions
 ```
@@ -36,7 +36,7 @@ export const holdTrigger = createTriggerResponse({
 });
 
 // index.ts
-export default createStrategyBot({
+export default createReplyBot({
   name: 'HoldBot',
   description: 'Responds "Hold." when someone says "Hold"',
   defaultIdentity: {
@@ -52,7 +52,7 @@ export default createStrategyBot({
 For more complex bots, you can add multiple triggers with different priorities:
 
 ```typescript
-export default createStrategyBot({
+export default createReplyBot({
   name: 'BlueBot',
   description: 'Responds when someone says "blu?"',
   defaultIdentity: {
@@ -70,9 +70,9 @@ export default createStrategyBot({
 
 ## Adding a New Bot
 
-1. Create a new directory under `strategy-bots/`
+1. Create a new directory under `reply-bots/`
 2. Define your triggers in a `triggers.ts` file
-3. Create your bot in `index.ts` using `createStrategyBot`
+3. Create your bot in `index.ts` using `createReplyBot`
 4. The bot will be automatically loaded by the bot registry
 
 ## Using LLM Features
