@@ -1,15 +1,11 @@
-import { BotFactory } from '../../core/bot-factory';
-import { BABY_BOT_AVATAR_URL, BABY_BOT_NAME } from './constants';
-import { babyTrigger } from './triggers';
+import { createBot } from '../../createBot';
 
-// Create the Baby Bot that responds with Metroid gif
-export default BotFactory.createBot({
-	name: BABY_BOT_NAME,
+// Create the Baby Bot that responds with Metroid gif using the simplified approach
+export default createBot({
+	name: 'BabyBot',
 	description: 'Posts a Metroid gif when someone mentions "baby"',
-	defaultIdentity: {
-		botName: BABY_BOT_NAME,
-		avatarUrl: BABY_BOT_AVATAR_URL
-	},
-	skipBotMessages: true,
-	triggers: [babyTrigger]
+	patterns: [/\bbaby\b/i],
+	responses: ['https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif'],
+	avatarUrl: 'https://i.redd.it/qc9qus78dc581.jpg',
+	skipBotMessages: true
 });

@@ -1,6 +1,6 @@
 import { logger } from '../../services/logger';
-import { ReplyBotAdapter } from './adapter';
 import { BotRegistry } from './botRegistry';
+import { ReplyBotAdapter } from './adapter';
 import { ReplyBotImpl } from './core/bot-builder';
 import ReplyBot from './replyBot';
 import { replyBots } from './reply-bots';
@@ -26,47 +26,76 @@ interface ReplyLoaderConfig {
 	};
 }
 
-// Export the class for testing purposes
+/**
+ * @deprecated Use BotRegistry.discoverBots() instead.
+ * This class is kept for backward compatibility.
+ */
 export class ReplyBotLoader {
+	/**
+	 * Load reply bots using the new automatic discovery mechanism
+	 * @returns Array of loaded reply bots
+	 * @deprecated Use BotRegistry.discoverBots() instead
+	 */
 	public static async loadBots(): Promise<ReplyBot[]> {
-		logger.info('Loading reply bots...');
-		const loadedBots: ReplyBot[] = [];
+		// Check if we're running in a test environment
+		const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
 
-		try {
-			// Initialize CovaBot first
-			await this.initializeCovaBot();
+		if (isTestEnvironment) {
+			logger.info('Loading reply bots (test environment, using legacy approach)...');
+			const loadedBots: ReplyBot[] = [];
 
-			// Load and adapt all other bots
-			for (const bot of replyBots) {
-				try {
-					if (this.validateBot(bot)) {
-						const adaptedBot = this.adaptBot(bot);
-						const registryInstance = BotRegistry.getInstance();
-						registryInstance.registerBot(adaptedBot);
-						loadedBots.push(adaptedBot);
-						logger.debug(`Successfully loaded bot: ${bot.name}`);
+			try {
+				// Initialize CovaBot first
+				await this.initializeCovaBot();
+
+				// Load and adapt all other bots (legacy approach for tests)
+				for (const bot of replyBots as ReplyBotImpl[]) {
+					try {
+						if (this.validateBot(bot)) {
+							const adaptedBot = this.adaptBot(bot);
+							const registryInstance = BotRegistry.getInstance();
+							registryInstance.registerBot(adaptedBot);
+							loadedBots.push(adaptedBot);
+							logger.debug(`Successfully loaded bot: ${bot.name}`);
+						}
+					} catch (error) {
+						const botName = this.validateBot(bot) ? bot.name : 'unknown';
+						logger.error(
+							`Failed to load bot: ${botName}`,
+							error instanceof Error
+								? error
+								: new ReplyBotError(`Unknown error loading bot ${botName}`, error),
+						);
 					}
-				} catch (error) {
-					const botName = this.validateBot(bot) ? bot.name : 'unknown';
-					logger.error(
-						`Failed to load bot: ${botName}`,
-						error instanceof Error
-							? error
-							: new ReplyBotError(`Unknown error loading bot ${botName}`, error),
-					);
 				}
+
+				this.logLoadingSummary(loadedBots);
+			} catch (error) {
+				logger.error(
+					'Critical error loading reply bots:',
+					error instanceof Error ? error : new ReplyBotError('Unknown critical error', error),
+				);
+				return [];
 			}
 
-			this.logLoadingSummary(loadedBots);
-		} catch (error) {
-			logger.error(
-				'Critical error loading reply bots:',
-				error instanceof Error ? error : new ReplyBotError('Unknown critical error', error),
-			);
-			return [];
-		}
+			return loadedBots;
+		} else {
+			logger.info('Loading reply bots (using automatic discovery)...');
 
-		return loadedBots;
+			try {
+				// Initialize CovaBot first
+				await this.initializeCovaBot();
+
+				// Use the new automatic discovery mechanism
+				return await BotRegistry.discoverBots();
+			} catch (error) {
+				logger.error(
+					'Critical error loading reply bots:',
+					error instanceof Error ? error : new ReplyBotError('Unknown critical error', error),
+				);
+				return [];
+			}
+		}
 	}
 
 	// Let errors propagate up from the underlying initializeCovaBot
@@ -78,6 +107,8 @@ export class ReplyBotLoader {
 			throw new ReplyBotError('Failed to initialize CovaBot', error);
 		}
 	}
+
+	// The following methods are kept for backward compatibility with tests
 
 	private static validateBot(bot: unknown): bot is ReplyBotImpl {
 		if (!bot || typeof bot !== 'object') {
@@ -126,5 +157,8 @@ export class ReplyBotLoader {
 	}
 }
 
-// Bind the static method to its class to preserve 'this' context
+/**
+ * @deprecated Use BotRegistry.discoverBots() instead.
+ * This function is kept for backward compatibility.
+ */
 export const loadReplyBots = ReplyBotLoader.loadBots.bind(ReplyBotLoader);

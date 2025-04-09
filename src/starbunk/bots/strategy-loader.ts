@@ -44,10 +44,10 @@ export class ReplyBotLoader {
 						const registryInstance = BotRegistry.getInstance();
 						registryInstance.registerBot(adaptedBot);
 						loadedBots.push(adaptedBot);
-						logger.debug(`Successfully loaded bot: ${bot.name}`);
+						logger.debug(`Successfully loaded bot: ${(bot as ReplyBotImpl).name}`);
 					}
 				} catch (error) {
-					const botName = this.validateBot(bot) ? bot.name : 'unknown';
+					const botName = this.validateBot(bot) ? (bot as ReplyBotImpl).name : 'unknown';
 					logger.error(
 						`Failed to load bot: ${botName}`,
 						error instanceof Error

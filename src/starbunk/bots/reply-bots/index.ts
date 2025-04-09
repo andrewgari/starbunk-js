@@ -1,56 +1,28 @@
-// Import all bots
-// Each bot is created using the BotFactory in its own module
-// This allows for consistent bot creation and configuration
-import attitudeBot from './attitude-bot';
-import babyBot from './baby-bot';
-import bananaBot from './banana-bot';
-import blueBot from './blue-bot';
-import botBot from './bot-bot';
-import chadBot from './chad-bot';
-import chaosBot from './chaos-bot';
-import checkBot from './check-bot';
-import covaBot from './cova-bot';
-import ezioBot from './ezio-bot';
-import gundamBot from './gundam-bot';
-import guyBot from './guy-bot';
-import holdBot from './hold-bot';
-import homonymBot from './homonym-bot';
-import interruptBot from './interrupt-bot';
-import macaroniBot from './macaroni-bot';
-import musicCorrectBot from './music-correct-bot';
-import niceBot from './nice-bot';
-import pickleBot from './pickle-bot';
-import sheeshBot from './sheesh-bot';
-import sigGreatBot from './sig-great-bot';
-import spiderBot from './spider-bot';
-import vennBot from './venn-bot';
+/**
+ * This file is no longer needed for bot registration.
+ * 
+ * Bots are now automatically discovered and loaded by the BotRegistry.discoverBots() method.
+ * Each bot is in its own directory and is created using the simplified createBot() function.
+ * 
+ * To create a new bot:
+ * 1. Create a new directory in the reply-bots directory
+ * 2. Create an index.ts file in the new directory
+ * 3. Use the createBot() function to define your bot
+ * 
+ * Example:
+ * ```typescript
+ * import { createBot } from '../../createBot';
+ * 
+ * export default createBot({
+ *   name: 'MyBot',
+ *   description: 'My awesome bot',
+ *   patterns: [/\bpattern\b/i],
+ *   responses: ['Response text'],
+ *   avatarUrl: 'https://example.com/avatar.png'
+ * });
+ * ```
+ */
 
-// Export all bots
-// These bots are created using the Factory Pattern via BotFactory
-export const replyBots = [
-	attitudeBot,
-	babyBot,
-	bananaBot,
-	blueBot,
-	botBot,
-	chadBot,
-	chaosBot,
-	checkBot,
-	covaBot,
-	ezioBot,
-	gundamBot,
-	guyBot,
-	holdBot,
-	homonymBot,
-	interruptBot,
-	macaroniBot,
-	musicCorrectBot,
-	niceBot,
-	pickleBot,
-	sheeshBot,
-	sigGreatBot,
-	spiderBot,
-	vennBot,
-];
-
+// This empty export is kept for backward compatibility
+export const replyBots = [];
 export default replyBots;

@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { getDiscordService } from "@/services/bootstrap";
+import { getDiscordService } from '@/services/bootstrap';
 import { logger } from '../../../services/logger';
 import { getBotDefaults } from '../../config/botDefaults';
 import { BotIdentity } from '../../types/botIdentity';
@@ -84,7 +84,7 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 		triggers: config.triggers,
 		defaultResponseRate: responseRate,
 		skipBotMessages: config.skipBotMessages ?? false,
-		disabled
+		disabled,
 	};
 }
 
@@ -113,7 +113,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 		description: validConfig.description,
 		metadata: {
 			responseRate: validConfig.defaultResponseRate,
-			disabled: validConfig.disabled
+			disabled: validConfig.disabled,
 		},
 		async processMessage(message: Message): Promise<void> {
 			// Check if bot is disabled first
@@ -143,9 +143,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 			}
 
 			// Sort and process triggers in priority order
-			const sortedTriggers = [...validConfig.triggers].sort((a, b) =>
-				(b.priority || 0) - (a.priority || 0)
-			);
+			const sortedTriggers = [...validConfig.triggers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
 
 			// Process triggers in order
 			for (const trigger of sortedTriggers) {
@@ -164,9 +162,10 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 					// Get identity
 					let identity: BotIdentity;
 					try {
-						identity = typeof trigger.identity === 'function'
-							? await trigger.identity(message)
-							: trigger.identity || validConfig.defaultIdentity;
+						identity =
+							typeof trigger.identity === 'function'
+								? await trigger.identity(message)
+								: trigger.identity || validConfig.defaultIdentity;
 
 						if (!identity) {
 							throw new Error('Failed to retrieve valid bot identity');
@@ -177,17 +176,12 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 					}
 
 					// Send message
-					await getDiscordService().sendMessageWithBotIdentity(
-						message.channel.id,
-						identity,
-						responseText
-					);
+					await getDiscordService().sendMessageWithBotIdentity(message.channel.id, identity, responseText);
 					return;
 				} catch (error) {
 					logger.error('Error in trigger', error as Error);
-					continue;
 				}
 			}
-		}
+		},
 	};
 }

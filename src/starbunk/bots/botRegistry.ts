@@ -2,6 +2,10 @@ import { logger } from '../../services/logger';
 import { getBotDefaults } from '../config/botDefaults';
 import { BaseVoiceBot } from './core/voice-bot-adapter';
 import ReplyBot from './replyBot';
+import fs from 'fs';
+import path from 'path';
+import { ReplyBotAdapter } from './adapter';
+import { ReplyBotImpl } from './core/bot-builder';
 
 // Define the Bot type as a union of ReplyBot and BaseVoiceBot
 type Bot = ReplyBot | BaseVoiceBot;
@@ -129,5 +133,121 @@ export class BotRegistry {
 	public static reset(): void {
 		logger.debug('[BotRegistry] Resetting singleton instance');
 		BotRegistry.instance = new BotRegistry();
+	}
+
+	/**
+	 * Automatically discover and load all reply bots from the reply-bots directory
+	 * @returns Array of loaded reply bots
+	 */
+	public static async discoverBots(): Promise<ReplyBot[]> {
+		logger.info('[BotRegistry] Discovering reply bots...');
+		const loadedBots: ReplyBot[] = [];
+		const registry = BotRegistry.getInstance();
+
+		try {
+			// Path to the reply-bots directory
+			const replyBotsDir = path.join(__dirname, 'reply-bots');
+
+			// Get all subdirectories (each should be a bot)
+			const botDirs = fs.readdirSync(replyBotsDir, { withFileTypes: true })
+				.filter(dirent => dirent.isDirectory() && !dirent.name.startsWith('.') && dirent.name !== 'dist' && dirent.name !== 'node_modules')
+				.map(dirent => dirent.name);
+
+			logger.debug(`[BotRegistry] Found ${botDirs.length} potential bot directories`);
+
+			// Load each bot
+			for (const botDir of botDirs) {
+				try {
+					// Import the bot module
+					const botPath = path.join(replyBotsDir, botDir);
+					const indexPath = path.join(botPath, 'index.ts');
+					const jsIndexPath = path.join(botPath, 'index.js');
+
+					// Check if index file exists
+					if (!fs.existsSync(indexPath) && !fs.existsSync(jsIndexPath)) {
+						logger.warn(`[BotRegistry] No index file found for bot in directory: ${botDir}`);
+						continue;
+					}
+
+					// Import the bot
+					const botModule = await import(path.join('file://', botPath));
+					const bot = botModule.default;
+
+					// Validate the bot
+					if (!bot || typeof bot !== 'object') {
+						logger.warn(`[BotRegistry] Invalid bot module in directory: ${botDir}`);
+						continue;
+					}
+
+					// Check if it's a valid ReplyBotImpl
+					if (!this.validateBot(bot)) {
+						logger.warn(`[BotRegistry] Invalid bot implementation in directory: ${botDir}`);
+						continue;
+					}
+
+					// Adapt and register the bot
+					const adaptedBot = this.adaptBot(bot);
+					registry.registerBot(adaptedBot);
+					loadedBots.push(adaptedBot);
+					logger.debug(`[BotRegistry] Successfully loaded bot: ${bot.name} from ${botDir}`);
+				} catch (error) {
+					logger.error(
+						`[BotRegistry] Failed to load bot from directory: ${botDir}`,
+						error instanceof Error ? error : new Error(String(error))
+					);
+				}
+			}
+
+			// Log summary
+			if (loadedBots.length > 0) {
+				logger.info(`[BotRegistry] Successfully discovered and loaded ${loadedBots.length} reply bots`);
+				logger.info('[BotRegistry] Reply bots summary:');
+				loadedBots.forEach((bot) => {
+					logger.info(`   - ${bot.defaultBotName}`);
+				});
+			} else {
+				logger.warn('[BotRegistry] No reply bots were discovered');
+			}
+		} catch (error) {
+			logger.error(
+				'[BotRegistry] Critical error discovering reply bots:',
+				error instanceof Error ? error : new Error(String(error))
+			);
+		}
+
+		return loadedBots;
+	}
+
+	/**
+	 * Validate if an object is a valid ReplyBotImpl
+	 * @param bot Object to validate
+	 * @returns true if valid, false otherwise
+	 */
+	private static validateBot(bot: unknown): bot is ReplyBotImpl {
+		if (!bot || typeof bot !== 'object') {
+			return false;
+		}
+
+		const requiredProps = {
+			name: 'string',
+			description: 'string',
+			processMessage: 'function',
+		} as const;
+
+		const missingProps = Object.entries(requiredProps).filter(([prop, type]) => {
+			const value = (bot as Record<string, unknown>)[prop];
+			return typeof value !== type;
+		});
+
+		return missingProps.length === 0;
+	}
+
+	/**
+	 * Adapt a ReplyBotImpl to a ReplyBot
+	 * @param bot Bot implementation to adapt
+	 * @returns Adapted ReplyBot
+	 */
+	private static adaptBot(bot: ReplyBotImpl): ReplyBot {
+		return new ReplyBotAdapter(bot);
 	}
 }

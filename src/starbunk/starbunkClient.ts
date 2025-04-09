@@ -170,9 +170,9 @@ export default class StarbunkClient extends DiscordClient {
 
 			logger.info('Personality service initialized successfully');
 
-			// Load reply bots
-			const { loadReplyBots } = await import('./bots/reply-loader');
-			const replyBots = await loadReplyBots();
+			// Automatically discover and load reply bots
+			const { BotRegistry } = await import('./bots/botRegistry');
+			const replyBots = await BotRegistry.discoverBots();
 
 			// Log summary of loaded reply bots
 			if (replyBots.length > 0) {

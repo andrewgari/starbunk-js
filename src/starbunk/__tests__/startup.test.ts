@@ -14,15 +14,9 @@ jest.mock('../starbunkClient', () => {
 				const exists = mockFs.existsSync();
 
 				if (exists) {
-					// Call the loadBots method directly to simulate client initialization
-					const { loadReplyBots } = require('../bots/reply-loader');
-					const replyBots = await loadReplyBots();
-
-					// Register bots in the registry
-					const registry = BotRegistry.getInstance();
-					replyBots.forEach((bot: ReplyBotAdapter) => {
-						registry.registerBot(bot);
-					});
+					// Call the discoverBots method directly to simulate client initialization
+					const { BotRegistry } = require('../bots/botRegistry');
+					await BotRegistry.discoverBots();
 				}
 				// If directories don't exist, do nothing (no bots are registered)
 			}),
@@ -56,22 +50,57 @@ jest.mock('../../services/logger', () => ({
 	},
 }));
 
-// Mock reply-loader
-jest.mock('../bots/reply-loader', () => ({
-	loadReplyBots: jest.fn().mockImplementation(() => {
-		const mockCovaBot = new ReplyBotAdapter({
-			name: 'CovaBot',
-			description: 'Mock Cova Bot',
-			processMessage: async () => {},
-		});
-		const mockBabyBot = new ReplyBotAdapter({
-			name: 'BabyBot',
-			description: 'Mock Baby Bot',
-			processMessage: async () => {},
-		});
-		return [mockCovaBot, mockBabyBot];
-	}),
-}));
+// Mock BotRegistry
+jest.mock('../bots/botRegistry', () => {
+	const originalModule = jest.requireActual('../bots/botRegistry');
+
+	// Create mock bots
+	const mockCovaBot = new ReplyBotAdapter({
+		name: 'CovaBot',
+		description: 'Mock Cova Bot',
+		processMessage: async () => {},
+	});
+	const mockBabyBot = new ReplyBotAdapter({
+		name: 'BabyBot',
+		description: 'Mock Baby Bot',
+		processMessage: async () => {},
+	});
+	const mockExampleBot = new ReplyBotAdapter({
+		name: 'ExampleBot',
+		description: 'Mock Example Bot',
+		processMessage: async () => {},
+	});
+
+	// Create a singleton instance
+	const mockRegistry = {
+		registerBot: jest.fn(),
+		replyBots: new Map(),
+		voiceBots: new Map(),
+		bots: new Map(),
+		botStates: new Map(),
+	};
+
+	return {
+		...originalModule,
+		BotRegistry: {
+			...originalModule.BotRegistry,
+			getInstance: jest.fn().mockReturnValue(mockRegistry),
+			discoverBots: jest.fn().mockImplementation(async () => {
+				// Register the mock bots in the registry
+				mockRegistry.registerBot(mockCovaBot);
+				mockRegistry.registerBot(mockBabyBot);
+				mockRegistry.registerBot(mockExampleBot);
+
+				// Add them to the replyBots map
+				mockRegistry.replyBots.set('CovaBot', mockCovaBot);
+				mockRegistry.replyBots.set('BabyBot', mockBabyBot);
+				mockRegistry.replyBots.set('ExampleBot', mockExampleBot);
+
+				return [mockCovaBot, mockBabyBot, mockExampleBot];
+			}),
+		},
+	};
+});
 
 // Mock voice-loader
 jest.mock('../bots/voice-loader', () => ({
@@ -119,6 +148,7 @@ describe('Starbunk startup', () => {
 			const botNames = replyBots.map((bot) => bot.defaultBotName);
 			expect(botNames).toContain('CovaBot');
 			expect(botNames).toContain('BabyBot');
+			expect(botNames).toContain('ExampleBot');
 		});
 
 		it('should handle missing bot directories gracefully', async () => {

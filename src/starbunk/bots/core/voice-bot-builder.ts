@@ -45,9 +45,7 @@ export function createVoiceBot(config: VoiceBotConfig): VoiceBot {
 			logger.debug(`[${config.name}] Processing voice state update`);
 
 			// Sort triggers by priority
-			const sortedTriggers = [...config.triggers].sort((a, b) =>
-				(b.priority || 0) - (a.priority || 0)
-			);
+			const sortedTriggers = [...config.triggers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
 
 			// Process triggers in order
 			for (const trigger of sortedTriggers) {
@@ -58,9 +56,12 @@ export function createVoiceBot(config: VoiceBotConfig): VoiceBot {
 						return;
 					}
 				} catch (error) {
-					logger.error(`[${config.name}] Error in voice trigger ${trigger.name}:`, error instanceof Error ? error : new Error(String(error)));
+					logger.error(
+						`[${config.name}] Error in voice trigger ${trigger.name}:`,
+						error instanceof Error ? error : new Error(String(error)),
+					);
 				}
 			}
-		}
+		},
 	};
 }

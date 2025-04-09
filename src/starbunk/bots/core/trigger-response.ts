@@ -118,11 +118,7 @@ export class TriggerResponseClass {
 	}
 
 	// Process the message and send a response if conditions match
-	public async process(
-		message: Message,
-		defaultIdentity: BotIdentity,
-		botName: string,
-	): Promise<boolean> {
+	public async process(message: Message, defaultIdentity: BotIdentity, botName: string): Promise<boolean> {
 		try {
 			const matches = await this.matches(message);
 
@@ -143,11 +139,7 @@ export class TriggerResponseClass {
 
 			// Use the discord service to send the message
 			// Use pre-imported DiscordService for better performance
-			await getDiscordService().sendMessageWithBotIdentity(
-				channel.id,
-				identity,
-				responseText
-			);
+			await getDiscordService().sendMessageWithBotIdentity(channel.id, identity, responseText);
 
 			return true;
 		} catch (error) {
@@ -165,6 +157,6 @@ export function createTriggerResponse(config: TriggerResponseConfig): TriggerRes
 		response: config.response,
 		identity: config.identity,
 		priority: config.priority !== undefined ? createPriority(config.priority) : createPriority(0),
-		botName: config.botName
+		botName: config.botName,
 	};
 }
