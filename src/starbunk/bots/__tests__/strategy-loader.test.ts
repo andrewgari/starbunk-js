@@ -31,8 +31,7 @@ jest.mock('../reply-bots', () => ({
 
 // Statically import the necessary modules again
 import { ReplyBotImpl } from '../core/bot-builder';
-import { ReplyBotLoader } from '../strategy-loader'; // Import the class directly
-
+import { ReplyBotLoader } from '../reply-loader'; // Import the class directly
 describe('Reply Bot Loader', () => {
 	// Remove spy variable
 	// let initializeCovaBotSpy: jest.SpyInstance;
