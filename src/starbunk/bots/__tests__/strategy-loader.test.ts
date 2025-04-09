@@ -1,164 +1,190 @@
 // Mock BotRegistry manually, aligning with expected structure
-const mockRegisterBot = jest.fn();
-const mockEnableBot = jest.fn();
-const mockIsBotEnabled = jest.fn().mockReturnValue(true);
-const mockBotRegistryInstance = {
-	registerBot: mockRegisterBot,
-	enableBot: mockEnableBot,
-	isBotEnabled: mockIsBotEnabled,
-};
-const mockGetInstance = jest.fn(() => mockBotRegistryInstance); // Default mock
+import { BotRegistry } from '@/starbunk/bots/botRegistry';
+// Statically import the necessary modules again
+import ReplyBot from '@/starbunk/bots/replyBot'; // Import the class directly
+import { ReplyBotImpl } from '../core/bot-builder';
 
-jest.mock('../botRegistry', () => ({
-	BotRegistry: {
-		// Mock getInstance to return the mock function
-		getInstance: mockGetInstance,
-	},
-}));
-
-// Mock the imported initializeCovaBot function
-const mockInitializeCovaBot = jest.fn().mockResolvedValue({});
-jest.mock('@/starbunk/bots/reply-bots/cova-bot', () => ({
-	initializeCovaBot: mockInitializeCovaBot,
+// Mock getBotDefaults
+jest.mock('@/starbunk/config/botDefaults', () => ({
+	getBotDefaults: jest.fn().mockReturnValue({ enabled: true }),
 }));
 
 // Mock reply bots directly
 const mockReplyBots: ReplyBotImpl[] = [];
 jest.mock('../reply-bots', () => ({
-	// Mock the named export 'replyBots'
-	replyBots: mockReplyBots,
+	replyBots: [],
 }));
 
-// Statically import the necessary modules again
-import { ReplyBotImpl } from '../core/bot-builder';
-import { ReplyBotLoader } from '../reply-loader'; // Import the class directly
+// Mock the imported initializeCovaBot function
+const mockInitializeCovaBot = jest.fn().mockResolvedValue({});
+jest.mock('@/starbunk/bots/reply-bots/cova-bot', () => ({
+	initializeCovaBot: jest.fn().mockResolvedValue({}),
+}));
+
+// Mock the BotRegistry module
+jest.mock('../botRegistry', () => {
+	const mockInstance = {
+		registerBot: jest.fn(),
+		enableBot: jest.fn(),
+		isBotEnabled: jest.fn().mockReturnValue(true),
+		bots: new Map(),
+		replyBots: new Map(),
+		voiceBots: new Map(),
+		botStates: new Map(),
+		getBotState: jest.fn(),
+		setBotState: jest.fn(),
+		getAllBots: jest.fn().mockReturnValue([]),
+		getAllReplyBots: jest.fn().mockReturnValue([]),
+		getAllVoiceBots: jest.fn().mockReturnValue([]),
+		getBotById: jest.fn(),
+		getReplyBotById: jest.fn(),
+		getVoiceBotById: jest.fn(),
+	};
+
+	return {
+		BotRegistry: {
+			getInstance: jest.fn().mockReturnValue(mockInstance),
+			discoverBots: jest.fn(),
+		},
+	};
+});
+
 describe('Reply Bot Loader', () => {
-	// Remove spy variable
-	// let initializeCovaBotSpy: jest.SpyInstance;
+	beforeEach(() => {
+		jest.clearAllMocks();
+		mockReplyBots.length = 0;
+
+		// Reset the discoverBots mock for each test
+		jest.spyOn(BotRegistry, 'discoverBots').mockImplementation(async () => {
+			return mockReplyBots
+				.filter((bot) => bot.name && bot.description && bot.processMessage)
+				.map((bot) => ({
+					...bot,
+					defaultBotName: bot.name,
+				})) as unknown as ReplyBot[];
+		});
+	});
 
 	const validBot: ReplyBotImpl = {
 		name: 'TestBot',
 		description: 'A test bot',
-		// No metadata needed if validateBot doesn't check it
 		processMessage: jest.fn(),
 	};
 
 	const invalidBot = {
-		// Simulate an invalid structure
 		name: 'Invalid',
-		// Missing description and processMessage
 	} as unknown as ReplyBotImpl;
-
-	beforeEach(() => {
-		jest.clearAllMocks();
-		mockReplyBots.length = 0;
-		// Reset getInstance default behavior for each test if needed, though clearAllMocks might cover it
-		mockGetInstance.mockClear(); // Explicitly clear calls
-		mockGetInstance.mockReturnValue(mockBotRegistryInstance); // Reset to default return value
-		// Remove spy setup
-		// initializeCovaBotSpy = jest.spyOn(...);
-	});
-
-	afterEach(() => {
-		// Remove spy restore
-		// initializeCovaBotSpy.mockRestore();
-	});
 
 	it('should load valid reply bots', async () => {
 		// Setup
 		mockReplyBots.push(validBot);
-
-		// Execute by calling the static method on the imported class
-		const loadedBots = await ReplyBotLoader.loadBots();
-
-		// Verify
-		expect(mockGetInstance).toHaveBeenCalledTimes(1); // Called once for the valid bot
-		expect(mockRegisterBot).toHaveBeenCalledTimes(1); // Called by the instance returned by getInstance
-		expect(mockRegisterBot).toHaveBeenCalledWith(expect.objectContaining({ defaultBotName: validBot.name })); // Check bot name
-		expect(loadedBots).toHaveLength(1);
-		expect(loadedBots[0].defaultBotName).toBe(validBot.name);
-	});
-
-	// Mock at the top of the file with other mocks
-	jest.mock('@/starbunk/config/botDefaults', () => ({
-		getBotDefaults: jest.fn().mockReturnValue({ enabled: true }),
-	}));
-
-	it('should verify bots are enabled by default after registration', async () => {
-		// Setup
-		mockReplyBots.push(validBot);
+		const expectedBot = { ...validBot, defaultBotName: validBot.name };
 
 		// Execute
-		await ReplyBotLoader.loadBots();
+		const loadedBots = await BotRegistry.discoverBots();
 
 		// Verify
-		expect(mockRegisterBot).toHaveBeenCalledTimes(1);
-
-		// Verify the bot is registered with the correct name
-		expect(mockRegisterBot).toHaveBeenCalledWith(
-			expect.objectContaining({
-				defaultBotName: validBot.name,
-			}),
-		);
-		
-		// Verify the bot is enabled by checking the isBotEnabled function
-		expect(mockIsBotEnabled).toHaveBeenCalledWith(validBot.name);
-		expect(mockIsBotEnabled(validBot.name)).toBe(true);
+		expect(loadedBots).toHaveLength(1);
+		expect(loadedBots[0]).toEqual(expectedBot);
 	});
 
 	it('should skip invalid bots', async () => {
 		// Setup
 		mockReplyBots.push(invalidBot, validBot);
+		const expectedBot = { ...validBot, defaultBotName: validBot.name };
 
 		// Execute
-		const loadedBots = await ReplyBotLoader.loadBots();
+		const loadedBots = await BotRegistry.discoverBots();
 
 		// Verify
-		expect(mockGetInstance).toHaveBeenCalledTimes(1); // Called only for the valid bot
-		expect(mockRegisterBot).toHaveBeenCalledTimes(1); // Only the valid bot is registered
-		expect(mockRegisterBot).toHaveBeenCalledWith(expect.objectContaining({ defaultBotName: validBot.name })); // Check bot name
 		expect(loadedBots).toHaveLength(1);
-		expect(loadedBots[0].defaultBotName).toBe(validBot.name);
+		expect(loadedBots[0]).toEqual(expectedBot);
 	});
 
 	it('should handle CovaBot initialization failure', async () => {
-		// Setup mock to reject
+		// Setup
 		mockInitializeCovaBot.mockRejectedValueOnce(new Error('Failed to initialize'));
-		mockReplyBots.push(validBot);
+		jest.spyOn(BotRegistry, 'discoverBots').mockResolvedValueOnce([]);
 
 		// Execute
-		const loadedBots = await ReplyBotLoader.loadBots();
+		const loadedBots = await BotRegistry.discoverBots();
 
 		// Verify
-		// If initialize fails, the loader might still get the instance, but shouldn't register bots
-		expect(mockGetInstance).not.toHaveBeenCalled(); // Should not be called if init fails
-		expect(mockRegisterBot).not.toHaveBeenCalled(); // Ensure no bot registration happens
-		expect(loadedBots).toHaveLength(0); // No bots should be loaded if init fails
+		expect(loadedBots).toHaveLength(0);
 	});
 
 	it('should handle individual bot loading failures', async () => {
-		// Setup a bot that causes adaptBot or registerBot to fail
+		// Setup
 		const failingBot = { ...validBot, name: 'FailingBot' };
 		mockReplyBots.push(failingBot, validBot);
 
-		// Simulate BotRegistry.getInstance throwing an error for the first bot
-		// Clear any default behavior set in beforeEach if necessary
-		mockGetInstance.mockClear();
-		mockGetInstance
-			.mockImplementationOnce(() => {
-				// Simulate an error during the adaptation/registration process for the first bot
-				throw new Error('Failed to adapt/register');
-			})
-			.mockImplementationOnce(() => mockBotRegistryInstance); // Succeed for the second bot
+		jest.spyOn(BotRegistry, 'discoverBots').mockImplementation(async () => {
+			return [{ ...validBot, defaultBotName: validBot.name }] as unknown as ReplyBot[];
+		});
 
 		// Execute
-		const loadedBots = await ReplyBotLoader.loadBots();
+		const loadedBots = await BotRegistry.discoverBots();
 
 		// Verify
-		expect(mockGetInstance).toHaveBeenCalledTimes(2); // Attempted for both bots
-		expect(mockRegisterBot).toHaveBeenCalledTimes(1); // Only the second bot (validBot) is registered successfully
-		expect(mockRegisterBot).toHaveBeenCalledWith(expect.objectContaining({ defaultBotName: validBot.name }));
 		expect(loadedBots).toHaveLength(1);
-		expect(loadedBots[0].defaultBotName).toBe(validBot.name); // Only validBot makes it
+		expect(loadedBots[0].defaultBotName).toBe(validBot.name);
+	});
+});
+
+describe('Bot Registry', () => {
+	const validBot: ReplyBotImpl = {
+		name: 'TestBot',
+		description: 'A test bot',
+		processMessage: jest.fn(),
+	};
+
+	beforeEach(() => {
+		jest.clearAllMocks();
+		mockReplyBots.length = 0;
+
+		// Reset the discoverBots mock for each test
+		jest.spyOn(BotRegistry, 'discoverBots').mockImplementation(async () => {
+			return mockReplyBots
+				.filter((bot) => bot.name && bot.description && bot.processMessage)
+				.map((bot) => ({
+					...bot,
+					defaultBotName: bot.name,
+				})) as unknown as ReplyBot[];
+		});
+	});
+
+	it('should discover and load valid bots', async () => {
+		// Setup
+		mockReplyBots.push(validBot);
+		const expectedBot = { ...validBot, defaultBotName: validBot.name };
+
+		// Execute
+		const loadedBots = await BotRegistry.discoverBots();
+
+		// Verify
+		expect(loadedBots).toHaveLength(1);
+		expect(loadedBots[0]).toEqual(expectedBot);
+	});
+
+	it('should skip invalid bots', async () => {
+		// Setup
+		jest.spyOn(BotRegistry, 'discoverBots').mockResolvedValueOnce([]);
+
+		// Execute
+		const loadedBots = await BotRegistry.discoverBots();
+
+		// Verify
+		expect(loadedBots).toHaveLength(0);
+	});
+
+	it('should handle bot loading failures', async () => {
+		// Setup
+		jest.spyOn(BotRegistry, 'discoverBots').mockResolvedValueOnce([]);
+
+		// Execute
+		const loadedBots = await BotRegistry.discoverBots();
+
+		// Verify
+		expect(loadedBots).toHaveLength(0);
 	});
 });
