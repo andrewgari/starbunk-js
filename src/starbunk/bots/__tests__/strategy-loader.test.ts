@@ -79,14 +79,14 @@ describe('Reply Bot Loader', () => {
 		expect(loadedBots[0].defaultBotName).toBe(validBot.name);
 	});
 
+// Mock at the top of the file with other mocks
+jest.mock('@/starbunk/config/botDefaults', () => ({
+	getBotDefaults: jest.fn().mockReturnValue({ enabled: true }),
+}));
+
 	it('should verify bots are enabled by default after registration', async () => {
 		// Setup
 		mockReplyBots.push(validBot);
-
-		// Mock getBotDefaults to return enabled: true
-		jest.mock('@/starbunk/config/botDefaults', () => ({
-			getBotDefaults: jest.fn().mockReturnValue({ enabled: true }),
-		}));
 
 		// Execute
 		await ReplyBotLoader.loadBots();
