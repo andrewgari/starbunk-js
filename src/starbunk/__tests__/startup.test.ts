@@ -15,7 +15,7 @@ jest.mock('../starbunkClient', () => {
 
 				if (exists) {
 					// Call the loadBots method directly to simulate client initialization
-					const { loadReplyBots } = require('../bots/strategy-loader');
+					const { loadReplyBots } = require('../bots/reply-loader');
 					const replyBots = await loadReplyBots();
 
 					// Register bots in the registry
@@ -56,8 +56,8 @@ jest.mock('../../services/logger', () => ({
 	},
 }));
 
-// Mock strategy-loader
-jest.mock('../bots/strategy-loader', () => ({
+// Mock reply-loader
+jest.mock('../bots/reply-loader', () => ({
 	loadReplyBots: jest.fn().mockImplementation(() => {
 		const mockCovaBot = new ReplyBotAdapter({
 			name: 'CovaBot',

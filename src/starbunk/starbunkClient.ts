@@ -9,9 +9,10 @@ import {
 	VoiceState,
 } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
-import { setStarbunkClient } from '../discord/getStarbunkClient';
-import { bootstrapApplication } from '../services/bootstrap';
-import { logger } from '../services/logger';
+import { setStarbunkClient } from '@/discord/getStarbunkClient';
+import { bootstrapApplication } from '@/services/bootstrap';
+import { logger } from '@/services/logger';
+
 import { BotRegistry } from './bots/botRegistry';
 import ReplyBot from './bots/replyBot';
 import { CommandHandler } from './commandHandler';
@@ -170,7 +171,7 @@ export default class StarbunkClient extends DiscordClient {
 			logger.info('Personality service initialized successfully');
 
 			// Load reply bots
-			const { loadReplyBots } = await import('./bots/strategy-loader');
+			const { loadReplyBots } = await import('./bots/reply-loader');
 			const replyBots = await loadReplyBots();
 
 			// Log summary of loaded reply bots
