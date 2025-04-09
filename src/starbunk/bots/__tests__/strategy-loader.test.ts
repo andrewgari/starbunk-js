@@ -94,14 +94,16 @@ describe('Reply Bot Loader', () => {
 		// Verify
 		expect(mockRegisterBot).toHaveBeenCalledTimes(1);
 
-		// Verify the bot is enabled by default after registration
-		// We don't need to explicitly check isBotEnabled since it's set during registration
-		// But we can verify that the bot is registered with the correct name
+		// Verify the bot is registered with the correct name
 		expect(mockRegisterBot).toHaveBeenCalledWith(
 			expect.objectContaining({
 				defaultBotName: validBot.name,
 			}),
 		);
+		
+		// Verify the bot is enabled by checking the isBotEnabled function
+		expect(mockIsBotEnabled).toHaveBeenCalledWith(validBot.name);
+		expect(mockIsBotEnabled(validBot.name)).toBe(true);
 	});
 
 	it('should skip invalid bots', async () => {
