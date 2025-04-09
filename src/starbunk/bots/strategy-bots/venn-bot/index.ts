@@ -1,8 +1,8 @@
-import { createStrategyBot } from '../../core/bot-builder';
+import { BotFactory } from '../../core/bot-factory';
 import { cringeTrigger, randomVennTrigger } from './triggers';
 
 // Create the Venn Bot that randomly says "Hmm..."
-export default createStrategyBot({
+export default BotFactory.createBot({
 	name: 'VennBot',
 	description: 'Randomly says "Hmm..."',
 	defaultIdentity: {

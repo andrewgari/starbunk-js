@@ -6,45 +6,47 @@ const mockGetInstance = jest.fn(() => mockBotRegistryInstance); // Default mock
 jest.mock('../botRegistry', () => ({
 	BotRegistry: {
 		// Mock getInstance to return the mock function
-		getInstance: mockGetInstance
-	}
+		getInstance: mockGetInstance,
+	},
 }));
 
 // Mock the imported initializeCovaBot function
 const mockInitializeCovaBot = jest.fn().mockResolvedValue({});
 jest.mock('../strategy-bots/cova-bot', () => ({
-	initializeCovaBot: mockInitializeCovaBot
+	initializeCovaBot: mockInitializeCovaBot,
 }));
 
-// Mock strategy bots directly
-const mockStrategyBots: StrategyBot[] = [];
-jest.mock('../strategy-bots', () => ({ // Mock the named export 'strategyBots'
-	strategyBots: mockStrategyBots
+// Mock reply bots directly
+const mockReplyBots: ReplyBotImpl[] = [];
+jest.mock('../strategy-bots', () => ({
+	// Mock the named export 'replyBots'
+	replyBots: mockReplyBots,
 }));
 
 // Statically import the necessary modules again
-import { StrategyBot } from '../core/bot-builder';
-import { StrategyBotLoader } from '../strategy-loader'; // Import the class directly
+import { ReplyBotImpl } from '../core/bot-builder';
+import { ReplyBotLoader } from '../strategy-loader'; // Import the class directly
 
-describe('Strategy Bot Loader', () => {
+describe('Reply Bot Loader', () => {
 	// Remove spy variable
 	// let initializeCovaBotSpy: jest.SpyInstance;
 
-	const validBot: StrategyBot = {
+	const validBot: ReplyBotImpl = {
 		name: 'TestBot',
 		description: 'A test bot',
 		// No metadata needed if validateBot doesn't check it
-		processMessage: jest.fn()
+		processMessage: jest.fn(),
 	};
 
-	const invalidBot = { // Simulate an invalid structure
-		name: 'Invalid'
+	const invalidBot = {
+		// Simulate an invalid structure
+		name: 'Invalid',
 		// Missing description and processMessage
-	} as unknown as StrategyBot;
+	} as unknown as ReplyBotImpl;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
-		mockStrategyBots.length = 0;
+		mockReplyBots.length = 0;
 		// Reset getInstance default behavior for each test if needed, though clearAllMocks might cover it
 		mockGetInstance.mockClear(); // Explicitly clear calls
 		mockGetInstance.mockReturnValue(mockBotRegistryInstance); // Reset to default return value
@@ -57,12 +59,12 @@ describe('Strategy Bot Loader', () => {
 		// initializeCovaBotSpy.mockRestore();
 	});
 
-	it('should load valid strategy bots', async () => {
+	it('should load valid reply bots', async () => {
 		// Setup
-		mockStrategyBots.push(validBot);
+		mockReplyBots.push(validBot);
 
 		// Execute by calling the static method on the imported class
-		const loadedBots = await StrategyBotLoader.loadBots();
+		const loadedBots = await ReplyBotLoader.loadBots();
 
 		// Verify
 		expect(mockGetInstance).toHaveBeenCalledTimes(1); // Called once for the valid bot
@@ -74,10 +76,10 @@ describe('Strategy Bot Loader', () => {
 
 	it('should skip invalid bots', async () => {
 		// Setup
-		mockStrategyBots.push(invalidBot, validBot);
+		mockReplyBots.push(invalidBot, validBot);
 
 		// Execute
-		const loadedBots = await StrategyBotLoader.loadBots();
+		const loadedBots = await ReplyBotLoader.loadBots();
 
 		// Verify
 		expect(mockGetInstance).toHaveBeenCalledTimes(1); // Called only for the valid bot
@@ -90,10 +92,10 @@ describe('Strategy Bot Loader', () => {
 	it('should handle CovaBot initialization failure', async () => {
 		// Setup mock to reject
 		mockInitializeCovaBot.mockRejectedValueOnce(new Error('Failed to initialize'));
-		mockStrategyBots.push(validBot);
+		mockReplyBots.push(validBot);
 
 		// Execute
-		const loadedBots = await StrategyBotLoader.loadBots();
+		const loadedBots = await ReplyBotLoader.loadBots();
 
 		// Verify
 		// If initialize fails, the loader might still get the instance, but shouldn't register bots
@@ -105,7 +107,7 @@ describe('Strategy Bot Loader', () => {
 	it('should handle individual bot loading failures', async () => {
 		// Setup a bot that causes adaptBot or registerBot to fail
 		const failingBot = { ...validBot, name: 'FailingBot' };
-		mockStrategyBots.push(failingBot, validBot);
+		mockReplyBots.push(failingBot, validBot);
 
 		// Simulate BotRegistry.getInstance throwing an error for the first bot
 		// Clear any default behavior set in beforeEach if necessary
@@ -118,7 +120,7 @@ describe('Strategy Bot Loader', () => {
 			.mockImplementationOnce(() => mockBotRegistryInstance); // Succeed for the second bot
 
 		// Execute
-		const loadedBots = await StrategyBotLoader.loadBots();
+		const loadedBots = await ReplyBotLoader.loadBots();
 
 		// Verify
 		expect(mockGetInstance).toHaveBeenCalledTimes(2); // Attempted for both bots

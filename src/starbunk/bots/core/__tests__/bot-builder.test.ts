@@ -2,7 +2,7 @@ import { DiscordService } from '../../../../services/discordService';
 import { logger } from '../../../../services/logger';
 import { getDiscordService } from '@/services/bootstrap';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
-import { createBotDescription, createBotStrategyName, createStrategyBot } from '../bot-builder';
+import { createBotDescription, createBotReplyName, createReplyBot } from '../bot-builder';
 
 // Mock the logger
 jest.mock('../../../../services/logger');
@@ -13,14 +13,14 @@ describe('Bot builder', () => {
 	});
 
 	describe('Type creators', () => {
-		describe('createBotStrategyName', () => {
-			it('should create a valid bot strategy name', () => {
-				const name = createBotStrategyName('TestBot');
+		describe('createBotReplyName', () => {
+			it('should create a valid bot reply name', () => {
+				const name = createBotReplyName('TestBot');
 				expect(name).toBe('TestBot');
 			});
 
 			it('should throw an error for empty name', () => {
-				expect(() => createBotStrategyName('')).toThrow();
+				expect(() => createBotReplyName('')).toThrow();
 			});
 		});
 
@@ -37,7 +37,7 @@ describe('Bot builder', () => {
 		});
 	});
 
-	describe('createStrategyBot', () => {
+	describe('createReplyBot', () => {
 		it('should create a bot with the given config', () => {
 			const config = {
 				name: 'TestBot',
@@ -53,7 +53,7 @@ describe('Bot builder', () => {
 				]
 			};
 
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 
 			expect(bot.name).toBe('TestBot');
 			expect(bot.description).toBe('A test bot');
@@ -62,7 +62,7 @@ describe('Bot builder', () => {
 
 		it('should validate the bot configuration', () => {
 			// Missing name
-			expect(() => createStrategyBot({
+			expect(() => createReplyBot({
 				name: '',
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
@@ -74,7 +74,7 @@ describe('Bot builder', () => {
 			})).toThrow('Bot name is required');
 
 			// Missing description
-			expect(() => createStrategyBot({
+			expect(() => createReplyBot({
 				name: 'TestBot',
 				description: '',
 				defaultIdentity: mockBotIdentity,
@@ -86,7 +86,7 @@ describe('Bot builder', () => {
 			})).toThrow('Bot description cannot be empty');
 
 			// Missing default identity
-			expect(() => createStrategyBot({
+			expect(() => createReplyBot({
 				name: 'TestBot',
 				description: 'A test bot',
 				defaultIdentity: null as any,
@@ -98,7 +98,7 @@ describe('Bot builder', () => {
 			})).toThrow('Default bot identity is required');
 
 			// Empty triggers
-			expect(() => createStrategyBot({
+			expect(() => createReplyBot({
 				name: 'TestBot',
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
@@ -132,7 +132,7 @@ describe('Bot builder', () => {
 			const mockDiscordService = getDiscordService() as jest.Mocked<DiscordService>; // Assuming it's already mocked
 
 			// Create bot and process message
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 			const message = mockMessage(); // Create the mock message
 			await bot.processMessage(message); // Use the created message
 
@@ -164,7 +164,7 @@ describe('Bot builder', () => {
 				// No skipBotMessages or responseRate
 			};
 
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 			expect(bot.metadata?.responseRate).toBe(100); // Default value
 		});
 
@@ -183,7 +183,7 @@ describe('Bot builder', () => {
 				skipBotMessages: true
 			};
 
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 			const botMessage = mockMessage('Test message', 'BotUser', true);
 
 			await bot.processMessage(botMessage);
@@ -214,7 +214,7 @@ describe('Bot builder', () => {
 				triggers: [trigger1, trigger2]
 			};
 
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 			const message = mockMessage('Test message');
 
 			await bot.processMessage(message);
@@ -245,7 +245,7 @@ describe('Bot builder', () => {
 				triggers: [trigger]
 			};
 
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 			const message = mockMessage('Test message');
 
 			await bot.processMessage(message);
@@ -280,7 +280,7 @@ describe('Bot builder', () => {
 				triggers: [errorTrigger, fallbackTrigger]
 			};
 
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 			const message = mockMessage('Test message');
 
 			await bot.processMessage(message);
@@ -323,7 +323,7 @@ describe('Bot builder', () => {
 				triggers: [trigger]
 			};
 
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 			const message = mockMessage('Test message');
 
 			await bot.processMessage(message);
@@ -356,7 +356,7 @@ describe('Bot builder', () => {
 				triggers: [trigger]
 			};
 
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 			const message = mockMessage('Test message');
 
 			await bot.processMessage(message);
@@ -387,7 +387,7 @@ describe('Bot builder', () => {
 				triggers: [trigger]
 			};
 
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 			const message = mockMessage('Test message');
 
 			await bot.processMessage(message);
@@ -416,7 +416,7 @@ describe('Bot builder', () => {
 				triggers: [trigger]
 			};
 
-			const bot = createStrategyBot(config);
+			const bot = createReplyBot(config);
 			const message = mockMessage('Test message');
 
 			await bot.processMessage(message);
@@ -448,7 +448,7 @@ describe('Bot builder', () => {
 					responseRate: 0,
 				};
 
-				const bot = createStrategyBot(config);
+				const bot = createReplyBot(config);
 				const message = mockMessage('Test message');
 
 				await bot.processMessage(message);
@@ -475,7 +475,7 @@ describe('Bot builder', () => {
 					responseRate: 100,
 				};
 
-				const bot = createStrategyBot(config);
+				const bot = createReplyBot(config);
 				const message = mockMessage('Test message');
 
 				await bot.processMessage(message);

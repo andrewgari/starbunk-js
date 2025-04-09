@@ -1,4 +1,4 @@
-import { createStrategyBot } from '../../core/bot-builder';
+import { BotFactory } from '../../core/bot-factory';
 import { BLUE_BOT_AVATARS, BLUE_BOT_NAME } from './constants';
 import {
 	triggerBlueBotAcknowledgeOther,
@@ -10,7 +10,7 @@ import {
 } from './triggers';
 
 // Create the Blue Bot with all its triggers
-export default createStrategyBot({
+export default BotFactory.createBot({
 	name: 'BlueBot',
 	description: 'Responds when someone says "blu?"',
 	defaultIdentity: {

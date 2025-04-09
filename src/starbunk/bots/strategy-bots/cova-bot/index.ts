@@ -1,7 +1,7 @@
-import { PromptRegistry, PromptType } from '../../../../services/llm/promptManager';
-import { logger } from '../../../../services/logger';
-import { getPersonalityService } from '../../../../services/personalityService';
-import { createStrategyBot } from '../../core/bot-builder';
+import { PromptRegistry, PromptType } from '@/services/llm/promptManager';
+import { logger } from '@/services/logger';
+import { getPersonalityService } from '@/services/personalityService';
+import { createReplyBot } from '@/starbunk/bots/core';
 import { COVA_BOT_PROMPTS } from './constants';
 import { covaDirectMentionTrigger, covaStatsCommandTrigger, covaTrigger } from './triggers';
 
@@ -22,14 +22,14 @@ export class CovaBotFactory {
 			systemContent: COVA_BOT_PROMPTS.EmulatorPrompt,
 			formatUserMessage: (message: string): string => message,
 			defaultTemperature: 0.7,
-			defaultMaxTokens: 250
+			defaultMaxTokens: 250,
 		});
 
 		PromptRegistry.registerPrompt(PromptType.COVA_DECISION, {
 			systemContent: COVA_BOT_PROMPTS.DecisionPrompt,
 			formatUserMessage: (message: string): string => message,
 			defaultTemperature: 0.2,
-			defaultMaxTokens: 10
+			defaultMaxTokens: 10,
 		});
 	}
 
@@ -58,7 +58,7 @@ export class CovaBotFactory {
 		const newEmbedding = await personalityService.generatePersonalityEmbedding(
 			COVA_BOT_PROMPTS.EmulatorPrompt,
 			'personality.json',
-			'covaBot'
+			'covaBot',
 		);
 
 		if (newEmbedding) {
@@ -80,19 +80,21 @@ export class CovaBotFactory {
 				embedding: embedding,
 				prompts: {
 					emulator: COVA_BOT_PROMPTS.EmulatorPrompt,
-					decision: COVA_BOT_PROMPTS.DecisionPrompt
-				}
+					decision: COVA_BOT_PROMPTS.DecisionPrompt,
+				},
 			};
 		} catch (error) {
-			logger.error(`[CovaBot] Error during initialization: ${error instanceof Error ? error.message : String(error)}`);
+			logger.error(
+				`[CovaBot] Error during initialization: ${error instanceof Error ? error.message : String(error)}`,
+			);
 			logger.warn('[CovaBot] Continuing with default behavior');
 
 			// Ensure prompts are still returned even on error
 			return {
 				prompts: {
 					emulator: COVA_BOT_PROMPTS.EmulatorPrompt,
-					decision: COVA_BOT_PROMPTS.DecisionPrompt
-				}
+					decision: COVA_BOT_PROMPTS.DecisionPrompt,
+				},
 			};
 		}
 	}
@@ -102,17 +104,17 @@ export class CovaBotFactory {
 export const initializeCovaBot = CovaBotFactory.initialize;
 
 // Create and export the bot instance
-export default createStrategyBot({
+export default createReplyBot({
 	name: 'CovaBot',
 	description: 'LLM-powered CovaBot that responds to messages based on personality vectors',
 	defaultIdentity: {
 		botName: 'Cova',
-		avatarUrl: '' // Will be overridden by dynamic identity from Cova's Discord user
+		avatarUrl: '', // Will be overridden by dynamic identity from Cova's Discord user
 	},
 	skipBotMessages: true,
 	triggers: [
 		covaStatsCommandTrigger, // Highest priority - command for debugging
 		covaDirectMentionTrigger, // Higher priority - always respond to direct mentions
-		covaTrigger // Normal priority - use LLM to decide if should respond
-	]
+		covaTrigger, // Normal priority - use LLM to decide if should respond
+	],
 });

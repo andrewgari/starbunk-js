@@ -1,8 +1,8 @@
-import { createStrategyBot } from '../../core/bot-builder';
+import { BotFactory } from '../../core/bot-factory';
 import { interruptTrigger } from './triggers';
 
 // Create the Interrupt Bot that randomly interrupts messages
-export default createStrategyBot({
+export default BotFactory.createBot({
 	name: 'Interrupt Bot',
 	description: 'Randomly interrupts messages with an apology',
 	defaultIdentity: {

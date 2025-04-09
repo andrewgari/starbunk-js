@@ -1,9 +1,9 @@
-import { createStrategyBot } from '../../core/bot-builder';
+import { BotFactory } from '../../core/bot-factory';
 import { SPIDER_BOT_AVATAR_URL, SPIDER_BOT_NAME } from './constants';
 import { correctSpellingTrigger, incorrectSpellingTrigger } from './triggers';
 
 // Create the Spider Bot that enforces proper Spider-Man hyphenation
-export default createStrategyBot({
+export default BotFactory.createBot({
 	name: SPIDER_BOT_NAME,
 	description: 'Enforces proper Spider-Man hyphenation and responds accordingly',
 	defaultIdentity: {

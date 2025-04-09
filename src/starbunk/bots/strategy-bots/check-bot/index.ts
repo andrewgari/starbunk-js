@@ -1,9 +1,9 @@
-import { createStrategyBot } from '../../core/bot-builder';
+import { BotFactory } from '../../core/bot-factory';
 import { CHECK_BOT_AVATAR_URL, CHECK_BOT_NAME } from './constants';
 import { checkTrigger } from './triggers';
 
 // Create the Check Bot that swaps "check" and "czech"
-export default createStrategyBot({
+export default BotFactory.createBot({
 	name: CHECK_BOT_NAME,
 	description: 'Swaps "check" and "czech" in messages',
 	defaultIdentity: {

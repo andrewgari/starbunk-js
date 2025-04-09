@@ -1,9 +1,9 @@
-import { createStrategyBot } from '../../core/bot-builder';
+import { BotFactory } from '../../core/bot-factory';
 import { PICKLE_BOT_AVATAR_URL, PICKLE_BOT_NAME } from './constants';
 import { pickleTrigger } from './triggers';
 
 // Create the Pickle Bot that responds to gremlin mentions
-export default createStrategyBot({
+export default BotFactory.createBot({
 	name: PICKLE_BOT_NAME,
 	description: 'Responds to gremlin mentions with confusion',
 	defaultIdentity: {

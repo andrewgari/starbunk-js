@@ -1,9 +1,9 @@
-import { createStrategyBot } from '../../core/bot-builder';
+import { BotFactory } from '../../core/bot-factory';
 import { BOT_BOT_AVATAR_URL, BOT_BOT_NAME, BOT_BOT_RESPONSE_RATE } from './constants';
 import { botTrigger } from './triggers';
 
 // Create the Bot Bot that responds to other bots
-export default createStrategyBot({
+export default BotFactory.createBot({
 	name: BOT_BOT_NAME,
 	description: 'Responds to other bots with a 5% chance',
 	defaultIdentity: {

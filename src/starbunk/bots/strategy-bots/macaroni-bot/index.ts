@@ -1,9 +1,9 @@
-import { createStrategyBot } from '../../core/bot-builder';
+import { BotFactory } from '../../core/bot-factory';
 import { MACARONI_BOT_AVATAR_URL, MACARONI_BOT_NAME } from './constants';
 import { macaroniTrigger, vennTrigger } from './triggers';
 
 // Create the Macaroni Bot that responds to macaroni/pasta and Venn mentions
-export default createStrategyBot({
+export default BotFactory.createBot({
 	name: MACARONI_BOT_NAME,
 	description: 'Responds to macaroni/pasta mentions with a joke about Venn',
 	defaultIdentity: {

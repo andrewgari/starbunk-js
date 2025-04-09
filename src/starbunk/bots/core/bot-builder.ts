@@ -8,9 +8,9 @@ import { TriggerResponse } from './trigger-response';
 /**
  * Strongly typed bot name
  */
-export type BotStrategyName = string;
+export type BotReplyName = string;
 
-export function createBotStrategyName(name: string): BotStrategyName {
+export function createBotReplyName(name: string): BotReplyName {
 	if (!name || name.trim().length === 0) {
 		throw new Error('Bot name is required');
 	}
@@ -30,9 +30,9 @@ export function createBotDescription(description: string): BotDescription {
 }
 
 /**
- * Configuration for a strategy-based bot with strong typing
+ * Configuration for a reply-based bot with strong typing
  */
-export interface StrategyBotConfig {
+export interface ReplyBotConfig {
 	name: string;
 	description: string;
 	defaultIdentity: BotIdentity;
@@ -44,10 +44,10 @@ export interface StrategyBotConfig {
 }
 
 /**
- * Validated strategy bot configuration
+ * Validated reply bot configuration
  */
-export interface ValidatedStrategyBotConfig {
-	name: BotStrategyName;
+export interface ValidatedReplyBotConfig {
+	name: BotReplyName;
 	description: BotDescription;
 	defaultIdentity: BotIdentity;
 	triggers: TriggerResponse[];
@@ -59,7 +59,7 @@ export interface ValidatedStrategyBotConfig {
 /**
  * Validate bot configuration and provide defaults
  */
-export function validateBotConfig(config: StrategyBotConfig): ValidatedStrategyBotConfig {
+export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConfig {
 	// Validate required fields
 	if (!config.name || config.name.trim() === '') {
 		throw new Error('Bot name is required');
@@ -78,7 +78,7 @@ export function validateBotConfig(config: StrategyBotConfig): ValidatedStrategyB
 	const disabled = config.disabled ?? false;
 
 	return {
-		name: createBotStrategyName(config.name),
+		name: createBotReplyName(config.name),
 		description: createBotDescription(config.description),
 		defaultIdentity: config.defaultIdentity,
 		triggers: config.triggers,
@@ -89,10 +89,10 @@ export function validateBotConfig(config: StrategyBotConfig): ValidatedStrategyB
 }
 
 /**
- * Public interface for a strategy bot
+ * Public interface for a reply bot implementation
  */
-export interface StrategyBot {
-	readonly name: BotStrategyName;
+export interface ReplyBotImpl {
+	readonly name: BotReplyName;
 	readonly description: BotDescription;
 	readonly metadata?: {
 		responseRate: number;
@@ -103,9 +103,9 @@ export interface StrategyBot {
 }
 
 /**
- * Create a new strategy bot with validated configuration
+ * Create a new reply bot with validated configuration
  */
-export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
+export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 	const validConfig = validateBotConfig(config);
 
 	return {

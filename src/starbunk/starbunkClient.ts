@@ -1,5 +1,13 @@
 import { PlayerSubscription } from '@discordjs/voice';
-import { CommandInteraction, Events, GatewayIntentBits, IntentsBitField, Interaction, Message, VoiceState } from 'discord.js';
+import {
+	CommandInteraction,
+	Events,
+	GatewayIntentBits,
+	IntentsBitField,
+	Interaction,
+	Message,
+	VoiceState,
+} from 'discord.js';
 import DiscordClient from '../discord/discordClient';
 import { setStarbunkClient } from '../discord/getStarbunkClient';
 import { bootstrapApplication } from '../services/bootstrap';
@@ -10,10 +18,10 @@ import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
 
 export default class StarbunkClient extends DiscordClient {
+	public activeSubscription: PlayerSubscription | null = null;
 	private readonly commandHandler: CommandHandler;
 	private hasInitialized = false;
 	private musicPlayer: DJCova | null = null;
-	public activeSubscription: PlayerSubscription | null = null;
 
 	constructor() {
 		const intents = new IntentsBitField();
@@ -23,7 +31,7 @@ export default class StarbunkClient extends DiscordClient {
 			GatewayIntentBits.GuildVoiceStates,
 			GatewayIntentBits.MessageContent,
 			GatewayIntentBits.GuildMembers,
-			GatewayIntentBits.GuildWebhooks
+			GatewayIntentBits.GuildWebhooks,
 		);
 
 		super({ intents });
@@ -102,6 +110,16 @@ export default class StarbunkClient extends DiscordClient {
 		}
 	}
 
+	public override async destroy(): Promise<void> {
+		try {
+			// Call parent destroy
+			await super.destroy();
+		} catch (error) {
+			logger.error('Error during client destroy:', error instanceof Error ? error : new Error(String(error)));
+			throw error;
+		}
+	}
+
 	private async handleInteraction(interaction: Interaction): Promise<void> {
 		if (!interaction.isCommand()) return;
 
@@ -151,19 +169,19 @@ export default class StarbunkClient extends DiscordClient {
 
 			logger.info('Personality service initialized successfully');
 
-			// Load strategy bots
-			const { loadStrategyBots } = await import('./bots/strategy-loader');
-			const strategyBots = await loadStrategyBots();
+			// Load reply bots
+			const { loadReplyBots } = await import('./bots/strategy-loader');
+			const replyBots = await loadReplyBots();
 
-			// Log summary of loaded strategy bots
-			if (strategyBots.length > 0) {
-				logger.info(`📊 Successfully loaded ${strategyBots.length} strategy bots`);
-				logger.info('📋 Strategy bots summary:');
-				strategyBots.forEach(bot => {
+			// Log summary of loaded reply bots
+			if (replyBots.length > 0) {
+				logger.info(`📊 Successfully loaded ${replyBots.length} reply bots`);
+				logger.info('📋 Reply bots summary:');
+				replyBots.forEach((bot) => {
 					logger.info(`   - ${bot.defaultBotName}`);
 				});
 			} else {
-				logger.warn('⚠️ No strategy bots were loaded');
+				logger.warn('⚠️ No reply bots were loaded');
 			}
 
 			// Load voice bots
@@ -174,7 +192,7 @@ export default class StarbunkClient extends DiscordClient {
 			if (voiceBots.length > 0) {
 				logger.info(`📊 Successfully loaded ${voiceBots.length} voice bots`);
 				logger.info('📋 Voice bots summary:');
-				voiceBots.forEach(bot => {
+				voiceBots.forEach((bot) => {
 					logger.info(`   - ${bot.name}`);
 				});
 			} else {
@@ -182,16 +200,6 @@ export default class StarbunkClient extends DiscordClient {
 			}
 		} catch (error) {
 			logger.error('Error loading bots:', error instanceof Error ? error : new Error(String(error)));
-			throw error;
-		}
-	}
-
-	public override async destroy(): Promise<void> {
-		try {
-			// Call parent destroy
-			await super.destroy();
-		} catch (error) {
-			logger.error('Error during client destroy:', error instanceof Error ? error : new Error(String(error)));
 			throw error;
 		}
 	}
@@ -204,14 +212,17 @@ export default class StarbunkClient extends DiscordClient {
 
 			// Create an array of promises for each enabled bot's message handling
 			const processingPromises = replyBots
-				.filter(bot => registry.isBotEnabled(bot.defaultBotName))
-				.map(bot => {
+				.filter((bot) => registry.isBotEnabled(bot.defaultBotName))
+				.map((bot) => {
 					// Wrap the call in an async IIFE to handle potential errors individually
 					return (async () => {
 						try {
 							await bot.handleMessage(message);
 						} catch (error) {
-							logger.error(`Error in bot ${bot.defaultBotName} while handling message:`, error instanceof Error ? error : new Error(String(error)));
+							logger.error(
+								`Error in bot ${bot.defaultBotName} while handling message:`,
+								error instanceof Error ? error : new Error(String(error)),
+							);
 							// We log the error but don't re-throw, allowing Promise.allSettled to continue
 						}
 					})();
@@ -221,7 +232,10 @@ export default class StarbunkClient extends DiscordClient {
 			await Promise.allSettled(processingPromises);
 		} catch (error) {
 			// Catch errors related to getting the registry or bots list
-			logger.error('Error preparing to handle message:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'Error preparing to handle message:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 		}
 	}
 }

@@ -1,9 +1,9 @@
-import { createStrategyBot } from '../../core/bot-builder';
+import { BotFactory } from '../../core/bot-factory';
 import { HOLD_AVATAR_URL, HOLD_BOT_NAME } from './constants';
 import { holdTrigger } from './triggers';
 
 // Create the Hold Bot with minimal configuration
-export default createStrategyBot({
+export default BotFactory.createBot({
 	name: 'HoldBot',
 	description: 'Responds "Hold." when someone says "Hold"',
 	defaultIdentity: {

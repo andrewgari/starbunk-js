@@ -1,5 +1,5 @@
 import fs, { Dirent } from 'fs';
-import { StrategyBotAdapter } from '../bots/adapter';
+import { ReplyBotAdapter } from '../bots/adapter';
 import { BotRegistry } from '../bots/botRegistry';
 import ReplyBot from '../bots/replyBot';
 import StarbunkClient from '../starbunkClient';
@@ -15,34 +15,35 @@ jest.mock('../starbunkClient', () => {
 
 				if (exists) {
 					// Call the loadBots method directly to simulate client initialization
-					const { loadStrategyBots } = require('../bots/strategy-loader');
-					const strategyBots = await loadStrategyBots();
+					const { loadReplyBots } = require('../bots/strategy-loader');
+					const replyBots = await loadReplyBots();
 
 					// Register bots in the registry
 					const registry = BotRegistry.getInstance();
-					strategyBots.forEach((bot: StrategyBotAdapter) => {
+					replyBots.forEach((bot: ReplyBotAdapter) => {
 						registry.registerBot(bot);
 					});
 				}
 				// If directories don't exist, do nothing (no bots are registered)
-			})
+			}),
 		};
 	});
 });
 
 // Mock fs
 jest.mock('fs', () => {
-	const mockFs = {
+	return {
 		existsSync: jest.fn(),
-		readdirSync: jest.fn().mockImplementation(() => [
-			{ name: 'cova-bot', isDirectory: () => true } as Dirent,
-			{ name: 'baby-bot', isDirectory: () => true } as Dirent
-		]),
+		readdirSync: jest
+			.fn()
+			.mockImplementation(() => [
+				{ name: 'cova-bot', isDirectory: () => true } as Dirent,
+				{ name: 'baby-bot', isDirectory: () => true } as Dirent,
+			]),
 		promises: {
-			rename: jest.fn()
-		}
+			rename: jest.fn(),
+		},
 	};
-	return mockFs;
 });
 
 // Mock logger
@@ -51,37 +52,37 @@ jest.mock('../../services/logger', () => ({
 		info: jest.fn(),
 		debug: jest.fn(),
 		warn: jest.fn(),
-		error: jest.fn()
-	}
+		error: jest.fn(),
+	},
 }));
 
 // Mock strategy-loader
 jest.mock('../bots/strategy-loader', () => ({
-	loadStrategyBots: jest.fn().mockImplementation(() => {
-		const mockCovaBot = new StrategyBotAdapter({
+	loadReplyBots: jest.fn().mockImplementation(() => {
+		const mockCovaBot = new ReplyBotAdapter({
 			name: 'CovaBot',
 			description: 'Mock Cova Bot',
-			processMessage: async () => { }
+			processMessage: async () => {},
 		});
-		const mockBabyBot = new StrategyBotAdapter({
+		const mockBabyBot = new ReplyBotAdapter({
 			name: 'BabyBot',
 			description: 'Mock Baby Bot',
-			processMessage: async () => { }
+			processMessage: async () => {},
 		});
 		return [mockCovaBot, mockBabyBot];
-	})
+	}),
 }));
 
 // Mock voice-loader
 jest.mock('../bots/voice-loader', () => ({
-	loadVoiceBots: jest.fn().mockResolvedValue([])
+	loadVoiceBots: jest.fn().mockResolvedValue([]),
 }));
 
 // Mock personality service
 jest.mock('../../services/personalityService', () => ({
 	getPersonalityService: jest.fn().mockReturnValue({
-		loadPersonalityEmbedding: jest.fn().mockResolvedValue(undefined)
-	})
+		loadPersonalityEmbedding: jest.fn().mockResolvedValue(undefined),
+	}),
 }));
 
 describe('Starbunk startup', () => {
@@ -115,7 +116,7 @@ describe('Starbunk startup', () => {
 			expect(replyBots.length).toBeGreaterThan(0);
 
 			// Verify some known bots exist
-			const botNames = replyBots.map(bot => bot.defaultBotName);
+			const botNames = replyBots.map((bot) => bot.defaultBotName);
 			expect(botNames).toContain('CovaBot');
 			expect(botNames).toContain('BabyBot');
 		});

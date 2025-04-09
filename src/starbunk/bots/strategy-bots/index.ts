@@ -1,4 +1,6 @@
 // Import all bots
+// Each bot is created using the BotFactory in its own module
+// This allows for consistent bot creation and configuration
 import attitudeBot from './attitude-bot';
 import babyBot from './baby-bot';
 import bananaBot from './banana-bot';
@@ -24,7 +26,8 @@ import spiderBot from './spider-bot';
 import vennBot from './venn-bot';
 
 // Export all bots
-export const strategyBots = [
+// These bots are created using the Factory Pattern via BotFactory
+export const replyBots = [
 	attitudeBot,
 	babyBot,
 	bananaBot,
@@ -47,8 +50,7 @@ export const strategyBots = [
 	sheeshBot,
 	sigGreatBot,
 	spiderBot,
-	vennBot
+	vennBot,
 ];
 
-export default strategyBots;
-
+export default replyBots;

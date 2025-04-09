@@ -1,19 +1,22 @@
 import { logger } from '../../services/logger';
-import { StrategyBotAdapter } from './adapter';
+import { ReplyBotAdapter } from './adapter';
 import { BotRegistry } from './botRegistry';
-import { StrategyBot } from './core/bot-builder';
+import { ReplyBotImpl } from './core/bot-builder';
 import ReplyBot from './replyBot';
-import { strategyBots } from './strategy-bots';
+import { replyBots } from './strategy-bots';
 import { initializeCovaBot } from './strategy-bots/cova-bot';
 
-class StrategyBotError extends Error {
-	constructor(message: string, public readonly cause?: unknown) {
+class ReplyBotError extends Error {
+	constructor(
+		message: string,
+		public readonly cause?: unknown,
+	) {
 		super(message);
-		this.name = 'StrategyBotError';
+		this.name = 'ReplyBotError';
 	}
 }
 
-interface StrategyLoaderConfig {
+interface ReplyLoaderConfig {
 	covaConfig?: {
 		personalityEmbedding?: Float32Array;
 		prompts: {
@@ -24,56 +27,9 @@ interface StrategyLoaderConfig {
 }
 
 // Export the class for testing purposes
-export class StrategyBotLoader {
-	// Let errors propagate up from the underlying initializeCovaBot
-	private static async initializeCovaBot(): Promise<StrategyLoaderConfig> {
-		try {
-			const covaConfig = await initializeCovaBot();
-			return { covaConfig };
-		} catch (error) {
-			throw new StrategyBotError('Failed to initialize CovaBot', error);
-		}
-	}
-
-	private static validateBot(bot: unknown): bot is StrategyBot {
-		if (!bot || typeof bot !== 'object') {
-			logger.warn('Invalid strategy bot: not an object');
-			return false;
-		}
-
-		const requiredProps = {
-			name: 'string',
-			description: 'string',
-			processMessage: 'function'
-		} as const;
-
-		const missingProps = Object.entries(requiredProps).filter(([prop, type]) => {
-			const value = (bot as Record<string, unknown>)[prop];
-			return typeof value !== type;
-		});
-
-		if (missingProps.length > 0) {
-			logger.warn(
-				`Invalid strategy bot: missing or invalid properties: ${missingProps.map(([prop]) => prop).join(', ')
-				}`
-			);
-			return false;
-		}
-
-		return true;
-	}
-
-	private static adaptBot(bot: StrategyBot): ReplyBot {
-		try {
-			logger.debug(`Adapting strategy bot: ${bot.name}`);
-			return new StrategyBotAdapter(bot);
-		} catch (error) {
-			throw new StrategyBotError(`Failed to adapt bot ${bot.name}`, error);
-		}
-	}
-
+export class ReplyBotLoader {
 	public static async loadBots(): Promise<ReplyBot[]> {
-		logger.info('Loading strategy bots...');
+		logger.info('Loading reply bots...');
 		const loadedBots: ReplyBot[] = [];
 
 		try {
@@ -81,7 +37,7 @@ export class StrategyBotLoader {
 			await this.initializeCovaBot();
 
 			// Load and adapt all other bots
-			for (const bot of strategyBots) {
+			for (const bot of replyBots) {
 				try {
 					if (this.validateBot(bot)) {
 						const adaptedBot = this.adaptBot(bot);
@@ -94,7 +50,9 @@ export class StrategyBotLoader {
 					const botName = this.validateBot(bot) ? bot.name : 'unknown';
 					logger.error(
 						`Failed to load bot: ${botName}`,
-						error instanceof Error ? error : new StrategyBotError(`Unknown error loading bot ${botName}`, error)
+						error instanceof Error
+							? error
+							: new ReplyBotError(`Unknown error loading bot ${botName}`, error),
 					);
 				}
 			}
@@ -102,8 +60,8 @@ export class StrategyBotLoader {
 			this.logLoadingSummary(loadedBots);
 		} catch (error) {
 			logger.error(
-				'Critical error loading strategy bots:',
-				error instanceof Error ? error : new StrategyBotError('Unknown critical error', error)
+				'Critical error loading reply bots:',
+				error instanceof Error ? error : new ReplyBotError('Unknown critical error', error),
 			);
 			return [];
 		}
@@ -111,11 +69,57 @@ export class StrategyBotLoader {
 		return loadedBots;
 	}
 
+	// Let errors propagate up from the underlying initializeCovaBot
+	private static async initializeCovaBot(): Promise<ReplyLoaderConfig> {
+		try {
+			const covaConfig = await initializeCovaBot();
+			return { covaConfig };
+		} catch (error) {
+			throw new ReplyBotError('Failed to initialize CovaBot', error);
+		}
+	}
+
+	private static validateBot(bot: unknown): bot is ReplyBotImpl {
+		if (!bot || typeof bot !== 'object') {
+			logger.warn('Invalid reply bot: not an object');
+			return false;
+		}
+
+		const requiredProps = {
+			name: 'string',
+			description: 'string',
+			processMessage: 'function',
+		} as const;
+
+		const missingProps = Object.entries(requiredProps).filter(([prop, type]) => {
+			const value = (bot as Record<string, unknown>)[prop];
+			return typeof value !== type;
+		});
+
+		if (missingProps.length > 0) {
+			logger.warn(
+				`Invalid reply bot: missing or invalid properties: ${missingProps.map(([prop]) => prop).join(', ')}`,
+			);
+			return false;
+		}
+
+		return true;
+	}
+
+	private static adaptBot(bot: ReplyBotImpl): ReplyBot {
+		try {
+			logger.debug(`Adapting reply bot: ${bot.name}`);
+			return new ReplyBotAdapter(bot);
+		} catch (error) {
+			throw new ReplyBotError(`Failed to adapt bot ${bot.name}`, error);
+		}
+	}
+
 	private static logLoadingSummary(loadedBots: ReplyBot[]): void {
-		logger.info(`📊 Successfully loaded ${loadedBots.length} strategy bots`);
+		logger.info(`📊 Successfully loaded ${loadedBots.length} reply bots`);
 		if (loadedBots.length > 0) {
-			logger.info('📋 Strategy bots summary:');
-			loadedBots.forEach(bot => {
+			logger.info('📋 Reply bots summary:');
+			loadedBots.forEach((bot) => {
 				logger.info(`   - ${bot.defaultBotName} (${bot.constructor.name})`);
 			});
 		}
@@ -123,4 +127,4 @@ export class StrategyBotLoader {
 }
 
 // Bind the static method to its class to preserve 'this' context
-export const loadStrategyBots = StrategyBotLoader.loadBots.bind(StrategyBotLoader);
+export const loadReplyBots = ReplyBotLoader.loadBots.bind(ReplyBotLoader);

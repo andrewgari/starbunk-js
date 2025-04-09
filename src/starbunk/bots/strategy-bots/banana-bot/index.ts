@@ -1,9 +1,9 @@
-import { createStrategyBot } from '../../core/bot-builder';
+import { BotFactory } from '../../core/bot-factory';
 import { BANANA_BOT_AVATAR_URL, BANANA_BOT_NAME } from './constants';
 import { bananaTrigger } from './triggers';
 
 // Create the Banana Bot that responds to banana mentions
-export default createStrategyBot({
+export default BotFactory.createBot({
 	name: BANANA_BOT_NAME,
 	description: 'Responds to banana mentions with random banana-related messages',
 	defaultIdentity: {
