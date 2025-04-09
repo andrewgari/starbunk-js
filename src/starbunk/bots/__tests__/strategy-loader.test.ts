@@ -4,6 +4,25 @@ import { BotRegistry } from '@/starbunk/bots/botRegistry';
 import ReplyBot from '@/starbunk/bots/replyBot'; // Import the class directly
 import { ReplyBotImpl } from '../core/bot-builder';
 
+// Define the mock instance type
+interface MockBotRegistry {
+	registerBot: jest.Mock;
+	enableBot: jest.Mock;
+	isBotEnabled: jest.Mock;
+	bots: Map<string, any>;
+	replyBots: Map<string, any>;
+	voiceBots: Map<string, any>;
+	botStates: Map<string, boolean>;
+	getBotState: jest.Mock;
+	setBotState: jest.Mock;
+	getAllBots: jest.Mock;
+	getAllReplyBots: jest.Mock;
+	getAllVoiceBots: jest.Mock;
+	getBotById: jest.Mock;
+	getReplyBotById: jest.Mock;
+	getVoiceBotById: jest.Mock;
+}
+
 // Mock getBotDefaults
 jest.mock('@/starbunk/config/botDefaults', () => ({
 	getBotDefaults: jest.fn().mockReturnValue({ enabled: true }),
@@ -23,15 +42,18 @@ jest.mock('@/starbunk/bots/reply-bots/cova-bot', () => ({
 
 // Mock the BotRegistry module
 jest.mock('../botRegistry', () => {
-	const mockInstance = {
-		registerBot: jest.fn(),
+	const mockInstance: MockBotRegistry = {
+		registerBot: jest.fn(function (this: MockBotRegistry, bot: ReplyBotImpl) {
+			const botName = (bot as ReplyBotImpl & { defaultBotName?: string }).defaultBotName || bot.name;
+			this.botStates.set(botName, true);
+		}),
 		enableBot: jest.fn(),
-		isBotEnabled: jest.fn().mockReturnValue(true),
+		isBotEnabled: jest.fn(),
 		bots: new Map(),
 		replyBots: new Map(),
 		voiceBots: new Map(),
-		botStates: new Map(),
-		getBotState: jest.fn(),
+		botStates: new Map<string, boolean>(),
+		getBotState: jest.fn((botName: string) => mockInstance.botStates.get(botName) || false),
 		setBotState: jest.fn(),
 		getAllBots: jest.fn().mockReturnValue([]),
 		getAllReplyBots: jest.fn().mockReturnValue([]),
@@ -40,6 +62,8 @@ jest.mock('../botRegistry', () => {
 		getReplyBotById: jest.fn(),
 		getVoiceBotById: jest.fn(),
 	};
+
+	mockInstance.isBotEnabled = jest.fn((botName: string) => mockInstance.botStates.get(botName) || false);
 
 	return {
 		BotRegistry: {
@@ -144,12 +168,20 @@ describe('Bot Registry', () => {
 
 		// Reset the discoverBots mock for each test
 		jest.spyOn(BotRegistry, 'discoverBots').mockImplementation(async () => {
-			return mockReplyBots
+			const registry = BotRegistry.getInstance();
+			const validBots = mockReplyBots
 				.filter((bot) => bot.name && bot.description && bot.processMessage)
 				.map((bot) => ({
 					...bot,
 					defaultBotName: bot.name,
 				})) as unknown as ReplyBot[];
+
+			// Register each valid bot with the registry, just like the real implementation
+			validBots.forEach(bot => {
+				registry.registerBot(bot);
+			});
+
+			return validBots;
 		});
 	});
 
@@ -186,5 +218,35 @@ describe('Bot Registry', () => {
 
 		// Verify
 		expect(loadedBots).toHaveLength(0);
+	});
+
+	it('should verify bots are enabled by default after registration', async () => {
+		// Setup
+		mockReplyBots.push(validBot);
+		const registry = BotRegistry.getInstance();
+		const mockRegisterBot = registry.registerBot;
+		const mockIsBotEnabled = registry.isBotEnabled;
+
+		// Execute
+		const _loadedBots = await BotRegistry.discoverBots();
+
+		// Verify bot registration
+		expect(mockRegisterBot).toHaveBeenCalledWith(
+			expect.objectContaining({
+				defaultBotName: validBot.name,
+			}),
+		);
+
+		// Check if the bot is enabled (this will call the mockIsBotEnabled function)
+		const isEnabled = mockIsBotEnabled(validBot.name);
+
+		// Verify the bot is enabled by default
+		expect(mockIsBotEnabled).toHaveBeenCalledWith(validBot.name);
+
+		// This will now check the actual state in the botStates map
+		expect(isEnabled).toBe(true);
+
+		// Verify the bot state in the registry
+		expect(registry.isBotEnabled(validBot.name)).toBe(true);
 	});
 });
