@@ -57,10 +57,7 @@ jest.mock('../../../services/bootstrap', () => ({
 
 // Mock the DiscordService
 jest.mock('../../../services/discordService', () => ({
-	DiscordService: {
-		getInstance: jest.fn().mockImplementation(() => mockDiscordServiceImpl),
-		initialize: jest.fn().mockImplementation(() => mockDiscordServiceImpl)
-	}
+	DiscordService: jest.fn().mockImplementation(() => mockDiscordServiceImpl)
 }));
 
 // For backward compatibility

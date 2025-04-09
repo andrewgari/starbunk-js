@@ -1,27 +1,20 @@
 import { Client, ClientEvents } from 'discord.js';
-import { WebhookService } from '../container';
-import { DiscordService } from '../discordService';
+import { DiscordService } from '../discordService'; // Use standard import
 import { UserNotFoundError } from '../errors/discordErrors';
 
 // Mock guild IDs
 jest.mock('../../discord/guildIds', () => ({
-	StarbunkCrusaders: 'guild123',
+	DefaultGuildId: 'guild123',
 	AnotherGuild: 'guild456'
 }));
 
 // Now tests are enabled using the public test methods
 describe('DiscordService', () => {
 	let mockClient: Partial<Client> & { emit: jest.Mock; once: jest.Mock };
-	let _mockWebhookService: Partial<WebhookService>;
-	let discordService: DiscordService;
+	let discordService: DiscordService; // Use standard type
 	let mockUser: { id: string; username: string; displayAvatarURL: jest.Mock };
 
 	beforeEach(() => {
-		// Reset modules and singleton
-		jest.resetModules();
-		// @ts-expect-error - accessing private field for testing
-		global.discordServiceInstance = null;
-
 		// Create mock user
 		mockUser = {
 			id: 'user123',
@@ -45,32 +38,12 @@ describe('DiscordService', () => {
 			})
 		};
 
-		_mockWebhookService = {
-			writeMessage: jest.fn().mockResolvedValue(undefined)
-		};
-
-		// Initialize service
-		discordService = DiscordService.initialize(mockClient as unknown as Client);
+		// Initialize service using the imported module
+		discordService = new DiscordService(mockClient as unknown as Client); // Use standard constructor
 	});
 
 	afterEach(() => {
 		jest.clearAllMocks();
-		// @ts-expect-error - accessing private field for testing
-		global.discordServiceInstance = null;
-	});
-
-	describe('initialization', () => {
-		it('should create a singleton instance', () => {
-			const instance1 = DiscordService.initialize(
-				mockClient as unknown as Client
-			);
-
-			const instance2 = DiscordService.initialize(
-				mockClient as unknown as Client
-			);
-
-			expect(instance1).toBe(instance2);
-		});
 	});
 
 	describe('user methods', () => {
@@ -92,7 +65,7 @@ describe('DiscordService', () => {
 		it('should throw an error when user not found', () => {
 			// Override the method for this test
 			const getUserSpy = jest.spyOn(discordService, 'getUser');
-			getUserSpy.mockImplementation((id) => {
+			getUserSpy.mockImplementation((id: string) => {
 				if (id === 'user123') {
 					return mockUser as any;
 				}

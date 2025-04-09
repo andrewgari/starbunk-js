@@ -29,6 +29,14 @@ console.log(`[Environment] - OLLAMA_API_URL: ${process.env.OLLAMA_API_URL ? 'Set
 console.log(`[Environment] - DEBUG: ${process.env.DEBUG}`);
 console.log(`[Environment] - Is Debug Mode Active: ${isDebugMode()}`);
 
+// --- Start Validation ---
+if (!process.env.STARBUNK_TOKEN) {
+	console.error('[Environment] FATAL: Required environment variable STARBUNK_TOKEN is not set.');
+	process.exit(1);
+}
+// Add other critical variable checks here if needed
+// --- End Validation ---
+
 // Helper function to check debug mode
 export function isDebugMode(): boolean {
 	return process.env.DEBUG === 'true';

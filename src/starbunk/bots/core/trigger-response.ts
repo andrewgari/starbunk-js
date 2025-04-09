@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { DiscordService } from '../../../services/discordService';
+import { getDiscordService } from '../../../services/bootstrap';
 import { logger } from '../../../services/logger';
 import { BotIdentity } from '../../types/botIdentity';
 import { withDefaultBotBehavior } from './conditions';
@@ -143,7 +143,7 @@ export class TriggerResponseClass {
 
 			// Use the discord service to send the message
 			// Use pre-imported DiscordService for better performance
-			await DiscordService.getInstance().sendMessageWithBotIdentity(
+			await getDiscordService().sendMessageWithBotIdentity(
 				channel.id,
 				identity,
 				responseText

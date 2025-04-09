@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { DiscordService } from '../../../services/discordService';
+import { getDiscordService } from "@/services/bootstrap";
 import { logger } from '../../../services/logger';
 import { getBotDefaults } from '../../config/botDefaults';
 import { BotIdentity } from '../../types/botIdentity';
@@ -177,7 +177,7 @@ export function createStrategyBot(config: StrategyBotConfig): StrategyBot {
 					}
 
 					// Send message
-					await DiscordService.getInstance().sendMessageWithBotIdentity(
+					await getDiscordService().sendMessageWithBotIdentity(
 						message.channel.id,
 						identity,
 						responseText
