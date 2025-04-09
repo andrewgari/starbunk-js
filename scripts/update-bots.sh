@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Find all index.ts files in the strategy-bots directory
-find /home/andrewgari/Repos/starbunk-js/src/starbunk/bots/strategy-bots -name "index.ts" -type f | while read -r file; do
+find ./src/starbunk/bots/strategy-bots -name "index.ts" -type f | while read -r file; do
   # Skip the main index.ts file
-  if [[ "$file" == "/home/andrewgari/Repos/starbunk-js/src/starbunk/bots/strategy-bots/index.ts" ]]; then
+  if [[ "$file" == "./src/starbunk/bots/strategy-bots/index.ts" ]]; then
     continue
   fi
   
