@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Find all index.ts files in the strategy-bots directory
-find ./src/starbunk/bots/strategy-bots -name "index.ts" -type f | while read -r file; do
+# Find all index.ts files in the reply-bots directory
+find ./src/starbunk/bots/reply-bots -name "index.ts" -type f | while read -r file; do
   # Skip the main index.ts file
   if [[ "$file" == "./src/starbunk/bots/strategy-bots/index.ts" ]]; then
     continue

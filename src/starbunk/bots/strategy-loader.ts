@@ -3,8 +3,8 @@ import { ReplyBotAdapter } from './adapter';
 import { BotRegistry } from './botRegistry';
 import { ReplyBotImpl } from './core/bot-builder';
 import ReplyBot from './replyBot';
-import { replyBots } from './strategy-bots';
-import { initializeCovaBot } from './strategy-bots/cova-bot';
+import { replyBots } from './reply-bots';
+import { initializeCovaBot } from '@/starbunk/bots/reply-bots/cova-bot';
 
 class ReplyBotError extends Error {
 	constructor(

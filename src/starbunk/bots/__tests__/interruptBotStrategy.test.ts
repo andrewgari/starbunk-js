@@ -1,6 +1,6 @@
 import { container, ServiceId } from '../../../services/container';
-import interruptBot from '../strategy-bots/interrupt-bot';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
+import interruptBot from '@/starbunk/bots/reply-bots/interrupt-bot';
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
 	getWebhookService: jest.fn().mockImplementation(() => mockWebhookService),

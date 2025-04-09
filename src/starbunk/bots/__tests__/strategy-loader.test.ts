@@ -12,13 +12,13 @@ jest.mock('../botRegistry', () => ({
 
 // Mock the imported initializeCovaBot function
 const mockInitializeCovaBot = jest.fn().mockResolvedValue({});
-jest.mock('../strategy-bots/cova-bot', () => ({
+jest.mock('@/starbunk/bots/reply-bots/cova-bot', () => ({
 	initializeCovaBot: mockInitializeCovaBot,
 }));
 
 // Mock reply bots directly
 const mockReplyBots: ReplyBotImpl[] = [];
-jest.mock('../strategy-bots', () => ({
+jest.mock('../reply-bots', () => ({
 	// Mock the named export 'replyBots'
 	replyBots: mockReplyBots,
 }));

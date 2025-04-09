@@ -4,7 +4,7 @@
 	"description": "it's bot that says blu, among things...",
 	"type": "commonjs",
 	"scripts": {
-		"build": "tsc && tsc-alias && cd src/starbunk/bots/strategy-bots && npm run build",
+		"build": "tsc && tsc-alias && cd src/starbunk/bots/reply-bots && npm run build",
 		"start": "node dist/bunkbot.js",
 		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/bunkbot.ts",
 		"dev:debug": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only --inspect -r tsconfig-paths/register src/bunkbot.ts",

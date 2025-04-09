@@ -5,19 +5,19 @@ WORKDIR /app
 
 # Copy package.json and lockfiles first to leverage caching
 COPY package*.json ./
-COPY src/starbunk/bots/strategy-bots/package*.json ./src/starbunk/bots/strategy-bots/
+COPY src/starbunk/bots/reply-bots/package*.json ./src/starbunk/bots/strategy-bots/
 
 # Install dependencies and global tools needed for build
 RUN npm ci && \
     npm install -g typescript@latest ts-node tsc-alias && \
-    cd src/starbunk/bots/strategy-bots && npm ci
+    cd src/starbunk/bots/reply-bots && npm ci
 
 # Copy the rest of the source code
 COPY . .
 
 # Build the TypeScript project
-# First build strategy-bots, then run type checks from root
-RUN cd src/starbunk/bots/strategy-bots && npm run build && \
+# First build reply-bots, then run type checks from root
+RUN cd src/starbunk/bots/reply-bots && npm run build && \
     cd ../../../.. && \
     npm run type-check:relaxed && \
     npx tsc -p tsconfig-check.json && \

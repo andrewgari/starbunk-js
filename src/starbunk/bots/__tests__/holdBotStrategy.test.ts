@@ -1,14 +1,14 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import holdBot from '../strategy-bots/hold-bot';
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
+import holdBot from '@/starbunk/bots/reply-bots/hold-bot';
 import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	HOLD_BOT_NAME, 
+	HOLD_BOT_NAME,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	HOLD_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	HOLD_PATTERN
-} from '../strategy-bots/hold-bot/constants';
+	HOLD_PATTERN,
+} from '@/starbunk/bots/reply-bots/hold-bot/constants';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -34,14 +34,14 @@ describe('holdBot Strategy', () => {
 		expect(holdBot.name).toBe('HoldBot');
 		expect(typeof holdBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await holdBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

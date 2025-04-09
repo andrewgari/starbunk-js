@@ -1,13 +1,13 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import chaosBot from '../strategy-bots/chaos-bot';
-import { 
-	CHAOS_BOT_NAME, 
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
+import chaosBot from '@/starbunk/bots/reply-bots/chaos-bot';
+import {
+	CHAOS_BOT_NAME,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	CHAOS_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	CHAOS_BOT_PATTERNS
-} from '../strategy-bots/chaos-bot/constants';
+	CHAOS_BOT_PATTERNS,
+} from '@/starbunk/bots/reply-bots/chaos-bot/constants';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -33,14 +33,14 @@ describe('chaosBot Strategy', () => {
 		expect(chaosBot.name).toBe(CHAOS_BOT_NAME);
 		expect(typeof chaosBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await chaosBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

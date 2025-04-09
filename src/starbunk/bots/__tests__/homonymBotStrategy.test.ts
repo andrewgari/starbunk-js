@@ -1,14 +1,14 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import homonymBot from '../strategy-bots/homonym-bot';
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
+import homonymBot from '@/starbunk/bots/reply-bots/homonym-bot';
 import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	HOMONYM_BOT_NAME, 
+	HOMONYM_BOT_NAME,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	HOMONYM_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	HOMONYM_PAIRS
-} from '../strategy-bots/homonym-bot/constants';
+	HOMONYM_PAIRS,
+} from '@/starbunk/bots/reply-bots/homonym-bot/constants';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -34,14 +34,14 @@ describe('homonymBot Strategy', () => {
 		expect(homonymBot.name).toBe('Gerald');
 		expect(typeof homonymBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await homonymBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

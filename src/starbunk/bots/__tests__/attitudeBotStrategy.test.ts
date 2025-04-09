@@ -1,7 +1,7 @@
 import { container, ServiceId } from '../../../services/container';
-import attitudeBot from '../strategy-bots/attitude-bot';
-import { ATTITUDE_BOT_NAME } from '../strategy-bots/attitude-bot/constants';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
+import attitudeBot from '@/starbunk/bots/reply-bots/attitude-bot';
+import { ATTITUDE_BOT_NAME } from '@/starbunk/bots/reply-bots/attitude-bot/constants';
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -19,15 +19,15 @@ describe('AttitudeBot Strategy', () => {
 
 	it('should respond to negative statements', async () => {
 		// Test with a typical trigger phrase
-		const message = mockMessage('I can\'t do this');
+		const message = mockMessage("I can't do this");
 		await attitudeBot.processMessage(message);
 
 		// Verify it responded
 		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
-				username: ATTITUDE_BOT_NAME
-			})
+				username: ATTITUDE_BOT_NAME,
+			}),
 		);
 	});
 

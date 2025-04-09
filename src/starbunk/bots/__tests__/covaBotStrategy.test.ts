@@ -1,15 +1,21 @@
 import { container, ServiceId } from '../../../services/container';
-import covaBot from '../strategy-bots/cova-bot';
-import { COVA_BOT_NAME } from '../strategy-bots/cova-bot/constants';
-import { mockDiscordServiceImpl, mockLogger, mockMessage, mockWebhookService, mockWriteMessage } from "../test-utils/testUtils";
+import covaBot from '@/starbunk/bots/reply-bots/cova-bot';
+import { COVA_BOT_NAME } from '@/starbunk/bots/reply-bots/cova-bot/constants';
+import {
+	mockDiscordServiceImpl,
+	mockLogger,
+	mockMessage,
+	mockWebhookService,
+	mockWriteMessage,
+} from '../test-utils/testUtils';
 
 // Minimal mock for LLM
 const mockLLM = {
 	createPromptCompletion: jest.fn().mockResolvedValue("Cova's response"),
 	createCompletion: jest.fn().mockResolvedValue({ content: 'YES' }),
 	getDefaultProvider: jest.fn().mockReturnValue({
-		constructor: { name: 'MockLLMProvider' }
-	})
+		constructor: { name: 'MockLLMProvider' },
+	}),
 };
 
 // Reset DiscordService implementation for our tests
@@ -18,7 +24,7 @@ mockDiscordServiceImpl.sendMessageWithBotIdentity.mockImplementation((channelId,
 	const messageInfo = {
 		botName: botIdentity.botName,
 		avatarUrl: botIdentity.avatarUrl,
-		content: content
+		content: content,
 	};
 	// Call both so we can test either one
 	mockWriteMessage(channel, messageInfo);
@@ -29,15 +35,15 @@ mockDiscordServiceImpl.sendMessageWithBotIdentity.mockImplementation((channelId,
 jest.mock('../../../services/bootstrap', () => ({
 	getWebhookService: jest.fn().mockReturnValue(mockWebhookService),
 	getLLMManager: jest.fn().mockReturnValue(mockLLM),
-	getDiscordService: jest.fn().mockReturnValue(mockDiscordServiceImpl)
+	getDiscordService: jest.fn().mockReturnValue(mockDiscordServiceImpl),
 }));
 
 // Simple mock for any other services
 jest.mock('../../../services/personalityService', () => ({
 	getPersonalityService: jest.fn().mockReturnValue({
 		loadPersonalityEmbedding: jest.fn().mockResolvedValue(new Float32Array(384)),
-		getPersonalityEmbedding: jest.fn().mockReturnValue(new Float32Array(384))
-	})
+		getPersonalityEmbedding: jest.fn().mockReturnValue(new Float32Array(384)),
+	}),
 }));
 
 describe('covaBot Strategy', () => {
@@ -86,7 +92,7 @@ describe('covaBot Strategy', () => {
 		// TypeScript workaround - make the guild property temporarily writable
 		Object.defineProperty(message, 'guild', {
 			writable: true,
-			value: { id: '753251582719688714' }
+			value: { id: '753251582719688714' },
 		});
 
 		// Set Math.random to ensure match
@@ -105,7 +111,7 @@ describe('covaBot Strategy', () => {
 		// TypeScript workaround - make the guild property temporarily writable
 		Object.defineProperty(message, 'guild', {
 			writable: true,
-			value: { id: '753251582719688714' }
+			value: { id: '753251582719688714' },
 		});
 
 		await covaBot.processMessage(message);
@@ -120,7 +126,7 @@ describe('covaBot Strategy', () => {
 		// TypeScript workaround - make the guild property temporarily writable
 		Object.defineProperty(message, 'guild', {
 			writable: true,
-			value: { id: '753251582719688714' }
+			value: { id: '753251582719688714' },
 		});
 
 		await expect(covaBot.processMessage(message)).resolves.not.toThrow();
@@ -128,5 +134,4 @@ describe('covaBot Strategy', () => {
 		// Reset the mock for subsequent tests
 		mockLLM.createPromptCompletion.mockResolvedValue("Cova's response");
 	});
-
 });
