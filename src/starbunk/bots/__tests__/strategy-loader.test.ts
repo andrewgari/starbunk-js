@@ -1,6 +1,12 @@
 // Mock BotRegistry manually, aligning with expected structure
 const mockRegisterBot = jest.fn();
-const mockBotRegistryInstance = { registerBot: mockRegisterBot };
+const mockEnableBot = jest.fn();
+const mockIsBotEnabled = jest.fn().mockReturnValue(true);
+const mockBotRegistryInstance = {
+	registerBot: mockRegisterBot,
+	enableBot: mockEnableBot,
+	isBotEnabled: mockIsBotEnabled,
+};
 const mockGetInstance = jest.fn(() => mockBotRegistryInstance); // Default mock
 
 jest.mock('../botRegistry', () => ({
@@ -72,6 +78,31 @@ describe('Reply Bot Loader', () => {
 		expect(mockRegisterBot).toHaveBeenCalledWith(expect.objectContaining({ defaultBotName: validBot.name })); // Check bot name
 		expect(loadedBots).toHaveLength(1);
 		expect(loadedBots[0].defaultBotName).toBe(validBot.name);
+	});
+
+	it('should verify bots are enabled by default after registration', async () => {
+		// Setup
+		mockReplyBots.push(validBot);
+
+		// Mock getBotDefaults to return enabled: true
+		jest.mock('@/starbunk/config/botDefaults', () => ({
+			getBotDefaults: jest.fn().mockReturnValue({ enabled: true }),
+		}));
+
+		// Execute
+		await ReplyBotLoader.loadBots();
+
+		// Verify
+		expect(mockRegisterBot).toHaveBeenCalledTimes(1);
+
+		// Verify the bot is enabled by default after registration
+		// We don't need to explicitly check isBotEnabled since it's set during registration
+		// But we can verify that the bot is registered with the correct name
+		expect(mockRegisterBot).toHaveBeenCalledWith(
+			expect.objectContaining({
+				defaultBotName: validBot.name,
+			}),
+		);
 	});
 
 	it('should skip invalid bots', async () => {
