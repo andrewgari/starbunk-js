@@ -1,17 +1,16 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import sheeshBot from '../strategy-bots/sheesh-bot';
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
+import sheeshBot from '@/starbunk/bots/reply-bots/sheesh-bot';
 import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	SHEESH_BOT_NAME, 
+	SHEESH_BOT_NAME,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	SHEESH_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	SHEESH_BOT_PATTERNS
-} from '../strategy-bots/sheesh-bot/constants';
+	SHEESH_BOT_PATTERNS,
+} from '@/starbunk/bots/reply-bots/sheesh-bot/constants';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -37,14 +36,14 @@ describe('sheeshBot Strategy', () => {
 		expect(sheeshBot.name).toBe('Sheesh Bot');
 		expect(typeof sheeshBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await sheeshBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

@@ -1,13 +1,13 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import ezioBot from '../strategy-bots/ezio-bot';
-import { 
-	EZIO_BOT_NAME, 
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
+import ezioBot from '@/starbunk/bots/reply-bots/ezio-bot';
+import {
+	EZIO_BOT_NAME,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	EZIO_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	EZIO_BOT_PATTERNS
-} from '../strategy-bots/ezio-bot/constants';
+	EZIO_BOT_PATTERNS,
+} from '@/starbunk/bots/reply-bots/ezio-bot/constants';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -33,14 +33,14 @@ describe('ezioBot Strategy', () => {
 		expect(ezioBot.name).toBe(EZIO_BOT_NAME);
 		expect(typeof ezioBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await ezioBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

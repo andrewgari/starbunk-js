@@ -1,17 +1,16 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import niceBot from '../strategy-bots/nice-bot';
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
+import niceBot from '@/starbunk/bots/reply-bots/nice-bot';
 import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	NICE_BOT_NAME, 
+	NICE_BOT_NAME,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	NICE_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	NICE_BOT_PATTERNS
-} from '../strategy-bots/nice-bot/constants';
+	NICE_BOT_PATTERNS,
+} from '@/starbunk/bots/reply-bots/nice-bot/constants';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -37,14 +36,14 @@ describe('niceBot Strategy', () => {
 		expect(niceBot.name).toBe('BunkBot');
 		expect(typeof niceBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await niceBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

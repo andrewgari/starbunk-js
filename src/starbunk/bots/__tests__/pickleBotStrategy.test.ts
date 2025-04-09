@@ -1,17 +1,16 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import pickleBot from '../strategy-bots/pickle-bot';
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
+import pickleBot from '@/starbunk/bots/reply-bots/pickle-bot';
 import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	PICKLE_BOT_NAME, 
+	PICKLE_BOT_NAME,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	PICKLE_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	PICKLE_BOT_PATTERNS
-} from '../strategy-bots/pickle-bot/constants';
+	PICKLE_BOT_PATTERNS,
+} from '@/starbunk/bots/reply-bots/pickle-bot/constants';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -37,14 +36,14 @@ describe('pickleBot Strategy', () => {
 		expect(pickleBot.name).toBe('GremlinBot');
 		expect(typeof pickleBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await pickleBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

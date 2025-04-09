@@ -1,13 +1,13 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import botBot from '../strategy-bots/bot-bot';
-import { 
-	BOT_BOT_NAME, 
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
+import botBot from '@/starbunk/bots/reply-bots/bot-bot';
+import {
+	BOT_BOT_NAME,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	BOT_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	BOT_BOT_RESPONSES
-} from '../strategy-bots/bot-bot/constants';
+	BOT_BOT_RESPONSES,
+} from '@/starbunk/bots/reply-bots/bot-bot/constants';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -33,14 +33,14 @@ describe('botBot Strategy', () => {
 		expect(botBot.name).toBe(BOT_BOT_NAME);
 		expect(typeof botBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await botBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

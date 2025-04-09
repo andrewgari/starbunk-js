@@ -5,7 +5,7 @@ DIRS=(
     "./data"
     "./data/llm_context"
     "./scripts"
-    "./src/starbunk/bots/strategy-bots"
+    "./src/starbunk/bots/reply-bots"
 )
 
 # Create directories if they don't exist

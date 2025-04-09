@@ -1,6 +1,6 @@
 import { container, ServiceId } from '../../../services/container';
-import sigGreatBot from '../strategy-bots/sig-great-bot';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
+import sigGreatBot from '@/starbunk/bots/reply-bots/sig-great-bot';
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({

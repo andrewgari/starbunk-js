@@ -1,8 +1,8 @@
 import userId from '../../../discord/userId';
 import { container } from '../../../services/container';
-import chadBot from '../strategy-bots/chad-bot';
-import { CHAD_BOT_AVATAR_URL, CHAD_BOT_NAME, CHAD_RESPONSE } from '../strategy-bots/chad-bot/constants';
-import { mockDiscordService, mockMessage, setupBotTest } from "../test-utils/testUtils";
+import chadBot from '@/starbunk/bots/reply-bots/chad-bot';
+import { CHAD_BOT_AVATAR_URL, CHAD_BOT_NAME, CHAD_RESPONSE } from '@/starbunk/bots/reply-bots/chad-bot/constants';
+import { mockDiscordService, mockMessage, setupBotTest } from '../test-utils/testUtils';
 
 describe('Chad Bot Strategy', () => {
 	const originalRandom = global.Math.random;
@@ -11,7 +11,7 @@ describe('Chad Bot Strategy', () => {
 		// Clear mocks and reset container
 		setupBotTest(container, {
 			botName: CHAD_BOT_NAME,
-			avatarUrl: CHAD_BOT_AVATAR_URL
+			avatarUrl: CHAD_BOT_AVATAR_URL,
 		});
 
 		// Reset all mocks
@@ -41,9 +41,9 @@ describe('Chad Bot Strategy', () => {
 			message.channel.id,
 			expect.objectContaining({
 				botName: CHAD_BOT_NAME,
-				avatarUrl: CHAD_BOT_AVATAR_URL
+				avatarUrl: CHAD_BOT_AVATAR_URL,
 			}),
-			CHAD_RESPONSE
+			CHAD_RESPONSE,
 		);
 	});
 

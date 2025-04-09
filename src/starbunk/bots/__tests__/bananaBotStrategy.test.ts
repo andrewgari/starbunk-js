@@ -1,11 +1,11 @@
 import { container, ServiceId } from '../../../services/container';
-import bananaBot from '../strategy-bots/banana-bot';
+import bananaBot from '@/starbunk/bots/reply-bots/banana-bot';
 import {
 	BANANA_BOT_AVATAR_URL,
 	BANANA_BOT_NAME,
-	BANANA_BOT_RESPONSES
-} from '../strategy-bots/banana-bot/constants';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
+	BANANA_BOT_RESPONSES,
+} from '@/starbunk/bots/reply-bots/banana-bot/constants';
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -40,8 +40,8 @@ describe('bananaBot Strategy', () => {
 			expect.objectContaining({
 				username: BANANA_BOT_NAME,
 				avatarURL: BANANA_BOT_AVATAR_URL,
-				content: expect.any(String)
-			})
+				content: expect.any(String),
+			}),
 		);
 
 		// Verify the response is one of the valid responses

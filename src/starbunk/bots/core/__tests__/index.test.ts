@@ -15,20 +15,20 @@ describe('core index module', () => {
 			and: expect.any(Function),
 			or: expect.any(Function),
 			not: expect.any(Function),
-			
+
 			// From responses
 			staticResponse: expect.any(Function),
 			randomResponse: expect.any(Function),
 			templateResponse: expect.any(Function),
 			regexCaptureResponse: expect.any(Function),
 			sendBotResponse: expect.any(Function),
-			
+
 			// From trigger-response
 			createTriggerResponse: expect.any(Function),
-			
+
 			// From bot-builder
-			createStrategyBot: expect.any(Function),
-			
+			createReplyBot: expect.any(Function),
+
 			// From llm-conditions
 			createLLMCondition: expect.any(Function)
 		});

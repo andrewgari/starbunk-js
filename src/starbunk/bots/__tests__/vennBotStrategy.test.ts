@@ -1,13 +1,13 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import vennBot from '../strategy-bots/venn-bot';
-import { 
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
+import vennBot from '@/starbunk/bots/reply-bots/venn-bot';
+import {
 	VENN_BOT_NAME,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	VENN_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	VENN_PATTERNS
-} from '../strategy-bots/venn-bot/constants';
+	VENN_PATTERNS,
+} from '@/starbunk/bots/reply-bots/venn-bot/constants';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -34,14 +34,14 @@ describe('vennBot Strategy', () => {
 		expect(vennBot.name).toBe(VENN_BOT_NAME);
 		expect(typeof vennBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await vennBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

@@ -1,17 +1,16 @@
 import { container, ServiceId } from '../../../services/container';
-import { mockLogger, mockMessage, mockWebhookService } from "../test-utils/testUtils";
-import musicCorrectBot from '../strategy-bots/music-correct-bot';
+import { mockLogger, mockMessage, mockWebhookService } from '../test-utils/testUtils';
+import musicCorrectBot from '@/starbunk/bots/reply-bots/music-correct-bot';
 import {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	MUSIC_CORRECT_BOT_NAME, 
+	MUSIC_CORRECT_BOT_NAME,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	MUSIC_CORRECT_BOT_AVATAR_URL,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	MUSIC_CORRECT_BOT_PATTERNS
-} from '../strategy-bots/music-correct-bot/constants';
+	MUSIC_CORRECT_BOT_PATTERNS,
+} from '@/starbunk/bots/reply-bots/music-correct-bot/constants';
 
 // Mock the WebhookService
 jest.mock('../../../services/bootstrap', () => ({
@@ -37,14 +36,14 @@ describe('musicCorrectBot Strategy', () => {
 		expect(musicCorrectBot.name).toBe('Music Correct Bot');
 		expect(typeof musicCorrectBot.processMessage).toBe('function');
 	});
-	
+
 	it('should not respond to unrelated messages', async () => {
 		// Arrange
 		const message = mockMessage('A completely unrelated message');
-		
+
 		// Act
 		await musicCorrectBot.processMessage(message);
-		
+
 		// Assert
 		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
 	});

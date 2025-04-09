@@ -1,43 +1,45 @@
 import { Message } from 'discord.js';
 import { logger } from '../../services/logger';
 import { BotIdentity } from '../types/botIdentity';
-import { StrategyBot } from './core/bot-builder';
+import { ReplyBotImpl } from './core/bot-builder';
 import ReplyBot from './replyBot';
 
 /**
- * Adapter class that wraps a StrategyBot to make it compatible with ReplyBot interface.
- * This allows strategy bots to work with the existing message processing pipeline.
+ * Adapter class that wraps a ReplyBotImpl to make it compatible with ReplyBot interface.
+ * This allows reply bots to work with the existing message processing pipeline.
  */
-export class StrategyBotAdapter extends ReplyBot {
-	private strategyBot: StrategyBot;
+export class ReplyBotAdapter extends ReplyBot {
+	private replyBotImpl: ReplyBotImpl;
 
-	constructor(strategyBot: StrategyBot) {
+	constructor(replyBotImpl: ReplyBotImpl) {
 		super();
-		this.strategyBot = strategyBot;
-		
+		this.replyBotImpl = replyBotImpl;
+
 		// Set response rate based on bot configuration
-		// We'll extract it from the strategyBot's metadata if available
-		if (strategyBot.metadata && typeof strategyBot.metadata.responseRate === 'number') {
-			this.responseRate = strategyBot.metadata.responseRate;
+		// We'll extract it from the replyBotImpl's metadata if available
+		if (replyBotImpl.metadata && typeof replyBotImpl.metadata.responseRate === 'number') {
+			this.responseRate = replyBotImpl.metadata.responseRate;
 		}
-		
-		logger.debug(`[StrategyBotAdapter] Created adapter for ${strategyBot.name} with response rate ${this.responseRate}%`);
+
+		logger.debug(
+			`[ReplyBotAdapter] Created adapter for ${replyBotImpl.name} with response rate ${this.responseRate}%`,
+		);
 	}
 
 	get defaultBotName(): string {
-		return this.strategyBot.name;
+		return this.replyBotImpl.name;
 	}
 
 	get description(): string {
-		return this.strategyBot.description;
+		return this.replyBotImpl.description;
 	}
 
 	get botIdentity(): BotIdentity {
-		// We can't easily access the default identity from the strategy bot
+		// We can't easily access the default identity from the reply bot
 		// So we'll use a placeholder that will be overridden by the specific trigger's identity
 		return {
-			botName: this.strategyBot.name,
-			avatarUrl: '' // Will be provided by the specific trigger
+			botName: this.replyBotImpl.name,
+			avatarUrl: '', // Will be provided by the specific trigger
 		};
 	}
 
@@ -46,10 +48,13 @@ export class StrategyBotAdapter extends ReplyBot {
 	 */
 	protected async processMessage(message: Message): Promise<void> {
 		try {
-			// The strategy bot has its own logic for processing messages
-			await this.strategyBot.processMessage(message);
+			// The reply bot has its own logic for processing messages
+			await this.replyBotImpl.processMessage(message);
 		} catch (error) {
-			logger.error(`[${this.defaultBotName}] Error in strategy bot message handling:`, error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				`[${this.defaultBotName}] Error in reply bot message handling:`,
+				error instanceof Error ? error : new Error(String(error)),
+			);
 		}
 	}
 }
