@@ -79,7 +79,7 @@
 		"@discordjs/rest": "^2.0.1",
 		"@discordjs/voice": "^0.18.0",
 		"@distube/yt-dlp": "^2.0.1",
-		"@distube/ytdl-core": "^4.15.9",
+		"@distube/ytdl-core": "^4.16.5",
 		"@prisma/client": "^6.5.0",
  	"@starbunk/reply-bots": "file:src/starbunk/bots/reply-bots",
 		"@types/node-schedule": "^2.1.7",
