@@ -1,3 +1,23 @@
+# Fast build verification
 FROM node:20-slim
 WORKDIR /app
-CMD ["echo", "test"]
+
+# Copy package files for dependency installation
+COPY package*.json ./
+COPY src/starbunk/bots/reply-bots/package*.json ./src/starbunk/bots/reply-bots/
+
+# Install only what's needed for build
+RUN npm ci --omit=dev && \
+    cd src/starbunk/bots/reply-bots && \
+    npm ci --omit=dev && \
+    cd ../../../.. && \
+    npm install -D typescript@~5.3.0 @types/node tsc-alias
+
+# Copy source files needed for build
+COPY tsconfig*.json ./
+COPY src ./src
+
+# Run build and exit
+RUN npm run build && \
+    echo "Build check passed" && \
+    exit 0

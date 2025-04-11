@@ -68,3 +68,9 @@ cypress.config.ts
 jest.config.js
 README.md
 LICENSE
+
+# New additions from the code block
+data
+test
+**/*.spec.ts
+docs

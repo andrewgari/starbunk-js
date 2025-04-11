@@ -19,7 +19,7 @@
 		"type-check:relaxed": "tsc --project tsconfig-check.json --noEmit",
 		"clean": "rimraf dist",
 		"build:clean": "npm run clean && npm run build",
-		"check:docker": "podman build -t starbunk-js:latest .",
+		"check:docker": "podman build --no-cache=false --rm -t starbunk-js:test -f Dockerfile.test .",
 		"check:types": "npm run type-check:relaxed",
 		"check:lint": "npm run lint",
 		"check:build": "npm run build",
@@ -55,7 +55,8 @@
 		"compose:shell": "podman-compose -f docker-compose.prod.yml exec bunkbot sh",
 		"compose:shell:dev": "podman-compose exec bunkbot sh",
 		"setup:dirs": "./scripts/ensure-directories.sh",
-		"setup:git-hooks": "./scripts/setup-git-hooks.sh"
+		"setup:git-hooks": "./scripts/setup-git-hooks.sh",
+		"test:health": "cross-env NODE_ENV=test ts-node -r tsconfig-paths/register src/health.ts"
 	},
 	"engines": {
 		"node": ">=16.0.0"
@@ -80,8 +81,8 @@
 		"@discordjs/voice": "^0.18.0",
 		"@distube/yt-dlp": "^2.0.1",
 		"@distube/ytdl-core": "^4.15.9",
-		"@prisma/client": "^6.5.0",
- 	"@starbunk/reply-bots": "file:src/starbunk/bots/reply-bots",
+		"@prisma/client": "6.6.0",
+		"@starbunk/reply-bots": "file:src/starbunk/bots/reply-bots",
 		"@types/node-schedule": "^2.1.7",
 		"@xenova/transformers": "^2.17.2",
 		"async": "^3.2.4",
@@ -99,6 +100,7 @@
 		"openai": "^4.87.3",
 		"opusscript": "^0.0.8",
 		"play-dl": "^1.9.7",
+		"prisma": "6.6.0",
 		"rxjs": "^7.8.2",
 		"uuid": "^11.1.0",
 		"ytdl-core": "^4.11.5",
@@ -107,7 +109,7 @@
 	"devDependencies": {
 		"@testing-library/jest-dom": "^6.6.3",
 		"@types/jest": "^29.5.14",
-		"@types/node": "^20.17.14",
+		"@types/node": "^20.17.30",
 		"@typescript-eslint/eslint-plugin": "^6.21.0",
 		"@typescript-eslint/parser": "^6.21.0",
 		"cross-env": "^7.0.3",
@@ -116,7 +118,6 @@
 		"eslint-plugin-prettier": "^5.2.3",
 		"jest": "^29.7.0",
 		"prettier": "^3.2.5",
-		"prisma": "^6.5.0",
 		"rimraf": "^5.0.1",
 		"source-map-support": "^0.5.21",
 		"ts-jest": "^29.2.6",

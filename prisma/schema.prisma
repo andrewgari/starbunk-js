@@ -10,63 +10,88 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:../data/starbunk.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Campaign {
   id            String       @id @default(uuid())
   name          String
-  system        String       // Stored as JSON string
-  textChannelId String
-  voiceChannelId String
-  gmId          String
-  adventureId   String?
-  isActive      Boolean      @default(true)
-  metadata      String?      // Stored as JSON string
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  system        String      // Game system (e.g., D&D, Pathfinder)
+  gmId          String      // Discord user ID of the GM
+  textChannelId String      // Discord channel ID
+  voiceChannelId String?    // Optional voice channel ID
+  adventureId   String?     // Optional adventure identifier
+  guildId       String      // Discord server ID
+  isActive      Boolean     @default(true)
+  webhookId     String?     // Discord webhook ID
+  roleId        String?     // Discord role ID
+  metadata      String?     // JSON string for additional metadata
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
+  // Relations
+  characters    Character[]
   messages      Message[]
   notes         Note[]
   files         StoredFile[]
   gameSessions  GameSession[]
+
+  @@unique([textChannelId, guildId])
+  @@index([gmId])
+  @@index([guildId])
 }
 
-model GameSession {
-  id          String     @id @default(uuid())
-  campaignId  String
-  name        String
-  channelId   String
-  createdBy   String
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+model Character {
+  id         String   @id @default(uuid())
+  name       String
+  avatarUrl  String?
+  playerId   String   // Discord user ID
+  campaignId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  campaign    Campaign   @relation(fields: [campaignId], references: [id])
+  // Relations
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+
+  @@unique([name, campaignId])
+  @@index([playerId])
+  @@index([campaignId])
 }
 
 model Message {
-  id          String   @id @default(uuid())
-  campaignId  String
-  content     String
-  userId      String
-  messageId   String
-  timestamp   DateTime @default(now())
+  id         String   @id @default(uuid())
+  content    String
+  authorId   String   // Discord user ID
+  userId     String   // Alias for authorId for compatibility
+  messageId  String   // Discord message ID
+  timestamp  DateTime // Message timestamp
+  campaignId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  // Relations
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+
+  @@index([authorId])
+  @@index([campaignId])
+  @@index([messageId])
 }
 
 model Note {
-  id          String   @id @default(uuid())
-  campaignId  String
-  content     String
-  userId      String
-  isGM        Boolean  @default(false)
-  tags        String   // Stored as comma-separated
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  title      String
+  content    String
+  authorId   String   // Discord user ID
+  campaignId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  // Relations
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+
+  @@index([authorId])
+  @@index([campaignId])
 }
 
 model TimeEntry {
@@ -78,15 +103,23 @@ model TimeEntry {
 }
 
 model StoredFile {
-  id          String   @id @default(uuid())
-  campaignId  String
-  name        String
-  path        String
-  mimeType    String
-  size        Int
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  name       String
+  url        String
+  path       String   // Local file path
+  type       String
+  mimeType   String   // MIME type of the file
+  size       Int
+  uploaderId String   // Discord user ID
+  campaignId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  // Relations
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+
+  @@index([uploaderId])
+  @@index([campaignId])
 }
 
 model BotFrequency {
@@ -95,4 +128,19 @@ model BotFrequency {
   frequency   Int      // 0-100
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
+}
+
+model GameSession {
+  id          String   @id @default(uuid())
+  name        String
+  startTime   DateTime
+  endTime     DateTime?
+  campaignId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+
+  @@index([campaignId])
 }
