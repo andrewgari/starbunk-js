@@ -5,9 +5,10 @@ export interface Campaign {
 	name: string;
 	system: GameSystem;
 	textChannelId: string;
-	voiceChannelId: string;
+	voiceChannelId?: string;
 	gmId: string;
-	adventureId: string;
+	guildId: string;
+	adventureId?: string;
 	isActive: boolean;
 	createdAt: Date;
 	updatedAt: Date;
@@ -15,11 +16,11 @@ export interface Campaign {
 
 export interface Message {
 	id: string;
-	campaignId: string;
 	content: string;
-	userId: string;
-	messageId: string;
-	timestamp: Date;
+	authorId: string;
+	campaignId: string;
+	createdAt: Date;
+	updatedAt: Date;
 }
 
 export interface Note {
@@ -42,10 +43,12 @@ export interface TimeEntry {
 
 export interface StoredFile {
 	id: string;
-	campaignId: string;
 	name: string;
-	path: string;
-	mimeType: string;
+	url: string;
+	type: string;
 	size: number;
+	uploaderId: string;
+	campaignId: string;
 	createdAt: Date;
+	updatedAt: Date;
 }

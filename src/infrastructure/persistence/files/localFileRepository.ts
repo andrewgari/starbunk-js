@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 import { StoredFile } from '../../../domain/models';
 import { FileRepository } from '../../../domain/repositories';
 
@@ -14,31 +14,45 @@ export class LocalFileRepository implements FileRepository {
 		fs.mkdir(this.basePath, { recursive: true });
 	}
 
-	async save(file: Buffer, metadata: Omit<StoredFile, 'id' | 'path' | 'createdAt'>): Promise<StoredFile> {
-		const id = randomUUID();
-		const relativePath = path.join(metadata.campaignId, `${id}-${metadata.name}`);
-		const fullPath = path.join(this.basePath, relativePath);
+	async save(file: Buffer, metadata: Omit<StoredFile, 'id' | 'path' | 'createdAt' | 'updatedAt'>): Promise<StoredFile> {
+		const id = uuidv4();
+		const relativePath = path.join(this.basePath, id);
 
-		// Ensure campaign directory exists
-		await fs.mkdir(path.dirname(fullPath), { recursive: true });
+		await fs.writeFile(relativePath, file);
+		const stats = await fs.stat(relativePath);
 
-		// Write file
-		await fs.writeFile(fullPath, file);
-
-		// Store file metadata in database
-		return this.prisma.storedFile.create({
+		const storedFile = await this.prisma.storedFile.create({
 			data: {
 				id,
-				...metadata,
-				path: relativePath
+				name: metadata.name,
+				url: `file://${relativePath}`,
+				type: path.extname(metadata.name).slice(1),
+				size: stats.size,
+				uploaderId: metadata.uploaderId,
+				campaignId: metadata.campaignId,
+				path: relativePath,
+				mimeType: `application/${path.extname(metadata.name).slice(1)}`
 			}
 		});
+
+		return {
+			id: storedFile.id,
+			name: storedFile.name,
+			url: storedFile.url,
+			type: storedFile.type,
+			size: storedFile.size,
+			uploaderId: storedFile.uploaderId,
+			campaignId: storedFile.campaignId,
+			createdAt: storedFile.createdAt,
+			updatedAt: storedFile.updatedAt
+		};
 	}
 
 	async findById(id: string): Promise<StoredFile | null> {
-		return this.prisma.storedFile.findUnique({
+		const file = await this.prisma.storedFile.findUnique({
 			where: { id }
 		});
+		return file;
 	}
 
 	async findByCampaign(campaignId: string): Promise<StoredFile[]> {
@@ -52,7 +66,7 @@ export class LocalFileRepository implements FileRepository {
 		if (!file) {
 			throw new Error(`File not found: ${id}`);
 		}
-		return fs.readFile(path.join(this.basePath, file.path));
+		return fs.readFile(file.url.replace('file://', ''));
 	}
 
 	async delete(id: string): Promise<void> {
@@ -63,7 +77,7 @@ export class LocalFileRepository implements FileRepository {
 
 		// Delete from filesystem
 		try {
-			await fs.unlink(path.join(this.basePath, file.path));
+			await fs.unlink(file.url.replace('file://', ''));
 		} catch (error) {
 			console.error(`Error deleting file ${id}:`, error);
 		}

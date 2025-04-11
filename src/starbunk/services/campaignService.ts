@@ -1,10 +1,10 @@
+import { getDiscordService } from '@/services/bootstrap';
 import { ChannelType, GuildChannel, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel } from 'discord.js';
 import fs from 'fs/promises';
 import guildIds from '../../discord/guildIds';
 import { Campaign } from '../../domain/models';
 import { CampaignMetadata, CampaignRepository, CreateCampaignData } from '../../domain/repositories';
 import { RepositoryFactory } from '../../infrastructure/persistence/repositoryFactory';
-import { getDiscordService } from '@/services/bootstrap';
 import { logger } from '../../services/logger';
 import { GameSystem, SUPPORTED_SYSTEMS } from '../types/game';
 import { CampaignFileService } from './campaignFileService';
@@ -50,6 +50,7 @@ export class CampaignService {
 			textChannelId: channel.id,
 			voiceChannelId: voiceChannel.id,
 			gmId,
+			guildId: guild.id,
 			isActive: true,
 			adventureId: 'default'
 		};
@@ -140,6 +141,11 @@ export class CampaignService {
 		// Create Discord event
 		const discordService = getDiscordService();
 		const guild = discordService.getGuild(guildIds.StarbunkCrusaders);
+
+		if (!campaign.voiceChannelId) {
+			throw new Error('Campaign has no voice channel configured');
+		}
+
 		const channel = guild.channels.cache.get(campaign.voiceChannelId);
 
 		if (!channel?.isVoiceBased()) {
@@ -297,6 +303,7 @@ export class CampaignService {
 			textChannelId: textChannel.id,
 			voiceChannelId: voiceChannel.id,
 			gmId: textChannel.guild.ownerId, // Default to server owner as GM
+			guildId: textChannel.guild.id,
 			isActive: true,
 			adventureId: 'default'
 		};

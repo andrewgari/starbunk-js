@@ -5,10 +5,11 @@ export type CreateCampaignData = {
 	name: string;
 	system: GameSystem;
 	textChannelId: string;
-	voiceChannelId: string;
+	voiceChannelId?: string;
 	gmId: string;
+	guildId: string;
 	isActive: boolean;
-	adventureId: string;
+	adventureId?: string;
 };
 
 export interface CampaignMetadata {

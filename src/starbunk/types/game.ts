@@ -9,10 +9,11 @@ export interface Campaign {
 	id: string;
 	name: string;
 	system: GameSystem;
-	gmId: string;
 	textChannelId: string;
-	voiceChannelId: string;
-	adventureId: string;
+	voiceChannelId?: string;
+	gmId: string;
+	guildId: string;
+	adventureId?: string;
 	isActive: boolean;
 	createdAt: Date;
 	updatedAt: Date;
@@ -54,16 +55,16 @@ export interface Note {
 }
 
 export const SUPPORTED_SYSTEMS: Record<string, GameSystem> = {
-	'pf2e': {
-		id: 'pf2e',
-		name: 'Pathfinder',
-		version: '2e',
-		description: 'Pathfinder Second Edition'
-	},
-	'dnd5e': {
+	dnd5e: {
 		id: 'dnd5e',
-		name: 'Dungeons & Dragons',
-		version: '5e',
-		description: 'Dungeons & Dragons 5th Edition'
+		name: 'D&D 5th Edition',
+		version: '5.1',
+		description: 'The fifth edition of Dungeons & Dragons'
+	},
+	pathfinder2e: {
+		id: 'pathfinder2e',
+		name: 'Pathfinder 2nd Edition',
+		version: '2.0',
+		description: 'The second edition of Pathfinder'
 	}
-} as const;
+};
