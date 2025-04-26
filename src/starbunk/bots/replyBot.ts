@@ -1,3 +1,4 @@
+import userId from '@/discord/userId';
 import { BotIdentity } from '@/starbunk/types/botIdentity';
 import { Message } from 'discord.js';
 import { BotFrequencyService } from '../../services/botFrequencyService';
@@ -129,7 +130,13 @@ export default abstract class ReplyBot {
 	 * Can be overridden by child classes for custom skip logic.
 	 */
 	protected shouldSkipMessage(message: Message): boolean {
-		return this.skipBotMessages && message.author.bot;
+		if (this.skipBotMessages && message.author.bot) {
+			return true;
+		}
+		if (message.author.id === userId.Ian) {
+			return true;
+		}
+		return false;
 	}
 
 	/**
