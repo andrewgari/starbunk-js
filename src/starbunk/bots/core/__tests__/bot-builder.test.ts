@@ -1,6 +1,7 @@
+import userId from '@/discord/userId';
+import { getDiscordService } from '@/services/bootstrap';
 import { DiscordService } from '../../../../services/discordService';
 import { logger } from '../../../../services/logger';
-import { getDiscordService } from '@/services/bootstrap';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { createBotDescription, createBotReplyName, createReplyBot } from '../bot-builder';
 
@@ -191,6 +192,35 @@ describe('Bot builder', () => {
 			// Should skip the message without checking triggers
 			expect(trigger.condition).not.toHaveBeenCalled();
 			expect(trigger.response).not.toHaveBeenCalled();
+			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+		});
+
+		it('should skip messages from ignored users (Ian)', async () => {
+			const trigger = {
+				name: 'test-trigger',
+				condition: jest.fn().mockReturnValue(true),
+				response: jest.fn().mockReturnValue('Test response'),
+			};
+
+			const config = {
+				name: 'TestBot',
+				description: 'A test bot',
+				defaultIdentity: mockBotIdentity,
+				triggers: [trigger],
+				skipBotMessages: false, // Ensure we aren't skipping because of bot status
+			};
+
+			const bot = createReplyBot(config);
+			const ianMessage = mockMessage('Test message from Ian');
+			Object.defineProperty(ianMessage.author, 'id', { value: userId.Ian });
+
+			// Call processMessage. The skipping logic is now inside this method for createReplyBot.
+			await bot.processMessage(ianMessage);
+
+			// Assert that trigger condition/response were not called because processMessage should have returned early
+			expect(trigger.condition).not.toHaveBeenCalled();
+			expect(trigger.response).not.toHaveBeenCalled();
+			// Assert that no message was sent
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
 

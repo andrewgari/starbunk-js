@@ -1,5 +1,6 @@
-import { Message } from 'discord.js';
+import userId from '@/discord/userId';
 import { getDiscordService } from '@/services/bootstrap';
+import { Message } from 'discord.js';
 import { logger } from '../../../services/logger';
 import { getBotDefaults } from '../../config/botDefaults';
 import { BotIdentity } from '../../types/botIdentity';
@@ -139,6 +140,12 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 			// Skip bot messages if configured
 			if (config.skipBotMessages && message.author.bot) {
 				logger.debug('Skipping bot message');
+				return;
+			}
+
+			// Skip messages from ignored users (Ian)
+			if (message.author.id === userId.Ian) {
+				logger.debug('Skipping message from ignored user Ian');
 				return;
 			}
 
