@@ -1,3 +1,5 @@
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'file:memory:?cache=shared';
+
 module.exports = {
 	preset: 'ts-jest',
 	testEnvironment: 'node',

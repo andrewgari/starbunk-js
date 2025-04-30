@@ -1,3 +1,4 @@
+// DEPRECATED: All user IDs are now stored in the database. Use the User table instead.
 export default {
 	Cova: '139592376443338752',
 	Venn: '151120340343455744',

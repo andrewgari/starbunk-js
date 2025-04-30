@@ -1,4 +1,3 @@
-import userId from '@/discord/userId';
 import { getDiscordService } from '@/services/bootstrap';
 import { DiscordService } from '../../../../services/discordService';
 import { logger } from '../../../../services/logger';
@@ -195,7 +194,7 @@ describe('Bot builder', () => {
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
 
-		it('should skip messages from ignored users (Ian)', async () => {
+		it('should skip messages from any blacklisted user', async () => {
 			const trigger = {
 				name: 'test-trigger',
 				condition: jest.fn().mockReturnValue(true),
@@ -207,20 +206,30 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
 				triggers: [trigger],
-				skipBotMessages: false, // Ensure we aren't skipping because of bot status
+				skipBotMessages: false,
 			};
 
+			// Mock PrismaClient constructor globally for this test BEFORE bot creation
+			const mockFindUnique = jest.fn().mockResolvedValueOnce({
+				id: 'some-id',
+				guildId: 'guild123',
+				userId: 'blacklisted-user-id',
+				createdAt: new Date(),
+			});
+			jest.spyOn(require('@prisma/client'), 'PrismaClient').mockImplementation(() => ({
+				blacklist: { findUnique: mockFindUnique },
+			}));
+
 			const bot = createReplyBot(config);
-			const ianMessage = mockMessage('Test message from Ian');
-			Object.defineProperty(ianMessage.author, 'id', { value: userId.Ian });
+			const message = mockMessage('Test message from blacklisted user');
+			Object.defineProperty(message.author, 'id', { value: 'blacklisted-user-id' });
+			Object.defineProperty(message, 'guild', { value: { id: 'guild123' } });
 
-			// Call processMessage. The skipping logic is now inside this method for createReplyBot.
-			await bot.processMessage(ianMessage);
+			await bot.processMessage(message);
 
-			// Assert that trigger condition/response were not called because processMessage should have returned early
+			// Should skip triggers and not send a message
 			expect(trigger.condition).not.toHaveBeenCalled();
 			expect(trigger.response).not.toHaveBeenCalled();
-			// Assert that no message was sent
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
 

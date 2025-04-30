@@ -1,3 +1,4 @@
+// DEPRECATED: All role IDs are now stored in the database. Use the Role table instead.
 export default {
 	Macaroni: '836680699217444924',
 	WetBread: '204326753215315968',
