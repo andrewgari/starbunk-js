@@ -50,7 +50,7 @@ describe('Voice Bot Builder', () => {
 			};
 
 			const bot = createVoiceBot(config);
-			
+
 			expect(bot.name).toBe('VoiceBot');
 			expect(bot.description).toBe('A test voice bot');
 			expect(bot.getVolume()).toBe(0.8);
@@ -114,7 +114,7 @@ describe('Voice Bot Builder', () => {
 
 				const bot = createVoiceBot(config);
 				bot.setVolume(0.8);
-				
+
 				expect(bot.getVolume()).toBe(0.8);
 				expect(logger.debug).toHaveBeenCalledWith(
 					expect.stringMatching(/Volume set to 0.8/)
@@ -137,11 +137,11 @@ describe('Voice Bot Builder', () => {
 				};
 
 				const bot = createVoiceBot(config);
-				
+
 				// Test clamping to minimum
 				bot.setVolume(-0.5);
 				expect(bot.getVolume()).toBe(0);
-				
+
 				// Test clamping to maximum
 				bot.setVolume(3.0);
 				expect(bot.getVolume()).toBe(2.0);
@@ -174,9 +174,9 @@ describe('Voice Bot Builder', () => {
 				const bot = createVoiceBot(config);
 				const oldState = createMockVoiceState();
 				const newState = createMockVoiceState('channel123');
-				
+
 				await bot.onVoiceStateUpdate(oldState, newState);
-				
+
 				// Should check both triggers but only call response on the matching one
 				expect(nonMatchingTrigger.condition).toHaveBeenCalledWith(oldState, newState);
 				expect(nonMatchingTrigger.response).not.toHaveBeenCalled();
@@ -212,9 +212,9 @@ describe('Voice Bot Builder', () => {
 				const bot = createVoiceBot(config);
 				const oldState = createMockVoiceState();
 				const newState = createMockVoiceState('channel123');
-				
+
 				await bot.onVoiceStateUpdate(oldState, newState);
-				
+
 				// Should check high priority first and short-circuit
 				expect(highPriorityTrigger.condition).toHaveBeenCalledWith(oldState, newState);
 				expect(highPriorityTrigger.response).toHaveBeenCalledWith(oldState, newState);
@@ -249,9 +249,9 @@ describe('Voice Bot Builder', () => {
 				const bot = createVoiceBot(config);
 				const oldState = createMockVoiceState();
 				const newState = createMockVoiceState('channel123');
-				
+
 				await bot.onVoiceStateUpdate(oldState, newState);
-				
+
 				// Should log the error and continue to the next trigger
 				expect(errorTrigger.condition).toHaveBeenCalledWith(oldState, newState);
 				expect(errorTrigger.response).not.toHaveBeenCalled();
@@ -259,7 +259,7 @@ describe('Voice Bot Builder', () => {
 					expect.stringContaining('Error in voice trigger'),
 					expect.any(Error)
 				);
-				
+
 				// Should fall back to the next trigger
 				expect(fallbackTrigger.condition).toHaveBeenCalledWith(oldState, newState);
 				expect(fallbackTrigger.response).toHaveBeenCalledWith(oldState, newState);
@@ -285,9 +285,9 @@ describe('Voice Bot Builder', () => {
 				const bot = createVoiceBot(config);
 				const oldState = createMockVoiceState();
 				const newState = createMockVoiceState('channel123');
-				
+
 				await bot.onVoiceStateUpdate(oldState, newState);
-				
+
 				// Should log the error
 				expect(trigger.condition).toHaveBeenCalledWith(oldState, newState);
 				expect(trigger.response).toHaveBeenCalledWith(oldState, newState);

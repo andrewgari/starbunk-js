@@ -51,7 +51,7 @@ describe('Voice Bot Adapter', () => {
 		it('should update volume with setVolume', () => {
 			const bot = new TestVoiceBot();
 			bot.setVolume(0.8);
-			
+
 			expect(bot.getVolume()).toBe(0.8);
 			expect(logger.debug).toHaveBeenCalledWith(
 				expect.stringMatching(/Volume set to 0.8/)
@@ -60,11 +60,11 @@ describe('Voice Bot Adapter', () => {
 
 		it('should clamp volume between 0 and 2.0', () => {
 			const bot = new TestVoiceBot();
-			
+
 			// Test clamping to minimum
 			bot.setVolume(-0.5);
 			expect(bot.getVolume()).toBe(0);
-			
+
 			// Test clamping to maximum
 			bot.setVolume(3.0);
 			expect(bot.getVolume()).toBe(2.0);
@@ -82,23 +82,23 @@ describe('Voice Bot Adapter', () => {
 			};
 
 			const adapter = new VoiceBotAdapter(mockVoiceBot);
-			
+
 			expect(adapter.name).toBe('MockVoiceBot');
 			expect(adapter.description).toBe('A mock voice bot');
 			expect(adapter.botIdentity.botName).toBe('MockVoiceBot');
 			expect(adapter.botIdentity.avatarUrl).toBe(''); // Placeholder
-			
+
 			// Test volume methods
 			expect(adapter.getVolume()).toBe(1.0);
 			expect(mockVoiceBot.getVolume).toHaveBeenCalled();
-			
+
 			adapter.setVolume(0.8);
 			expect(mockVoiceBot.setVolume).toHaveBeenCalledWith(0.8);
-			
+
 			// Test voice state update
 			const oldState = createMockVoiceState();
 			const newState = createMockVoiceState('channel123');
-			
+
 			await adapter.onVoiceStateUpdate(oldState, newState);
 			expect(mockVoiceBot.onVoiceStateUpdate).toHaveBeenCalledWith(oldState, newState);
 		});
@@ -113,7 +113,7 @@ describe('Voice Bot Adapter', () => {
 			};
 
 			new VoiceBotAdapter(mockVoiceBot);
-			
+
 			expect(logger.debug).toHaveBeenCalledWith(
 				expect.stringMatching(/Created adapter for LoggedVoiceBot/)
 			);
@@ -133,9 +133,9 @@ describe('Voice Bot Adapter', () => {
 			const adapter = new VoiceBotAdapter(mockVoiceBot);
 			const oldState = createMockVoiceState();
 			const newState = createMockVoiceState('channel123');
-			
+
 			await adapter.onVoiceStateUpdate(oldState, newState);
-			
+
 			expect(mockVoiceBot.onVoiceStateUpdate).toHaveBeenCalledWith(oldState, newState);
 			expect(logger.error).toHaveBeenCalledWith(
 				expect.stringContaining('Error in voice bot state handling'),
