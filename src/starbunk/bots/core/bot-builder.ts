@@ -108,7 +108,7 @@ export interface ReplyBotImpl {
  */
 export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 	const validConfig = validateBotConfig(config);
-	const prisma = new PrismaClient();
+	const prisma = getPrismaClient();
 
 	return {
 		name: validConfig.name,
@@ -200,3 +200,12 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 		},
 	};
 }
+let prisma: PrismaClient | null = null;
+
+function getPrismaClient(): PrismaClient {
+	if (!prisma) {
+		prisma = new PrismaClient();
+	}
+	return prisma;
+}
+
