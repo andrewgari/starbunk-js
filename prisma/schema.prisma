@@ -96,3 +96,52 @@ model BotFrequency {
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
 }
+
+model Guild {
+  id          String   @id
+  name        String
+  channels    Channel[]
+  roles       Role[]
+  users       UserOnGuild[]
+  blacklists  Blacklist[]
+}
+
+model Channel {
+  id        String   @id
+  name      String
+  guildId   String
+  guild     Guild    @relation(fields: [guildId], references: [id])
+}
+
+model Role {
+  id        String   @id
+  name      String
+  guildId   String
+  guild     Guild    @relation(fields: [guildId], references: [id])
+}
+
+model User {
+  id        String   @id
+  name      String
+  guilds    UserOnGuild[]
+  blacklists Blacklist[]
+}
+
+model UserOnGuild {
+  id        String   @id @default(uuid())
+  userId    String
+  guildId   String
+  user      User     @relation(fields: [userId], references: [id])
+  guild     Guild    @relation(fields: [guildId], references: [id])
+  @@unique([userId, guildId])
+}
+
+model Blacklist {
+  id        String   @id @default(uuid())
+  guildId   String
+  userId    String
+  guild     Guild    @relation(fields: [guildId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  @@unique([guildId, userId])
+}

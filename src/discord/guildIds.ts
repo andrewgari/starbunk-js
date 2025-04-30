@@ -1,3 +1,4 @@
+// DEPRECATED: All guild IDs are now stored in the database. Use the Guild table instead.
 export default {
 	StarbunkCrusaders: '753251582719688714',
 	StarbunkStaging: '856617421427441674',
