@@ -4,7 +4,7 @@ module.exports = {
 	preset: 'ts-jest',
 	testEnvironment: 'node',
 	// Use standard patterns for finding tests
-	testMatch: ['**/__tests__/**/*.test.ts', '**/reply-bots/**/*.test.ts'],
+	testMatch: ['**/*.test.ts'],
 	collectCoverageFrom: [
 		'src/**/*.ts',
 		'!src/**/*.d.ts',
@@ -28,9 +28,6 @@ module.exports = {
 	// Only exclude tests with complex external dependencies like LLM services
 	testPathIgnorePatterns: [
 		'node_modules/',
-		// Tests needing special mocks for external services
-		// blueBot.test.ts depends on LLM service which is complex to mock
-		'blueBot\\.test\\.ts',
 	],
 	transform: {
 		'^.+\\.tsx?$': [
