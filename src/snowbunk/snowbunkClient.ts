@@ -1,7 +1,8 @@
 import { Events, GatewayIntentBits, IntentsBitField, Message, TextChannel } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
 import userId from '../discord/userId';
-import { bootstrapSnowbunkApplication, getDiscordService } from '../services/bootstrap';
+import { bootstrapSnowbunkApplication } from '../services/bootstrap';
+import { getDiscordService } from '../services/bootstrap';
 import { logger } from '../services/logger';
 
 export default class SnowbunkClient extends DiscordClient {
@@ -57,25 +58,23 @@ export default class SnowbunkClient extends DiscordClient {
 
 		super({ intents });
 
-		// Initialize with minimal services
-		try {
-			bootstrapSnowbunkApplication(this).then(() => {
+		// Initialize with minimal services and register event handler
+		bootstrapSnowbunkApplication(this)
+			.then(() => {
 				logger.info('Snowbunk services bootstrapped successfully');
-			}).catch((error: unknown) => {
+				this.on(Events.MessageCreate, this.syncMessage);
+			})
+			.catch((error: unknown) => {
 				logger.error('Failed to bootstrap Snowbunk services:', error instanceof Error ? error : new Error(String(error)));
 			});
-		} catch (error: unknown) {
-			logger.error('Error bootstrapping Snowbunk services:', error instanceof Error ? error : new Error(String(error)));
-		}
-
-		this.on(Events.MessageCreate, this.syncMessage.bind(this));
 	}
 
 	getSyncedChannels(channelID: string): string[] {
 		return this.channelMap[channelID] ?? [];
 	}
 
-	private syncMessage = (message: Message): void => {
+	// Changed from private to public for testing
+	public syncMessage = (message: Message): void => {
 		if (message.author.id === userId.Goose) return;
 		if (message.author.bot) return;
 
