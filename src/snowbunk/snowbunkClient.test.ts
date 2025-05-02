@@ -5,12 +5,104 @@ import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from 
 
 // Create a test version of SnowbunkClient that doesn't call bootstrapSnowbunkApplication
 class SnowbunkClient extends DiscordClient {
-	private readonly channelMap: Record<string, Array<string>> = {
-		'757866614787014660': ['856617421942030364', '798613445301633137'],
-		// testing
-		'856617421942030364': ['757866614787014660', '798613445301633137'],
-		// testing
-		'798613445301633137': ['757866614787014660', '856617421942030364']
+	// Mock Prisma client for testing
+	public readonly prisma = {
+		blacklist: {
+			findUnique: jest.fn().mockResolvedValue(null) // Default to no blacklisted users
+		},
+		channel: {
+			findUnique: jest.fn().mockImplementation((query) => {
+				const channelId = query?.where?.id;
+
+				// Mock channel data based on the ID
+				if (channelId === '757866614787014660') {
+					return Promise.resolve({ id: channelId, name: 'Test-Channel', guildId: '753251582719688714' });
+				} else if (channelId === '856617421942030364') {
+					return Promise.resolve({ id: channelId, name: 'Test-Channel', guildId: '856617421427441674' });
+				} else if (channelId === '798613445301633137') {
+					return Promise.resolve({ id: channelId, name: 'Test-Channel', guildId: '798613445301633134' });
+				}
+
+				// Default to null for unknown channels
+				return Promise.resolve(null);
+			})
+		},
+		channelBridge: {
+			findMany: jest.fn().mockImplementation((query) => {
+				// Mock channel bridge data based on the query
+				const sourceChannelId = query?.where?.sourceChannelId;
+
+				// Return mock data based on the source channel ID
+				if (sourceChannelId === '757866614787014660') {
+					return Promise.resolve([
+						{
+							id: 'bridge1',
+							sourceChannelId,
+							targetChannelId: '856617421942030364',
+							name: 'testing',
+							sourceServer: 'StarbunkCrusaders',
+							targetServer: 'StarbunkStaging',
+							isActive: true
+						},
+						{
+							id: 'bridge2',
+							sourceChannelId,
+							targetChannelId: '798613445301633137',
+							name: 'testing',
+							sourceServer: 'StarbunkCrusaders',
+							targetServer: 'CovaDaxServer',
+							isActive: true
+						}
+					]);
+				} else if (sourceChannelId === '856617421942030364') {
+					return Promise.resolve([
+						{
+							id: 'bridge3',
+							sourceChannelId,
+							targetChannelId: '757866614787014660',
+							name: 'testing',
+							sourceServer: 'StarbunkStaging',
+							targetServer: 'StarbunkCrusaders',
+							isActive: true
+						},
+						{
+							id: 'bridge4',
+							sourceChannelId,
+							targetChannelId: '798613445301633137',
+							name: 'testing',
+							sourceServer: 'StarbunkStaging',
+							targetServer: 'CovaDaxServer',
+							isActive: true
+						}
+					]);
+				} else if (sourceChannelId === '798613445301633137') {
+					return Promise.resolve([
+						{
+							id: 'bridge5',
+							sourceChannelId,
+							targetChannelId: '757866614787014660',
+							name: 'testing',
+							sourceServer: 'CovaDaxServer',
+							targetServer: 'StarbunkCrusaders',
+							isActive: true
+						},
+						{
+							id: 'bridge6',
+							sourceChannelId,
+							targetChannelId: '856617421942030364',
+							name: 'testing',
+							sourceServer: 'CovaDaxServer',
+							targetServer: 'StarbunkStaging',
+							isActive: true
+						}
+					]);
+				}
+
+				// Default to empty array for unknown channels
+				return Promise.resolve([]);
+			})
+		},
+		$disconnect: jest.fn().mockResolvedValue(undefined)
 	};
 
 	constructor() {
@@ -28,16 +120,23 @@ class SnowbunkClient extends DiscordClient {
 		// No bootstrap call here
 	}
 
-	getSyncedChannels(channelID: string): string[] {
-		return this.channelMap[channelID] ?? [];
-	}
+	async getSyncedChannels(channelID: string): Promise<string[]> {
+		try {
+			// Query the database for channel bridges where the source channel matches the given ID
+			const bridges = await this.prisma.channelBridge.findMany({
+				where: {
+					sourceChannelId: channelID,
+					isActive: true
+				}
+			});
 
-	// Mock Prisma client for testing
-	public readonly prismaClient = {
-		blacklist: {
-			findUnique: jest.fn().mockResolvedValue(null) // Default to no blacklisted users
+			// Extract the target channel IDs
+			return bridges.map((bridge: { targetChannelId: string }) => bridge.targetChannelId);
+		} catch (error) {
+			mockLogger.error('Error fetching synced channels:', error instanceof Error ? error : new Error(String(error)));
+			return [];
 		}
-	};
+	}
 
 	// Public for testing
 	public syncMessage = async (message: Message): Promise<void> => {
@@ -47,7 +146,7 @@ class SnowbunkClient extends DiscordClient {
 		// Check if the user is blacklisted in this guild
 		if (message.guild) {
 			try {
-				const blacklisted = await this.prismaClient.blacklist.findUnique({
+				const blacklisted = await this.prisma.blacklist.findUnique({
 					where: {
 						guildId_userId: {
 							guildId: message.guild.id,
@@ -66,17 +165,22 @@ class SnowbunkClient extends DiscordClient {
 			}
 		}
 
-		const linkedChannels = this.getSyncedChannels(message.channel.id);
-		linkedChannels.forEach((channelID: string) => {
-			this.channels
-				.fetch(channelID)
-				.then((channel) => {
+		try {
+			// Get linked channels from the database
+			const linkedChannels = await this.getSyncedChannels(message.channel.id);
+
+			// Process each linked channel
+			for (const channelID of linkedChannels) {
+				try {
+					const channel = await this.channels.fetch(channelID);
 					this.writeMessage(message, channel as TextChannel);
-				})
-				.catch((error) => {
-					console.error('Error fetching channel:', error);
-				});
-		});
+				} catch (error) {
+					mockLogger.error('Error fetching channel:', error instanceof Error ? error : new Error(String(error)));
+				}
+			}
+		} catch (error) {
+			mockLogger.error('Error processing linked channels:', error instanceof Error ? error : new Error(String(error)));
+		}
 	};
 
 	private writeMessage(message: Message, linkedChannel: TextChannel): void {
@@ -183,13 +287,13 @@ describe('SnowbunkClient', () => {
 		onSpy.mockRestore();
 	});
 
-	it('should get synced channels', () => {
-		const channels = snowbunkClient.getSyncedChannels('757866614787014660');
+	it('should get synced channels', async () => {
+		const channels = await snowbunkClient.getSyncedChannels('757866614787014660');
 		expect(channels).toEqual(['856617421942030364', '798613445301633137']);
 	});
 
-	it('should return empty array for unknown channel', () => {
-		const channels = snowbunkClient.getSyncedChannels('unknown-channel');
+	it('should return empty array for unknown channel', async () => {
+		const channels = await snowbunkClient.getSyncedChannels('unknown-channel');
 		expect(channels).toEqual([]);
 	});
 
@@ -219,7 +323,7 @@ describe('SnowbunkClient', () => {
 
 	it('should not sync messages from blacklisted users', async () => {
 		// Mock blacklist lookup to return a blacklist entry
-		snowbunkClient.prismaClient.blacklist.findUnique.mockResolvedValue({
+		snowbunkClient.prisma.blacklist.findUnique.mockResolvedValue({
 			id: 'blacklist-1',
 			guildId: 'guild123',
 			userId: 'blacklisted-user',
@@ -239,7 +343,7 @@ describe('SnowbunkClient', () => {
 		await new Promise(process.nextTick);
 
 		// Check that the blacklist was checked
-		expect(snowbunkClient.prismaClient.blacklist.findUnique).toHaveBeenCalledWith({
+		expect(snowbunkClient.prisma.blacklist.findUnique).toHaveBeenCalledWith({
 			where: {
 				guildId_userId: {
 					guildId: 'guild123',

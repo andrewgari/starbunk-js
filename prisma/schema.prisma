@@ -145,3 +145,18 @@ model Blacklist {
   createdAt DateTime @default(now())
   @@unique([guildId, userId])
 }
+
+model ChannelBridge {
+  id            String   @id @default(uuid())
+  sourceChannelId String
+  targetChannelId String
+  name          String?  // Optional name for the bridge (e.g., "memes", "ff14-general")
+  sourceServer  String?  // Server name for the source channel (e.g., "Starbunk", "Snowfall")
+  targetServer  String?  // Server name for the target channel (e.g., "Starbunk", "Snowfall")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Ensure we don't have duplicate bridges
+  @@unique([sourceChannelId, targetChannelId])
+}

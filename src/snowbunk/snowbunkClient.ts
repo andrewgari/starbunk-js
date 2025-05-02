@@ -1,3 +1,4 @@
+import { PrismaClient } from '@prisma/client';
 import { Events, GatewayIntentBits, IntentsBitField, Message, TextChannel } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
 import userId from '../discord/userId';
@@ -5,45 +6,8 @@ import { bootstrapSnowbunkApplication, getDiscordService } from '../services/boo
 import { logger } from '../services/logger';
 
 export default class SnowbunkClient extends DiscordClient {
-	private readonly channelMap: Record<string, Array<string>> = {
-		'757866614787014660': ['856617421942030364', '798613445301633137'],
-		// testing
-		'856617421942030364': ['757866614787014660', '798613445301633137'],
-		// testing
-		'798613445301633137': ['757866614787014660', '856617421942030364'],
-		// starbunk
-		'755579237934694420': ['755585038388691127'],
-		// starbunk
-		'755585038388691127': ['755579237934694420'],
-		// memes
-		'753251583084724371': ['697341904873979925'],
-		// memes
-		'697341904873979925': ['753251583084724371'],
-		// ff14 general
-		'754485972774944778': ['696906700627640352'],
-		// ff14 general
-		'696906700627640352': ['754485972774944778'],
-		// ff14 msq
-		'697342576730177658': ['753251583084724372'],
-		// ff14 msq
-		'753251583084724372': ['697342576730177658'],
-		// screenshots
-		'753251583286050926': ['755575759753576498'],
-		// screenshots
-		'755575759753576498': ['753251583286050926'],
-		// raiding
-		'753251583286050928': ['699048771308224642'],
-		// raiding
-		'699048771308224642': ['753251583286050928'],
-		// food
-		'696948268579553360': ['755578695011270707'],
-		// food
-		'755578695011270707': ['696948268579553360'],
-		// pets
-		'696948305586028544': ['755578835122126898'],
-		// pets
-		'755578835122126898': ['696948305586028544'],
-	};
+	// Prisma client for database access
+	private prisma: PrismaClient | null = null;
 
 	constructor() {
 		const intents = new IntentsBitField();
@@ -57,6 +21,9 @@ export default class SnowbunkClient extends DiscordClient {
 
 		super({ intents });
 
+		// Initialize Prisma client
+		this.prisma = new PrismaClient();
+
 		// Initialize with minimal services and register event handler
 		bootstrapSnowbunkApplication(this)
 			.then(() => {
@@ -68,8 +35,53 @@ export default class SnowbunkClient extends DiscordClient {
 			});
 	}
 
-	getSyncedChannels(channelID: string): string[] {
-		return this.channelMap[channelID] ?? [];
+	async getSyncedChannels(channelID: string): Promise<string[]> {
+		try {
+			if (!this.prisma) {
+				logger.error('Prisma client not initialized');
+				return [];
+			}
+
+			// Get source channel info
+			const sourceChannel = await this.prisma.channel.findUnique({
+				where: { id: channelID },
+				select: { name: true, guildId: true }
+			});
+
+			// Query the database for channel bridges where the source channel matches the given ID
+			const bridges = await this.prisma.channelBridge.findMany({
+				where: {
+					sourceChannelId: channelID,
+					isActive: true
+				},
+				select: {
+					targetChannelId: true,
+					sourceServer: true,
+					targetServer: true,
+					name: true
+				}
+			});
+
+			// For each bridge, get the target channel info
+			for (const bridge of bridges) {
+				const targetChannel = await this.prisma.channel.findUnique({
+					where: { id: bridge.targetChannelId },
+					select: { name: true, guildId: true }
+				});
+
+				// Log the bridge information for debugging
+				logger.debug(
+					`Channel Bridge: ${bridge.name || 'unnamed'} from ${bridge.sourceServer || 'unknown'}/${sourceChannel?.name || 'unknown'} ` +
+					`to ${bridge.targetServer || 'unknown'}/${targetChannel?.name || 'unknown'}`
+				);
+			}
+
+			// Extract the target channel IDs
+			return bridges.map((bridge: { targetChannelId: string }) => bridge.targetChannelId);
+		} catch (error) {
+			logger.error('Error fetching synced channels:', error instanceof Error ? error : new Error(String(error)));
+			return [];
+		}
 	}
 
 	// Changed from private to public for testing
@@ -80,11 +92,12 @@ export default class SnowbunkClient extends DiscordClient {
 		// Check if the user is blacklisted in this guild
 		if (message.guild) {
 			try {
-				// Import PrismaClient here to avoid circular dependencies
-				const { PrismaClient } = await import('@prisma/client');
-				const prisma = new PrismaClient();
+				if (!this.prisma) {
+					logger.error('Prisma client not initialized');
+					return;
+				}
 
-				const blacklisted = await prisma.blacklist.findUnique({
+				const blacklisted = await this.prisma.blacklist.findUnique({
 					where: {
 						guildId_userId: {
 							guildId: message.guild.id,
@@ -103,17 +116,22 @@ export default class SnowbunkClient extends DiscordClient {
 			}
 		}
 
-		const linkedChannels = this.getSyncedChannels(message.channel.id);
-		linkedChannels.forEach((channelID: string) => {
-			this.channels
-				.fetch(channelID)
-				.then((channel) => {
+		try {
+			// Get linked channels from the database
+			const linkedChannels = await this.getSyncedChannels(message.channel.id);
+
+			// Process each linked channel
+			for (const channelID of linkedChannels) {
+				try {
+					const channel = await this.channels.fetch(channelID);
 					this.writeMessage(message, channel as TextChannel);
-				})
-				.catch((error) => {
+				} catch (error) {
 					logger.error('Error fetching channel:', error instanceof Error ? error : new Error(String(error)));
-				});
-		});
+				}
+			}
+		} catch (error) {
+			logger.error('Error processing linked channels:', error instanceof Error ? error : new Error(String(error)));
+		}
 	};
 
 	private writeMessage(message: Message, linkedChannel: TextChannel): void {
@@ -149,6 +167,24 @@ export default class SnowbunkClient extends DiscordClient {
 		} catch (error: unknown) {
 			logger.error(`[SnowbunkClient] Failed to send any message to channel ${linkedChannel.id}: ${error instanceof Error ? error.message : String(error)}`);
 			// Don't throw here - just log the error and continue
+		}
+	}
+
+	/**
+	 * Clean up resources when the client is destroyed
+	 */
+	public override async destroy(): Promise<void> {
+		try {
+			// Disconnect Prisma client
+			if (this.prisma) {
+				await this.prisma.$disconnect();
+				this.prisma = null;
+			}
+
+			// Call parent destroy method
+			await super.destroy();
+		} catch (error) {
+			logger.error('Error during SnowbunkClient destroy:', error instanceof Error ? error : new Error(String(error)));
 		}
 	}
 }
