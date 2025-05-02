@@ -1,8 +1,7 @@
 import { Events, GatewayIntentBits, IntentsBitField, Message, TextChannel } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
 import userId from '../discord/userId';
-import { bootstrapSnowbunkApplication } from '../services/bootstrap';
-import { getDiscordService } from '../services/bootstrap';
+import { bootstrapSnowbunkApplication, getDiscordService } from '../services/bootstrap';
 import { logger } from '../services/logger';
 
 export default class SnowbunkClient extends DiscordClient {
@@ -74,9 +73,35 @@ export default class SnowbunkClient extends DiscordClient {
 	}
 
 	// Changed from private to public for testing
-	public syncMessage = (message: Message): void => {
+	public syncMessage = async (message: Message): Promise<void> => {
 		if (message.author.id === userId.Goose) return;
 		if (message.author.bot) return;
+
+		// Check if the user is blacklisted in this guild
+		if (message.guild) {
+			try {
+				// Import PrismaClient here to avoid circular dependencies
+				const { PrismaClient } = await import('@prisma/client');
+				const prisma = new PrismaClient();
+
+				const blacklisted = await prisma.blacklist.findUnique({
+					where: {
+						guildId_userId: {
+							guildId: message.guild.id,
+							userId: message.author.id
+						}
+					}
+				});
+
+				if (blacklisted) {
+					logger.debug(`Skipping message from blacklisted user ${message.author.id} in guild ${message.guild.id}`);
+					return;
+				}
+			} catch (error) {
+				logger.error('Error checking blacklist:', error instanceof Error ? error : new Error(String(error)));
+				// Continue processing even if blacklist check fails
+			}
+		}
 
 		const linkedChannels = this.getSyncedChannels(message.channel.id);
 		linkedChannels.forEach((channelID: string) => {

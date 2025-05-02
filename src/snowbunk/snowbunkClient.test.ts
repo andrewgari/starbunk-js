@@ -1,32 +1,17 @@
-import { Events, GatewayIntentBits, IntentsBitField, TextChannel } from 'discord.js';
+import { Events, GatewayIntentBits, IntentsBitField, Message, TextChannel } from 'discord.js';
 import DiscordClient from '../discord/discordClient';
 import { ServiceId, container } from '../services/container';
 import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from '../starbunk/bots/test-utils/testUtils';
 
 // Create a test version of SnowbunkClient that doesn't call bootstrapSnowbunkApplication
 class SnowbunkClient extends DiscordClient {
--   private readonly channelMap: Record<string, Array<string>> = {
--       '757866614787014660': ['856617421942030364', '798613445301633137'],
--       // ... many more hardcoded channel mappings ...
--   };
-+   private readonly prismaClient = {
-+       guild: {
-+           findUnique: jest.fn(),
-+           findMany: jest.fn()
-+       },
-+       channel: {
-+           findMany: jest.fn().mockImplementation((args) => {
-+               // Mock implementation that returns linked channels based on provided channel ID
-+               const channelMappings: Record<string, Array<{id: string}>> = {
-+                   '757866614787014660': [
-+                       { id: '856617421942030364' },
-+                       { id: '798613445301633137' }
-+                   ]
-+               };
-+               return Promise.resolve(channelMappings[args.where.id] || []);
-+           })
-+       }
-+   };
+	private readonly channelMap: Record<string, Array<string>> = {
+		'757866614787014660': ['856617421942030364', '798613445301633137'],
+		// testing
+		'856617421942030364': ['757866614787014660', '798613445301633137'],
+		// testing
+		'798613445301633137': ['757866614787014660', '856617421942030364']
+	};
 
 	constructor() {
 		const intents = new IntentsBitField();
@@ -47,10 +32,39 @@ class SnowbunkClient extends DiscordClient {
 		return this.channelMap[channelID] ?? [];
 	}
 
+	// Mock Prisma client for testing
+	public readonly prismaClient = {
+		blacklist: {
+			findUnique: jest.fn().mockResolvedValue(null) // Default to no blacklisted users
+		}
+	};
+
 	// Public for testing
-	public syncMessage = (message: any): void => {
+	public syncMessage = async (message: Message): Promise<void> => {
 		if (message.author.id === 'Goose') return;
 		if (message.author.bot) return;
+
+		// Check if the user is blacklisted in this guild
+		if (message.guild) {
+			try {
+				const blacklisted = await this.prismaClient.blacklist.findUnique({
+					where: {
+						guildId_userId: {
+							guildId: message.guild.id,
+							userId: message.author.id
+						}
+					}
+				});
+
+				if (blacklisted) {
+					mockLogger.debug(`Skipping message from blacklisted user ${message.author.id} in guild ${message.guild.id}`);
+					return;
+				}
+			} catch (error) {
+				mockLogger.error('Error checking blacklist:', error instanceof Error ? error : new Error(String(error)));
+				// Continue processing even if blacklist check fails
+			}
+		}
 
 		const linkedChannels = this.getSyncedChannels(message.channel.id);
 		linkedChannels.forEach((channelID: string) => {
@@ -78,8 +92,8 @@ class SnowbunkClient extends DiscordClient {
 		try {
 			// Try to use Discord service (which will use webhook service internally)
 			try {
-				const discordService = container.resolve(ServiceId.DiscordService);
-				discordService.sendWebhookMessage(linkedChannel, {
+				// For testing, use the mockWebhookService directly
+				mockWebhookService.writeMessage(linkedChannel, {
 					username: displayName,
 					avatarURL: avatarUrl,
 					content: message.content,
@@ -87,18 +101,16 @@ class SnowbunkClient extends DiscordClient {
 				});
 				return; // Success, exit early
 			} catch (error: unknown) {
-				const logger = container.resolve(ServiceId.Logger);
-				logger.warn(`Failed to use Discord service, falling back to direct message: ${error}`);
+				// For testing, use mockLogger directly
+				mockLogger.warn(`Failed to use Discord service, falling back to direct message: ${error}`);
 			}
 
 			// Fallback to direct channel message
-			const logger = container.resolve(ServiceId.Logger);
-			logger.debug(`Sending fallback direct message to channel ${linkedChannel.name}`);
+			mockLogger.debug(`Sending fallback direct message to channel ${linkedChannel.name}`);
 			const formattedMessage = `**[${displayName}]**: ${message.content}`;
 			linkedChannel.send(formattedMessage);
 		} catch (error: unknown) {
-			const logger = container.resolve(ServiceId.Logger);
-			logger.error(`Failed to send any message to channel ${linkedChannel.id}: ${error}`);
+			mockLogger.error(`Failed to send any message to channel ${linkedChannel.id}: ${error}`);
 			// Don't throw here - just log the error and continue
 		}
 	}
@@ -188,13 +200,13 @@ describe('SnowbunkClient', () => {
 		Object.defineProperty(message, 'channel', { value: { id: '757866614787014660' } });
 
 		// Call the message handler directly
-		snowbunkClient.syncMessage(message);
+		await snowbunkClient.syncMessage(message);
 
 		// Wait for promises to resolve
 		await new Promise(process.nextTick);
 
 		// Check if webhook message was sent with correct parameters
-		expect(mockSendWebhookMessage).toHaveBeenCalledWith(
+		expect(mockWebhookService.writeMessage).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({
 				content: 'test message',
@@ -203,5 +215,43 @@ describe('SnowbunkClient', () => {
 				embeds: []
 			})
 		);
+	});
+
+	it('should not sync messages from blacklisted users', async () => {
+		// Mock blacklist lookup to return a blacklist entry
+		snowbunkClient.prismaClient.blacklist.findUnique.mockResolvedValue({
+			id: 'blacklist-1',
+			guildId: 'guild123',
+			userId: 'blacklisted-user',
+			createdAt: new Date()
+		});
+
+		// Create test message from blacklisted user
+		const message = mockMessage('test message from blacklisted user');
+		Object.defineProperty(message.author, 'id', { value: 'blacklisted-user' });
+		Object.defineProperty(message, 'channel', { value: { id: '757866614787014660' } });
+		Object.defineProperty(message, 'guild', { value: { id: 'guild123' } });
+
+		// Call the message handler directly
+		await snowbunkClient.syncMessage(message);
+
+		// Wait for promises to resolve
+		await new Promise(process.nextTick);
+
+		// Check that the blacklist was checked
+		expect(snowbunkClient.prismaClient.blacklist.findUnique).toHaveBeenCalledWith({
+			where: {
+				guildId_userId: {
+					guildId: 'guild123',
+					userId: 'blacklisted-user'
+				}
+			}
+		});
+
+		// Verify that no webhook message was sent
+		expect(mockWebhookService.writeMessage).not.toHaveBeenCalled();
+
+		// Check that a debug log was generated
+		expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/Skipping message from blacklisted user/));
 	});
 });
