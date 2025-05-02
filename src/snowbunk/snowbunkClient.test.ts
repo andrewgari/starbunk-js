@@ -65,7 +65,7 @@ class SnowbunkClient extends DiscordClient {
 		});
 	};
 
-	private writeMessage(message: any, linkedChannel: TextChannel): void {
+	private writeMessage(message: Message, linkedChannel: TextChannel): void {
 		const userid = message.author.id;
 		const displayName =
 			linkedChannel.members.get(userid)?.displayName ?? message.member?.displayName ?? message.author.displayName;
@@ -78,7 +78,7 @@ class SnowbunkClient extends DiscordClient {
 		try {
 			// Try to use Discord service (which will use webhook service internally)
 			try {
-				const discordService = require('../services/bootstrap').getDiscordService();
+				const discordService = container.resolve(ServiceId.DiscordService);
 				discordService.sendWebhookMessage(linkedChannel, {
 					username: displayName,
 					avatarURL: avatarUrl,
@@ -87,16 +87,18 @@ class SnowbunkClient extends DiscordClient {
 				});
 				return; // Success, exit early
 			} catch (error: unknown) {
-				// Just log the error, we'll fall back to direct channel message
-				console.warn(`Failed to use Discord service, falling back to direct message: ${error}`);
+				const logger = container.resolve(ServiceId.Logger);
+				logger.warn(`Failed to use Discord service, falling back to direct message: ${error}`);
 			}
 
 			// Fallback to direct channel message
-			console.debug(`Sending fallback direct message to channel ${linkedChannel.name}`);
+			const logger = container.resolve(ServiceId.Logger);
+			logger.debug(`Sending fallback direct message to channel ${linkedChannel.name}`);
 			const formattedMessage = `**[${displayName}]**: ${message.content}`;
 			linkedChannel.send(formattedMessage);
 		} catch (error: unknown) {
-			console.error(`Failed to send any message to channel ${linkedChannel.id}: ${error}`);
+			const logger = container.resolve(ServiceId.Logger);
+			logger.error(`Failed to send any message to channel ${linkedChannel.id}: ${error}`);
 			// Don't throw here - just log the error and continue
 		}
 	}
