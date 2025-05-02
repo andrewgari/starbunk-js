@@ -1,15 +1,17 @@
 import { getDiscordService } from '@/services/bootstrap';
 import { DiscordService } from '@/services/discordService';
 import { logger } from '@/services/logger';
+import { Message } from 'discord.js';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { createBotDescription, createBotReplyName, createReplyBot } from '../bot-builder';
 
 // Mock the PrismaClient
+const mockBlacklistFindUnique = jest.fn().mockResolvedValue(null);
 jest.mock('@prisma/client', () => {
 	return {
 		PrismaClient: jest.fn().mockImplementation(() => ({
 			blacklist: {
-				findUnique: jest.fn(),
+				findUnique: mockBlacklistFindUnique,
 			},
 		})),
 	};
@@ -21,6 +23,11 @@ jest.mock('../../../../services/logger');
 describe('Bot builder', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		// Reset the blacklist mock to return null by default (no blacklisted user)
+		mockBlacklistFindUnique.mockResolvedValue(null);
+
+		// Reset the Discord service mock
+		mockDiscordService.sendMessageWithBotIdentity.mockClear();
 	});
 
 	describe('Type creators', () => {
@@ -219,10 +226,72 @@ describe('Bot builder', () => {
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
 
-		// Skip this test for now as it requires more complex mocking
-		it.skip('should skip messages from any blacklisted user', async () => {
-			// This test needs to be fixed with proper mocking of the Prisma client
-			// TODO: Fix this test with proper mocking of the Prisma client
+		it('should skip messages from any blacklisted user', async () => {
+			// Configure the mock to return a blacklisted record for a specific user
+			mockBlacklistFindUnique.mockResolvedValue({
+				id: 'blacklist-1',
+				guildId: 'test-guild-id',
+				userId: 'blacklisted-user-id',
+				createdAt: new Date()
+			});
+
+			const trigger = {
+				name: 'test-trigger',
+				condition: jest.fn().mockReturnValue(true),
+				response: jest.fn().mockReturnValue('Test response'),
+			};
+
+			const config = {
+				name: 'TestBot',
+				description: 'A test bot',
+				defaultIdentity: mockBotIdentity,
+				triggers: [trigger],
+			};
+
+			const bot = createReplyBot(config);
+
+			// Create a custom mock message for a blacklisted user
+			const blacklistedMessage = {
+				content: 'Test message',
+				author: {
+					bot: false,
+					id: 'blacklisted-user-id',
+					username: 'blacklisted-user',
+					displayName: 'blacklisted-user'
+				},
+				client: {
+					user: {
+						id: 'bot123'
+					}
+				},
+				channel: {
+					id: 'channel123',
+					name: 'test-channel',
+					fetchWebhooks: jest.fn().mockResolvedValue([])
+				},
+				guild: {
+					id: 'test-guild-id'
+				},
+				createdTimestamp: Date.now()
+			} as unknown as Message;
+
+			await bot.processMessage(blacklistedMessage);
+
+			// Verify the blacklist was checked
+			expect(mockBlacklistFindUnique).toHaveBeenCalledWith({
+				where: {
+					guildId_userId: {
+						guildId: 'test-guild-id',
+						userId: 'blacklisted-user-id'
+					}
+				}
+			});
+
+			// Verify the message was skipped (triggers not called)
+			expect(trigger.condition).not.toHaveBeenCalled();
+			expect(trigger.response).not.toHaveBeenCalled();
+			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+			expect(logger.debug).toHaveBeenCalledWith(expect.stringMatching(/Skipping message from blacklisted user/));
 		});
 
 		it('should continue to next trigger if condition fails', async () => {
