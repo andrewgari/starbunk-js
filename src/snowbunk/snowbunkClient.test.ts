@@ -5,45 +5,28 @@ import { mockDiscordService, mockLogger, mockMessage, mockWebhookService } from 
 
 // Create a test version of SnowbunkClient that doesn't call bootstrapSnowbunkApplication
 class SnowbunkClient extends DiscordClient {
-	private readonly channelMap: Record<string, Array<string>> = {
-		'757866614787014660': ['856617421942030364', '798613445301633137'],
-		// testing
-		'856617421942030364': ['757866614787014660', '798613445301633137'],
-		// testing
-		'798613445301633137': ['757866614787014660', '856617421942030364'],
-		// starbunk
-		'755579237934694420': ['755585038388691127'],
-		// starbunk
-		'755585038388691127': ['755579237934694420'],
-		// memes
-		'753251583084724371': ['697341904873979925'],
-		// memes
-		'697341904873979925': ['753251583084724371'],
-		// ff14 general
-		'754485972774944778': ['696906700627640352'],
-		// ff14 general
-		'696906700627640352': ['754485972774944778'],
-		// ff14 msq
-		'697342576730177658': ['753251583084724372'],
-		// ff14 msq
-		'753251583084724372': ['697342576730177658'],
-		// screenshots
-		'753251583286050926': ['755575759753576498'],
-		// screenshots
-		'755575759753576498': ['753251583286050926'],
-		// raiding
-		'753251583286050928': ['699048771308224642'],
-		// raiding
-		'699048771308224642': ['753251583286050928'],
-		// food
-		'696948268579553360': ['755578695011270707'],
-		// food
-		'755578695011270707': ['696948268579553360'],
-		// pets
-		'696948305586028544': ['755578835122126898'],
-		// pets
-		'755578835122126898': ['696948305586028544'],
-	};
+-   private readonly channelMap: Record<string, Array<string>> = {
+-       '757866614787014660': ['856617421942030364', '798613445301633137'],
+-       // ... many more hardcoded channel mappings ...
+-   };
++   private readonly prismaClient = {
++       guild: {
++           findUnique: jest.fn(),
++           findMany: jest.fn()
++       },
++       channel: {
++           findMany: jest.fn().mockImplementation((args) => {
++               // Mock implementation that returns linked channels based on provided channel ID
++               const channelMappings: Record<string, Array<{id: string}>> = {
++                   '757866614787014660': [
++                       { id: '856617421942030364' },
++                       { id: '798613445301633137' }
++                   ]
++               };
++               return Promise.resolve(channelMappings[args.where.id] || []);
++           })
++       }
++   };
 
 	constructor() {
 		const intents = new IntentsBitField();
