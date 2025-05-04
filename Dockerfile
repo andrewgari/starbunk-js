@@ -32,7 +32,7 @@ RUN cd src/starbunk/bots/reply-bots && \
     npx tsc-alias
 
 # Stage 2: Runtime image
-FROM node:slim AS runtime
+FROM node:20-slim AS runtime
 
 WORKDIR /app
 
