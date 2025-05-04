@@ -8,16 +8,24 @@ COPY package*.json ./
 COPY src/starbunk/bots/reply-bots/package*.json ./src/starbunk/bots/reply-bots/
 
 # Install dependencies and global tools needed for build
-RUN npm ci && \
-    npm install -g typescript@latest ts-node tsc-alias && \
-    cd src/starbunk/bots/reply-bots && npm ci
+RUN apt-get update -y && apt-get install -y openssl && \
+    npm ci && \
+    npm install -g typescript@latest ts-node tsc-alias prisma && \
+    cd src/starbunk/bots/reply-bots && npm install
 
-# Copy the rest of the source code
-COPY . .
+# Copy only necessary source code files
+COPY tsconfig*.json ./
+COPY prisma ./prisma/
+COPY scripts ./scripts/
+COPY src ./src/
+
+# Generate Prisma client first
+RUN npx prisma generate
 
 # Build the TypeScript project
 # First build reply-bots, then run type checks from root
-RUN cd src/starbunk/bots/reply-bots && npm run build && \
+RUN cd src/starbunk/bots/reply-bots && \
+    npm run build && \
     cd ../../../.. && \
     npm run type-check:relaxed && \
     npx tsc -p tsconfig-check.json && \
@@ -33,7 +41,7 @@ RUN groupadd -r bunkbot && useradd -r -g bunkbot bunkbot
 
 # Install system dependencies
 RUN apt-get update && \
-    apt-get install -y ffmpeg && \
+    apt-get install -y ffmpeg openssl && \
     npm install -g ts-node typescript ts-node-dev prisma && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
