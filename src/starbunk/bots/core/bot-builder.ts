@@ -1,5 +1,5 @@
-import userId from '@/discord/userId';
 import { getDiscordService } from '@/services/bootstrap';
+import { PrismaClient } from '@prisma/client';
 import { Message } from 'discord.js';
 import { logger } from '../../../services/logger';
 import { getBotDefaults } from '../../config/botDefaults';
@@ -108,6 +108,7 @@ export interface ReplyBotImpl {
  */
 export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 	const validConfig = validateBotConfig(config);
+	const prisma = getPrismaClient();
 
 	return {
 		name: validConfig.name,
@@ -143,10 +144,17 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 				return;
 			}
 
-			// Skip messages from ignored users (Ian)
-			if (message.author.id === userId.Ian) {
-				logger.debug('Skipping message from ignored user Ian');
-				return;
+			// Check blacklist in DB (per-guild)
+			const guildId = message.guild?.id;
+			const userId = message.author.id;
+			if (guildId) {
+				const blacklisted = await prisma.blacklist.findUnique({
+					where: { guildId_userId: { guildId, userId } }
+				});
+				if (blacklisted) {
+					logger.debug(`Skipping message from blacklisted user ${userId} in guild ${guildId}`);
+					return;
+				}
 			}
 
 			// Sort and process triggers in priority order
@@ -192,3 +200,12 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 		},
 	};
 }
+let prisma: PrismaClient | null = null;
+
+function getPrismaClient(): PrismaClient {
+	if (!prisma) {
+		prisma = new PrismaClient();
+	}
+	return prisma;
+}
+

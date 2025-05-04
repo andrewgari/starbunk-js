@@ -18,8 +18,7 @@ yarn-error.log
 .env.production
 
 # Build artifacts
-dist
-build
+# Don't exclude dist as it's needed for the runtime image
 coverage
 .nyc_output
 
@@ -58,6 +57,35 @@ Thumbs.db
 *.tgz
 *.tar.gz
 *.zip
+
+# Python/Virtual Environments
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Large directories and files
+data/*.db
+data/campaigns
+data/llm_context
+node_modules/.cache
+.npm
 
 # Exclude unnecessary files from the build context
 *.md

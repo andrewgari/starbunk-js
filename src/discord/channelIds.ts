@@ -1,3 +1,4 @@
+// DEPRECATED: All channel IDs are now stored in the database. Use the Channel table instead.
 export default {
 	Starbunk: {
 		WhaleWatchers: '767836161619525652',

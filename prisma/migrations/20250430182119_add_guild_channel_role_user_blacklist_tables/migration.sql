@@ -1,0 +1,115 @@
+-- CreateTable
+CREATE TABLE "Guild" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "Channel" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "guildId" TEXT NOT NULL,
+    CONSTRAINT "Channel_guildId_fkey" FOREIGN KEY ("guildId") REFERENCES "Guild" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "Role" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "guildId" TEXT NOT NULL,
+    CONSTRAINT "Role_guildId_fkey" FOREIGN KEY ("guildId") REFERENCES "Guild" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "UserOnGuild" (
+    "id" TEXT NOT NULL PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    "userId" TEXT NOT NULL,
+    "guildId" TEXT NOT NULL,
+    CONSTRAINT "UserOnGuild_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "UserOnGuild_guildId_fkey" FOREIGN KEY ("guildId") REFERENCES "Guild" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "Blacklist" (
+    "id" TEXT NOT NULL PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    "guildId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Blacklist_guildId_fkey" FOREIGN KEY ("guildId") REFERENCES "Guild" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Blacklist_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserOnGuild_userId_guildId_key" ON "UserOnGuild"("userId", "guildId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Blacklist_guildId_userId_key" ON "Blacklist"("guildId", "userId");
+
+-- Seed data for Guilds, Channels, Roles, Users, and Blacklist
+
+-- Insert Guilds
+INSERT OR IGNORE INTO "Guild" (id, name) VALUES
+  ('753251582719688714', 'StarbunkCrusaders'),
+  ('856617421427441674', 'StarbunkStaging'),
+  ('696689954759245915', 'Snowfall'),
+  ('798613445301633134', 'CovaDaxServer');
+
+-- Insert Channels (Starbunk only for brevity, add others as needed)
+INSERT OR IGNORE INTO "Channel" (id, name, guildId) VALUES
+  ('767836161619525652', 'WhaleWatchers', '753251582719688714'),
+  ('754401194788520047', 'TheLounge', '753251582719688714'),
+  ('987456522969841824', 'NoGuyLounge', '753251582719688714'),
+  ('989524799044862022', 'GuyLounge', '753251582719688714'),
+  ('753251583902482637', 'AFK', '753251582719688714'),
+  ('753251583084724366', 'BotChannel', '753251582719688714'),
+  ('1014170827601748048', 'StarbunkTesting', '753251582719688714'),
+  ('1300829674854809692', 'MadMage', '753251582719688714'),
+  ('869410394089869312', 'HotSprings', '753251582719688714');
+
+-- Insert Roles (Starbunk only for brevity, add others as needed)
+INSERT OR IGNORE INTO "Role" (id, name, guildId) VALUES
+  ('836680699217444924', 'Macaroni', '753251582719688714'),
+  ('204326753215315968', 'WetBread', '753251582719688714'),
+  ('753251582732271680', 'CoLead', '753251582719688714'),
+  ('1091933617040670792', 'TriviaMaster', '753251582719688714'),
+  ('1354646472989081740', 'HotSpringsGM', '753251582719688714'),
+  ('1354646602945659003', 'MadMageGM', '753251582719688714'),
+  ('1107693756997713962', 'HotSpringsPlayer', '753251582719688714'),
+  ('1300828911848001627', 'MadMagePlayer', '753251582719688714');
+
+-- Insert Users (from userId.ts)
+INSERT OR IGNORE INTO "User" (id, name) VALUES
+  ('139592376443338752', 'Cova'),
+  ('151120340343455744', 'Venn'),
+  ('135820819086573568', 'Bender'),
+  ('486516247576444928', 'Sig'),
+  ('113035990725066752', 'Guy'),
+  ('113776144012148737', 'Guildus'),
+  ('115631499344216066', 'Deaf'),
+  ('120263103366692868', 'Feli'),
+  ('163780525859930112', 'Goose'),
+  ('85184539906809856', 'Chad'),
+  ('146110603835080704', 'Ian');
+
+-- Link all users to StarbunkCrusaders guild (UserOnGuild)
+INSERT OR IGNORE INTO "UserOnGuild" (userId, guildId) VALUES
+  ('139592376443338752', '753251582719688714'),
+  ('151120340343455744', '753251582719688714'),
+  ('135820819086573568', '753251582719688714'),
+  ('486516247576444928', '753251582719688714'),
+  ('113035990725066752', '753251582719688714'),
+  ('113776144012148737', '753251582719688714'),
+  ('115631499344216066', '753251582719688714'),
+  ('120263103366692868', '753251582719688714'),
+  ('163780525859930112', '753251582719688714'),
+  ('85184539906809856', '753251582719688714'),
+  ('146110603835080704', '753251582719688714');
+
+-- Add Ian to the blacklist for StarbunkCrusaders
+INSERT OR IGNORE INTO "Blacklist" (guildId, userId) VALUES ('753251582719688714', '146110603835080704');

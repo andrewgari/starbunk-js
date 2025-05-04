@@ -1,9 +1,21 @@
-import userId from '@/discord/userId';
 import { getDiscordService } from '@/services/bootstrap';
-import { DiscordService } from '../../../../services/discordService';
-import { logger } from '../../../../services/logger';
+import { DiscordService } from '@/services/discordService';
+import { logger } from '@/services/logger';
+import { Message } from 'discord.js';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { createBotDescription, createBotReplyName, createReplyBot } from '../bot-builder';
+
+// Mock the PrismaClient
+const mockBlacklistFindUnique = jest.fn().mockResolvedValue(null);
+jest.mock('@prisma/client', () => {
+	return {
+		PrismaClient: jest.fn().mockImplementation(() => ({
+			blacklist: {
+				findUnique: mockBlacklistFindUnique,
+			},
+		})),
+	};
+});
 
 // Mock the logger
 jest.mock('../../../../services/logger');
@@ -11,6 +23,11 @@ jest.mock('../../../../services/logger');
 describe('Bot builder', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		// Reset the blacklist mock to return null by default (no blacklisted user)
+		mockBlacklistFindUnique.mockResolvedValue(null);
+
+		// Reset the Discord service mock
+		mockDiscordService.sendMessageWithBotIdentity.mockClear();
 	});
 
 	describe('Type creators', () => {
@@ -49,9 +66,9 @@ describe('Bot builder', () => {
 						name: 'test-trigger',
 						condition: jest.fn().mockReturnValue(false),
 						response: jest.fn().mockReturnValue('Test response'),
-						priority: 10
-					}
-				]
+						priority: 10,
+					},
+				],
 			};
 
 			const bot = createReplyBot(config);
@@ -63,48 +80,62 @@ describe('Bot builder', () => {
 
 		it('should validate the bot configuration', () => {
 			// Missing name
-			expect(() => createReplyBot({
-				name: '',
-				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
-				triggers: [{
-					name: 'test-trigger',
-					condition: jest.fn(),
-					response: jest.fn()
-				}]
-			})).toThrow('Bot name is required');
+			expect(() =>
+				createReplyBot({
+					name: '',
+					description: 'A test bot',
+					defaultIdentity: mockBotIdentity,
+					triggers: [
+						{
+							name: 'test-trigger',
+							condition: jest.fn(),
+							response: jest.fn(),
+						},
+					],
+				}),
+			).toThrow('Bot name is required');
 
 			// Missing description
-			expect(() => createReplyBot({
-				name: 'TestBot',
-				description: '',
-				defaultIdentity: mockBotIdentity,
-				triggers: [{
-					name: 'test-trigger',
-					condition: jest.fn(),
-					response: jest.fn()
-				}]
-			})).toThrow('Bot description cannot be empty');
+			expect(() =>
+				createReplyBot({
+					name: 'TestBot',
+					description: '',
+					defaultIdentity: mockBotIdentity,
+					triggers: [
+						{
+							name: 'test-trigger',
+							condition: jest.fn(),
+							response: jest.fn(),
+						},
+					],
+				}),
+			).toThrow('Bot description cannot be empty');
 
 			// Missing default identity
-			expect(() => createReplyBot({
-				name: 'TestBot',
-				description: 'A test bot',
-				defaultIdentity: null as any,
-				triggers: [{
-					name: 'test-trigger',
-					condition: jest.fn(),
-					response: jest.fn()
-				}]
-			})).toThrow('Default bot identity is required');
+			expect(() =>
+				createReplyBot({
+					name: 'TestBot',
+					description: 'A test bot',
+					defaultIdentity: null as any,
+					triggers: [
+						{
+							name: 'test-trigger',
+							condition: jest.fn(),
+							response: jest.fn(),
+						},
+					],
+				}),
+			).toThrow('Default bot identity is required');
 
 			// Empty triggers
-			expect(() => createReplyBot({
-				name: 'TestBot',
-				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
-				triggers: []
-			})).toThrow('At least one trigger is required');
+			expect(() =>
+				createReplyBot({
+					name: 'TestBot',
+					description: 'A test bot',
+					defaultIdentity: mockBotIdentity,
+					triggers: [],
+				}),
+			).toThrow('At least one trigger is required');
 		});
 
 		it('should sort triggers by priority', async () => {
@@ -112,21 +143,21 @@ describe('Bot builder', () => {
 				name: 'low-priority',
 				condition: jest.fn().mockReturnValue(true),
 				response: jest.fn().mockReturnValue('Low priority response'),
-				priority: 1
+				priority: 1,
 			};
 
 			const trigger2 = {
 				name: 'high-priority',
 				condition: jest.fn().mockReturnValue(true),
 				response: jest.fn().mockReturnValue('High priority response'),
-				priority: 10
+				priority: 10,
 			};
 
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
-				triggers: [trigger1, trigger2]
+				triggers: [trigger1, trigger2],
 			};
 
 			// Mock discord service
@@ -145,7 +176,7 @@ describe('Bot builder', () => {
 			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id, // Use the created message's channel id
 				config.defaultIdentity, // Expect default identity as triggers don't define one
-				'High priority response' // Expect response from trigger2
+				'High priority response', // Expect response from trigger2
 			);
 		});
 
@@ -158,10 +189,10 @@ describe('Bot builder', () => {
 					{
 						name: 'test-trigger',
 						condition: jest.fn().mockReturnValue(false),
-						response: jest.fn().mockReturnValue('Test response')
+						response: jest.fn().mockReturnValue('Test response'),
 						// No priority specified
-					}
-				]
+					},
+				],
 				// No skipBotMessages or responseRate
 			};
 
@@ -173,7 +204,7 @@ describe('Bot builder', () => {
 			const trigger = {
 				name: 'test-trigger',
 				condition: jest.fn().mockReturnValue(true),
-				response: jest.fn().mockReturnValue('Test response')
+				response: jest.fn().mockReturnValue('Test response'),
 			};
 
 			const config = {
@@ -181,7 +212,7 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
 				triggers: [trigger],
-				skipBotMessages: true
+				skipBotMessages: true,
 			};
 
 			const bot = createReplyBot(config);
@@ -195,7 +226,15 @@ describe('Bot builder', () => {
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
 
-		it('should skip messages from ignored users (Ian)', async () => {
+		it('should skip messages from any blacklisted user', async () => {
+			// Configure the mock to return a blacklisted record for a specific user
+			mockBlacklistFindUnique.mockResolvedValue({
+				id: 'blacklist-1',
+				guildId: 'test-guild-id',
+				userId: 'blacklisted-user-id',
+				createdAt: new Date()
+			});
+
 			const trigger = {
 				name: 'test-trigger',
 				condition: jest.fn().mockReturnValue(true),
@@ -207,41 +246,72 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
 				triggers: [trigger],
-				skipBotMessages: false, // Ensure we aren't skipping because of bot status
 			};
 
 			const bot = createReplyBot(config);
-			const ianMessage = mockMessage('Test message from Ian');
-			Object.defineProperty(ianMessage.author, 'id', { value: userId.Ian });
 
-			// Call processMessage. The skipping logic is now inside this method for createReplyBot.
-			await bot.processMessage(ianMessage);
+			// Create a custom mock message for a blacklisted user
+			const blacklistedMessage = {
+				content: 'Test message',
+				author: {
+					bot: false,
+					id: 'blacklisted-user-id',
+					username: 'blacklisted-user',
+					displayName: 'blacklisted-user'
+				},
+				client: {
+					user: {
+						id: 'bot123'
+					}
+				},
+				channel: {
+					id: 'channel123',
+					name: 'test-channel',
+					fetchWebhooks: jest.fn().mockResolvedValue([])
+				},
+				guild: {
+					id: 'test-guild-id'
+				},
+				createdTimestamp: Date.now()
+			} as unknown as Message;
 
-			// Assert that trigger condition/response were not called because processMessage should have returned early
+			await bot.processMessage(blacklistedMessage);
+
+			// Verify the blacklist was checked
+			expect(mockBlacklistFindUnique).toHaveBeenCalledWith({
+				where: {
+					guildId_userId: {
+						guildId: 'test-guild-id',
+						userId: 'blacklisted-user-id'
+					}
+				}
+			});
+
+			// Verify the message was skipped (triggers not called)
 			expect(trigger.condition).not.toHaveBeenCalled();
 			expect(trigger.response).not.toHaveBeenCalled();
-			// Assert that no message was sent
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+			expect(logger.debug).toHaveBeenCalledWith(expect.stringMatching(/Skipping message from blacklisted user/));
 		});
 
 		it('should continue to next trigger if condition fails', async () => {
 			const trigger1 = {
 				name: 'failing-trigger',
 				condition: jest.fn().mockReturnValue(false),
-				response: jest.fn().mockReturnValue('Trigger 1 response')
+				response: jest.fn().mockReturnValue('Trigger 1 response'),
 			};
 
 			const trigger2 = {
 				name: 'matching-trigger',
 				condition: jest.fn().mockReturnValue(true),
-				response: jest.fn().mockReturnValue('Trigger 2 response')
+				response: jest.fn().mockReturnValue('Trigger 2 response'),
 			};
 
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
-				triggers: [trigger1, trigger2]
+				triggers: [trigger1, trigger2],
 			};
 
 			const bot = createReplyBot(config);
@@ -257,7 +327,7 @@ describe('Bot builder', () => {
 			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				mockBotIdentity,
-				'Trigger 2 response'
+				'Trigger 2 response',
 			);
 		});
 
@@ -265,14 +335,14 @@ describe('Bot builder', () => {
 			const trigger = {
 				name: 'empty-response',
 				condition: jest.fn().mockReturnValue(true),
-				response: jest.fn().mockReturnValue('')
+				response: jest.fn().mockReturnValue(''),
 			};
 
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
-				triggers: [trigger]
+				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
@@ -283,9 +353,7 @@ describe('Bot builder', () => {
 			expect(trigger.condition).toHaveBeenCalled();
 			expect(trigger.response).toHaveBeenCalled();
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
-			expect(logger.debug).toHaveBeenCalledWith(
-				expect.stringMatching(/Empty response from trigger/)
-			);
+			expect(logger.debug).toHaveBeenCalledWith(expect.stringMatching(/Empty response from trigger/));
 		});
 
 		it('should handle errors in trigger conditions', async () => {
@@ -294,20 +362,20 @@ describe('Bot builder', () => {
 				condition: jest.fn().mockImplementation(() => {
 					throw new Error('Test error');
 				}),
-				response: jest.fn()
+				response: jest.fn(),
 			};
 
 			const fallbackTrigger = {
 				name: 'fallback-trigger',
 				condition: jest.fn().mockReturnValue(true),
-				response: jest.fn().mockReturnValue('Fallback response')
+				response: jest.fn().mockReturnValue('Fallback response'),
 			};
 
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
-				triggers: [errorTrigger, fallbackTrigger]
+				triggers: [errorTrigger, fallbackTrigger],
 			};
 
 			const bot = createReplyBot(config);
@@ -318,10 +386,7 @@ describe('Bot builder', () => {
 			// Should log the error and continue to the next trigger
 			expect(errorTrigger.condition).toHaveBeenCalled();
 			expect(errorTrigger.response).not.toHaveBeenCalled();
-			expect(logger.error).toHaveBeenCalledWith(
-				expect.stringMatching(/Error in trigger/),
-				expect.any(Error)
-			);
+			expect(logger.error).toHaveBeenCalledWith(expect.stringMatching(/Error in trigger/), expect.any(Error));
 
 			// Should fall back to the next trigger
 			expect(fallbackTrigger.condition).toHaveBeenCalled();
@@ -329,28 +394,28 @@ describe('Bot builder', () => {
 			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				mockBotIdentity,
-				'Fallback response'
+				'Fallback response',
 			);
 		});
 
 		it('should use trigger-specific identity if provided', async () => {
 			const customIdentity = {
 				botName: 'CustomBot',
-				avatarUrl: 'https://example.com/custom.jpg'
+				avatarUrl: 'https://example.com/custom.jpg',
 			};
 
 			const trigger = {
 				name: 'custom-identity',
 				condition: jest.fn().mockReturnValue(true),
 				response: jest.fn().mockReturnValue('Custom response'),
-				identity: customIdentity
+				identity: customIdentity,
 			};
 
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
-				triggers: [trigger]
+				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
@@ -362,28 +427,28 @@ describe('Bot builder', () => {
 			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				customIdentity,
-				'Custom response'
+				'Custom response',
 			);
 		});
 
 		it('should handle identity function', async () => {
 			const customIdentity = {
 				botName: 'DynamicBot',
-				avatarUrl: 'https://example.com/dynamic.jpg'
+				avatarUrl: 'https://example.com/dynamic.jpg',
 			};
 
 			const trigger = {
 				name: 'dynamic-identity',
 				condition: jest.fn().mockReturnValue(true),
 				response: jest.fn().mockReturnValue('Dynamic response'),
-				identity: jest.fn().mockReturnValue(customIdentity)
+				identity: jest.fn().mockReturnValue(customIdentity),
 			};
 
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
-				triggers: [trigger]
+				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
@@ -396,7 +461,7 @@ describe('Bot builder', () => {
 			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				customIdentity,
-				'Dynamic response'
+				'Dynamic response',
 			);
 		});
 
@@ -407,14 +472,14 @@ describe('Bot builder', () => {
 				response: jest.fn().mockReturnValue('Response with error'),
 				identity: jest.fn().mockImplementation(() => {
 					throw new Error('Identity error');
-				})
+				}),
 			};
 
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
-				triggers: [trigger]
+				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
@@ -426,7 +491,7 @@ describe('Bot builder', () => {
 			expect(trigger.identity).toHaveBeenCalled();
 			expect(logger.error).toHaveBeenCalledWith(
 				expect.stringMatching(/Failed to get bot identity/),
-				expect.any(Error)
+				expect.any(Error),
 			);
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
@@ -436,14 +501,14 @@ describe('Bot builder', () => {
 				name: 'invalid-identity',
 				condition: jest.fn().mockReturnValue(true),
 				response: jest.fn().mockReturnValue('Response with invalid identity'),
-				identity: jest.fn().mockReturnValue(null)
+				identity: jest.fn().mockReturnValue(null),
 			};
 
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity,
-				triggers: [trigger]
+				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
@@ -455,7 +520,7 @@ describe('Bot builder', () => {
 			expect(trigger.identity).toHaveBeenCalled();
 			expect(logger.error).toHaveBeenCalledWith(
 				expect.stringMatching(/Failed to get bot identity/),
-				expect.any(Error)
+				expect.any(Error),
 			);
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
@@ -487,7 +552,7 @@ describe('Bot builder', () => {
 				expect(trigger.response).not.toHaveBeenCalled();
 				expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 				expect(logger.debug).toHaveBeenCalledWith(
-					expect.stringMatching(/Skipping message due to response rate/)
+					expect.stringMatching(/Skipping message due to response rate/),
 				);
 			});
 
@@ -516,7 +581,7 @@ describe('Bot builder', () => {
 				expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 					message.channel.id,
 					mockBotIdentity,
-					'Should send'
+					'Should send',
 				);
 			});
 		});
