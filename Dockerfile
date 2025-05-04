@@ -24,7 +24,7 @@ RUN cd src/starbunk/bots/reply-bots && npm run build && \
     npx tsc-alias
 
 # Stage 2: Runtime image
-FROM node:20-slim AS runtime
+FROM node:slim AS runtime
 
 WORKDIR /app
 
@@ -44,6 +44,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/tsconfig*.json ./
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/scripts ./scripts
 
 # Create directories and set permissions
 RUN mkdir -p /app/data /app/data/campaigns /app/data/llm_context && \

@@ -19,7 +19,6 @@ yarn-error.log
 
 # Build artifacts
 dist
-build
 coverage
 .nyc_output
 
