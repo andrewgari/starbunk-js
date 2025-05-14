@@ -200,6 +200,32 @@ describe('Bot builder', () => {
 			expect(bot.metadata?.responseRate).toBe(100); // Default value
 		});
 
+		it('should skip bot messages by default when skipBotMessages is not specified', async () => {
+			const trigger = {
+				name: 'test-trigger',
+				condition: jest.fn().mockReturnValue(true),
+				response: jest.fn().mockReturnValue('Test response'),
+			};
+
+			const config = {
+				name: 'TestBot',
+				description: 'A test bot',
+				defaultIdentity: mockBotIdentity,
+				triggers: [trigger],
+				// skipBotMessages not specified, should default to true
+			};
+
+			const bot = createReplyBot(config);
+			const botMessage = mockMessage('Test message', 'BotUser', true);
+
+			await bot.processMessage(botMessage);
+
+			// Should skip the message without checking triggers since skipBotMessages defaults to true
+			expect(trigger.condition).not.toHaveBeenCalled();
+			expect(trigger.response).not.toHaveBeenCalled();
+			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+		});
+
 		it('should skip bot messages when configured', async () => {
 			const trigger = {
 				name: 'test-trigger',
@@ -224,6 +250,36 @@ describe('Bot builder', () => {
 			expect(trigger.condition).not.toHaveBeenCalled();
 			expect(trigger.response).not.toHaveBeenCalled();
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+		});
+
+		it('should process bot messages when skipBotMessages is explicitly set to false', async () => {
+			const trigger = {
+				name: 'test-trigger',
+				condition: jest.fn().mockReturnValue(true),
+				response: jest.fn().mockReturnValue('Test response'),
+			};
+
+			const config = {
+				name: 'TestBot',
+				description: 'A test bot',
+				defaultIdentity: mockBotIdentity,
+				triggers: [trigger],
+				skipBotMessages: false, // Explicitly allow bot messages
+			};
+
+			const bot = createReplyBot(config);
+			const botMessage = mockMessage('Test message', 'BotUser', true);
+
+			await bot.processMessage(botMessage);
+
+			// Should process the message since skipBotMessages is false
+			expect(trigger.condition).toHaveBeenCalled();
+			expect(trigger.response).toHaveBeenCalled();
+			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+				botMessage.channel.id,
+				mockBotIdentity,
+				'Test response'
+			);
 		});
 
 		it('should skip messages from any blacklisted user', async () => {

@@ -111,7 +111,6 @@ export default createReplyBot({
 		botName: 'Cova',
 		avatarUrl: '', // Will be overridden by dynamic identity from Cova's Discord user
 	},
-	skipBotMessages: true,
 	triggers: [
 		covaStatsCommandTrigger, // Highest priority - command for debugging
 		covaDirectMentionTrigger, // Higher priority - always respond to direct mentions
