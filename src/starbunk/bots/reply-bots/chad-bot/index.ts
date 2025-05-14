@@ -10,8 +10,6 @@ export default BotFactory.createBot({
 		botName: CHAD_BOT_NAME,
 		avatarUrl: CHAD_BOT_AVATAR_URL
 	},
-	// We don't want Chad to respond to other bots
-	skipBotMessages: true,
 	// Always process messages since we handle chance in the trigger
 	defaultResponseRate: 100,
 	// All triggers with their priorities

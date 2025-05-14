@@ -6,6 +6,5 @@ export default createBot({
 	patterns: [/\bexample\b/i, /\bsimple\b/i],
 	responses: ['This is an example response from the simplified bot architecture!'],
 	avatarUrl: 'https://example.com/avatar.png',
-	responseRate: 100,
-	skipBotMessages: true,
+	responseRate: 100
 });

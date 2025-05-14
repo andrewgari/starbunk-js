@@ -6,6 +6,5 @@ export default createBot({
 	description: 'Posts a Metroid gif when someone mentions "baby"',
 	patterns: [/\bbaby\b/i],
 	responses: ['https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif'],
-	avatarUrl: 'https://i.redd.it/qc9qus78dc581.jpg',
-	skipBotMessages: true
+	avatarUrl: 'https://i.redd.it/qc9qus78dc581.jpg'
 });
