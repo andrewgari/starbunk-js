@@ -12,5 +12,7 @@ export default BotFactory.createBot({
 	},
 	// Set bot-specific default response rate
 	defaultResponseRate: BOT_BOT_RESPONSE_RATE,
+	// This bot needs to process messages from other bots
+	skipBotMessages: false,
 	triggers: [botTrigger]
 });

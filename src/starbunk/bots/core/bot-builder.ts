@@ -84,7 +84,7 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 		defaultIdentity: config.defaultIdentity,
 		triggers: config.triggers,
 		defaultResponseRate: responseRate,
-		skipBotMessages: config.skipBotMessages ?? false,
+		skipBotMessages: config.skipBotMessages ?? true, // Default to true for safer behavior
 		disabled,
 	};
 }
@@ -139,7 +139,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 			}
 
 			// Skip bot messages if configured
-			if (config.skipBotMessages && message.author.bot) {
+			if (validConfig.skipBotMessages && message.author.bot) {
 				logger.debug('Skipping bot message');
 				return;
 			}

@@ -17,7 +17,6 @@ export default BotFactory.createBot({
 		botName: BLUE_BOT_NAME,
 		avatarUrl: BLUE_BOT_AVATARS.Default
 	},
-	skipBotMessages: true,
 	triggers: [
 		// Order matters for processing, but priority is also considered
 		triggerBlueBotNiceVenn,            // Priority 1

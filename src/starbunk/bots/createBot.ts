@@ -1,9 +1,9 @@
 import { BotIdentity } from '../types/botIdentity';
+import { ReplyBotImpl } from './core/bot-builder';
 import { BotFactory } from './core/bot-factory';
-import { createTriggerResponse, TriggerResponse } from './core/trigger-response';
 import { matchesPattern } from './core/conditions';
 import { staticResponse } from './core/responses';
-import { ReplyBotImpl } from './core/bot-builder';
+import { createTriggerResponse, TriggerResponse } from './core/trigger-response';
 
 /**
  * Interface for simplified bot configuration
@@ -106,6 +106,6 @@ export function createBot(config: SimpleBotConfig): ReplyBotImpl {
 		defaultIdentity,
 		triggers,
 		defaultResponseRate: config.responseRate,
-		skipBotMessages: config.skipBotMessages !== undefined ? config.skipBotMessages : true,
+		...(config.skipBotMessages !== undefined && { skipBotMessages: config.skipBotMessages }),
 	});
 }

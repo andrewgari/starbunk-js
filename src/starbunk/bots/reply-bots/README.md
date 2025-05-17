@@ -23,8 +23,8 @@ export default createBot({
   patterns: [/\bhello\b/i, /\bhi\b/i, /\bhey\b/i],
   responses: ['Hello there!', 'Hi!', 'Hey, how are you?'],
   avatarUrl: 'https://example.com/avatar.png',
-  responseRate: 80, // Optional: respond 80% of the time
-  skipBotMessages: true // Optional: don't respond to other bots
+  responseRate: 80 // Optional: respond 80% of the time
+  // skipBotMessages is true by default
 });
 ```
 
@@ -40,7 +40,7 @@ The `createBot()` function accepts the following options:
 | `responses` | string[] | Yes | Array of possible responses |
 | `avatarUrl` | string | No | URL to the avatar image for your bot |
 | `responseRate` | number | No | Percentage chance of responding (0-100) |
-| `skipBotMessages` | boolean | No | Whether to ignore messages from other bots |
+| `skipBotMessages` | boolean | No | Whether to ignore messages from other bots (defaults to true) |
 
 ### Pattern and Response Matching
 
