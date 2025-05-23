@@ -76,7 +76,7 @@
 	"homepage": "https://github.com/andrewgari/starbunk-js#readme",
 	"dependencies": {
 		"@discordjs/builders": "^1.6.5",
-		"@discordjs/rest": "^2.0.1",
+		"@discordjs/rest": "^2.5.0",
 		"@discordjs/voice": "^0.18.0",
 		"@distube/yt-dlp": "^2.0.1",
 		"@distube/ytdl-core": "^4.16.10",
