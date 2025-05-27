@@ -74,9 +74,9 @@
 		"url": "https://github.com/andrewgari/starbunk-js/issues"
 	},
 	"homepage": "https://github.com/andrewgari/starbunk-js#readme",
-	"dependencies": {
+	"dependencies": {S
 		"@discordjs/builders": "^1.11.1",
-		"@discordjs/rest": "^2.0.1",
+		"@discordjs/rest": "^2.5.0",
 		"@discordjs/voice": "^0.18.0",
 		"@distube/yt-dlp": "^2.0.1",
 		"@distube/ytdl-core": "^4.16.10",
@@ -87,7 +87,7 @@
 		"chalk": "^4.1.2",
 		"date-fns": "^4.1.0",
 		"delta": "^3.0.5",
-		"discord-api-types": "^0.38.1",
+		"discord-api-types": "^0.38.2",
 		"discord.js": "^14.18.0",
 		"dotenv": "^16.5.0",
 		"envalid": "^8.0.0",
