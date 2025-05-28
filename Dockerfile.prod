@@ -41,9 +41,11 @@ RUN groupadd -r bunkbot && \
     chmod -R 755 /app && \
     chmod 777 /app/data
 
-# Install ffmpeg (needed at runtime)
+# Install ffmpeg and Python (needed at runtime for yt-dlp)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy built application and necessary node_modules from the builder stage

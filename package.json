@@ -55,7 +55,8 @@
 		"compose:shell": "podman-compose -f docker-compose.prod.yml exec bunkbot sh",
 		"compose:shell:dev": "podman-compose exec bunkbot sh",
 		"setup:dirs": "./scripts/ensure-directories.sh",
-		"setup:git-hooks": "./scripts/setup-git-hooks.sh"
+		"setup:git-hooks": "./scripts/setup-git-hooks.sh",
+		"test:ytdlp": "node scripts/test-ytdlp.js"
 	},
 	"engines": {
 		"node": ">=16.0.0"

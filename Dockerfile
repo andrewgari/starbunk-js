@@ -8,7 +8,7 @@ COPY package*.json ./
 COPY src/starbunk/bots/reply-bots/package*.json ./src/starbunk/bots/reply-bots/
 
 # Install dependencies and global tools needed for build
-RUN apt-get update -y && apt-get install -y openssl && \
+RUN apt-get update -y && apt-get install -y openssl python3 python3-pip && \
     npm ci && \
     npm install -g typescript@latest ts-node tsc-alias prisma && \
     cd src/starbunk/bots/reply-bots && npm install
@@ -39,12 +39,16 @@ WORKDIR /app
 # Create non-root user
 RUN groupadd -r bunkbot && useradd -r -g bunkbot bunkbot
 
-# Install system dependencies
+# Install system dependencies including Python for yt-dlp
 RUN apt-get update && \
-    apt-get install -y ffmpeg openssl && \
+    apt-get install -y ffmpeg openssl python3 python3-pip curl && \
     npm install -g ts-node typescript ts-node-dev prisma && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for yt-dlp
+ENV YTDLP_DIR=/app/yt-dlp
+ENV YTDLP_FILENAME=yt-dlp
 
 # Copy only the necessary files from the builder stage
 COPY --from=builder /app/package*.json ./
@@ -55,7 +59,7 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
 
 # Create directories and set permissions
-RUN mkdir -p /app/data /app/data/campaigns /app/data/llm_context && \
+RUN mkdir -p /app/data /app/data/campaigns /app/data/llm_context /app/yt-dlp && \
     chown -R bunkbot:bunkbot /app && \
     chmod -R 755 /app && \
     chmod 777 /app/data && \
@@ -63,6 +67,9 @@ RUN mkdir -p /app/data /app/data/campaigns /app/data/llm_context && \
     touch /app/data/starbunk.db && \
     chown bunkbot:bunkbot /app/data/starbunk.db && \
     chmod 666 /app/data/starbunk.db
+
+# Ensure yt-dlp binary is available and up to date
+RUN npm run --silent --prefix /app/node_modules/@distube/yt-dlp install || true
 
 USER bunkbot
 

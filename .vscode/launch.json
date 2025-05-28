@@ -5,9 +5,13 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Debug Application",
-			"skipFiles": ["<node_internals>/**"],
+			"skipFiles": [
+				"<node_internals>/**"
+			],
 			"program": "${workspaceFolder}/src/bunkbot.ts",
-			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
+			"outFiles": [
+				"${workspaceFolder}/dist/**/*.js"
+			],
 			"env": {
 				"LOG_LEVEL": "debug"
 			}
@@ -16,7 +20,9 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Debug Production Build",
-			"skipFiles": ["<node_internals>/**"],
+			"skipFiles": [
+				"<node_internals>/**"
+			],
 			"program": "${workspaceFolder}/dist/bunkbot.js",
 			"env": {
 				"LOG_LEVEL": "debug"
@@ -27,7 +33,16 @@
 			"request": "attach",
 			"name": "Attach to Running Process",
 			"port": 9229,
-			"skipFiles": ["<node_internals>/**"]
+			"skipFiles": [
+				"<node_internals>/**"
+			]
+		},
+		{
+			"name": "Docker Node.js Launch",
+			"type": "docker",
+			"request": "launch",
+			"preLaunchTask": "docker-run: debug",
+			"platform": "node"
 		}
 	]
 }

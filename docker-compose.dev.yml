@@ -1,27 +1,29 @@
 services:
-    bunkbot-dev:
-        build:
-            context: .
-            dockerfile: Dockerfile
-            # Add build cache to speed up rebuilds
-            cache_from:
-                - node:18-alpine
-        container_name: bunkbot-dev
-        user: root
-        ports:
-            - '3000:3000'
-        env_file: .env
-        command: npm run dev
-        # Mount only specific directories
-        volumes:
-            - ./src:/app/src:delegated
-            - ./prisma:/app/prisma:delegated
-            - ./data:/app/data:delegated
-            - node_modules:/app/node_modules
-        # Enable Node.js optimizations
-        environment:
-            - NODE_ENV=development
-            - NODE_OPTIONS=--max-old-space-size=2048
+  bunkbot-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Add build cache to speed up rebuilds
+      cache_from:
+        - node:18-alpine
+    container_name: bunkbot-dev
+    user: root
+    ports:
+      - '3000:3000'
+    env_file: .env
+    command: npm run dev
+    # Mount only specific directories
+    volumes:
+      - ./src:/app/src:delegated
+      - ./prisma:/app/prisma:delegated
+      - ./data:/app/data:delegated
+      - node_modules:/app/node_modules
+    # Enable Node.js optimizations
+    environment:
+      - NODE_ENV=development
+      - NODE_OPTIONS=--max-old-space-size=2048
+      - YTDLP_DIR=/app/yt-dlp
+      - YTDLP_FILENAME=yt-dlp
 
 volumes:
-    node_modules:
+  node_modules:
