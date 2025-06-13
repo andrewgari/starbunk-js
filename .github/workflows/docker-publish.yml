@@ -10,12 +10,104 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  publish-pr-image:
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+  # Detect which containers have changed to optimize Docker builds
+  detect-changes:
+    name: 🔍 Detect Container Changes
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    outputs:
+      shared: ${{ steps.filter.outputs.shared }}
+      bunkbot: ${{ steps.filter.outputs.bunkbot }}
+      djcova: ${{ steps.filter.outputs.djcova }}
+      starbunk-dnd: ${{ steps.filter.outputs.starbunk-dnd }}
+      covabot: ${{ steps.filter.outputs.covabot }}
+      root-files: ${{ steps.filter.outputs.root-files }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+      docker: ${{ steps.filter.outputs.docker }}
+      # Dynamic matrix outputs
+      containers-matrix: ${{ steps.set-matrix.outputs.containers }}
+      any-container-changed: ${{ steps.set-matrix.outputs.any-changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for file change detection
+
+      - name: Check for file changes
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'containers/shared/**'
+            bunkbot:
+              - 'containers/bunkbot/**'
+            djcova:
+              - 'containers/djcova/**'
+            starbunk-dnd:
+              - 'containers/starbunk-dnd/**'
+            covabot:
+              - 'containers/covabot/**'
+            root-files:
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+              - '.eslintrc.json'
+              - 'jest.config.js'
+            workflows:
+              - '.github/workflows/**'
+            docker:
+              - 'Dockerfile*'
+              - '.dockerignore'
+              - 'docker-compose*.yml'
+
+      - name: Set dynamic matrix and flags
+        id: set-matrix
+        run: |
+          # Initialize arrays
+          containers=()
+
+          # Check if shared changed (affects all containers)
+          if [[ "${{ steps.filter.outputs.shared }}" == "true" || "${{ steps.filter.outputs.root-files }}" == "true" || "${{ steps.filter.outputs.workflows }}" == "true" || "${{ steps.filter.outputs.docker }}" == "true" ]]; then
+            echo "Shared files or critical files changed - building all containers"
+            containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+          else
+            # Only build containers that have changed
+            if [[ "${{ steps.filter.outputs.bunkbot }}" == "true" ]]; then
+              containers+=("bunkbot")
+            fi
+            if [[ "${{ steps.filter.outputs.djcova }}" == "true" ]]; then
+              containers+=("djcova")
+            fi
+            if [[ "${{ steps.filter.outputs.starbunk-dnd }}" == "true" ]]; then
+              containers+=("starbunk-dnd")
+            fi
+            if [[ "${{ steps.filter.outputs.covabot }}" == "true" ]]; then
+              containers+=("covabot")
+            fi
+          fi
+
+          # Convert array to JSON for matrix
+          if [ ${#containers[@]} -eq 0 ]; then
+            echo "containers=[]" >> $GITHUB_OUTPUT
+            echo "any-changed=false" >> $GITHUB_OUTPUT
+            echo "No containers need building"
+          else
+            printf -v containers_json '%s\n' "${containers[@]}" | jq -R . | jq -s .
+            echo "containers=$containers_json" >> $GITHUB_OUTPUT
+            echo "any-changed=true" >> $GITHUB_OUTPUT
+            echo "Containers to build: ${containers[*]}"
+          fi
+  publish-pr-image:
+    name: 🚀 Publish PR Images - ${{ matrix.container }}
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' && needs.detect-changes.outputs.any-container-changed == 'true' }}
     permissions:
       packages: write
       contents: read
+    strategy:
+      matrix:
+        container: ${{ fromJson(needs.detect-changes.outputs.containers-matrix) }}
 
     steps:
       - name: Checkout repository
@@ -31,17 +123,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Tag and Push PR Image
+      - name: Tag and Push PR Image for ${{ matrix.container }}
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.dev  # Always use dev Dockerfile for PRs
+          file: containers/${{ matrix.container }}/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container }}:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha,scope=${{ matrix.container }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.container }}
 
   delete-pr-image:
+    name: 🗑️ Delete PR Images
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     permissions:
@@ -49,13 +142,21 @@ jobs:
       contents: read
 
     steps:
-      - name: Delete PR image
+      - name: Delete PR images for all containers
         env:
           GH_TOKEN: ${{ secrets.GHCR_PAT }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          echo "Attempting to delete PR image tag pr-${PR_NUMBER}..."
-          gh api \
-            --method DELETE \
-            /user/packages/container/${{ github.event.repository.name }}/versions \
-            -f package_version_id="$(gh api /user/packages/container/${{ github.event.repository.name }}/versions --jq ".[] | select(.metadata.container.tags[] == \"pr-${PR_NUMBER}\") | .id")"
+          echo "Attempting to delete PR images for PR ${PR_NUMBER}..."
+
+          # List of all possible containers
+          containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+
+          for container in "${containers[@]}"; do
+            echo "Deleting ${container} PR image..."
+            gh api \
+              --method DELETE \
+              /user/packages/container/${{ github.event.repository.name }}%2F${container}/versions \
+              -f package_version_id="$(gh api /user/packages/container/${{ github.event.repository.name }}%2F${container}/versions --jq ".[] | select(.metadata.container.tags[] == \"pr-${PR_NUMBER}\") | .id")" \
+              || echo "Failed to delete ${container} image or it doesn't exist"
+          done

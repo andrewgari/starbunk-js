@@ -7,70 +7,163 @@ on:
     branches: [ main ]
 
 jobs:
-  test-shared:
-    name: Test Shared Package
+  # Detect which containers have changed to optimize CI execution
+  detect-changes:
+    name: 🔍 Detect Container Changes
     runs-on: ubuntu-latest
+    outputs:
+      shared: ${{ steps.filter.outputs.shared }}
+      bunkbot: ${{ steps.filter.outputs.bunkbot }}
+      djcova: ${{ steps.filter.outputs.djcova }}
+      starbunk-dnd: ${{ steps.filter.outputs.starbunk-dnd }}
+      covabot: ${{ steps.filter.outputs.covabot }}
+      root-files: ${{ steps.filter.outputs.root-files }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+      docker: ${{ steps.filter.outputs.docker }}
+      # Dynamic matrix outputs
+      containers-matrix: ${{ steps.set-matrix.outputs.containers }}
+      test-shared: ${{ steps.set-matrix.outputs.test-shared }}
     steps:
       - uses: actions/checkout@v4
-      
+        with:
+          fetch-depth: 0 # Needed for file change detection
+
+      - name: Check for file changes
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'containers/shared/**'
+            bunkbot:
+              - 'containers/bunkbot/**'
+            djcova:
+              - 'containers/djcova/**'
+            starbunk-dnd:
+              - 'containers/starbunk-dnd/**'
+            covabot:
+              - 'containers/covabot/**'
+            root-files:
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+              - '.eslintrc.json'
+              - 'jest.config.js'
+            workflows:
+              - '.github/workflows/**'
+            docker:
+              - 'docker-compose*.yml'
+              - 'Dockerfile*'
+              - '.dockerignore'
+
+      - name: Set dynamic matrix and flags
+        id: set-matrix
+        run: |
+          # Initialize arrays
+          containers=()
+
+          # Check if shared changed (affects all containers)
+          if [[ "${{ steps.filter.outputs.shared }}" == "true" || "${{ steps.filter.outputs.root-files }}" == "true" || "${{ steps.filter.outputs.workflows }}" == "true" ]]; then
+            echo "Shared files or critical files changed - testing all containers"
+            containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+            echo "test-shared=true" >> $GITHUB_OUTPUT
+          else
+            echo "test-shared=${{ steps.filter.outputs.shared }}" >> $GITHUB_OUTPUT
+            # Only test containers that have changed
+            if [[ "${{ steps.filter.outputs.bunkbot }}" == "true" ]]; then
+              containers+=("bunkbot")
+            fi
+            if [[ "${{ steps.filter.outputs.djcova }}" == "true" ]]; then
+              containers+=("djcova")
+            fi
+            if [[ "${{ steps.filter.outputs.starbunk-dnd }}" == "true" ]]; then
+              containers+=("starbunk-dnd")
+            fi
+            if [[ "${{ steps.filter.outputs.covabot }}" == "true" ]]; then
+              containers+=("covabot")
+            fi
+          fi
+
+          # Convert array to JSON for matrix
+          if [ ${#containers[@]} -eq 0 ]; then
+            echo "containers=[]" >> $GITHUB_OUTPUT
+            echo "No containers need testing"
+          else
+            printf -v containers_json '%s\n' "${containers[@]}" | jq -R . | jq -s .
+            echo "containers=$containers_json" >> $GITHUB_OUTPUT
+            echo "Containers to test: ${containers[*]}"
+          fi
+  test-shared:
+    name: 📦 Test Shared Package
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.test-shared == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: 'containers/shared/package-lock.json'
-      
+
       - name: Install shared dependencies
         run: cd containers/shared && npm ci
-      
+
       - name: Build shared package
         run: cd containers/shared && npm run build
-      
+
       - name: Test shared package
         run: cd containers/shared && npm test
 
   test-containers:
-    name: Test Container - ${{ matrix.container }}
+    name: 🧪 Test Container - ${{ matrix.container }}
     runs-on: ubuntu-latest
-    needs: test-shared
+    needs: [detect-changes, test-shared]
+    if: ${{ needs.detect-changes.outputs.containers-matrix != '[]' && needs.detect-changes.outputs.containers-matrix != '' }}
     strategy:
       matrix:
-        container: [bunkbot, djcova, starbunk-dnd, covabot]
+        container: ${{ fromJson(needs.detect-changes.outputs.containers-matrix) }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: 'containers/${{ matrix.container }}/package-lock.json'
-      
-      - name: Install shared dependencies
-        run: cd containers/shared && npm ci && npm run build
-      
+
+      - name: Install shared dependencies (if needed)
+        run: |
+          if [[ "${{ needs.detect-changes.outputs.test-shared }}" == "true" ]]; then
+            cd containers/shared && npm ci && npm run build
+          fi
+
       - name: Install container dependencies
         run: cd containers/${{ matrix.container }} && npm ci
-      
+
       - name: Build container
         run: cd containers/${{ matrix.container }} && npm run build
-      
+
       - name: Test container
         run: cd containers/${{ matrix.container }} && npm test
 
   build-containers:
-    name: Build Docker Container - ${{ matrix.container }}
+    name: 🐳 Build Docker Container - ${{ matrix.container }}
     runs-on: ubuntu-latest
-    needs: [test-shared, test-containers]
+    needs: [detect-changes, test-shared, test-containers]
+    if: ${{ needs.detect-changes.outputs.containers-matrix != '[]' && needs.detect-changes.outputs.containers-matrix != '' && (needs.detect-changes.outputs.docker == 'true' || needs.detect-changes.outputs.workflows == 'true' || always()) }}
     strategy:
       matrix:
-        container: [bunkbot, djcova, starbunk-dnd, covabot]
+        container: ${{ fromJson(needs.detect-changes.outputs.containers-matrix) }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Build container image
         uses: docker/build-push-action@v5
         with:
@@ -82,18 +175,19 @@ jobs:
           cache-to: type=gha,mode=max
 
   integration-test:
-    name: Integration Test
+    name: 🔗 Integration Test
     runs-on: ubuntu-latest
-    needs: build-containers
+    needs: [detect-changes, build-containers]
+    if: ${{ needs.detect-changes.outputs.containers-matrix != '[]' && needs.detect-changes.outputs.containers-matrix != '' && (needs.detect-changes.outputs.docker == 'true' || needs.detect-changes.outputs.workflows == 'true' || github.event_name == 'push') }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Create test environment file
         run: |
           echo "STARBUNK_TOKEN=test_token" > .env
           echo "DATABASE_URL=postgresql://test:test@localhost:5432/test" >> .env
           echo "DEBUG=true" >> .env
-      
+
       - name: Start PostgreSQL
         run: |
           docker run -d \
@@ -103,13 +197,13 @@ jobs:
             -e POSTGRES_PASSWORD=test \
             -p 5432:5432 \
             postgres:15-alpine
-      
+
       - name: Wait for PostgreSQL
         run: |
           timeout 30 bash -c 'until docker exec postgres pg_isready -U test; do sleep 1; done'
-      
+
       - name: Test Docker Compose build
         run: docker compose build
-      
+
       - name: Cleanup
         run: docker stop postgres && docker rm postgres
