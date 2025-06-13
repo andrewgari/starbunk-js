@@ -89,7 +89,7 @@ jobs:
             echo "containers=[]" >> $GITHUB_OUTPUT
             echo "No containers need testing"
           else
-            printf -v containers_json '%s\n' "${containers[@]}" | jq -R . | jq -s .
+            containers_json=$(printf '%s\n' "${containers[@]}" | jq -R . | jq -s .)
             echo "containers=$containers_json" >> $GITHUB_OUTPUT
             echo "Containers to test: ${containers[*]}"
           fi
@@ -135,11 +135,9 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'containers/${{ matrix.container }}/package-lock.json'
 
-      - name: Install shared dependencies (if needed)
+      - name: Install and build shared dependencies
         run: |
-          if [[ "${{ needs.detect-changes.outputs.test-shared }}" == "true" ]]; then
-            cd containers/shared && npm ci && npm run build
-          fi
+          cd containers/shared && npm ci && npm run build
 
       - name: Install container dependencies
         run: cd containers/${{ matrix.container }} && npm ci

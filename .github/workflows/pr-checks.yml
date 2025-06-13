@@ -95,7 +95,7 @@ jobs:
                   echo "any-changed=false" >> $GITHUB_OUTPUT
                   echo "No containers need checking"
                 else
-                  printf -v containers_json '%s\n' "${containers[@]}" | jq -R . | jq -s .
+                  containers_json=$(printf '%s\n' "${containers[@]}" | jq -R . | jq -s .)
                   echo "containers=$containers_json" >> $GITHUB_OUTPUT
                   echo "any-changed=true" >> $GITHUB_OUTPUT
                   echo "Containers to check: ${containers[*]}"
@@ -122,6 +122,9 @@ jobs:
             - name: Install Container Dependencies
               run: npm run setup:containers
 
+            - name: Build Shared Package
+              run: cd containers/shared && npm run build
+
             - name: Run Lint
               run: npm run lint
 
@@ -145,6 +148,9 @@ jobs:
 
             - name: Install Container Dependencies
               run: npm run setup:containers
+
+            - name: Build Shared Package
+              run: cd containers/shared && npm run build
 
             - name: Type Check Code
               run: npm run type-check
@@ -174,6 +180,9 @@ jobs:
 
             - name: Install Container Dependencies
               run: npm run setup:containers
+
+            - name: Build Shared Package
+              run: cd containers/shared && npm run build
 
             - name: Build App
               run: npm run build
@@ -209,6 +218,9 @@ jobs:
 
             - name: Install Container Dependencies
               run: npm run setup:containers
+
+            - name: Build Shared Package
+              run: cd containers/shared && npm run build
 
             - name: Download Build Artifacts
               uses: actions/download-artifact@v4

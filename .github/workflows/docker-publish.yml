@@ -92,7 +92,7 @@ jobs:
             echo "any-changed=false" >> $GITHUB_OUTPUT
             echo "No containers need building"
           else
-            printf -v containers_json '%s\n' "${containers[@]}" | jq -R . | jq -s .
+            containers_json=$(printf '%s\n' "${containers[@]}" | jq -R . | jq -s .)
             echo "containers=$containers_json" >> $GITHUB_OUTPUT
             echo "any-changed=true" >> $GITHUB_OUTPUT
             echo "Containers to build: ${containers[*]}"
