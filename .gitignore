@@ -141,7 +141,8 @@ pr_*.json
 *_pr_comments.txt
 completed_pr_comments.txt
 
-# Archive directory
+# Archive directories
+archive/
 .archive/
 
 # Ignore archived GitHub workflows
