@@ -603,7 +603,7 @@ export default {
 					content: 'An error occurred while processing the command. Please try again later.',
 					ephemeral: true
 				});
-			} catch (replyError) {
+			} catch (_replyError) {
 				// If we can't reply normally, try to follow up
 				try {
 					await interaction.followUp({

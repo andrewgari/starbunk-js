@@ -18,61 +18,24 @@
 	],
 	"rules": {
 		"indent": "off",
-		"@typescript-eslint/indent": ["error", "tab", {
-			"SwitchCase": 1,
-			"FunctionDeclaration": {
-				"parameters": 1,
-				"body": 1
-			},
-			"FunctionExpression": {
-				"parameters": 1,
-				"body": 1
-			},
-			"ignoredNodes": ["TSTypeParameterInstantiation"]
-		}],
-		"@typescript-eslint/member-delimiter-style": [
-			"error",
-			{
-				"multiline": {
-					"delimiter": "semi",
-					"requireLast": true
-				},
-				"singleline": {
-					"delimiter": "semi",
-					"requireLast": false
-				}
-			}
-		],
-		"@typescript-eslint/type-annotation-spacing": [
-			"error",
-			{
-				"before": false,
-				"after": true,
-				"overrides": {
-					"arrow": {
-						"before": true,
-						"after": true
-					}
-				}
-			}
-		],
-		"@typescript-eslint/explicit-function-return-type": "off",
 		"@typescript-eslint/no-unused-vars": [
 			"error",
 			{
 				"argsIgnorePattern": "^_",
-				"varsIgnorePattern": "^_"
+				"varsIgnorePattern": "^_",
+				"caughtErrorsIgnorePattern": "^_"
 			}
 		],
 		"@typescript-eslint/no-var-requires": "off",
 		"@typescript-eslint/no-namespace": ["error", { "allowDeclarations": true }],
+		"@typescript-eslint/no-require-imports": "off",
 		"no-console": "off",
 		"no-constant-condition": "off",
 		"no-empty": "off"
 	},
 	"overrides": [
 		{
-			"files": ["**/__tests__/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)", "**/test-utils/**/*.[jt]s?(x)"],
+			"files": ["**/__tests__/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)", "**/test-utils/**/*.[jt]s?(x)", "**/tests/**/*.[jt]s?(x)"],
 			"rules": {
 				"@typescript-eslint/no-explicit-any": "off"
 			}
@@ -82,27 +45,7 @@
 			"rules": {
 				"@typescript-eslint/no-explicit-any": "off"
 			}
-		},
-		{
-			"files": ["dist/**/*"],
-			"rules": {
-				"@typescript-eslint/no-explicit-any": "off",
-				"@typescript-eslint/no-unused-vars": "off",
-				"indent": "off",
-				"@typescript-eslint/indent": ["error", "tab", {
-					"SwitchCase": 1,
-					"FunctionDeclaration": {
-						"parameters": 1,
-						"body": 1
-					},
-					"FunctionExpression": {
-						"parameters": 1,
-						"body": 1
-					},
-					"ignoredNodes": ["TSTypeParameterInstantiation"]
-				}]
-			}
 		}
 	],
-	"ignorePatterns": ["dist/**/*", "unused_files/**/*"]
+	"ignorePatterns": ["dist/**/*", "unused_files/**/*", "node_modules/**/*"]
 }

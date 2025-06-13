@@ -49,7 +49,7 @@ export class PersonalityService {
 			// Check if directory exists
 			try {
 				await fs.access(dataDir);
-			} catch (error) {
+			} catch (_error) {
 				logger.warn(`[PersonalityService] Context directory not found at ${dataDir}. Creating it...`);
 				await fs.mkdir(dataDir, { recursive: true });
 			}
@@ -92,7 +92,7 @@ export class PersonalityService {
 
 					logger.info(`[PersonalityService] Successfully loaded personality embedding from ${npyPath} with ${this.personalityEmbedding.length} dimensions`);
 					return this.personalityEmbedding;
-				} catch (npyError) {
+				} catch (_npyError) {
 					// Only log NPY warning once per service instance
 					if (!this.hasLoggedNpyWarning) {
 						logger.debug(`[PersonalityService] NPY format not available, using JSON format instead`);

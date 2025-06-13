@@ -18,7 +18,7 @@ export class WebhookService implements WebhookServiceInterface {
 				this.webhookClient = new WebhookClient({ url: webhookUrl });
 				this._webhookAvailable = true;
 				this.logger.debug('Webhook service initialized with URL');
-			} catch (error) {
+			} catch (_error) {
 				this.logger.warn('Invalid webhook URL provided');
 				this._webhookAvailable = false;
 			}
@@ -120,7 +120,7 @@ export class WebhookService implements WebhookServiceInterface {
 		try {
 			await this.webhookClient.send(messageInfo);
 			this.logger.debug('Message sent via webhook');
-		} catch (error) {
+		} catch (_error) {
 			this.logger.error('Failed to send message via webhook');
 			// We don't have a channel reference here, so we can't fallback
 		}
@@ -138,7 +138,7 @@ export class WebhookService implements WebhookServiceInterface {
 			});
 
 			this.logger.debug(`Message sent to channel ${channel.name} via regular message (webhook fallback)`);
-		} catch (error) {
+		} catch (_error) {
 			this.logger.error('Failed to send regular message (webhook fallback)');
 		}
 	}

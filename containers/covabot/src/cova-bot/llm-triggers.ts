@@ -58,7 +58,7 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 					} else {
 						channelName = 'Direct Message';
 					}
-				} catch (error) {
+				} catch (_error) {
 					// If anything fails, just use default
 				}
 
@@ -139,7 +139,7 @@ export const createLLMResponseDecisionCondition = () => {
 					} else {
 						channelName = 'Direct Message';
 					}
-				} catch (error) {
+				} catch (_error) {
 					// If anything fails, just use default
 				}
 

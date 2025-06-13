@@ -131,7 +131,7 @@ export class CampaignFileService {
 
 			logger.info('[CampaignFileService] Campaign directory structure is valid', { campaignId });
 			return true;
-		} catch (error) {
+		} catch (_error) {
 			logger.debug('[CampaignFileService] Campaign directory structure is invalid or missing', { campaignId });
 			return false;
 		}
