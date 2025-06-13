@@ -95,7 +95,7 @@ jobs:
                   echo "any-changed=false" >> $GITHUB_OUTPUT
                   echo "No containers need checking"
                 else
-                  containers_json=$(printf '%s\n' "${containers[@]}" | jq -R . | jq -s .)
+                  containers_json=$(printf '%s\n' "${containers[@]}" | jq -R . | jq -s -c .)
                   echo "containers=$containers_json" >> $GITHUB_OUTPUT
                   echo "any-changed=true" >> $GITHUB_OUTPUT
                   echo "Containers to check: ${containers[*]}"

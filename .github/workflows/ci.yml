@@ -89,7 +89,7 @@ jobs:
             echo "containers=[]" >> $GITHUB_OUTPUT
             echo "No containers need testing"
           else
-            containers_json=$(printf '%s\n' "${containers[@]}" | jq -R . | jq -s .)
+            containers_json=$(printf '%s\n' "${containers[@]}" | jq -R . | jq -s -c .)
             echo "containers=$containers_json" >> $GITHUB_OUTPUT
             echo "Containers to test: ${containers[*]}"
           fi
