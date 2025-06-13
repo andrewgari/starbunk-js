@@ -14,8 +14,8 @@ RUN cd shared && npm ci && cd .. && npm ci
 COPY containers/shared ./shared
 COPY containers/covabot ./
 
-# Build shared and container
-RUN cd shared && npm run build && cd .. && npm run build
+# Build shared package first, then link it and build container
+RUN cd shared && npm run build && npm pack && cd .. && npm install ./shared/starbunk-shared-1.0.0.tgz && npm run build
 
 # Production stage
 FROM node:20-slim AS runtime
