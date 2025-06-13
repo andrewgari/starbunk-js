@@ -1,0 +1,19 @@
+{
+	"name": "@starbunk/strategy-bots",
+	"version": "1.0.0",
+	"description": "Strategy bots for Starbunk",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch"
+	},
+	"dependencies": {
+		"@prisma/client": "^6.7.0",
+		"discord.js": "^14.18.0"
+	},
+	"peerDependencies": {
+		"@types/node": "^20.17.14",
+		"typescript": "~5.3.0"
+	}
+}

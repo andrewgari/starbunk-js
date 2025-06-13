@@ -1,290 +1,331 @@
-# StarBunk Discord Bot
+# StarBunk Discord Bot - Container Architecture
 
-A sophisticated Discord bot built with TypeScript that combines personality-driven bots, community management tools, and advanced LLM-powered analysis capabilities.
+A sophisticated Discord bot built with TypeScript using a **4-container modular architecture** that provides scalable, isolated services for different bot functionalities.
 
-## 🌟 Key Features
+## 🏗️ Container Architecture
 
-### 🤖 Personality Bots
-- **Multiple Bot Personas**: Includes various themed bots that react to messages based on unique trigger patterns
-- **Strategy Pattern**: Each bot implements a consistent interface but with unique behaviors
-- **Dynamic Loading**: Bots are loaded at runtime from their respective directories
+StarBunk is built as **4 independent containers**, each handling specific functionality:
 
-### 🧠 LLM Integration
-- **Personality Analysis Command**: Generate detailed profiles of users based on their message history
-- **Custom Focus Areas**: Analyze specific aspects of users' communication and skills
-- **Concurrent Request Limiting**: Prevents system overload with a locking mechanism
+### 🤖 **BunkBot** - Reply Bots & Admin Commands
+- **Purpose**: Handles reply bots and administrative commands
+- **Dependencies**: Discord.js, Webhooks, Basic Database
+- **Features**: Bot management, admin commands, webhook-based responses
+- **Scaling**: Lightweight, optimized for high message volume
 
-### 🛠️ Command System
-- **Slash Commands**: Modern Discord interaction patterns
-- **Role-Based Permissions**: Commands restricted by user roles
-- **Command Categories**: Organized by functionality
+### 🎵 **DJCova** - Music Service
+- **Purpose**: Voice channel music playback and audio processing
+- **Dependencies**: Discord.js Voice, ffmpeg, audio libraries
+- **Features**: YouTube playback, voice channel management, audio streaming
+- **Scaling**: CPU-optimized for audio processing
 
-### 📊 Technical Features
-- **Dependency Injection**: Service container for better testability and modularity
-- **Type Safety**: Full TypeScript implementation with strict typing
-- **Repository Pattern**: Data access abstraction for different storage mechanisms
+### 🐉 **Starbunk-DND** - D&D Features & Bridge
+- **Purpose**: D&D campaign management and cross-server bridging
+- **Dependencies**: Full LLM stack, Database, File processing, Snowbunk bridge
+- **Features**: Campaign management, vector embeddings, cross-server messaging
+- **Scaling**: Memory-optimized for LLM and data processing
 
-## 📋 Commands
+### 🧠 **CovaBot** - AI Personality
+- **Purpose**: AI-powered personality simulation and responses
+- **Dependencies**: LLM services, Minimal database
+- **Features**: Personality-driven responses, user behavior mimicking
+- **Scaling**: LLM-optimized for AI processing
 
-### `/personality @user [focus]`
-Analyzes a user's message history to create a comprehensive personality profile.
+## 🌟 Key Benefits
 
-**Parameters:**
-- `@user`: The user to analyze (required)
-- `focus`: Optional custom focus area for the analysis (e.g., "programming skills", "communication style")
+### 🔧 **Independent Scaling**
+- Scale containers based on load (music service vs reply bots)
+- Resource optimization per container type
+- Independent deployment and updates
 
-**Permissions:**
-- Users can only analyze themselves
-- Administrators can analyze any user
-- Only one analysis can run at a time
+### 🛡️ **Isolation & Reliability**
+- Container failures don't affect other services
+- Independent environment validation
+- Service-specific error boundaries
 
-**Example Usage:**
-```
-/personality @JohnDoe
-/personality @JaneDoe focus:technical skills
-```
+### 📦 **Optimized Dependencies**
+- Each container only includes required dependencies
+- Reduced attack surface and resource usage
+- Faster startup times per service
 
-**Command Flow:**
-```mermaid
-flowchart TD
-    A[User Types Command] --> B{Check Permissions}
-    B -->|Admin or Self| C{Check Lock}
-    B -->|No Permission| Z[Error: Permission Denied]
-    
-    C -->|Lock Available| D[Acquire Lock]
-    C -->|Lock Unavailable| Y[Error: Analysis in Progress]
-    
-    D --> E[Fetch Channels]
-    E --> F[Fetch Messages]
-    F --> G[Process with LLM]
-    G --> H[Generate Embeds]
-    H --> I[Send Results]
-    I --> J[Release Lock]
-    
-    style A fill:#f9f,stroke:#333
-    style G fill:#bfb,stroke:#333
-    style Z fill:#f99,stroke:#333
-    style Y fill:#f99,stroke:#333
-    style J fill:#bbf,stroke:#333
-```
-
-## 🚀 Development
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 16.x or higher
+- Docker and Docker Compose
+- Node.js 20.x or higher (for development)
 - Discord Bot Token
-- LLM provider access (Ollama or OpenAI)
 
-### Setup
-1. Clone the repository:
+### Production Deployment
 ```bash
-git clone https://github.com/yourusername/starbunk-js.git
+# Clone the repository
+git clone https://github.com/andrewgari/starbunk-js.git
 cd starbunk-js
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your tokens and configuration
+
+# Start all containers
+docker-compose up -d
+
+# Monitor logs
+npm run logs
 ```
 
-2. Install dependencies:
+### Development Setup
 ```bash
-npm install
+# Install dependencies for all containers
+npm run setup:containers
+
+# Build all containers
+npm run build
+
+# Start development environment
+npm run start:dev
+
+# Work on specific containers
+npm run dev:bunkbot      # Reply bots + admin
+npm run dev:djcova       # Music service
+npm run dev:starbunk-dnd # D&D + bridge
+npm run dev:covabot      # AI personality
 ```
 
-3. Create a `.env` file with your credentials:
-```
+## 📋 Environment Configuration
+
+### Required for All Containers
+```env
 STARBUNK_TOKEN=your_discord_bot_token
-CLIENT_ID=your_discord_client_id
-GUILD_ID=your_discord_server_id
-OPENAI_API_KEY=your_openai_api_key # Optional
-OLLAMA_API_URL=http://localhost:11434 # For local Ollama
 ```
 
-4. Start the development server:
+### Container-Specific Variables
+```env
+# Database-dependent containers (BunkBot, Starbunk-DND, CovaBot)
+DATABASE_URL=postgresql://user:pass@postgres:5432/starbunk
+
+# LLM-dependent containers (Starbunk-DND, CovaBot)
+OPENAI_API_KEY=your_openai_key
+OLLAMA_API_URL=http://ollama:11434
+
+# Starbunk-DND specific
+SNOWBUNK_TOKEN=your_snowbunk_token
+VECTOR_CONTEXT_DIR=/app/data/vectors
+
+# Development
+DEBUG=true
+NODE_ENV=development
+```
+
+## 🛠️ Development Commands
+
+### Container Management
 ```bash
-npm run dev
+# Build all containers
+npm run build
+
+# Test all containers
+npm test
+
+# Start production stack
+npm run start
+
+# Start development environment
+npm run start:dev
+
+# View logs
+npm run logs
+npm run logs:bunkbot
+npm run logs:djcova
+npm run logs:starbunk-dnd
+npm run logs:covabot
 ```
 
-### Key NPM Commands
-- `npm run build`: Compile TypeScript
-- `npm run dev`: Start development server
-- `npm run lint`: Run ESLint
-- `npm run check:all`: Run all checks (lint, typecheck, tests, build)
-- `npm test`: Run Jest tests
-
-## 📁 Project Structure
-
-```
-src/
-├── bunkbot.ts                # Main entry point
-├── config.ts                 # Configuration loader
-├── discord/                  # Discord-specific utilities
-├── domain/                   # Domain models
-├── infrastructure/           # Data access and repositories
-├── services/                 # Core application services
-│   ├── llm/                  # LLM integration 
-│   └── bootstrap.ts          # Service initialization
-├── starbunk/                 # Bot-specific code
-│   ├── bots/                 # Bot strategies
-│   ├── commands/             # Command implementations
-│   └── starbunkClient.ts     # Discord client wrapper
-└── utils/                    # Utility functions
+### Individual Container Development
+```bash
+# Work on specific containers
+cd containers/bunkbot && npm run dev
+cd containers/djcova && npm run dev
+cd containers/starbunk-dnd && npm run dev
+cd containers/covabot && npm run dev
 ```
 
-## 📊 Architecture Diagrams
+## 📁 Container Structure
 
-### System Architecture
+```
+containers/
+├── shared/                   # Shared services and utilities
+│   ├── src/
+│   │   ├── services/        # Logger, webhook manager, etc.
+│   │   ├── utils/           # Environment validation, error handling
+│   │   ├── discord/         # Discord client factory
+│   │   └── index.ts         # Shared exports
+│   └── package.json
+├── bunkbot/                 # Reply bots + admin commands
+│   ├── src/
+│   │   ├── index-minimal.ts # Container entry point
+│   │   └── tests/           # Container-specific tests
+│   ├── Dockerfile
+│   └── package.json
+├── djcova/                  # Music service
+│   ├── src/
+│   │   ├── index-minimal.ts # Container entry point
+│   │   └── tests/           # Container-specific tests
+│   ├── Dockerfile
+│   └── package.json
+├── starbunk-dnd/            # D&D features + Snowbunk bridge
+│   ├── src/
+│   │   ├── index-minimal.ts # Container entry point
+│   │   └── tests/           # Container-specific tests
+│   ├── Dockerfile
+│   └── package.json
+└── covabot/                 # AI personality bot
+    ├── src/
+    │   ├── index-minimal.ts # Container entry point
+    │   └── tests/           # Container-specific tests
+    ├── Dockerfile
+    └── package.json
+```
+
+## 📊 Container Architecture Diagram
 
 ```mermaid
 graph TD
     User([Discord User]) <-->|Interacts with| Discord[Discord Platform]
-    Discord <-->|APIs| Bot[StarBunk Bot]
-    
-    subgraph "StarBunk Application"
-        Bot --> Commands[Command Handler]
-        Bot --> Bots[Bot Strategies]
-        Commands --> Services[Services]
-        Bots --> Services
-        Services --> LLM[LLM Provider]
-        Services --> Database[(Database)]
+
+    subgraph "Container Stack"
+        Discord <-->|Bot API| BunkBot[🤖 BunkBot<br/>Reply Bots + Admin]
+        Discord <-->|Voice API| DJCova[🎵 DJCova<br/>Music Service]
+        Discord <-->|Bot API| StarbunkDND[🐉 Starbunk-DND<br/>D&D + Bridge]
+        Discord <-->|Bot API| CovaBot[🧠 CovaBot<br/>AI Personality]
+
+        StarbunkDND <-->|Bridge| Snowbunk[Snowbunk Server]
     end
-    
-    LLM <-->|API| LLMService[LLM Service<br>Ollama/OpenAI]
-    
-    style Bot fill:#f9f,stroke:#333,stroke-width:2px
-    style Services fill:#bbf,stroke:#333,stroke-width:1px
+
+    subgraph "Shared Infrastructure"
+        BunkBot --> SharedDB[(PostgreSQL)]
+        StarbunkDND --> SharedDB
+        CovaBot --> SharedDB
+
+        StarbunkDND --> LLM[LLM Services<br/>OpenAI/Ollama]
+        CovaBot --> LLM
+
+        BunkBot --> Webhooks[Webhook Manager]
+        CovaBot --> Webhooks
+        StarbunkDND --> Webhooks
+    end
+
+    style BunkBot fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style DJCova fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    style StarbunkDND fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    style CovaBot fill:#fff3e0,stroke:#e65100,stroke-width:2px
     style LLM fill:#bfb,stroke:#333,stroke-width:1px
 ```
 
-### Personality Analysis Sequence
+## 🔄 Container Bootstrap Flow
 
 ```mermaid
 sequenceDiagram
-    participant User as Discord User
-    participant Bot as StarBunk Bot
-    participant Lock as Analysis Lock
-    participant Service as LLM Service
-    participant Discord as Discord API
-    
-    User->>Bot: /personality @user [focus]
-    
-    Bot->>Lock: Check if available
-    alt Lock Acquired
-        Lock-->>Bot: Lock granted
-        Bot->>Discord: Fetch channels
-        Discord-->>Bot: Return channels
-        
-        loop For each channel
-            Bot->>Discord: Fetch messages
-            Discord-->>Bot: Return messages
-        end
-        
-        Bot->>Service: Generate profile
-        Service-->>Bot: Return analysis
-        Bot->>User: Send embed with profile
-        Bot->>Lock: Release lock
-    else Lock Denied
-        Lock-->>Bot: Already in use
-        Bot->>User: Send "try again later" message
+    participant Docker as Docker Compose
+    participant Shared as Shared Package
+    participant BunkBot as BunkBot Container
+    participant DJCova as DJCova Container
+    participant StarbunkDND as Starbunk-DND Container
+    participant CovaBot as CovaBot Container
+
+    Docker->>Shared: Build shared package
+    Shared-->>Docker: ✅ Built
+
+    par Container Initialization
+        Docker->>BunkBot: Start container
+        BunkBot->>BunkBot: Validate STARBUNK_TOKEN
+        BunkBot->>BunkBot: Initialize webhook services
+        BunkBot-->>Docker: ✅ Ready
+    and
+        Docker->>DJCova: Start container
+        DJCova->>DJCova: Validate STARBUNK_TOKEN
+        DJCova->>DJCova: Initialize voice services
+        DJCova-->>Docker: ✅ Ready
+    and
+        Docker->>StarbunkDND: Start container
+        StarbunkDND->>StarbunkDND: Validate tokens + DB + LLM
+        StarbunkDND->>StarbunkDND: Initialize full services
+        StarbunkDND-->>Docker: ✅ Ready
+    and
+        Docker->>CovaBot: Start container
+        CovaBot->>CovaBot: Validate STARBUNK_TOKEN + LLM
+        CovaBot->>CovaBot: Initialize AI services
+        CovaBot-->>Docker: ✅ Ready
     end
-```
-
-### Bot Strategy Pattern
-
-```mermaid
-classDiagram
-    class BotStrategy {
-        <<interface>>
-        +processMessage(message)
-        +getName()
-        +getDescription()
-    }
-    
-    class BaseBotStrategy {
-        #conditions
-        #responses
-        +processMessage(message)
-        +getName()
-        +getDescription()
-    }
-    
-    class SpecificBotStrategy {
-        -specificConditions
-        -specificResponses
-        +processMessage(message)
-    }
-    
-    BotStrategy <|-- BaseBotStrategy
-    BaseBotStrategy <|-- SpecificBotStrategy
-    BaseBotStrategy <|-- AnotherBotStrategy
-    
-    class BotRegistry {
-        -bots
-        +registerBot(bot)
-        +processMessage(message)
-    }
-    
-    BotRegistry o-- BotStrategy : contains
 ```
 
 ## 🧪 Testing
 
-The codebase uses Jest for testing. Run the tests with:
+The container architecture uses Jest with project-based testing:
 
 ```bash
+# Test all containers
 npm test
+
+# Test specific containers
+npm run test:shared
+npm run test:bunkbot
+npm run test:djcova
+npm run test:starbunk-dnd
+npm run test:covabot
+
+# Test individual container
+cd containers/bunkbot && npm test
 ```
 
-To run specific tests:
+## 🚀 Deployment
 
+### Production Deployment
 ```bash
-npx jest path/to/specific/test.test.ts
+# Build and start all containers
+docker-compose up -d
+
+# Scale specific containers
+docker-compose up -d --scale djcova=2 --scale bunkbot=3
+
+# Update specific container
+docker-compose up -d --no-deps bunkbot
 ```
 
-## 🔐 Permissions
+### CI/CD Pipeline
+The project includes GitHub Actions workflows for:
+- **Continuous Integration**: Build and test all containers
+- **Container Registry**: Push images to GitHub Container Registry
+- **Deployment**: Automated deployment to production
 
-For the `/personality` command:
-- Regular users can only analyze their own messages
-- Users with Administrator permission can analyze any user
-- All analysis results are only visible to the requesting user
-- Only one analysis can run at a time (lock system)
+## 📊 Container Resource Requirements
 
-## 🧩 Dependency Injection
+| Container | CPU | Memory | Storage | Network |
+|-----------|-----|--------|---------|---------|
+| **BunkBot** | 0.5 cores | 512MB | Minimal | High (webhooks) |
+| **DJCova** | 1-2 cores | 1GB | Moderate (cache) | High (voice) |
+| **Starbunk-DND** | 1-2 cores | 1GB | High (vectors) | Moderate |
+| **CovaBot** | 0.5-1 cores | 512MB | Low | Moderate |
+| **PostgreSQL** | 0.5 cores | 512MB | High | Low |
 
-StarBunk uses a service container for dependency injection, making the code more modular and testable.
+## 🔧 Troubleshooting
 
-```mermaid
-graph TD
-    Container[Service Container]
-    
-    subgraph "Core Services"
-        Logger[Logger Service]
-        Discord[Discord Service]
-        LLM[LLM Manager]
-        Webhook[Webhook Service]
-    end
-    
-    subgraph "Commands"
-        PersCmd[Personality Command]
-        OtherCmds[Other Commands]
-    end
-    
-    subgraph "Bot Strategies"
-        Bots[Bot Strategies]
-    end
-    
-    Container -->|registers| Logger
-    Container -->|registers| Discord
-    Container -->|registers| LLM
-    Container -->|registers| Webhook
-    
-    PersCmd -->|injects| Logger
-    PersCmd -->|injects| LLM
-    OtherCmds -->|injects| Logger
-    OtherCmds -->|injects| Discord
-    
-    Bots -->|injects| Logger
-    Bots -->|injects| LLM
-    
-    style Container fill:#f9f,stroke:#333,stroke-width:2px
-    style LLM fill:#bfb,stroke:#333,stroke-width:1px
-    style PersCmd fill:#bbf,stroke:#333,stroke-width:1px
+### Container Won't Start
+```bash
+# Check container logs
+docker-compose logs bunkbot
+
+# Check environment variables
+docker-compose config
+
+# Rebuild container
+docker-compose build --no-cache bunkbot
+```
+
+### Database Connection Issues
+```bash
+# Check PostgreSQL status
+docker-compose ps postgres
+
+# Test database connection
+docker-compose exec postgres psql -U starbunk -d starbunk
 ```
 
 ## 📜 License

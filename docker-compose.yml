@@ -1,39 +1,153 @@
+version: '3.8'
+
 services:
-    bunkbot:
-        build:
-            context: .
-            dockerfile: Dockerfile
-            args:
-                NODE_ENV: development
-        container_name: bunkbot
-        privileged: true
-        env_file:
-            - .env
-        command: npm run dev
-        # Improve performance with resource limits
-        deploy:
-            resources:
-                limits:
-                    cpus: '2'
-                    memory: 1G
-        volumes:
-            # Mount source code
-            - ./src:/app/src:Z
-            - ./dist:/app/dist:Z
-            - ./node_modules:/app/node_modules:Z
-            - ./package.json:/app/package.json:Z
-            - ./package-lock.json:/app/package-lock.json:Z
-            - ./tsconfig.json:/app/tsconfig.json:Z
-            # Data and config directories
-            - ./data:/app/data:Z,rw
-            - ./data/campaigns:/app/data/campaigns:Z,rw
-            - ./scripts:/app/scripts:Z,ro
-            - ./data/llm_context:/app/data/llm_context:Z,rw
-        environment:
-            - PYTHONPATH=/app/scripts
-            - VECTOR_CONTEXT_DIR=/app/data/llm_context
-            - NODE_ENV=development
-            - DEBUG=true
-            - TS_NODE_DEV=true
-        # Add user mapping for rootless operation
-        user: "1000:1000"  # Adjust these IDs to match your host user/group IDs
+  # Shared database service
+  postgres:
+    image: postgres:15-alpine
+    container_name: starbunk-postgres
+    environment:
+      POSTGRES_DB: starbunk
+      POSTGRES_USER: starbunk
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-starbunk123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/postgres-init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U starbunk"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # BunkBot - Reply bots and admin commands
+  bunkbot:
+    build:
+      context: .
+      dockerfile: containers/bunkbot/Dockerfile
+    container_name: starbunk-bunkbot
+    user: "1000:1000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - DEBUG=${DEBUG:-false}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_API_URL=${OLLAMA_API_URL}
+    volumes:
+      - ./data:/app/data:rw
+      - ./logs:/app/logs:rw
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # DJCova - Music service
+  djcova:
+    build:
+      context: .
+      dockerfile: containers/djcova/Dockerfile
+    container_name: starbunk-djcova
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - DEBUG=${DEBUG:-false}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+    volumes:
+      - ./data/music:/app/data/music:rw
+      - ./logs:/app/logs:rw
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Starbunk-DND - D&D features and Snowbunk bridge
+  starbunk-dnd:
+    build:
+      context: .
+      dockerfile: containers/starbunk-dnd/Dockerfile
+    container_name: starbunk-dnd
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - DEBUG=${DEBUG:-false}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_API_URL=${OLLAMA_API_URL}
+      - VECTOR_CONTEXT_DIR=/app/data/vectors
+    volumes:
+      - ./data:/app/data:rw
+      - ./data/campaigns:/app/data/campaigns:rw
+      - ./data/vectors:/app/data/vectors:rw
+      - ./logs:/app/logs:rw
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # CovaBot - AI personality bot
+  covabot:
+    build:
+      context: .
+      dockerfile: containers/covabot/Dockerfile
+    container_name: starbunk-covabot
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - DEBUG=${DEBUG:-false}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_API_URL=${OLLAMA_API_URL}
+    volumes:
+      - ./data:/app/data:rw
+      - ./logs:/app/logs:rw
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: starbunk-network
