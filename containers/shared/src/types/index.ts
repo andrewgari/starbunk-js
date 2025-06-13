@@ -20,8 +20,8 @@ export interface WebhookMessage {
 	content: string;
 	identity: BotIdentity;
 	channelId: string;
-	embeds?: any[];
-	files?: any[];
+	embeds?: unknown[];
+	files?: unknown[];
 }
 
 // Re-export existing types
