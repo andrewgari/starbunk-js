@@ -50,6 +50,7 @@
 		"docker:build:covabot": "docker compose build covabot",
 		"docker:rebuild": "docker compose build --no-cache",
 		"check:all": "npm run type-check && npm run lint && npm run test && npm run docker:build",
+		"check:ci": "npm run type-check && npm run lint && npm run test",
 		"setup:dirs": "./scripts/ensure-directories.sh",
 		"setup:containers": "npm run setup:shared && npm run setup:bunkbot && npm run setup:djcova && npm run setup:starbunk-dnd && npm run setup:covabot",
 		"setup:shared": "cd containers/shared && npm install",
