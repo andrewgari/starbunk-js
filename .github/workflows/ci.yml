@@ -109,7 +109,7 @@ jobs:
           timeout 30 bash -c 'until docker exec postgres pg_isready -U test; do sleep 1; done'
       
       - name: Test Docker Compose build
-        run: docker-compose build
+        run: docker compose build
       
       - name: Cleanup
         run: docker stop postgres && docker rm postgres
