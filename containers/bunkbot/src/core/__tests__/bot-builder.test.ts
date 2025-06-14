@@ -1,6 +1,4 @@
-import { getDiscordService } from '@/services/bootstrap';
-import { DiscordService } from '@/services/discordService';
-import { logger } from '@/services/logger';
+import { getDiscordService, DiscordService, logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { createBotDescription, createBotReplyName, createReplyBot } from '../bot-builder';
@@ -17,8 +15,17 @@ jest.mock('@prisma/client', () => {
 	};
 });
 
-// Mock the logger
-jest.mock('../../../../services/logger');
+// Mock the shared package
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
+	getDiscordService: jest.fn(),
+	logger: {
+		warn: jest.fn(),
+		error: jest.fn(),
+		info: jest.fn(),
+		debug: jest.fn()
+	}
+}));
 
 describe('Bot builder', () => {
 	beforeEach(() => {

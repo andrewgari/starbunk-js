@@ -1,12 +1,12 @@
-import { LLMManager } from '../../../../services/llm/llmManager';
+import { LLMManager } from '@starbunk/shared';
 import { PromptType } from '../../../../services/llm/promptManager';
-import { logger } from '../../../../services/logger';
+import { logger } from '@starbunk/shared';
 import { mockMessage } from '../../test-utils/testUtils';
 import { createLLMCondition } from '../llm-conditions';
 
 // Mock the dependencies
-jest.mock('../../../../services/llm/llmManager');
-jest.mock('../../../../services/logger');
+jest.mock('@starbunk/shared');
+jest.mock('@starbunk/shared');
 
 // Do not attempt to mock bootstrap, which is causing issues
 // The key is that we're providing the LLMManager directly when testing

@@ -25,6 +25,7 @@
 		"dev:covabot": "cd containers/covabot && npm run dev",
 		"test": "npm run test:shared",
 		"test:full": "npm run test:shared && npm run test:containers",
+		"test:containers:note": "Container tests temporarily disabled due to import path issues from monolithic structure transition",
 		"test:shared": "cd containers/shared && npm test",
 		"test:containers": "npm run test:bunkbot && npm run test:djcova && npm run test:starbunk-dnd && npm run test:covabot",
 		"test:bunkbot": "cd containers/bunkbot && npm test",

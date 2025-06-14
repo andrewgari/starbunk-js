@@ -9,7 +9,7 @@ import { SUPPORTED_SYSTEMS } from '../../types/game';
 jest.mock('../../services/campaignService');
 jest.mock('../../services/helpService');
 jest.mock('../../utils/campaignChecks');
-jest.mock('../../../services/logger');
+jest.mock('@starbunk/shared');
 
 describe('RPG Command', () => {
 	let mockInteraction: Partial<ChatInputCommandInteraction>;

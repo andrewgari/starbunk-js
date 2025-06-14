@@ -1,9 +1,17 @@
 import { userJoined, userLeft, userSwitched, channelNameMatches, joiningChannel, and, or, findRandomVoiceChannel } from '../voice-conditions';
 import { ChannelType, Collection } from 'discord.js';
-import { logger } from '../../../../services/logger';
+import { logger } from '@starbunk/shared';
 
 // Mock the logger
-jest.mock('../../../../services/logger');
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
+	logger: {
+		warn: jest.fn(),
+		error: jest.fn(),
+		info: jest.fn(),
+		debug: jest.fn()
+	}
+}));
 
 describe('Voice Conditions', () => {
 	// Helper to create mock voice states

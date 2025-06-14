@@ -1,9 +1,9 @@
 import { BaseVoiceBot, VoiceBotAdapter } from '../voice-bot-adapter';
-import { logger } from '../../../../services/logger';
+import { logger } from '@starbunk/shared';
 import { VoiceState } from 'discord.js';
 
 // Mock the logger
-jest.mock('../../../../services/logger');
+jest.mock('@starbunk/shared');
 
 describe('Voice Bot Adapter', () => {
 	beforeEach(() => {

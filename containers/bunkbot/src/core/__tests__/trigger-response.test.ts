@@ -1,9 +1,9 @@
-import { logger } from '../../../../services/logger';
+import { logger } from '@starbunk/shared';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { createPriority, createTriggerName, createTriggerResponse, TriggerResponseClass } from '../trigger-response';
 
 // Mock the logger
-jest.mock('../../../../services/logger');
+jest.mock('@starbunk/shared');
 
 describe('Trigger Response', () => {
 	beforeEach(() => {

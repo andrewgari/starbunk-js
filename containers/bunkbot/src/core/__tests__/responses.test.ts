@@ -1,4 +1,4 @@
-import { logger } from '../../../../services/logger';
+import { logger } from '@starbunk/shared';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import {
 	createStaticMessage,
@@ -14,7 +14,7 @@ const originalRandom = global.Math.random;
 const mockRandomValue = 0.5;
 
 // Mock the logger
-jest.mock('../../../../services/logger');
+jest.mock('@starbunk/shared');
 
 beforeEach(() => {
 	jest.clearAllMocks();
