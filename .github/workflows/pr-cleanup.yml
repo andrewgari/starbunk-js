@@ -30,7 +30,7 @@ jobs:
                           // Get all versions of the package
                           const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
                             package_type: 'container',
-                            package_name: `${repo}/${container}`,
+                            package_name: `starbunk-${container}`,
                             username: owner
                           });
 
@@ -49,7 +49,7 @@ jobs:
                             console.log(`Deleting version ${version.id} with tags: ${version.metadata.container.tags.join(', ')}`);
                             await github.rest.packages.deletePackageVersionForUser({
                               package_type: 'container',
-                              package_name: `${repo}/${container}`,
+                              package_name: `starbunk-${container}`,
                               username: owner,
                               package_version_id: version.id
                             });
