@@ -14,8 +14,9 @@ jobs:
         name: '🔍 Security - Detect File Changes'
         runs-on: ubuntu-latest
         outputs:
-            src: ${{ steps.filter.outputs.src }}
+            containers: ${{ steps.filter.outputs.containers }}
             package_json: ${{ steps.filter.outputs.package_json }}
+            container_packages: ${{ steps.filter.outputs.container_packages }}
         steps:
             - uses: actions/checkout@v4
               with:
@@ -26,20 +27,36 @@ jobs:
               id: filter
               with:
                   filters: |
-                      src:
-                          - 'src/**'
+                      containers:
+                          - 'containers/**'
                       package_json:
                           - 'package.json'
                           - 'package-lock.json'
+                      container_packages:
+                          - 'containers/*/package.json'
+                          - 'containers/*/package-lock.json'
 
     security:
         name: '🔒 Security - Check Dependencies'
         needs: [changes]
         runs-on: ubuntu-latest
-        if: ${{ needs.changes.outputs.src == 'true' || needs.changes.outputs.package_json == 'true' }}
+        if: ${{ needs.changes.outputs.containers == 'true' || needs.changes.outputs.package_json == 'true' || needs.changes.outputs.container_packages == 'true' }}
         continue-on-error: true
         steps:
             - uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Install root dependencies
+              run: npm ci
+
+            - name: Install container dependencies
+              run: npm run setup:containers
+
             - name: Run Snyk to check for vulnerabilities
               continue-on-error: true
               uses: snyk/actions/node@master

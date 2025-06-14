@@ -1,22 +1,22 @@
-process.env.DATABASE_URL = process.env.DATABASE_URL || 'file:memory:?cache=shared';
-
+// Root Jest configuration for container orchestration
+// Individual containers have their own Jest configs
 module.exports = {
-	preset: 'ts-jest',
-	testEnvironment: 'node',
-	// Use standard patterns for finding tests
-	testMatch: ['**/*.test.ts'],
-	collectCoverageFrom: [
-		'src/**/*.ts',
-		'!src/**/*.d.ts',
-		'!src/bunkbot.ts',
-		'!src/**/index.ts',
-		'!src/tests/**',
-		'!src/**/__tests__/**',
-		'!src/**/__mocks__/**',
+	projects: [
+		'<rootDir>/containers/shared',
+		'<rootDir>/containers/bunkbot',
+		'<rootDir>/containers/djcova',
+		'<rootDir>/containers/starbunk-dnd',
+		'<rootDir>/containers/covabot'
 	],
 	coverageDirectory: 'coverage',
 	coverageReporters: ['text', 'lcov', 'clover', 'html'],
-	// Setting minimum coverage goals - adjust these numbers upward over time
+	collectCoverageFrom: [
+		'containers/*/src/**/*.ts',
+		'!containers/*/src/**/*.d.ts',
+		'!containers/*/src/**/index*.ts',
+		'!containers/*/src/**/__tests__/**',
+		'!containers/*/src/**/__mocks__/**',
+	],
 	coverageThreshold: {
 		global: {
 			branches: 10,
@@ -24,25 +24,5 @@ module.exports = {
 			lines: 18,
 			statements: 17,
 		},
-	},
-	// Only exclude tests with complex external dependencies like LLM services
-	testPathIgnorePatterns: [
-		'node_modules/',
-	],
-	transform: {
-		'^.+\\.tsx?$': [
-			'ts-jest',
-			{
-				isolatedModules: true,
-			},
-		],
-	},
-	transformIgnorePatterns: ['node_modules/(?!@xenova/transformers)'],
-	moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-	setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],
-	moduleNameMapper: {
-		'^@/(.*)$': '<rootDir>/src/$1',
-		// Mock @xenova/transformers for tests
-		'^@xenova/transformers$': '<rootDir>/src/tests/mocks/transformers.ts',
 	},
 };
