@@ -6,23 +6,65 @@ on:
 
 jobs:
     cleanup:
-        name: 🧹 Cleanup
+        name: 🧹 Cleanup PR Artifacts
         runs-on: ubuntu-latest
+        permissions:
+            packages: write
+            contents: read
         steps:
-            - name: Delete PR Image
+            - name: Delete PR Container Images
               uses: actions/github-script@v7
               with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
                   script: |
                       const { owner, repo } = context.repo;
                       const prNumber = context.payload.pull_request.number;
+                      const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot'];
 
-                      try {
-                          await github.rest.packages.deletePackageVersionForOrg({
-                              package_type: 'container',
-                              package_name: `${repo}/app`,
-                              org: owner,
-                              version: `pr-${prNumber}`
+                      console.log(`Cleaning up PR ${prNumber} artifacts...`);
+
+                      for (const container of containers) {
+                        try {
+                          console.log(`Deleting ${container} PR images...`);
+
+                          // Get all versions of the package
+                          const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
+                            package_type: 'container',
+                            package_name: `${repo}/${container}`,
+                            username: owner
                           });
-                      } catch (error) {
-                          console.log('Failed to delete package:', error);
+
+                          // Find versions with PR tags
+                          const prVersions = versions.filter(version =>
+                            version.metadata &&
+                            version.metadata.container &&
+                            version.metadata.container.tags &&
+                            version.metadata.container.tags.some(tag =>
+                              tag.startsWith(`pr-${prNumber}`)
+                            )
+                          );
+
+                          // Delete each PR version
+                          for (const version of prVersions) {
+                            console.log(`Deleting version ${version.id} with tags: ${version.metadata.container.tags.join(', ')}`);
+                            await github.rest.packages.deletePackageVersionForUser({
+                              package_type: 'container',
+                              package_name: `${repo}/${container}`,
+                              username: owner,
+                              package_version_id: version.id
+                            });
+                          }
+
+                          if (prVersions.length === 0) {
+                            console.log(`No PR images found for ${container}`);
+                          } else {
+                            console.log(`Deleted ${prVersions.length} PR image(s) for ${container}`);
+                          }
+
+                        } catch (error) {
+                          console.log(`Failed to delete ${container} images:`, error.message);
+                          // Don't fail the job if image doesn't exist or there are permission issues
+                        }
                       }
+
+                      console.log(`PR ${prNumber} cleanup completed.`);

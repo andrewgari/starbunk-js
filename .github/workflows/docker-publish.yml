@@ -105,7 +105,9 @@ jobs:
     permissions:
       packages: write
       contents: read
+      pull-requests: write  # For commenting on PRs
     strategy:
+      fail-fast: false  # Continue building other containers even if one fails
       matrix:
         container: ${{ fromJson(needs.detect-changes.outputs.containers-matrix) }}
 
@@ -121,17 +123,74 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Tag and Push PR Image for ${{ matrix.container }}
+      - name: Extract metadata for ${{ matrix.container }}
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container }}
+          tags: |
+            type=raw,value=pr-${{ github.event.pull_request.number }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-{{sha}}
+
+      - name: Build and Push PR Image for ${{ matrix.container }}
         uses: docker/build-push-action@v5
         with:
           context: .
           file: containers/${{ matrix.container }}/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container }}:pr-${{ github.event.pull_request.number }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.container }}
           cache-to: type=gha,mode=max,scope=${{ matrix.container }}
+          platforms: linux/amd64
+
+      - name: Add PR Comment with Image Info
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+            const container = '${{ matrix.container }}';
+            const imageTag = `ghcr.io/${owner}/${repo}/${container}:pr-${prNumber}`;
+
+            const comment = `🐳 **Docker Image Published for \`${container}\`**
+
+            **Image:** \`${imageTag}\`
+            **Pull Command:** \`docker pull ${imageTag}\`
+
+            This image will be automatically deleted when the PR is closed.`;
+
+            // Check if we already commented for this container
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: prNumber
+            });
+
+            const existingComment = comments.find(comment =>
+              comment.body.includes(`Docker Image Published for \`${container}\``)
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existingComment.id,
+                body: comment
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body: comment
+              });
+            }
 
   delete-pr-image:
     name: 🗑️ Delete PR Images
@@ -143,20 +202,54 @@ jobs:
 
     steps:
       - name: Delete PR images for all containers
-        env:
-          GH_TOKEN: ${{ secrets.GHCR_PAT }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          echo "Attempting to delete PR images for PR ${PR_NUMBER}..."
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+            const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot'];
 
-          # List of all possible containers
-          containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+            console.log(`Attempting to delete PR images for PR ${prNumber}...`);
 
-          for container in "${containers[@]}"; do
-            echo "Deleting ${container} PR image..."
-            gh api \
-              --method DELETE \
-              /user/packages/container/${{ github.event.repository.name }}%2F${container}/versions \
-              -f package_version_id="$(gh api /user/packages/container/${{ github.event.repository.name }}%2F${container}/versions --jq ".[] | select(.metadata.container.tags[] == \"pr-${PR_NUMBER}\") | .id")" \
-              || echo "Failed to delete ${container} image or it doesn't exist"
-          done
+            for (const container of containers) {
+              try {
+                console.log(`Deleting ${container} PR image...`);
+
+                // Get all versions of the package
+                const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
+                  package_type: 'container',
+                  package_name: `${repo}/${container}`,
+                  username: owner
+                });
+
+                // Find versions with PR tags
+                const prVersions = versions.filter(version =>
+                  version.metadata &&
+                  version.metadata.container &&
+                  version.metadata.container.tags &&
+                  version.metadata.container.tags.some(tag =>
+                    tag.startsWith(`pr-${prNumber}`)
+                  )
+                );
+
+                // Delete each PR version
+                for (const version of prVersions) {
+                  console.log(`Deleting version ${version.id} with tags: ${version.metadata.container.tags.join(', ')}`);
+                  await github.rest.packages.deletePackageVersionForUser({
+                    package_type: 'container',
+                    package_name: `${repo}/${container}`,
+                    username: owner,
+                    package_version_id: version.id
+                  });
+                }
+
+                if (prVersions.length === 0) {
+                  console.log(`No PR images found for ${container}`);
+                }
+
+              } catch (error) {
+                console.log(`Failed to delete ${container} image:`, error.message);
+                // Don't fail the job if image doesn't exist
+              }
+            }
