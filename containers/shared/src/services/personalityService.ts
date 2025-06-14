@@ -1,7 +1,17 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { VectorEmbeddingService } from '../starbunk/services/vectorEmbeddingService';
 import { logger } from './logger';
+
+// Dynamic import for VectorEmbeddingService to handle missing dependency
+let VectorEmbeddingService: any = null;
+try {
+	// Try to import VectorEmbeddingService if available
+	const vectorModule = require('../starbunk/services/vectorEmbeddingService');
+	VectorEmbeddingService = vectorModule.VectorEmbeddingService;
+} catch (_error) {
+	// VectorEmbeddingService not available - will handle gracefully
+	logger.debug('[PersonalityService] VectorEmbeddingService not available, embedding generation disabled');
+}
 
 // Custom error for personality embedding errors
 export class PersonalityEmbeddingError extends Error {
@@ -17,11 +27,15 @@ export class PersonalityEmbeddingError extends Error {
 export class PersonalityService {
 	private static instance: PersonalityService | null = null;
 	private personalityEmbedding: Float32Array | null = null;
-	private embeddingService: VectorEmbeddingService;
+	private embeddingService: any = null;
 	private hasLoggedNpyWarning = false;
 
 	private constructor() {
-		this.embeddingService = VectorEmbeddingService.getInstance();
+		if (VectorEmbeddingService) {
+			this.embeddingService = VectorEmbeddingService.getInstance();
+		} else {
+			logger.debug('[PersonalityService] VectorEmbeddingService not available, embedding generation will be disabled');
+		}
 	}
 
 	public static getInstance(): PersonalityService {
@@ -129,6 +143,12 @@ export class PersonalityService {
 		botName: string = 'covaBot'
 	): Promise<Float32Array | null> {
 		try {
+			// Check if embedding service is available
+			if (!this.embeddingService) {
+				logger.warn('[PersonalityService] VectorEmbeddingService not available, cannot generate embeddings');
+				return null;
+			}
+
 			// Initialize the embedding service if needed
 			await this.embeddingService.initialize();
 
