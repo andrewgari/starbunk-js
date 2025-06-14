@@ -3,7 +3,7 @@ import { execFile } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import mammoth from 'mammoth';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { TextWithMetadata } from '../types/textWithMetadata';
 import { VectorMetadata } from './vectorService';
 

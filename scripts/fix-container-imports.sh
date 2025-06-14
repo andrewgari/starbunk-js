@@ -1,46 +1,66 @@
 #!/bin/bash
 
-# Script to fix import paths in container tests from monolithic structure to shared package
+# Script to fix import paths in container source and test files from monolithic structure to shared package
 
-echo "🔧 Fixing container test import paths..."
+echo "🔧 Fixing container import paths..."
 
-# Function to fix imports in a directory
+# Function to fix imports in all TypeScript files in a directory
 fix_imports_in_dir() {
     local dir=$1
     echo "Processing directory: $dir"
-    
-    # Find all TypeScript test files
-    find "$dir" -name "*.test.ts" -o -name "*.spec.ts" | while read -r file; do
+
+    # Find all TypeScript files (source and test files)
+    find "$dir" -name "*.ts" -not -path "*/node_modules/*" | while read -r file; do
         echo "  Fixing imports in: $file"
-        
-        # Replace old import paths with shared package imports
+
+        # Fix logger imports
         sed -i 's|from '\''../../../../services/logger'\''|from '\''@starbunk/shared'\''|g' "$file"
         sed -i 's|from '\''../../../services/logger'\''|from '\''@starbunk/shared'\''|g' "$file"
         sed -i 's|from '\''../../services/logger'\''|from '\''@starbunk/shared'\''|g' "$file"
         sed -i 's|from '\''@/services/logger'\''|from '\''@starbunk/shared'\''|g' "$file"
-        
+
+        # Fix bootstrap service imports
+        sed -i 's|from '\''../../../../services/bootstrap'\''|from '\''@starbunk/shared'\''|g' "$file"
+        sed -i 's|from '\''../../../services/bootstrap'\''|from '\''@starbunk/shared'\''|g' "$file"
+        sed -i 's|from '\''../../services/bootstrap'\''|from '\''@starbunk/shared'\''|g' "$file"
+        sed -i 's|from '\''@/services/bootstrap'\''|from '\''@starbunk/shared'\''|g' "$file"
+
+        # Fix LLM service imports
         sed -i 's|from '\''../../../../services/llm/llmManager'\''|from '\''@starbunk/shared'\''|g' "$file"
         sed -i 's|from '\''../../../services/llm/llmManager'\''|from '\''@starbunk/shared'\''|g' "$file"
         sed -i 's|from '\''@/services/llm/llmManager'\''|from '\''@starbunk/shared'\''|g' "$file"
-        
-        sed -i 's|from '\''@/services/bootstrap'\''|from '\''@starbunk/shared'\''|g' "$file"
+
+        sed -i 's|from '\''../../../../services/llm/promptManager'\''|from '\''@starbunk/shared'\''|g' "$file"
+        sed -i 's|from '\''../../../services/llm/promptManager'\''|from '\''@starbunk/shared'\''|g' "$file"
+        sed -i 's|from '\''@/services/llm/promptManager'\''|from '\''@starbunk/shared'\''|g' "$file"
+
+        sed -i 's|from '\''../../../../services/llm'\''|from '\''@starbunk/shared'\''|g' "$file"
+        sed -i 's|from '\''../../../services/llm'\''|from '\''@starbunk/shared'\''|g' "$file"
+        sed -i 's|from '\''@/services/llm'\''|from '\''@starbunk/shared'\''|g' "$file"
+
+        sed -i 's|from '\''../../../../services/llm/standardLlmService'\''|from '\''@starbunk/shared'\''|g' "$file"
+        sed -i 's|from '\''../../../services/llm/standardLlmService'\''|from '\''@starbunk/shared'\''|g' "$file"
+
+        # Fix personality service imports
+        sed -i 's|from '\''@/services/personalityService'\''|from '\''@starbunk/shared'\''|g' "$file"
+
+        # Fix Discord service imports
         sed -i 's|from '\''@/services/discordService'\''|from '\''@starbunk/shared'\''|g' "$file"
-        
-        # Replace jest.mock paths
-        sed -i 's|jest\.mock('\''../../../../services/logger'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
-        sed -i 's|jest\.mock('\''../../../services/logger'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
-        sed -i 's|jest\.mock('\''../../services/logger'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
-        sed -i 's|jest\.mock('\''@/services/logger'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
-        
-        sed -i 's|jest\.mock('\''../../../../services/llm/llmManager'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
-        sed -i 's|jest\.mock('\''../../../services/llm/llmManager'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
-        sed -i 's|jest\.mock('\''@/services/llm/llmManager'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
-        
-        # Add proper mock structure for shared package (this is a basic version)
-        # Note: This is a simplified approach - more complex mocking may be needed
-        if grep -q "jest\.mock('@starbunk/shared')" "$file"; then
-            echo "    ✅ Mock found, ensuring proper structure..."
-            # This would need more sophisticated handling for each specific case
+
+        # Replace jest.mock paths for test files
+        if [[ "$file" == *".test.ts" || "$file" == *".spec.ts" ]]; then
+            sed -i 's|jest\.mock('\''../../../../services/logger'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
+            sed -i 's|jest\.mock('\''../../../services/logger'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
+            sed -i 's|jest\.mock('\''../../services/logger'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
+            sed -i 's|jest\.mock('\''@/services/logger'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
+
+            sed -i 's|jest\.mock('\''../../../../services/llm/llmManager'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
+            sed -i 's|jest\.mock('\''../../../services/llm/llmManager'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
+            sed -i 's|jest\.mock('\''@/services/llm/llmManager'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
+
+            sed -i 's|jest\.mock('\''../../../../services/llm/promptManager'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
+            sed -i 's|jest\.mock('\''../../../services/llm/promptManager'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
+            sed -i 's|jest\.mock('\''@/services/llm/promptManager'\'')|jest.mock('\''@starbunk/shared'\'')|g' "$file"
         fi
     done
 }

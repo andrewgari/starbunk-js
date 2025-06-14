@@ -1,4 +1,4 @@
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { VectorService } from './vectorService';
 
 interface HelpContent {

@@ -5,7 +5,7 @@ import {
 	GuildMember,
 	SlashCommandBuilder
 } from 'discord.js';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { CampaignService } from '../services/campaignService';
 import { HelpService } from '../services/helpService';
 import { GameLLMService } from '../services/llmService';

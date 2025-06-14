@@ -1,5 +1,5 @@
-import { getDiscordService } from '@/services/bootstrap';
-import { logger } from '@/services/logger';
+import { getDiscordService } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
 import { BotIdentity } from '@/starbunk/types/botIdentity';
 
 interface GetBotIdentityOptions {

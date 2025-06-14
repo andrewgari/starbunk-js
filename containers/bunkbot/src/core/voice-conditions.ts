@@ -1,5 +1,5 @@
 import { ChannelType, VoiceChannel, VoiceState } from 'discord.js';
-import { logger } from '../../../services/logger';
+import { logger } from '@starbunk/shared';
 
 /**
  * Creates a condition that checks if a user joined a voice channel

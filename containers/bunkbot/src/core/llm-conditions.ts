@@ -1,9 +1,9 @@
 import { Message } from 'discord.js';
-import { getLLMManager } from '../../../services/bootstrap';
-import { LLMProviderType } from '../../../services/llm';
-import { LLMManager } from '../../../services/llm/llmManager';
-import { PromptType } from '../../../services/llm/promptManager';
-import { logger } from '../../../services/logger';
+import { getLLMManager } from '@starbunk/shared';
+import { LLMProviderType } from '@starbunk/shared';
+import { LLMManager } from '@starbunk/shared';
+import { PromptType } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
 import { Condition } from './conditions';
 
 interface LLMConditionOptions {

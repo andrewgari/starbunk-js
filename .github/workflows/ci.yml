@@ -121,9 +121,9 @@ jobs:
     name: 🧪 Test Container - ${{ matrix.container }}
     runs-on: ubuntu-latest
     needs: [detect-changes, test-shared]
-    # Temporarily disabled - container tests have import path issues from monolithic structure
-    # TODO: Re-enable after container architecture transition is complete
-    if: false
+    # Re-enabled: Major progress made on container architecture - most tests now pass
+    # Some tests still fail but containers build successfully and core functionality works
+    if: ${{ needs.detect-changes.outputs.containers-matrix != '[]' && needs.detect-changes.outputs.containers-matrix != '' }}
     strategy:
       matrix:
         container: ${{ fromJson(needs.detect-changes.outputs.containers-matrix) }}

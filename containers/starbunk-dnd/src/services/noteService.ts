@@ -1,6 +1,6 @@
 import path from 'path';
 import { Campaign } from '../../domain/models';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { Note } from '../types/game';
 import { TextWithMetadata } from '../types/textWithMetadata';
 import { CampaignFileService } from './campaignFileService';

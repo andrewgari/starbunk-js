@@ -1,6 +1,6 @@
-import { PromptRegistry, PromptType } from '@/services/llm/promptManager';
-import { logger } from '@/services/logger';
-import { getPersonalityService } from '@/services/personalityService';
+import { PromptRegistry, PromptType } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { getPersonalityService } from '@starbunk/shared';
 import { createReplyBot } from '@/starbunk/bots/core';
 import { COVA_BOT_PROMPTS } from './constants';
 import { covaDirectMentionTrigger, covaStatsCommandTrigger, covaTrigger } from './triggers';

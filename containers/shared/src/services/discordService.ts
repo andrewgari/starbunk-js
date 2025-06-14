@@ -12,7 +12,7 @@ import {
 	WebhookError
 } from "./errors/discordErrors";
 import { logger } from './logger';
-import { ensureError } from '@/utils/errorUtils';
+import { ensureError } from '../utils/errorUtils';
 
 export interface BulkMessageOptions {
 	channelIds: string[];

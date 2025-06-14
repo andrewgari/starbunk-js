@@ -5,6 +5,18 @@ export { validateEnvironment } from './utils/envValidation';
 export { createDiscordClient, ClientConfigs } from './discord/clientFactory';
 export { WebhookManager } from './services/webhookManager';
 
+// Bootstrap functions and service getters
+export {
+	bootstrapApplication,
+	bootstrapSnowbunkApplication,
+	getLogger,
+	getDiscordClient,
+	getDiscordService,
+	getDiscordGMService,
+	getLLMManager,
+	getWebhookService
+} from './services/bootstrap';
+
 // Simple dependency injection container
 export class Container {
 	private services = new Map<string, any>();

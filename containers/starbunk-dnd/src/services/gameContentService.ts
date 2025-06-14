@@ -1,4 +1,4 @@
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { Campaign, GameContent } from '../types/game';
 import { LLMQueryService } from './llmQueryService';
 import { NoteService } from './noteService';

@@ -24,6 +24,6 @@ export interface WebhookMessage {
 	files?: unknown[];
 }
 
-// Re-export existing types
-export * from '../discord/messageInfo';
-export * from '../webhooks/types';
+// Re-export existing types with explicit naming to avoid conflicts
+export { MessageInfo as DiscordMessageInfo } from '../discord/messageInfo';
+export { MessageInfo as WebhookMessageInfo } from '../webhooks/types';

@@ -3,7 +3,7 @@ import { LLMFactory } from './llmFactory';
 import { LLMProvider, LLMProviderType } from './llmProvider';
 import { LLMCompletion, LLMCompletionOptions } from './llmService';
 import { PromptType, formatPromptMessages, getPromptDefaultOptions } from './promptManager';
-import { ensureError } from '@/utils/errorUtils';
+import { ensureError } from '../../utils/errorUtils';
 
 /**
  * Error thrown when a provider is not available

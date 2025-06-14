@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 
 interface DirectoryWithAccess {
 	gm: string;

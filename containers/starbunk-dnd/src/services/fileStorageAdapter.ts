@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { StorageError, StorageItem, StoragePath } from '../types/storage';
 
 export class FileStorageAdapter {

@@ -1,5 +1,5 @@
 import { BehaviorSubject, Observable } from 'rxjs';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { QueryContext, StorageError, StorageItem, StoragePath } from '../types/storage';
 import { FileStorageAdapter } from './fileStorageAdapter';
 

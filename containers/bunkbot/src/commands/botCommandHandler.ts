@@ -1,6 +1,6 @@
 import { AutocompleteInteraction, ChatInputCommandInteraction, PermissionFlagsBits, SlashCommandBuilder, TextChannel } from 'discord.js';
 import userId from '../../discord/userId';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { BotRegistry } from '../bots/botRegistry';
 
 const commandBuilder = new SlashCommandBuilder()

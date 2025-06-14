@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { TextWithMetadata } from '../types/textWithMetadata';
 import { CampaignFileService } from './campaignFileService';
 import { VectorEmbeddingService } from './vectorEmbeddingService';

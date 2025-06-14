@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 
 // Define command data
 const data = new SlashCommandBuilder()

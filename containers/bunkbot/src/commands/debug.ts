@@ -1,6 +1,6 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { isDebugMode, setDebugMode } from '../../environment';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('debug')

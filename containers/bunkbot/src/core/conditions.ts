@@ -1,8 +1,8 @@
 import { isDebugMode } from '@/environment';
 import { Message } from 'discord.js';
 import userIds from '../../../discord/userId';
-import { StandardLLMService } from '../../../services/llm/standardLlmService';
-import { logger } from '../../../services/logger';
+import { StandardLLMService } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
 import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
 /**

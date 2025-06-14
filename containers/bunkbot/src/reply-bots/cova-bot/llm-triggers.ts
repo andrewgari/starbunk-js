@@ -1,9 +1,9 @@
 import { Message } from 'discord.js';
 import userId from '../../../../discord/userId';
-import { getLLMManager } from '../../../../services/bootstrap';
-import { LLMProviderType } from '../../../../services/llm';
-import { PromptRegistry, PromptType } from '../../../../services/llm/promptManager';
-import { logger } from '../../../../services/logger';
+import { getLLMManager } from '@starbunk/shared';
+import { LLMProviderType } from '@starbunk/shared';
+import { PromptRegistry, PromptType } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
 import { getPersonalityService } from '../../../../services/personalityService';
 import { PerformanceTimer } from '../../../../utils/time';
 import { ResponseGenerator, weightedRandomResponse } from '../../core/responses';

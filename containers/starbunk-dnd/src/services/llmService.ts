@@ -1,5 +1,5 @@
 import { StandardLLMService } from '../../services/llm/standardLlmService';
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { Campaign } from '../types/game';
 
 export class GameLLMService {

@@ -4,8 +4,8 @@ import guildIds from '../../discord/guildIds';
 import { Campaign } from '../../domain/models';
 import { CampaignMetadata, CampaignRepository, CreateCampaignData } from '../../domain/repositories';
 import { RepositoryFactory } from '../../infrastructure/persistence/repositoryFactory';
-import { getDiscordService } from '@/services/bootstrap';
-import { logger } from '../../services/logger';
+import { getDiscordService } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
 import { GameSystem, SUPPORTED_SYSTEMS } from '../types/game';
 import { CampaignFileService } from './campaignFileService';
 

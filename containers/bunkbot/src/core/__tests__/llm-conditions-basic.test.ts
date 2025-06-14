@@ -1,5 +1,5 @@
 import { LLMManager } from '@starbunk/shared';
-import { PromptType } from '../../../../services/llm/promptManager';
+import { PromptType } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
 import { mockMessage } from '../../test-utils/testUtils';
 import { createLLMCondition } from '../llm-conditions';

@@ -1,4 +1,4 @@
-import { logger } from '../../services/logger';
+import { logger } from '@starbunk/shared';
 import { AdventureMetadata } from '../types/adventure';
 import { Campaign } from '../types/game';
 import { StorageItem } from '../types/storage';

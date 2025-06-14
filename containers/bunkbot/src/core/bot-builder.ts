@@ -1,7 +1,6 @@
-import { getDiscordService } from '@/services/bootstrap';
+import { getDiscordService, logger } from '@starbunk/shared';
 import { PrismaClient } from '@prisma/client';
 import { Message } from 'discord.js';
-import { logger } from '../../../services/logger';
 import { getBotDefaults } from '../../config/botDefaults';
 import { BotIdentity } from '../../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
