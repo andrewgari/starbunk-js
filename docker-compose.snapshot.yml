@@ -10,7 +10,6 @@
 #
 # Image Format: ghcr.io/andrewgari/starbunk/{service}:pr-{number}-snapshot
 # Example: ghcr.io/andrewgari/starbunk/bunkbot:pr-123-snapshot
-
 version: '3.8'
 
 services:
