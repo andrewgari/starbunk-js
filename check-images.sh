@@ -6,10 +6,10 @@ echo "🔍 Checking Starbunk Docker Images in GHCR..."
 echo "============================================="
 
 images=(
-    "ghcr.io/andrewgari/starbunk/bunkbot:latest"
-    "ghcr.io/andrewgari/starbunk/djcova:latest"
-    "ghcr.io/andrewgari/starbunk/starbunk-dnd:latest"
-    "ghcr.io/andrewgari/starbunk/covabot:latest"
+    "ghcr.io/andrewgari/bunkbot:latest"
+    "ghcr.io/andrewgari/djcova:latest"
+    "ghcr.io/andrewgari/starbunk-dnd:latest"
+    "ghcr.io/andrewgari/covabot:latest"
 )
 
 all_exist=true

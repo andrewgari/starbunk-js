@@ -12,7 +12,7 @@ echo "=============================="
 check_pr_image() {
     local container=$1
     local pr_number=$2
-    local image="ghcr.io/andrewgari/starbunk/${container}:pr-${pr_number}-snapshot"
+    local image="ghcr.io/andrewgari/${container}:pr-${pr_number}-snapshot"
     
     echo -n "Checking ${container} PR ${pr_number}... "
     if docker manifest inspect "$image" > /dev/null 2>&1; then
@@ -28,7 +28,7 @@ check_pr_image() {
 pull_pr_image() {
     local container=$1
     local pr_number=$2
-    local image="ghcr.io/andrewgari/starbunk/${container}:pr-${pr_number}-snapshot"
+    local image="ghcr.io/andrewgari/${container}:pr-${pr_number}-snapshot"
     
     echo "📥 Pulling ${image}..."
     if docker pull "$image"; then
@@ -46,7 +46,7 @@ list_pr_images() {
     
     # This would require GitHub CLI or API access
     # For now, we'll show the expected naming pattern
-    echo "Expected naming pattern: ghcr.io/andrewgari/starbunk/${container}:pr-{number}-snapshot"
+    echo "Expected naming pattern: ghcr.io/andrewgari/${container}:pr-{number}-snapshot"
     echo "Use GitHub web interface to see actual images:"
     echo "https://github.com/andrewgari/starbunk-js/pkgs/container/starbunk%2F${container}"
 }
@@ -63,7 +63,7 @@ test_pr_image() {
 version: '3.8'
 services:
   ${container}:
-    image: ghcr.io/andrewgari/starbunk/${container}:pr-${pr_number}-snapshot
+    image: ghcr.io/andrewgari/${container}:pr-${pr_number}-snapshot
 EOF
 
     echo "Created docker-compose.pr-test.yml for testing"
@@ -140,5 +140,5 @@ echo "   GitHub Packages: https://github.com/andrewgari?tab=packages"
 echo "   Actions: https://github.com/andrewgari/starbunk-js/actions"
 echo ""
 echo "💡 PR Image Naming Convention:"
-echo "   Format: ghcr.io/andrewgari/starbunk/{container}:pr-{number}-snapshot"
-echo "   Example: ghcr.io/andrewgari/starbunk/bunkbot:pr-123-snapshot"
+echo "   Format: ghcr.io/andrewgari/{container}:pr-{number}-snapshot"
+echo "   Example: ghcr.io/andrewgari/bunkbot:pr-123-snapshot"

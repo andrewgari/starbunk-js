@@ -44,7 +44,7 @@ services:
 
   # BunkBot - Reply bots and admin commands (PR Snapshot)
   bunkbot:
-    image: ghcr.io/andrewgari/starbunk/bunkbot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/bunkbot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
     container_name: starbunk-bunkbot-snapshot
     restart: unless-stopped
     environment:
@@ -85,7 +85,7 @@ services:
 
   # DJCova - Music service (PR Snapshot)
   djcova:
-    image: ghcr.io/andrewgari/starbunk/djcova:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/djcova:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
     container_name: starbunk-djcova-snapshot
     restart: unless-stopped
     environment:
@@ -122,7 +122,7 @@ services:
 
   # Starbunk-DND - D&D features and bridge (PR Snapshot)
   starbunk-dnd:
-    image: ghcr.io/andrewgari/starbunk/starbunk-dnd:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/starbunk-dnd:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
     container_name: starbunk-dnd-snapshot
     restart: unless-stopped
     environment:
@@ -169,7 +169,7 @@ services:
 
   # CovaBot - AI personality bot (PR Snapshot)
   covabot:
-    image: ghcr.io/andrewgari/starbunk/covabot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/covabot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
     container_name: starbunk-covabot-snapshot
     restart: unless-stopped
     environment:

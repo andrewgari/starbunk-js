@@ -52,10 +52,10 @@ echo "This may take a few minutes on first run..."
 # Pull all images first to check if they exist
 echo "🔍 Checking image availability..."
 images=(
-    "ghcr.io/andrewgari/starbunk/bunkbot:latest"
-    "ghcr.io/andrewgari/starbunk/djcova:latest"
-    "ghcr.io/andrewgari/starbunk/starbunk-dnd:latest"
-    "ghcr.io/andrewgari/starbunk/covabot:latest"
+    "ghcr.io/andrewgari/bunkbot:latest"
+    "ghcr.io/andrewgari/djcova:latest"
+    "ghcr.io/andrewgari/starbunk-dnd:latest"
+    "ghcr.io/andrewgari/covabot:latest"
 )
 
 for image in "${images[@]}"; do

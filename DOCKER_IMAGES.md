@@ -8,10 +8,10 @@ Each service is published as a separate image to GitHub Container Registry (GHCR
 
 | Service | Image | Description |
 |---------|-------|-------------|
-| BunkBot | `ghcr.io/andrewgari/starbunk/bunkbot:latest` | Reply bots and admin commands |
-| DJCova | `ghcr.io/andrewgari/starbunk/djcova:latest` | Music service |
-| Starbunk-DND | `ghcr.io/andrewgari/starbunk/starbunk-dnd:latest` | D&D features and bridge |
-| CovaBot | `ghcr.io/andrewgari/starbunk/covabot:latest` | AI personality bot |
+| BunkBot | `ghcr.io/andrewgari/bunkbot:latest` | Reply bots and admin commands |
+| DJCova | `ghcr.io/andrewgari/djcova:latest` | Music service |
+| Starbunk-DND | `ghcr.io/andrewgari/starbunk-dnd:latest` | D&D features and bridge |
+| CovaBot | `ghcr.io/andrewgari/covabot:latest` | AI personality bot |
 
 ## 🚀 Publishing Images
 

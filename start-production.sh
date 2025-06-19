@@ -43,7 +43,7 @@ echo "✅ Environment variables check passed"
 
 # Authenticate with GitHub Container Registry if needed
 echo "🔐 Checking GitHub Container Registry access..."
-if ! docker pull ghcr.io/andrewgari/starbunk/bunkbot:latest > /dev/null 2>&1; then
+if ! docker pull ghcr.io/andrewgari/bunkbot:latest > /dev/null 2>&1; then
     echo "⚠️  Cannot pull images from GHCR. You may need to:"
     echo "   1. Authenticate: docker login ghcr.io -u andrewgari"
     echo "   2. Ensure images exist in the registry"
