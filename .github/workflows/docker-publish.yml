@@ -131,8 +131,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk/${{ matrix.container }}
           tags: |
-            type=raw,value=pr-${{ github.event.pull_request.number }}
-            type=raw,value=pr-${{ github.event.pull_request.number }}-{{sha}}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-snapshot
 
       - name: Build and Push PR Image for ${{ matrix.container }}
         uses: docker/build-push-action@v5
@@ -154,14 +153,15 @@ jobs:
             const { owner, repo } = context.repo;
             const prNumber = context.payload.pull_request.number;
             const container = '${{ matrix.container }}';
-            const imageTag = `ghcr.io/${owner}/starbunk/${container}:pr-${prNumber}`;
+            const imageTag = `ghcr.io/${owner}/starbunk/${container}:pr-${prNumber}-snapshot`;
 
             const comment = `🐳 **Docker Image Published for \`${container}\`**
 
             **Image:** \`${imageTag}\`
             **Pull Command:** \`docker pull ${imageTag}\`
 
-            This image will be automatically deleted when the PR is closed.`;
+            📝 **Note:** This image uses a predictable name that gets updated with each PR commit.
+            🗑️ **Cleanup:** Image will be automatically deleted when the PR is closed.`;
 
             // Check if we already commented for this container
             const { data: comments } = await github.rest.issues.listComments({
@@ -223,13 +223,13 @@ jobs:
                   username: owner
                 });
 
-                // Find versions with PR tags
+                // Find versions with PR snapshot tags
                 const prVersions = versions.filter(version =>
                   version.metadata &&
                   version.metadata.container &&
                   version.metadata.container.tags &&
                   version.metadata.container.tags.some(tag =>
-                    tag.startsWith(`pr-${prNumber}`)
+                    tag === `pr-${prNumber}-snapshot`
                   )
                 );
 
