@@ -1,11 +1,11 @@
-# Docker Compose for Production Deployment (Latest Images)
+# Podman Compose for Production Deployment (Latest Images)
 # ========================================================
 # This file is designed for production deployment using the latest stable images.
 # 
 # Usage:
-#   docker-compose -f docker-compose.latest.yml up -d
+#   podman-compose -f podman-compose.latest.yml up -d
 #
-# Image Format: ghcr.io/andrewgari/starbunk/{service}:latest
+# Image Format: ghcr.io/andrewgari/{service}:latest
 # 
 # Prerequisites:
 #   - Ensure all latest images are published to GHCR
@@ -17,8 +17,6 @@
 #   - Configuring log aggregation
 #   - Setting up monitoring and alerting
 #   - Implementing backup strategies for PostgreSQL data
-
-version: '3.8'
 
 services:
   # PostgreSQL Database - Shared by services that need persistence
@@ -45,10 +43,9 @@ services:
     networks:
       - starbunk-latest-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-postgres-latest"
 
   # BunkBot - Reply bots and admin commands (Latest Stable)
   bunkbot:
@@ -80,10 +77,9 @@ services:
     networks:
       - starbunk-latest-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-bunkbot-latest"
     deploy:
       resources:
         limits:
@@ -117,10 +113,9 @@ services:
     networks:
       - starbunk-latest-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-djcova-latest"
     deploy:
       resources:
         limits:
@@ -164,10 +159,9 @@ services:
     networks:
       - starbunk-latest-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-dnd-latest"
     deploy:
       resources:
         limits:
@@ -204,10 +198,9 @@ services:
     networks:
       - starbunk-latest-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-covabot-latest"
     deploy:
       resources:
         limits:

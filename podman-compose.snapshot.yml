@@ -1,30 +1,21 @@
-# Docker Compose for Production Deployment (Latest Images)
-# ========================================================
-# This file is designed for production deployment using the latest stable images.
+# Podman Compose for PR Snapshot Testing
+# =====================================
+# This file is designed for testing PR snapshot images with predictable naming.
 # 
 # Usage:
-#   docker-compose -f docker-compose.latest.yml up -d
+#   1. Set the PR_NUMBER environment variable:
+#      export PR_NUMBER=123
+#   2. Run with: podman-compose -f podman-compose.snapshot.yml up
+#   3. Or specify PR inline: PR_NUMBER=123 podman-compose -f podman-compose.snapshot.yml up
 #
-# Image Format: ghcr.io/andrewgari/starbunk/{service}:latest
-# 
-# Prerequisites:
-#   - Ensure all latest images are published to GHCR
-#   - Configure environment variables in .env file
-#   - Verify PostgreSQL credentials are set
-#
-# For production deployment, consider:
-#   - Setting up proper SSL/TLS termination
-#   - Configuring log aggregation
-#   - Setting up monitoring and alerting
-#   - Implementing backup strategies for PostgreSQL data
-
-version: '3.8'
+# Image Format: ghcr.io/andrewgari/{service}:pr-{number}-snapshot
+# Example: ghcr.io/andrewgari/bunkbot:pr-123-snapshot
 
 services:
   # PostgreSQL Database - Shared by services that need persistence
   postgres:
     image: postgres:15-alpine
-    container_name: starbunk-postgres-latest
+    container_name: starbunk-postgres-snapshot
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-starbunk}
@@ -32,7 +23,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
-      - postgres_latest_data:/var/lib/postgresql/data
+      - postgres_snapshot_data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d:ro
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -43,17 +34,16 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - starbunk-latest-network
+      - starbunk-snapshot-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-postgres-snapshot"
 
-  # BunkBot - Reply bots and admin commands (Latest Stable)
+  # BunkBot - Reply bots and admin commands (PR Snapshot)
   bunkbot:
-    image: ghcr.io/andrewgari/bunkbot:latest
-    container_name: starbunk-bunkbot-latest
+    image: ghcr.io/andrewgari/bunkbot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    container_name: starbunk-bunkbot-snapshot
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -64,8 +54,8 @@ services:
       - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
-      - DEBUG_MODE=${DEBUG_MODE:-false}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DEBUG_MODE=${DEBUG_MODE:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
     ports:
       - "${BUNKBOT_PORT:-3000}:3000"
     depends_on:
@@ -78,12 +68,11 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-latest-network
+      - starbunk-snapshot-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-bunkbot-snapshot"
     deploy:
       resources:
         limits:
@@ -91,23 +80,23 @@ services:
         reservations:
           memory: 256M
 
-  # DJCova - Music service (Latest Stable)
+  # DJCova - Music service (PR Snapshot)
   djcova:
-    image: ghcr.io/andrewgari/djcova:latest
-    container_name: starbunk-djcova-latest
+    image: ghcr.io/andrewgari/djcova:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    container_name: starbunk-djcova-snapshot
     restart: unless-stopped
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
-      - DEBUG_MODE=${DEBUG_MODE:-false}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DEBUG_MODE=${DEBUG_MODE:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
     ports:
       - "${DJCOVA_PORT:-3001}:3001"
     volumes:
-      - djcova_latest_cache:/app/cache
-      - djcova_latest_temp:/tmp
+      - djcova_snapshot_cache:/app/cache
+      - djcova_snapshot_temp:/tmp
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
       interval: 30s
@@ -115,12 +104,11 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-latest-network
+      - starbunk-snapshot-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-djcova-snapshot"
     deploy:
       resources:
         limits:
@@ -128,10 +116,10 @@ services:
         reservations:
           memory: 512M
 
-  # Starbunk-DND - D&D features and bridge (Latest Stable)
+  # Starbunk-DND - D&D features and bridge (PR Snapshot)
   starbunk-dnd:
-    image: ghcr.io/andrewgari/starbunk-dnd:latest
-    container_name: starbunk-dnd-latest
+    image: ghcr.io/andrewgari/starbunk-dnd:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    container_name: starbunk-dnd-snapshot
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -144,14 +132,14 @@ services:
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
-      - DEBUG_MODE=${DEBUG_MODE:-false}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DEBUG_MODE=${DEBUG_MODE:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
     ports:
       - "${STARBUNK_DND_PORT:-3002}:3002"
     volumes:
-      - dnd_latest_data:/app/data
-      - dnd_latest_campaigns:/app/data/campaigns
-      - dnd_latest_context:/app/data/llm_context
+      - dnd_snapshot_data:/app/data
+      - dnd_snapshot_campaigns:/app/data/campaigns
+      - dnd_snapshot_context:/app/data/llm_context
     depends_on:
       postgres:
         condition: service_healthy
@@ -162,12 +150,11 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-latest-network
+      - starbunk-snapshot-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-dnd-snapshot"
     deploy:
       resources:
         limits:
@@ -175,10 +162,10 @@ services:
         reservations:
           memory: 512M
 
-  # CovaBot - AI personality bot (Latest Stable)
+  # CovaBot - AI personality bot (PR Snapshot)
   covabot:
-    image: ghcr.io/andrewgari/covabot:latest
-    container_name: starbunk-covabot-latest
+    image: ghcr.io/andrewgari/covabot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    container_name: starbunk-covabot-snapshot
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -188,8 +175,8 @@ services:
       - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
-      - DEBUG_MODE=${DEBUG_MODE:-false}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DEBUG_MODE=${DEBUG_MODE:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
     ports:
       - "${COVABOT_PORT:-3003}:3003"
     depends_on:
@@ -202,12 +189,11 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-latest-network
+      - starbunk-snapshot-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-covabot-snapshot"
     deploy:
       resources:
         limits:
@@ -215,25 +201,25 @@ services:
         reservations:
           memory: 256M
 
-# Named volumes for persistent data (latest/production)
+# Named volumes for persistent data (snapshot-specific)
 volumes:
-  postgres_latest_data:
+  postgres_snapshot_data:
     driver: local
-  djcova_latest_cache:
+  djcova_snapshot_cache:
     driver: local
-  djcova_latest_temp:
+  djcova_snapshot_temp:
     driver: local
-  dnd_latest_data:
+  dnd_snapshot_data:
     driver: local
-  dnd_latest_campaigns:
+  dnd_snapshot_campaigns:
     driver: local
-  dnd_latest_context:
+  dnd_snapshot_context:
     driver: local
 
-# Custom network for service communication (latest/production)
+# Custom network for service communication (snapshot-specific)
 networks:
-  starbunk-latest-network:
+  starbunk-snapshot-network:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.22.0.0/16
+        - subnet: 172.21.0.0/16

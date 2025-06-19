@@ -180,15 +180,15 @@ jobs:
           if [ "${{ inputs.push_to_registry }}" = "true" ]; then
             echo "### Published Images" >> $GITHUB_STEP_SUMMARY
             if [ "${{ needs.prepare.outputs.bunkbot }}" = "true" ]; then
-              echo "- \`ghcr.io/${{ github.repository_owner }}/starbunk/bunkbot:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- \`ghcr.io/${{ github.repository_owner }}/bunkbot:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
             fi
             if [ "${{ needs.prepare.outputs.djcova }}" = "true" ]; then
-              echo "- \`ghcr.io/${{ github.repository_owner }}/starbunk/djcova:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- \`ghcr.io/${{ github.repository_owner }}/djcova:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
             fi
             if [ "${{ needs.prepare.outputs.starbunk-dnd }}" = "true" ]; then
-              echo "- \`ghcr.io/${{ github.repository_owner }}/starbunk/starbunk-dnd:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- \`ghcr.io/${{ github.repository_owner }}/starbunk-dnd:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
             fi
             if [ "${{ needs.prepare.outputs.covabot }}" = "true" ]; then
-              echo "- \`ghcr.io/${{ github.repository_owner }}/starbunk/covabot:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- \`ghcr.io/${{ github.repository_owner }}/covabot:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
             fi
           fi

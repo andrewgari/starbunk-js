@@ -1,30 +1,21 @@
-# Docker Compose for Production Deployment (Latest Images)
-# ========================================================
-# This file is designed for production deployment using the latest stable images.
+# Podman Compose for Starbunk Services
+# ====================================
+# This is the main Podman Compose file equivalent to docker-compose.yml
 # 
 # Usage:
-#   docker-compose -f docker-compose.latest.yml up -d
+#   podman-compose up -d
+#   podman-compose -f podman-compose.yml up -d
 #
-# Image Format: ghcr.io/andrewgari/starbunk/{service}:latest
-# 
 # Prerequisites:
-#   - Ensure all latest images are published to GHCR
 #   - Configure environment variables in .env file
-#   - Verify PostgreSQL credentials are set
-#
-# For production deployment, consider:
-#   - Setting up proper SSL/TLS termination
-#   - Configuring log aggregation
-#   - Setting up monitoring and alerting
-#   - Implementing backup strategies for PostgreSQL data
-
-version: '3.8'
+#   - Ensure PostgreSQL credentials are set
+#   - Verify all required images are available
 
 services:
   # PostgreSQL Database - Shared by services that need persistence
   postgres:
     image: postgres:15-alpine
-    container_name: starbunk-postgres-latest
+    container_name: starbunk-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-starbunk}
@@ -32,7 +23,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
-      - postgres_latest_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d:ro
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -43,17 +34,16 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - starbunk-latest-network
+      - starbunk-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-postgres"
 
-  # BunkBot - Reply bots and admin commands (Latest Stable)
+  # BunkBot - Reply bots and admin commands
   bunkbot:
     image: ghcr.io/andrewgari/bunkbot:latest
-    container_name: starbunk-bunkbot-latest
+    container_name: starbunk-bunkbot
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -78,12 +68,11 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-latest-network
+      - starbunk-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-bunkbot"
     deploy:
       resources:
         limits:
@@ -91,10 +80,10 @@ services:
         reservations:
           memory: 256M
 
-  # DJCova - Music service (Latest Stable)
+  # DJCova - Music service
   djcova:
     image: ghcr.io/andrewgari/djcova:latest
-    container_name: starbunk-djcova-latest
+    container_name: starbunk-djcova
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -106,8 +95,8 @@ services:
     ports:
       - "${DJCOVA_PORT:-3001}:3001"
     volumes:
-      - djcova_latest_cache:/app/cache
-      - djcova_latest_temp:/tmp
+      - djcova_cache:/app/cache
+      - djcova_temp:/tmp
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
       interval: 30s
@@ -115,12 +104,11 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-latest-network
+      - starbunk-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-djcova"
     deploy:
       resources:
         limits:
@@ -128,10 +116,10 @@ services:
         reservations:
           memory: 512M
 
-  # Starbunk-DND - D&D features and bridge (Latest Stable)
+  # Starbunk-DND - D&D features and bridge
   starbunk-dnd:
     image: ghcr.io/andrewgari/starbunk-dnd:latest
-    container_name: starbunk-dnd-latest
+    container_name: starbunk-dnd
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -149,9 +137,9 @@ services:
     ports:
       - "${STARBUNK_DND_PORT:-3002}:3002"
     volumes:
-      - dnd_latest_data:/app/data
-      - dnd_latest_campaigns:/app/data/campaigns
-      - dnd_latest_context:/app/data/llm_context
+      - dnd_data:/app/data
+      - dnd_campaigns:/app/data/campaigns
+      - dnd_context:/app/data/llm_context
     depends_on:
       postgres:
         condition: service_healthy
@@ -162,12 +150,11 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-latest-network
+      - starbunk-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-dnd"
     deploy:
       resources:
         limits:
@@ -175,10 +162,10 @@ services:
         reservations:
           memory: 512M
 
-  # CovaBot - AI personality bot (Latest Stable)
+  # CovaBot - AI personality bot
   covabot:
     image: ghcr.io/andrewgari/covabot:latest
-    container_name: starbunk-covabot-latest
+    container_name: starbunk-covabot
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -202,12 +189,11 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-latest-network
+      - starbunk-network
     logging:
-      driver: "json-file"
+      driver: journald
       options:
-        max-size: "10m"
-        max-file: "3"
+        tag: "starbunk-covabot"
     deploy:
       resources:
         limits:
@@ -215,25 +201,25 @@ services:
         reservations:
           memory: 256M
 
-# Named volumes for persistent data (latest/production)
+# Named volumes for persistent data
 volumes:
-  postgres_latest_data:
+  postgres_data:
     driver: local
-  djcova_latest_cache:
+  djcova_cache:
     driver: local
-  djcova_latest_temp:
+  djcova_temp:
     driver: local
-  dnd_latest_data:
+  dnd_data:
     driver: local
-  dnd_latest_campaigns:
+  dnd_campaigns:
     driver: local
-  dnd_latest_context:
+  dnd_context:
     driver: local
 
-# Custom network for service communication (latest/production)
+# Custom network for service communication
 networks:
-  starbunk-latest-network:
+  starbunk-network:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.22.0.0/16
+        - subnet: 172.20.0.0/16
