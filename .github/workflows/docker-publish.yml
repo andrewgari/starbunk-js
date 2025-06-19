@@ -1,4 +1,4 @@
-name: PR Docker Image Publisher
+name: PR Docker Build & Publish
 
 on:
   pull_request:
@@ -10,10 +10,63 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # Wait for PR checks to complete before building Docker images
+  # This ensures we only build images after code quality checks pass
+  wait-for-checks:
+    name: ⏳ Wait for PR Checks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    steps:
+      - name: Wait for PR Checks
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: '🔍 PR - Detect Container Changes'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+          allowed-conclusions: success,skipped
+
+      - name: Wait for Lint Checks
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: '🔍 PR - Run ESLint Code Quality Checks'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+          allowed-conclusions: success,skipped
+
+      - name: Wait for Type Checks
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: '🔍 PR - Verify TypeScript Types'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+          allowed-conclusions: success,skipped
+
+      - name: Wait for Build
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: '🔨 PR - Build TypeScript Project'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+          allowed-conclusions: success,skipped
+
+      - name: Wait for Unit Tests
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: '🧪 PR - Run Jest Unit Tests'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+          allowed-conclusions: success,skipped
+
   # Detect which containers have changed to optimize Docker builds
   detect-changes:
     name: 🔍 Detect Container Changes
     runs-on: ubuntu-latest
+    needs: wait-for-checks
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     outputs:
       shared: ${{ steps.filter.outputs.shared }}
@@ -97,8 +150,8 @@ jobs:
             echo "any-changed=true" >> $GITHUB_OUTPUT
             echo "Containers to build: ${containers[*]}"
           fi
-  publish-pr-image:
-    name: 🚀 Publish PR Images - ${{ matrix.container }}
+  build-and-publish-pr-image:
+    name: 🐳 Build & Publish PR Snapshot - ${{ matrix.container }}
     runs-on: ubuntu-latest
     needs: detect-changes
     if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' && needs.detect-changes.outputs.any-container-changed == 'true' }}
@@ -133,7 +186,7 @@ jobs:
           tags: |
             type=raw,value=pr-${{ github.event.pull_request.number }}-snapshot
 
-      - name: Build and Push PR Image for ${{ matrix.container }}
+      - name: Build and Push PR Snapshot for ${{ matrix.container }}
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -155,11 +208,12 @@ jobs:
             const container = '${{ matrix.container }}';
             const imageTag = `ghcr.io/${owner}/${container}:pr-${prNumber}-snapshot`;
 
-            const comment = `🐳 **Docker Image Published for \`${container}\`**
+            const comment = `🐳 **Docker Image Built & Published for \`${container}\`**
 
             **Image:** \`${imageTag}\`
             **Pull Command:** \`docker pull ${imageTag}\`
 
+            ✅ **Build Validation:** This image was built after all PR checks passed, serving as both build validation and snapshot artifact.
             📝 **Note:** This image uses a predictable name that gets updated with each PR commit.
             🗑️ **Cleanup:** Image will be automatically deleted when the PR is closed.`;
 
@@ -171,7 +225,7 @@ jobs:
             });
 
             const existingComment = comments.find(comment =>
-              comment.body.includes(`Docker Image Published for \`${container}\``)
+              comment.body.includes(`Docker Image Built & Published for \`${container}\``)
             );
 
             if (existingComment) {

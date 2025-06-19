@@ -30,17 +30,17 @@ jobs:
                           // Get all versions of the package
                           const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
                             package_type: 'container',
-                            package_name: `starbunk-${container}`,
+                            package_name: container,
                             username: owner
                           });
 
-                          // Find versions with PR tags
+                          // Find versions with PR snapshot tags
                           const prVersions = versions.filter(version =>
                             version.metadata &&
                             version.metadata.container &&
                             version.metadata.container.tags &&
                             version.metadata.container.tags.some(tag =>
-                              tag.startsWith(`pr-${prNumber}`)
+                              tag === `pr-${prNumber}-snapshot`
                             )
                           );
 
@@ -49,7 +49,7 @@ jobs:
                             console.log(`Deleting version ${version.id} with tags: ${version.metadata.container.tags.join(', ')}`);
                             await github.rest.packages.deletePackageVersionForUser({
                               package_type: 'container',
-                              package_name: `starbunk-${container}`,
+                              package_name: container,
                               username: owner,
                               package_version_id: version.id
                             });
