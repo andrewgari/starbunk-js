@@ -32,7 +32,7 @@ services:
 
   # BunkBot - Reply bots and admin commands
   bunkbot:
-    image: ghcr.io/andrewgari/starbunk-bunkbot:latest
+    image: ghcr.io/andrewgari/starbunk/bunkbot:latest
     container_name: starbunk-bunkbot
     restart: unless-stopped
     environment:
@@ -73,7 +73,7 @@ services:
 
   # DJCova - Music service
   djcova:
-    image: ghcr.io/andrewgari/starbunk-djcova:latest
+    image: ghcr.io/andrewgari/starbunk/djcova:latest
     container_name: starbunk-djcova
     restart: unless-stopped
     environment:
@@ -110,7 +110,7 @@ services:
 
   # Starbunk-DND - D&D features and bridge
   starbunk-dnd:
-    image: ghcr.io/andrewgari/starbunk-starbunk-dnd:latest
+    image: ghcr.io/andrewgari/starbunk/starbunk-dnd:latest
     container_name: starbunk-dnd
     restart: unless-stopped
     environment:
@@ -157,7 +157,7 @@ services:
 
   # CovaBot - AI personality bot
   covabot:
-    image: ghcr.io/andrewgari/starbunk-covabot:latest
+    image: ghcr.io/andrewgari/starbunk/covabot:latest
     container_name: starbunk-covabot
     restart: unless-stopped
     environment:

@@ -129,7 +129,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-${{ matrix.container }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk/${{ matrix.container }}
           tags: |
             type=raw,value=pr-${{ github.event.pull_request.number }}
             type=raw,value=pr-${{ github.event.pull_request.number }}-{{sha}}
@@ -154,7 +154,7 @@ jobs:
             const { owner, repo } = context.repo;
             const prNumber = context.payload.pull_request.number;
             const container = '${{ matrix.container }}';
-            const imageTag = `ghcr.io/${owner}/starbunk-${container}:pr-${prNumber}`;
+            const imageTag = `ghcr.io/${owner}/starbunk/${container}:pr-${prNumber}`;
 
             const comment = `🐳 **Docker Image Published for \`${container}\`**
 
@@ -219,7 +219,7 @@ jobs:
                 // Get all versions of the package
                 const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
                   package_type: 'container',
-                  package_name: `starbunk-${container}`,
+                  package_name: `starbunk/${container}`,
                   username: owner
                 });
 
@@ -238,7 +238,7 @@ jobs:
                   console.log(`Deleting version ${version.id} with tags: ${version.metadata.container.tags.join(', ')}`);
                   await github.rest.packages.deletePackageVersionForUser({
                     package_type: 'container',
-                    package_name: `starbunk-${container}`,
+                    package_name: `starbunk/${container}`,
                     username: owner,
                     package_version_id: version.id
                   });
