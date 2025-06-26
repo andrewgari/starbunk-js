@@ -3,6 +3,8 @@ services:
     image: ghcr.io/andrewgari/bunkbot:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-bunkbot-snapshot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -38,6 +40,8 @@ services:
     image: ghcr.io/andrewgari/djcova:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-djcova-snapshot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -74,6 +78,8 @@ services:
     image: ghcr.io/andrewgari/starbunk-dnd:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-dnd-snapshot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -117,6 +123,8 @@ services:
     image: ghcr.io/andrewgari/covabot:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-covabot-snapshot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}

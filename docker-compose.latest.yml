@@ -2,6 +2,11 @@
 # ========================================================
 # This file is designed for production deployment using the latest stable images.
 #
+# Prerequisites:
+#   - Ensure .env file exists in the same directory as this compose file
+#   - All required environment variables must be defined in .env file
+#   - Verify all latest images are available in GHCR
+#
 # Usage:
 #   docker-compose -f docker-compose.latest.yml up -d
 #
@@ -16,6 +21,8 @@ services:
     image: ghcr.io/andrewgari/bunkbot:latest
     container_name: starbunk-bunkbot-latest
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -52,6 +59,8 @@ services:
     image: ghcr.io/andrewgari/djcova:latest
     container_name: starbunk-djcova-latest
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -87,6 +96,8 @@ services:
     image: ghcr.io/andrewgari/starbunk-dnd:latest
     container_name: starbunk-dnd-latest
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -129,6 +140,8 @@ services:
     image: ghcr.io/andrewgari/covabot:latest
     container_name: starbunk-covabot-latest
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}

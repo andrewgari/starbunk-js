@@ -6,6 +6,8 @@ services:
     image: postgres:15-alpine
     container_name: starbunk-postgres
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-starbunk}
       POSTGRES_USER: ${POSTGRES_USER:-starbunk}
@@ -35,6 +37,8 @@ services:
     image: ghcr.io/andrewgari/bunkbot:latest
     container_name: starbunk-bunkbot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -76,6 +80,8 @@ services:
     image: ghcr.io/andrewgari/djcova:latest
     container_name: starbunk-djcova
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -113,6 +119,8 @@ services:
     image: ghcr.io/andrewgari/starbunk-dnd:latest
     container_name: starbunk-dnd
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -160,6 +168,8 @@ services:
     image: ghcr.io/andrewgari/covabot:latest
     container_name: starbunk-covabot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
