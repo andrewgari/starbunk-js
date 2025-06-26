@@ -10,7 +10,8 @@ import {
 	ClientConfigs,
 	WebhookManager,
 	getMessageFilter,
-	MessageFilter
+	MessageFilter,
+	runStartupDiagnostics
 } from '@starbunk/shared';
 
 // Import commands
@@ -28,6 +29,18 @@ class BunkBotContainer {
 		logger.info('🚀 Initializing BunkBot container...');
 
 		try {
+			// Run startup diagnostics
+			const diagnostics = await runStartupDiagnostics();
+			const failures = diagnostics.filter(d => d.status === 'fail');
+
+			if (failures.length > 0) {
+				logger.error('❌ Critical startup issues detected:');
+				for (const failure of failures) {
+					logger.error(`  - ${failure.check}: ${failure.message}`);
+				}
+				throw new Error(`Startup failed due to ${failures.length} critical issues`);
+			}
+
 			// Validate environment
 			this.validateEnvironment();
 

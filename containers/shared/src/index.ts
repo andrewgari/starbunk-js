@@ -2,6 +2,8 @@
 export { logger } from './services/logger';
 export { ensureError } from './utils/errorUtils';
 export { validateEnvironment, getDebugMode, getTestingServerIds, getTestingChannelIds } from './utils/envValidation';
+export { runStartupDiagnostics, StartupDiagnostics } from './utils/diagnostics';
+export type { DiagnosticResult } from './utils/diagnostics';
 export { isDebugMode, setDebugMode } from './environment';
 export { createDiscordClient, ClientConfigs } from './discord/clientFactory';
 export { WebhookManager } from './services/webhookManager';
