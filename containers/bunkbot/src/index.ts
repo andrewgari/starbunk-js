@@ -1,5 +1,6 @@
 // BunkBot - Reply bots and admin commands container
 import { Events } from 'discord.js';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 import {
 	logger,
 	container,
@@ -20,10 +21,11 @@ import debugCommand from './commands/debug';
 
 class BunkBotContainer {
 	private client: any;
-	private webhookManager: WebhookManager;
-	private messageFilter: MessageFilter;
+	private webhookManager!: WebhookManager;
+	private messageFilter!: MessageFilter;
 	private hasInitialized = false;
 	private commands = new Map();
+	private healthServer: any;
 
 	async initialize(): Promise<void> {
 		logger.info('🚀 Initializing BunkBot container...');
@@ -55,6 +57,9 @@ class BunkBotContainer {
 
 			// Set up event handlers
 			this.setupEventHandlers();
+
+			// Start health check server
+			this.startHealthServer();
 
 			logger.info('✅ BunkBot container initialized successfully');
 		} catch (error) {
@@ -98,6 +103,33 @@ private registerCommands(): void {
 
 	logger.info(`Registered ${this.commands.size} commands: ${Array.from(this.commands.keys()).join(', ')}`);
 }
+
+	private startHealthServer(): void {
+		this.healthServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+			if (req.url === '/health') {
+				const healthStatus = {
+					status: 'healthy',
+					timestamp: new Date().toISOString(),
+					discord: {
+						connected: this.client?.isReady() || false,
+						initialized: this.hasInitialized
+					},
+					uptime: process.uptime()
+				};
+
+				res.writeHead(200, { 'Content-Type': 'application/json' });
+				res.end(JSON.stringify(healthStatus, null, 2));
+			} else {
+				res.writeHead(404, { 'Content-Type': 'text/plain' });
+				res.end('Not Found');
+			}
+		});
+
+		const port = 3000;
+		this.healthServer.listen(port, () => {
+			logger.info(`🏥 Health check server running on port ${port}`);
+		});
+	}
 
 	private setupEventHandlers(): void {
 		this.client.on(Events.Error, (error: Error) => {
@@ -247,9 +279,19 @@ private registerCommands(): void {
 
 	async stop(): Promise<void> {
 		logger.info('Stopping BunkBot...');
+
+		// Stop health server
+		if (this.healthServer) {
+			this.healthServer.close(() => {
+				logger.info('Health server stopped');
+			});
+		}
+
+		// Stop Discord client
 		if (this.client) {
 			await this.client.destroy();
 		}
+
 		logger.info('BunkBot stopped');
 	}
 
@@ -257,26 +299,41 @@ private registerCommands(): void {
 
 // Main execution
 async function main(): Promise<void> {
+	let bunkBot: BunkBotContainer | null = null;
+
 	try {
-		const bunkBot = new BunkBotContainer();
+		bunkBot = new BunkBotContainer();
 		await bunkBot.initialize();
 		await bunkBot.start();
+
+		// Keep the process alive - the Discord client will handle events
+		logger.info('🎯 BunkBot is now running and listening for Discord events...');
+
+		// Set up graceful shutdown handlers
+		const shutdown = async (signal: string) => {
+			logger.info(`Received ${signal} signal, shutting down BunkBot...`);
+			if (bunkBot) {
+				await bunkBot.stop();
+			}
+			process.exit(0);
+		};
+
+		process.on('SIGINT', () => shutdown('SIGINT'));
+		process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+		// Keep process alive indefinitely
+		// The Discord client connection will keep the event loop active
+
 	} catch (error) {
 		logger.error('Failed to start BunkBot:', ensureError(error));
+		if (bunkBot) {
+			await bunkBot.stop();
+		}
 		process.exit(1);
 	}
 }
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-	logger.info('Received SIGINT signal, shutting down BunkBot...');
-	process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-	logger.info('Received SIGTERM signal, shutting down BunkBot...');
-	process.exit(0);
-});
+// Note: Graceful shutdown is now handled within the main function
 
 if (require.main === module) {
 	main().catch(error => {

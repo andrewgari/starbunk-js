@@ -18,6 +18,17 @@
 			"@shared/*": ["../shared/src/*"]
 		}
 	},
-	"include": ["src/index-minimal.ts"],
-	"exclude": ["node_modules", "dist", "tests"]
+	"include": ["src/index.ts", "src/commands/ping.ts", "src/commands/debug.ts"],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"tests",
+		"src/adapter.ts",
+		"src/botRegistry.ts",
+		"src/commandHandler.ts",
+		"src/core/**/*",
+		"src/reply-bots/**/*",
+		"src/test-utils/**/*",
+		"src/__tests__/**/*"
+	]
 }
