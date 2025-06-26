@@ -156,7 +156,7 @@ async function main(): Promise<void> {
 		await bunkBot.initialize();
 		await bunkBot.start();
 	} catch (error) {
-		logger.error('Failed to start the BunkBot:', ensureError(error));
+		logger.error('Failed to start BunkBot:', ensureError(error));
 		process.exit(1);
 	}
 }
