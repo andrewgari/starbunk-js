@@ -1,51 +1,6 @@
-# Docker Compose for PR Snapshot Testing
-# =====================================
-# This file is designed for testing PR snapshot images with predictable naming.
-# 
-# Usage:
-#   1. Set the PR_NUMBER environment variable:
-#      export PR_NUMBER=123
-#   2. Run with: docker-compose -f docker-compose.snapshot.yml up
-#   3. Or specify PR inline: PR_NUMBER=123 docker-compose -f docker-compose.snapshot.yml up
-#
-# Image Format: ghcr.io/andrewgari/starbunk/{service}:pr-{number}-snapshot
-# Example: ghcr.io/andrewgari/starbunk/bunkbot:pr-123-snapshot
-
-version: '3.8'
-
 services:
-  # PostgreSQL Database - Shared by services that need persistence
-  postgres:
-    image: postgres:15-alpine
-    container_name: starbunk-postgres-snapshot
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-starbunk}
-      POSTGRES_USER: ${POSTGRES_USER:-starbunk}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    volumes:
-      - postgres_snapshot_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d:ro
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-starbunk} -d ${POSTGRES_DB:-starbunk}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - starbunk-snapshot-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # BunkBot - Reply bots and admin commands (PR Snapshot)
   bunkbot:
-    image: ghcr.io/andrewgari/bunkbot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/bunkbot:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-bunkbot-snapshot
     restart: unless-stopped
     environment:
@@ -59,11 +14,6 @@ services:
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-true}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    ports:
-      - "${BUNKBOT_PORT:-3000}:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 30s
@@ -84,9 +34,8 @@ services:
         reservations:
           memory: 256M
 
-  # DJCova - Music service (PR Snapshot)
   djcova:
-    image: ghcr.io/andrewgari/djcova:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/djcova:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-djcova-snapshot
     restart: unless-stopped
     environment:
@@ -97,7 +46,7 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-true}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
     ports:
-      - "${DJCOVA_PORT:-3001}:3001"
+      - "${DJCOVA_PORT:-3101}:3001"
     volumes:
       - djcova_snapshot_cache:/app/cache
       - djcova_snapshot_temp:/tmp
@@ -121,9 +70,8 @@ services:
         reservations:
           memory: 512M
 
-  # Starbunk-DND - D&D features and bridge (PR Snapshot)
   starbunk-dnd:
-    image: ghcr.io/andrewgari/starbunk-dnd:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/starbunk-dnd:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-dnd-snapshot
     restart: unless-stopped
     environment:
@@ -145,9 +93,6 @@ services:
       - dnd_snapshot_data:/app/data
       - dnd_snapshot_campaigns:/app/data/campaigns
       - dnd_snapshot_context:/app/data/llm_context
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
       interval: 30s
@@ -168,9 +113,8 @@ services:
         reservations:
           memory: 512M
 
-  # CovaBot - AI personality bot (PR Snapshot)
   covabot:
-    image: ghcr.io/andrewgari/covabot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/covabot:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-covabot-snapshot
     restart: unless-stopped
     environment:
@@ -183,11 +127,6 @@ services:
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-true}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    ports:
-      - "${COVABOT_PORT:-3003}:3003"
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
       interval: 30s
@@ -208,10 +147,7 @@ services:
         reservations:
           memory: 256M
 
-# Named volumes for persistent data (snapshot-specific)
 volumes:
-  postgres_snapshot_data:
-    driver: local
   djcova_snapshot_cache:
     driver: local
   djcova_snapshot_temp:
@@ -223,10 +159,9 @@ volumes:
   dnd_snapshot_context:
     driver: local
 
-# Custom network for service communication (snapshot-specific)
 networks:
   starbunk-snapshot-network:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.21.0.0/16
+        - subnet: 172.31.0.0/24
