@@ -141,9 +141,6 @@ jobs:
       fail-fast: false
       matrix:
         container: ${{ fromJson(needs.detect-changes.outputs.containers-matrix) }}
-    outputs:
-      # Export image tags for publishing job
-      image-tag-${{ matrix.container }}: ${{ steps.meta.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
 
