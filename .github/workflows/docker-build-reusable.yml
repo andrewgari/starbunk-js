@@ -33,6 +33,15 @@ jobs:
       packages: write
     
     steps:
+      - name: Debug inputs
+        run: |
+          echo "Container name: ${{ inputs.container_name }}"
+          echo "Image tag: ${{ inputs.image_tag }}"
+          echo "Push image: ${{ inputs.push_image }}"
+          echo "Registry: ${{ inputs.registry }}"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+
       - name: Checkout code
         uses: actions/checkout@v4
         

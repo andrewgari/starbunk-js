@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { Campaign } from '../../../../domain/models';
+import { Campaign, GameSystem } from '../../../../domain/models';
 import { CampaignMetadata, CampaignRepository, CreateCampaignData } from '../../../../domain/repositories';
-import { GameSystem } from '../../../../starbunk/types/game';
 
 export class SQLiteCampaignRepository implements CampaignRepository {
 	constructor(private prisma: PrismaClient) { }

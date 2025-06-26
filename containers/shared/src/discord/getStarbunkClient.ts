@@ -1,19 +1,18 @@
-import { Interaction } from 'discord.js';
-import StarbunkClient from '../starbunk/starbunkClient';
+import { Client, Interaction } from 'discord.js';
 
-let clientInstance: StarbunkClient | null = null;
+let clientInstance: Client | null = null;
 
-export function setStarbunkClient(client: StarbunkClient): void {
+export function setStarbunkClient(client: Client): void {
 	clientInstance = client;
 }
 
-export function getStarbunkClient(interaction?: Interaction): StarbunkClient {
+export function getStarbunkClient(interaction?: Interaction): Client {
 	if (interaction) {
-		return interaction.client as StarbunkClient;
+		return interaction.client;
 	}
 
 	if (!clientInstance) {
-		throw new Error('StarbunkClient instance not set. Call setStarbunkClient first.');
+		throw new Error('Discord client instance not set. Call setStarbunkClient first.');
 	}
 
 	return clientInstance;

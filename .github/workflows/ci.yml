@@ -112,7 +112,11 @@ jobs:
         run: cd containers/shared && npm ci
 
       - name: Build shared package
-        run: cd containers/shared && npm run build
+        run: |
+          echo "Building shared package..."
+          cd containers/shared
+          npm run build
+          echo "✅ Shared package build completed successfully"
 
       - name: Test shared package
         run: cd containers/shared && npm test
@@ -164,6 +168,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Verify container structure
+        run: |
+          echo "Checking container structure for ${{ matrix.container }}..."
+          ls -la containers/${{ matrix.container }}/
+          echo "Checking if Dockerfile exists..."
+          test -f containers/${{ matrix.container }}/Dockerfile && echo "Dockerfile found" || echo "Dockerfile missing"
+          echo "Checking shared package..."
+          ls -la containers/shared/
+          test -f containers/shared/package.json && echo "Shared package.json found" || echo "Shared package.json missing"
+          test -d containers/shared/dist && echo "Shared dist found" || echo "Shared dist missing"
+
       - name: Build container image
         uses: docker/build-push-action@v5
         with:
@@ -173,6 +188,8 @@ jobs:
           tags: starbunk-${{ matrix.container }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
   publish-containers:
     name: 📦 Publish Docker Container - ${{ matrix.container }}

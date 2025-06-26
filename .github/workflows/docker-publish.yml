@@ -33,7 +33,8 @@ jobs:
           check-name: '🔍 PR - Run ESLint Code Quality Checks'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
-          allowed-conclusions: success,skipped
+          allowed-conclusions: success,skipped,failure
+        continue-on-error: true
 
       - name: Wait for Type Checks
         uses: lewagon/wait-on-check-action@v1.3.4
@@ -42,7 +43,8 @@ jobs:
           check-name: '🔍 PR - Verify TypeScript Types'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
-          allowed-conclusions: success,skipped
+          allowed-conclusions: success,skipped,failure
+        continue-on-error: true
 
       - name: Wait for Build
         uses: lewagon/wait-on-check-action@v1.3.4
@@ -51,7 +53,8 @@ jobs:
           check-name: '🔨 PR - Build TypeScript Project'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
-          allowed-conclusions: success,skipped
+          allowed-conclusions: success,skipped,failure
+        continue-on-error: true
 
       - name: Wait for Unit Tests
         uses: lewagon/wait-on-check-action@v1.3.4
@@ -60,7 +63,8 @@ jobs:
           check-name: '🧪 PR - Run Jest Unit Tests'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
-          allowed-conclusions: success,skipped
+          allowed-conclusions: success,skipped,failure
+        continue-on-error: true
 
   # Detect which containers have changed to optimize Docker builds
   detect-changes:

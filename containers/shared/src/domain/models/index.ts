@@ -1,4 +1,11 @@
-import { GameSystem } from '../../starbunk/types/game';
+// Define GameSystem enum locally since it's not available in shared package
+export enum GameSystem {
+	DND5E = 'dnd5e',
+	PATHFINDER = 'pathfinder',
+	CALL_OF_CTHULHU = 'call_of_cthulhu',
+	VAMPIRE = 'vampire',
+	OTHER = 'other'
+}
 
 export interface Campaign {
 	id: string;

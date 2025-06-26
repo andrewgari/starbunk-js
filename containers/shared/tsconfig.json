@@ -21,12 +21,7 @@
 		}
 	},
 	"include": [
-		"src/index.ts",
-		"src/services/logger.ts",
-		"src/services/webhookManager.ts",
-		"src/utils/errorUtils.ts",
-		"src/utils/envValidation.ts",
-		"src/discord/clientFactory.ts"
+		"src/**/*"
 	],
 	"exclude": ["node_modules", "dist", "tests"]
 }

@@ -178,7 +178,7 @@ export class PersonalityService {
 				if (filename.endsWith('.json')) {
 					await fs.writeFile(
 						filePath,
-						JSON.stringify(Array.from(this.personalityEmbedding)),
+						JSON.stringify(Array.from(this.personalityEmbedding || [])),
 						'utf-8'
 					);
 				} else {
