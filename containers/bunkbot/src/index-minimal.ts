@@ -1,14 +1,14 @@
 // BunkBot - Reply bots and admin commands container (Minimal Bootstrap Demo)
 import { Events } from 'discord.js';
-import { 
-	logger, 
-	ensureError, 
-	validateEnvironment, 
-	createDiscordClient, 
+import {
 	ClientConfigs,
 	container,
+	createDiscordClient,
+	ensureError,
+	logger,
 	ServiceId,
-	WebhookManager 
+	validateEnvironment,
+	WebhookManager,
 } from '@starbunk/shared';
 
 class BunkBotContainer {
@@ -39,10 +39,29 @@ class BunkBotContainer {
 		}
 	}
 
+	async start(): Promise<void> {
+		const token = process.env.STARBUNK_TOKEN;
+		if (!token) {
+			throw new Error('STARBUNK_TOKEN environment variable is required');
+		}
+
+		await this.client.login(token);
+		await this.waitForReady();
+		logger.info('🎉 BunkBot started successfully');
+	}
+
+	async stop(): Promise<void> {
+		logger.info('Stopping BunkBot...');
+		if (this.client) {
+			await this.client.destroy();
+		}
+		logger.info('BunkBot stopped');
+	}
+
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['DATABASE_URL', 'DEBUG', 'NODE_ENV']
+			optional: ['DATABASE_URL', 'DEBUG', 'NODE_ENV'],
 		});
 		logger.info('✅ Environment validation passed for BunkBot');
 	}
@@ -98,7 +117,7 @@ class BunkBotContainer {
 				await this.webhookManager.sendMessage(message.channel.id, {
 					content: `Hello ${message.author.username}! BunkBot is working! 🤖`,
 					username: 'BunkBot',
-					avatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
+					avatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png',
 				});
 			}
 		} catch (error) {
@@ -119,17 +138,6 @@ class BunkBotContainer {
 		}
 	}
 
-	async start(): Promise<void> {
-		const token = process.env.STARBUNK_TOKEN;
-		if (!token) {
-			throw new Error('STARBUNK_TOKEN environment variable is required');
-		}
-
-		await this.client.login(token);
-		await this.waitForReady();
-		logger.info('🎉 BunkBot started successfully');
-	}
-
 	private waitForReady(): Promise<void> {
 		return new Promise((resolve) => {
 			if (this.hasInitialized) {
@@ -138,14 +146,6 @@ class BunkBotContainer {
 				this.client.once(Events.ClientReady, () => resolve());
 			}
 		});
-	}
-
-	async stop(): Promise<void> {
-		logger.info('Stopping BunkBot...');
-		if (this.client) {
-			await this.client.destroy();
-		}
-		logger.info('BunkBot stopped');
 	}
 }
 
@@ -156,7 +156,7 @@ async function main(): Promise<void> {
 		await bunkBot.initialize();
 		await bunkBot.start();
 	} catch (error) {
-		logger.error('Failed to start BunkBot:', ensureError(error));
+		logger.error('Failed to start BunkBot: ', ensureError(error));
 		process.exit(1);
 	}
 }
@@ -173,7 +173,7 @@ process.on('SIGTERM', async () => {
 });
 
 if (require.main === module) {
-	main().catch(error => {
+	main().catch((error) => {
 		console.error('Fatal error:', ensureError(error));
 		process.exit(1);
 	});
