@@ -1,7 +1,7 @@
 # Podman Compose for Starbunk Services
 # ====================================
 # This is the main Podman Compose file equivalent to docker-compose.yml
-# 
+#
 # Usage:
 #   podman-compose up -d
 #   podman-compose -f podman-compose.yml up -d
@@ -11,12 +11,16 @@
 #   - Ensure PostgreSQL credentials are set
 #   - Verify all required images are available
 
+version: '3.8'
+
 services:
   # PostgreSQL Database - Shared by services that need persistence
   postgres:
     image: postgres:15-alpine
     container_name: starbunk-postgres
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-starbunk}
       POSTGRES_USER: ${POSTGRES_USER:-starbunk}
@@ -36,15 +40,18 @@ services:
     networks:
       - starbunk-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-postgres"
+        max-size: "10m"
+        max-file: "3"
 
   # BunkBot - Reply bots and admin commands
   bunkbot:
     image: ghcr.io/andrewgari/bunkbot:latest
     container_name: starbunk-bunkbot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -56,8 +63,6 @@ services:
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${BUNKBOT_PORT:-3000}:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,9 +75,10 @@ services:
     networks:
       - starbunk-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-bunkbot"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -85,6 +91,8 @@ services:
     image: ghcr.io/andrewgari/djcova:latest
     container_name: starbunk-djcova
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -92,8 +100,6 @@ services:
       - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${DJCOVA_PORT:-3001}:3001"
     volumes:
       - djcova_cache:/app/cache
       - djcova_temp:/tmp
@@ -106,9 +112,10 @@ services:
     networks:
       - starbunk-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-djcova"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -121,6 +128,8 @@ services:
     image: ghcr.io/andrewgari/starbunk-dnd:latest
     container_name: starbunk-dnd
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -134,8 +143,6 @@ services:
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${STARBUNK_DND_PORT:-3002}:3002"
     volumes:
       - dnd_data:/app/data
       - dnd_campaigns:/app/data/campaigns
@@ -152,9 +159,10 @@ services:
     networks:
       - starbunk-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-dnd"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -167,6 +175,8 @@ services:
     image: ghcr.io/andrewgari/covabot:latest
     container_name: starbunk-covabot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -177,8 +187,6 @@ services:
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${COVABOT_PORT:-3003}:3003"
     depends_on:
       postgres:
         condition: service_healthy
@@ -191,9 +199,10 @@ services:
     networks:
       - starbunk-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-covabot"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:

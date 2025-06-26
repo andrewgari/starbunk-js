@@ -12,34 +12,6 @@
 # Example: ghcr.io/andrewgari/bunkbot:pr-123-snapshot
 
 services:
-  # PostgreSQL Database - Shared by services that need persistence
-  postgres:
-    image: postgres:15-alpine
-    container_name: starbunk-postgres-snapshot
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-starbunk}
-      POSTGRES_USER: ${POSTGRES_USER:-starbunk}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    volumes:
-      - postgres_snapshot_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d:ro
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-starbunk} -d ${POSTGRES_DB:-starbunk}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - starbunk-snapshot-network
-    logging:
-      driver: journald
-      options:
-        tag: "starbunk-postgres-snapshot"
-
   # BunkBot - Reply bots and admin commands (PR Snapshot)
   bunkbot:
     image: ghcr.io/andrewgari/bunkbot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
@@ -56,11 +28,6 @@ services:
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-true}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    ports:
-      - "${BUNKBOT_PORT:-3000}:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 30s
@@ -70,9 +37,10 @@ services:
     networks:
       - starbunk-snapshot-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-bunkbot-snapshot"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -92,8 +60,6 @@ services:
       - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-true}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    ports:
-      - "${DJCOVA_PORT:-3001}:3001"
     volumes:
       - djcova_snapshot_cache:/app/cache
       - djcova_snapshot_temp:/tmp
@@ -106,9 +72,10 @@ services:
     networks:
       - starbunk-snapshot-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-djcova-snapshot"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -134,15 +101,10 @@ services:
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
       - DEBUG_MODE=${DEBUG_MODE:-true}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    ports:
-      - "${STARBUNK_DND_PORT:-3002}:3002"
     volumes:
       - dnd_snapshot_data:/app/data
       - dnd_snapshot_campaigns:/app/data/campaigns
       - dnd_snapshot_context:/app/data/llm_context
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
       interval: 30s
@@ -152,9 +114,10 @@ services:
     networks:
       - starbunk-snapshot-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-dnd-snapshot"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -177,11 +140,6 @@ services:
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-true}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    ports:
-      - "${COVABOT_PORT:-3003}:3003"
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
       interval: 30s
@@ -191,9 +149,10 @@ services:
     networks:
       - starbunk-snapshot-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-covabot-snapshot"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -203,8 +162,6 @@ services:
 
 # Named volumes for persistent data (snapshot-specific)
 volumes:
-  postgres_snapshot_data:
-    driver: local
   djcova_snapshot_cache:
     driver: local
   djcova_snapshot_temp:

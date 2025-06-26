@@ -43,9 +43,10 @@ services:
     networks:
       - starbunk-latest-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-postgres-latest"
+        max-size: "10m"
+        max-file: "3"
 
   # BunkBot - Reply bots and admin commands (Latest Stable)
   bunkbot:
@@ -63,11 +64,6 @@ services:
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${BUNKBOT_PORT:-3000}:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 30s
@@ -77,9 +73,10 @@ services:
     networks:
       - starbunk-latest-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-bunkbot-latest"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -99,8 +96,6 @@ services:
       - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${DJCOVA_PORT:-3001}:3001"
     volumes:
       - djcova_latest_cache:/app/cache
       - djcova_latest_temp:/tmp
@@ -113,9 +108,10 @@ services:
     networks:
       - starbunk-latest-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-djcova-latest"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -141,15 +137,10 @@ services:
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${STARBUNK_DND_PORT:-3002}:3002"
     volumes:
       - dnd_latest_data:/app/data
       - dnd_latest_campaigns:/app/data/campaigns
       - dnd_latest_context:/app/data/llm_context
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
       interval: 30s
@@ -159,9 +150,10 @@ services:
     networks:
       - starbunk-latest-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-dnd-latest"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -184,11 +176,6 @@ services:
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${COVABOT_PORT:-3003}:3003"
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
       interval: 30s
@@ -198,9 +185,10 @@ services:
     networks:
       - starbunk-latest-network
     logging:
-      driver: journald
+      driver: "json-file"
       options:
-        tag: "starbunk-covabot-latest"
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -210,8 +198,6 @@ services:
 
 # Named volumes for persistent data (latest/production)
 volumes:
-  postgres_latest_data:
-    driver: local
   djcova_latest_cache:
     driver: local
   djcova_latest_temp:
