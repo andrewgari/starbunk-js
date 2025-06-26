@@ -1,9 +1,12 @@
 // Shared utilities and services for all containers
 export { logger } from './services/logger';
 export { ensureError } from './utils/errorUtils';
-export { validateEnvironment } from './utils/envValidation';
+export { validateEnvironment, getDebugMode, getTestingServerIds, getTestingChannelIds } from './utils/envValidation';
+export { isDebugMode, setDebugMode } from './environment';
 export { createDiscordClient, ClientConfigs } from './discord/clientFactory';
 export { WebhookManager } from './services/webhookManager';
+export { MessageFilter, getMessageFilter, resetMessageFilter } from './services/messageFilter';
+export type { MessageContext, FilterResult } from './services/messageFilter';
 
 // Bootstrap functions and service getters
 export {
@@ -46,5 +49,6 @@ export const ServiceId = {
 	DiscordClient: 'DiscordClient',
 	WebhookService: 'WebhookService',
 	DatabaseService: 'DatabaseService',
-	LLMManager: 'LLMManager'
+	LLMManager: 'LLMManager',
+	MessageFilter: 'MessageFilter'
 } as const;

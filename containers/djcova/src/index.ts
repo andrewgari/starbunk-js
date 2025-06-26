@@ -7,11 +7,14 @@ import {
 	createDiscordClient,
 	ClientConfigs,
 	container,
-	ServiceId
+	ServiceId,
+	getMessageFilter,
+	MessageFilter
 } from '@starbunk/shared';
 
 class DJCovaContainer {
 	private client: any;
+	private messageFilter: MessageFilter;
 	public activeSubscription: PlayerSubscription | null = null;
 	private hasInitialized = false;
 
@@ -41,13 +44,17 @@ class DJCovaContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['DEBUG', 'NODE_ENV']
+			optional: ['DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV']
 		});
 	}
 
 	private async initializeServices(): Promise<void> {
 		// Register Discord client
 		container.register(ServiceId.DiscordClient, this.client);
+
+		// Initialize message filter
+		this.messageFilter = getMessageFilter();
+		container.register(ServiceId.MessageFilter, this.messageFilter);
 
 		// Note: DJCova doesn't need database access
 		logger.info('DJCova services initialized (no database required)');
@@ -75,6 +82,28 @@ class DJCovaContainer {
 	private async handleInteraction(interaction: any): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
+				// Create interaction context for filtering
+				const context = MessageFilter.createContextFromInteraction(interaction);
+
+				// Check if interaction should be processed
+				const filterResult = this.messageFilter.shouldProcessMessage(context);
+				if (!filterResult.allowed) {
+					// Interaction was filtered out - send ephemeral response
+					if (this.messageFilter.isDebugMode()) {
+						await interaction.reply({
+							content: `🚫 Music command filtered: ${filterResult.reason}`,
+							ephemeral: true
+						});
+					} else {
+						// Silently ignore in production mode
+						await interaction.reply({
+							content: '🚫 Music commands are not available in this server/channel.',
+							ephemeral: true
+						});
+					}
+					return;
+				}
+
 				// TODO: Handle music commands
 				// This will be implemented when we fix the command handler
 				logger.debug(`Processing music command: ${interaction.commandName}`);

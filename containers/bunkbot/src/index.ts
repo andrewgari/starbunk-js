@@ -8,7 +8,9 @@ import {
 	validateEnvironment,
 	createDiscordClient,
 	ClientConfigs,
-	WebhookManager
+	WebhookManager,
+	getMessageFilter,
+	MessageFilter
 } from '@starbunk/shared';
 
 // Import commands
@@ -18,6 +20,7 @@ import debugCommand from './commands/debug';
 class BunkBotContainer {
 	private client: any;
 	private webhookManager: WebhookManager;
+	private messageFilter: MessageFilter;
 	private hasInitialized = false;
 	private commands = new Map();
 
@@ -50,7 +53,7 @@ class BunkBotContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['DATABASE_URL', 'DEBUG', 'NODE_ENV']
+			optional: ['DATABASE_URL', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV']
 		});
 	}
 
@@ -61,6 +64,10 @@ class BunkBotContainer {
 		// Initialize webhook manager
 		this.webhookManager = new WebhookManager(this.client);
 		container.register(ServiceId.WebhookService, this.webhookManager);
+
+		// Initialize message filter
+		this.messageFilter = getMessageFilter();
+		container.register(ServiceId.MessageFilter, this.messageFilter);
 
 		// Initialize database if URL is provided
 		if (process.env.DATABASE_URL) {
@@ -107,6 +114,19 @@ private registerCommands(): void {
 		if (message.author.bot) return;
 
 		try {
+			// Create message context for filtering
+			const context = MessageFilter.createContextFromMessage(message);
+
+			// Check if message should be processed
+			const filterResult = this.messageFilter.shouldProcessMessage(context);
+			if (!filterResult.allowed) {
+				// Message was filtered out - no need to log unless in debug mode
+				if (this.messageFilter.isDebugMode()) {
+					logger.debug(`Message filtered: ${filterResult.reason}`);
+				}
+				return;
+			}
+
 			logger.debug(`Processing message from ${message.author.username}: ${message.content}`);
 
 			// Demo: Simple reply bot functionality
@@ -133,6 +153,28 @@ private registerCommands(): void {
 	private async handleInteraction(interaction: any): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
+				// Create interaction context for filtering
+				const context = MessageFilter.createContextFromInteraction(interaction);
+
+				// Check if interaction should be processed
+				const filterResult = this.messageFilter.shouldProcessMessage(context);
+				if (!filterResult.allowed) {
+					// Interaction was filtered out - send ephemeral response
+					if (this.messageFilter.isDebugMode()) {
+						await interaction.reply({
+							content: `🚫 Command filtered: ${filterResult.reason}`,
+							ephemeral: true
+						});
+					} else {
+						// Silently ignore in production mode
+						await interaction.reply({
+							content: '🚫 This command is not available in this server/channel.',
+							ephemeral: true
+						});
+					}
+					return;
+				}
+
 				const commandName = interaction.commandName;
 				logger.debug(`Processing command: ${commandName} from ${interaction.user.username}`);
 

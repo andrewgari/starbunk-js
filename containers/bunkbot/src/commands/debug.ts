@@ -1,6 +1,5 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { isDebugMode, setDebugMode } from '../../environment';
-import { logger } from '@starbunk/shared';
+import { logger, getTestingServerIds, getTestingChannelIds, isDebugMode, setDebugMode } from '@starbunk/shared';
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('debug')
@@ -68,6 +67,8 @@ export default {
 				debugInfo = {
 					nodeEnv: process.env.NODE_ENV,
 					debugMode: isDebugMode(),
+					testingServerIds: getTestingServerIds(),
+					testingChannelIds: getTestingChannelIds(),
 					platform: process.platform,
 					arch: process.arch,
 					nodeVersion: process.version,

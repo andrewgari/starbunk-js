@@ -231,7 +231,7 @@ jobs:
         run: |
           echo "STARBUNK_TOKEN=test_token" > .env
           echo "DATABASE_URL=postgresql://test:test@localhost:5432/test" >> .env
-          echo "DEBUG=true" >> .env
+          echo "DEBUG_MODE=true" >> .env
 
       - name: Start PostgreSQL
         run: |
