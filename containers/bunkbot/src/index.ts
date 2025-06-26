@@ -11,10 +11,15 @@ import {
 	WebhookManager
 } from '@starbunk/shared';
 
+// Import commands
+import pingCommand from './commands/ping';
+import debugCommand from './commands/debug';
+
 class BunkBotContainer {
 	private client: any;
 	private webhookManager: WebhookManager;
 	private hasInitialized = false;
+	private commands = new Map();
 
 	async initialize(): Promise<void> {
 		logger.info('🚀 Initializing BunkBot container...');
@@ -28,6 +33,9 @@ class BunkBotContainer {
 
 			// Initialize services
 			await this.initializeServices();
+
+		// Register commands
+		this.registerCommands();
 
 			// Set up event handlers
 			this.setupEventHandlers();
@@ -63,6 +71,14 @@ class BunkBotContainer {
 		logger.info('BunkBot services initialized');
 	}
 
+private registerCommands(): void {
+	// Register available commands
+	this.commands.set('ping', pingCommand);
+	this.commands.set('debug', debugCommand);
+
+	logger.info(`Registered ${this.commands.size} commands: ${Array.from(this.commands.keys()).join(', ')}`);
+}
+
 	private setupEventHandlers(): void {
 		this.client.on(Events.Error, (error: Error) => {
 			logger.error('Discord client error:', error);
@@ -91,9 +107,24 @@ class BunkBotContainer {
 		if (message.author.bot) return;
 
 		try {
-			// TODO: Process message with reply bots
-			// This will be implemented when we fix the bot registry
 			logger.debug(`Processing message from ${message.author.username}: ${message.content}`);
+
+			// Demo: Simple reply bot functionality
+			if (message.content.toLowerCase().includes('hello bunkbot')) {
+				logger.info(`🎯 "hello bunkbot" trigger detected from ${message.author.username}`);
+
+				await this.webhookManager.sendMessage(message.channel.id, {
+					content: `Hello ${message.author.username}! BunkBot is working! 🤖`,
+					username: 'BunkBot',
+					avatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
+				});
+
+				logger.info('✅ BunkBot response sent successfully');
+			}
+
+			// TODO: Add more reply bot patterns here
+			// This is where we'll integrate the full reply bot system
+
 		} catch (error) {
 			logger.error('Error processing message:', ensureError(error));
 		}
@@ -102,11 +133,38 @@ class BunkBotContainer {
 	private async handleInteraction(interaction: any): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
-				// TODO: Handle admin commands
-				// This will be implemented when we fix the command handler
-				logger.debug(`Processing command: ${interaction.commandName}`);
+				const commandName = interaction.commandName;
+				logger.debug(`Processing command: ${commandName} from ${interaction.user.username}`);
+
+				// Get the command from our registered commands
+				const command = this.commands.get(commandName);
+
+				if (command) {
+					logger.info(`🎮 Executing ${commandName} command`);
+					await command.execute(interaction);
+					logger.info(`✅ ${commandName} command completed successfully`);
+				} else {
+					logger.warn(`❓ Unknown command: ${commandName}`);
+					await interaction.reply({
+						content: `❓ Unknown command: \`${commandName}\`\nAvailable commands: ${Array.from(this.commands.keys()).map(cmd => `\`${cmd}\``).join(', ')}`,
+						ephemeral: true
+					});
+				}
+
 			} catch (error) {
-				logger.error('Error processing interaction:', ensureError(error));
+				logger.error(`Error processing command ${interaction.commandName}:`, ensureError(error));
+
+				// Send error response if interaction hasn't been replied to
+				try {
+					if (!interaction.replied && !interaction.deferred) {
+						await interaction.reply({
+							content: '❌ An error occurred while processing the command.',
+							ephemeral: true
+						});
+					}
+				} catch (replyError) {
+					logger.error('Failed to send error response:', ensureError(replyError));
+				}
 			}
 		}
 	}

@@ -45,4 +45,4 @@ USER bunkbot
 
 EXPOSE 3000
 
-CMD ["node", "dist/index-minimal.js"]
+CMD ["node", "dist/index.js"]
