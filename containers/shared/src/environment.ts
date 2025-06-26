@@ -1,6 +1,6 @@
 import { config as configDotenv } from 'dotenv';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Environment configuration abstraction that loads and validates environment variables.

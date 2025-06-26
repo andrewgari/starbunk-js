@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import * as chalk from 'chalk';
 import { isDebugMode } from '../environment';
 import { Logger as LoggerInterface } from './container';
 
