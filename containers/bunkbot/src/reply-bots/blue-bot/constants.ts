@@ -1,6 +1,5 @@
 // Contains all the static data from BlueBotConfig
 // Exactly the same constants as the original config
-// Test comment to demonstrate individual container path filtering
 
 export const BLUE_BOT_NAME = 'BluBot';
 
