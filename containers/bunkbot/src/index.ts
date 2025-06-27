@@ -174,21 +174,9 @@ private registerCommands(): void {
 
 			logger.debug(`Processing message from ${message.author.username}: ${message.content}`);
 
-			// Demo: Simple reply bot functionality
-			if (message.content.toLowerCase().includes('hello bunkbot')) {
-				logger.info(`🎯 "hello bunkbot" trigger detected from ${message.author.username}`);
-
-				await this.webhookManager.sendMessage(message.channel.id, {
-					content: `Hello ${message.author.username}! BunkBot is working! 🤖`,
-					username: 'BunkBot',
-					avatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
-				});
-
-				logger.info('✅ BunkBot response sent successfully');
-			}
-
-			// TODO: Add more reply bot patterns here
-			// This is where we'll integrate the full reply bot system
+			// TODO: Integrate reply bot system here
+			// This is where the full reply bot patterns will be processed
+			// For now, BunkBot focuses on slash commands and admin functionality
 
 		} catch (error) {
 			logger.error('Error processing message:', ensureError(error));
