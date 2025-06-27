@@ -37,31 +37,7 @@ jobs:
               uses: dorny/paths-filter@v2
               id: filter
               with:
-                  filters: |
-                      shared:
-                          - 'containers/shared/**'
-                      bunkbot:
-                          - 'containers/bunkbot/**'
-                      djcova:
-                          - 'containers/djcova/**'
-                      starbunk-dnd:
-                          - 'containers/starbunk-dnd/**'
-                      covabot:
-                          - 'containers/covabot/**'
-                      containers:
-                          - 'containers/**'
-                      root-files:
-                          - 'package.json'
-                          - 'package-lock.json'
-                          - 'tsconfig.json'
-                          - '.eslintrc.json'
-                          - 'jest.config.js'
-                      workflows:
-                          - '.github/workflows/**'
-                      docker:
-                          - 'Dockerfile*'
-                          - '.dockerignore'
-                          - 'docker-compose*.yml'
+                  filters: '.github/path-filters.yml'
 
             - name: Set dynamic matrix and flags
               id: set-matrix
