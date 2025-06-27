@@ -59,9 +59,9 @@ export class MessageFilter {
 		// Case 1: Guild-only filtering
 		if (hasServerRestriction && !hasChannelRestriction) {
 			if (!context.serverId) {
-				const reason = 'Message is from DM, but server restriction is active';
-				this.logFilterDecision(context, false, reason);
-				return { allowed: false, reason };
+				// DM messages are allowed even when server restrictions are active
+				this.logFilterDecision(context, true, 'DM message allowed despite server restrictions');
+				return { allowed: true };
 			}
 
 			if (!this.testingServerIds.includes(context.serverId)) {

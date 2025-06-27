@@ -1,6 +1,6 @@
 import { logger, getConfigurationService, BotConfig, BotTriggerConfig, BotResponseConfig } from '@starbunk/shared';
 import { BotFactory } from './bot-factory';
-import { createTriggerResponse } from './trigger-response';
+import { createTriggerResponse, TriggerResponse } from './trigger-response';
 import { matchesPattern } from './conditions';
 import { staticResponse } from './responses';
 import ReplyBot from '../replyBot';
@@ -90,8 +90,8 @@ export class DatabaseBotFactory {
 	/**
 	 * Create triggers from bot configuration
 	 */
-	private static createTriggersFromConfig(config: BotConfig): any[] {
-		const triggers: any[] = [];
+	private static createTriggersFromConfig(config: BotConfig): TriggerResponse[] {
+		const triggers: TriggerResponse[] = [];
 
 		for (const triggerConfig of config.triggers) {
 			if (!triggerConfig.isEnabled) {
@@ -127,7 +127,7 @@ export class DatabaseBotFactory {
 	/**
 	 * Create response function from bot configuration
 	 */
-	private static createResponseFromConfig(config: BotConfig, triggerConfig: BotTriggerConfig): any {
+	private static createResponseFromConfig(config: BotConfig, _triggerConfig: BotTriggerConfig): (message: import('discord.js').Message) => Promise<string> | string {
 		// Find the best matching response for this trigger
 		// For now, use the first enabled response, but this could be more sophisticated
 		const responseConfig = config.responses.find((r: BotResponseConfig) => r.isEnabled);

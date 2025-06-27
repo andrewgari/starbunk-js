@@ -1,5 +1,5 @@
 import { logger } from '@starbunk/shared';
-import { Message, TextBasedChannel, TextChannel, Webhook } from 'discord.js';
+import { Client, Message, TextChannel, Webhook } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
@@ -228,22 +228,17 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 	};
 }
 // Simple in-memory storage for bot data (replaces Prisma for now)
-const botStorage = new Map<string, any>();
+const botStorage = new Map<string, string | number | boolean>();
 
-function getBotData(botName: string, key: string): any {
+function getBotData(botName: string, key: string): string | number | boolean | undefined {
 	const botKey = `${botName}:${key}`;
 	return botStorage.get(botKey);
-}
-
-function setBotData(botName: string, key: string, value: any): void {
-	const botKey = `${botName}:${key}`;
-	botStorage.set(botKey, value);
 }
 
 // Webhook cache for custom bot identities
 const webhookCache = new Map<string, Webhook>();
 
-async function getOrCreateWebhook(channel: TextChannel, client: any): Promise<Webhook> {
+async function getOrCreateWebhook(channel: TextChannel, client: Client): Promise<Webhook> {
 	const cacheKey = channel.id;
 	const cachedWebhook = webhookCache.get(cacheKey);
 	if (cachedWebhook) {
