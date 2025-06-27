@@ -15,12 +15,17 @@ import {
 	runStartupDiagnostics
 } from '@starbunk/shared';
 
+// Import DiscordService directly from the service file
+import { DiscordService } from '@starbunk/shared/dist/services/discordService';
+
 // Import commands
 import pingCommand from './commands/ping';
 import debugCommand from './commands/debug';
 
-// Reply bot system will be integrated later
-// import { ReplyBotImpl } from './core/bot-builder';
+// Import reply bot system
+import { BotRegistry } from './botRegistry';
+// import { DatabaseBotFactory } from './core/database-bot-factory'; // Temporarily disabled
+import ReplyBot from './replyBot';
 
 class BunkBotContainer {
 	private client: any;
@@ -29,7 +34,7 @@ class BunkBotContainer {
 	private hasInitialized = false;
 	private commands = new Map();
 	private healthServer: any;
-	private replyBots: any[] = [];
+	private replyBots: ReplyBot[] = [];
 
 	async initialize(): Promise<void> {
 		logger.info('🚀 Initializing BunkBot container...');
@@ -86,6 +91,15 @@ class BunkBotContainer {
 		// Register Discord client
 		container.register(ServiceId.DiscordClient, this.client);
 
+		// Initialize and register Discord service for bot identity functionality
+		const discordService = new DiscordService(this.client);
+		// Use the same approach as the bootstrap function
+		container.register(
+			ServiceId.DiscordService,
+			discordService
+		);
+		logger.info('✅ Discord identity service initialized and registered');
+
 		// Initialize webhook manager
 		this.webhookManager = new WebhookManager(this.client);
 		container.register(ServiceId.WebhookService, this.webhookManager);
@@ -94,11 +108,8 @@ class BunkBotContainer {
 		this.messageFilter = getMessageFilter();
 		container.register(ServiceId.MessageFilter, this.messageFilter);
 
-		// Initialize database if URL is provided
-		if (process.env.DATABASE_URL) {
-			// TODO: Initialize Prisma client for reply bot data
-			logger.info('Database connection available for reply bot data');
-		}
+		// Database services temporarily disabled to focus on file-based bot loading
+		logger.info('⚠️  Database services disabled - using file-based bot loading only');
 
 		logger.info('BunkBot services initialized');
 	}
@@ -107,13 +118,24 @@ class BunkBotContainer {
 		logger.info('🤖 Initializing reply bot system...');
 
 		try {
-			// TODO: Reply bot system integration
-			// For now, just log that the system is ready for integration
-			logger.info('✅ Reply bot system ready for integration');
-			logger.warn('⚠️  Reply bot integration is pending - only slash commands are active');
+			// For now, focus on file-based bot loading only
+			// Database bot loading is temporarily disabled to fix compilation issues
+			logger.info('📁 Loading reply bots from file system...');
+			this.replyBots = await BotRegistry.discoverBots();
+
+			if (this.replyBots.length > 0) {
+				logger.info(`✅ Reply bot system initialized with ${this.replyBots.length} bots`);
+				logger.info('🤖 Active reply bots:');
+				this.replyBots.forEach(bot => {
+					logger.info(`   - ${bot.defaultBotName}: ${bot.description}`);
+				});
+			} else {
+				logger.warn('⚠️  No reply bots were loaded - only slash commands are active');
+			}
 		} catch (error) {
 			logger.error('❌ Failed to initialize reply bot system:', ensureError(error));
 			// Don't throw here - allow BunkBot to continue with just slash commands
+			this.replyBots = [];
 		}
 	}
 
@@ -128,12 +150,24 @@ private registerCommands(): void {
 private async deployCommands(): Promise<void> {
 	try {
 		logger.info('🚀 Deploying slash commands to Discord...');
+		logger.info(`🔍 Bot Application ID: ${this.client.application?.id || 'Unknown'}`);
+		logger.info(`🔍 Bot User ID: ${this.client.user?.id || 'Unknown'}`);
 
 		// Collect command data
 		const commandData = Array.from(this.commands.values()).map(command => command.data);
+		logger.info(`📋 Commands to deploy: ${commandData.map(cmd => cmd.name).join(', ')}`);
 
-		// Deploy commands globally (available in all servers)
-		await this.client.application.commands.set(commandData);
+		// Deploy commands to specific guild for faster updates during development
+		const guildId = process.env.GUILD_ID;
+		if (guildId && process.env.DEBUG_MODE === 'true') {
+			logger.info(`🎯 Deploying commands to guild ${guildId} (debug mode)`);
+			const guild = await this.client.guilds.fetch(guildId);
+			await guild.commands.set(commandData);
+		} else {
+			// Deploy commands globally (available in all servers)
+			logger.info('🌍 Deploying commands globally');
+			await this.client.application.commands.set(commandData);
+		}
 
 		logger.info(`✅ Successfully deployed ${commandData.length} slash commands to Discord`);
 	} catch (error) {
@@ -163,7 +197,7 @@ private async deployCommands(): Promise<void> {
 			}
 		});
 
-		const port = 3000;
+		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT) : 3002;
 		this.healthServer.listen(port, () => {
 			logger.info(`🏥 Health check server running on port ${port}`);
 		});
@@ -184,12 +218,28 @@ private async deployCommands(): Promise<void> {
 		});
 
 		this.client.on(Events.InteractionCreate, async (interaction: any) => {
-			logger.debug(`🎮 Received interaction: ${interaction.type} from ${interaction.user?.username || 'unknown'}`);
+			logger.info(`🎮 Received interaction: ${interaction.type} from ${interaction.user?.username || 'unknown'} - Command: ${interaction.commandName || 'N/A'}`);
+			logger.info(`🔍 Interaction details: Guild=${interaction.guildId}, Channel=${interaction.channelId}, User=${interaction.user?.id}`);
 			await this.handleInteraction(interaction);
 		});
 
 		this.client.once(Events.ClientReady, async () => {
 			logger.info('🤖 BunkBot is ready and connected to Discord');
+
+			// Debug: Check if bot is in the target guild
+			const guildId = process.env.GUILD_ID;
+			if (guildId) {
+				try {
+					const guild = await this.client.guilds.fetch(guildId);
+					logger.info(`✅ Bot is present in guild: ${guild.name} (${guild.id})`);
+					logger.info(`🔍 Guild member count: ${guild.memberCount}`);
+					logger.info(`🔍 Bot permissions in guild: ${guild.members.me?.permissions.toArray().join(', ') || 'Unknown'}`);
+				} catch (error) {
+					logger.error(`❌ Bot is NOT in guild ${guildId}:`, ensureError(error));
+					logger.error('🚨 This explains why slash commands are not working!');
+					logger.error('🔧 You need to invite the bot to your Discord server first!');
+				}
+			}
 
 			// Deploy commands to Discord now that client is ready
 			try {
@@ -222,19 +272,44 @@ private async deployCommands(): Promise<void> {
 
 			logger.debug(`Processing message from ${message.author.username}: ${message.content}`);
 
-			// TODO: Process message through reply bot system
-			// await this.processMessageWithReplyBots(message);
-			logger.debug('Reply bot processing not yet implemented - message logged only');
+			// Process message through reply bot system
+			await this.processMessageWithReplyBots(message);
 
 		} catch (error) {
 			logger.error('Error processing message:', ensureError(error));
 		}
 	}
 
-	// TODO: Implement reply bot message processing
-	// private async processMessageWithReplyBots(message: any): Promise<void> {
-	//     // Implementation pending
-	// }
+	/**
+	 * Process a message through all loaded reply bots
+	 * @param message Discord message to process
+	 */
+	private async processMessageWithReplyBots(message: any): Promise<void> {
+		if (this.replyBots.length === 0) {
+			logger.debug('No reply bots loaded - skipping message processing');
+			return;
+		}
+
+		logger.debug(`Processing message through ${this.replyBots.length} reply bots`);
+
+		// Process message through each reply bot
+		for (const bot of this.replyBots) {
+			try {
+				// Check if bot should respond to this message
+				const shouldRespond = await bot.shouldRespond(message);
+
+				if (shouldRespond) {
+					logger.debug(`${bot.defaultBotName} will process message`);
+					await bot.processMessagePublic(message);
+				} else {
+					logger.debug(`${bot.defaultBotName} skipped message`);
+				}
+			} catch (error) {
+				logger.error(`Error processing message with ${bot.defaultBotName}:`, ensureError(error));
+				// Continue processing with other bots even if one fails
+			}
+		}
+	}
 
 	private async handleInteraction(interaction: any): Promise<void> {
 		if (interaction.isChatInputCommand()) {

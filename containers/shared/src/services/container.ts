@@ -37,6 +37,9 @@ export const ServiceId = {
 	DiscordService: Symbol.for('DiscordService'),
 	DiscordGMService: Symbol.for('DiscordGMService'),
 	LLMManager: Symbol.for('LLMManager'),
+	DatabaseService: Symbol.for('DatabaseService'),
+	ConfigurationService: Symbol.for('ConfigurationService'),
+	MessageFilter: Symbol.for('MessageFilter'),
 
 	// Bots
 	BlueBot: Symbol.for('BlueBot'),

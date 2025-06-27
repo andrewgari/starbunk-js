@@ -1,8 +1,12 @@
-import { isDebugMode } from '@/environment';
+import { isDebugMode, logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
-import userIds from '../../../discord/userId';
-import { StandardLLMService } from '@starbunk/shared';
-import { logger } from '@starbunk/shared';
+
+// Simple user IDs for testing and development
+const userIds = {
+	Cova: '139592376443338752', // Cova's actual Discord user ID
+	Venn: '123456789012345678', // Valid format placeholder for Venn
+	Chad: '123456789012345679' // Valid format placeholder for Chad
+};
 import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
 /**
@@ -197,21 +201,13 @@ export function contextWithinTimeframeOf(
 export function llmDetects(prompt: string): TriggerCondition {
 	return async (message: Message): Promise<boolean> => {
 		try {
-			const llmService = await StandardLLMService.getInstance();
+			// TODO: Implement LLM service integration
+			logger.debug(`LLM detection requested for prompt: "${prompt}" on message: "${message.content}"`);
 
-			const query = `Based on the following message content, is this statement true: "${prompt}"? Respond ONLY with the word "true" or "false".\n\nMessage Content: "${message.content}"`;
+			// For now, return false to disable LLM-based conditions
+			// This will be implemented when LLM service is properly integrated
+			return false;
 
-			const response = await llmService.generateText(query);
-			const resultText = response.trim().toLowerCase();
-
-			if (resultText === 'true') {
-				return true;
-			} else if (resultText === 'false') {
-				return false;
-			} else {
-				logger.warn(`LLM returned unexpected response for boolean query: "${response}". Query sent: "${query}". Defaulting to false.`);
-				return false;
-			}
 		} catch (error) {
 			logger.error(`LLM query failed in llmDetects: ${error instanceof Error ? error.message : String(error)}`);
 			return false;

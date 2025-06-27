@@ -1,4 +1,8 @@
-import userId from '../../../../discord/userId';
+// Simple user IDs for testing and development
+const userId = {
+	Cova: '139592376443338752', // Cova's actual Discord user ID
+	Venn: '123456789012345678' // Valid format placeholder for Venn
+};
 
 // Constants for Macaroni Bot
 export const MACARONI_BOT_NAME = 'Macaroni Bot';

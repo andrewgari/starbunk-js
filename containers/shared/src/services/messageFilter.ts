@@ -37,29 +37,84 @@ export class MessageFilter {
 
 	/**
 	 * Checks if a message should be processed based on server and channel restrictions
+	 * Implements the following logic:
+	 * 1. Guild-only filtering: If TESTING_SERVER_IDS is specified but TESTING_CHANNEL_IDS is not,
+	 *    bots should only post in the specified guild(s)
+	 * 2. Channel-only filtering: If TESTING_CHANNEL_IDS is specified but TESTING_SERVER_IDS is not,
+	 *    bots should only post in the specified channel(s) regardless of guild
+	 * 3. Combined filtering: If both are specified, bots should only post in the specified
+	 *    channel(s) within the specified guild(s)
+	 * 4. No filtering: If neither are specified, bots should post normally without restrictions
 	 */
 	public shouldProcessMessage(context: MessageContext): FilterResult {
-		// Check server restriction
-		if (this.testingServerIds.length > 0 && context.serverId) {
+		const hasServerRestriction = this.testingServerIds.length > 0;
+		const hasChannelRestriction = this.testingChannelIds.length > 0;
+
+		// Case 4: No filtering - allow all messages
+		if (!hasServerRestriction && !hasChannelRestriction) {
+			this.logFilterDecision(context, true, 'No restrictions configured');
+			return { allowed: true };
+		}
+
+		// Case 1: Guild-only filtering
+		if (hasServerRestriction && !hasChannelRestriction) {
+			if (!context.serverId) {
+				const reason = 'Message is from DM, but server restriction is active';
+				this.logFilterDecision(context, false, reason);
+				return { allowed: false, reason };
+			}
+
 			if (!this.testingServerIds.includes(context.serverId)) {
-				const reason = `Server ${context.serverId} not in allowed testing servers`;
+				const reason = `Server ${context.serverId} not in allowed testing servers: [${this.testingServerIds.join(', ')}]`;
 				this.logFilterDecision(context, false, reason);
 				return { allowed: false, reason };
 			}
+
+			this.logFilterDecision(context, true, 'Server restriction passed');
+			return { allowed: true };
 		}
 
-		// Check channel restriction
-		if (this.testingChannelIds.length > 0) {
+		// Case 2: Channel-only filtering
+		if (!hasServerRestriction && hasChannelRestriction) {
 			if (!this.testingChannelIds.includes(context.channelId)) {
-				const reason = `Channel ${context.channelId} not in allowed testing channels`;
+				const reason = `Channel ${context.channelId} not in allowed testing channels: [${this.testingChannelIds.join(', ')}]`;
 				this.logFilterDecision(context, false, reason);
 				return { allowed: false, reason };
 			}
+
+			this.logFilterDecision(context, true, 'Channel restriction passed');
+			return { allowed: true };
 		}
 
-		// Message passes all filters
-		this.logFilterDecision(context, true);
-		return { allowed: true };
+		// Case 3: Combined filtering - both server AND channel must match
+		if (hasServerRestriction && hasChannelRestriction) {
+			// First check server restriction
+			if (!context.serverId) {
+				const reason = 'Message is from DM, but server restriction is active';
+				this.logFilterDecision(context, false, reason);
+				return { allowed: false, reason };
+			}
+
+			if (!this.testingServerIds.includes(context.serverId)) {
+				const reason = `Server ${context.serverId} not in allowed testing servers: [${this.testingServerIds.join(', ')}]`;
+				this.logFilterDecision(context, false, reason);
+				return { allowed: false, reason };
+			}
+
+			// Then check channel restriction
+			if (!this.testingChannelIds.includes(context.channelId)) {
+				const reason = `Channel ${context.channelId} not in allowed testing channels: [${this.testingChannelIds.join(', ')}] (server restriction already passed)`;
+				this.logFilterDecision(context, false, reason);
+				return { allowed: false, reason };
+			}
+
+			this.logFilterDecision(context, true, 'Both server and channel restrictions passed');
+			return { allowed: true };
+		}
+
+		// This should never be reached, but provide a safe fallback
+		this.logFilterDecision(context, false, 'Unknown filtering state');
+		return { allowed: false, reason: 'Unknown filtering state' };
 	}
 
 	/**

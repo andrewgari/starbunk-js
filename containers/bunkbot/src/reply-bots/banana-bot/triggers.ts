@@ -1,5 +1,10 @@
-import userId from '../../../../discord/userId';
-import { isDebugMode } from '../../../../environment';
+import { isDebugMode } from '@starbunk/shared';
+
+// Simple user IDs for testing and development
+const userId = {
+	Cova: '139592376443338752', // Cova's actual Discord user ID
+	Venn: '123456789012345678' // Valid format placeholder for Venn
+};
 import { and, fromUser, matchesPattern, or, withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { BANANA_BOT_PATTERNS, getRandomBananaResponse } from './constants';

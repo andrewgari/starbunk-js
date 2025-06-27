@@ -1,14 +1,16 @@
-import userId from '@/discord/userId';
-import { BotIdentity } from '@/starbunk/types/botIdentity';
+import { BotIdentity } from '../../types/botIdentity';
 import { matchesPattern } from '../../core/conditions';
 import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { GUY_BOT_NAME, GUY_BOT_PATTERNS, getRandomGuyResponse } from './constants';
 
+// Guy's real Discord user ID
+const GUY_USER_ID = '135820819086573568';
+
 // Get Guy's identity from Discord
 async function getGuyIdentityFromDiscord(): Promise<BotIdentity> {
 	return getBotIdentityFromDiscord({
-		userId: userId.Guy,
+		userId: GUY_USER_ID,
 		fallbackName: GUY_BOT_NAME
 	});
 }

@@ -13,9 +13,10 @@ RUN cd shared && npm ci && cd .. && npm ci
 # Copy source code
 COPY containers/shared ./shared
 COPY containers/bunkbot ./
+COPY prisma ./prisma
 
 # Build shared package first, then link it and build container
-RUN cd shared && npm run build && npm pack && cd .. && npm install ./shared/starbunk-shared-1.0.0.tgz && npm run build
+RUN cd shared && npm run build && npm pack && cd .. && npm install ./shared/starbunk-shared-1.0.0.tgz && npx prisma generate && npm run build
 
 # Production stage
 FROM node:20-slim AS runtime
@@ -37,6 +38,13 @@ COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/shared/node_modules ./shared/node_modules
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/prisma ./prisma
+
+# Generate Prisma client in runtime stage (before changing ownership)
+RUN echo "Generating Prisma client..." && \
+    npx prisma generate && \
+    echo "Prisma client generated successfully" && \
+    ls -la node_modules/.prisma/ || echo "No .prisma directory found"
 
 # Set ownership
 RUN chown -R bunkbot:bunkbot /app

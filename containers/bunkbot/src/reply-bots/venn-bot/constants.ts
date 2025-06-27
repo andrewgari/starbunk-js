@@ -1,10 +1,7 @@
 // Constants for Venn Bot
 
-import userId from '../../../../discord/userId';
-
 export const VENN_BOT_NAME = 'VennBot';
 export const VENN_AVATAR_URL = 'https://i.imgur.com/1234567890.png';
-export const VENN_USER_ID = userId.Venn;
 export const VENN_TRIGGER_CHANCE = 1; // 1% chance to trigger
 export const VENN_RESPONSE = 'Hmm...';
 

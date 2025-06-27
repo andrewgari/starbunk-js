@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { createBotIdentity } from '../../../../starbunk/types/botIdentity';
+import { BotIdentity } from '../../types/botIdentity';
 import { withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { HOMONYM_BOT_AVATAR_URL, HOMONYM_BOT_NAME, HOMONYM_BOT_RESPONSE_RATE, HOMONYM_PAIRS, getRandomCorrection } from './constants';
@@ -40,6 +40,9 @@ export const homonymTrigger = createTriggerResponse({
 
 		return `You mean "${correction}"*`;
 	},
-	identity: createBotIdentity(HOMONYM_BOT_NAME, HOMONYM_BOT_AVATAR_URL),
+	identity: {
+		botName: HOMONYM_BOT_NAME,
+		avatarUrl: HOMONYM_BOT_AVATAR_URL
+	},
 	priority: 1
 });

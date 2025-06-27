@@ -1,6 +1,11 @@
 import { Message } from 'discord.js';
-import userId from '../../../../discord/userId';
-import { isDebugMode } from '../../../../environment';
+import { isDebugMode } from '@starbunk/shared';
+
+// Simple user IDs for testing and development
+const userId = {
+	Cova: '139592376443338752', // Cova's actual Discord user ID
+	Venn: '123456789012345678' // Valid format placeholder for Venn
+};
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { and, fromUser, llmDetects, matchesPattern, not, or, withinTimeframeOf } from '../../core/conditions';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

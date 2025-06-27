@@ -1,15 +1,17 @@
-import userId from '../../../../discord/userId';
-import { BotIdentity } from '../../../types/botIdentity';
+import { BotIdentity } from '../../types/botIdentity';
 import { and, fromUser, matchesPattern, or, withChance } from '../../core/conditions';
 import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
 import { weightedRandomResponse } from '../../core/responses';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { VENN_BOT_NAME, VENN_PATTERNS, VENN_RESPONSES, VENN_TRIGGER_CHANCE, VENN_USER_ID } from './constants';
+import { VENN_BOT_NAME, VENN_PATTERNS, VENN_RESPONSES, VENN_TRIGGER_CHANCE } from './constants';
+
+// Venn's real Discord user ID
+const VENN_USER_ID = '151120340343455744';
 
 // Get Venn's identity from Discord
 async function getVennIdentityFromDiscord(): Promise<BotIdentity> {
 	return getBotIdentityFromDiscord({
-		userId: userId.Venn,
+		userId: VENN_USER_ID,
 		fallbackName: VENN_BOT_NAME
 	});
 }

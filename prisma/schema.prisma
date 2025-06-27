@@ -10,8 +10,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:../data/starbunk.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Campaign {
@@ -159,4 +159,77 @@ model ChannelBridge {
 
   // Ensure we don't have duplicate bridges
   @@unique([sourceChannelId, targetChannelId])
+}
+
+// Bot Configuration Tables
+model BotConfiguration {
+  id          String   @id @default(uuid())
+  botName     String   @unique // e.g., "nice-bot", "cova-bot", "chad-bot"
+  displayName String   // Human-readable name
+  description String?
+  isEnabled   Boolean  @default(true)
+  avatarUrl   String?
+  priority    Int      @default(1)
+  metadata    Json?    // Additional bot-specific configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patterns    BotPattern[]
+  responses   BotResponse[]
+}
+
+model BotPattern {
+  id              String   @id @default(uuid())
+  botConfigId     String
+  name            String   // e.g., "default", "mention", "direct"
+  pattern         String   // Regex pattern as string
+  patternFlags    String?  // Regex flags (i, g, m, etc.)
+  isEnabled       Boolean  @default(true)
+  priority        Int      @default(1)
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  botConfig       BotConfiguration @relation(fields: [botConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([botConfigId, name])
+}
+
+model BotResponse {
+  id              String   @id @default(uuid())
+  botConfigId     String
+  name            String   // e.g., "default", "mention_response"
+  responseType    String   // "static", "random", "llm", "function"
+  content         String?  // Static response text or function name
+  alternatives    Json?    // Array of alternative responses for random type
+  isEnabled       Boolean  @default(true)
+  priority        Int      @default(1)
+  metadata        Json?    // Additional response configuration
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  botConfig       BotConfiguration @relation(fields: [botConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([botConfigId, name])
+}
+
+model UserConfiguration {
+  id          String   @id @default(uuid())
+  userId      String   @unique // Discord user ID
+  username    String   // Discord username for reference
+  displayName String?  // Custom display name
+  isActive    Boolean  @default(true)
+  metadata    Json?    // Additional user-specific configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ServerConfiguration {
+  id          String   @id @default(uuid())
+  serverId    String   @unique // Discord server/guild ID
+  serverName  String   // Server name for reference
+  isActive    Boolean  @default(true)
+  settings    Json?    // Server-specific bot settings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

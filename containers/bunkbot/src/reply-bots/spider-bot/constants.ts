@@ -3,7 +3,7 @@ export const SPIDER_BOT_NAME = 'Spider-Bot';
 export const SPIDER_BOT_AVATAR_URL = 'https://i.pinimg.com/736x/33/e0/06/33e00653eb485455ce5121b413b26d3b.jpg';
 
 export const SPIDER_BOT_PATTERNS = {
-	Default: /spider[^-]?man/i,
+	Default: /spider(?!-).*man/i,  // Matches "spiderman", "spider man", "spider_man", etc. but NOT "spider-man"
 	Correct: /spider-man/i
 };
 

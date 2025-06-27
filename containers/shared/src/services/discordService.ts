@@ -505,7 +505,7 @@ export class DiscordService {
 					logger.debug(`[DiscordService] Forced refresh of member ${userId} successful`);
 				} else {
 					// Use normal getMember which uses cache with fallback to fetch
-					member = this.getMember(DefaultGuildId, userId);
+					member = await this.getMemberAsync(DefaultGuildId, userId);
 				}
 			} catch (memberError) {
 				const errorMessage = ensureError(memberError);
@@ -534,6 +534,7 @@ export class DiscordService {
 			const identity: BotIdentity = { botName, avatarUrl };
 			this.botProfileCache.set(userId, identity);
 
+			logger.debug(`[DiscordService] Created bot identity for user ${userId}: ${botName} with avatar ${avatarUrl}`);
 			return identity;
 		} catch (error) {
 			const errorMessage = ensureError(error);
@@ -561,6 +562,42 @@ export class DiscordService {
 		return member;
 	}
 
+	/**
+	 * Async version of getMember that fetches from API if not in cache
+	 */
+	public async getMemberAsync(guildId: string, memberId: string): Promise<GuildMember> {
+		const cacheKey = `${guildId}:${memberId}`;
+
+		// Check our cache first
+		const cachedMember = this.memberCache.get(cacheKey);
+		if (cachedMember) {
+			return cachedMember;
+		}
+
+		const guild = this.getGuild(guildId);
+
+		// Check Discord's cache
+		let member = guild.members.cache.get(memberId);
+		if (member) {
+			// Cache the result
+			this.memberCache.set(cacheKey, member);
+			return member;
+		}
+
+		// Not in cache, fetch from API
+		try {
+			member = await guild.members.fetch({ user: memberId, force: false });
+
+			// Cache the result
+			this.memberCache.set(cacheKey, member);
+			return member;
+		} catch (error) {
+			const errorMessage = ensureError(error);
+			logger.error(`[DiscordService] Failed to fetch member ${memberId} from guild ${guildId}:`, errorMessage);
+			throw new MemberNotFoundError(memberId);
+		}
+	}
+
 	public async sendMessage(channelId: string, message: string): Promise<Message> {
 		const channel = this.getTextChannel(channelId);
 		return channel.send(message);
@@ -575,6 +612,9 @@ export class DiscordService {
 		try {
 			const channel = this.getTextChannel(channelId);
 			const webhook = await this.getOrCreateWebhook(channel);
+
+			logger.debug(`[DiscordService] Sending webhook message with identity: ${botIdentity.botName}, avatar: ${botIdentity.avatarUrl}`);
+
 			await webhook.send({
 				content: message,
 				username: botIdentity.botName,
@@ -645,15 +685,36 @@ export class DiscordService {
 
 	public async getRandomMemberAsBotIdentity(): Promise<BotIdentity> {
 		try {
-			const guild = await this.getGuild(DefaultGuildId);
-			const members = Array.from(guild.members.cache.values());
+			const guild = this.getGuild(DefaultGuildId);
+			let members = Array.from(guild.members.cache.values());
 
+			// If no members in cache, fetch them from API
 			if (members.length === 0) {
-				throw new Error('No members found in guild');
+				logger.debug('[DiscordService] No members in cache, fetching from API...');
+				try {
+					await guild.members.fetch({ limit: 100 }); // Fetch up to 100 members
+					members = Array.from(guild.members.cache.values());
+				} catch (fetchError) {
+					const errorMessage = ensureError(fetchError);
+					logger.error('[DiscordService] Failed to fetch guild members:', errorMessage);
+					throw new Error('Failed to fetch guild members for random selection');
+				}
 			}
 
-			const randomIndex = Math.floor(Math.random() * members.length);
-			const member = members[randomIndex];
+			if (members.length === 0) {
+				throw new Error('No members found in guild after fetching');
+			}
+
+			// Filter out bots to avoid selecting bot accounts
+			const humanMembers = members.filter(member => !member.user.bot);
+			if (humanMembers.length === 0) {
+				logger.warn('[DiscordService] No human members found, using all members including bots');
+				// Fallback to all members if no humans found
+			}
+
+			const membersToChooseFrom = humanMembers.length > 0 ? humanMembers : members;
+			const randomIndex = Math.floor(Math.random() * membersToChooseFrom.length);
+			const member = membersToChooseFrom[randomIndex];
 
 			// Ensure we have valid display name
 			const botName = member.nickname ?? member.user.username;
@@ -667,6 +728,7 @@ export class DiscordService {
 				throw new Error(`No valid avatar URL found for random member ${member.id}`);
 			}
 
+			logger.debug(`[DiscordService] Selected random member: ${botName} (${member.id})`);
 			return { botName, avatarUrl };
 		} catch (error) {
 			const errorMessage = ensureError(error);

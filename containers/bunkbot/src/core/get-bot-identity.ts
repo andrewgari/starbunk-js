@@ -1,6 +1,6 @@
-import { getDiscordService } from '@starbunk/shared';
-import { logger } from '@starbunk/shared';
-import { BotIdentity } from '@/starbunk/types/botIdentity';
+import { container, ServiceId, logger } from '@starbunk/shared';
+import { DiscordService } from '@starbunk/shared/dist/services/discordService';
+import { BotIdentity } from '../types/botIdentity';
 
 interface GetBotIdentityOptions {
 	userId?: string;
@@ -19,12 +19,16 @@ export async function getBotIdentityFromDiscord({
 	useRandomMember = false
 }: GetBotIdentityOptions): Promise<BotIdentity> {
 	try {
-		const discordService = getDiscordService();
+		// Get the Discord service from the container
+		const discordService = container.get<DiscordService>(ServiceId.DiscordService);
+
 		let identity: BotIdentity;
 
 		if (useRandomMember) {
+			logger.debug(`Getting random member identity for ${fallbackName}`);
 			identity = await discordService.getRandomMemberAsBotIdentity();
 		} else if (userId) {
+			logger.debug(`Getting Discord identity for user ${userId} (${fallbackName})`);
 			identity = await discordService.getMemberAsBotIdentity(userId);
 		} else {
 			throw new Error('Either userId or useRandomMember must be provided');
@@ -35,6 +39,7 @@ export async function getBotIdentityFromDiscord({
 			throw new Error(`Invalid bot identity retrieved${userId ? ` for user ID: ${userId}` : ' from random member'}`);
 		}
 
+		logger.debug(`Successfully retrieved Discord identity: ${identity.botName} with avatar ${identity.avatarUrl}`);
 		return identity;
 	} catch (error) {
 		logger.error(
@@ -43,6 +48,7 @@ export async function getBotIdentityFromDiscord({
 		);
 
 		// Fallback to a valid default identity
+		logger.debug(`Using fallback identity for ${fallbackName} due to error`);
 		return {
 			botName: fallbackName,
 			avatarUrl: fallbackAvatarUrl

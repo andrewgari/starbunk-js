@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
-import { getDiscordService } from '@starbunk/shared';
-import { logger } from '@starbunk/shared';
-import { BotIdentity } from '../../types/botIdentity';
+import { container, ServiceId, logger } from '@starbunk/shared';
+import { DiscordService } from '@starbunk/shared/dist/services/discordService';
+import { BotIdentity } from '../types/botIdentity';
 import { withDefaultBotBehavior } from './conditions';
 
 /**
@@ -137,9 +137,11 @@ export class TriggerResponseClass {
 
 			logger.debug(`[${botName}] Sending response: "${responseText.substring(0, 100)}..."`);
 
-			// Use the discord service to send the message
-			// Use pre-imported DiscordService for better performance
-			await getDiscordService().sendMessageWithBotIdentity(channel.id, identity, responseText);
+			// Use the Discord service to send the message with bot identity via webhook
+			const discordService = container.get<DiscordService>(ServiceId.DiscordService);
+			await discordService.sendMessageWithBotIdentity(channel.id, identity, responseText);
+
+			logger.debug(`Message sent with bot identity: ${identity.botName} in channel ${channel.id}`);
 
 			return true;
 		} catch (error) {
