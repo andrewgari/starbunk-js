@@ -125,6 +125,23 @@ private registerCommands(): void {
 	logger.info(`Registered ${this.commands.size} commands: ${Array.from(this.commands.keys()).join(', ')}`);
 }
 
+private async deployCommands(): Promise<void> {
+	try {
+		logger.info('🚀 Deploying slash commands to Discord...');
+
+		// Collect command data
+		const commandData = Array.from(this.commands.values()).map(command => command.data);
+
+		// Deploy commands globally (available in all servers)
+		await this.client.application.commands.set(commandData);
+
+		logger.info(`✅ Successfully deployed ${commandData.length} slash commands to Discord`);
+	} catch (error) {
+		logger.error('❌ Failed to deploy commands to Discord:', ensureError(error));
+		throw error;
+	}
+}
+
 	private startHealthServer(): void {
 		this.healthServer = createServer((req: IncomingMessage, res: ServerResponse) => {
 			if (req.url === '/health') {
@@ -162,15 +179,25 @@ private registerCommands(): void {
 		});
 
 		this.client.on(Events.MessageCreate, async (message: any) => {
+			logger.debug(`💬 Received message from ${message.author?.username || 'unknown'}: ${message.content?.substring(0, 50) || 'no content'}...`);
 			await this.handleMessage(message);
 		});
 
 		this.client.on(Events.InteractionCreate, async (interaction: any) => {
+			logger.debug(`🎮 Received interaction: ${interaction.type} from ${interaction.user?.username || 'unknown'}`);
 			await this.handleInteraction(interaction);
 		});
 
-		this.client.once(Events.ClientReady, () => {
+		this.client.once(Events.ClientReady, async () => {
 			logger.info('🤖 BunkBot is ready and connected to Discord');
+
+			// Deploy commands to Discord now that client is ready
+			try {
+				await this.deployCommands();
+			} catch (error) {
+				logger.error('Failed to deploy commands, but continuing...', ensureError(error));
+			}
+
 			this.hasInitialized = true;
 		});
 	}
