@@ -1,0 +1,147 @@
+# Path-based filters for container builds
+# This file centralizes all path filtering logic for CI/CD workflows
+
+# Shared package - affects ALL containers when changed
+shared:
+  - 'containers/shared/**'
+  - '!containers/shared/README.md'
+  - '!containers/shared/docs/**'
+  - '!containers/shared/**/*.md'
+
+# Individual container filters
+bunkbot:
+  - 'containers/bunkbot/**'
+  - '!containers/bunkbot/README.md'
+  - '!containers/bunkbot/docs/**'
+  - '!containers/bunkbot/**/*.md'
+
+djcova:
+  - 'containers/djcova/**'
+  - '!containers/djcova/README.md'
+  - '!containers/djcova/docs/**'
+  - '!containers/djcova/**/*.md'
+
+starbunk-dnd:
+  - 'containers/starbunk-dnd/**'
+  - '!containers/starbunk-dnd/README.md'
+  - '!containers/starbunk-dnd/docs/**'
+  - '!containers/starbunk-dnd/**/*.md'
+
+covabot:
+  - 'containers/covabot/**'
+  - '!containers/covabot/README.md'
+  - '!containers/covabot/docs/**'
+  - '!containers/covabot/**/*.md'
+
+# Root-level files that affect all containers
+root-files:
+  - 'package.json'
+  - 'package-lock.json'
+  - 'tsconfig.json'
+  - '.eslintrc.json'
+  - 'jest.config.js'
+  - '.nvmrc'
+  - '.node-version'
+  - 'lerna.json'
+  - 'nx.json'
+
+# CI/CD workflow changes
+workflows:
+  - '.github/workflows/**'
+  - '.github/actions/**'
+  - '.github/path-filters.yml'
+
+# Docker configuration changes
+docker:
+  - 'docker-compose*.yml'
+  - 'Dockerfile*'
+  - '.dockerignore'
+  - 'containers/*/Dockerfile'
+  - 'containers/*/.dockerignore'
+
+# Security and dependency updates
+security:
+  - '.github/dependabot.yml'
+  - '.github/security.yml'
+  - 'package-lock.json'
+  - 'containers/*/package-lock.json'
+  - '.github/workflows/security.yml'
+
+# Documentation (usually doesn't require builds)
+docs:
+  - '**/*.md'
+  - 'docs/**'
+  - '.github/ISSUE_TEMPLATE/**'
+  - '.github/PULL_REQUEST_TEMPLATE.md'
+  - 'README.md'
+  - 'CHANGELOG.md'
+  - 'CONTRIBUTING.md'
+  - 'LICENSE'
+
+# Test files (may require test runs but not necessarily builds)
+tests:
+  - '**/*.test.ts'
+  - '**/*.test.js'
+  - '**/*.spec.ts'
+  - '**/*.spec.js'
+  - 'containers/*/tests/**'
+  - 'containers/shared/tests/**'
+  - 'jest.config.js'
+  - '**/__tests__/**'
+
+# Configuration files that might affect builds
+config:
+  - '.eslintrc*'
+  - '.prettierrc*'
+  - 'tsconfig*.json'
+  - 'babel.config.*'
+  - 'webpack.config.*'
+  - 'vite.config.*'
+
+# Container-specific dependency combinations
+# These are used for more granular dependency detection
+
+bunkbot-deps:
+  - 'containers/bunkbot/**'
+  - 'containers/shared/**'
+  - '!**/*.md'
+  - '!**/docs/**'
+
+djcova-deps:
+  - 'containers/djcova/**'
+  - 'containers/shared/**'
+  - '!**/*.md'
+  - '!**/docs/**'
+
+starbunk-dnd-deps:
+  - 'containers/starbunk-dnd/**'
+  - 'containers/shared/**'
+  - '!**/*.md'
+  - '!**/docs/**'
+
+covabot-deps:
+  - 'containers/covabot/**'
+  - 'containers/shared/**'
+  - '!**/*.md'
+  - '!**/docs/**'
+
+# Critical files that always trigger full builds
+critical:
+  - '.github/workflows/container-build-test-publish.yml'
+  - '.github/workflows/pr-checks.yml'
+  - '.github/path-filters.yml'
+  - 'package.json'
+  - 'docker-compose*.yml'
+
+# Files that never trigger builds
+ignore:
+  - '**/*.md'
+  - 'docs/**'
+  - '.github/ISSUE_TEMPLATE/**'
+  - '.github/PULL_REQUEST_TEMPLATE.md'
+  - '**/README.md'
+  - '**/CHANGELOG.md'
+  - '**/LICENSE'
+  - '**/.gitkeep'
+  - '**/.gitignore'
+  - '**/.*ignore'
