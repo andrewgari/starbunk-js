@@ -245,9 +245,20 @@ private registerCommands(): void {
 	}
 
 	async start(): Promise<void> {
-		const token = process.env.STARBUNK_TOKEN;
+		// Check for container-specific token first, then fallback to legacy tokens
+		const token = process.env.BUNKBOT_TOKEN || process.env.STARBUNK_TOKEN || process.env.TOKEN;
+
 		if (!token) {
-			throw new Error('STARBUNK_TOKEN environment variable is required');
+			throw new Error('No Discord token found. Please set BUNKBOT_TOKEN, STARBUNK_TOKEN, or TOKEN environment variable.');
+		}
+
+		// Log which token variable is being used (without exposing the actual token)
+		if (process.env.BUNKBOT_TOKEN) {
+			logger.info('🔑 Using BUNKBOT_TOKEN for Discord authentication');
+		} else if (process.env.STARBUNK_TOKEN) {
+			logger.info('🔑 Using STARBUNK_TOKEN for Discord authentication (fallback)');
+		} else {
+			logger.info('🔑 Using TOKEN for Discord authentication (last resort)');
 		}
 
 		await this.client.login(token);
