@@ -19,6 +19,9 @@ import {
 import pingCommand from './commands/ping';
 import debugCommand from './commands/debug';
 
+// Reply bot system will be integrated later
+// import { ReplyBotImpl } from './core/bot-builder';
+
 class BunkBotContainer {
 	private client: any;
 	private webhookManager!: WebhookManager;
@@ -26,6 +29,7 @@ class BunkBotContainer {
 	private hasInitialized = false;
 	private commands = new Map();
 	private healthServer: any;
+	private replyBots: any[] = [];
 
 	async initialize(): Promise<void> {
 		logger.info('🚀 Initializing BunkBot container...');
@@ -51,6 +55,9 @@ class BunkBotContainer {
 
 			// Initialize services
 			await this.initializeServices();
+
+			// Initialize reply bot system
+			await this.initializeReplyBots();
 
 		// Register commands
 		this.registerCommands();
@@ -94,6 +101,20 @@ class BunkBotContainer {
 		}
 
 		logger.info('BunkBot services initialized');
+	}
+
+	private async initializeReplyBots(): Promise<void> {
+		logger.info('🤖 Initializing reply bot system...');
+
+		try {
+			// TODO: Reply bot system integration
+			// For now, just log that the system is ready for integration
+			logger.info('✅ Reply bot system ready for integration');
+			logger.warn('⚠️  Reply bot integration is pending - only slash commands are active');
+		} catch (error) {
+			logger.error('❌ Failed to initialize reply bot system:', ensureError(error));
+			// Don't throw here - allow BunkBot to continue with just slash commands
+		}
 	}
 
 private registerCommands(): void {
@@ -174,14 +195,19 @@ private registerCommands(): void {
 
 			logger.debug(`Processing message from ${message.author.username}: ${message.content}`);
 
-			// TODO: Integrate reply bot system here
-			// This is where the full reply bot patterns will be processed
-			// For now, BunkBot focuses on slash commands and admin functionality
+			// TODO: Process message through reply bot system
+			// await this.processMessageWithReplyBots(message);
+			logger.debug('Reply bot processing not yet implemented - message logged only');
 
 		} catch (error) {
 			logger.error('Error processing message:', ensureError(error));
 		}
 	}
+
+	// TODO: Implement reply bot message processing
+	// private async processMessageWithReplyBots(message: any): Promise<void> {
+	//     // Implementation pending
+	// }
 
 	private async handleInteraction(interaction: any): Promise<void> {
 		if (interaction.isChatInputCommand()) {
