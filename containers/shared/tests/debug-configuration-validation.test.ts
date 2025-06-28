@@ -373,17 +373,17 @@ describe('Debug Configuration Validation', () => {
 	describe('Edge Cases and Error Handling', () => {
 		test('should handle extremely long ID lists', () => {
 			// Arrange
-			const longList = Array.from({ length: 100 }, (_, i) => 
-				`12345678901234567${i.toString().padStart(2, '0')}`
+			const longList = Array.from({ length: 100 }, (_, i) =>
+				`1234567890123456${i.toString().padStart(2, '0')}`
 			).join(',');
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: longList });
-			
+
 			// Act
 			const result = getTestingServerIds();
-			
+
 			// Assert
 			expect(result).toHaveLength(100);
-			expect(result[0]).toBe('123456789012345670');
+			expect(result[0]).toBe('123456789012345600');
 			expect(result[99]).toBe('123456789012345699');
 		});
 

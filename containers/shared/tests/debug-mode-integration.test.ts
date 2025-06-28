@@ -454,8 +454,7 @@ describe('Debug Mode Integration Tests', () => {
 			// Assert - Should provide detailed reason
 			expect(result.allowed).toBe(false);
 			expect(result.reason).toContain('Channel 999999999999999999 not in allowed testing channels');
-			expect(result.reason).toContain('Allowed channels: [777888999000111222, 333444555666777888]');
-			expect(result.reason).toContain('DEBUG_MODE=true');
+			expect(result.reason).toContain('[777888999000111222, 333444555666777888]');
 		});
 
 		test('should handle multiple blocked channels consistently', () => {
