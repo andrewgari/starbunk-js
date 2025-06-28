@@ -1,5 +1,5 @@
 // Use the root Prisma client since BunkBot container doesn't have its own schema
-import { PrismaClient } from '../../../../node_modules/@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { logger } from '@starbunk/shared';
 
 export interface UserConfig {
