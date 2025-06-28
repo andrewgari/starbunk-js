@@ -20,7 +20,7 @@ interface GetBotIdentityOptions {
 export async function getBotIdentityFromDiscord({
 	userId,
 	fallbackName,
-	fallbackAvatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png',
+	fallbackAvatarUrl: _fallbackAvatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png',
 	useRandomMember = false,
 	message,
 	forceRefresh = false
@@ -101,8 +101,8 @@ async function getServerSpecificIdentity(
 		// Get server-specific avatar (falls back to global avatar, then default)
 		// Priority: Server avatar > Global avatar > Default avatar
 		const avatarUrl = member.displayAvatarURL({ size: 256, extension: 'png' }) ||
-						  member.user.displayAvatarURL({ size: 256, extension: 'png' }) ||
-						  'https://cdn.discordapp.com/embed/avatars/0.png';
+			member.user.displayAvatarURL({ size: 256, extension: 'png' }) ||
+			'https://cdn.discordapp.com/embed/avatars/0.png';
 
 		logger.debug(`[getBotIdentity] Server-specific identity for ${userId} in ${guildId}: "${botName}" with avatar ${avatarUrl}`);
 

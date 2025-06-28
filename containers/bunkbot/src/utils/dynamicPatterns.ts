@@ -1,4 +1,5 @@
 import { ConfigurationService } from '../services/configurationService';
+import { Message } from 'discord.js';
 
 /**
  * Utility functions for creating dynamic patterns and responses
@@ -55,8 +56,8 @@ export function createDynamicMentionResponse(
 export function createDynamicUserCondition(
 	configService: ConfigurationService,
 	username: string
-): (message: any) => Promise<boolean> {
-	return async (message: any) => {
+): (message: Message) => Promise<boolean> {
+	return async (message: Message) => {
 		const userId = await configService.getUserIdByUsername(username);
 		if (!userId) {
 			return false;
@@ -74,8 +75,8 @@ export function createDynamicUserCondition(
 export function createDynamicNotUserCondition(
 	configService: ConfigurationService,
 	username: string
-): (message: any) => Promise<boolean> {
-	return async (message: any) => {
+): (message: Message) => Promise<boolean> {
+	return async (message: Message) => {
 		const userId = await configService.getUserIdByUsername(username);
 		if (!userId) {
 			return true; // If user not found, consider it as "not from user"

@@ -169,8 +169,8 @@ export class BotIdentityService {
 
 			// Get server-specific avatar (falls back to global avatar, then default)
 			const avatarUrl = member.displayAvatarURL({ size: 256, extension: 'png' }) ||
-							  member.user.displayAvatarURL({ size: 256, extension: 'png' }) ||
-							  'https://cdn.discordapp.com/embed/avatars/0.png';
+				member.user.displayAvatarURL({ size: 256, extension: 'png' }) ||
+				'https://cdn.discordapp.com/embed/avatars/0.png';
 
 			logger.debug(`[BotIdentityService] Server-specific identity for ${userId} in ${guildId}: ${botName}`);
 
