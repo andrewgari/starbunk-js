@@ -31,8 +31,9 @@ export interface ResponseGenerator {
 
 /**
  * Function or value that provides a bot identity
+ * Can return null to indicate identity resolution failure (bot will remain silent)
  */
-export type IdentityProvider = BotIdentity | ((message: Message) => Promise<BotIdentity> | BotIdentity);
+export type IdentityProvider = BotIdentity | ((message: Message) => Promise<BotIdentity | null> | BotIdentity | null);
 
 /**
  * Priority level for trigger execution order
@@ -100,7 +101,8 @@ export class TriggerResponseClass {
 	}
 
 	// Get the identity to use for this response
-	public async getIdentity(message: Message, defaultIdentity: BotIdentity): Promise<BotIdentity> {
+	// Returns null if identity cannot be resolved (bot should remain silent)
+	public async getIdentity(message: Message, defaultIdentity: BotIdentity): Promise<BotIdentity | null> {
 		if (!this.identity) {
 			return defaultIdentity;
 		}
@@ -108,12 +110,18 @@ export class TriggerResponseClass {
 		try {
 			if (typeof this.identity === 'function') {
 				const result = await this.identity(message);
+				if (result === null) {
+					logger.debug(`[TriggerResponse:${this.name}] Identity resolution returned null - bot will remain silent`);
+					return null;
+				}
 				return result;
 			}
 			return this.identity;
 		} catch (error) {
 			logger.error(`[TriggerResponse:${this.name}] Error getting identity:`, error as Error);
-			return defaultIdentity;
+			// If identity resolution fails, bot should remain silent (no fallback)
+			logger.debug(`[TriggerResponse:${this.name}] Identity resolution failed - bot will remain silent`);
+			return null;
 		}
 	}
 
@@ -130,6 +138,12 @@ export class TriggerResponseClass {
 
 			// Get identity for this response
 			const identity = await this.getIdentity(message, defaultIdentity);
+
+			// If identity is null, bot should remain silent
+			if (identity === null) {
+				logger.debug(`[${botName}] Identity resolution failed for trigger "${this.name}" - bot will remain silent`);
+				return false; // Don't send any response
+			}
 
 			// Generate and send response
 			const responseText = await this.response(message);

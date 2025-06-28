@@ -1,17 +1,22 @@
 import { Message } from 'discord.js';
 import { isDebugMode } from '@starbunk/shared';
-
-// Simple user IDs for testing and development
-const userId = {
-	Cova: '139592376443338752', // Cova's actual Discord user ID
-	Venn: '123456789012345678' // Valid format placeholder for Venn
-};
+import { ConfigurationService } from '../../services/configurationService';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { and, fromUser, llmDetects, matchesPattern, not, or, withinTimeframeOf } from '../../core/conditions';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { randomResponse } from '../../core/responses';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { BLUE_BOT_AVATARS, BLUE_BOT_NAME, BLUE_BOT_PATTERNS, BLUE_BOT_PROMPTS, BLUE_BOT_RESPONSES } from './constants';
+
+// Initialize configuration service
+const configService = new ConfigurationService();
+
+// Get target user ID based on debug mode
+async function getTargetUserId(): Promise<string | null> {
+	// In debug mode, use Cova's ID instead of Venn's for easier testing
+	const targetUsername = isDebugMode() ? 'Cova' : 'Venn';
+	return configService.getUserIdByUsername(targetUsername);
+}
 
 // State to track when blue was mentioned or murder was triggered
 let blueTimestamp = new Date(Number.MIN_SAFE_INTEGER);
@@ -26,7 +31,10 @@ export const triggerBlueBotNiceVenn = createTriggerResponse({
 	priority: 1,
 	condition: and(
 		matchesPattern(BLUE_BOT_PATTERNS.Nice),
-		fromUser(userId.Venn)
+		async (message) => {
+		const targetUserId = await getTargetUserId();
+		return targetUserId ? fromUser(targetUserId)(message) : false;
+	}
 	),
 	response: () => 'No way, Venn can suck my blu cane. :unamused:',
 	identity: {
@@ -56,7 +64,10 @@ export const triggerBlueBotAcknowledgeVennMean = createTriggerResponse({
 	priority: 3,
 	condition: and(
 		or(matchesPattern(BLUE_BOT_PATTERNS.Confirm), matchesPattern(BLUE_BOT_PATTERNS.Mean)),
-		fromUser(isDebugMode() ? userId.Cova : userId.Venn),
+		async (message) => {
+			const targetUserId = await getTargetUserId();
+			return targetUserId ? fromUser(targetUserId)(message) : false;
+		},
 		withinTimeframeOf(getBlueTimestamp, 2, 'm')
 	),
 	response: (message) => {
@@ -79,7 +90,10 @@ export const triggerBlueBotAcknowledgeOther = createTriggerResponse({
 	name: 'blue-acknowledge',
 	priority: 4,
 	condition: and(
-		not(fromUser(userId.Venn)),
+		async (message) => {
+		const targetUserId = await getTargetUserId();
+		return targetUserId ? not(fromUser(targetUserId))(message) : true;
+	},
 		or(matchesPattern(BLUE_BOT_PATTERNS.Confirm), matchesPattern(BLUE_BOT_PATTERNS.Mean), matchesPattern(BLUE_BOT_PATTERNS.Default)),
 		withinTimeframeOf(getBlueTimestamp, 2, 'm')
 	),
@@ -87,12 +101,14 @@ export const triggerBlueBotAcknowledgeOther = createTriggerResponse({
 		blueMurderTimestamp = new Date();
 		return randomResponse(BLUE_BOT_RESPONSES.Cheeky);
 	},
-	identity: (message: Message) => ({
-		botName: BLUE_BOT_NAME,
-		avatarUrl: fromUser(isDebugMode() ? userId.Cova : userId.Venn)(message)
-			? BLUE_BOT_AVATARS.Murder
-			: BLUE_BOT_AVATARS.Default
-	})
+	identity: async (message: Message) => {
+		const targetUserId = await getTargetUserId();
+		const isTargetUser = targetUserId ? fromUser(targetUserId)(message) : false;
+		return {
+			botName: BLUE_BOT_NAME,
+			avatarUrl: isTargetUser ? BLUE_BOT_AVATARS.Murder : BLUE_BOT_AVATARS.Default
+		};
+	}
 });
 
 // 3. blue-standard - respond to any blue mention

@@ -1,5 +1,5 @@
 // Constants for Chad Bot
-export const CHAD_USER_ID = '85184539906809856';
+// Note: CHAD_USER_ID is now retrieved from database via ConfigurationService
 export const CHAD_BOT_NAME = 'ChadBot';
 export const CHAD_BOT_AVATAR_URL = 'https://i.imgur.com/XFDYZYz.png';
 

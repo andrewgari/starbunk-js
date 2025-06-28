@@ -182,6 +182,186 @@ async function main() {
 		},
 	});
 
+	// Chad Bot
+	const chadBot = await prisma.botConfiguration.upsert({
+		where: { botName: 'chad-bot' },
+		update: {
+			displayName: 'Chad Bot',
+			description: 'Responds to mentions of gym, protein, and other chad topics',
+		},
+		create: {
+			botName: 'chad-bot',
+			displayName: 'Chad Bot',
+			description: 'Responds to mentions of gym, protein, and other chad topics',
+			isEnabled: true,
+			avatarUrl: 'https://i.imgur.com/XFDYZYz.png',
+			priority: 1,
+			metadata: {
+				responseChance: 1,
+				targetUserId: '85184539906809856', // Chad's Discord ID
+			},
+		},
+	});
+
+	await prisma.botPattern.upsert({
+		where: { botConfigId_name: { botConfigId: chadBot.id, name: 'default' } },
+		update: {
+			pattern: '\\b(gym|protein|gains|workout|lifting|chad|alpha|sigma|grindset|hustle)\\b',
+			patternFlags: 'i',
+		},
+		create: {
+			botConfigId: chadBot.id,
+			name: 'default',
+			pattern: '\\b(gym|protein|gains|workout|lifting|chad|alpha|sigma|grindset|hustle)\\b',
+			patternFlags: 'i',
+			isEnabled: true,
+			priority: 1,
+			description: 'Matches chad-related keywords',
+		},
+	});
+
+	await prisma.botResponse.upsert({
+		where: { botConfigId_name: { botConfigId: chadBot.id, name: 'default' } },
+		update: {
+			content: 'What is bro *yappin* about?...',
+		},
+		create: {
+			botConfigId: chadBot.id,
+			name: 'default',
+			responseType: 'static',
+			content: 'What is bro *yappin* about?...',
+			isEnabled: true,
+			priority: 1,
+		},
+	});
+
+	// Guy Bot
+	const guyBot = await prisma.botConfiguration.upsert({
+		where: { botName: 'guy-bot' },
+		update: {
+			displayName: 'Guy Bot',
+			description: 'Responds with Guy-style messages',
+		},
+		create: {
+			botName: 'guy-bot',
+			displayName: 'Guy Bot',
+			description: 'Responds with Guy-style messages',
+			isEnabled: true,
+			priority: 1,
+			metadata: {
+				targetUserId: '135820819086573568', // Guy's Discord ID
+			},
+		},
+	});
+
+	await prisma.botPattern.upsert({
+		where: { botConfigId_name: { botConfigId: guyBot.id, name: 'default' } },
+		update: {
+			pattern: '\\b(guy|dude|bro|man)\\b',
+			patternFlags: 'i',
+		},
+		create: {
+			botConfigId: guyBot.id,
+			name: 'default',
+			pattern: '\\b(guy|dude|bro|man)\\b',
+			patternFlags: 'i',
+			isEnabled: true,
+			priority: 1,
+			description: 'Matches guy-related keywords',
+		},
+	});
+
+	await prisma.botResponse.upsert({
+		where: { botConfigId_name: { botConfigId: guyBot.id, name: 'default' } },
+		update: {
+			responseType: 'random',
+			alternatives: [
+				'Hey there, guy!',
+				'What\'s up, dude?',
+				'Yo, bro!',
+				'Guy here!'
+			],
+		},
+		create: {
+			botConfigId: guyBot.id,
+			name: 'default',
+			responseType: 'random',
+			alternatives: [
+				'Hey there, guy!',
+				'What\'s up, dude?',
+				'Yo, bro!',
+				'Guy here!'
+			],
+			isEnabled: true,
+			priority: 1,
+		},
+	});
+
+	// Venn Bot
+	const vennBot = await prisma.botConfiguration.upsert({
+		where: { botName: 'venn-bot' },
+		update: {
+			displayName: 'Venn Bot',
+			description: 'Responds to cringe messages with Venn-style reactions',
+		},
+		create: {
+			botName: 'venn-bot',
+			displayName: 'Venn Bot',
+			description: 'Responds to cringe messages with Venn-style reactions',
+			isEnabled: true,
+			priority: 2,
+			metadata: {
+				responseChance: 1,
+				targetUserId: '151120340343455744', // Venn's Discord ID
+			},
+		},
+	});
+
+	await prisma.botPattern.upsert({
+		where: { botConfigId_name: { botConfigId: vennBot.id, name: 'cringe' } },
+		update: {
+			pattern: '\\b(cringe|yikes|oof|bruh|sus|cap|no cap|fr|periodt)\\b',
+			patternFlags: 'i',
+		},
+		create: {
+			botConfigId: vennBot.id,
+			name: 'cringe',
+			pattern: '\\b(cringe|yikes|oof|bruh|sus|cap|no cap|fr|periodt)\\b',
+			patternFlags: 'i',
+			isEnabled: true,
+			priority: 2,
+			description: 'Matches cringe-related keywords',
+		},
+	});
+
+	await prisma.botResponse.upsert({
+		where: { botConfigId_name: { botConfigId: vennBot.id, name: 'cringe' } },
+		update: {
+			responseType: 'random',
+			alternatives: [
+				'That\'s pretty cringe, ngl',
+				'Yikes...',
+				'Bruh moment',
+				'Sus',
+				'That ain\'t it, chief'
+			],
+		},
+		create: {
+			botConfigId: vennBot.id,
+			name: 'cringe',
+			responseType: 'random',
+			alternatives: [
+				'That\'s pretty cringe, ngl',
+				'Yikes...',
+				'Bruh moment',
+				'Sus',
+				'That ain\'t it, chief'
+			],
+			isEnabled: true,
+			priority: 1,
+		},
+	});
+
 	console.log('✅ Database seeding completed successfully!');
 }
 

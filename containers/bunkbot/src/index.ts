@@ -27,10 +27,16 @@ import { BotRegistry } from './botRegistry';
 // import { DatabaseBotFactory } from './core/database-bot-factory'; // Temporarily disabled
 import ReplyBot from './replyBot';
 
+// Import configuration services
+import { ConfigurationService } from './services/configurationService';
+import { BotIdentityService } from './services/botIdentityService';
+
 class BunkBotContainer {
 	private client: any;
 	private webhookManager!: WebhookManager;
 	private messageFilter!: MessageFilter;
+	private configurationService!: ConfigurationService;
+	private botIdentityService!: BotIdentityService;
 	private hasInitialized = false;
 	private commands = new Map();
 	private healthServer: any;
@@ -107,6 +113,14 @@ class BunkBotContainer {
 		// Initialize message filter
 		this.messageFilter = getMessageFilter();
 		container.register(ServiceId.MessageFilter, this.messageFilter);
+
+		// Initialize configuration services
+		this.configurationService = new ConfigurationService();
+		this.botIdentityService = new BotIdentityService(this.configurationService);
+
+		// Preload configuration cache
+		await this.configurationService.refreshCache();
+		logger.info('✅ Configuration services initialized and cache preloaded');
 
 		// Database services temporarily disabled to focus on file-based bot loading
 		logger.info('⚠️  Database services disabled - using file-based bot loading only');
@@ -412,6 +426,12 @@ private async deployCommands(): Promise<void> {
 			this.healthServer.close(() => {
 				logger.info('Health server stopped');
 			});
+		}
+
+		// Disconnect configuration services
+		if (this.configurationService) {
+			await this.configurationService.disconnect();
+			logger.info('Configuration services disconnected');
 		}
 
 		// Stop Discord client

@@ -174,7 +174,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 					}
 
 					// Get identity
-					let identity: BotIdentity;
+					let identity: BotIdentity | null;
 					try {
 						identity =
 							typeof trigger.identity === 'function'
@@ -182,7 +182,8 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 								: trigger.identity || validConfig.defaultIdentity;
 
 						if (!identity) {
-							throw new Error('Failed to retrieve valid bot identity');
+							logger.debug(`[${validConfig.name}] Identity resolution failed for trigger "${trigger.name}" - bot will remain silent`);
+							continue; // Skip this trigger, bot remains silent
 						}
 					} catch (error) {
 						logger.error('Failed to get bot identity', error as Error);
