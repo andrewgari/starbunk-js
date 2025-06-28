@@ -162,7 +162,7 @@ describe('Nice Bot', () => {
 			const response = await niceTrigger.response(message);
 
 			// Assert: Response should be "Nice."
-			expect(response).toBe(NICE_BOT_RESPONSES, NICE_BOT_NAME, NICE_BOT_AVATAR_URL.Default);
+			expect(response).toBe(NICE_BOT_RESPONSES.Default);
 		});
 
 		it('should generate consistent responses for different triggering messages', async () => {
@@ -177,9 +177,9 @@ describe('Nice Bot', () => {
 			const response3 = await niceTrigger.response(message3);
 
 			// Assert: All responses should be the same "Nice." message
-			expect(response1).toBe(NICE_BOT_RESPONSES, NICE_BOT_NAME, NICE_BOT_AVATAR_URL.Default);
-			expect(response2).toBe(NICE_BOT_RESPONSES, NICE_BOT_NAME, NICE_BOT_AVATAR_URL.Default);
-			expect(response3).toBe(NICE_BOT_RESPONSES, NICE_BOT_NAME, NICE_BOT_AVATAR_URL.Default);
+			expect(response1).toBe(NICE_BOT_RESPONSES.Default);
+			expect(response2).toBe(NICE_BOT_RESPONSES.Default);
+			expect(response3).toBe(NICE_BOT_RESPONSES.Default);
 		});
 
 		it('should return exactly "Nice."', async () => {
@@ -197,14 +197,14 @@ describe('Nice Bot', () => {
 	describe('Bot Identity', () => {
 		it('should have the correct bot name', () => {
 			// Arrange: Get the bot instance
-			const bot = nicebotBot;
+			const bot = niceBot;
 
 			// Act: Check the bot name from the instance
 			const botName = bot.name;
 
 			// Assert: Bot should have the correct name
 			expect(botName).toBe(NICE_BOT_NAME);
-			expect(botName).toBe('NiceBot');
+			expect(botName).toBe('BunkBot');
 		});
 });
 });

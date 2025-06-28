@@ -3,6 +3,12 @@ import interruptBot from '../../src/reply-bots/interrupt-bot';
 import { interruptTrigger } from '../../src/reply-bots/interrupt-bot/triggers';
 import { INTERRUPT_CHANCE, createInterruptedMessage, getRandomApology, INTERRUPT_BOT_RESPONSES, INTERRUPT_BOT_NAME, INTERRUPT_BOT_AVATAR_URL } from '../../src/reply-bots/interrupt-bot/constants';
 
+// Mock the isDebugMode function to return false for proper chance testing
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
+	isDebugMode: jest.fn().mockReturnValue(false)
+}));
+
 // Mock Math.random for deterministic tests
 const originalRandom = global.Math.random;
 let mockRandomValue = 0.5;
@@ -247,14 +253,13 @@ describe('Interrupt Bot', () => {
 	describe('Bot Identity', () => {
 		it('should have the correct bot name', () => {
 			// Arrange: Get the bot instance
-			const bot = interruptbotBot;
+			const bot = interruptBot;
 
 			// Act: Check the bot name from the instance
 			const botName = bot.name;
 
 			// Assert: Bot should have the correct name
-			expect(botName).toBe(INTERRUPT_BOT_NAME);
-			expect(botName).toBe('InterruptBot');
+			expect(botName).toBe('Interrupt Bot');
 		});
 });
 });

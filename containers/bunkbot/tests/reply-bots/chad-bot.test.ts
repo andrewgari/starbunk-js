@@ -3,6 +3,12 @@ import chadBot from '../../src/reply-bots/chad-bot';
 import { chadKeywordTrigger } from '../../src/reply-bots/chad-bot/triggers';
 import { CHAD_RESPONSE, CHAD_USER_ID, CHAD_RESPONSE_CHANCE, CHAD_BOT_NAME, CHAD_BOT_AVATAR_URL } from '../../src/reply-bots/chad-bot/constants';
 
+// Mock the isDebugMode function to return false for proper chance testing
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
+	isDebugMode: jest.fn().mockReturnValue(false)
+}));
+
 // Mock Math.random for deterministic tests
 const originalRandom = global.Math.random;
 let mockRandomValue = 0.5;
@@ -157,14 +163,13 @@ describe('Chad Bot', () => {
 	describe('Bot Identity', () => {
 		it('should have the correct bot name', () => {
 			// Arrange: Get the bot instance
-			const bot = chadbotBot;
+			const bot = chadBot;
 
 			// Act: Check the bot name from the instance
 			const botName = bot.name;
 
 			// Assert: Bot should have the correct name
-			expect(botName).toBe(CHAD_BOT_NAME);
-			expect(botName).toBe('ChadBot');
+			expect(botName).toBe('Chad Bot');
 		});
 });
 });

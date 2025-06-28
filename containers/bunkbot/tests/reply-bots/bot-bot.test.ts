@@ -3,6 +3,12 @@ import botBot from '../../src/reply-bots/bot-bot';
 import { botTrigger } from '../../src/reply-bots/bot-bot/triggers';
 import { BOT_BOT_RESPONSES, BOT_BOT_RESPONSE_RATE, BOT_BOT_NAME, BOT_BOT_AVATAR_URL } from '../../src/reply-bots/bot-bot/constants';
 
+// Mock the isDebugMode function to return false for proper chance testing
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
+	isDebugMode: jest.fn().mockReturnValue(false)
+}));
+
 // Mock Math.random for deterministic tests
 const originalRandom = global.Math.random;
 let mockRandomValue = 0.5;
@@ -186,7 +192,7 @@ describe('Bot Bot', () => {
 	describe('Bot Identity', () => {
 		it('should have the correct bot name', () => {
 			// Arrange: Get the bot instance
-			const bot = botbotBot;
+			const bot = botBot;
 
 			// Act: Check the bot name from the instance
 			const botName = bot.name;

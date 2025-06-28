@@ -137,7 +137,7 @@ describe('Pickle Bot', () => {
 			const response = await pickleTrigger.response(message);
 
 			// Assert: Response should be the expected gremlin message
-			expect(response).toBe(PICKLE_BOT_RESPONSES, PICKLE_BOT_NAME, PICKLE_BOT_AVATAR_URL.Default);
+			expect(response).toBe(PICKLE_BOT_RESPONSES.Default);
 		});
 
 		it('should generate consistent responses for different triggering messages', async () => {
@@ -152,9 +152,9 @@ describe('Pickle Bot', () => {
 			const response3 = await pickleTrigger.response(message3);
 
 			// Assert: All responses should be the same gremlin message
-			expect(response1).toBe(PICKLE_BOT_RESPONSES, PICKLE_BOT_NAME, PICKLE_BOT_AVATAR_URL.Default);
-			expect(response2).toBe(PICKLE_BOT_RESPONSES, PICKLE_BOT_NAME, PICKLE_BOT_AVATAR_URL.Default);
-			expect(response3).toBe(PICKLE_BOT_RESPONSES, PICKLE_BOT_NAME, PICKLE_BOT_AVATAR_URL.Default);
+			expect(response1).toBe(PICKLE_BOT_RESPONSES.Default);
+			expect(response2).toBe(PICKLE_BOT_RESPONSES.Default);
+			expect(response3).toBe(PICKLE_BOT_RESPONSES.Default);
 		});
 
 		it('should return the exact expected response text', async () => {
@@ -172,7 +172,7 @@ describe('Pickle Bot', () => {
 	describe('Bot Identity', () => {
 		it('should have the correct bot name', () => {
 			// Arrange: Get the bot instance
-			const bot = picklebotBot;
+			const bot = pickleBot;
 
 			// Act: Check the bot name from the instance
 			const botName = bot.name;

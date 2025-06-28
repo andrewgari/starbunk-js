@@ -151,7 +151,7 @@ describe('Sheesh Bot', () => {
 			// Arrange: Create messages with similar but different words
 			const message1 = mockMessage({ content: 'sheep are fluffy' });
 			const message2 = mockMessage({ content: 'sheet music' });
-			const message3 = mockMessage({ content: 'shesh is not sheesh' });
+			const message3 = mockMessage({ content: 'shesh is different' }); // Changed to not contain "sheesh"
 
 			// Act: Check if the bot should respond to these messages
 			const shouldRespond1 = await sheeshTrigger.condition(message1);

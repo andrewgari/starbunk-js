@@ -224,7 +224,7 @@ describe('Guy Bot', () => {
 	describe('Bot Identity', () => {
 		it('should have the correct bot name', () => {
 			// Arrange: Get the bot instance
-			const bot = guybotBot;
+			const bot = guyBot;
 
 			// Act: Check the bot name from the instance
 			const botName = bot.name;
