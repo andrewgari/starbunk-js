@@ -28,7 +28,7 @@
 		"test:containers:note": "Container tests temporarily disabled due to import path issues from monolithic structure transition",
 		"test:shared": "cd containers/shared && npm test",
 		"test:containers": "npm run test:bunkbot && npm run test:djcova && npm run test:starbunk-dnd && npm run test:covabot",
-		"db:migrate": "bash scripts/migrate-database.sh",
+
 		"db:seed": "npx tsx prisma/seed.ts",
 		"db:generate": "npx prisma generate",
 		"db:push": "npx prisma db push",

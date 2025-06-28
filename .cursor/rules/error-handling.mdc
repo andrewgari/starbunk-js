@@ -1,6 +1,6 @@
 ---
 description: handle errors
-globs: src/**
+globs: containers/*/src/**
 alwaysApply: false
 ---
 ## Error Handling

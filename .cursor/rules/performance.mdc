@@ -1,6 +1,6 @@
 ---
 description: performance
-globs: src/**
+globs: containers/*/src/**
 alwaysApply: false
 ---
 ## Performance
