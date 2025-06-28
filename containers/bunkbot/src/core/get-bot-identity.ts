@@ -6,7 +6,6 @@ import { Message } from 'discord.js';
 interface GetBotIdentityOptions {
 	userId?: string;
 	fallbackName: string;
-	fallbackAvatarUrl?: string;
 	useRandomMember?: boolean;
 	message?: Message; // For server context
 	forceRefresh?: boolean; // Force fresh data from Discord API
@@ -20,7 +19,6 @@ interface GetBotIdentityOptions {
 export async function getBotIdentityFromDiscord({
 	userId,
 	fallbackName,
-	fallbackAvatarUrl: _fallbackAvatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png',
 	useRandomMember = false,
 	message,
 	forceRefresh = false
@@ -98,11 +96,15 @@ async function getServerSpecificIdentity(
 						member.user.username ||
 						fallbackName;
 
-		// Get server-specific avatar (falls back to global avatar, then default)
-		// Priority: Server avatar > Global avatar > Default avatar
+		// Get server-specific avatar (falls back to global avatar)
+		// Priority: Server avatar > Global avatar
+		// If no valid avatar is found, return null to indicate failure
 		const avatarUrl = member.displayAvatarURL({ size: 256, extension: 'png' }) ||
-			member.user.displayAvatarURL({ size: 256, extension: 'png' }) ||
-			'https://cdn.discordapp.com/embed/avatars/0.png';
+			member.user.displayAvatarURL({ size: 256, extension: 'png' });
+
+		if (!avatarUrl) {
+			throw new Error(`No valid avatar URL found for user ${userId} in guild ${guildId}`);
+		}
 
 		logger.debug(`[getBotIdentity] Server-specific identity for ${userId} in ${guildId}: "${botName}" with avatar ${avatarUrl}`);
 

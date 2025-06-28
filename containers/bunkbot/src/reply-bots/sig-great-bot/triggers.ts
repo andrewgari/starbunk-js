@@ -9,7 +9,7 @@ async function getPosterIdentity(message: Message) {
 	return getBotIdentityFromDiscord({
 		userId: message.author.id,
 		fallbackName: 'SigGreatBot',
-		fallbackAvatarUrl: 'https://cdn.discordapp.com/embed/avatars/2.png'
+		message
 	});
 }
 

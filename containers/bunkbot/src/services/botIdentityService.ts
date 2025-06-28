@@ -167,10 +167,14 @@ export class BotIdentityService {
 			// Get server-specific nickname (falls back to username)
 			const botName = member.nickname || member.user.username || fallbackName;
 
-			// Get server-specific avatar (falls back to global avatar, then default)
+			// Get server-specific avatar (falls back to global avatar)
+			// If no valid avatar is found, return null to indicate failure
 			const avatarUrl = member.displayAvatarURL({ size: 256, extension: 'png' }) ||
-				member.user.displayAvatarURL({ size: 256, extension: 'png' }) ||
-				'https://cdn.discordapp.com/embed/avatars/0.png';
+				member.user.displayAvatarURL({ size: 256, extension: 'png' });
+
+			if (!avatarUrl) {
+				throw new Error(`No valid avatar URL found for user ${userId} in guild ${guildId}`);
+			}
 
 			logger.debug(`[BotIdentityService] Server-specific identity for ${userId} in ${guildId}: ${botName}`);
 

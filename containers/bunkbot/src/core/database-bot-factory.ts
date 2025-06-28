@@ -35,13 +35,19 @@ export class DatabaseBotFactory {
 				return null;
 			}
 
+			// Validate avatar URL - if not provided, bot creation fails
+			if (!config.avatarUrl) {
+				logger.error(`❌ Bot configuration for ${botName} missing required avatarUrl`);
+				return null;
+			}
+
 			// Create the bot using the existing BotFactory
 			const bot = BotFactory.createBot({
 				name: config.displayName,
 				description: config.description || `Database-driven bot: ${config.displayName}`,
 				defaultIdentity: {
 					botName: config.displayName,
-					avatarUrl: config.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png',
+					avatarUrl: config.avatarUrl,
 				},
 				skipBotMessages: true,
 				triggers: triggers,
