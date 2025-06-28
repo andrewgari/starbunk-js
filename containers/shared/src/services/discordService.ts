@@ -598,7 +598,21 @@ export class DiscordService {
 		}
 	}
 
-	public async sendMessage(channelId: string, message: string): Promise<Message> {
+	public async sendMessage(channelId: string, message: string): Promise<Message | null> {
+		// CRITICAL: Debug mode channel filtering safety check
+		// This is the final safety net to prevent messages from being sent to non-whitelisted channels
+		const { getMessageFilter } = await import('./messageFilter');
+		const messageFilter = getMessageFilter();
+
+		if (messageFilter.isDebugMode()) {
+			const testingChannelIds = messageFilter.getTestingChannelIds();
+			if (testingChannelIds.length > 0 && !testingChannelIds.includes(channelId)) {
+				logger.warn(`[DiscordService] 🚫 DEBUG MODE: Blocking message to channel ${channelId} - not in TESTING_CHANNEL_IDS whitelist`);
+				logger.debug(`[DiscordService] Whitelisted channels: [${testingChannelIds.join(', ')}]`);
+				return null; // Silently discard the message
+			}
+		}
+
 		const channel = this.getTextChannel(channelId);
 		return channel.send(message);
 	}
@@ -607,6 +621,20 @@ export class DiscordService {
 		if (!botIdentity || !botIdentity.botName || !botIdentity.avatarUrl) {
 			logger.error(`[DiscordService] Invalid bot identity provided for message to channel ${channelId}`);
 			return; // Skip sending the message with invalid identity
+		}
+
+		// CRITICAL: Debug mode channel filtering safety check
+		// This is the final safety net to prevent messages from being sent to non-whitelisted channels
+		const { getMessageFilter } = await import('./messageFilter');
+		const messageFilter = getMessageFilter();
+
+		if (messageFilter.isDebugMode()) {
+			const testingChannelIds = messageFilter.getTestingChannelIds();
+			if (testingChannelIds.length > 0 && !testingChannelIds.includes(channelId)) {
+				logger.warn(`[DiscordService] 🚫 DEBUG MODE: Blocking message to channel ${channelId} - not in TESTING_CHANNEL_IDS whitelist`);
+				logger.debug(`[DiscordService] Whitelisted channels: [${testingChannelIds.join(', ')}]`);
+				return; // Silently discard the message
+			}
 		}
 
 		try {
@@ -637,6 +665,20 @@ export class DiscordService {
 
 		if (!messageInfo.avatarURL && !messageInfo.avatarUrl) {
 			throw new WebhookError('Missing avatarURL/avatarUrl in webhook message');
+		}
+
+		// CRITICAL: Debug mode channel filtering safety check
+		// This is the final safety net to prevent messages from being sent to non-whitelisted channels
+		const { getMessageFilter } = await import('./messageFilter');
+		const messageFilter = getMessageFilter();
+
+		if (messageFilter.isDebugMode()) {
+			const testingChannelIds = messageFilter.getTestingChannelIds();
+			if (testingChannelIds.length > 0 && !testingChannelIds.includes(channel.id)) {
+				logger.warn(`[DiscordService] 🚫 DEBUG MODE: Blocking webhook message to channel ${channel.id} - not in TESTING_CHANNEL_IDS whitelist`);
+				logger.debug(`[DiscordService] Whitelisted channels: [${testingChannelIds.join(', ')}]`);
+				return; // Silently discard the message
+			}
 		}
 
 		try {
