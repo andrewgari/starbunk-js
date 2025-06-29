@@ -18,6 +18,37 @@
 			"@shared/*": ["../shared/src/*"]
 		}
 	},
-	"include": ["src/index-minimal.ts"],
-	"exclude": ["node_modules", "dist", "tests"]
+	"include": [
+		"src/index.ts",
+		"src/commands/**/*",
+		"src/adapter.ts",
+		"src/botRegistry.ts",
+		"src/replyBot.ts",
+		"src/config/**/*",
+		"src/types/**/*",
+		"src/core/bot-factory.ts",
+		"src/core/trigger-response.ts",
+		"src/core/bot-builder.ts",
+		"src/core/conditions.ts",
+		"src/core/responses.ts",
+		"src/core/response-context.ts",
+		"src/core/get-bot-identity.ts",
+		"src/reply-bots/**/*"
+	],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"tests",
+		"src/test-utils/**/*",
+		"src/__tests__/**/*",
+		"src/core/__tests__/**/*",
+		"src/commandHandler.ts",
+		"src/commands/botCommandHandler.ts",
+		"src/core/llm-conditions.ts",
+		"src/core/llm-conditions.test.ts",
+		"src/core/index.ts",
+		"src/reply-bots/cova-bot/**/*",
+		"src/reply-bots/blue-bot/triggers.ts",
+		"src/reply-bots/blue-bot/llm-triggers.ts"
+	]
 }

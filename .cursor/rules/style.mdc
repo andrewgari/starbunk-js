@@ -1,6 +1,6 @@
 ---
 description: coding style and best practices
-globs: src/**
+globs: containers/*/src/**
 alwaysApply: false
 ---
 ## Code Style

@@ -1,1 +1,3 @@
-src/starbunk/bots/reply-bots/dist/
+# Container build outputs
+containers/*/dist/
+containers/*/node_modules/

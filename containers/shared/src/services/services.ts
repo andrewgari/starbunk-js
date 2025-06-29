@@ -6,10 +6,16 @@
  */
 
 import { Client, TextChannel, WebhookClient } from 'discord.js';
-import ReplyBot from '../starbunk/bots/replyBot';
 import { MessageInfo } from '../webhooks/types';
 import { DiscordService } from './discordService';
 import { LLMManager } from './llm/llmManager';
+
+// Define a basic ReplyBot interface since the actual implementation is not available in shared
+export interface ReplyBot {
+	name: string;
+	trigger: (message: string) => boolean;
+	respond: (message: string) => string | Promise<string>;
+}
 
 // Forward declarations of service types
 export interface Logger {

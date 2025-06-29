@@ -1,4 +1,9 @@
-// DEPRECATED: All role IDs are now stored in the database. Use the Role table instead.
+// ⚠️  DEPRECATED: All role IDs are now stored in the database. Use the Role table instead.
+//
+// This file is kept for backward compatibility only and will be removed in a future version.
+// Use ConfigurationService for dynamic role ID lookups.
+
+console.warn('⚠️  DEPRECATED: containers/shared/src/discord/roleIds.ts is deprecated. Use ConfigurationService instead.');
 export default {
 	Macaroni: '836680699217444924',
 	WetBread: '204326753215315968',

@@ -6,6 +6,8 @@ services:
     image: postgres:15-alpine
     container_name: starbunk-postgres
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-starbunk}
       POSTGRES_USER: ${POSTGRES_USER:-starbunk}
@@ -32,9 +34,11 @@ services:
 
   # BunkBot - Reply bots and admin commands
   bunkbot:
-    image: ghcr.io/andrewgari/starbunk/bunkbot:latest
+    image: ghcr.io/andrewgari/bunkbot:latest
     container_name: starbunk-bunkbot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -45,9 +49,10 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${BUNKBOT_PORT:-3000}:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,18 +78,20 @@ services:
 
   # DJCova - Music service
   djcova:
-    image: ghcr.io/andrewgari/starbunk/djcova:latest
+    image: ghcr.io/andrewgari/djcova:latest
     container_name: starbunk-djcova
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${DJCOVA_PORT:-3001}:3001"
     volumes:
       - djcova_cache:/app/cache
       - djcova_temp:/tmp
@@ -110,9 +117,11 @@ services:
 
   # Starbunk-DND - D&D features and bridge
   starbunk-dnd:
-    image: ghcr.io/andrewgari/starbunk/starbunk-dnd:latest
+    image: ghcr.io/andrewgari/starbunk-dnd:latest
     container_name: starbunk-dnd
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -125,9 +134,9 @@ services:
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
       - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${STARBUNK_DND_PORT:-3002}:3002"
     volumes:
       - dnd_data:/app/data
       - dnd_campaigns:/app/data/campaigns
@@ -157,9 +166,11 @@ services:
 
   # CovaBot - AI personality bot
   covabot:
-    image: ghcr.io/andrewgari/starbunk/covabot:latest
+    image: ghcr.io/andrewgari/covabot:latest
     container_name: starbunk-covabot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -169,9 +180,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    ports:
-      - "${COVABOT_PORT:-3003}:3003"
     depends_on:
       postgres:
         condition: service_healthy

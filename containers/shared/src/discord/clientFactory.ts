@@ -49,6 +49,7 @@ export const ClientConfigs = {
 			GatewayIntentBits.GuildMessages,
 			GatewayIntentBits.MessageContent,
 			GatewayIntentBits.GuildMembers,
+			GatewayIntentBits.GuildIntegrations, // Required for slash commands
 		],
 		enableWebhooks: true,
 	},

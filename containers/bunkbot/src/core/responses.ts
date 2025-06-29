@@ -1,7 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import { getDiscordService } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
-import { BotIdentity } from '../../types/botIdentity';
+import { BotIdentity } from '../types/botIdentity';
 import { ContextualResponseGenerator, ResponseContext, asResponseGenerator } from './response-context';
 
 // Core response generator type - returns string based on message

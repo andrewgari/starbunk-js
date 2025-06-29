@@ -1,16 +1,13 @@
 ---
 description: Run a Spot Check of the application startup to verify working
-globs: **.*
+globs: containers/*/src/**
 alwaysApply: false
 ---
-Please run `npm run dev` before ever commiting. If any errors are detectedin this script, fix them.
+Please run `npm run build && npm run lint && npm test` before ever committing. If any errors are detected, fix them.
 
-The process consists of
-* Build
-* Lint
+The process consists of:
+* Build (TypeScript compilation)
+* Lint (ESLint validation)
 * Unit Tests (Jest)
-* Type Check
-* Cypress Tests
-* Type Check (Cypress)
-* Run and verify healthy start
-* Docker Build
+* Type Check (TypeScript validation)
+* Container builds verification

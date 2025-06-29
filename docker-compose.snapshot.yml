@@ -1,20 +1,5 @@
-# Docker Compose for PR Snapshot Testing
-# =====================================
-# This file is designed for testing PR snapshot images with predictable naming.
-# 
-# Usage:
-#   1. Set the PR_NUMBER environment variable:
-#      export PR_NUMBER=123
-#   2. Run with: docker-compose -f docker-compose.snapshot.yml up
-#   3. Or specify PR inline: PR_NUMBER=123 docker-compose -f docker-compose.snapshot.yml up
-#
-# Image Format: ghcr.io/andrewgari/starbunk/{service}:pr-{number}-snapshot
-# Example: ghcr.io/andrewgari/starbunk/bunkbot:pr-123-snapshot
-
-version: '3.8'
-
 services:
-  # PostgreSQL Database - Shared by services that need persistence
+  # PostgreSQL Database - Required for database-driven configuration
   postgres:
     image: postgres:15-alpine
     container_name: starbunk-postgres-snapshot
@@ -43,11 +28,12 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # BunkBot - Reply bots and admin commands (PR Snapshot)
   bunkbot:
-    image: ghcr.io/andrewgari/starbunk/bunkbot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/bunkbot:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-bunkbot-snapshot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -58,9 +44,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-true}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    ports:
-      - "${BUNKBOT_PORT:-3000}:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,20 +70,21 @@ services:
         reservations:
           memory: 256M
 
-  # DJCova - Music service (PR Snapshot)
   djcova:
-    image: ghcr.io/andrewgari/starbunk/djcova:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/djcova:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-djcova-snapshot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-true}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    ports:
-      - "${DJCOVA_PORT:-3001}:3001"
     volumes:
       - djcova_snapshot_cache:/app/cache
       - djcova_snapshot_temp:/tmp
@@ -121,11 +108,12 @@ services:
         reservations:
           memory: 512M
 
-  # Starbunk-DND - D&D features and bridge (PR Snapshot)
   starbunk-dnd:
-    image: ghcr.io/andrewgari/starbunk/starbunk-dnd:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/starbunk-dnd:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-dnd-snapshot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -138,16 +126,16 @@ services:
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
       - DEBUG_MODE=${DEBUG_MODE:-true}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    ports:
-      - "${STARBUNK_DND_PORT:-3002}:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - dnd_snapshot_data:/app/data
       - dnd_snapshot_campaigns:/app/data/campaigns
       - dnd_snapshot_context:/app/data/llm_context
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
       interval: 30s
@@ -168,11 +156,12 @@ services:
         reservations:
           memory: 512M
 
-  # CovaBot - AI personality bot (PR Snapshot)
   covabot:
-    image: ghcr.io/andrewgari/starbunk/covabot:pr-${PR_NUMBER:-CHANGE_ME}-snapshot
+    image: ghcr.io/andrewgari/covabot:${SNAPSHOT_TAG:-pr-234-snapshot}
     container_name: starbunk-covabot-snapshot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -182,9 +171,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-true}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    ports:
-      - "${COVABOT_PORT:-3003}:3003"
     depends_on:
       postgres:
         condition: service_healthy
@@ -208,7 +197,6 @@ services:
         reservations:
           memory: 256M
 
-# Named volumes for persistent data (snapshot-specific)
 volumes:
   postgres_snapshot_data:
     driver: local
@@ -223,10 +211,9 @@ volumes:
   dnd_snapshot_context:
     driver: local
 
-# Custom network for service communication (snapshot-specific)
 networks:
   starbunk-snapshot-network:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.21.0.0/16
+        - subnet: 172.31.0.0/24

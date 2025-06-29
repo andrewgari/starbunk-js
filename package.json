@@ -28,6 +28,11 @@
 		"test:containers:note": "Container tests temporarily disabled due to import path issues from monolithic structure transition",
 		"test:shared": "cd containers/shared && npm test",
 		"test:containers": "npm run test:bunkbot && npm run test:djcova && npm run test:starbunk-dnd && npm run test:covabot",
+
+		"db:seed": "npx tsx prisma/seed.ts",
+		"db:generate": "npx prisma generate",
+		"db:push": "npx prisma db push",
+		"test:bots": "node scripts/test-reply-bots.js",
 		"test:bunkbot": "cd containers/bunkbot && npm test",
 		"test:djcova": "cd containers/djcova && npm test",
 		"test:starbunk-dnd": "cd containers/starbunk-dnd && npm test",
@@ -78,7 +83,12 @@
 		"url": "https://github.com/andrewgari/starbunk-js/issues"
 	},
 	"homepage": "https://github.com/andrewgari/starbunk-js#readme",
-	"dependencies": {},
+	"dependencies": {
+		"@prisma/client": "^5.7.1",
+		"dotenv": "^16.6.1",
+		"prisma": "^5.7.1",
+		"tsx": "^4.6.2"
+	},
 	"devDependencies": {
 		"@typescript-eslint/eslint-plugin": "^8.34.0",
 		"@typescript-eslint/parser": "^8.34.0",

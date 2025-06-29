@@ -7,8 +7,7 @@ import { INTERRUPT_CHANCE, createInterruptedMessage } from './constants';
 async function getRandomInterrupterIdentity() {
 	return getBotIdentityFromDiscord({
 		useRandomMember: true,
-		fallbackName: 'Interrupter',
-		fallbackAvatarUrl: 'https://cdn.discordapp.com/embed/avatars/4.png'
+		fallbackName: 'Interrupter'
 	});
 }
 

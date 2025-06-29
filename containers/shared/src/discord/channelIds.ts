@@ -1,4 +1,9 @@
-// DEPRECATED: All channel IDs are now stored in the database. Use the Channel table instead.
+// ⚠️  DEPRECATED: All channel IDs are now stored in the database. Use the Channel table instead.
+//
+// This file is kept for backward compatibility only and will be removed in a future version.
+// Use ConfigurationService for dynamic channel ID lookups.
+
+console.warn('⚠️  DEPRECATED: containers/shared/src/discord/channelIds.ts is deprecated. Use ConfigurationService instead.');
 export default {
 	Starbunk: {
 		WhaleWatchers: '767836161619525652',

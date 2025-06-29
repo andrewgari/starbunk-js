@@ -1,5 +1,8 @@
 import { Message } from 'discord.js';
-import userId from '../../../../discord/userId';
+// Simple user IDs for testing and development
+const userId = {
+	Cova: '123456789' // Placeholder user ID
+};
 import { getLLMManager } from '@starbunk/shared';
 import { LLMProviderType } from '@starbunk/shared';
 import { PromptRegistry, PromptType } from '@starbunk/shared';

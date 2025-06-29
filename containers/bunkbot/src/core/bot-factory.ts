@@ -1,4 +1,4 @@
-import { BotIdentity } from '../../types/botIdentity';
+import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
 import { createReplyBot, ReplyBotImpl } from './bot-builder';
 

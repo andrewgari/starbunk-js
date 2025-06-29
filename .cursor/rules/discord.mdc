@@ -1,6 +1,6 @@
 ---
 description: discord specific stuff
-globs: src/
+globs: containers/*/src/**
 alwaysApply: false
 ---
 

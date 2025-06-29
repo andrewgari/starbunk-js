@@ -1,6 +1,5 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { VectorEmbeddingService } from '../../starbunk/services/vectorEmbeddingService';
 import { logger } from '../logger';
 import { PersonalityService } from '../personalityService';
 

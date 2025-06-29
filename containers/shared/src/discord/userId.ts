@@ -1,4 +1,18 @@
-// DEPRECATED: All user IDs are now stored in the database. Use the User table instead.
+// ⚠️  DEPRECATED: All user IDs are now stored in the database. Use the UserConfiguration table instead.
+//
+// This file is kept for backward compatibility only and will be removed in a future version.
+//
+// NEW USAGE:
+// import { ConfigurationService } from '../services/configurationService';
+// const configService = new ConfigurationService();
+// const userId = await configService.getUserIdByUsername('Chad');
+//
+// For BunkBot containers, use the BotIdentityService:
+// import { BotIdentityService } from '../services/botIdentityService';
+// const identity = await identityService.getChadIdentity();
+
+console.warn('⚠️  DEPRECATED: containers/shared/src/discord/userId.ts is deprecated. Use ConfigurationService instead.');
+
 export default {
 	Cova: '139592376443338752',
 	Venn: '151120340343455744',

@@ -9,7 +9,8 @@ export const COVA_BOT_AVATARS = {
 export const COVA_BOT_PATTERNS = {
 	Mention: /\b(cova|covadax|cove|covs|covie)\b/i,
 	Question: /\b(cova|covadax|cove|covs|covie).*(\?|what|how|why|when|where|who|which|is|are|can|could|should|would|will)/i,
-	AtMention: /<@!?139592376443338752>/
+	// Note: AtMention pattern now uses dynamic user ID lookup
+	AtMentionBase: /<@!?{COVA_USER_ID}>/
 };
 
 export const COVA_BOT_CONFIG = {

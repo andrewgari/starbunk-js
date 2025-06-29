@@ -1,4 +1,4 @@
-import userId from '../../../../discord/userId';
+import { getUserId } from '@starbunk/shared';
 import { PerformanceTimer } from '../../../../utils/time';
 import { and, fromBot, fromUser, not, withChance } from '../../core/conditions';
 import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
@@ -7,8 +7,13 @@ import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from '.
 
 // Get Cova's identity from Discord
 async function getCovaIdentity() {
+	const covaUserId = await getUserId('Cova');
+	if (!covaUserId) {
+		throw new Error('Cova user ID not found in database');
+	}
+
 	return getBotIdentityFromDiscord({
-		userId: userId.Cova,
+		userId: covaUserId,
 		fallbackName: 'CovaBot',
 	});
 }
@@ -19,7 +24,10 @@ export const covaTrigger = createTriggerResponse({
 	priority: 3,
 	condition: and(
 		createLLMResponseDecisionCondition(),
-		not(fromUser(userId.Cova)),
+		async (message) => {
+			const covaUserId = await getUserId('Cova');
+			return covaUserId ? message.author.id !== covaUserId : true;
+		},
 		not(fromBot()),
 		withChance(50)
 	),
@@ -32,8 +40,14 @@ export const covaDirectMentionTrigger = createTriggerResponse({
 	name: 'cova-direct-mention',
 	priority: 5, // Highest priority
 	condition: and(
-		message => message.mentions.has(userId.Cova),
-		not(fromUser(userId.Cova)),
+		async (message) => {
+			const covaUserId = await getUserId('Cova');
+			return covaUserId ? message.mentions.has(covaUserId) : false;
+		},
+		async (message) => {
+			const covaUserId = await getUserId('Cova');
+			return covaUserId ? message.author.id !== covaUserId : true;
+		},
 		not(fromBot())
 	),
 	response: createLLMEmulatorResponse(),
@@ -46,7 +60,10 @@ export const covaStatsCommandTrigger = createTriggerResponse({
 	priority: 10, // Highest priority
 	condition: and(
 		message => message.content.toLowerCase().startsWith('!cova-stats'),
-		fromUser(userId.Cova),
+		async (message) => {
+			const covaUserId = await getUserId('Cova');
+			return covaUserId ? message.author.id === covaUserId : false;
+		},
 	),
 	response: async () => {
 		const stats = PerformanceTimer.getInstance().getStatsString();

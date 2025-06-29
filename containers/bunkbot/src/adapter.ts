@@ -1,6 +1,6 @@
 import { Message } from 'discord.js';
 import { logger } from '@starbunk/shared';
-import { BotIdentity } from '../types/botIdentity';
+import { BotIdentity } from './types/botIdentity';
 import { ReplyBotImpl } from './core/bot-builder';
 import ReplyBot from './replyBot';
 

@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
-import { getDiscordService } from '@starbunk/shared';
-import { logger } from '@starbunk/shared';
-import { BotIdentity } from '../../types/botIdentity';
+import { container, ServiceId, logger } from '@starbunk/shared';
+import { DiscordService } from '@starbunk/shared/dist/services/discordService';
+import { BotIdentity } from '../types/botIdentity';
 import { withDefaultBotBehavior } from './conditions';
 
 /**
@@ -31,8 +31,9 @@ export interface ResponseGenerator {
 
 /**
  * Function or value that provides a bot identity
+ * Can return null to indicate identity resolution failure (bot will remain silent)
  */
-export type IdentityProvider = BotIdentity | ((message: Message) => Promise<BotIdentity> | BotIdentity);
+export type IdentityProvider = BotIdentity | ((message: Message) => Promise<BotIdentity | null> | BotIdentity | null);
 
 /**
  * Priority level for trigger execution order
@@ -100,7 +101,8 @@ export class TriggerResponseClass {
 	}
 
 	// Get the identity to use for this response
-	public async getIdentity(message: Message, defaultIdentity: BotIdentity): Promise<BotIdentity> {
+	// Returns null if identity cannot be resolved (bot should remain silent)
+	public async getIdentity(message: Message, defaultIdentity: BotIdentity): Promise<BotIdentity | null> {
 		if (!this.identity) {
 			return defaultIdentity;
 		}
@@ -108,12 +110,18 @@ export class TriggerResponseClass {
 		try {
 			if (typeof this.identity === 'function') {
 				const result = await this.identity(message);
+				if (result === null) {
+					logger.debug(`[TriggerResponse:${this.name}] Identity resolution returned null - bot will remain silent`);
+					return null;
+				}
 				return result;
 			}
 			return this.identity;
 		} catch (error) {
 			logger.error(`[TriggerResponse:${this.name}] Error getting identity:`, error as Error);
-			return defaultIdentity;
+			// If identity resolution fails, bot should remain silent (no fallback)
+			logger.debug(`[TriggerResponse:${this.name}] Identity resolution failed - bot will remain silent`);
+			return null;
 		}
 	}
 
@@ -131,15 +139,23 @@ export class TriggerResponseClass {
 			// Get identity for this response
 			const identity = await this.getIdentity(message, defaultIdentity);
 
+			// If identity is null, bot should remain silent
+			if (identity === null) {
+				logger.debug(`[${botName}] Identity resolution failed for trigger "${this.name}" - bot will remain silent`);
+				return false; // Don't send any response
+			}
+
 			// Generate and send response
 			const responseText = await this.response(message);
 			const channel = message.channel;
 
 			logger.debug(`[${botName}] Sending response: "${responseText.substring(0, 100)}..."`);
 
-			// Use the discord service to send the message
-			// Use pre-imported DiscordService for better performance
-			await getDiscordService().sendMessageWithBotIdentity(channel.id, identity, responseText);
+			// Use the Discord service to send the message with bot identity via webhook
+			const discordService = container.get<DiscordService>(ServiceId.DiscordService);
+			await discordService.sendMessageWithBotIdentity(channel.id, identity, responseText);
+
+			logger.debug(`Message sent with bot identity: ${identity.botName} in channel ${channel.id}`);
 
 			return true;
 		} catch (error) {

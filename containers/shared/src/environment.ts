@@ -1,6 +1,6 @@
 import { config as configDotenv } from 'dotenv';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Environment configuration abstraction that loads and validates environment variables.
@@ -26,7 +26,9 @@ console.log(`[Environment] - SNOWBUNK_TOKEN: ${process.env.SNOWBUNK_TOKEN ? 'Set
 console.log(`[Environment] - DISCORD_WEBHOOK_URL: ${process.env.DISCORD_WEBHOOK_URL ? 'Set' : 'Not set'}`);
 console.log(`[Environment] - OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? 'Set' : 'Not set'}`);
 console.log(`[Environment] - OLLAMA_API_URL: ${process.env.OLLAMA_API_URL ? 'Set' : 'Not set'}`);
-console.log(`[Environment] - DEBUG: ${process.env.DEBUG}`);
+console.log(`[Environment] - DEBUG_MODE: ${process.env.DEBUG_MODE}`);
+console.log(`[Environment] - TESTING_SERVER_IDS: ${process.env.TESTING_SERVER_IDS || 'Not set'}`);
+console.log(`[Environment] - TESTING_CHANNEL_IDS: ${process.env.TESTING_CHANNEL_IDS || 'Not set'}`);
 console.log(`[Environment] - Is Debug Mode Active: ${isDebugMode()}`);
 
 // --- Start Validation ---
@@ -37,20 +39,22 @@ if (!process.env.STARBUNK_TOKEN) {
 // Add other critical variable checks here if needed
 // --- End Validation ---
 
-// Helper function to check debug mode
+// Helper function to check debug mode (updated to use DEBUG_MODE)
 export function isDebugMode(): boolean {
-	return process.env.DEBUG === 'true';
+	return process.env.DEBUG_MODE === 'true';
 }
 
 // Helper function to set debug mode (for tests or runtime changes)
 export function setDebugMode(value: boolean): void {
-	process.env.DEBUG = value ? 'true' : 'false';
+	process.env.DEBUG_MODE = value ? 'true' : 'false';
 }
 
 // Export default object with environment variables
 const environment = {
 	app: {
-		DEBUG: process.env.DEBUG
+		DEBUG_MODE: process.env.DEBUG_MODE,
+		TESTING_SERVER_IDS: process.env.TESTING_SERVER_IDS,
+		TESTING_CHANNEL_IDS: process.env.TESTING_CHANNEL_IDS
 	},
 	discord: {
 		STARBUNK_TOKEN: process.env.STARBUNK_TOKEN,

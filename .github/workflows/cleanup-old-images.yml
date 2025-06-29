@@ -1,0 +1,183 @@
+name: Cleanup Old Container Images
+
+on:
+  # Run weekly on Sundays at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * 0'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      cleanup_type:
+        description: 'Type of cleanup to perform'
+        required: true
+        default: 'old-images'
+        type: choice
+        options:
+          - 'old-images'      # Delete images older than 30 days (except latest)
+          - 'pr-snapshots'    # Delete all PR snapshot images
+          - 'untagged'        # Delete untagged images
+          - 'dry-run'         # Show what would be deleted
+      days_old:
+        description: 'Delete images older than X days (for old-images cleanup)'
+        required: false
+        default: '30'
+        type: string
+
+env:
+  CONTAINERS: '["bunkbot", "djcova", "starbunk-dnd", "covabot"]'
+
+jobs:
+  cleanup-images:
+    name: 🧹 Cleanup Container Images
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set cleanup parameters
+        id: params
+        run: |
+          CLEANUP_TYPE="${{ github.event.inputs.cleanup_type || 'old-images' }}"
+          DAYS_OLD="${{ github.event.inputs.days_old || '30' }}"
+          
+          echo "cleanup_type=$CLEANUP_TYPE" >> $GITHUB_OUTPUT
+          echo "days_old=$DAYS_OLD" >> $GITHUB_OUTPUT
+          
+          echo "🧹 Cleanup Type: $CLEANUP_TYPE"
+          echo "📅 Days Old Threshold: $DAYS_OLD"
+
+      - name: Cleanup Container Images
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const containers = ${{ env.CONTAINERS }};
+            const cleanupType = '${{ steps.params.outputs.cleanup_type }}';
+            const daysOld = parseInt('${{ steps.params.outputs.days_old }}');
+            const isDryRun = cleanupType === 'dry-run';
+            
+            console.log(`🧹 Starting ${isDryRun ? 'DRY RUN' : 'cleanup'} for ${containers.length} containers`);
+            console.log(`📋 Cleanup type: ${cleanupType}`);
+            console.log(`📅 Days old threshold: ${daysOld}`);
+            console.log('');
+            
+            let totalDeleted = 0;
+            
+            for (const container of containers) {
+              console.log(`📦 Processing container: ${container}`);
+              
+              try {
+                // Get all versions of the package
+                const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
+                  package_type: 'container',
+                  package_name: container,
+                  username: owner
+                });
+                
+                if (versions.length === 0) {
+                  console.log(`  ℹ️ No versions found for ${container}`);
+                  continue;
+                }
+                
+                console.log(`  📊 Found ${versions.length} version(s)`);
+                
+                let deletedCount = 0;
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+                
+                for (const version of versions) {
+                  const tags = version.metadata?.container?.tags || [];
+                  const createdAt = new Date(version.created_at);
+                  const tagsStr = tags.join(', ') || 'untagged';
+                  
+                  let shouldDelete = false;
+                  let reason = '';
+                  
+                  // Determine if this version should be deleted based on cleanup type
+                  switch (cleanupType) {
+                    case 'old-images':
+                    case 'dry-run':
+                      // Delete old images but keep 'latest' tag
+                      if (!tags.includes('latest') && createdAt < cutoffDate) {
+                        shouldDelete = true;
+                        reason = `older than ${daysOld} days`;
+                      }
+                      break;
+                      
+                    case 'pr-snapshots':
+                      // Delete PR snapshot images
+                      if (tags.some(tag => tag.match(/^pr-\d+-snapshot$/))) {
+                        shouldDelete = true;
+                        reason = 'PR snapshot image';
+                      }
+                      break;
+                      
+                    case 'untagged':
+                      // Delete untagged images
+                      if (tags.length === 0) {
+                        shouldDelete = true;
+                        reason = 'untagged image';
+                      }
+                      break;
+                  }
+                  
+                  if (shouldDelete) {
+                    if (isDryRun) {
+                      console.log(`  🔍 [DRY RUN] Would delete: ${version.id} (${tagsStr}) - ${reason}`);
+                    } else {
+                      console.log(`  🗑️ Deleting: ${version.id} (${tagsStr}) - ${reason}`);
+                      
+                      try {
+                        await github.rest.packages.deletePackageVersionForUser({
+                          package_type: 'container',
+                          package_name: container,
+                          username: owner,
+                          package_version_id: version.id
+                        });
+                        deletedCount++;
+                        totalDeleted++;
+                      } catch (deleteError) {
+                        console.log(`  ❌ Failed to delete version ${version.id}: ${deleteError.message}`);
+                      }
+                    }
+                  }
+                }
+                
+                if (deletedCount === 0 && !isDryRun) {
+                  console.log(`  ✅ No versions deleted for ${container}`);
+                } else if (!isDryRun) {
+                  console.log(`  ✅ Deleted ${deletedCount} version(s) for ${container}`);
+                }
+                
+              } catch (error) {
+                console.log(`  ❌ Error processing ${container}: ${error.message}`);
+              }
+              
+              console.log('');
+            }
+            
+            // Summary
+            if (isDryRun) {
+              console.log(`🔍 DRY RUN COMPLETED`);
+              console.log(`Use workflow_dispatch with a different cleanup_type to actually delete images.`);
+            } else {
+              console.log(`🎉 CLEANUP COMPLETED`);
+              console.log(`📊 Total images deleted: ${totalDeleted}`);
+            }
+
+      - name: Create cleanup summary
+        if: always()
+        run: |
+          echo "## 🧹 Container Image Cleanup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Cleanup Type:** ${{ steps.params.outputs.cleanup_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Days Old Threshold:** ${{ steps.params.outputs.days_old }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Containers Processed:** bunkbot, djcova, starbunk-dnd, covabot" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the workflow logs for detailed information about deleted images." >> $GITHUB_STEP_SUMMARY

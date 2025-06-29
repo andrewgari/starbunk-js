@@ -1,16 +1,17 @@
-import userId from '@/discord/userId';
-import { BotIdentity } from '@/starbunk/types/botIdentity';
+import { BotIdentity } from '../../types/botIdentity';
 import { matchesPattern } from '../../core/conditions';
-import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
 import { createTriggerResponse } from '../../core/trigger-response';
+import { ConfigurationService } from '../../services/configurationService';
+import { BotIdentityService } from '../../services/botIdentityService';
 import { GUY_BOT_NAME, GUY_BOT_PATTERNS, getRandomGuyResponse } from './constants';
 
-// Get Guy's identity from Discord
-async function getGuyIdentityFromDiscord(): Promise<BotIdentity> {
-	return getBotIdentityFromDiscord({
-		userId: userId.Guy,
-		fallbackName: GUY_BOT_NAME
-	});
+// Initialize services
+const configService = new ConfigurationService();
+const identityService = new BotIdentityService(configService);
+
+// Get Guy's identity using the identity service with message context
+async function getGuyIdentity(message?: any): Promise<BotIdentity | null> {
+	return identityService.getGuyIdentity(message);
 }
 
 // Trigger for guy mentions
@@ -18,6 +19,13 @@ export const guyTrigger = createTriggerResponse({
 	name: 'guy-trigger',
 	condition: matchesPattern(GUY_BOT_PATTERNS.Default),
 	response: async () => getRandomGuyResponse(),
-	identity: async () => getGuyIdentityFromDiscord(),
+	identity: async (message) => {
+		const identity = await getGuyIdentity(message);
+		if (!identity) {
+			// If identity cannot be resolved, prevent trigger execution
+			throw new Error('Guy identity could not be resolved - bot will remain silent');
+		}
+		return identity;
+	},
 	priority: 1
 });

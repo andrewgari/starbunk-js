@@ -20,6 +20,20 @@ export class WebhookManager {
 	}
 
 	async sendMessage(channelId: string, message: WebhookMessage): Promise<void> {
+		// CRITICAL: Debug mode channel filtering safety check
+		// This is the final safety net to prevent messages from being sent to non-whitelisted channels
+		const { getMessageFilter } = await import('./messageFilter');
+		const messageFilter = getMessageFilter();
+
+		if (messageFilter.isDebugMode()) {
+			const testingChannelIds = messageFilter.getTestingChannelIds();
+			if (testingChannelIds.length > 0 && !testingChannelIds.includes(channelId)) {
+				logger.warn(`[WebhookManager] 🚫 DEBUG MODE: Blocking webhook message to channel ${channelId} - not in TESTING_CHANNEL_IDS whitelist`);
+				logger.debug(`[WebhookManager] Whitelisted channels: [${testingChannelIds.join(', ')}]`);
+				return; // Silently discard the message
+			}
+		}
+
 		try {
 			const webhook = await this.getOrCreateWebhook(channelId);
 			if (!webhook) {

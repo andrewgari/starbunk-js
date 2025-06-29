@@ -1,5 +1,4 @@
-import { GameSystem } from '../../starbunk/types/game';
-import { Campaign, Message, Note, StoredFile, TimeEntry } from '../models';
+import { Campaign, Message, Note, StoredFile, TimeEntry, GameSystem } from '../models';
 
 export type CreateCampaignData = {
 	name: string;

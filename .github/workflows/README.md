@@ -2,6 +2,31 @@
 
 This directory contains the CI/CD workflows for the Starbunk Discord Bot project.
 
+## 🚀 **Optimized Container Workflow**
+
+### **Primary Workflow: `container-build-test-publish.yml`**
+
+This is our main workflow that efficiently handles container building, testing, and publishing in a single pipeline to avoid duplication.
+
+**Key Features:**
+- ✅ **Single Build**: Builds each Docker container only once
+- ✅ **Smart Testing**: Tests containers after building but before publishing
+- ✅ **Conditional Publishing**: Only publishes if tests pass and conditions are met
+- ✅ **Efficient Caching**: Uses GitHub Actions cache and Docker layer caching
+- ✅ **Path-based Optimization**: Only processes containers that have changed
+- ✅ **Artifact Reuse**: Reuses built images between jobs to avoid rebuilding
+
+**Workflow Stages:**
+1. **🔍 Detect Changes** - Determines which containers need processing
+2. **📦 Test Shared Package** - Validates shared dependencies
+3. **🐳 Build & Test** - Builds containers and runs validation tests
+4. **📦 Publish** - Publishes validated containers to registry
+
+**Triggers:**
+- **Push to main/develop**: Builds, tests, and publishes with `latest` tags
+- **Pull Requests**: Builds, tests, and publishes with `pr-{number}-snapshot` tags
+- **PR Closure**: Automatically cleans up PR snapshot images
+
 ## Workflows Overview
 
 ### 1. `docker-publish.yml` - PR Docker Image Publisher

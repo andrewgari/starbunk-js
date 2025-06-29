@@ -7,11 +7,14 @@ import {
 	createDiscordClient,
 	ClientConfigs,
 	container,
-	ServiceId
+	ServiceId,
+	getMessageFilter,
+	MessageFilter
 } from '@starbunk/shared';
 
 class StarbunkDNDContainer {
 	private client: any;
+	private messageFilter: MessageFilter;
 	private snowbunkClient: any = null;
 	private hasInitialized = false;
 
@@ -44,13 +47,17 @@ class StarbunkDNDContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['SNOWBUNK_TOKEN', 'DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'VECTOR_CONTEXT_DIR', 'DEBUG', 'NODE_ENV']
+			optional: ['SNOWBUNK_TOKEN', 'DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'VECTOR_CONTEXT_DIR', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV']
 		});
 	}
 
 	private async initializeServices(): Promise<void> {
 		// Register Discord client
 		container.register(ServiceId.DiscordClient, this.client);
+
+		// Initialize message filter
+		this.messageFilter = getMessageFilter();
+		container.register(ServiceId.MessageFilter, this.messageFilter);
 
 		// Initialize database for D&D campaigns
 		if (process.env.DATABASE_URL) {
@@ -106,6 +113,28 @@ class StarbunkDNDContainer {
 	private async handleInteraction(interaction: any): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
+				// Create interaction context for filtering
+				const context = MessageFilter.createContextFromInteraction(interaction);
+
+				// Check if interaction should be processed
+				const filterResult = this.messageFilter.shouldProcessMessage(context);
+				if (!filterResult.allowed) {
+					// Interaction was filtered out - send ephemeral response
+					if (this.messageFilter.isDebugMode()) {
+						await interaction.reply({
+							content: `🚫 D&D command filtered: ${filterResult.reason}`,
+							ephemeral: true
+						});
+					} else {
+						// Silently ignore in production mode
+						await interaction.reply({
+							content: '🚫 D&D commands are not available in this server/channel.',
+							ephemeral: true
+						});
+					}
+					return;
+				}
+
 				// TODO: Handle D&D commands
 				// This will be implemented when we fix the command handler
 				logger.debug(`Processing D&D command: ${interaction.commandName}`);

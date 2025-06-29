@@ -1,6 +1,6 @@
 ---
 description: architecture and pattern preferences
-globs: src/**
+globs: containers/*/src/**
 alwaysApply: false
 ---
 ## Architecture

@@ -1,5 +1,5 @@
 import { logger } from '@starbunk/shared';
-import { getBotDefaults } from '../config/botDefaults';
+import { getBotDefaults } from './config/botDefaults';
 import { BaseVoiceBot } from './core/voice-bot-adapter';
 import ReplyBot from './replyBot';
 import fs from 'fs';

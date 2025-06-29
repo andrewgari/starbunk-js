@@ -4,10 +4,10 @@
 		{
 			"type": "node",
 			"request": "launch",
-			"name": "Debug Application",
+			"name": "Debug BunkBot",
 			"skipFiles": ["<node_internals>/**"],
-			"program": "${workspaceFolder}/src/bunkbot.ts",
-			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
+			"program": "${workspaceFolder}/containers/bunkbot/src/index.ts",
+			"outFiles": ["${workspaceFolder}/containers/bunkbot/dist/**/*.js"],
 			"env": {
 				"LOG_LEVEL": "debug"
 			}
@@ -15,9 +15,32 @@
 		{
 			"type": "node",
 			"request": "launch",
-			"name": "Debug Production Build",
+			"name": "Debug DJCova",
 			"skipFiles": ["<node_internals>/**"],
-			"program": "${workspaceFolder}/dist/bunkbot.js",
+			"program": "${workspaceFolder}/containers/djcova/src/index.ts",
+			"outFiles": ["${workspaceFolder}/containers/djcova/dist/**/*.js"],
+			"env": {
+				"LOG_LEVEL": "debug"
+			}
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug Starbunk-DND",
+			"skipFiles": ["<node_internals>/**"],
+			"program": "${workspaceFolder}/containers/starbunk-dnd/src/index.ts",
+			"outFiles": ["${workspaceFolder}/containers/starbunk-dnd/dist/**/*.js"],
+			"env": {
+				"LOG_LEVEL": "debug"
+			}
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug CovaBot",
+			"skipFiles": ["<node_internals>/**"],
+			"program": "${workspaceFolder}/containers/covabot/src/index.ts",
+			"outFiles": ["${workspaceFolder}/containers/covabot/dist/**/*.js"],
 			"env": {
 				"LOG_LEVEL": "debug"
 			}

@@ -8,12 +8,15 @@ import {
 	ClientConfigs,
 	container,
 	ServiceId,
-	WebhookManager
+	WebhookManager,
+	getMessageFilter,
+	MessageFilter
 } from '@starbunk/shared';
 
 class CovaBotContainer {
 	private client: any;
 	private webhookManager: WebhookManager;
+	private messageFilter: MessageFilter;
 	private hasInitialized = false;
 
 	async initialize(): Promise<void> {
@@ -42,7 +45,7 @@ class CovaBotContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG', 'NODE_ENV']
+			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV']
 		});
 	}
 
@@ -53,6 +56,10 @@ class CovaBotContainer {
 		// Initialize webhook manager for AI personality responses
 		this.webhookManager = new WebhookManager(this.client);
 		container.register(ServiceId.WebhookService, this.webhookManager);
+
+		// Initialize message filter
+		this.messageFilter = getMessageFilter();
+		container.register(ServiceId.MessageFilter, this.messageFilter);
 
 		// Initialize minimal database access for personality data
 		if (process.env.DATABASE_URL) {
@@ -93,6 +100,19 @@ class CovaBotContainer {
 		if (message.author.bot) return;
 
 		try {
+			// Create message context for filtering
+			const context = MessageFilter.createContextFromMessage(message);
+
+			// Check if message should be processed
+			const filterResult = this.messageFilter.shouldProcessMessage(context);
+			if (!filterResult.allowed) {
+				// Message was filtered out - no need to log unless in debug mode
+				if (this.messageFilter.isDebugMode()) {
+					logger.debug(`AI message filtered: ${filterResult.reason}`);
+				}
+				return;
+			}
+
 			// TODO: Process message with AI Cova personality
 			// This will be implemented when we fix the AI Cova imports
 			logger.debug(`Processing AI message from ${message.author.username}: ${message.content}`);

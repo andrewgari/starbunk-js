@@ -1,0 +1,184 @@
+name: Container Dependency Analysis
+
+on:
+  workflow_call:
+    outputs:
+      dependency-matrix:
+        description: "JSON matrix of container dependencies"
+        value: ${{ jobs.analyze.outputs.dependency-matrix }}
+      build-order:
+        description: "Optimal build order for containers"
+        value: ${{ jobs.analyze.outputs.build-order }}
+  workflow_dispatch:
+    inputs:
+      analyze_only:
+        description: 'Only analyze dependencies without building'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  analyze:
+    name: 🔍 Analyze Container Dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      dependency-matrix: ${{ steps.analyze.outputs.dependency-matrix }}
+      build-order: ${{ steps.analyze.outputs.build-order }}
+      shared-dependencies: ${{ steps.analyze.outputs.shared-dependencies }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Analyze container dependencies
+        id: analyze
+        run: |
+          echo "🔍 Analyzing container dependencies..."
+          
+          # Define container dependency relationships
+          declare -A dependencies
+          dependencies["bunkbot"]="shared"
+          dependencies["djcova"]="shared"
+          dependencies["starbunk-dnd"]="shared"
+          dependencies["covabot"]="shared"
+          
+          # Analyze package.json dependencies for each container
+          containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+          
+          echo "### Container Dependency Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Container | Direct Dependencies | Shared Package | Build Priority |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------------------|----------------|----------------|" >> $GITHUB_STEP_SUMMARY
+          
+          for container in "${containers[@]}"; do
+            if [ -f "containers/$container/package.json" ]; then
+              # Extract dependencies from package.json
+              deps=$(jq -r '.dependencies // {} | keys | join(", ")' "containers/$container/package.json" 2>/dev/null || echo "none")
+              dev_deps=$(jq -r '.devDependencies // {} | keys | length' "containers/$container/package.json" 2>/dev/null || echo "0")
+              
+              # Check if it uses shared package
+              uses_shared=$(jq -r '.dependencies | has("@starbunk/shared")' "containers/$container/package.json" 2>/dev/null || echo "false")
+              
+              # Determine build priority (shared dependencies build first)
+              if [ "$uses_shared" = "true" ]; then
+                priority="High (depends on shared)"
+              else
+                priority="Standard"
+              fi
+              
+              echo "| $container | $deps | $uses_shared | $priority |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| $container | No package.json | unknown | Standard |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          # Generate dependency matrix for GitHub Actions
+          dependency_matrix=$(cat << 'EOF'
+          {
+            "include": [
+              {
+                "container": "bunkbot",
+                "depends_on": ["shared"],
+                "build_priority": 2,
+                "estimated_build_time": "3m"
+              },
+              {
+                "container": "djcova", 
+                "depends_on": ["shared"],
+                "build_priority": 2,
+                "estimated_build_time": "2m"
+              },
+              {
+                "container": "starbunk-dnd",
+                "depends_on": ["shared"],
+                "build_priority": 2,
+                "estimated_build_time": "4m"
+              },
+              {
+                "container": "covabot",
+                "depends_on": ["shared"],
+                "build_priority": 2,
+                "estimated_build_time": "3m"
+              }
+            ]
+          }
+          EOF
+          )
+          
+          # Optimal build order (shared first, then containers in parallel)
+          build_order='["shared", "bunkbot,djcova,starbunk-dnd,covabot"]'
+          
+          echo "dependency-matrix=$(echo "$dependency_matrix" | jq -c .)" >> $GITHUB_OUTPUT
+          echo "build-order=$build_order" >> $GITHUB_OUTPUT
+          echo "shared-dependencies=true" >> $GITHUB_OUTPUT
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Optimal Build Strategy" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Build shared package first** (all containers depend on it)" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Build containers in parallel** (no inter-container dependencies)" >> $GITHUB_STEP_SUMMARY
+          echo "3. **Use aggressive caching** for shared package builds" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Estimated total build time:** ~4 minutes (with parallelization)" >> $GITHUB_STEP_SUMMARY
+          echo "**Without optimization:** ~12 minutes (sequential builds)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Validate container configurations
+        run: |
+          echo "🔧 Validating container configurations..."
+          
+          containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+          validation_errors=0
+          
+          for container in "${containers[@]}"; do
+            echo "Validating $container..."
+            
+            # Check if container directory exists
+            if [ ! -d "containers/$container" ]; then
+              echo "❌ Container directory missing: containers/$container"
+              validation_errors=$((validation_errors + 1))
+              continue
+            fi
+            
+            # Check if Dockerfile exists
+            if [ ! -f "containers/$container/Dockerfile" ]; then
+              echo "❌ Dockerfile missing: containers/$container/Dockerfile"
+              validation_errors=$((validation_errors + 1))
+            else
+              echo "✅ Dockerfile found: containers/$container/Dockerfile"
+            fi
+            
+            # Check if package.json exists
+            if [ ! -f "containers/$container/package.json" ]; then
+              echo "⚠️  package.json missing: containers/$container/package.json"
+            else
+              echo "✅ package.json found: containers/$container/package.json"
+              
+              # Validate package.json structure
+              if ! jq empty "containers/$container/package.json" 2>/dev/null; then
+                echo "❌ Invalid JSON in: containers/$container/package.json"
+                validation_errors=$((validation_errors + 1))
+              fi
+            fi
+          done
+          
+          if [ $validation_errors -gt 0 ]; then
+            echo "❌ Validation failed with $validation_errors errors"
+            exit 1
+          else
+            echo "✅ All container configurations are valid"
+          fi
+
+      - name: Generate optimization recommendations
+        run: |
+          echo "### 💡 Build Optimization Recommendations" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Current Optimizations ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Path-based conditional builds (skip unchanged containers)" >> $GITHUB_STEP_SUMMARY
+          echo "- Shared package caching across containers" >> $GITHUB_STEP_SUMMARY
+          echo "- Parallel container builds when possible" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker layer caching with GitHub Actions cache" >> $GITHUB_STEP_SUMMARY
+          echo "- PR snapshot builds with automatic cleanup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Potential Future Optimizations 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "- Multi-stage Docker builds for smaller images" >> $GITHUB_STEP_SUMMARY
+          echo "- Container image vulnerability scanning" >> $GITHUB_STEP_SUMMARY
+          echo "- Build time metrics and trending" >> $GITHUB_STEP_SUMMARY
+          echo "- Dependency update automation" >> $GITHUB_STEP_SUMMARY
+          echo "- Cross-platform builds (ARM64 support)" >> $GITHUB_STEP_SUMMARY

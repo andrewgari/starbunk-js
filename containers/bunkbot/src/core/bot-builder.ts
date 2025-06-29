@@ -1,8 +1,7 @@
-import { getDiscordService, logger } from '@starbunk/shared';
-import { PrismaClient } from '@prisma/client';
-import { Message } from 'discord.js';
-import { getBotDefaults } from '../../config/botDefaults';
-import { BotIdentity } from '../../types/botIdentity';
+import { logger } from '@starbunk/shared';
+import { Client, Message, TextChannel, Webhook } from 'discord.js';
+import { getBotDefaults } from '../config/botDefaults';
+import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
 
 /**
@@ -107,7 +106,7 @@ export interface ReplyBotImpl {
  */
 export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 	const validConfig = validateBotConfig(config);
-	const prisma = getPrismaClient();
+	// Note: Database functionality disabled for now - using in-memory storage
 
 	return {
 		name: validConfig.name,
@@ -143,13 +142,12 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 				return;
 			}
 
-			// Check blacklist in DB (per-guild)
+			// Check blacklist (simple in-memory implementation)
 			const guildId = message.guild?.id;
 			const userId = message.author.id;
 			if (guildId) {
-				const blacklisted = await prisma.blacklist.findUnique({
-					where: { guildId_userId: { guildId, userId } }
-				});
+				const blacklistKey = `blacklist:${guildId}:${userId}`;
+				const blacklisted = getBotData(validConfig.name, blacklistKey);
 				if (blacklisted) {
 					logger.debug(`Skipping message from blacklisted user ${userId} in guild ${guildId}`);
 					return;
@@ -160,10 +158,12 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 			const sortedTriggers = [...validConfig.triggers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
 
 			// Process triggers in order
+			logger.debug(`[${validConfig.name}] Processing ${sortedTriggers.length} triggers for message: "${message.content}"`);
 			for (const trigger of sortedTriggers) {
 				try {
 					// Check if trigger matches
 					const matches = await trigger.condition(message);
+					logger.debug(`[${validConfig.name}] Trigger "${trigger.name}" condition result: ${matches}`);
 					if (!matches) continue;
 
 					// Get response
@@ -174,7 +174,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 					}
 
 					// Get identity
-					let identity: BotIdentity;
+					let identity: BotIdentity | null;
 					try {
 						identity =
 							typeof trigger.identity === 'function'
@@ -182,15 +182,44 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 								: trigger.identity || validConfig.defaultIdentity;
 
 						if (!identity) {
-							throw new Error('Failed to retrieve valid bot identity');
+							logger.debug(`[${validConfig.name}] Identity resolution failed for trigger "${trigger.name}" - bot will remain silent`);
+							continue; // Skip this trigger, bot remains silent
 						}
 					} catch (error) {
 						logger.error('Failed to get bot identity', error as Error);
 						continue;
 					}
 
-					// Send message
-					await getDiscordService().sendMessageWithBotIdentity(message.channel.id, identity, responseText);
+					// Send message with custom bot identity using webhooks
+					try {
+						if (message.channel instanceof TextChannel) {
+							// Use webhook for custom bot identity
+							const webhook = await getOrCreateWebhook(message.channel, message.client);
+							await webhook.send({
+								content: responseText,
+								username: identity.botName,
+								avatarURL: identity.avatarUrl
+							});
+							logger.debug(`Message sent via webhook as ${identity.botName}`);
+						} else if ('send' in message.channel) {
+							// Fallback to regular message for non-text channels
+							await message.channel.send(responseText);
+							logger.debug(`Message sent via regular channel (no webhook support)`);
+						} else {
+							logger.warn(`Channel does not support sending messages`);
+						}
+					} catch (error) {
+						logger.error(`Failed to send message to channel:`, error as Error);
+						// Fallback to regular message if webhook fails
+						try {
+							if ('send' in message.channel) {
+								await message.channel.send(responseText);
+								logger.debug(`Fallback message sent via regular channel`);
+							}
+						} catch (fallbackError) {
+							logger.error(`Fallback message also failed:`, fallbackError as Error);
+						}
+					}
 					return;
 				} catch (error) {
 					logger.error('Error in trigger', error as Error);
@@ -199,12 +228,47 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 		},
 	};
 }
-let prisma: PrismaClient | null = null;
+// Simple in-memory storage for bot data (replaces Prisma for now)
+const botStorage = new Map<string, string | number | boolean>();
 
-function getPrismaClient(): PrismaClient {
-	if (!prisma) {
-		prisma = new PrismaClient();
+function getBotData(botName: string, key: string): string | number | boolean | undefined {
+	const botKey = `${botName}:${key}`;
+	return botStorage.get(botKey);
+}
+
+// Webhook cache for custom bot identities
+const webhookCache = new Map<string, Webhook>();
+
+async function getOrCreateWebhook(channel: TextChannel, client: Client): Promise<Webhook> {
+	const cacheKey = channel.id;
+	const cachedWebhook = webhookCache.get(cacheKey);
+	if (cachedWebhook) {
+		return cachedWebhook;
 	}
-	return prisma;
+
+	try {
+		// Try to find existing webhook
+		const webhooks = await channel.fetchWebhooks();
+		const existingWebhook = webhooks.find(w => w.owner?.id === client.user?.id);
+		if (existingWebhook) {
+			webhookCache.set(cacheKey, existingWebhook);
+			return existingWebhook;
+		}
+
+		// Create new webhook if none exists
+		if (!client.user) {
+			throw new Error('Client user not available');
+		}
+
+		const newWebhook = await channel.createWebhook({
+			name: 'BunkBot Webhook',
+			avatar: client.user.displayAvatarURL()
+		});
+		webhookCache.set(cacheKey, newWebhook);
+		return newWebhook;
+	} catch (error) {
+		logger.error(`Error in getOrCreateWebhook: ${error instanceof Error ? error.message : String(error)}`);
+		throw new Error(`Could not get or create webhook: ${error instanceof Error ? error.message : String(error)}`);
+	}
 }
 

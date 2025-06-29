@@ -1,0 +1,233 @@
+# Podman Compose for Starbunk Services
+# ====================================
+# This is the main Podman Compose file equivalent to docker-compose.yml
+#
+# Usage:
+#   podman-compose up -d
+#   podman-compose -f podman-compose.yml up -d
+#
+# Prerequisites:
+#   - Configure environment variables in .env file
+#   - Ensure PostgreSQL credentials are set
+#   - Verify all required images are available
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Shared by services that need persistence
+  postgres:
+    image: postgres:15-alpine
+    container_name: starbunk-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-starbunk}
+      POSTGRES_USER: ${POSTGRES_USER:-starbunk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-starbunk} -d ${POSTGRES_DB:-starbunk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # BunkBot - Reply bots and admin commands
+  bunkbot:
+    image: ghcr.io/andrewgari/bunkbot:latest
+    container_name: starbunk-bunkbot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # DJCova - Music service
+  djcova:
+    image: ghcr.io/andrewgari/djcova:latest
+    container_name: starbunk-djcova
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - djcova_cache:/app/cache
+      - djcova_temp:/tmp
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Starbunk-DND - D&D features and bridge
+  starbunk-dnd:
+    image: ghcr.io/andrewgari/starbunk-dnd:latest
+    container_name: starbunk-dnd
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - OLLAMA_API_URL=${OLLAMA_API_URL:-}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - dnd_data:/app/data
+      - dnd_campaigns:/app/data/campaigns
+      - dnd_context:/app/data/llm_context
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # CovaBot - AI personality bot
+  covabot:
+    image: ghcr.io/andrewgari/covabot:latest
+    container_name: starbunk-covabot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+# Named volumes for persistent data
+volumes:
+  postgres_data:
+    driver: local
+  djcova_cache:
+    driver: local
+  djcova_temp:
+    driver: local
+  dnd_data:
+    driver: local
+  dnd_campaigns:
+    driver: local
+  dnd_context:
+    driver: local
+
+# Custom network for service communication
+networks:
+  starbunk-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
