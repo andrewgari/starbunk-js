@@ -128,7 +128,7 @@ jobs:
           
           # Count filters
           total_filters=$(grep -c "^[a-zA-Z]" .github/path-filters.yml)
-          container_filters=$(grep -c "^(bunkbot|djcova|starbunk-dnd|covabot):" .github/path-filters.yml)
+          container_filters=$(grep -E -c "^(bunkbot|djcova|starbunk-dnd|covabot):" .github/path-filters.yml)
           
           echo "### 📋 Filter Statistics" >> $GITHUB_STEP_SUMMARY
           echo "- **Total filters:** $total_filters" >> $GITHUB_STEP_SUMMARY
