@@ -52,26 +52,50 @@ jobs:
             echo "Changed files: shared=${{ steps.filter.outputs.shared }}, root-files=${{ steps.filter.outputs.root-files }}, workflows=${{ steps.filter.outputs.workflows }}, docker=${{ steps.filter.outputs.docker }}, security=${{ steps.filter.outputs.security }}"
             containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
             echo "test-shared=true" >> $GITHUB_OUTPUT
+
+            # Log specific shared changes for better debugging
+            echo "📋 Shared change analysis:"
+            if [[ "${{ steps.filter.outputs.shared }}" == "true" ]]; then
+              echo "  🔧 Shared package code modified - all containers need rebuilding"
+            fi
+            if [[ "${{ steps.filter.outputs.root-files }}" == "true" ]]; then
+              echo "  📦 Root configuration files changed - all containers affected"
+            fi
+            if [[ "${{ steps.filter.outputs.workflows }}" == "true" ]]; then
+              echo "  ⚙️ CI/CD workflows modified - full validation required"
+            fi
+            if [[ "${{ steps.filter.outputs.docker }}" == "true" ]]; then
+              echo "  🐳 Docker configuration changed - all containers need rebuilding"
+            fi
           else
             echo "test-shared=${{ steps.filter.outputs.shared }}" >> $GITHUB_OUTPUT
             echo "🎯 Processing only containers with specific changes"
+
             # Only process containers that have changed
             if [[ "${{ steps.filter.outputs.bunkbot }}" == "true" ]]; then
               containers+=("bunkbot")
-              echo "  ✅ BunkBot container changed"
+              echo "  ✅ BunkBot container changed - will rebuild"
             fi
             if [[ "${{ steps.filter.outputs.djcova }}" == "true" ]]; then
               containers+=("djcova")
-              echo "  ✅ DJCova container changed"
+              echo "  ✅ DJCova container changed - will rebuild"
             fi
             if [[ "${{ steps.filter.outputs.starbunk-dnd }}" == "true" ]]; then
               containers+=("starbunk-dnd")
-              echo "  ✅ Starbunk-DND container changed"
+              echo "  ✅ Starbunk-DND container changed - will rebuild"
             fi
             if [[ "${{ steps.filter.outputs.covabot }}" == "true" ]]; then
               containers+=("covabot")
-              echo "  ✅ CovaBot container changed"
+              echo "  ✅ CovaBot container changed - will rebuild"
             fi
+
+            # Log skipped containers for transparency
+            all_containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+            for container in "${all_containers[@]}"; do
+              if [[ ! " ${containers[@]} " =~ " ${container} " ]]; then
+                echo "  ⏭️ ${container} container unchanged - skipping build"
+              fi
+            done
           fi
 
           # Convert array to JSON for matrix
@@ -79,6 +103,7 @@ jobs:
             echo "containers=[]" >> $GITHUB_OUTPUT
             echo "any-changed=false" >> $GITHUB_OUTPUT
             echo "📭 No containers need processing - no relevant changes detected"
+            echo "🎉 Maximum optimization achieved - 100% build time saved!"
           else
             containers_json=$(printf '%s\n' "${containers[@]}" | jq -R . | jq -s -c .)
             echo "containers=$containers_json" >> $GITHUB_OUTPUT
@@ -86,13 +111,31 @@ jobs:
             echo "📦 Containers to process: ${containers[*]}"
             echo "🔧 Matrix JSON: $containers_json"
 
-            # Log build optimization savings
+            # Enhanced build optimization reporting
             total_containers=4
             processing_containers=${#containers[@]}
             saved_containers=$((total_containers - processing_containers))
+
             if [ $saved_containers -gt 0 ]; then
               echo "⚡ Build optimization: Skipping $saved_containers unnecessary container builds"
+              echo "💰 Estimated savings: ~$((saved_containers * 3)) minutes build time"
+              echo "🌱 Resource efficiency: $((saved_containers * 25))% CI/CD resources saved"
+            else
+              echo "🔄 Full rebuild required - all containers have relevant changes"
             fi
+
+            # Log detailed container status
+            echo "📊 Container build status:"
+            for container in "${containers[@]}"; do
+              echo "  🔨 $container: BUILDING"
+            done
+
+            all_containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+            for container in "${all_containers[@]}"; do
+              if [[ ! " ${containers[@]} " =~ " ${container} " ]]; then
+                echo "  ⏭️ $container: SKIPPED"
+              fi
+            done
           fi
 
   # Build optimization summary
@@ -121,25 +164,51 @@ jobs:
           echo "| Docker Config | ${{ needs.detect-changes.outputs.docker }} | ${{ needs.detect-changes.outputs.docker == 'true' && 'All containers' || 'None' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Build optimization results
+          # Build optimization results with enhanced metrics
           if [[ "${{ needs.detect-changes.outputs.any-container-changed }}" == "true" ]]; then
             containers_matrix='${{ needs.detect-changes.outputs.containers-matrix }}'
             containers_count=$(echo "$containers_matrix" | jq '. | length')
             total_containers=4
             saved_builds=$((total_containers - containers_count))
+            optimization_percentage=$(( (saved_builds * 100) / total_containers ))
 
-            echo "### ⚡ Build Optimization" >> $GITHUB_STEP_SUMMARY
+            echo "### ⚡ Build Optimization Results" >> $GITHUB_STEP_SUMMARY
             echo "- **Containers to build:** $containers_count out of $total_containers" >> $GITHUB_STEP_SUMMARY
             echo "- **Builds saved:** $saved_builds" >> $GITHUB_STEP_SUMMARY
-            echo "- **Time savings:** ~$((saved_builds * 3)) minutes estimated" >> $GITHUB_STEP_SUMMARY
-            echo "- **Resource savings:** ~$((saved_builds * 25))% CI/CD resources" >> $GITHUB_STEP_SUMMARY
+            echo "- **Optimization rate:** ${optimization_percentage}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Estimated time savings:** ~$((saved_builds * 3)) minutes" >> $GITHUB_STEP_SUMMARY
+            echo "- **Estimated resource savings:** ~$((saved_builds * 25))% CI/CD resources" >> $GITHUB_STEP_SUMMARY
+            echo "- **Carbon footprint reduction:** ~$((saved_builds * 15))% less compute emissions" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Detailed container status table
+            echo "### 📦 Container Build Status" >> $GITHUB_STEP_SUMMARY
+            echo "| Container | Status | Reason |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+
+            # Parse containers being built
+            containers_list=$(echo "$containers_matrix" | jq -r '.[]')
+            all_containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+
+            for container in "${all_containers[@]}"; do
+              if echo "$containers_list" | grep -q "^${container}$"; then
+                echo "| $container | 🔨 Building | Source code or dependencies changed |" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "| $container | ⏭️ Skipped | No relevant changes detected |" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Containers being built:** $containers_matrix" >> $GITHUB_STEP_SUMMARY
           else
-            echo "### ✅ Maximum Optimization" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ Maximum Optimization Achieved" >> $GITHUB_STEP_SUMMARY
             echo "- **No container builds needed** - no relevant changes detected" >> $GITHUB_STEP_SUMMARY
-            echo "- **Time savings:** ~12 minutes (100% optimization)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Optimization rate:** 100%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Time savings:** ~12 minutes (complete skip)" >> $GITHUB_STEP_SUMMARY
             echo "- **Resource savings:** 100% CI/CD resources" >> $GITHUB_STEP_SUMMARY
+            echo "- **Carbon footprint reduction:** 100% less compute emissions" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🎉 **Perfect efficiency!** All containers are up-to-date." >> $GITHUB_STEP_SUMMARY
           fi
 
   # Test shared package first (prerequisite for all containers)

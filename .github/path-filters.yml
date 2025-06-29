@@ -1,37 +1,95 @@
 # Path-based filters for container builds
 # This file centralizes all path filtering logic for CI/CD workflows
+# Optimized for maximum build efficiency and minimal false positives
 
 # Shared package - affects ALL containers when changed
+# Only triggers on actual code/config changes, not documentation
 shared:
-  - 'containers/shared/**'
+  - 'containers/shared/src/**'
+  - 'containers/shared/lib/**'
+  - 'containers/shared/package.json'
+  - 'containers/shared/package-lock.json'
+  - 'containers/shared/tsconfig.json'
+  - 'containers/shared/jest.config.js'
+  - 'containers/shared/.eslintrc*'
+  - 'containers/shared/Dockerfile'
+  - 'containers/shared/**/*.ts'
+  - 'containers/shared/**/*.js'
   - '!containers/shared/README.md'
   - '!containers/shared/docs/**'
   - '!containers/shared/**/*.md'
+  - '!containers/shared/node_modules/**'
+  - '!containers/shared/dist/**'
 
-# Individual container filters
+# Individual container filters - optimized for actual build triggers
+# Only includes files that actually affect the container build/runtime
 bunkbot:
-  - 'containers/bunkbot/**'
+  - 'containers/bunkbot/src/**'
+  - 'containers/bunkbot/lib/**'
+  - 'containers/bunkbot/package.json'
+  - 'containers/bunkbot/package-lock.json'
+  - 'containers/bunkbot/tsconfig.json'
+  - 'containers/bunkbot/Dockerfile'
+  - 'containers/bunkbot/.dockerignore'
+  - 'containers/bunkbot/**/*.ts'
+  - 'containers/bunkbot/**/*.js'
+  - 'containers/bunkbot/**/*.json'
   - '!containers/bunkbot/README.md'
   - '!containers/bunkbot/docs/**'
   - '!containers/bunkbot/**/*.md'
+  - '!containers/bunkbot/node_modules/**'
+  - '!containers/bunkbot/dist/**'
 
 djcova:
-  - 'containers/djcova/**'
+  - 'containers/djcova/src/**'
+  - 'containers/djcova/lib/**'
+  - 'containers/djcova/package.json'
+  - 'containers/djcova/package-lock.json'
+  - 'containers/djcova/tsconfig.json'
+  - 'containers/djcova/Dockerfile'
+  - 'containers/djcova/.dockerignore'
+  - 'containers/djcova/**/*.ts'
+  - 'containers/djcova/**/*.js'
+  - 'containers/djcova/**/*.json'
   - '!containers/djcova/README.md'
   - '!containers/djcova/docs/**'
   - '!containers/djcova/**/*.md'
+  - '!containers/djcova/node_modules/**'
+  - '!containers/djcova/dist/**'
 
 starbunk-dnd:
-  - 'containers/starbunk-dnd/**'
+  - 'containers/starbunk-dnd/src/**'
+  - 'containers/starbunk-dnd/lib/**'
+  - 'containers/starbunk-dnd/package.json'
+  - 'containers/starbunk-dnd/package-lock.json'
+  - 'containers/starbunk-dnd/tsconfig.json'
+  - 'containers/starbunk-dnd/Dockerfile'
+  - 'containers/starbunk-dnd/.dockerignore'
+  - 'containers/starbunk-dnd/**/*.ts'
+  - 'containers/starbunk-dnd/**/*.js'
+  - 'containers/starbunk-dnd/**/*.json'
   - '!containers/starbunk-dnd/README.md'
   - '!containers/starbunk-dnd/docs/**'
   - '!containers/starbunk-dnd/**/*.md'
+  - '!containers/starbunk-dnd/node_modules/**'
+  - '!containers/starbunk-dnd/dist/**'
 
 covabot:
-  - 'containers/covabot/**'
+  - 'containers/covabot/src/**'
+  - 'containers/covabot/lib/**'
+  - 'containers/covabot/package.json'
+  - 'containers/covabot/package-lock.json'
+  - 'containers/covabot/tsconfig.json'
+  - 'containers/covabot/Dockerfile'
+  - 'containers/covabot/.dockerignore'
+  - 'containers/covabot/**/*.ts'
+  - 'containers/covabot/**/*.js'
+  - 'containers/covabot/**/*.json'
   - '!containers/covabot/README.md'
   - '!containers/covabot/docs/**'
   - '!containers/covabot/**/*.md'
+  - '!containers/covabot/node_modules/**'
+  - '!containers/covabot/dist/**'
 
 # Root-level files that affect all containers
 root-files:
@@ -99,31 +157,72 @@ config:
   - 'vite.config.*'
 
 # Container-specific dependency combinations
-# These are used for more granular dependency detection
+# These provide more granular dependency detection for advanced scenarios
+# Useful for detecting when a container needs rebuilding due to shared dependencies
 
 bunkbot-deps:
-  - 'containers/bunkbot/**'
-  - 'containers/shared/**'
+  - 'containers/bunkbot/src/**'
+  - 'containers/bunkbot/lib/**'
+  - 'containers/bunkbot/package.json'
+  - 'containers/bunkbot/package-lock.json'
+  - 'containers/bunkbot/Dockerfile'
+  - 'containers/shared/src/**'
+  - 'containers/shared/lib/**'
+  - 'containers/shared/package.json'
+  - 'containers/shared/**/*.ts'
+  - 'containers/shared/**/*.js'
   - '!**/*.md'
   - '!**/docs/**'
+  - '!**/node_modules/**'
+  - '!**/dist/**'
 
 djcova-deps:
-  - 'containers/djcova/**'
-  - 'containers/shared/**'
+  - 'containers/djcova/src/**'
+  - 'containers/djcova/lib/**'
+  - 'containers/djcova/package.json'
+  - 'containers/djcova/package-lock.json'
+  - 'containers/djcova/Dockerfile'
+  - 'containers/shared/src/**'
+  - 'containers/shared/lib/**'
+  - 'containers/shared/package.json'
+  - 'containers/shared/**/*.ts'
+  - 'containers/shared/**/*.js'
   - '!**/*.md'
   - '!**/docs/**'
+  - '!**/node_modules/**'
+  - '!**/dist/**'
 
 starbunk-dnd-deps:
-  - 'containers/starbunk-dnd/**'
-  - 'containers/shared/**'
+  - 'containers/starbunk-dnd/src/**'
+  - 'containers/starbunk-dnd/lib/**'
+  - 'containers/starbunk-dnd/package.json'
+  - 'containers/starbunk-dnd/package-lock.json'
+  - 'containers/starbunk-dnd/Dockerfile'
+  - 'containers/shared/src/**'
+  - 'containers/shared/lib/**'
+  - 'containers/shared/package.json'
+  - 'containers/shared/**/*.ts'
+  - 'containers/shared/**/*.js'
   - '!**/*.md'
   - '!**/docs/**'
+  - '!**/node_modules/**'
+  - '!**/dist/**'
 
 covabot-deps:
-  - 'containers/covabot/**'
-  - 'containers/shared/**'
+  - 'containers/covabot/src/**'
+  - 'containers/covabot/lib/**'
+  - 'containers/covabot/package.json'
+  - 'containers/covabot/package-lock.json'
+  - 'containers/covabot/Dockerfile'
+  - 'containers/shared/src/**'
+  - 'containers/shared/lib/**'
+  - 'containers/shared/package.json'
+  - 'containers/shared/**/*.ts'
+  - 'containers/shared/**/*.js'
   - '!**/*.md'
   - '!**/docs/**'
+  - '!**/node_modules/**'
+  - '!**/dist/**'
 
 # Critical files that always trigger full builds
 critical:
