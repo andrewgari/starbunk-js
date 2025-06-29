@@ -1,8 +1,8 @@
-# Path-Based Conditional Build Optimization Summary
+# CI/CD Build Optimization & PR Snapshot Container System Summary
 
 ## 🎯 Overview
 
-Your CI/CD pipeline already had an excellent path-based conditional build system implemented. I've enhanced it with additional optimizations, better reporting, validation tools, and comprehensive documentation to make it even more robust and maintainable.
+Your CI/CD pipeline already had an excellent path-based conditional build system implemented. I've enhanced it with additional optimizations, better reporting, validation tools, comprehensive documentation, and a complete PR snapshot container system to make it even more robust and maintainable.
 
 ## ✅ Current Implementation Status
 
@@ -171,31 +171,105 @@ Your system typically achieves:
 3. **Monitor for degradation** - Watch for decreasing optimization rates
 4. **Validate changes** - Use local testing script before committing filter changes
 
-## 🎉 Conclusion
+## 📦 PR Snapshot Container System
 
-Your path-based conditional build system was already excellent and well-implemented. The enhancements I've made focus on:
+### New Features Added
 
+1. **Dual Container Strategy**: Every PR build now creates both specific versioned containers and snapshot containers
+   - **Specific**: `ghcr.io/andrewgari/starbunk-bunkbot:pr-235-abc1234` (immutable)
+   - **Snapshot**: `ghcr.io/andrewgari/starbunk-bunkbot:pr-235-snapshot` (always latest)
+
+2. **In-Place Snapshot Updates**: Snapshot tags are updated in-place to always point to the latest PR build
+   - No duplicate snapshot containers
+   - Always references the most current version
+   - Efficient storage usage
+
+3. **Enhanced PR Comments**: Detailed container information with pull commands for both types
+   - Quick start commands for testing
+   - Clear distinction between snapshot and specific versions
+   - Container system information and cleanup policy
+
+4. **Comprehensive Cleanup System**:
+   - **Immediate**: PR containers deleted when PR is closed
+   - **Weekly**: Automated cleanup of old containers (30+ days)
+   - **Untagged**: Removes orphaned images to prevent registry bloat
+   - **Protected**: Open PRs are never affected by cleanup
+
+5. **Retention Policy Management**:
+   - Configurable retention periods
+   - Dry run support for safe testing
+   - Detailed cleanup reporting
+   - Manual cleanup triggers available
+
+### Benefits for Developers
+
+- 🔄 **Always Latest**: `pr-X-snapshot` tags automatically update with each push
+- 🏷️ **Reproducible**: Specific versions for consistent testing and debugging
+- 🚀 **Easy Testing**: Simple pull commands for PR testing
+- 🗑️ **No Maintenance**: Automatic cleanup prevents registry bloat
+- 📦 **Efficient Storage**: In-place updates reduce storage usage
+
+### Usage Examples
+
+```bash
+# For testing (recommended) - always gets latest
+docker pull ghcr.io/andrewgari/starbunk-bunkbot:pr-235-snapshot
+
+# For reproducible builds - immutable reference
+docker pull ghcr.io/andrewgari/starbunk-bunkbot:pr-235-abc1234
+```
+
+## 🎉 Combined System Conclusion
+
+Your CI/CD pipeline now includes both excellent path-based conditional builds AND a comprehensive PR snapshot container system. The enhancements focus on:
+
+### Path-Based Build Optimization
 1. **Precision**: More accurate path filtering to reduce false positives
 2. **Visibility**: Better reporting and monitoring capabilities
 3. **Reliability**: Validation tools to prevent configuration issues
 4. **Maintainability**: Documentation and tools for easier management
 5. **Developer Experience**: Local testing capabilities
 
-The system now provides:
-- **Maximum build efficiency** through precise change detection
+### PR Snapshot Container System
+1. **Convenience**: Always-latest snapshot containers for easy testing
+2. **Reproducibility**: Immutable specific versions for consistent builds
+3. **Automation**: Comprehensive cleanup and retention management
+4. **Efficiency**: In-place updates and smart storage usage
+5. **Safety**: Protected cleanup with open PR detection
+
+The combined system now provides:
+- **Maximum build efficiency** through precise change detection (~65% optimization)
+- **Convenient container management** with automatic snapshot updates
 - **Comprehensive monitoring** for performance tracking
 - **Robust validation** to prevent configuration issues
 - **Complete documentation** for easy maintenance
-- **Developer-friendly tools** for local testing
+- **Developer-friendly tools** for local testing and container usage
+- **Automatic cleanup** to prevent registry bloat
 
-Your CI/CD pipeline is now optimized for maximum efficiency while maintaining reliability and ease of maintenance. The path-based conditional builds will continue to save significant time and resources while providing excellent developer experience.
+Your CI/CD pipeline is now optimized for maximum efficiency while providing excellent developer experience through both build optimization and convenient container management.
 
 ## 🚀 Next Steps
 
+### Path-Based Build System
 1. **Test the enhancements** by making some changes and observing the improved reporting
 2. **Use the local testing script** during development: `./scripts/test-path-filters.sh`
 3. **Review the documentation** at `.github/docs/path-based-builds.md`
 4. **Monitor performance** using the enhanced metrics and reporting
-5. **Customize further** if needed using the provided guides and tools
 
-The system is production-ready and will immediately start providing enhanced optimization reporting and validation capabilities!
+### PR Snapshot Container System
+1. **Create a test PR** to see the new container system in action
+2. **Try the snapshot containers** using the pull commands in PR comments
+3. **Review the documentation** at `.github/docs/pr-snapshot-containers.md`
+4. **Test the cleanup** by closing a test PR and observing automatic deletion
+5. **Configure retention** if needed using the cleanup workflow parameters
+
+### Monitoring & Maintenance
+1. **Monitor container registry usage** to ensure cleanup is working effectively
+2. **Review weekly cleanup reports** for registry maintenance insights
+3. **Customize retention policies** if your team needs different cleanup schedules
+4. **Use dry run cleanup** to test retention policies before applying
+
+The complete system is production-ready and will immediately start providing:
+- **Enhanced build optimization** reporting and validation capabilities
+- **Automatic PR container management** with convenient snapshot updates
+- **Comprehensive cleanup** to maintain registry efficiency

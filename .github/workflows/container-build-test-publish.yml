@@ -286,7 +286,8 @@ jobs:
             # For main branch pushes
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix={{branch}}-,enable={{is_default_branch}}
-            # For PR builds
+            # For PR builds - create both specific versioned and snapshot tags
+            type=raw,value=pr-${{ github.event.pull_request.number }}-{{sha}},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=pr-${{ github.event.pull_request.number }}-snapshot,enable=${{ github.event_name == 'pull_request' }}
 
       - name: Build container image
@@ -404,12 +405,27 @@ jobs:
         run: |
           # Load the pre-built image
           docker load --input /tmp/${{ matrix.container }}-image.tar
-          
+
+          # List all images for this container
+          echo "📋 Available images for ${{ matrix.container }}:"
+          docker images --format "table {{.Repository}}:{{.Tag}}" | grep "${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}" || echo "No images found"
+
           # Push all tags
           docker images --format "table {{.Repository}}:{{.Tag}}" | grep "${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}" | while read image; do
-            echo "Pushing $image..."
+            echo "🚀 Pushing $image..."
             docker push "$image"
+            echo "✅ Successfully pushed $image"
           done
+
+          # For PR builds, log snapshot information
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo ""
+            echo "📦 PR Snapshot Container System:"
+            echo "  🏷️  Specific version: pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
+            echo "  📌 Snapshot (latest): pr-${{ github.event.pull_request.number }}-snapshot"
+            echo "  🔄 Snapshot updated in-place to point to latest build"
+            echo "  🗑️  Cleanup: Snapshot will be deleted when PR is closed"
+          fi
 
       - name: Add PR Comment (for PR builds)
         if: github.event_name == 'pull_request'
@@ -420,16 +436,30 @@ jobs:
             const { owner, repo } = context.repo;
             const prNumber = context.payload.pull_request.number;
             const container = '${{ matrix.container }}';
-            const imageTag = `ghcr.io/${owner}/${container}:pr-${prNumber}-snapshot`;
+            const sha = context.sha.substring(0, 7);
+            const snapshotTag = `ghcr.io/${owner}/${container}:pr-${prNumber}-snapshot`;
+            const specificTag = `ghcr.io/${owner}/${container}:pr-${prNumber}-${sha}`;
 
             const comment = `🐳 **Container Built, Tested & Published: \`${container}\`**
 
-            **Image:** \`${imageTag}\`
-            **Pull Command:** \`docker pull ${imageTag}\`
+            ## 📦 Available Images:
+            **🔄 Latest Snapshot:** \`${snapshotTag}\`
+            **🏷️ Specific Version:** \`${specificTag}\`
 
+            ## 🚀 Quick Start:
+            \`\`\`bash
+            # Pull latest snapshot (recommended for testing)
+            docker pull ${snapshotTag}
+
+            # Pull specific version (for reproducible builds)
+            docker pull ${specificTag}
+            \`\`\`
+
+            ## ℹ️ Container Info:
             ✅ **Build & Test:** Image built and validated successfully
             📦 **Published:** Available in GitHub Container Registry
-            🗑️ **Cleanup:** Image will be deleted when PR is closed`;
+            🔄 **Snapshot System:** Snapshot tag updated in-place to latest build
+            🗑️ **Cleanup:** Images will be deleted when PR is closed`;
 
             // Update or create comment
             const { data: comments } = await github.rest.issues.listComments({
@@ -468,27 +498,53 @@ jobs:
             const prNumber = context.payload.pull_request.number;
             const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot'];
 
+            console.log(`🗑️ Cleaning up PR #${prNumber} container images...`);
+
             for (const container of containers) {
               try {
+                console.log(`\n📦 Processing container: ${container}`);
+
                 const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
                   package_type: 'container',
                   package_name: container,
                   username: owner
                 });
 
-                const prVersions = versions.filter(version =>
-                  version.metadata?.container?.tags?.some(tag => tag === `pr-${prNumber}-snapshot`)
-                );
+                // Find all PR-related versions (both snapshot and specific versions)
+                const prVersions = versions.filter(version => {
+                  const tags = version.metadata?.container?.tags || [];
+                  return tags.some(tag =>
+                    tag === `pr-${prNumber}-snapshot` ||
+                    tag.startsWith(`pr-${prNumber}-`) && tag !== `pr-${prNumber}-snapshot`
+                  );
+                });
+
+                console.log(`  Found ${prVersions.length} PR-related versions to delete`);
 
                 for (const version of prVersions) {
-                  await github.rest.packages.deletePackageVersionForUser({
-                    package_type: 'container',
-                    package_name: container,
-                    username: owner,
-                    package_version_id: version.id
-                  });
+                  const tags = version.metadata?.container?.tags || [];
+                  const tagList = tags.join(', ');
+
+                  try {
+                    await github.rest.packages.deletePackageVersionForUser({
+                      package_type: 'container',
+                      package_name: container,
+                      username: owner,
+                      package_version_id: version.id
+                    });
+                    console.log(`  ✅ Deleted version with tags: ${tagList}`);
+                  } catch (deleteError) {
+                    console.log(`  ❌ Failed to delete version with tags: ${tagList} - ${deleteError.message}`);
+                  }
                 }
+
+                if (prVersions.length === 0) {
+                  console.log(`  ℹ️ No PR-related versions found for ${container}`);
+                }
+
               } catch (error) {
-                console.log(`Failed to delete ${container} image:`, error.message);
+                console.log(`❌ Failed to process ${container} container: ${error.message}`);
               }
             }
+
+            console.log(`\n🎉 PR #${prNumber} container cleanup completed!`);
