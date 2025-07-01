@@ -38,7 +38,7 @@ export default {
 			return;
 		}
 
-		const { member, voiceChannel } = voiceValidation;
+		const { voiceChannel } = voiceValidation;
 
 		try {
 			logger.info(`🎵 Attempting to play: ${url}`);

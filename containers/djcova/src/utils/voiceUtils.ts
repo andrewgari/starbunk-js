@@ -1,9 +1,8 @@
 // DJCova-specific voice utilities
-import { 
-	VoiceChannel, 
-	GuildMember, 
+import {
+	GuildMember,
 	CommandInteraction,
-	VoiceBasedChannel 
+	VoiceBasedChannel
 } from 'discord.js';
 import { 
 	joinVoiceChannel, 
@@ -20,7 +19,7 @@ import { logger } from '@starbunk/shared';
  */
 export function createVoiceConnection(
 	channel: VoiceBasedChannel,
-	adapterCreator: any
+	adapterCreator: (methods: any) => any
 ): VoiceConnection {
 	logger.debug(`Joining voice channel: ${channel.name} (${channel.id})`);
 	
