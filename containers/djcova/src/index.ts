@@ -1,5 +1,6 @@
 // DJCova - Music service container
-import { Events, PlayerSubscription } from 'discord.js';
+import { Events, Client } from 'discord.js';
+import { PlayerSubscription } from '@discordjs/voice';
 import {
 	logger,
 	ensureError,
@@ -11,10 +12,14 @@ import {
 	getMessageFilter,
 	MessageFilter
 } from '@starbunk/shared';
+import { CommandHandler } from './commandHandler';
+import { DJCova } from './djCova';
 
 class DJCovaContainer {
-	private client: any;
-	private messageFilter: MessageFilter;
+	private client!: Client;
+	private messageFilter!: MessageFilter;
+	private commandHandler!: CommandHandler;
+	private musicPlayer!: DJCova;
 	public activeSubscription: PlayerSubscription | null = null;
 	private hasInitialized = false;
 
@@ -43,8 +48,8 @@ class DJCovaContainer {
 
 	private validateEnvironment(): void {
 		validateEnvironment({
-			required: ['STARBUNK_TOKEN'],
-			optional: ['DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV']
+			required: ['STARBUNK_TOKEN', 'CLIENT_ID'],
+			optional: ['DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV', 'MUSIC_IDLE_TIMEOUT_SECONDS']
 		});
 	}
 
@@ -55,6 +60,14 @@ class DJCovaContainer {
 		// Initialize message filter
 		this.messageFilter = getMessageFilter();
 		container.register(ServiceId.MessageFilter, this.messageFilter);
+
+		// Initialize music player
+		this.musicPlayer = new DJCova();
+		container.register(ServiceId.MusicPlayer, this.musicPlayer);
+
+		// Initialize command handler
+		this.commandHandler = new CommandHandler();
+		await this.commandHandler.registerCommands();
 
 		// Note: DJCova doesn't need database access
 		logger.info('DJCova services initialized (no database required)');
@@ -104,9 +117,8 @@ class DJCovaContainer {
 					return;
 				}
 
-				// TODO: Handle music commands
-				// This will be implemented when we fix the command handler
-				logger.debug(`Processing music command: ${interaction.commandName}`);
+				// Handle music commands using the command handler
+				await this.commandHandler.handleInteraction(interaction);
 			} catch (error) {
 				logger.error('Error processing music interaction:', ensureError(error));
 			}

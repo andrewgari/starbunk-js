@@ -1,5 +1,12 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { getStarbunkClient } from '../starbunkClient';
+import {
+	logger,
+	sendErrorResponse,
+	sendSuccessResponse,
+	container,
+	ServiceId
+} from '@starbunk/shared';
+import { DJCova } from '../djCova';
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('volume')
@@ -9,12 +16,26 @@ const commandBuilder = new SlashCommandBuilder()
 export default {
 	data: commandBuilder.toJSON(),
 	async execute(interaction: CommandInteraction) {
-		const client = getStarbunkClient(interaction);
+		try {
+			// Get volume from the 'noise' option (as defined in the command builder)
+			const vol = interaction.options.get('noise')?.value as number;
 
-		let vol = interaction.options.get('volume')?.value as number;
-		if (client && vol > 1 && vol <= 100) {
-			vol = Math.round(vol / 10);
-			client.getMusicPlayer().changeVolume(vol);
+			if (!vol || vol < 1 || vol > 100) {
+				await sendErrorResponse(interaction, 'Volume must be between 1 and 100!');
+				return;
+			}
+
+			// Get music player from container
+			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);
+
+			// Set the volume (no need to divide by 10, DJCova handles percentage internally)
+			musicPlayer.changeVolume(vol);
+
+			await sendSuccessResponse(interaction, `🔊 Volume set to ${vol}%!`);
+			logger.info(`Volume changed to ${vol}% via volume command`);
+		} catch (error) {
+			logger.error('Error executing volume command:', error instanceof Error ? error : new Error(String(error)));
+			await sendErrorResponse(interaction, 'An error occurred while changing the volume.');
 		}
 	},
 };
