@@ -22,6 +22,11 @@ export class DJCova {
 	private currentChannelId: string | null = null;
 	private notificationCallback: ((message: string) => Promise<void>) | null = null;
 
+	// Event listener references for proper cleanup
+	private onPlayingListener: (() => void) | null = null;
+	private onIdleListener: (() => void) | null = null;
+	private onErrorListener: ((error: Error) => void) | null = null;
+
 	constructor() {
 		logger.debug('🎵 Initializing DJCova audio player');
 		this.player = createAudioPlayer();
@@ -132,26 +137,32 @@ export class DJCova {
 	 * Set up idle management for auto-disconnect functionality
 	 */
 	private setupIdleManagement(): void {
-		this.player.on(AudioPlayerStatus.Playing, () => {
+		// Create listener functions as class properties for proper cleanup
+		this.onPlayingListener = () => {
 			logger.debug('Audio player started playing, resetting idle timer');
 			if (this.idleManager) {
 				this.idleManager.resetIdleTimer();
 			}
-		});
+		};
 
-		this.player.on(AudioPlayerStatus.Idle, () => {
+		this.onIdleListener = () => {
 			logger.debug('Audio player became idle, starting idle timer');
 			if (this.idleManager) {
 				this.idleManager.startIdleTimer();
 			}
-		});
+		};
 
-		this.player.on('error', (error) => {
+		this.onErrorListener = (error: Error) => {
 			logger.error('Audio player error:', error);
 			if (this.idleManager) {
 				this.idleManager.startIdleTimer();
 			}
-		});
+		};
+
+		// Register the event listeners
+		this.player.on(AudioPlayerStatus.Playing, this.onPlayingListener);
+		this.player.on(AudioPlayerStatus.Idle, this.onIdleListener);
+		this.player.on('error', this.onErrorListener);
 	}
 
 	/**
@@ -230,11 +241,31 @@ export class DJCova {
 	 * Cleanup resources when destroying the music player
 	 */
 	destroy(): void {
+		// Remove event listeners to prevent memory leaks
+		if (this.onPlayingListener) {
+			this.player.off(AudioPlayerStatus.Playing, this.onPlayingListener);
+			this.onPlayingListener = null;
+		}
+
+		if (this.onIdleListener) {
+			this.player.off(AudioPlayerStatus.Idle, this.onIdleListener);
+			this.onIdleListener = null;
+		}
+
+		if (this.onErrorListener) {
+			this.player.off('error', this.onErrorListener);
+			this.onErrorListener = null;
+		}
+
+		// Cleanup idle manager
 		if (this.idleManager) {
 			this.idleManager.destroy();
 			this.idleManager = null;
 		}
+
+		// Stop the music player
 		this.stop();
-		logger.debug('DJCova music player destroyed');
+
+		logger.debug('DJCova music player destroyed with proper cleanup');
 	}
 }

@@ -1,10 +1,9 @@
-import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
+import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, SlashCommandBuilder } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import { logger, isDebugMode } from '@starbunk/shared';
 
 // Command interface for DJCova music commands
-import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, SlashCommandBuilder } from 'discord.js';
 
 export interface Command {
     data: RESTPostAPIChatInputApplicationCommandsJSONBody | SlashCommandBuilder;
