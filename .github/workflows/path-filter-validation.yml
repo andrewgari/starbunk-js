@@ -26,6 +26,7 @@ jobs:
       - name: Validate path filter syntax
         run: |
           echo "🔍 Validating path filter syntax..."
+          pip install --quiet pyyaml
           
           # Check if path-filters.yml exists and is valid YAML
           if [ ! -f ".github/path-filters.yml" ]; then
