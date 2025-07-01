@@ -19,7 +19,7 @@ import { logger } from '@starbunk/shared';
  */
 export function createVoiceConnection(
 	channel: VoiceBasedChannel,
-	adapterCreator: (methods: any) => any
+	adapterCreator: (methods: unknown) => unknown
 ): VoiceConnection {
 	logger.debug(`Joining voice channel: ${channel.name} (${channel.id})`);
 	
