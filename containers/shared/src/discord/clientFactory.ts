@@ -1,32 +1,49 @@
 // Discord client factory for different container needs
-import { Client, GatewayIntentBits, IntentsBitField } from 'discord.js';
+import { Client, GatewayIntentBits, IntentsBitField, ClientOptions } from 'discord.js';
 import { logger } from '../services/logger';
 
 export interface ClientConfig {
 	intents: readonly GatewayIntentBits[];
 	enableVoice?: boolean;
 	enableWebhooks?: boolean;
+	enablePresence?: boolean;
+	additionalOptions?: Partial<ClientOptions>;
 }
 
+/**
+ * Creates a standard Discord.js client with the specified configuration
+ * This is the recommended way to create Discord clients across all containers
+ */
 export function createDiscordClient(config: ClientConfig): Client {
 	const intents = new IntentsBitField();
-	
+
 	// Add required intents
 	for (const intent of config.intents) {
 		intents.add(intent);
 	}
-	
+
 	// Add voice intents if needed
 	if (config.enableVoice) {
 		intents.add(GatewayIntentBits.GuildVoiceStates);
 	}
-	
+
 	// Add webhook intents if needed
 	if (config.enableWebhooks) {
 		intents.add(GatewayIntentBits.GuildWebhooks);
 	}
 
-	const client = new Client({ intents });
+	// Add presence intents if needed
+	if (config.enablePresence) {
+		intents.add(GatewayIntentBits.GuildPresences);
+	}
+
+	// Merge additional options
+	const clientOptions: ClientOptions = {
+		intents,
+		...config.additionalOptions
+	};
+
+	const client = new Client(clientOptions);
 
 	// Set up basic error handling
 	client.on('error', (error) => {

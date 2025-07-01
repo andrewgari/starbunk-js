@@ -40,6 +40,7 @@ export const ServiceId = {
 	DatabaseService: Symbol.for('DatabaseService'),
 	ConfigurationService: Symbol.for('ConfigurationService'),
 	MessageFilter: Symbol.for('MessageFilter'),
+	MusicPlayer: Symbol.for('MusicPlayer'),
 
 	// Bots
 	BlueBot: Symbol.for('BlueBot'),

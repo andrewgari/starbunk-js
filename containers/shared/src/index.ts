@@ -6,6 +6,19 @@ export { runStartupDiagnostics, StartupDiagnostics } from './utils/diagnostics';
 export type { DiagnosticResult } from './utils/diagnostics';
 export { isDebugMode, setDebugMode } from './environment';
 export { createDiscordClient, ClientConfigs } from './discord/clientFactory';
+export {
+	getClientFromInteraction,
+	getMemberFromInteraction,
+	getUserFromInteraction,
+	getGuildFromInteraction,
+	isUserInVoiceChannel,
+	getUserVoiceChannel,
+	validateGuildInteraction,
+	sendErrorResponse,
+	sendSuccessResponse,
+	deferInteractionReply
+} from './discord/utils';
+
 export { WebhookManager } from './services/webhookManager';
 export { MessageFilter, getMessageFilter, resetMessageFilter } from './services/messageFilter';
 export type { MessageContext, FilterResult } from './services/messageFilter';
