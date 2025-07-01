@@ -4,13 +4,14 @@ import {
 	CommandInteraction,
 	VoiceBasedChannel
 } from 'discord.js';
-import { 
-	joinVoiceChannel, 
-	VoiceConnection, 
+import {
+	joinVoiceChannel,
+	VoiceConnection,
 	getVoiceConnection,
 	VoiceConnectionStatus,
 	AudioPlayer,
-	PlayerSubscription
+	PlayerSubscription,
+	DiscordGatewayAdapterCreator
 } from '@discordjs/voice';
 import { logger } from '@starbunk/shared';
 
@@ -19,7 +20,7 @@ import { logger } from '@starbunk/shared';
  */
 export function createVoiceConnection(
 	channel: VoiceBasedChannel,
-	adapterCreator: (methods: unknown) => unknown
+	adapterCreator: DiscordGatewayAdapterCreator
 ): VoiceConnection {
 	logger.debug(`Joining voice channel: ${channel.name} (${channel.id})`);
 	
