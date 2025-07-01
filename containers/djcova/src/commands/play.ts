@@ -1,7 +1,19 @@
-import { AudioPlayerStatus, joinVoiceChannel } from '@discordjs/voice';
-import { CommandInteraction, GuildMember, SlashCommandBuilder } from 'discord.js';
-import { logger } from '@starbunk/shared';
-import StarbunkClient, { getStarbunkClient } from '../starbunkClient';
+import { AudioPlayerStatus } from '@discordjs/voice';
+import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import {
+	logger,
+	sendErrorResponse,
+	sendSuccessResponse,
+	deferInteractionReply,
+	container,
+	ServiceId
+} from '@starbunk/shared';
+import {
+	validateVoiceChannelAccess,
+	createVoiceConnection,
+	subscribePlayerToConnection
+} from '../utils/voiceUtils';
+import { DJCova } from '../djCova';
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('play')
@@ -12,59 +24,59 @@ export default {
 	data: commandBuilder.toJSON(),
 	async execute(interaction: CommandInteraction) {
 		const url = interaction.options.get('song')?.value as string;
-		const member = interaction.member as GuildMember;
 
 		if (!url) {
 			logger.warn('Play command executed without URL');
-			await interaction.reply('Please provide a valid YouTube link!');
+			await sendErrorResponse(interaction, 'Please provide a valid YouTube link!');
 			return;
 		}
 
-		const voiceChannel = member.voice.channel;
-		if (!voiceChannel) {
-			logger.warn('Play command executed outside voice channel');
-			await interaction.reply('You need to be in a voice channel to use this command!');
+		// Validate voice channel access
+		const voiceValidation = validateVoiceChannelAccess(interaction);
+		if (!voiceValidation.isValid) {
+			await sendErrorResponse(interaction, voiceValidation.errorMessage!);
 			return;
 		}
+
+		const { member, voiceChannel } = voiceValidation;
 
 		try {
 			logger.info(`🎵 Attempting to play: ${url}`);
-			await interaction.deferReply();
+			await deferInteractionReply(interaction);
 
-			const connection = joinVoiceChannel({
-				channelId: voiceChannel.id,
-				guildId: voiceChannel.guild.id,
-				adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-			});
+			// Create voice connection
+			const connection = createVoiceConnection(
+				voiceChannel!,
+				voiceChannel!.guild.voiceAdapterCreator
+			);
 
-			if (!connection.state.status || connection.state.status === 'disconnected') {
-				logger.warn('Voice connection invalid, attempting reconnect');
-			}
+			// Get music player from container
+			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);
 
-			const djCova = getStarbunkClient(interaction).getMusicPlayer();
-
-			djCova.on(AudioPlayerStatus.Playing, () => {
+			// Set up audio player event handlers
+			musicPlayer.on(AudioPlayerStatus.Playing, () => {
 				logger.info('🎶 Audio playback started');
 			});
 
-			djCova.on(AudioPlayerStatus.Idle, () => {
+			musicPlayer.on(AudioPlayerStatus.Idle, () => {
 				logger.info('⏹️ Audio playback ended');
 			});
 
-			await djCova.start(url);
+			// Start playing the audio
+			await musicPlayer.start(url);
 
-			const subscription = djCova.subscribe(connection);
+			// Subscribe player to voice connection
+			const subscription = subscribePlayerToConnection(connection, musicPlayer.getPlayer());
 			if (!subscription) {
-				logger.error('Failed to subscribe to voice connection');
-			} else {
-				logger.success('Successfully subscribed to voice connection');
-				(interaction.client as StarbunkClient).activeSubscription = subscription;
+				await sendErrorResponse(interaction, 'Failed to connect audio player to voice channel.');
+				return;
 			}
 
-			await interaction.followUp(`🎶 Now playing: ${url}`);
+			logger.info('Successfully subscribed to voice connection');
+			await sendSuccessResponse(interaction, `🎶 Now playing: ${url}`);
 		} catch (error) {
-			logger.error('Error executing play command', error as Error);
-			await interaction.followUp('An error occurred while trying to play the music.');
+			logger.error('Error executing play command', error instanceof Error ? error : new Error(String(error)));
+			await sendErrorResponse(interaction, 'An error occurred while trying to play the music.');
 		}
 	},
 };

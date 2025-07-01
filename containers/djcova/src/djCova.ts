@@ -9,7 +9,7 @@ import {
 	VoiceConnection,
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
-import { logger } from '../services/logger';
+import { logger } from '@starbunk/shared';
 
 export class DJCova {
 	private player: AudioPlayer;
@@ -94,6 +94,10 @@ export class DJCova {
 
 	getVolume(): number {
 		return this.volume;
+	}
+
+	getPlayer(): AudioPlayer {
+		return this.player;
 	}
 
 	subscribe(channel: VoiceConnection): PlayerSubscription | undefined {

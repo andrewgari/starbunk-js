@@ -2,11 +2,11 @@
 	"name": "@starbunk/djcova",
 	"version": "1.0.0",
 	"description": "DJCova - Music service container",
-	"main": "dist/index-minimal.js",
+	"main": "dist/index.js",
 	"scripts": {
 		"build": "tsc && tsc-alias",
-		"start": "node dist/index-minimal.js",
-		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index-minimal.ts",
+		"start": "node dist/index.js",
+		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
 		"test": "jest",
 		"type-check": "tsc --noEmit",
 		"clean": "rimraf dist"

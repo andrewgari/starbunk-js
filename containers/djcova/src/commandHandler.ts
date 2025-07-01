@@ -1,9 +1,13 @@
 import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
-import { Command } from '../discord/command';
-import { isDebugMode } from '../environment';
-import { logger } from '../services/logger';
+import { logger, isDebugMode } from '@starbunk/shared';
+
+// Command interface for DJCova music commands
+export interface Command {
+	data: any;
+	execute: (interaction: CommandInteraction) => Promise<void>;
+}
 
 export class CommandHandler {
 	private commands: Collection<string, Command> = new Collection();
@@ -48,7 +52,7 @@ export class CommandHandler {
 			// When running in development or using ts-node, we use the src directory path
 			// In production, use the dist directory
 			const baseDir = (isDev || isTsNode) ? process.cwd() + '/src' : process.cwd() + '/dist';
-			const commandDir = path.resolve(baseDir, 'starbunk/commands');
+			const commandDir = path.resolve(baseDir, 'commands');
 
 			logger.debug(`Looking for commands in: ${commandDir}`);
 			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
@@ -114,13 +118,12 @@ export class CommandHandler {
 				throw new Error('CLIENT_ID not set in environment variables');
 			}
 
-			if (!process.env.GUILD_ID) {
-				throw new Error('GUILD_ID not set in environment variables');
+			// Use STARBUNK_TOKEN for authentication
+			const token = process.env.STARBUNK_TOKEN;
+			if (!token) {
+				throw new Error('STARBUNK_TOKEN not set in environment variables');
 			}
-
-			// Use STARBUNK_TOKEN instead of TOKEN
-			const token = process.env.STARBUNK_TOKEN || process.env.TOKEN || '';
-			const rest = new REST({ version: '9' }).setToken(token);
+			const rest = new REST({ version: '10' }).setToken(token);
 			const commandData: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 
 			// Collect all command data, converting SlashCommandBuilder to JSON if needed
@@ -141,8 +144,9 @@ export class CommandHandler {
 
 			// Only register commands if we have some
 			if (commandData.length > 0) {
+				// Register globally instead of guild-specific for music commands
 				await rest.put(
-					Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+					Routes.applicationCommands(process.env.CLIENT_ID),
 					{ body: commandData }
 				);
 

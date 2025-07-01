@@ -45,4 +45,4 @@ USER djcova
 
 EXPOSE 3001
 
-CMD ["node", "dist/index-minimal.js"]
+CMD ["node", "dist/index.js"]
