@@ -63,7 +63,11 @@ describe('Music Commands Tests', () => {
 			getVolume: jest.fn().mockReturnValue(50),
 			getPlayer: jest.fn().mockReturnValue(mockAudioPlayer),
 			on: jest.fn(),
-			subscribe: jest.fn()
+			subscribe: jest.fn(),
+			initializeIdleManagement: jest.fn(),
+			disconnect: jest.fn(),
+			getIdleStatus: jest.fn().mockReturnValue({ isActive: false, timeoutSeconds: 30 }),
+			destroy: jest.fn()
 		} as any;
 
 		// Mock voice channel
@@ -194,7 +198,7 @@ describe('Music Commands Tests', () => {
 		it('should successfully stop music and disconnect', async () => {
 			await stopCommand.execute(mockInteraction);
 
-			expect(mockMusicPlayer.stop).toHaveBeenCalled();
+			expect(mockMusicPlayer.disconnect).toHaveBeenCalled();
 			expect(disconnectVoiceConnection).toHaveBeenCalledWith('guild-id');
 			expect(sendSuccessResponse).toHaveBeenCalledWith(
 				mockInteraction,
@@ -207,13 +211,13 @@ describe('Music Commands Tests', () => {
 
 			await stopCommand.execute(mockInteraction);
 
-			expect(mockMusicPlayer.stop).toHaveBeenCalled();
+			expect(mockMusicPlayer.disconnect).toHaveBeenCalled();
 			expect(disconnectVoiceConnection).not.toHaveBeenCalled();
 			expect(sendSuccessResponse).toHaveBeenCalled();
 		});
 
 		it('should handle music player errors during stop', async () => {
-			mockMusicPlayer.stop.mockImplementation(() => {
+			mockMusicPlayer.disconnect.mockImplementation(() => {
 				throw new Error('Stop failed');
 			});
 

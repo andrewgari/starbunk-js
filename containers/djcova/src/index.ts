@@ -49,7 +49,7 @@ class DJCovaContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN', 'CLIENT_ID'],
-			optional: ['DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV']
+			optional: ['DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV', 'MUSIC_IDLE_TIMEOUT_SECONDS']
 		});
 	}
 

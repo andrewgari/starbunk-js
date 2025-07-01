@@ -10,15 +10,24 @@ import {
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
 import { logger } from '@starbunk/shared';
+import { IdleManager, createIdleManager, IdleManagerConfig } from './services/idleManager';
+import { getMusicConfig } from './config/musicConfig';
 
 export class DJCova {
 	private player: AudioPlayer;
 	private resource: AudioResource | undefined;
 	private volume: number = 50; // Default volume 50%
+	private idleManager: IdleManager | null = null;
+	private currentGuildId: string | null = null;
+	private currentChannelId: string | null = null;
+	private notificationCallback: ((message: string) => Promise<void>) | null = null;
 
 	constructor() {
 		logger.debug('🎵 Initializing DJCova audio player');
 		this.player = createAudioPlayer();
+
+		// Set up audio player event listeners for idle management
+		this.setupIdleManagement();
 	}
 
 	async start(url: string): Promise<void> {
@@ -117,5 +126,115 @@ export class DJCova {
 	on(status: AudioPlayerStatus, callback: () => void): void {
 		logger.debug(`📡 Registering listener for ${status} status`);
 		this.player.on(status, callback);
+	}
+
+	/**
+	 * Set up idle management for auto-disconnect functionality
+	 */
+	private setupIdleManagement(): void {
+		this.player.on(AudioPlayerStatus.Playing, () => {
+			logger.debug('Audio player started playing, resetting idle timer');
+			if (this.idleManager) {
+				this.idleManager.resetIdleTimer();
+			}
+		});
+
+		this.player.on(AudioPlayerStatus.Idle, () => {
+			logger.debug('Audio player became idle, starting idle timer');
+			if (this.idleManager) {
+				this.idleManager.startIdleTimer();
+			}
+		});
+
+		this.player.on('error', (error) => {
+			logger.error('Audio player error:', error);
+			if (this.idleManager) {
+				this.idleManager.startIdleTimer();
+			}
+		});
+	}
+
+	/**
+	 * Initialize idle management for a specific guild and channel
+	 */
+	initializeIdleManagement(guildId: string, channelId?: string, notificationCallback?: (message: string) => Promise<void>): void {
+		// Clean up existing idle manager
+		if (this.idleManager) {
+			this.idleManager.destroy();
+		}
+
+		this.currentGuildId = guildId;
+		this.currentChannelId = channelId || null;
+		this.notificationCallback = notificationCallback || null;
+
+		const config = getMusicConfig();
+		const idleConfig: IdleManagerConfig = {
+			timeoutSeconds: config.idleTimeoutSeconds,
+			guildId,
+			channelId,
+			onDisconnect: async (reason: string) => {
+				await this.handleAutoDisconnect(reason);
+			}
+		};
+
+		this.idleManager = createIdleManager(idleConfig);
+		logger.info(`Idle management initialized for guild ${guildId} with ${config.idleTimeoutSeconds}s timeout`);
+	}
+
+	/**
+	 * Handle auto-disconnect due to inactivity
+	 */
+	private async handleAutoDisconnect(reason: string): Promise<void> {
+		try {
+			// Stop the music player
+			this.stop();
+
+			// Send notification to users
+			const message = `🔇 ${reason}`;
+			if (this.notificationCallback) {
+				await this.notificationCallback(message);
+			}
+
+			logger.info(`Auto-disconnect completed for guild ${this.currentGuildId}: ${reason}`);
+		} catch (error) {
+			logger.error('Error during auto-disconnect:', error instanceof Error ? error : new Error(String(error)));
+		}
+	}
+
+	/**
+	 * Manually disconnect and cleanup idle management
+	 */
+	disconnect(): void {
+		if (this.idleManager) {
+			this.idleManager.cancelIdleTimer();
+		}
+		this.stop();
+		logger.debug('Manual disconnect completed');
+	}
+
+	/**
+	 * Get idle management status
+	 */
+	getIdleStatus(): { isActive: boolean; timeoutSeconds: number } | null {
+		if (!this.idleManager) {
+			return null;
+		}
+
+		return {
+			isActive: this.idleManager.isIdleTimerActive(),
+			timeoutSeconds: this.idleManager.getTimeoutSeconds()
+		};
+	}
+
+	/**
+	 * Cleanup resources when destroying the music player
+	 */
+	destroy(): void {
+		if (this.idleManager) {
+			this.idleManager.destroy();
+			this.idleManager = null;
+		}
+		this.stop();
+		logger.debug('DJCova music player destroyed');
 	}
 }

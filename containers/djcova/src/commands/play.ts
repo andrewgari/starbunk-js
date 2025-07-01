@@ -53,6 +53,21 @@ export default {
 			// Get music player from container
 			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);
 
+			// Initialize idle management with notification callback
+			const notificationCallback = async (message: string) => {
+				try {
+					await interaction.followUp({ content: message, ephemeral: false });
+				} catch (error) {
+					logger.error('Failed to send auto-disconnect notification:', error instanceof Error ? error : new Error(String(error)));
+				}
+			};
+
+			musicPlayer.initializeIdleManagement(
+				interaction.guild!.id,
+				interaction.channelId,
+				notificationCallback
+			);
+
 			// Set up audio player event handlers
 			musicPlayer.on(AudioPlayerStatus.Playing, () => {
 				logger.info('🎶 Audio playback started');

@@ -20,8 +20,8 @@ export default {
 			// Get music player from container
 			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);
 
-			// Stop the music player
-			musicPlayer.stop();
+			// Manually disconnect (this will cancel idle timer and stop music)
+			musicPlayer.disconnect();
 
 			// Disconnect from voice channel
 			if (interaction.guild?.id) {
