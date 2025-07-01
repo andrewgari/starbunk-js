@@ -4,9 +4,11 @@ import path from 'path';
 import { logger, isDebugMode } from '@starbunk/shared';
 
 // Command interface for DJCova music commands
+import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, SlashCommandBuilder } from 'discord.js';
+
 export interface Command {
-	data: any;
-	execute: (interaction: CommandInteraction) => Promise<void>;
+    data: RESTPostAPIChatInputApplicationCommandsJSONBody | SlashCommandBuilder;
+    execute: (interaction: CommandInteraction) => Promise<void>;
 }
 
 export class CommandHandler {
