@@ -185,6 +185,6 @@ tags: |
 
 ## 🔗 Related Documentation
 
-- [Path-Based Conditional Builds](.github/docs/path-based-builds.md)
-- [Container Build Workflow](../.github/workflows/container-build-test-publish.yml)
-- [Registry Cleanup Workflow](../.github/workflows/container-registry-cleanup.yml)
+- [Path-Based Conditional Builds](path-based-builds.md)
+- [Container Build Workflow](../workflows/container-build-test-publish.yml)
+- [Registry Cleanup Workflow](../workflows/container-registry-cleanup.yml)
