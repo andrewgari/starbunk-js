@@ -65,12 +65,15 @@ jobs:
               try {
                 console.log(`📦 Processing container: ${container}`);
                 
-                const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
-                  package_type: 'container',
-                  package_name: container,
-                  username: owner,
-                  per_page: 100
-                });
+                const versions = await github.paginate(
+                  github.rest.packages.getAllPackageVersionsForPackageOwnedByUser,
+                  {
+                    package_type: 'container',
+                    package_name: container,
+                    username: owner,
+                    per_page: 100
+                  }
+                );
 
                 totalScanned += versions.length;
                 console.log(`  📊 Found ${versions.length} total versions`);
