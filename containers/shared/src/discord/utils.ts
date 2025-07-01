@@ -17,7 +17,8 @@ export function getMemberFromInteraction(interaction: CommandInteraction): Guild
 	if (!interaction.guild || !interaction.member) {
 		return null;
 	}
-	return interaction.member as GuildMember;
+	// Only return if it's a full GuildMember object, not API data
+	return interaction.member instanceof GuildMember ? interaction.member : null;
 }
 
 /**
