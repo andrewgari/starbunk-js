@@ -166,29 +166,50 @@ Based on the Response Decision System, should Cova respond to this message?`;
 
 				const response = llmResponse.trim().toUpperCase();
 
-				// Determine probability based on the response
+				// Determine probability based on the response with more conversational logic
 				let probability = 0;
 				if (response.includes("YES")) {
-					probability = 0.8;
+					probability = 0.7; // Reduced from 0.8 to be less aggressive
 				} else if (response.includes("LIKELY")) {
-					probability = 0.5;
+					probability = 0.35; // Reduced from 0.5
 				} else if (response.includes("UNLIKELY")) {
-					probability = 0.2;
+					probability = 0.1; // Reduced from 0.2
 				} else {
-					probability = 0.05;
+					probability = 0.02; // Reduced from 0.05
 				}
 
-				// Adjust probability based on conversation recency
+				// Enhanced contextual adjustments for more natural conversation
 				if (isRecentConversation) {
-					// Higher chance to respond in active conversations
-					probability *= 1.2;
+					// In active conversations, be more responsive but not overwhelming
+					probability *= 1.3;
 				} else {
-					// Lower chance to start new conversations
-					probability *= 0.8;
+					// Be much more selective about starting new conversations
+					probability *= 0.5;
 				}
 
-				// Cap probability
-				probability = Math.min(probability, 0.9);
+				// Additional conversational intelligence
+				const messageContent = message.content.toLowerCase();
+				
+				// Increase chance for direct questions or mentions of topics Cova cares about
+				if (messageContent.includes('?') && 
+					(messageContent.includes('cova') || messageContent.includes('dev') || 
+					 messageContent.includes('code') || messageContent.includes('bot'))) {
+					probability *= 1.4;
+				}
+
+				// Reduce chance for very short messages unless they're questions
+				if (message.content.length < 20 && !messageContent.includes('?')) {
+					probability *= 0.6;
+				}
+
+				// Increase chance in smaller conversations (fewer people talking recently)
+				// This makes Cova more likely to participate in intimate conversations
+				if (isRecentConversation && lastResponseMinutes < 5) {
+					probability *= 1.2;
+				}
+
+				// Cap probability at lower level to avoid being too chatty
+				probability = Math.min(probability, 0.8);
 
 				// Apply randomization to avoid predictability
 				const random = Math.random();

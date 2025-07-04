@@ -1,16 +1,28 @@
-import userId from '../../../../discord/userId';
-import { PerformanceTimer } from '../../../../utils/time';
-import { and, fromBot, fromUser, not, withChance } from '../../core/conditions';
-import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
-import { createTriggerResponse } from '../../core/trigger-response';
+import userId from '@starbunk/shared/dist/discord/userId';
+import { PerformanceTimer } from '@starbunk/shared';
+import { and, fromBot, fromUser, not, withChance } from '@starbunk/shared';
+import { createTriggerResponse } from '@starbunk/shared';
 import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './llm-triggers';
+import { CovaIdentityService } from '../services/identity';
+import { logger } from '@starbunk/shared';
+import { Message } from 'discord.js';
 
-// Get Cova's identity from Discord
-async function getCovaIdentity() {
-	return getBotIdentityFromDiscord({
-		userId: userId.Cova,
-		fallbackName: 'CovaBot',
-	});
+// Enhanced identity function with validation and silent failure
+async function getCovaIdentity(message?: Message) {
+	try {
+		const identity = await CovaIdentityService.getCovaIdentity(message);
+		
+		if (!identity) {
+			logger.warn(`[CovaBot] Identity validation failed, silently discarding message`);
+			return null; // This will cause the message to be silently discarded
+		}
+		
+		logger.debug(`[CovaBot] Using identity: "${identity.botName}" with avatar ${identity.avatarUrl}`);
+		return identity;
+	} catch (error) {
+		logger.error(`[CovaBot] Critical error getting identity, silently discarding message:`, error);
+		return null; // Silent discard on any error
+	}
 }
 
 // Main trigger for CovaBot - uses LLM to decide if it should respond
@@ -18,13 +30,13 @@ export const covaTrigger = createTriggerResponse({
 	name: 'cova-contextual-response',
 	priority: 3,
 	condition: and(
-		createLLMResponseDecisionCondition(),
+		createLLMResponseDecisionCondition(), // This now handles all probability logic
 		not(fromUser(userId.Cova)),
-		not(fromBot()),
-		withChance(50)
+		not(fromBot())
+		// Removed withChance(50) since LLM decision now handles probability
 	),
 	response: createLLMEmulatorResponse(),
-	identity: getCovaIdentity
+	identity: async (message) => getCovaIdentity(message)
 });
 
 // Direct mention trigger - always respond to direct mentions
@@ -37,7 +49,7 @@ export const covaDirectMentionTrigger = createTriggerResponse({
 		not(fromBot())
 	),
 	response: createLLMEmulatorResponse(),
-	identity: getCovaIdentity
+	identity: async (message) => getCovaIdentity(message)
 });
 
 // Stats command trigger - for debugging performance metrics
@@ -52,6 +64,6 @@ export const covaStatsCommandTrigger = createTriggerResponse({
 		const stats = PerformanceTimer.getInstance().getStatsString();
 		return `**CovaBot Performance Stats**\n\`\`\`\n${stats}\n\`\`\``;
 	},
-	identity: getCovaIdentity
+	identity: async (message) => getCovaIdentity(message)
 });
 
