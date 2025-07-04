@@ -68,7 +68,8 @@ describe('CovaIdentityService', () => {
 
       expect(result).toBeNull();
       expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Identity validation failed')
+        expect.stringContaining('Identity validation failed'),
+        expect.any(Object)
       );
     });
 

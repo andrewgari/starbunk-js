@@ -1,12 +1,12 @@
 import { Message } from 'discord.js';
-import userId from '../../../../discord/userId';
+import userId from '@starbunk/shared/dist/discord/userId';
 import { getLLMManager } from '@starbunk/shared';
 import { LLMProviderType } from '@starbunk/shared';
 import { PromptRegistry, PromptType } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
-import { getPersonalityService } from '../../../../services/personalityService';
-import { PerformanceTimer } from '../../../../utils/time';
-import { ResponseGenerator, weightedRandomResponse } from '../../core/responses';
+import { getPersonalityService } from '@starbunk/shared';
+import { PerformanceTimer } from '@starbunk/shared';
+import { ResponseGenerator, weightedRandomResponse } from '@starbunk/shared';
 import { COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_PROMPTS } from './constants';
 
 // Create performance timer for CovaBot operations
@@ -193,7 +193,7 @@ Based on the Response Decision System, should Cova respond to this message?`;
 				// Increase chance for direct questions or mentions of topics Cova cares about
 				if (messageContent.includes('?') && 
 					(messageContent.includes('cova') || messageContent.includes('dev') || 
-					 messageContent.includes('code') || messageContent.includes('bot'))) {
+                     messageContent.includes('code') || messageContent.includes('bot'))) {
 					probability *= 1.4;
 				}
 

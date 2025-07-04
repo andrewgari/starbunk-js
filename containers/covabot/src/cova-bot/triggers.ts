@@ -1,6 +1,6 @@
 import userId from '@starbunk/shared/dist/discord/userId';
 import { PerformanceTimer } from '@starbunk/shared';
-import { and, fromBot, fromUser, not, withChance } from '@starbunk/shared';
+import { and, fromBot, fromUser, not } from '@starbunk/shared';
 import { createTriggerResponse } from '@starbunk/shared';
 import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './llm-triggers';
 import { CovaIdentityService } from '../services/identity';

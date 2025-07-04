@@ -19,7 +19,25 @@ jest.mock('@starbunk/shared', () => ({
   not: jest.fn(),
   withChance: jest.fn(),
   createTriggerResponse: jest.fn(),
-  PerformanceTimer: jest.fn()
+  PerformanceTimer: {
+    getInstance: jest.fn(() => ({
+      getStatsString: jest.fn()
+    }))
+  },
+  ResponseGenerator: jest.fn(),
+  weightedRandomResponse: jest.fn(),
+  PromptRegistry: {
+    registerPrompt: jest.fn()
+  },
+  PromptType: {
+    COVA_EMULATOR: 'COVA_EMULATOR',
+    COVA_DECISION: 'COVA_DECISION'
+  },
+  getLLMManager: jest.fn(),
+  LLMProviderType: {
+    OLLAMA: 'OLLAMA'
+  },
+  getPersonalityService: jest.fn()
 }));
 
 const mockCovaIdentityService = CovaIdentityService as jest.Mocked<typeof CovaIdentityService>;
