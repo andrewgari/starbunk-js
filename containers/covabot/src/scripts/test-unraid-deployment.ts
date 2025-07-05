@@ -19,7 +19,6 @@
  */
 
 import { PersonalityNotesService } from '../services/personalityNotesService';
-import { PersonalityNotesServiceDb } from '../services/personalityNotesServiceDb';
 import { logger } from '@starbunk/shared';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -379,8 +378,8 @@ class UnraidDeploymentTester {
       }
     }
 
-    const allValid = Object.values(results).every((result: any) => result.valid);
-    const allHaveUnraidMounts = Object.values(results).every((result: any) => result.hasUnraidMount);
+    const allValid = Object.values(results).every((result: { valid: boolean }) => result.valid);
+    const allHaveUnraidMounts = Object.values(results).every((result: { hasUnraidMount: boolean }) => result.hasUnraidMount);
 
     return {
       testName: 'Docker Compose Validation',
