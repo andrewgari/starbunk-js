@@ -8,6 +8,8 @@ import { getPersonalityService } from '@starbunk/shared';
 import { PerformanceTimer } from '@starbunk/shared';
 import { ResponseGenerator, weightedRandomResponse } from '@starbunk/shared';
 import { COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_PROMPTS } from './constants';
+import { PersonalityNotesService } from '../services/personalityNotesService';
+import { PersonalityNotesServiceDb } from '../services/personalityNotesServiceDb';
 
 // Create performance timer for CovaBot operations
 const perfTimer = PerformanceTimer.getInstance();
@@ -50,6 +52,18 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 				const personalityService = getPersonalityService();
 				const personalityEmbedding = personalityService.getPersonalityEmbedding();
 
+				// Get personality notes from the appropriate service
+				const useDatabase = process.env.USE_DATABASE === 'true';
+				let personalityNotes: string;
+
+				if (useDatabase) {
+					const dbService = PersonalityNotesServiceDb.getInstance();
+					personalityNotes = await dbService.getActiveNotesForLLM();
+				} else {
+					const fileService = PersonalityNotesService.getInstance();
+					personalityNotes = await fileService.getActiveNotesForLLM();
+				}
+
 				// Get channel name safely
 				let channelName = 'Unknown Channel';
 				try {
@@ -62,13 +76,18 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 					// If anything fails, just use default
 				}
 
-				// Create the user prompt with context
-				const userPrompt = `
+				// Create the user prompt with context including personality notes
+				let userPrompt = `
 Channel: ${channelName}
 User: ${message.author.username}
-Message: ${message.content}
+Message: ${message.content}`;
 
-Respond as Cova would to this message.`;
+				// Add personality notes context if available
+				if (personalityNotes) {
+					userPrompt += `\n\n${personalityNotes}`;
+				}
+
+				userPrompt += '\n\nRespond as Cova would to this message, taking into account the personality instructions above.';
 
 				// Create completion with personality context
 				const response = await getLLMManager().createPromptCompletion(

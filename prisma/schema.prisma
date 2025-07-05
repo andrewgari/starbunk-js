@@ -233,3 +233,19 @@ model ServerConfiguration {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// CovaBot Personality Notes for LLM Context Management
+model PersonalityNote {
+  id          String   @id @default(uuid())
+  content     String   // The personality instruction or note content
+  category    String   // 'instruction', 'personality', 'behavior', 'knowledge', 'context'
+  priority    String   @default("medium") // 'high', 'medium', 'low'
+  isActive    Boolean  @default(true)
+  tokens      Json?    // Tokenized content for LLM processing (stored as JSON array)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([priority])
+  @@index([isActive])
+}

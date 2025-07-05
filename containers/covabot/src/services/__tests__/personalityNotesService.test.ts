@@ -1,0 +1,384 @@
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { PersonalityNotesService } from '../personalityNotesService';
+import { PersonalityNote, CreateNoteRequest } from '../../types/personalityNote';
+
+// Mock fs and logger
+jest.mock('fs/promises');
+jest.mock('@starbunk/shared', () => ({
+  logger: {
+    info: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }
+}));
+
+const mockFs = fs as jest.Mocked<typeof fs>;
+
+describe('PersonalityNotesService', () => {
+  let service: PersonalityNotesService;
+  let testDataDir: string;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    
+    // Create a new instance for each test
+    (PersonalityNotesService as any).instance = undefined;
+    service = PersonalityNotesService.getInstance();
+    
+    testDataDir = path.join(process.cwd(), 'data');
+    
+    // Mock file system operations
+    mockFs.access.mockRejectedValue(new Error('Directory not found'));
+    mockFs.mkdir.mockResolvedValue(undefined);
+    mockFs.readFile.mockRejectedValue({ code: 'ENOENT' });
+    mockFs.writeFile.mockResolvedValue(undefined);
+  });
+
+  describe('getInstance', () => {
+    it('should return singleton instance', () => {
+      const instance1 = PersonalityNotesService.getInstance();
+      const instance2 = PersonalityNotesService.getInstance();
+      expect(instance1).toBe(instance2);
+    });
+  });
+
+  describe('loadNotes', () => {
+    it('should create data directory if it does not exist', async () => {
+      await service.loadNotes();
+      
+      expect(mockFs.mkdir).toHaveBeenCalledWith(testDataDir, { recursive: true });
+    });
+
+    it('should start with empty notes if file does not exist', async () => {
+      await service.loadNotes();
+      const notes = await service.getNotes();
+      
+      expect(notes).toEqual([]);
+    });
+
+    it('should load existing notes from file', async () => {
+      const existingNotes = [
+        {
+          id: 'test-1',
+          content: 'Test note',
+          category: 'instruction',
+          priority: 'high',
+          isActive: true,
+          tokens: ['Test', 'note'],
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z'
+        }
+      ];
+
+      mockFs.readFile.mockResolvedValue(JSON.stringify(existingNotes));
+
+      await service.loadNotes();
+      const notes = await service.getNotes();
+
+      expect(notes).toHaveLength(1);
+      expect(notes[0].id).toBe('test-1');
+      expect(notes[0].content).toBe('Test note');
+    });
+  });
+
+  describe('createNote', () => {
+    beforeEach(async () => {
+      await service.loadNotes();
+    });
+
+    it('should create a new note with required fields', async () => {
+      const request: CreateNoteRequest = {
+        content: 'Always be friendly and helpful',
+        category: 'personality',
+        priority: 'high'
+      };
+
+      const note = await service.createNote(request);
+
+      expect(note.id).toBeDefined();
+      expect(note.content).toBe(request.content);
+      expect(note.category).toBe(request.category);
+      expect(note.priority).toBe(request.priority);
+      expect(note.isActive).toBe(true);
+      expect(note.tokens).toBeDefined();
+      expect(note.createdAt).toBeInstanceOf(Date);
+      expect(note.updatedAt).toBeInstanceOf(Date);
+    });
+
+    it('should tokenize content correctly', async () => {
+      const request: CreateNoteRequest = {
+        content: 'Be helpful. Always respond with care. Use emoji sometimes.',
+        category: 'instruction'
+      };
+
+      const note = await service.createNote(request);
+
+      expect(note.tokens).toContain('Be helpful');
+      expect(note.tokens).toContain('Always respond with care');
+      expect(note.tokens).toContain('helpful.');
+      expect(note.tokens).toContain('respond');
+      expect(note.tokens).toContain('care.');
+    });
+
+    it('should default priority to medium', async () => {
+      const request: CreateNoteRequest = {
+        content: 'Test note',
+        category: 'context'
+      };
+
+      const note = await service.createNote(request);
+
+      expect(note.priority).toBe('medium');
+    });
+  });
+
+  describe('updateNote', () => {
+    let existingNote: PersonalityNote;
+
+    beforeEach(async () => {
+      await service.loadNotes();
+      
+      const request: CreateNoteRequest = {
+        content: 'Original content',
+        category: 'behavior',
+        priority: 'low'
+      };
+      
+      existingNote = await service.createNote(request);
+    });
+
+    it('should update note content and retokenize', async () => {
+      // Add a small delay to ensure timestamp difference
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      const updated = await service.updateNote(existingNote.id, {
+        content: 'Updated content with new information.'
+      });
+
+      expect(updated?.content).toBe('Updated content with new information.');
+      expect(updated?.tokens).toContain('Updated content with new information');
+      expect(updated?.tokens).toContain('updated');
+      expect(updated?.tokens).toContain('information.');
+      expect(updated?.updatedAt.getTime()).toBeGreaterThanOrEqual(existingNote.updatedAt.getTime());
+    });
+
+    it('should update category and priority', async () => {
+      const updated = await service.updateNote(existingNote.id, {
+        category: 'personality',
+        priority: 'high'
+      });
+
+      expect(updated?.category).toBe('personality');
+      expect(updated?.priority).toBe('high');
+      expect(updated?.content).toBe(existingNote.content); // Should remain unchanged
+    });
+
+    it('should toggle active status', async () => {
+      const updated = await service.updateNote(existingNote.id, {
+        isActive: false
+      });
+
+      expect(updated?.isActive).toBe(false);
+    });
+
+    it('should return null for non-existent note', async () => {
+      const updated = await service.updateNote('non-existent-id', {
+        content: 'New content'
+      });
+
+      expect(updated).toBeNull();
+    });
+  });
+
+  describe('deleteNote', () => {
+    let existingNote: PersonalityNote;
+
+    beforeEach(async () => {
+      await service.loadNotes();
+      
+      const request: CreateNoteRequest = {
+        content: 'Note to delete',
+        category: 'context'
+      };
+      
+      existingNote = await service.createNote(request);
+    });
+
+    it('should delete existing note', async () => {
+      const deleted = await service.deleteNote(existingNote.id);
+      const notes = await service.getNotes();
+
+      expect(deleted).toBe(true);
+      expect(notes).toHaveLength(0);
+    });
+
+    it('should return false for non-existent note', async () => {
+      const deleted = await service.deleteNote('non-existent-id');
+
+      expect(deleted).toBe(false);
+    });
+  });
+
+  describe('getNotes with filtering', () => {
+    beforeEach(async () => {
+      await service.loadNotes();
+      
+      // Create test notes
+      await service.createNote({
+        content: 'High priority instruction',
+        category: 'instruction',
+        priority: 'high'
+      });
+      
+      await service.createNote({
+        content: 'Medium priority personality trait',
+        category: 'personality',
+        priority: 'medium'
+      });
+      
+      const inactiveNote = await service.createNote({
+        content: 'Inactive behavior rule',
+        category: 'behavior',
+        priority: 'low'
+      });
+      
+      // Make one note inactive
+      await service.updateNote(inactiveNote.id, { isActive: false });
+    });
+
+    it('should filter by category', async () => {
+      const notes = await service.getNotes({ category: 'instruction' });
+      
+      expect(notes).toHaveLength(1);
+      expect(notes[0].category).toBe('instruction');
+    });
+
+    it('should filter by priority', async () => {
+      const notes = await service.getNotes({ priority: 'high' });
+      
+      expect(notes).toHaveLength(1);
+      expect(notes[0].priority).toBe('high');
+    });
+
+    it('should filter by active status', async () => {
+      const activeNotes = await service.getNotes({ isActive: true });
+      const inactiveNotes = await service.getNotes({ isActive: false });
+      
+      expect(activeNotes).toHaveLength(2);
+      expect(inactiveNotes).toHaveLength(1);
+    });
+
+    it('should search by content', async () => {
+      const notes = await service.getNotes({ search: 'personality' });
+      
+      expect(notes).toHaveLength(1);
+      expect(notes[0].content).toContain('personality');
+    });
+
+    it('should sort by priority and date', async () => {
+      const notes = await service.getNotes();
+      
+      // Should be sorted: high -> medium -> low priority
+      expect(notes[0].priority).toBe('high');
+      expect(notes[1].priority).toBe('medium');
+      expect(notes[2].priority).toBe('low');
+    });
+  });
+
+  describe('getActiveNotesForLLM', () => {
+    beforeEach(async () => {
+      await service.loadNotes();
+      
+      await service.createNote({
+        content: 'Always be helpful and kind',
+        category: 'personality',
+        priority: 'high'
+      });
+      
+      await service.createNote({
+        content: 'Use emojis occasionally',
+        category: 'behavior',
+        priority: 'medium'
+      });
+      
+      await service.createNote({
+        content: 'You are a developer assistant',
+        category: 'context',
+        priority: 'medium'
+      });
+      
+      const inactiveNote = await service.createNote({
+        content: 'This should not appear',
+        category: 'instruction',
+        priority: 'high'
+      });
+      
+      await service.updateNote(inactiveNote.id, { isActive: false });
+    });
+
+    it('should return formatted context for LLM', async () => {
+      const context = await service.getActiveNotesForLLM();
+      
+      expect(context).toContain('Current personality instructions and context:');
+      expect(context).toContain('Personality:');
+      expect(context).toContain('Behavior:');
+      expect(context).toContain('Context:');
+      expect(context).toContain('[IMPORTANT] Always be helpful and kind');
+      expect(context).toContain('Use emojis occasionally');
+      expect(context).toContain('You are a developer assistant');
+      expect(context).not.toContain('This should not appear');
+    });
+
+    it('should return empty string when no active notes', async () => {
+      // Delete all notes
+      const notes = await service.getNotes();
+      for (const note of notes) {
+        await service.deleteNote(note.id);
+      }
+      
+      const context = await service.getActiveNotesForLLM();
+      
+      expect(context).toBe('');
+    });
+  });
+
+  describe('getStats', () => {
+    beforeEach(async () => {
+      await service.loadNotes();
+      
+      await service.createNote({
+        content: 'Instruction 1',
+        category: 'instruction',
+        priority: 'high'
+      });
+      
+      await service.createNote({
+        content: 'Instruction 2',
+        category: 'instruction',
+        priority: 'medium'
+      });
+      
+      const inactiveNote = await service.createNote({
+        content: 'Personality 1',
+        category: 'personality',
+        priority: 'low'
+      });
+      
+      await service.updateNote(inactiveNote.id, { isActive: false });
+    });
+
+    it('should return correct statistics', async () => {
+      const stats = await service.getStats();
+      
+      expect(stats.total).toBe(3);
+      expect(stats.active).toBe(2);
+      expect(stats.byCategory.instruction).toBe(2);
+      expect(stats.byCategory.personality).toBe(1);
+      expect(stats.byPriority.high).toBe(1);
+      expect(stats.byPriority.medium).toBe(1);
+      expect(stats.byPriority.low).toBe(1);
+    });
+  });
+});

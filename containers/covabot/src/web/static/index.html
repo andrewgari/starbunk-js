@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CovaBot Personality Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 CovaBot Personality Manager</h1>
+            <p>Manage personality instructions, behaviors, and context for CovaBot's LLM responses</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="stats-panel">
+                <h3>📊 Statistics</h3>
+                <div id="stats-content">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Notes:</span>
+                        <span class="stat-value" id="total-notes">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Active Notes:</span>
+                        <span class="stat-value" id="active-notes">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Database:</span>
+                        <span class="stat-value" id="db-status">🔄 Checking...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-panel">
+                <div class="filters">
+                    <select id="category-filter">
+                        <option value="">All Categories</option>
+                        <option value="instruction">Instructions</option>
+                        <option value="personality">Personality</option>
+                        <option value="behavior">Behavior</option>
+                        <option value="knowledge">Knowledge</option>
+                        <option value="context">Context</option>
+                    </select>
+
+                    <select id="priority-filter">
+                        <option value="">All Priorities</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+
+                    <select id="status-filter">
+                        <option value="">All Status</option>
+                        <option value="true">Active Only</option>
+                        <option value="false">Inactive Only</option>
+                    </select>
+
+                    <input type="text" id="search-input" placeholder="Search notes..." />
+                    
+                    <button id="refresh-btn" class="btn btn-secondary">🔄 Refresh</button>
+                </div>
+
+                <button id="add-note-btn" class="btn btn-primary">➕ Add New Note</button>
+                <button id="import-btn" class="btn btn-secondary">📥 Import Notes</button>
+                <button id="export-btn" class="btn btn-secondary">📤 Export Notes</button>
+            </div>
+        </div>
+
+        <div class="notes-container">
+            <div id="notes-list">
+                <!-- Notes will be loaded here -->
+            </div>
+        </div>
+
+        <div class="context-preview">
+            <h3>🧠 Current LLM Context</h3>
+            <button id="preview-context-btn" class="btn btn-secondary">View Current Context</button>
+            <div id="context-content" class="context-box" style="display: none;"></div>
+        </div>
+
+        <div class="system-info">
+            <h3>⚙️ System Information</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Storage Type:</span>
+                    <span class="info-value" id="storage-type">🔄 Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Last Updated:</span>
+                    <span class="info-value" id="last-updated">Never</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">API Status:</span>
+                    <span class="info-value" id="api-status">🔄 Checking...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Note Modal -->
+    <div id="note-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 id="modal-title">Add New Note</h3>
+            
+            <form id="note-form">
+                <div class="form-group">
+                    <label for="note-content">Content:</label>
+                    <textarea id="note-content" rows="4" placeholder="Enter personality instruction or note..." required></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="note-category">Category:</label>
+                        <select id="note-category" required>
+                            <option value="">Select Category</option>
+                            <option value="instruction">Instruction</option>
+                            <option value="personality">Personality</option>
+                            <option value="behavior">Behavior</option>
+                            <option value="knowledge">Knowledge</option>
+                            <option value="context">Context</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="note-priority">Priority:</label>
+                        <select id="note-priority">
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" id="active-toggle-group" style="display: none;">
+                    <label>
+                        <input type="checkbox" id="note-active" checked> Active
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Note</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
