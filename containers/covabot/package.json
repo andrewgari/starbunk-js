@@ -16,7 +16,8 @@
 		"start:db": "cross-env USE_DATABASE=true node dist/index-web.js",
 		"dev:db": "cross-env NODE_ENV=development DEBUG=true USE_DATABASE=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index-web.ts",
 		"demo": "ts-node -r tsconfig-paths/register src/scripts/demo-personality-system.ts",
-		"demo:db": "cross-env USE_DATABASE=true ts-node -r tsconfig-paths/register src/scripts/demo-personality-system.ts"
+		"demo:db": "cross-env USE_DATABASE=true ts-node -r tsconfig-paths/register src/scripts/demo-personality-system.ts",
+		"test:persistence": "ts-node -r tsconfig-paths/register src/scripts/test-persistence.ts"
 	},
 	"dependencies": {
 		"@discordjs/builders": "^1.6.5",

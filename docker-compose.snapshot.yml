@@ -10,7 +10,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
-      - postgres_snapshot_data:/var/lib/postgresql/data
+      # Unraid-compatible host path mount for snapshot testing
+      - ${UNRAID_APPDATA_PATH:-./data}/postgres-snapshot:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d:ro
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -86,8 +87,9 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
     volumes:
-      - djcova_snapshot_cache:/app/cache
-      - djcova_snapshot_temp:/tmp
+      # Unraid-compatible host path mounts for snapshot testing
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova-snapshot/cache:/app/cache
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova-snapshot/temp:/tmp
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
       interval: 30s
@@ -133,9 +135,10 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - dnd_snapshot_data:/app/data
-      - dnd_snapshot_campaigns:/app/data/campaigns
-      - dnd_snapshot_context:/app/data/llm_context
+      # Unraid-compatible host path mounts for snapshot testing
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd-snapshot/data:/app/data
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd-snapshot/campaigns:/app/data/campaigns
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd-snapshot/context:/app/data/llm_context
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
       interval: 30s
@@ -174,6 +177,16 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-debug}
+      # CovaBot-specific configuration
+      - USE_DATABASE=${USE_DATABASE:-false}
+      - COVABOT_DATA_DIR=/app/data
+      - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+    volumes:
+      # Unraid-compatible host path mount for CovaBot personality notes (snapshot testing)
+      - ${UNRAID_APPDATA_PATH:-./data}/covabot-snapshot:/app/data
+    ports:
+      # Expose web interface for personality management (snapshot testing)
+      - "${COVABOT_WEB_PORT:-3001}:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -197,19 +210,9 @@ services:
         reservations:
           memory: 256M
 
-volumes:
-  postgres_snapshot_data:
-    driver: local
-  djcova_snapshot_cache:
-    driver: local
-  djcova_snapshot_temp:
-    driver: local
-  dnd_snapshot_data:
-    driver: local
-  dnd_snapshot_campaigns:
-    driver: local
-  dnd_snapshot_context:
-    driver: local
+# Note: Using host path mounts for Unraid compatibility
+# Snapshot data persists in ${UNRAID_APPDATA_PATH:-./data}/*-snapshot/ directories
+# Default fallback to ./data/ for non-Unraid environments
 
 networks:
   starbunk-snapshot-network:

@@ -11,8 +11,12 @@ export class PersonalityNotesService {
   private isLoaded = false;
 
   constructor() {
-    // Store notes in the container's data directory
-    this.notesFilePath = path.join(process.cwd(), 'data', 'personality-notes.json');
+    // Use configurable data directory for Docker/Unraid compatibility
+    const dataDir = process.env.COVABOT_DATA_DIR || path.join(process.cwd(), 'data');
+    this.notesFilePath = path.join(dataDir, 'personality-notes.json');
+
+    logger.info(`[PersonalityNotes] Using data directory: ${dataDir}`);
+    logger.info(`[PersonalityNotes] Notes file path: ${this.notesFilePath}`);
   }
 
   static getInstance(): PersonalityNotesService {

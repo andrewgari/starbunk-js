@@ -91,9 +91,12 @@ npm run start:db
 
 ### Environment Variables
 ```bash
+# Storage Configuration
+COVABOT_DATA_DIR="/app/data"  # Directory for personality notes (Docker/Unraid)
+USE_DATABASE=false            # Use PostgreSQL instead of file storage
+
 # Database (optional)
 DATABASE_URL="postgresql://user:password@localhost:5432/starbunk"
-USE_DATABASE=true
 
 # Authentication (optional)
 COVABOT_API_KEY="your-secure-api-key"
@@ -249,6 +252,30 @@ EXPOSE 3001
 CMD ["npm", "run", "start:db"]
 ```
 
+### Unraid Server Deployment
+
+CovaBot is fully compatible with Unraid servers using persistent volume mounts:
+
+```yaml
+# docker-compose.yml excerpt
+covabot:
+  image: ghcr.io/andrewgari/covabot:latest
+  environment:
+    - COVABOT_DATA_DIR=/app/data
+    - USE_DATABASE=false  # or true for PostgreSQL
+  volumes:
+    # Unraid persistent storage
+    - /mnt/user/appdata/starbunk/covabot:/app/data
+  ports:
+    - "3001:3001"
+```
+
+**Unraid Benefits:**
+- ✅ **Persistent Storage**: Personality notes survive container updates
+- ✅ **Easy Backups**: Simple file-based backup of `/mnt/user/appdata/`
+- ✅ **Web Interface**: Access at `http://unraid-ip:3001`
+- ✅ **File Permissions**: Automatic handling of Docker user permissions
+
 ### Environment Setup
 ```bash
 # Production environment
@@ -256,9 +283,16 @@ export NODE_ENV=production
 export USE_DATABASE=true
 export DATABASE_URL="postgresql://..."
 export COVABOT_API_KEY="secure-random-key"
+export COVABOT_DATA_DIR="/app/data"  # For Docker/Unraid
 
 # Start the service
 npm run start:db
+```
+
+### Testing Persistence
+```bash
+# Test that personality notes persist across container restarts
+npm run test:persistence
 ```
 
 ## 🤝 Contributing
