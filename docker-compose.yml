@@ -14,7 +14,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Unraid-compatible host path mount
+      - ${UNRAID_APPDATA_PATH:-./data}/postgres:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d:ro
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -93,8 +94,9 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - djcova_cache:/app/cache
-      - djcova_temp:/tmp
+      # Unraid-compatible host path mounts
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
       interval: 30s
@@ -138,9 +140,10 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - dnd_data:/app/data
-      - dnd_campaigns:/app/data/campaigns
-      - dnd_context:/app/data/llm_context
+      # Unraid-compatible host path mounts
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/data:/app/data
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/campaigns:/app/data/campaigns
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/context:/app/data/llm_context
     depends_on:
       postgres:
         condition: service_healthy
@@ -183,6 +186,14 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - USE_DATABASE=${USE_DATABASE:-false}
+      - COVABOT_DATA_DIR=/app/data
+      - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+    volumes:
+      # Unraid-compatible host path mount for CovaBot personality notes
+      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
+    ports:
+      - "${COVABOT_WEB_PORT:-3001}:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -206,20 +217,9 @@ services:
         reservations:
           memory: 256M
 
-# Named volumes for persistent data
-volumes:
-  postgres_data:
-    driver: local
-  djcova_cache:
-    driver: local
-  djcova_temp:
-    driver: local
-  dnd_data:
-    driver: local
-  dnd_campaigns:
-    driver: local
-  dnd_context:
-    driver: local
+# Note: Using host path mounts for Unraid compatibility
+# Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
+# Default fallback to ./data/ for non-Unraid environments
 
 # Custom network for service communication
 networks:

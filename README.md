@@ -289,6 +289,31 @@ docker-compose up -d --scale djcova=2 --scale bunkbot=3
 docker-compose up -d --no-deps bunkbot
 ```
 
+### 🏠 Unraid Server Deployment
+
+The Starbunk bot stack is fully compatible with Unraid servers using Docker Compose with persistent storage:
+
+```bash
+# Set Unraid appdata path
+export UNRAID_APPDATA_PATH=/mnt/user/appdata/starbunk
+
+# Copy Unraid environment template
+cp .env.unraid.example .env
+# Edit .env with your configuration
+
+# Deploy on Unraid
+docker-compose up -d
+```
+
+**Key Features for Unraid:**
+- ✅ **Persistent Storage**: All data stored in `/mnt/user/appdata/starbunk/`
+- ✅ **CovaBot Web Interface**: Accessible at `http://your-unraid-ip:3001`
+- ✅ **File & Database Storage**: Choose between JSON files or PostgreSQL
+- ✅ **Automatic Backups**: Easy backup of appdata directory
+- ✅ **Container Updates**: Standard Docker Compose update process
+
+📖 **[Complete Unraid Setup Guide](docs/UNRAID_SETUP.md)**
+
 ### CI/CD Pipeline
 The project includes GitHub Actions workflows for:
 - **Continuous Integration**: Build and test all containers

@@ -73,8 +73,9 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - djcova_latest_cache:/app/cache
-      - djcova_latest_temp:/tmp
+      # Unraid-compatible host path mounts for latest/production
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova:/app/cache
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
       interval: 30s
@@ -118,9 +119,10 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - dnd_latest_data:/app/data
-      - dnd_latest_campaigns:/app/data/campaigns
-      - dnd_latest_context:/app/data/llm_context
+      # Unraid-compatible host path mounts for latest/production
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/data:/app/data
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/campaigns:/app/data/campaigns
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/context:/app/data/llm_context
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
       interval: 30s
@@ -160,6 +162,16 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      # CovaBot-specific configuration
+      - USE_DATABASE=${USE_DATABASE:-false}
+      - COVABOT_DATA_DIR=/app/data
+      - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+    volumes:
+      # Unraid-compatible host path mount for CovaBot personality notes (latest/production)
+      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
+    ports:
+      # Expose web interface for personality management (latest/production)
+      - "${COVABOT_WEB_PORT:-3001}:3001"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
       interval: 30s
@@ -180,18 +192,9 @@ services:
         reservations:
           memory: 256M
 
-# Named volumes for persistent data (latest/production)
-volumes:
-  djcova_latest_cache:
-    driver: local
-  djcova_latest_temp:
-    driver: local
-  dnd_latest_data:
-    driver: local
-  dnd_latest_campaigns:
-    driver: local
-  dnd_latest_context:
-    driver: local
+# Note: Using host path mounts for Unraid compatibility
+# Latest/production data persists in ${UNRAID_APPDATA_PATH:-./data}/ directories
+# Default fallback to ./data/ for non-Unraid environments
 
 # Custom network for service communication (latest/production)
 networks:
