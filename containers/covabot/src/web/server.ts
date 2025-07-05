@@ -5,7 +5,7 @@ import { logger } from '@starbunk/shared';
 import { PersonalityNotesService } from '../services/personalityNotesService';
 import { PersonalityNotesServiceDb } from '../services/personalityNotesServiceDb';
 import { CreateNoteRequest, UpdateNoteRequest, NoteSearchFilters } from '../types/personalityNote';
-import { apiKeyAuth, requireAdmin, rateLimit, requestLogger } from './middleware/auth';
+import { rateLimit, requestLogger } from './middleware/auth';
 
 export class WebServer {
   private app: express.Application;
@@ -88,8 +88,8 @@ export class WebServer {
     apiRouter.get('/notes', async (req, res) => {
       try {
         const filters: NoteSearchFilters = {
-          category: req.query.category as any,
-          priority: req.query.priority as any,
+          category: req.query.category as NoteSearchFilters['category'],
+          priority: req.query.priority as NoteSearchFilters['priority'],
           isActive: req.query.isActive ? req.query.isActive === 'true' : undefined,
           search: req.query.search as string
         };
@@ -210,7 +210,7 @@ export class WebServer {
     });
 
     // Error handler
-    this.app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    this.app.use((error: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
       logger.error('[WebServer] Unhandled error:', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
     });
