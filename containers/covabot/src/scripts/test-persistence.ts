@@ -21,7 +21,7 @@ import * as path from 'path';
 interface TestResult {
   success: boolean;
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 async function testFileStoragePersistence(): Promise<TestResult> {
@@ -50,7 +50,7 @@ async function testFileStoragePersistence(): Promise<TestResult> {
       const fileContent = await fs.readFile(notesFilePath, 'utf-8');
       const notes = JSON.parse(fileContent);
       
-      const foundNote = notes.find((note: any) => note.id === testNote.id);
+      const foundNote = notes.find((note: { id: string }) => note.id === testNote.id);
       
       if (foundNote) {
         logger.info('✅ Test note found in file storage');
