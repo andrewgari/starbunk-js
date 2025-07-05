@@ -228,8 +228,10 @@ async function runPersistenceTests(): Promise<void> {
   if (volumeResult.success) {
     logger.info('✅ Volume mount test passed');
   } else {
-    logger.error('❌ Volume mount test failed:', volumeResult.message);
-    logger.error('Details:', volumeResult.details);
+    logger.error(`❌ Volume mount test failed: ${volumeResult.message}`);
+    if (volumeResult.details) {
+      logger.error(`Details: ${JSON.stringify(volumeResult.details, null, 2)}`);
+    }
   }
   
   // Test file storage
@@ -240,8 +242,10 @@ async function runPersistenceTests(): Promise<void> {
   if (fileResult.success) {
     logger.info('✅ File storage test passed');
   } else {
-    logger.error('❌ File storage test failed:', fileResult.message);
-    logger.error('Details:', fileResult.details);
+    logger.error(`❌ File storage test failed: ${fileResult.message}`);
+    if (fileResult.details) {
+      logger.error(`Details: ${JSON.stringify(fileResult.details, null, 2)}`);
+    }
   }
   
   // Test database storage (if available)
@@ -253,8 +257,10 @@ async function runPersistenceTests(): Promise<void> {
     if (dbResult.success) {
       logger.info('✅ Database storage test passed');
     } else {
-      logger.error('❌ Database storage test failed:', dbResult.message);
-      logger.error('Details:', dbResult.details);
+      logger.error(`❌ Database storage test failed: ${dbResult.message}`);
+      if (dbResult.details) {
+        logger.error(`Details: ${JSON.stringify(dbResult.details, null, 2)}`);
+      }
     }
   } catch (error) {
     logger.warn('⚠️ Database storage test skipped (database not available)');

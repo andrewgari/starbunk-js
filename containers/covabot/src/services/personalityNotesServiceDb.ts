@@ -29,7 +29,7 @@ export class PersonalityNotesServiceDb {
       await this.prisma.$connect();
       logger.info('[PersonalityNotesDb] Database connection established');
     } catch (error) {
-      logger.error('[PersonalityNotesDb] Failed to connect to database:', error);
+      logger.error(`[PersonalityNotesDb] Failed to connect to database: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
   }

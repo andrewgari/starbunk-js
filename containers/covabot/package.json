@@ -17,7 +17,10 @@
 		"dev:db": "cross-env NODE_ENV=development DEBUG=true USE_DATABASE=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index-web.ts",
 		"demo": "ts-node -r tsconfig-paths/register src/scripts/demo-personality-system.ts",
 		"demo:db": "cross-env USE_DATABASE=true ts-node -r tsconfig-paths/register src/scripts/demo-personality-system.ts",
-		"test:persistence": "ts-node -r tsconfig-paths/register src/scripts/test-persistence.ts"
+		"test:persistence": "ts-node -r tsconfig-paths/register src/scripts/test-persistence.ts",
+		"test:unraid": "ts-node -r tsconfig-paths/register src/scripts/test-unraid-deployment.ts",
+		"test:unraid:simple": "ts-node -r tsconfig-paths/register src/scripts/test-unraid-simple.ts",
+		"test:unraid:full": "npm run test:unraid && npm run test:persistence"
 	},
 	"dependencies": {
 		"@discordjs/builders": "^1.6.5",

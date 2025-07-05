@@ -70,7 +70,7 @@ export class PersonalityNotesService {
       
       this.isLoaded = true;
     } catch (error) {
-      logger.error(`[PersonalityNotes] Failed to load notes:`, error);
+      logger.error(`[PersonalityNotes] Failed to load notes: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
   }
@@ -84,7 +84,7 @@ export class PersonalityNotesService {
       await fs.writeFile(this.notesFilePath, JSON.stringify(this.notes, null, 2), 'utf-8');
       logger.debug(`[PersonalityNotes] Saved ${this.notes.length} notes to disk`);
     } catch (error) {
-      logger.error(`[PersonalityNotes] Failed to save notes:`, error);
+      logger.error(`[PersonalityNotes] Failed to save notes: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
   }
