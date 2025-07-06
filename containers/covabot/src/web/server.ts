@@ -16,7 +16,7 @@ export class WebServer {
   private configService: BotConfigurationService;
   private useDatabase: boolean;
 
-  constructor(port: number = 3001, useDatabase: boolean = false) {
+  constructor(port: number = 7080, useDatabase: boolean = false) {
     this.app = express();
     this.port = port;
     this.useDatabase = useDatabase;
@@ -37,8 +37,12 @@ export class WebServer {
 
   private setupMiddleware(): void {
     // CORS configuration
+    const corsOrigins = process.env.CORS_ORIGINS?.split(',') || [
+      'http://localhost:7080',
+      'http://127.0.0.1:7080'
+    ];
     this.app.use(cors({
-      origin: ['http://localhost:3001', 'http://127.0.0.1:3001'],
+      origin: corsOrigins,
       credentials: true
     }));
 

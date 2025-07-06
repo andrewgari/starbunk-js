@@ -9,7 +9,7 @@ The CovaBot memory management web frontend is **production-ready** and can be de
 ```bash
 # 1. Set environment variables
 export COVABOT_API_KEY="your-secure-api-key"
-export COVABOT_WEB_PORT="3001"
+export COVABOT_WEB_PORT="7080"
 export USE_DATABASE="true"  # For production
 export DATABASE_URL="postgresql://user:password@host:5432/database"
 
@@ -17,7 +17,7 @@ export DATABASE_URL="postgresql://user:password@host:5432/database"
 docker-compose up covabot
 
 # 3. Access the interface
-open http://localhost:3001
+open http://localhost:7080
 ```
 
 ### Option 2: Development Mode
@@ -31,7 +31,7 @@ npm install
 npm run dev:web
 
 # 3. Access the interface
-open http://localhost:3001
+open http://localhost:7080
 ```
 
 ## 🔧 Configuration
@@ -41,7 +41,7 @@ open http://localhost:3001
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `COVABOT_API_KEY` | No* | - | API key for authentication (*optional in dev) |
-| `COVABOT_WEB_PORT` | No | 3001 | Port for web interface |
+| `COVABOT_WEB_PORT` | No | 7080 | Port for web interface |
 | `USE_DATABASE` | No | false | Use PostgreSQL instead of file storage |
 | `DATABASE_URL` | Yes** | - | PostgreSQL connection string (**if USE_DATABASE=true) |
 | `COVABOT_DATA_DIR` | No | ./data | Directory for file storage |
@@ -61,7 +61,7 @@ covabot:
   volumes:
     - /mnt/user/appdata/covabot:/app/data
   ports:
-    - "3001:3001"
+    - "7080:7080"
 ```
 
 ## 🌐 Web Interface Features
@@ -138,7 +138,7 @@ npm run test:web
 
 ### Manual Testing
 1. Start the web interface
-2. Open http://localhost:3001
+2. Open http://localhost:7080
 3. Test CRUD operations on notes
 4. Verify configuration changes
 5. Check LLM context preview
@@ -146,7 +146,7 @@ npm run test:web
 
 ### Health Check
 ```bash
-curl http://localhost:3001/api/health
+curl http://localhost:7080/api/health
 ```
 
 ## 🔄 Migration
@@ -164,7 +164,7 @@ npm run migrate-notes
 ## 📈 Monitoring
 
 ### Health Checks
-- Web interface: `http://localhost:3001/api/health`
+- Web interface: `http://localhost:7080/api/health`
 - Database connectivity included in health check
 - Docker health check configured
 
@@ -222,7 +222,7 @@ chown -R 1000:1000 /mnt/user/appdata/covabot
 
 For issues or questions:
 1. Check logs: `docker logs starbunk-covabot`
-2. Test health: `curl http://localhost:3001/api/health`
+2. Test health: `curl http://localhost:7080/api/health`
 3. Review configuration
 4. Check database connectivity
 

@@ -101,10 +101,10 @@ addCheck('Dockerfile configuration', () => {
   try {
     const dockerfile = fs.readFileSync('Dockerfile', 'utf8');
     
-    if (dockerfile.includes('EXPOSE 3001')) {
+    if (dockerfile.includes('EXPOSE 7080')) {
       pass('Correct port exposed in Dockerfile');
     } else {
-      fail('Dockerfile should expose port 3001');
+      fail('Dockerfile should expose port 7080');
     }
 
     if (dockerfile.includes('index-web.js')) {
@@ -277,7 +277,7 @@ async function runValidation() {
     console.log('   1. Configure .env file');
     console.log('   2. Set up database (if using USE_DATABASE=true)');
     console.log('   3. Deploy with Docker Compose');
-    console.log('   4. Access web interface at http://localhost:3001');
+    console.log('   4. Access web interface at http://localhost:7080');
     return true;
   } else {
     console.log('\n⚠️  Some checks failed. Please address the issues above.');

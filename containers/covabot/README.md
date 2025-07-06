@@ -34,7 +34,7 @@ cp .env.production.example .env
 docker-compose up covabot
 
 # 3. Access the web interface
-open http://localhost:3001
+open http://localhost:7080
 ```
 
 ### Option 2: Development Mode (File Storage)
@@ -46,7 +46,7 @@ npm install
 npm run dev:web
 
 # Access the interface
-open http://localhost:3001
+open http://localhost:7080
 ```
 
 ### Option 3: Production Mode (Database Storage)
@@ -149,7 +149,7 @@ GET /api/notes?category=personality&priority=high&search=friendly&isActive=true
 ### Creating Notes via API
 ```bash
 # Add a personality trait
-curl -X POST http://localhost:3001/api/notes \
+curl -X POST http://localhost:7080/api/notes \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key" \
   -d '{
@@ -234,7 +234,7 @@ npm test -- --coverage
 
 ### Health Checks
 ```bash
-curl http://localhost:3001/api/health
+curl http://localhost:7080/api/health
 ```
 
 Response:
@@ -268,7 +268,7 @@ FROM node:18-alpine
 WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY dist ./dist
-EXPOSE 3001
+EXPOSE 7080
 CMD ["npm", "run", "start:db"]
 ```
 
@@ -287,13 +287,13 @@ covabot:
     # Unraid persistent storage
     - /mnt/user/appdata/starbunk/covabot:/app/data
   ports:
-    - "3001:3001"
+    - "7080:7080"
 ```
 
 **Unraid Benefits:**
 - ✅ **Persistent Storage**: Personality notes survive container updates
 - ✅ **Easy Backups**: Simple file-based backup of `/mnt/user/appdata/`
-- ✅ **Web Interface**: Access at `http://unraid-ip:3001`
+- ✅ **Web Interface**: Access at `http://unraid-ip:7080`
 - ✅ **File Permissions**: Automatic handling of Docker user permissions
 
 ### Environment Setup

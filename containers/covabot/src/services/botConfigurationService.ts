@@ -48,7 +48,7 @@ export class BotConfigurationService {
         }
         
         logger.info('[BotConfiguration] Configuration loaded successfully');
-      } catch (error) {
+      } catch (_error) {
         // File doesn't exist or is corrupted, create default configuration
         logger.info('[BotConfiguration] No existing configuration found, creating default');
         this.configuration = this.createDefaultConfiguration();

@@ -50,7 +50,7 @@ describe('WebServer', () => {
     (BotConfigurationService.getInstance as jest.Mock).mockReturnValue(mockConfigService);
 
     // Create web server instance
-    webServer = new WebServer(3001, false);
+    webServer = new WebServer(7080, false);
     app = webServer.getApp();
   });
 

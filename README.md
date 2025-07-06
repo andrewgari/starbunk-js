@@ -307,7 +307,7 @@ docker-compose up -d
 
 **Key Features for Unraid:**
 - ✅ **Persistent Storage**: All data stored in `/mnt/user/appdata/starbunk/`
-- ✅ **CovaBot Web Interface**: Accessible at `http://your-unraid-ip:3001`
+- ✅ **CovaBot Web Interface**: Accessible at `http://your-unraid-ip:7080`
 - ✅ **File & Database Storage**: Choose between JSON files or PostgreSQL
 - ✅ **Automatic Backups**: Easy backup of appdata directory
 - ✅ **Container Updates**: Standard Docker Compose update process

@@ -23,15 +23,16 @@ async function startCovaBot() {
     }
 
     // Start web server
-    const webServer = new WebServer(3001, useDatabase);
+    const port = parseInt(process.env.COVABOT_WEB_PORT || '7080', 10);
+    const webServer = new WebServer(port, useDatabase);
     await webServer.start();
-    logger.info('✅ Web interface started on http://localhost:3001');
+    logger.info(`✅ Web interface started on http://localhost:${port}`);
 
     // Import and start the main CovaBot after web server is ready
     const { default: main } = await import('./index-minimal');
-    
+
     logger.info('🚀 CovaBot with Web Interface started successfully!');
-    logger.info('📝 Manage personality at: http://localhost:3001');
+    logger.info(`📝 Manage personality at: http://localhost:${port}`);
   } catch (error) {
     logger.error('❌ Failed to start CovaBot with Web Interface:', error);
     process.exit(1);

@@ -77,7 +77,7 @@ services:
       - ${UNRAID_APPDATA_PATH:-./data}/djcova:/app/cache
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f 'node dist/index.js' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -171,9 +171,9 @@ services:
       - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
     ports:
       # Expose web interface for personality management (latest/production)
-      - "${COVABOT_WEB_PORT:-3001}:3001"
+      - "${COVABOT_WEB_PORT:-7080}:7080"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/api/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:7080/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

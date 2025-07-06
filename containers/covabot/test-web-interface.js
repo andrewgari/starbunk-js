@@ -23,7 +23,7 @@ server.stdout.on('data', (data) => {
   const output = data.toString();
   console.log(`[SERVER] ${output.trim()}`);
   
-  if (output.includes('running on http://localhost:3001')) {
+  if (output.includes('running on http://localhost:7080')) {
     serverReady = true;
     console.log('\n✅ Server is ready! Running tests...\n');
     runTests();
@@ -54,7 +54,7 @@ async function runTests() {
     await testWebInterface();
     
     console.log('\n🎉 All tests passed! CovaBot web interface is working correctly.');
-    console.log('🌐 Access the interface at: http://localhost:3001');
+    console.log('🌐 Access the interface at: http://localhost:7080');
     
   } catch (error) {
     console.error('\n❌ Test failed:', error.message);
@@ -69,7 +69,7 @@ function makeRequest(path, method = 'GET') {
   return new Promise((resolve, reject) => {
     const options = {
       hostname: 'localhost',
-      port: 3001,
+      port: 7080,
       path: path,
       method: method,
       headers: {

@@ -138,7 +138,7 @@ async function runDemo() {
     logger.info('  🚀 Start the web server:');
     logger.info(`     npm run ${useDatabase ? 'dev:db' : 'dev:web'}`);
     logger.info('  🔗 Access the interface:');
-    logger.info('     http://localhost:3001');
+    logger.info('     http://localhost:7080');
     logger.info('  📱 Features available:');
     logger.info('     • Create, edit, delete notes');
     logger.info('     • Filter by category, priority, status');
@@ -150,13 +150,13 @@ async function runDemo() {
     // API examples
     logger.info('\n🔌 API Usage Examples...');
     logger.info('  📡 Create a note:');
-    logger.info('     curl -X POST http://localhost:3001/api/notes \\');
+    logger.info('     curl -X POST http://localhost:7080/api/notes \\');
     logger.info('       -H "Content-Type: application/json" \\');
     logger.info('       -d \'{"content":"Be concise","category":"instruction","priority":"medium"}\'');
     logger.info('  📊 Get statistics:');
-    logger.info('     curl http://localhost:3001/api/stats');
+    logger.info('     curl http://localhost:7080/api/stats');
     logger.info('  🧠 Get LLM context:');
-    logger.info('     curl http://localhost:3001/api/context');
+    logger.info('     curl http://localhost:7080/api/context');
     
     logger.info('\n🎉 Demo completed successfully!');
     logger.info('💡 The personality management system is ready for production use.');
