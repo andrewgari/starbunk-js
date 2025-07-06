@@ -239,38 +239,64 @@ export class PersonalityNotesService {
    * Get active notes for LLM context (formatted for prompt inclusion)
    */
   async getActiveNotesForLLM(): Promise<string> {
-    const activeNotes = await this.getNotes({ isActive: true });
-    
-    if (activeNotes.length === 0) {
-      return '';
-    }
-    
-    // Group notes by category and priority
-    const notesByCategory = activeNotes.reduce((acc, note) => {
-      if (!acc[note.category]) {
-        acc[note.category] = [];
-      }
-      acc[note.category].push(note);
-      return acc;
-    }, {} as Record<string, PersonalityNote[]>);
-    
-    let contextString = 'Current personality instructions and context:\n\n';
-    
-    // Add notes by category in priority order
-    const categoryOrder = ['instruction', 'personality', 'behavior', 'context', 'knowledge'];
-    
-    for (const category of categoryOrder) {
-      if (notesByCategory[category]) {
-        contextString += `${category.charAt(0).toUpperCase() + category.slice(1)}:\n`;
-        for (const note of notesByCategory[category]) {
-          const priorityPrefix = note.priority === 'high' ? '[IMPORTANT] ' : '';
-          contextString += `- ${priorityPrefix}${note.content}\n`;
+    // Get configuration service for core personality
+    try {
+      const { BotConfigurationService } = await import('./botConfigurationService');
+      const configService = BotConfigurationService.getInstance();
+      const config = await configService.getConfiguration();
+
+      let contextString = 'CORE PERSONALITY:\n';
+      contextString += `${config.corePersonality}\n\n`;
+
+      const activeNotes = await this.getNotes({ isActive: true });
+
+      if (activeNotes.length > 0) {
+        // Group notes by category and priority
+        const notesByCategory = activeNotes.reduce((acc, note) => {
+          if (!acc[note.category]) {
+            acc[note.category] = [];
+          }
+          acc[note.category].push(note);
+          return acc;
+        }, {} as Record<string, PersonalityNote[]>);
+
+        contextString += 'DETAILED INSTRUCTIONS:\n\n';
+
+        // Add notes by category in priority order
+        const categoryOrder = ['instruction', 'personality', 'behavior', 'context', 'knowledge'];
+
+        for (const category of categoryOrder) {
+          if (notesByCategory[category]) {
+            contextString += `${category.charAt(0).toUpperCase() + category.slice(1)}:\n`;
+            for (const note of notesByCategory[category]) {
+              const priorityPrefix = note.priority === 'high' ? '[IMPORTANT] ' : '';
+              contextString += `- ${priorityPrefix}${note.content}\n`;
+            }
+            contextString += '\n';
+          }
         }
-        contextString += '\n';
       }
+
+      return contextString.trim();
+    } catch (error) {
+      logger.error(`[PersonalityNotes] Error getting configuration for LLM context: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      // Fallback to notes-only context
+      const activeNotes = await this.getNotes({ isActive: true });
+
+      if (activeNotes.length === 0) {
+        return 'No active personality configuration.';
+      }
+
+      let contextString = 'PERSONALITY INSTRUCTIONS:\n\n';
+
+      for (const note of activeNotes) {
+        const priorityPrefix = note.priority === 'high' ? '[IMPORTANT] ' : '';
+        contextString += `- ${priorityPrefix}${note.content}\n`;
+      }
+
+      return contextString.trim();
     }
-    
-    return contextString.trim();
   }
 
   /**

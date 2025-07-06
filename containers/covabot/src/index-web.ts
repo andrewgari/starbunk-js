@@ -1,4 +1,4 @@
-import '../shared/src/environment';
+import '../../shared/src/environment';
 import { logger } from '@starbunk/shared';
 import { WebServer } from './web/server';
 import { PersonalityNotesService } from './services/personalityNotesService';

@@ -4,13 +4,16 @@ import path from 'path';
 import { logger } from '@starbunk/shared';
 import { PersonalityNotesService } from '../services/personalityNotesService';
 import { PersonalityNotesServiceDb } from '../services/personalityNotesServiceDb';
+import { BotConfigurationService } from '../services/botConfigurationService';
 import { CreateNoteRequest, UpdateNoteRequest, NoteSearchFilters } from '../types/personalityNote';
+import { CreateConfigurationRequest, UpdateConfigurationRequest } from '../types/botConfiguration';
 import { rateLimit, requestLogger } from './middleware/auth';
 
 export class WebServer {
   private app: express.Application;
   private port: number;
   private notesService: PersonalityNotesService | PersonalityNotesServiceDb;
+  private configService: BotConfigurationService;
   private useDatabase: boolean;
 
   constructor(port: number = 3001, useDatabase: boolean = false) {
@@ -24,6 +27,9 @@ export class WebServer {
     } else {
       this.notesService = PersonalityNotesService.getInstance();
     }
+
+    // Initialize configuration service
+    this.configService = BotConfigurationService.getInstance();
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -194,10 +200,141 @@ export class WebServer {
     apiRouter.get('/context', async (req, res) => {
       try {
         const context = await this.notesService.getActiveNotesForLLM();
-        res.json({ success: true, data: { context } });
+        res.send(context);
       } catch (error) {
         logger.error('[WebServer] Error getting context:', error);
         res.status(500).json({ success: false, error: 'Failed to get context' });
+      }
+    });
+
+    // Configuration endpoints
+    // Get bot configuration
+    apiRouter.get('/configuration', async (req, res) => {
+      try {
+        const config = await this.configService.getConfiguration();
+        res.json(config);
+      } catch (error) {
+        logger.error('[WebServer] Error getting configuration:', error);
+        res.status(500).json({ success: false, error: 'Failed to get configuration' });
+      }
+    });
+
+    // Update bot configuration
+    apiRouter.put('/configuration', async (req, res) => {
+      try {
+        const updates: UpdateConfigurationRequest = req.body;
+        const config = await this.configService.updateConfiguration(updates);
+        res.json(config);
+      } catch (error) {
+        logger.error('[WebServer] Error updating configuration:', error);
+        res.status(500).json({ success: false, error: 'Failed to update configuration' });
+      }
+    });
+
+    // Create new configuration
+    apiRouter.post('/configuration', async (req, res) => {
+      try {
+        const request: CreateConfigurationRequest = req.body;
+        const config = await this.configService.createConfiguration(request);
+        res.json(config);
+      } catch (error) {
+        logger.error('[WebServer] Error creating configuration:', error);
+        res.status(500).json({ success: false, error: 'Failed to create configuration' });
+      }
+    });
+
+    // Reset configuration to defaults
+    apiRouter.post('/configuration/reset', async (req, res) => {
+      try {
+        const config = await this.configService.resetToDefaults();
+        res.json(config);
+      } catch (error) {
+        logger.error('[WebServer] Error resetting configuration:', error);
+        res.status(500).json({ success: false, error: 'Failed to reset configuration' });
+      }
+    });
+
+    // Export all data
+    apiRouter.get('/export', async (req, res) => {
+      try {
+        const notes = await this.notesService.getNotes();
+        const config = await this.configService.getConfiguration();
+
+        const exportData = {
+          configuration: config,
+          notes: notes,
+          exportedAt: new Date().toISOString(),
+          version: '1.0'
+        };
+
+        res.json(exportData);
+      } catch (error) {
+        logger.error('[WebServer] Error exporting data:', error);
+        res.status(500).json({ success: false, error: 'Failed to export data' });
+      }
+    });
+
+    // Import data
+    apiRouter.post('/import', async (req, res) => {
+      try {
+        const importData = req.body;
+
+        // Import configuration if present
+        if (importData.configuration) {
+          await this.configService.updateConfiguration(importData.configuration);
+        }
+
+        // Import notes if present
+        if (importData.notes && Array.isArray(importData.notes)) {
+          // Clear existing notes and import new ones
+          const existingNotes = await this.notesService.getNotes();
+          for (const note of existingNotes) {
+            await this.notesService.deleteNote(note.id);
+          }
+
+          for (const noteData of importData.notes) {
+            await this.notesService.createNote({
+              content: noteData.content,
+              category: noteData.category,
+              priority: noteData.priority
+            });
+          }
+        }
+
+        res.json({ success: true, message: 'Data imported successfully' });
+      } catch (error) {
+        logger.error('[WebServer] Error importing data:', error);
+        res.status(500).json({ success: false, error: 'Failed to import data' });
+      }
+    });
+
+    // Get statistics
+    apiRouter.get('/stats', async (req, res) => {
+      try {
+        const notes = await this.notesService.getNotes();
+        const config = await this.configService.getConfiguration();
+
+        const stats = {
+          totalNotes: notes.length,
+          activeNotes: notes.filter(note => note.isActive).length,
+          inactiveNotes: notes.filter(note => !note.isActive).length,
+          categoryCounts: notes.reduce((acc, note) => {
+            acc[note.category] = (acc[note.category] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          priorityCounts: notes.reduce((acc, note) => {
+            acc[note.priority] = (acc[note.priority] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          botEnabled: config.isEnabled,
+          responseFrequency: config.responseFrequency,
+          lastUpdated: new Date().toISOString()
+        };
+
+        res.json(stats);
+      } catch (error) {
+        logger.error('[WebServer] Error getting stats:', error);
+        res.status(500).json({ success: false, error: 'Failed to get stats' });
       }
     });
 
@@ -205,7 +342,7 @@ export class WebServer {
     this.app.use('/api', apiRouter);
 
     // 404 handler
-    this.app.use('*', (req, res) => {
+    this.app.use((req, res) => {
       res.status(404).json({ success: false, error: 'Not found' });
     });
 
@@ -227,11 +364,15 @@ export class WebServer {
         logger.info('[WebServer] File-based service initialized');
       }
 
+      // Initialize the configuration service
+      await this.configService.loadConfiguration();
+      logger.info('[WebServer] Configuration service initialized');
+
       // Start the server
       return new Promise((resolve) => {
         this.app.listen(this.port, () => {
           const storageType = this.useDatabase ? 'Database' : 'File';
-          logger.info(`[WebServer] CovaBot personality notes manager (${storageType}) running on http://localhost:${this.port}`);
+          logger.info(`[WebServer] CovaBot personality management interface (${storageType}) running on http://localhost:${this.port}`);
           resolve();
         });
       });

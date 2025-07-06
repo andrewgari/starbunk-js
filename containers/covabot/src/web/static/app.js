@@ -1,472 +1,799 @@
-// CovaBot Personality Manager Frontend
-class PersonalityManager {
+// Enhanced CovaBot Personality Manager Frontend
+class CovaBot {
     constructor() {
         this.apiBase = '/api';
         this.currentEditingNote = null;
+        this.currentTab = 'dashboard';
+        this.configuration = null;
+        this.notes = [];
+        this.stats = {};
         this.init();
     }
 
     init() {
         this.setupEventListeners();
+        this.loadConfiguration();
         this.loadNotes();
         this.loadStats();
-        this.checkDatabaseStatus();
+        this.updateStatus();
+        this.showTab('dashboard');
     }
 
     setupEventListeners() {
-        // Modal controls
-        document.getElementById('add-note-btn').addEventListener('click', () => this.openModal());
-        document.querySelector('.close').addEventListener('click', () => this.closeModal());
-        document.getElementById('cancel-btn').addEventListener('click', () => this.closeModal());
-        
-        // Form submission
-        document.getElementById('note-form').addEventListener('submit', (e) => this.handleFormSubmit(e));
-        
-        // Filters and search
-        document.getElementById('category-filter').addEventListener('change', () => this.loadNotes());
-        document.getElementById('priority-filter').addEventListener('change', () => this.loadNotes());
-        document.getElementById('status-filter').addEventListener('change', () => this.loadNotes());
-        document.getElementById('search-input').addEventListener('input', () => this.debounceSearch());
-        
-        // Refresh button
-        document.getElementById('refresh-btn').addEventListener('click', () => {
-            this.loadNotes();
-            this.loadStats();
-        });
-        
-        // Context preview
-        document.getElementById('preview-context-btn').addEventListener('click', () => this.toggleContextPreview());
-
-        // Import/Export functionality
-        document.getElementById('import-btn').addEventListener('click', () => this.importNotes());
-        document.getElementById('export-btn').addEventListener('click', () => this.exportNotes());
-
-        // Close modal when clicking outside
-        document.getElementById('note-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'note-modal') {
-                this.closeModal();
-            }
-        });
-    }
-
-    debounceSearch() {
-        clearTimeout(this.searchTimeout);
-        this.searchTimeout = setTimeout(() => this.loadNotes(), 300);
-    }
-
-    async apiCall(endpoint, options = {}) {
-        try {
-            this.showLoading(true);
-            const response = await fetch(`${this.apiBase}${endpoint}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
-                ...options
+        // Navigation
+        document.querySelectorAll('[data-tab]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = e.currentTarget.getAttribute('data-tab');
+                this.showTab(tab);
             });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || 'Request failed');
-            }
-            
-            return data;
-        } catch (error) {
-            this.showToast(error.message, 'error');
-            throw error;
-        } finally {
-            this.showLoading(false);
+        });
+
+        // Configuration form
+        const configForm = document.getElementById('configuration-form');
+        if (configForm) {
+            configForm.addEventListener('submit', (e) => this.handleConfigurationSubmit(e));
+        }
+
+        // Personality form
+        const personalityForm = document.getElementById('personality-form');
+        if (personalityForm) {
+            personalityForm.addEventListener('submit', (e) => this.handlePersonalitySubmit(e));
+        }
+
+        // Master enable/disable toggle
+        const masterToggle = document.getElementById('master-enable');
+        if (masterToggle) {
+            masterToggle.addEventListener('change', (e) => this.handleMasterToggle(e));
+        }
+
+        // Response frequency slider
+        const frequencySlider = document.getElementById('response-frequency');
+        if (frequencySlider) {
+            frequencySlider.addEventListener('input', (e) => this.updateFrequencyDisplay(e.target.value));
+        }
+
+        // Quick action buttons
+        this.setupQuickActions();
+
+        // Note management
+        this.setupNoteManagement();
+
+        // Context refresh
+        const refreshContextBtn = document.getElementById('refresh-context-btn');
+        if (refreshContextBtn) {
+            refreshContextBtn.addEventListener('click', () => this.loadLLMContext());
+        }
+
+        // Load from notes button
+        const loadFromNotesBtn = document.getElementById('load-from-notes-btn');
+        if (loadFromNotesBtn) {
+            loadFromNotesBtn.addEventListener('click', () => this.loadPersonalityFromNotes());
+        }
+
+        // Reset configuration button
+        const resetConfigBtn = document.getElementById('reset-config-btn');
+        if (resetConfigBtn) {
+            resetConfigBtn.addEventListener('click', () => this.resetConfiguration());
         }
     }
 
+    setupQuickActions() {
+        // Toggle bot button
+        const toggleBotBtn = document.getElementById('toggle-bot-btn');
+        if (toggleBotBtn) {
+            toggleBotBtn.addEventListener('click', () => this.toggleBot());
+        }
+
+        // Refresh stats button
+        const refreshStatsBtn = document.getElementById('refresh-stats-btn');
+        if (refreshStatsBtn) {
+            refreshStatsBtn.addEventListener('click', () => this.loadStats());
+        }
+
+        // Export config button
+        const exportConfigBtn = document.getElementById('export-config-btn');
+        if (exportConfigBtn) {
+            exportConfigBtn.addEventListener('click', () => this.exportConfiguration());
+        }
+
+        // Import config button
+        const importConfigBtn = document.getElementById('import-config-btn');
+        if (importConfigBtn) {
+            importConfigBtn.addEventListener('click', () => this.importConfiguration());
+        }
+    }
+
+    setupNoteManagement() {
+        // Add note button
+        const addNoteBtn = document.getElementById('add-note-btn');
+        if (addNoteBtn) {
+            addNoteBtn.addEventListener('click', () => this.openNoteModal());
+        }
+
+        // Save note button
+        const saveNoteBtn = document.getElementById('save-note-btn');
+        if (saveNoteBtn) {
+            saveNoteBtn.addEventListener('click', () => this.saveNote());
+        }
+
+        // Note filters
+        const filterCategory = document.getElementById('filter-category');
+        const filterPriority = document.getElementById('filter-priority');
+        const filterStatus = document.getElementById('filter-status');
+        const searchNotes = document.getElementById('search-notes');
+
+        if (filterCategory) filterCategory.addEventListener('change', () => this.loadNotes());
+        if (filterPriority) filterPriority.addEventListener('change', () => this.loadNotes());
+        if (filterStatus) filterStatus.addEventListener('change', () => this.loadNotes());
+        if (searchNotes) {
+            searchNotes.addEventListener('input', () => {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => this.loadNotes(), 300);
+            });
+        }
+
+        // Import file input
+        const importFileInput = document.getElementById('import-file-input');
+        if (importFileInput) {
+            importFileInput.addEventListener('change', (e) => this.handleFileImport(e));
+        }
+    }
+
+    // Tab management
+    showTab(tabName) {
+        // Update navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+        // Update content
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(`${tabName}-tab`).classList.add('active');
+
+        this.currentTab = tabName;
+
+        // Load tab-specific data
+        switch (tabName) {
+            case 'dashboard':
+                this.loadStats();
+                break;
+            case 'configuration':
+                this.loadConfiguration();
+                break;
+            case 'personality':
+                this.loadConfiguration();
+                break;
+            case 'notes':
+                this.loadNotes();
+                this.loadNotesStats();
+                break;
+            case 'context':
+                this.loadLLMContext();
+                break;
+        }
+    }
+
+    // Configuration management
+    async loadConfiguration() {
+        try {
+            const response = await fetch(`${this.apiBase}/configuration`);
+            if (response.ok) {
+                this.configuration = await response.json();
+                this.updateConfigurationUI();
+                this.updateStatus();
+            } else {
+                // Create default configuration if none exists
+                await this.createDefaultConfiguration();
+            }
+        } catch (error) {
+            console.error('Error loading configuration:', error);
+            this.showToast('Error loading configuration', 'error');
+        }
+    }
+
+    async createDefaultConfiguration() {
+        try {
+            const response = await fetch(`${this.apiBase}/configuration`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    isEnabled: true,
+                    responseFrequency: 25,
+                    corePersonality: 'I am CovaBot, a helpful and friendly AI assistant.'
+                })
+            });
+            
+            if (response.ok) {
+                this.configuration = await response.json();
+                this.updateConfigurationUI();
+                this.updateStatus();
+            }
+        } catch (error) {
+            console.error('Error creating default configuration:', error);
+        }
+    }
+
+    updateConfigurationUI() {
+        if (!this.configuration) return;
+
+        // Update master toggle
+        const masterToggle = document.getElementById('master-enable');
+        if (masterToggle) {
+            masterToggle.checked = this.configuration.isEnabled;
+            this.updateMasterStatusText(this.configuration.isEnabled);
+        }
+
+        // Update frequency slider
+        const frequencySlider = document.getElementById('response-frequency');
+        if (frequencySlider) {
+            frequencySlider.value = this.configuration.responseFrequency;
+            this.updateFrequencyDisplay(this.configuration.responseFrequency);
+        }
+
+        // Update core personality
+        const corePersonality = document.getElementById('core-personality');
+        if (corePersonality) {
+            corePersonality.value = this.configuration.corePersonality;
+        }
+
+        // Update dashboard stats
+        this.updateDashboardStats();
+    }
+
+    updateDashboardStats() {
+        if (!this.configuration) return;
+
+        const botStatus = document.getElementById('bot-status');
+        const responseRate = document.getElementById('response-rate');
+        const powerIcon = document.getElementById('power-icon');
+
+        if (botStatus) {
+            botStatus.textContent = this.configuration.isEnabled ? 'Enabled' : 'Disabled';
+        }
+
+        if (responseRate) {
+            responseRate.textContent = `${this.configuration.responseFrequency}%`;
+        }
+
+        if (powerIcon) {
+            powerIcon.className = this.configuration.isEnabled 
+                ? 'bi bi-power fs-2 text-success'
+                : 'bi bi-power fs-2 text-danger';
+        }
+    }
+
+    updateMasterStatusText(isEnabled) {
+        const statusText = document.getElementById('master-status-text');
+        if (statusText) {
+            statusText.textContent = isEnabled ? 'Bot Enabled' : 'Bot Disabled';
+        }
+    }
+
+    updateFrequencyDisplay(value) {
+        const display = document.getElementById('frequency-display');
+        if (display) {
+            display.textContent = `${value}%`;
+        }
+    }
+
+    updateStatus() {
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+
+        if (this.configuration && statusIndicator && statusText) {
+            if (this.configuration.isEnabled) {
+                statusIndicator.className = 'bi bi-circle-fill text-success';
+                statusText.textContent = 'Online';
+            } else {
+                statusIndicator.className = 'bi bi-circle-fill text-danger';
+                statusText.textContent = 'Offline';
+            }
+        }
+    }
+
+    // Event handlers
+    async handleConfigurationSubmit(e) {
+        e.preventDefault();
+
+        const formData = {
+            isEnabled: document.getElementById('master-enable').checked,
+            responseFrequency: parseInt(document.getElementById('response-frequency').value)
+        };
+
+        try {
+            const response = await fetch(`${this.apiBase}/configuration`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                this.configuration = await response.json();
+                this.updateConfigurationUI();
+                this.updateStatus();
+                this.showToast('Configuration saved successfully', 'success');
+            } else {
+                throw new Error('Failed to save configuration');
+            }
+        } catch (error) {
+            console.error('Error saving configuration:', error);
+            this.showToast('Error saving configuration', 'error');
+        }
+    }
+
+    async handlePersonalitySubmit(e) {
+        e.preventDefault();
+
+        const corePersonality = document.getElementById('core-personality').value;
+
+        try {
+            const response = await fetch(`${this.apiBase}/configuration`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ corePersonality })
+            });
+
+            if (response.ok) {
+                this.configuration = await response.json();
+                this.showToast('Core personality saved successfully', 'success');
+            } else {
+                throw new Error('Failed to save personality');
+            }
+        } catch (error) {
+            console.error('Error saving personality:', error);
+            this.showToast('Error saving personality', 'error');
+        }
+    }
+
+    async handleMasterToggle(e) {
+        const isEnabled = e.target.checked;
+
+        try {
+            const response = await fetch(`${this.apiBase}/configuration`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isEnabled })
+            });
+
+            if (response.ok) {
+                this.configuration = await response.json();
+                this.updateMasterStatusText(isEnabled);
+                this.updateDashboardStats();
+                this.updateStatus();
+                this.showToast(`Bot ${isEnabled ? 'enabled' : 'disabled'}`, 'success');
+            } else {
+                // Revert toggle if request failed
+                e.target.checked = !isEnabled;
+                throw new Error('Failed to update bot status');
+            }
+        } catch (error) {
+            console.error('Error toggling bot:', error);
+            this.showToast('Error updating bot status', 'error');
+        }
+    }
+
+    // Quick actions
+    async toggleBot() {
+        const masterToggle = document.getElementById('master-enable');
+        if (masterToggle) {
+            masterToggle.checked = !masterToggle.checked;
+            masterToggle.dispatchEvent(new Event('change'));
+        }
+    }
+
+    async resetConfiguration() {
+        if (confirm('Are you sure you want to reset all configuration to defaults? This cannot be undone.')) {
+            try {
+                const response = await fetch(`${this.apiBase}/configuration/reset`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    this.configuration = await response.json();
+                    this.updateConfigurationUI();
+                    this.updateStatus();
+                    this.showToast('Configuration reset to defaults', 'success');
+                } else {
+                    throw new Error('Failed to reset configuration');
+                }
+            } catch (error) {
+                console.error('Error resetting configuration:', error);
+                this.showToast('Error resetting configuration', 'error');
+            }
+        }
+    }
+
+    async exportConfiguration() {
+        try {
+            const response = await fetch(`${this.apiBase}/export`);
+            if (response.ok) {
+                const data = await response.json();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `covabot-config-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                this.showToast('Configuration exported successfully', 'success');
+            }
+        } catch (error) {
+            console.error('Error exporting configuration:', error);
+            this.showToast('Error exporting configuration', 'error');
+        }
+    }
+
+    importConfiguration() {
+        document.getElementById('import-file-input').click();
+    }
+
+    async handleFileImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+
+            const response = await fetch(`${this.apiBase}/import`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                await this.loadConfiguration();
+                await this.loadNotes();
+                this.showToast('Configuration imported successfully', 'success');
+            } else {
+                throw new Error('Failed to import configuration');
+            }
+        } catch (error) {
+            console.error('Error importing configuration:', error);
+            this.showToast('Error importing configuration', 'error');
+        }
+
+        // Reset file input
+        e.target.value = '';
+    }
+
+    // Notes management
     async loadNotes() {
         try {
             const filters = this.getFilters();
             const queryString = new URLSearchParams(filters).toString();
-            const response = await this.apiCall(`/notes?${queryString}`);
-            this.renderNotes(response.data);
-        } catch (error) {
-            console.error('Failed to load notes:', error);
-        }
-    }
+            const response = await fetch(`${this.apiBase}/notes?${queryString}`);
 
-    async loadStats() {
-        try {
-            const response = await this.apiCall('/stats');
-            this.renderStats(response.data);
+            if (response.ok) {
+                this.notes = await response.json();
+                this.renderNotes(this.notes);
+            }
         } catch (error) {
-            console.error('Failed to load stats:', error);
+            console.error('Error loading notes:', error);
+            this.showToast('Error loading notes', 'error');
         }
     }
 
     getFilters() {
         const filters = {};
-        
-        const category = document.getElementById('category-filter').value;
-        if (category) filters.category = category;
-        
-        const priority = document.getElementById('priority-filter').value;
-        if (priority) filters.priority = priority;
-        
-        const status = document.getElementById('status-filter').value;
-        if (status) filters.isActive = status;
-        
-        const search = document.getElementById('search-input').value.trim();
-        if (search) filters.search = search;
-        
-        return filters;
-    }
 
-    renderStats(stats) {
-        document.getElementById('total-notes').textContent = stats.total;
-        document.getElementById('active-notes').textContent = stats.active;
-        
-        // Update stats content with category breakdown
-        const statsContent = document.getElementById('stats-content');
-        
-        // Clear existing category stats
-        const existingCategories = statsContent.querySelectorAll('.category-stat');
-        existingCategories.forEach(el => el.remove());
-        
-        // Add category breakdown
-        Object.entries(stats.byCategory).forEach(([category, count]) => {
-            const statItem = document.createElement('div');
-            statItem.className = 'stat-item category-stat';
-            statItem.innerHTML = `
-                <span class="stat-label">${this.capitalize(category)}:</span>
-                <span class="stat-value">${count}</span>
-            `;
-            statsContent.appendChild(statItem);
-        });
+        const category = document.getElementById('filter-category')?.value;
+        if (category) filters.category = category;
+
+        const priority = document.getElementById('filter-priority')?.value;
+        if (priority) filters.priority = priority;
+
+        const status = document.getElementById('filter-status')?.value;
+        if (status) filters.isActive = status;
+
+        const search = document.getElementById('search-notes')?.value;
+        if (search) filters.search = search;
+
+        return filters;
     }
 
     renderNotes(notes) {
         const container = document.getElementById('notes-list');
-        
+        if (!container) return;
+
         if (notes.length === 0) {
             container.innerHTML = `
-                <div class="empty-state">
-                    <h3>No notes found</h3>
-                    <p>Add some personality instructions to get started!</p>
+                <div class="text-center py-5">
+                    <i class="bi bi-journal-x fs-1 text-muted"></i>
+                    <h5 class="mt-3 text-muted">No notes found</h5>
+                    <p class="text-muted">Create your first personality note to get started!</p>
                 </div>
             `;
             return;
         }
-        
-        container.innerHTML = notes.map(note => this.createNoteCard(note)).join('');
-        
-        // Add event listeners for note actions
-        container.querySelectorAll('.edit-note').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const noteId = e.target.dataset.noteId;
-                this.editNote(noteId);
-            });
-        });
-        
-        container.querySelectorAll('.delete-note').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const noteId = e.target.dataset.noteId;
-                this.deleteNote(noteId);
-            });
-        });
-        
-        container.querySelectorAll('.toggle-note').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const noteId = e.target.dataset.noteId;
-                const isActive = e.target.dataset.isActive === 'true';
-                this.toggleNote(noteId, !isActive);
-            });
-        });
-    }
 
-    createNoteCard(note) {
-        const createdDate = new Date(note.createdAt).toLocaleDateString();
-        const updatedDate = new Date(note.updatedAt).toLocaleDateString();
-        
-        return `
-            <div class="note-card ${!note.isActive ? 'inactive' : ''}">
+        container.innerHTML = notes.map(note => `
+            <div class="note-item ${note.isActive ? '' : 'inactive'}">
                 <div class="note-header">
                     <div class="note-meta">
-                        <span class="category-badge category-${note.category}">${note.category}</span>
-                        <span class="priority-badge priority-${note.priority}">${note.priority}</span>
-                        ${!note.isActive ? '<span class="priority-badge priority-low">inactive</span>' : ''}
+                        <span class="badge category-${note.category}">${note.category}</span>
+                        <span class="badge priority-${note.priority}">${note.priority}</span>
+                        ${note.isActive ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}
                     </div>
                     <div class="note-actions">
-                        <button class="btn btn-small btn-secondary edit-note" data-note-id="${note.id}">✏️ Edit</button>
-                        <button class="btn btn-small btn-warning toggle-note" 
-                                data-note-id="${note.id}" 
-                                data-is-active="${note.isActive}">
-                            ${note.isActive ? '⏸️ Deactivate' : '▶️ Activate'}
+                        <button class="btn btn-sm btn-outline-primary" onclick="covaBot.editNote('${note.id}')">
+                            <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-small btn-danger delete-note" data-note-id="${note.id}">🗑️ Delete</button>
+                        <button class="btn btn-sm btn-outline-${note.isActive ? 'warning' : 'success'}" onclick="covaBot.toggleNote('${note.id}')">
+                            <i class="bi bi-${note.isActive ? 'pause' : 'play'}"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="covaBot.deleteNote('${note.id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="note-content">${this.escapeHtml(note.content)}</div>
-                <div class="note-footer">
-                    <span>Created: ${createdDate}</span>
-                    <span>Updated: ${updatedDate}</span>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <small class="text-muted">Created: ${new Date(note.createdAt).toLocaleDateString()}</small>
+                    <small class="text-muted">Updated: ${new Date(note.updatedAt).toLocaleDateString()}</small>
                 </div>
             </div>
-        `;
+        `).join('');
     }
 
-    openModal(note = null) {
-        this.currentEditingNote = note;
-        const modal = document.getElementById('note-modal');
-        const title = document.getElementById('modal-title');
-        const activeToggle = document.getElementById('active-toggle-group');
-        
-        if (note) {
-            title.textContent = 'Edit Note';
-            document.getElementById('note-content').value = note.content;
-            document.getElementById('note-category').value = note.category;
-            document.getElementById('note-priority').value = note.priority;
-            document.getElementById('note-active').checked = note.isActive;
-            activeToggle.style.display = 'block';
-        } else {
-            title.textContent = 'Add New Note';
-            document.getElementById('note-form').reset();
-            activeToggle.style.display = 'none';
-        }
-        
-        modal.style.display = 'flex';
-        document.getElementById('note-content').focus();
-    }
+    openNoteModal(noteId = null) {
+        this.currentEditingNote = noteId;
+        const modal = new bootstrap.Modal(document.getElementById('noteModal'));
+        const title = document.getElementById('noteModalTitle');
 
-    closeModal() {
-        document.getElementById('note-modal').style.display = 'none';
-        this.currentEditingNote = null;
-    }
-
-    async handleFormSubmit(e) {
-        e.preventDefault();
-        
-        const formData = {
-            content: document.getElementById('note-content').value.trim(),
-            category: document.getElementById('note-category').value,
-            priority: document.getElementById('note-priority').value
-        };
-        
-        if (!formData.content) {
-            this.showToast('Content is required', 'error');
-            return;
-        }
-        
-        if (!formData.category) {
-            this.showToast('Category is required', 'error');
-            return;
-        }
-        
-        try {
-            if (this.currentEditingNote) {
-                // Update existing note
-                formData.isActive = document.getElementById('note-active').checked;
-                await this.apiCall(`/notes/${this.currentEditingNote.id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(formData)
-                });
-                this.showToast('Note updated successfully', 'success');
-            } else {
-                // Create new note
-                await this.apiCall('/notes', {
-                    method: 'POST',
-                    body: JSON.stringify(formData)
-                });
-                this.showToast('Note created successfully', 'success');
+        if (noteId) {
+            const note = this.notes.find(n => n.id === noteId);
+            if (note) {
+                title.textContent = 'Edit Note';
+                document.getElementById('note-id').value = note.id;
+                document.getElementById('note-content').value = note.content;
+                document.getElementById('note-category').value = note.category;
+                document.getElementById('note-priority').value = note.priority;
             }
-            
-            this.closeModal();
-            this.loadNotes();
-            this.loadStats();
+        } else {
+            title.textContent = 'Add Note';
+            document.getElementById('note-form').reset();
+            document.getElementById('note-id').value = '';
+        }
+
+        modal.show();
+    }
+
+    async saveNote() {
+        const noteId = document.getElementById('note-id').value;
+        const content = document.getElementById('note-content').value;
+        const category = document.getElementById('note-category').value;
+        const priority = document.getElementById('note-priority').value;
+
+        if (!content.trim()) {
+            this.showToast('Note content is required', 'error');
+            return;
+        }
+
+        const noteData = { content, category, priority };
+
+        try {
+            const url = noteId ? `${this.apiBase}/notes/${noteId}` : `${this.apiBase}/notes`;
+            const method = noteId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(noteData)
+            });
+
+            if (response.ok) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('noteModal'));
+                modal.hide();
+                await this.loadNotes();
+                this.showToast(`Note ${noteId ? 'updated' : 'created'} successfully`, 'success');
+            } else {
+                throw new Error('Failed to save note');
+            }
         } catch (error) {
-            console.error('Failed to save note:', error);
+            console.error('Error saving note:', error);
+            this.showToast('Error saving note', 'error');
         }
     }
 
-    async editNote(noteId) {
+    editNote(noteId) {
+        this.openNoteModal(noteId);
+    }
+
+    async toggleNote(noteId) {
         try {
-            const response = await this.apiCall(`/notes/${noteId}`);
-            this.openModal(response.data);
+            const response = await fetch(`${this.apiBase}/notes/${noteId}/toggle`, {
+                method: 'PUT'
+            });
+
+            if (response.ok) {
+                await this.loadNotes();
+                this.showToast('Note status updated', 'success');
+            } else {
+                throw new Error('Failed to toggle note');
+            }
         } catch (error) {
-            console.error('Failed to load note for editing:', error);
+            console.error('Error toggling note:', error);
+            this.showToast('Error updating note status', 'error');
         }
     }
 
     async deleteNote(noteId) {
-        if (!confirm('Are you sure you want to delete this note?')) {
+        if (confirm('Are you sure you want to delete this note? This cannot be undone.')) {
+            try {
+                const response = await fetch(`${this.apiBase}/notes/${noteId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    await this.loadNotes();
+                    this.showToast('Note deleted successfully', 'success');
+                } else {
+                    throw new Error('Failed to delete note');
+                }
+            } catch (error) {
+                console.error('Error deleting note:', error);
+                this.showToast('Error deleting note', 'error');
+            }
+        }
+    }
+
+    // Stats and context
+    async loadStats() {
+        try {
+            const response = await fetch(`${this.apiBase}/stats`);
+            if (response.ok) {
+                this.stats = await response.json();
+                this.updateStatsDisplay();
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    }
+
+    updateStatsDisplay() {
+        const totalNotes = document.getElementById('total-notes');
+        const activeNotes = document.getElementById('active-notes');
+
+        if (totalNotes) totalNotes.textContent = this.stats.totalNotes || 0;
+        if (activeNotes) activeNotes.textContent = this.stats.activeNotes || 0;
+    }
+
+    async loadNotesStats() {
+        const statsContainer = document.getElementById('notes-stats');
+        if (!statsContainer) return;
+
+        const categoryStats = {};
+        const priorityStats = {};
+
+        this.notes.forEach(note => {
+            categoryStats[note.category] = (categoryStats[note.category] || 0) + 1;
+            priorityStats[note.priority] = (priorityStats[note.priority] || 0) + 1;
+        });
+
+        const activeCount = this.notes.filter(note => note.isActive).length;
+        const inactiveCount = this.notes.length - activeCount;
+
+        statsContainer.innerHTML = `
+            <div class="stat-item">
+                <span class="stat-label">Total Notes:</span>
+                <span class="stat-value">${this.notes.length}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Active:</span>
+                <span class="stat-value text-success">${activeCount}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Inactive:</span>
+                <span class="stat-value text-muted">${inactiveCount}</span>
+            </div>
+            <hr>
+            <h6>By Category</h6>
+            ${Object.entries(categoryStats).map(([category, count]) => `
+                <div class="stat-item">
+                    <span class="stat-label">${category}:</span>
+                    <span class="stat-value">${count}</span>
+                </div>
+            `).join('')}
+            <hr>
+            <h6>By Priority</h6>
+            ${Object.entries(priorityStats).map(([priority, count]) => `
+                <div class="stat-item">
+                    <span class="stat-label">${priority}:</span>
+                    <span class="stat-value">${count}</span>
+                </div>
+            `).join('')}
+        `;
+    }
+
+    async loadLLMContext() {
+        try {
+            const response = await fetch(`${this.apiBase}/context`);
+            if (response.ok) {
+                const context = await response.text();
+                const contextElement = document.getElementById('llm-context');
+                if (contextElement) {
+                    contextElement.textContent = context;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading LLM context:', error);
+            this.showToast('Error loading LLM context', 'error');
+        }
+    }
+
+    async loadPersonalityFromNotes() {
+        const highPriorityPersonalityNotes = this.notes.filter(note =>
+            note.category === 'personality' &&
+            note.priority === 'high' &&
+            note.isActive
+        );
+
+        if (highPriorityPersonalityNotes.length === 0) {
+            this.showToast('No high-priority personality notes found', 'warning');
             return;
         }
-        
-        try {
-            await this.apiCall(`/notes/${noteId}`, { method: 'DELETE' });
-            this.showToast('Note deleted successfully', 'success');
-            this.loadNotes();
-            this.loadStats();
-        } catch (error) {
-            console.error('Failed to delete note:', error);
+
+        const combinedPersonality = highPriorityPersonalityNotes
+            .map(note => note.content)
+            .join(' ');
+
+        const corePersonality = document.getElementById('core-personality');
+        if (corePersonality) {
+            corePersonality.value = combinedPersonality;
+            this.showToast('Personality loaded from high-priority notes', 'success');
         }
     }
 
-    async toggleNote(noteId, isActive) {
-        try {
-            await this.apiCall(`/notes/${noteId}`, {
-                method: 'PUT',
-                body: JSON.stringify({ isActive })
-            });
-            this.showToast(`Note ${isActive ? 'activated' : 'deactivated'} successfully`, 'success');
-            this.loadNotes();
-            this.loadStats();
-        } catch (error) {
-            console.error('Failed to toggle note:', error);
-        }
-    }
-
-    async toggleContextPreview() {
-        const contextContent = document.getElementById('context-content');
-        const button = document.getElementById('preview-context-btn');
-        
-        if (contextContent.style.display === 'none') {
-            try {
-                const response = await this.apiCall('/context');
-                contextContent.textContent = response.data.context || 'No active notes to display';
-                contextContent.style.display = 'block';
-                button.textContent = 'Hide Context';
-            } catch (error) {
-                console.error('Failed to load context:', error);
-            }
-        } else {
-            contextContent.style.display = 'none';
-            button.textContent = 'View Current Context';
-        }
-    }
-
-    showLoading(show) {
-        document.getElementById('loading').style.display = show ? 'flex' : 'none';
-    }
-
-    showToast(message, type = 'info') {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        
-        toast.innerHTML = `
-            ${message}
-            <span class="toast-close">&times;</span>
-        `;
-        
-        container.appendChild(toast);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        }, 5000);
-        
-        // Manual close
-        toast.querySelector('.toast-close').addEventListener('click', () => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        });
-    }
-
+    // Utility functions
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
 
-    capitalize(str) {
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    }
+    showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
 
-    async checkDatabaseStatus() {
-        try {
-            const response = await this.apiCall('/health');
-            document.getElementById('db-status').innerHTML = '✅ Connected';
+        if (toast && toastMessage) {
+            toastMessage.textContent = message;
 
-            // Update system info
-            document.getElementById('storage-type').innerHTML =
-                response.data.storage === 'database' ? '🗄️ Database' : '📁 File';
-            document.getElementById('api-status').innerHTML = '✅ Online';
-            document.getElementById('last-updated').innerHTML =
-                new Date().toLocaleTimeString();
-        } catch (error) {
-            document.getElementById('db-status').innerHTML = '❌ Error';
-            document.getElementById('api-status').innerHTML = '❌ Offline';
-        }
-    }
-
-    async exportNotes() {
-        try {
-            const response = await this.apiCall('/notes');
-            const notes = response.data;
-
-            const dataStr = JSON.stringify(notes, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(dataBlob);
-            link.download = `covabot-personality-notes-${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-
-            this.showToast('Notes exported successfully', 'success');
-        } catch (error) {
-            console.error('Failed to export notes:', error);
-        }
-    }
-
-    async importNotes() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-
-        input.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            try {
-                const text = await file.text();
-                const notes = JSON.parse(text);
-
-                if (!Array.isArray(notes)) {
-                    throw new Error('Invalid file format');
-                }
-
-                let imported = 0;
-                for (const note of notes) {
-                    if (note.content && note.category) {
-                        try {
-                            await this.apiCall('/notes', {
-                                method: 'POST',
-                                body: JSON.stringify({
-                                    content: note.content,
-                                    category: note.category,
-                                    priority: note.priority || 'medium'
-                                })
-                            });
-                            imported++;
-                        } catch (error) {
-                            console.warn('Failed to import note:', note, error);
-                        }
-                    }
-                }
-
-                this.showToast(`Imported ${imported} notes successfully`, 'success');
-                this.loadNotes();
-                this.loadStats();
-            } catch (error) {
-                this.showToast('Failed to import notes: ' + error.message, 'error');
+            // Update toast header icon based on type
+            const toastHeader = toast.querySelector('.toast-header i');
+            if (toastHeader) {
+                toastHeader.className = `bi bi-${this.getToastIcon(type)} text-${this.getToastColor(type)} me-2`;
             }
-        };
 
-        input.click();
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+    }
+
+    getToastIcon(type) {
+        switch (type) {
+            case 'success': return 'check-circle';
+            case 'error': return 'exclamation-triangle';
+            case 'warning': return 'exclamation-circle';
+            default: return 'info-circle';
+        }
+    }
+
+    getToastColor(type) {
+        switch (type) {
+            case 'success': return 'success';
+            case 'error': return 'danger';
+            case 'warning': return 'warning';
+            default: return 'primary';
+        }
     }
 }
 
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    new PersonalityManager();
-});
+// Initialize the application
+const covaBot = new CovaBot();

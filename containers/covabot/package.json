@@ -20,7 +20,9 @@
 		"test:persistence": "ts-node -r tsconfig-paths/register src/scripts/test-persistence.ts",
 		"test:unraid": "ts-node -r tsconfig-paths/register src/scripts/test-unraid-deployment.ts",
 		"test:unraid:simple": "ts-node -r tsconfig-paths/register src/scripts/test-unraid-simple.ts",
-		"test:unraid:full": "npm run test:unraid && npm run test:persistence"
+		"test:unraid:full": "npm run test:unraid && npm run test:persistence",
+		"test:web": "node test-web-interface.js",
+		"validate": "node validate-production.js"
 	},
 	"dependencies": {
 		"@discordjs/builders": "^1.6.5",
@@ -44,10 +46,12 @@
 		"@types/express": "^5.0.3",
 		"@types/jest": "^29.5.14",
 		"@types/node": "^20.17.14",
+		"@types/supertest": "^6.0.2",
 		"@types/uuid": "^10.0.0",
 		"cross-env": "^7.0.3",
 		"jest": "^29.7.0",
 		"rimraf": "^5.0.1",
+		"supertest": "^7.0.0",
 		"ts-jest": "^29.2.6",
 		"ts-node": "^10.9.2",
 		"ts-node-dev": "^2.0.0",

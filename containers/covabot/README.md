@@ -24,7 +24,20 @@ A comprehensive web-based interface for managing CovaBot's personality, behavior
 
 ## 🚀 Quick Start
 
-### Development Mode (File Storage)
+### Option 1: Docker Compose (Recommended)
+```bash
+# 1. Configure environment
+cp .env.production.example .env
+# Edit .env with your settings
+
+# 2. Start with Docker Compose
+docker-compose up covabot
+
+# 3. Access the web interface
+open http://localhost:3001
+```
+
+### Option 2: Development Mode (File Storage)
 ```bash
 # Install dependencies
 npm install
@@ -36,16 +49,23 @@ npm run dev:web
 open http://localhost:3001
 ```
 
-### Production Mode (Database Storage)
+### Option 3: Production Mode (Database Storage)
 ```bash
 # Set up database
 export DATABASE_URL="postgresql://user:password@localhost:5432/starbunk"
+export USE_DATABASE=true
 
 # Run database migrations
 npx prisma migrate deploy
 
 # Start with database storage
 npm run start:db
+```
+
+### Quick Test
+```bash
+# Test the web interface
+npm run test:web
 ```
 
 ## 📊 Architecture

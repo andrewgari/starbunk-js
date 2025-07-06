@@ -43,6 +43,6 @@ RUN chown -R covabot:covabot /app
 
 USER covabot
 
-EXPOSE 3003
+EXPOSE 3001
 
-CMD ["node", "dist/index-minimal.js"]
+CMD ["node", "dist/index-web.js"]
