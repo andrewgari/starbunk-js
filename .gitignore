@@ -169,3 +169,66 @@ logs-dev
 
 */prisma
 */scripts
+
+# ============================================================================
+# STRICT COMMIT POLICY - FORBIDDEN FILES
+# ============================================================================
+
+# Documentation Files - FORBIDDEN (except essential project docs)
+# Only allow: README.md, containers/*/README.md, containers/*/DEPLOYMENT.md
+*_ASSESSMENT.md
+*_REPORT.md
+*_SUMMARY.md
+*_COMPLETION.md
+*_TEST_REPORT.md
+*_ANALYSIS.md
+*_REVIEW.md
+*_EVALUATION.md
+ASSESSMENT_*.md
+REPORT_*.md
+SUMMARY_*.md
+COMPLETION_*.md
+
+# Unraid-specific files - FORBIDDEN
+.env.unraid*
+*unraid*.example
+docs/UNRAID_*.md
+**/UNRAID_*.md
+
+# Temporary and debugging scripts - FORBIDDEN
+**/test-unraid-*.ts
+**/test-unraid-*.js
+**/debug-*.ts
+**/debug-*.js
+**/temp-*.ts
+**/temp-*.js
+**/fix-*.ts
+**/fix-*.js
+**/validate-*.ts
+**/validate-*.js
+**/check-*.ts
+**/check-*.js
+
+# One-off and expedient scripts - FORBIDDEN
+**/one-off-*.ts
+**/one-off-*.js
+**/expedient-*.ts
+**/expedient-*.js
+**/quick-*.ts
+**/quick-*.js
+**/hotfix-*.ts
+**/hotfix-*.js
+
+# Temporary documentation and notes - FORBIDDEN
+NOTES.md
+TODO.md
+SCRATCH.md
+TEMP.md
+DRAFT.md
+WIP.md
+*_NOTES.md
+*_TODO.md
+*_SCRATCH.md
+*_TEMP.md
+*_DRAFT.md
+*_WIP.md
