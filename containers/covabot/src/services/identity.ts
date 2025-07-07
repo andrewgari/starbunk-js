@@ -1,5 +1,4 @@
-import { logger } from '@starbunk/shared';
-import { getBotIdentityFromDiscord } from '@starbunk/shared';
+import { logger, container, ServiceId } from '@starbunk/shared';
 import { BotIdentity } from '../types/botIdentity';
 import { Message } from 'discord.js';
 
@@ -48,13 +47,8 @@ export class CovaIdentityService {
 
       logger.debug(`[CovaIdentityService] Fetching fresh identity for user ${COVA_USER_ID} in guild ${guildId || 'global'}`);
 
-      // Fetch fresh identity from Discord
-      const identity = await getBotIdentityFromDiscord({
-        userId: COVA_USER_ID,
-        fallbackName: 'CovaBot',
-        message,
-        forceRefresh: true // Always get fresh data for accuracy
-      });
+      // Fetch fresh identity from Discord using DiscordService
+      const identity = await this.fetchDiscordIdentity(COVA_USER_ID, guildId, message);
 
       if (!identity) {
         logger.error(`[CovaIdentityService] Failed to retrieve identity for user ${COVA_USER_ID}`);
@@ -79,6 +73,70 @@ export class CovaIdentityService {
 
     } catch (error) {
       logger.error(`[CovaIdentityService] Error getting Cova identity:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch Discord identity using DiscordService
+   */
+  private static async fetchDiscordIdentity(userId: string, guildId?: string, message?: Message): Promise<BotIdentity | null> {
+    try {
+      // Get DiscordService from container
+      const discordService = container.get(ServiceId.DiscordService) as any;
+
+      if (guildId && message) {
+        // Get server-specific identity
+        const member = await discordService.getMemberAsync(guildId, userId);
+
+        if (!member) {
+          throw new Error(`Member ${userId} not found in guild ${guildId}`);
+        }
+
+        // Get server-specific nickname (falls back to username)
+        const botName = member.nickname ||
+                       member.user.globalName ||
+                       member.user.username ||
+                       'CovaBot';
+
+        // Get server-specific avatar (falls back to global avatar)
+        const avatarUrl = member.displayAvatarURL({ size: 256, extension: 'png' }) ||
+                         member.user.displayAvatarURL({ size: 256, extension: 'png' });
+
+        if (!avatarUrl) {
+          throw new Error(`No valid avatar URL found for user ${userId} in guild ${guildId}`);
+        }
+
+        logger.debug(`[CovaIdentityService] Server-specific identity: "${botName}" with avatar ${avatarUrl}`);
+
+        return {
+          botName,
+          avatarUrl
+        };
+      } else {
+        // Fallback to global identity
+        const user = await discordService.getUserAsync(userId);
+
+        if (!user) {
+          throw new Error(`User ${userId} not found`);
+        }
+
+        const botName = user.globalName || user.username || 'CovaBot';
+        const avatarUrl = user.displayAvatarURL({ size: 256, extension: 'png' });
+
+        if (!avatarUrl) {
+          throw new Error(`No valid avatar URL found for user ${userId}`);
+        }
+
+        logger.debug(`[CovaIdentityService] Global identity: "${botName}" with avatar ${avatarUrl}`);
+
+        return {
+          botName,
+          avatarUrl
+        };
+      }
+    } catch (error) {
+      logger.error(`[CovaIdentityService] Failed to fetch Discord identity for ${userId}:`, error as Error);
       return null;
     }
   }

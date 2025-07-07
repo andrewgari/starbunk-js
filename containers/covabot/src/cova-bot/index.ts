@@ -1,9 +1,9 @@
 import { PromptRegistry, PromptType } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
 import { getPersonalityService } from '@starbunk/shared';
-import { createReplyBot } from '@/starbunk/bots/core';
 import { COVA_BOT_PROMPTS } from './constants';
 import { covaDirectMentionTrigger, covaStatsCommandTrigger, covaTrigger } from './triggers';
+import { CovaBot } from './covaBot';
 
 interface CovaBotConfig {
 	prompts: {
@@ -104,7 +104,7 @@ export class CovaBotFactory {
 export const initializeCovaBot = CovaBotFactory.initialize;
 
 // Create and export the bot instance
-export default createReplyBot({
+export default new CovaBot({
 	name: 'CovaBot',
 	description: 'LLM-powered CovaBot that responds to messages based on personality vectors',
 	defaultIdentity: {

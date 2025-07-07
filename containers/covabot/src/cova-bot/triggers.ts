@@ -1,8 +1,7 @@
 import userId from '@starbunk/shared/dist/discord/userId';
-import { PerformanceTimer } from '@starbunk/shared';
-import { and, fromBot, fromUser, not } from '@starbunk/shared';
-import { createTriggerResponse } from '@starbunk/shared';
-import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './llm-triggers';
+import { and, fromBot, fromUser, not } from './conditions';
+import { createTriggerResponse } from './triggerResponseFactory';
+import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './simplifiedLlmTriggers';
 import { CovaIdentityService } from '../services/identity';
 import { logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
@@ -61,7 +60,9 @@ export const covaStatsCommandTrigger = createTriggerResponse({
 		fromUser(userId.Cova),
 	),
 	response: async () => {
-		const stats = PerformanceTimer.getInstance().getStatsString();
+		const uptime = process.uptime();
+		const memUsage = process.memoryUsage();
+		const stats = `Uptime: ${Math.floor(uptime)}s\nMemory: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`;
 		return `**CovaBot Performance Stats**\n\`\`\`\n${stats}\n\`\`\``;
 	},
 	identity: async (message) => getCovaIdentity(message)
