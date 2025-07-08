@@ -1,13 +1,15 @@
 import { Message } from 'discord.js';
-import userId from '../../../../discord/userId';
+import userId from '@starbunk/shared/dist/discord/userId';
 import { getLLMManager } from '@starbunk/shared';
 import { LLMProviderType } from '@starbunk/shared';
 import { PromptRegistry, PromptType } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
-import { getPersonalityService } from '../../../../services/personalityService';
-import { PerformanceTimer } from '../../../../utils/time';
-import { ResponseGenerator, weightedRandomResponse } from '../../core/responses';
+import { getPersonalityService } from '@starbunk/shared';
+import { PerformanceTimer } from '@starbunk/shared';
+import { ResponseGenerator, weightedRandomResponse } from '@starbunk/shared';
 import { COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_PROMPTS } from './constants';
+import { PersonalityNotesService } from '../services/personalityNotesService';
+import { PersonalityNotesServiceDb } from '../services/personalityNotesServiceDb';
 
 // Create performance timer for CovaBot operations
 const perfTimer = PerformanceTimer.getInstance();
@@ -50,6 +52,18 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 				const personalityService = getPersonalityService();
 				const personalityEmbedding = personalityService.getPersonalityEmbedding();
 
+				// Get personality notes from the appropriate service
+				const useDatabase = process.env.USE_DATABASE === 'true';
+				let personalityNotes: string;
+
+				if (useDatabase) {
+					const dbService = PersonalityNotesServiceDb.getInstance();
+					personalityNotes = await dbService.getActiveNotesForLLM();
+				} else {
+					const fileService = PersonalityNotesService.getInstance();
+					personalityNotes = await fileService.getActiveNotesForLLM();
+				}
+
 				// Get channel name safely
 				let channelName = 'Unknown Channel';
 				try {
@@ -62,13 +76,18 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 					// If anything fails, just use default
 				}
 
-				// Create the user prompt with context
-				const userPrompt = `
+				// Create the user prompt with context including personality notes
+				let userPrompt = `
 Channel: ${channelName}
 User: ${message.author.username}
-Message: ${message.content}
+Message: ${message.content}`;
 
-Respond as Cova would to this message.`;
+				// Add personality notes context if available
+				if (personalityNotes) {
+					userPrompt += `\n\n${personalityNotes}`;
+				}
+
+				userPrompt += '\n\nRespond as Cova would to this message, taking into account the personality instructions above.';
 
 				// Create completion with personality context
 				const response = await getLLMManager().createPromptCompletion(
@@ -166,29 +185,50 @@ Based on the Response Decision System, should Cova respond to this message?`;
 
 				const response = llmResponse.trim().toUpperCase();
 
-				// Determine probability based on the response
+				// Determine probability based on the response with more conversational logic
 				let probability = 0;
 				if (response.includes("YES")) {
-					probability = 0.8;
+					probability = 0.7; // Reduced from 0.8 to be less aggressive
 				} else if (response.includes("LIKELY")) {
-					probability = 0.5;
+					probability = 0.35; // Reduced from 0.5
 				} else if (response.includes("UNLIKELY")) {
-					probability = 0.2;
+					probability = 0.1; // Reduced from 0.2
 				} else {
-					probability = 0.05;
+					probability = 0.02; // Reduced from 0.05
 				}
 
-				// Adjust probability based on conversation recency
+				// Enhanced contextual adjustments for more natural conversation
 				if (isRecentConversation) {
-					// Higher chance to respond in active conversations
-					probability *= 1.2;
+					// In active conversations, be more responsive but not overwhelming
+					probability *= 1.3;
 				} else {
-					// Lower chance to start new conversations
-					probability *= 0.8;
+					// Be much more selective about starting new conversations
+					probability *= 0.5;
 				}
 
-				// Cap probability
-				probability = Math.min(probability, 0.9);
+				// Additional conversational intelligence
+				const messageContent = message.content.toLowerCase();
+				
+				// Increase chance for direct questions or mentions of topics Cova cares about
+				if (messageContent.includes('?') && 
+					(messageContent.includes('cova') || messageContent.includes('dev') || 
+                     messageContent.includes('code') || messageContent.includes('bot'))) {
+					probability *= 1.4;
+				}
+
+				// Reduce chance for very short messages unless they're questions
+				if (message.content.length < 20 && !messageContent.includes('?')) {
+					probability *= 0.6;
+				}
+
+				// Increase chance in smaller conversations (fewer people talking recently)
+				// This makes Cova more likely to participate in intimate conversations
+				if (isRecentConversation && lastResponseMinutes < 5) {
+					probability *= 1.2;
+				}
+
+				// Cap probability at lower level to avoid being too chatty
+				probability = Math.min(probability, 0.8);
 
 				// Apply randomization to avoid predictability
 				const random = Math.random();

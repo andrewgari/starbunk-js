@@ -43,6 +43,4 @@ RUN chown -R djcova:djcova /app
 
 USER djcova
 
-EXPOSE 3001
-
 CMD ["node", "dist/index.js"]

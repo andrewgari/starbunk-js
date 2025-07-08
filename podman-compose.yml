@@ -103,7 +103,7 @@ services:
       - djcova_cache:/app/cache
       - djcova_temp:/tmp
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f 'node dist/index.js' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
