@@ -19,7 +19,7 @@ async function getCovaIdentity(message?: Message) {
 		logger.debug(`[CovaBot] Using identity: "${identity.botName}" with avatar ${identity.avatarUrl}`);
 		return identity;
 	} catch (error) {
-		logger.error(`[CovaBot] Critical error getting identity, silently discarding message:`, error);
+		logger.error(`[CovaBot] Critical error getting identity, silently discarding message:`, error as Error);
 		return null; // Silent discard on any error
 	}
 }

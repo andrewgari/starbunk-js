@@ -57,7 +57,7 @@ export class CovaIdentityService {
 
       // Validate identity data
       if (!this.validateIdentity(identity)) {
-        logger.error(`[CovaIdentityService] Identity validation failed for user ${COVA_USER_ID}:`, identity);
+        logger.error(`[CovaIdentityService] Identity validation failed for user ${COVA_USER_ID}: ${JSON.stringify(identity)}`);
         return null;
       }
 
@@ -72,7 +72,7 @@ export class CovaIdentityService {
       return identity;
 
     } catch (error) {
-      logger.error(`[CovaIdentityService] Error getting Cova identity:`, error);
+      logger.error(`[CovaIdentityService] Error getting Cova identity:`, error as Error);
       return null;
     }
   }

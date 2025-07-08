@@ -5,6 +5,27 @@ import { TriggerResponse } from '../types/triggerResponse';
 import { CovaIdentityService } from '../services/identity';
 
 /**
+ * Mock Message class for web testing (non-Discord usage)
+ */
+export class MockMessage {
+	public content: string;
+	public author: { id: string; bot: boolean };
+	public mentions: { has: (userId: string) => boolean };
+	public guild: { id: string } | null;
+	public channel: { send: (content: string) => Promise<void> };
+	public client: { user: { id: string } | null };
+
+	constructor(content: string, authorId: string = 'web-user') {
+		this.content = content;
+		this.author = { id: authorId, bot: false };
+		this.mentions = { has: () => false }; // No mentions in web testing
+		this.guild = null; // No guild context for web testing
+		this.channel = { send: async () => {} }; // No-op for web testing
+		this.client = { user: null }; // No client user for web testing
+	}
+}
+
+/**
  * Configuration interface for CovaBot
  */
 export interface CovaBotConfig {
@@ -48,6 +69,74 @@ export class CovaBot {
 			responseRate: this.config.defaultResponseRate || 100,
 			disabled: this.config.disabled || false,
 		};
+	}
+
+	/**
+	 * Process web message for testing (non-Discord)
+	 * Returns the bot's response as a string instead of sending via Discord
+	 */
+	async processWebMessage(content: string): Promise<string | null> {
+		try {
+			// Create mock message for web testing
+			const mockMessage = new MockMessage(content);
+
+			// Check if bot is disabled
+			if (this.config.disabled) {
+				logger.debug('[CovaBot] Bot is disabled, skipping message');
+				return null;
+			}
+
+			// Check response rate
+			if ((this.config.defaultResponseRate || 100) <= 0) {
+				logger.debug('[CovaBot] Skipping message due to response rate');
+				return null;
+			}
+
+			if ((this.config.defaultResponseRate || 100) < 100) {
+				const randomValue = Math.random() * 100;
+				if (randomValue >= (this.config.defaultResponseRate || 100)) {
+					logger.debug('[CovaBot] Skipping message due to response rate');
+					return null;
+				}
+			}
+
+			// Sort triggers by priority (highest first)
+			const sortedTriggers = [...this.config.triggers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+
+			logger.debug(`[CovaBot] Processing ${sortedTriggers.length} triggers for web message: "${content}"`);
+
+			// Process triggers in priority order
+			for (const trigger of sortedTriggers) {
+				try {
+					// Check if trigger condition matches
+					const matches = await trigger.condition(mockMessage as unknown as Message);
+					logger.debug(`[CovaBot] Trigger "${trigger.name}" condition result: ${matches}`);
+
+					if (!matches) continue;
+
+					// Get response text
+					const responseText = await trigger.response(mockMessage as unknown as Message);
+					if (!responseText) {
+						logger.debug('[CovaBot] Empty response from trigger');
+						continue;
+					}
+
+					logger.debug(`[CovaBot] Web response generated: "${responseText}"`);
+					return responseText;
+
+				} catch (error) {
+					logger.error(`[CovaBot] Error in trigger "${trigger.name}":`, error as Error);
+					continue; // Try next trigger
+				}
+			}
+
+			// No triggers matched
+			return null;
+
+		} catch (error) {
+			logger.error('[CovaBot] Error processing web message:', error as Error);
+			return null;
+		}
 	}
 
 	/**

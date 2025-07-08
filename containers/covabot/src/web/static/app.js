@@ -7,6 +7,9 @@ class CovaBot {
         this.configuration = null;
         this.notes = [];
         this.stats = {};
+        this.chatMessages = [];
+        this.messageCount = 0;
+        this.responseCount = 0;
         this.init();
     }
 
@@ -101,6 +104,34 @@ class CovaBot {
         const importConfigBtn = document.getElementById('import-config-btn');
         if (importConfigBtn) {
             importConfigBtn.addEventListener('click', () => this.importConfiguration());
+        }
+
+        // Chat functionality
+        this.setupChatEventListeners();
+    }
+
+    setupChatEventListeners() {
+        // Chat form submission
+        const chatForm = document.getElementById('chat-form');
+        if (chatForm) {
+            chatForm.addEventListener('submit', (e) => this.handleChatSubmit(e));
+        }
+
+        // Clear chat button
+        const clearChatBtn = document.getElementById('clear-chat-btn');
+        if (clearChatBtn) {
+            clearChatBtn.addEventListener('click', () => this.clearChat());
+        }
+
+        // Enter key in chat input
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.handleChatSubmit(e);
+                }
+            });
         }
     }
 
@@ -792,6 +823,157 @@ class CovaBot {
             case 'warning': return 'warning';
             default: return 'primary';
         }
+    }
+
+    // Chat functionality
+    async handleChatSubmit(e) {
+        e.preventDefault();
+
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        const message = chatInput.value.trim();
+
+        if (!message) return;
+
+        // Disable input while processing
+        chatInput.disabled = true;
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Sending...';
+
+        try {
+            // Add user message to chat
+            this.addChatMessage(message, 'user');
+            this.messageCount++;
+            this.updateChatStats();
+
+            // Clear input
+            chatInput.value = '';
+
+            // Send to API
+            const response = await fetch(`${this.apiBase}/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.data.botResponse) {
+                // Add bot response to chat
+                this.addChatMessage(data.data.botResponse, 'bot');
+                this.responseCount++;
+            } else if (data.success && !data.data.botResponse) {
+                // Bot chose not to respond
+                this.addChatMessage('*CovaBot chose not to respond*', 'system');
+            } else {
+                throw new Error(data.error || 'Failed to get response');
+            }
+
+        } catch (error) {
+            console.error('Chat error:', error);
+            this.addChatMessage('*Error: Failed to get response from CovaBot*', 'error');
+            this.showToast('Failed to send message', 'error');
+        } finally {
+            // Re-enable input
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="bi bi-send"></i> Send';
+            chatInput.focus();
+            this.updateChatStats();
+        }
+    }
+
+    addChatMessage(content, type) {
+        const chatMessages = document.getElementById('chat-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `mb-3 ${type === 'user' ? 'text-end' : ''}`;
+
+        const timestamp = new Date().toLocaleTimeString();
+
+        let messageClass, icon, sender;
+        switch (type) {
+            case 'user':
+                messageClass = 'bg-primary text-white';
+                icon = 'person-fill';
+                sender = 'You';
+                break;
+            case 'bot':
+                messageClass = 'bg-light border';
+                icon = 'robot';
+                sender = 'CovaBot';
+                break;
+            case 'system':
+                messageClass = 'bg-warning bg-opacity-25 border-warning';
+                icon = 'info-circle';
+                sender = 'System';
+                break;
+            case 'error':
+                messageClass = 'bg-danger bg-opacity-25 border-danger';
+                icon = 'exclamation-triangle';
+                sender = 'Error';
+                break;
+        }
+
+        messageDiv.innerHTML = `
+            <div class="d-inline-block p-3 rounded ${messageClass}" style="max-width: 80%;">
+                <div class="d-flex align-items-center mb-1">
+                    <i class="bi bi-${icon} me-2"></i>
+                    <small class="fw-bold">${sender}</small>
+                    <small class="ms-auto opacity-75">${timestamp}</small>
+                </div>
+                <div>${this.escapeHtml(content)}</div>
+            </div>
+        `;
+
+        // Remove empty state if it exists
+        const emptyState = chatMessages.querySelector('.text-center.text-muted');
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Store message
+        this.chatMessages.push({
+            content,
+            type,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    clearChat() {
+        const chatMessages = document.getElementById('chat-messages');
+        chatMessages.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-chat-square-text fs-1"></i>
+                <p class="mt-2">Start a conversation with CovaBot!</p>
+                <small>Type a message below to test the bot's responses</small>
+            </div>
+        `;
+
+        this.chatMessages = [];
+        this.messageCount = 0;
+        this.responseCount = 0;
+        this.updateChatStats();
+
+        this.showToast('Chat cleared', 'success');
+    }
+
+    updateChatStats() {
+        const messageCountEl = document.getElementById('message-count');
+        const responseCountEl = document.getElementById('response-count');
+
+        if (messageCountEl) messageCountEl.textContent = this.messageCount;
+        if (responseCountEl) responseCountEl.textContent = this.responseCount;
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 

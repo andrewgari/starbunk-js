@@ -8,6 +8,8 @@ import { BotConfigurationService } from '../services/botConfigurationService';
 import { CreateNoteRequest, UpdateNoteRequest, NoteSearchFilters } from '../types/personalityNote';
 import { CreateConfigurationRequest, UpdateConfigurationRequest } from '../types/botConfiguration';
 import { rateLimit, requestLogger } from './middleware/auth';
+import { CovaBot } from '../cova-bot/covaBot';
+import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from '../cova-bot/triggers';
 
 export class WebServer {
   private app: express.Application;
@@ -15,6 +17,7 @@ export class WebServer {
   private notesService: PersonalityNotesService | PersonalityNotesServiceDb;
   private configService: BotConfigurationService;
   private useDatabase: boolean;
+  private covaBot: CovaBot;
 
   constructor(port: number = 7080, useDatabase: boolean = false) {
     this.app = express();
@@ -30,6 +33,21 @@ export class WebServer {
 
     // Initialize configuration service
     this.configService = BotConfigurationService.getInstance();
+
+    // Initialize CovaBot for web testing
+    this.covaBot = new CovaBot({
+      name: 'CovaBot',
+      description: 'LLM-powered CovaBot for web testing',
+      defaultIdentity: {
+        botName: 'Cova',
+        avatarUrl: '/static/cova-avatar.png', // Static avatar for web testing
+      },
+      triggers: [
+        covaStatsCommandTrigger,
+        covaDirectMentionTrigger,
+        covaTrigger,
+      ],
+    });
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -339,6 +357,52 @@ export class WebServer {
       } catch (error) {
         logger.error('[WebServer] Error getting stats:', error);
         res.status(500).json({ success: false, error: 'Failed to get stats' });
+      }
+    });
+
+    // Chat endpoint for conversation testing
+    apiRouter.post('/chat', async (req, res) => {
+      try {
+        const { message } = req.body;
+
+        // Validation
+        if (!message || typeof message !== 'string' || !message.trim()) {
+          return res.status(400).json({
+            success: false,
+            error: 'Message is required and must be a non-empty string'
+          });
+        }
+
+        // Process message through CovaBot
+        const response = await this.covaBot.processWebMessage(message.trim());
+
+        if (response) {
+          res.json({
+            success: true,
+            data: {
+              userMessage: message.trim(),
+              botResponse: response,
+              timestamp: new Date().toISOString()
+            }
+          });
+        } else {
+          // Bot chose not to respond (due to triggers, rate limiting, etc.)
+          res.json({
+            success: true,
+            data: {
+              userMessage: message.trim(),
+              botResponse: null,
+              timestamp: new Date().toISOString(),
+              reason: 'Bot chose not to respond'
+            }
+          });
+        }
+      } catch (error) {
+        logger.error('[WebServer] Error in chat endpoint:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to process chat message'
+        });
       }
     });
 
