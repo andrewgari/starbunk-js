@@ -242,10 +242,11 @@ describe('CovaBot Response Scenarios', () => {
       
       const identityFunction = covaTrigger.identity;
       if (typeof identityFunction === 'function') {
-        const result = await identityFunction(mockMessage);
+        const testMessage = createMockMessage();
+        const result = await identityFunction(testMessage);
 
         expect(result).toEqual(validIdentity);
-        expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledWith(mockMessage);
+        expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledWith(testMessage);
       }
     });
   });

@@ -173,9 +173,9 @@ describe('Enhanced CovaBot Triggers', () => {
       mockAnd.mockReturnValue(mockCondition);
       
       // Mock the helper functions
-      mockFromBot.mockReturnValue((msg: Message) => msg.author.bot);
-      mockFromUser.mockReturnValue((userId: string) => (msg: Message) => msg.author.id === userId);
-      mockNot.mockReturnValue((fn: any) => (msg: Message) => !fn(msg));
+      mockFromBot.mockImplementation(() => (msg: Message) => msg.author.bot);
+      mockFromUser.mockImplementation((userId: string) => (msg: Message) => msg.author.id === userId);
+      mockNot.mockImplementation((fn: any) => (msg: Message) => !fn(msg));
     });
 
     describe('Bot Message Filtering', () => {

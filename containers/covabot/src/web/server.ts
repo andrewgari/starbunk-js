@@ -1,4 +1,5 @@
-import express, { Request, Response, RequestHandler } from 'express';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { logger } from '@starbunk/shared';
@@ -125,7 +126,7 @@ export class WebServer {
     });
 
     // Get note by ID
-    apiRouter.get('/notes/:id', async (req: Request<{ id: string }>, res: Response) => {
+    apiRouter.get('/notes/:id', async (req: any, res: any) => {
       try {
         const note = await this.memoryService.getNoteById(req.params.id);
         if (!note) {
@@ -139,7 +140,7 @@ export class WebServer {
     });
 
     // Create new note
-    apiRouter.post('/notes', async (req: Request, res: Response) => {
+    apiRouter.post('/notes', async (req: any, res: any) => {
       try {
         const request: CreatePersonalityNoteRequest = {
           content: req.body.content,
@@ -165,7 +166,7 @@ export class WebServer {
     });
 
     // Update note
-    apiRouter.put('/notes/:id', async (req: Request<{ id: string }>, res: Response) => {
+    apiRouter.put('/notes/:id', async (req: any, res: any) => {
       try {
         const request: UpdatePersonalityNoteRequest = {
           content: req.body.content,
@@ -187,7 +188,7 @@ export class WebServer {
     });
 
     // Delete note
-    apiRouter.delete('/notes/:id', async (req: Request<{ id: string }>, res: Response) => {
+    apiRouter.delete('/notes/:id', async (req: any, res: any) => {
       try {
         const deleted = await this.memoryService.deleteNote(req.params.id);
         if (!deleted) {
@@ -224,7 +225,7 @@ export class WebServer {
     });
 
     // Semantic search endpoint
-    apiRouter.post('/search', async (req: Request, res: Response) => {
+    apiRouter.post('/search', async (req: any, res: any) => {
       try {
         const { query, filters = {} } = req.body;
 
@@ -241,7 +242,7 @@ export class WebServer {
     });
 
     // Enhanced context generation
-    apiRouter.post('/context/enhanced', async (req: Request, res: Response) => {
+    apiRouter.post('/context/enhanced', async (req: any, res: any) => {
       try {
         const { message, userId, channelId, options = {} } = req.body;
 
@@ -397,7 +398,7 @@ export class WebServer {
     });
 
     // Chat endpoint for conversation testing
-    apiRouter.post('/chat', (async (req: Request, res: Response) => {
+    apiRouter.post('/chat', async (req: any, res: any) => {
       try {
         const { message } = req.body;
 
@@ -440,7 +441,7 @@ export class WebServer {
           error: 'Failed to process chat message'
         });
       }
-    }) as RequestHandler);
+    });
 
     // Mount API routes
     this.app.use('/api', apiRouter);

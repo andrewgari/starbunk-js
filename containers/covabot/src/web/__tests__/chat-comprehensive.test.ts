@@ -317,7 +317,7 @@ describe('Comprehensive Chat Testing Suite', () => {
       ];
 
       for (const test of regressionTests) {
-        const response = await request(app)[test.method.toLowerCase()](test.endpoint);
+        const response = await (request(app) as any)[test.method.toLowerCase()](test.endpoint);
         
         // Should not break existing endpoints (may hit rate limiting)
         expect([200, 404, 429, 500]).toContain(response.status); // Some might not be fully implemented

@@ -263,8 +263,8 @@ describe('Chat Performance and Edge Case Tests', () => {
 
   describe('Resource Management', () => {
     it('should clean up resources properly', async () => {
-      const initialHandles = process._getActiveHandles().length;
-      const initialRequests = process._getActiveRequests().length;
+      const initialHandles = (process as any)._getActiveHandles().length;
+      const initialRequests = (process as any)._getActiveRequests().length;
 
       // Make multiple requests (reduced count)
       for (let i = 0; i < 15; i++) {
@@ -280,8 +280,8 @@ describe('Chat Performance and Edge Case Tests', () => {
       // Allow some time for cleanup
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const finalHandles = process._getActiveHandles().length;
-      const finalRequests = process._getActiveRequests().length;
+      const finalHandles = (process as any)._getActiveHandles().length;
+      const finalRequests = (process as any)._getActiveRequests().length;
       
       // Should not have significant resource leaks
       expect(finalHandles - initialHandles).toBeLessThan(10);

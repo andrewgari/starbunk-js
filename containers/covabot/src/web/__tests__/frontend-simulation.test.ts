@@ -267,7 +267,7 @@ describe('Frontend Chat Interface Simulation', () => {
         messageCount: 0,
         responseCount: 0,
         sessionStartTime: Date.now(),
-        lastMessageTime: null
+        lastMessageTime: null as number | null
       };
 
       const testMessages = [
@@ -303,7 +303,7 @@ describe('Frontend Chat Interface Simulation', () => {
         Messages sent: ${chatState.messageCount}
         Bot responses: ${chatState.responseCount}
         Response rate: ${(chatState.responseCount / chatState.messageCount * 100).toFixed(1)}%
-        Session duration: ${chatState.lastMessageTime - chatState.sessionStartTime}ms`);
+        Session duration: ${(chatState.lastMessageTime || 0) - chatState.sessionStartTime}ms`);
     });
 
     it('should simulate frontend clear chat functionality', async () => {
