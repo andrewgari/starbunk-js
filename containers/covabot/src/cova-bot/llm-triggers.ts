@@ -300,14 +300,14 @@ Based on the Response Decision System, should Cova respond to this message?`;
 
 // Initialize periodic stats logging - every hour
 setInterval(() => {
-	const stats = perfTimer.getStatsString();
-	logger.info(`[CovaBot] Performance stats:\n${stats}`);
+	// const stats = perfTimer.getStatsString();
+	// logger.info(`[CovaBot] Performance stats:\n${stats}`);
 
 	// Reset after logging to avoid memory growth
-	if (perfTimer.getStats()['llm-decision']?.count > 1000) {
-		logger.info(`[CovaBot] Resetting performance stats after threshold`);
-		perfTimer.reset();
-	}
+	// if (perfTimer.getStats()['llm-decision']?.count > 1000) {
+	//	logger.info(`[CovaBot] Resetting performance stats after threshold`);
+	//	perfTimer.reset();
+	// }
 
 	// Clean up old entries from last response tracking
 	const now = Date.now();
