@@ -5,13 +5,13 @@ import { LLMProviderType } from '@starbunk/shared';
 import { PromptRegistry, PromptType } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
 import { getPersonalityService } from '@starbunk/shared';
-import { PerformanceTimer } from '@starbunk/shared';
+// import { PerformanceTimer } from '@starbunk/shared/dist/utils/time';
 import { ResponseGenerator, weightedRandomResponse } from '../utils/responseUtils';
 import { COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_PROMPTS } from './constants';
 import { QdrantMemoryService } from '../services/qdrantMemoryService';
 
 // Create performance timer for CovaBot operations
-const perfTimer = PerformanceTimer.getInstance();
+// const perfTimer = PerformanceTimer.getInstance();
 
 // Track last time the bot responded to maintain conversation context
 const lastResponseTime = new Map<string, number>();
@@ -43,7 +43,10 @@ PromptRegistry.registerPrompt(PromptType.COVA_DECISION, {
  */
 export const createLLMEmulatorResponse = (): ResponseGenerator => {
 	return async (message: Message): Promise<string> => {
-		return await PerformanceTimer.time('llm-emulator', async () => {
+		// Simple timing without PerformanceTimer for now
+		const startTime = Date.now();
+		try {
+			const result = await (async () => {
 			try {
 				logger.debug(`[CovaBot] Generating response with personality emulation`);
 
@@ -154,7 +157,14 @@ Message: ${message.content}`;
 				logger.warn(`[CovaBot] LLM service error: ${error instanceof Error ? error.message : String(error)}`);
 				return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 			}
-		});
+		})();
+
+		logger.debug(`[CovaBot] LLM emulator took ${Date.now() - startTime}ms`);
+		return result;
+	} catch (error) {
+		logger.error(`[CovaBot] Error in emulator timing: ${error instanceof Error ? error.message : String(error)}`);
+		return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
+	}
 	};
 };
 
@@ -163,7 +173,10 @@ Message: ${message.content}`;
  */
 export const createLLMResponseDecisionCondition = () => {
 	return async (message: Message): Promise<boolean> => {
-		return await PerformanceTimer.time('llm-decision', async () => {
+		// Simple timing without PerformanceTimer for now
+		const startTime = Date.now();
+		try {
+			const result = await (async () => {
 			try {
 				// Skip bot messages FIRST - even if they mention Cova
 				if (message.author.bot) {
@@ -274,7 +287,14 @@ Based on the Response Decision System, should Cova respond to this message?`;
 				logger.error(`[CovaBot] Error in decision logic: ${error instanceof Error ? error.message : String(error)}`);
 				return Math.random() < 0.2; // 20% chance to respond on error
 			}
-		});
+		})();
+
+		logger.debug(`[CovaBot] LLM decision took ${Date.now() - startTime}ms`);
+		return result;
+	} catch (error) {
+		logger.error(`[CovaBot] Error in decision timing: ${error instanceof Error ? error.message : String(error)}`);
+		return Math.random() < 0.2; // 20% chance to respond on error
+	}
 	};
 };
 
