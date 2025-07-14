@@ -9,6 +9,9 @@
 		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
 		"test": "jest",
 		"type-check": "tsc --noEmit",
+		"lint": "eslint src/**/*.ts",
+		"lint:fix": "eslint src/**/*.ts --fix",
+		"check:all": "npm run type-check && npm run lint && npm run test",
 		"clean": "rimraf dist"
 	},
 	"dependencies": {

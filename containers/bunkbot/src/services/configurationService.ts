@@ -1,5 +1,5 @@
-// Use the root Prisma client since BunkBot container doesn't have its own schema
-import { PrismaClient } from '@prisma/client';
+// Use the shared database service instead of direct Prisma import
+import { getDatabaseService } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
 
 export interface UserConfig {
@@ -31,15 +31,15 @@ export interface ServerConfig {
  * Replaces hardcoded values with database-driven configuration
  */
 export class ConfigurationService {
-	private prisma: PrismaClient;
+	private prisma: any;
 	private userCache = new Map<string, UserConfig>();
 	private botCache = new Map<string, BotConfig>();
 	private serverCache = new Map<string, ServerConfig>();
 	private cacheExpiry = 5 * 60 * 1000; // 5 minutes
 	private lastCacheUpdate = 0;
 
-	constructor(prisma?: PrismaClient) {
-		this.prisma = prisma || new PrismaClient();
+	constructor(prisma?: any) {
+		this.prisma = prisma || getDatabaseService();
 	}
 
 	/**

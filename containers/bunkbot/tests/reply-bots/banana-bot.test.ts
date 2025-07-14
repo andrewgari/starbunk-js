@@ -3,12 +3,32 @@ import bananaBot from '../../src/reply-bots/banana-bot';
 import { bananaTrigger } from '../../src/reply-bots/banana-bot/triggers';
 import { BANANA_BOT_RESPONSES, getRandomBananaResponse, BANANA_BOT_NAME, BANANA_BOT_AVATAR_URL } from '../../src/reply-bots/banana-bot/constants';
 
+// Venn's user ID (from deprecated userId.ts for testing purposes)
+const VENN_USER_ID = '151120340343455744';
+
 // Mock the isDebugMode function to return false for proper chance testing
 // We'll use Venn's ID in tests instead of Cova's to match the production behavior
 jest.mock('@starbunk/shared', () => ({
 	...jest.requireActual('@starbunk/shared'),
 	isDebugMode: jest.fn().mockReturnValue(false)
 }));
+
+// Mock the ConfigurationService
+jest.mock('../../src/services/configurationService', () => {
+	return {
+		ConfigurationService: jest.fn().mockImplementation(() => ({
+			getUserIdByUsername: jest.fn().mockImplementation((username: string) => {
+				if (username === 'Venn') {
+					return Promise.resolve(VENN_USER_ID);
+				}
+				if (username === 'Cova') {
+					return Promise.resolve('139592376443338752'); // Cova's ID for debug mode
+				}
+				return Promise.resolve(null);
+			})
+		}))
+	};
+});
 
 // Mock Math.random for deterministic tests
 const originalRandom = global.Math.random;
@@ -114,7 +134,7 @@ describe('Banana Bot', () => {
 		it('should respond to empty messages from target user with favorable chance', async () => {
 			// Arrange: Set favorable random value and create empty message from target user (Venn in production mode)
 			mockRandomValue = 0.05; // 5% - within 10% threshold
-			const targetUser = mockUser({ id: '123456789012345678' }); // Venn's ID (used in production mode)
+			const targetUser = mockUser({ id: VENN_USER_ID }); // Venn's ID (used in production mode)
 			const message = mockMessage({ content: '', author: targetUser });
 
 			// Act: Check if the trigger condition matches
@@ -127,7 +147,7 @@ describe('Banana Bot', () => {
 		it('should NOT respond to empty messages from target user with unfavorable chance', async () => {
 			// Arrange: Set unfavorable random value and create empty message from target user (Venn in production mode)
 			mockRandomValue = 0.15; // 15% - above 10% threshold
-			const targetUser = mockUser({ id: '123456789012345678' }); // Venn's ID (used in production mode)
+			const targetUser = mockUser({ id: VENN_USER_ID }); // Venn's ID (used in production mode)
 			const message = mockMessage({ content: '', author: targetUser });
 
 			// Act: Check if the trigger condition matches

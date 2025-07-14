@@ -1,7 +1,7 @@
 import { getDiscordService, DiscordService, logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
-import { createBotDescription, createBotReplyName, createReplyBot } from '../bot-builder';
+import { createBotDescription, createBotReplyName, createReplyBot, setBotData, clearBotData } from '../bot-builder';
 
 // Mock the PrismaClient
 const mockBlacklistFindUnique = jest.fn().mockResolvedValue(null);
@@ -32,6 +32,12 @@ describe('Bot builder', () => {
 		jest.clearAllMocks();
 		// Reset the blacklist mock to return null by default (no blacklisted user)
 		mockBlacklistFindUnique.mockResolvedValue(null);
+
+		// Clear the in-memory bot data storage
+		clearBotData();
+
+		// Set up the getDiscordService mock to return our mock instance
+		(getDiscordService as jest.Mock).mockReturnValue(mockDiscordService);
 
 		// Reset the Discord service mock
 		mockDiscordService.sendMessageWithBotIdentity.mockClear();
@@ -290,14 +296,6 @@ describe('Bot builder', () => {
 		});
 
 		it('should skip messages from any blacklisted user', async () => {
-			// Configure the mock to return a blacklisted record for a specific user
-			mockBlacklistFindUnique.mockResolvedValue({
-				id: 'blacklist-1',
-				guildId: 'test-guild-id',
-				userId: 'blacklisted-user-id',
-				createdAt: new Date()
-			});
-
 			const trigger = {
 				name: 'test-trigger',
 				condition: jest.fn().mockReturnValue(true),
@@ -310,6 +308,9 @@ describe('Bot builder', () => {
 				defaultIdentity: mockBotIdentity,
 				triggers: [trigger],
 			};
+
+			// Set up blacklist data in the in-memory storage
+			setBotData('TestBot', 'blacklist:test-guild-id:blacklisted-user-id', true);
 
 			const bot = createReplyBot(config);
 
@@ -339,16 +340,6 @@ describe('Bot builder', () => {
 			} as unknown as Message;
 
 			await bot.processMessage(blacklistedMessage);
-
-			// Verify the blacklist was checked
-			expect(mockBlacklistFindUnique).toHaveBeenCalledWith({
-				where: {
-					guildId_userId: {
-						guildId: 'test-guild-id',
-						userId: 'blacklisted-user-id'
-					}
-				}
-			});
 
 			// Verify the message was skipped (triggers not called)
 			expect(trigger.condition).not.toHaveBeenCalled();
@@ -579,11 +570,10 @@ describe('Bot builder', () => {
 
 			await bot.processMessage(message);
 
-			// Should log the error and skip sending the message
+			// Should log debug message and skip sending the message
 			expect(trigger.identity).toHaveBeenCalled();
-			expect(logger.error).toHaveBeenCalledWith(
-				expect.stringMatching(/Failed to get bot identity/),
-				expect.any(Error),
+			expect(logger.debug).toHaveBeenCalledWith(
+				expect.stringMatching(/Identity resolution failed for trigger "invalid-identity" - bot will remain silent/)
 			);
 			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});

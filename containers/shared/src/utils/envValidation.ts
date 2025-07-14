@@ -113,3 +113,10 @@ export function getTestingChannelIds(): string[] {
 export function getDebugMode(): boolean {
 	return getEnvVarBoolean('DEBUG_MODE', false);
 }
+
+/**
+ * Alias for getDebugMode() for backward compatibility
+ */
+export function isDebugMode(): boolean {
+	return getDebugMode();
+}

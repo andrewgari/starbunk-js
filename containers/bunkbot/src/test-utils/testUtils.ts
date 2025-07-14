@@ -3,9 +3,36 @@ import { BotIdentity } from '../types/botIdentity';
 import { DiscordService } from '@starbunk/shared';
 
 /**
- * Mock Discord Message for testing
+ * Create a mock Discord message for testing
+ * Supports legacy signatures for backward compatibility:
+ * - mockMessage() - default message
+ * - mockMessage(content) - message with specific content
+ * - mockMessage(content, username, isBot) - message with content, username, and bot flag
+ * - mockMessage(overrides) - message with property overrides
  */
-export function mockMessage(overrides: Partial<Message> = {}): Message {
+export function mockMessage(
+	contentOrOverrides?: string | Partial<Message>,
+	username?: string,
+	isBot?: boolean
+): Message {
+	// Handle legacy signatures
+	let overrides: Partial<Message> = {};
+
+	if (typeof contentOrOverrides === 'string') {
+		// Legacy signature: mockMessage(content, username?, isBot?)
+		overrides.content = contentOrOverrides;
+		if (username) {
+			overrides.author = {
+				...mockUser(),
+				username,
+				bot: isBot || false
+			};
+		}
+	} else if (contentOrOverrides && typeof contentOrOverrides === 'object') {
+		// New signature: mockMessage(overrides)
+		overrides = contentOrOverrides;
+	}
+	// If contentOrOverrides is undefined, use empty overrides (default message)
 	const defaultMessage = {
 		id: '123456789',
 		content: 'test message',
@@ -13,6 +40,11 @@ export function mockMessage(overrides: Partial<Message> = {}): Message {
 		channel: mockTextChannel(),
 		guild: mockGuild(),
 		member: mockGuildMember(),
+		client: {
+			user: {
+				id: 'bot123'
+			}
+		},
 		createdTimestamp: Date.now(),
 		editedTimestamp: null,
 		mentions: {
@@ -203,9 +235,9 @@ export function mockBotIdentity(overrides: Partial<BotIdentity> = {}): BotIdenti
 }
 
 /**
- * Mock DiscordService for testing
+ * Create a mock DiscordService for testing
  */
-export function mockDiscordService(overrides: Partial<DiscordService> = {}): Partial<DiscordService> {
+export function createMockDiscordService(overrides: Partial<DiscordService> = {}): Partial<DiscordService> {
 	return {
 		getBotProfile: jest.fn().mockResolvedValue(mockBotIdentity()),
 		getMemberAsBotIdentity: jest.fn().mockResolvedValue(mockBotIdentity()),
@@ -216,9 +248,26 @@ export function mockDiscordService(overrides: Partial<DiscordService> = {}): Par
 		sendMessage: jest.fn().mockResolvedValue(mockMessage()),
 		sendBulkMessages: jest.fn().mockResolvedValue([]),
 		sendWebhookMessage: jest.fn().mockResolvedValue(mockMessage()),
+		sendMessageWithBotIdentity: jest.fn().mockResolvedValue(mockMessage()),
 		...overrides
 	};
 }
+
+/**
+ * Global mock instance for DiscordService that can be used across tests
+ */
+export const mockDiscordService = {
+	getBotProfile: jest.fn().mockResolvedValue(mockBotIdentity()),
+	getMemberAsBotIdentity: jest.fn().mockResolvedValue(mockBotIdentity()),
+	getGuild: jest.fn().mockReturnValue(mockGuild()),
+	getMember: jest.fn().mockReturnValue(mockGuildMember()),
+	getChannel: jest.fn().mockReturnValue(mockTextChannel()),
+	getRole: jest.fn().mockReturnValue({}),
+	sendMessage: jest.fn().mockResolvedValue(mockMessage()),
+	sendBulkMessages: jest.fn().mockResolvedValue([]),
+	sendWebhookMessage: jest.fn().mockResolvedValue(mockMessage()),
+	sendMessageWithBotIdentity: jest.fn().mockResolvedValue(mockMessage()),
+};
 
 /**
  * Mock Discord Client for testing

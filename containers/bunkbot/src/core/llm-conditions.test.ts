@@ -1,12 +1,21 @@
-import { LLMManager } from '@starbunk/shared';
-import { PromptType } from '@starbunk/shared';
-import { logger } from '@starbunk/shared';
+import { getLLMManager, LLMManager, logger } from '@starbunk/shared';
 import { mockMessage } from '../test-utils/testUtils';
 import { createLLMCondition } from './llm-conditions';
 
-// Mock the LLMManager
-jest.mock('@starbunk/shared');
-jest.mock('@starbunk/shared');
+// Mock the shared package
+jest.mock('@starbunk/shared', () => {
+	const actual = jest.requireActual('@starbunk/shared');
+	return {
+		...actual,
+		getLLMManager: jest.fn(),
+		logger: {
+			warn: jest.fn(),
+			error: jest.fn(),
+			info: jest.fn(),
+			debug: jest.fn()
+		}
+	};
+});
 
 describe('llm-conditions', () => {
 	let mockLLMManager: jest.Mocked<LLMManager>;
@@ -19,14 +28,28 @@ describe('llm-conditions', () => {
 		mockLLMManager = {
 			createPromptCompletion: jest.fn(),
 		} as unknown as jest.Mocked<LLMManager>;
+
+		// Set up the getLLMManager mock to return our mock instance
+		(getLLMManager as jest.Mock).mockReturnValue(mockLLMManager);
 	});
 
 	describe('createLLMCondition', () => {
 		it('should use LLM for condition check when prompt type is registered', async () => {
 			// Setup
 			const prompt = 'Does this message mention cats?';
-			const message = mockMessage('I love cats!');
-			mockLLMManager.createPromptCompletion.mockResolvedValue('yes');
+			const message = mockMessage({ content: 'I love cats!' });
+
+			// Create a spy on the mock function
+			const createPromptCompletionSpy = jest.fn().mockResolvedValue('yes');
+			mockLLMManager.createPromptCompletion = createPromptCompletionSpy;
+
+			// Test the mock directly first
+			const directResult = await mockLLMManager.createPromptCompletion('conditionCheck', 'test', {});
+			expect(directResult).toBe('yes');
+			expect(createPromptCompletionSpy).toHaveBeenCalled();
+
+			// Reset the spy
+			createPromptCompletionSpy.mockClear();
 
 			// Create condition
 			const condition = createLLMCondition(prompt, {
@@ -37,9 +60,10 @@ describe('llm-conditions', () => {
 			const result = await condition(message);
 
 			// Verify
+			expect(createPromptCompletionSpy).toHaveBeenCalled();
 			expect(result).toBe(true);
-			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalledWith(
-				PromptType.CONDITION_CHECK,
+			expect(createPromptCompletionSpy).toHaveBeenCalledWith(
+				'conditionCheck',
 				`${prompt} Message: "I love cats!"`,
 				expect.any(Object)
 			);
@@ -48,7 +72,7 @@ describe('llm-conditions', () => {
 		it('should fall back to regex when LLM fails', async () => {
 			// Setup
 			const prompt = 'Does this message mention cats?';
-			const message = mockMessage('I love cats!');
+			const message = mockMessage({ content: 'I love cats!' });
 			const regexFallback = /cats/i;
 
 			mockLLMManager.createPromptCompletion.mockRejectedValue(
@@ -75,7 +99,7 @@ describe('llm-conditions', () => {
 		it('should return false when LLM fails and no regex fallback is provided', async () => {
 			// Setup
 			const prompt = 'Does this message mention cats?';
-			const message = mockMessage('I love cats!');
+			const message = mockMessage({ content: 'I love cats!' });
 
 			mockLLMManager.createPromptCompletion.mockRejectedValue(
 				new Error('Prompt type conditionCheck not registered')
@@ -100,7 +124,7 @@ describe('llm-conditions', () => {
 		it('should use regex fallback correctly when provided', async () => {
 			// Setup
 			const prompt = 'Does this message mention cats?';
-			const message = mockMessage('I love dogs!');
+			const message = mockMessage({ content: 'I love dogs!' });
 			const regexFallback = /cats/i;
 
 			mockLLMManager.createPromptCompletion.mockRejectedValue(

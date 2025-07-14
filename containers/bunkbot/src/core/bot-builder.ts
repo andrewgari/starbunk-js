@@ -1,5 +1,5 @@
-import { logger } from '@starbunk/shared';
-import { Client, Message, TextChannel, Webhook } from 'discord.js';
+import { logger, getDiscordService } from '@starbunk/shared';
+import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
@@ -190,35 +190,17 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 						continue;
 					}
 
-					// Send message with custom bot identity using webhooks
+					// Send message with custom bot identity using Discord service
 					try {
-						if (message.channel instanceof TextChannel) {
-							// Use webhook for custom bot identity
-							const webhook = await getOrCreateWebhook(message.channel, message.client);
-							await webhook.send({
-								content: responseText,
-								username: identity.botName,
-								avatarURL: identity.avatarUrl
-							});
-							logger.debug(`Message sent via webhook as ${identity.botName}`);
-						} else if ('send' in message.channel) {
-							// Fallback to regular message for non-text channels
-							await message.channel.send(responseText);
-							logger.debug(`Message sent via regular channel (no webhook support)`);
-						} else {
-							logger.warn(`Channel does not support sending messages`);
-						}
+						const discordService = getDiscordService();
+						await discordService.sendMessageWithBotIdentity(
+							message.channel.id,
+							identity,
+							responseText
+						);
+						logger.debug(`Message sent via Discord service as ${identity.botName}`);
 					} catch (error) {
-						logger.error(`Failed to send message to channel:`, error as Error);
-						// Fallback to regular message if webhook fails
-						try {
-							if ('send' in message.channel) {
-								await message.channel.send(responseText);
-								logger.debug(`Fallback message sent via regular channel`);
-							}
-						} catch (fallbackError) {
-							logger.error(`Fallback message also failed:`, fallbackError as Error);
-						}
+						logger.error(`Failed to send message via Discord service:`, error as Error);
 					}
 					return;
 				} catch (error) {
@@ -236,39 +218,14 @@ function getBotData(botName: string, key: string): string | number | boolean | u
 	return botStorage.get(botKey);
 }
 
-// Webhook cache for custom bot identities
-const webhookCache = new Map<string, Webhook>();
-
-async function getOrCreateWebhook(channel: TextChannel, client: Client): Promise<Webhook> {
-	const cacheKey = channel.id;
-	const cachedWebhook = webhookCache.get(cacheKey);
-	if (cachedWebhook) {
-		return cachedWebhook;
-	}
-
-	try {
-		// Try to find existing webhook
-		const webhooks = await channel.fetchWebhooks();
-		const existingWebhook = webhooks.find(w => w.owner?.id === client.user?.id);
-		if (existingWebhook) {
-			webhookCache.set(cacheKey, existingWebhook);
-			return existingWebhook;
-		}
-
-		// Create new webhook if none exists
-		if (!client.user) {
-			throw new Error('Client user not available');
-		}
-
-		const newWebhook = await channel.createWebhook({
-			name: 'BunkBot Webhook',
-			avatar: client.user.displayAvatarURL()
-		});
-		webhookCache.set(cacheKey, newWebhook);
-		return newWebhook;
-	} catch (error) {
-		logger.error(`Error in getOrCreateWebhook: ${error instanceof Error ? error.message : String(error)}`);
-		throw new Error(`Could not get or create webhook: ${error instanceof Error ? error.message : String(error)}`);
-	}
+export function setBotData(botName: string, key: string, value: string | number | boolean): void {
+	const botKey = `${botName}:${key}`;
+	botStorage.set(botKey, value);
 }
+
+export function clearBotData(): void {
+	botStorage.clear();
+}
+
+
 

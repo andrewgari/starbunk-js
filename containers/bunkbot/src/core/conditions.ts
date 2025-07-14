@@ -1,12 +1,5 @@
 import { isDebugMode, logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
-
-// Simple user IDs for testing and development
-const userIds = {
-	Cova: '139592376443338752', // Cova's actual Discord user ID
-	Venn: '123456789012345678', // Valid format placeholder for Venn
-	Chad: '123456789012345679' // Valid format placeholder for Chad
-};
 import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
 /**
@@ -92,7 +85,9 @@ export function contextContainsPhrase(phrase: string): ContextualTriggerConditio
 // Check if message is from specific user
 export function fromUser(userId: string | UserId): TriggerCondition {
 	if (isDebugMode()) {
-		return () => userId === userIds.Cova;
+		// In debug mode, simulate the user check by comparing the actual user ID
+		const id = typeof userId === 'string' ? userId : userId;
+		return (message: Message) => message.author.id === id;
 	}
 	const id = typeof userId === 'string' ? createUserId(userId) : userId;
 	return (message: Message) => message.author.id === id;
@@ -112,7 +107,7 @@ export function contextInChannel(channelId: string | ChannelId): ContextualTrigg
 
 // Check based on random chance
 export function withChance(chance: number): Condition {
-	return () => {
+	return (_message: Message) => {
 		if (isDebugMode()) {
 			return true;
 		}

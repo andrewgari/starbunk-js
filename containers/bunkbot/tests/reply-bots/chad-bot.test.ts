@@ -1,13 +1,30 @@
 import { mockMessage, mockUser } from '../../src/test-utils/testUtils';
 import chadBot from '../../src/reply-bots/chad-bot';
 import { chadKeywordTrigger } from '../../src/reply-bots/chad-bot/triggers';
-import { CHAD_RESPONSE, CHAD_USER_ID, CHAD_RESPONSE_CHANCE, CHAD_BOT_NAME, CHAD_BOT_AVATAR_URL } from '../../src/reply-bots/chad-bot/constants';
+import { CHAD_RESPONSE, CHAD_RESPONSE_CHANCE, CHAD_BOT_NAME, CHAD_BOT_AVATAR_URL } from '../../src/reply-bots/chad-bot/constants';
+
+// Chad's user ID (from deprecated userId.ts for testing purposes)
+const CHAD_USER_ID = '85184539906809856';
 
 // Mock the isDebugMode function to return false for proper chance testing
 jest.mock('@starbunk/shared', () => ({
 	...jest.requireActual('@starbunk/shared'),
 	isDebugMode: jest.fn().mockReturnValue(false)
 }));
+
+// Mock the ConfigurationService
+jest.mock('../../src/services/configurationService', () => {
+	return {
+		ConfigurationService: jest.fn().mockImplementation(() => ({
+			getUserIdByUsername: jest.fn().mockImplementation((username: string) => {
+				if (username === 'Chad') {
+					return Promise.resolve(CHAD_USER_ID);
+				}
+				return Promise.resolve(null);
+			})
+		}))
+	};
+});
 
 // Mock Math.random for deterministic tests
 const originalRandom = global.Math.random;

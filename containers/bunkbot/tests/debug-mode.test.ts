@@ -12,6 +12,12 @@ jest.mock('@starbunk/shared/dist/utils/envValidation', () => ({
 	isDebugMode: jest.fn()
 }));
 
+// Mock the shared package to ensure isDebugMode is mocked correctly
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
+	isDebugMode: jest.fn()
+}));
+
 // Mock shared services
 jest.mock('@starbunk/shared/dist/services/webhookManager');
 jest.mock('@starbunk/shared/dist/services/logger', () => ({
@@ -23,7 +29,8 @@ jest.mock('@starbunk/shared/dist/services/logger', () => ({
 	}
 }));
 
-import { getTestingServerIds, getTestingChannelIds, getDebugMode, isDebugMode } from '@starbunk/shared/dist/utils/envValidation';
+import { getTestingServerIds, getTestingChannelIds, getDebugMode, isDebugMode as isDebugModeFromEnv } from '@starbunk/shared/dist/utils/envValidation';
+import { isDebugMode } from '@starbunk/shared';
 
 describe('BunkBot Debug Mode Functionality', () => {
 	const mockGetTestingServerIds = getTestingServerIds as jest.MockedFunction<typeof getTestingServerIds>;
@@ -96,10 +103,11 @@ describe('BunkBot Debug Mode Functionality', () => {
 			mockIsDebugMode.mockReturnValue(true);
 			const chance = 1; // 1% normal chance
 			const condition = withChance(chance);
-			
+			const mockMessage = { id: 'test' } as any; // Simple mock message
+
 			// Act & Assert - Test multiple times to ensure deterministic behavior
 			for (let i = 0; i < 10; i++) {
-				const result = condition();
+				const result = condition(mockMessage);
 				expect(result).toBe(true);
 			}
 		});
@@ -109,10 +117,11 @@ describe('BunkBot Debug Mode Functionality', () => {
 			mockIsDebugMode.mockReturnValue(false);
 			const chance = 0; // 0% chance should never trigger
 			const condition = withChance(chance);
-			
+			const mockMessage = { id: 'test' } as any; // Simple mock message
+
 			// Act & Assert - Test multiple times
 			for (let i = 0; i < 10; i++) {
-				const result = condition();
+				const result = condition(mockMessage);
 				expect(result).toBe(false);
 			}
 		});
@@ -122,13 +131,14 @@ describe('BunkBot Debug Mode Functionality', () => {
 			mockIsDebugMode.mockReturnValue(true);
 			const chance = 50; // 50% normal chance
 			const condition = withChance(chance);
-			
+			const mockMessage = { id: 'test' } as any; // Simple mock message
+
 			// Act - Get first result
-			const firstResult = condition();
-			
+			const firstResult = condition(mockMessage);
+
 			// Assert - All subsequent calls should return true (deterministic in debug)
 			for (let i = 0; i < 5; i++) {
-				const result = condition();
+				const result = condition(mockMessage);
 				expect(result).toBe(true);
 			}
 			expect(firstResult).toBe(true);

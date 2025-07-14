@@ -56,3 +56,12 @@ export {
 
 // Export container and ServiceId from container (uses Symbol values)
 export { container, ServiceId } from './services/container';
+
+// LLM services and types
+export { LLMProviderType } from './services/llm/llmFactory';
+export { PromptType, PromptRegistry } from './services/llm/promptManager';
+export * from './services/llm';
+
+// Personality and performance utilities
+export { getPersonalityService } from './services/personalityService';
+export { PerformanceTimer } from './utils/time';

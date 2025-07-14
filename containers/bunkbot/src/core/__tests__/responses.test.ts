@@ -1,4 +1,4 @@
-import { logger } from '@starbunk/shared';
+import { getDiscordService, logger } from '@starbunk/shared';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import {
 	createStaticMessage,
@@ -13,11 +13,23 @@ import {
 const originalRandom = global.Math.random;
 const mockRandomValue = 0.5;
 
-// Mock the logger
-jest.mock('@starbunk/shared');
+// Mock the logger and getDiscordService
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
+	getDiscordService: jest.fn(),
+	logger: {
+		warn: jest.fn(),
+		error: jest.fn(),
+		info: jest.fn(),
+		debug: jest.fn()
+	}
+}));
 
 beforeEach(() => {
 	jest.clearAllMocks();
+
+	// Set up the getDiscordService mock to return our mock instance
+	(getDiscordService as jest.Mock).mockReturnValue(mockDiscordService);
 
 	// Mock Math.random
 	global.Math.random = jest.fn().mockImplementation(() => mockRandomValue);
@@ -165,7 +177,7 @@ describe('Response functions', () => {
 			const pattern = /Hello (\w+)/i;
 			const template = 'Hi $1!';
 			const responseGen = regexCaptureResponse(pattern, template);
-			const message = mockMessage('Hello John');
+			const message = mockMessage({ content: 'Hello John' });
 
 			const response = responseGen(message);
 			expect(response).toBe('Hi John!');
@@ -175,7 +187,7 @@ describe('Response functions', () => {
 			const pattern = /(\w+) likes (\w+)/i;
 			const template = '$2 is liked by $1';
 			const responseGen = regexCaptureResponse(pattern, template);
-			const message = mockMessage('John likes pizza');
+			const message = mockMessage({ content: 'John likes pizza' });
 
 			const response = responseGen(message);
 			expect(response).toBe('pizza is liked by John');

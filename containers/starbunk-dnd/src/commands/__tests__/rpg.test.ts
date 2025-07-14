@@ -21,11 +21,10 @@ describe('RPG Command', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 
-		// Mock channel
-		mockChannel = {
-			id: 'channel123',
-			isTextBased: jest.fn().mockReturnValue(true)
-		} as any;
+		// Mock channel as GuildChannel
+		mockChannel = Object.create(GuildChannel.prototype);
+		mockChannel.id = 'channel123';
+		mockChannel.isTextBased = jest.fn().mockReturnValue(true);
 
 		// Mock member
 		mockMember = {

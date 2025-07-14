@@ -82,24 +82,30 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const userId = '85184539906809856';
 			const guildId = '123456789';
 			const message = createMockMessage(guildId, 'someuser') as Message;
-			
+
 			mockConfigService.getUserIdByUsername.mockResolvedValue(userId);
-			
+			mockConfigService.getUserConfig.mockResolvedValue({
+				userId,
+				username: 'Chad',
+				isActive: true
+			});
+
 			const mockMember = createMockGuildMember(
-				userId, 
-				'Chad', 
+				userId,
+				'Chad',
 				'Chad "The Machine" Johnson', // Server nickname
 				'https://example.com/server-avatar.png'
 			);
-			
+
 			mockDiscordService.getMemberAsync.mockResolvedValue(mockMember);
 
 			// Act
 			const identity = await identityService.getChadIdentity(message);
 
 			// Assert
-			expect(identity.botName).toBe('Chad "The Machine" Johnson'); // Should use server nickname
-			expect(identity.avatarUrl).toContain('server-avatar.png'); // Should use server avatar
+			expect(identity).not.toBeNull();
+			expect(identity!.botName).toBe('Chad "The Machine" Johnson'); // Should use server nickname
+			expect(identity!.avatarUrl).toContain('server-avatar.png'); // Should use server avatar
 			expect(mockDiscordService.getMemberAsync).toHaveBeenCalledWith(guildId, userId);
 		});
 
@@ -108,24 +114,30 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const userId = '85184539906809856';
 			const guildId = '123456789';
 			const message = createMockMessage(guildId, 'someuser') as Message;
-			
+
 			mockConfigService.getUserIdByUsername.mockResolvedValue(userId);
-			
+			mockConfigService.getUserConfig.mockResolvedValue({
+				userId,
+				username: 'Chad',
+				isActive: true
+			});
+
 			const mockMember = createMockGuildMember(
-				userId, 
-				'Chad', 
+				userId,
+				'Chad',
 				null, // No server nickname
 				'https://example.com/global-avatar.png'
 			);
-			
+
 			mockDiscordService.getMemberAsync.mockResolvedValue(mockMember);
 
 			// Act
 			const identity = await identityService.getChadIdentity(message);
 
 			// Assert
-			expect(identity.botName).toBe('Chad'); // Should use global username
-			expect(identity.avatarUrl).toContain('global-avatar.png');
+			expect(identity).not.toBeNull();
+			expect(identity!.botName).toBe('Chad'); // Should use global username
+			expect(identity!.avatarUrl).toContain('global-avatar.png');
 		});
 	});
 
@@ -137,13 +149,18 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const guild2 = '222222222';
 			const message1 = createMockMessage(guild1, 'someuser') as Message;
 			const message2 = createMockMessage(guild2, 'someuser') as Message;
-			
+
 			mockConfigService.getUserIdByUsername.mockResolvedValue(userId);
-			
+			mockConfigService.getUserConfig.mockResolvedValue({
+				userId,
+				username: 'Chad',
+				isActive: true
+			});
+
 			// Different nicknames in different servers
 			const member1 = createMockGuildMember(userId, 'Chad', 'Chad Alpha');
 			const member2 = createMockGuildMember(userId, 'Chad', 'Chad Beta');
-			
+
 			mockDiscordService.getMemberAsync
 				.mockResolvedValueOnce(member1)
 				.mockResolvedValueOnce(member2);
@@ -153,15 +170,19 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const identity2 = await identityService.getChadIdentity(message2);
 
 			// Assert
-			expect(identity1.botName).toBe('Chad Alpha');
-			expect(identity2.botName).toBe('Chad Beta');
+			expect(identity1).not.toBeNull();
+			expect(identity2).not.toBeNull();
+			expect(identity1!.botName).toBe('Chad Alpha');
+			expect(identity2!.botName).toBe('Chad Beta');
 			expect(mockDiscordService.getMemberAsync).toHaveBeenCalledTimes(2);
-			
-			// Verify cache has separate entries
+
+			// Verify cache has separate entries (both username and userId keys for each guild)
 			const cacheStats = identityService.getCacheStats();
-			expect(cacheStats.size).toBe(2);
+			expect(cacheStats.size).toBe(4); // 2 guilds × 2 cache keys each (username + userId)
 			expect(cacheStats.keys).toContain(`username:chad:${guild1}`);
 			expect(cacheStats.keys).toContain(`username:chad:${guild2}`);
+			expect(cacheStats.keys).toContain(`userId:85184539906809856:${guild1}`);
+			expect(cacheStats.keys).toContain(`userId:85184539906809856:${guild2}`);
 		});
 
 		it('should use cache for subsequent requests in same server', async () => {
@@ -169,9 +190,14 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const userId = '85184539906809856';
 			const guildId = '123456789';
 			const message = createMockMessage(guildId, 'someuser') as Message;
-			
+
 			mockConfigService.getUserIdByUsername.mockResolvedValue(userId);
-			
+			mockConfigService.getUserConfig.mockResolvedValue({
+				userId,
+				username: 'Chad',
+				isActive: true
+			});
+
 			const mockMember = createMockGuildMember(userId, 'Chad', 'Cached Chad');
 			mockDiscordService.getMemberAsync.mockResolvedValue(mockMember);
 
@@ -180,8 +206,10 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const identity2 = await identityService.getChadIdentity(message);
 
 			// Assert
-			expect(identity1.botName).toBe('Cached Chad');
-			expect(identity2.botName).toBe('Cached Chad');
+			expect(identity1).not.toBeNull();
+			expect(identity2).not.toBeNull();
+			expect(identity1!.botName).toBe('Cached Chad');
+			expect(identity2!.botName).toBe('Cached Chad');
 			expect(mockDiscordService.getMemberAsync).toHaveBeenCalledTimes(1); // Only called once due to cache
 		});
 
@@ -190,12 +218,17 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const userId = '85184539906809856';
 			const guildId = '123456789';
 			const message = createMockMessage(guildId, 'someuser') as Message;
-			
+
 			mockConfigService.getUserIdByUsername.mockResolvedValue(userId);
-			
+			mockConfigService.getUserConfig.mockResolvedValue({
+				userId,
+				username: 'Chad',
+				isActive: true
+			});
+
 			const member1 = createMockGuildMember(userId, 'Chad', 'Old Chad');
 			const member2 = createMockGuildMember(userId, 'Chad', 'New Chad');
-			
+
 			mockDiscordService.getMemberAsync
 				.mockResolvedValueOnce(member1)
 				.mockResolvedValueOnce(member2);
@@ -205,8 +238,10 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const identity2 = await identityService.getChadIdentity(message, true); // Force refresh
 
 			// Assert
-			expect(identity1.botName).toBe('Old Chad');
-			expect(identity2.botName).toBe('New Chad');
+			expect(identity1).not.toBeNull();
+			expect(identity2).not.toBeNull();
+			expect(identity1!.botName).toBe('Old Chad');
+			expect(identity2!.botName).toBe('New Chad');
 			expect(mockDiscordService.getMemberAsync).toHaveBeenCalledTimes(2); // Called twice due to force refresh
 		});
 	});
@@ -217,8 +252,13 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const userId = '85184539906809856';
 			const guildId = '123456789';
 			const message = createMockMessage(guildId, 'someuser') as Message;
-			
+
 			mockConfigService.getUserIdByUsername.mockResolvedValue(userId);
+			mockConfigService.getUserConfig.mockResolvedValue({
+				userId,
+				username: 'Chad',
+				isActive: true
+			});
 			mockDiscordService.getMemberAsync.mockResolvedValue(null); // User not in server
 			mockDiscordService.getMemberAsBotIdentity.mockResolvedValue({
 				botName: 'ChadBot',
@@ -229,8 +269,9 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const identity = await identityService.getChadIdentity(message);
 
 			// Assert
-			expect(identity.botName).toBe('ChadBot'); // Should use fallback
-			expect(identity.avatarUrl).toContain('fallback.png');
+			expect(identity).not.toBeNull();
+			expect(identity!.botName).toBe('ChadBot'); // Should use fallback
+			expect(identity!.avatarUrl).toContain('fallback.png');
 			expect(mockDiscordService.getMemberAsBotIdentity).toHaveBeenCalledWith(userId, false);
 		});
 
@@ -239,8 +280,13 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const userId = '85184539906809856';
 			const guildId = '123456789';
 			const message = createMockMessage(guildId, 'someuser') as Message;
-			
+
 			mockConfigService.getUserIdByUsername.mockResolvedValue(userId);
+			mockConfigService.getUserConfig.mockResolvedValue({
+				userId,
+				username: 'Chad',
+				isActive: true
+			});
 			mockDiscordService.getMemberAsync.mockRejectedValue(new Error('Discord API Error'));
 			mockDiscordService.getMemberAsBotIdentity.mockResolvedValue({
 				botName: 'ChadBot',
@@ -251,7 +297,8 @@ describe('BotIdentityService - Server-Specific Identity Resolution', () => {
 			const identity = await identityService.getChadIdentity(message);
 
 			// Assert
-			expect(identity.botName).toBe('ChadBot'); // Should use fallback
+			expect(identity).not.toBeNull();
+			expect(identity!.botName).toBe('ChadBot'); // Should use fallback
 			expect(mockDiscordService.getMemberAsBotIdentity).toHaveBeenCalled();
 		});
 	});

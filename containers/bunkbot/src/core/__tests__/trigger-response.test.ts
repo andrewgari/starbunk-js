@@ -1,13 +1,39 @@
-import { logger } from '@starbunk/shared';
+import { getDiscordService, logger, container, ServiceId } from '@starbunk/shared';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { createPriority, createTriggerName, createTriggerResponse, TriggerResponseClass } from '../trigger-response';
 
-// Mock the logger
-jest.mock('@starbunk/shared');
+// Mock the logger, getDiscordService, and container
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
+	getDiscordService: jest.fn(),
+	container: {
+		get: jest.fn()
+	},
+	ServiceId: {
+		DiscordService: 'DiscordService'
+	},
+	logger: {
+		warn: jest.fn(),
+		error: jest.fn(),
+		info: jest.fn(),
+		debug: jest.fn()
+	}
+}));
 
 describe('Trigger Response', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+
+		// Set up the getDiscordService mock to return our mock instance
+		(getDiscordService as jest.Mock).mockReturnValue(mockDiscordService);
+
+		// Set up the container mock to return our mock DiscordService
+		(container.get as jest.Mock).mockImplementation((serviceId) => {
+			if (serviceId === ServiceId.DiscordService) {
+				return mockDiscordService;
+			}
+			throw new Error(`Service not registered: ${String(serviceId)}`);
+		});
 	});
 
 	describe('Type creators', () => {
@@ -229,7 +255,7 @@ describe('Trigger Response', () => {
 				expect(identityFn).toHaveBeenCalledWith(message);
 			});
 
-			it('should return default identity and log error if identity function throws', async () => {
+			it('should return null and log error if identity function throws', async () => {
 				const identityFn = jest.fn().mockImplementation(() => {
 					throw new Error('Identity error');
 				});
@@ -245,7 +271,7 @@ describe('Trigger Response', () => {
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const result = await trigger.getIdentity(message, defaultIdentity);
 
-				expect(result).toBe(defaultIdentity);
+				expect(result).toBeNull(); // Should return null when identity resolution fails
 				expect(identityFn).toHaveBeenCalledWith(message);
 				expect(logger.error).toHaveBeenCalledWith(
 					expect.stringContaining('Error getting identity'),

@@ -22,6 +22,9 @@ class PrismaClientMock {
 		this.user = buildModelMock();
 		this.role = buildModelMock();
 		this.userOnGuild = buildModelMock();
+		this.userConfiguration = buildModelMock();
+		this.botConfiguration = buildModelMock();
+		this.serverConfiguration = buildModelMock();
 
 		// Mock the guild model
 		this.guild = {

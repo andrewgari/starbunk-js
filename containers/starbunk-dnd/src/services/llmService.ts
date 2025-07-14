@@ -1,4 +1,4 @@
-import { StandardLLMService } from '../../services/llm/standardLlmService';
+import { StandardLLMService } from './llm/standardLlmService';
 import { logger } from '@starbunk/shared';
 import { Campaign } from '../types/game';
 

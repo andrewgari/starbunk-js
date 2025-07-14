@@ -1,10 +1,19 @@
 // Debug mode tests for reply bots (InterruptBot, ChadBot, etc.)
 import { withChance, and, not, fromUser } from '../src/core/conditions';
 import { INTERRUPT_CHANCE } from '../src/reply-bots/interrupt-bot/constants';
-import { CHAD_RESPONSE_CHANCE, CHAD_USER_ID } from '../src/reply-bots/chad-bot/constants';
+import { CHAD_RESPONSE_CHANCE } from '../src/reply-bots/chad-bot/constants';
+
+// Chad's user ID (from deprecated userId.ts for testing purposes)
+const CHAD_USER_ID = '85184539906809856';
 
 // Mock environment validation utilities
 jest.mock('@starbunk/shared/dist/utils/envValidation', () => ({
+	isDebugMode: jest.fn()
+}));
+
+// Mock the shared package to ensure isDebugMode is mocked correctly
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
 	isDebugMode: jest.fn()
 }));
 
@@ -18,7 +27,8 @@ jest.mock('@starbunk/shared/dist/services/logger', () => ({
 	}
 }));
 
-import { isDebugMode } from '@starbunk/shared/dist/utils/envValidation';
+import { isDebugMode as isDebugModeFromEnv } from '@starbunk/shared/dist/utils/envValidation';
+import { isDebugMode } from '@starbunk/shared';
 
 describe('Reply Bots Debug Mode Behavior', () => {
 	const mockIsDebugMode = isDebugMode as jest.MockedFunction<typeof isDebugMode>;
@@ -103,58 +113,59 @@ describe('Reply Bots Debug Mode Behavior', () => {
 	});
 
 	describe('ChadBot Random Trigger Behavior', () => {
-		test('should trigger at 100% rate in debug mode', () => {
+		test('should trigger at 100% rate in debug mode', async () => {
 			// Arrange
 			mockIsDebugMode.mockReturnValue(true);
-			const message = createMockMessage({ 
+			const message = createMockMessage({
 				author: { id: 'not-chad-id' } // Not the real Chad
 			});
-			
+
 			// ChadBot condition: not from Chad AND random chance
 			const condition = and(not(fromUser(CHAD_USER_ID)), withChance(CHAD_RESPONSE_CHANCE));
-			
+
 			// Act & Assert - Should always trigger in debug mode
 			for (let i = 0; i < 10; i++) {
-				const result = condition(message);
+				const result = await condition(message);
 				expect(result).toBe(true);
 			}
 		});
 
-		test('should never trigger from real Chad user even in debug mode', () => {
+		test('should never trigger from real Chad user even in debug mode', async () => {
 			// Arrange
 			mockIsDebugMode.mockReturnValue(true);
-			const message = createMockMessage({ 
+			const message = createMockMessage({
 				author: { id: CHAD_USER_ID } // Real Chad
 			});
-			
+
 			const condition = and(not(fromUser(CHAD_USER_ID)), withChance(CHAD_RESPONSE_CHANCE));
-			
+
 			// Act & Assert - Should never trigger from real Chad
 			for (let i = 0; i < 10; i++) {
-				const result = condition(message);
+				const result = await condition(message);
 				expect(result).toBe(false);
 			}
 		});
 
-		test('should trigger at normal 1% rate in production mode', () => {
+		test('should trigger at normal 1% rate in production mode', async () => {
 			// Arrange
 			mockIsDebugMode.mockReturnValue(false);
-			const message = createMockMessage({ 
+			const message = createMockMessage({
 				author: { id: 'not-chad-id' }
 			});
-			
+
 			const condition = and(not(fromUser(CHAD_USER_ID)), withChance(CHAD_RESPONSE_CHANCE));
-			
+
 			// Act - Test many times
 			const results: boolean[] = [];
 			for (let i = 0; i < 1000; i++) {
-				results.push(condition(message));
+				const result = await condition(message);
+				results.push(result);
 			}
-			
+
 			// Assert - Should have roughly 1% success rate
 			const successCount = results.filter(r => r).length;
 			const successRate = (successCount / results.length) * 100;
-			
+
 			expect(successRate).toBeGreaterThanOrEqual(0.5);
 			expect(successRate).toBeLessThanOrEqual(1.5);
 		});
@@ -211,7 +222,7 @@ describe('Reply Bots Debug Mode Behavior', () => {
 	});
 
 	describe('Complex Condition Combinations', () => {
-		test('should handle AND conditions with random triggers in debug mode', () => {
+		test('should handle AND conditions with random triggers in debug mode', async () => {
 			// Arrange
 			mockIsDebugMode.mockReturnValue(true);
 			const message = createMockMessage({ content: 'test message' });
@@ -224,7 +235,7 @@ describe('Reply Bots Debug Mode Behavior', () => {
 
 			// Act & Assert - Should always trigger in debug mode
 			for (let i = 0; i < 10; i++) {
-				const result = condition(message);
+				const result = await condition(message);
 				expect(result).toBe(true);
 			}
 		});
@@ -280,7 +291,8 @@ describe('Reply Bots Debug Mode Behavior', () => {
 
 			// Verify that even though debug mode would trigger 100%, filtering prevents response
 			const triggerCondition = withChance(INTERRUPT_CHANCE);
-			expect(triggerCondition()).toBe(true); // Debug mode = 100% trigger
+			const mockMessage = { id: 'test' } as any; // Simple mock message
+			expect(triggerCondition(mockMessage)).toBe(true); // Debug mode = 100% trigger
 			// But the message filter would prevent the bot from ever seeing the message
 		});
 
@@ -316,10 +328,10 @@ describe('Reply Bots Debug Mode Behavior', () => {
 
 			// Verify debug mode triggers 100%
 			const triggerCondition = withChance(INTERRUPT_CHANCE);
-			expect(triggerCondition()).toBe(true);
+			expect(triggerCondition(message)).toBe(true);
 		});
 
-		test('should prevent ChadBot responses in non-whitelisted channels even with 100% trigger rate', () => {
+		test('should prevent ChadBot responses in non-whitelisted channels even with 100% trigger rate', async () => {
 			// Arrange
 			mockIsDebugMode.mockReturnValue(true); // 100% trigger rate
 			const whitelistedChannels = ['777888999000111222'];
@@ -354,7 +366,8 @@ describe('Reply Bots Debug Mode Behavior', () => {
 
 			// Verify that ChadBot condition would trigger in debug mode
 			const chadCondition = and(not(fromUser(CHAD_USER_ID)), withChance(CHAD_RESPONSE_CHANCE));
-			expect(chadCondition(message)).toBe(true); // Debug mode = 100% trigger
+			const conditionResult = await chadCondition(message);
+			expect(conditionResult).toBe(true); // Debug mode = 100% trigger
 			// But the message filter would prevent the bot from processing the message
 		});
 

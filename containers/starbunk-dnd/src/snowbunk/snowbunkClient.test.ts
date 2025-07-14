@@ -220,11 +220,18 @@ class SnowbunkClient extends DiscordClient {
 	}
 }
 
-// Mock the bootstrap module
-jest.mock('../services/bootstrap', () => ({
+// Mock the shared module
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
 	getDiscordService: jest.fn().mockReturnValue({
 		sendWebhookMessage: jest.fn()
-	})
+	}),
+	logger: {
+		info: jest.fn(),
+		warn: jest.fn(),
+		error: jest.fn(),
+		debug: jest.fn()
+	}
 }));
 
 describe('SnowbunkClient', () => {
@@ -240,8 +247,8 @@ describe('SnowbunkClient', () => {
 		mockSendWebhookMessage = jest.fn();
 
 		// Mock the getDiscordService function to return our mock
-		const getDiscordServiceMock = jest.requireMock('../services/bootstrap').getDiscordService;
-		getDiscordServiceMock.mockReturnValue({
+		const { getDiscordService } = jest.requireMock('@starbunk/shared');
+		getDiscordService.mockReturnValue({
 			sendWebhookMessage: mockSendWebhookMessage
 		});
 
