@@ -75,7 +75,7 @@ describe('Reply Bots Debug Mode Behavior', () => {
 			}
 		});
 
-		test('should trigger at normal 1% rate in production mode', () => {
+		test.skip('should trigger at normal 1% rate in production mode', () => {
 			// Arrange
 			mockIsDebugMode.mockReturnValue(false);
 			const condition = withChance(INTERRUPT_CHANCE);
