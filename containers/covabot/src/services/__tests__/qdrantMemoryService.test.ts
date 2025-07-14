@@ -19,25 +19,27 @@ describe('QdrantMemoryService', () => {
 		// Reset all mocks
 		jest.clearAllMocks();
 
-		// Create mock instances
+		// Create mock instances with proper return values
 		mockQdrantInstance = {
-			initialize: jest.fn(),
-			storeMemoryItem: jest.fn(),
-			searchSimilar: jest.fn(),
-			getMemoryItem: jest.fn(),
-			updateMemoryItem: jest.fn(),
-			deleteMemoryItem: jest.fn(),
-			getStats: jest.fn(),
-			healthCheck: jest.fn(),
+			initialize: jest.fn().mockResolvedValue(undefined),
+			storeMemoryItem: jest.fn().mockResolvedValue('mock-id'),
+			searchSimilar: jest.fn().mockResolvedValue([
+				{ item: { id: '1', content: 'Mock result', type: 'personality' }, score: 0.9 }
+			]),
+			getMemoryItem: jest.fn().mockResolvedValue({ id: '1', content: 'Mock item' }),
+			updateMemoryItem: jest.fn().mockResolvedValue({ id: '1', content: 'Updated content', priority: 'high' }),
+			deleteMemoryItem: jest.fn().mockResolvedValue(true),
+			getStats: jest.fn().mockResolvedValue({ totalVectors: 100 }),
+			healthCheck: jest.fn().mockResolvedValue({ connected: true }),
 		} as any;
 
 		mockEmbeddingInstance = {
-			initialize: jest.fn(),
-			generateEmbedding: jest.fn(),
-			generateBatchEmbeddings: jest.fn(),
+			initialize: jest.fn().mockResolvedValue(undefined),
+			generateEmbedding: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+			generateBatchEmbeddings: jest.fn().mockResolvedValue([[0.1, 0.2, 0.3]]),
 			getConfig: jest.fn().mockReturnValue({ dimensions: 384 }),
-			getHealthStatus: jest.fn(),
-			cleanup: jest.fn(),
+			getHealthStatus: jest.fn().mockReturnValue({ loaded: true }),
+			cleanup: jest.fn().mockResolvedValue(undefined),
 		} as any;
 
 		// Mock the getInstance methods

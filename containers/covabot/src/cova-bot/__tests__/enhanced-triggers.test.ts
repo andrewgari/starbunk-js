@@ -60,6 +60,12 @@ jest.mock('@starbunk/shared', () => ({
 // Get the mocked functions (only mock what we need to mock)
 const mockCreateTriggerResponse = createTriggerResponse as jest.MockedFunction<typeof createTriggerResponse>;
 
+// Define missing mock variables to fix TypeScript compilation
+const mockAnd = jest.fn();
+const mockFromBot = jest.fn();
+const mockFromUser = jest.fn();
+const mockNot = jest.fn();
+
 const mockCovaIdentityService = CovaIdentityService as jest.Mocked<typeof CovaIdentityService>;
 const mockCreateLLMResponseDecisionCondition = createLLMResponseDecisionCondition as jest.MockedFunction<typeof createLLMResponseDecisionCondition>;
 const mockLogger = logger as jest.Mocked<typeof logger>;
