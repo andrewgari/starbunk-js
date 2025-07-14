@@ -6,10 +6,9 @@ import { PromptRegistry, PromptType } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
 import { getPersonalityService } from '@starbunk/shared';
 import { PerformanceTimer } from '@starbunk/shared';
-import { ResponseGenerator, weightedRandomResponse } from '@starbunk/shared';
+import { ResponseGenerator, weightedRandomResponse } from '../utils/responseUtils';
 import { COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_PROMPTS } from './constants';
-import { PersonalityNotesService } from '../services/personalityNotesService';
-import { PersonalityNotesServiceDb } from '../services/personalityNotesServiceDb';
+import { QdrantMemoryService } from '../services/qdrantMemoryService';
 
 // Create performance timer for CovaBot operations
 const perfTimer = PerformanceTimer.getInstance();
@@ -52,17 +51,21 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 				const personalityService = getPersonalityService();
 				const personalityEmbedding = personalityService.getPersonalityEmbedding();
 
-				// Get personality notes from the appropriate service
-				const useDatabase = process.env.USE_DATABASE === 'true';
-				let personalityNotes: string;
-
-				if (useDatabase) {
-					const dbService = PersonalityNotesServiceDb.getInstance();
-					personalityNotes = await dbService.getActiveNotesForLLM();
-				} else {
-					const fileService = PersonalityNotesService.getInstance();
-					personalityNotes = await fileService.getActiveNotesForLLM();
-				}
+				// Get enhanced context with conversation memory
+				const memoryService = QdrantMemoryService.getInstance();
+				const enhancedContext = await memoryService.generateEnhancedContext(
+					message.content,
+					message.author.id,
+					message.channel.id,
+					{
+						maxPersonalityNotes: 10,
+						maxConversationHistory: 8,
+						personalityWeight: 1.0,
+						conversationWeight: 0.8,
+						similarityThreshold: 0.6,
+					}
+				);
+				const personalityNotes = enhancedContext.combinedContext;
 
 				// Get channel name safely
 				let channelName = 'Unknown Channel';
@@ -112,6 +115,34 @@ Message: ${message.content}`;
 					return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 				}
 
+				// Store conversation in memory
+				try {
+					const conversationId = `${message.channel.id}_${Date.now()}`;
+
+					// Store user message
+					await memoryService.storeConversation({
+						content: message.content,
+						userId: message.author.id,
+						channelId: message.channel.id,
+						messageType: 'user',
+						conversationId,
+					});
+
+					// Store bot response
+					await memoryService.storeConversation({
+						content: response,
+						userId: 'covabot',
+						channelId: message.channel.id,
+						messageType: 'bot',
+						conversationId,
+					});
+
+					logger.debug(`[CovaBot] Stored conversation pair in memory: ${conversationId}`);
+				} catch (memoryError) {
+					logger.warn(`[CovaBot] Failed to store conversation in memory: ${memoryError instanceof Error ? memoryError.message : 'Unknown error'}`);
+					// Continue with response even if memory storage fails
+				}
+
 				// Truncate response to Discord's 2000 character limit
 				if (response.length > 1900) {
 					logger.warn(`[CovaBot] Response exceeded Discord's character limit (${response.length} chars), truncating`);
@@ -134,15 +165,16 @@ export const createLLMResponseDecisionCondition = () => {
 	return async (message: Message): Promise<boolean> => {
 		return await PerformanceTimer.time('llm-decision', async () => {
 			try {
-				// Always respond to direct mentions
+				// Skip bot messages FIRST - even if they mention Cova
+				if (message.author.bot) {
+					logger.debug('[CovaBot] Skipping bot message');
+					return false;
+				}
+
+				// Always respond to direct mentions (from non-bots)
 				if (message.mentions.has(userId.Cova)) {
 					logger.debug('[CovaBot] Direct mention detected, will respond');
 					return true;
-				}
-
-				// Skip bot messages
-				if (message.author.bot) {
-					return false;
 				}
 
 				// Get data about recent interactions

@@ -321,7 +321,7 @@ describe('PersonalityNotesService', () => {
     it('should return formatted context for LLM', async () => {
       const context = await service.getActiveNotesForLLM();
       
-      expect(context).toContain('Current personality instructions and context:');
+      expect(context).toContain('CORE PERSONALITY:');
       expect(context).toContain('Personality:');
       expect(context).toContain('Behavior:');
       expect(context).toContain('Context:');
@@ -340,7 +340,8 @@ describe('PersonalityNotesService', () => {
       
       const context = await service.getActiveNotesForLLM();
       
-      expect(context).toBe('');
+      expect(context).toContain('CORE PERSONALITY:');
+      expect(context).not.toContain('DETAILED INSTRUCTIONS:');
     });
   });
 

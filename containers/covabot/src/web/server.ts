@@ -1,35 +1,30 @@
-import express from 'express';
+import express, { Request, Response, RequestHandler } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { logger } from '@starbunk/shared';
-import { PersonalityNotesService } from '../services/personalityNotesService';
-import { PersonalityNotesServiceDb } from '../services/personalityNotesServiceDb';
+import { QdrantMemoryService } from '../services/qdrantMemoryService';
 import { BotConfigurationService } from '../services/botConfigurationService';
-import { CreateNoteRequest, UpdateNoteRequest, NoteSearchFilters } from '../types/personalityNote';
+import { CreatePersonalityNoteRequest, UpdatePersonalityNoteRequest, MemorySearchFilters } from '../types/memoryTypes';
 import { CreateConfigurationRequest, UpdateConfigurationRequest } from '../types/botConfiguration';
 import { rateLimit, requestLogger } from './middleware/auth';
 import { CovaBot } from '../cova-bot/covaBot';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from '../cova-bot/triggers';
 
 export class WebServer {
-  private app: express.Application;
+  protected app: express.Application;
   private port: number;
-  private notesService: PersonalityNotesService | PersonalityNotesServiceDb;
+  private memoryService: QdrantMemoryService;
   private configService: BotConfigurationService;
-  private useDatabase: boolean;
+  private useQdrant: boolean;
   private covaBot: CovaBot;
 
-  constructor(port: number = 7080, useDatabase: boolean = false) {
+  constructor(port: number = 7080, useQdrant: boolean = true) {
     this.app = express();
     this.port = port;
-    this.useDatabase = useDatabase;
+    this.useQdrant = useQdrant;
 
-    // Choose service based on configuration
-    if (useDatabase) {
-      this.notesService = PersonalityNotesServiceDb.getInstance();
-    } else {
-      this.notesService = PersonalityNotesService.getInstance();
-    }
+    // Use unified Qdrant memory service
+    this.memoryService = QdrantMemoryService.getInstance();
 
     // Initialize configuration service
     this.configService = BotConfigurationService.getInstance();
@@ -53,7 +48,7 @@ export class WebServer {
     this.setupRoutes();
   }
 
-  private setupMiddleware(): void {
+  protected setupMiddleware(): void {
     // CORS configuration
     const corsOrigins = process.env.CORS_ORIGINS?.split(',') || [
       'http://localhost:7080',
@@ -69,7 +64,7 @@ export class WebServer {
     this.app.use(express.urlencoded({ extended: true }));
 
     // Rate limiting
-    this.app.use('/api', rateLimit(100, 60000)); // 100 requests per minute
+    this.app.use('/api', rateLimit(100, 60000) as express.RequestHandler); // 100 requests per minute
 
     // Request logging
     this.app.use(requestLogger);
@@ -79,7 +74,7 @@ export class WebServer {
     this.app.use(express.static(staticPath));
   }
 
-  private setupRoutes(): void {
+  protected setupRoutes(): void {
     // Serve the main webpage
     this.app.get('/', (req, res) => {
       res.sendFile(path.join(__dirname, '..', 'web', 'static', 'index.html'));
@@ -91,19 +86,17 @@ export class WebServer {
     // Health check endpoint
     apiRouter.get('/health', async (req, res) => {
       try {
-        // Test database connection if using database service
-        if (this.useDatabase && 'initialize' in this.notesService) {
-          await (this.notesService as PersonalityNotesServiceDb).initialize();
-        }
+        const healthResult = await this.memoryService.healthCheck();
 
         res.json({
-          success: true,
-          status: 'healthy',
-          storage: this.useDatabase ? 'database' : 'file',
-          timestamp: new Date().toISOString()
+          success: healthResult.status === 'healthy',
+          status: healthResult.status,
+          storage: 'qdrant',
+          timestamp: new Date().toISOString(),
+          details: healthResult
         });
       } catch (error) {
-        logger.error('[WebServer] Health check failed:', error);
+        logger.error('[WebServer] Health check failed:', error as Error);
         res.status(500).json({
           success: false,
           status: 'unhealthy',
@@ -115,39 +108,40 @@ export class WebServer {
     // Get all notes with optional filtering
     apiRouter.get('/notes', async (req, res) => {
       try {
-        const filters: NoteSearchFilters = {
-          category: req.query.category as NoteSearchFilters['category'],
-          priority: req.query.priority as NoteSearchFilters['priority'],
+        const filters: MemorySearchFilters = {
+          category: req.query.category as 'instruction' | 'personality' | 'behavior' | 'knowledge' | 'context' | undefined,
+          priority: req.query.priority as 'high' | 'medium' | 'low' | undefined,
           isActive: req.query.isActive ? req.query.isActive === 'true' : undefined,
-          search: req.query.search as string
+          search: req.query.search as string,
+          limit: req.query.limit ? parseInt(req.query.limit as string) : undefined
         };
 
-        const notes = await this.notesService.getNotes(filters);
+        const notes = await this.memoryService.getNotes(filters);
         res.json({ success: true, data: notes });
       } catch (error) {
-        logger.error('[WebServer] Error getting notes:', error);
+        logger.error('[WebServer] Error getting notes:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to get notes' });
       }
     });
 
     // Get note by ID
-    apiRouter.get('/notes/:id', async (req, res) => {
+    apiRouter.get('/notes/:id', async (req: Request<{ id: string }>, res: Response) => {
       try {
-        const note = await this.notesService.getNoteById(req.params.id);
+        const note = await this.memoryService.getNoteById(req.params.id);
         if (!note) {
           return res.status(404).json({ success: false, error: 'Note not found' });
         }
         res.json({ success: true, data: note });
       } catch (error) {
-        logger.error('[WebServer] Error getting note:', error);
+        logger.error('[WebServer] Error getting note:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to get note' });
       }
     });
 
     // Create new note
-    apiRouter.post('/notes', async (req, res) => {
+    apiRouter.post('/notes', async (req: Request, res: Response) => {
       try {
-        const request: CreateNoteRequest = {
+        const request: CreatePersonalityNoteRequest = {
           content: req.body.content,
           category: req.body.category,
           priority: req.body.priority
@@ -162,47 +156,47 @@ export class WebServer {
           return res.status(400).json({ success: false, error: 'Valid category is required' });
         }
 
-        const note = await this.notesService.createNote(request);
+        const note = await this.memoryService.createNote(request);
         res.status(201).json({ success: true, data: note });
       } catch (error) {
-        logger.error('[WebServer] Error creating note:', error);
+        logger.error('[WebServer] Error creating note:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to create note' });
       }
     });
 
     // Update note
-    apiRouter.put('/notes/:id', async (req, res) => {
+    apiRouter.put('/notes/:id', async (req: Request<{ id: string }>, res: Response) => {
       try {
-        const request: UpdateNoteRequest = {
+        const request: UpdatePersonalityNoteRequest = {
           content: req.body.content,
           category: req.body.category,
           priority: req.body.priority,
           isActive: req.body.isActive
         };
 
-        const note = await this.notesService.updateNote(req.params.id, request);
+        const note = await this.memoryService.updateNote(req.params.id, request);
         if (!note) {
           return res.status(404).json({ success: false, error: 'Note not found' });
         }
 
         res.json({ success: true, data: note });
       } catch (error) {
-        logger.error('[WebServer] Error updating note:', error);
+        logger.error('[WebServer] Error updating note:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to update note' });
       }
     });
 
     // Delete note
-    apiRouter.delete('/notes/:id', async (req, res) => {
+    apiRouter.delete('/notes/:id', async (req: Request<{ id: string }>, res: Response) => {
       try {
-        const deleted = await this.notesService.deleteNote(req.params.id);
+        const deleted = await this.memoryService.deleteNote(req.params.id);
         if (!deleted) {
           return res.status(404).json({ success: false, error: 'Note not found' });
         }
 
         res.json({ success: true, message: 'Note deleted successfully' });
       } catch (error) {
-        logger.error('[WebServer] Error deleting note:', error);
+        logger.error('[WebServer] Error deleting note:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to delete note' });
       }
     });
@@ -210,10 +204,10 @@ export class WebServer {
     // Get statistics
     apiRouter.get('/stats', async (req, res) => {
       try {
-        const stats = await this.notesService.getStats();
+        const stats = await this.memoryService.getStats();
         res.json({ success: true, data: stats });
       } catch (error) {
-        logger.error('[WebServer] Error getting stats:', error);
+        logger.error('[WebServer] Error getting stats:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to get stats' });
       }
     });
@@ -221,11 +215,53 @@ export class WebServer {
     // Get active notes for LLM context
     apiRouter.get('/context', async (req, res) => {
       try {
-        const context = await this.notesService.getActiveNotesForLLM();
+        const context = await this.memoryService.getActiveNotesForLLM();
         res.send(context);
       } catch (error) {
-        logger.error('[WebServer] Error getting context:', error);
+        logger.error('[WebServer] Error getting context:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to get context' });
+      }
+    });
+
+    // Semantic search endpoint
+    apiRouter.post('/search', async (req: Request, res: Response) => {
+      try {
+        const { query, filters = {} } = req.body;
+
+        if (!query || typeof query !== 'string') {
+          return res.status(400).json({ success: false, error: 'Query is required' });
+        }
+
+        const results = await this.memoryService.searchMemory(query, filters);
+        res.json({ success: true, data: results });
+      } catch (error) {
+        logger.error('[WebServer] Error in semantic search:', error as Error);
+        res.status(500).json({ success: false, error: 'Failed to search memory' });
+      }
+    });
+
+    // Enhanced context generation
+    apiRouter.post('/context/enhanced', async (req: Request, res: Response) => {
+      try {
+        const { message, userId, channelId, options = {} } = req.body;
+
+        if (!message || !userId || !channelId) {
+          return res.status(400).json({
+            success: false,
+            error: 'Message, userId, and channelId are required'
+          });
+        }
+
+        const context = await this.memoryService.generateEnhancedContext(
+          message,
+          userId,
+          channelId,
+          options
+        );
+        res.json({ success: true, data: context });
+      } catch (error) {
+        logger.error('[WebServer] Error generating enhanced context:', error as Error);
+        res.status(500).json({ success: false, error: 'Failed to generate enhanced context' });
       }
     });
 
@@ -236,7 +272,7 @@ export class WebServer {
         const config = await this.configService.getConfiguration();
         res.json(config);
       } catch (error) {
-        logger.error('[WebServer] Error getting configuration:', error);
+        logger.error('[WebServer] Error getting configuration:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to get configuration' });
       }
     });
@@ -248,7 +284,7 @@ export class WebServer {
         const config = await this.configService.updateConfiguration(updates);
         res.json(config);
       } catch (error) {
-        logger.error('[WebServer] Error updating configuration:', error);
+        logger.error('[WebServer] Error updating configuration:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to update configuration' });
       }
     });
@@ -260,7 +296,7 @@ export class WebServer {
         const config = await this.configService.createConfiguration(request);
         res.json(config);
       } catch (error) {
-        logger.error('[WebServer] Error creating configuration:', error);
+        logger.error('[WebServer] Error creating configuration:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to create configuration' });
       }
     });
@@ -271,7 +307,7 @@ export class WebServer {
         const config = await this.configService.resetToDefaults();
         res.json(config);
       } catch (error) {
-        logger.error('[WebServer] Error resetting configuration:', error);
+        logger.error('[WebServer] Error resetting configuration:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to reset configuration' });
       }
     });
@@ -279,7 +315,7 @@ export class WebServer {
     // Export all data
     apiRouter.get('/export', async (req, res) => {
       try {
-        const notes = await this.notesService.getNotes();
+        const notes = await this.memoryService.getNotes();
         const config = await this.configService.getConfiguration();
 
         const exportData = {
@@ -291,7 +327,7 @@ export class WebServer {
 
         res.json(exportData);
       } catch (error) {
-        logger.error('[WebServer] Error exporting data:', error);
+        logger.error('[WebServer] Error exporting data:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to export data' });
       }
     });
@@ -309,13 +345,13 @@ export class WebServer {
         // Import notes if present
         if (importData.notes && Array.isArray(importData.notes)) {
           // Clear existing notes and import new ones
-          const existingNotes = await this.notesService.getNotes();
+          const existingNotes = await this.memoryService.getNotes();
           for (const note of existingNotes) {
-            await this.notesService.deleteNote(note.id);
+            await this.memoryService.deleteNote(note.id);
           }
 
           for (const noteData of importData.notes) {
-            await this.notesService.createNote({
+            await this.memoryService.createNote({
               content: noteData.content,
               category: noteData.category,
               priority: noteData.priority
@@ -325,7 +361,7 @@ export class WebServer {
 
         res.json({ success: true, message: 'Data imported successfully' });
       } catch (error) {
-        logger.error('[WebServer] Error importing data:', error);
+        logger.error('[WebServer] Error importing data:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to import data' });
       }
     });
@@ -333,7 +369,7 @@ export class WebServer {
     // Get statistics
     apiRouter.get('/stats', async (req, res) => {
       try {
-        const notes = await this.notesService.getNotes();
+        const notes = await this.memoryService.getNotes();
         const config = await this.configService.getConfiguration();
 
         const stats = {
@@ -355,13 +391,13 @@ export class WebServer {
 
         res.json(stats);
       } catch (error) {
-        logger.error('[WebServer] Error getting stats:', error);
+        logger.error('[WebServer] Error getting stats:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to get stats' });
       }
     });
 
     // Chat endpoint for conversation testing
-    apiRouter.post('/chat', async (req, res) => {
+    apiRouter.post('/chat', (async (req: Request, res: Response) => {
       try {
         const { message } = req.body;
 
@@ -398,13 +434,13 @@ export class WebServer {
           });
         }
       } catch (error) {
-        logger.error('[WebServer] Error in chat endpoint:', error);
+        logger.error('[WebServer] Error in chat endpoint:', error as Error);
         res.status(500).json({
           success: false,
           error: 'Failed to process chat message'
         });
       }
-    });
+    }) as RequestHandler);
 
     // Mount API routes
     this.app.use('/api', apiRouter);
@@ -416,21 +452,23 @@ export class WebServer {
 
     // Error handler
     this.app.use((error: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      logger.error('[WebServer] Unhandled error:', error);
+      logger.error('[WebServer] Unhandled error:', error as Error);
       res.status(500).json({ success: false, error: 'Internal server error' });
     });
   }
 
+  /**
+   * Get the Express app instance for testing
+   */
+  getApp(): express.Application {
+    return this.app;
+  }
+
   async start(): Promise<void> {
     try {
-      // Initialize the notes service
-      if (this.useDatabase && 'initialize' in this.notesService) {
-        await (this.notesService as PersonalityNotesServiceDb).initialize();
-        logger.info('[WebServer] Database service initialized');
-      } else {
-        await (this.notesService as PersonalityNotesService).loadNotes();
-        logger.info('[WebServer] File-based service initialized');
-      }
+      // Initialize the memory service
+      await this.memoryService.initialize();
+      logger.info('[WebServer] Qdrant memory service initialized');
 
       // Initialize the configuration service
       await this.configService.loadConfiguration();
@@ -439,18 +477,13 @@ export class WebServer {
       // Start the server
       return new Promise((resolve) => {
         this.app.listen(this.port, () => {
-          const storageType = this.useDatabase ? 'Database' : 'File';
-          logger.info(`[WebServer] CovaBot personality management interface (${storageType}) running on http://localhost:${this.port}`);
+          logger.info(`[WebServer] CovaBot memory management interface (Qdrant) running on http://localhost:${this.port}`);
           resolve();
         });
       });
     } catch (error) {
-      logger.error('[WebServer] Failed to start server:', error);
+      logger.error('[WebServer] Failed to start server:', error as Error);
       throw error;
     }
-  }
-
-  getApp(): express.Application {
-    return this.app;
   }
 }

@@ -12,15 +12,20 @@ export class MockMessage {
 	public author: { id: string; bot: boolean };
 	public mentions: { has: (userId: string) => boolean };
 	public guild: { id: string } | null;
-	public channel: { send: (content: string) => Promise<void> };
+	public channel: { send: (content: string) => Promise<void>; id: string };
 	public client: { user: { id: string } | null };
+	public channelId: string;
 
-	constructor(content: string, authorId: string = 'web-user') {
+	constructor(content: string, authorId: string = 'web-user', isBot: boolean = false) {
 		this.content = content;
-		this.author = { id: authorId, bot: false };
+		this.author = { id: authorId, bot: isBot };
 		this.mentions = { has: () => false }; // No mentions in web testing
 		this.guild = null; // No guild context for web testing
-		this.channel = { send: async () => {} }; // No-op for web testing
+		this.channelId = 'web-channel';
+		this.channel = {
+			send: async () => {},
+			id: this.channelId
+		}; // No-op for web testing
 		this.client = { user: null }; // No client user for web testing
 	}
 }

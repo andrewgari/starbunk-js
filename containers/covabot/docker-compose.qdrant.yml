@@ -1,0 +1,311 @@
+# Docker Compose configuration for CovaBot with Qdrant vector database
+# Production-ready setup for Unraid deployment
+
+version: '3.8'
+
+services:
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: covabot-qdrant
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API (optional)
+    volumes:
+      - ${QDRANT_DATA_PATH:-/mnt/user/appdata/covabot/qdrant}:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__LOG_LEVEL=${QDRANT_LOG_LEVEL:-INFO}
+      - QDRANT__STORAGE__OPTIMIZERS__DELETED_THRESHOLD=0.2
+      - QDRANT__STORAGE__OPTIMIZERS__VACUUM_MIN_VECTOR_NUMBER=1000
+      - QDRANT__STORAGE__OPTIMIZERS__DEFAULT_SEGMENT_NUMBER=2
+      # Optional: Enable authentication
+      # - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - covabot-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+
+  # CovaBot with Qdrant Integration
+  covabot:
+    image: ghcr.io/andrewgari/starbunk-covabot:latest
+    container_name: covabot
+    ports:
+      - "${COVABOT_WEB_PORT:-7080}:7080"  # Web interface
+    volumes:
+      - ${COVABOT_DATA_PATH:-/mnt/user/appdata/covabot/data}:/app/data
+      - ${COVABOT_LOGS_PATH:-/mnt/user/appdata/covabot/logs}:/app/logs
+    environment:
+      # Discord Configuration
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - COVABOT_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      
+      # Debug and Testing
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - NODE_ENV=${NODE_ENV:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # Qdrant Configuration
+      - USE_QDRANT=true
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - QDRANT_COLLECTION_PERSONALITY=covabot_personality
+      - QDRANT_COLLECTION_CONVERSATIONS=covabot_conversations
+      
+      # Embedding Configuration
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-Xenova/all-MiniLM-L6-v2}
+      - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-384}
+      - EMBEDDING_BATCH_SIZE=${EMBEDDING_BATCH_SIZE:-32}
+      - EMBEDDING_CACHE_SIZE=${EMBEDDING_CACHE_SIZE:-1000}
+      - EMBEDDING_TIMEOUT=${EMBEDDING_TIMEOUT:-30000}
+      
+      # Memory Configuration
+      - MAX_CONVERSATION_HISTORY=${MAX_CONVERSATION_HISTORY:-100}
+      - MEMORY_RETENTION_DAYS=${MEMORY_RETENTION_DAYS:-30}
+      - CONTEXT_SIMILARITY_THRESHOLD=${CONTEXT_SIMILARITY_THRESHOLD:-0.7}
+      - CONVERSATION_CONTEXT_LIMIT=${CONVERSATION_CONTEXT_LIMIT:-10}
+      
+      # LLM Configuration
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      
+      # Web Interface Configuration
+      - COVABOT_WEB_PORT=7080
+      - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:7080,http://127.0.0.1:7080}
+      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS:-100}
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-60000}
+      
+      # Data Directory
+      - COVABOT_DATA_DIR=/app/data
+      
+      # Performance and Resource Management
+      - NODE_OPTIONS=--max-old-space-size=1024
+      - UV_THREADPOOL_SIZE=4
+      
+      # Health Check Configuration
+      - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30}
+      - HEALTH_CHECK_TIMEOUT=${HEALTH_CHECK_TIMEOUT:-10}
+      
+      # Backup Configuration
+      - AUTO_BACKUP_INTERVAL=${AUTO_BACKUP_INTERVAL:-24}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+      
+      # Timezone
+      - TZ=${TZ:-UTC}
+      
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s  # Allow time for embedding model to load
+    networks:
+      - covabot-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.2'
+
+  # Optional: PostgreSQL for configuration data (if needed)
+  postgres:
+    image: postgres:15-alpine
+    container_name: covabot-postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ${POSTGRES_DATA_PATH:-/mnt/user/appdata/covabot/postgres}:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-covabot}
+      - POSTGRES_USER=${POSTGRES_USER:-covabot}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-covabot}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - covabot-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+    profiles:
+      - postgres  # Only start if explicitly requested
+
+networks:
+  covabot-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  qdrant-data:
+    driver: local
+  covabot-data:
+    driver: local
+  postgres-data:
+    driver: local
+
+---
+# Environment file template (.env.qdrant.example)
+# Copy to .env and configure for your environment
+
+# =============================================================================
+# CORE DISCORD CONFIGURATION
+# =============================================================================
+
+# Discord Bot Token (Required)
+STARBUNK_TOKEN=your_discord_bot_token_here
+COVABOT_TOKEN=your_discord_bot_token_here  # Can be same as STARBUNK_TOKEN
+
+# Discord Application Client ID (Required)
+CLIENT_ID=your_discord_client_id_here
+
+# Discord Guild/Server ID (Required)
+GUILD_ID=your_discord_guild_id_here
+
+# =============================================================================
+# QDRANT VECTOR DATABASE CONFIGURATION
+# =============================================================================
+
+# Qdrant API Key (Optional, for authentication)
+QDRANT_API_KEY=
+
+# Qdrant Log Level
+QDRANT_LOG_LEVEL=INFO
+
+# =============================================================================
+# EMBEDDING MODEL CONFIGURATION
+# =============================================================================
+
+# Embedding Model (Local sentence-transformers model)
+EMBEDDING_MODEL=Xenova/all-MiniLM-L6-v2
+EMBEDDING_DIMENSIONS=384
+EMBEDDING_BATCH_SIZE=32
+EMBEDDING_CACHE_SIZE=1000
+EMBEDDING_TIMEOUT=30000
+
+# =============================================================================
+# MEMORY AND CONVERSATION CONFIGURATION
+# =============================================================================
+
+# Conversation Memory Settings
+MAX_CONVERSATION_HISTORY=100
+MEMORY_RETENTION_DAYS=30
+CONTEXT_SIMILARITY_THRESHOLD=0.7
+CONVERSATION_CONTEXT_LIMIT=10
+
+# =============================================================================
+# LLM PROVIDER CONFIGURATION
+# =============================================================================
+
+# LLM Provider (ollama or openai)
+LLM_PROVIDER=ollama
+
+# Ollama Configuration
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+
+# OpenAI Configuration (if using OpenAI)
+OPENAI_API_KEY=
+OPENAI_DEFAULT_MODEL=gpt-4o-mini
+
+# =============================================================================
+# WEB INTERFACE CONFIGURATION
+# =============================================================================
+
+# Web Interface Port
+COVABOT_WEB_PORT=7080
+
+# API Key for web interface (Optional)
+COVABOT_API_KEY=
+
+# CORS Origins
+CORS_ORIGINS=http://localhost:7080,http://127.0.0.1:7080
+
+# Rate Limiting
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW_MS=60000
+
+# =============================================================================
+# DEBUG AND TESTING CONFIGURATION
+# =============================================================================
+
+# Environment
+NODE_ENV=production
+DEBUG_MODE=false
+LOG_LEVEL=info
+
+# Testing Configuration (leave empty for production)
+TESTING_SERVER_IDS=
+TESTING_CHANNEL_IDS=
+
+# =============================================================================
+# UNRAID PATHS CONFIGURATION
+# =============================================================================
+
+# Unraid Data Paths
+QDRANT_DATA_PATH=/mnt/user/appdata/covabot/qdrant
+COVABOT_DATA_PATH=/mnt/user/appdata/covabot/data
+COVABOT_LOGS_PATH=/mnt/user/appdata/covabot/logs
+
+# Optional PostgreSQL (if needed)
+POSTGRES_DATA_PATH=/mnt/user/appdata/covabot/postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=covabot
+POSTGRES_USER=covabot
+POSTGRES_PASSWORD=your_secure_postgres_password
+
+# =============================================================================
+# BACKUP AND MAINTENANCE
+# =============================================================================
+
+# Automatic Backup Settings
+AUTO_BACKUP_INTERVAL=24
+BACKUP_RETENTION_DAYS=30
+
+# Health Check Settings
+HEALTH_CHECK_INTERVAL=30
+HEALTH_CHECK_TIMEOUT=10
+
+# =============================================================================
+# SYSTEM CONFIGURATION
+# =============================================================================
+
+# Timezone
+TZ=UTC

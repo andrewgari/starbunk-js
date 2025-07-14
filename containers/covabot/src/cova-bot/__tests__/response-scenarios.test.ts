@@ -49,24 +49,43 @@ describe('CovaBot Response Scenarios', () => {
     avatarUrl: 'https://cdn.discordapp.com/avatars/139592376443338752/avatar.png'
   };
 
-  const createMockMessage = (overrides: Partial<Message> = {}): Message => ({
+  const createMockMessage = (overrides: any = {}): Message => ({
     id: 'test-message-123',
     content: 'Test message',
     channelId: 'test-channel-123',
     author: {
       id: 'user-123',
       bot: false,
-      username: 'TestUser'
+      username: 'TestUser',
+      _equals: jest.fn(),
+      accentColor: null,
+      avatar: null,
+      avatarDecoration: null,
+      avatarDecorationData: null,
+      banner: null,
+      createdAt: new Date(),
+      createdTimestamp: Date.now(),
+      defaultAvatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png',
+      discriminator: '0000',
+      displayName: 'TestUser',
+      flags: null,
+      globalName: null,
+      hexAccentColor: null,
+      partial: false,
+      system: false,
+      tag: 'TestUser#0000',
+      valueOf: () => 'user-123'
     },
     mentions: {
       has: jest.fn().mockReturnValue(false)
-    },
+    } as any,
     channel: {
       name: 'general'
-    },
+    } as any,
     guild: {
       id: 'test-guild-123'
-    },
+    } as any,
+    valueOf: () => 'test-message-123',
     ...overrides
   } as unknown as Message);
 
@@ -223,10 +242,10 @@ describe('CovaBot Response Scenarios', () => {
       
       const identityFunction = covaTrigger.identity;
       if (typeof identityFunction === 'function') {
-        const result = await identityFunction();
-        
+        const result = await identityFunction(mockMessage);
+
         expect(result).toEqual(validIdentity);
-        expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledWith(undefined);
+        expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledWith(mockMessage);
       }
     });
   });
@@ -270,8 +289,8 @@ describe('CovaBot Response Scenarios', () => {
       expect(covaTrigger.priority).toBe(3);
       
       // Verify priority ordering
-      expect(covaStatsCommandTrigger.priority).toBeGreaterThan(covaDirectMentionTrigger.priority);
-      expect(covaDirectMentionTrigger.priority).toBeGreaterThan(covaTrigger.priority);
+      expect(covaStatsCommandTrigger.priority).toBeGreaterThan(covaDirectMentionTrigger.priority || 0);
+      expect(covaDirectMentionTrigger.priority).toBeGreaterThan(covaTrigger.priority || 0);
     });
 
     it('should have unique trigger names', () => {

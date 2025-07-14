@@ -1,30 +1,25 @@
 import '../../shared/src/environment';
 import { logger } from '@starbunk/shared';
 import { WebServer } from './web/server';
-import { PersonalityNotesService } from './services/personalityNotesService';
-import { PersonalityNotesServiceDb } from './services/personalityNotesServiceDb';
+import { QdrantMemoryService } from './services/qdrantMemoryService';
 
 async function startCovaBot() {
   try {
-    const useDatabase = process.env.USE_DATABASE === 'true';
-    const storageType = useDatabase ? 'Database' : 'File';
+    const useQdrant = process.env.USE_QDRANT !== 'false'; // Default to true
+    const storageType = useQdrant ? 'Qdrant Vector Database' : 'Legacy';
 
     logger.info(`🤖 Starting CovaBot with Web Interface (${storageType} storage)...`);
 
-    // Initialize personality notes service
-    if (useDatabase) {
-      const dbService = PersonalityNotesServiceDb.getInstance();
-      await dbService.initialize();
-      logger.info('✅ Database personality notes service initialized');
-    } else {
-      const fileService = PersonalityNotesService.getInstance();
-      await fileService.loadNotes();
-      logger.info('✅ File-based personality notes service initialized');
+    // Initialize Qdrant memory service
+    if (useQdrant) {
+      const memoryService = QdrantMemoryService.getInstance();
+      await memoryService.initialize();
+      logger.info('✅ Qdrant memory service initialized');
     }
 
     // Start web server
     const port = parseInt(process.env.COVABOT_WEB_PORT || '7080', 10);
-    const webServer = new WebServer(port, useDatabase);
+    const webServer = new WebServer(port, useQdrant);
     await webServer.start();
     logger.info(`✅ Web interface started on http://localhost:${port}`);
 
@@ -33,6 +28,7 @@ async function startCovaBot() {
 
     logger.info('🚀 CovaBot with Web Interface started successfully!');
     logger.info(`📝 Manage personality at: http://localhost:${port}`);
+    logger.info(`🧠 Memory system: ${storageType}`);
   } catch (error) {
     logger.error('❌ Failed to start CovaBot with Web Interface:', error);
     process.exit(1);
@@ -40,15 +36,25 @@ async function startCovaBot() {
 }
 
 // Handle graceful shutdown
-process.on('SIGINT', () => {
+const shutdown = async () => {
   logger.info('🛑 Shutting down CovaBot...');
-  process.exit(0);
-});
 
-process.on('SIGTERM', () => {
-  logger.info('🛑 Shutting down CovaBot...');
+  try {
+    const useQdrant = process.env.USE_QDRANT !== 'false';
+    if (useQdrant) {
+      const memoryService = QdrantMemoryService.getInstance();
+      await memoryService.cleanup();
+      logger.info('✅ Memory service cleanup completed');
+    }
+  } catch (error) {
+    logger.error('❌ Error during cleanup:', error);
+  }
+
   process.exit(0);
-});
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 // Start the application
 startCovaBot();

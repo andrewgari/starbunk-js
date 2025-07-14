@@ -65,3 +65,6 @@ export * from './services/llm';
 // Personality and performance utilities
 export { getPersonalityService } from './services/personalityService';
 export { PerformanceTimer } from './utils/time';
+
+// Condition utilities for triggers
+export { and, fromBot, fromUser, not } from './utils/conditions';

@@ -1,0 +1,290 @@
+# Docker Compose configuration for Qdrant + CovaBot on Unraid
+# This extends your existing docker-compose setup
+
+version: '3.8'
+
+services:
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API (optional)
+    volumes:
+      - /mnt/user/appdata/qdrant:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__LOG_LEVEL=INFO
+      # Optional: Enable authentication
+      # - QDRANT__SERVICE__API_KEY=your_secure_api_key
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - starbunk-network
+
+  # Enhanced CovaBot with Qdrant integration
+  covabot:
+    image: ghcr.io/andrewgari/starbunk-covabot:latest
+    container_name: covabot
+    ports:
+      - "7080:7080"  # Web interface
+    volumes:
+      - /mnt/user/appdata/covabot:/app/data
+    environment:
+      # Discord Configuration
+      - COVABOT_TOKEN=${COVABOT_TOKEN}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      
+      # Database Configuration
+      - DATABASE_URL=${DATABASE_URL}
+      - USE_DATABASE=${USE_DATABASE:-true}
+      
+      # Qdrant Configuration
+      - QDRANT_URL=http://qdrant:6333
+      - USE_QDRANT=${USE_QDRANT:-true}
+      - QDRANT_COLLECTION_NAME=covabot_conversations
+      # - QDRANT_API_KEY=your_secure_api_key  # If authentication enabled
+      
+      # Embedding Configuration
+      - EMBEDDING_MODEL=Xenova/all-MiniLM-L6-v2
+      - EMBEDDING_BATCH_SIZE=32
+      - EMBEDDING_CACHE_SIZE=1000
+      
+      # Memory Configuration
+      - MAX_CONVERSATION_HISTORY=100
+      - MEMORY_RETENTION_DAYS=30
+      - CONTEXT_SIMILARITY_THRESHOLD=0.7
+      - CONVERSATION_CONTEXT_LIMIT=5
+      
+      # LLM Configuration
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      
+      # Web Interface Configuration
+      - WEB_PORT=7080
+      - CORS_ORIGINS=http://localhost:7080,http://127.0.0.1:7080
+      
+      # Data Directory (for file-based fallback)
+      - COVABOT_DATA_DIR=/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-network
+
+  # PostgreSQL Database (existing)
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - /mnt/user/appdata/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-starbunk}
+      - POSTGRES_USER=${POSTGRES_USER:-starbunk}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-starbunk}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - starbunk-network
+
+networks:
+  starbunk-network:
+    driver: bridge
+
+---
+# Environment file template (.env.qdrant.example)
+# Copy to .env and fill in your values
+
+# Discord Configuration
+COVABOT_TOKEN=your_discord_bot_token_here
+DEBUG_MODE=false
+TESTING_CHANNEL_IDS=
+
+# Database Configuration
+DATABASE_URL=postgresql://starbunk:your_password@postgres:5432/starbunk
+USE_DATABASE=true
+POSTGRES_DB=starbunk
+POSTGRES_USER=starbunk
+POSTGRES_PASSWORD=your_secure_password_here
+
+# Qdrant Configuration
+USE_QDRANT=true
+QDRANT_URL=http://qdrant:6333
+QDRANT_COLLECTION_NAME=covabot_conversations
+# QDRANT_API_KEY=your_secure_api_key  # Optional
+
+# Embedding Configuration
+EMBEDDING_MODEL=Xenova/all-MiniLM-L6-v2
+EMBEDDING_BATCH_SIZE=32
+EMBEDDING_CACHE_SIZE=1000
+
+# Memory Configuration
+MAX_CONVERSATION_HISTORY=100
+MEMORY_RETENTION_DAYS=30
+CONTEXT_SIMILARITY_THRESHOLD=0.7
+CONVERSATION_CONTEXT_LIMIT=5
+
+# LLM Configuration
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+
+# Web Interface Configuration
+WEB_PORT=7080
+CORS_ORIGINS=http://localhost:7080,http://127.0.0.1:7080
+
+---
+# Unraid Template for Qdrant
+# Add this to your Unraid templates
+
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Qdrant</Name>
+  <Repository>qdrant/qdrant:latest</Repository>
+  <Registry>https://hub.docker.com/r/qdrant/qdrant</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://qdrant.tech/documentation/</Support>
+  <Project>https://github.com/qdrant/qdrant</Project>
+  <Overview>Qdrant is a vector database and vector similarity search engine. It provides a production-ready service with a convenient API to store, search, and manage points with additional payload.</Overview>
+  <Category>Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:6333]/dashboard</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/qdrant/qdrant/master/docs/logo.svg</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled>1704067200</DateInstalled>
+  <DonateText/>
+  <DonateLink/>
+  <Description>Qdrant vector database for AI applications and semantic search.</Description>
+  <Networking>
+    <Mode>bridge</Mode>
+    <Publish>
+      <Port>
+        <HostPort>6333</HostPort>
+        <ContainerPort>6333</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+      <Port>
+        <HostPort>6334</HostPort>
+        <ContainerPort>6334</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+    </Publish>
+  </Networking>
+  <Data>
+    <Volume>
+      <HostDir>/mnt/user/appdata/qdrant</HostDir>
+      <ContainerDir>/qdrant/storage</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+  </Data>
+  <Environment>
+    <Variable>
+      <Value>6333</Value>
+      <Name>QDRANT__SERVICE__HTTP_PORT</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>6334</Value>
+      <Name>QDRANT__SERVICE__GRPC_PORT</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>INFO</Value>
+      <Name>QDRANT__LOG_LEVEL</Name>
+      <Mode/>
+    </Variable>
+  </Environment>
+  <Labels/>
+  <Config Name="HTTP Port" Target="6333" Default="6333" Mode="tcp" Description="Qdrant HTTP API port" Type="Port" Display="always" Required="true" Mask="false">6333</Config>
+  <Config Name="gRPC Port" Target="6334" Default="6334" Mode="tcp" Description="Qdrant gRPC API port (optional)" Type="Port" Display="always" Required="false" Mask="false">6334</Config>
+  <Config Name="Storage" Target="/qdrant/storage" Default="/mnt/user/appdata/qdrant" Mode="rw" Description="Qdrant data storage directory" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/qdrant</Config>
+  <Config Name="HTTP Port" Target="QDRANT__SERVICE__HTTP_PORT" Default="6333" Mode="" Description="HTTP service port" Type="Variable" Display="always" Required="true" Mask="false">6333</Config>
+  <Config Name="gRPC Port" Target="QDRANT__SERVICE__GRPC_PORT" Default="6334" Mode="" Description="gRPC service port" Type="Variable" Display="always" Required="false" Mask="false">6334</Config>
+  <Config Name="Log Level" Target="QDRANT__LOG_LEVEL" Default="INFO" Mode="" Description="Logging level (DEBUG, INFO, WARN, ERROR)" Type="Variable" Display="always" Required="false" Mask="false">INFO</Config>
+</Container>
+
+---
+# Migration Script for Existing Data
+# Run this to migrate existing personality notes to Qdrant
+
+#!/bin/bash
+
+# Backup existing data
+echo "Creating backup of existing personality notes..."
+docker exec covabot npm run export > personality_backup_$(date +%Y%m%d_%H%M%S).json
+
+# Initialize Qdrant collections
+echo "Initializing Qdrant collections..."
+curl -X PUT "http://localhost:6333/collections/covabot_conversations" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vectors": {
+      "size": 384,
+      "distance": "Cosine"
+    }
+  }'
+
+curl -X PUT "http://localhost:6333/collections/covabot_personality" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vectors": {
+      "size": 384,
+      "distance": "Cosine"
+    }
+  }'
+
+# Migrate personality notes to vectors
+echo "Migrating personality notes to Qdrant..."
+docker exec covabot node -e "
+const { ConversationMemoryService } = require('./dist/services/conversationMemoryService');
+const { PersonalityNotesServiceDb } = require('./dist/services/personalityNotesServiceDb');
+
+async function migrate() {
+  const memoryService = new ConversationMemoryService();
+  await memoryService.initialize();
+  
+  const notesService = PersonalityNotesServiceDb.getInstance();
+  await notesService.initialize();
+  
+  const notes = await notesService.getNotes();
+  console.log(\`Migrating \${notes.length} personality notes...\`);
+  
+  for (const note of notes) {
+    await memoryService.storePersonalityNote(note);
+  }
+  
+  console.log('Migration completed successfully!');
+}
+
+migrate().catch(console.error);
+"
+
+echo "Migration completed! Qdrant is now ready for use."
+echo "Access Qdrant dashboard at: http://localhost:6333/dashboard"

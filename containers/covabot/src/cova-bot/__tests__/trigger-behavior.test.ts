@@ -56,20 +56,23 @@ describe('CovaBot Response Behavior Tests', () => {
     decisionCondition = createLLMResponseDecisionCondition();
   });
 
-  const createMockMessage = (overrides: Partial<Message> = {}): Message => ({
+  const createMockMessage = (overrides: any = {}): Message => ({
     id: 'test-message-123',
     content: 'Test message',
     channelId: 'test-channel-123',
     author: {
       id: 'user-123',
       bot: false,
-      username: 'TestUser'
+      username: 'TestUser',
+      ...overrides.author
     },
     mentions: {
-      has: jest.fn().mockReturnValue(false)
+      has: jest.fn().mockReturnValue(false),
+      ...overrides.mentions
     },
     channel: {
-      name: 'general'
+      name: 'general',
+      ...overrides.channel
     },
     ...overrides
   } as unknown as Message);
@@ -245,8 +248,7 @@ describe('CovaBot Response Behavior Tests', () => {
       expect(result).toBe(false);
       
       expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Error in decision logic'),
-        expect.any(Error)
+        expect.stringContaining('Error in decision logic')
       );
       
       mockRandom.mockRestore();

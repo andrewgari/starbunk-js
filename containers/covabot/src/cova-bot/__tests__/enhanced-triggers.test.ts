@@ -2,12 +2,14 @@ import { Message } from 'discord.js';
 import { covaTrigger, covaDirectMentionTrigger } from '../triggers';
 import { CovaIdentityService } from '../../services/identity';
 import { createLLMResponseDecisionCondition } from '../llm-triggers';
-import { logger, and, fromBot, fromUser, not, createTriggerResponse } from '@starbunk/shared';
+import { logger, and, fromBot, fromUser, not } from '@starbunk/shared';
+import { createTriggerResponse } from '../triggerResponseFactory';
 import userId from '@starbunk/shared/dist/discord/userId';
 
 // Mock dependencies
 jest.mock('../../services/identity');
 jest.mock('../llm-triggers');
+jest.mock('../triggerResponseFactory');
 jest.mock('@starbunk/shared/dist/discord/userId', () => ({
   __esModule: true,
   default: {
@@ -25,7 +27,7 @@ jest.mock('@starbunk/shared', () => ({
   fromBot: jest.fn(),
   fromUser: jest.fn(),
   not: jest.fn(),
-  createTriggerResponse: jest.fn(),
+  // createTriggerResponse moved to local import
   PerformanceTimer: {
     getInstance: jest.fn(() => ({
       getStatsString: jest.fn()
@@ -187,9 +189,10 @@ describe('Enhanced CovaBot Triggers', () => {
         } as unknown as Message;
 
         // Test the fromBot condition
-        const fromBotCondition = mockFromBot.mockReturnValue((msg: Message) => msg.author.bot);
+        mockFromBot.mockReturnValue((msg: Message) => msg.author.bot);
+        const fromBotCondition = mockFromBot();
         const result = fromBotCondition(botMessage);
-        
+
         expect(result).toBe(true);
         expect(mockFromBot).toHaveBeenCalled();
       });
@@ -203,9 +206,10 @@ describe('Enhanced CovaBot Triggers', () => {
           }
         } as unknown as Message;
 
-        const fromBotCondition = mockFromBot.mockReturnValue((msg: Message) => msg.author.bot);
+        mockFromBot.mockReturnValue((msg: Message) => msg.author.bot);
+        const fromBotCondition = mockFromBot();
         const result = fromBotCondition(humanMessage);
-        
+
         expect(result).toBe(false);
       });
     });
@@ -220,9 +224,10 @@ describe('Enhanced CovaBot Triggers', () => {
           }
         } as unknown as Message;
 
-        const fromCovaCondition = mockFromUser.mockReturnValue((msg: Message) => msg.author.id === '139592376443338752');
+        mockFromUser.mockReturnValue((msg: Message) => msg.author.id === '139592376443338752');
+        const fromCovaCondition = mockFromUser('139592376443338752');
         const result = fromCovaCondition(covaMessage);
-        
+
         expect(result).toBe(true);
         expect(mockFromUser).toHaveBeenCalledWith('139592376443338752');
       });
@@ -236,9 +241,10 @@ describe('Enhanced CovaBot Triggers', () => {
           }
         } as unknown as Message;
 
-        const fromCovaCondition = mockFromUser.mockReturnValue((msg: Message) => msg.author.id === '139592376443338752');
+        mockFromUser.mockReturnValue((msg: Message) => msg.author.id === '139592376443338752');
+        const fromCovaCondition = mockFromUser('139592376443338752');
         const result = fromCovaCondition(otherUserMessage);
-        
+
         expect(result).toBe(false);
       });
     });
@@ -279,8 +285,16 @@ describe('Enhanced CovaBot Triggers', () => {
     });
 
     describe('Combined Condition Logic', () => {
-      it('should have correct condition structure', () => {
+      it('should have correct condition structure', async () => {
         expect(typeof covaTrigger.condition).toBe('function');
+
+        // Test that the condition function works by calling it
+        const testMessage = {
+          content: 'test message',
+          author: { id: 'user123', bot: false },
+        } as Message;
+        await covaTrigger.condition(testMessage);
+
         expect(mockAnd).toHaveBeenCalled();
       });
 
@@ -332,9 +346,10 @@ describe('Enhanced CovaBot Triggers', () => {
         }
       } as unknown as Message;
 
-      const fromBotCondition = mockFromBot.mockReturnValue((msg: Message) => msg.author.bot);
+      mockFromBot.mockReturnValue((msg: Message) => msg.author.bot);
+      const fromBotCondition = mockFromBot();
       const isBot = fromBotCondition(botMentionMessage);
-      
+
       expect(isBot).toBe(true);
     });
   });
@@ -452,11 +467,13 @@ describe('Enhanced CovaBot Triggers', () => {
         const msg = scenario.message as unknown as Message;
         
         // Test bot filtering
-        const fromBotCondition = mockFromBot.mockReturnValue((m: Message) => m.author.bot);
+        mockFromBot.mockReturnValue((m: Message) => m.author.bot);
+        const fromBotCondition = mockFromBot();
         const isBot = fromBotCondition(msg);
-        
+
         // Test self-message filtering
-        const fromCovaCondition = mockFromUser.mockReturnValue((m: Message) => m.author.id === '139592376443338752');
+        mockFromUser.mockReturnValue((m: Message) => m.author.id === '139592376443338752');
+        const fromCovaCondition = mockFromUser('139592376443338752');
         const isCova = fromCovaCondition(msg);
         
         // Test mention detection

@@ -22,12 +22,7 @@ module.exports = {
 		'^@xenova/transformers$': '<rootDir>/tests/mocks/transformers.ts',
 	},
 	transform: {
-		'^.+\\.tsx?$': [
-			'ts-jest',
-			{
-				isolatedModules: true,
-			},
-		],
+		'^.+\\.tsx?$': ['ts-jest'],
 	},
 	transformIgnorePatterns: ['node_modules/(?!@xenova/transformers)'],
 };

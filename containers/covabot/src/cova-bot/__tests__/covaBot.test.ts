@@ -44,8 +44,8 @@ describe('CovaBot', () => {
 			id: 'test-channel-123',
 			type: 0, // GUILD_TEXT channel type
 			send: jest.fn(),
-			fetchWebhooks: jest.fn(),
-			createWebhook: jest.fn(),
+			fetchWebhooks: jest.fn().mockResolvedValue(new Map()),
+			createWebhook: jest.fn().mockResolvedValue({ send: jest.fn() }),
 		} as unknown as TextChannel;
 
 		// Make sure instanceof check works
@@ -99,8 +99,8 @@ describe('CovaBot', () => {
 			const mockWebhooksCollection = {
 				find: jest.fn().mockReturnValue(undefined), // No existing webhook found
 			};
-			mockChannel.fetchWebhooks.mockResolvedValue(mockWebhooksCollection as any);
-			mockChannel.createWebhook.mockResolvedValue(mockWebhook as any);
+			(mockChannel.fetchWebhooks as jest.Mock).mockResolvedValue(mockWebhooksCollection as any);
+			(mockChannel.createWebhook as jest.Mock).mockResolvedValue(mockWebhook as any);
 
 			// Act
 			await covaBot.processMessage(mockMessage);
@@ -195,8 +195,8 @@ describe('CovaBot', () => {
 			mockCovaIdentityService.getCovaIdentity.mockResolvedValue(mockIdentity);
 
 			// Mock webhook operations to fail, forcing fallback to regular message
-			mockChannel.fetchWebhooks.mockRejectedValue(new Error('Webhook error'));
-			mockChannel.createWebhook.mockRejectedValue(new Error('Create webhook error'));
+			(mockChannel.fetchWebhooks as jest.Mock).mockRejectedValue(new Error('Webhook error'));
+			(mockChannel.createWebhook as jest.Mock).mockRejectedValue(new Error('Create webhook error'));
 
 			// Act
 			await covaBot.processMessage(mockMessage);
@@ -231,8 +231,8 @@ describe('CovaBot', () => {
 
 			mockCovaIdentityService.getCovaIdentity.mockResolvedValue(mockIdentity);
 			const mockWebhook = { send: jest.fn() };
-			mockChannel.fetchWebhooks.mockResolvedValue(new Map());
-			mockChannel.createWebhook.mockResolvedValue(mockWebhook as any);
+			(mockChannel.fetchWebhooks as jest.Mock).mockResolvedValue(new Map());
+			(mockChannel.createWebhook as jest.Mock).mockResolvedValue(mockWebhook as any);
 
 			// Act
 			await botWithMultipleTriggers.processMessage(mockMessage);
