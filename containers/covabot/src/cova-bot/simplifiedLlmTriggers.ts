@@ -11,18 +11,24 @@ export function createLLMResponseDecisionCondition(): TriggerCondition {
 		try {
 			// Simple heuristic: respond to questions, mentions, or with 10% probability
 			const content = message.content.toLowerCase();
-			
+
+			// Don't respond to empty or whitespace-only messages
+			if (!content.trim()) {
+				logger.debug('[CovaBot] LLM decision: not responding to empty message');
+				return false;
+			}
+
 			// Always respond to questions
 			if (content.includes('?') || content.startsWith('cova')) {
 				logger.debug('[CovaBot] LLM decision: responding to question or mention');
 				return true;
 			}
-			
+
 			// 10% chance to respond to other messages
 			const shouldRespond = Math.random() < 0.1;
 			logger.debug(`[CovaBot] LLM decision: ${shouldRespond ? 'responding' : 'not responding'} (random)`);
 			return shouldRespond;
-			
+
 		} catch (error) {
 			logger.error('[CovaBot] Error in LLM decision condition:', error as Error);
 			return false;
