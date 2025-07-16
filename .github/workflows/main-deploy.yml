@@ -21,7 +21,7 @@ jobs:
       starbunk-dnd-changed: ${{ steps.changes.outputs.starbunk-dnd }}
       snowbunk-changed: ${{ steps.changes.outputs.snowbunk }}
       covabot-changed: ${{ steps.changes.outputs.covabot }}
-      any-container-changed: ${{ steps.changes.outputs.any-container }}
+      any-container-changed: ${{ steps.changes.outputs.shared == 'true' || steps.changes.outputs.bunkbot == 'true' || steps.changes.outputs.djcova == 'true' || steps.changes.outputs.starbunk-dnd == 'true' || steps.changes.outputs.snowbunk == 'true' || steps.changes.outputs.covabot == 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,40 +30,7 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: changes
         with:
-          filters: |
-            shared:
-              - 'containers/shared/**'
-              - 'package.json'
-              - 'package-lock.json'
-            bunkbot:
-              - 'containers/bunkbot/**'
-              - 'containers/shared/**'
-              - 'package.json'
-              - 'package-lock.json'
-            djcova:
-              - 'containers/djcova/**'
-              - 'containers/shared/**'
-              - 'package.json'
-              - 'package-lock.json'
-            starbunk-dnd:
-              - 'containers/starbunk-dnd/**'
-              - 'containers/shared/**'
-              - 'package.json'
-              - 'package-lock.json'
-            snowbunk:
-              - 'containers/starbunk-dnd/**'
-              - 'containers/shared/**'
-              - 'package.json'
-              - 'package-lock.json'
-            covabot:
-              - 'containers/covabot/**'
-              - 'containers/shared/**'
-              - 'package.json'
-              - 'package-lock.json'
-            any-container:
-              - 'containers/**'
-              - 'package.json'
-              - 'package-lock.json'
+          filters: '.github/path-filters.yml'
 
   # Build and publish container images with latest tag
   build-and-publish:
