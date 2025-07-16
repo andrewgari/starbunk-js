@@ -281,9 +281,41 @@ export class MockQdrantMemoryService {
 }
 
 /**
+ * Interface describing the mock memory service returned by createMockMemoryService
+ */
+export interface MockMemoryService {
+	// Core QdrantMemoryService methods
+	createPersonalityNote: jest.MockedFunction<(content: string, metadata?: any) => Promise<PersonalityNote>>;
+	getPersonalityNote: jest.MockedFunction<(id: string) => Promise<PersonalityNote | null>>;
+	searchPersonalityNotes: jest.MockedFunction<(query: string, filters?: MemorySearchFilters, limit?: number) => Promise<PersonalityNote[]>>;
+	updatePersonalityNote: jest.MockedFunction<(id: string, updates: Partial<PersonalityNote>) => Promise<PersonalityNote | null>>;
+	deletePersonalityNote: jest.MockedFunction<(id: string) => Promise<boolean>>;
+	storeConversation: jest.MockedFunction<(userId: string, channelId: string, content: string, metadata?: any) => Promise<void>>;
+	generateEnhancedContext: jest.MockedFunction<(query: string, userId: string, channelId: string, options?: any) => Promise<{ combinedContext: string; personalityNotes: PersonalityNote[]; conversationHistory: any[] }>>;
+	healthCheck: jest.MockedFunction<() => Promise<{ status: string; details?: any }>>;
+
+	// WebServer compatibility methods
+	createNote: jest.MockedFunction<(request: any) => Promise<PersonalityNote>>;
+	getNotes: jest.MockedFunction<(filters?: any) => Promise<PersonalityNote[]>>;
+	getNoteById: jest.MockedFunction<(id: string) => Promise<PersonalityNote | null>>;
+	updateNote: jest.MockedFunction<(id: string, request: any) => Promise<PersonalityNote | null>>;
+	deleteNote: jest.MockedFunction<(id: string) => Promise<boolean>>;
+	searchMemory: jest.MockedFunction<(query: string, filters?: any) => Promise<PersonalityNote[]>>;
+	getStats: jest.MockedFunction<() => Promise<{ totalNotes: number; activeNotes: number; inactiveNotes: number }>>;
+	getActiveNotesForLLM: jest.MockedFunction<() => Promise<string>>;
+	initialize: jest.MockedFunction<() => Promise<void>>;
+
+	// Mock control methods
+	reset: () => void;
+	setShouldFail: (shouldFail: boolean, error?: Error) => void;
+	getMockData: () => { personalityNotes: PersonalityNote[]; conversationHistory: any[] };
+	setMockData: (data: any) => void;
+}
+
+/**
  * Factory function to create a mock memory service with Jest mock methods
  */
-export function createMockMemoryService(): any {
+export function createMockMemoryService(): MockMemoryService {
 	const mockService = new MockQdrantMemoryService();
 
 	// Add Jest mock methods for compatibility with tests
@@ -392,9 +424,36 @@ export class MockBotConfigurationService {
 }
 
 /**
+ * Interface representing the bot configuration object structure
+ */
+export interface BotConfiguration {
+	isEnabled: boolean;
+	responseFrequency: number;
+	maxResponseLength: number;
+	debugMode: boolean;
+}
+
+/**
+ * Interface describing the mock configuration service returned by createMockConfigurationService
+ */
+export interface MockConfigurationService {
+	// Core configuration service methods
+	getConfiguration: jest.MockedFunction<(key?: string) => Promise<any>>;
+	setConfiguration: jest.MockedFunction<(key: string, value: any) => Promise<void>>;
+	updateConfiguration: jest.MockedFunction<(updates: Partial<BotConfiguration>) => Promise<BotConfiguration>>;
+	createConfiguration: jest.MockedFunction<(request: Partial<BotConfiguration>) => Promise<BotConfiguration>>;
+	resetToDefaults: jest.MockedFunction<() => Promise<BotConfiguration>>;
+	loadConfiguration: jest.MockedFunction<() => Promise<void>>;
+
+	// Mock control methods
+	reset: () => void;
+	setShouldFail: (shouldFail: boolean) => void;
+}
+
+/**
  * Factory function to create a mock configuration service with Jest mock methods
  */
-export function createMockConfigurationService(): any {
+export function createMockConfigurationService(): MockConfigurationService {
 	const mockService = new MockBotConfigurationService();
 
 	return {

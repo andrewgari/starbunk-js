@@ -499,12 +499,47 @@ export class QdrantMemoryService {
 	// =============================================================================
 
 	/**
-	 * Simple tokenization for backward compatibility
+	 * Tokenizes content into both sentence-level and word-level segments for Qdrant metadata filtering.
+	 *
+	 * This method returns a mixed array containing:
+	 * - Sentence-level tokens: Split on sentence boundaries (.!?) and trimmed
+	 * - Word-level tokens: Individual words (≥3 characters) in lowercase
+	 *
+	 * The combined tokenization enables flexible metadata filtering in Qdrant:
+	 * - Sentence tokens allow matching against longer phrases and context
+	 * - Word tokens enable precise keyword-based filtering
+	 *
+	 * @param content - The text content to tokenize
+	 * @returns Array of mixed sentence and word tokens for metadata filtering
+	 *
+	 * @example
+	 * tokenizeContent("Hello world! How are you?")
+	 * // Returns: ["Hello world", "How are you", "hello", "world", "how", "are", "you"]
 	 */
 	private tokenizeContent(content: string): string[] {
-		const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
-		const words = content.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-		return [...sentences.map(s => s.trim()), ...words];
+		const sentences = this.tokenizeSentences(content);
+		const words = this.tokenizeWords(content);
+		return [...sentences, ...words];
+	}
+
+	/**
+	 * Extracts sentence-level tokens from content by splitting on sentence boundaries.
+	 *
+	 * @param content - The text content to tokenize
+	 * @returns Array of trimmed sentence tokens
+	 */
+	private tokenizeSentences(content: string): string[] {
+		return content.split(/[.!?]+/).filter(s => s.trim().length > 0).map(s => s.trim());
+	}
+
+	/**
+	 * Extracts word-level tokens from content, filtering for words with 3+ characters.
+	 *
+	 * @param content - The text content to tokenize
+	 * @returns Array of lowercase word tokens (≥3 characters)
+	 */
+	private tokenizeWords(content: string): string[] {
+		return content.toLowerCase().split(/\s+/).filter(w => w.length > 2);
 	}
 
 	/**

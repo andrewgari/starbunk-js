@@ -29,6 +29,14 @@ export interface PersonalityMemory extends BaseMemoryItem {
 	category: PersonalityCategory;
 	priority: Priority;
 	isActive: boolean;
+	/**
+	 * Mixed tokenization array containing both sentence-level and word-level tokens
+	 * for flexible Qdrant metadata filtering. Includes trimmed sentences and individual
+	 * words (≥3 characters) in lowercase for comprehensive search capabilities.
+	 *
+	 * Note: This field contains heterogeneous segments (both sentences and words).
+	 * Consider renaming to 'segments' in future refactoring for better clarity.
+	 */
 	tokens?: string[];
 }
 
