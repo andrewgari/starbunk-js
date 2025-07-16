@@ -1,4 +1,4 @@
-# BunkBot Container - Reply bots and admin commands
+# Snowbunk Container - Production-only D&D features
 # Optimized multi-stage build with Alpine Linux and BuildKit caching
 
 # Stage 1: Dependencies - Cache npm dependencies separately
@@ -10,8 +10,9 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files for dependency installation
+# Note: Snowbunk uses the same source as starbunk-dnd
 COPY containers/shared/package*.json ./shared/
-COPY containers/bunkbot/package*.json ./
+COPY containers/starbunk-dnd/package*.json ./
 
 # Install shared dependencies with mount cache
 RUN --mount=type=cache,target=/root/.npm \
@@ -31,7 +32,7 @@ RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files
 COPY containers/shared/package*.json ./shared/
-COPY containers/bunkbot/package*.json ./
+COPY containers/starbunk-dnd/package*.json ./
 
 # Install all dependencies (including dev) with mount cache
 RUN --mount=type=cache,target=/root/.npm \
@@ -39,13 +40,11 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # Copy source code
 COPY containers/shared ./shared
-COPY containers/bunkbot ./
-COPY prisma ./prisma
+COPY containers/starbunk-dnd ./
 
 # Build shared package and container
 RUN cd shared && npm run build && npm pack && \
     cd .. && npm install ./shared/starbunk-shared-1.0.0.tgz && \
-    npx prisma generate && \
     npm run build
 
 # Stage 3: Runtime - Minimal production image
@@ -53,10 +52,10 @@ FROM node:20-alpine AS runtime
 
 WORKDIR /app
 
-# Install only runtime system dependencies
-RUN apk add --no-cache openssl dumb-init curl && \
-    addgroup -g 1001 -S bunkbot && \
-    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G bunkbot bunkbot
+# Install runtime system dependencies
+RUN apk add --no-cache openssl python3 dumb-init curl && \
+    addgroup -g 1001 -S snowbunk && \
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G snowbunk snowbunk
 
 # Copy production dependencies from dependencies stage
 COPY --from=dependencies /app/node_modules ./node_modules
@@ -66,21 +65,17 @@ COPY --from=dependencies /app/shared/node_modules ./shared/node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/prisma ./prisma
-
-# Generate Prisma client for production
-RUN npx prisma generate
 
 # Set ownership and switch to non-root user
-RUN chown -R bunkbot:bunkbot /app
-USER bunkbot
+RUN chown -R snowbunk:snowbunk /app
+USER snowbunk
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
+    CMD curl -f http://localhost:3004/health || exit 1
 
-EXPOSE 3000
+EXPOSE 3004
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/index-minimal.js"]
