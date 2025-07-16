@@ -1,4 +1,4 @@
-# Starbunk-DND Container - D&D features and Snowbunk bridge
+# Snowbunk Container - Production-only D&D features
 # Optimized multi-stage build with Alpine Linux (Docker & Podman compatible)
 
 # Stage 1: Dependencies - Cache npm dependencies separately
@@ -10,6 +10,7 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files for dependency installation
+# Note: Snowbunk uses the same source as starbunk-dnd
 COPY containers/shared/package*.json ./shared/
 COPY containers/starbunk-dnd/package*.json ./
 
@@ -50,8 +51,8 @@ WORKDIR /app
 
 # Install runtime system dependencies
 RUN apk add --no-cache openssl python3 dumb-init curl && \
-    addgroup -g 1001 -S starbunk-dnd && \
-    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G starbunk-dnd starbunk-dnd
+    addgroup -g 1001 -S snowbunk && \
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G snowbunk snowbunk
 
 # Copy production dependencies from dependencies stage
 COPY --from=dependencies /app/node_modules ./node_modules
@@ -63,14 +64,14 @@ COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/package.json ./
 
 # Set ownership and switch to non-root user
-RUN chown -R starbunk-dnd:starbunk-dnd /app
-USER starbunk-dnd
+RUN chown -R snowbunk:snowbunk /app
+USER snowbunk
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3002/health || exit 1
+    CMD curl -f http://localhost:3004/health || exit 1
 
-EXPOSE 3002
+EXPOSE 3004
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]

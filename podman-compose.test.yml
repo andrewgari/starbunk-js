@@ -1,0 +1,31 @@
+# Podman Compose Test File
+# Simple test configuration for validating Podman compatibility
+
+services:
+  # Test BunkBot container
+  bunkbot-test:
+    image: ghcr.io/andrewgari/bunkbot:test-podman-v2
+    container_name: bunkbot-test
+    restart: "no"
+    environment:
+      - NODE_ENV=test
+      - LOG_LEVEL=debug
+    command: ["node", "--version"]
+    networks:
+      - test-network
+
+  # Test CovaBot container  
+  covabot-test:
+    image: ghcr.io/andrewgari/covabot:test-podman-v2
+    container_name: covabot-test
+    restart: "no"
+    environment:
+      - NODE_ENV=test
+      - LOG_LEVEL=debug
+    command: ["node", "--version"]
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge

@@ -1,0 +1,86 @@
+# Starbunk-DND specific .dockerignore
+# Optimize build context by excluding unnecessary files
+
+# Node.js
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.npm
+.cache
+
+# Git
+.git
+.gitignore
+.github
+
+# Environment files (except .env which may be needed)
+.env.*
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Build artifacts and coverage
+coverage
+.nyc_output
+dist
+*.tgz
+*.tar.gz
+
+# Testing
+__tests__
+**/*.test.ts
+**/*.spec.ts
+cypress
+cypress.config.ts
+jest.config.js
+
+# Documentation
+*.md
+README.md
+LICENSE
+docs
+
+# IDE and editor files
+.idea
+.vscode
+*.sublime-*
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Temporary files
+.tmp
+.temp
+*.zip
+
+# Python/Virtual Environments
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Other containers (exclude other container directories)
+containers/bunkbot
+containers/covabot
+containers/djcova
+containers/snowbunk
+
+# Archive directory
+archive
+
+# Scripts directory
+scripts
+
+# Large data directories that shouldn't be in build context
+data/*.db
+data/campaigns
+data/llm_context

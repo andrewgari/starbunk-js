@@ -1,22 +1,28 @@
 # Podman Compose for Production Deployment (Latest Images)
-# ========================================================
-# This file is designed for production deployment using the latest stable images.
-# 
+# =========================================================
+# This file is designed for production deployment using Podman with the latest stable images.
+#
+# Containers included: bunkbot, djcova, starbunk-dnd, snowbunk, covabot (5 containers)
+# Note: snowbunk is only available in production deployment
+#
+# Prerequisites:
+#   - Ensure .env file exists in the same directory as this compose file
+#   - All required environment variables must be defined in .env file
+#   - Verify all latest images are available in GHCR
+#   - Podman and podman-compose installed
+#
 # Usage:
+#   podman compose -f podman-compose.latest.yml up -d
+#   # OR (older syntax)
 #   podman-compose -f podman-compose.latest.yml up -d
 #
 # Image Format: ghcr.io/andrewgari/{service}:latest
-# 
-# Prerequisites:
-#   - Ensure all latest images are published to GHCR
-#   - Configure environment variables in .env file
-#   - Verify PostgreSQL credentials are set
+# Example: ghcr.io/andrewgari/bunkbot:latest
 #
-# For production deployment, consider:
-#   - Setting up proper SSL/TLS termination
-#   - Configuring log aggregation
-#   - Setting up monitoring and alerting
-#   - Implementing backup strategies for PostgreSQL data
+# Podman-specific considerations:
+#   - Health checks are built into containers but not supported in compose format
+#   - Logging configuration may differ slightly from Docker
+#   - Network handling is compatible with Docker Compose
 
 services:
   # PostgreSQL Database - Shared by services that need persistence

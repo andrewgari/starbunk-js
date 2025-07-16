@@ -25,7 +25,7 @@ on:
         type: string
 
 env:
-  CONTAINERS: '["bunkbot", "djcova", "starbunk-dnd", "covabot"]'
+  CONTAINERS: '["bunkbot", "djcova", "starbunk-dnd", "snowbunk", "covabot"]'
 
 jobs:
   cleanup-images:
@@ -112,7 +112,7 @@ jobs:
                       
                     case 'pr-snapshots':
                       // Delete PR snapshot images
-                      if (tags.some(tag => tag.match(/^pr-\d+-snapshot$/))) {
+                      if (tags.some(tag => tag === 'snapshot')) {
                         shouldDelete = true;
                         reason = 'PR snapshot image';
                       }
@@ -178,6 +178,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Cleanup Type:** ${{ steps.params.outputs.cleanup_type }}" >> $GITHUB_STEP_SUMMARY
           echo "**Days Old Threshold:** ${{ steps.params.outputs.days_old }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Containers Processed:** bunkbot, djcova, starbunk-dnd, covabot" >> $GITHUB_STEP_SUMMARY
+          echo "**Containers Processed:** bunkbot, djcova, starbunk-dnd, snowbunk, covabot" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Check the workflow logs for detailed information about deleted images." >> $GITHUB_STEP_SUMMARY

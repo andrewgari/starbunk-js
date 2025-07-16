@@ -18,6 +18,7 @@ jobs:
             bunkbot: ${{ steps.filter.outputs.bunkbot }}
             djcova: ${{ steps.filter.outputs.djcova }}
             starbunk-dnd: ${{ steps.filter.outputs.starbunk-dnd }}
+            snowbunk: ${{ steps.filter.outputs.snowbunk }}
             covabot: ${{ steps.filter.outputs.covabot }}
             root-files: ${{ steps.filter.outputs.root-files }}
             workflows: ${{ steps.filter.outputs.workflows }}
@@ -48,7 +49,7 @@ jobs:
                 # Check if shared changed (affects all containers)
                 if [[ "${{ steps.filter.outputs.shared }}" == "true" || "${{ steps.filter.outputs.root-files }}" == "true" || "${{ steps.filter.outputs.workflows }}" == "true" ]]; then
                   echo "Shared files or critical files changed - checking all containers"
-                  containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+                  containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
                 else
                   # Only check containers that have changed
                   if [[ "${{ steps.filter.outputs.bunkbot }}" == "true" ]]; then
@@ -59,6 +60,9 @@ jobs:
                   fi
                   if [[ "${{ steps.filter.outputs.starbunk-dnd }}" == "true" ]]; then
                     containers+=("starbunk-dnd")
+                  fi
+                  if [[ "${{ steps.filter.outputs.snowbunk }}" == "true" ]]; then
+                    containers+=("snowbunk")
                   fi
                   if [[ "${{ steps.filter.outputs.covabot }}" == "true" ]]; then
                     containers+=("covabot")

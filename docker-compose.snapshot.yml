@@ -1,3 +1,21 @@
+# Docker Compose for PR Testing (Snapshot Images)
+# ================================================
+# This file is designed for testing PR builds using snapshot images.
+#
+# Containers included: bunkbot, djcova, starbunk-dnd, covabot (4 containers)
+# Note: snowbunk is excluded from PR testing - only available in production
+#
+# Prerequisites:
+#   - Ensure .env file exists in the same directory as this compose file
+#   - All required environment variables must be defined in .env file
+#   - Verify snapshot images are available in GHCR (built during PR workflow)
+#
+# Usage:
+#   docker-compose -f docker-compose.snapshot.yml up -d
+#
+# Image Format: ghcr.io/andrewgari/{service}:snapshot (hardcoded tags)
+# Example: ghcr.io/andrewgari/bunkbot:snapshot
+
 services:
   # PostgreSQL Database - Required for database-driven configuration
   postgres:
@@ -30,7 +48,7 @@ services:
         max-file: "3"
 
   bunkbot:
-    image: ghcr.io/andrewgari/bunkbot:${SNAPSHOT_TAG:-pr-234-snapshot}
+    image: ghcr.io/andrewgari/bunkbot:snapshot
     container_name: starbunk-bunkbot-snapshot
     restart: unless-stopped
     env_file:
@@ -72,7 +90,7 @@ services:
           memory: 256M
 
   djcova:
-    image: ghcr.io/andrewgari/djcova:${SNAPSHOT_TAG:-pr-234-snapshot}
+    image: ghcr.io/andrewgari/djcova:snapshot
     container_name: starbunk-djcova-snapshot
     restart: unless-stopped
     env_file:
@@ -111,7 +129,7 @@ services:
           memory: 512M
 
   starbunk-dnd:
-    image: ghcr.io/andrewgari/starbunk-dnd:${SNAPSHOT_TAG:-pr-234-snapshot}
+    image: ghcr.io/andrewgari/starbunk-dnd:snapshot
     container_name: starbunk-dnd-snapshot
     restart: unless-stopped
     env_file:
@@ -160,7 +178,7 @@ services:
           memory: 512M
 
   covabot:
-    image: ghcr.io/andrewgari/covabot:${SNAPSHOT_TAG:-pr-234-snapshot}
+    image: ghcr.io/andrewgari/covabot:snapshot
     container_name: starbunk-covabot-snapshot
     restart: unless-stopped
     env_file:
