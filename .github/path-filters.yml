@@ -28,11 +28,10 @@ starbunk-dnd:
   - '!containers/starbunk-dnd/**/*.md'
 
 snowbunk:
-  - 'containers/starbunk-dnd/**'
+  - 'containers/snowbunk/**'
   - '!containers/starbunk-dnd/README.md'
   - '!containers/starbunk-dnd/docs/**'
   - '!containers/starbunk-dnd/**/*.md'
-
 covabot:
   - 'containers/covabot/**'
   - '!containers/covabot/README.md'
