@@ -157,13 +157,32 @@ describe('Web UI - Memory CRUD Operations (No Discord Integration)', () => {
 			});
 
 			it('should retrieve specific personality note by ID', async () => {
-				const noteId = 'test-note-123';
+				// First create a note
+				const noteData = {
+					content: 'Test note for retrieval',
+					category: 'knowledge',
+					priority: 'medium'
+				};
 
+				const createResponse = await request(app)
+					.post('/api/memory/personality-notes')
+					.send(noteData)
+					.expect(201);
+
+				const noteId = createResponse.body.data.id;
+
+				// Then retrieve it
 				const response = await request(app)
 					.get(`/api/memory/personality-notes/${noteId}`)
 					.expect(200);
 
 				expect(response.body.success).toBe(true);
+				expect(response.body.data).toMatchObject({
+					id: noteId,
+					content: noteData.content,
+					category: noteData.category,
+					priority: noteData.priority
+				});
 				expect(mockMemoryService.getPersonalityNote).toHaveBeenCalledWith(noteId);
 			});
 
@@ -196,7 +215,21 @@ describe('Web UI - Memory CRUD Operations (No Discord Integration)', () => {
 
 		describe('Update Operations', () => {
 			it('should update personality note content', async () => {
-				const noteId = 'test-note-123';
+				// First create a note
+				const noteData = {
+					content: 'Original note content',
+					category: 'knowledge',
+					priority: 'medium'
+				};
+
+				const createResponse = await request(app)
+					.post('/api/memory/personality-notes')
+					.send(noteData)
+					.expect(201);
+
+				const noteId = createResponse.body.data.id;
+
+				// Then update it
 				const updateData = {
 					content: 'Updated: Cova enjoys advanced AI discussions',
 					category: 'knowledge',
@@ -219,7 +252,21 @@ describe('Web UI - Memory CRUD Operations (No Discord Integration)', () => {
 			});
 
 			it('should handle partial updates', async () => {
-				const noteId = 'test-note-123';
+				// First create a note
+				const noteData = {
+					content: 'Original content for partial update',
+					category: 'knowledge',
+					priority: 'medium'
+				};
+
+				const createResponse = await request(app)
+					.post('/api/memory/personality-notes')
+					.send(noteData)
+					.expect(201);
+
+				const noteId = createResponse.body.data.id;
+
+				// Then do a partial update
 				const updateData = { content: 'Only updating content' };
 
 				const response = await request(app)
@@ -263,22 +310,53 @@ describe('Web UI - Memory CRUD Operations (No Discord Integration)', () => {
 			});
 
 			it('should handle service errors during update', async () => {
+				// First create a note
+				const noteData = {
+					content: 'Note that will fail to update',
+					category: 'knowledge',
+					priority: 'medium'
+				};
+
+				const createResponse = await request(app)
+					.post('/api/memory/personality-notes')
+					.send(noteData)
+					.expect(201);
+
+				const noteId = createResponse.body.data.id;
+
+				// Set up the mock to fail AFTER creating the note
 				mockMemoryService.setShouldFail(true, new Error('Update failed'));
 
 				const response = await request(app)
-					.put('/api/memory/personality-notes/test-id')
+					.put(`/api/memory/personality-notes/${noteId}`)
 					.send({ content: 'Test update' })
 					.expect(500);
 
 				expect(response.body.success).toBe(false);
 				expect(response.body.error).toContain('Failed to update personality note');
+
+				// Reset the mock failure state
+				mockMemoryService.setShouldFail(false);
 			});
 		});
 
 		describe('Delete Operations', () => {
 			it('should delete personality note successfully', async () => {
-				const noteId = 'test-note-123';
+				// First create a note
+				const noteData = {
+					content: 'Note to be deleted',
+					category: 'knowledge',
+					priority: 'medium'
+				};
 
+				const createResponse = await request(app)
+					.post('/api/memory/personality-notes')
+					.send(noteData)
+					.expect(201);
+
+				const noteId = createResponse.body.data.id;
+
+				// Then delete it
 				const response = await request(app)
 					.delete(`/api/memory/personality-notes/${noteId}`)
 					.expect(200);
@@ -303,14 +381,32 @@ describe('Web UI - Memory CRUD Operations (No Discord Integration)', () => {
 			});
 
 			it('should handle service errors during deletion', async () => {
+				// First create a note
+				const noteData = {
+					content: 'Note that will fail to delete',
+					category: 'knowledge',
+					priority: 'medium'
+				};
+
+				const createResponse = await request(app)
+					.post('/api/memory/personality-notes')
+					.send(noteData)
+					.expect(201);
+
+				const noteId = createResponse.body.data.id;
+
+				// Set up the mock to fail AFTER creating the note
 				mockMemoryService.setShouldFail(true, new Error('Delete failed'));
 
 				const response = await request(app)
-					.delete('/api/memory/personality-notes/test-id')
+					.delete(`/api/memory/personality-notes/${noteId}`)
 					.expect(500);
 
 				expect(response.body.success).toBe(false);
 				expect(response.body.error).toContain('Failed to delete personality note');
+
+				// Reset the mock failure state
+				mockMemoryService.setShouldFail(false);
 			});
 		});
 
@@ -426,6 +522,7 @@ describe('Web UI - Memory CRUD Operations (No Discord Integration)', () => {
 			});
 
 			it('should handle search service errors', async () => {
+				// Set up the mock to fail
 				mockMemoryService.setShouldFail(true, new Error('Search failed'));
 
 				const response = await request(app)
@@ -435,6 +532,9 @@ describe('Web UI - Memory CRUD Operations (No Discord Integration)', () => {
 
 				expect(response.body.success).toBe(false);
 				expect(response.body.error).toContain('Failed to search personality notes');
+
+				// Reset the mock failure state
+				mockMemoryService.setShouldFail(false);
 			});
 		});
 	});

@@ -277,10 +277,83 @@ export class MockQdrantMemoryService {
 }
 
 /**
- * Factory function to create a mock memory service
+ * Factory function to create a mock memory service with Jest mock methods
  */
-export function createMockMemoryService(): MockQdrantMemoryService {
-	return new MockQdrantMemoryService();
+export function createMockMemoryService(): any {
+	const mockService = new MockQdrantMemoryService();
+
+	// Add Jest mock methods for compatibility with tests
+	return {
+		...mockService,
+		// Alias methods for test compatibility
+		createPersonalityNote: jest.fn().mockImplementation((content: string, category?: PersonalityCategory, priority?: Priority) =>
+			mockService.createPersonalityNote(content, category, priority)
+		),
+		getPersonalityNote: jest.fn().mockImplementation((id: string) =>
+			mockService.getPersonalityNote(id)
+		),
+		searchPersonalityNotes: jest.fn().mockImplementation((query: string, filters?: MemorySearchFilters, limit?: number) =>
+			mockService.searchPersonalityNotes(query, filters, limit)
+		),
+		updatePersonalityNote: jest.fn().mockImplementation((id: string, updates: Partial<PersonalityNote>) =>
+			mockService.updatePersonalityNote(id, updates)
+		),
+		deletePersonalityNote: jest.fn().mockImplementation((id: string) =>
+			mockService.deletePersonalityNote(id)
+		),
+		storeConversation: jest.fn().mockImplementation((userId: string, channelId: string, content: string, metadata?: any) =>
+			mockService.storeConversation(userId, channelId, content, metadata)
+		),
+		generateEnhancedContext: jest.fn().mockImplementation((query: string, userId: string, channelId: string, options?: any) =>
+			mockService.generateEnhancedContext(query, userId, channelId, options)
+		),
+		healthCheck: jest.fn().mockImplementation(() =>
+			mockService.healthCheck()
+		),
+		// Main service methods (for WebServer compatibility)
+		createNote: jest.fn().mockImplementation((request: any) =>
+			mockService.createPersonalityNote(request.content, request.category, request.priority)
+		),
+		getNotes: jest.fn().mockImplementation((filters?: any) => {
+			// Simple implementation for testing
+			return Promise.resolve(mockService.getMockData().personalityNotes.filter(note => {
+				if (filters?.category && note.category !== filters.category) return false;
+				if (filters?.priority && note.priority !== filters.priority) return false;
+				if (filters?.isActive !== undefined && note.isActive !== filters.isActive) return false;
+				if (filters?.search && !note.content.toLowerCase().includes(filters.search.toLowerCase())) return false;
+				return true;
+			}));
+		}),
+		getNoteById: jest.fn().mockImplementation((id: string) =>
+			mockService.getPersonalityNote(id)
+		),
+		updateNote: jest.fn().mockImplementation((id: string, request: any) =>
+			mockService.updatePersonalityNote(id, request)
+		),
+		deleteNote: jest.fn().mockImplementation((id: string) =>
+			mockService.deletePersonalityNote(id)
+		),
+		searchMemory: jest.fn().mockImplementation((query: string, filters?: any) =>
+			mockService.searchPersonalityNotes(query, filters)
+		),
+		getStats: jest.fn().mockImplementation(() => {
+			const notes = mockService.getMockData().personalityNotes;
+			return Promise.resolve({
+				totalNotes: notes.length,
+				activeNotes: notes.filter(n => n.isActive).length,
+				inactiveNotes: notes.filter(n => !n.isActive).length
+			});
+		}),
+		getActiveNotesForLLM: jest.fn().mockImplementation(() => {
+			const activeNotes = mockService.getMockData().personalityNotes.filter(n => n.isActive);
+			return Promise.resolve(activeNotes.map(n => n.content).join('\n'));
+		}),
+		initialize: jest.fn().mockResolvedValue(undefined),
+		reset: () => mockService.reset(),
+		setShouldFail: (shouldFail: boolean, error?: Error) => mockService.setShouldFail(shouldFail, error),
+		getMockData: () => mockService.getMockData(),
+		setMockData: (data: any) => mockService.setMockData(data)
+	};
 }
 
 /**
@@ -315,8 +388,57 @@ export class MockBotConfigurationService {
 }
 
 /**
- * Factory function to create a mock configuration service
+ * Factory function to create a mock configuration service with Jest mock methods
  */
-export function createMockConfigurationService(): MockBotConfigurationService {
-	return new MockBotConfigurationService();
+export function createMockConfigurationService(): any {
+	const mockService = new MockBotConfigurationService();
+
+	return {
+		...mockService,
+		getConfiguration: jest.fn().mockImplementation((key?: string) => {
+			if (key) {
+				return mockService.getConfiguration(key);
+			}
+			// Return default configuration for no key
+			return Promise.resolve({
+				isEnabled: true,
+				responseFrequency: 0.3,
+				maxResponseLength: 2000,
+				debugMode: false
+			});
+		}),
+		setConfiguration: jest.fn().mockImplementation((key: string, value: any) =>
+			mockService.setConfiguration(key, value)
+		),
+		updateConfiguration: jest.fn().mockImplementation((updates: any) => {
+			// Simple implementation for testing
+			return Promise.resolve({
+				isEnabled: true,
+				responseFrequency: 0.3,
+				maxResponseLength: 2000,
+				debugMode: false,
+				...updates
+			});
+		}),
+		createConfiguration: jest.fn().mockImplementation((request: any) => {
+			return Promise.resolve({
+				isEnabled: true,
+				responseFrequency: 0.3,
+				maxResponseLength: 2000,
+				debugMode: false,
+				...request
+			});
+		}),
+		resetToDefaults: jest.fn().mockImplementation(() => {
+			return Promise.resolve({
+				isEnabled: true,
+				responseFrequency: 0.3,
+				maxResponseLength: 2000,
+				debugMode: false
+			});
+		}),
+		loadConfiguration: jest.fn().mockResolvedValue(undefined),
+		reset: () => mockService.reset(),
+		setShouldFail: (shouldFail: boolean) => mockService.setShouldFail(shouldFail)
+	};
 }
