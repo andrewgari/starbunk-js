@@ -183,7 +183,16 @@ describe('Enhanced LLM Triggers Tests', () => {
       // Mock the LLM service to fail
       if (failingGenerator.isUsingRealLLM()) {
         // Override the service to simulate failure
-        (failingGenerator as any).llmService = {
+        // Create a proper mock type
+        const mockLLMService: LLMService = {
+          isInitialized: () => true,
+          createSimpleCompletion: async () => {
+            throw new Error('Simulated LLM service failure');
+          },
+          initialize: async () => false,
+          getProviderName: () => 'Mock'
+        };
+        (failingGenerator as any).llmService = mockLLMService;
           isInitialized: () => true,
           createSimpleCompletion: async () => {
             throw new Error('Simulated LLM service failure');
