@@ -94,7 +94,11 @@ export class EmbeddingService {
 		// Check cache first
 		const cacheKey = this.getCacheKey(text);
 		if (this.cache.has(cacheKey)) {
-			return this.cache.get(cacheKey)!;
+			// Move to end for LRU behavior
+			const embedding = this.cache.get(cacheKey)!;
+			this.cache.delete(cacheKey);
+			this.cache.set(cacheKey, embedding);
+			return embedding;
 		}
 
 		try {
@@ -195,12 +199,12 @@ export class EmbeddingService {
 	}
 
 	/**
-	 * Cache embedding with size management
+	 * Cache embedding with LRU size management
 	 */
 	private cacheEmbedding(key: string, embedding: number[]): void {
 		// Implement LRU cache behavior
 		if (this.cache.size >= this.config.cacheSize) {
-			// Remove oldest entry
+			// Remove least recently used entry (first in Map)
 			const firstKey = this.cache.keys().next().value;
 			this.cache.delete(firstKey);
 		}

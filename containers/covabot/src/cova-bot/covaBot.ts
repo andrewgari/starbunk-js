@@ -76,6 +76,25 @@ export class CovaBot {
 		};
 	}
 
+	private shouldSkipDueToResponseRate(): boolean {
+		const responseRate = this.config.defaultResponseRate || 100;
+
+		if (responseRate <= 0) {
+			logger.debug('[CovaBot] Skipping message due to response rate');
+			return true;
+		}
+
+		if (responseRate < 100) {
+			const randomValue = Math.random() * 100;
+			if (randomValue >= responseRate) {
+				logger.debug('[CovaBot] Skipping message due to response rate');
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	/**
 	 * Process web message for testing (non-Discord)
 	 * Returns the bot's response as a string instead of sending via Discord
@@ -91,18 +110,8 @@ export class CovaBot {
 				return null;
 			}
 
-			// Check response rate
-			if ((this.config.defaultResponseRate || 100) <= 0) {
-				logger.debug('[CovaBot] Skipping message due to response rate');
+			if (this.shouldSkipDueToResponseRate()) {
 				return null;
-			}
-
-			if ((this.config.defaultResponseRate || 100) < 100) {
-				const randomValue = Math.random() * 100;
-				if (randomValue >= (this.config.defaultResponseRate || 100)) {
-					logger.debug('[CovaBot] Skipping message due to response rate');
-					return null;
-				}
 			}
 
 			// Sort triggers by priority (highest first)
@@ -155,18 +164,8 @@ export class CovaBot {
 				return;
 			}
 
-			// Check response rate
-			if ((this.config.defaultResponseRate || 100) <= 0) {
-				logger.debug('[CovaBot] Skipping message due to response rate');
+			if (this.shouldSkipDueToResponseRate()) {
 				return;
-			}
-
-			if ((this.config.defaultResponseRate || 100) < 100) {
-				const randomValue = Math.random() * 100;
-				if (randomValue >= (this.config.defaultResponseRate || 100)) {
-					logger.debug('[CovaBot] Skipping message due to response rate');
-					return;
-				}
 			}
 
 			// Skip bot messages if configured

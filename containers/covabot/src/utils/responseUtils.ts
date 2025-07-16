@@ -12,7 +12,6 @@ export interface ResponseGenerator {
  */
 export interface RandomResponseOptions {
 	weights?: number[];
-	seed?: number;
 }
 
 /**
@@ -56,5 +55,8 @@ export function weightedRandomResponse(
  * @returns Random response string
  */
 export function randomResponse(responses: string[]): string {
+	if (!responses || responses.length === 0) {
+		throw new Error('Response array cannot be empty');
+	}
 	return responses[Math.floor(Math.random() * responses.length)];
 }
