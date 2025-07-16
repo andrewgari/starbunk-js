@@ -1,5 +1,5 @@
 # Snowbunk Container - Production-only D&D features
-# Optimized multi-stage build with Alpine Linux and BuildKit caching
+# Optimized multi-stage build with Alpine Linux (Docker & Podman compatible)
 
 # Stage 1: Dependencies - Cache npm dependencies separately
 FROM node:20-alpine AS dependencies
@@ -14,13 +14,11 @@ RUN apk add --no-cache python3 make g++ openssl
 COPY containers/shared/package*.json ./shared/
 COPY containers/starbunk-dnd/package*.json ./
 
-# Install shared dependencies with mount cache
-RUN --mount=type=cache,target=/root/.npm \
-    cd shared && npm ci --only=production && npm ci
+# Install shared dependencies (optimized for both Docker and Podman)
+RUN cd shared && npm ci --only=production && npm ci && npm cache clean --force
 
-# Install container dependencies with mount cache
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production
+# Install container dependencies
+RUN npm ci --only=production && npm cache clean --force
 
 # Stage 2: Builder - Build the application
 FROM node:20-alpine AS builder
@@ -34,9 +32,8 @@ RUN apk add --no-cache python3 make g++ openssl
 COPY containers/shared/package*.json ./shared/
 COPY containers/starbunk-dnd/package*.json ./
 
-# Install all dependencies (including dev) with mount cache
-RUN --mount=type=cache,target=/root/.npm \
-    cd shared && npm ci && cd .. && npm ci
+# Install all dependencies (including dev) - optimized for both Docker and Podman
+RUN cd shared && npm ci && cd .. && npm ci && npm cache clean --force
 
 # Copy source code
 COPY containers/shared ./shared

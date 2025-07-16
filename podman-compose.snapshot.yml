@@ -1,15 +1,28 @@
-# Podman Compose for PR Snapshot Testing
-# =====================================
-# This file is designed for testing PR snapshot images with predictable naming.
-# 
-# Usage:
-#   1. Set the PR_NUMBER environment variable:
-#      export PR_NUMBER=123
-#   2. Run with: podman-compose -f podman-compose.snapshot.yml up
-#   3. Or specify PR inline: PR_NUMBER=123 podman-compose -f podman-compose.snapshot.yml up
+# Podman Compose for Testing/Development (Snapshot Images)
+# ========================================================
+# This file is designed for testing and development using Podman with snapshot images.
 #
-# Image Format: ghcr.io/andrewgari/{service}:pr-{number}-snapshot
-# Example: ghcr.io/andrewgari/bunkbot:pr-123-snapshot
+# Containers included: bunkbot, djcova, starbunk-dnd, covabot (4 containers)
+# Note: snowbunk is excluded from snapshot/testing deployment
+#
+# Prerequisites:
+#   - Ensure .env file exists in the same directory as this compose file
+#   - All required environment variables must be defined in .env file
+#   - Verify all snapshot images are available locally or in GHCR
+#   - Podman and podman-compose installed
+#
+# Usage:
+#   podman compose -f podman-compose.snapshot.yml up -d
+#   # OR (older syntax)
+#   podman-compose -f podman-compose.snapshot.yml up -d
+#
+# Image Format: ghcr.io/andrewgari/{service}:snapshot
+# Example: ghcr.io/andrewgari/bunkbot:snapshot
+#
+# Podman-specific considerations:
+#   - Health checks are built into containers but not supported in compose format
+#   - Logging configuration may differ slightly from Docker
+#   - Network handling is compatible with Docker Compose
 
 services:
   # PostgreSQL Database - Required for database-driven configuration
