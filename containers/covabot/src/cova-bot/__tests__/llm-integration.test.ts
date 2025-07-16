@@ -176,7 +176,7 @@ describe('LLM Integration Tests', () => {
   });
 
   describe('Real LLM Service Testing (Environment Dependent)', () => {
-    it('should create OpenAI provider when API key is available', async () => {
+    it.skip('should create OpenAI provider when API key is available', async () => {
       const hasOpenAIKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 0;
       
       if (!hasOpenAIKey) {

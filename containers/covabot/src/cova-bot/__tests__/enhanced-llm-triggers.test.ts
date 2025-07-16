@@ -1,6 +1,7 @@
 import { MockMessage } from '../covaBot';
 import { createLLMResponseDecisionCondition, createLLMEmulatorResponse, SimplePerformanceTimer } from '../simplifiedLlmTriggers';
 import { LLMFactory, LLMProviderType } from '@starbunk/shared/dist/services/llm/llmFactory';
+import { LLMService } from '@starbunk/shared/dist/services/llm/llmService';
 import { logger } from '@starbunk/shared';
 
 // Enhanced LLM Response Generator that can use real LLM services
@@ -179,7 +180,7 @@ describe('Enhanced LLM Triggers Tests', () => {
     it('should fallback gracefully when LLM service fails', async () => {
       // Create a generator that will definitely fail
       const failingGenerator = new EnhancedLLMResponseGenerator();
-      
+
       // Mock the LLM service to fail
       if (failingGenerator.isUsingRealLLM()) {
         // Override the service to simulate failure
@@ -190,14 +191,11 @@ describe('Enhanced LLM Triggers Tests', () => {
             throw new Error('Simulated LLM service failure');
           },
           initialize: async () => false,
-          getProviderName: () => 'Mock'
+          getProviderName: () => 'Mock',
+          getAvailableModels: () => ['mock-model'],
+          createCompletion: async () => ({ content: 'mock response' })
         };
         (failingGenerator as any).llmService = mockLLMService;
-          isInitialized: () => true,
-          createSimpleCompletion: async () => {
-            throw new Error('Simulated LLM service failure');
-          },
-        };
       }
 
       const mockMessage = new MockMessage('Test fallback behavior', 'test-user');
