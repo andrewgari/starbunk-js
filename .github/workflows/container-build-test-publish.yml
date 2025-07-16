@@ -55,6 +55,9 @@ jobs:
             echo "test-shared=true" >> $GITHUB_OUTPUT
 
             # Log specific shared changes for better debugging
+
+-           total_containers=4
++           total_containers=5   # or: total_containers=${#all_containers[@]}
             echo "📋 Shared change analysis:"
             if [[ "${{ steps.filter.outputs.shared }}" == "true" ]]; then
               echo "  🔧 Shared package code modified - all containers need rebuilding"
