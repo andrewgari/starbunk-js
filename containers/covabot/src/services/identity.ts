@@ -3,7 +3,7 @@ import { BotIdentity } from '../types/botIdentity';
 import { Message } from 'discord.js';
 
 // Cova's Discord user ID
-const COVA_USER_ID = '139592376443338752';
+const COVA_USER_ID = process.env.COVA_USER_ID || '139592376443338752';
 
 // Cache for identity data with expiration
 interface IdentityCache {
@@ -16,17 +16,15 @@ const identityCache = new Map<string, IdentityCache>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Enhanced identity service for CovaBot that always fetches current Discord identity
- * with validation and fallback handling
+ * Get Cova's current Discord identity with caching and validation
+ * @param message - Discord message for server context
+ * @param forceRefresh - Force fresh data from Discord API
+ * @returns Promise<BotIdentity | null> - null if identity cannot be resolved
  */
-export class CovaIdentityService {
-  /**
-   * Get Cova's current Discord identity with caching and validation
-   * @param message - Discord message for server context
-   * @param forceRefresh - Force fresh data from Discord API
-   * @returns Promise<BotIdentity | null> - null if identity cannot be resolved
-   */
-  static async getCovaIdentity(message?: Message, forceRefresh: boolean = false): Promise<BotIdentity | null> {
+export async function getCovaIdentityFromService(
+  message?: Message,
+  forceRefresh: boolean = false
+): Promise<BotIdentity | null> {
     try {
       const guildId = message?.guild?.id;
       const cacheKey = guildId || 'global';
@@ -48,7 +46,7 @@ export class CovaIdentityService {
       logger.debug(`[CovaIdentityService] Fetching fresh identity for user ${COVA_USER_ID} in guild ${guildId || 'global'}`);
 
       // Fetch fresh identity from Discord using DiscordService
-      const identity = await this.fetchDiscordIdentity(COVA_USER_ID, guildId, message);
+      const identity = await fetchDiscordIdentity(COVA_USER_ID, guildId, message);
 
       if (!identity) {
         logger.error(`[CovaIdentityService] Failed to retrieve identity for user ${COVA_USER_ID}`);
@@ -56,7 +54,7 @@ export class CovaIdentityService {
       }
 
       // Validate identity data
-      if (!this.validateIdentity(identity)) {
+      if (!validateIdentity(identity)) {
         logger.error(`[CovaIdentityService] Identity validation failed for user ${COVA_USER_ID}: ${JSON.stringify(identity)}`);
         return null;
       }
@@ -75,12 +73,16 @@ export class CovaIdentityService {
       logger.error(`[CovaIdentityService] Error getting Cova identity:`, error as Error);
       return null;
     }
-  }
+}
 
-  /**
-   * Fetch Discord identity using DiscordService
-   */
-  private static async fetchDiscordIdentity(userId: string, guildId?: string, message?: Message): Promise<BotIdentity | null> {
+/**
+ * Fetch Discord identity using DiscordService
+ */
+async function fetchDiscordIdentity(
+  userId: string,
+  guildId?: string,
+  message?: Message
+): Promise<BotIdentity | null> {
     try {
       // Get DiscordService from container
       const discordService = container.get(ServiceId.DiscordService) as any;
@@ -141,75 +143,81 @@ export class CovaIdentityService {
     }
   }
 
-  /**
-   * Validate that identity data is complete and usable
-   */
-  private static validateIdentity(identity: BotIdentity): boolean {
-    // Check that required fields are present and non-empty
-    if (!identity.botName || identity.botName.trim().length === 0) {
-      logger.warn(`[CovaIdentityService] Invalid botName: "${identity.botName}"`);
-      return false;
+/**
+ * Validate that identity data is complete and usable
+ */
+function validateIdentity(identity: BotIdentity): boolean {
+  // Check that required fields are present and non-empty
+  if (!identity.botName || identity.botName.trim().length === 0) {
+    logger.warn(`[CovaIdentityService] Invalid botName: "${identity.botName}"`);
+    return false;
+  }
+
+  if (!identity.avatarUrl || identity.avatarUrl.trim().length === 0) {
+    logger.warn(`[CovaIdentityService] Invalid avatarUrl: "${identity.avatarUrl}"`);
+    return false;
+  }
+
+  // Check that avatar URL is a valid Discord CDN URL
+  const validUrlPattern = /^https:\/\/(cdn\.discordapp\.com|media\.discordapp\.net)\//;
+  if (!validUrlPattern.test(identity.avatarUrl)) {
+    logger.warn(`[CovaIdentityService] Avatar URL is not a valid Discord CDN URL: "${identity.avatarUrl}"`);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Clear the identity cache (useful for testing or manual refresh)
+ */
+export function clearIdentityCache(): void {
+  const cacheSize = identityCache.size;
+  identityCache.clear();
+  logger.debug(`[CovaIdentityService] Cleared identity cache (${cacheSize} entries)`);
+}
+
+/**
+ * Get cache statistics for debugging
+ */
+export function getIdentityCacheStats(): { entries: number; keys: string[] } {
+  const keys = Array.from(identityCache.keys());
+  return {
+    entries: identityCache.size,
+    keys,
+  };
+}
+
+/**
+ * Pre-warm the cache with identity data for common guilds
+ */
+export async function preWarmIdentityCache(
+  guildIds: string[]
+): Promise<void> {
+  logger.debug(
+    `[CovaIdentityService] Pre-warming cache for ${guildIds.length} guilds`
+  );
+
+  const promises = guildIds.map(async (guildId) => {
+    try {
+      // Create a mock message for context
+      const mockMessage = { guild: { id: guildId } } as Message;
+      await getCovaIdentityFromService(mockMessage, true);
+    } catch (error) {
+      logger.warn(
+        `[CovaIdentityService] Failed to pre-warm cache for guild ${guildId}:`,
+        error
+      );
     }
+  });
 
-    if (!identity.avatarUrl || identity.avatarUrl.trim().length === 0) {
-      logger.warn(`[CovaIdentityService] Invalid avatarUrl: "${identity.avatarUrl}"`);
-      return false;
-    }
-
-    // Check that avatar URL is a valid Discord CDN URL
-    const validUrlPattern = /^https:\/\/(cdn\.discordapp\.com|media\.discordapp\.net)\//;
-    if (!validUrlPattern.test(identity.avatarUrl)) {
-      logger.warn(`[CovaIdentityService] Avatar URL is not a valid Discord CDN URL: "${identity.avatarUrl}"`);
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Clear the identity cache (useful for testing or manual refresh)
-   */
-  static clearCache(): void {
-    const cacheSize = identityCache.size;
-    identityCache.clear();
-    logger.debug(`[CovaIdentityService] Cleared identity cache (${cacheSize} entries)`);
-  }
-
-  /**
-   * Get cache statistics for debugging
-   */
-  static getCacheStats(): { entries: number; keys: string[] } {
-    const keys = Array.from(identityCache.keys());
-    return {
-      entries: identityCache.size,
-      keys
-    };
-  }
-
-  /**
-   * Pre-warm the cache with identity data for common guilds
-   */
-  static async preWarmCache(guildIds: string[]): Promise<void> {
-    logger.debug(`[CovaIdentityService] Pre-warming cache for ${guildIds.length} guilds`);
-    
-    const promises = guildIds.map(async (guildId) => {
-      try {
-        // Create a mock message for context
-        const mockMessage = { guild: { id: guildId } } as Message;
-        await this.getCovaIdentity(mockMessage, true);
-      } catch (error) {
-        logger.warn(`[CovaIdentityService] Failed to pre-warm cache for guild ${guildId}:`, error);
-      }
-    });
-
-    await Promise.allSettled(promises);
-    logger.debug(`[CovaIdentityService] Cache pre-warming complete`);
-  }
+  await Promise.allSettled(promises);
+  logger.debug(`[CovaIdentityService] Cache pre-warming complete`);
 }
 
 /**
  * Convenience function that maintains backward compatibility
  */
 export async function getCovaIdentity(message?: Message): Promise<BotIdentity | null> {
-  return CovaIdentityService.getCovaIdentity(message);
+  return getCovaIdentityFromService(message);
 }

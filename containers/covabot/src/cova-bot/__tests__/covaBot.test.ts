@@ -1,5 +1,5 @@
 import { CovaBot } from '../covaBot';
-import { CovaIdentityService } from '../../services/identity';
+import { getCovaIdentity } from '../../services/identity';
 import { Message, TextChannel, Client } from 'discord.js';
 import { logger } from '@starbunk/shared';
 
@@ -14,7 +14,12 @@ jest.mock('@starbunk/shared', () => ({
 	},
 }));
 
-const mockCovaIdentityService = CovaIdentityService as jest.Mocked<typeof CovaIdentityService>;
+// Mock the identity service functions
+jest.mock('../../services/identity', () => ({
+	getCovaIdentity: jest.fn(),
+}));
+
+const mockGetCovaIdentity = getCovaIdentity as jest.MockedFunction<typeof getCovaIdentity>;
 const mockLogger = logger as jest.Mocked<typeof logger>;
 
 describe('CovaBot', () => {
@@ -90,7 +95,7 @@ describe('CovaBot', () => {
 			// Arrange
 			mockTrigger.condition.mockResolvedValue(true);
 			mockTrigger.response.mockResolvedValue('Hello there!');
-			mockCovaIdentityService.getCovaIdentity.mockResolvedValue(mockIdentity);
+			mockGetCovaIdentity.mockResolvedValue(mockIdentity);
 
 			const mockWebhook = {
 				send: jest.fn().mockResolvedValue(undefined),
@@ -108,7 +113,7 @@ describe('CovaBot', () => {
 			// Assert
 			expect(mockTrigger.condition).toHaveBeenCalledWith(mockMessage);
 			expect(mockTrigger.response).toHaveBeenCalledWith(mockMessage);
-			expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledWith(mockMessage);
+			expect(mockGetCovaIdentity).toHaveBeenCalledWith(mockMessage);
 			expect(mockChannel.fetchWebhooks).toHaveBeenCalled();
 			expect(mockChannel.createWebhook).toHaveBeenCalledWith({
 				name: 'CovaBot Webhook',
@@ -125,7 +130,7 @@ describe('CovaBot', () => {
 			// Arrange
 			mockTrigger.condition.mockResolvedValue(true);
 			mockTrigger.response.mockResolvedValue('Hello there!');
-			mockCovaIdentityService.getCovaIdentity.mockResolvedValue(null); // Identity resolution fails
+			mockGetCovaIdentity.mockResolvedValue(null); // Identity resolution fails
 
 			// Act
 			await covaBot.processMessage(mockMessage);
@@ -133,7 +138,7 @@ describe('CovaBot', () => {
 			// Assert
 			expect(mockTrigger.condition).toHaveBeenCalledWith(mockMessage);
 			expect(mockTrigger.response).toHaveBeenCalledWith(mockMessage);
-			expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledWith(mockMessage);
+			expect(mockGetCovaIdentity).toHaveBeenCalledWith(mockMessage);
 			expect(mockChannel.send).not.toHaveBeenCalled();
 			expect(mockChannel.createWebhook).not.toHaveBeenCalled();
 		});
@@ -148,7 +153,7 @@ describe('CovaBot', () => {
 			// Assert
 			expect(mockTrigger.condition).toHaveBeenCalledWith(mockMessage);
 			expect(mockTrigger.response).not.toHaveBeenCalled();
-			expect(mockCovaIdentityService.getCovaIdentity).not.toHaveBeenCalled();
+			expect(mockGetCovaIdentity).not.toHaveBeenCalled();
 			expect(mockChannel.send).not.toHaveBeenCalled();
 		});
 
@@ -192,7 +197,7 @@ describe('CovaBot', () => {
 			// Arrange
 			mockTrigger.condition.mockResolvedValue(true);
 			mockTrigger.response.mockResolvedValue('Hello there!');
-			mockCovaIdentityService.getCovaIdentity.mockResolvedValue(mockIdentity);
+			mockGetCovaIdentity.mockResolvedValue(mockIdentity);
 
 			// Mock webhook operations to fail, forcing fallback to regular message
 			(mockChannel.fetchWebhooks as jest.Mock).mockRejectedValue(new Error('Webhook error'));
@@ -229,7 +234,7 @@ describe('CovaBot', () => {
 				triggers: [lowPriorityTrigger, highPriorityTrigger], // Added in reverse priority order
 			});
 
-			mockCovaIdentityService.getCovaIdentity.mockResolvedValue(mockIdentity);
+			mockGetCovaIdentity.mockResolvedValue(mockIdentity);
 			const mockWebhook = { send: jest.fn() };
 			(mockChannel.fetchWebhooks as jest.Mock).mockResolvedValue(new Map());
 			(mockChannel.createWebhook as jest.Mock).mockResolvedValue(mockWebhook as any);

@@ -2,14 +2,14 @@ import userId from '@starbunk/shared/dist/discord/userId';
 import { and, fromBot, fromUser, not } from './conditions';
 import { createTriggerResponse } from './triggerResponseFactory';
 import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './simplifiedLlmTriggers';
-import { CovaIdentityService } from '../services/identity';
+import { getCovaIdentity } from '../services/identity';
 import { logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
 
 // Enhanced identity function with validation and silent failure
-async function getCovaIdentity(message?: Message) {
+async function getCovaIdentityWithValidation(message?: Message) {
 	try {
-		const identity = await CovaIdentityService.getCovaIdentity(message);
+		const identity = await getCovaIdentity(message);
 		
 		if (!identity) {
 			logger.warn(`[CovaBot] Identity validation failed, silently discarding message`);
@@ -35,7 +35,7 @@ export const covaTrigger = createTriggerResponse({
 		// Removed withChance(50) since LLM decision now handles probability
 	),
 	response: createLLMEmulatorResponse(),
-	identity: async (message) => getCovaIdentity(message)
+	identity: async (message) => getCovaIdentityWithValidation(message)
 });
 
 // Direct mention trigger - always respond to direct mentions
@@ -48,7 +48,7 @@ export const covaDirectMentionTrigger = createTriggerResponse({
 		not(fromBot())
 	),
 	response: createLLMEmulatorResponse(),
-	identity: async (message) => getCovaIdentity(message)
+	identity: async (message) => getCovaIdentityWithValidation(message)
 });
 
 // Stats command trigger - for debugging performance metrics
@@ -65,6 +65,6 @@ export const covaStatsCommandTrigger = createTriggerResponse({
 		const stats = `Uptime: ${Math.floor(uptime)}s\nMemory: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`;
 		return `**CovaBot Performance Stats**\n\`\`\`\n${stats}\n\`\`\``;
 	},
-	identity: async (message) => getCovaIdentity(message)
+	identity: async (message) => getCovaIdentityWithValidation(message)
 });
 

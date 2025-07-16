@@ -1,6 +1,6 @@
 import { Message } from 'discord.js';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from '../triggers';
-import { CovaIdentityService } from '../../services/identity';
+import { getCovaIdentity } from '../../services/identity';
 import { createLLMResponseDecisionCondition, createLLMEmulatorResponse } from '../llm-triggers';
 import { logger } from '@starbunk/shared';
 
@@ -38,7 +38,12 @@ jest.mock('@starbunk/shared', () => ({
   weightedRandomResponse: jest.fn()
 }));
 
-const mockCovaIdentityService = CovaIdentityService as jest.Mocked<typeof CovaIdentityService>;
+// Mock the identity service functions
+jest.mock('../../services/identity', () => ({
+	getCovaIdentity: jest.fn(),
+}));
+
+const mockGetCovaIdentity = getCovaIdentity as jest.MockedFunction<typeof getCovaIdentity>;
 const mockCreateLLMResponseDecisionCondition = createLLMResponseDecisionCondition as jest.MockedFunction<typeof createLLMResponseDecisionCondition>;
 const mockCreateLLMEmulatorResponse = createLLMEmulatorResponse as jest.MockedFunction<typeof createLLMEmulatorResponse>;
 const mockLogger = logger as jest.Mocked<typeof logger>;
@@ -91,7 +96,7 @@ describe('CovaBot Response Scenarios', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockCovaIdentityService.getCovaIdentity.mockResolvedValue(validIdentity);
+    mockGetCovaIdentity.mockResolvedValue(validIdentity);
   });
 
   describe('Real-World Scenarios', () => {
@@ -209,7 +214,7 @@ describe('CovaBot Response Scenarios', () => {
 
   describe('Identity Validation Edge Cases', () => {
     it('should handle network failures gracefully', async () => {
-      mockCovaIdentityService.getCovaIdentity.mockRejectedValue(new Error('Network timeout'));
+      mockGetCovaIdentity.mockRejectedValue(new Error('Network timeout'));
       
       const identityFunction = covaTrigger.identity;
       if (typeof identityFunction === 'function') {
@@ -224,7 +229,7 @@ describe('CovaBot Response Scenarios', () => {
     });
 
     it('should handle invalid identity data', async () => {
-      mockCovaIdentityService.getCovaIdentity.mockResolvedValue(null);
+      mockGetCovaIdentity.mockResolvedValue(null);
       
       const identityFunction = covaTrigger.identity;
       if (typeof identityFunction === 'function') {
@@ -238,7 +243,7 @@ describe('CovaBot Response Scenarios', () => {
     });
 
     it('should handle identity validation without message context', async () => {
-      mockCovaIdentityService.getCovaIdentity.mockResolvedValue(validIdentity);
+      mockGetCovaIdentity.mockResolvedValue(validIdentity);
       
       const identityFunction = covaTrigger.identity;
       if (typeof identityFunction === 'function') {
@@ -246,7 +251,7 @@ describe('CovaBot Response Scenarios', () => {
         const result = await identityFunction(testMessage);
 
         expect(result).toEqual(validIdentity);
-        expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledWith(testMessage);
+        expect(mockGetCovaIdentity).toHaveBeenCalledWith(testMessage);
       }
     });
   });
@@ -321,7 +326,7 @@ describe('CovaBot Response Scenarios', () => {
         expect(results.every(r => r === validIdentity)).toBe(true);
         
         // Should not create excessive calls due to caching
-        expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledTimes(100);
+        expect(mockGetCovaIdentity).toHaveBeenCalledTimes(100);
       }
     });
   });
@@ -372,7 +377,7 @@ describe('CovaBot Response Scenarios', () => {
         
         expect(result1).toEqual(validIdentity);
         expect(result2).toEqual(validIdentity);
-        expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledTimes(2);
+        expect(mockGetCovaIdentity).toHaveBeenCalledTimes(2);
       }
     });
 
@@ -394,7 +399,7 @@ describe('CovaBot Response Scenarios', () => {
         
         expect(result1).toEqual(validIdentity);
         expect(result2).toEqual(validIdentity);
-        expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledTimes(2);
+        expect(mockGetCovaIdentity).toHaveBeenCalledTimes(2);
       }
     });
   });

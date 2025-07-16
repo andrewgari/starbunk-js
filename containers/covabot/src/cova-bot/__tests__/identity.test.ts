@@ -1,4 +1,8 @@
-import { CovaIdentityService } from '../../services/identity';
+import {
+  getCovaIdentityFromService,
+  clearIdentityCache,
+  getIdentityCacheStats
+} from '../../services/identity';
 import { container, ServiceId } from '@starbunk/shared';
 import { Message } from 'discord.js';
 
@@ -48,7 +52,7 @@ describe('CovaIdentityService', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		(container.get as jest.Mock).mockReturnValue(mockDiscordService);
-		CovaIdentityService.clearCache();
+		clearIdentityCache();
 	});
 
 	describe('getCovaIdentity', () => {
@@ -57,7 +61,7 @@ describe('CovaIdentityService', () => {
 			mockDiscordService.getMemberAsync.mockResolvedValue(mockMember);
 
 			// Act
-			const identity = await CovaIdentityService.getCovaIdentity(mockMessage);
+			const identity = await getCovaIdentityFromService(mockMessage);
 
 			// Assert
 			expect(identity).toEqual({
@@ -76,7 +80,7 @@ describe('CovaIdentityService', () => {
 			mockDiscordService.getMemberAsync.mockResolvedValue(memberWithoutNickname);
 
 			// Act
-			const identity = await CovaIdentityService.getCovaIdentity(mockMessage);
+			const identity = await getCovaIdentityFromService(mockMessage);
 
 			// Assert
 			expect(identity).toEqual({
@@ -98,7 +102,7 @@ describe('CovaIdentityService', () => {
 			mockDiscordService.getMemberAsync.mockResolvedValue(memberWithoutNames);
 
 			// Act
-			const identity = await CovaIdentityService.getCovaIdentity(mockMessage);
+			const identity = await getCovaIdentityFromService(mockMessage);
 
 			// Assert
 			expect(identity).toEqual({
@@ -112,7 +116,7 @@ describe('CovaIdentityService', () => {
 			mockDiscordService.getMemberAsync.mockResolvedValue(null);
 
 			// Act
-			const identity = await CovaIdentityService.getCovaIdentity(mockMessage);
+			const identity = await getCovaIdentityFromService(mockMessage);
 
 			// Assert
 			expect(identity).toBeNull();
@@ -131,7 +135,7 @@ describe('CovaIdentityService', () => {
 			mockDiscordService.getMemberAsync.mockResolvedValue(memberWithoutAvatar);
 
 			// Act
-			const identity = await CovaIdentityService.getCovaIdentity(mockMessage);
+			const identity = await getCovaIdentityFromService(mockMessage);
 
 			// Assert
 			expect(identity).toBeNull();
@@ -142,8 +146,8 @@ describe('CovaIdentityService', () => {
 			mockDiscordService.getMemberAsync.mockResolvedValue(mockMember);
 
 			// Act
-			const identity1 = await CovaIdentityService.getCovaIdentity(mockMessage);
-			const identity2 = await CovaIdentityService.getCovaIdentity(mockMessage);
+			const identity1 = await getCovaIdentityFromService(mockMessage);
+			const identity2 = await getCovaIdentityFromService(mockMessage);
 
 			// Assert
 			expect(identity1).toEqual(identity2);
@@ -155,8 +159,8 @@ describe('CovaIdentityService', () => {
 			mockDiscordService.getMemberAsync.mockResolvedValue(mockMember);
 
 			// Act
-			await CovaIdentityService.getCovaIdentity(mockMessage);
-			const identity = await CovaIdentityService.getCovaIdentity(mockMessage, true);
+			await getCovaIdentityFromService(mockMessage);
+			const identity = await getCovaIdentityFromService(mockMessage, true);
 
 			// Assert
 			expect(identity).toEqual({
@@ -172,7 +176,7 @@ describe('CovaIdentityService', () => {
 			mockDiscordService.getUserAsync.mockResolvedValue(mockUser);
 
 			// Act
-			const identity = await CovaIdentityService.getCovaIdentity(messageWithoutGuild);
+			const identity = await getCovaIdentityFromService(messageWithoutGuild);
 
 			// Assert
 			expect(identity).toEqual({
@@ -187,11 +191,11 @@ describe('CovaIdentityService', () => {
 		it('should clear cache correctly', async () => {
 			// Arrange
 			mockDiscordService.getMemberAsync.mockResolvedValue(mockMember);
-			await CovaIdentityService.getCovaIdentity(mockMessage);
+			await getCovaIdentityFromService(mockMessage);
 
 			// Act
-			CovaIdentityService.clearCache();
-			await CovaIdentityService.getCovaIdentity(mockMessage);
+			clearIdentityCache();
+			await getCovaIdentityFromService(mockMessage);
 
 			// Assert
 			expect(mockDiscordService.getMemberAsync).toHaveBeenCalledTimes(2);
@@ -200,10 +204,10 @@ describe('CovaIdentityService', () => {
 		it('should return cache statistics', async () => {
 			// Arrange
 			mockDiscordService.getMemberAsync.mockResolvedValue(mockMember);
-			await CovaIdentityService.getCovaIdentity(mockMessage);
+			await getCovaIdentityFromService(mockMessage);
 
 			// Act
-			const stats = CovaIdentityService.getCacheStats();
+			const stats = getIdentityCacheStats();
 
 			// Assert
 			expect(stats.entries).toBe(1);

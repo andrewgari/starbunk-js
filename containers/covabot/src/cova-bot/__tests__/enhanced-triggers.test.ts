@@ -1,6 +1,6 @@
 import { Message } from 'discord.js';
 import { covaTrigger, covaDirectMentionTrigger } from '../triggers';
-import { CovaIdentityService } from '../../services/identity';
+import { getCovaIdentity } from '../../services/identity';
 import { createLLMResponseDecisionCondition } from '../simplifiedLlmTriggers';
 import { logger } from '@starbunk/shared';
 import { and, fromBot, fromUser, not } from '../conditions';
@@ -62,7 +62,12 @@ const mockCreateTriggerResponse = createTriggerResponse as jest.MockedFunction<t
 
 // Using real condition functions instead of mocks
 
-const mockCovaIdentityService = CovaIdentityService as jest.Mocked<typeof CovaIdentityService>;
+// Mock the identity service functions
+jest.mock('../../services/identity', () => ({
+	getCovaIdentity: jest.fn(),
+}));
+
+const mockGetCovaIdentity = getCovaIdentity as jest.MockedFunction<typeof getCovaIdentity>;
 const mockCreateLLMResponseDecisionCondition = createLLMResponseDecisionCondition as jest.MockedFunction<typeof createLLMResponseDecisionCondition>;
 const mockLogger = logger as jest.Mocked<typeof logger>;
 
@@ -94,19 +99,19 @@ describe('Enhanced CovaBot Triggers', () => {
 
   describe('Identity Management', () => {
     it('should use enhanced identity service for covaTrigger', async () => {
-      mockCovaIdentityService.getCovaIdentity.mockResolvedValue(validIdentity);
+      mockGetCovaIdentity.mockResolvedValue(validIdentity);
       
       const identityFunction = covaTrigger.identity;
       if (typeof identityFunction === 'function') {
         const result = await identityFunction(mockMessage);
         
-        expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledWith(mockMessage);
+        expect(mockGetCovaIdentity).toHaveBeenCalledWith(mockMessage);
         expect(result).toEqual(validIdentity);
       }
     });
 
     it('should return null when identity validation fails', async () => {
-      mockCovaIdentityService.getCovaIdentity.mockResolvedValue(null);
+      mockGetCovaIdentity.mockResolvedValue(null);
       
       const identityFunction = covaTrigger.identity;
       if (typeof identityFunction === 'function') {
@@ -120,7 +125,7 @@ describe('Enhanced CovaBot Triggers', () => {
     });
 
     it('should handle identity service errors gracefully', async () => {
-      mockCovaIdentityService.getCovaIdentity.mockRejectedValue(new Error('Service error'));
+      mockGetCovaIdentity.mockRejectedValue(new Error('Service error'));
       
       const identityFunction = covaTrigger.identity;
       if (typeof identityFunction === 'function') {
@@ -135,13 +140,13 @@ describe('Enhanced CovaBot Triggers', () => {
     });
 
     it('should use enhanced identity service for covaDirectMentionTrigger', async () => {
-      mockCovaIdentityService.getCovaIdentity.mockResolvedValue(validIdentity);
+      mockGetCovaIdentity.mockResolvedValue(validIdentity);
       
       const identityFunction = covaDirectMentionTrigger.identity;
       if (typeof identityFunction === 'function') {
         const result = await identityFunction(mockMessage);
         
-        expect(mockCovaIdentityService.getCovaIdentity).toHaveBeenCalledWith(mockMessage);
+        expect(mockGetCovaIdentity).toHaveBeenCalledWith(mockMessage);
         expect(result).toEqual(validIdentity);
       }
     });
@@ -351,7 +356,7 @@ describe('Enhanced CovaBot Triggers', () => {
 
   describe('Silent Message Discarding', () => {
     it('should silently discard messages when identity fails', async () => {
-      mockCovaIdentityService.getCovaIdentity.mockResolvedValue(null);
+      mockGetCovaIdentity.mockResolvedValue(null);
       
       const identityFunction = covaTrigger.identity;
       if (typeof identityFunction === 'function') {
@@ -365,7 +370,7 @@ describe('Enhanced CovaBot Triggers', () => {
     });
 
     it('should silently discard messages when identity service throws', async () => {
-      mockCovaIdentityService.getCovaIdentity.mockRejectedValue(new Error('Network error'));
+      mockGetCovaIdentity.mockRejectedValue(new Error('Network error'));
       
       const identityFunction = covaTrigger.identity;
       if (typeof identityFunction === 'function') {
@@ -470,7 +475,7 @@ describe('Enhanced CovaBot Triggers', () => {
         const isCova = fromCovaCondition(msg);
         
         // Test mention detection
-        const hasMention = msg.mentions && msg.mentions.has('139592376443338752');
+        const hasMention = msg.mentions?.has('139592376443338752');
         
         if (scenario.shouldRespond === false) {
           expect(isBot || isCova).toBe(true);

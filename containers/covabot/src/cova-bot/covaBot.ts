@@ -2,7 +2,7 @@ import { logger } from '@starbunk/shared';
 import { Message, TextChannel, Webhook, Client } from 'discord.js';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from '../types/triggerResponse';
-import { CovaIdentityService } from '../services/identity';
+import { getCovaIdentity } from '../services/identity';
 
 /**
  * Mock Message class for web testing (non-Discord usage)
@@ -58,7 +58,7 @@ export class CovaBot {
 			disabled: false,
 			...config,
 		};
-		// CovaIdentityService is a static class, no need to instantiate
+		// Identity service is now function-based
 	}
 
 	get name(): string {
@@ -222,7 +222,7 @@ export class CovaBot {
 	 */
 	private async getCovaIdentity(message: Message): Promise<BotIdentity | null> {
 		try {
-			return await CovaIdentityService.getCovaIdentity(message);
+			return await getCovaIdentity(message);
 		} catch (error) {
 			logger.error('[CovaBot] Failed to get Cova identity:', error as Error);
 			return null; // Bot will remain silent
