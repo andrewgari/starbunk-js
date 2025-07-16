@@ -1,0 +1,139 @@
+name: Main Branch Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_USER: ${{ github.actor }}
+  REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  # Detect which containers need to be built based on changed files
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      shared-changed: ${{ steps.changes.outputs.shared }}
+      bunkbot-changed: ${{ steps.changes.outputs.bunkbot }}
+      djcova-changed: ${{ steps.changes.outputs.djcova }}
+      starbunk-dnd-changed: ${{ steps.changes.outputs.starbunk-dnd }}
+      snowbunk-changed: ${{ steps.changes.outputs.snowbunk }}
+      covabot-changed: ${{ steps.changes.outputs.covabot }}
+      any-container-changed: ${{ steps.changes.outputs.shared == 'true' || steps.changes.outputs.bunkbot == 'true' || steps.changes.outputs.djcova == 'true' || steps.changes.outputs.starbunk-dnd == 'true' || steps.changes.outputs.snowbunk == 'true' || steps.changes.outputs.covabot == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for change detection
+      
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: '.github/path-filters.yml'
+
+  # Build and publish container images with latest tag
+  build-and-publish:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.any-container-changed == 'true'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - container: bunkbot
+            changed: ${{ needs.detect-changes.outputs.bunkbot-changed }}
+            image: ghcr.io/andrewgari/bunkbot
+          - container: djcova
+            changed: ${{ needs.detect-changes.outputs.djcova-changed }}
+            image: ghcr.io/andrewgari/djcova
+          - container: starbunk-dnd
+            changed: ${{ needs.detect-changes.outputs.starbunk-dnd-changed }}
+            image: ghcr.io/andrewgari/starbunk-dnd
+          - container: snowbunk
+            changed: ${{ needs.detect-changes.outputs.snowbunk-changed }}
+            image: ghcr.io/andrewgari/snowbunk
+            dockerfile_path: containers/starbunk-dnd
+          - container: covabot
+            changed: ${{ needs.detect-changes.outputs.covabot-changed }}
+            image: ghcr.io/andrewgari/covabot
+    steps:
+      - name: Skip if container unchanged
+        if: matrix.changed != 'true'
+        run: echo "Skipping ${{ matrix.container }} - no changes detected"
+
+      - name: Checkout code
+        if: matrix.changed == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        if: matrix.changed == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: matrix.changed == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_TOKEN }}
+
+      - name: Build and push container image
+        if: matrix.changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile_path || format('containers/{0}', matrix.container) }}/Dockerfile
+          push: true
+          tags: |
+            ${{ matrix.image }}:latest
+            ${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Log deployment info
+        if: matrix.changed == 'true'
+        run: |
+          echo "🚀 Successfully deployed ${{ matrix.container }} to production"
+          echo "📦 Image: ${{ matrix.image }}:latest"
+          echo "🏷️ SHA: ${{ matrix.image }}:${{ github.sha }}"
+
+  # Summary job
+  deployment-summary:
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-and-publish]
+    if: always()
+    steps:
+      - name: Generate deployment summary
+        run: |
+          echo "## 🚀 Main Branch Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.detect-changes.outputs.any-container-changed }}" == "true" ]]; then
+            echo "### 📦 Container Deployments" >> $GITHUB_STEP_SUMMARY
+            echo "| Container | Status | Image |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            
+            containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
+            changed_flags=("${{ needs.detect-changes.outputs.bunkbot-changed }}" "${{ needs.detect-changes.outputs.djcova-changed }}" "${{ needs.detect-changes.outputs.starbunk-dnd-changed }}" "${{ needs.detect-changes.outputs.snowbunk-changed }}" "${{ needs.detect-changes.outputs.covabot-changed }}")
+            
+            for i in "${!containers[@]}"; do
+              container="${containers[$i]}"
+              changed="${changed_flags[$i]}"
+              
+              if [[ "$changed" == "true" ]]; then
+                echo "| $container | ✅ Deployed | ghcr.io/andrewgari/$container:latest |" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "| $container | ⏭️ Skipped | No changes |" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🎉 **Deployment completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ✅ No Deployment Needed" >> $GITHUB_STEP_SUMMARY
+            echo "No container changes detected - all containers are up-to-date." >> $GITHUB_STEP_SUMMARY
+          fi

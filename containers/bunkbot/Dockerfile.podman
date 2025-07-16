@@ -1,7 +1,7 @@
-# DJCova Container - Music service
-# Optimized multi-stage build with Alpine Linux (Docker & Podman compatible)
+# BunkBot Container - Reply bots and admin commands
+# Podman-compatible optimized multi-stage build with Alpine Linux
 
-# Stage 1: Dependencies - Cache npm dependencies separately
+# Stage 1: Dependencies - Install production dependencies
 FROM node:20-alpine AS dependencies
 
 WORKDIR /app
@@ -11,12 +11,12 @@ RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files for dependency installation
 COPY containers/shared/package*.json ./shared/
-COPY containers/djcova/package*.json ./
+COPY containers/bunkbot/package*.json ./
 
-# Install shared dependencies (optimized for both Docker and Podman)
-RUN cd shared && npm ci --only=production && npm ci && npm cache clean --force
+# Install shared dependencies and clean up
+RUN cd shared && npm ci --only=production && npm cache clean --force
 
-# Install container dependencies
+# Install container dependencies and clean up
 RUN npm ci --only=production && npm cache clean --force
 
 # Stage 2: Builder - Build the application
@@ -29,18 +29,20 @@ RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files
 COPY containers/shared/package*.json ./shared/
-COPY containers/djcova/package*.json ./
+COPY containers/bunkbot/package*.json ./
 
-# Install all dependencies (including dev) - optimized for both Docker and Podman
+# Install all dependencies (including dev) and clean up
 RUN cd shared && npm ci && cd .. && npm ci && npm cache clean --force
 
 # Copy source code
 COPY containers/shared ./shared
-COPY containers/djcova ./
+COPY containers/bunkbot ./
+COPY prisma ./prisma
 
 # Build shared package and container
 RUN cd shared && npm run build && npm pack && \
     cd .. && npm install ./shared/starbunk-shared-1.0.0.tgz && \
+    npx prisma generate && \
     npm run build
 
 # Stage 3: Runtime - Minimal production image
@@ -48,10 +50,10 @@ FROM node:20-alpine AS runtime
 
 WORKDIR /app
 
-# Install runtime system dependencies (including ffmpeg for audio processing)
-RUN apk add --no-cache ffmpeg openssl python3 dumb-init curl && \
-    addgroup -g 1001 -S djcova && \
-    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova
+# Install only runtime system dependencies
+RUN apk add --no-cache openssl dumb-init curl && \
+    addgroup -g 1001 -S bunkbot && \
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G bunkbot bunkbot
 
 # Copy production dependencies from dependencies stage
 COPY --from=dependencies /app/node_modules ./node_modules
@@ -61,16 +63,20 @@ COPY --from=dependencies /app/shared/node_modules ./shared/node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/prisma ./prisma
+
+# Generate Prisma client for production
+RUN npx prisma generate
 
 # Set ownership and switch to non-root user
-RUN chown -R djcova:djcova /app
-USER djcova
+RUN chown -R bunkbot:bunkbot /app
+USER bunkbot
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3001/health || exit 1
+    CMD curl -f http://localhost:3000/health || exit 1
 
-EXPOSE 3001
+EXPOSE 3000
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]

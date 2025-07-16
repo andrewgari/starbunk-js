@@ -1,4 +1,4 @@
-# DJCova Container - Music service
+# Snowbunk Container - Production-only D&D features
 # Optimized multi-stage build with Alpine Linux (Docker & Podman compatible)
 
 # Stage 1: Dependencies - Cache npm dependencies separately
@@ -10,8 +10,9 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files for dependency installation
+# Note: Snowbunk uses the same source as starbunk-dnd
 COPY containers/shared/package*.json ./shared/
-COPY containers/djcova/package*.json ./
+COPY containers/starbunk-dnd/package*.json ./
 
 # Install shared dependencies (optimized for both Docker and Podman)
 RUN cd shared && npm ci --only=production && npm ci && npm cache clean --force
@@ -29,14 +30,14 @@ RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files
 COPY containers/shared/package*.json ./shared/
-COPY containers/djcova/package*.json ./
+COPY containers/starbunk-dnd/package*.json ./
 
 # Install all dependencies (including dev) - optimized for both Docker and Podman
 RUN cd shared && npm ci && cd .. && npm ci && npm cache clean --force
 
 # Copy source code
 COPY containers/shared ./shared
-COPY containers/djcova ./
+COPY containers/starbunk-dnd ./
 
 # Build shared package and container
 RUN cd shared && npm run build && npm pack && \
@@ -48,10 +49,10 @@ FROM node:20-alpine AS runtime
 
 WORKDIR /app
 
-# Install runtime system dependencies (including ffmpeg for audio processing)
-RUN apk add --no-cache ffmpeg openssl python3 dumb-init curl && \
-    addgroup -g 1001 -S djcova && \
-    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova
+# Install runtime system dependencies
+RUN apk add --no-cache openssl python3 dumb-init curl && \
+    addgroup -g 1001 -S snowbunk && \
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G snowbunk snowbunk
 
 # Copy production dependencies from dependencies stage
 COPY --from=dependencies /app/node_modules ./node_modules
@@ -63,15 +64,15 @@ COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/package.json ./
 
 # Set ownership and switch to non-root user
-RUN chown -R djcova:djcova /app
-USER djcova
+RUN chown -R snowbunk:snowbunk /app
+USER snowbunk
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3001/health || exit 1
+    CMD curl -f http://localhost:3004/health || exit 1
 
-EXPOSE 3001
+EXPOSE 3004
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/index-minimal.js"]

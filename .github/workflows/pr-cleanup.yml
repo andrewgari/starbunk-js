@@ -40,7 +40,7 @@ jobs:
                             version.metadata.container &&
                             version.metadata.container.tags &&
                             version.metadata.container.tags.some(tag =>
-                              tag === `pr-${prNumber}-snapshot`
+                              tag === 'snapshot'
                             )
                           );
 
