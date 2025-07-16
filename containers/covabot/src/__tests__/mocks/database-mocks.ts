@@ -88,10 +88,14 @@ export class MockQdrantMemoryService {
 	/**
 	 * Mock personality note creation
 	 */
-	async createPersonalityNote(content: string, category: PersonalityCategory = 'knowledge', priority: Priority = 'medium'): Promise<PersonalityNote> {
+	async createPersonalityNote(content: string, metadata?: any): Promise<PersonalityNote> {
 		if (this.shouldFail) {
 			throw this.failureError;
 		}
+
+		// Extract category and priority from metadata, with fallbacks
+		const category: PersonalityCategory = metadata?.category || 'knowledge';
+		const priority: Priority = metadata?.importance || metadata?.priority || 'medium';
 
 		const note: PersonalityNote = {
 			id: `mock-${Date.now()}`,
@@ -286,8 +290,8 @@ export function createMockMemoryService(): any {
 	return {
 		...mockService,
 		// Alias methods for test compatibility
-		createPersonalityNote: jest.fn().mockImplementation((content: string, category?: PersonalityCategory, priority?: Priority) =>
-			mockService.createPersonalityNote(content, category, priority)
+		createPersonalityNote: jest.fn().mockImplementation((content: string, metadata?: any) =>
+			mockService.createPersonalityNote(content, metadata)
 		),
 		getPersonalityNote: jest.fn().mockImplementation((id: string) =>
 			mockService.getPersonalityNote(id)
@@ -312,7 +316,7 @@ export function createMockMemoryService(): any {
 		),
 		// Main service methods (for WebServer compatibility)
 		createNote: jest.fn().mockImplementation((request: any) =>
-			mockService.createPersonalityNote(request.content, request.category, request.priority)
+			mockService.createPersonalityNote(request.content, { category: request.category, priority: request.priority })
 		),
 		getNotes: jest.fn().mockImplementation((filters?: any) => {
 			// Simple implementation for testing
