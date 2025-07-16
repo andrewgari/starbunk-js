@@ -21,6 +21,7 @@ jobs:
       bunkbot: ${{ steps.filter.outputs.bunkbot }}
       djcova: ${{ steps.filter.outputs.djcova }}
       starbunk-dnd: ${{ steps.filter.outputs.starbunk-dnd }}
+      snowbunk: ${{ steps.filter.outputs.snowbunk }}
       covabot: ${{ steps.filter.outputs.covabot }}
       root-files: ${{ steps.filter.outputs.root-files }}
       workflows: ${{ steps.filter.outputs.workflows }}
@@ -50,7 +51,7 @@ jobs:
           if [[ "${{ steps.filter.outputs.shared }}" == "true" || "${{ steps.filter.outputs.root-files }}" == "true" || "${{ steps.filter.outputs.workflows }}" == "true" || "${{ steps.filter.outputs.docker }}" == "true" || "${{ steps.filter.outputs.security }}" == "true" ]]; then
             echo "🔄 Shared files or critical files changed - processing all containers"
             echo "Changed files: shared=${{ steps.filter.outputs.shared }}, root-files=${{ steps.filter.outputs.root-files }}, workflows=${{ steps.filter.outputs.workflows }}, docker=${{ steps.filter.outputs.docker }}, security=${{ steps.filter.outputs.security }}"
-            containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+            containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
             echo "test-shared=true" >> $GITHUB_OUTPUT
 
             # Log specific shared changes for better debugging
@@ -84,13 +85,17 @@ jobs:
               containers+=("starbunk-dnd")
               echo "  ✅ Starbunk-DND container changed - will rebuild"
             fi
+            if [[ "${{ steps.filter.outputs.snowbunk }}" == "true" ]]; then
+              containers+=("snowbunk")
+              echo "  ✅ Snowbunk container changed - will rebuild"
+            fi
             if [[ "${{ steps.filter.outputs.covabot }}" == "true" ]]; then
               containers+=("covabot")
               echo "  ✅ CovaBot container changed - will rebuild"
             fi
 
             # Log skipped containers for transparency
-            all_containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+            all_containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
             for container in "${all_containers[@]}"; do
               if [[ ! " ${containers[@]} " =~ " ${container} " ]]; then
                 echo "  ⏭️ ${container} container unchanged - skipping build"
@@ -130,7 +135,7 @@ jobs:
               echo "  🔨 $container: BUILDING"
             done
 
-            all_containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+            all_containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
             for container in "${all_containers[@]}"; do
               if [[ ! " ${containers[@]} " =~ " ${container} " ]]; then
                 echo "  ⏭️ $container: SKIPPED"
@@ -158,6 +163,7 @@ jobs:
           echo "| BunkBot | ${{ needs.detect-changes.outputs.bunkbot }} | ${{ needs.detect-changes.outputs.bunkbot == 'true' && 'BunkBot only' || 'None' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| DJCova | ${{ needs.detect-changes.outputs.djcova }} | ${{ needs.detect-changes.outputs.djcova == 'true' && 'DJCova only' || 'None' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Starbunk-DND | ${{ needs.detect-changes.outputs.starbunk-dnd }} | ${{ needs.detect-changes.outputs.starbunk-dnd == 'true' && 'Starbunk-DND only' || 'None' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Snowbunk | ${{ needs.detect-changes.outputs.snowbunk }} | ${{ needs.detect-changes.outputs.snowbunk == 'true' && 'Snowbunk only' || 'None' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| CovaBot | ${{ needs.detect-changes.outputs.covabot }} | ${{ needs.detect-changes.outputs.covabot == 'true' && 'CovaBot only' || 'None' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Root Files | ${{ needs.detect-changes.outputs.root-files }} | ${{ needs.detect-changes.outputs.root-files == 'true' && 'All containers' || 'None' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Workflows | ${{ needs.detect-changes.outputs.workflows }} | ${{ needs.detect-changes.outputs.workflows == 'true' && 'All containers' || 'None' }} |" >> $GITHUB_STEP_SUMMARY
@@ -188,7 +194,7 @@ jobs:
 
             # Parse containers being built
             containers_list=$(echo "$containers_matrix" | jq -r '.[]')
-            all_containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+            all_containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
 
             for container in "${all_containers[@]}"; do
               if echo "$containers_list" | grep -q "^${container}$"; then
@@ -261,6 +267,10 @@ jobs:
           - container: starbunk-dnd
             build-timeout: 12
             test-timeout: 8
+          - container: snowbunk
+            build-timeout: 12
+            test-timeout: 8
+            dockerfile_path: containers/starbunk-dnd
           - container: covabot
             build-timeout: 10
             test-timeout: 5
@@ -286,16 +296,15 @@ jobs:
             # For main branch pushes
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix={{branch}}-,enable={{is_default_branch}}
-            # For PR builds - create both specific versioned and snapshot tags
-            type=raw,value=pr-${{ github.event.pull_request.number }}-{{sha}},enable=${{ github.event_name == 'pull_request' }}
-            type=raw,value=pr-${{ github.event.pull_request.number }}-snapshot,enable=${{ github.event_name == 'pull_request' }}
+            # For PR builds - use simple snapshot tag
+            type=raw,value=snapshot,enable=${{ github.event_name == 'pull_request' }}
 
       - name: Build container image
         id: build
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: containers/${{ matrix.container }}/Dockerfile
+          file: ${{ matrix.dockerfile_path || format('containers/{0}', matrix.container) }}/Dockerfile
           push: false  # Don't push yet, just build and cache
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -348,7 +357,7 @@ jobs:
                 "$image_tag" \
                 node -e "console.log('Music bot container test passed')" || true
               ;;
-            "starbunk-dnd")
+            "starbunk-dnd"|"snowbunk")
               echo "Testing D&D bot container..."
               timeout 15s docker run --rm \
                 -e STARBUNK_TOKEN=test_token_for_validation \
@@ -421,8 +430,7 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo ""
             echo "📦 PR Snapshot Container System:"
-            echo "  🏷️  Specific version: pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
-            echo "  📌 Snapshot (latest): pr-${{ github.event.pull_request.number }}-snapshot"
+            echo "  📌 Snapshot tag: snapshot"
             echo "  🔄 Snapshot updated in-place to point to latest build"
             echo "  🗑️  Cleanup: Snapshot will be deleted when PR is closed"
           fi
@@ -437,22 +445,17 @@ jobs:
             const prNumber = context.payload.pull_request.number;
             const container = '${{ matrix.container }}';
             const sha = context.sha.substring(0, 7);
-            const snapshotTag = `ghcr.io/${owner}/${container}:pr-${prNumber}-snapshot`;
-            const specificTag = `ghcr.io/${owner}/${container}:pr-${prNumber}-${sha}`;
+            const snapshotTag = `ghcr.io/${owner}/${container}:snapshot`;
 
             const comment = `🐳 **Container Built, Tested & Published: \`${container}\`**
 
             ## 📦 Available Images:
-            **🔄 Latest Snapshot:** \`${snapshotTag}\`
-            **🏷️ Specific Version:** \`${specificTag}\`
+            **📌 Snapshot:** \`${snapshotTag}\`
 
             ## 🚀 Quick Start:
             \`\`\`bash
-            # Pull latest snapshot (recommended for testing)
+            # Pull snapshot (recommended for testing)
             docker pull ${snapshotTag}
-
-            # Pull specific version (for reproducible builds)
-            docker pull ${specificTag}
             \`\`\`
 
             ## ℹ️ Container Info:
@@ -496,7 +499,7 @@ jobs:
           script: |
             const { owner } = context.repo;
             const prNumber = context.payload.pull_request.number;
-            const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot'];
+            const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'snowbunk', 'covabot'];
 
             console.log(`🗑️ Cleaning up PR #${prNumber} container images...`);
 
@@ -510,13 +513,10 @@ jobs:
                   username: owner
                 });
 
-                // Find all PR-related versions (both snapshot and specific versions)
+                // Find all PR-related versions (snapshot tag)
                 const prVersions = versions.filter(version => {
                   const tags = version.metadata?.container?.tags || [];
-                  return tags.some(tag =>
-                    tag === `pr-${prNumber}-snapshot` ||
-                    tag.startsWith(`pr-${prNumber}-`) && tag !== `pr-${prNumber}-snapshot`
-                  );
+                  return tags.some(tag => tag === 'snapshot');
                 });
 
                 console.log(`  Found ${prVersions.length} PR-related versions to delete`);

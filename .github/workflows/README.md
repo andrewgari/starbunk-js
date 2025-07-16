@@ -24,7 +24,7 @@ This is our main workflow that efficiently handles container building, testing, 
 
 **Triggers:**
 - **Push to main/develop**: Builds, tests, and publishes with `latest` tags
-- **Pull Requests**: Builds, tests, and publishes with `pr-{number}-snapshot` tags
+- **Pull Requests**: Builds, tests, and publishes with `snapshot` tags
 - **PR Closure**: Automatically cleans up PR snapshot images
 
 ## Workflows Overview
@@ -79,6 +79,7 @@ The workflows support the modular container architecture:
 - **bunkbot**: Reply bots and admin commands
 - **djcova**: Music service (Discord voice)
 - **starbunk-dnd**: D&D features with LLM integration
+- **snowbunk**: D&D features with LLM integration (alternative)
 - **covabot**: AI personality bot
 - **shared**: Common utilities and services
 

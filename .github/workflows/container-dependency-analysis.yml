@@ -38,10 +38,11 @@ jobs:
           dependencies["bunkbot"]="shared"
           dependencies["djcova"]="shared"
           dependencies["starbunk-dnd"]="shared"
+          dependencies["snowbunk"]="shared"
           dependencies["covabot"]="shared"
           
           # Analyze package.json dependencies for each container
-          containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+          containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
           
           echo "### Container Dependency Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -49,21 +50,27 @@ jobs:
           echo "|-----------|-------------------|----------------|----------------|" >> $GITHUB_STEP_SUMMARY
           
           for container in "${containers[@]}"; do
-            if [ -f "containers/$container/package.json" ]; then
+            # Map container name to directory (both starbunk-dnd and snowbunk use starbunk-dnd directory)
+            container_dir="$container"
+            if [ "$container" = "snowbunk" ]; then
+              container_dir="starbunk-dnd"
+            fi
+
+            if [ -f "containers/$container_dir/package.json" ]; then
               # Extract dependencies from package.json
-              deps=$(jq -r '.dependencies // {} | keys | join(", ")' "containers/$container/package.json" 2>/dev/null || echo "none")
-              dev_deps=$(jq -r '.devDependencies // {} | keys | length' "containers/$container/package.json" 2>/dev/null || echo "0")
-              
+              deps=$(jq -r '.dependencies // {} | keys | join(", ")' "containers/$container_dir/package.json" 2>/dev/null || echo "none")
+              dev_deps=$(jq -r '.devDependencies // {} | keys | length' "containers/$container_dir/package.json" 2>/dev/null || echo "0")
+
               # Check if it uses shared package
-              uses_shared=$(jq -r '.dependencies | has("@starbunk/shared")' "containers/$container/package.json" 2>/dev/null || echo "false")
-              
+              uses_shared=$(jq -r '.dependencies | has("@starbunk/shared")' "containers/$container_dir/package.json" 2>/dev/null || echo "false")
+
               # Determine build priority (shared dependencies build first)
               if [ "$uses_shared" = "true" ]; then
                 priority="High (depends on shared)"
               else
                 priority="Standard"
               fi
-              
+
               echo "| $container | $deps | $uses_shared | $priority |" >> $GITHUB_STEP_SUMMARY
             else
               echo "| $container | No package.json | unknown | Standard |" >> $GITHUB_STEP_SUMMARY
@@ -93,6 +100,12 @@ jobs:
                 "estimated_build_time": "4m"
               },
               {
+                "container": "snowbunk",
+                "depends_on": ["shared"],
+                "build_priority": 2,
+                "estimated_build_time": "4m"
+              },
+              {
                 "container": "covabot",
                 "depends_on": ["shared"],
                 "build_priority": 2,
@@ -104,7 +117,7 @@ jobs:
           )
           
           # Optimal build order (shared first, then containers in parallel)
-          build_order='["shared", "bunkbot,djcova,starbunk-dnd,covabot"]'
+          build_order='["shared", "bunkbot,djcova,starbunk-dnd,snowbunk,covabot"]'
           
           echo "dependency-matrix=$(echo "$dependency_matrix" | jq -c .)" >> $GITHUB_OUTPUT
           echo "build-order=$build_order" >> $GITHUB_OUTPUT
@@ -123,36 +136,42 @@ jobs:
         run: |
           echo "🔧 Validating container configurations..."
           
-          containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+          containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
           validation_errors=0
           
           for container in "${containers[@]}"; do
             echo "Validating $container..."
-            
+
+            # Map container name to directory (both starbunk-dnd and snowbunk use starbunk-dnd directory)
+            container_dir="$container"
+            if [ "$container" = "snowbunk" ]; then
+              container_dir="starbunk-dnd"
+            fi
+
             # Check if container directory exists
-            if [ ! -d "containers/$container" ]; then
-              echo "❌ Container directory missing: containers/$container"
+            if [ ! -d "containers/$container_dir" ]; then
+              echo "❌ Container directory missing: containers/$container_dir"
               validation_errors=$((validation_errors + 1))
               continue
             fi
-            
+
             # Check if Dockerfile exists
-            if [ ! -f "containers/$container/Dockerfile" ]; then
-              echo "❌ Dockerfile missing: containers/$container/Dockerfile"
+            if [ ! -f "containers/$container_dir/Dockerfile" ]; then
+              echo "❌ Dockerfile missing: containers/$container_dir/Dockerfile"
               validation_errors=$((validation_errors + 1))
             else
-              echo "✅ Dockerfile found: containers/$container/Dockerfile"
+              echo "✅ Dockerfile found: containers/$container_dir/Dockerfile"
             fi
             
             # Check if package.json exists
-            if [ ! -f "containers/$container/package.json" ]; then
-              echo "⚠️  package.json missing: containers/$container/package.json"
+            if [ ! -f "containers/$container_dir/package.json" ]; then
+              echo "⚠️  package.json missing: containers/$container_dir/package.json"
             else
-              echo "✅ package.json found: containers/$container/package.json"
-              
+              echo "✅ package.json found: containers/$container_dir/package.json"
+
               # Validate package.json structure
-              if ! jq empty "containers/$container/package.json" 2>/dev/null; then
-                echo "❌ Invalid JSON in: containers/$container/package.json"
+              if ! jq empty "containers/$container_dir/package.json" 2>/dev/null; then
+                echo "❌ Invalid JSON in: containers/$container_dir/package.json"
                 validation_errors=$((validation_errors + 1))
               fi
             fi

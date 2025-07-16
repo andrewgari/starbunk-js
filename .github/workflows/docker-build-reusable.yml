@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       container_name:
-        description: 'Name of the container to build (bunkbot, djcova, starbunk-dnd, covabot)'
+        description: 'Name of the container to build (bunkbot, djcova, starbunk-dnd, snowbunk, covabot)'
         required: true
         type: string
       image_tag:
@@ -66,20 +66,28 @@ jobs:
             
       - name: Verify container directory exists
         run: |
-          if [ ! -d "containers/${{ inputs.container_name }}" ]; then
-            echo "Error: Container directory containers/${{ inputs.container_name }} does not exist"
+          # Map container name to directory (both starbunk-dnd and snowbunk use starbunk-dnd directory)
+          CONTAINER_DIR="${{ inputs.container_name }}"
+          if [ "${{ inputs.container_name }}" = "snowbunk" ]; then
+            CONTAINER_DIR="starbunk-dnd"
+          fi
+
+          if [ ! -d "containers/$CONTAINER_DIR" ]; then
+            echo "Error: Container directory containers/$CONTAINER_DIR does not exist"
             exit 1
           fi
-          if [ ! -f "containers/${{ inputs.container_name }}/Dockerfile" ]; then
-            echo "Error: Dockerfile not found in containers/${{ inputs.container_name }}"
+          if [ ! -f "containers/$CONTAINER_DIR/Dockerfile" ]; then
+            echo "Error: Dockerfile not found in containers/$CONTAINER_DIR"
             exit 1
           fi
+
+          echo "CONTAINER_DIR=$CONTAINER_DIR" >> $GITHUB_ENV
           
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: containers/${{ inputs.container_name }}/Dockerfile
+          file: containers/${{ env.CONTAINER_DIR }}/Dockerfile
           push: ${{ inputs.push_image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
