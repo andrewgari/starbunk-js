@@ -63,8 +63,7 @@ describe('Web UI - Memory CRUD Operations (No Discord Integration)', () => {
 
 				expect(mockMemoryService.createPersonalityNote).toHaveBeenCalledWith(
 					noteData.content,
-					noteData.category,
-					noteData.priority
+					{ category: noteData.category, priority: noteData.priority }
 				);
 
 				// Verify no Discord messages were sent
@@ -102,8 +101,7 @@ describe('Web UI - Memory CRUD Operations (No Discord Integration)', () => {
 				expect(response.body.success).toBe(true);
 				expect(mockMemoryService.createPersonalityNote).toHaveBeenCalledWith(
 					noteData.content,
-					'knowledge',
-					'medium'
+					{ category: 'knowledge', priority: 'medium' }
 				);
 			});
 
@@ -123,8 +121,7 @@ describe('Web UI - Memory CRUD Operations (No Discord Integration)', () => {
 				// Content should be passed through (sanitization handled by service layer)
 				expect(mockMemoryService.createPersonalityNote).toHaveBeenCalledWith(
 					noteData.content,
-					noteData.category,
-					noteData.priority
+					{ category: noteData.category, priority: noteData.priority }
 				);
 			});
 

@@ -716,7 +716,7 @@ export class WebServer {
           return res.status(400).json({ success: false, error: 'Invalid category' });
         }
 
-        const note = await (this.memoryService as any).createPersonalityNote(request.content, request.category, request.priority);
+        const note = await (this.memoryService as any).createPersonalityNote(request.content, { category: request.category, priority: request.priority });
         res.status(201).json({ success: true, data: note });
       } catch (error) {
         logger.error('[WebServer] Error creating personality note:', error as Error);
