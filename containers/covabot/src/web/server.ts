@@ -157,7 +157,7 @@ export class WebServer {
         }
 
         if (!request.category || !['instruction', 'personality', 'behavior', 'knowledge', 'context'].includes(request.category)) {
-          return res.status(400).json({ success: false, error: 'Valid category is required' });
+          return res.status(400).json({ success: false, error: 'Invalid category' });
         }
 
         const note = await this.memoryService.createNote(request);
@@ -192,6 +192,55 @@ export class WebServer {
 
     // Delete note (using specific path to avoid conflicts)
     apiRouter.delete('/notes/direct/:id', async (req: any, res: any) => {
+      try {
+        const deleted = await this.memoryService.deleteNote(req.params.id);
+        if (!deleted) {
+          return res.status(404).json({ success: false, error: 'Note not found' });
+        }
+
+        res.json({ success: true, message: 'Note deleted successfully' });
+      } catch (error) {
+        logger.error('[WebServer] Error deleting note:', error as Error);
+        res.status(500).json({ success: false, error: 'Failed to delete note' });
+      }
+    });
+
+    // Standard REST routes for notes (for test compatibility)
+    apiRouter.get('/notes/:id', async (req: any, res: any) => {
+      try {
+        const note = await this.memoryService.getNoteById(req.params.id);
+        if (!note) {
+          return res.status(404).json({ success: false, error: 'Note not found' });
+        }
+        res.json({ success: true, data: note });
+      } catch (error) {
+        logger.error('[WebServer] Error getting note:', error as Error);
+        res.status(500).json({ success: false, error: 'Failed to get note' });
+      }
+    });
+
+    apiRouter.put('/notes/:id', async (req: any, res: any) => {
+      try {
+        const request: UpdatePersonalityNoteRequest = {
+          content: req.body.content,
+          category: req.body.category,
+          priority: req.body.priority,
+          isActive: req.body.isActive,
+        };
+
+        const updated = await this.memoryService.updateNote(req.params.id, request);
+        if (!updated) {
+          return res.status(404).json({ success: false, error: 'Note not found' });
+        }
+
+        res.json({ success: true, data: updated });
+      } catch (error) {
+        logger.error('[WebServer] Error updating note:', error as Error);
+        res.status(500).json({ success: false, error: 'Failed to update note' });
+      }
+    });
+
+    apiRouter.delete('/notes/:id', async (req: any, res: any) => {
       try {
         const deleted = await this.memoryService.deleteNote(req.params.id);
         if (!deleted) {
@@ -313,6 +362,38 @@ export class WebServer {
       } catch (error) {
         logger.error('[WebServer] Error resetting configuration:', error as Error);
         res.status(500).json({ success: false, error: 'Failed to reset configuration' });
+      }
+    });
+
+    // Bot configuration routes (for test compatibility)
+    apiRouter.get('/config/bot', async (req, res) => {
+      try {
+        const config = await this.configService.getConfiguration();
+        res.json({ success: true, data: config });
+      } catch (error) {
+        logger.error('[WebServer] Error getting bot configuration:', error as Error);
+        res.status(500).json({ success: false, error: 'Failed to get bot configuration' });
+      }
+    });
+
+    apiRouter.put('/config/bot', async (req: any, res: any) => {
+      try {
+        const updates: UpdateConfigurationRequest = req.body;
+
+        // Validate configuration - use correct property names
+        if (updates.responseFrequency !== undefined && (updates.responseFrequency < 0 || updates.responseFrequency > 100)) {
+          return res.status(400).json({ success: false, error: 'Response rate must be between 0 and 100' });
+        }
+
+        if (updates.isEnabled !== undefined && typeof updates.isEnabled !== 'boolean') {
+          return res.status(400).json({ success: false, error: 'isEnabled must be a boolean' });
+        }
+
+        const config = await this.configService.updateConfiguration(updates);
+        res.json({ success: true, data: config });
+      } catch (error) {
+        logger.error('[WebServer] Error updating bot configuration:', error as Error);
+        res.status(500).json({ success: false, error: 'Failed to update bot configuration' });
       }
     });
 
@@ -441,7 +522,7 @@ export class WebServer {
         logger.error('[WebServer] Error in chat endpoint:', error as Error);
         res.status(500).json({
           success: false,
-          error: 'Failed to process chat message'
+          error: 'Failed to process message'
         });
       }
     });
@@ -527,8 +608,10 @@ export class WebServer {
         for (const noteData of notes) {
           const note = await (this.memoryService as any).createPersonalityNote(
             noteData.content,
-            noteData.category || 'knowledge',
-            noteData.priority || 'medium'
+            {
+              category: noteData.category || 'knowledge',
+              priority: noteData.priority || 'medium'
+            }
           );
           importedNotes.push(note);
         }
@@ -553,8 +636,10 @@ export class WebServer {
         for (const noteData of notes) {
           const note = await (this.memoryService as any).createPersonalityNote(
             noteData.content,
-            noteData.category || 'knowledge',
-            noteData.priority || 'medium'
+            {
+              category: noteData.category || 'knowledge',
+              priority: noteData.priority || 'medium'
+            }
           );
           createdNotes.push(note);
         }
@@ -628,7 +713,7 @@ export class WebServer {
         }
 
         if (!request.category || !['instruction', 'personality', 'behavior', 'knowledge', 'context'].includes(request.category)) {
-          return res.status(400).json({ success: false, error: 'Valid category is required' });
+          return res.status(400).json({ success: false, error: 'Invalid category' });
         }
 
         const note = await (this.memoryService as any).createPersonalityNote(request.content, request.category, request.priority);
