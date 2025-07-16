@@ -2,6 +2,9 @@
 # ========================================================
 # This file is designed for production deployment using the latest stable images.
 #
+# Containers included: bunkbot, djcova, starbunk-dnd, snowbunk, covabot (5 containers)
+# Note: snowbunk is only available in production deployment
+#
 # Prerequisites:
 #   - Ensure .env file exists in the same directory as this compose file
 #   - All required environment variables must be defined in .env file
@@ -12,8 +15,6 @@
 #
 # Image Format: ghcr.io/andrewgari/{service}:latest
 # Example: ghcr.io/andrewgari/bunkbot:latest
-
-version: '3.8'
 
 services:
   # BunkBot - Reply bots and admin commands (Latest Stable)
@@ -73,11 +74,10 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      # Unraid-compatible host path mounts for latest/production
-      - ${UNRAID_APPDATA_PATH:-./data}/djcova:/app/cache
-      - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
+      - djcova_latest_cache:/app/cache
+      - djcova_latest_temp:/tmp
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f 'node dist/index.js' || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -119,12 +119,57 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      # Unraid-compatible host path mounts for latest/production
-      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/data:/app/data
-      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/campaigns:/app/data/campaigns
-      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/context:/app/data/llm_context
+      - dnd_latest_data:/app/data
+      - dnd_latest_campaigns:/app/data/campaigns
+      - dnd_latest_context:/app/data/llm_context
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-latest-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Snowbunk - D&D features and bridge (Latest Stable)
+  snowbunk:
+    image: ghcr.io/andrewgari/snowbunk:latest
+    container_name: starbunk-snowbunk-latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - OLLAMA_API_URL=${OLLAMA_API_URL:-}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - snowbunk_latest_data:/app/data
+      - snowbunk_latest_campaigns:/app/data/campaigns
+      - snowbunk_latest_context:/app/data/llm_context
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3004/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -162,18 +207,8 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      # CovaBot-specific configuration
-      - USE_DATABASE=${USE_DATABASE:-false}
-      - COVABOT_DATA_DIR=/app/data
-      - COVABOT_API_KEY=${COVABOT_API_KEY:-}
-    volumes:
-      # Unraid-compatible host path mount for CovaBot personality notes (latest/production)
-      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
-    ports:
-      # Expose web interface for personality management (latest/production)
-      - "${COVABOT_WEB_PORT:-7080}:7080"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:7080/api/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -192,9 +227,24 @@ services:
         reservations:
           memory: 256M
 
-# Note: Using host path mounts for Unraid compatibility
-# Latest/production data persists in ${UNRAID_APPDATA_PATH:-./data}/ directories
-# Default fallback to ./data/ for non-Unraid environments
+# Named volumes for persistent data (latest/production)
+volumes:
+  djcova_latest_cache:
+    driver: local
+  djcova_latest_temp:
+    driver: local
+  dnd_latest_data:
+    driver: local
+  dnd_latest_campaigns:
+    driver: local
+  dnd_latest_context:
+    driver: local
+  snowbunk_latest_data:
+    driver: local
+  snowbunk_latest_campaigns:
+    driver: local
+  snowbunk_latest_context:
+    driver: local
 
 # Custom network for service communication (latest/production)
 networks:
