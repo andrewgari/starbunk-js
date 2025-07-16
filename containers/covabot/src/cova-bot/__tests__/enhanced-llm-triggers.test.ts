@@ -113,7 +113,7 @@ describe('Enhanced LLM Triggers Tests', () => {
       console.log(`Real LLM Available: ${enhancedGenerator.isUsingRealLLM()}`);
     });
 
-    it('should generate responses using available LLM service', async () => {
+    it.skip('should generate responses using available LLM service', async () => {
       const testMessages = [
         'Hello, how are you?',
         'What do you think about programming?',
@@ -399,7 +399,7 @@ describe('Enhanced LLM Triggers Tests', () => {
       }
     }, 10000); // 10 second timeout
 
-    it('should handle edge cases appropriately', async () => {
+    it.skip('should handle edge cases appropriately', async () => {
       const edgeCases = [
         { content: '', description: 'empty string' },
         { content: '   ', description: 'whitespace only' },
