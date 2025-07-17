@@ -146,12 +146,26 @@ export class EmbeddingService {
 
 		logger.debug(`[EmbeddingService] Generating embeddings for ${texts.length} texts in batches of ${batchSize}`);
 
-		for (let i = 0; i < texts.length; i += batchSize) {
-			const batch = texts.slice(i, i + batchSize);
-			const batchResults = await Promise.all(
-				batch.map(text => this.generateEmbedding(text))
-			);
-			results.push(...batchResults);
+        for (let i = 0; i < texts.length; i += batchSize) {
+            const batch = texts.slice(i, i + batchSize);
+-           const batchResults = await Promise.all(
+-               batch.map(text => this.generateEmbedding(text))
+-           );
+-           results.push(...batchResults);
++           const batchResults = await Promise.allSettled(
++               batch.map(text => this.generateEmbedding(text))
++           );
++
++           for (const result of batchResults) {
++               if (result.status === 'fulfilled') {
++                   results.push(result.value);
++               } else {
++                   logger.error(`[EmbeddingService] Failed to generate embedding in batch: ${result.reason}`);
++                   // Optionally, you could push a zero vector or handle the error differently
++                   throw result.reason; // Or handle gracefully based on requirements
++               }
++           }
+        }
 
 			// Log progress for large batches
 			if (texts.length > batchSize) {
