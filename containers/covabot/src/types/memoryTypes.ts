@@ -89,8 +89,6 @@ export interface MemorySearchResult<T extends MemoryItem = MemoryItem> {
 	item: T;
 	score: number;
 	distance?: number;
-	matchingCriteria?: string[];
-	searchContext?: Record<string, unknown>;
 }
 
 /**

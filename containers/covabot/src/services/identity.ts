@@ -1,24 +1,9 @@
 import { logger, container, ServiceId } from '@starbunk/shared';
 import { BotIdentity } from '../types/botIdentity';
-import { Message, GuildMember, User } from 'discord.js';
+import { Message } from 'discord.js';
 
-/**
- * Interface for Discord service operations
- */
-interface DiscordService {
-	getMemberAsync(guildId: string, userId: string): Promise<GuildMember | null>;
-	getUserAsync(userId: string): Promise<User | null>;
-}
-
-// Cova's Discord user ID with validation
-const COVA_USER_ID = (() => {
-  const userId = process.env.COVA_USER_ID || '139592376443338752';
-  if (!/^\d{17,19}$/.test(userId)) {
-    logger.warn(`[CovaIdentityService] Invalid COVA_USER_ID format: ${userId}, using default`);
-    return '139592376443338752';
-  }
-  return userId;
-})();
+// Cova's Discord user ID
+const COVA_USER_ID = process.env.COVA_USER_ID || '139592376443338752';
 
 // Cache for identity data with expiration
 interface IdentityCache {
@@ -29,38 +14,20 @@ interface IdentityCache {
 
 const identityCache = new Map<string, IdentityCache>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHE_SIZE = 1000; // Maximum number of cached entries
-
-// Helper to maintain cache size
-function maintainCacheSize() {
-  if (identityCache.size > MAX_CACHE_SIZE) {
-    // Remove oldest entries
-    const entriesToRemove = identityCache.size - MAX_CACHE_SIZE;
-    const iterator = identityCache.entries();
-    for (let i = 0; i < entriesToRemove; i++) {
-      const { value } = iterator.next();
-      if (value) {
-        identityCache.delete(value[0]);
-      }
-    }
-  }
-}
 
 /**
  * Get Cova's current Discord identity with caching and validation
  * @param message - Discord message for server context
  * @param forceRefresh - Force fresh data from Discord API
- * @param guildId - Optional guild ID for direct guild-specific identity resolution
  * @returns Promise<BotIdentity | null> - null if identity cannot be resolved
  */
 export async function getCovaIdentityFromService(
   message?: Message,
-  forceRefresh: boolean = false,
-  guildId?: string
+  forceRefresh: boolean = false
 ): Promise<BotIdentity | null> {
     try {
-      const resolvedGuildId = guildId || message?.guild?.id;
-      const cacheKey = resolvedGuildId || 'global';
+      const guildId = message?.guild?.id;
+      const cacheKey = guildId || 'global';
       
       // Check cache first (unless force refresh)
       if (!forceRefresh && identityCache.has(cacheKey)) {
@@ -76,10 +43,10 @@ export async function getCovaIdentityFromService(
         }
       }
 
-      logger.debug(`[CovaIdentityService] Fetching fresh identity for user ${COVA_USER_ID} in guild ${resolvedGuildId || 'global'}`);
+      logger.debug(`[CovaIdentityService] Fetching fresh identity for user ${COVA_USER_ID} in guild ${guildId || 'global'}`);
 
       // Fetch fresh identity from Discord using DiscordService
-      const identity = await fetchDiscordIdentity(COVA_USER_ID, resolvedGuildId, message);
+      const identity = await fetchDiscordIdentity(COVA_USER_ID, guildId, message);
 
       if (!identity) {
         logger.error(`[CovaIdentityService] Failed to retrieve identity for user ${COVA_USER_ID}`);
@@ -96,18 +63,14 @@ export async function getCovaIdentityFromService(
       identityCache.set(cacheKey, {
         identity,
         timestamp: Date.now(),
-        guildId: resolvedGuildId
+        guildId
       });
-
-      // Maintain cache size limit
-      maintainCacheSize();
 
       logger.debug(`[CovaIdentityService] Successfully cached identity: "${identity.botName}" with avatar ${identity.avatarUrl}`);
       return identity;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error(`[CovaIdentityService] Error getting Cova identity: ${errorMessage}`);
+      logger.error(`[CovaIdentityService] Error getting Cova identity:`, error as Error);
       return null;
     }
 }
@@ -122,7 +85,7 @@ async function fetchDiscordIdentity(
 ): Promise<BotIdentity | null> {
     try {
       // Get DiscordService from container
-      const discordService = container.get(ServiceId.DiscordService) as DiscordService;
+      const discordService = container.get(ServiceId.DiscordService) as any;
 
       if (guildId && message) {
         // Get server-specific identity
@@ -175,8 +138,7 @@ async function fetchDiscordIdentity(
         };
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error(`[CovaIdentityService] Failed to fetch Discord identity for ${userId}: ${errorMessage}`);
+      logger.error(`[CovaIdentityService] Failed to fetch Discord identity for ${userId}:`, error as Error);
       return null;
     }
   }
@@ -196,8 +158,8 @@ function validateIdentity(identity: BotIdentity): boolean {
     return false;
   }
 
-  // Check that avatar URL is a valid Discord CDN URL (including newer domains)
-  const validUrlPattern = /^https:\/\/(cdn\.discordapp\.com|media\.discordapp\.net|cdn\.discord\.com)\//;
+  // Check that avatar URL is a valid Discord CDN URL
+  const validUrlPattern = /^https:\/\/(cdn\.discordapp\.com|media\.discordapp\.net)\//;
   if (!validUrlPattern.test(identity.avatarUrl)) {
     logger.warn(`[CovaIdentityService] Avatar URL is not a valid Discord CDN URL: "${identity.avatarUrl}"`);
     return false;
@@ -238,8 +200,9 @@ export async function preWarmIdentityCache(
 
   const promises = guildIds.map(async (guildId) => {
     try {
-      // Use the guildId parameter directly instead of creating a mock message
-      await getCovaIdentityFromService(undefined, true, guildId);
+      // Create a mock message for context
+      const mockMessage = { guild: { id: guildId } } as Message;
+      await getCovaIdentityFromService(mockMessage, true);
     } catch (error) {
       logger.warn(
         `[CovaIdentityService] Failed to pre-warm cache for guild ${guildId}:`,
