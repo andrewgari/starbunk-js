@@ -1,6 +1,6 @@
 {
 	"name": "@starbunk/covabot",
-	"version": "1.0.0",
+	"version": "0.1.0",
 	"description": "CovaBot - AI personality bot container",
 	"main": "dist/index-minimal.js",
 	"scripts": {
