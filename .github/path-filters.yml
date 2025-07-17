@@ -370,8 +370,6 @@ covabot-deps:
 # Critical files that always trigger full builds for ALL containers
 critical:
   - '.github/workflows/container-build-test-publish.yml'
-  - '.github/workflows/pr-checks.yml'
-  - '.github/workflows/main-deploy.yml'
   - '.github/workflows/docker-build-reusable.yml'
   - '.github/workflows/manual-docker-build.yml'
   - '.github/path-filters.yml'

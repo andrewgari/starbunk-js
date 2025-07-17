@@ -83,7 +83,6 @@ bunkbot:
 
 ### Supporting Workflows
 
-- **PR Checks** (`pr-checks.yml`) - Runs linting and type checking only for changed containers
 - **Path Filter Validation** (`path-filter-validation.yml`) - Validates filter configuration
 - **Build Metrics** (`build-metrics.yml`) - Tracks optimization performance over time
 
