@@ -34,21 +34,57 @@ reviews:
   path_instructions:
     - path: "containers/shared/**"
       instructions: |
-        Focus on:
+        Shared utilities and services library - Focus on:
         - Breaking changes that affect all containers
         - Performance implications for shared services
         - Type safety and API consistency
         - Memory leaks in shared utilities
         - Security vulnerabilities in shared code
-    
-    - path: "containers/*/src/**"
+
+    - path: "containers/bunkbot/**"
       instructions: |
-        Focus on:
+        Discord bot with listener, webhook, identity, guild functionality - Focus on:
         - Discord.js best practices and rate limiting
-        - Error handling and logging consistency
-        - Resource cleanup and memory management
-        - Security issues (token handling, input validation)
-        - Performance bottlenecks in message processing
+        - Guild-specific message handling and filtering
+        - Webhook integrations and error handling
+        - Identity service usage and validation
+        - Error handling for Discord API failures
+
+    - path: "containers/djcova/**"
+      instructions: |
+        Server-agnostic music bot with no identity requirements - Focus on:
+        - Audio streaming performance and memory usage
+        - YouTube-dl integration and FFmpeg processing
+        - Voice connection management and cleanup
+        - Queue management and concurrent access
+        - Memory usage optimization for audio processing
+
+    - path: "containers/covabot/**"
+      instructions: |
+        Discord bot with listener, identity, LLM integration, AI functionality - Focus on:
+        - LLM integration security and rate limiting
+        - Identity management and server/channel restrictions
+        - Conversation memory handling and persistence
+        - Vector database query optimization
+        - AI service error handling and fallbacks
+
+    - path: "containers/starbunk-dnd/**"
+      instructions: |
+        D&D bot with game mechanics and rule engine functionality - Focus on:
+        - D&D rule engine accuracy and performance
+        - Game state management and persistence
+        - User input validation and sanitization
+        - Dice rolling and probability calculations
+        - Character sheet and campaign data handling
+
+    - path: "containers/snowbunk/**"
+      instructions: |
+        Production-only message bridge for two specific guilds with identity - Focus on:
+        - Production deployment considerations and stability
+        - Identity verification and guild-specific logic
+        - Message synchronization between guilds
+        - Cross-guild bridging error handling
+        - Resource optimization for production workloads
     
     - path: ".github/workflows/**"
       instructions: |
@@ -117,35 +153,59 @@ language_settings:
 
 # Container-specific review settings
 container_settings:
-  bunkbot:
+  shared:
+    description: "Utilities and shared services library"
     focus_areas:
-      - "Discord bot reply logic and rate limiting"
-      - "Message filtering and content validation"
+      - "Breaking changes affecting all containers"
+      - "Performance implications for shared services"
+      - "Type safety and API consistency"
+      - "Memory leaks in shared utilities"
+      - "Security vulnerabilities in shared code"
+
+  bunkbot:
+    description: "Discord bot with listener, webhook, identity, and guild-specific functionality"
+    focus_areas:
+      - "Discord.js best practices and rate limiting"
+      - "Guild-specific message handling and filtering"
+      - "Webhook integrations and error handling"
+      - "Identity service usage and validation"
       - "Error handling for Discord API failures"
-    
+
   djcova:
+    description: "Server-agnostic music bot with no identity requirements"
     focus_areas:
       - "Audio streaming performance and memory usage"
+      - "YouTube-dl integration and FFmpeg processing"
       - "Voice connection management and cleanup"
       - "Queue management and concurrent access"
-    
+      - "Memory usage optimization for audio processing"
+
   covabot:
+    description: "Discord bot with listener, identity, LLM integration, and AI functionality"
     focus_areas:
       - "LLM integration security and rate limiting"
-      - "Memory service performance and data privacy"
+      - "Identity management and server/channel restrictions"
+      - "Conversation memory handling and persistence"
       - "Vector database query optimization"
-    
+      - "AI service error handling and fallbacks"
+
   "starbunk-dnd":
+    description: "D&D bot with game mechanics and rule engine functionality"
     focus_areas:
       - "D&D rule engine accuracy and performance"
-      - "State management and persistence"
+      - "Game state management and persistence"
       - "User input validation and sanitization"
-    
+      - "Dice rolling and probability calculations"
+      - "Character sheet and campaign data handling"
+
   snowbunk:
+    description: "Production-only message bridge for two specific guilds with identity requirements"
     focus_areas:
-      - "Production-only deployment considerations"
+      - "Production deployment considerations and stability"
+      - "Identity verification and guild-specific logic"
+      - "Message synchronization between guilds"
+      - "Cross-guild bridging error handling"
       - "Resource optimization for production workloads"
-      - "Monitoring and alerting integration"
 
 # Security-focused review settings
 security:
@@ -224,14 +284,41 @@ ci_integration:
 
 # Custom instructions for Discord bot development
 discord_bot_guidelines:
-  - "Ensure proper Discord.js rate limiting and error handling"
-  - "Validate all user inputs and sanitize content"
-  - "Use proper logging levels and structured logging"
-  - "Implement graceful shutdown and cleanup procedures"
-  - "Follow Discord bot best practices for permissions and intents"
-  - "Ensure container health checks and monitoring"
-  - "Use environment variables for all configuration"
-  - "Implement proper error boundaries and fallback mechanisms"
+  general:
+    - "Ensure proper Discord.js rate limiting and error handling"
+    - "Validate all user inputs and sanitize content"
+    - "Use proper logging levels and structured logging"
+    - "Implement graceful shutdown and cleanup procedures"
+    - "Follow Discord bot best practices for permissions and intents"
+    - "Ensure container health checks and monitoring"
+    - "Use environment variables for all configuration"
+    - "Implement proper error boundaries and fallback mechanisms"
+
+  container_specific:
+    bunkbot:
+      - "Implement guild-specific message filtering and webhook handling"
+      - "Ensure identity service integration for user verification"
+      - "Handle Discord API rate limits for high-volume guilds"
+
+    djcova:
+      - "Optimize audio processing and memory usage for music streaming"
+      - "Implement proper voice connection cleanup and error recovery"
+      - "Handle YouTube-dl and FFmpeg integration robustly"
+
+    covabot:
+      - "Secure LLM API integration with proper rate limiting"
+      - "Implement conversation memory with vector database optimization"
+      - "Ensure server/channel restrictions are properly enforced"
+
+    starbunk-dnd:
+      - "Validate D&D rule calculations and game state consistency"
+      - "Implement secure character sheet and campaign data handling"
+      - "Ensure dice rolling algorithms are fair and auditable"
+
+    snowbunk:
+      - "Implement robust cross-guild message bridging with error handling"
+      - "Ensure production-grade stability and monitoring"
+      - "Handle identity verification for guild-specific operations"
 
 # Quality gates
 quality_gates:
