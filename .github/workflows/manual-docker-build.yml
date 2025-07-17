@@ -158,7 +158,6 @@ jobs:
     uses: ./.github/workflows/docker-build-reusable.yml
     with:
       container_name: snowbunk
-      context_path: containers/starbunk-dnd
       image_tag: ${{ needs.prepare.outputs.tag }}
       push_image: ${{ inputs.push_to_registry }}
     secrets:
