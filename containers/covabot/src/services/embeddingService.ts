@@ -3,18 +3,40 @@ import { logger } from '@starbunk/shared';
 import { EmbeddingConfig } from '../types/memoryTypes';
 
 /**
+ * Interface for embedding service operations
+ */
+export interface IEmbeddingService {
+	initialize(): Promise<void>;
+	generateEmbedding(text: string): Promise<number[]>;
+	generateBatchEmbeddings(texts: string[]): Promise<number[][]>;
+	getConfig(): EmbeddingConfig;
+	getCacheStats(): { size: number; maxSize: number; hitRate: number };
+	clearCache(): void;
+	isReady(): boolean;
+	getHealthStatus(): {
+		status: 'healthy' | 'unhealthy';
+		model: string;
+		dimensions: number;
+		cacheSize: number;
+		isReady: boolean;
+	};
+	cleanup(): Promise<void>;
+}
+
+/**
  * Local embedding service using sentence-transformers
  * Provides text-to-vector conversion for semantic search
  */
-export class EmbeddingService {
+export class EmbeddingService implements IEmbeddingService {
 	private static instance: EmbeddingService;
 	private pipeline: Pipeline | null = null;
 	private config: EmbeddingConfig;
 	private cache = new Map<string, number[]>();
 	private isInitialized = false;
 	private initializationPromise: Promise<void> | null = null;
+	private cacheHits = 0;
+	private cacheMisses = 0;
 
-	constructor() {
 	constructor() {
 		this.config = {
 			model: process.env.EMBEDDING_MODEL || 'Xenova/all-MiniLM-L6-v2',
@@ -23,6 +45,8 @@ export class EmbeddingService {
 			cacheSize: this.parseIntWithDefault(process.env.EMBEDDING_CACHE_SIZE, 1000),
 			timeout: this.parseIntWithDefault(process.env.EMBEDDING_TIMEOUT, 30000),
 		};
+
+		logger.info(`[EmbeddingService] Configured with model: ${this.config.model}`);
 	}
 
 	private parseIntWithDefault(value: string | undefined, defaultValue: number): number {
@@ -35,9 +59,6 @@ export class EmbeddingService {
 			return defaultValue;
 		}
 		return parsed;
-	}
-
-		logger.info(`[EmbeddingService] Configured with model: ${this.config.model}`);
 	}
 
 	static getInstance(): EmbeddingService {
@@ -112,8 +133,10 @@ export class EmbeddingService {
 			const embedding = this.cache.get(cacheKey)!;
 			this.cache.delete(cacheKey);
 			this.cache.set(cacheKey, embedding);
+			this.cacheHits++;
 			return embedding;
 		}
+		this.cacheMisses++;
 
 		try {
 			const startTime = Date.now();
@@ -160,26 +183,21 @@ export class EmbeddingService {
 
 		logger.debug(`[EmbeddingService] Generating embeddings for ${texts.length} texts in batches of ${batchSize}`);
 
-        for (let i = 0; i < texts.length; i += batchSize) {
-            const batch = texts.slice(i, i + batchSize);
--           const batchResults = await Promise.all(
--               batch.map(text => this.generateEmbedding(text))
--           );
--           results.push(...batchResults);
-+           const batchResults = await Promise.allSettled(
-+               batch.map(text => this.generateEmbedding(text))
-+           );
-+
-+           for (const result of batchResults) {
-+               if (result.status === 'fulfilled') {
-+                   results.push(result.value);
-+               } else {
-+                   logger.error(`[EmbeddingService] Failed to generate embedding in batch: ${result.reason}`);
-+                   // Optionally, you could push a zero vector or handle the error differently
-+                   throw result.reason; // Or handle gracefully based on requirements
-+               }
-+           }
-        }
+		for (let i = 0; i < texts.length; i += batchSize) {
+			const batch = texts.slice(i, i + batchSize);
+			const batchResults = await Promise.allSettled(
+				batch.map(text => this.generateEmbedding(text))
+			);
+
+			for (const result of batchResults) {
+				if (result.status === 'fulfilled') {
+					results.push(result.value);
+				} else {
+					logger.error(`[EmbeddingService] Failed to generate embedding in batch: ${result.reason}`);
+					// Optionally, you could push a zero vector or handle the error differently
+					throw result.reason; // Or handle gracefully based on requirements
+				}
+			}
 
 			// Log progress for large batches
 			if (texts.length > batchSize) {
@@ -216,12 +234,11 @@ export class EmbeddingService {
 	 * Generate cache key for text
 	 */
 	private getCacheKey(text: string): string {
-		// Use a simple hash for cache key
-		let hash = 0;
+		// Use a more robust hash function to minimize collisions
+		let hash = 5381; // Start with a prime number
 		for (let i = 0; i < text.length; i++) {
 			const char = text.charCodeAt(i);
-			hash = ((hash << 5) - hash) + char;
-			hash = hash & hash; // Convert to 32-bit integer
+			hash = ((hash << 5) - hash + char * (i + 1)) & 0xffffffff;
 		}
 		return hash.toString();
 	}
@@ -251,10 +268,13 @@ export class EmbeddingService {
 	 * Get cache statistics
 	 */
 	getCacheStats(): { size: number; maxSize: number; hitRate: number } {
+		const totalRequests = this.cacheHits + this.cacheMisses;
+		const hitRate = totalRequests > 0 ? this.cacheHits / totalRequests : 0;
+
 		return {
 			size: this.cache.size,
 			maxSize: this.config.cacheSize,
-			hitRate: 0, // TODO: Implement hit rate tracking
+			hitRate: Math.round(hitRate * 100) / 100, // Round to 2 decimal places
 		};
 	}
 
@@ -263,6 +283,8 @@ export class EmbeddingService {
 	 */
 	clearCache(): void {
 		this.cache.clear();
+		this.cacheHits = 0;
+		this.cacheMisses = 0;
 		logger.info('[EmbeddingService] Cache cleared');
 	}
 
@@ -297,6 +319,8 @@ export class EmbeddingService {
 	 */
 	async cleanup(): Promise<void> {
 		this.cache.clear();
+		this.cacheHits = 0;
+		this.cacheMisses = 0;
 		this.pipeline = null;
 		this.isInitialized = false;
 		this.initializationPromise = null;

@@ -10,9 +10,10 @@ export interface Pipeline {
 // Mock pipeline function that returns fake embeddings
 const mockPipeline: Pipeline = async (text: string, options?: any) => {
 	// Generate deterministic fake embeddings based on text content
-	const textHash = text.split('').reduce((hash, char) => {
-		return ((hash << 5) - hash + char.charCodeAt(0)) & 0xffffffff;
-	}, 0);
+	// Use a more robust hash function to minimize collisions
+	const textHash = text.split('').reduce((hash, char, i) => {
+		return ((hash << 5) - hash + char.charCodeAt(0) * (i + 1)) & 0xffffffff;
+	}, 5381); // Start with a prime number
 
 	// Create a 384-dimensional vector (matching all-MiniLM-L6-v2)
 	const dimensions = 384;

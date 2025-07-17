@@ -143,7 +143,7 @@ describe('Identity Service - Comprehensive Tests', () => {
 			expect(mockDiscordService.getMemberAsync).not.toHaveBeenCalled();
 		});
 
-		it.skip('should fall back to global identity when member not found in guild', async () => {
+		it('should fall back to global identity when member not found in guild', async () => {
 			const guildId = 'test-guild-123';
 			const message = new MockDiscordMessage('test', 'user-123', false, guildId);
 
@@ -162,7 +162,7 @@ describe('Identity Service - Comprehensive Tests', () => {
 	});
 
 	describe('Identity Validation', () => {
-		it.skip('should reject identity with invalid bot name', async () => {
+		it('should reject identity with invalid bot name', async () => {
 			const message = new MockDiscordMessage('test', 'user-123', false);
 
 			const mockUser = createMockUser(COVA_USER_ID, ''); // Empty username
@@ -174,7 +174,7 @@ describe('Identity Service - Comprehensive Tests', () => {
 			expect(identity).toBeNull();
 		});
 
-		it.skip('should reject identity with invalid avatar URL', async () => {
+		it('should reject identity with invalid avatar URL', async () => {
 			const message = new MockDiscordMessage('test', 'user-123', false);
 
 			const mockUser = createMockUser(COVA_USER_ID, 'cova_user');
