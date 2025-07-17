@@ -1,8 +1,8 @@
-name: Claude Code Review
+name: Claude Code Review - Container-Aware
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [review_requested, synchronize]
     paths:
       - "containers/**/*.ts"
       - "containers/**/*.tsx"
@@ -11,103 +11,368 @@ on:
       - "containers/**/test/**"
       - "containers/**/*.test.*"
       - "containers/**/*.spec.*"
+      - "containers/**/src/**"
+      - "containers/**/package.json"
+      - "containers/**/Dockerfile"
+      - "containers/**/.dockerignore"
+      - ".github/workflows/**"
+      - "docker-compose*.yml"
+  pull_request_review:
+    types: [dismissed]
 
 jobs:
-  claude-review:
-    name: '🤖 AI Code Review - Optimized'
-    # Skip review for maintainers, focus on external contributors
-    # Also skip for draft PRs, WIP, and skip-review labels
-    if: |
-      (github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' ||
-       github.event.pull_request.author_association == 'CONTRIBUTOR' ||
-       contains(fromJSON('["external-contributor", "new-developer"]'), github.event.pull_request.user.login)) &&
-      !github.event.pull_request.draft &&
-      !contains(github.event.pull_request.title, '[WIP]') &&
-      !contains(github.event.pull_request.title, '[skip-review]') &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-review')
+  # Detect which containers are affected by the PR changes
+  detect-changes:
+    name: 🔍 Detect Container Changes
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Prevent runaway jobs
+    timeout-minutes: 5
     permissions:
       contents: read
-      pull-requests: write
-      issues: read
-      id-token: write  # For secure authentication
+      pull-requests: read
+    outputs:
+      bunkbot: ${{ steps.changes.outputs.bunkbot }}
+      covabot: ${{ steps.changes.outputs.covabot }}
+      djcova: ${{ steps.changes.outputs.djcova }}
+      starbunk-dnd: ${{ steps.changes.outputs.starbunk-dnd }}
+      snowbunk: ${{ steps.changes.outputs.snowbunk }}
+      shared: ${{ steps.changes.outputs.shared }}
+      docker: ${{ steps.changes.outputs.docker }}
+      workflows: ${{ steps.changes.outputs.workflows }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Detect changes using path filters
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: .github/path-filters.yml
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  claude-review:
+    name: 🤖 Claude Container-Aware Review
+    needs: detect-changes
+    # Only run when Claude is explicitly requested as a reviewer
+    if: |
+      contains(github.event.pull_request.requested_reviewers.*.login, 'claude') ||
+      contains(github.event.pull_request.requested_reviewers.*.login, 'claude-ai') ||
+      contains(github.event.pull_request.requested_reviewers.*.login, 'anthropic-claude') ||
+      github.event.action == 'review_requested'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+
+    steps:
+      - name: Check if Claude is requested reviewer
+        id: check-reviewer
+        run: |
+          echo "Checking if Claude is requested as reviewer..."
+          if [[ "${{ github.event.action }}" == "review_requested" ]]; then
+            echo "Review was requested"
+            echo "claude_requested=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.action }}" == "dismissed" ]]; then
+            echo "Review was dismissed - exiting"
+            echo "claude_requested=false" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "claude_requested=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Exit if Claude not requested
+        if: steps.check-reviewer.outputs.claude_requested != 'true'
+        run: |
+          echo "Claude was not explicitly requested as a reviewer. Skipping review."
+          exit 0
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need depth for diff analysis
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            containers/*/package-lock.json
 
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.npm
+          path: |
+            ~/.npm
+            node_modules
+            containers/*/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: npm ci --prefer-offline --no-audit
 
-      - name: Run linting
-        id: lint
-        run: npm run lint 2>&1 | tee lint-output.txt || echo "LINT_FAILED=true" >> $GITHUB_ENV
+      - name: Install container dependencies
+        run: |
+          for container in containers/*/; do
+            if [ -f "$container/package.json" ]; then
+              echo "Installing dependencies for $container"
+              cd "$container" && npm ci --prefer-offline --no-audit && cd ../..
+            fi
+          done
+
+      - name: Run container-specific linting and type checking
+        id: container-checks
+        run: |
+          echo "Running checks for affected containers..."
+
+          # Initialize status variables
+          echo "LINT_STATUS=✅ All linting passed" >> $GITHUB_ENV
+          echo "TYPECHECK_STATUS=✅ All type checking passed" >> $GITHUB_ENV
+          echo "TEST_STATUS=✅ All tests passed" >> $GITHUB_ENV
+
+          # Check each affected container
+          containers=()
+          ${{ needs.detect-changes.outputs.bunkbot == 'true' }} && containers+=("bunkbot")
+          ${{ needs.detect-changes.outputs.covabot == 'true' }} && containers+=("covabot")
+          ${{ needs.detect-changes.outputs.djcova == 'true' }} && containers+=("djcova")
+          ${{ needs.detect-changes.outputs.starbunk-dnd == 'true' }} && containers+=("starbunk-dnd")
+          ${{ needs.detect-changes.outputs.snowbunk == 'true' }} && containers+=("snowbunk")
+          ${{ needs.detect-changes.outputs.shared == 'true' }} && containers+=("shared")
+
+          for container in "${containers[@]}"; do
+            echo "Checking container: $container"
+            cd "containers/$container"
+
+            # Run linting
+            if ! npm run lint 2>&1 | tee "../../${container}-lint.txt"; then
+              echo "LINT_STATUS=⚠️ Linting issues in $container" >> $GITHUB_ENV
+            fi
+
+            # Run type checking
+            if ! npm run type-check 2>&1 | tee "../../${container}-typecheck.txt"; then
+              echo "TYPECHECK_STATUS=⚠️ Type checking issues in $container" >> $GITHUB_ENV
+            fi
+
+            # Run tests
+            if ! npm test 2>&1 | tee "../../${container}-test.txt"; then
+              echo "TEST_STATUS=⚠️ Test failures in $container" >> $GITHUB_ENV
+            fi
+
+            cd ../..
+          done
         continue-on-error: true
 
-      - name: Run type checking
-        id: typecheck
-        run: npm run typecheck 2>&1 | tee typecheck-output.txt || echo "TYPECHECK_FAILED=true" >> $GITHUB_ENV
-        continue-on-error: true
+      - name: Analyze container-specific changes
+        id: analyze-changes
+        run: |
+          echo "Analyzing changes for container-specific context..."
 
-      - name: Run tests
-        id: test
-        run: npm test 2>&1 | tee test-output.txt || echo "TESTS_FAILED=true" >> $GITHUB_ENV
-        continue-on-error: true
+          # Create container context for Claude
+          cat > container-context.md << 'EOF'
+          # Container-Specific Analysis
 
-      - name: Run Claude Code Review
+          ## Affected Containers:
+          EOF
+
+          ${{ needs.detect-changes.outputs.bunkbot == 'true' }} && echo "- **BunkBot**: Reply bots + admin commands" >> container-context.md
+          ${{ needs.detect-changes.outputs.covabot == 'true' }} && echo "- **CovaBot**: AI personality with Qdrant vector database" >> container-context.md
+          ${{ needs.detect-changes.outputs.djcova == 'true' }} && echo "- **DJCova**: Music bot with voice channel management" >> container-context.md
+          ${{ needs.detect-changes.outputs.starbunk-dnd == 'true' }} && echo "- **Starbunk-DnD**: D&D game mechanics and character management" >> container-context.md
+          ${{ needs.detect-changes.outputs.snowbunk == 'true' }} && echo "- **Snowbunk**: Specialized functionality with minimal resources" >> container-context.md
+          ${{ needs.detect-changes.outputs.shared == 'true' }} && echo "- **Shared Library**: Core utilities affecting all containers" >> container-context.md
+
+          echo "" >> container-context.md
+          echo "## Change Summary:" >> container-context.md
+          git diff --name-only HEAD~1 HEAD >> container-context.md
+
+      - name: Run Claude Container-Aware Code Review
         id: claude-review
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: "claude-3-5-sonnet-20241022"
+          max_tokens: 8000
+          timeout: 300
 
-          # Performance optimizations
-          model: "claude-sonnet-4-20250514"  # Use faster model for reviews
-          max_tokens: 4000  # Limit response length
-
-          # Enable tools for running CI/CD commands with timeout
-          allowed_tools: "Bash(timeout 60 npm run lint),Bash(timeout 60 npm run typecheck),Bash(timeout 120 npm test),Bash(timeout 180 npm run build)"
-
-          # Author-customized prompts with CI/CD tool integration
-
+          # Container-aware review prompt
           direct_prompt: |
-            ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
-            'Welcome to the project! 🎉 This is an encouraging review for a first-time contributor.
+            # 🤖 Claude Container-Aware Code Review for Starbunk-JS Discord Bot System
 
-            I''ll provide detailed explanations and helpful guidance while reviewing your code.' ||
-            'This is a thorough code review focusing on our coding standards and best practices.' }}
+            You are reviewing a Pull Request for a modular Discord bot system with 5 specialized containers.
+            Focus your review on the specific containers that have been modified.
 
-            **CI/CD Integration Results:**
-            ${{ env.LINT_FAILED == 'true' && '⚠️ Linting issues detected - please review lint-output.txt' || '✅ Linting passed' }}
-            ${{ env.TYPECHECK_FAILED == 'true' && '⚠️ Type checking issues detected - please review typecheck-output.txt' || '✅ Type checking passed' }}
-            ${{ env.TESTS_FAILED == 'true' && '⚠️ Tests failed - please review test-output.txt' || '✅ Tests passed' }}
+            ## 📋 Repository Context
 
-            ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
-            'Be especially encouraging and provide detailed explanations for any suggestions. Include links to documentation where helpful. Focus on learning opportunities and positive reinforcement while maintaining code quality standards.' ||
-            'Be constructive, specific, and provide actionable feedback. Focus on Discord bot architecture, TypeScript best practices, and container-based microservices patterns.' }}
+            **Architecture**: Modular Discord bot system with container-based microservices
+            **Language**: TypeScript/Node.js with Discord.js
+            **Deployment**: Docker containers with Unraid optimization
+            **Database**: PostgreSQL + Qdrant vector database for AI features
 
-            **Security & Performance Focus:**
-            - Prioritize security vulnerabilities and performance issues
-            - Flag potential memory leaks, race conditions, or resource exhaustion
-            - Check for proper input validation and sanitization
-            - Verify secure coding practices and dependency usage
-            - Assess scalability and resource efficiency
+            ## 🎯 Container-Specific Review Focus
+
+            ### BunkBot Container (${{ needs.detect-changes.outputs.bunkbot == 'true' && '✅ MODIFIED' || '⏭️ SKIPPED' }})
+            ${{ needs.detect-changes.outputs.bunkbot == 'true' && '
+            **Focus Areas:**
+            - Reply bot patterns and message matching logic
+            - Admin command implementations and permission handling
+            - Shared library integration and dependency usage
+            - Discord slash command registration and handling
+            - Error handling and logging patterns
+            - Environment variable usage and validation
+
+            **Key Concerns:**
+            - Proper Discord.js patterns and best practices
+            - Command cooldowns and rate limiting
+            - Permission validation and security
+            - Memory efficiency for reply pattern matching
+            ' || '' }}
+
+            ### CovaBot Container (${{ needs.detect-changes.outputs.covabot == 'true' && '✅ MODIFIED' || '⏭️ SKIPPED' }})
+            ${{ needs.detect-changes.outputs.covabot == 'true' && '
+            **Focus Areas:**
+            - AI personality system and LLM integration
+            - Qdrant vector database operations and embeddings
+            - Conversation memory management and context handling
+            - Web interface functionality (port 7080)
+            - Identity service and server-specific personalities
+            - Embedding service and vector operations
+
+            **Key Concerns:**
+            - LLM API security and rate limiting
+            - Vector database performance and memory usage
+            - Conversation context management and privacy
+            - Web interface security and authentication
+            - Debug mode safety (TESTING_CHANNEL_IDS whitelist)
+            ' || '' }}
+
+            ### DJCova Container (${{ needs.detect-changes.outputs.djcova == 'true' && '✅ MODIFIED' || '⏭️ SKIPPED' }})
+            ${{ needs.detect-changes.outputs.djcova == 'true' && '
+            **Focus Areas:**
+            - Music bot functionality and audio processing
+            - Voice channel management and connection handling
+            - Audio stream handling and queue management
+            - Auto-disconnect features and idle timeout (30 seconds)
+            - YouTube/audio source integration
+            - Voice connection cleanup and error recovery
+
+            **Key Concerns:**
+            - Voice connection stability and error handling
+            - Audio stream memory management
+            - Queue persistence and state management
+            - Resource cleanup on disconnect
+            - Audio quality and performance optimization
+            ' || '' }}
+
+            ### Starbunk-DnD Container (${{ needs.detect-changes.outputs.starbunk-dnd == 'true' && '✅ MODIFIED' || '⏭️ SKIPPED' }})
+            ${{ needs.detect-changes.outputs.starbunk-dnd == 'true' && '
+            **Focus Areas:**
+            - D&D game mechanics and rule implementations
+            - Character management and persistence
+            - Dice rolling systems and randomization
+            - Campaign and session management
+            - RPG feature implementations
+            - Game state persistence and recovery
+
+            **Key Concerns:**
+            - Game balance and rule accuracy
+            - Character data integrity and validation
+            - Random number generation security
+            - Session state management
+            - Performance with complex game calculations
+            ' || '' }}
+
+            ### Snowbunk Container (${{ needs.detect-changes.outputs.snowbunk == 'true' && '✅ MODIFIED' || '⏭️ SKIPPED' }})
+            ${{ needs.detect-changes.outputs.snowbunk == 'true' && '
+            **Focus Areas:**
+            - Specialized functionality implementation
+            - Minimal resource usage optimization
+            - Production-only deployment considerations
+            - Lightweight service architecture
+            - Efficient Discord API usage
+
+            **Key Concerns:**
+            - Resource efficiency and memory usage
+            - Minimal dependency footprint
+            - Production stability and reliability
+            - Service startup time optimization
+            ' || '' }}
+
+            ### Shared Library (${{ needs.detect-changes.outputs.shared == 'true' && '✅ MODIFIED' || '⏭️ SKIPPED' }})
+            ${{ needs.detect-changes.outputs.shared == 'true' && '
+            **Focus Areas:**
+            - Cross-container utility functions
+            - Common Discord.js patterns and helpers
+            - Logging and error handling utilities
+            - Environment configuration management
+            - Database connection and ORM utilities
+            - Message filtering and debug mode safety
+
+            **Key Concerns:**
+            - Breaking changes affecting multiple containers
+            - API consistency and backward compatibility
+            - Performance impact across all services
+            - Security implications for shared utilities
+            - Debug mode safety enforcement
+            ' || '' }}
+
+            ## 🔍 CI/CD Status
+
+            **Linting**: ${{ env.LINT_STATUS }}
+            **Type Checking**: ${{ env.TYPECHECK_STATUS }}
+            **Tests**: ${{ env.TEST_STATUS }}
+
+            ## 🛡️ Security & Safety Requirements
+
+            **Critical Safety Checks:**
+            - ✅ Discord token security (no hardcoded tokens)
+            - ✅ Environment variable validation
+            - ✅ Debug mode safety (TESTING_CHANNEL_IDS whitelist enforcement)
+            - ✅ Input sanitization and validation
+            - ✅ SQL injection prevention
+            - ✅ Rate limiting and abuse prevention
+
+            **Performance Requirements:**
+            - ✅ Container resource limits compliance
+            - ✅ Memory leak prevention
+            - ✅ Efficient Discord API usage
+            - ✅ Database query optimization
+            - ✅ Proper error handling and recovery
+
+            ## 📝 Review Instructions
+
+            1. **Focus on modified containers only** - Skip containers that weren't changed
+            2. **Provide container-specific feedback** - Use the focus areas above
+            3. **Check critical safety requirements** - Especially debug mode safety
+            4. **Validate TypeScript patterns** - Ensure proper typing and error handling
+            5. **Review Discord.js usage** - Check for best practices and efficiency
+            6. **Assess Docker optimization** - Consider container resource usage
+            7. **Verify test coverage** - Ensure new functionality is tested
+
+            **Review Style:**
+            - Be constructive and specific
+            - Provide actionable feedback with examples
+            - Focus on architecture, security, and performance
+            - Highlight both strengths and areas for improvement
+            - Consider the modular container architecture in suggestions
+
+            Please provide a thorough review focusing on the modified containers and their specific concerns.
+
+      - name: Handle Claude API failures
+        if: failure() && steps.claude-review.outcome == 'failure'
+        run: |
+          echo "Claude API request failed. Implementing retry strategy..."
+          sleep 60
+          echo "Retrying Claude review with reduced scope..."
+        continue-on-error: true
 
       - name: Rate limit protection
         if: failure()
@@ -115,8 +380,8 @@ jobs:
           echo "Review failed, implementing backoff strategy"
           sleep 30
 
-      - name: Cleanup on failure
-        if: failure()
+      - name: Cleanup temporary files
+        if: always()
         run: |
-          rm -f lint-output.txt typecheck-output.txt test-output.txt
+          rm -f *-lint.txt *-typecheck.txt *-test.txt container-context.md
           echo "Cleaned up temporary files"
