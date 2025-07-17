@@ -14,7 +14,12 @@ on:
 
 jobs:
   claude-review:
-    name: '🤖 AI Code Review - Advanced Prompts'
+    name: '🤖 AI Code Review - Author Customization'
+    # Skip review for maintainers, focus on external contributors
+    if: |
+      github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' ||
+      github.event.pull_request.author_association == 'CONTRIBUTOR' ||
+      contains(fromJSON('["external-contributor", "new-developer"]'), github.event.pull_request.user.login)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,8 +38,15 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
-          # Advanced file-type specific prompts
+          # Author-customized prompts with file-type specificity
           direct_prompt: |
+            ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
+            'Welcome to the project! 🎉 This is an encouraging review for a first-time contributor.
+
+            I''ll provide detailed explanations and helpful guidance while reviewing your code.' ||
+            'This is a thorough code review focusing on our coding standards and best practices.' }}
+
+            Please review this pull request with specialized focus based on file types:
             Please review this pull request with specialized focus based on file types:
 
             **For TypeScript/JavaScript Discord Bot Files:**
@@ -79,4 +91,6 @@ jobs:
             - Documentation completeness
             - Adherence to project coding standards
 
-            Be constructive, specific, and provide actionable feedback. Focus on Discord bot architecture, TypeScript best practices, and container-based microservices patterns.
+            ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
+            'Be especially encouraging and provide detailed explanations for any suggestions. Include links to documentation where helpful. Focus on learning opportunities and positive reinforcement while maintaining code quality standards.' ||
+            'Be constructive, specific, and provide actionable feedback. Focus on Discord bot architecture, TypeScript best practices, and container-based microservices patterns.' }}
