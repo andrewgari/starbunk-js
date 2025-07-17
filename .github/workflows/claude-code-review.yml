@@ -14,17 +14,24 @@ on:
 
 jobs:
   claude-review:
-    name: '🤖 AI Code Review - Tool Integration'
+    name: '🤖 AI Code Review - Optimized'
     # Skip review for maintainers, focus on external contributors
+    # Also skip for draft PRs, WIP, and skip-review labels
     if: |
-      github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' ||
-      github.event.pull_request.author_association == 'CONTRIBUTOR' ||
-      contains(fromJSON('["external-contributor", "new-developer"]'), github.event.pull_request.user.login)
+      (github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' ||
+       github.event.pull_request.author_association == 'CONTRIBUTOR' ||
+       contains(fromJSON('["external-contributor", "new-developer"]'), github.event.pull_request.user.login)) &&
+      !github.event.pull_request.draft &&
+      !contains(github.event.pull_request.title, '[WIP]') &&
+      !contains(github.event.pull_request.title, '[skip-review]') &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-review')
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # Prevent runaway jobs
     permissions:
       contents: read
       pull-requests: write
       issues: read
+      id-token: write  # For secure authentication
 
     steps:
       - name: Checkout repository
@@ -38,8 +45,16 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit
 
       - name: Run linting
         id: lint
@@ -62,8 +77,12 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
-          # Enable tools for running CI/CD commands
-          allowed_tools: "Bash(npm run lint),Bash(npm run typecheck),Bash(npm test),Bash(npm run build)"
+          # Performance optimizations
+          model: "claude-sonnet-4-20250514"  # Use faster model for reviews
+          max_tokens: 4000  # Limit response length
+
+          # Enable tools for running CI/CD commands with timeout
+          allowed_tools: "Bash(timeout 60 npm run lint),Bash(timeout 60 npm run typecheck),Bash(timeout 120 npm test),Bash(timeout 180 npm run build)"
 
           # Author-customized prompts with CI/CD tool integration
           direct_prompt: |
@@ -126,3 +145,22 @@ jobs:
             ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
             'Be especially encouraging and provide detailed explanations for any suggestions. Include links to documentation where helpful. Focus on learning opportunities and positive reinforcement while maintaining code quality standards.' ||
             'Be constructive, specific, and provide actionable feedback. Focus on Discord bot architecture, TypeScript best practices, and container-based microservices patterns.' }}
+
+            **Security & Performance Focus:**
+            - Prioritize security vulnerabilities and performance issues
+            - Flag potential memory leaks, race conditions, or resource exhaustion
+            - Check for proper input validation and sanitization
+            - Verify secure coding practices and dependency usage
+            - Assess scalability and resource efficiency
+
+      - name: Rate limit protection
+        if: failure()
+        run: |
+          echo "Review failed, implementing backoff strategy"
+          sleep 30
+
+      - name: Cleanup on failure
+        if: failure()
+        run: |
+          rm -f lint-output.txt typecheck-output.txt test-output.txt
+          echo "Cleaned up temporary files"
