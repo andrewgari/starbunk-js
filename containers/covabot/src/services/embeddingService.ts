@@ -235,12 +235,13 @@ export class EmbeddingService implements IEmbeddingService {
 	 */
 	private getCacheKey(text: string): string {
 		// Use a more robust hash function to minimize collisions
+		// Include text length to reduce collision probability
 		let hash = 5381; // Start with a prime number
 		for (let i = 0; i < text.length; i++) {
 			const char = text.charCodeAt(i);
 			hash = ((hash << 5) - hash + char * (i + 1)) & 0xffffffff;
 		}
-		return hash.toString();
+		return `${text.length}_${hash.toString()}`;
 	}
 
 	/**
@@ -274,7 +275,7 @@ export class EmbeddingService implements IEmbeddingService {
 		return {
 			size: this.cache.size,
 			maxSize: this.config.cacheSize,
-			hitRate: Math.round(hitRate * 100) / 100, // Round to 2 decimal places
+			hitRate: Math.round(hitRate * 10000) / 10000, // Round to 4 decimal places for better precision
 		};
 	}
 

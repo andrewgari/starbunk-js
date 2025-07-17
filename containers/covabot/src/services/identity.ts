@@ -10,8 +10,15 @@ interface DiscordService {
 	getUserAsync(userId: string): Promise<User | null>;
 }
 
-// Cova's Discord user ID
-const COVA_USER_ID = process.env.COVA_USER_ID || '139592376443338752';
+// Cova's Discord user ID with validation
+const COVA_USER_ID = (() => {
+  const userId = process.env.COVA_USER_ID || '139592376443338752';
+  if (!/^\d{17,19}$/.test(userId)) {
+    logger.warn(`[CovaIdentityService] Invalid COVA_USER_ID format: ${userId}, using default`);
+    return '139592376443338752';
+  }
+  return userId;
+})();
 
 // Cache for identity data with expiration
 interface IdentityCache {
@@ -170,8 +177,8 @@ function validateIdentity(identity: BotIdentity): boolean {
     return false;
   }
 
-  // Check that avatar URL is a valid Discord CDN URL
-  const validUrlPattern = /^https:\/\/(cdn\.discordapp\.com|media\.discordapp\.net)\//;
+  // Check that avatar URL is a valid Discord CDN URL (including newer domains)
+  const validUrlPattern = /^https:\/\/(cdn\.discordapp\.com|media\.discordapp\.net|cdn\.discord\.com)\//;
   if (!validUrlPattern.test(identity.avatarUrl)) {
     logger.warn(`[CovaIdentityService] Avatar URL is not a valid Discord CDN URL: "${identity.avatarUrl}"`);
     return false;
