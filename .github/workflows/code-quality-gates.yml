@@ -1,0 +1,395 @@
+name: Code Quality Gates
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+  push:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  COVERAGE_THRESHOLD: 80
+  COMPLEXITY_THRESHOLD: 10
+
+jobs:
+  # Path-based change detection
+  detect-changes:
+    name: 🔍 Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      shared: ${{ steps.filter.outputs.shared }}
+      containers: ${{ steps.filter.outputs.containers }}
+      tests: ${{ steps.filter.outputs.tests }}
+      config: ${{ steps.filter.outputs.config }}
+      should-run-quality: ${{ steps.should-run.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for file changes
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: '.github/path-filters.yml'
+
+      - name: Determine if quality checks should run
+        id: should-run
+        run: |
+          if [ "${{ steps.filter.outputs.shared }}" = "true" ] || 
+             [ "${{ steps.filter.outputs.containers }}" = "true" ] || 
+             [ "${{ steps.filter.outputs.tests }}" = "true" ] || 
+             [ "${{ steps.filter.outputs.config }}" = "true" ]; then
+            echo "result=true" >> $GITHUB_OUTPUT
+          else
+            echo "result=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Code quality analysis
+  quality-analysis:
+    name: 📊 Code Quality Analysis
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.should-run-quality == 'true'
+    outputs:
+      coverage-passed: ${{ steps.coverage-check.outputs.passed }}
+      complexity-passed: ${{ steps.complexity-check.outputs.passed }}
+      quality-score: ${{ steps.quality-score.outputs.score }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm run setup:containers
+
+      - name: Run TypeScript compilation check
+        run: npm run type-check
+
+      - name: Run ESLint with detailed output
+        run: |
+          npm run lint -- --format=json --output-file=eslint-results.json || true
+          npm run lint
+
+      - name: Run tests with coverage
+        run: |
+          npm run test:shared -- --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=text
+          
+      - name: Check test coverage threshold
+        id: coverage-check
+        run: |
+          # Extract coverage percentage from Jest output
+          COVERAGE=$(npm run test:shared -- --coverage --silent | grep -o "All files.*[0-9]\+\.[0-9]\+" | grep -o "[0-9]\+\.[0-9]\+" | head -1 || echo "0")
+          
+          echo "Current coverage: $COVERAGE%"
+          echo "Required threshold: $COVERAGE_THRESHOLD%"
+          
+          if (( $(echo "$COVERAGE >= $COVERAGE_THRESHOLD" | bc -l) )); then
+            echo "✅ Coverage threshold met: $COVERAGE% >= $COVERAGE_THRESHOLD%"
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Coverage threshold not met: $COVERAGE% < $COVERAGE_THRESHOLD%"
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+
+      - name: Analyze code complexity
+        id: complexity-check
+        run: |
+          # Install complexity analysis tool
+          npm install -g complexity-report
+          
+          # Analyze complexity for all TypeScript files
+          find containers/*/src -name "*.ts" -not -path "*/node_modules/*" -not -name "*.test.ts" -not -name "*.spec.ts" > ts-files.txt
+          
+          COMPLEX_FILES=0
+          TOTAL_FILES=0
+          
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              COMPLEXITY=$(cr --format json "$file" | jq '.reports[0].complexity.cyclomatic' 2>/dev/null || echo "0")
+              TOTAL_FILES=$((TOTAL_FILES + 1))
+              
+              if (( $(echo "$COMPLEXITY > $COMPLEXITY_THRESHOLD" | bc -l) )); then
+                echo "⚠️ High complexity in $file: $COMPLEXITY"
+                COMPLEX_FILES=$((COMPLEX_FILES + 1))
+              fi
+            fi
+          done < ts-files.txt
+          
+          echo "Files with high complexity: $COMPLEX_FILES/$TOTAL_FILES"
+          
+          if [ $COMPLEX_FILES -eq 0 ]; then
+            echo "✅ All files meet complexity threshold"
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ $COMPLEX_FILES files exceed complexity threshold of $COMPLEXITY_THRESHOLD"
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Calculate overall quality score
+        id: quality-score
+        run: |
+          COVERAGE_SCORE=${{ steps.coverage-check.outputs.coverage }}
+          COMPLEXITY_PASSED=${{ steps.complexity-check.outputs.passed }}
+          
+          # Parse ESLint results
+          ESLINT_ERRORS=$(jq '[.[] | .errorCount] | add // 0' eslint-results.json)
+          ESLINT_WARNINGS=$(jq '[.[] | .warningCount] | add // 0' eslint-results.json)
+          
+          # Calculate quality score (0-100)
+          QUALITY_SCORE=$COVERAGE_SCORE
+          
+          # Deduct points for ESLint issues
+          QUALITY_SCORE=$(echo "$QUALITY_SCORE - ($ESLINT_ERRORS * 2) - ($ESLINT_WARNINGS * 0.5)" | bc -l)
+          
+          # Deduct points for complexity issues
+          if [ "$COMPLEXITY_PASSED" = "false" ]; then
+            QUALITY_SCORE=$(echo "$QUALITY_SCORE - 10" | bc -l)
+          fi
+          
+          # Ensure score is not negative
+          QUALITY_SCORE=$(echo "if ($QUALITY_SCORE < 0) 0 else $QUALITY_SCORE" | bc -l)
+          
+          echo "Quality Score: $QUALITY_SCORE/100"
+          echo "score=$QUALITY_SCORE" >> $GITHUB_OUTPUT
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            containers/shared/coverage/
+            eslint-results.json
+          retention-days: 30
+
+      - name: Comment PR with quality metrics
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const coverage = '${{ steps.coverage-check.outputs.coverage }}';
+            const coveragePassed = '${{ steps.coverage-check.outputs.passed }}';
+            const complexityPassed = '${{ steps.complexity-check.outputs.passed }}';
+            const qualityScore = '${{ steps.quality-score.outputs.score }}';
+            
+            // Read ESLint results
+            let eslintSummary = '';
+            try {
+              const eslintResults = JSON.parse(fs.readFileSync('eslint-results.json', 'utf8'));
+              const totalErrors = eslintResults.reduce((sum, result) => sum + result.errorCount, 0);
+              const totalWarnings = eslintResults.reduce((sum, result) => sum + result.warningCount, 0);
+              eslintSummary = `- **ESLint**: ${totalErrors} errors, ${totalWarnings} warnings`;
+            } catch (error) {
+              eslintSummary = '- **ESLint**: Unable to parse results';
+            }
+            
+            const comment = `## 📊 Code Quality Report
+            
+            ### Quality Score: ${Math.round(qualityScore)}/100
+            
+            ### Metrics
+            - **Test Coverage**: ${coverage}% ${coveragePassed === 'true' ? '✅' : '❌'} (threshold: ${process.env.COVERAGE_THRESHOLD}%)
+            - **Code Complexity**: ${complexityPassed === 'true' ? '✅ Passed' : '❌ Failed'} (threshold: ${process.env.COMPLEXITY_THRESHOLD})
+            ${eslintSummary}
+            
+            ### Quality Gates
+            ${coveragePassed === 'true' ? '✅' : '❌'} Coverage threshold met
+            ${complexityPassed === 'true' ? '✅' : '❌'} Complexity threshold met
+            
+            ${qualityScore >= 80 ? '🎉 **Excellent code quality!**' : 
+              qualityScore >= 60 ? '👍 **Good code quality**' : 
+              '⚠️ **Code quality needs improvement**'}
+            
+            ---
+            *Generated by Code Quality Gates workflow*`;
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Security analysis
+  security-analysis:
+    name: 🔒 Security Analysis
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.should-run-quality == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm run setup:containers
+
+      - name: Run npm audit
+        run: |
+          npm audit --audit-level=moderate
+          
+          # Run audit for each container
+          for container in shared bunkbot djcova starbunk-dnd covabot; do
+            echo "Auditing $container..."
+            cd containers/$container
+            npm audit --audit-level=moderate || true
+            cd ../..
+          done
+
+      - name: Run Snyk security scan
+        continue-on-error: true
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Scan for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # Performance analysis
+  performance-analysis:
+    name: ⚡ Performance Analysis
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.should-run-quality == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm run setup:containers
+
+      - name: Build all containers
+        run: npm run build
+
+      - name: Analyze bundle sizes
+        run: |
+          echo "## Bundle Size Analysis" > bundle-analysis.md
+          echo "" >> bundle-analysis.md
+          
+          for container in bunkbot djcova starbunk-dnd covabot; do
+            if [ -d "containers/$container/dist" ]; then
+              SIZE=$(du -sh containers/$container/dist | cut -f1)
+              echo "- **$container**: $SIZE" >> bundle-analysis.md
+            fi
+          done
+
+      - name: Memory usage analysis
+        run: |
+          # Run a basic memory analysis on built containers
+          echo "## Memory Usage Estimates" >> bundle-analysis.md
+          echo "" >> bundle-analysis.md
+          
+          for container in bunkbot djcova starbunk-dnd covabot; do
+            if [ -f "containers/$container/dist/index.js" ]; then
+              # Basic analysis - count requires and estimate memory usage
+              REQUIRES=$(grep -c "require\|import" containers/$container/dist/index.js || echo "0")
+              echo "- **$container**: ~$((REQUIRES * 2))MB estimated (based on $REQUIRES dependencies)" >> bundle-analysis.md
+            fi
+          done
+
+      - name: Upload performance analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-analysis
+          path: bundle-analysis.md
+          retention-days: 30
+
+  # Quality gate enforcement
+  quality-gate:
+    name: 🚪 Quality Gate
+    runs-on: ubuntu-latest
+    needs: [quality-analysis, security-analysis, performance-analysis]
+    if: always() && needs.detect-changes.outputs.should-run-quality == 'true'
+    steps:
+      - name: Evaluate quality gates
+        run: |
+          COVERAGE_PASSED="${{ needs.quality-analysis.outputs.coverage-passed }}"
+          COMPLEXITY_PASSED="${{ needs.quality-analysis.outputs.complexity-passed }}"
+          QUALITY_SCORE="${{ needs.quality-analysis.outputs.quality-score }}"
+          
+          echo "Coverage passed: $COVERAGE_PASSED"
+          echo "Complexity passed: $COMPLEXITY_PASSED"
+          echo "Quality score: $QUALITY_SCORE"
+          
+          # Determine if quality gate passes
+          if [ "$COVERAGE_PASSED" = "true" ] && [ "$COMPLEXITY_PASSED" = "true" ]; then
+            echo "✅ Quality gate PASSED"
+            echo "QUALITY_GATE_PASSED=true" >> $GITHUB_ENV
+          else
+            echo "❌ Quality gate FAILED"
+            echo "QUALITY_GATE_PASSED=false" >> $GITHUB_ENV
+            
+            # Don't fail the workflow, just report
+            echo "Quality gate failed but not blocking merge. Review the quality metrics above."
+          fi
+
+      - name: Set quality gate status
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const qualityGatePassed = process.env.QUALITY_GATE_PASSED === 'true';
+            const qualityScore = '${{ needs.quality-analysis.outputs.quality-score }}';
+            
+            // Add quality gate label
+            const label = qualityGatePassed ? 'quality-gate-passed' : 'quality-gate-failed';
+            
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: [label]
+              });
+            } catch (error) {
+              console.error('Error adding quality gate label:', error);
+            }
+            
+            // Create status check
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: qualityGatePassed ? 'success' : 'failure',
+              target_url: `${context.payload.pull_request.html_url}/checks`,
+              description: `Quality Score: ${Math.round(qualityScore)}/100`,
+              context: 'Quality Gate'
+            });

@@ -1,0 +1,383 @@
+name: Automated Changelog Generation
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to generate changelog for (e.g., v1.2.3)'
+        required: false
+        type: string
+      since_tag:
+        description: 'Generate changelog since this tag'
+        required: false
+        type: string
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  generate-changelog:
+    name: 📝 Generate Changelog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install changelog generator
+        run: |
+          npm install -g conventional-changelog-cli
+          npm install -g auto-changelog
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Determine version and range
+        id: version-info
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            # Get the latest tag or use v0.0.1 if no tags exist
+            VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.1")
+          fi
+          
+          if [ "${{ github.event.inputs.since_tag }}" != "" ]; then
+            SINCE_TAG="${{ github.event.inputs.since_tag }}"
+          else
+            # Get the previous tag
+            SINCE_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "since_tag=$SINCE_TAG" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+          echo "Since tag: $SINCE_TAG"
+
+      - name: Generate conventional changelog
+        run: |
+          VERSION="${{ steps.version-info.outputs.version }}"
+          SINCE_TAG="${{ steps.version-info.outputs.since_tag }}"
+          
+          # Generate changelog using conventional commits
+          if [ "$SINCE_TAG" != "" ]; then
+            conventional-changelog -p angular -r 2 > CHANGELOG_TEMP.md
+          else
+            conventional-changelog -p angular -r 0 > CHANGELOG_TEMP.md
+          fi
+
+      - name: Generate detailed changelog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            const version = '${{ steps.version-info.outputs.version }}';
+            const sinceTag = '${{ steps.version-info.outputs.since_tag }}';
+            
+            // Get commits since last tag
+            let commits = [];
+            try {
+              if (sinceTag) {
+                const { data: compareData } = await github.rest.repos.compareCommits({
+                  owner,
+                  repo,
+                  base: sinceTag,
+                  head: 'main'
+                });
+                commits = compareData.commits;
+              } else {
+                const { data: commitsData } = await github.rest.repos.listCommits({
+                  owner,
+                  repo,
+                  per_page: 100
+                });
+                commits = commitsData;
+              }
+            } catch (error) {
+              console.error('Error fetching commits:', error);
+              return;
+            }
+            
+            // Categorize commits
+            const categories = {
+              breaking: [],
+              features: [],
+              fixes: [],
+              performance: [],
+              security: [],
+              documentation: [],
+              chores: [],
+              other: []
+            };
+            
+            commits.forEach(commit => {
+              const message = commit.commit.message;
+              const firstLine = message.split('\n')[0];
+              
+              // Parse conventional commit format
+              const conventionalMatch = firstLine.match(/^(\w+)(\(.+\))?(!)?:\s*(.+)$/);
+              
+              if (conventionalMatch) {
+                const [, type, scope, breaking, description] = conventionalMatch;
+                const isBreaking = breaking === '!' || message.includes('BREAKING CHANGE');
+                
+                const commitInfo = {
+                  sha: commit.sha.substring(0, 7),
+                  message: description,
+                  author: commit.commit.author.name,
+                  url: commit.html_url,
+                  scope: scope ? scope.replace(/[()]/g, '') : null
+                };
+                
+                if (isBreaking) {
+                  categories.breaking.push(commitInfo);
+                } else {
+                  switch (type.toLowerCase()) {
+                    case 'feat':
+                    case 'feature':
+                      categories.features.push(commitInfo);
+                      break;
+                    case 'fix':
+                    case 'bugfix':
+                      categories.fixes.push(commitInfo);
+                      break;
+                    case 'perf':
+                    case 'performance':
+                      categories.performance.push(commitInfo);
+                      break;
+                    case 'security':
+                    case 'sec':
+                      categories.security.push(commitInfo);
+                      break;
+                    case 'docs':
+                    case 'doc':
+                      categories.documentation.push(commitInfo);
+                      break;
+                    case 'chore':
+                    case 'build':
+                    case 'ci':
+                    case 'style':
+                    case 'refactor':
+                    case 'test':
+                      categories.chores.push(commitInfo);
+                      break;
+                    default:
+                      categories.other.push(commitInfo);
+                  }
+                }
+              } else {
+                // Non-conventional commit
+                categories.other.push({
+                  sha: commit.sha.substring(0, 7),
+                  message: firstLine,
+                  author: commit.commit.author.name,
+                  url: commit.html_url,
+                  scope: null
+                });
+              }
+            });
+            
+            // Generate changelog content
+            const date = new Date().toISOString().split('T')[0];
+            let changelog = `# Changelog\n\n`;
+            
+            if (version) {
+              changelog += `## [${version}] - ${date}\n\n`;
+            } else {
+              changelog += `## [Unreleased] - ${date}\n\n`;
+            }
+            
+            // Add sections for each category
+            const sections = [
+              { key: 'breaking', title: '💥 BREAKING CHANGES', emoji: '💥' },
+              { key: 'security', title: '🔒 Security', emoji: '🔒' },
+              { key: 'features', title: '✨ Features', emoji: '✨' },
+              { key: 'fixes', title: '🐛 Bug Fixes', emoji: '🐛' },
+              { key: 'performance', title: '⚡ Performance', emoji: '⚡' },
+              { key: 'documentation', title: '📚 Documentation', emoji: '📚' },
+              { key: 'chores', title: '🔧 Maintenance', emoji: '🔧' }
+            ];
+            
+            sections.forEach(section => {
+              const items = categories[section.key];
+              if (items.length > 0) {
+                changelog += `### ${section.title}\n\n`;
+                
+                // Group by container/scope
+                const grouped = {};
+                items.forEach(item => {
+                  const key = item.scope || 'general';
+                  if (!grouped[key]) grouped[key] = [];
+                  grouped[key].push(item);
+                });
+                
+                Object.keys(grouped).sort().forEach(scope => {
+                  if (scope !== 'general') {
+                    changelog += `#### ${scope}\n\n`;
+                  }
+                  
+                  grouped[scope].forEach(item => {
+                    changelog += `- ${item.message} ([${item.sha}](${item.url})) by @${item.author}\n`;
+                  });
+                  
+                  if (scope !== 'general') {
+                    changelog += '\n';
+                  }
+                });
+                
+                changelog += '\n';
+              }
+            });
+            
+            // Add other commits if any
+            if (categories.other.length > 0) {
+              changelog += `### 📦 Other Changes\n\n`;
+              categories.other.forEach(item => {
+                changelog += `- ${item.message} ([${item.sha}](${item.url})) by @${item.author}\n`;
+              });
+              changelog += '\n';
+            }
+            
+            // Add statistics
+            const totalCommits = commits.length;
+            const contributors = [...new Set(commits.map(c => c.commit.author.name))];
+            
+            changelog += `### 📊 Statistics\n\n`;
+            changelog += `- **Total commits**: ${totalCommits}\n`;
+            changelog += `- **Contributors**: ${contributors.length}\n`;
+            changelog += `- **Files changed**: ${commits.reduce((sum, c) => sum + (c.files?.length || 0), 0)}\n\n`;
+            
+            changelog += `### 👥 Contributors\n\n`;
+            contributors.forEach(contributor => {
+              changelog += `- @${contributor}\n`;
+            });
+            changelog += '\n';
+            
+            // Write changelog to file
+            fs.writeFileSync('CHANGELOG_GENERATED.md', changelog);
+            
+            console.log('Generated changelog with', totalCommits, 'commits from', contributors.length, 'contributors');
+
+      - name: Update CHANGELOG.md
+        run: |
+          # Backup existing changelog if it exists
+          if [ -f "CHANGELOG.md" ]; then
+            cp CHANGELOG.md CHANGELOG_BACKUP.md
+          fi
+          
+          # Create new changelog or prepend to existing
+          if [ -f "CHANGELOG.md" ]; then
+            # Extract everything after the first release section
+            tail -n +$(grep -n "^## \[" CHANGELOG.md | head -2 | tail -1 | cut -d: -f1) CHANGELOG.md > CHANGELOG_OLD.md 2>/dev/null || echo "" > CHANGELOG_OLD.md
+            
+            # Combine new and old changelog
+            cat CHANGELOG_GENERATED.md > CHANGELOG.md
+            if [ -s CHANGELOG_OLD.md ]; then
+              echo "" >> CHANGELOG.md
+              cat CHANGELOG_OLD.md >> CHANGELOG.md
+            fi
+          else
+            cp CHANGELOG_GENERATED.md CHANGELOG.md
+          fi
+          
+          # Clean up temporary files
+          rm -f CHANGELOG_GENERATED.md CHANGELOG_OLD.md CHANGELOG_TEMP.md
+
+      - name: Create changelog PR
+        if: github.event_name != 'release'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            
+            // Check if there are changes to commit
+            const { execSync } = require('child_process');
+            
+            try {
+              execSync('git add CHANGELOG.md');
+              const status = execSync('git status --porcelain').toString();
+              
+              if (status.trim() === '') {
+                console.log('No changes to changelog');
+                return;
+              }
+              
+              // Create a new branch for the changelog update
+              const branchName = `automated/changelog-update-${Date.now()}`;
+              execSync(`git checkout -b ${branchName}`);
+              
+              // Commit changes
+              execSync('git commit -m "docs: update changelog\n\nAutomatically generated changelog from recent commits\n\nCo-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"');
+              
+              // Push branch
+              execSync(`git push origin ${branchName}`);
+              
+              // Create PR
+              const { data: pr } = await github.rest.pulls.create({
+                owner,
+                repo,
+                title: 'docs: update changelog',
+                head: branchName,
+                base: 'main',
+                body: `## 📝 Automated Changelog Update
+                
+                This PR contains an automatically generated changelog update based on recent commits.
+                
+                ### 🤖 What's included
+                - Categorized commits by type (features, fixes, etc.)
+                - Contributor information
+                - Commit statistics
+                - Proper conventional commit formatting
+                
+                ### ✅ Review checklist
+                - [ ] Verify changelog accuracy
+                - [ ] Check for any missing important changes
+                - [ ] Ensure proper formatting
+                - [ ] Validate contributor attributions
+                
+                ### 🚀 Next steps
+                1. Review the generated changelog
+                2. Make any necessary manual adjustments
+                3. Merge when ready
+                
+                ---
+                
+                **Generated by**: Changelog Generation workflow
+                **Trigger**: ${context.eventName}
+                **Date**: ${new Date().toISOString()}`
+              });
+              
+              console.log(`Created changelog PR: ${pr.html_url}`);
+              
+            } catch (error) {
+              console.error('Error creating changelog PR:', error);
+            }
+
+      - name: Upload changelog artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-artifacts
+          path: |
+            CHANGELOG.md
+            CHANGELOG_BACKUP.md
+          retention-days: 30

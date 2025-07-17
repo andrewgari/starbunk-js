@@ -1,0 +1,252 @@
+# Code Rabbit Configuration for Starbunk Discord Bot Project
+# Optimized for TypeScript/Node.js containerized architecture
+
+# Review settings
+reviews:
+  # Enable high-quality reviews with focus on security and performance
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_empty_files: true
+  
+  # Auto-approve low-risk changes
+  auto_approve:
+    enabled: true
+    drafts: false
+    conditions:
+      - path_patterns:
+          - "**/*.md"
+          - "docs/**"
+          - ".github/ISSUE_TEMPLATE/**"
+          - "**/*.test.ts"
+          - "**/*.spec.ts"
+          - "**/__tests__/**"
+        max_files: 10
+        max_review_lines: 100
+      - path_patterns:
+          - ".prettierrc*"
+          - ".eslintrc*"
+          - "tsconfig.json"
+        max_files: 3
+        max_review_lines: 50
+
+  # Path-based review assignments
+  path_instructions:
+    - path: "containers/shared/**"
+      instructions: |
+        Focus on:
+        - Breaking changes that affect all containers
+        - Performance implications for shared services
+        - Type safety and API consistency
+        - Memory leaks in shared utilities
+        - Security vulnerabilities in shared code
+    
+    - path: "containers/*/src/**"
+      instructions: |
+        Focus on:
+        - Discord.js best practices and rate limiting
+        - Error handling and logging consistency
+        - Resource cleanup and memory management
+        - Security issues (token handling, input validation)
+        - Performance bottlenecks in message processing
+    
+    - path: ".github/workflows/**"
+      instructions: |
+        Focus on:
+        - CI/CD security and secret handling
+        - Resource optimization and cost efficiency
+        - Workflow reliability and error handling
+        - Container build optimization
+        - Path-based conditional logic correctness
+    
+    - path: "containers/*/package.json"
+      instructions: |
+        Focus on:
+        - Dependency security vulnerabilities
+        - Version compatibility issues
+        - Unnecessary dependencies
+        - License compatibility
+    
+    - path: "docker-compose*.yml"
+      instructions: |
+        Focus on:
+        - Container security configurations
+        - Resource limits and health checks
+        - Network security and isolation
+        - Volume mount security
+        - Environment variable handling
+
+# Language-specific settings for TypeScript/Node.js
+language_settings:
+  typescript:
+    # Focus areas for TypeScript code
+    focus_areas:
+      - type_safety
+      - performance
+      - security
+      - maintainability
+      - error_handling
+    
+    # TypeScript-specific rules
+    rules:
+      - name: "strict_null_checks"
+        description: "Ensure strict null checking is used"
+        pattern: "strictNullChecks.*false"
+        severity: "error"
+      
+      - name: "no_any_type"
+        description: "Avoid using 'any' type unless absolutely necessary"
+        pattern: ":\\s*any\\b"
+        severity: "warning"
+      
+      - name: "async_await_usage"
+        description: "Prefer async/await over Promise chains"
+        pattern: "\\.then\\("
+        severity: "info"
+      
+      - name: "error_handling"
+        description: "Ensure proper error handling in async functions"
+        pattern: "async.*{[^}]*(?!try|catch)"
+        severity: "warning"
+
+  javascript:
+    focus_areas:
+      - security
+      - performance
+      - error_handling
+
+# Container-specific review settings
+container_settings:
+  bunkbot:
+    focus_areas:
+      - "Discord bot reply logic and rate limiting"
+      - "Message filtering and content validation"
+      - "Error handling for Discord API failures"
+    
+  djcova:
+    focus_areas:
+      - "Audio streaming performance and memory usage"
+      - "Voice connection management and cleanup"
+      - "Queue management and concurrent access"
+    
+  covabot:
+    focus_areas:
+      - "LLM integration security and rate limiting"
+      - "Memory service performance and data privacy"
+      - "Vector database query optimization"
+    
+  "starbunk-dnd":
+    focus_areas:
+      - "D&D rule engine accuracy and performance"
+      - "State management and persistence"
+      - "User input validation and sanitization"
+    
+  snowbunk:
+    focus_areas:
+      - "Production-only deployment considerations"
+      - "Resource optimization for production workloads"
+      - "Monitoring and alerting integration"
+
+# Security-focused review settings
+security:
+  enabled: true
+  focus_areas:
+    - "Environment variable and secret handling"
+    - "Input validation and sanitization"
+    - "Authentication and authorization"
+    - "Dependency vulnerabilities"
+    - "Container security configurations"
+    - "API rate limiting and abuse prevention"
+  
+  # Security patterns to watch for
+  patterns:
+    - name: "hardcoded_secrets"
+      pattern: "(password|token|key|secret)\\s*[=:]\\s*['\"][^'\"]+['\"]"
+      severity: "critical"
+    
+    - name: "sql_injection"
+      pattern: "\\$\\{.*\\}.*query|query.*\\$\\{.*\\}"
+      severity: "high"
+    
+    - name: "unsafe_eval"
+      pattern: "eval\\(|Function\\(|setTimeout\\(.*string|setInterval\\(.*string"
+      severity: "high"
+    
+    - name: "insecure_random"
+      pattern: "Math\\.random\\(\\)"
+      severity: "medium"
+
+# Performance review settings
+performance:
+  enabled: true
+  focus_areas:
+    - "Memory leaks and resource cleanup"
+    - "Inefficient database queries"
+    - "Blocking operations in event loops"
+    - "Large object allocations"
+    - "Inefficient algorithms and data structures"
+  
+  patterns:
+    - name: "memory_leak_potential"
+      pattern: "setInterval|setTimeout.*(?!clear)"
+      severity: "medium"
+    
+    - name: "blocking_operations"
+      pattern: "fs\\.readFileSync|fs\\.writeFileSync"
+      severity: "warning"
+    
+    - name: "inefficient_loops"
+      pattern: "for.*in.*Object\\.keys"
+      severity: "info"
+
+# Integration with existing CI/CD
+ci_integration:
+  # Work with existing tag-based triggering
+  respect_labels:
+    - "review"
+    - "publish"
+    - "documentation"
+    - "security"
+    - "performance"
+  
+  # Skip review for certain automated changes
+  skip_patterns:
+    - "^chore\\(deps\\): update"
+    - "^docs: update"
+    - "^ci: update"
+  
+  # Enhanced review for critical changes
+  enhanced_review_patterns:
+    - "containers/shared/**"
+    - ".github/workflows/**"
+    - "docker-compose*.yml"
+    - "**/package.json"
+
+# Custom instructions for Discord bot development
+discord_bot_guidelines:
+  - "Ensure proper Discord.js rate limiting and error handling"
+  - "Validate all user inputs and sanitize content"
+  - "Use proper logging levels and structured logging"
+  - "Implement graceful shutdown and cleanup procedures"
+  - "Follow Discord bot best practices for permissions and intents"
+  - "Ensure container health checks and monitoring"
+  - "Use environment variables for all configuration"
+  - "Implement proper error boundaries and fallback mechanisms"
+
+# Quality gates
+quality_gates:
+  # Minimum requirements for approval
+  requirements:
+    - "No critical security issues"
+    - "No high-severity performance issues"
+    - "Proper error handling implemented"
+    - "Tests updated for new functionality"
+    - "Documentation updated if needed"
+  
+  # Metrics to track
+  metrics:
+    - code_coverage
+    - cyclomatic_complexity
+    - security_score
+    - performance_score
+    - maintainability_index
