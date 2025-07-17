@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check for file changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v2
         id: filter
         with:
           filters: '.github/path-filters.yml'

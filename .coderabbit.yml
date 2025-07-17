@@ -7,6 +7,7 @@ reviews:
   high_level_summary: true
   poem: false
   review_status: true
+  collapse_empty_files: true
 
   # Path-based review assignments
   path_instructions:
@@ -120,7 +121,7 @@ language_settings:
 
       - name: "error_handling"
         description: "Ensure proper error handling in async functions"
-        pattern: "async[^{]*{(?![^}]*try)"
+        pattern: "async[^{]*\\{(?![^}]*try)"
         severity: "warning"
 
   javascript:
