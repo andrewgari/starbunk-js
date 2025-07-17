@@ -14,10 +14,10 @@ COPY containers/shared/package*.json ./shared/
 COPY containers/bunkbot/package*.json ./
 
 # Install shared dependencies (optimized for both Docker and Podman)
-RUN cd shared && npm ci --only=production && npm ci && npm cache clean --force
+RUN cd shared && npm ci --omit=dev && npm cache clean --force
 
 # Install container dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Stage 2: Builder - Build the application
 FROM node:20-alpine AS builder
@@ -40,8 +40,8 @@ COPY containers/bunkbot ./
 COPY prisma ./prisma
 
 # Build shared package and container
-RUN cd shared && npm run build && npm pack && \
-    cd .. && npm install ./shared/starbunk-shared-1.0.0.tgz && \
+RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
+    cd .. && npm install "./shared/${SHARED_TGZ}" && \
     npx prisma generate && \
     npm run build
 
