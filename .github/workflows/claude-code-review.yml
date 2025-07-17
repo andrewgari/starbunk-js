@@ -2,7 +2,7 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [labeled, unlabeled, synchronize]
     # Optional: Only run on specific file changes
     # paths:
     #   - "src/**/*.ts"
@@ -12,12 +12,9 @@ on:
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-    
+    # Only run when the "review" label is present
+    if: contains(github.event.pull_request.labels.*.name, 'review')
+
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,4 +69,36 @@ jobs:
           # if: |
           #   !contains(github.event.pull_request.title, '[skip-review]') &&
           #   !contains(github.event.pull_request.title, '[WIP]')
+
+  # Request Code Rabbit review when "review" label is added
+  request-coderabbit-review:
+    if: contains(github.event.pull_request.labels.*.name, 'review')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Request Code Rabbit Review
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+
+            try {
+              // Request review from Code Rabbit
+              await github.rest.pulls.requestReviewers({
+                owner,
+                repo,
+                pull_number: prNumber,
+                reviewers: ['aicoderabbit']
+              });
+
+              console.log('✅ Successfully requested review from Code Rabbit (aicoderabbit)');
+            } catch (error) {
+              console.log(`⚠️ Could not request Code Rabbit review: ${error.message}`);
+              // Don't fail the workflow if Code Rabbit review request fails
+            }
 
