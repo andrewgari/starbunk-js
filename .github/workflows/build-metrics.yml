@@ -32,32 +32,32 @@ jobs:
             const analysisDate = new Date();
             const daysBack = parseInt('${{ inputs.analysis_period || "30" }}');
             const sinceDate = new Date(analysisDate.getTime() - (daysBack * 24 * 60 * 60 * 1000));
-            
+
             console.log(`Analyzing builds from ${sinceDate.toISOString()} to ${analysisDate.toISOString()}`);
-            
+
             // Get workflow runs for the container build workflow
             const { data: workflows } = await github.rest.actions.listRepoWorkflows({
               owner, repo
             });
-            
-            const containerWorkflow = workflows.workflows.find(w => 
+
+            const containerWorkflow = workflows.workflows.find(w =>
               w.name === 'Container Build, Test & Publish'
             );
-            
+
             if (!containerWorkflow) {
               console.log('Container build workflow not found');
               return;
             }
-            
+
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
               owner, repo,
               workflow_id: containerWorkflow.id,
               created: `>=${sinceDate.toISOString()}`,
               per_page: 100
             });
-            
+
             console.log(`Found ${runs.workflow_runs.length} workflow runs`);
-            
+
             // Analyze build metrics
             let totalRuns = 0;
             let successfulRuns = 0;
@@ -65,31 +65,31 @@ jobs:
             let totalDuration = 0;
             let optimizedBuilds = 0;
             let fullBuilds = 0;
-            
+
             const buildsByTrigger = {};
             const buildsByBranch = {};
-            
+
             for (const run of runs.workflow_runs) {
               totalRuns++;
-              
+
               if (run.conclusion === 'success') {
                 successfulRuns++;
               } else if (run.conclusion === 'failure') {
                 failedRuns++;
               }
-              
+
               // Calculate duration in minutes
               const duration = (new Date(run.updated_at) - new Date(run.created_at)) / (1000 * 60);
               totalDuration += duration;
-              
+
               // Track trigger types
               const trigger = run.event;
               buildsByTrigger[trigger] = (buildsByTrigger[trigger] || 0) + 1;
-              
+
               // Track branches
               const branch = run.head_branch || 'unknown';
               buildsByBranch[branch] = (buildsByBranch[branch] || 0) + 1;
-              
+
               // Estimate if this was an optimized build (duration < 8 minutes suggests partial build)
               if (duration < 8) {
                 optimizedBuilds++;
@@ -97,66 +97,66 @@ jobs:
                 fullBuilds++;
               }
             }
-            
+
             const avgDuration = totalRuns > 0 ? (totalDuration / totalRuns).toFixed(1) : 0;
             const successRate = totalRuns > 0 ? ((successfulRuns / totalRuns) * 100).toFixed(1) : 0;
             const optimizationRate = totalRuns > 0 ? ((optimizedBuilds / totalRuns) * 100).toFixed(1) : 0;
-            
+
             // Generate summary
             const summary = `## 📊 Build Performance Analysis (Last ${daysBack} days)
-            
+
             ### 🎯 Key Metrics
             - **Total Builds:** ${totalRuns}
             - **Success Rate:** ${successRate}% (${successfulRuns}/${totalRuns})
             - **Average Duration:** ${avgDuration} minutes
             - **Optimization Rate:** ${optimizationRate}% (${optimizedBuilds} optimized vs ${fullBuilds} full builds)
-            
+
             ### 📈 Build Efficiency
             - **Time Saved:** ~${(fullBuilds * 12 - optimizedBuilds * 4).toFixed(0)} minutes through optimization
             - **Resource Savings:** ~${optimizationRate}% CI/CD resource reduction
             - **Failed Builds:** ${failedRuns} (${((failedRuns / totalRuns) * 100).toFixed(1)}%)
-            
+
             ### 🔄 Build Triggers
-            ${Object.entries(buildsByTrigger).map(([trigger, count]) => 
+            ${Object.entries(buildsByTrigger).map(([trigger, count]) =>
               `- **${trigger}:** ${count} builds`
             ).join('\n')}
-            
+
             ### 🌿 Branch Activity
             ${Object.entries(buildsByBranch)
               .sort(([,a], [,b]) => b - a)
               .slice(0, 5)
               .map(([branch, count]) => `- **${branch}:** ${count} builds`)
               .join('\n')}
-            
+
             ### 💡 Recommendations
-            ${optimizationRate < 50 ? 
-              '- ⚠️ Low optimization rate - consider reviewing path filters' : 
+            ${optimizationRate < 50 ?
+              '- ⚠️ Low optimization rate - consider reviewing path filters' :
               '- ✅ Good optimization rate - path-based builds working well'
             }
-            ${successRate < 90 ? 
-              '- ⚠️ Build reliability could be improved' : 
+            ${successRate < 90 ?
+              '- ⚠️ Build reliability could be improved' :
               '- ✅ Excellent build reliability'
             }
-            ${avgDuration > 10 ? 
-              '- ⚠️ Consider further build optimizations' : 
+            ${avgDuration > 10 ?
+              '- ⚠️ Consider further build optimizations' :
               '- ✅ Good build performance'
             }`;
-            
+
             // Write to step summary
             await core.summary
               .addRaw(summary)
               .write();
-            
+
             console.log('Build analysis completed');
 
       - name: Check for build optimization opportunities
         run: |
           echo "🔍 Checking for build optimization opportunities..."
-          
+
           # Check for large files that might slow builds
           echo "### 📦 Large Files Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           large_files=$(find containers/ -type f -size +1M 2>/dev/null | head -10)
           if [ -n "$large_files" ]; then
             echo "**Large files found (>1MB):**" >> $GITHUB_STEP_SUMMARY
@@ -171,11 +171,11 @@ jobs:
             echo "✅ No large files found in container directories" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           # Check Docker ignore files
           echo "### 🚫 Docker Ignore Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
           for container in "${containers[@]}"; do
             if [ -f "containers/$container/.dockerignore" ]; then
@@ -184,7 +184,7 @@ jobs:
               echo "⚠️ $container missing .dockerignore" >> $GITHUB_STEP_SUMMARY
             fi
           done
-          
+
           # Check for root .dockerignore
           if [ -f ".dockerignore" ]; then
             echo "✅ Root .dockerignore exists" >> $GITHUB_STEP_SUMMARY
