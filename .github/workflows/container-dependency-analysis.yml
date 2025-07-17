@@ -32,7 +32,7 @@ jobs:
         id: analyze
         run: |
           echo "🔍 Analyzing container dependencies..."
-          
+
           # Define container dependency relationships
           declare -A dependencies
           dependencies["bunkbot"]="shared"
@@ -40,15 +40,15 @@ jobs:
           dependencies["starbunk-dnd"]="shared"
           dependencies["snowbunk"]="shared"
           dependencies["covabot"]="shared"
-          
+
           # Analyze package.json dependencies for each container
           containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
-          
+
           echo "### Container Dependency Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Container | Direct Dependencies | Shared Package | Build Priority |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-------------------|----------------|----------------|" >> $GITHUB_STEP_SUMMARY
-          
+
           for container in "${containers[@]}"; do
             # Map container name to directory (both starbunk-dnd and snowbunk use starbunk-dnd directory)
             container_dir="$container"
@@ -76,7 +76,7 @@ jobs:
               echo "| $container | No package.json | unknown | Standard |" >> $GITHUB_STEP_SUMMARY
             fi
           done
-          
+
           # Generate dependency matrix for GitHub Actions
           dependency_matrix=$(cat << 'EOF'
           {
@@ -88,7 +88,7 @@ jobs:
                 "estimated_build_time": "3m"
               },
               {
-                "container": "djcova", 
+                "container": "djcova",
                 "depends_on": ["shared"],
                 "build_priority": 2,
                 "estimated_build_time": "2m"
@@ -115,14 +115,14 @@ jobs:
           }
           EOF
           )
-          
+
           # Optimal build order (shared first, then containers in parallel)
           build_order='["shared", "bunkbot,djcova,starbunk-dnd,snowbunk,covabot"]'
-          
+
           echo "dependency-matrix=$(echo "$dependency_matrix" | jq -c .)" >> $GITHUB_OUTPUT
           echo "build-order=$build_order" >> $GITHUB_OUTPUT
           echo "shared-dependencies=true" >> $GITHUB_OUTPUT
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🚀 Optimal Build Strategy" >> $GITHUB_STEP_SUMMARY
           echo "1. **Build shared package first** (all containers depend on it)" >> $GITHUB_STEP_SUMMARY
@@ -135,10 +135,10 @@ jobs:
       - name: Validate container configurations
         run: |
           echo "🔧 Validating container configurations..."
-          
+
           containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
           validation_errors=0
-          
+
           for container in "${containers[@]}"; do
             echo "Validating $container..."
 
@@ -162,7 +162,7 @@ jobs:
             else
               echo "✅ Dockerfile found: containers/$container_dir/Dockerfile"
             fi
-            
+
             # Check if package.json exists
             if [ ! -f "containers/$container_dir/package.json" ]; then
               echo "⚠️  package.json missing: containers/$container_dir/package.json"
@@ -176,7 +176,7 @@ jobs:
               fi
             fi
           done
-          
+
           if [ $validation_errors -gt 0 ]; then
             echo "❌ Validation failed with $validation_errors errors"
             exit 1
