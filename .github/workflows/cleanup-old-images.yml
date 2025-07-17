@@ -4,7 +4,7 @@ on:
   # Run weekly on Sundays at 2 AM UTC
   schedule:
     - cron: '0 2 * * 0'
-  
+
   # Allow manual triggering
   workflow_dispatch:
     inputs:
@@ -34,7 +34,7 @@ jobs:
     permissions:
       packages: write
       contents: read
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -44,10 +44,10 @@ jobs:
         run: |
           CLEANUP_TYPE="${{ github.event.inputs.cleanup_type || 'old-images' }}"
           DAYS_OLD="${{ github.event.inputs.days_old || '30' }}"
-          
+
           echo "cleanup_type=$CLEANUP_TYPE" >> $GITHUB_OUTPUT
           echo "days_old=$DAYS_OLD" >> $GITHUB_OUTPUT
-          
+
           echo "🧹 Cleanup Type: $CLEANUP_TYPE"
           echo "📅 Days Old Threshold: $DAYS_OLD"
 
@@ -61,17 +61,17 @@ jobs:
             const cleanupType = '${{ steps.params.outputs.cleanup_type }}';
             const daysOld = parseInt('${{ steps.params.outputs.days_old }}');
             const isDryRun = cleanupType === 'dry-run';
-            
+
             console.log(`🧹 Starting ${isDryRun ? 'DRY RUN' : 'cleanup'} for ${containers.length} containers`);
             console.log(`📋 Cleanup type: ${cleanupType}`);
             console.log(`📅 Days old threshold: ${daysOld}`);
             console.log('');
-            
+
             let totalDeleted = 0;
-            
+
             for (const container of containers) {
               console.log(`📦 Processing container: ${container}`);
-              
+
               try {
                 // Get all versions of the package
                 const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
@@ -79,26 +79,26 @@ jobs:
                   package_name: container,
                   username: owner
                 });
-                
+
                 if (versions.length === 0) {
                   console.log(`  ℹ️ No versions found for ${container}`);
                   continue;
                 }
-                
+
                 console.log(`  📊 Found ${versions.length} version(s)`);
-                
+
                 let deletedCount = 0;
                 const cutoffDate = new Date();
                 cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-                
+
                 for (const version of versions) {
                   const tags = version.metadata?.container?.tags || [];
                   const createdAt = new Date(version.created_at);
                   const tagsStr = tags.join(', ') || 'untagged';
-                  
+
                   let shouldDelete = false;
                   let reason = '';
-                  
+
                   // Determine if this version should be deleted based on cleanup type
                   switch (cleanupType) {
                     case 'old-images':
@@ -109,7 +109,7 @@ jobs:
                         reason = `older than ${daysOld} days`;
                       }
                       break;
-                      
+
                     case 'pr-snapshots':
                       // Delete PR snapshot images
                       if (tags.some(tag => tag === 'snapshot')) {
@@ -117,7 +117,7 @@ jobs:
                         reason = 'PR snapshot image';
                       }
                       break;
-                      
+
                     case 'untagged':
                       // Delete untagged images
                       if (tags.length === 0) {
@@ -126,13 +126,13 @@ jobs:
                       }
                       break;
                   }
-                  
+
                   if (shouldDelete) {
                     if (isDryRun) {
                       console.log(`  🔍 [DRY RUN] Would delete: ${version.id} (${tagsStr}) - ${reason}`);
                     } else {
                       console.log(`  🗑️ Deleting: ${version.id} (${tagsStr}) - ${reason}`);
-                      
+
                       try {
                         await github.rest.packages.deletePackageVersionForUser({
                           package_type: 'container',
@@ -148,20 +148,20 @@ jobs:
                     }
                   }
                 }
-                
+
                 if (deletedCount === 0 && !isDryRun) {
                   console.log(`  ✅ No versions deleted for ${container}`);
                 } else if (!isDryRun) {
                   console.log(`  ✅ Deleted ${deletedCount} version(s) for ${container}`);
                 }
-                
+
               } catch (error) {
                 console.log(`  ❌ Error processing ${container}: ${error.message}`);
               }
-              
+
               console.log('');
             }
-            
+
             // Summary
             if (isDryRun) {
               console.log(`🔍 DRY RUN COMPLETED`);

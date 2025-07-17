@@ -5,7 +5,6 @@ on:
     paths:
       - '.github/path-filters.yml'
       - '.github/workflows/container-build-test-publish.yml'
-      - '.github/workflows/pr-checks.yml'
   workflow_dispatch:
     inputs:
       test_branch:
@@ -27,13 +26,13 @@ jobs:
         run: |
           echo "🔍 Validating path filter syntax..."
           pip install --quiet pyyaml
-          
+
           # Check if path-filters.yml exists and is valid YAML
           if [ ! -f ".github/path-filters.yml" ]; then
             echo "❌ Error: .github/path-filters.yml not found"
             exit 1
           fi
-          
+
           # Validate YAML syntax
           python3 -c "
           import yaml
@@ -59,24 +58,24 @@ jobs:
       - name: Check for path filter coverage
         run: |
           echo "🔍 Checking path filter coverage..."
-          
+
           # Check if all container directories are covered
           containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
           missing_filters=()
-          
+
           for container in "${containers[@]}"; do
             if ! grep -q "^${container}:" .github/path-filters.yml; then
               missing_filters+=("$container")
             fi
           done
-          
+
           if [ ${#missing_filters[@]} -gt 0 ]; then
             echo "❌ Missing path filters for containers: ${missing_filters[*]}"
             exit 1
           else
             echo "✅ All containers have path filters defined"
           fi
-          
+
           # Check for shared filter
           if ! grep -q "^shared:" .github/path-filters.yml; then
             echo "❌ Missing shared path filter"
@@ -88,34 +87,34 @@ jobs:
       - name: Validate filter patterns
         run: |
           echo "🔍 Validating filter patterns..."
-          
+
           # Check for common issues in path patterns
           issues_found=0
-          
+
           # Check for overly broad patterns
           if grep -q "\*\*$" .github/path-filters.yml; then
             echo "⚠️ Warning: Found patterns ending with '**' which may be overly broad"
             grep -n "\*\*$" .github/path-filters.yml
             issues_found=$((issues_found + 1))
           fi
-          
+
           # Check for missing exclusions
           if ! grep -q "node_modules" .github/path-filters.yml; then
             echo "⚠️ Warning: No node_modules exclusions found"
             issues_found=$((issues_found + 1))
           fi
-          
+
           if ! grep -q "dist" .github/path-filters.yml; then
             echo "⚠️ Warning: No dist directory exclusions found"
             issues_found=$((issues_found + 1))
           fi
-          
+
           # Check for documentation exclusions
           if ! grep -q "README.md" .github/path-filters.yml; then
             echo "⚠️ Warning: No README.md exclusions found"
             issues_found=$((issues_found + 1))
           fi
-          
+
           if [ $issues_found -eq 0 ]; then
             echo "✅ Path filter patterns look good"
           else
@@ -126,22 +125,22 @@ jobs:
         run: |
           echo "## 📊 Path Filter Validation Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           # Count filters
           total_filters=$(grep -c "^[a-zA-Z]" .github/path-filters.yml)
           container_filters=$(grep -E -c "^(bunkbot|djcova|starbunk-dnd|covabot):" .github/path-filters.yml)
-          
+
           echo "### 📋 Filter Statistics" >> $GITHUB_STEP_SUMMARY
           echo "- **Total filters:** $total_filters" >> $GITHUB_STEP_SUMMARY
           echo "- **Container filters:** $container_filters" >> $GITHUB_STEP_SUMMARY
           echo "- **Shared filters:** $(grep -c "^shared" .github/path-filters.yml)" >> $GITHUB_STEP_SUMMARY
           echo "- **Root file filters:** $(grep -c "^root-files" .github/path-filters.yml)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           echo "### 🎯 Filter Coverage" >> $GITHUB_STEP_SUMMARY
           echo "| Filter Type | Status | Patterns |" >> $GITHUB_STEP_SUMMARY
           echo "|-------------|--------|----------|" >> $GITHUB_STEP_SUMMARY
-          
+
           # Check each container
           containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
           for container in "${containers[@]}"; do
@@ -152,29 +151,29 @@ jobs:
               echo "| $container | ❌ Missing | 0 patterns |" >> $GITHUB_STEP_SUMMARY
             fi
           done
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔧 Optimization Recommendations" >> $GITHUB_STEP_SUMMARY
-          
+
           # Check for optimization opportunities
           if grep -q "containers/\*/\*\*" .github/path-filters.yml; then
             echo "- ✅ Using specific container paths" >> $GITHUB_STEP_SUMMARY
           else
             echo "- ⚠️ Consider using more specific container paths" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if grep -q "!\*\*/\*.md" .github/path-filters.yml; then
             echo "- ✅ Excluding documentation files" >> $GITHUB_STEP_SUMMARY
           else
             echo "- ⚠️ Consider excluding documentation files" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if grep -q "!.*/node_modules/\*\*" .github/path-filters.yml; then
             echo "- ✅ Excluding node_modules directories" >> $GITHUB_STEP_SUMMARY
           else
             echo "- ⚠️ Consider excluding node_modules directories" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "*Path filter validation completed at $(date)*" >> $GITHUB_STEP_SUMMARY
@@ -208,7 +207,7 @@ jobs:
           echo "| Starbunk-DND | ${{ steps.filter.outputs.starbunk-dnd }} | ${{ steps.filter.outputs.starbunk-dnd == 'true' && 'Starbunk-DND only' || 'None' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| CovaBot | ${{ steps.filter.outputs.covabot }} | ${{ steps.filter.outputs.covabot == 'true' && 'CovaBot only' || 'None' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           # Calculate optimization
           triggered_filters=0
           if [ "${{ steps.filter.outputs.shared }}" = "true" ]; then triggered_filters=4; fi
@@ -216,13 +215,13 @@ jobs:
           if [ "${{ steps.filter.outputs.djcova }}" = "true" ]; then triggered_filters=$((triggered_filters + 1)); fi
           if [ "${{ steps.filter.outputs.starbunk-dnd }}" = "true" ]; then triggered_filters=$((triggered_filters + 1)); fi
           if [ "${{ steps.filter.outputs.covabot }}" = "true" ]; then triggered_filters=$((triggered_filters + 1)); fi
-          
+
           # Cap at 4 (can't build more than 4 containers)
           if [ $triggered_filters -gt 4 ]; then triggered_filters=4; fi
-          
+
           saved_builds=$((4 - triggered_filters))
           optimization_rate=$(( (saved_builds * 100) / 4 ))
-          
+
           echo "### ⚡ Optimization Results" >> $GITHUB_STEP_SUMMARY
           echo "- **Containers to build:** $triggered_filters out of 4" >> $GITHUB_STEP_SUMMARY
           echo "- **Builds saved:** $saved_builds" >> $GITHUB_STEP_SUMMARY

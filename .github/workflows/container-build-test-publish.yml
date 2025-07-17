@@ -5,7 +5,7 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened, closed, labeled, unlabeled]
 
 env:
   REGISTRY: ghcr.io
@@ -15,7 +15,9 @@ jobs:
   detect-changes:
     name: 🔍 Detect Container Changes
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    if: |
+      (github.event_name != 'pull_request' || github.event.action != 'closed') &&
+      (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'publish'))
     outputs:
       shared: ${{ steps.filter.outputs.shared }}
       bunkbot: ${{ steps.filter.outputs.bunkbot }}
@@ -234,6 +236,16 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'containers/shared/package-lock.json'
 
+      - name: Cache TypeScript build
+        uses: actions/cache@v4
+        with:
+          path: |
+            containers/shared/dist
+            containers/shared/node_modules/.cache
+          key: ${{ runner.os }}-shared-build-${{ hashFiles('containers/shared/package-lock.json', 'containers/shared/src/**/*.ts', 'containers/shared/tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-shared-build-
+
       - name: Install shared dependencies
         run: cd containers/shared && npm ci
 
@@ -280,6 +292,17 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Configure Docker layer caching
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.container }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.container }}-
+            ${{ runner.os }}-buildx-
 
       - name: Log in to Container Registry
         uses: docker/login-action@v3
@@ -383,7 +406,11 @@ jobs:
     name: 📦 Publish - ${{ matrix.container }}
     runs-on: ubuntu-latest
     needs: [detect-changes, build-test-containers]
-    if: ${{ needs.detect-changes.outputs.any-container-changed == 'true' && needs.detect-changes.outputs.containers-matrix != '[]' && (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') }}
+    if: |
+      needs.detect-changes.outputs.any-container-changed == 'true' &&
+      needs.detect-changes.outputs.containers-matrix != '[]' &&
+      (github.ref == 'refs/heads/main' ||
+       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'publish')))
     permissions:
       contents: read
       packages: write
@@ -397,6 +424,17 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Configure Docker layer caching
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.container }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.container }}-
+            ${{ runner.os }}-buildx-
 
       - name: Log in to Container Registry
         uses: docker/login-action@v3
@@ -437,7 +475,7 @@ jobs:
           fi
 
       - name: Add PR Comment (for PR builds)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'publish')
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -463,6 +501,7 @@ jobs:
             ✅ **Build & Test:** Image built and validated successfully
             📦 **Published:** Available in GitHub Container Registry
             🔄 **Snapshot System:** Snapshot tag updated in-place to latest build
+            🏷️ **Label-Based:** Triggered by "publish" label on PR
             🗑️ **Cleanup:** Images will be deleted when PR is closed`;
 
             // Update or create comment
@@ -484,10 +523,13 @@ jobs:
               });
             }
 
-  # Clean up PR images when PR is closed
+  # Clean up PR images when PR is closed (only if publish label was used)
   cleanup-pr-images:
     name: 🗑️ Cleanup PR Images
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      contains(github.event.pull_request.labels.*.name, 'publish')
     runs-on: ubuntu-latest
     permissions:
       packages: write
