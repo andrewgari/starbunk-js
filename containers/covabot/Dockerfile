@@ -66,12 +66,24 @@ COPY --from=builder /app/package.json ./
 RUN chown -R covabot:covabot /app
 USER covabot
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3003/health || exit 1
+# Create directories for persistent data
+RUN mkdir -p /app/data /app/logs /app/public && \
+    chown -R covabot:covabot /app/data /app/logs /app/public
 
-EXPOSE 3003
+# Environment variables for enhanced CovaBot
+ENV NODE_ENV=production
+ENV WEB_PORT=7080
+ENV WEB_HOST=0.0.0.0
+
+# Health check for enhanced CovaBot with web interface
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:7080/health || exit 1
+
+# Expose web interface port
+EXPOSE 7080
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index-minimal.js"]
+
+# Start enhanced CovaBot (fallback to minimal if enhanced not available)
+CMD ["sh", "-c", "if [ -f dist/index-enhanced.js ]; then node dist/index-enhanced.js; else node dist/index-minimal.js; fi"]
