@@ -70,12 +70,12 @@ export class EmbeddingService {
 			const startTime = Date.now();
 			this.pipeline = await pipeline('feature-extraction', this.config.model, {
 				quantized: true, // Use quantized model for better performance
-				progress_callback: (progress: any) => {
-					if (progress.status === 'downloading') {
+				progress_callback: (progress: { status: string; name?: string; progress?: number }) => {
+					if (progress.status === 'downloading' && progress.name && progress.progress !== undefined) {
 						logger.debug(`[EmbeddingService] Downloading: ${progress.name} (${Math.round(progress.progress)}%)`);
 					}
 				},
-			}) as any;
+			});
 
 			const loadTime = Date.now() - startTime;
 			logger.info(`[EmbeddingService] Model loaded successfully in ${loadTime}ms`);
