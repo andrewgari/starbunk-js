@@ -8,10 +8,13 @@ on:
       - "containers/**/*.tsx"
       - "containers/**/*.js"
       - "containers/**/*.jsx"
+      - "containers/**/test/**"
+      - "containers/**/*.test.*"
+      - "containers/**/*.spec.*"
 
 jobs:
   claude-review:
-    name: '🤖 AI Code Review'
+    name: '🤖 AI Code Review - Advanced Prompts'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -30,12 +33,50 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
+          # Advanced file-type specific prompts
           direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            Please review this pull request with specialized focus based on file types:
 
-            Be constructive and helpful in your feedback. Focus on the Discord bot architecture and TypeScript best practices.
+            **For TypeScript/JavaScript Discord Bot Files:**
+            - Type safety and proper interface usage
+            - Discord.js best practices and API usage
+            - Event handling and error management
+            - Memory management and resource cleanup
+            - Async/await patterns and Promise handling
+
+            **For Container-Specific Code:**
+            - Modular architecture adherence
+            - Dependency injection patterns
+            - Service layer implementations
+            - Configuration management
+            - Container health and lifecycle management
+
+            **For Database/Storage Code:**
+            - SQL injection prevention
+            - Connection pooling and management
+            - Transaction handling
+            - Data validation and sanitization
+            - Migration safety
+
+            **For Test Files:**
+            - Test coverage and edge cases
+            - Mock usage and test isolation
+            - AAA (Arrange-Act-Assert) pattern
+            - Integration vs unit test appropriateness
+            - Test performance and reliability
+
+            **For API/Web Interface Code:**
+            - Input validation and sanitization
+            - Authentication and authorization
+            - Rate limiting and security headers
+            - Error handling and logging
+            - Performance and caching strategies
+
+            **General Code Quality:**
+            - Code maintainability and readability
+            - Performance optimizations
+            - Security vulnerabilities
+            - Documentation completeness
+            - Adherence to project coding standards
+
+            Be constructive, specific, and provide actionable feedback. Focus on Discord bot architecture, TypeScript best practices, and container-based microservices patterns.
