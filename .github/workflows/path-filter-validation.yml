@@ -5,7 +5,6 @@ on:
     paths:
       - '.github/path-filters.yml'
       - '.github/workflows/container-build-test-publish.yml'
-      - '.github/workflows/pr-checks.yml'
   workflow_dispatch:
     inputs:
       test_branch:

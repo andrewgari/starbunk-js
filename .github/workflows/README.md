@@ -43,28 +43,7 @@ This is our main workflow that efficiently handles container building, testing, 
 - Format: `ghcr.io/andrewgari/starbunk-js/{container}:pr-{number}`
 - Example: `ghcr.io/andrewgari/starbunk-js/bunkbot:pr-123`
 
-### 2. `pr-checks.yml` - Pull Request Validation
-**Triggers:** Pull request opened, synchronized, reopened
-**Purpose:** Validates code quality, types, builds, and tests
-
-**Checks:**
-- 🔍 **ESLint**: Code quality and style checks
-- 🔧 **TypeScript**: Type checking
-- 🔨 **Build**: Compilation verification
-- 🧪 **Unit Tests**: Jest test execution
-- 🐳 **Docker Build**: Container build verification (no push)
-
-### 3. `ci.yml` - Continuous Integration
-**Triggers:** Push to main/develop, pull requests to main
-**Purpose:** Comprehensive testing and container building
-
-**Jobs:**
-- 📦 **Shared Package Testing**: Tests the shared utilities
-- 🧪 **Container Testing**: Tests individual containers
-- 🐳 **Docker Building**: Builds container images
-- 🔗 **Integration Testing**: End-to-end testing with Docker Compose
-
-### 4. `pr-cleanup.yml` - PR Artifact Cleanup
+### 2. `pr-cleanup.yml` - PR Artifact Cleanup
 **Triggers:** Pull request closed
 **Purpose:** Removes PR-specific artifacts and images
 
