@@ -48,6 +48,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
+          # NOTE: network=host is required for accessing local npm registry during build
+          # This is a controlled environment (GitHub Actions) with trusted code only
+          # Security risk is mitigated by running only on trusted runners
           driver-opts: |
             network=host
           buildkitd-flags: --allow-insecure-entitlement network.host
