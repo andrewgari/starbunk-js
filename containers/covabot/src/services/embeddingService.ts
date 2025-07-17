@@ -15,13 +15,27 @@ export class EmbeddingService {
 	private initializationPromise: Promise<void> | null = null;
 
 	constructor() {
+	constructor() {
 		this.config = {
 			model: process.env.EMBEDDING_MODEL || 'Xenova/all-MiniLM-L6-v2',
-			dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '384'),
-			batchSize: parseInt(process.env.EMBEDDING_BATCH_SIZE || '32'),
-			cacheSize: parseInt(process.env.EMBEDDING_CACHE_SIZE || '1000'),
-			timeout: parseInt(process.env.EMBEDDING_TIMEOUT || '30000'),
+			dimensions: this.parseIntWithDefault(process.env.EMBEDDING_DIMENSIONS, 384),
+			batchSize: this.parseIntWithDefault(process.env.EMBEDDING_BATCH_SIZE, 32),
+			cacheSize: this.parseIntWithDefault(process.env.EMBEDDING_CACHE_SIZE, 1000),
+			timeout: this.parseIntWithDefault(process.env.EMBEDDING_TIMEOUT, 30000),
 		};
+	}
+
+	private parseIntWithDefault(value: string | undefined, defaultValue: number): number {
+		if (!value) {
+			return defaultValue;
+		}
+		const parsed = parseInt(value, 10);
+		if (isNaN(parsed)) {
+			logger.warn(`[EmbeddingService] Invalid integer value: ${value}, using default: ${defaultValue}`);
+			return defaultValue;
+		}
+		return parsed;
+	}
 
 		logger.info(`[EmbeddingService] Configured with model: ${this.config.model}`);
 	}
