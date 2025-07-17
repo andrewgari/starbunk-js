@@ -1,16 +1,17 @@
 import { Message } from 'discord.js';
-import userId from '../../../../discord/userId';
+import userId from '@starbunk/shared/dist/discord/userId';
 import { getLLMManager } from '@starbunk/shared';
 import { LLMProviderType } from '@starbunk/shared';
 import { PromptRegistry, PromptType } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
-import { getPersonalityService } from '../../../../services/personalityService';
-import { PerformanceTimer } from '../../../../utils/time';
-import { ResponseGenerator, weightedRandomResponse } from '../../core/responses';
+import { getPersonalityService } from '@starbunk/shared';
+// import { PerformanceTimer } from '@starbunk/shared/dist/utils/time';
+import { ResponseGenerator, weightedRandomResponse } from '../utils/responseUtils';
 import { COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_PROMPTS } from './constants';
+import { QdrantMemoryService } from '../services/qdrantMemoryService';
 
 // Create performance timer for CovaBot operations
-const perfTimer = PerformanceTimer.getInstance();
+// const perfTimer = PerformanceTimer.getInstance();
 
 // Track last time the bot responded to maintain conversation context
 const lastResponseTime = new Map<string, number>();
@@ -42,13 +43,32 @@ PromptRegistry.registerPrompt(PromptType.COVA_DECISION, {
  */
 export const createLLMEmulatorResponse = (): ResponseGenerator => {
 	return async (message: Message): Promise<string> => {
-		return await PerformanceTimer.time('llm-emulator', async () => {
+		// Simple timing without PerformanceTimer for now
+		const startTime = Date.now();
+		try {
+			const result = await (async () => {
 			try {
 				logger.debug(`[CovaBot] Generating response with personality emulation`);
 
 				// Get personality embedding
 				const personalityService = getPersonalityService();
 				const personalityEmbedding = personalityService.getPersonalityEmbedding();
+
+				// Get enhanced context with conversation memory
+				const memoryService = QdrantMemoryService.getInstance();
+				const enhancedContext = await memoryService.generateEnhancedContext(
+					message.content,
+					message.author.id,
+					message.channel.id,
+					{
+						maxPersonalityNotes: 10,
+						maxConversationHistory: 8,
+						personalityWeight: 1.0,
+						conversationWeight: 0.8,
+						similarityThreshold: 0.6,
+					}
+				);
+				const personalityNotes = enhancedContext.combinedContext;
 
 				// Get channel name safely
 				let channelName = 'Unknown Channel';
@@ -62,13 +82,18 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 					// If anything fails, just use default
 				}
 
-				// Create the user prompt with context
-				const userPrompt = `
+				// Create the user prompt with context including personality notes
+				let userPrompt = `
 Channel: ${channelName}
 User: ${message.author.username}
-Message: ${message.content}
+Message: ${message.content}`;
 
-Respond as Cova would to this message.`;
+				// Add personality notes context if available
+				if (personalityNotes) {
+					userPrompt += `\n\n${personalityNotes}`;
+				}
+
+				userPrompt += '\n\nRespond as Cova would to this message, taking into account the personality instructions above.';
 
 				// Create completion with personality context
 				const response = await getLLMManager().createPromptCompletion(
@@ -93,6 +118,34 @@ Respond as Cova would to this message.`;
 					return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 				}
 
+				// Store conversation in memory
+				try {
+					const conversationId = `${message.channel.id}_${Date.now()}`;
+
+					// Store user message
+					await memoryService.storeConversation({
+						content: message.content,
+						userId: message.author.id,
+						channelId: message.channel.id,
+						messageType: 'user',
+						conversationId,
+					});
+
+					// Store bot response
+					await memoryService.storeConversation({
+						content: response,
+						userId: 'covabot',
+						channelId: message.channel.id,
+						messageType: 'bot',
+						conversationId,
+					});
+
+					logger.debug(`[CovaBot] Stored conversation pair in memory: ${conversationId}`);
+				} catch (memoryError) {
+					logger.warn(`[CovaBot] Failed to store conversation in memory: ${memoryError instanceof Error ? memoryError.message : 'Unknown error'}`);
+					// Continue with response even if memory storage fails
+				}
+
 				// Truncate response to Discord's 2000 character limit
 				if (response.length > 1900) {
 					logger.warn(`[CovaBot] Response exceeded Discord's character limit (${response.length} chars), truncating`);
@@ -104,7 +157,14 @@ Respond as Cova would to this message.`;
 				logger.warn(`[CovaBot] LLM service error: ${error instanceof Error ? error.message : String(error)}`);
 				return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 			}
-		});
+		})();
+
+		logger.debug(`[CovaBot] LLM emulator took ${Date.now() - startTime}ms`);
+		return result;
+	} catch (error) {
+		logger.error(`[CovaBot] Error in emulator timing: ${error instanceof Error ? error.message : String(error)}`);
+		return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
+	}
 	};
 };
 
@@ -113,17 +173,21 @@ Respond as Cova would to this message.`;
  */
 export const createLLMResponseDecisionCondition = () => {
 	return async (message: Message): Promise<boolean> => {
-		return await PerformanceTimer.time('llm-decision', async () => {
+		// Simple timing without PerformanceTimer for now
+		const startTime = Date.now();
+		try {
+			const result = await (async () => {
 			try {
-				// Always respond to direct mentions
+				// Skip bot messages FIRST - even if they mention Cova
+				if (message.author.bot) {
+					logger.debug('[CovaBot] Skipping bot message');
+					return false;
+				}
+
+				// Always respond to direct mentions (from non-bots)
 				if (message.mentions.has(userId.Cova)) {
 					logger.debug('[CovaBot] Direct mention detected, will respond');
 					return true;
-				}
-
-				// Skip bot messages
-				if (message.author.bot) {
-					return false;
 				}
 
 				// Get data about recent interactions
@@ -166,29 +230,50 @@ Based on the Response Decision System, should Cova respond to this message?`;
 
 				const response = llmResponse.trim().toUpperCase();
 
-				// Determine probability based on the response
+				// Determine probability based on the response with more conversational logic
 				let probability = 0;
 				if (response.includes("YES")) {
-					probability = 0.8;
+					probability = 0.7; // Reduced from 0.8 to be less aggressive
 				} else if (response.includes("LIKELY")) {
-					probability = 0.5;
+					probability = 0.35; // Reduced from 0.5
 				} else if (response.includes("UNLIKELY")) {
-					probability = 0.2;
+					probability = 0.1; // Reduced from 0.2
 				} else {
-					probability = 0.05;
+					probability = 0.02; // Reduced from 0.05
 				}
 
-				// Adjust probability based on conversation recency
+				// Enhanced contextual adjustments for more natural conversation
 				if (isRecentConversation) {
-					// Higher chance to respond in active conversations
-					probability *= 1.2;
+					// In active conversations, be more responsive but not overwhelming
+					probability *= 1.3;
 				} else {
-					// Lower chance to start new conversations
-					probability *= 0.8;
+					// Be much more selective about starting new conversations
+					probability *= 0.5;
 				}
 
-				// Cap probability
-				probability = Math.min(probability, 0.9);
+				// Additional conversational intelligence
+				const messageContent = message.content.toLowerCase();
+				
+				// Increase chance for direct questions or mentions of topics Cova cares about
+				if (messageContent.includes('?') && 
+					(messageContent.includes('cova') || messageContent.includes('dev') || 
+                     messageContent.includes('code') || messageContent.includes('bot'))) {
+					probability *= 1.4;
+				}
+
+				// Reduce chance for very short messages unless they're questions
+				if (message.content.length < 20 && !messageContent.includes('?')) {
+					probability *= 0.6;
+				}
+
+				// Increase chance in smaller conversations (fewer people talking recently)
+				// This makes Cova more likely to participate in intimate conversations
+				if (isRecentConversation && lastResponseMinutes < 5) {
+					probability *= 1.2;
+				}
+
+				// Cap probability at lower level to avoid being too chatty
+				probability = Math.min(probability, 0.8);
 
 				// Apply randomization to avoid predictability
 				const random = Math.random();
@@ -202,20 +287,27 @@ Based on the Response Decision System, should Cova respond to this message?`;
 				logger.error(`[CovaBot] Error in decision logic: ${error instanceof Error ? error.message : String(error)}`);
 				return Math.random() < 0.2; // 20% chance to respond on error
 			}
-		});
+		})();
+
+		logger.debug(`[CovaBot] LLM decision took ${Date.now() - startTime}ms`);
+		return result;
+	} catch (error) {
+		logger.error(`[CovaBot] Error in decision timing: ${error instanceof Error ? error.message : String(error)}`);
+		return Math.random() < 0.2; // 20% chance to respond on error
+	}
 	};
 };
 
 // Initialize periodic stats logging - every hour
 setInterval(() => {
-	const stats = perfTimer.getStatsString();
-	logger.info(`[CovaBot] Performance stats:\n${stats}`);
+	// const stats = perfTimer.getStatsString();
+	// logger.info(`[CovaBot] Performance stats:\n${stats}`);
 
 	// Reset after logging to avoid memory growth
-	if (perfTimer.getStats()['llm-decision']?.count > 1000) {
-		logger.info(`[CovaBot] Resetting performance stats after threshold`);
-		perfTimer.reset();
-	}
+	// if (perfTimer.getStats()['llm-decision']?.count > 1000) {
+	//	logger.info(`[CovaBot] Resetting performance stats after threshold`);
+	//	perfTimer.reset();
+	// }
 
 	// Clean up old entries from last response tracking
 	const now = Date.now();

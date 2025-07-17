@@ -4,9 +4,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@starbunk/shared';
 import { PersonalityNote, CreateNoteRequest, UpdateNoteRequest, NoteSearchFilters } from '../types/personalityNote';
 
-// Cache the BotConfigurationService import to avoid repeated dynamic imports
-let BotConfigurationService: typeof import('./botConfigurationService').BotConfigurationService | undefined;
-
 export class PersonalityNotesService {
   private static instance: PersonalityNotesService;
   private notesFilePath: string;
@@ -244,10 +241,7 @@ export class PersonalityNotesService {
   async getActiveNotesForLLM(): Promise<string> {
     // Get configuration service for core personality
     try {
-      if (!BotConfigurationService) {
-        const module = await import('./botConfigurationService');
-        BotConfigurationService = module.BotConfigurationService;
-      }
+      const { BotConfigurationService } = await import('./botConfigurationService');
       const configService = BotConfigurationService.getInstance();
       const config = await configService.getConfiguration();
 
