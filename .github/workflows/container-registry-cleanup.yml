@@ -39,7 +39,7 @@ jobs:
             const dryRun = '${{ github.event.inputs.dry_run }}' === 'true';
             const retentionDays = parseInt('${{ github.event.inputs.retention_days }}' || '30');
             const cutoffDate = new Date(Date.now() - (retentionDays * 24 * 60 * 60 * 1000));
-            
+
             console.log(`🗑️ Container Registry Cleanup`);
             console.log(`📅 Retention period: ${retentionDays} days`);
             console.log(`📅 Cutoff date: ${cutoffDate.toISOString()}`);
@@ -53,7 +53,7 @@ jobs:
               state: 'open',
               per_page: 100
             });
-            
+
             const openPRNumbers = new Set(openPRs.map(pr => pr.number));
             console.log(`🔓 Found ${openPRNumbers.size} open PRs: ${Array.from(openPRNumbers).join(', ')}`);
             console.log('');
@@ -64,7 +64,7 @@ jobs:
             for (const container of containers) {
               try {
                 console.log(`📦 Processing container: ${container}`);
-                
+
                 const versions = await github.paginate(
                   github.rest.packages.getAllPackageVersionsForPackageOwnedByUser,
                   {
@@ -79,42 +79,42 @@ jobs:
                 console.log(`  📊 Found ${versions.length} total versions`);
 
                 let containerDeleted = 0;
-                
+
                 for (const version of versions) {
                   const tags = version.metadata?.container?.tags || [];
                   const createdAt = new Date(version.created_at);
                   const isOld = createdAt < cutoffDate;
-                  
+
                   // Check if this is a PR-related container
                   const prTags = tags.filter(tag => tag.startsWith('pr-'));
-                  
+
                   if (prTags.length === 0) {
                     // Not a PR container, skip
                     continue;
                   }
-                  
+
                   // Extract PR numbers from tags
                   const prNumbers = prTags.map(tag => {
                     const match = tag.match(/^pr-(\d+)-/);
                     return match ? parseInt(match[1]) : null;
                   }).filter(num => num !== null);
-                  
+
                   // Check if any of the PR numbers are still open
                   const hasOpenPR = prNumbers.some(prNum => openPRNumbers.has(prNum));
-                  
+
                   if (hasOpenPR) {
                     console.log(`  ⏭️  Skipping version with tags [${tags.join(', ')}] - PR still open`);
                     continue;
                   }
-                  
+
                   if (!isOld) {
                     console.log(`  ⏭️  Skipping version with tags [${tags.join(', ')}] - not old enough (${Math.floor((Date.now() - createdAt.getTime()) / (24 * 60 * 60 * 1000))} days)`);
                     continue;
                   }
-                  
+
                   // This version should be deleted
                   const ageInDays = Math.floor((Date.now() - createdAt.getTime()) / (24 * 60 * 60 * 1000));
-                  
+
                   if (dryRun) {
                     console.log(`  🔍 [DRY RUN] Would delete version with tags [${tags.join(', ')}] - ${ageInDays} days old`);
                   } else {
@@ -132,23 +132,23 @@ jobs:
                     }
                   }
                 }
-                
+
                 totalDeleted += containerDeleted;
                 console.log(`  📊 ${container}: ${containerDeleted} versions ${dryRun ? 'would be' : ''} deleted`);
                 console.log('');
-                
+
               } catch (error) {
                 console.log(`❌ Failed to process ${container} container: ${error.message}`);
                 console.log('');
               }
             }
-            
+
             console.log(`🎉 Cleanup Summary:`);
             console.log(`  📊 Total versions scanned: ${totalScanned}`);
             console.log(`  🗑️  Total versions ${dryRun ? 'would be' : ''} deleted: ${totalDeleted}`);
             console.log(`  🔓 Open PRs protected: ${openPRNumbers.size}`);
             console.log(`  📅 Retention period: ${retentionDays} days`);
-            
+
             if (dryRun) {
               console.log(`\n💡 This was a dry run. To actually delete containers, run with dry_run=false`);
             }
@@ -168,7 +168,7 @@ jobs:
             const { owner } = context.repo;
             const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot'];
             const dryRun = '${{ github.event.inputs.dry_run }}' === 'true';
-            
+
             console.log(`🗑️ Untagged Images Cleanup`);
             console.log(`🔍 Dry run: ${dryRun ? 'YES' : 'NO'}`);
             console.log('');
@@ -178,7 +178,7 @@ jobs:
             for (const container of containers) {
               try {
                 console.log(`📦 Processing container: ${container}`);
-                
+
                 const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
                   package_type: 'container',
                   package_name: container,
@@ -196,7 +196,7 @@ jobs:
                 for (const version of untaggedVersions) {
                   const createdAt = new Date(version.created_at);
                   const ageInDays = Math.floor((Date.now() - createdAt.getTime()) / (24 * 60 * 60 * 1000));
-                  
+
                   if (dryRun) {
                     console.log(`  🔍 [DRY RUN] Would delete untagged version ${version.id} - ${ageInDays} days old`);
                   } else {
@@ -214,18 +214,18 @@ jobs:
                     }
                   }
                 }
-                
+
                 console.log('');
-                
+
               } catch (error) {
                 console.log(`❌ Failed to process ${container} container: ${error.message}`);
                 console.log('');
               }
             }
-            
+
             console.log(`🎉 Untagged Images Cleanup Summary:`);
             console.log(`  🗑️  Total untagged images ${dryRun ? 'would be' : ''} deleted: ${totalDeleted}`);
-            
+
             if (dryRun) {
               console.log(`\n💡 This was a dry run. To actually delete images, run with dry_run=false`);
             }

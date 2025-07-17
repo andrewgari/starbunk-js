@@ -15,13 +15,18 @@ jobs:
     # Only run when the "review" label is present
     if: contains(github.event.pull_request.labels.*.name, 'review')
 
+    # Cancel in-progress reviews when label is removed
+    concurrency:
+      group: pr-${{ github.event.pull_request.number }}-review
+      cancel-in-progress: true
+
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read
       issues: read
       id-token: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,10 +38,10 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
+
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
-          
+
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
             Please review this pull request and provide feedback on:
@@ -45,9 +50,9 @@ jobs:
             - Performance considerations
             - Security concerns
             - Test coverage
-            
+
             Be constructive and helpful in your feedback.
-          
+
           # Optional: Customize review based on file types
           # direct_prompt: |
           #   Review this PR focusing on:
@@ -55,16 +60,16 @@ jobs:
           #   - For API endpoints: Security, input validation, and error handling
           #   - For React components: Performance, accessibility, and best practices
           #   - For tests: Coverage, edge cases, and test quality
-          
+
           # Optional: Different prompts for different authors
           # direct_prompt: |
-          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' && 
+          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
           #   'Welcome! Please review this PR from a first-time contributor. Be encouraging and provide detailed explanations for any suggestions.' ||
           #   'Please provide a thorough code review focusing on our coding standards and best practices.' }}
-          
+
           # Optional: Add specific tools for running tests or linting
           # allowed_tools: "Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)"
-          
+
           # Optional: Skip review for certain conditions
           # if: |
           #   !contains(github.event.pull_request.title, '[skip-review]') &&
@@ -72,7 +77,7 @@ jobs:
 
   # Request Code Rabbit review when "review" label is added
   request-coderabbit-review:
-    if: contains(github.event.pull_request.labels.*.name, 'review')
+    if: github.event.action == 'labeled' && github.event.label.name == 'review'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -101,4 +106,3 @@ jobs:
               console.log(`⚠️ Could not request Code Rabbit review: ${error.message}`);
               // Don't fail the workflow if Code Rabbit review request fails
             }
-

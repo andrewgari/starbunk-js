@@ -28,7 +28,7 @@ The tag-based system allows developers to control when CI/CD resources are used 
 - **On PR Close**: Cleans up snapshot images (only if label was used)
 
 ### 🏷️ Automatically Applied Labels
-The system also automatically applies labels based on file changes and PR characteristics:
+The system automatically applies labels based on file changes and PR characteristics:
 
 **Container Labels**: `bunkbot`, `djcova`, `starbunk-dnd`, `covabot`, `snowbunk`, `shared-library`
 **Change Type Labels**: `documentation`, `ci-cd`, `security`, `configuration`, `tests`, `database`, `performance`, `dependencies`
@@ -78,7 +78,7 @@ The system also automatically applies labels based on file changes and PR charac
 ### Code Reviews
 
 1. **Start Reviews**:
-   ```
+   ```text
    Add the "review" label to your PR
    ```
    - Claude will provide automated code review
@@ -89,7 +89,7 @@ The system also automatically applies labels based on file changes and PR charac
    - Label remains → Reviews happen on each commit
 
 3. **Stop Reviews**:
-   ```
+   ```text
    Remove the "review" label from your PR
    ```
    - No more automated reviews will be triggered
@@ -97,7 +97,7 @@ The system also automatically applies labels based on file changes and PR charac
 ### Container Publishing
 
 1. **Create Snapshots**:
-   ```
+   ```text
    Add the "publish" label to your PR
    ```
    - Snapshot containers created for changed containers only
@@ -109,7 +109,7 @@ The system also automatically applies labels based on file changes and PR charac
    - Label remains → Snapshots updated on each commit
 
 3. **Stop Publishing**:
-   ```
+   ```text
    Remove the "publish" label from your PR
    ```
    - No new snapshots created for subsequent commits
@@ -149,7 +149,7 @@ The system also automatically applies labels based on file changes and PR charac
 ## Examples
 
 ### Example 1: Code Review Only
-```
+```text
 1. Create PR
 2. Add "review" label
 3. Claude and Code Rabbit provide reviews
@@ -159,7 +159,7 @@ The system also automatically applies labels based on file changes and PR charac
 ```
 
 ### Example 2: Container Testing
-```
+```text
 1. Create PR with container changes
 2. Add "publish" label
 3. Snapshot containers created
@@ -169,7 +169,7 @@ The system also automatically applies labels based on file changes and PR charac
 ```
 
 ### Example 3: Full Workflow
-```
+```text
 1. Create PR
 2. Add both "review" and "publish" labels
 3. Get code reviews AND container snapshots

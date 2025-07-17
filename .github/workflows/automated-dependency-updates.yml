@@ -53,18 +53,18 @@ jobs:
         run: |
           # Run audit and capture output
           npm audit --json > audit-results.json || true
-          
+
           # Parse results
           CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' audit-results.json)
           HIGH=$(jq '.metadata.vulnerabilities.high // 0' audit-results.json)
           MODERATE=$(jq '.metadata.vulnerabilities.moderate // 0' audit-results.json)
           LOW=$(jq '.metadata.vulnerabilities.low // 0' audit-results.json)
-          
+
           echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
           echo "high=$HIGH" >> $GITHUB_OUTPUT
           echo "moderate=$MODERATE" >> $GITHUB_OUTPUT
           echo "low=$LOW" >> $GITHUB_OUTPUT
-          
+
           # Set vulnerabilities found flag
           if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
             echo "vulnerabilities=true" >> $GITHUB_OUTPUT
@@ -89,15 +89,34 @@ jobs:
             snyk-results.json
           retention-days: 30
 
+  # Generate container list dynamically
+  generate-matrix:
+    name: 🔍 Generate Container Matrix
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: needs.security-scan.outputs.vulnerabilities-found == 'true' || github.event_name == 'workflow_dispatch'
+    outputs:
+      containers: ${{ steps.set-matrix.outputs.containers }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate container matrix
+        id: set-matrix
+        run: |
+          CONTAINERS=$(ls -d containers/*/ | sed 's|containers/||g' | sed 's|/||g' | jq -R -s -c 'split("\n")[:-1]')
+          echo "containers=$CONTAINERS" >> $GITHUB_OUTPUT
+          echo "Generated container matrix: $CONTAINERS"
+
   # Automated dependency updates
   dependency-updates:
     name: 📦 Update Dependencies - ${{ matrix.container }}
     runs-on: ubuntu-latest
-    needs: security-scan
+    needs: [security-scan, generate-matrix]
     if: needs.security-scan.outputs.vulnerabilities-found == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
-        container: [shared, bunkbot, djcova, starbunk-dnd, covabot]
+        container: ${{ fromJson(needs.generate-matrix.outputs.containers) }}
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -120,7 +139,7 @@ jobs:
         id: strategy
         run: |
           UPDATE_TYPE="${{ github.event.inputs.update_type || 'security' }}"
-          
+
           if [ "$UPDATE_TYPE" = "security" ]; then
             echo "strategy=--audit-level=moderate" >> $GITHUB_OUTPUT
             echo "branch-suffix=security-updates" >> $GITHUB_OUTPUT
@@ -147,18 +166,18 @@ jobs:
           # Update root package.json
           npx npm-check-updates ${{ steps.strategy.outputs.strategy }} --upgrade
           npm install
-          
+
           # Run tests to ensure updates don't break anything
           npm run type-check || exit 1
 
       - name: Update container dependencies
         run: |
           cd containers/${{ matrix.container }}
-          
+
           # Update dependencies
           npx npm-check-updates ${{ steps.strategy.outputs.strategy }} --upgrade
           npm install
-          
+
           # Run container-specific checks
           npm run type-check || exit 1
           npm test || exit 1
@@ -175,13 +194,13 @@ jobs:
             echo "No changes to commit"
             exit 0
           fi
-          
+
           git commit -m "chore(deps): automated ${{ github.event.inputs.update_type || 'security' }} updates for ${{ matrix.container }}
-          
+
           - Updated dependencies using ${{ steps.strategy.outputs.strategy }}
           - All tests and type checks passing
           - Security audit clean
-          
+
           Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
 
       - name: Push changes
@@ -196,7 +215,7 @@ jobs:
             const branchName = process.env.BRANCH_NAME;
             const container = '${{ matrix.container }}';
             const updateType = '${{ github.event.inputs.update_type || 'security' }}';
-            
+
             // Check if PR already exists
             const existingPRs = await github.rest.pulls.list({
               owner,
@@ -204,46 +223,46 @@ jobs:
               head: `${owner}:${branchName}`,
               state: 'open'
             });
-            
+
             if (existingPRs.data.length > 0) {
               console.log('PR already exists for this branch');
               return;
             }
-            
+
             const title = `chore(deps): automated ${updateType} updates for ${container}`;
             const body = `## 🤖 Automated Dependency Updates
-            
+
             This PR contains automated dependency updates for the **${container}** container.
-            
+
             ### 📋 Update Details
             - **Update Type**: ${updateType}
             - **Container**: ${container}
             - **Strategy**: ${{ steps.strategy.outputs.strategy }}
             - **Security Scan**: ${needs.security-scan.outputs.critical-count} critical, ${needs.security-scan.outputs.high-count} high vulnerabilities found
-            
+
             ### ✅ Automated Checks Completed
             - [x] Dependencies updated successfully
             - [x] TypeScript compilation passes
             - [x] Unit tests pass
             - [x] Security audit clean
             - [x] No breaking changes detected
-            
+
             ### 🔍 Review Checklist
             - [ ] Review dependency changes for compatibility
             - [ ] Verify no breaking changes in APIs
             - [ ] Check for any new security considerations
             - [ ] Validate container builds successfully
-            
+
             ### 🚀 Next Steps
             1. Review the changes carefully
             2. Add the \`publish\` label to test container builds
             3. Merge when ready
-            
+
             ---
-            
+
             **Automated by**: GitHub Actions
             **Triggered by**: ${context.eventName === 'schedule' ? 'Scheduled run' : 'Manual dispatch'}`;
-            
+
             await github.rest.pulls.create({
               owner,
               repo,
@@ -268,38 +287,38 @@ jobs:
             const { owner, repo } = context.repo;
             const critical = '${{ needs.security-scan.outputs.critical-count }}';
             const high = '${{ needs.security-scan.outputs.high-count }}';
-            
+
             const title = `🚨 Security Vulnerabilities Detected - ${new Date().toISOString().split('T')[0]}`;
             const body = `## 🔒 Security Vulnerability Report
-            
+
             Automated security scan has detected vulnerabilities that require attention.
-            
+
             ### 📊 Vulnerability Summary
             - **Critical**: ${critical}
             - **High**: ${high}
-            
+
             ### 🤖 Automated Actions Taken
             - Dependency update PRs have been created automatically
             - Security scan results uploaded as artifacts
             - All containers scanned for vulnerabilities
-            
+
             ### 👥 Action Required
             1. Review and merge the automated dependency update PRs
             2. For critical vulnerabilities, consider immediate hotfix deployment
             3. Review security scan artifacts for detailed information
-            
+
             ### 📎 Related PRs
             Check for PRs with the prefix \`chore(deps): automated security updates\`
-            
+
             ---
-            
+
             **Auto-generated by**: Security Scanning Workflow
             **Scan Date**: ${new Date().toISOString()}`;
-            
+
             // Check if similar issue exists in last 7 days
             const oneWeekAgo = new Date();
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            
+
             const existingIssues = await github.rest.issues.listForRepo({
               owner,
               repo,
@@ -307,11 +326,11 @@ jobs:
               labels: 'security,automated',
               since: oneWeekAgo.toISOString()
             });
-            
-            const hasRecentSecurityIssue = existingIssues.data.some(issue => 
+
+            const hasRecentSecurityIssue = existingIssues.data.some(issue =>
               issue.title.includes('Security Vulnerabilities Detected')
             );
-            
+
             if (!hasRecentSecurityIssue) {
               await github.rest.issues.create({
                 owner,

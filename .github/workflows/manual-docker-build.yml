@@ -44,27 +44,27 @@ jobs:
         id: parse
         run: |
           CONTAINERS="${{ inputs.containers }}"
-          
+
           # Normalize input
           if [ "$CONTAINERS" = "all" ]; then
             CONTAINERS="bunkbot,djcova,starbunk-dnd,snowbunk,covabot"
           fi
-          
+
           echo "containers=$CONTAINERS" >> $GITHUB_OUTPUT
-          
+
           # Set individual container flags
           if echo "$CONTAINERS" | grep -q "bunkbot"; then
             echo "bunkbot=true" >> $GITHUB_OUTPUT
           else
             echo "bunkbot=false" >> $GITHUB_OUTPUT
           fi
-          
+
           if echo "$CONTAINERS" | grep -q "djcova"; then
             echo "djcova=true" >> $GITHUB_OUTPUT
           else
             echo "djcova=false" >> $GITHUB_OUTPUT
           fi
-          
+
           if echo "$CONTAINERS" | grep -q "starbunk-dnd"; then
             echo "starbunk-dnd=true" >> $GITHUB_OUTPUT
           else
@@ -76,13 +76,13 @@ jobs:
           else
             echo "snowbunk=false" >> $GITHUB_OUTPUT
           fi
-          
+
           if echo "$CONTAINERS" | grep -q "covabot"; then
             echo "covabot=true" >> $GITHUB_OUTPUT
           else
             echo "covabot=false" >> $GITHUB_OUTPUT
           fi
-          
+
       - name: Generate tag
         id: tag
         run: |
@@ -90,7 +90,7 @@ jobs:
           BRANCH_NAME="${{ github.ref_name }}"
           SHORT_SHA="${{ github.sha }}"
           SHORT_SHA=${SHORT_SHA:0:7}
-          
+
           case "$TAG_PREFIX" in
             "dev")
               # Clean branch name for tag (replace / with -)
@@ -115,7 +115,7 @@ jobs:
               exit 1
               ;;
           esac
-          
+
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Generated tag: $TAG"
 
@@ -194,7 +194,7 @@ jobs:
           echo "| snowbunk | ${{ needs.prepare.outputs.snowbunk }} | ${{ needs.build-snowbunk.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| covabot | ${{ needs.prepare.outputs.covabot }} | ${{ needs.build-covabot.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ inputs.push_to_registry }}" = "true" ]; then
             echo "### Published Images" >> $GITHUB_STEP_SUMMARY
             if [ "${{ needs.prepare.outputs.bunkbot }}" = "true" ]; then

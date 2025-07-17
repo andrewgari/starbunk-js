@@ -7,28 +7,6 @@ reviews:
   high_level_summary: true
   poem: false
   review_status: true
-  collapse_empty_files: true
-  
-  # Auto-approve low-risk changes
-  auto_approve:
-    enabled: true
-    drafts: false
-    conditions:
-      - path_patterns:
-          - "**/*.md"
-          - "docs/**"
-          - ".github/ISSUE_TEMPLATE/**"
-          - "**/*.test.ts"
-          - "**/*.spec.ts"
-          - "**/__tests__/**"
-        max_files: 10
-        max_review_lines: 100
-      - path_patterns:
-          - ".prettierrc*"
-          - ".eslintrc*"
-          - "tsconfig.json"
-        max_files: 3
-        max_review_lines: 50
 
   # Path-based review assignments
   path_instructions:
@@ -85,7 +63,7 @@ reviews:
         - Message synchronization between guilds
         - Cross-guild bridging error handling
         - Resource optimization for production workloads
-    
+
     - path: ".github/workflows/**"
       instructions: |
         Focus on:
@@ -94,7 +72,7 @@ reviews:
         - Workflow reliability and error handling
         - Container build optimization
         - Path-based conditional logic correctness
-    
+
     - path: "containers/*/package.json"
       instructions: |
         Focus on:
@@ -102,7 +80,7 @@ reviews:
         - Version compatibility issues
         - Unnecessary dependencies
         - License compatibility
-    
+
     - path: "docker-compose*.yml"
       instructions: |
         Focus on:
@@ -122,27 +100,27 @@ language_settings:
       - security
       - maintainability
       - error_handling
-    
+
     # TypeScript-specific rules
     rules:
       - name: "strict_null_checks"
         description: "Ensure strict null checking is used"
         pattern: "strictNullChecks.*false"
         severity: "error"
-      
+
       - name: "no_any_type"
         description: "Avoid using 'any' type unless absolutely necessary"
         pattern: ":\\s*any\\b"
         severity: "warning"
-      
+
       - name: "async_await_usage"
         description: "Prefer async/await over Promise chains"
         pattern: "\\.then\\("
         severity: "info"
-      
+
       - name: "error_handling"
         description: "Ensure proper error handling in async functions"
-        pattern: "async.*{[^}]*(?!try|catch)"
+        pattern: "async[^{]*{(?![^}]*try)"
         severity: "warning"
 
   javascript:
@@ -217,21 +195,21 @@ security:
     - "Dependency vulnerabilities"
     - "Container security configurations"
     - "API rate limiting and abuse prevention"
-  
+
   # Security patterns to watch for
   patterns:
     - name: "hardcoded_secrets"
       pattern: "(password|token|key|secret)\\s*[=:]\\s*['\"][^'\"]+['\"]"
       severity: "critical"
-    
+
     - name: "sql_injection"
       pattern: "\\$\\{.*\\}.*query|query.*\\$\\{.*\\}"
       severity: "high"
-    
+
     - name: "unsafe_eval"
       pattern: "eval\\(|Function\\(|setTimeout\\(.*string|setInterval\\(.*string"
       severity: "high"
-    
+
     - name: "insecure_random"
       pattern: "Math\\.random\\(\\)"
       severity: "medium"
@@ -245,16 +223,16 @@ performance:
     - "Blocking operations in event loops"
     - "Large object allocations"
     - "Inefficient algorithms and data structures"
-  
+
   patterns:
     - name: "memory_leak_potential"
       pattern: "setInterval|setTimeout.*(?!clear)"
       severity: "medium"
-    
+
     - name: "blocking_operations"
       pattern: "fs\\.readFileSync|fs\\.writeFileSync"
       severity: "warning"
-    
+
     - name: "inefficient_loops"
       pattern: "for.*in.*Object\\.keys"
       severity: "info"
@@ -268,13 +246,13 @@ ci_integration:
     - "documentation"
     - "security"
     - "performance"
-  
+
   # Skip review for certain automated changes
   skip_patterns:
     - "^chore\\(deps\\): update"
     - "^docs: update"
     - "^ci: update"
-  
+
   # Enhanced review for critical changes
   enhanced_review_patterns:
     - "containers/shared/**"
@@ -329,7 +307,7 @@ quality_gates:
     - "Proper error handling implemented"
     - "Tests updated for new functionality"
     - "Documentation updated if needed"
-  
+
   # Metrics to track
   metrics:
     - code_coverage

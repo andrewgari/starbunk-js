@@ -15,11 +15,6 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Detect file changes and assign labels
         uses: actions/github-script@v7
         with:
@@ -27,12 +22,12 @@ jobs:
             const { owner, repo } = context.repo;
             const number = context.payload.pull_request?.number || context.payload.issue?.number;
             const isPR = !!context.payload.pull_request;
-            
+
             if (!number) return;
-            
+
             let labelsToAdd = [];
             let labelsToRemove = [];
-            
+
             if (isPR) {
               // Get changed files for PRs
               const { data: files } = await github.rest.pulls.listFiles({
@@ -40,10 +35,10 @@ jobs:
                 repo,
                 pull_number: number
               });
-              
+
               const changedFiles = files.map(file => file.filename);
               console.log('Changed files:', changedFiles);
-              
+
               // Container-specific labels
               const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot', 'snowbunk'];
               containers.forEach(container => {
@@ -51,23 +46,23 @@ jobs:
                   labelsToAdd.push(container);
                 }
               });
-              
+
               // Shared library changes
               if (changedFiles.some(file => file.startsWith('containers/shared/'))) {
                 labelsToAdd.push('shared-library');
               }
-              
+
               // Documentation changes
-              if (changedFiles.some(file => 
-                file.endsWith('.md') || 
+              if (changedFiles.some(file =>
+                file.endsWith('.md') ||
                 file.startsWith('docs/') ||
                 file.startsWith('.github/ISSUE_TEMPLATE/')
               )) {
                 labelsToAdd.push('documentation');
               }
-              
+
               // CI/CD changes
-              if (changedFiles.some(file => 
+              if (changedFiles.some(file =>
                 file.startsWith('.github/workflows/') ||
                 file.includes('docker-compose') ||
                 file.includes('Dockerfile') ||
@@ -75,9 +70,9 @@ jobs:
               )) {
                 labelsToAdd.push('ci-cd');
               }
-              
+
               // Security-related changes
-              if (changedFiles.some(file => 
+              if (changedFiles.some(file =>
                 file.includes('security') ||
                 file.includes('auth') ||
                 file.includes('token') ||
@@ -87,9 +82,9 @@ jobs:
               )) {
                 labelsToAdd.push('security');
               }
-              
+
               // Configuration changes
-              if (changedFiles.some(file => 
+              if (changedFiles.some(file =>
                 file.includes('config') ||
                 file.includes('.env') ||
                 file.includes('tsconfig') ||
@@ -99,9 +94,9 @@ jobs:
               )) {
                 labelsToAdd.push('configuration');
               }
-              
+
               // Test changes
-              if (changedFiles.some(file => 
+              if (changedFiles.some(file =>
                 file.includes('.test.') ||
                 file.includes('.spec.') ||
                 file.includes('__tests__') ||
@@ -109,9 +104,9 @@ jobs:
               )) {
                 labelsToAdd.push('tests');
               }
-              
+
               // Database changes
-              if (changedFiles.some(file => 
+              if (changedFiles.some(file =>
                 file.includes('prisma') ||
                 file.includes('database') ||
                 file.includes('migration') ||
@@ -119,9 +114,9 @@ jobs:
               )) {
                 labelsToAdd.push('database');
               }
-              
+
               // Performance-related changes
-              if (changedFiles.some(file => 
+              if (changedFiles.some(file =>
                 file.includes('performance') ||
                 file.includes('optimization') ||
                 file.includes('cache') ||
@@ -129,12 +124,12 @@ jobs:
               )) {
                 labelsToAdd.push('performance');
               }
-              
+
               // Dependency changes
               if (changedFiles.some(file => file.includes('package.json'))) {
                 labelsToAdd.push('dependencies');
               }
-              
+
               // Size-based labels
               const totalChanges = files.reduce((sum, file) => sum + file.changes, 0);
               if (totalChanges > 500) {
@@ -142,55 +137,55 @@ jobs:
               } else if (totalChanges < 50) {
                 labelsToAdd.push('small-change');
               }
-              
+
               // Breaking changes detection
               const title = context.payload.pull_request.title.toLowerCase();
               const body = context.payload.pull_request.body?.toLowerCase() || '';
-              
-              if (title.includes('breaking') || 
+
+              if (title.includes('breaking') ||
                   body.includes('breaking change') ||
                   title.includes('!:') ||
                   changedFiles.some(file => file.startsWith('containers/shared/src/'))) {
                 labelsToAdd.push('breaking-change');
               }
-              
+
               // Hotfix detection
               if (title.includes('hotfix') || title.includes('urgent')) {
                 labelsToAdd.push('hotfix');
               }
-              
+
               // Feature vs bug fix detection
               if (title.startsWith('feat') || title.includes('feature')) {
                 labelsToAdd.push('enhancement');
               } else if (title.startsWith('fix') || title.includes('bug')) {
                 labelsToAdd.push('bug');
               }
-              
+
             } else {
               // Issue labeling based on content
               const title = context.payload.issue.title.toLowerCase();
               const body = context.payload.issue.body?.toLowerCase() || '';
-              
+
               // Bug reports
               if (title.includes('bug') || title.includes('error') || title.includes('issue')) {
                 labelsToAdd.push('bug');
               }
-              
+
               // Feature requests
               if (title.includes('feature') || title.includes('enhancement') || title.includes('request')) {
                 labelsToAdd.push('enhancement');
               }
-              
+
               // Questions
               if (title.includes('question') || title.includes('how to') || title.includes('help')) {
                 labelsToAdd.push('question');
               }
-              
+
               // Documentation issues
               if (title.includes('documentation') || title.includes('docs') || title.includes('readme')) {
                 labelsToAdd.push('documentation');
               }
-              
+
               // Container-specific issues
               const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot', 'snowbunk'];
               containers.forEach(container => {
@@ -198,18 +193,18 @@ jobs:
                   labelsToAdd.push(container);
                 }
               });
-              
+
               // Priority detection
               if (title.includes('urgent') || title.includes('critical') || body.includes('production')) {
                 labelsToAdd.push('high-priority');
               }
             }
-            
+
             // Remove duplicates
             labelsToAdd = [...new Set(labelsToAdd)];
-            
+
             console.log('Labels to add:', labelsToAdd);
-            
+
             if (labelsToAdd.length > 0) {
               try {
                 if (isPR) {
@@ -240,21 +235,21 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const number = context.payload.pull_request.number;
-            
+
             // Get current labels
             const { data: issue } = await github.rest.issues.get({
               owner,
               repo,
               issue_number: number
             });
-            
+
             const labels = issue.labels.map(label => label.name);
             console.log('Current labels:', labels);
-            
+
             // Auto-request reviews for critical changes
             let reviewersToRequest = [];
-            
-            if (labels.includes('breaking-change') || 
+
+            if (labels.includes('breaking-change') ||
                 labels.includes('shared-library') ||
                 labels.includes('security') ||
                 labels.includes('ci-cd')) {
@@ -271,7 +266,7 @@ jobs:
                 console.error('Error adding review label:', error);
               }
             }
-            
+
             // Auto-assign based on container changes
             const containerMaintainers = {
               'bunkbot': [],
@@ -280,14 +275,14 @@ jobs:
               'starbunk-dnd': [],
               'snowbunk': []
             };
-            
+
             // Request reviews from container maintainers if configured
             for (const [container, maintainers] of Object.entries(containerMaintainers)) {
               if (labels.includes(container) && maintainers.length > 0) {
                 reviewersToRequest.push(...maintainers);
               }
             }
-            
+
             if (reviewersToRequest.length > 0) {
               try {
                 await github.rest.pulls.requestReviewers({
@@ -309,36 +304,36 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const number = context.payload.pull_request.number;
-            
+
             // Get PR files and calculate complexity
             const { data: files } = await github.rest.pulls.listFiles({
               owner,
               repo,
               pull_number: number
             });
-            
+
             const stats = {
               totalFiles: files.length,
               totalAdditions: files.reduce((sum, file) => sum + file.additions, 0),
               totalDeletions: files.reduce((sum, file) => sum + file.deletions, 0),
               totalChanges: files.reduce((sum, file) => sum + file.changes, 0),
               tsFiles: files.filter(file => file.filename.endsWith('.ts')).length,
-              testFiles: files.filter(file => 
-                file.filename.includes('.test.') || 
+              testFiles: files.filter(file =>
+                file.filename.includes('.test.') ||
                 file.filename.includes('.spec.') ||
                 file.filename.includes('__tests__')
               ).length
             };
-            
+
             let complexityLabels = [];
-            
+
             // File count based labels
             if (stats.totalFiles > 20) {
               complexityLabels.push('large-pr');
             } else if (stats.totalFiles <= 3) {
               complexityLabels.push('small-pr');
             }
-            
+
             // Change size labels
             if (stats.totalChanges > 1000) {
               complexityLabels.push('xl-change');
@@ -349,7 +344,7 @@ jobs:
             } else {
               complexityLabels.push('small-change');
             }
-            
+
             // Test coverage labels
             const codeFiles = stats.tsFiles - stats.testFiles;
             if (stats.testFiles > 0 && codeFiles > 0) {
@@ -362,7 +357,7 @@ jobs:
             } else if (codeFiles > 0 && stats.testFiles === 0) {
               complexityLabels.push('needs-tests');
             }
-            
+
             if (complexityLabels.length > 0) {
               try {
                 await github.rest.issues.addLabels({
@@ -376,20 +371,20 @@ jobs:
                 console.error('Error adding complexity labels:', error);
               }
             }
-            
+
             // Add PR stats as comment
             const statsComment = `## 📊 PR Statistics
-            
+
             - **Files changed**: ${stats.totalFiles}
             - **Lines added**: ${stats.totalAdditions}
             - **Lines deleted**: ${stats.totalDeletions}
             - **Total changes**: ${stats.totalChanges}
             - **TypeScript files**: ${stats.tsFiles}
             - **Test files**: ${stats.testFiles}
-            
+
             ---
             *Auto-generated by Label Management workflow*`;
-            
+
             // Only add comment if PR is substantial
             if (stats.totalChanges > 50) {
               try {

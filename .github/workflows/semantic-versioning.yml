@@ -61,25 +61,25 @@ jobs:
           # Get current version from package.json
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          
+
           # Get the last tag
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "Last tag: $LAST_TAG"
-          
+
           # Get commits since last tag
           COMMITS=$(git log ${LAST_TAG}..HEAD --oneline --no-merges)
-          
+
           if [ -z "$COMMITS" ]; then
             echo "No new commits since last release"
             echo "should-release=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           # Analyze commit types
           HAS_BREAKING=false
           HAS_FEAT=false
           HAS_FIX=false
-          
+
           while IFS= read -r commit; do
             if echo "$commit" | grep -qE "(BREAKING CHANGE|!:)"; then
               HAS_BREAKING=true
@@ -89,10 +89,10 @@ jobs:
               HAS_FIX=true
             fi
           done <<< "$COMMITS"
-          
+
           # Determine release type
           RELEASE_TYPE="${{ github.event.inputs.release_type }}"
-          
+
           if [ "$RELEASE_TYPE" = "auto" ] || [ "$RELEASE_TYPE" = "" ]; then
             if [ "$HAS_BREAKING" = true ]; then
               RELEASE_TYPE="major"
@@ -106,14 +106,14 @@ jobs:
               exit 0
             fi
           fi
-          
+
           echo "Determined release type: $RELEASE_TYPE"
           echo "release-type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
           echo "should-release=true" >> $GITHUB_OUTPUT
-          
+
           # Calculate new version
           IFS='.' read -r major minor patch <<< "${CURRENT_VERSION}"
-          
+
           case $RELEASE_TYPE in
             major)
               NEW_VERSION="$((major + 1)).0.0"
@@ -128,10 +128,10 @@ jobs:
               NEW_VERSION="${CURRENT_VERSION}-rc.$(date +%Y%m%d%H%M%S)"
               ;;
           esac
-          
+
           echo "New version: $NEW_VERSION"
           echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          
+
           # Generate changelog snippet
           CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges | head -20)
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
@@ -171,10 +171,10 @@ jobs:
       - name: Update version in package.json
         run: |
           NEW_VERSION="${{ needs.analyze-commits.outputs.new-version }}"
-          
+
           # Update root package.json
           npm version $NEW_VERSION --no-git-tag-version
-          
+
           # Update container package.json files
           for container in shared bunkbot djcova starbunk-dnd covabot; do
             if [ -f "containers/$container/package.json" ]; then
@@ -190,37 +190,37 @@ jobs:
           NEW_VERSION="${{ needs.analyze-commits.outputs.new-version }}"
           CURRENT_VERSION="${{ needs.analyze-commits.outputs.current-version }}"
           RELEASE_TYPE="${{ needs.analyze-commits.outputs.release-type }}"
-          
+
           # Generate comprehensive release notes
           cat > release-notes.md << EOF
           ## 🎉 Release v${NEW_VERSION}
-          
+
           **Release Type**: ${RELEASE_TYPE}
           **Previous Version**: v${CURRENT_VERSION}
-          
+
           ### 📋 What's Changed
-          
+
           ${{ needs.analyze-commits.outputs.changelog }}
-          
+
           ### 🐳 Container Images
-          
+
           All container images have been updated to version \`${NEW_VERSION}\`:
-          
+
           - \`ghcr.io/andrewgari/bunkbot:${NEW_VERSION}\`
           - \`ghcr.io/andrewgari/djcova:${NEW_VERSION}\`
           - \`ghcr.io/andrewgari/starbunk-dnd:${NEW_VERSION}\`
           - \`ghcr.io/andrewgari/covabot:${NEW_VERSION}\`
           - \`ghcr.io/andrewgari/snowbunk:${NEW_VERSION}\`
-          
+
           ### 🚀 Deployment
-          
+
           #### Docker Compose (Recommended)
           \`\`\`bash
           # Update your docker-compose.yml to use the new version
           docker-compose pull
           docker-compose up -d
           \`\`\`
-          
+
           #### Individual Containers
           \`\`\`bash
           docker pull ghcr.io/andrewgari/bunkbot:${NEW_VERSION}
@@ -229,35 +229,33 @@ jobs:
           docker pull ghcr.io/andrewgari/covabot:${NEW_VERSION}
           docker pull ghcr.io/andrewgari/snowbunk:${NEW_VERSION}
           \`\`\`
-          
+
           ### 🔧 Breaking Changes
-          
+
           $(if [ "$RELEASE_TYPE" = "major" ]; then echo "⚠️ This is a major release and may contain breaking changes. Please review the changelog carefully before upgrading."; else echo "✅ No breaking changes in this release."; fi)
-          
+
           ### 📊 Statistics
-          
+
           - **Commits**: $(git rev-list --count v${CURRENT_VERSION}..HEAD 2>/dev/null || echo "N/A")
           - **Contributors**: $(git shortlog -sn v${CURRENT_VERSION}..HEAD 2>/dev/null | wc -l || echo "N/A")
           - **Files Changed**: $(git diff --name-only v${CURRENT_VERSION}..HEAD 2>/dev/null | wc -l || echo "N/A")
-          
+
           ---
-          
+
           **Full Changelog**: https://github.com/andrewgari/starbunk-js/compare/v${CURRENT_VERSION}...v${NEW_VERSION}
           EOF
-          
+
           echo "Generated release notes for v${NEW_VERSION}"
 
       - name: Commit version updates
         run: |
           NEW_VERSION="${{ needs.analyze-commits.outputs.new-version }}"
-          
-          git add package.json containers/*/package.json
-          git commit -m "chore(release): bump version to v${NEW_VERSION}
 
-          - Updated all package.json files to version ${NEW_VERSION}
-          - Automated version bump for ${{ needs.analyze-commits.outputs.release-type }} release
-          
-          Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          git add package.json containers/*/package.json
+          git commit -m "chore(release): bump version to v${NEW_VERSION}" \
+                     -m "Updated all package.json files to version ${NEW_VERSION}" \
+                     -m "Automated version bump for ${{ needs.analyze-commits.outputs.release-type }} release" \
+                     -m "Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
 
       - name: Create Git tag
         run: |
@@ -274,9 +272,9 @@ jobs:
             const fs = require('fs');
             const newVersion = '${{ needs.analyze-commits.outputs.new-version }}';
             const releaseType = '${{ needs.analyze-commits.outputs.release-type }}';
-            
+
             const releaseNotes = fs.readFileSync('release-notes.md', 'utf8');
-            
+
             const { data: release } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -287,9 +285,9 @@ jobs:
               prerelease: releaseType === 'prerelease',
               generate_release_notes: false
             });
-            
+
             console.log(`Created release: ${release.html_url}`);
-            
+
             return {
               id: release.id,
               html_url: release.html_url,
@@ -309,7 +307,7 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const newVersion = '${{ needs.analyze-commits.outputs.new-version }}';
-            
+
             // Trigger the container build workflow
             await github.rest.actions.createWorkflowDispatch({
               owner,
@@ -321,7 +319,7 @@ jobs:
                 force_build: 'true'
               }
             });
-            
+
             console.log(`Triggered container builds for version ${newVersion}`);
 
   # Dry run summary
