@@ -85,6 +85,7 @@ jobs:
           allowed_tools: "Bash(timeout 60 npm run lint),Bash(timeout 60 npm run typecheck),Bash(timeout 120 npm test),Bash(timeout 180 npm run build)"
 
           # Author-customized prompts with CI/CD tool integration
+
           direct_prompt: |
             ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
             'Welcome to the project! 🎉 This is an encouraging review for a first-time contributor.
@@ -96,51 +97,6 @@ jobs:
             ${{ env.LINT_FAILED == 'true' && '⚠️ Linting issues detected - please review lint-output.txt' || '✅ Linting passed' }}
             ${{ env.TYPECHECK_FAILED == 'true' && '⚠️ Type checking issues detected - please review typecheck-output.txt' || '✅ Type checking passed' }}
             ${{ env.TESTS_FAILED == 'true' && '⚠️ Tests failed - please review test-output.txt' || '✅ Tests passed' }}
-
-            Please review this pull request with specialized focus based on file types:
-            Please review this pull request with specialized focus based on file types:
-
-            **For TypeScript/JavaScript Discord Bot Files:**
-            - Type safety and proper interface usage
-            - Discord.js best practices and API usage
-            - Event handling and error management
-            - Memory management and resource cleanup
-            - Async/await patterns and Promise handling
-
-            **For Container-Specific Code:**
-            - Modular architecture adherence
-            - Dependency injection patterns
-            - Service layer implementations
-            - Configuration management
-            - Container health and lifecycle management
-
-            **For Database/Storage Code:**
-            - SQL injection prevention
-            - Connection pooling and management
-            - Transaction handling
-            - Data validation and sanitization
-            - Migration safety
-
-            **For Test Files:**
-            - Test coverage and edge cases
-            - Mock usage and test isolation
-            - AAA (Arrange-Act-Assert) pattern
-            - Integration vs unit test appropriateness
-            - Test performance and reliability
-
-            **For API/Web Interface Code:**
-            - Input validation and sanitization
-            - Authentication and authorization
-            - Rate limiting and security headers
-            - Error handling and logging
-            - Performance and caching strategies
-
-            **General Code Quality:**
-            - Code maintainability and readability
-            - Performance optimizations
-            - Security vulnerabilities
-            - Documentation completeness
-            - Adherence to project coding standards
 
             ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
             'Be especially encouraging and provide detailed explanations for any suggestions. Include links to documentation where helpful. Focus on learning opportunities and positive reinforcement while maintaining code quality standards.' ||
