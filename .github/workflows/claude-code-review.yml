@@ -14,7 +14,7 @@ on:
 
 jobs:
   claude-review:
-    name: '🤖 AI Code Review - Author Customization'
+    name: '🤖 AI Code Review - Tool Integration'
     # Skip review for maintainers, focus on external contributors
     if: |
       github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' ||
@@ -32,19 +32,51 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        id: lint
+        run: npm run lint 2>&1 | tee lint-output.txt || echo "LINT_FAILED=true" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Run type checking
+        id: typecheck
+        run: npm run typecheck 2>&1 | tee typecheck-output.txt || echo "TYPECHECK_FAILED=true" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Run tests
+        id: test
+        run: npm test 2>&1 | tee test-output.txt || echo "TESTS_FAILED=true" >> $GITHUB_ENV
+        continue-on-error: true
+
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
-          # Author-customized prompts with file-type specificity
+          # Enable tools for running CI/CD commands
+          allowed_tools: "Bash(npm run lint),Bash(npm run typecheck),Bash(npm test),Bash(npm run build)"
+
+          # Author-customized prompts with CI/CD tool integration
           direct_prompt: |
             ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
             'Welcome to the project! 🎉 This is an encouraging review for a first-time contributor.
 
             I''ll provide detailed explanations and helpful guidance while reviewing your code.' ||
             'This is a thorough code review focusing on our coding standards and best practices.' }}
+
+            **CI/CD Integration Results:**
+            ${{ env.LINT_FAILED == 'true' && '⚠️ Linting issues detected - please review lint-output.txt' || '✅ Linting passed' }}
+            ${{ env.TYPECHECK_FAILED == 'true' && '⚠️ Type checking issues detected - please review typecheck-output.txt' || '✅ Type checking passed' }}
+            ${{ env.TESTS_FAILED == 'true' && '⚠️ Tests failed - please review test-output.txt' || '✅ Tests passed' }}
 
             Please review this pull request with specialized focus based on file types:
             Please review this pull request with specialized focus based on file types:
