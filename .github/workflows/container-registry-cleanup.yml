@@ -1,4 +1,4 @@
-name: 🗑️ Container Registry Cleanup
+name: Container Registry Cleanup
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run (don't actually delete anything)'
+        description: 'Dry run (do not actually delete anything)'
         required: false
         default: 'false'
         type: boolean
@@ -22,7 +22,7 @@ env:
 
 jobs:
   cleanup-old-containers:
-    name: 🧹 Cleanup Old PR Containers
+    name: Cleanup Old PR Containers
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -154,7 +154,7 @@ jobs:
             }
 
   cleanup-untagged-images:
-    name: 🧹 Cleanup Untagged Images
+    name: Cleanup Untagged Images
     runs-on: ubuntu-latest
     permissions:
       packages: write
