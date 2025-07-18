@@ -66,7 +66,7 @@ describe('QdrantMemoryService', () => {
 			expect(mockEmbeddingInstance.initialize).toHaveBeenCalledTimes(1);
 		});
 
-		it.skip('should handle initialization errors', async () => {
+		it('should handle initialization errors', async () => {
 			mockQdrantInstance.initialize.mockRejectedValue(new Error('Qdrant connection failed'));
 
 			await expect(memoryService.initialize()).rejects.toThrow('Qdrant connection failed');
