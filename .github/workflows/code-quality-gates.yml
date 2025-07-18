@@ -76,6 +76,9 @@ jobs:
           npm ci
           npm run setup:containers
 
+      - name: Build shared package for type checking
+        run: cd containers/shared && npm run build
+
       - name: Run TypeScript compilation check
         run: npm run type-check
 
