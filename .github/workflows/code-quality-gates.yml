@@ -12,10 +12,8 @@ on:
 
 permissions:
   contents: read          # Read repository contents
-  pull-requests: write    # Comment on PRs and add labels
-  issues: write          # Add labels to issues/PRs
-  statuses: write        # Create commit status checks
-  checks: write          # Create check runs
+  pull-requests: write    # Needed for PR comments/labels
+  statuses: write         # Needed for commit-status API calls
 
 env:
   NODE_VERSION: '20'
