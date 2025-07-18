@@ -10,6 +10,13 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read          # Read repository contents
+  pull-requests: write    # Comment on PRs and add labels
+  issues: write          # Add labels to issues/PRs
+  statuses: write        # Create commit status checks
+  checks: write          # Create check runs
+
 env:
   NODE_VERSION: '20'
   COVERAGE_THRESHOLD: 80
