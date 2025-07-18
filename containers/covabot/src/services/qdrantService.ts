@@ -55,6 +55,8 @@ export class QdrantService {
 	private static instance: QdrantService;
 	private client: QdrantClient;
 	private isConnected = false;
+	private lastHealthCheck: Date | null = null;
+	private readonly HEALTH_CHECK_INTERVAL = 60000; // 1 minute
 	private collections: Map<string, QdrantCollectionConfig> = new Map();
 
 	// Collection names
@@ -78,6 +80,23 @@ export class QdrantService {
 			QdrantService.instance = new QdrantService();
 		}
 		return QdrantService.instance;
+	}
+
+	/**
+	 * Check if actually connected to Qdrant with periodic health checks
+	 */
+	private async isActuallyConnected(): Promise<boolean> {
+		try {
+			if (!this.lastHealthCheck || Date.now() - this.lastHealthCheck.getTime() > this.HEALTH_CHECK_INTERVAL) {
+				await this.client.getCollections();
+				this.lastHealthCheck = new Date();
+				this.isConnected = true;
+			}
+			return this.isConnected;
+		} catch {
+			this.isConnected = false;
+			return false;
+		}
 	}
 
 	/**
