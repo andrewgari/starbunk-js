@@ -350,3 +350,5 @@ jobs:
   #   runs-on: ubuntu-latest
   #   needs: [detect-changes, quality-analysis, security-analysis, performance-analysis]
   #   if: always() && needs.detect-changes.outputs.should-run-quality == 'true'
+
+  # Force GitHub to re-evaluate branch protection status
