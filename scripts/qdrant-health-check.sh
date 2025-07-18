@@ -4,6 +4,11 @@ QDRANT_URL=${1:-"http://localhost:6333"}
 
 echo "🔍 Checking Qdrant health..."
 
+# Check if jq is available
+if ! command -v jq &> /dev/null; then
+    echo "⚠️  jq not found - JSON parsing will be limited"
+fi
+
 # Basic health check (using root endpoint since /health doesn't exist in v1.7.4)
 if curl -s "$QDRANT_URL/" | grep -q "qdrant"; then
     echo "✅ Qdrant is healthy"

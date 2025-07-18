@@ -14,7 +14,7 @@ This plan outlines the complete setup of Qdrant vector database for CovaBot's me
 
 ## 🏗️ **Architecture Overview**
 
-```
+```text
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   CovaBot       │    │   Qdrant        │    │   Web UI        │
 │   Container     │◄──►│   Vector DB     │◄──►│   (Optional)    │
@@ -149,7 +149,7 @@ Docker Command:
 
 ### 2.2 Unraid Directory Structure
 
-```
+```text
 /mnt/user/appdata/qdrant/
 ├── storage/                 # Vector data storage
 │   ├── collections/
@@ -540,7 +540,7 @@ curl -s "$QDRANT_URL/metrics" | grep -E "(qdrant_collections_total|qdrant_points
 
 ### Common Issues & Solutions
 
-**Issue: Connection refused**
+### Issue: Connection refused
 ```bash
 # Check if Qdrant is running
 docker ps | grep qdrant
@@ -552,7 +552,7 @@ docker logs qdrant-covabot
 docker exec covabot-production ping qdrant-covabot
 ```
 
-**Issue: Collections not created**
+### Issue: Collections not created
 ```bash
 # Manual collection creation (matches PR 248 QdrantMemoryService)
 curl -X PUT "http://localhost:6333/collections/covabot_personality" \
@@ -572,7 +572,7 @@ for collection in covabot_personality covabot_conversations covabot_memory; do
 done
 ```
 
-**Issue: Performance problems**
+### Issue: Performance problems
 ```bash
 # Check resource usage
 docker stats qdrant-covabot

@@ -5,6 +5,11 @@ QDRANT_URL=${1:-"http://localhost:6333"}
 echo "📊 Qdrant Performance Metrics"
 echo "=============================="
 
+# Check if jq is available
+if ! command -v jq >/dev/null 2>&1; then
+  echo "❌ jq not found – install it to get parsed output"; exit 1
+fi
+
 # Collection stats (from PR 248 services)
 for collection in covabot_personality covabot_conversations covabot_memory; do
     echo "📁 Collection: $collection"
@@ -33,6 +38,7 @@ echo "🎯 Performance Summary:"
 total_points=0
 for collection in covabot_personality covabot_conversations covabot_memory; do
     points=$(curl -s "$QDRANT_URL/collections/$collection" | jq -r '.result.points_count // 0' 2>/dev/null)
+    points=${points:-0}  # Default to 0 if empty
     if [[ "$points" =~ ^[0-9]+$ ]]; then
         total_points=$((total_points + points))
     fi

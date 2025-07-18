@@ -2,6 +2,7 @@
 
 BACKUP_DIR=${1:-"/mnt/user/appdata/qdrant/backups"}
 QDRANT_URL=${2:-"http://localhost:6333"}
+STORAGE_PATH=${3:-${QDRANT_STORAGE_PATH:-"/mnt/user/appdata/qdrant/storage"}}
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_NAME="qdrant_backup_$TIMESTAMP"
 
@@ -25,9 +26,9 @@ for collection in covabot_personality covabot_conversations covabot_memory; do
 done
 
 # Copy storage directory (if accessible)
-if [ -d "/mnt/user/appdata/qdrant/storage" ]; then
+if [ -d "$STORAGE_PATH" ]; then
     echo "📦 Creating storage backup..."
-    tar -czf "$BACKUP_DIR/$BACKUP_NAME.tar.gz" -C /mnt/user/appdata/qdrant storage/ 2>/dev/null
+    tar -czf "$BACKUP_DIR/$BACKUP_NAME.tar.gz" -C "$(dirname "$STORAGE_PATH")" "$(basename "$STORAGE_PATH")" 2>/dev/null
     if [ $? -eq 0 ]; then
         echo "✅ Storage backup completed: $BACKUP_NAME.tar.gz"
     else
@@ -41,7 +42,8 @@ fi
 cat > "$BACKUP_DIR/$BACKUP_NAME.metadata" << EOF
 {
   "timestamp": "$TIMESTAMP",
-  "qdrant_version": "$(curl -s $QDRANT_URL/ | jq -r '.version' 2>/dev/null || echo 'unknown')",
+  "qdrant_version": "$(command -v jq >/dev/null 2>&1 && \
+      curl -s "$QDRANT_URL/" | jq -r '.version' 2>/dev/null || echo 'unknown')",
   "collections": ["covabot_personality", "covabot_conversations", "covabot_memory"],
   "backup_type": "full",
   "created_by": "backup-qdrant.sh"

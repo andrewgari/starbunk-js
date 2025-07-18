@@ -222,7 +222,7 @@ export class EmbeddingService implements IEmbeddingService {
 			processed = processed.substring(0, maxLength).trim();
 			// Try to end at a word boundary
 			const lastSpace = processed.lastIndexOf(' ');
-			if (lastSpace > maxLength * 0.8) {
+			if (lastSpace > 0) {
 				processed = processed.substring(0, lastSpace);
 			}
 		}

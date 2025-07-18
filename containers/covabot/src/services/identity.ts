@@ -29,6 +29,22 @@ interface IdentityCache {
 
 const identityCache = new Map<string, IdentityCache>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 1000; // Maximum number of cached entries
+
+// Helper to maintain cache size
+function maintainCacheSize() {
+  if (identityCache.size > MAX_CACHE_SIZE) {
+    // Remove oldest entries
+    const entriesToRemove = identityCache.size - MAX_CACHE_SIZE;
+    const iterator = identityCache.entries();
+    for (let i = 0; i < entriesToRemove; i++) {
+      const { value } = iterator.next();
+      if (value) {
+        identityCache.delete(value[0]);
+      }
+    }
+  }
+}
 
 /**
  * Get Cova's current Discord identity with caching and validation
@@ -82,6 +98,9 @@ export async function getCovaIdentityFromService(
         timestamp: Date.now(),
         guildId: resolvedGuildId
       });
+
+      // Maintain cache size limit
+      maintainCacheSize();
 
       logger.debug(`[CovaIdentityService] Successfully cached identity: "${identity.botName}" with avatar ${identity.avatarUrl}`);
       return identity;

@@ -14,6 +14,22 @@ export class PersonalityNotesServiceDb {
     this.prisma = new PrismaClient();
   }
 
+  /**
+   * Maps a database note record to PersonalityNote type
+   */
+  private mapDbNoteToPersonalityNote(note: any): PersonalityNote {
+    return {
+      id: note.id,
+      content: note.content,
+      category: note.category as PersonalityNote['category'],
+      priority: note.priority as PersonalityNote['priority'],
+      isActive: note.isActive,
+      tokens: Array.isArray(note.tokens) ? note.tokens as string[] : undefined,
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt
+    };
+  }
+
   static getInstance(): PersonalityNotesServiceDb {
     if (!PersonalityNotesServiceDb.instance) {
       PersonalityNotesServiceDb.instance = new PersonalityNotesServiceDb();
@@ -81,16 +97,7 @@ export class PersonalityNotesServiceDb {
       });
 
       // Convert database records to our PersonalityNote type
-      return dbNotes.map(note => ({
-        id: note.id,
-        content: note.content,
-        category: note.category as PersonalityNote['category'],
-        priority: note.priority as PersonalityNote['priority'],
-        isActive: note.isActive,
-        tokens: Array.isArray(note.tokens) ? note.tokens as string[] : undefined,
-        createdAt: note.createdAt,
-        updatedAt: note.updatedAt
-      }));
+      return dbNotes.map(note => this.mapDbNoteToPersonalityNote(note));
     } catch (error) {
       logger.error('[PersonalityNotesDb] Failed to get notes:', error);
       throw error;
@@ -110,16 +117,7 @@ export class PersonalityNotesServiceDb {
         return null;
       }
 
-      return {
-        id: note.id,
-        content: note.content,
-        category: note.category as PersonalityNote['category'],
-        priority: note.priority as PersonalityNote['priority'],
-        isActive: note.isActive,
-        tokens: Array.isArray(note.tokens) ? note.tokens as string[] : undefined,
-        createdAt: note.createdAt,
-        updatedAt: note.updatedAt
-      };
+      return this.mapDbNoteToPersonalityNote(note);
     } catch (error) {
       logger.error('[PersonalityNotesDb] Failed to get note by ID:', error);
       throw error;

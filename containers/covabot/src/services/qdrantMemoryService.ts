@@ -3,7 +3,6 @@ import { logger } from '@starbunk/shared';
 import { QdrantService } from './qdrantService';
 import { EmbeddingService } from './embeddingService';
 import {
-	// MemoryItem, // Unused import
 	PersonalityMemory,
 	ConversationMemory,
 	MemorySearchFilters,
@@ -456,22 +455,44 @@ export class QdrantMemoryService {
 		await this.ensureInitialized();
 
 		try {
-			// Get both personality and conversation context
-			const [personalityContext, conversationContext] = await Promise.all([
-				this.getActiveNotesForLLM(),
-				this.getConversationContext(currentMessage, userId, channelId, options),
-			]);
+			// Get personality context and conversation search results
+			const personalityContext = await this.getActiveNotesForLLM();
+
+			// Get conversation search results to calculate average similarity
+			const conversationResults = await this.searchConversations(currentMessage, {
+				limit: options.maxConversationItems || 10,
+				similarityThreshold: options.similarityThreshold || 0.6,
+				userId,
+				channelId,
+			});
+
+			// Calculate average similarity from search results
+			const similarities = conversationResults.map(r => r.score);
+			const averageSimilarity = similarities.length > 0
+				? similarities.reduce((sum, score) => sum + score, 0) / similarities.length
+				: 0;
+
+			// Format conversation context
+			let conversationContext = '';
+			for (const result of conversationResults) {
+				const conv = result.item;
+				const timeAgo = this.getTimeAgo(conv.createdAt);
+				const userLabel = conv.messageType === 'user' ? 'User' : 'Cova';
+
+				conversationContext += `[${timeAgo}] ${userLabel}: ${conv.content}\n`;
+			}
+			conversationContext = conversationContext.trim();
 
 			// Combine contexts with weights
 			const _personalityWeight = options.personalityWeight || 1.0; // Reserved for future weighting
 			const _conversationWeight = options.conversationWeight || 0.8; // Reserved for future weighting
 
 			let combinedContext = '';
-			
+
 			if (personalityContext) {
 				combinedContext += personalityContext;
 			}
-			
+
 			if (conversationContext) {
 				if (combinedContext) combinedContext += '\n\n';
 				combinedContext += conversationContext;
@@ -483,8 +504,8 @@ export class QdrantMemoryService {
 				combinedContext,
 				metadata: {
 					personalityNotesUsed: personalityContext ? personalityContext.split('\n').filter(l => l.startsWith('- ')).length : 0,
-					conversationItemsUsed: conversationContext ? conversationContext.split('\n').filter(l => l.startsWith('[')).length : 0,
-					averageSimilarity: 0.8, // TODO: Calculate actual average
+					conversationItemsUsed: conversationResults.length,
+					averageSimilarity: Math.round(averageSimilarity * 10000) / 10000, // Round to 4 decimal places
 					contextLength: combinedContext.length,
 				},
 			};
@@ -648,14 +669,7 @@ export class QdrantMemoryService {
 				)
 			);
 
-			// Calculate averages
-			const _avgSearchTime = this.performanceMetrics.searchTimes.length > 0
-				? this.performanceMetrics.searchTimes.reduce((a, b) => a + b, 0) / this.performanceMetrics.searchTimes.length
-				: 0;
-
-			const _avgEmbeddingTime = this.performanceMetrics.embeddingTimes.length > 0
-				? this.performanceMetrics.embeddingTimes.reduce((a, b) => a + b, 0) / this.performanceMetrics.embeddingTimes.length
-				: 0;
+			// Performance metrics are calculated in healthCheck() method when needed
 
 			return {
 				total: qdrantStats.totalVectors,

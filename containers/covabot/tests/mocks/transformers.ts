@@ -4,7 +4,7 @@
  */
 
 export interface Pipeline {
-	(text: string, options?: any): Promise<{ data: Float32Array }>;
+	(text: string, options?: { pooling?: string; normalize?: boolean }): Promise<{ data: Float32Array }>;
 }
 
 // Mock pipeline function that returns fake embeddings

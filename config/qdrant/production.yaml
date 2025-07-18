@@ -9,13 +9,11 @@ storage:
   performance:
     max_search_threads: 4
     max_optimization_threads: 2
-  
   # Memory management
   optimizers:
     memmap_threshold: 200000
     indexing_threshold: 10000
     flush_interval_sec: 30
-  
   # Persistence settings
   wal:
     wal_capacity_mb: 32

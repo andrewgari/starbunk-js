@@ -54,7 +54,7 @@ class MockQdrantMemoryService {
     async storeConversation(userId, message, response) {
         const embedding = await this.embeddingService.generateEmbedding(message + ' ' + response);
         const point = {
-            id: Date.now() + Math.floor(Math.random() * 1000), // Ensure integer ID
+            id: Date.now() * 1000 + Math.floor(Math.random() * 1000), // More collision-resistant
             vector: embedding,
             payload: {
                 userId,
@@ -165,7 +165,7 @@ async function runIntegrationTest() {
         
         // Store multiple items
         const promises = [];
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 10; i++) {
             promises.push(memoryService.storePersonality(
                 `test-user-${i}`,
                 'test-trait',
