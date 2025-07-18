@@ -53,7 +53,7 @@ describe('Memory Service - Comprehensive Database Integration Tests', () => {
 
 	describe('Personality Note CRUD Operations', () => {
 		describe('Create Operations', () => {
-			it.skip('should create personality note with content and metadata', async () => {
+			it('should create personality note with content and metadata', async () => {
 				const content = 'Cova enjoys discussing artificial intelligence topics';
 				const metadata = { category: 'interests', importance: 'high', source: 'conversation' };
 
@@ -69,7 +69,7 @@ describe('Memory Service - Comprehensive Database Integration Tests', () => {
 				});
 			});
 
-			it.skip('should create personality note with minimal data', async () => {
+			it('should create personality note with minimal data', async () => {
 				const content = 'Simple note';
 
 				const note = await memoryService.createPersonalityNote(content);
