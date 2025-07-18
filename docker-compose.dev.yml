@@ -1,0 +1,73 @@
+version: '3.8'
+
+networks:
+  covabot-dev-network:
+    driver: bridge
+
+services:
+  qdrant-dev:
+    image: qdrant/qdrant:v1.7.4
+    container_name: qdrant-dev
+    networks:
+      - covabot-dev-network
+    ports:
+      - "6333:6333"  # REST API
+      - "6334:6334"  # gRPC API (optional)
+    volumes:
+      - qdrant_dev_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  covabot-dev:
+    build:
+      context: .
+      dockerfile: containers/covabot/Dockerfile
+    container_name: covabot-dev
+    networks:
+      - covabot-dev-network
+    depends_on:
+      qdrant-dev:
+        condition: service_healthy
+    environment:
+      # Qdrant Configuration
+      - QDRANT_URL=http://qdrant-dev:6333
+      - QDRANT_API_KEY=
+      
+      # Embedding Configuration (from PR 248 services)
+      - EMBEDDING_MODEL=Xenova/all-MiniLM-L6-v2
+      - EMBEDDING_DIMENSIONS=384
+      - EMBEDDING_BATCH_SIZE=32
+      - EMBEDDING_CACHE_SIZE=1000
+      - EMBEDDING_TIMEOUT=30000
+      
+      # Memory Collections (from PR 248 QdrantMemoryService)
+      - PERSONALITY_COLLECTION=covabot_personality
+      - CONVERSATION_COLLECTION=covabot_conversations
+      - MEMORY_COLLECTION=covabot_memory
+      
+      # Development Settings
+      - NODE_ENV=development
+      - DEBUG_MODE=true
+      - TESTING_CHANNEL_IDS=123456789012345678
+    volumes:
+      - ./containers/covabot:/app
+      - /app/node_modules
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+
+volumes:
+  qdrant_dev_data:
+    driver: local
