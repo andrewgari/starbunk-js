@@ -1,0 +1,30 @@
+service:
+  http_port: 6333
+  grpc_port: 6334
+  enable_cors: true
+  max_request_size_mb: 32
+
+storage:
+  # Storage optimizations for production
+  performance:
+    max_search_threads: 4
+    max_optimization_threads: 2
+  
+  # Memory management
+  optimizers:
+    memmap_threshold: 200000
+    indexing_threshold: 10000
+    flush_interval_sec: 30
+  
+  # Persistence settings
+  wal:
+    wal_capacity_mb: 32
+    wal_segments_ahead: 2
+
+cluster:
+  enabled: false  # Single node setup
+
+telemetry:
+  disabled: true  # Disable telemetry for privacy
+
+log_level: INFO
