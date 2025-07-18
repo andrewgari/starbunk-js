@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 QDRANT_URL=${1:-"http://localhost:6333"}
 

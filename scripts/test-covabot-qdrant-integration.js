@@ -6,6 +6,7 @@
  */
 
 const { QdrantClient } = require('@qdrant/js-client-rest');
+const { v4: uuidv4 } = require('uuid');
 
 // Mock the CovaBot services for testing
 class MockEmbeddingService {
@@ -33,7 +34,7 @@ class MockQdrantMemoryService {
     async storePersonality(userId, trait, description) {
         const embedding = await this.embeddingService.generateEmbedding(description);
         const point = {
-            id: Date.now(),
+            id: uuidv4(),
             vector: embedding,
             payload: {
                 userId,
@@ -54,7 +55,7 @@ class MockQdrantMemoryService {
     async storeConversation(userId, message, response) {
         const embedding = await this.embeddingService.generateEmbedding(message + ' ' + response);
         const point = {
-            id: Date.now() * 1000 + Math.floor(Math.random() * 1000), // More collision-resistant
+            id: uuidv4(),
             vector: embedding,
             payload: {
                 userId,
