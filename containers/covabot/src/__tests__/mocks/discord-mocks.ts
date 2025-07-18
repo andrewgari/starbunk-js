@@ -1,41 +1,15 @@
 import { Message, TextChannel, Client, User, GuildMember, Guild, Webhook } from 'discord.js';
 
 /**
- * Mock interfaces for better type safety
- */
-interface MockAuthor {
-	id: string;
-	bot: boolean;
-	username: string;
-	globalName: string;
-	displayAvatarURL: jest.MockedFunction<() => string>;
-}
-
-interface MockGuild {
-	id: string;
-	name: string;
-}
-
-interface MockTextChannel {
-	id: string;
-	name: string;
-	send: jest.MockedFunction<(content: string) => Promise<Message>>;
-}
-
-interface MockClient {
-	user: MockAuthor;
-}
-
-/**
  * Mock Discord Message for testing
  */
 export class MockDiscordMessage {
 	public content: string;
-	public author: MockAuthor;
+	public author: any;
 	public mentions: { has: jest.MockedFunction<(userId: string) => boolean> };
-	public guild: MockGuild | null;
-	public channel: MockTextChannel;
-	public client: MockClient;
+	public guild: any;
+	public channel: any;
+	public client: any;
 	public channelId: string;
 	public id: string;
 
@@ -70,15 +44,15 @@ export class MockDiscordMessage {
 		this.channel = {
 			id: channelId,
 			name: 'test-channel',
-			send: jest.fn().mockResolvedValue(undefined as any),
+			type: 0, // GUILD_TEXT
+			send: jest.fn().mockResolvedValue(undefined),
+			fetchWebhooks: jest.fn().mockResolvedValue(new Map()),
+			createWebhook: jest.fn().mockResolvedValue(createMockWebhook()),
 		};
 
 		this.client = {
 			user: {
 				id: 'bot-client-123',
-				bot: true,
-				username: 'TestBot',
-				globalName: 'Test Bot',
 				displayAvatarURL: jest.fn().mockReturnValue('https://cdn.discordapp.com/avatars/bot/avatar.png'),
 			},
 		};

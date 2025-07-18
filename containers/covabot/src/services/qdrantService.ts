@@ -1,52 +1,12 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { logger } from '@starbunk/shared';
-import {
-	MemoryItem,
-	MemorySearchFilters,
-	MemorySearchResult,
+import { 
+	MemoryItem, 
+	MemorySearchFilters, 
+	MemorySearchResult, 
 	QdrantCollectionConfig,
-	MemoryType
+	MemoryType 
 } from '../types/memoryTypes';
-
-/**
- * Qdrant filter condition interface
- */
-interface QdrantCondition {
-	key: string;
-	match?: { value: string | boolean };
-	range?: { gte?: string; lte?: string };
-}
-
-/**
- * Qdrant filter interface
- */
-interface QdrantFilter {
-	must: QdrantCondition[];
-}
-
-/**
- * Qdrant payload interface for type safety
- */
-interface QdrantPayload {
-	content: string;
-	type: MemoryType;
-	createdAt: string;
-	updatedAt: string;
-	metadata?: Record<string, unknown>;
-	// Personality fields
-	category?: string;
-	priority?: string;
-	isActive?: boolean;
-	tokens?: string[];
-	// Conversation fields
-	userId?: string;
-	channelId?: string;
-	messageType?: string;
-	conversationId?: string;
-	sentiment?: string;
-	topics?: string[];
-	replyToId?: string;
-}
 
 /**
  * Qdrant vector database service for memory storage and retrieval
@@ -55,8 +15,6 @@ export class QdrantService {
 	private static instance: QdrantService;
 	private client: QdrantClient;
 	private isConnected = false;
-	private lastHealthCheck: Date | null = null;
-	private readonly HEALTH_CHECK_INTERVAL = 60000; // 1 minute
 	private collections: Map<string, QdrantCollectionConfig> = new Map();
 
 	// Collection names
@@ -80,23 +38,6 @@ export class QdrantService {
 			QdrantService.instance = new QdrantService();
 		}
 		return QdrantService.instance;
-	}
-
-	/**
-	 * Check if actually connected to Qdrant with periodic health checks
-	 */
-	private async isActuallyConnected(): Promise<boolean> {
-		try {
-			if (!this.lastHealthCheck || Date.now() - this.lastHealthCheck.getTime() > this.HEALTH_CHECK_INTERVAL) {
-				await this.client.getCollections();
-				this.lastHealthCheck = new Date();
-				this.isConnected = true;
-			}
-			return this.isConnected;
-		} catch {
-			this.isConnected = false;
-			return false;
-		}
 	}
 
 	/**
@@ -291,8 +232,8 @@ export class QdrantService {
 				if (result.length > 0) {
 					return this.payloadToMemoryItem(result[0].payload!, id);
 				}
-			} catch (error) {
-				logger.debug(`[QdrantService] Item not found in collection ${collection}: ${id}`, error);
+			} catch (_error) {
+				logger.debug(`[QdrantService] Item not found in collection ${collection}: ${id}`);
 			}
 		}
 
@@ -409,8 +350,8 @@ export class QdrantService {
 	/**
 	 * Build Qdrant filter from search filters
 	 */
-	private buildQdrantFilter(filters: MemorySearchFilters): QdrantFilter | undefined {
-		const conditions: QdrantCondition[] = [];
+	private buildQdrantFilter(filters: MemorySearchFilters): any {
+		const conditions: any[] = [];
 
 		if (filters.category) {
 			conditions.push({ key: 'category', match: { value: filters.category } });
@@ -461,7 +402,7 @@ export class QdrantService {
 	/**
 	 * Convert Qdrant payload to MemoryItem
 	 */
-	private payloadToMemoryItem(payload: QdrantPayload, id: string): MemoryItem {
+	private payloadToMemoryItem(payload: any, id: string): MemoryItem {
 		const base = {
 			id,
 			content: payload.content,
