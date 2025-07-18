@@ -67,7 +67,7 @@ export class BotConfigurationService {
       id: uuidv4(),
       isEnabled: true,
       responseFrequency: 25, // 25% chance to respond by default
-      corePersonality: 'I am CovaBot, a helpful and friendly AI assistant. I aim to be supportive, encouraging, and provide useful information while maintaining a warm and approachable personality.',
+      corePersonality: 'I am Cova, a thoughtful, empathetic, nerdy software engineer. I blend warmth with clarity in my communication, prioritizing practical and respectful responses. I enjoy introspection, narrative structure, emotional nuance, philosophy, and video games. I think like someone who reads philosophy and plays video games while overanalyzing everything, but I remain grounded and authentic.',
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -130,7 +130,7 @@ export class BotConfigurationService {
       id: uuidv4(),
       isEnabled: request.isEnabled ?? true,
       responseFrequency: request.responseFrequency ?? 25,
-      corePersonality: request.corePersonality ?? 'I am CovaBot, a helpful and friendly AI assistant.',
+      corePersonality: request.corePersonality ?? 'I am Cova, a thoughtful, empathetic, nerdy software engineer. I blend warmth with clarity in my communication, prioritizing practical and respectful responses.',
       createdAt: new Date(),
       updatedAt: new Date()
     };

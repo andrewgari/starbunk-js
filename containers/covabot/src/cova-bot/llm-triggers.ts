@@ -255,9 +255,9 @@ Based on the Response Decision System, should Cova respond to this message?`;
 				const messageContent = message.content.toLowerCase();
 				
 				// Increase chance for direct questions or mentions of topics Cova cares about
-				if (messageContent.includes('?') && 
-					(messageContent.includes('cova') || messageContent.includes('dev') || 
-                     messageContent.includes('code') || messageContent.includes('bot'))) {
+				if (messageContent.includes('?') &&
+					(messageContent.includes('cova') || messageContent.includes('philosophy') ||
+                     messageContent.includes('code') || messageContent.includes('game'))) {
 					probability *= 1.4;
 				}
 
