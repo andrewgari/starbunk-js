@@ -199,6 +199,8 @@ services:
       - USE_DATABASE=${USE_DATABASE:-false}
       - COVABOT_DATA_DIR=/app/data
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+      - QDRANT_URL=${QDRANT_URL:-http://192.168.50.3:6333}
+      - USE_QDRANT=${USE_QDRANT:-true}
     volumes:
       # Unraid-compatible host path mount for CovaBot personality notes (snapshot testing)
       - ${UNRAID_APPDATA_PATH:-./data}/covabot-snapshot:/app/data
