@@ -207,8 +207,20 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      # CovaBot-specific configuration
+      - USE_DATABASE=${USE_DATABASE:-false}
+      - COVABOT_DATA_DIR=/app/data
+      - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+      - QDRANT_URL=${QDRANT_URL:-http://192.168.50.3:6333}
+      - USE_QDRANT=${USE_QDRANT:-true}
+    volumes:
+      # Unraid-compatible host path mount for CovaBot personality notes (production)
+      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
+    ports:
+      # Expose web interface for personality management (production)
+      - "${COVABOT_WEB_PORT:-7080}:7080"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:7080/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
