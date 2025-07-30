@@ -211,7 +211,7 @@ private async deployCommands(): Promise<void> {
 			}
 		});
 
-		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT) : 3002;
+		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT) : 3000;
 		this.healthServer.listen(port, () => {
 			logger.info(`🏥 Health check server running on port ${port}`);
 		});
