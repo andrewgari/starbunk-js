@@ -900,6 +900,72 @@ export class WebServer {
       }
     });
 
+    // Get Docker logs directly
+    apiRouter.get('/monitoring/docker-logs/:container', async (req: any, res: any) => {
+      try {
+        const containerName = req.params.container;
+        const options = {
+          tail: req.query.tail ? parseInt(req.query.tail as string) : 100,
+          since: req.query.since as string,
+          until: req.query.until as string,
+          follow: false // Don't follow for API requests
+        };
+
+        const logs = await this.logService.getDockerLogs(containerName, options);
+        res.json({
+          success: true,
+          data: {
+            container: containerName,
+            logs: logs,
+            count: logs.length
+          }
+        });
+      } catch (error) {
+        logger.error('[WebServer] Error getting Docker logs:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: `Failed to get Docker logs: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
+      }
+    });
+
+    // Get available containers
+    apiRouter.get('/monitoring/containers', async (req, res) => {
+      try {
+        const containers = await this.logService.getAvailableContainers();
+        res.json({
+          success: true,
+          data: containers
+        });
+      } catch (error) {
+        logger.error('[WebServer] Error getting available containers:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to get available containers'
+        });
+      }
+    });
+
+    // Check Docker API status
+    apiRouter.get('/monitoring/docker-status', async (req, res) => {
+      try {
+        const isAvailable = await this.logService.isDockerApiAvailable();
+        res.json({
+          success: true,
+          data: {
+            dockerApiAvailable: isAvailable,
+            socketPath: '/var/run/docker.sock'
+          }
+        });
+      } catch (error) {
+        logger.error('[WebServer] Error checking Docker status:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to check Docker status'
+        });
+      }
+    });
+
     // Get all alerts
     apiRouter.get('/monitoring/alerts', (req, res) => {
       try {

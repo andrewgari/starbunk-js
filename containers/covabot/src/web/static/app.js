@@ -14,6 +14,8 @@ class CovaBot {
         this.logWebSocket = null;
         this.logsPaused = false;
         this.maxLogEntries = 1000;
+        this.availableContainers = [];
+        this.dockerApiAvailable = false;
         this.init();
     }
 
@@ -86,6 +88,9 @@ class CovaBot {
 
         // Production Monitoring Event Listeners
         this.setupMonitoringEventListeners();
+
+        // Docker Logs Event Listeners
+        this.setupDockerLogsEventListeners();
     }
 
     setupQuickActions() {
@@ -215,6 +220,8 @@ class CovaBot {
             case 'monitoring':
                 this.loadMonitoringData();
                 this.connectLogWebSocket();
+                this.loadAvailableContainers();
+                this.checkDockerApiStatus();
                 break;
         }
     }
@@ -1026,6 +1033,30 @@ class CovaBot {
         }
     }
 
+    setupDockerLogsEventListeners() {
+        // Load Docker logs button
+        const loadDockerLogsBtn = document.getElementById('load-docker-logs-btn');
+        if (loadDockerLogsBtn) {
+            loadDockerLogsBtn.addEventListener('click', () => this.loadDockerLogs());
+        }
+
+        // Clear Docker logs button
+        const clearDockerLogsBtn = document.getElementById('clear-docker-logs-btn');
+        if (clearDockerLogsBtn) {
+            clearDockerLogsBtn.addEventListener('click', () => this.clearDockerLogs());
+        }
+
+        // Container selection change
+        const dockerContainerSelect = document.getElementById('docker-container-select');
+        if (dockerContainerSelect) {
+            dockerContainerSelect.addEventListener('change', () => {
+                if (dockerContainerSelect.value) {
+                    this.loadDockerLogs();
+                }
+            });
+        }
+    }
+
     async loadMonitoringData() {
         try {
             const response = await fetch(`${this.apiBase}/monitoring/health`);
@@ -1440,6 +1471,170 @@ class CovaBot {
                 console.error('Error resolving all alerts:', error);
                 this.showToast('Error resolving alerts', 'error');
             }
+        }
+    }
+
+    async loadAvailableContainers() {
+        try {
+            const response = await fetch(`${this.apiBase}/monitoring/containers`);
+            if (response.ok) {
+                const result = await response.json();
+                this.availableContainers = result.data || [];
+                this.updateContainerSelect();
+            }
+        } catch (error) {
+            console.error('Error loading available containers:', error);
+        }
+    }
+
+    updateContainerSelect() {
+        const dockerContainerSelect = document.getElementById('docker-container-select');
+        if (!dockerContainerSelect) return;
+
+        // Clear existing options except the first one
+        dockerContainerSelect.innerHTML = '<option value="">Select Container</option>';
+
+        // Add available containers
+        this.availableContainers.forEach(container => {
+            const option = document.createElement('option');
+            option.value = container;
+            option.textContent = container;
+            dockerContainerSelect.appendChild(option);
+        });
+    }
+
+    async checkDockerApiStatus() {
+        try {
+            const response = await fetch(`${this.apiBase}/monitoring/docker-status`);
+            if (response.ok) {
+                const result = await response.json();
+                this.dockerApiAvailable = result.data?.dockerApiAvailable || false;
+                this.updateDockerApiStatus();
+            }
+        } catch (error) {
+            console.error('Error checking Docker API status:', error);
+            this.dockerApiAvailable = false;
+            this.updateDockerApiStatus();
+        }
+    }
+
+    updateDockerApiStatus() {
+        const dockerLogsContainer = document.getElementById('docker-logs-container');
+        if (!dockerLogsContainer) return;
+
+        if (!this.dockerApiAvailable) {
+            dockerLogsContainer.innerHTML = `
+                <div class="text-center text-warning">
+                    <i class="bi bi-exclamation-triangle fs-4"></i>
+                    <p class="mt-2 mb-0">Docker API not available</p>
+                    <small>Docker socket not accessible or Docker daemon not running</small>
+                </div>
+            `;
+        }
+    }
+
+    async loadDockerLogs() {
+        const dockerContainerSelect = document.getElementById('docker-container-select');
+        const dockerLogsTail = document.getElementById('docker-logs-tail');
+        const dockerLogsContainer = document.getElementById('docker-logs-container');
+
+        if (!dockerContainerSelect || !dockerLogsTail || !dockerLogsContainer) return;
+
+        const containerName = dockerContainerSelect.value;
+        if (!containerName) {
+            this.showToast('Please select a container', 'warning');
+            return;
+        }
+
+        const tail = parseInt(dockerLogsTail.value) || 100;
+
+        try {
+            // Show loading
+            dockerLogsContainer.innerHTML = `
+                <div class="text-center text-muted">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    Loading Docker logs for ${containerName}...
+                </div>
+            `;
+
+            const response = await fetch(`${this.apiBase}/monitoring/docker-logs/${containerName}?tail=${tail}`);
+            if (response.ok) {
+                const result = await response.json();
+                this.displayDockerLogs(result.data.logs, containerName);
+                this.showToast(`Loaded ${result.data.count} log entries`, 'success');
+            } else {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to load Docker logs');
+            }
+        } catch (error) {
+            console.error('Error loading Docker logs:', error);
+            dockerLogsContainer.innerHTML = `
+                <div class="text-center text-danger">
+                    <i class="bi bi-exclamation-circle fs-4"></i>
+                    <p class="mt-2 mb-0">Failed to load Docker logs</p>
+                    <small>${error.message}</small>
+                </div>
+            `;
+            this.showToast('Error loading Docker logs', 'error');
+        }
+    }
+
+    displayDockerLogs(logs, containerName) {
+        const dockerLogsContainer = document.getElementById('docker-logs-container');
+        if (!dockerLogsContainer) return;
+
+        if (!logs || logs.length === 0) {
+            dockerLogsContainer.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="bi bi-info-circle fs-4"></i>
+                    <p class="mt-2 mb-0">No logs found for ${containerName}</p>
+                    <small>Container may not be running or have no output</small>
+                </div>
+            `;
+            return;
+        }
+
+        // Clear container and add logs
+        dockerLogsContainer.innerHTML = '';
+
+        logs.forEach(logLine => {
+            if (!logLine.trim()) return;
+
+            const logElement = document.createElement('div');
+            logElement.className = 'docker-log-line';
+            logElement.style.cssText = 'margin-bottom: 2px; word-wrap: break-word; white-space: pre-wrap;';
+
+            // Try to parse timestamp and message
+            const timestampMatch = logLine.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(.*)$/);
+            if (timestampMatch) {
+                const timestamp = new Date(timestampMatch[1]).toLocaleTimeString();
+                const message = timestampMatch[2];
+
+                logElement.innerHTML = `
+                    <span style="color: #888;">[${timestamp}]</span>
+                    <span style="color: #fff;">${this.escapeHtml(message)}</span>
+                `;
+            } else {
+                logElement.innerHTML = `<span style="color: #fff;">${this.escapeHtml(logLine)}</span>`;
+            }
+
+            dockerLogsContainer.appendChild(logElement);
+        });
+
+        // Scroll to bottom
+        dockerLogsContainer.scrollTop = dockerLogsContainer.scrollHeight;
+    }
+
+    clearDockerLogs() {
+        const dockerLogsContainer = document.getElementById('docker-logs-container');
+        if (dockerLogsContainer) {
+            dockerLogsContainer.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="bi bi-docker text-info fs-4"></i>
+                    <p class="mt-2 mb-0">Docker logs cleared</p>
+                    <small>Select a container and click "Load Logs" to view logs</small>
+                </div>
+            `;
         }
     }
 
