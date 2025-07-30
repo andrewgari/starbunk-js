@@ -1,4 +1,3 @@
-import '../../shared/src/environment';
 import { logger } from '@starbunk/shared';
 import { WebServer } from './web/server';
 import { QdrantMemoryService } from './services/qdrantMemoryService';
@@ -23,14 +22,13 @@ async function startCovaBot() {
     await webServer.start();
     logger.info(`✅ Web interface started on http://localhost:${port}`);
 
-    // Import and start the main CovaBot after web server is ready
-    const { default: main } = await import('./index-minimal');
+    // Note: Main CovaBot functionality would be imported here if needed
 
     logger.info('🚀 CovaBot with Web Interface started successfully!');
     logger.info(`📝 Manage personality at: http://localhost:${port}`);
     logger.info(`🧠 Memory system: ${storageType}`);
   } catch (error) {
-    logger.error('❌ Failed to start CovaBot with Web Interface:', error);
+    logger.error('❌ Failed to start CovaBot with Web Interface:', error as Error);
     process.exit(1);
   }
 }
@@ -47,7 +45,7 @@ const shutdown = async () => {
       logger.info('✅ Memory service cleanup completed');
     }
   } catch (error) {
-    logger.error('❌ Error during cleanup:', error);
+    logger.error('❌ Error during cleanup:', error as Error);
   }
 
   process.exit(0);

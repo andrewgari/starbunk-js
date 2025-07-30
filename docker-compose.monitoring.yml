@@ -1,0 +1,284 @@
+# Docker Compose for Production Monitoring (Latest Images + Monitoring)
+# ========================================================================
+# This file extends the production deployment with comprehensive monitoring
+# capabilities including real-time log aggregation, health monitoring,
+# and remote debugging support.
+#
+# Containers included: bunkbot, djcova, starbunk-dnd, snowbunk, covabot (5 containers)
+# Plus enhanced monitoring through CovaBot web interface
+#
+# Prerequisites:
+#   - Ensure .env file exists in the same directory as this compose file
+#   - All required environment variables must be defined in .env file
+#   - Verify all latest images are available in GHCR
+#   - Docker daemon must have access to container logs
+#
+# Usage:
+#   docker-compose -f docker-compose.monitoring.yml up -d
+#
+# Monitoring Features:
+#   - Real-time container health monitoring
+#   - Live log streaming via WebSocket
+#   - Production metrics and alerting
+#   - Remote debugging capabilities
+#   - Centralized monitoring dashboard at http://192.168.50.3:7080
+
+services:
+  # BunkBot - Reply bots and admin commands (Latest Stable)
+  bunkbot:
+    image: ghcr.io/andrewgari/bunkbot:latest
+    container_name: starbunk-bunkbot-latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-monitoring-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=bunkbot,environment=production"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # DJCova - Music service (Latest Stable)
+  djcova:
+    image: ghcr.io/andrewgari/djcova:latest
+    container_name: starbunk-djcova-latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - djcova_monitoring_cache:/app/cache
+      - djcova_monitoring_temp:/tmp
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-monitoring-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=djcova,environment=production"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Starbunk-DND - D&D features and bridge (Latest Stable)
+  starbunk-dnd:
+    image: ghcr.io/andrewgari/starbunk-dnd:latest
+    container_name: starbunk-dnd-latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - OLLAMA_API_URL=${OLLAMA_API_URL:-}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - dnd_monitoring_data:/app/data
+      - dnd_monitoring_campaigns:/app/data/campaigns
+      - dnd_monitoring_context:/app/data/llm_context
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-monitoring-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=starbunk-dnd,environment=production"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Snowbunk - Production message bridge (Latest Stable)
+  snowbunk:
+    image: ghcr.io/andrewgari/snowbunk:latest
+    container_name: starbunk-snowbunk-latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - OLLAMA_API_URL=${OLLAMA_API_URL:-}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - snowbunk_monitoring_data:/app/data
+      - snowbunk_monitoring_campaigns:/app/data/campaigns
+      - snowbunk_monitoring_context:/app/data/llm_context
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3004/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-monitoring-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=snowbunk,environment=production"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # CovaBot - AI personality bot with enhanced monitoring (Latest Stable)
+  covabot:
+    image: ghcr.io/andrewgari/covabot:latest
+    container_name: starbunk-covabot-latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # CovaBot-specific configuration
+      - USE_DATABASE=${USE_DATABASE:-false}
+      - COVABOT_DATA_DIR=/app/data
+      - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+      - QDRANT_URL=${QDRANT_URL:-http://192.168.50.3:6333}
+      - USE_QDRANT=${USE_QDRANT:-true}
+      # Production monitoring configuration
+      - ENABLE_PRODUCTION_MONITORING=true
+      - MONITORING_LOG_LEVEL=${MONITORING_LOG_LEVEL:-info}
+    volumes:
+      # Unraid-compatible host path mount for CovaBot personality notes (production)
+      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
+      # Mount Docker socket for container monitoring (read-only)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      # Expose web interface for personality management and monitoring (production)
+      - "${COVABOT_WEB_PORT:-7080}:7080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7080/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-monitoring-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=covabot,environment=production"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+# Named volumes for persistent data (monitoring/production)
+volumes:
+  djcova_monitoring_cache:
+    driver: local
+  djcova_monitoring_temp:
+    driver: local
+  dnd_monitoring_data:
+    driver: local
+  dnd_monitoring_campaigns:
+    driver: local
+  dnd_monitoring_context:
+    driver: local
+  snowbunk_monitoring_data:
+    driver: local
+  snowbunk_monitoring_campaigns:
+    driver: local
+  snowbunk_monitoring_context:
+    driver: local
+
+# Custom network for service communication (monitoring/production)
+networks:
+  starbunk-monitoring-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16

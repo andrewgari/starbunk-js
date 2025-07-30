@@ -51,6 +51,11 @@
                             <i class="bi bi-chat-dots"></i> Test Chat
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="monitoring">
+                            <i class="bi bi-activity"></i> Production Monitor
+                        </a>
+                    </li>
                 </ul>
                 <div class="navbar-nav">
                     <div class="nav-item">
@@ -500,6 +505,149 @@
                                     <small class="text-muted">Bot Responses:</small>
                                     <span class="badge bg-success" id="response-count">0</span>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Production Monitoring Tab -->
+        <div id="monitoring-tab" class="tab-content">
+            <div class="row">
+                <!-- System Health Overview -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-heart-pulse"></i>
+                                System Health
+                            </h5>
+                            <button class="btn btn-outline-primary btn-sm" id="refresh-health-btn">
+                                <i class="bi bi-arrow-clockwise"></i>
+                                Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="system-health-status" class="mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    <span>Loading system health...</span>
+                                </div>
+                            </div>
+                            <div id="container-health-list">
+                                <!-- Container health items will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts Panel -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Active Alerts
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="alerts-list">
+                                <!-- Alerts will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <!-- Real-time Logs -->
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-terminal"></i>
+                                Real-time Container Logs
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <select class="form-select form-select-sm" id="log-container-filter" style="width: auto;">
+                                    <option value="">All Containers</option>
+                                    <option value="bunkbot">BunkBot</option>
+                                    <option value="covabot">CovaBot</option>
+                                    <option value="djcova">DJCova</option>
+                                    <option value="snowbunk">Snowbunk</option>
+                                    <option value="starbunk-dnd">Starbunk-DND</option>
+                                </select>
+                                <select class="form-select form-select-sm" id="log-level-filter" style="width: auto;">
+                                    <option value="">All Levels</option>
+                                    <option value="error">Error</option>
+                                    <option value="warn">Warning</option>
+                                    <option value="info">Info</option>
+                                    <option value="debug">Debug</option>
+                                </select>
+                                <button class="btn btn-outline-secondary btn-sm" id="clear-logs-btn">
+                                    <i class="bi bi-trash"></i>
+                                    Clear
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" id="pause-logs-btn">
+                                    <i class="bi bi-pause"></i>
+                                    Pause
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="log-container" style="height: 400px; overflow-y: auto; background-color: #1e1e1e; color: #ffffff; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px;">
+                                <div class="text-center text-muted">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    Connecting to log stream...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <!-- Log Statistics -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-bar-chart"></i>
+                                Log Statistics
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="log-stats">
+                                <!-- Log statistics will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-lightning"></i>
+                                Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" id="force-health-check-btn">
+                                    <i class="bi bi-heart-pulse"></i>
+                                    Force Health Check
+                                </button>
+                                <button class="btn btn-info" id="download-logs-btn">
+                                    <i class="bi bi-download"></i>
+                                    Download Recent Logs
+                                </button>
+                                <button class="btn btn-warning" id="resolve-all-alerts-btn">
+                                    <i class="bi bi-check-circle"></i>
+                                    Resolve All Alerts
+                                </button>
                             </div>
                         </div>
                     </div>

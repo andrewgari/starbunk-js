@@ -10,6 +10,10 @@ class CovaBot {
         this.chatMessages = [];
         this.messageCount = 0;
         this.responseCount = 0;
+        this.monitoringData = null;
+        this.logWebSocket = null;
+        this.logsPaused = false;
+        this.maxLogEntries = 1000;
         this.init();
     }
 
@@ -79,6 +83,9 @@ class CovaBot {
         if (resetConfigBtn) {
             resetConfigBtn.addEventListener('click', () => this.resetConfiguration());
         }
+
+        // Production Monitoring Event Listeners
+        this.setupMonitoringEventListeners();
     }
 
     setupQuickActions() {
@@ -204,6 +211,10 @@ class CovaBot {
                 break;
             case 'context':
                 this.loadLLMContext();
+                break;
+            case 'monitoring':
+                this.loadMonitoringData();
+                this.connectLogWebSocket();
                 break;
         }
     }
@@ -968,6 +979,468 @@ class CovaBot {
 
         if (messageCountEl) messageCountEl.textContent = this.messageCount;
         if (responseCountEl) responseCountEl.textContent = this.responseCount;
+    }
+
+    // Production Monitoring Methods
+    setupMonitoringEventListeners() {
+        // Refresh health button
+        const refreshHealthBtn = document.getElementById('refresh-health-btn');
+        if (refreshHealthBtn) {
+            refreshHealthBtn.addEventListener('click', () => this.loadMonitoringData());
+        }
+
+        // Force health check button
+        const forceHealthCheckBtn = document.getElementById('force-health-check-btn');
+        if (forceHealthCheckBtn) {
+            forceHealthCheckBtn.addEventListener('click', () => this.forceHealthCheck());
+        }
+
+        // Log filter controls
+        const logContainerFilter = document.getElementById('log-container-filter');
+        const logLevelFilter = document.getElementById('log-level-filter');
+        if (logContainerFilter) {
+            logContainerFilter.addEventListener('change', () => this.filterLogs());
+        }
+        if (logLevelFilter) {
+            logLevelFilter.addEventListener('change', () => this.filterLogs());
+        }
+
+        // Log control buttons
+        const clearLogsBtn = document.getElementById('clear-logs-btn');
+        const pauseLogsBtn = document.getElementById('pause-logs-btn');
+        if (clearLogsBtn) {
+            clearLogsBtn.addEventListener('click', () => this.clearLogs());
+        }
+        if (pauseLogsBtn) {
+            pauseLogsBtn.addEventListener('click', () => this.toggleLogPause());
+        }
+
+        // Quick action buttons
+        const downloadLogsBtn = document.getElementById('download-logs-btn');
+        const resolveAllAlertsBtn = document.getElementById('resolve-all-alerts-btn');
+        if (downloadLogsBtn) {
+            downloadLogsBtn.addEventListener('click', () => this.downloadLogs());
+        }
+        if (resolveAllAlertsBtn) {
+            resolveAllAlertsBtn.addEventListener('click', () => this.resolveAllAlerts());
+        }
+    }
+
+    async loadMonitoringData() {
+        try {
+            const response = await fetch(`${this.apiBase}/monitoring/health`);
+            if (response.ok) {
+                this.monitoringData = await response.json();
+                this.updateHealthDisplay();
+                this.updateAlertsDisplay();
+                this.loadLogStats();
+            }
+        } catch (error) {
+            console.error('Error loading monitoring data:', error);
+            this.showToast('Error loading monitoring data', 'error');
+        }
+    }
+
+    updateHealthDisplay() {
+        if (!this.monitoringData?.data) return;
+
+        const systemHealthStatus = document.getElementById('system-health-status');
+        const containerHealthList = document.getElementById('container-health-list');
+
+        if (systemHealthStatus) {
+            const { systemHealth, lastUpdate } = this.monitoringData.data;
+            const statusColor = systemHealth === 'healthy' ? 'success' :
+                              systemHealth === 'degraded' ? 'warning' : 'danger';
+            const statusIcon = systemHealth === 'healthy' ? 'check-circle' :
+                             systemHealth === 'degraded' ? 'exclamation-triangle' : 'x-circle';
+
+            systemHealthStatus.innerHTML = `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-${statusIcon} text-${statusColor} fs-4 me-2"></i>
+                    <div>
+                        <h6 class="mb-0">System Status: <span class="text-${statusColor}">${systemHealth.toUpperCase()}</span></h6>
+                        <small class="text-muted">Last updated: ${new Date(lastUpdate).toLocaleString()}</small>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (containerHealthList) {
+            const containers = this.monitoringData.data.containers || [];
+            containerHealthList.innerHTML = containers.map(container => {
+                const statusColor = container.status === 'healthy' ? 'success' : 'danger';
+                const statusIcon = container.status === 'healthy' ? 'check-circle' : 'x-circle';
+
+                return `
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-${statusIcon} text-${statusColor} me-2"></i>
+                            <div>
+                                <strong>${container.name}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    ${container.responseTime ? `${container.responseTime}ms` : 'N/A'}
+                                    ${container.error ? ` - ${container.error}` : ''}
+                                </small>
+                            </div>
+                        </div>
+                        <span class="badge bg-${statusColor}">${container.status}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    updateAlertsDisplay() {
+        if (!this.monitoringData?.data) return;
+
+        const alertsList = document.getElementById('alerts-list');
+        if (!alertsList) return;
+
+        const alerts = this.monitoringData.data.alerts || [];
+
+        if (alerts.length === 0) {
+            alertsList.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-check-circle text-success fs-2"></i>
+                    <p class="mt-2 mb-0">No active alerts</p>
+                </div>
+            `;
+            return;
+        }
+
+        alertsList.innerHTML = alerts.map(alert => {
+            const severityColor = alert.severity === 'critical' ? 'danger' :
+                                alert.severity === 'error' ? 'warning' :
+                                alert.severity === 'warning' ? 'warning' : 'info';
+            const severityIcon = alert.severity === 'critical' ? 'exclamation-triangle-fill' :
+                               alert.severity === 'error' ? 'exclamation-triangle' :
+                               alert.severity === 'warning' ? 'exclamation-circle' : 'info-circle';
+
+            return `
+                <div class="alert alert-${severityColor} alert-dismissible fade show" role="alert">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-${severityIcon} me-2 mt-1"></i>
+                        <div class="flex-grow-1">
+                            <strong>${alert.severity.toUpperCase()}</strong>
+                            ${alert.container ? `[${alert.container}]` : ''}
+                            <br>
+                            ${alert.message}
+                            <br>
+                            <small class="text-muted">${new Date(alert.timestamp).toLocaleString()}</small>
+                        </div>
+                        <button type="button" class="btn-close" onclick="covaBot.resolveAlert('${alert.id}')"></button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async forceHealthCheck() {
+        try {
+            const response = await fetch(`${this.apiBase}/monitoring/health/check`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                this.monitoringData = await response.json();
+                this.updateHealthDisplay();
+                this.updateAlertsDisplay();
+                this.showToast('Health check completed', 'success');
+            }
+        } catch (error) {
+            console.error('Error forcing health check:', error);
+            this.showToast('Error performing health check', 'error');
+        }
+    }
+
+    connectLogWebSocket() {
+        if (this.logWebSocket) {
+            this.logWebSocket.close();
+        }
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/logs`;
+
+        this.logWebSocket = new WebSocket(wsUrl);
+
+        this.logWebSocket.onopen = () => {
+            console.log('Log WebSocket connected');
+            this.updateLogConnectionStatus(true);
+        };
+
+        this.logWebSocket.onmessage = (event) => {
+            if (this.logsPaused) return;
+
+            try {
+                const message = JSON.parse(event.data);
+                if (message.type === 'log-entry') {
+                    this.addLogEntry(message.data);
+                } else if (message.type === 'initial-logs') {
+                    this.displayInitialLogs(message.data);
+                }
+            } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+            }
+        };
+
+        this.logWebSocket.onclose = () => {
+            console.log('Log WebSocket disconnected');
+            this.updateLogConnectionStatus(false);
+            // Attempt to reconnect after 5 seconds
+            setTimeout(() => {
+                if (this.currentTab === 'monitoring') {
+                    this.connectLogWebSocket();
+                }
+            }, 5000);
+        };
+
+        this.logWebSocket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            this.updateLogConnectionStatus(false);
+        };
+    }
+
+    updateLogConnectionStatus(connected) {
+        const logContainer = document.getElementById('log-container');
+        if (!logContainer) return;
+
+        if (!connected) {
+            logContainer.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="bi bi-wifi-off text-warning fs-4"></i>
+                    <p class="mt-2 mb-0">Disconnected from log stream</p>
+                    <small>Attempting to reconnect...</small>
+                </div>
+            `;
+        }
+    }
+
+    displayInitialLogs(logs) {
+        const logContainer = document.getElementById('log-container');
+        if (!logContainer) return;
+
+        logContainer.innerHTML = '';
+        logs.forEach(log => this.addLogEntry(log, false));
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    addLogEntry(logEntry, scroll = true) {
+        const logContainer = document.getElementById('log-container');
+        if (!logContainer) return;
+
+        // Apply filters
+        if (!this.shouldShowLogEntry(logEntry)) return;
+
+        const levelColor = this.getLogLevelColor(logEntry.level);
+        const timestamp = new Date(logEntry.timestamp).toLocaleTimeString();
+
+        const logLine = document.createElement('div');
+        logLine.className = 'log-entry';
+        logLine.innerHTML = `
+            <span class="text-muted">[${timestamp}]</span>
+            <span class="badge bg-secondary me-2">${logEntry.container}</span>
+            <span class="badge bg-${levelColor} me-2">${logEntry.level.toUpperCase()}</span>
+            <span>${this.escapeHtml(logEntry.message)}</span>
+        `;
+
+        logContainer.appendChild(logLine);
+
+        // Limit number of log entries
+        const logEntries = logContainer.querySelectorAll('.log-entry');
+        if (logEntries.length > this.maxLogEntries) {
+            logEntries[0].remove();
+        }
+
+        if (scroll) {
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+    }
+
+    shouldShowLogEntry(logEntry) {
+        const containerFilter = document.getElementById('log-container-filter')?.value;
+        const levelFilter = document.getElementById('log-level-filter')?.value;
+
+        if (containerFilter && logEntry.container !== containerFilter) {
+            return false;
+        }
+
+        if (levelFilter && logEntry.level !== levelFilter) {
+            return false;
+        }
+
+        return true;
+    }
+
+    getLogLevelColor(level) {
+        switch (level) {
+            case 'error': return 'danger';
+            case 'warn': return 'warning';
+            case 'info': return 'info';
+            case 'debug': return 'secondary';
+            default: return 'light';
+        }
+    }
+
+    filterLogs() {
+        // Request filtered logs from server
+        const containerFilter = document.getElementById('log-container-filter')?.value;
+        const levelFilter = document.getElementById('log-level-filter')?.value;
+
+        if (this.logWebSocket && this.logWebSocket.readyState === WebSocket.OPEN) {
+            const filter = {};
+            if (containerFilter) filter.containers = [containerFilter];
+            if (levelFilter) filter.levels = [levelFilter];
+            filter.limit = 500;
+
+            this.logWebSocket.send(JSON.stringify({
+                type: 'filter-logs',
+                filter: filter
+            }));
+        }
+    }
+
+    clearLogs() {
+        const logContainer = document.getElementById('log-container');
+        if (logContainer) {
+            logContainer.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="bi bi-terminal text-info fs-4"></i>
+                    <p class="mt-2 mb-0">Logs cleared</p>
+                    <small>New logs will appear here...</small>
+                </div>
+            `;
+        }
+    }
+
+    toggleLogPause() {
+        this.logsPaused = !this.logsPaused;
+        const pauseBtn = document.getElementById('pause-logs-btn');
+        if (pauseBtn) {
+            if (this.logsPaused) {
+                pauseBtn.innerHTML = '<i class="bi bi-play"></i> Resume';
+                pauseBtn.classList.remove('btn-outline-primary');
+                pauseBtn.classList.add('btn-outline-success');
+            } else {
+                pauseBtn.innerHTML = '<i class="bi bi-pause"></i> Pause';
+                pauseBtn.classList.remove('btn-outline-success');
+                pauseBtn.classList.add('btn-outline-primary');
+            }
+        }
+    }
+
+    async loadLogStats() {
+        try {
+            const response = await fetch(`${this.apiBase}/monitoring/logs/stats`);
+            if (response.ok) {
+                const stats = await response.json();
+                this.updateLogStatsDisplay(stats.data);
+            }
+        } catch (error) {
+            console.error('Error loading log stats:', error);
+        }
+    }
+
+    updateLogStatsDisplay(stats) {
+        const logStatsContainer = document.getElementById('log-stats');
+        if (!logStatsContainer) return;
+
+        logStatsContainer.innerHTML = `
+            <div class="row">
+                <div class="col-6">
+                    <div class="text-center">
+                        <h4 class="text-primary">${stats.totalLogs}</h4>
+                        <small class="text-muted">Total Logs</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-center">
+                        <h4 class="text-info">${Object.keys(stats.containerCounts).length}</h4>
+                        <small class="text-muted">Active Containers</small>
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <h6>By Container:</h6>
+            ${Object.entries(stats.containerCounts).map(([container, count]) => `
+                <div class="d-flex justify-content-between">
+                    <span>${container}:</span>
+                    <span class="badge bg-secondary">${count}</span>
+                </div>
+            `).join('')}
+            <hr>
+            <h6>By Level:</h6>
+            ${Object.entries(stats.levelCounts).map(([level, count]) => `
+                <div class="d-flex justify-content-between">
+                    <span>${level}:</span>
+                    <span class="badge bg-${this.getLogLevelColor(level)}">${count}</span>
+                </div>
+            `).join('')}
+        `;
+    }
+
+    async downloadLogs() {
+        try {
+            const response = await fetch(`${this.apiBase}/monitoring/logs?limit=5000`);
+            if (response.ok) {
+                const logs = await response.json();
+                const logText = logs.data.map(log =>
+                    `[${new Date(log.timestamp).toISOString()}] [${log.container}] [${log.level.toUpperCase()}] ${log.message}`
+                ).join('\n');
+
+                const blob = new Blob([logText], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `starbunk-logs-${new Date().toISOString().split('T')[0]}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                this.showToast('Logs downloaded successfully', 'success');
+            }
+        } catch (error) {
+            console.error('Error downloading logs:', error);
+            this.showToast('Error downloading logs', 'error');
+        }
+    }
+
+    async resolveAlert(alertId) {
+        try {
+            const response = await fetch(`${this.apiBase}/monitoring/alerts/${alertId}/resolve`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                this.loadMonitoringData(); // Refresh alerts
+                this.showToast('Alert resolved', 'success');
+            }
+        } catch (error) {
+            console.error('Error resolving alert:', error);
+            this.showToast('Error resolving alert', 'error');
+        }
+    }
+
+    async resolveAllAlerts() {
+        if (!this.monitoringData?.data?.alerts?.length) {
+            this.showToast('No alerts to resolve', 'info');
+            return;
+        }
+
+        if (confirm('Are you sure you want to resolve all active alerts?')) {
+            try {
+                const alerts = this.monitoringData.data.alerts;
+                const resolvePromises = alerts.map(alert =>
+                    fetch(`${this.apiBase}/monitoring/alerts/${alert.id}/resolve`, { method: 'POST' })
+                );
+
+                await Promise.all(resolvePromises);
+                this.loadMonitoringData(); // Refresh alerts
+                this.showToast('All alerts resolved', 'success');
+            } catch (error) {
+                console.error('Error resolving all alerts:', error);
+                this.showToast('Error resolving alerts', 'error');
+            }
+        }
     }
 
     escapeHtml(text) {

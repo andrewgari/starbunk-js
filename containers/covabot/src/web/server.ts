@@ -10,6 +10,8 @@ import { CreateConfigurationRequest, UpdateConfigurationRequest } from '../types
 import { rateLimit, requestLogger } from './middleware/auth';
 import { CovaBot } from '../cova-bot/covaBot';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from '../cova-bot/triggers';
+import { ProductionMonitoringService } from '../services/productionMonitoringService';
+import { LogAggregationService } from '../services/logAggregationService';
 
 export class WebServer {
   protected app: express.Application;
@@ -18,6 +20,8 @@ export class WebServer {
   private configService: BotConfigurationService;
   private useQdrant: boolean;
   private covaBot: CovaBot;
+  private monitoringService: ProductionMonitoringService;
+  private logService: LogAggregationService;
 
   constructor(port: number = 7080, useQdrant: boolean = true) {
     this.app = express();
@@ -29,6 +33,10 @@ export class WebServer {
 
     // Initialize configuration service
     this.configService = BotConfigurationService.getInstance();
+
+    // Initialize monitoring services
+    this.monitoringService = ProductionMonitoringService.getInstance();
+    this.logService = LogAggregationService.getInstance();
 
     // Initialize CovaBot for web testing
     this.covaBot = new CovaBot({
@@ -527,6 +535,9 @@ export class WebServer {
       }
     });
 
+    // Production Monitoring Routes
+    this.setupMonitoringRoutes(apiRouter);
+
     // Mount API routes
     this.app.use('/api', apiRouter);
 
@@ -785,6 +796,151 @@ export class WebServer {
     return this.app;
   }
 
+  /**
+   * Setup production monitoring routes
+   */
+  private setupMonitoringRoutes(apiRouter: express.Router): void {
+    // Production health overview
+    apiRouter.get('/monitoring/health', async (req, res) => {
+      try {
+        const metrics = this.monitoringService.getMetrics();
+        res.json({
+          success: true,
+          data: metrics
+        });
+      } catch (error) {
+        logger.error('[WebServer] Error getting production metrics:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to get production metrics'
+        });
+      }
+    });
+
+    // Force health check
+    apiRouter.post('/monitoring/health/check', async (req, res) => {
+      try {
+        const metrics = await this.monitoringService.forceHealthCheck();
+        res.json({
+          success: true,
+          data: metrics
+        });
+      } catch (error) {
+        logger.error('[WebServer] Error forcing health check:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to perform health check'
+        });
+      }
+    });
+
+    // Get container-specific health
+    apiRouter.get('/monitoring/containers/:name', async (req: any, res: any) => {
+      try {
+        const containerHealth = this.monitoringService.getContainerHealth(req.params.name);
+        if (!containerHealth) {
+          return res.status(404).json({
+            success: false,
+            error: 'Container not found'
+          });
+        }
+        res.json({
+          success: true,
+          data: containerHealth
+        });
+      } catch (error) {
+        logger.error('[WebServer] Error getting container health:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to get container health'
+        });
+      }
+    });
+
+    // Get logs with filtering
+    apiRouter.get('/monitoring/logs', (req, res) => {
+      try {
+        const filter = {
+          containers: req.query.containers ? (req.query.containers as string).split(',') : undefined,
+          levels: req.query.levels ? (req.query.levels as string).split(',') : undefined,
+          since: req.query.since ? new Date(req.query.since as string) : undefined,
+          until: req.query.until ? new Date(req.query.until as string) : undefined,
+          search: req.query.search as string,
+          limit: req.query.limit ? parseInt(req.query.limit as string) : 1000
+        };
+
+        const logs = this.logService.getLogs(filter);
+        res.json({
+          success: true,
+          data: logs
+        });
+      } catch (error) {
+        logger.error('[WebServer] Error getting logs:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to get logs'
+        });
+      }
+    });
+
+    // Get log statistics
+    apiRouter.get('/monitoring/logs/stats', (req, res) => {
+      try {
+        const stats = this.logService.getLogStats();
+        res.json({
+          success: true,
+          data: stats
+        });
+      } catch (error) {
+        logger.error('[WebServer] Error getting log stats:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to get log statistics'
+        });
+      }
+    });
+
+    // Get all alerts
+    apiRouter.get('/monitoring/alerts', (req, res) => {
+      try {
+        const alerts = this.monitoringService.getAllAlerts();
+        res.json({
+          success: true,
+          data: alerts
+        });
+      } catch (error) {
+        logger.error('[WebServer] Error getting alerts:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to get alerts'
+        });
+      }
+    });
+
+    // Resolve alert
+    apiRouter.post('/monitoring/alerts/:id/resolve', async (req: any, res: any) => {
+      try {
+        const resolved = this.monitoringService.resolveAlert(req.params.id);
+        if (!resolved) {
+          return res.status(404).json({
+            success: false,
+            error: 'Alert not found or already resolved'
+          });
+        }
+        res.json({
+          success: true,
+          message: 'Alert resolved'
+        });
+      } catch (error) {
+        logger.error('[WebServer] Error resolving alert:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to resolve alert'
+        });
+      }
+    });
+  }
+
   async start(): Promise<void> {
     try {
       // Initialize the memory service
@@ -795,10 +951,23 @@ export class WebServer {
       await this.configService.loadConfiguration();
       logger.info('[WebServer] Configuration service initialized');
 
+      // Start production monitoring
+      this.monitoringService.startMonitoring();
+      logger.info('[WebServer] Production monitoring service started');
+
+      // Start log aggregation
+      this.logService.startLogCollection();
+      logger.info('[WebServer] Log aggregation service started');
+
       // Start the server
       return new Promise((resolve) => {
-        this.app.listen(this.port, () => {
+        const server = this.app.listen(this.port, () => {
           logger.info(`[WebServer] CovaBot memory management interface (Qdrant) running on http://localhost:${this.port}`);
+
+          // Setup WebSocket server for log streaming
+          this.logService.setupWebSocketServer(server);
+          logger.info('[WebServer] WebSocket server setup for real-time log streaming');
+
           resolve();
         });
       });
