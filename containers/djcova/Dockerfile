@@ -1,69 +1,48 @@
 # DJCova Container - Music service
-# Optimized multi-stage build with Alpine Linux (Docker & Podman compatible)
+# Optimized 2-stage build with Alpine Linux (Docker & Podman compatible)
 
-# Stage 1: Dependencies - Cache npm dependencies separately
-FROM node:20-alpine AS dependencies
-
-WORKDIR /app
-
-# Install system dependencies needed for native modules
-RUN apk add --no-cache python3 make g++ openssl
-
-# Copy package files for dependency installation
-COPY containers/shared/package*.json ./shared/
-COPY containers/djcova/package*.json ./
-
-# Install shared dependencies (optimized for both Docker and Podman)
-RUN cd shared && npm ci --only=production && npm ci && npm cache clean --force
-
-# Install container dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Stage 2: Builder - Build the application
+# Stage 1: Builder - Build everything in one stage for speed
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++ openssl
+# Install all system dependencies in one layer
+RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 
-# Copy package files
+# Copy package files for better caching
 COPY containers/shared/package*.json ./shared/
 COPY containers/djcova/package*.json ./
 
-# Install all dependencies (including dev) - optimized for both Docker and Podman
-RUN cd shared && npm ci && cd .. && npm ci && npm cache clean --force
+# Install all dependencies in parallel for speed
+RUN cd shared && npm ci && cd .. && npm ci
 
 # Copy source code
 COPY containers/shared ./shared
 COPY containers/djcova ./
 
-# Build shared package and container
+# Build shared package and container in one step
 RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
     cd .. && npm install "./shared/${SHARED_TGZ}" && \
-    npm run build
+    npm run build && \
+    npm prune --omit=dev
 
-# Stage 3: Runtime - Minimal production image
+# Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
 
 WORKDIR /app
 
-# Install runtime system dependencies (including ffmpeg for audio processing)
-RUN apk add --no-cache ffmpeg openssl python3 dumb-init curl && \
+# Create user and install runtime dependencies in one layer
+RUN apk add --no-cache ffmpeg openssl dumb-init curl && \
     addgroup -g 1001 -S djcova && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova
 
-# Copy production dependencies from dependencies stage
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/shared/node_modules ./shared/node_modules
+# Copy everything from builder stage (production-ready) with correct ownership
+COPY --from=builder --chown=djcova:djcova /app/node_modules ./node_modules
+COPY --from=builder --chown=djcova:djcova /app/shared ./shared
+COPY --from=builder --chown=djcova:djcova /app/dist ./dist
+COPY --from=builder --chown=djcova:djcova /app/package.json ./
 
-# Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/shared/dist ./shared/dist
-COPY --from=builder /app/package.json ./
-
-# Set ownership and switch to non-root user
-RUN chown -R djcova:djcova /app
+# Switch to non-root user
 USER djcova
 
 # Health check

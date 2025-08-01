@@ -55,9 +55,9 @@ RUN apk add --no-cache openssl dumb-init curl && \
     addgroup -g 1001 -S bunkbot && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G bunkbot bunkbot
 
-# Copy production dependencies from dependencies stage
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/shared/node_modules ./shared/node_modules
+# Copy production dependencies from builder stage (includes installed shared package)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/shared/node_modules ./shared/node_modules
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
