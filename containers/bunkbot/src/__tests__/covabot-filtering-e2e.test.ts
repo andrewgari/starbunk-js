@@ -243,7 +243,7 @@ describe('CovaBot Filtering E2E Tests', () => {
 
 		it('should provide detailed logging for CovaBot detection in debug mode', () => {
 			// Arrange
-			const _covaBotMessage = mockMessage({
+			const covaBotMessage = mockMessage({
 				author: mockCovaBotUser()
 			});
 
@@ -264,7 +264,7 @@ describe('CovaBot Filtering E2E Tests', () => {
 
 		it('should provide detailed logging for exclusion decisions in debug mode', () => {
 			// Arrange
-			const _covaBotMessage = mockMessage({
+			const covaBotMessage = mockMessage({
 				author: mockCovaBotUser()
 			});
 
