@@ -1,0 +1,327 @@
+name: Container Startup Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    paths:
+      - 'containers/**'
+      - 'shared/**'
+      - '.github/workflows/container-startup-validation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'containers/**'
+      - 'shared/**'
+      - '.github/workflows/container-startup-validation.yml'
+
+# Allow manual triggering for testing
+  workflow_dispatch:
+    inputs:
+      test_level:
+        description: 'Test level to run'
+        required: true
+        default: 'unit'
+        type: choice
+        options:
+          - unit
+          - integration
+          - full
+
+env:
+  # Test environment variables (safe for CI)
+  STARBUNK_TOKEN: ${{ secrets.STARBUNK_TOKEN || 'test-token-placeholder-70-chars-long-for-validation-testing-purposes' }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'test-openai-key' }}
+  OLLAMA_API_URL: ${{ secrets.OLLAMA_API_URL || 'http://localhost:11434' }}
+  DEBUG_MODE: 'true'
+  TESTING_SERVER_IDS: '753251582719688714'
+  TESTING_CHANNEL_IDS: '1234567890123456789'
+  NODE_ENV: 'test'
+
+jobs:
+  detect-changes:
+    name: Detect Container Changes
+    runs-on: ubuntu-latest
+    outputs:
+      bunkbot: ${{ steps.changes.outputs.bunkbot }}
+      covabot: ${{ steps.changes.outputs.covabot }}
+      djcova: ${{ steps.changes.outputs.djcova }}
+      starbunk-dnd: ${{ steps.changes.outputs.starbunk-dnd }}
+      snowbunk: ${{ steps.changes.outputs.snowbunk }}
+      shared: ${{ steps.changes.outputs.shared }}
+      container-validation: ${{ steps.changes.outputs.container-validation }}
+      any-container: ${{ steps.set-flags.outputs.any-container }}
+
+
+      - name: Set validation flags
+        id: set-flags
+        run: |
+          # Check if any container-related changes occurred
+          if [[ "${{ steps.changes.outputs.bunkbot }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.covabot }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.djcova }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.starbunk-dnd }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.snowbunk }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.shared }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.container-validation }}" == "true" ]]; then
+            echo "any-container=true" >> $GITHUB_OUTPUT
+          else
+            echo "any-container=false" >> $GITHUB_OUTPUT
+          fi
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: '.github/path-filters.yml'
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.any-container == 'true'
+    strategy:
+      matrix:
+        container: [bunkbot, covabot, djcova, starbunk-dnd]
+        include:
+          - container: bunkbot
+            path: containers/bunkbot
+            test-script: test:unit
+          - container: covabot
+            path: containers/covabot
+            test-script: test
+          - container: djcova
+            path: containers/djcova
+            test-script: test
+          - container: starbunk-dnd
+            path: containers/starbunk-dnd
+            test-script: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            containers/shared/package-lock.json
+            ${{ matrix.path }}/package-lock.json
+
+      - name: Install shared dependencies
+        run: |
+          cd containers/shared
+          npm ci
+
+      - name: Build shared library
+        run: |
+          cd containers/shared
+          npm run build
+
+      - name: Install container dependencies
+        run: |
+          cd ${{ matrix.path }}
+          npm ci
+
+      - name: Run unit tests
+        run: |
+          cd ${{ matrix.path }}
+          npm run ${{ matrix.test-script }}
+
+  covabot-filtering-tests:
+    name: CovaBot Filtering Tests
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.bunkbot == 'true' || needs.detect-changes.outputs.shared == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            containers/shared/package-lock.json
+            containers/bunkbot/package-lock.json
+
+      - name: Install shared dependencies
+        run: |
+          cd containers/shared
+          npm ci
+
+      - name: Build shared library
+        run: |
+          cd containers/shared
+          npm run build
+
+      - name: Install BunkBot dependencies
+        run: |
+          cd containers/bunkbot
+          npm ci
+
+      - name: Run CovaBot filtering tests
+        run: |
+          cd containers/bunkbot
+          npm test -- --testPathPattern="covabot-filtering" --verbose
+
+  container-startup-tests:
+    name: Container Startup Tests
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.any-container == 'true'
+    strategy:
+      matrix:
+        container: [bunkbot]
+        include:
+          - container: bunkbot
+            path: containers/bunkbot
+            dockerfile: containers/bunkbot/Dockerfile
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            containers/shared/package-lock.json
+            ${{ matrix.path }}/package-lock.json
+
+      - name: Install shared dependencies
+        run: |
+          cd containers/shared
+          npm ci
+
+      - name: Build shared library
+        run: |
+          cd containers/shared
+          npm run build
+
+      - name: Install container dependencies
+        run: |
+          cd ${{ matrix.path }}
+          npm ci
+
+      - name: Run container startup unit tests
+        run: |
+          cd ${{ matrix.path }}
+          npm run test:container
+
+  container-health-tests:
+    name: Container Health Tests (E2E)
+    runs-on: ubuntu-latest
+    needs: [detect-changes, unit-tests]
+    if: |
+      needs.detect-changes.outputs.any-container == 'true' && 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test_level == 'full') ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'test:e2e')) ||
+      github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        container: [bunkbot]
+        include:
+          - container: bunkbot
+            path: containers/bunkbot
+            dockerfile: containers/bunkbot/Dockerfile
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            containers/shared/package-lock.json
+            ${{ matrix.path }}/package-lock.json
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install shared dependencies
+        run: |
+          cd containers/shared
+          npm ci
+
+      - name: Build shared library
+        run: |
+          cd containers/shared
+          npm run build
+
+      - name: Install container dependencies
+        run: |
+          cd ${{ matrix.path }}
+          npm ci
+
+      - name: Create test environment file
+        run: |
+          cat > .env << EOF
+          STARBUNK_TOKEN=${{ env.STARBUNK_TOKEN }}
+          OPENAI_API_KEY=${{ env.OPENAI_API_KEY }}
+          OLLAMA_API_URL=${{ env.OLLAMA_API_URL }}
+          DEBUG_MODE=${{ env.DEBUG_MODE }}
+          TESTING_SERVER_IDS=${{ env.TESTING_SERVER_IDS }}
+          TESTING_CHANNEL_IDS=${{ env.TESTING_CHANNEL_IDS }}
+          NODE_ENV=${{ env.NODE_ENV }}
+          EOF
+
+      - name: Run container health tests
+        run: |
+          cd ${{ matrix.path }}
+          npm test -- --testPathPattern="container-health" --runInBand --detectOpenHandles --verbose
+        timeout-minutes: 10
+
+  validation-summary:
+    name: Container Validation Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, unit-tests, covabot-filtering-tests, container-startup-tests]
+    if: always() && needs.detect-changes.outputs.any-container == 'true'
+    steps:
+      - name: Check test results
+        run: |
+          echo "## Container Startup Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.unit-tests.result }}" == "success" ]]; then
+            echo "✅ **Unit Tests**: All container unit tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Unit Tests**: Some unit tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.covabot-filtering-tests.result }}" == "success" ]]; then
+            echo "✅ **CovaBot Filtering**: Enhanced bot filtering tests passed" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.covabot-filtering-tests.result }}" == "skipped" ]]; then
+            echo "⏭️ **CovaBot Filtering**: Tests skipped (no relevant changes)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **CovaBot Filtering**: Bot filtering tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.container-startup-tests.result }}" == "success" ]]; then
+            echo "✅ **Container Startup**: All startup validation tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Container Startup**: Some startup tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "- **Unit Tests**: Core component functionality" >> $GITHUB_STEP_SUMMARY
+          echo "- **CovaBot Filtering**: Enhanced bot response filtering" >> $GITHUB_STEP_SUMMARY
+          echo "- **Container Startup**: Service initialization and Discord connection" >> $GITHUB_STEP_SUMMARY
+          
+          # Fail if any required tests failed
+          if [[ "${{ needs.unit-tests.result }}" != "success" ]] || 
+             [[ "${{ needs.container-startup-tests.result }}" != "success" ]] ||
+             [[ "${{ needs.covabot-filtering-tests.result }}" == "failure" ]]; then
+            echo "❌ Container validation failed - check individual test results"
+            exit 1
+          fi
+          
+          echo "✅ All container validation tests passed successfully!"
