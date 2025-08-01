@@ -50,7 +50,15 @@ jobs:
       shared: ${{ steps.changes.outputs.shared }}
       container-validation: ${{ steps.changes.outputs.container-validation }}
       any-container: ${{ steps.set-flags.outputs.any-container }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: '.github/path-filters.yml'
 
       - name: Set validation flags
         id: set-flags
