@@ -170,3 +170,7 @@ logs-dev
 
 */prisma
 */scripts
+
+# Temporary development and optimization scripts
+scripts/
+scripts/*
