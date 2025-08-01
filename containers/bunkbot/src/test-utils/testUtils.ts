@@ -3,6 +3,54 @@ import { BotIdentity } from '../types/botIdentity';
 import { DiscordService } from '@starbunk/shared';
 
 /**
+ * Mock Discord User for testing
+ */
+export function mockUser(overrides: Partial<User> = {}): User {
+	const defaultUser = {
+		id: '987654321',
+		username: 'testuser',
+		discriminator: '0001',
+		avatar: 'avatar_hash',
+		bot: false,
+		system: false,
+		mfaEnabled: false,
+		verified: true,
+		email: null,
+		locale: 'en-US',
+		flags: null,
+		premiumType: null,
+		publicFlags: null,
+		banner: null,
+		accentColor: null,
+		globalName: null,
+		avatarDecoration: null,
+		displayName: 'testuser',
+		...overrides
+	} as User;
+
+	return defaultUser;
+}
+
+/**
+ * Mock Discord Client for testing
+ */
+export function mockClient(overrides: Partial<Client> = {}): Partial<Client> {
+	return {
+		user: mockUser({ bot: true }),
+		guilds: {
+			cache: new Map()
+		},
+		channels: {
+			cache: new Map()
+		},
+		users: {
+			cache: new Map()
+		},
+		...overrides
+	};
+}
+
+/**
  * Mock Discord Message for testing
  */
 export function mockMessage(overrides: Partial<Message> = {}): Message {
@@ -13,6 +61,7 @@ export function mockMessage(overrides: Partial<Message> = {}): Message {
 		channel: mockTextChannel(),
 		guild: mockGuild(),
 		member: mockGuildMember(),
+		client: mockClient(),
 		createdTimestamp: Date.now(),
 		editedTimestamp: null,
 		mentions: {
@@ -54,33 +103,7 @@ export function mockMessage(overrides: Partial<Message> = {}): Message {
 	return defaultMessage;
 }
 
-/**
- * Mock Discord User for testing
- */
-export function mockUser(overrides: Partial<User> = {}): User {
-	const defaultUser = {
-		id: '987654321',
-		username: 'testuser',
-		discriminator: '0001',
-		avatar: 'avatar_hash',
-		bot: false,
-		system: false,
-		mfaEnabled: false,
-		verified: true,
-		email: null,
-		flags: null,
-		premiumType: null,
-		publicFlags: null,
-		banner: null,
-		accentColor: null,
-		globalName: 'Test User',
-		avatarDecoration: null,
-		displayName: 'Test User',
-		...overrides
-	} as User;
 
-	return defaultUser;
-}
 
 /**
  * Mock Discord Guild for testing
@@ -220,21 +243,98 @@ export function mockDiscordService(overrides: Partial<DiscordService> = {}): Par
 	};
 }
 
+
+
 /**
- * Mock Discord Client for testing
+ * Create a mock CovaBot user for testing bot filtering
  */
-export function mockClient(overrides: Partial<Client> = {}): Partial<Client> {
-	return {
-		user: mockUser({ bot: true }),
-		guilds: {
-			cache: new Map()
-		},
-		channels: {
-			cache: new Map()
-		},
-		users: {
-			cache: new Map()
-		},
+export function mockCovaBotUser(overrides: Partial<User> = {}): User {
+	return mockUser({
+		id: '139592376443338752', // CovaBot's user ID
+		username: 'CovaBot',
+		displayName: 'CovaBot',
+		bot: true,
 		...overrides
-	};
+	});
+}
+
+/**
+ * Create a mock message from CovaBot
+ */
+export function mockCovaBotMessage(overrides: Partial<Message> = {}): Message {
+	return mockMessage({
+		author: mockCovaBotUser(),
+		content: 'Hello from CovaBot!',
+		...overrides
+	});
+}
+
+/**
+ * Create a mock generic bot user for testing
+ */
+export function mockGenericBotUser(overrides: Partial<User> = {}): User {
+	return mockUser({
+		id: '123456789012345678',
+		username: 'GenericBot',
+		displayName: 'GenericBot',
+		bot: true,
+		...overrides
+	});
+}
+
+/**
+ * Create a mock message from a generic bot
+ */
+export function mockGenericBotMessage(overrides: Partial<Message> = {}): Message {
+	return mockMessage({
+		author: mockGenericBotUser(),
+		content: 'Hello from a generic bot!',
+		...overrides
+	});
+}
+
+/**
+ * Create a mock human user for testing
+ */
+export function mockHumanUser(overrides: Partial<User> = {}): User {
+	return mockUser({
+		id: '987654321098765432',
+		username: 'HumanUser',
+		displayName: 'Human User',
+		bot: false,
+		...overrides
+	});
+}
+
+/**
+ * Create a mock message from a human user
+ */
+export function mockHumanMessage(overrides: Partial<Message> = {}): Message {
+	return mockMessage({
+		author: mockHumanUser(),
+		content: 'Hello from a human!',
+		...overrides
+	});
+}
+
+/**
+ * Create a mock testing channel (for debug mode)
+ */
+export function mockTestingChannel(overrides: Partial<TextChannel> = {}): TextChannel {
+	return mockTextChannel({
+		id: '123456789012345678', // Testing channel ID
+		name: 'testing-channel',
+		...overrides
+	});
+}
+
+/**
+ * Create a mock production channel
+ */
+export function mockProductionChannel(overrides: Partial<TextChannel> = {}): TextChannel {
+	return mockTextChannel({
+		id: '987654321098765432', // Production channel ID
+		name: 'general',
+		...overrides
+	});
 }

@@ -108,11 +108,14 @@ export function contextContainsPhrase(phrase: string): ContextualTriggerConditio
 
 // Check if message is from specific user
 export function fromUser(userId: string | UserId): TriggerCondition {
-	if (isDebugMode()) {
-		return () => userId === userIds.Cova;
-	}
 	const id = typeof userId === 'string' ? createUserId(userId) : userId;
-	return (message: Message) => message.author.id === id;
+	return (message: Message) => {
+		if (isDebugMode()) {
+			// In debug mode, only allow Cova's user ID
+			return message.author.id === userIds.Cova;
+		}
+		return message.author.id === id;
+	};
 }
 
 // Check if message is in a specific channel
@@ -136,7 +139,7 @@ export function withChance(chance: number): Condition {
 
 		const random = Math.random() * 100;
 		const result = random <= chance;
-		logger.debug(`withChance(${chance}): random=${random}, result=${result}`);
+		logger.debug(`withChance(${chance}): random=${Math.round(random)}, result=${result}`);
 		return result;
 	};
 }
@@ -160,21 +163,24 @@ export function fromBot(includeSelf = true): TriggerCondition {
  * This is more robust than the generic fromBot() function
  */
 export function isCovaBot(message: Message): boolean {
+	// Handle null/undefined author gracefully
+	if (!message?.author) return false;
+
 	// Check if message is from a bot first
 	if (!message.author.bot) return false;
 
-	// Check username patterns
-	const username = message.author.username.toLowerCase();
+	// Handle null/undefined username gracefully
+	const username = message.author.username?.toLowerCase() || '';
 	const displayName = message.author.displayName?.toLowerCase() || '';
 
-	// Check for CovaBot-specific identifiers
+	// Check for CovaBot-specific identifiers (exact match, not substring)
 	const isCovaUsername = BOT_IDENTIFIERS.COVABOT_USERNAMES.some(name =>
-		username.includes(name.toLowerCase()) || displayName.includes(name.toLowerCase())
+		username === name.toLowerCase() || displayName === name.toLowerCase()
 	);
 
 	// Check webhook names if available (for webhook-sent messages)
 	const isCovaWebhook = message.webhookId ? BOT_IDENTIFIERS.COVABOT_WEBHOOK_NAMES.some(name =>
-		username.includes(name.toLowerCase()) || displayName.includes(name.toLowerCase())
+		username === name.toLowerCase() || displayName === name.toLowerCase()
 	) : false;
 
 	const result = isCovaUsername || isCovaWebhook;
@@ -199,6 +205,9 @@ export function isCovaBot(message: Message): boolean {
  * This implements the comprehensive bot filtering logic
  */
 export function shouldExcludeFromReplyBots(message: Message): boolean {
+	// Handle null/undefined message or author gracefully
+	if (!message?.author) return true; // Exclude malformed messages
+
 	// Always exclude non-bot messages from this check
 	if (!message.author.bot) return false;
 
@@ -211,7 +220,7 @@ export function shouldExcludeFromReplyBots(message: Message): boolean {
 	}
 
 	// Check if it's from the same client (self)
-	if (message.client.user && message.author.id === message.client.user.id) {
+	if (message.client?.user && message.author.id === message.client.user.id) {
 		if (isDebugMode()) {
 			logger.debug(`❌ Excluding self-message from reply bot processing`);
 		}
@@ -219,11 +228,11 @@ export function shouldExcludeFromReplyBots(message: Message): boolean {
 	}
 
 	// Check excluded bot names
-	const username = message.author.username.toLowerCase();
+	const username = message.author.username?.toLowerCase() || '';
 	const displayName = message.author.displayName?.toLowerCase() || '';
 
 	const isExcludedName = BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.some(name =>
-		username.includes(name.toLowerCase()) || displayName.includes(name.toLowerCase())
+		username === name.toLowerCase() || displayName === name.toLowerCase()
 	);
 
 	if (isExcludedName) {
