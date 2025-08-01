@@ -119,9 +119,10 @@ jobs:
           echo "should-release=true" >> $GITHUB_OUTPUT
 
           # Calculate new version
-          # Remove 'v' prefix if present
+          # Normalise version: strip leading "v" and any pre-release / build metadata
           VERSION_NUMBER="${CURRENT_VERSION#v}"
-          IFS='.' read -r major minor patch <<< "${VERSION_NUMBER}"
+          BASE_VERSION="${VERSION_NUMBER%%[-+]*}"   # keep only x.y.z
+          IFS='.' read -r major minor patch <<< "${BASE_VERSION}"
 
           # Ensure we have valid numbers
           major=${major:-0}

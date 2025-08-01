@@ -108,12 +108,12 @@ export function contextContainsPhrase(phrase: string): ContextualTriggerConditio
 
 // Check if message is from specific user
 export function fromUser(userId: string | UserId): TriggerCondition {
-	const id = typeof userId === 'string' ? createUserId(userId) : userId;
 	return (message: Message) => {
 		if (isDebugMode()) {
 			// In debug mode, only allow Cova's user ID
 			return message.author.id === userIds.Cova;
 		}
+		const id = typeof userId === 'string' ? createUserId(userId) : userId;
 		return message.author.id === id;
 	};
 }

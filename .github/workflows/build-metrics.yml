@@ -40,10 +40,10 @@ jobs:
               owner, repo
             });
 
-            const containerWorkflow = workflows.workflows.find(w =>
+            let containerWorkflow = workflows.workflows.find(w =>
               w.name === 'Container Build, Test & Publish' ||
-              w.name.includes('Container') ||
-              w.name.includes('Build')
+              w.name.toLowerCase().includes('container') ||
+              w.name.toLowerCase().includes('build')
             );
 
             if (!containerWorkflow) {

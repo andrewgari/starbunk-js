@@ -216,7 +216,7 @@ describe('Individual Bot Trigger Tests', () => {
 		});
 	});
 
-	describe('HoldBot Triggers', () => {
+	describe('HoldBot Triggers (word match)', () => {
 		let holdBot: any;
 
 		beforeEach(() => {

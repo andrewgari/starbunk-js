@@ -9,7 +9,6 @@
  */
 
 import { execSync } from 'child_process';
-// import { logger } from '@starbunk/shared';
 
 interface TestSuite {
 	name: string;
