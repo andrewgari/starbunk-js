@@ -8,6 +8,8 @@ module.exports = {
 		'<rootDir>/src/**/*.test.ts',        // Co-located unit tests
 		'<rootDir>/src/**/__tests__/**/*.test.ts' // Co-located unit tests in __tests__ dirs
 	],
+	// E2E tests have longer timeouts
+	testTimeout: 30000,
 	setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
 	collectCoverageFrom: [
 		'src/**/*.ts',

@@ -214,6 +214,20 @@ tests:
   - 'jest.config.js'
   - '**/__tests__/**'
 
+# Container startup validation tests - triggers validation when tests change
+container-validation:
+  - 'containers/**/__tests__/**'
+  - 'containers/**/tests/**'
+  - 'containers/**/*.test.ts'
+  - 'containers/**/*.test.js'
+  - 'containers/**/*.spec.ts'
+  - 'containers/**/*.spec.js'
+  - 'containers/**/jest.config.js'
+  - 'containers/**/package.json'
+  - 'containers/**/src/**'
+  - 'containers/shared/**'
+  - '.github/workflows/container-startup-validation.yml'
+
 # Configuration files that might affect builds
 config:
   - '.eslintrc*'

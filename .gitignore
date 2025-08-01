@@ -174,3 +174,6 @@ logs-dev
 # Temporary development and optimization scripts
 scripts/
 scripts/*
+
+*.md
+!README.md

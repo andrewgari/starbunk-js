@@ -7,6 +7,23 @@ const userIds = {
 	Venn: '123456789012345678', // Valid format placeholder for Venn
 	Chad: '123456789012345679' // Valid format placeholder for Chad
 };
+
+// Bot identification constants
+const BOT_IDENTIFIERS = {
+	// Discord application/client ID used by all containers
+	STARBUNK_CLIENT_ID: '836445923105308672',
+
+	// CovaBot-specific identifiers (AI personality bot)
+	COVABOT_WEBHOOK_NAMES: ['CovaBot', 'Cova', 'CovaBot Webhook'],
+	COVABOT_USERNAMES: ['CovaBot', 'Cova'],
+
+	// BunkBot-specific identifiers (reply bots)
+	BUNKBOT_WEBHOOK_NAMES: ['BunkBot', 'BunkBot Webhook'],
+
+	// Other bot identifiers to exclude
+	EXCLUDED_BOT_NAMES: ['CovaBot', 'Cova', 'DJCova', 'Snowbunk'],
+	EXCLUDED_BOT_IDS: [] as string[] // Can be populated with specific bot user IDs
+};
 import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
 /**
@@ -138,6 +155,100 @@ export function fromBot(includeSelf = true): TriggerCondition {
 	};
 }
 
+/**
+ * Enhanced bot detection that identifies specific bot types
+ * This is more robust than the generic fromBot() function
+ */
+export function isCovaBot(message: Message): boolean {
+	// Check if message is from a bot first
+	if (!message.author.bot) return false;
+
+	// Check username patterns
+	const username = message.author.username.toLowerCase();
+	const displayName = message.author.displayName?.toLowerCase() || '';
+
+	// Check for CovaBot-specific identifiers
+	const isCovaUsername = BOT_IDENTIFIERS.COVABOT_USERNAMES.some(name =>
+		username.includes(name.toLowerCase()) || displayName.includes(name.toLowerCase())
+	);
+
+	// Check webhook names if available (for webhook-sent messages)
+	const isCovaWebhook = message.webhookId ? BOT_IDENTIFIERS.COVABOT_WEBHOOK_NAMES.some(name =>
+		username.includes(name.toLowerCase()) || displayName.includes(name.toLowerCase())
+	) : false;
+
+	const result = isCovaUsername || isCovaWebhook;
+
+	if (isDebugMode()) {
+		logger.debug(`🤖 CovaBot Detection:`, {
+			username: message.author.username,
+			displayName: message.author.displayName,
+			isBot: message.author.bot,
+			webhookId: message.webhookId,
+			isCovaUsername,
+			isCovaWebhook,
+			result
+		});
+	}
+
+	return result;
+}
+
+/**
+ * Check if message should be excluded from reply bot processing
+ * This implements the comprehensive bot filtering logic
+ */
+export function shouldExcludeFromReplyBots(message: Message): boolean {
+	// Always exclude non-bot messages from this check
+	if (!message.author.bot) return false;
+
+	// Check if it's CovaBot specifically
+	if (isCovaBot(message)) {
+		if (isDebugMode()) {
+			logger.debug(`❌ Excluding CovaBot message from reply bot processing`);
+		}
+		return true;
+	}
+
+	// Check if it's from the same client (self)
+	if (message.client.user && message.author.id === message.client.user.id) {
+		if (isDebugMode()) {
+			logger.debug(`❌ Excluding self-message from reply bot processing`);
+		}
+		return true;
+	}
+
+	// Check excluded bot names
+	const username = message.author.username.toLowerCase();
+	const displayName = message.author.displayName?.toLowerCase() || '';
+
+	const isExcludedName = BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.some(name =>
+		username.includes(name.toLowerCase()) || displayName.includes(name.toLowerCase())
+	);
+
+	if (isExcludedName) {
+		if (isDebugMode()) {
+			logger.debug(`❌ Excluding bot message from excluded name list: ${message.author.username}`);
+		}
+		return true;
+	}
+
+	// Check excluded bot IDs
+	if (BOT_IDENTIFIERS.EXCLUDED_BOT_IDS.includes(message.author.id)) {
+		if (isDebugMode()) {
+			logger.debug(`❌ Excluding bot message from excluded ID list: ${message.author.id}`);
+		}
+		return true;
+	}
+
+	// If we get here, the bot message is allowed
+	if (isDebugMode()) {
+		logger.debug(`✅ Bot message allowed for reply bot processing: ${message.author.username}`);
+	}
+
+	return false;
+}
+
 // Contextual version of fromBot
 export function contextFromBot(includeSelf = true): ContextualTriggerCondition {
 	return (context: ResponseContext): boolean => {
@@ -149,6 +260,33 @@ export function contextFromBot(includeSelf = true): ContextualTriggerCondition {
 		}
 
 		return true;
+	};
+}
+
+/**
+ * Enhanced bot condition that excludes CovaBot and other specified bots
+ * This should be used instead of fromBot() for reply bots that need to interact with bots
+ * but should exclude CovaBot specifically
+ */
+export function fromBotExcludingCovaBot(): TriggerCondition {
+	return (message: Message): boolean => {
+		// Must be from a bot
+		if (!message.author.bot) return false;
+
+		// But exclude CovaBot and other excluded bots
+		if (shouldExcludeFromReplyBots(message)) return false;
+
+		// Allow other bot messages
+		return true;
+	};
+}
+
+/**
+ * Condition that only matches CovaBot messages (for debugging/testing)
+ */
+export function fromCovaBot(): TriggerCondition {
+	return (message: Message): boolean => {
+		return isCovaBot(message);
 	};
 }
 
@@ -268,31 +406,51 @@ function escapeRegExp(string: string): string {
 
 /**
  * Wraps a condition with the default bot behavior:
- * - By default, ignores all bot messages
- * - Only processes bot messages if the condition explicitly includes fromBot()
+ * - By default, ignores all bot messages using enhanced filtering
+ * - Only processes bot messages if the condition explicitly includes fromBot() or fromBotExcludingCovaBot()
+ * - Always excludes CovaBot messages for production safety
  */
 export function withDefaultBotBehavior(botName: string, condition: TriggerCondition): TriggerCondition {
 	return async (message: Message): Promise<boolean> => {
 		try {
-			// Skip bot messages if configured
-			if (message.author.bot) {
-				logger.debug(`[${botName}] Skipping message from bot user`);
+			// Enhanced bot message filtering - excludes CovaBot and other specified bots
+			if (message.author.bot && shouldExcludeFromReplyBots(message)) {
+				if (isDebugMode()) {
+					logger.debug(`[${botName}] 🚫 Message excluded by enhanced bot filtering`);
+				}
 				return false;
+			}
+
+			// For non-excluded bot messages, still apply the original logic
+			if (message.author.bot) {
+				if (isDebugMode()) {
+					logger.debug(`[${botName}] ⚠️ Bot message detected but not excluded - condition must explicitly handle bots`);
+				}
+				// Let the condition decide if it wants to handle bot messages
 			}
 
 			// Check the condition
 			const result = await condition(message);
 
-			// Log the result
-			if (result) {
-				logger.debug(`[${botName}] Condition matched`);
-			} else {
-				logger.debug(`[${botName}] Condition did not match`);
+			// Enhanced logging
+			if (isDebugMode()) {
+				const messageInfo = {
+					author: message.author.username,
+					isBot: message.author.bot,
+					content: message.content.substring(0, 50) + (message.content.length > 50 ? '...' : ''),
+					result
+				};
+
+				if (result) {
+					logger.debug(`[${botName}] ✅ Condition matched`, messageInfo);
+				} else {
+					logger.debug(`[${botName}] ❌ Condition did not match`, messageInfo);
+				}
 			}
 
 			return result;
 		} catch (error) {
-			logger.error(`[${botName}] Error in condition:`,
+			logger.error(`[${botName}] 💥 Error in condition:`,
 				error instanceof Error ? error : new Error(String(error)));
 			return false;
 		}
