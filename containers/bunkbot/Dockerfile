@@ -43,6 +43,7 @@ COPY --from=builder --chown=bunkbot:bunkbot /app/node_modules ./node_modules
 COPY --from=builder --chown=bunkbot:bunkbot /app/shared ./shared
 COPY --from=builder --chown=bunkbot:bunkbot /app/dist ./dist
 COPY --from=builder --chown=bunkbot:bunkbot /app/package.json ./
+COPY --from=builder --chown=bunkbot:bunkbot /app/prisma ./prisma
 
 # Switch to non-root user
 USER bunkbot
