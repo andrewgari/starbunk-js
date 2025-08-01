@@ -147,6 +147,7 @@ export function withChance(chance: number): Condition {
 // Check if message is from a bot
 export function fromBot(includeSelf = true): TriggerCondition {
 	return (message: Message): boolean => {
+		if (!message || !message.author) return false;
 		if (!message.author.bot) return false;
 
 		// If we don't want to include self, check if it's the client
@@ -169,9 +170,28 @@ export function isCovaBot(message: Message): boolean {
 	// Check if message is from a bot first
 	if (!message.author.bot) return false;
 
-	// Handle null/undefined username gracefully
-	const username = message.author.username?.toLowerCase() || '';
-	const displayName = message.author.displayName?.toLowerCase() || '';
+	// Handle null/undefined username gracefully with logging
+	let username: string;
+	if (message.author.username == null) {
+		logger.warn(
+			`[isCovaBot] message.author.username is ${message.author.username} for message ID: ${message.id}`,
+			{ author: message.author }
+		);
+		username = '';
+	} else {
+		username = message.author.username.toLowerCase();
+	}
+
+	let displayName: string;
+	if (message.author.displayName == null) {
+		logger.warn(
+			`[isCovaBot] message.author.displayName is ${message.author.displayName} for message ID: ${message.id}`,
+			{ author: message.author }
+		);
+		displayName = '';
+	} else {
+		displayName = message.author.displayName.toLowerCase();
+	}
 
 	// Check for CovaBot-specific identifiers (exact match, not substring)
 	const isCovaUsername = BOT_IDENTIFIERS.COVABOT_USERNAMES.some(name =>
@@ -279,6 +299,9 @@ export function contextFromBot(includeSelf = true): ContextualTriggerCondition {
  */
 export function fromBotExcludingCovaBot(): TriggerCondition {
 	return (message: Message): boolean => {
+		// Handle null/undefined message or author gracefully
+		if (!message || !message.author) return false;
+
 		// Must be from a bot
 		if (!message.author.bot) return false;
 

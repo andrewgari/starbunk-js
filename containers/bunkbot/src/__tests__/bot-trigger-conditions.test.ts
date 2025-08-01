@@ -235,6 +235,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 		describe('fromCovaBot()', () => {
 			it('should only match CovaBot messages', async () => {
 				// Arrange
+				const condition = fromCovaBot(); // Move condition creation outside test iterations
 				const covaBotMessage = mockMessage({
 					author: mockCovaBotUser()
 				});
@@ -246,7 +247,6 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 				});
 
 				// Act
-				const condition = fromCovaBot();
 				const covaResult = await condition(covaBotMessage);
 				const botResult = await condition(genericBotMessage);
 				const humanResult = await condition(humanMessage);
