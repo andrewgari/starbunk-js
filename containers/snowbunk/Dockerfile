@@ -37,7 +37,7 @@ RUN cd shared && npm ci && cd .. && npm ci && npm cache clean --force
 
 # Copy source code
 COPY containers/shared ./shared
-COPY containers/starbunk-dnd ./
+COPY containers/snowbunk ./
 
 # Build shared package and container
 RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
