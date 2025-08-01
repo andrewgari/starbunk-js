@@ -9,7 +9,7 @@
  */
 
 import { execSync } from 'child_process';
-import { logger } from '@starbunk/shared';
+// import { logger } from '@starbunk/shared';
 
 interface TestSuite {
 	name: string;
@@ -142,11 +142,11 @@ class BunkBotTestRunner {
 		console.log(`   ⏱️  Total Duration: ${totalDuration}ms`);
 
 		console.log(`\n📋 Detailed Results:`);
-		this.results.forEach((result, index) => {
+		this.results.forEach((result, _index) => {
 			const status = result.passed ? '✅' : '❌';
 			const critical = result.suite.critical ? '🚨' : '📝';
 			console.log(`   ${status} ${critical} ${result.suite.name} (${result.duration}ms)`);
-			
+
 			if (!result.passed && result.error) {
 				console.log(`      Error: ${result.error.split('\n')[0]}`);
 			}

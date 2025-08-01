@@ -92,7 +92,7 @@ describe('Individual Bot Trigger Tests', () => {
 
 		it('should NOT respond to CovaBot messages containing "hold"', async () => {
 			// Arrange
-			const covaBotMessage = mockMessage({
+			const _covaBotMessage = mockMessage({
 				content: 'hold',
 				author: mockCovaBotUser()
 			});
@@ -128,7 +128,7 @@ describe('Individual Bot Trigger Tests', () => {
 		it('should trigger on bot messages with 5% chance in production', async () => {
 			// Arrange
 			mockRandomValue = 0.03; // 3% - within 5% threshold
-			const botMessage = mockMessage({
+			const _botMessage = mockMessage({
 				content: 'Hello from bot',
 				author: mockGenericBotUser()
 			});
@@ -141,7 +141,7 @@ describe('Individual Bot Trigger Tests', () => {
 		it('should NOT trigger when chance fails in production', async () => {
 			// Arrange
 			mockRandomValue = 0.07; // 7% - above 5% threshold
-			const botMessage = mockMessage({
+			const _botMessage = mockMessage({
 				content: 'Hello from bot',
 				author: mockGenericBotUser()
 			});
@@ -154,7 +154,7 @@ describe('Individual Bot Trigger Tests', () => {
 			// Arrange
 			mockIsDebugMode.mockReturnValue(true);
 			mockRandomValue = 0.99; // 99% - would normally fail
-			const botMessage = mockMessage({
+			const _botMessage = mockMessage({
 				content: 'Hello from bot',
 				author: mockGenericBotUser()
 			});
@@ -166,7 +166,7 @@ describe('Individual Bot Trigger Tests', () => {
 		it('should NOT trigger on CovaBot messages', async () => {
 			// Arrange
 			mockRandomValue = 0.01; // 1% - favorable chance
-			const covaBotMessage = mockMessage({
+			const _covaBotMessage = mockMessage({
 				content: 'Hello from CovaBot',
 				author: mockCovaBotUser()
 			});
@@ -178,7 +178,7 @@ describe('Individual Bot Trigger Tests', () => {
 		it('should NOT trigger on human messages', async () => {
 			// Arrange
 			mockRandomValue = 0.01; // 1% - favorable chance
-			const humanMessage = mockMessage({
+			const _humanMessage = mockMessage({
 				content: 'Hello from human',
 				author: mockHumanUser()
 			});
@@ -275,7 +275,7 @@ describe('Individual Bot Trigger Tests', () => {
 	describe('Cross-Bot Interaction Tests', () => {
 		it('should handle messages that could trigger multiple bots', async () => {
 			// Arrange
-			const multiTriggerMessage = mockMessage({
+			const _multiTriggerMessage = mockMessage({
 				content: 'guy that was nice, hold on, sorry to interrupt',
 				author: mockHumanUser()
 			});
@@ -370,7 +370,7 @@ describe('Individual Bot Trigger Tests', () => {
 			expect(holdBot).toBeDefined();
 
 			// Should not crash on malformed input
-			for (const message of malformedMessages) {
+			for (const _message of malformedMessages) {
 				expect(() => {
 					// Test that the bot can handle these messages without crashing
 					// Actual trigger testing would depend on implementation
@@ -380,7 +380,7 @@ describe('Individual Bot Trigger Tests', () => {
 
 		it('should handle missing author information', async () => {
 			// Arrange
-			const messageWithoutAuthor = mockMessage({
+			const _messageWithoutAuthor = mockMessage({
 				content: 'guy',
 				author: null as any
 			});

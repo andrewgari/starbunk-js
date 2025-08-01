@@ -80,7 +80,7 @@ describe('CovaBot Filtering E2E Tests', () => {
 			];
 
 			// Act & Assert
-			covaVariations.forEach((message, index) => {
+			covaVariations.forEach((message, _index) => {
 				expect(isCovaBot(message)).toBe(true);
 			});
 		});
@@ -96,7 +96,7 @@ describe('CovaBot Filtering E2E Tests', () => {
 			];
 
 			// Act & Assert
-			nonCovaBots.forEach((message, index) => {
+			nonCovaBots.forEach((message, _index) => {
 				expect(isCovaBot(message)).toBe(false);
 			});
 		});
@@ -110,7 +110,7 @@ describe('CovaBot Filtering E2E Tests', () => {
 			];
 
 			// Act & Assert
-			humanMessages.forEach((message, index) => {
+			humanMessages.forEach((message, _index) => {
 				expect(isCovaBot(message)).toBe(false);
 			});
 		});
@@ -150,7 +150,7 @@ describe('CovaBot Filtering E2E Tests', () => {
 			];
 
 			// Act & Assert
-			excludedBots.forEach((message, index) => {
+			excludedBots.forEach((message, _index) => {
 				expect(shouldExcludeFromReplyBots(message)).toBe(true);
 			});
 		});
@@ -243,7 +243,7 @@ describe('CovaBot Filtering E2E Tests', () => {
 
 		it('should provide detailed logging for CovaBot detection in debug mode', () => {
 			// Arrange
-			const covaBotMessage = mockMessage({
+			const _covaBotMessage = mockMessage({
 				author: mockCovaBotUser()
 			});
 
@@ -264,7 +264,7 @@ describe('CovaBot Filtering E2E Tests', () => {
 
 		it('should provide detailed logging for exclusion decisions in debug mode', () => {
 			// Arrange
-			const covaBotMessage = mockMessage({
+			const _covaBotMessage = mockMessage({
 				author: mockCovaBotUser()
 			});
 
@@ -282,7 +282,7 @@ describe('CovaBot Filtering E2E Tests', () => {
 	describe('Integration with Actual Bots', () => {
 		it('should prevent BotBot from responding to CovaBot messages', async () => {
 			// Arrange
-			const covaBotMessage = mockMessage({
+			const _covaBotMessage = mockMessage({
 				author: mockCovaBotUser(),
 				content: 'Hello from CovaBot' // BotBot normally responds to bot messages
 			});
@@ -299,7 +299,7 @@ describe('CovaBot Filtering E2E Tests', () => {
 
 		it('should prevent all reply bots from responding to CovaBot messages', async () => {
 			// Arrange
-			const covaBotMessage = mockMessage({
+			const _covaBotMessage = mockMessage({
 				author: mockCovaBotUser(),
 				content: 'guy nice hold interrupt' // Would trigger multiple bots normally
 			});

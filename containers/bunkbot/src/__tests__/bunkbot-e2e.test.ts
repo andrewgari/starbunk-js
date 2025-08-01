@@ -1,15 +1,14 @@
 import { BotRegistry } from '../botRegistry';
-import { 
-	mockMessage, 
-	mockHumanUser, 
-	mockCovaBotUser, 
+import {
+	mockMessage,
+	mockHumanUser,
+	mockCovaBotUser,
 	mockGenericBotUser,
 	mockTestingChannel,
-	mockProductionChannel,
-	mockClient
+	mockProductionChannel
 } from '../test-utils/testUtils';
 import { isDebugMode, setDebugMode } from '@starbunk/shared';
-import { logger } from '@starbunk/shared';
+// import { logger } from '@starbunk/shared';
 
 // Mock the shared library
 jest.mock('@starbunk/shared', () => ({
@@ -25,7 +24,7 @@ jest.mock('@starbunk/shared', () => ({
 }));
 
 const mockIsDebugMode = isDebugMode as jest.MockedFunction<typeof isDebugMode>;
-const mockSetDebugMode = setDebugMode as jest.MockedFunction<typeof setDebugMode>;
+const _mockSetDebugMode = setDebugMode as jest.MockedFunction<typeof setDebugMode>;
 
 describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 	let registry: BotRegistry;
@@ -60,13 +59,13 @@ describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 
 			it('should respond to messages in testing channels only', async () => {
 				// Arrange: Create messages in different channels
-				const testingChannelMessage = mockMessage({
+				const _testingChannelMessage = mockMessage({
 					content: 'guy',
 					author: mockHumanUser(),
 					channel: mockTestingChannel()
 				});
 
-				const productionChannelMessage = mockMessage({
+				const _productionChannelMessage = mockMessage({
 					content: 'guy',
 					author: mockHumanUser(),
 					channel: mockProductionChannel()
@@ -86,7 +85,7 @@ describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 				// Arrange: Set unfavorable random value
 				mockRandomValue = 0.99; // 99% - should normally fail 5% chance
 
-				const botMessage = mockMessage({
+				const _botMessage = mockMessage({
 					content: 'Hello from bot',
 					author: mockGenericBotUser()
 				});
@@ -103,7 +102,7 @@ describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 
 			it('should provide enhanced logging in debug mode', async () => {
 				// Arrange: Create a test message
-				const message = mockMessage({
+				const _message = mockMessage({
 					content: 'test message',
 					author: mockHumanUser()
 				});
@@ -128,7 +127,7 @@ describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 				// Arrange: Set unfavorable random value for 5% chance
 				mockRandomValue = 0.07; // 7% - above 5% threshold
 
-				const botMessage = mockMessage({
+				const _botMessage = mockMessage({
 					content: 'Hello from bot',
 					author: mockGenericBotUser()
 				});
@@ -145,13 +144,13 @@ describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 
 			it('should work in all channels in production mode', async () => {
 				// Arrange: Create messages in different channels
-				const testingChannelMessage = mockMessage({
+				const _testingChannelMessage = mockMessage({
 					content: 'guy',
 					author: mockHumanUser(),
 					channel: mockTestingChannel()
 				});
 
-				const productionChannelMessage = mockMessage({
+				const _productionChannelMessage = mockMessage({
 					content: 'guy',
 					author: mockHumanUser(),
 					channel: mockProductionChannel()
@@ -173,7 +172,7 @@ describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 
 		it('should NEVER respond to CovaBot messages', async () => {
 			// Arrange: Create a message from CovaBot
-			const covaBotMessage = mockMessage({
+			const _covaBotMessage = mockMessage({
 				content: 'hold', // This would normally trigger HoldBot
 				author: mockCovaBotUser()
 			});
@@ -195,7 +194,7 @@ describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 			// Arrange: Set favorable random value for bot-bot
 			mockRandomValue = 0.03; // 3% - within 5% threshold
 
-			const genericBotMessage = mockMessage({
+			const _genericBotMessage = mockMessage({
 				content: 'Hello from generic bot',
 				author: mockGenericBotUser()
 			});
@@ -209,7 +208,7 @@ describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 
 		it('should respond to human messages normally', async () => {
 			// Arrange: Create a message from a human that should trigger HoldBot
-			const humanMessage = mockMessage({
+			const _humanMessage = mockMessage({
 				content: 'hold',
 				author: mockHumanUser()
 			});
@@ -226,7 +225,7 @@ describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 		it('should discover and register all available bots', async () => {
 			// Act: Get all bot names
 			const replyBotNames = registry.getReplyBotNames();
-			const voiceBotNames = registry.getVoiceBotNames();
+			const _voiceBotNames = registry.getVoiceBotNames();
 			const allBotNames = registry.getAllBotNames();
 
 			// Assert: Should have discovered bots
@@ -281,17 +280,17 @@ describe('BunkBot E2E Tests - Message Filtering & Triggering', () => {
 
 		it('should handle empty or malformed messages', async () => {
 			// Arrange: Create various edge case messages
-			const emptyMessage = mockMessage({
+			const _emptyMessage = mockMessage({
 				content: '',
 				author: mockHumanUser()
 			});
 
-			const whitespaceMessage = mockMessage({
+			const _whitespaceMessage = mockMessage({
 				content: '   \n\t  ',
 				author: mockHumanUser()
 			});
 
-			const nullContentMessage = mockMessage({
+			const _nullContentMessage = mockMessage({
 				content: null as any,
 				author: mockHumanUser()
 			});

@@ -4,11 +4,10 @@ import {
 	inChannel,
 	withDefaultBotBehavior
 } from '../core/conditions';
-import { 
-	mockMessage, 
-	mockHumanUser, 
-	mockCovaBotUser, 
-	mockGenericBotUser,
+import {
+	mockMessage,
+	mockHumanUser,
+	mockCovaBotUser,
 	mockTestingChannel,
 	mockProductionChannel
 } from '../test-utils/testUtils';
@@ -29,7 +28,7 @@ jest.mock('@starbunk/shared', () => ({
 }));
 
 const mockIsDebugMode = isDebugMode as jest.MockedFunction<typeof isDebugMode>;
-const mockSetDebugMode = setDebugMode as jest.MockedFunction<typeof setDebugMode>;
+const _mockSetDebugMode = setDebugMode as jest.MockedFunction<typeof setDebugMode>;
 
 describe('Debug Mode vs Production Mode Behavior', () => {
 	const originalRandom = global.Math.random;

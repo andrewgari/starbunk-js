@@ -20,7 +20,7 @@ import {
 	mockClient
 } from '../test-utils/testUtils';
 import { isDebugMode } from '@starbunk/shared';
-import { logger } from '@starbunk/shared';
+// import { logger } from '@starbunk/shared';
 
 // Mock the shared library
 jest.mock('@starbunk/shared', () => ({
