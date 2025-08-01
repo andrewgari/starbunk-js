@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  bunkbot:
+    build:
+      context: .
+      dockerfile: containers/bunkbot/Dockerfile
+    container_name: starbunk-bunkbot
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - BUNKBOT_TOKEN=${BUNKBOT_TOKEN}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - TOKEN=${TOKEN}
+      - BUNKBOT_CLIENT_ID=${BUNKBOT_CLIENT_ID}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DEBUG_MODE=${DEBUG_MODE}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS}
+      - LOG_LEVEL=${LOG_LEVEL}
+    restart: unless-stopped
+    networks:
+      - starbunk-network
+
+  covabot:
+    build:
+      context: .
+      dockerfile: containers/covabot/Dockerfile
+    container_name: starbunk-covabot
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - COVABOT_TOKEN=${COVABOT_TOKEN}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - TOKEN=${TOKEN}
+      - COVABOT_CLIENT_ID=${COVABOT_CLIENT_ID}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL}
+      - OLLAMA_API_URL=${OLLAMA_API_URL}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL}
+      - DEBUG_MODE=${DEBUG_MODE}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS}
+      - LOG_LEVEL=${LOG_LEVEL}
+    restart: unless-stopped
+    networks:
+      - starbunk-network
+
+  djcova:
+    build:
+      context: .
+      dockerfile: containers/djcova/Dockerfile
+    container_name: starbunk-djcova
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DJCOVA_TOKEN=${DJCOVA_TOKEN}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - TOKEN=${TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DEBUG_MODE=${DEBUG_MODE}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS}
+      - LOG_LEVEL=${LOG_LEVEL}
+    restart: unless-stopped
+    networks:
+      - starbunk-network
+
+  starbunk-dnd:
+    build:
+      context: .
+      dockerfile: containers/starbunk-dnd/Dockerfile
+    container_name: starbunk-dnd
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - STARBUNK_DND_TOKEN=${STARBUNK_DND_TOKEN}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - TOKEN=${TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DEBUG_MODE=${DEBUG_MODE}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS}
+      - LOG_LEVEL=${LOG_LEVEL}
+    restart: unless-stopped
+    networks:
+      - starbunk-network
+
+networks:
+  starbunk-network:
+    driver: bridge
