@@ -1,4 +1,4 @@
-import { logger } from '@starbunk/shared';
+import { logger, isDebugMode } from '@starbunk/shared';
 import { Client, Message, TextChannel, Webhook } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
@@ -136,10 +136,22 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 				}
 			}
 
-			// Skip bot messages if configured
+			// Enhanced bot message filtering
 			if (validConfig.skipBotMessages && message.author.bot) {
-				logger.debug('Skipping bot message');
-				return;
+				// Import the enhanced filtering function
+				const { shouldExcludeFromReplyBots } = await import('./conditions');
+
+				if (shouldExcludeFromReplyBots(message)) {
+					if (isDebugMode()) {
+						logger.debug(`[${validConfig.name}] 🚫 Skipping excluded bot message from: ${message.author.username}`);
+					}
+					return;
+				}
+
+				// For non-excluded bot messages, log but continue processing
+				if (isDebugMode()) {
+					logger.debug(`[${validConfig.name}] ⚠️ Processing bot message from: ${message.author.username} (not excluded)`);
+				}
 			}
 
 			// Check blacklist (simple in-memory implementation)
