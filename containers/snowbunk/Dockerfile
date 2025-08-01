@@ -37,11 +37,11 @@ RUN cd shared && npm ci && cd .. && npm ci && npm cache clean --force
 
 # Copy source code
 COPY containers/shared ./shared
-COPY containers/starbunk-dnd ./
+COPY containers/snowbunk ./
 
 # Build shared package and container
-RUN cd shared && npm run build && npm pack && \
-    cd .. && npm install ./shared/starbunk-shared-1.0.0.tgz && \
+RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
+    cd .. && npm install "./shared/${SHARED_TGZ}" && \
     npm run build
 
 # Stage 3: Runtime - Minimal production image
