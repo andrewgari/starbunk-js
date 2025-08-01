@@ -74,7 +74,7 @@ jest.mock('../botRegistry', () => ({
 
 // Mock HTTP server for health checks
 jest.mock('http', () => ({
-	createServer: jest.fn().mockImplementation((handler) => ({
+	createServer: jest.fn().mockImplementation((_handler) => ({
 		listen: jest.fn((port, callback) => {
 			if (callback) callback();
 		}),
