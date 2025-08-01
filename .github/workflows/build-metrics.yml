@@ -41,12 +41,29 @@ jobs:
             });
 
             const containerWorkflow = workflows.workflows.find(w =>
-              w.name === 'Container Build, Test & Publish'
+              w.name === 'Container Build, Test & Publish' ||
+              w.name.includes('Container') ||
+              w.name.includes('Build')
             );
 
             if (!containerWorkflow) {
-              console.log('Container build workflow not found');
-              return;
+              console.log('Container build workflow not found, checking all workflows...');
+              console.log('Available workflows:', workflows.workflows.map(w => w.name));
+
+              // Use the first workflow that looks like a build workflow
+              const buildWorkflow = workflows.workflows.find(w =>
+                w.name.toLowerCase().includes('build') ||
+                w.name.toLowerCase().includes('container') ||
+                w.name.toLowerCase().includes('docker')
+              );
+
+              if (!buildWorkflow) {
+                console.log('No build-related workflows found, skipping analysis');
+                return;
+              }
+
+              console.log(`Using workflow: ${buildWorkflow.name}`);
+              containerWorkflow = buildWorkflow;
             }
 
             const { data: runs } = await github.rest.actions.listWorkflowRuns({

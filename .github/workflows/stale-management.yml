@@ -20,7 +20,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Handle stale PRs and issues
-        uses: actions/stale@v9
+        uses: actions/stale@v8
         with:
           # Repository token
           repo-token: ${{ secrets.GITHUB_TOKEN }}
