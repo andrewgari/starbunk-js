@@ -1,10 +1,9 @@
 import { BotIdentity } from '../types';
 import { Client, Message } from 'discord.js';
-import channelIds from '../discord/channelIds';
 import { DiscordService } from './discordService';
 
-// Define the GM channel ID
-const GM_CHANNEL_ID = channelIds.Starbunk.BotChannelAdmin;
+// Define the GM channel ID (previously from deprecated channelIds.Starbunk.BotChannelAdmin)
+const GM_CHANNEL_ID = '1014170827601748048';
 
 export interface GMAlertOptions {
 	title: string;

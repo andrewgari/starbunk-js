@@ -21,4 +21,5 @@ export interface ErrorBoundary {
 }
 
 // Re-export service interfaces
-export { Logger, WebhookService, ServiceId, container, getService } from '../services/container';
+export { container, getService } from '../services/container';
+export type { Logger, WebhookService, ServiceId } from '../services/container';

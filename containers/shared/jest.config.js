@@ -23,7 +23,7 @@ module.exports = {
 		'^.+\\.tsx?$': [
 			'ts-jest',
 			{
-				isolatedModules: true,
+				// isolatedModules moved to tsconfig.json as recommended by ts-jest v30
 			},
 		],
 	},
