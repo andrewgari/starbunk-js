@@ -1,4 +1,4 @@
-import { logger } from '@starbunk/shared';
+import { logger, getDiscordService, DiscordService } from '@starbunk/shared';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import {
 	createStaticMessage,
@@ -13,14 +13,29 @@ import {
 const originalRandom = global.Math.random;
 const mockRandomValue = 0.5;
 
-// Mock the logger
-jest.mock('@starbunk/shared');
+// Mock the logger and Discord service
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
+	getDiscordService: jest.fn(),
+	logger: {
+		warn: jest.fn(),
+		error: jest.fn(),
+		info: jest.fn(),
+		debug: jest.fn()
+	}
+}));
+
+let mockDiscordServiceInstance: Partial<DiscordService>;
 
 beforeEach(() => {
 	jest.clearAllMocks();
 
 	// Mock Math.random
 	global.Math.random = jest.fn().mockImplementation(() => mockRandomValue);
+
+	// Create a fresh mock Discord service instance
+	mockDiscordServiceInstance = mockDiscordService();
+	(getDiscordService as jest.Mock).mockReturnValue(mockDiscordServiceInstance);
 });
 
 afterAll(() => {
@@ -223,7 +238,7 @@ describe('Response functions', () => {
 
 			await sendBotResponse(message, mockBotIdentity, responseGen, botName);
 
-			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				mockBotIdentity,
 				'Hello world'
@@ -240,7 +255,7 @@ describe('Response functions', () => {
 
 			await sendBotResponse(message, mockBotIdentity, responseGen, botName);
 
-			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 			expect(logger.warn).toHaveBeenCalledWith(
 				expect.stringMatching(/Empty response generated/)
 			);
@@ -255,7 +270,7 @@ describe('Response functions', () => {
 
 			await expect(sendBotResponse(message, mockBotIdentity, responseGen, botName)).rejects.toThrow();
 
-			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 			expect(logger.error).toHaveBeenCalledWith(
 				expect.stringContaining('Error sending response'),
 				expect.any(Error)
@@ -269,7 +284,7 @@ describe('Response functions', () => {
 
 			await sendBotResponse(message, mockBotIdentity, responseGen, botName);
 
-			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				mockBotIdentity,
 				'Async response'

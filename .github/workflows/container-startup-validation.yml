@@ -129,7 +129,10 @@ jobs:
         run: |
           cd ${{ matrix.path }}
           if [ -f "prisma/schema.prisma" ]; then
+            echo "Found Prisma schema, generating client..."
             npx prisma generate
+          else
+            echo "No Prisma schema found, skipping generation"
           fi
 
       - name: Run unit tests

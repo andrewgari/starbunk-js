@@ -28,13 +28,16 @@ jest.mock('@starbunk/shared', () => ({
 }));
 
 describe('Bot builder', () => {
+	let mockDiscordServiceInstance: Partial<DiscordService>;
+
 	beforeEach(() => {
 		jest.clearAllMocks();
 		// Reset the blacklist mock to return null by default (no blacklisted user)
 		mockBlacklistFindUnique.mockResolvedValue(null);
 
-		// Reset the Discord service mock
-		mockDiscordService.sendMessageWithBotIdentity.mockClear();
+		// Create a fresh mock Discord service instance
+		mockDiscordServiceInstance = mockDiscordService();
+		(getDiscordService as jest.Mock).mockReturnValue(mockDiscordServiceInstance);
 	});
 
 	describe('Type creators', () => {
@@ -180,7 +183,7 @@ describe('Bot builder', () => {
 			expect(trigger2.response).toHaveBeenCalled();
 			expect(trigger1.condition).not.toHaveBeenCalled(); // Lower priority should NOT be called
 			expect(trigger1.response).not.toHaveBeenCalled(); // Lower priority should NOT be called
-			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id, // Use the created message's channel id
 				config.defaultIdentity, // Expect default identity as triggers don't define one
 				'High priority response', // Expect response from trigger2
@@ -230,7 +233,7 @@ describe('Bot builder', () => {
 			// Should skip the message without checking triggers since skipBotMessages defaults to true
 			expect(trigger.condition).not.toHaveBeenCalled();
 			expect(trigger.response).not.toHaveBeenCalled();
-			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
 
 		it('should skip bot messages when configured', async () => {
@@ -256,7 +259,7 @@ describe('Bot builder', () => {
 			// Should skip the message without checking triggers
 			expect(trigger.condition).not.toHaveBeenCalled();
 			expect(trigger.response).not.toHaveBeenCalled();
-			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
 
 		it('should process bot messages when skipBotMessages is explicitly set to false', async () => {
@@ -282,7 +285,7 @@ describe('Bot builder', () => {
 			// Should process the message since skipBotMessages is false
 			expect(trigger.condition).toHaveBeenCalled();
 			expect(trigger.response).toHaveBeenCalled();
-			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				botMessage.channel.id,
 				mockBotIdentity,
 				'Test response'
@@ -353,7 +356,7 @@ describe('Bot builder', () => {
 			// Verify the message was skipped (triggers not called)
 			expect(trigger.condition).not.toHaveBeenCalled();
 			expect(trigger.response).not.toHaveBeenCalled();
-			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 			expect(logger.debug).toHaveBeenCalledWith(expect.stringMatching(/Skipping message from blacklisted user/));
 		});
 
@@ -387,7 +390,7 @@ describe('Bot builder', () => {
 			expect(trigger1.response).not.toHaveBeenCalled();
 			expect(trigger2.condition).toHaveBeenCalled();
 			expect(trigger2.response).toHaveBeenCalled();
-			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				mockBotIdentity,
 				'Trigger 2 response',
@@ -415,7 +418,7 @@ describe('Bot builder', () => {
 
 			expect(trigger.condition).toHaveBeenCalled();
 			expect(trigger.response).toHaveBeenCalled();
-			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 			expect(logger.debug).toHaveBeenCalledWith(expect.stringMatching(/Empty response from trigger/));
 		});
 
@@ -454,7 +457,7 @@ describe('Bot builder', () => {
 			// Should fall back to the next trigger
 			expect(fallbackTrigger.condition).toHaveBeenCalled();
 			expect(fallbackTrigger.response).toHaveBeenCalled();
-			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				mockBotIdentity,
 				'Fallback response',
@@ -487,7 +490,7 @@ describe('Bot builder', () => {
 			await bot.processMessage(message);
 
 			// Should use the trigger-specific identity
-			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				customIdentity,
 				'Custom response',
@@ -521,7 +524,7 @@ describe('Bot builder', () => {
 
 			// Should call the identity function and use its result
 			expect(trigger.identity).toHaveBeenCalledWith(message);
-			expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
 				customIdentity,
 				'Dynamic response',
@@ -556,7 +559,7 @@ describe('Bot builder', () => {
 				expect.stringMatching(/Failed to get bot identity/),
 				expect.any(Error),
 			);
-			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
 
 		it('should handle invalid identity result', async () => {
@@ -585,7 +588,7 @@ describe('Bot builder', () => {
 				expect.stringMatching(/Failed to get bot identity/),
 				expect.any(Error),
 			);
-			expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
 
 		// Add tests specifically for responseRate
@@ -613,7 +616,7 @@ describe('Bot builder', () => {
 
 				// Should exit due to responseRate before checking condition
 				expect(trigger.response).not.toHaveBeenCalled();
-				expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+				expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 				expect(logger.debug).toHaveBeenCalledWith(
 					expect.stringMatching(/Skipping message due to response rate/),
 				);
@@ -641,7 +644,7 @@ describe('Bot builder', () => {
 				// Should proceed past responseRate check and process the trigger
 				expect(trigger.condition).toHaveBeenCalled();
 				expect(trigger.response).toHaveBeenCalled();
-				expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+				expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 					message.channel.id,
 					mockBotIdentity,
 					'Should send',

@@ -234,9 +234,11 @@ export function mockDiscordService(overrides: Partial<DiscordService> = {}): Par
 		getMemberAsBotIdentity: jest.fn().mockResolvedValue(mockBotIdentity()),
 		getGuild: jest.fn().mockReturnValue(mockGuild()),
 		getMember: jest.fn().mockReturnValue(mockGuildMember()),
+		getMemberAsync: jest.fn().mockResolvedValue(mockGuildMember()),
 		getChannel: jest.fn().mockReturnValue(mockTextChannel()),
 		getRole: jest.fn().mockReturnValue({}),
 		sendMessage: jest.fn().mockResolvedValue(mockMessage()),
+		sendMessageWithBotIdentity: jest.fn().mockResolvedValue(mockMessage()),
 		sendBulkMessages: jest.fn().mockResolvedValue([]),
 		sendWebhookMessage: jest.fn().mockResolvedValue(mockMessage()),
 		...overrides
