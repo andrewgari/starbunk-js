@@ -40,7 +40,7 @@ export interface ReplyBotConfig {
 	responseRate?: number; // Specific response rate for this bot (overrides defaultResponseRate)
 	skipBotMessages?: boolean; // Whether to skip processing messages from other bots
 	disabled?: boolean; // Whether the bot is disabled
-	discordService?: DiscordService; // Discord service for sending messages
+	discordService?: DiscordService; // Discord service for sending messages (optional)
 }
 
 /**
@@ -54,7 +54,7 @@ export interface ValidatedReplyBotConfig {
 	defaultResponseRate: number; // Bot's default response rate
 	skipBotMessages: boolean; // Whether to skip processing messages from other bots
 	disabled: boolean; // Whether the bot is disabled
-	discordService: DiscordService; // Discord service for sending messages
+	discordService?: DiscordService; // Discord service for sending messages (optional)
 }
 
 /**
@@ -75,6 +75,7 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 		throw new Error('At least one trigger is required');
 	}
 
+
 	const responseRate = config.responseRate ?? config.defaultResponseRate ?? getBotDefaults().responseRate;
 	const disabled = config.disabled ?? false;
 
@@ -86,7 +87,7 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 		defaultResponseRate: responseRate,
 		skipBotMessages: config.skipBotMessages ?? true, // Default to true for safer behavior
 		disabled,
-		discordService: config.discordService || new DiscordService(), // Use provided service or create new one
+		discordService: config.discordService, // DiscordService (optional)
 	};
 }
 
@@ -205,16 +206,36 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 						continue;
 					}
 
-					// Send message using DiscordService
+					// Send message using DiscordService if available, otherwise use webhooks
 					try {
-						await validConfig.discordService.sendMessageWithBotIdentity(
-							message.channel.id,
-							identity,
-							responseText
-						);
-						logger.debug(`Message sent via DiscordService as ${identity.botName}`);
+						if (validConfig.discordService) {
+							// Use DiscordService if provided (for tests)
+							await validConfig.discordService.sendMessageWithBotIdentity(
+								message.channel.id,
+								identity,
+								responseText
+							);
+							logger.debug(`Message sent via DiscordService as ${identity.botName}`);
+						} else {
+							// Fallback to regular message sending (no custom identity)
+							if ('send' in message.channel) {
+								await message.channel.send(responseText);
+								logger.debug(`Message sent via regular channel (no custom identity)`);
+							} else {
+								logger.warn(`Channel does not support sending messages`);
+							}
+						}
 					} catch (error) {
-						logger.error(`Failed to send message via DiscordService:`, error as Error);
+						logger.error(`Failed to send message:`, error as Error);
+						// Fallback to regular message if everything else fails
+						try {
+							if ('send' in message.channel) {
+								await message.channel.send(responseText);
+								logger.debug(`Fallback message sent via regular channel`);
+							}
+						} catch (fallbackError) {
+							logger.error(`Fallback message also failed:`, fallbackError as Error);
+						}
 					}
 					return;
 				} catch (error) {
