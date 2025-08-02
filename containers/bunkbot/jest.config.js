@@ -1,7 +1,7 @@
 module.exports = {
 	displayName: 'bunkbot',
 	preset: 'ts-jest',
-	testEnvironment: 'node',
+	testEnvironment: '<rootDir>/tests/jest-test-environment.js',
 	// Support both co-located tests and centralized integration tests
 	testMatch: [
 		'<rootDir>/tests/**/*.test.ts',      // Integration/bootstrap tests
