@@ -19,7 +19,11 @@ jobs:
   analyze-build-performance:
     name: 📊 Analyze Build Performance
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    # Only run for expected trigger events (workflow_run, schedule, workflow_dispatch)
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       actions: read
