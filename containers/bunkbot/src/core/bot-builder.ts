@@ -1,5 +1,5 @@
 import { logger, isDebugMode, DiscordService } from '@starbunk/shared';
-import { Client, Message, TextChannel, Webhook } from 'discord.js';
+import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
@@ -253,39 +253,5 @@ function getBotData(botName: string, key: string): string | number | boolean | u
 	return botStorage.get(botKey);
 }
 
-// Webhook cache for custom bot identities
-const webhookCache = new Map<string, Webhook>();
 
-async function getOrCreateWebhook(channel: TextChannel, client: Client): Promise<Webhook> {
-	const cacheKey = channel.id;
-	const cachedWebhook = webhookCache.get(cacheKey);
-	if (cachedWebhook) {
-		return cachedWebhook;
-	}
-
-	try {
-		// Try to find existing webhook
-		const webhooks = await channel.fetchWebhooks();
-		const existingWebhook = webhooks.find(w => w.owner?.id === client.user?.id);
-		if (existingWebhook) {
-			webhookCache.set(cacheKey, existingWebhook);
-			return existingWebhook;
-		}
-
-		// Create new webhook if none exists
-		if (!client.user) {
-			throw new Error('Client user not available');
-		}
-
-		const newWebhook = await channel.createWebhook({
-			name: 'BunkBot Webhook',
-			avatar: client.user.displayAvatarURL()
-		});
-		webhookCache.set(cacheKey, newWebhook);
-		return newWebhook;
-	} catch (error) {
-		logger.error(`Error in getOrCreateWebhook: ${error instanceof Error ? error.message : String(error)}`);
-		throw new Error(`Could not get or create webhook: ${error instanceof Error ? error.message : String(error)}`);
-	}
-}
 
