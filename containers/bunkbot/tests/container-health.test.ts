@@ -47,10 +47,14 @@ describe('BunkBot Container Health Check', () => {
 	it('should start container and complete initialization successfully', async () => {
 		console.log('🚀 Testing container startup and initialization...');
 
-		// Start the container
+		// Start the container with environment variables
+		const rootDir = path.resolve(__dirname, '../../..');
+		const envFileExists = require('fs').existsSync(path.join(rootDir, '.env'));
+		const envFileArg = envFileExists ? '--env-file .env' : '';
+
 		const { stdout: containerId } = await execAsync(
-			`podman run -d --name ${CONTAINER_NAME} --env-file .env ${CONTAINER_IMAGE}`,
-			{ cwd: path.resolve(__dirname, '../../..') }
+			`podman run -d --name ${CONTAINER_NAME} ${envFileArg} -e NODE_ENV=test -e DEBUG_MODE=true ${CONTAINER_IMAGE}`,
+			{ cwd: rootDir }
 		);
 
 		expect(containerId.trim()).toBeTruthy();

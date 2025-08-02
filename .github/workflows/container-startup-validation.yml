@@ -125,6 +125,13 @@ jobs:
           cd ${{ matrix.path }}
           npm ci
 
+      - name: Generate Prisma client
+        run: |
+          cd ${{ matrix.path }}
+          if [ -f "prisma/schema.prisma" ]; then
+            npx prisma generate
+          fi
+
       - name: Run unit tests
         run: |
           cd ${{ matrix.path }}
