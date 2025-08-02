@@ -1,6 +1,6 @@
 import { getDiscordService, DiscordService, logger, container, ServiceId } from '@starbunk/shared';
 import { Message, TextChannel, Webhook } from 'discord.js';
-import { mockBotIdentity, mockDiscordService, mockMessage, mockUser } from '../../test-utils/testUtils';
+import { mockBotIdentity, mockDiscordService, mockMessage, mockUser, mockGuild } from '../../test-utils/testUtils';
 import { createBotDescription, createBotReplyName, createReplyBot } from '../bot-builder';
 
 // Mock the PrismaClient
@@ -298,7 +298,7 @@ describe('Bot builder', () => {
 			expect(trigger.response).toHaveBeenCalled();
 			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				botMessage.channel.id,
-				mockBotIdentity,
+				mockBotIdentity(),
 				'Test response'
 			);
 		});
@@ -389,7 +389,7 @@ describe('Bot builder', () => {
 			expect(trigger2.response).toHaveBeenCalled();
 			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
-				mockBotIdentity,
+				mockBotIdentity(),
 				'Trigger 2 response',
 			);
 		});
@@ -456,7 +456,7 @@ describe('Bot builder', () => {
 			expect(fallbackTrigger.response).toHaveBeenCalled();
 			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 				message.channel.id,
-				mockBotIdentity,
+				mockBotIdentity(),
 				'Fallback response',
 			);
 		});
@@ -643,7 +643,7 @@ describe('Bot builder', () => {
 				expect(trigger.response).toHaveBeenCalled();
 				expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 					message.channel.id,
-					mockBotIdentity,
+					mockBotIdentity(),
 					'Should send',
 				);
 			});

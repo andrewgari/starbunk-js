@@ -113,16 +113,20 @@ describe('Condition functions', () => {
 	describe('fromUser', () => {
 		it('should return true when message is from specified user', () => {
 			// Override the user ID for this test
-			const message = mockMessage({ content: 'test' });
-			Object.defineProperty(message.author, 'id', { value: '123456789012345678' });
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({ id: '123456789012345678' })
+			});
 
 			const condition = fromUser('123456789012345678');
 			expect(condition(message)).toBe(true);
 		});
 
 		it('should return false when message is not from specified user', () => {
-			const message = mockMessage({ content: 'test' });
-			Object.defineProperty(message.author, 'id', { value: '987654321098765432' });
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({ id: '987654321098765432' })
+			});
 
 			const condition = fromUser('123456789012345678');
 			expect(condition(message)).toBe(false);
