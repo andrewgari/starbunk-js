@@ -138,6 +138,12 @@ jobs:
             cd ../../
             npx prisma generate
             cd ${{ matrix.path }}
+            # Copy the generated client to the container's node_modules
+            if [ -d "../../node_modules/@prisma" ]; then
+              echo "Copying Prisma client to container node_modules..."
+              mkdir -p node_modules/@prisma
+              cp -r ../../node_modules/@prisma/client node_modules/@prisma/
+            fi
           else
             echo "No Prisma schema found, skipping generation"
           fi

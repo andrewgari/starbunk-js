@@ -1,6 +1,6 @@
 import { getDiscordService, DiscordService, logger, container, ServiceId } from '@starbunk/shared';
 import { Message, TextChannel, Webhook } from 'discord.js';
-import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
+import { mockBotIdentity, mockDiscordService, mockMessage, mockUser } from '../../test-utils/testUtils';
 import { createBotDescription, createBotReplyName, createReplyBot } from '../bot-builder';
 
 // Mock the PrismaClient
@@ -77,7 +77,7 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [
 					{
 						name: 'test-trigger',
@@ -101,7 +101,7 @@ describe('Bot builder', () => {
 				createReplyBot({
 					name: '',
 					description: 'A test bot',
-					defaultIdentity: mockBotIdentity,
+					defaultIdentity: mockBotIdentity(),
 					triggers: [
 						{
 							name: 'test-trigger',
@@ -117,7 +117,7 @@ describe('Bot builder', () => {
 				createReplyBot({
 					name: 'TestBot',
 					description: '',
-					defaultIdentity: mockBotIdentity,
+					defaultIdentity: mockBotIdentity(),
 					triggers: [
 						{
 							name: 'test-trigger',
@@ -149,7 +149,7 @@ describe('Bot builder', () => {
 				createReplyBot({
 					name: 'TestBot',
 					description: 'A test bot',
-					defaultIdentity: mockBotIdentity,
+					defaultIdentity: mockBotIdentity(),
 					triggers: [],
 				}),
 			).toThrow('At least one trigger is required');
@@ -196,7 +196,7 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [
 					{
 						name: 'test-trigger',
@@ -222,13 +222,16 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 				// skipBotMessages not specified, should default to true
 			};
 
 			const bot = createReplyBot(config);
-			const botMessage = mockMessage('Test message', 'BotUser', true);
+			const botMessage = mockMessage({
+				content: 'Test message',
+				author: mockUser({ username: 'BotUser', bot: true })
+			});
 
 			await bot.processMessage(botMessage);
 
@@ -248,13 +251,16 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 				skipBotMessages: true,
 			};
 
 			const bot = createReplyBot(config);
-			const botMessage = mockMessage('Test message', 'BotUser', true);
+			const botMessage = mockMessage({
+				content: 'Test message',
+				author: mockUser({ username: 'BotUser', bot: true })
+			});
 
 			await bot.processMessage(botMessage);
 
@@ -274,13 +280,16 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 				skipBotMessages: false, // Explicitly allow bot messages
 			};
 
 			const bot = createReplyBot(config);
-			const botMessage = mockMessage('Test message', 'BotUser', true);
+			const botMessage = mockMessage({
+				content: 'Test message',
+				author: mockUser({ username: 'BotUser', bot: true })
+			});
 
 			await bot.processMessage(botMessage);
 
@@ -312,36 +321,22 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
 
-			// Create a custom mock message for a blacklisted user
-			const blacklistedMessage = {
+			// Create a mock message for a blacklisted user
+			const blacklistedMessage = mockMessage({
 				content: 'Test message',
-				author: {
-					bot: false,
+				author: mockUser({
 					id: 'blacklisted-user-id',
 					username: 'blacklisted-user',
-					displayName: 'blacklisted-user'
-				},
-				client: {
-					user: {
-						id: 'bot123'
-					}
-				},
-				channel: {
-					id: 'channel123',
-					name: 'test-channel',
-					fetchWebhooks: jest.fn().mockResolvedValue([])
-				},
-				guild: {
-					id: 'test-guild-id'
-				},
-				createdTimestamp: Date.now()
-			} as unknown as Message;
+					bot: false
+				}),
+				guild: mockGuild({ id: 'test-guild-id' })
+			});
 
 			await bot.processMessage(blacklistedMessage);
 
@@ -378,12 +373,12 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger1, trigger2],
 			};
 
 			const bot = createReplyBot(config);
-			const message = mockMessage('Test message');
+			const message = mockMessage({ content: 'Test message' });
 
 			await bot.processMessage(message);
 
@@ -409,12 +404,12 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
-			const message = mockMessage('Test message');
+			const message = mockMessage({ content: 'Test message' });
 
 			await bot.processMessage(message);
 
@@ -442,12 +437,12 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [errorTrigger, fallbackTrigger],
 			};
 
 			const bot = createReplyBot(config);
-			const message = mockMessage('Test message');
+			const message = mockMessage({ content: 'Test message' });
 
 			await bot.processMessage(message);
 
@@ -482,12 +477,12 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
-			const message = mockMessage('Test message');
+			const message = mockMessage({ content: 'Test message' });
 
 			await bot.processMessage(message);
 
@@ -515,12 +510,12 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
-			const message = mockMessage('Test message');
+			const message = mockMessage({ content: 'Test message' });
 
 			await bot.processMessage(message);
 
@@ -546,12 +541,12 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
-			const message = mockMessage('Test message');
+			const message = mockMessage({ content: 'Test message' });
 
 			await bot.processMessage(message);
 
@@ -575,12 +570,12 @@ describe('Bot builder', () => {
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 			};
 
 			const bot = createReplyBot(config);
-			const message = mockMessage('Test message');
+			const message = mockMessage({ content: 'Test message' });
 
 			await bot.processMessage(message);
 
@@ -606,13 +601,13 @@ describe('Bot builder', () => {
 				const config = {
 					name: 'ZeroRateBot',
 					description: 'A bot that never responds',
-					defaultIdentity: mockBotIdentity,
+					defaultIdentity: mockBotIdentity(),
 					triggers: [trigger],
 					responseRate: 0,
 				};
 
 				const bot = createReplyBot(config);
-				const message = mockMessage('Test message');
+				const message = mockMessage({ content: 'Test message' });
 
 				await bot.processMessage(message);
 
@@ -633,13 +628,13 @@ describe('Bot builder', () => {
 				const config = {
 					name: 'FullRateBot',
 					description: 'A bot that always responds',
-					defaultIdentity: mockBotIdentity,
+					defaultIdentity: mockBotIdentity(),
 					triggers: [trigger],
 					responseRate: 100,
 				};
 
 				const bot = createReplyBot(config);
-				const message = mockMessage('Test message');
+				const message = mockMessage({ content: 'Test message' });
 
 				await bot.processMessage(message);
 

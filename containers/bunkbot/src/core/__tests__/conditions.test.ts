@@ -1,4 +1,4 @@
-import { mockMessage } from '../../test-utils/testUtils';
+import { mockMessage, mockUser } from '../../test-utils/testUtils';
 import { and, containsPhrase, containsWord, createChannelId, createDuration, createUserId, fromBot, fromUser, inChannel, matchesPattern, not, or, withChance, withinTimeframeOf } from '../conditions';
 
 // Mock Math.random for deterministic tests
@@ -59,13 +59,13 @@ describe('Condition functions', () => {
 	describe('matchesPattern', () => {
 		it('should return true when pattern matches', () => {
 			const condition = matchesPattern(/test/i);
-			const message = mockMessage('This is a test message');
+			const message = mockMessage({ content: 'This is a test message' });
 			expect(condition(message)).toBe(true);
 		});
 
 		it('should return false when pattern does not match', () => {
 			const condition = matchesPattern(/xyz/i);
-			const message = mockMessage('This is a test message');
+			const message = mockMessage({ content: 'This is a test message' });
 			expect(condition(message)).toBe(false);
 		});
 	});
@@ -73,19 +73,19 @@ describe('Condition functions', () => {
 	describe('containsWord', () => {
 		it('should return true when message contains the word', () => {
 			const condition = containsWord('test');
-			const message = mockMessage('This is a test message');
+			const message = mockMessage({ content: 'This is a test message' });
 			expect(condition(message)).toBe(true);
 		});
 
 		it('should return false when message does not contain the word', () => {
 			const condition = containsWord('xyz');
-			const message = mockMessage('This is a test message');
+			const message = mockMessage({ content: 'This is a test message' });
 			expect(condition(message)).toBe(false);
 		});
 
 		it('should not match partial words', () => {
 			const condition = containsWord('tes');
-			const message = mockMessage('This is a test message');
+			const message = mockMessage({ content: 'This is a test message' });
 			expect(condition(message)).toBe(false);
 		});
 	});
@@ -93,19 +93,19 @@ describe('Condition functions', () => {
 	describe('containsPhrase', () => {
 		it('should return true when message contains the phrase', () => {
 			const condition = containsPhrase('test message');
-			const message = mockMessage('This is a test message');
+			const message = mockMessage({ content: 'This is a test message' });
 			expect(condition(message)).toBe(true);
 		});
 
 		it('should return false when message does not contain the phrase', () => {
 			const condition = containsPhrase('xyz abc');
-			const message = mockMessage('This is a test message');
+			const message = mockMessage({ content: 'This is a test message' });
 			expect(condition(message)).toBe(false);
 		});
 
 		it('should match case-insensitively', () => {
 			const condition = containsPhrase('TEST MESSAGE');
-			const message = mockMessage('This is a test message');
+			const message = mockMessage({ content: 'This is a test message' });
 			expect(condition(message)).toBe(true);
 		});
 	});
@@ -113,7 +113,7 @@ describe('Condition functions', () => {
 	describe('fromUser', () => {
 		it('should return true when message is from specified user', () => {
 			// Override the user ID for this test
-			const message = mockMessage('test');
+			const message = mockMessage({ content: 'test' });
 			Object.defineProperty(message.author, 'id', { value: '123456789012345678' });
 
 			const condition = fromUser('123456789012345678');
@@ -121,7 +121,7 @@ describe('Condition functions', () => {
 		});
 
 		it('should return false when message is not from specified user', () => {
-			const message = mockMessage('test');
+			const message = mockMessage({ content: 'test' });
 			Object.defineProperty(message.author, 'id', { value: '987654321098765432' });
 
 			const condition = fromUser('123456789012345678');
@@ -131,7 +131,7 @@ describe('Condition functions', () => {
 
 	describe('inChannel', () => {
 		it('should return true when message is in specified channel', () => {
-			const message = mockMessage('test');
+			const message = mockMessage({ content: 'test' });
 			Object.defineProperty(message.channel, 'id', { value: '123456789012345678' });
 
 			const condition = inChannel('123456789012345678');
@@ -139,7 +139,7 @@ describe('Condition functions', () => {
 		});
 
 		it('should return false when message is not in specified channel', () => {
-			const message = mockMessage('test');
+			const message = mockMessage({ content: 'test' });
 			Object.defineProperty(message.channel, 'id', { value: '987654321098765432' });
 
 			const condition = inChannel('123456789012345678');
@@ -163,19 +163,28 @@ describe('Condition functions', () => {
 
 	describe('fromBot', () => {
 		it('should return true when message is from a bot', () => {
-			const message = mockMessage('test', 'testUser', true);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({ username: 'testUser', bot: true })
+			});
 			const condition = fromBot();
 			expect(condition(message)).toBe(true);
 		});
 
 		it('should return false when message is not from a bot', () => {
-			const message = mockMessage('test', 'testUser', false);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({ username: 'testUser', bot: false })
+			});
 			const condition = fromBot();
 			expect(condition(message)).toBe(false);
 		});
 
 		it('should exclude self when includeSelf is false', () => {
-			const message = mockMessage('test', 'testUser', true);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({ username: 'testUser', bot: true })
+			});
 			// Set the author ID to match the client user ID
 			Object.defineProperty(message.author, 'id', { value: 'bot123' });
 
