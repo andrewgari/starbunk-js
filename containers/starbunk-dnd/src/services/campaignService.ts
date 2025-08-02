@@ -138,8 +138,8 @@ export class CampaignService {
 
 		// Create Discord event
 		const discordService = getDiscordService();
-		// Starbunk Crusaders Guild ID (previously from deprecated guildIds.StarbunkCrusaders)
-		const guild = discordService.getGuild('753251582719688714');
+		// Default Guild ID from environment variable (fallback to Starbunk Crusaders)
+		const guild = discordService.getGuild(process.env.GUILD_ID || '753251582719688714');
 		const channel = guild.channels.cache.get(campaign.voiceChannelId);
 
 		if (!channel?.isVoiceBased()) {
@@ -190,8 +190,8 @@ export class CampaignService {
 		// If there's a Discord event for this date, delete it
 		if (session.discordEventId) {
 			const discordService = getDiscordService();
-			// Starbunk Crusaders Guild ID (previously from deprecated guildIds.StarbunkCrusaders)
-			const guild = discordService.getGuild('753251582719688714');
+			// Default Guild ID from environment variable (fallback to Starbunk Crusaders)
+			const guild = discordService.getGuild(process.env.GUILD_ID || '753251582719688714');
 			await guild.scheduledEvents.delete(session.discordEventId);
 		}
 

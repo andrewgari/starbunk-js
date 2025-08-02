@@ -44,8 +44,8 @@ export interface ProtectedMethods {
 	retryBotProfileRefresh: (attempts?: number) => Promise<void>;
 }
 
-// Starbunk Crusaders Guild ID (previously from deprecated guildIds.StarbunkCrusaders)
-const DefaultGuildId = '753251582719688714';
+// Default Guild ID from environment variable (fallback to Starbunk Crusaders)
+const DefaultGuildId = process.env.GUILD_ID || '753251582719688714';
 
 export class DiscordService {
 	private memberCache = new Map<string, GuildMember>();
