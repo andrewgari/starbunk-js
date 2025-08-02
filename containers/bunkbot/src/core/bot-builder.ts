@@ -1,4 +1,4 @@
-import { logger, isDebugMode } from '@starbunk/shared';
+import { logger, isDebugMode, DiscordService } from '@starbunk/shared';
 import { Client, Message, TextChannel, Webhook } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
@@ -40,6 +40,7 @@ export interface ReplyBotConfig {
 	responseRate?: number; // Specific response rate for this bot (overrides defaultResponseRate)
 	skipBotMessages?: boolean; // Whether to skip processing messages from other bots
 	disabled?: boolean; // Whether the bot is disabled
+	discordService?: DiscordService; // Discord service for sending messages
 }
 
 /**
@@ -53,6 +54,7 @@ export interface ValidatedReplyBotConfig {
 	defaultResponseRate: number; // Bot's default response rate
 	skipBotMessages: boolean; // Whether to skip processing messages from other bots
 	disabled: boolean; // Whether the bot is disabled
+	discordService: DiscordService; // Discord service for sending messages
 }
 
 /**
@@ -84,6 +86,7 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 		defaultResponseRate: responseRate,
 		skipBotMessages: config.skipBotMessages ?? true, // Default to true for safer behavior
 		disabled,
+		discordService: config.discordService || new DiscordService(), // Use provided service or create new one
 	};
 }
 
@@ -202,35 +205,16 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 						continue;
 					}
 
-					// Send message with custom bot identity using webhooks
+					// Send message using DiscordService
 					try {
-						if (message.channel instanceof TextChannel) {
-							// Use webhook for custom bot identity
-							const webhook = await getOrCreateWebhook(message.channel, message.client);
-							await webhook.send({
-								content: responseText,
-								username: identity.botName,
-								avatarURL: identity.avatarUrl
-							});
-							logger.debug(`Message sent via webhook as ${identity.botName}`);
-						} else if ('send' in message.channel) {
-							// Fallback to regular message for non-text channels
-							await message.channel.send(responseText);
-							logger.debug(`Message sent via regular channel (no webhook support)`);
-						} else {
-							logger.warn(`Channel does not support sending messages`);
-						}
+						await validConfig.discordService.sendMessageWithBotIdentity(
+							message.channel.id,
+							identity,
+							responseText
+						);
+						logger.debug(`Message sent via DiscordService as ${identity.botName}`);
 					} catch (error) {
-						logger.error(`Failed to send message to channel:`, error as Error);
-						// Fallback to regular message if webhook fails
-						try {
-							if ('send' in message.channel) {
-								await message.channel.send(responseText);
-								logger.debug(`Fallback message sent via regular channel`);
-							}
-						} catch (fallbackError) {
-							logger.error(`Fallback message also failed:`, fallbackError as Error);
-						}
+						logger.error(`Failed to send message via DiscordService:`, error as Error);
 					}
 					return;
 				} catch (error) {

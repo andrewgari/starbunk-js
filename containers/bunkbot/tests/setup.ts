@@ -2,6 +2,7 @@
 process.env.STARBUNK_TOKEN = 'test_token';
 process.env.NODE_ENV = 'test';
 process.env.DEBUG = 'false';
+process.env.DEBUG_MODE = 'false'; // Ensure debug mode is disabled for tests
 process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
 
 // Mock PrismaClient to prevent initialization issues in tests

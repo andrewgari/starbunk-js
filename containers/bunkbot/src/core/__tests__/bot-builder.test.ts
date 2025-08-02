@@ -86,6 +86,7 @@ describe('Bot builder', () => {
 						priority: 10,
 					},
 				],
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -175,6 +176,7 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger1, trigger2],
+				discordService: mockDiscordServiceInstance,
 			};
 
 			// Mock discord service
@@ -206,6 +208,7 @@ describe('Bot builder', () => {
 					},
 				],
 				// No skipBotMessages or responseRate
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -225,6 +228,7 @@ describe('Bot builder', () => {
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 				// skipBotMessages not specified, should default to true
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -254,6 +258,7 @@ describe('Bot builder', () => {
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 				skipBotMessages: true,
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -283,6 +288,8 @@ describe('Bot builder', () => {
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
 				skipBotMessages: false, // Explicitly allow bot messages
+				discordService: mockDiscordServiceInstance,
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -323,6 +330,7 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -375,6 +383,7 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger1, trigger2],
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -406,6 +415,7 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -439,6 +449,7 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity(),
 				triggers: [errorTrigger, fallbackTrigger],
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -479,6 +490,7 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -512,6 +524,7 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -543,6 +556,7 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -572,6 +586,7 @@ describe('Bot builder', () => {
 				description: 'A test bot',
 				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger],
+				discordService: mockDiscordServiceInstance,
 			};
 
 			const bot = createReplyBot(config);
@@ -604,6 +619,7 @@ describe('Bot builder', () => {
 					defaultIdentity: mockBotIdentity(),
 					triggers: [trigger],
 					responseRate: 0,
+				discordService: mockDiscordServiceInstance,
 				};
 
 				const bot = createReplyBot(config);
@@ -631,6 +647,7 @@ describe('Bot builder', () => {
 					defaultIdentity: mockBotIdentity(),
 					triggers: [trigger],
 					responseRate: 100,
+				discordService: mockDiscordServiceInstance,
 				};
 
 				const bot = createReplyBot(config);
