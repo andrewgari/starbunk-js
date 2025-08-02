@@ -1,13 +1,35 @@
 import { mockMessage, mockUser } from '../../src/test-utils/testUtils';
-import chadBot from '../../src/reply-bots/chad-bot';
-import { chadKeywordTrigger } from '../../src/reply-bots/chad-bot/triggers';
-import { CHAD_RESPONSE, CHAD_USER_ID, CHAD_RESPONSE_CHANCE, CHAD_BOT_NAME, CHAD_BOT_AVATAR_URL } from '../../src/reply-bots/chad-bot/constants';
+import { CHAD_RESPONSE, CHAD_RESPONSE_CHANCE, CHAD_BOT_NAME, CHAD_BOT_AVATAR_URL } from '../../src/reply-bots/chad-bot/constants';
+
+// Define Chad's user ID for testing (since it's no longer in constants)
+const CHAD_USER_ID = '85184539906809856';
 
 // Mock the isDebugMode function to return false for proper chance testing
 jest.mock('@starbunk/shared', () => ({
 	...jest.requireActual('@starbunk/shared'),
 	isDebugMode: jest.fn().mockReturnValue(false)
 }));
+
+// Mock the ConfigurationService to return Chad's user ID
+jest.mock('../../src/services/configurationService', () => ({
+	ConfigurationService: jest.fn().mockImplementation(() => ({
+		getUserIdByUsername: jest.fn().mockImplementation((username: string) => {
+			if (username === 'Chad') {
+				return Promise.resolve(CHAD_USER_ID);
+			}
+			return Promise.resolve(null);
+		}),
+		getUserConfig: jest.fn().mockResolvedValue({
+			userId: CHAD_USER_ID,
+			username: 'Chad',
+			isActive: true
+		})
+	}))
+}));
+
+// Import after mocks to ensure they're applied
+import chadBot from '../../src/reply-bots/chad-bot';
+import { chadKeywordTrigger } from '../../src/reply-bots/chad-bot/triggers';
 
 // Mock Math.random for deterministic tests
 const originalRandom = global.Math.random;
