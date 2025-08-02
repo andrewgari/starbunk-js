@@ -25,6 +25,9 @@ on:
       GITHUB_TOKEN:
         required: true
 
+# This workflow should ONLY be called by other workflows, never triggered directly
+# If you see this workflow failing, it means it's being triggered incorrectly
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
