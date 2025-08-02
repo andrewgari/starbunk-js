@@ -30,7 +30,10 @@ on:
 
 jobs:
   build-and-push:
+    name: 🐳 Build & Push ${{ inputs.container_name }}
     runs-on: ubuntu-latest
+    # Only run if this is a workflow_call event (called by another workflow)
+    if: github.event_name == 'workflow_call'
     permissions:
       contents: read
       packages: write
