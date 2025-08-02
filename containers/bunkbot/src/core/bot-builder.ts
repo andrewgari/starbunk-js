@@ -253,5 +253,13 @@ function getBotData(botName: string, key: string): string | number | boolean | u
 	return botStorage.get(botKey);
 }
 
+function setBotData(botName: string, key: string, value: string | number | boolean): void {
+	const botKey = `${botName}:${key}`;
+	botStorage.set(botKey, value);
+}
+
+// Export for testing
+export { setBotData };
+
 
 

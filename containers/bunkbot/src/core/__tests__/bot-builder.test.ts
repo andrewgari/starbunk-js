@@ -1,7 +1,7 @@
 import { getDiscordService, DiscordService, logger, container, ServiceId } from '@starbunk/shared';
 import { Message, TextChannel, Webhook } from 'discord.js';
 import { mockBotIdentity, mockDiscordService, mockMessage, mockUser, mockGuild } from '../../test-utils/testUtils';
-import { createBotDescription, createBotReplyName, createReplyBot } from '../bot-builder';
+import { createBotDescription, createBotReplyName, createReplyBot, setBotData } from '../bot-builder';
 
 // Mock the PrismaClient
 const mockBlacklistFindUnique = jest.fn().mockResolvedValue(null);
@@ -335,6 +335,9 @@ describe('Bot builder', () => {
 
 			const bot = createReplyBot(config);
 
+			// Set up blacklist data for the user
+			setBotData('TestBot', 'blacklist:test-guild-id:blacklisted-user-id', true);
+
 			// Create a mock message for a blacklisted user
 			const blacklistedMessage = mockMessage({
 				content: 'Test message',
@@ -347,16 +350,6 @@ describe('Bot builder', () => {
 			});
 
 			await bot.processMessage(blacklistedMessage);
-
-			// Verify the blacklist was checked
-			expect(mockBlacklistFindUnique).toHaveBeenCalledWith({
-				where: {
-					guildId_userId: {
-						guildId: 'test-guild-id',
-						userId: 'blacklisted-user-id'
-					}
-				}
-			});
 
 			// Verify the message was skipped (triggers not called)
 			expect(trigger.condition).not.toHaveBeenCalled();
@@ -578,7 +571,7 @@ describe('Bot builder', () => {
 				name: 'invalid-identity',
 				condition: jest.fn().mockReturnValue(true),
 				response: jest.fn().mockReturnValue('Response with invalid identity'),
-				identity: jest.fn().mockReturnValue(null),
+				identity: jest.fn().mockRejectedValue(new Error('Identity service failed')),
 			};
 
 			const config = {

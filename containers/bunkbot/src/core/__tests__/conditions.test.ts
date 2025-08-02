@@ -185,12 +185,17 @@ describe('Condition functions', () => {
 		});
 
 		it('should exclude self when includeSelf is false', () => {
+			const botUserId = 'bot123';
 			const message = mockMessage({
 				content: 'test',
-				author: mockUser({ username: 'testUser', bot: true })
+				author: mockUser({ username: 'testUser', bot: true }),
+				client: {
+					user: mockUser({ bot: true })
+				}
 			});
-			// Set the author ID to match the client user ID
-			Object.defineProperty(message.author, 'id', { value: 'bot123' });
+			// Set both author ID and client user ID to the same value
+			Object.defineProperty(message.author, 'id', { value: botUserId });
+			Object.defineProperty(message.client.user!, 'id', { value: botUserId });
 
 			const condition = fromBot(false);
 			expect(condition(message)).toBe(false);
