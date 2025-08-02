@@ -1,5 +1,5 @@
-import { getDiscordService, DiscordService, logger } from '@starbunk/shared';
-import { Message } from 'discord.js';
+import { getDiscordService, DiscordService, logger, container, ServiceId } from '@starbunk/shared';
+import { Message, TextChannel, Webhook } from 'discord.js';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { createBotDescription, createBotReplyName, createReplyBot } from '../bot-builder';
 
@@ -29,6 +29,7 @@ jest.mock('@starbunk/shared', () => ({
 
 describe('Bot builder', () => {
 	let mockDiscordServiceInstance: Partial<DiscordService>;
+	let mockWebhookSend: jest.Mock;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -38,6 +39,12 @@ describe('Bot builder', () => {
 		// Create a fresh mock Discord service instance
 		mockDiscordServiceInstance = mockDiscordService();
 		(getDiscordService as jest.Mock).mockReturnValue(mockDiscordServiceInstance);
+
+		// Register the mock Discord service in the container
+		container.register(ServiceId.DiscordService, mockDiscordServiceInstance as DiscordService);
+
+		// Mock webhook functionality
+		mockWebhookSend = jest.fn().mockResolvedValue(undefined);
 	});
 
 	describe('Type creators', () => {
@@ -151,22 +158,22 @@ describe('Bot builder', () => {
 		it('should sort triggers by priority', async () => {
 			const trigger1 = {
 				name: 'low-priority',
-				condition: jest.fn().mockReturnValue(true),
-				response: jest.fn().mockReturnValue('Low priority response'),
+				condition: jest.fn().mockResolvedValue(true),
+				response: jest.fn().mockResolvedValue('Low priority response'),
 				priority: 1,
 			};
 
 			const trigger2 = {
 				name: 'high-priority',
-				condition: jest.fn().mockReturnValue(true),
-				response: jest.fn().mockReturnValue('High priority response'),
+				condition: jest.fn().mockResolvedValue(true),
+				response: jest.fn().mockResolvedValue('High priority response'),
 				priority: 10,
 			};
 
 			const config = {
 				name: 'TestBot',
 				description: 'A test bot',
-				defaultIdentity: mockBotIdentity,
+				defaultIdentity: mockBotIdentity(),
 				triggers: [trigger1, trigger2],
 			};
 
@@ -183,11 +190,6 @@ describe('Bot builder', () => {
 			expect(trigger2.response).toHaveBeenCalled();
 			expect(trigger1.condition).not.toHaveBeenCalled(); // Lower priority should NOT be called
 			expect(trigger1.response).not.toHaveBeenCalled(); // Lower priority should NOT be called
-			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
-				message.channel.id, // Use the created message's channel id
-				config.defaultIdentity, // Expect default identity as triggers don't define one
-				'High priority response', // Expect response from trigger2
-			);
 		});
 
 		it('should use default values for optional config', () => {

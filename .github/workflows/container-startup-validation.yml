@@ -127,10 +127,17 @@ jobs:
 
       - name: Generate Prisma client
         run: |
+          # Check for container-specific Prisma schema first
           cd ${{ matrix.path }}
           if [ -f "prisma/schema.prisma" ]; then
-            echo "Found Prisma schema, generating client..."
+            echo "Found container-specific Prisma schema, generating client..."
             npx prisma generate
+          # Check for root-level Prisma schema
+          elif [ -f "../../prisma/schema.prisma" ]; then
+            echo "Found root-level Prisma schema, generating client..."
+            cd ../../
+            npx prisma generate
+            cd ${{ matrix.path }}
           else
             echo "No Prisma schema found, skipping generation"
           fi

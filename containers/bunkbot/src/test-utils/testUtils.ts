@@ -184,8 +184,19 @@ export function mockTextChannel(overrides: Partial<TextChannel> = {}): TextChann
 		rateLimitPerUser: 0,
 		lastPinTimestamp: null,
 		defaultAutoArchiveDuration: null,
+		// Add webhook methods for testing
+		createWebhook: jest.fn().mockResolvedValue({
+			send: jest.fn().mockResolvedValue(undefined),
+		}),
+		fetchWebhooks: jest.fn().mockResolvedValue({
+			find: jest.fn().mockReturnValue(undefined),
+		}),
+		send: jest.fn().mockResolvedValue(undefined),
 		...overrides
 	} as TextChannel;
+
+	// Ensure the mock is recognized as a TextChannel instance
+	Object.setPrototypeOf(defaultChannel, TextChannel.prototype);
 
 	return defaultChannel;
 }

@@ -1,4 +1,4 @@
-import { logger, getDiscordService, DiscordService } from '@starbunk/shared';
+import { logger, getDiscordService, DiscordService, container, ServiceId } from '@starbunk/shared';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { createPriority, createTriggerName, createTriggerResponse, TriggerResponseClass } from '../trigger-response';
 
@@ -23,6 +23,9 @@ describe('Trigger Response', () => {
 		// Create a fresh mock Discord service instance
 		mockDiscordServiceInstance = mockDiscordService();
 		(getDiscordService as jest.Mock).mockReturnValue(mockDiscordServiceInstance);
+
+		// Register the mock Discord service in the container
+		container.register(ServiceId.DiscordService, mockDiscordServiceInstance as DiscordService);
 	});
 
 	describe('Type creators', () => {
@@ -244,7 +247,7 @@ describe('Trigger Response', () => {
 				expect(identityFn).toHaveBeenCalledWith(message);
 			});
 
-			it('should return default identity and log error if identity function throws', async () => {
+			it('should return null and log error if identity function throws (bot remains silent)', async () => {
 				const identityFn = jest.fn().mockImplementation(() => {
 					throw new Error('Identity error');
 				});
@@ -260,7 +263,7 @@ describe('Trigger Response', () => {
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const result = await trigger.getIdentity(message, defaultIdentity);
 
-				expect(result).toBe(defaultIdentity);
+				expect(result).toBe(null); // Bot should remain silent when identity resolution fails
 				expect(identityFn).toHaveBeenCalledWith(message);
 				expect(logger.error).toHaveBeenCalledWith(
 					expect.stringContaining('Error getting identity'),
