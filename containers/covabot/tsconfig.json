@@ -19,6 +19,6 @@
 			"@shared/*": ["../shared/src/*"]
 		}
 	},
-	"include": ["src/index-minimal.ts"],
+	"include": ["src/index-minimal.ts", "src/index-web.ts", "src/web/server.ts", "src/services/productionMonitoringService.ts", "src/services/logAggregationService.ts"],
 	"exclude": ["node_modules", "dist", "tests"]
 }
