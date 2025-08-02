@@ -75,15 +75,6 @@ jobs:
           else
             echo "any-container=false" >> $GITHUB_OUTPUT
           fi
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: '.github/path-filters.yml'
 
   unit-tests:
     name: Unit Tests
@@ -133,6 +124,29 @@ jobs:
         run: |
           cd ${{ matrix.path }}
           npm ci
+
+      - name: Generate Prisma client
+        run: |
+          # Check for container-specific Prisma schema first
+          cd ${{ matrix.path }}
+          if [ -f "prisma/schema.prisma" ]; then
+            echo "Found container-specific Prisma schema, generating client..."
+            npx prisma generate
+          # Check for root-level Prisma schema
+          elif [ -f "../../prisma/schema.prisma" ]; then
+            echo "Found root-level Prisma schema, generating client..."
+            cd ../../
+            npx prisma generate
+            cd ${{ matrix.path }}
+            # Copy the generated client to the container's node_modules
+            if [ -d "../../node_modules/@prisma" ]; then
+              echo "Copying Prisma client to container node_modules..."
+              mkdir -p node_modules/@prisma
+              cp -r ../../node_modules/@prisma/client node_modules/@prisma/
+            fi
+          else
+            echo "No Prisma schema found, skipping generation"
+          fi
 
       - name: Run unit tests
         run: |

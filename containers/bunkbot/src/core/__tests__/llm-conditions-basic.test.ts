@@ -25,7 +25,7 @@ describe('LLM Conditions', () => {
 		it('should return true when LLM responds with "yes"', async () => {
 			// Setup
 			const prompt = 'Does this message mention cats?';
-			const message = mockMessage('I love cats!');
+			const message = mockMessage({ content: 'I love cats!' });
 			mockLLMManager.createPromptCompletion.mockResolvedValue('yes');
 
 			// Create the condition with the mock manager explicitly provided
@@ -48,7 +48,7 @@ describe('LLM Conditions', () => {
 		it('should return false when LLM responds with "no"', async () => {
 			// Setup
 			const prompt = 'Does this message mention cats?';
-			const message = mockMessage('I love dogs!');
+			const message = mockMessage({ content: 'I love dogs!' });
 			mockLLMManager.createPromptCompletion.mockResolvedValue('no');
 
 			// Create the condition with the mock manager
@@ -66,7 +66,7 @@ describe('LLM Conditions', () => {
 		it('should use regex fallback when LLM fails', async () => {
 			// Setup
 			const prompt = 'Does this message mention cats?';
-			const message = mockMessage('I love cats!');
+			const message = mockMessage({ content: 'I love cats!' });
 			const regexFallback = /cats/i;
 
 			// Make the LLM call fail
@@ -89,7 +89,7 @@ describe('LLM Conditions', () => {
 		it('should return false when LLM fails and regex does not match', async () => {
 			// Setup
 			const prompt = 'Does this message mention cats?';
-			const message = mockMessage('I love dogs!');
+			const message = mockMessage({ content: 'I love dogs!' });
 			const regexFallback = /cats/i;
 
 			// Make the LLM call fail
@@ -111,7 +111,7 @@ describe('LLM Conditions', () => {
 		it('should return false when LLM fails and no fallback is provided', async () => {
 			// Setup
 			const prompt = 'Does this message mention cats?';
-			const message = mockMessage('I love cats!');
+			const message = mockMessage({ content: 'I love cats!' });
 
 			// Make the LLM call fail
 			mockLLMManager.createPromptCompletion.mockRejectedValue(new Error('LLM unavailable'));

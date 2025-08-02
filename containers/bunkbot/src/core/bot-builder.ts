@@ -1,5 +1,5 @@
-import { logger, isDebugMode } from '@starbunk/shared';
-import { Client, Message, TextChannel, Webhook } from 'discord.js';
+import { logger, isDebugMode, DiscordService } from '@starbunk/shared';
+import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
@@ -40,6 +40,7 @@ export interface ReplyBotConfig {
 	responseRate?: number; // Specific response rate for this bot (overrides defaultResponseRate)
 	skipBotMessages?: boolean; // Whether to skip processing messages from other bots
 	disabled?: boolean; // Whether the bot is disabled
+	discordService?: DiscordService; // Discord service for sending messages (optional)
 }
 
 /**
@@ -53,6 +54,7 @@ export interface ValidatedReplyBotConfig {
 	defaultResponseRate: number; // Bot's default response rate
 	skipBotMessages: boolean; // Whether to skip processing messages from other bots
 	disabled: boolean; // Whether the bot is disabled
+	discordService?: DiscordService; // Discord service for sending messages (optional)
 }
 
 /**
@@ -73,6 +75,7 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 		throw new Error('At least one trigger is required');
 	}
 
+
 	const responseRate = config.responseRate ?? config.defaultResponseRate ?? getBotDefaults().responseRate;
 	const disabled = config.disabled ?? false;
 
@@ -84,6 +87,7 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 		defaultResponseRate: responseRate,
 		skipBotMessages: config.skipBotMessages ?? true, // Default to true for safer behavior
 		disabled,
+		discordService: config.discordService, // DiscordService (optional)
 	};
 }
 
@@ -202,27 +206,28 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 						continue;
 					}
 
-					// Send message with custom bot identity using webhooks
+					// Send message using DiscordService if available, otherwise use webhooks
 					try {
-						if (message.channel instanceof TextChannel) {
-							// Use webhook for custom bot identity
-							const webhook = await getOrCreateWebhook(message.channel, message.client);
-							await webhook.send({
-								content: responseText,
-								username: identity.botName,
-								avatarURL: identity.avatarUrl
-							});
-							logger.debug(`Message sent via webhook as ${identity.botName}`);
-						} else if ('send' in message.channel) {
-							// Fallback to regular message for non-text channels
-							await message.channel.send(responseText);
-							logger.debug(`Message sent via regular channel (no webhook support)`);
+						if (validConfig.discordService) {
+							// Use DiscordService if provided (for tests)
+							await validConfig.discordService.sendMessageWithBotIdentity(
+								message.channel.id,
+								identity,
+								responseText
+							);
+							logger.debug(`Message sent via DiscordService as ${identity.botName}`);
 						} else {
-							logger.warn(`Channel does not support sending messages`);
+							// Fallback to regular message sending (no custom identity)
+							if ('send' in message.channel) {
+								await message.channel.send(responseText);
+								logger.debug(`Message sent via regular channel (no custom identity)`);
+							} else {
+								logger.warn(`Channel does not support sending messages`);
+							}
 						}
 					} catch (error) {
-						logger.error(`Failed to send message to channel:`, error as Error);
-						// Fallback to regular message if webhook fails
+						logger.error(`Failed to send message:`, error as Error);
+						// Fallback to regular message if everything else fails
 						try {
 							if ('send' in message.channel) {
 								await message.channel.send(responseText);
@@ -248,39 +253,13 @@ function getBotData(botName: string, key: string): string | number | boolean | u
 	return botStorage.get(botKey);
 }
 
-// Webhook cache for custom bot identities
-const webhookCache = new Map<string, Webhook>();
-
-async function getOrCreateWebhook(channel: TextChannel, client: Client): Promise<Webhook> {
-	const cacheKey = channel.id;
-	const cachedWebhook = webhookCache.get(cacheKey);
-	if (cachedWebhook) {
-		return cachedWebhook;
-	}
-
-	try {
-		// Try to find existing webhook
-		const webhooks = await channel.fetchWebhooks();
-		const existingWebhook = webhooks.find(w => w.owner?.id === client.user?.id);
-		if (existingWebhook) {
-			webhookCache.set(cacheKey, existingWebhook);
-			return existingWebhook;
-		}
-
-		// Create new webhook if none exists
-		if (!client.user) {
-			throw new Error('Client user not available');
-		}
-
-		const newWebhook = await channel.createWebhook({
-			name: 'BunkBot Webhook',
-			avatar: client.user.displayAvatarURL()
-		});
-		webhookCache.set(cacheKey, newWebhook);
-		return newWebhook;
-	} catch (error) {
-		logger.error(`Error in getOrCreateWebhook: ${error instanceof Error ? error.message : String(error)}`);
-		throw new Error(`Could not get or create webhook: ${error instanceof Error ? error.message : String(error)}`);
-	}
+function setBotData(botName: string, key: string, value: string | number | boolean): void {
+	const botKey = `${botName}:${key}`;
+	botStorage.set(botKey, value);
 }
+
+// Export for testing
+export { setBotData };
+
+
 

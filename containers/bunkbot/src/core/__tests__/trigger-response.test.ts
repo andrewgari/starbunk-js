@@ -1,13 +1,31 @@
-import { logger } from '@starbunk/shared';
+import { logger, getDiscordService, DiscordService, container, ServiceId } from '@starbunk/shared';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
 import { createPriority, createTriggerName, createTriggerResponse, TriggerResponseClass } from '../trigger-response';
 
-// Mock the logger
-jest.mock('@starbunk/shared');
+// Mock the logger and Discord service
+jest.mock('@starbunk/shared', () => ({
+	...jest.requireActual('@starbunk/shared'),
+	getDiscordService: jest.fn(),
+	logger: {
+		warn: jest.fn(),
+		error: jest.fn(),
+		info: jest.fn(),
+		debug: jest.fn()
+	}
+}));
 
 describe('Trigger Response', () => {
+	let mockDiscordServiceInstance: Partial<DiscordService>;
+
 	beforeEach(() => {
 		jest.clearAllMocks();
+
+		// Create a fresh mock Discord service instance
+		mockDiscordServiceInstance = mockDiscordService();
+		(getDiscordService as jest.Mock).mockReturnValue(mockDiscordServiceInstance);
+
+		// Register the mock Discord service in the container
+		container.register(ServiceId.DiscordService, mockDiscordServiceInstance as DiscordService);
 	});
 
 	describe('Type creators', () => {
@@ -229,7 +247,7 @@ describe('Trigger Response', () => {
 				expect(identityFn).toHaveBeenCalledWith(message);
 			});
 
-			it('should return default identity and log error if identity function throws', async () => {
+			it('should return null and log error if identity function throws (bot remains silent)', async () => {
 				const identityFn = jest.fn().mockImplementation(() => {
 					throw new Error('Identity error');
 				});
@@ -245,7 +263,7 @@ describe('Trigger Response', () => {
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const result = await trigger.getIdentity(message, defaultIdentity);
 
-				expect(result).toBe(defaultIdentity);
+				expect(result).toBe(null); // Bot should remain silent when identity resolution fails
 				expect(identityFn).toHaveBeenCalledWith(message);
 				expect(logger.error).toHaveBeenCalledWith(
 					expect.stringContaining('Error getting identity'),
@@ -274,7 +292,7 @@ describe('Trigger Response', () => {
 				expect(result).toBe(true);
 				expect(condition).toHaveBeenCalledWith(message);
 				expect(responseGen).toHaveBeenCalledWith(message);
-				expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+				expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 					message.channel.id,
 					defaultIdentity,
 					'Test response',
@@ -301,7 +319,7 @@ describe('Trigger Response', () => {
 				expect(result).toBe(false);
 				expect(condition).toHaveBeenCalledWith(message);
 				expect(responseGen).not.toHaveBeenCalled();
-				expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+				expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 			});
 
 			it('should use custom identity when provided', async () => {
@@ -322,7 +340,7 @@ describe('Trigger Response', () => {
 
 				await trigger.process(message, defaultIdentity, botName);
 
-				expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+				expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 					message.channel.id,
 					customIdentity,
 					'Custom response',
@@ -346,7 +364,7 @@ describe('Trigger Response', () => {
 				await trigger.process(message, defaultIdentity, botName);
 
 				expect(responseGen).toHaveBeenCalledWith(message);
-				expect(mockDiscordService.sendMessageWithBotIdentity).toHaveBeenCalledWith(
+				expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).toHaveBeenCalledWith(
 					message.channel.id,
 					defaultIdentity,
 					'Async response',
@@ -373,7 +391,7 @@ describe('Trigger Response', () => {
 
 				expect(condition).toHaveBeenCalledWith(message);
 				expect(responseGen).toHaveBeenCalledWith(message);
-				expect(mockDiscordService.sendMessageWithBotIdentity).not.toHaveBeenCalled();
+				expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 				expect(logger.error).toHaveBeenCalledWith(
 					expect.stringContaining('Error processing'),
 					expect.any(Error),

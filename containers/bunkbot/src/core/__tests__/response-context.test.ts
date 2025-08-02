@@ -5,7 +5,7 @@ import { Message, User } from 'discord.js';
 describe('ResponseContext', () => {
 	// Create a proper mock message with mentions
 	function createMessageWithMentions(content: string): Message {
-		const message = mockMessage(content);
+		const message = mockMessage({ content });
 
 		// Add mock mentions object
 		Object.defineProperty(message, 'mentions', {

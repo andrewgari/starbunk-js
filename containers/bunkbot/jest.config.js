@@ -11,6 +11,8 @@ module.exports = {
 	// E2E tests have longer timeouts
 	testTimeout: 30000,
 	setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+	// Force test environment variables to override CI/CD settings
+	setupFiles: ['<rootDir>/tests/jest-env-setup.js'],
 	collectCoverageFrom: [
 		'src/**/*.ts',
 		'!src/**/*.d.ts',

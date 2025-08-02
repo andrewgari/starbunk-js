@@ -63,11 +63,18 @@ jobs:
           echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
           # Get the last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "Last tag: $LAST_TAG"
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
-          # Get commits since last tag
-          COMMITS=$(git log ${LAST_TAG}..HEAD --oneline --no-merges)
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tags found, using initial version"
+            LAST_TAG="v0.0.0"
+            # For first release, check commits from beginning
+            COMMITS=$(git log --oneline --no-merges | head -20)
+          else
+            echo "Last tag: $LAST_TAG"
+            # Get commits since last tag
+            COMMITS=$(git log ${LAST_TAG}..HEAD --oneline --no-merges)
+          fi
 
           if [ -z "$COMMITS" ]; then
             echo "No new commits since last release"
@@ -112,7 +119,15 @@ jobs:
           echo "should-release=true" >> $GITHUB_OUTPUT
 
           # Calculate new version
-          IFS='.' read -r major minor patch <<< "${CURRENT_VERSION}"
+          # Normalise version: strip leading "v" and any pre-release / build metadata
+          VERSION_NUMBER="${CURRENT_VERSION#v}"
+          BASE_VERSION="${VERSION_NUMBER%%[-+]*}"   # keep only x.y.z
+          IFS='.' read -r major minor patch <<< "${BASE_VERSION}"
+
+          # Ensure we have valid numbers
+          major=${major:-0}
+          minor=${minor:-0}
+          patch=${patch:-0}
 
           case $RELEASE_TYPE in
             major)
@@ -125,7 +140,7 @@ jobs:
               NEW_VERSION="${major}.${minor}.$((patch + 1))"
               ;;
             prerelease)
-              NEW_VERSION="${CURRENT_VERSION}-rc.$(date +%Y%m%d%H%M%S)"
+              NEW_VERSION="${VERSION_NUMBER}-rc.$(date +%Y%m%d%H%M%S)"
               ;;
           esac
 

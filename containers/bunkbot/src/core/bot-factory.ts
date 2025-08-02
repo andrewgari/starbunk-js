@@ -1,6 +1,7 @@
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
 import { createReplyBot, ReplyBotImpl } from './bot-builder';
+import { DiscordService } from '@starbunk/shared';
 
 /**
  * Interface for bot configuration
@@ -14,6 +15,7 @@ export interface BotConfig {
 	responseRate?: number;
 	skipBotMessages?: boolean;
 	disabled?: boolean;
+	discordService?: DiscordService; // Discord service for sending messages (optional)
 }
 
 /**

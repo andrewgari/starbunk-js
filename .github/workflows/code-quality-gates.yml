@@ -99,13 +99,30 @@ jobs:
       - name: Check test coverage threshold
         id: coverage-check
         run: |
-          # Extract coverage percentage from saved Jest output
-          COVERAGE=$(grep -o "All files.*[0-9]\+\.[0-9]\+" coverage-output.txt | grep -o "[0-9]\+\.[0-9]\+" | head -1 || echo "0")
+          # Extract coverage percentage from saved Jest output using multiple methods
+          # Method 1: Look for "All files" line and extract first percentage
+          COVERAGE=$(grep "All files" coverage-output.txt | grep -o "[0-9]\+\.[0-9]\+" | head -1 || echo "")
+
+          # Method 2: If method 1 fails, try alternative pattern
+          if [ -z "$COVERAGE" ]; then
+            COVERAGE=$(grep -E "All files.*\|.*[0-9]+\.[0-9]+" coverage-output.txt | sed -E 's/.*\|[^0-9]*([0-9]+\.[0-9]+).*/\1/' || echo "")
+          fi
+
+          # Method 3: If still empty, try extracting any percentage from coverage table
+          if [ -z "$COVERAGE" ]; then
+            COVERAGE=$(grep -E "[0-9]+\.[0-9]+.*\|" coverage-output.txt | head -1 | grep -o "[0-9]\+\.[0-9]\+" | head -1 || echo "0")
+          fi
+
+          # Fallback to 0 if still empty
+          if [ -z "$COVERAGE" ]; then
+            COVERAGE="0"
+          fi
 
           echo "Current coverage: $COVERAGE%"
           echo "Required threshold: $COVERAGE_THRESHOLD%"
 
-          if (( $(echo "$COVERAGE >= $COVERAGE_THRESHOLD" | bc -l) )); then
+          # Use awk for more reliable floating point comparison
+          if awk "BEGIN {exit !($COVERAGE >= $COVERAGE_THRESHOLD)}"; then
             echo "✅ Coverage threshold met: $COVERAGE% >= $COVERAGE_THRESHOLD%"
             echo "passed=true" >> $GITHUB_OUTPUT
           else
@@ -132,7 +149,8 @@ jobs:
               COMPLEXITY=$(cr --format json "$file" | jq '.reports[0].complexity.cyclomatic' 2>/dev/null || echo "0")
               TOTAL_FILES=$((TOTAL_FILES + 1))
 
-              if (( $(echo "$COMPLEXITY > $COMPLEXITY_THRESHOLD" | bc -l) )); then
+              # Use awk for reliable floating point comparison
+              if awk "BEGIN {exit !($COMPLEXITY > $COMPLEXITY_THRESHOLD)}"; then
                 echo "⚠️ High complexity in $file: $COMPLEXITY"
                 COMPLEX_FILES=$((COMPLEX_FILES + 1))
               fi
@@ -155,23 +173,24 @@ jobs:
           COVERAGE_SCORE=${{ steps.coverage-check.outputs.coverage }}
           COMPLEXITY_PASSED=${{ steps.complexity-check.outputs.passed }}
 
+          # Ensure coverage score is not empty
+          if [ -z "$COVERAGE_SCORE" ] || [ "$COVERAGE_SCORE" = "" ]; then
+            COVERAGE_SCORE="0"
+          fi
+
           # Parse ESLint results
           ESLINT_ERRORS=$(jq '[.[] | .errorCount] | add // 0' eslint-results.json)
           ESLINT_WARNINGS=$(jq '[.[] | .warningCount] | add // 0' eslint-results.json)
 
-          # Calculate quality score (0-100)
-          QUALITY_SCORE=$COVERAGE_SCORE
-
-          # Deduct points for ESLint issues
-          QUALITY_SCORE=$(echo "$QUALITY_SCORE - ($ESLINT_ERRORS * 2) - ($ESLINT_WARNINGS * 0.5)" | bc -l)
-
-          # Deduct points for complexity issues
-          if [ "$COMPLEXITY_PASSED" = "false" ]; then
-            QUALITY_SCORE=$(echo "$QUALITY_SCORE - 10" | bc -l)
-          fi
-
-          # Ensure score is not negative
-          QUALITY_SCORE=$(echo "if ($QUALITY_SCORE < 0) 0 else $QUALITY_SCORE" | bc -l)
+          # Calculate quality score (0-100) using awk for reliable arithmetic
+          QUALITY_SCORE=$(awk "BEGIN {
+            score = $COVERAGE_SCORE
+            score = score - ($ESLINT_ERRORS * 2)
+            score = score - ($ESLINT_WARNINGS * 0.5)
+            if (\"$COMPLEXITY_PASSED\" == \"false\") score = score - 10
+            if (score < 0) score = 0
+            printf \"%.2f\", score
+          }")
 
           echo "Quality Score: $QUALITY_SCORE/100"
           echo "score=$QUALITY_SCORE" >> $GITHUB_OUTPUT
@@ -276,12 +295,12 @@ jobs:
           args: --severity-threshold=high
 
       - name: Scan for secrets
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.63.2
         with:
           path: ./
-          base: main
+          base: ${{ github.event.repository.default_branch }}
           head: HEAD
-          extra_args: --debug --only-verified
+          extra_args: --only-verified
 
   # Performance analysis
   performance-analysis:

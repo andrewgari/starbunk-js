@@ -236,35 +236,37 @@ describe('BotIdentityService', () => {
 		it('should return bot identity when user exists', async () => {
 			// Arrange
 			mockConfigService.getUserIdByUsername.mockResolvedValue('85184539906809856');
-			
-			// Mock the getBotIdentityFromDiscord function
-			jest.doMock('../../core/get-bot-identity', () => ({
-				getBotIdentityFromDiscord: jest.fn().mockResolvedValue({
-					botName: 'ChadBot',
-					avatarUrl: 'https://example.com/chad.png'
-				})
-			}));
+			mockConfigService.getUserConfig.mockResolvedValue({
+				userId: '85184539906809856',
+				username: 'Chad',
+				isActive: true
+			});
+
+			// Mock the getServerSpecificIdentity method
+			const mockGetServerSpecificIdentity = jest.spyOn(identityService as any, 'getServerSpecificIdentity');
+			mockGetServerSpecificIdentity.mockResolvedValue({
+				botName: 'ChadBot',
+				avatarUrl: 'https://example.com/chad.png'
+			});
 
 			// Act
-			const result = await identityService.getBotIdentityByUsername('Chad', 'ChadBot');
+			const result = await identityService.getBotIdentityByUsername('Chad', undefined, 'ChadBot');
 
 			// Assert
 			expect(mockConfigService.getUserIdByUsername).toHaveBeenCalledWith('Chad');
-			expect(result.botName).toBe('ChadBot');
+			expect(result).not.toBeNull();
+			expect(result!.botName).toBe('ChadBot');
 		});
 
-		it('should return fallback identity when user not found', async () => {
+		it('should return null when user not found (no fallback)', async () => {
 			// Arrange
 			mockConfigService.getUserIdByUsername.mockResolvedValue(null);
 
 			// Act
-			const result = await identityService.getBotIdentityByUsername('NonExistent', 'FallbackBot');
+			const result = await identityService.getBotIdentityByUsername('NonExistent', undefined, 'FallbackBot');
 
-			// Assert
-			expect(result).toEqual({
-				botName: 'FallbackBot',
-				avatarUrl: undefined
-			});
+			// Assert - Implementation returns null when user not found (bot remains silent)
+			expect(result).toBeNull();
 		});
 	});
 
