@@ -62,12 +62,17 @@ export class BotIdentityService {
 					this.cacheIdentity(cacheKey, identity);
 					return identity;
 				} else {
-					logger.warn(`Failed to get Discord identity for user '${username}' (${userId}), no fallback provided`);
-					return null;
+					// Create fallback identity when Discord API fails
+					logger.warn(`Failed to get Discord identity for user '${username}' (${userId}), creating fallback identity`);
+					const fallbackIdentity = this.createFallbackIdentity(username, userId);
+					this.cacheIdentity(cacheKey, fallbackIdentity);
+					return fallbackIdentity;
 				}
 			} else {
-				logger.warn(`User '${username}' not found in configuration, no fallback provided`);
-				return null;
+				logger.warn(`User '${username}' not found in configuration, creating generic fallback identity`);
+				const fallbackIdentity = this.createFallbackIdentity(username);
+				this.cacheIdentity(cacheKey, fallbackIdentity);
+				return fallbackIdentity;
 			}
 		} catch (error) {
 			logger.error(`Failed to get bot identity for username '${username}':`, error as Error);
@@ -300,6 +305,42 @@ export class BotIdentityService {
 		if (keysToDelete.length > 0) {
 			logger.info(`[BotIdentityService] Cleared ${keysToDelete.length} cache entries for user ${userId}`);
 		}
+	}
+
+	/**
+	 * Create a fallback identity when Discord API fails or user is not found
+	 * @param username The username (e.g., 'Chad', 'Guy', 'Venn')
+	 * @param userId Optional Discord user ID for avatar fallback
+	 * @returns BotIdentity with fallback values
+	 */
+	private createFallbackIdentity(username: string, userId?: string): BotIdentity {
+		const botName = `${username}Bot`;
+
+		// Use known avatar URLs for specific users, or generic fallback
+		const knownAvatars: Record<string, string> = {
+			'Chad': 'https://cdn.discordapp.com/avatars/85184539906809856/avatar.png',
+			'Guy': 'https://cdn.discordapp.com/avatars/135820819086573568/avatar.png',
+			'Venn': 'https://cdn.discordapp.com/avatars/151120340343455744/avatar.png'
+		};
+
+		let avatarUrl = knownAvatars[username];
+
+		if (!avatarUrl && userId) {
+			// Try to construct default Discord avatar URL
+			avatarUrl = `https://cdn.discordapp.com/avatars/${userId}/avatar.png`;
+		}
+
+		if (!avatarUrl) {
+			// Generic fallback avatar
+			avatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png';
+		}
+
+		logger.info(`[BotIdentityService] Created fallback identity for ${username}: ${botName} (${avatarUrl})`);
+
+		return {
+			botName,
+			avatarUrl
+		};
 	}
 
 	/**

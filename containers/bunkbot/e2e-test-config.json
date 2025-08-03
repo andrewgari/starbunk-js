@@ -39,12 +39,14 @@
       }
     },
     {
-      "botName": "Chad Bot",
-      "triggerMessage": "chad",
-      "expectedResponse": "What is bro *yappin* about?",
-      "description": "Tests chad bot response (user-specific: Chad)",
-      "expectedBotName": "Chad Bot",
+      "botName": "ChadBot",
+      "triggerMessage": "chad workout protein gym",
+      "expectedResponse": "What is bro *yappin* about?...",
+      "description": "Tests ChadBot response (user-specific: Chad) - 1% chance",
+      "expectedBotName": "ChadBot",
       "botType": "user-specific",
+      "probability": 0.01,
+      "probabilityDescription": "1% chance to respond to any message (except from Chad himself)",
       "targetUser": {
         "username": "Chad",
         "userId": "85184539906809856",
@@ -197,6 +199,36 @@
       "botType": "random-chance",
       "probability": 0.10,
       "probabilityDescription": "10% chance to respond with 'Great!' to any message"
+    },
+    {
+      "botName": "BotBot",
+      "triggerMessage": "hello from bot",
+      "expectedResponse": "Hello fellow bot!",
+      "description": "Tests BotBot response to other bot messages (5% chance)",
+      "expectedBotName": "BotBot",
+      "botType": "random-chance",
+      "probability": 0.05,
+      "probabilityDescription": "5% chance to respond to bot messages (excluding CovaBot)",
+      "specialHandling": "requires-bot-message"
+    },
+    {
+      "botName": "Music Correct Bot",
+      "triggerMessage": "!play https://youtube.com/watch?v=test",
+      "expectedResponse": "Hey <@",
+      "description": "Tests Music Correct Bot response to old music commands",
+      "expectedBotName": "Music Correct Bot",
+      "botType": "deterministic",
+      "responseContains": "let me fill you in on a little insider secret"
+    },
+    {
+      "botName": "CovaBot",
+      "triggerMessage": "random message for cova",
+      "expectedResponse": "https://i.imgur.com/NtfJZP5.png",
+      "description": "Tests CovaBot random response (1% chance)",
+      "expectedBotName": "CovaBot",
+      "botType": "random-chance",
+      "probability": 0.01,
+      "probabilityDescription": "1% chance to respond with confused face to any message"
     }
   ],
   "controlTests": [
