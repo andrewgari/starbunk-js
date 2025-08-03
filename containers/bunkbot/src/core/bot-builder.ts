@@ -1,8 +1,10 @@
-import { logger, isDebugMode, DiscordService } from '@starbunk/shared';
+import { logger, isDebugMode, DiscordService, container, ServiceId } from '@starbunk/shared';
 import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
+import { BotIdentityConfig } from './bot-factory';
+import { BotIdentityService } from '../services/botIdentityService';
 
 /**
  * Strongly typed bot name
@@ -29,12 +31,30 @@ export function createBotDescription(description: string): BotDescription {
 }
 
 /**
+ * Get BotIdentityService instance from the container
+ * @returns BotIdentityService instance or null if not available
+ */
+function getBotIdentityService(): BotIdentityService | null {
+	try {
+		// Try to get from container first (if available)
+		if (container && container.get) {
+			return container.get<BotIdentityService>(ServiceId.BotIdentityService);
+		}
+	} catch (error) {
+		// Container might not be available or service not registered
+		logger.debug('[BotBuilder] BotIdentityService not available from container');
+	}
+	return null;
+}
+
+/**
  * Configuration for a reply-based bot with strong typing
  */
 export interface ReplyBotConfig {
 	name: string;
 	description: string;
-	defaultIdentity: BotIdentity;
+	defaultIdentity?: BotIdentity; // Legacy support for existing bots
+	identityConfig?: BotIdentityConfig; // New identity configuration system
 	triggers: TriggerResponse[];
 	defaultResponseRate?: number; // Bot's default response rate (overrides global default)
 	responseRate?: number; // Specific response rate for this bot (overrides defaultResponseRate)
@@ -49,7 +69,8 @@ export interface ReplyBotConfig {
 export interface ValidatedReplyBotConfig {
 	name: BotReplyName;
 	description: BotDescription;
-	defaultIdentity: BotIdentity;
+	defaultIdentity?: BotIdentity; // Legacy support
+	identityConfig?: BotIdentityConfig; // New identity configuration system
 	triggers: TriggerResponse[];
 	defaultResponseRate: number; // Bot's default response rate
 	skipBotMessages: boolean; // Whether to skip processing messages from other bots
@@ -68,8 +89,9 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 	if (!config.description || config.description.trim() === '') {
 		throw new Error('Bot description cannot be empty');
 	}
-	if (!config.defaultIdentity) {
-		throw new Error('Default bot identity is required');
+	// Identity validation - either legacy defaultIdentity or new identityConfig required
+	if (!config.defaultIdentity && !config.identityConfig) {
+		throw new Error('Bot identity configuration is required (defaultIdentity or identityConfig)');
 	}
 	if (!config.triggers || config.triggers.length === 0) {
 		throw new Error('At least one trigger is required');
@@ -83,6 +105,7 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 		name: createBotReplyName(config.name),
 		description: createBotDescription(config.description),
 		defaultIdentity: config.defaultIdentity,
+		identityConfig: config.identityConfig,
 		triggers: config.triggers,
 		defaultResponseRate: responseRate,
 		skipBotMessages: config.skipBotMessages ?? true, // Default to true for safer behavior
@@ -207,13 +230,29 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 						continue;
 					}
 
-					// Get identity
+					// Get identity using new identity resolution system
 					let identity: BotIdentity | null;
 					try {
-						identity =
-							typeof trigger.identity === 'function'
+						// First try trigger-specific identity (legacy support)
+						if (trigger.identity) {
+							identity = typeof trigger.identity === 'function'
 								? await trigger.identity(message)
-								: trigger.identity || validConfig.defaultIdentity;
+								: trigger.identity;
+						} else {
+							// Use new identity resolution system
+							const botIdentityService = getBotIdentityService();
+							if (botIdentityService && validConfig.identityConfig) {
+								identity = await botIdentityService.resolveBotIdentity(
+									validConfig.name,
+									validConfig.identityConfig,
+									message,
+									validConfig.defaultIdentity
+								);
+							} else {
+								// Fallback to legacy defaultIdentity
+								identity = validConfig.defaultIdentity || null;
+							}
+						}
 
 						if (!identity) {
 							logger.debug(`[${validConfig.name}] Identity resolution failed for trigger "${trigger.name}" - bot will remain silent`);

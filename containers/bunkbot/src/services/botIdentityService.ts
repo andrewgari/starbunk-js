@@ -248,13 +248,7 @@ export class BotIdentityService {
 		return this.getBotIdentityByUsername('Venn', message, 'VennBot', forceRefresh);
 	}
 
-	/**
-	 * Get Cova's bot identity with server context
-	 * @returns Promise<BotIdentity | null> - null if identity cannot be resolved
-	 */
-	async getCovaIdentity(message?: Message, forceRefresh: boolean = false): Promise<BotIdentity | null> {
-		return this.getBotIdentityByUsername('Cova', message, 'CovaBot', forceRefresh);
-	}
+
 
 	/**
 	 * Get cached identity if not expired
@@ -355,6 +349,156 @@ export class BotIdentityService {
 
 		// Default to production
 		return false;
+	}
+
+	/**
+	 * Get CovaBot's identity from Discord server for testing environment
+	 * @param message Discord message for server context
+	 * @param forceRefresh Force refresh from Discord API
+	 * @returns Promise<BotIdentity | null>
+	 */
+	private async getCovaIdentity(message?: Message, forceRefresh: boolean = false): Promise<BotIdentity | null> {
+		const covaUserId = '139592376443338752'; // CovaBot's Discord user ID
+		const cacheKey = `cova:${message?.guild?.id || 'default'}`;
+
+		// Check cache first (unless force refresh)
+		if (!forceRefresh) {
+			const cached = this.getCachedIdentity(cacheKey);
+			if (cached) {
+				logger.debug(`[BotIdentityService] Using cached CovaBot identity`);
+				return cached;
+			}
+		}
+
+		try {
+			logger.debug(`[BotIdentityService] Fetching CovaBot identity from Discord server`);
+
+			// Get CovaBot's identity from Discord
+			const covaIdentity = await this.getBotIdentityByUserIdWithContext(
+				covaUserId,
+				message,
+				'CovaBot',
+				forceRefresh
+			);
+
+			if (covaIdentity) {
+				this.cacheIdentity(cacheKey, covaIdentity);
+				logger.debug(`[BotIdentityService] CovaBot identity resolved: ${covaIdentity.botName} (${covaIdentity.avatarUrl})`);
+				return covaIdentity;
+			} else {
+				// Fallback to known CovaBot identity
+				const fallbackIdentity = {
+					botName: 'CovaBot',
+					avatarUrl: 'https://cdn.discordapp.com/avatars/139592376443338752/avatar.png'
+				};
+				this.cacheIdentity(cacheKey, fallbackIdentity);
+				logger.warn(`[BotIdentityService] Using fallback CovaBot identity`);
+				return fallbackIdentity;
+			}
+		} catch (error) {
+			logger.error(`[BotIdentityService] Error fetching CovaBot identity:`, error as Error);
+
+			// Fallback to known CovaBot identity
+			const fallbackIdentity = {
+				botName: 'CovaBot',
+				avatarUrl: 'https://cdn.discordapp.com/avatars/139592376443338752/avatar.png'
+			};
+			this.cacheIdentity(cacheKey, fallbackIdentity);
+			return fallbackIdentity;
+		}
+	}
+
+	/**
+	 * Get static identity for bots that use constants files
+	 * @param botName The bot name (e.g., 'BlueBot', 'Spider-Bot', 'HoldBot')
+	 * @param staticConfig Static configuration from bot's constants file
+	 * @returns BotIdentity with static values
+	 */
+	getStaticBotIdentity(botName: string, staticConfig: { botName: string; avatarUrl: string }): BotIdentity {
+		logger.debug(`[BotIdentityService] Using static identity for ${botName}: ${staticConfig.botName} (${staticConfig.avatarUrl})`);
+
+		return {
+			botName: staticConfig.botName,
+			avatarUrl: staticConfig.avatarUrl
+		};
+	}
+
+	/**
+	 * Resolve bot identity based on configuration type
+	 * @param botName The bot name
+	 * @param identityConfig Identity configuration (static or dynamic)
+	 * @param message Discord message for context
+	 * @param fallbackIdentity Fallback identity if resolution fails
+	 * @returns Promise<BotIdentity | null>
+	 */
+	async resolveBotIdentity(
+		botName: string,
+		identityConfig: { type: 'static'; identity: BotIdentity } | { type: 'dynamic'; targetUsername: string } | undefined,
+		message: Message,
+		fallbackIdentity?: BotIdentity
+	): Promise<BotIdentity | null> {
+		try {
+			// If no identity config provided, use fallback (legacy support)
+			if (!identityConfig) {
+				if (fallbackIdentity) {
+					logger.debug(`[BotIdentityService] Using fallback identity for ${botName}: ${fallbackIdentity.botName}`);
+					return fallbackIdentity;
+				}
+				logger.warn(`[BotIdentityService] No identity configuration or fallback for ${botName}`);
+				return null;
+			}
+
+			// Handle static identity bots
+			if (identityConfig.type === 'static') {
+				logger.debug(`[BotIdentityService] Resolving static identity for ${botName}`);
+				return this.getStaticBotIdentity(botName, identityConfig.identity);
+			}
+
+			// Handle dynamic identity bots (user-specific)
+			if (identityConfig.type === 'dynamic') {
+				logger.debug(`[BotIdentityService] Resolving dynamic identity for ${botName} (target: ${identityConfig.targetUsername})`);
+
+				const isTestingEnv = this.isTestingEnvironment(message);
+
+				if (isTestingEnv) {
+					// Testing environment: Use CovaBot's identity with bot-specific name
+					logger.debug(`[BotIdentityService] Testing environment - using CovaBot identity for ${botName}`);
+					const covaIdentity = await this.getCovaIdentity(message);
+					if (covaIdentity) {
+						return {
+							botName: botName, // Keep the specific bot name (e.g., "ChadBot")
+							avatarUrl: covaIdentity.avatarUrl // Use CovaBot's avatar
+						};
+					}
+				} else {
+					// Production environment: Use target user's identity
+					logger.debug(`[BotIdentityService] Production environment - using ${identityConfig.targetUsername}'s identity for ${botName}`);
+					const userIdentity = await this.getBotIdentityByUsername(identityConfig.targetUsername, message);
+					if (userIdentity) {
+						return {
+							botName: botName, // Keep the specific bot name (e.g., "ChadBot")
+							avatarUrl: userIdentity.avatarUrl // Use target user's avatar
+						};
+					}
+				}
+
+				// Fallback for dynamic identity bots
+				logger.warn(`[BotIdentityService] Dynamic identity resolution failed for ${botName}, using fallback`);
+				if (fallbackIdentity) {
+					return fallbackIdentity;
+				}
+
+				// Create a generic fallback
+				return this.createFallbackIdentity(identityConfig.targetUsername);
+			}
+
+			logger.error(`[BotIdentityService] Unknown identity config type for ${botName}`);
+			return fallbackIdentity || null;
+
+		} catch (error) {
+			logger.error(`[BotIdentityService] Error resolving identity for ${botName}:`, error as Error);
+			return fallbackIdentity || null;
+		}
 	}
 
 	/**

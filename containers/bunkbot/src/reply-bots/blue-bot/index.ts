@@ -13,9 +13,18 @@ import {
 export default BotFactory.createBot({
 	name: 'BlueBot',
 	description: 'Responds when someone says "blu?"',
+	// Legacy fallback identity
 	defaultIdentity: {
 		botName: BLUE_BOT_NAME,
 		avatarUrl: BLUE_BOT_AVATARS.Default
+	},
+	// New identity configuration system - Static Identity Bot
+	identityConfig: {
+		type: 'static',
+		identity: {
+			botName: BLUE_BOT_NAME,
+			avatarUrl: BLUE_BOT_AVATARS.Default
+		}
 	},
 	triggers: [
 		// Order matters for processing, but priority is also considered

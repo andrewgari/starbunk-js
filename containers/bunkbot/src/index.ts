@@ -118,6 +118,9 @@ class BunkBotContainer {
 		this.configurationService = new ConfigurationService();
 		this.botIdentityService = new BotIdentityService(this.configurationService);
 
+		// Register BotIdentityService in container for bot access
+		container.register(ServiceId.BotIdentityService, this.botIdentityService);
+
 		// Preload configuration cache
 		await this.configurationService.refreshCache();
 		logger.info('✅ Configuration services initialized and cache preloaded');

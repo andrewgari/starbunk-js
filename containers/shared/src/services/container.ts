@@ -39,6 +39,7 @@ export const ServiceId = {
 	LLMManager: Symbol.for('LLMManager'),
 	DatabaseService: Symbol.for('DatabaseService'),
 	ConfigurationService: Symbol.for('ConfigurationService'),
+	BotIdentityService: Symbol.for('BotIdentityService'),
 	MessageFilter: Symbol.for('MessageFilter'),
 	MusicPlayer: Symbol.for('MusicPlayer'),
 

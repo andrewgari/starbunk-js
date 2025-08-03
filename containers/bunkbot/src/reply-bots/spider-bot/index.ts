@@ -6,9 +6,18 @@ import { correctSpellingTrigger, incorrectSpellingTrigger } from './triggers';
 export default BotFactory.createBot({
 	name: SPIDER_BOT_NAME,
 	description: 'Enforces proper Spider-Man hyphenation and responds accordingly',
+	// Legacy fallback identity
 	defaultIdentity: {
 		botName: SPIDER_BOT_NAME,
 		avatarUrl: SPIDER_BOT_AVATAR_URL
+	},
+	// New identity configuration system - Static Identity Bot
+	identityConfig: {
+		type: 'static',
+		identity: {
+			botName: SPIDER_BOT_NAME,
+			avatarUrl: SPIDER_BOT_AVATAR_URL
+		}
 	},
 	skipBotMessages: true,
 	triggers: [correctSpellingTrigger, incorrectSpellingTrigger]

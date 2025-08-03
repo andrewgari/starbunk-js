@@ -4,12 +4,20 @@ import { createReplyBot, ReplyBotImpl } from './bot-builder';
 import { DiscordService, logger } from '@starbunk/shared';
 
 /**
+ * Bot identity configuration types
+ */
+export type BotIdentityConfig =
+	| { type: 'static'; identity: BotIdentity }
+	| { type: 'dynamic'; targetUsername: string };
+
+/**
  * Interface for bot configuration
  */
 export interface BotConfig {
 	name: string;
 	description: string;
-	defaultIdentity: BotIdentity;
+	defaultIdentity?: BotIdentity; // Legacy support for existing bots
+	identityConfig?: BotIdentityConfig; // New identity configuration system
 	triggers: TriggerResponse[];
 	defaultResponseRate?: number;
 	responseRate?: number;
