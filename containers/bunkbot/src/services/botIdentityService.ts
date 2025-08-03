@@ -45,7 +45,26 @@ export class BotIdentityService {
 		}
 
 		try {
-			// Get user ID from configuration service
+			// TESTING vs PRODUCTION logic for user-specific bots
+			const isTestingEnvironment = this.isTestingEnvironment(message);
+
+			if (isTestingEnvironment) {
+				// In testing: Always use CovaBot's identity for user-specific bots
+				logger.debug(`[BotIdentityService] Testing environment detected - using CovaBot identity for ${username}Bot`);
+				const covaIdentity = await this.getCovaIdentity(message, forceRefresh);
+				if (covaIdentity) {
+					// Override the bot name to be the specific bot (e.g., "ChadBot", "GuyBot")
+					const testingIdentity = {
+						botName: `${username}Bot`,
+						avatarUrl: covaIdentity.avatarUrl
+					};
+					this.cacheIdentity(cacheKey, testingIdentity);
+					return testingIdentity;
+				}
+			}
+
+			// Production: Use the actual target user's identity
+			logger.debug(`[BotIdentityService] Production environment - using ${username}'s actual identity`);
 			const userId = await this.configService.getUserIdByUsername(username);
 
 			if (userId) {
@@ -305,6 +324,37 @@ export class BotIdentityService {
 		if (keysToDelete.length > 0) {
 			logger.info(`[BotIdentityService] Cleared ${keysToDelete.length} cache entries for user ${userId}`);
 		}
+	}
+
+	/**
+	 * Determines if we're in a testing environment
+	 * In testing: Use CovaBot's identity for user-specific bots
+	 * In production: Use actual target user's identity
+	 */
+	private isTestingEnvironment(message?: Message): boolean {
+		// Check if we're in debug mode or testing channel
+		const { getMessageFilter } = require('./messageFilter');
+		const messageFilter = getMessageFilter();
+
+		if (messageFilter.isDebugMode()) {
+			return true;
+		}
+
+		// Check if message is from a testing channel
+		if (message?.channel?.id) {
+			const testingChannelIds = messageFilter.getTestingChannelIds();
+			if (testingChannelIds.includes(message.channel.id)) {
+				return true;
+			}
+		}
+
+		// Check for E2E test environment
+		if (process.env.E2E_TEST_ENABLED === 'true') {
+			return true;
+		}
+
+		// Default to production
+		return false;
 	}
 
 	/**

@@ -16,7 +16,7 @@ import { Client, GatewayIntentBits, WebhookClient, Message } from 'discord.js';
 // Test configuration - requires production bot to be running
 const TEST_CONFIG = {
   testChannelId: process.env.E2E_TEST_CHANNEL_ID || '798613445301633137',
-  webhookUrl: process.env.E2E_WEBHOOK_URL, // Required for sending test messages
+  webhookUrl: process.env.E2E_WEBHOOK_URL || process.env.E2E_TEST_WEBHOOK_URL, // Required for sending test messages
   monitorToken: process.env.E2E_MONITOR_TOKEN || process.env.STARBUNK_TOKEN, // Read-only monitoring
   responseTimeout: 15000, // 15 seconds to wait for bot response
   messageCleanupDelay: 2000 // 2 seconds between tests for cleanup
@@ -105,10 +105,10 @@ describe('Production Bot E2E Identity Tests', () => {
   beforeAll(async () => {
     // Check if E2E testing is properly configured
     if (!TEST_CONFIG.webhookUrl) {
-      console.log('⚠️ E2E_WEBHOOK_URL not configured - skipping webhook-based E2E tests');
+      console.log('⚠️ E2E_WEBHOOK_URL or E2E_TEST_WEBHOOK_URL not configured - skipping webhook-based E2E tests');
       console.log('💡 To run E2E tests:');
       console.log('   1. Create a Discord webhook in your test channel');
-      console.log('   2. Set E2E_WEBHOOK_URL environment variable');
+      console.log('   2. Set E2E_WEBHOOK_URL or E2E_TEST_WEBHOOK_URL environment variable');
       console.log('   3. Ensure production BunkBot is running');
       console.log('   4. Re-run the tests');
       return;
