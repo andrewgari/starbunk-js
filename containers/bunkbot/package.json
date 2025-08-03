@@ -19,6 +19,10 @@
 		"test:covabot-filtering": "jest --testPathPattern=covabot-filtering-e2e --runInBand --detectOpenHandles",
 		"test:debug-mode": "jest --testPathPattern=debug-mode-behavior --verbose",
 		"test:all-comprehensive": "ts-node src/__tests__/run-all-tests.ts",
+		"test:live-e2e": "jest --testPathPattern=bunkbot-live-e2e --runInBand --detectOpenHandles --verbose",
+		"test:live-e2e-required": "npm run test:live-e2e",
+		"validate:e2e-setup": "node scripts/validate-e2e-setup.js",
+		"setup:e2e": "node scripts/setup-e2e-tests.js",
 		"type-check": "tsc --noEmit",
 		"clean": "rimraf dist"
 	},

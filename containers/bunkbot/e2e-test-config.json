@@ -1,0 +1,102 @@
+{
+  "testEnvironment": {
+    "description": "Live E2E Test Configuration for BunkBot",
+    "safetyNote": "Tests will ONLY run in whitelisted servers/channels",
+    "testServerId": "REPLACE_WITH_YOUR_TEST_SERVER_ID",
+    "testChannelIds": [
+      "REPLACE_WITH_YOUR_TEST_CHANNEL_ID_1",
+      "REPLACE_WITH_YOUR_TEST_CHANNEL_ID_2"
+    ],
+    "testUserId": "REPLACE_WITH_YOUR_USER_ID_FOR_WEBHOOK"
+  },
+  "botTests": [
+    {
+      "botName": "BlueBot",
+      "triggerMessage": "blu",
+      "expectedResponse": "Did somebody say Blu?",
+      "description": "Tests blue bot response to 'blu' trigger",
+      "expectedBotName": "BluBot"
+    },
+    {
+      "botName": "HoldBot",
+      "triggerMessage": "Hold",
+      "expectedResponse": "Hold.",
+      "description": "Tests hold bot exact pattern match",
+      "expectedBotName": "HoldBot"
+    },
+    {
+      "botName": "GuyBot",
+      "triggerMessage": "guy",
+      "expectedResponse": "guy",
+      "description": "Tests guy bot response",
+      "expectedBotName": "GuyBot"
+    },
+    {
+      "botName": "ChadBot",
+      "triggerMessage": "chad",
+      "expectedResponse": "chad",
+      "description": "Tests chad bot response",
+      "expectedBotName": "ChadBot"
+    },
+    {
+      "botName": "VennBot",
+      "triggerMessage": "venn",
+      "expectedResponse": "venn",
+      "description": "Tests venn bot response",
+      "expectedBotName": "VennBot"
+    },
+    {
+      "botName": "NiceBot",
+      "triggerMessage": "nice",
+      "expectedResponse": "nice",
+      "description": "Tests nice bot response",
+      "expectedBotName": "NiceBot"
+    },
+    {
+      "botName": "SheeshBot",
+      "triggerMessage": "sheesh",
+      "expectedResponse": "sheesh",
+      "description": "Tests sheesh bot response",
+      "expectedBotName": "SheeshBot"
+    },
+    {
+      "botName": "CheckBot",
+      "triggerMessage": "check",
+      "expectedResponse": "check",
+      "description": "Tests check bot response",
+      "expectedBotName": "CheckBot"
+    },
+    {
+      "botName": "BananaBot",
+      "triggerMessage": "banana",
+      "expectedResponse": "banana",
+      "description": "Tests banana bot response",
+      "expectedBotName": "BananaBot"
+    },
+    {
+      "botName": "PickleBot",
+      "triggerMessage": "pickle",
+      "expectedResponse": "pickle",
+      "description": "Tests pickle bot response",
+      "expectedBotName": "PickleBot"
+    }
+  ],
+  "controlTests": [
+    {
+      "name": "NoTriggerTest",
+      "message": "This message should not trigger any bots xyz123",
+      "expectedBotResponses": 0,
+      "description": "Control test - should trigger no bot responses"
+    }
+  ],
+  "slashCommandTests": [
+    {
+      "command": "ping",
+      "description": "Tests ping slash command"
+    },
+    {
+      "command": "debug",
+      "description": "Tests debug slash command"
+    }
+  ]
+}
