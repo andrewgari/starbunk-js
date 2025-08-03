@@ -209,21 +209,24 @@ describe('BunkBot Live E2E Tests', () => {
       let timeout: number;
 
       switch (botTest.botType) {
-        case 'user-specific':
+        case 'user-specific': {
           testName = `should trigger ${botTest.botName} as user ${botTest.targetUser.username} with "${botTest.triggerMessage}"`;
           timeout = 15000; // Single attempt
           break;
-        case 'random-chance':
+        }
+        case 'random-chance': {
           const probability = botTest.probability || 0.1;
           const maxAttempts = Math.min(calculateAttemptsForProbability(probability), 20);
           testName = `should trigger ${botTest.botName} with "${botTest.triggerMessage}" (${(probability * 100).toFixed(1)}% chance, max ${maxAttempts} attempts)`;
           timeout = maxAttempts * 10000; // 10 seconds per attempt
           break;
+        }
         case 'deterministic':
-        default:
+        default: {
           testName = `should trigger ${botTest.botName} with "${botTest.triggerMessage}" (deterministic)`;
           timeout = 15000; // Single attempt
           break;
+        }
       }
 
       it(testName, async () => {

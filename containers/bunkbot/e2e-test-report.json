@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-03T18:14:16.094Z",
+  "timestamp": "2025-08-03T18:34:25.048Z",
   "environment": {
     "testServerId": "753251582719688714",
     "testChannelId": "798613445301633137",
@@ -14,8 +14,11 @@
         "success": false,
         "expectedResponse": "Did somebody say Blu?",
         "expectedBotName": "BlueBot",
-        "responseTime": 10226,
-        "error": "No bot response received within timeout"
+        "responseTime": 10114,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "HoldBot",
@@ -23,8 +26,11 @@
         "success": false,
         "expectedResponse": "Hold.",
         "expectedBotName": "HoldBot",
-        "responseTime": 10419,
-        "error": "No bot response received within timeout"
+        "responseTime": 10256,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "GuyBot",
@@ -32,19 +38,23 @@
         "success": false,
         "expectedResponse": "guy",
         "expectedBotName": "GuyBot",
-        "responseTime": 10186,
-        "error": "Random bot failed all 3 attempts. Last error: No bot response received within timeout",
-        "attemptNumber": 3,
-        "totalAttempts": 3
+        "responseTime": 10173,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "user-specific"
       },
       {
         "botName": "Chad Bot",
         "triggerMessage": "chad",
         "success": false,
-        "expectedResponse": "chad",
+        "expectedResponse": "What is bro *yappin* about?",
         "expectedBotName": "Chad Bot",
-        "responseTime": 10215,
-        "error": "No bot response received within timeout"
+        "responseTime": 10384,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "user-specific"
       },
       {
         "botName": "VennBot",
@@ -52,10 +62,11 @@
         "success": false,
         "expectedResponse": "Hmm...",
         "expectedBotName": "VennBot",
-        "responseTime": 10310,
-        "error": "Random bot failed all 3 attempts. Last error: No bot response received within timeout",
-        "attemptNumber": 3,
-        "totalAttempts": 3
+        "responseTime": 10208,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "user-specific"
       },
       {
         "botName": "BunkBot",
@@ -63,8 +74,11 @@
         "success": false,
         "expectedResponse": "Nice.",
         "expectedBotName": "BunkBot",
-        "responseTime": 10155,
-        "error": "No bot response received within timeout"
+        "responseTime": 10205,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "Sheesh Bot",
@@ -72,8 +86,11 @@
         "success": false,
         "expectedResponse": "SHEEEESH",
         "expectedBotName": "Sheesh Bot",
-        "responseTime": 10226,
-        "error": "No bot response received within timeout"
+        "responseTime": 10188,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "CheckBot",
@@ -81,8 +98,11 @@
         "success": false,
         "expectedResponse": "czech",
         "expectedBotName": "CheckBot",
-        "responseTime": 10157,
-        "error": "No bot response received within timeout"
+        "responseTime": 10225,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "BananaBot",
@@ -90,8 +110,11 @@
         "success": false,
         "expectedResponse": "banana",
         "expectedBotName": "BananaBot",
-        "responseTime": 10263,
-        "error": "No bot response received within timeout"
+        "responseTime": 10167,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "BabyBot",
@@ -99,8 +122,11 @@
         "success": false,
         "expectedResponse": "baby",
         "expectedBotName": "BabyBot",
-        "responseTime": 10227,
-        "error": "No bot response received within timeout"
+        "responseTime": 10223,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "Spider-Bot",
@@ -108,8 +134,11 @@
         "success": false,
         "expectedResponse": "Spider-Man",
         "expectedBotName": "Spider-Bot",
-        "responseTime": 10199,
-        "error": "No bot response received within timeout"
+        "responseTime": 10301,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "ChaosBot",
@@ -117,8 +146,11 @@
         "success": false,
         "expectedResponse": "chaos",
         "expectedBotName": "ChaosBot",
-        "responseTime": 10173,
-        "error": "No bot response received within timeout"
+        "responseTime": 10213,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "GundamBot",
@@ -126,8 +158,11 @@
         "success": false,
         "expectedResponse": "gundam",
         "expectedBotName": "GundamBot",
-        "responseTime": 10205,
-        "error": "No bot response received within timeout"
+        "responseTime": 10180,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "TestBot",
@@ -135,8 +170,11 @@
         "success": false,
         "expectedResponse": "test",
         "expectedBotName": "TestBot",
-        "responseTime": 10176,
-        "error": "No bot response received within timeout"
+        "responseTime": 10167,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "Xander Crews",
@@ -144,8 +182,11 @@
         "success": false,
         "expectedResponse": "Well, not with THAT attitude!!!",
         "expectedBotName": "Xander Crews",
-        "responseTime": 10183,
-        "error": "No bot response received within timeout"
+        "responseTime": 10223,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "Ezio Auditore Da Firenze",
@@ -153,8 +194,11 @@
         "success": false,
         "expectedResponse": "ezio",
         "expectedBotName": "Ezio Auditore Da Firenze",
-        "responseTime": 10171,
-        "error": "No bot response received within timeout"
+        "responseTime": 10170,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "Gerald",
@@ -162,21 +206,13 @@
         "success": false,
         "expectedResponse": "their",
         "expectedBotName": "Gerald",
-        "responseTime": 10230,
-        "error": "Random bot failed all 5 attempts. Last error: No bot response received within timeout",
-        "attemptNumber": 5,
-        "totalAttempts": 5
-      },
-      {
-        "botName": "Interrupt Bot",
-        "triggerMessage": "hello world",
-        "success": false,
-        "expectedResponse": "sorry",
-        "expectedBotName": "Interrupt Bot",
-        "responseTime": 10208,
-        "error": "Random bot failed all 5 attempts. Last error: No bot response received within timeout",
-        "attemptNumber": 5,
-        "totalAttempts": 5
+        "responseTime": 10211,
+        "error": "Random-chance bot failed all 15 attempts. This may be expected behavior given 5.0% probability.",
+        "attemptNumber": 15,
+        "totalAttempts": 15,
+        "testStrategy": "random-chance",
+        "probability": 0.05,
+        "probabilityDescription": "5% chance to trigger on grammar mistakes"
       },
       {
         "botName": "Macaroni Bot",
@@ -184,8 +220,11 @@
         "success": false,
         "expectedResponse": "macaroni",
         "expectedBotName": "Macaroni Bot",
-        "responseTime": 10225,
-        "error": "No bot response received within timeout"
+        "responseTime": 10285,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
         "botName": "GremlinBot",
@@ -193,19 +232,25 @@
         "success": false,
         "expectedResponse": "gremlin",
         "expectedBotName": "GremlinBot",
-        "responseTime": 10177,
-        "error": "No bot response received within timeout"
+        "responseTime": 10167,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
       },
       {
-        "botName": "SigGreatBot",
-        "triggerMessage": "anything",
+        "botName": "Interrupt Bot",
+        "triggerMessage": "hello world",
         "success": false,
-        "expectedResponse": "Great!",
-        "expectedBotName": "SigGreatBot",
-        "responseTime": 10266,
-        "error": "Random bot failed all 5 attempts. Last error: No bot response received within timeout",
-        "attemptNumber": 5,
-        "totalAttempts": 5
+        "expectedResponse": "sorry",
+        "expectedBotName": "Interrupt Bot",
+        "responseTime": 10477,
+        "error": "Random-chance bot failed all 20 attempts. This may be expected behavior given 2.0% probability.",
+        "attemptNumber": 20,
+        "totalAttempts": 20,
+        "testStrategy": "random-chance",
+        "probability": 0.02,
+        "probabilityDescription": "2% chance to interrupt any message"
       }
     ],
     "slashCommandTests": [],
@@ -216,13 +261,13 @@
         "success": true,
         "actualResponses": 0,
         "expectedResponses": 0,
-        "responseTime": 5166
+        "responseTime": 5178
       }
     ],
     "summary": {
-      "totalTests": 22,
+      "totalTests": 21,
       "passed": 1,
-      "failed": 21,
+      "failed": 20,
       "duration": 0
     }
   }
