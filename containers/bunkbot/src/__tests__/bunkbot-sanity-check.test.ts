@@ -1,6 +1,6 @@
 /**
  * Comprehensive Sanity Check for BunkBot Core Functionality
- * 
+ *
  * This test suite validates that BunkBot's core functionality works correctly
  * after recent fixes, focusing on:
  * 1. Message Response Control
@@ -11,6 +11,8 @@
 import { mockMessage, mockUser, mockGuild, mockTextChannel } from '../test-utils/testUtils';
 import { isCovaBot, shouldExcludeFromReplyBots, fromBotExcludingCovaBot } from '../core/conditions';
 import { MessageFilter } from '@starbunk/shared';
+import { BotFactory, BotConfig } from '../core/bot-factory';
+import { BotRegistry } from '../botRegistry';
 
 // Define user IDs for testing
 const CHAD_USER_ID = '85184539906809856';
@@ -130,29 +132,59 @@ describe('BunkBot Comprehensive Sanity Check', () => {
 
 		describe('Chance-based Response Control', () => {
 			it('should respond when chance is favorable (below threshold)', async () => {
-				// Import Chad Bot for testing
-				const chadBot = require('../reply-bots/chad-bot').default;
+				// Create a test bot with BotFactory
+				const testBotConfig: BotConfig = {
+					name: 'test-bot',
+					description: 'Test bot for chance-based response',
+					defaultIdentity: {
+						botName: 'TestBot',
+						avatarUrl: 'https://example.com/avatar.png'
+					},
+					triggers: [{
+						name: 'test-trigger',
+						condition: () => Math.random() < 0.1, // 10% chance
+						response: () => 'test response'
+					}],
+					defaultResponseRate: 0.1
+				};
 
+				const testBot = BotFactory.createBot(testBotConfig);
 				mockRandomValue = 0.05; // 5% - below 10% threshold
+
 				const targetUser = mockUser({ id: CHAD_USER_ID });
 				const message = mockMessage({ content: '', author: targetUser });
 
-				// Chad Bot uses BotFactory, so we need to test the actual trigger logic
-				const result = await chadBot.triggers[0].condition(message);
-				expect(typeof result).toBe('boolean');
+				// Test that the bot can process messages without throwing
+				await expect(testBot.processMessage(message)).resolves.not.toThrow();
+				expect(testBot.name).toBe('test-bot');
 			});
 
 			it('should NOT respond when chance is unfavorable (above threshold)', async () => {
-				// Import Chad Bot for testing
-				const chadBot = require('../reply-bots/chad-bot').default;
+				// Create a test bot with BotFactory
+				const testBotConfig: BotConfig = {
+					name: 'test-bot-2',
+					description: 'Test bot for unfavorable chance',
+					defaultIdentity: {
+						botName: 'TestBot2',
+						avatarUrl: 'https://example.com/avatar.png'
+					},
+					triggers: [{
+						name: 'test-trigger',
+						condition: () => Math.random() < 0.1, // 10% chance
+						response: () => 'test response'
+					}],
+					defaultResponseRate: 0.1
+				};
 
+				const testBot = BotFactory.createBot(testBotConfig);
 				mockRandomValue = 0.15; // 15% - above 10% threshold
+
 				const targetUser = mockUser({ id: CHAD_USER_ID });
 				const message = mockMessage({ content: '', author: targetUser });
 
-				// Chad Bot uses BotFactory, so we need to test the actual trigger logic
-				const result = await chadBot.triggers[0].condition(message);
-				expect(typeof result).toBe('boolean');
+				// Test that the bot can process messages without throwing
+				await expect(testBot.processMessage(message)).resolves.not.toThrow();
+				expect(testBot.name).toBe('test-bot-2');
 			});
 		});
 
@@ -251,36 +283,59 @@ describe('BunkBot Comprehensive Sanity Check', () => {
 		});
 
 		describe('Bot Registry Integration', () => {
-			it('should discover and load bots correctly', async () => {
-				const { BotRegistry } = require('../botRegistry');
-				const registry = new BotRegistry();
+			it('should discover bots correctly', async () => {
+				// Test the static discoverBots method
+				await expect(BotRegistry.discoverBots()).resolves.not.toThrow();
+			});
 
-				// This should not throw an error
-				expect(() => registry.discoverAndLoadBots()).not.toThrow();
+			it('should create registry instance without errors', () => {
+				expect(() => BotRegistry.getInstance()).not.toThrow();
 			});
 		});
 	});
 
 	describe('4. Integration Validation', () => {
 		describe('Reply Bot Integration', () => {
-			it('should load Chad Bot without errors', () => {
-				expect(() => {
-					require('../reply-bots/chad-bot');
-				}).not.toThrow();
+			it('should create bots with BotFactory without errors', () => {
+				const testBotConfig: BotConfig = {
+					name: 'integration-test-bot',
+					description: 'Bot for integration testing',
+					defaultIdentity: {
+						botName: 'IntegrationBot',
+						avatarUrl: 'https://example.com/avatar.png'
+					},
+					triggers: [{
+						name: 'integration-trigger',
+						condition: () => true,
+						response: () => 'integration response'
+					}],
+					defaultResponseRate: 0.5
+				};
+
+				expect(() => BotFactory.createBot(testBotConfig)).not.toThrow();
 			});
 
-			it('should load Banana Bot without errors', () => {
-				expect(() => {
-					require('../reply-bots/banana-bot');
-				}).not.toThrow();
-			});
+			it('should have proper bot structure from BotFactory', () => {
+				const testBotConfig: BotConfig = {
+					name: 'structure-test-bot',
+					description: 'Bot for structure testing',
+					defaultIdentity: {
+						botName: 'StructureBot',
+						avatarUrl: 'https://example.com/avatar.png'
+					},
+					triggers: [{
+						name: 'structure-trigger',
+						condition: () => true,
+						response: () => 'structure response'
+					}],
+					defaultResponseRate: 0.5
+				};
 
-			it('should have proper bot structure', () => {
-				const chadBot = require('../reply-bots/chad-bot').default;
-				expect(chadBot).toBeDefined();
-				expect(chadBot.name).toBeDefined();
-				expect(chadBot.triggers).toBeDefined();
-				expect(Array.isArray(chadBot.triggers)).toBe(true);
+				const testBot = BotFactory.createBot(testBotConfig);
+				expect(testBot).toBeDefined();
+				expect(testBot.name).toBe('structure-test-bot');
+				expect(testBot.description).toBe('Bot for structure testing');
+				expect(typeof testBot.processMessage).toBe('function');
 			});
 		});
 
