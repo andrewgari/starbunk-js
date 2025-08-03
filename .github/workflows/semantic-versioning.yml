@@ -30,6 +30,8 @@ jobs:
   analyze-commits:
     name: 📊 Analyze Commits
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       should-release: ${{ steps.analysis.outputs.should-release }}
       release-type: ${{ steps.analysis.outputs.release-type }}
@@ -58,9 +60,18 @@ jobs:
       - name: Analyze commits and determine version
         id: analysis
         run: |
+          set -e  # Exit on any error
+
           # Get current version from package.json
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          if [ ! -f "package.json" ]; then
+            echo "Error: package.json not found"
+            echo "should-release=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
           echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
 
           # Get the last tag
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
@@ -82,6 +93,9 @@ jobs:
             exit 0
           fi
 
+          echo "Found commits since last release:"
+          echo "$COMMITS"
+
           # Analyze commit types
           HAS_BREAKING=false
           HAS_FEAT=false
@@ -90,10 +104,13 @@ jobs:
           while IFS= read -r commit; do
             if echo "$commit" | grep -qE "(BREAKING CHANGE|!:)"; then
               HAS_BREAKING=true
+              echo "Found breaking change: $commit"
             elif echo "$commit" | grep -qE "^[a-f0-9]+ feat(\(.+\))?:"; then
               HAS_FEAT=true
+              echo "Found feature: $commit"
             elif echo "$commit" | grep -qE "^[a-f0-9]+ fix(\(.+\))?:"; then
               HAS_FIX=true
+              echo "Found fix: $commit"
             fi
           done <<< "$COMMITS"
 
@@ -108,7 +125,7 @@ jobs:
             elif [ "$HAS_FIX" = true ]; then
               RELEASE_TYPE="patch"
             else
-              echo "No significant changes found"
+              echo "No significant changes found (no feat:, fix:, or BREAKING CHANGE)"
               echo "should-release=false" >> $GITHUB_OUTPUT
               exit 0
             fi
