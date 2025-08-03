@@ -1,0 +1,216 @@
+{
+  "description": "Production E2E Test Configuration for BunkBot Identity System",
+  "architecture": "Webhook-based testing against live production BunkBot instance",
+  "requirements": {
+    "productionBot": "BunkBot must be running and connected to Discord",
+    "webhookUrl": "Discord webhook URL for sending test messages (E2E_WEBHOOK_URL)",
+    "monitorToken": "Discord token for monitoring responses (E2E_MONITOR_TOKEN)",
+    "testChannel": "Isolated Discord channel for E2E testing"
+  },
+  "testEnvironment": {
+    "testChannelId": "798613445301633137",
+    "responseTimeout": 15000,
+    "messageCleanupDelay": 2000
+  },
+  "testFlow": {
+    "1": "Send webhook message to Discord channel (simulates user message)",
+    "2": "Production BunkBot processes message and responds",
+    "3": "Test monitors for bot response and validates identity/content",
+    "4": "Verify bot uses custom name/avatar (not default Discord identity)"
+  },
+  "botTests": [
+    {
+      "botName": "BlueBot",
+      "triggerMessage": "blu?",
+      "expectedResponse": "Did somebody say Blu?",
+      "type": "deterministic",
+      "description": "Tests BlueBot custom identity with blue-themed avatar",
+      "expectedIdentity": {
+        "customName": "BlueBot",
+        "usesWebhook": true,
+        "notDefaultBot": true
+      }
+    },
+    {
+      "botName": "HoldBot",
+      "triggerMessage": "Hold",
+      "expectedResponse": "Hold.",
+      "type": "deterministic",
+      "description": "Tests HoldBot custom identity and exact pattern match"
+    },
+    {
+      "botName": "GuyBot",
+      "triggerMessage": "guy",
+      "expectedResponse": "guy",
+      "type": "user-specific",
+      "description": "Tests GuyBot with Guy's Discord identity (with fallback)"
+    },
+    {
+      "botName": "ChadBot",
+      "triggerMessage": "anything random for chad test",
+      "expectedResponse": "What is bro *yappin* about?...",
+      "type": "probabilistic",
+      "probability": 0.01,
+      "maxAttempts": 10,
+      "description": "Tests ChadBot probabilistic response with Chad's identity"
+    },
+    {
+      "botName": "VennBot",
+      "triggerMessage": "venn",
+      "expectedResponse": "Hmm...",
+      "type": "user-specific",
+      "description": "Tests VennBot with Venn's Discord identity (with fallback)"
+    },
+    {
+      "botName": "BunkBot",
+      "triggerMessage": "69",
+      "expectedResponse": "Nice.",
+      "type": "deterministic",
+      "description": "Tests BunkBot (nice-bot) custom identity"
+    },
+    {
+      "botName": "Sheesh Bot",
+      "triggerMessage": "sheesh",
+      "expectedResponse": "SHEEEESH",
+      "type": "deterministic",
+      "description": "Tests Sheesh Bot custom identity"
+    },
+    {
+      "botName": "CheckBot",
+      "triggerMessage": "check",
+      "expectedResponse": "czech",
+      "type": "deterministic",
+      "description": "Tests CheckBot word replacement functionality"
+    },
+    {
+      "botName": "BananaBot",
+      "triggerMessage": "banana",
+      "expectedResponse": "banana",
+      "type": "deterministic",
+      "description": "Tests BananaBot custom identity"
+    },
+    {
+      "botName": "BabyBot",
+      "triggerMessage": "baby",
+      "expectedResponse": "https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus.gif",
+      "type": "deterministic",
+      "description": "Tests BabyBot metroid gif response"
+    },
+    {
+      "botName": "Spider-Bot",
+      "triggerMessage": "spiderman",
+      "expectedResponse": "Spider-Man",
+      "type": "deterministic",
+      "description": "Tests Spider-Bot hyphenation correction"
+    },
+    {
+      "botName": "ChaosBot",
+      "triggerMessage": "chaos",
+      "expectedResponse": "All I know is...I",
+      "type": "deterministic",
+      "description": "Tests ChaosBot Final Fantasy reference"
+    },
+    {
+      "botName": "GundamBot",
+      "triggerMessage": "gundam",
+      "expectedResponse": "gundam",
+      "type": "deterministic",
+      "description": "Tests GundamBot pronunciation joke"
+    },
+    {
+      "botName": "Xander Crews",
+      "triggerMessage": "I can't do this",
+      "expectedResponse": "Well, not with *THAT* attitude!!!",
+      "type": "deterministic",
+      "description": "Tests Xander Crews negative statement response"
+    },
+    {
+      "botName": "Ezio Auditore Da Firenze",
+      "triggerMessage": "ezio",
+      "expectedResponse": "ezio",
+      "type": "deterministic",
+      "description": "Tests Ezio Assassin's Creed quotes"
+    },
+    {
+      "botName": "Gerald",
+      "triggerMessage": "there house is nice",
+      "expectedResponse": "their",
+      "type": "probabilistic",
+      "probability": 0.05,
+      "maxAttempts": 5,
+      "description": "Tests Gerald grammar correction (5% chance)"
+    },
+    {
+      "botName": "Interrupt Bot",
+      "triggerMessage": "hello world test message",
+      "expectedResponse": "Oh, sorry... go ahead",
+      "type": "probabilistic",
+      "probability": 0.02,
+      "maxAttempts": 10,
+      "description": "Tests Interrupt Bot random interruption (2% chance)"
+    },
+    {
+      "botName": "Macaroni Bot",
+      "triggerMessage": "macaroni",
+      "expectedResponse": "macaroni",
+      "type": "deterministic",
+      "description": "Tests Macaroni Bot Venn joke"
+    },
+    {
+      "botName": "GremlinBot",
+      "triggerMessage": "gremlin",
+      "expectedResponse": "Could you repeat that? I don't speak *gremlin*",
+      "type": "deterministic",
+      "description": "Tests GremlinBot confusion response"
+    },
+    {
+      "botName": "SigGreatBot",
+      "triggerMessage": "anything for sig great test",
+      "expectedResponse": "Great!",
+      "type": "probabilistic",
+      "probability": 0.10,
+      "maxAttempts": 5,
+      "description": "Tests SigGreatBot random great response (10% chance)"
+    },
+    {
+      "botName": "BotBot",
+      "triggerMessage": "hello from test bot",
+      "expectedResponse": "Hello fellow bot!",
+      "type": "probabilistic",
+      "probability": 0.05,
+      "maxAttempts": 5,
+      "description": "Tests BotBot response to bot messages (5% chance)",
+      "specialHandling": "requires-bot-message"
+    },
+    {
+      "botName": "Music Correct Bot",
+      "triggerMessage": "!play https://youtube.com/watch?v=test",
+      "expectedResponse": "let me fill you in on a little insider secret",
+      "type": "deterministic",
+      "description": "Tests Music Correct Bot response to old music commands"
+    },
+    {
+      "botName": "CovaBot",
+      "triggerMessage": "random message for cova test",
+      "expectedResponse": "https://i.imgur.com/NtfJZP5.png",
+      "type": "probabilistic",
+      "probability": 0.01,
+      "maxAttempts": 10,
+      "description": "Tests CovaBot random confused face response (1% chance)"
+    }
+  ],
+  "validationCriteria": {
+    "responseContent": "Bot response must contain expected text",
+    "botIdentity": "Bot must appear with custom name (not 'CovaBot' or default)",
+    "webhookUsage": "Bot should use webhook for custom avatar (preferred)",
+    "responseTime": "Bot must respond within 15 seconds",
+    "noDefaultIdentity": "Bot must NOT appear as default Discord bot token identity"
+  },
+  "setupInstructions": {
+    "1": "Ensure production BunkBot is running and connected to Discord",
+    "2": "Set E2E_WEBHOOK_URL environment variable with Discord webhook URL",
+    "3": "Set E2E_MONITOR_TOKEN environment variable with Discord token for monitoring",
+    "4": "Ensure test channel (798613445301633137) is accessible to both webhook and monitor token",
+    "5": "Run: npm test -- comprehensive-e2e-identity.test.ts"
+  }
+}

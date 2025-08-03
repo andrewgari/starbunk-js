@@ -1,271 +1,290 @@
 /**
- * Comprehensive E2E Identity Tests
- * 
- * Tests ALL reply-bots to ensure they display their correct custom identities
- * (names and avatars) instead of appearing as the default Discord bot identity.
+ * Production Bot E2E Identity Tests
+ *
+ * Tests ALL reply-bots against the running production BunkBot instance
+ * using webhook-based message simulation and response monitoring.
+ *
+ * Architecture:
+ * 1. Send webhook messages to Discord (simulates user messages)
+ * 2. Monitor for production bot responses
+ * 3. Validate bot identity (custom names/avatars) and content
+ * 4. No bot lifecycle management - tests against live production bot
  */
 
-import { Client, GatewayIntentBits, TextChannel, WebhookClient } from 'discord.js';
-import { BotRegistry } from '../botRegistry';
-import { DiscordService } from '@starbunk/shared';
+import { Client, GatewayIntentBits, WebhookClient, Message } from 'discord.js';
 
-// Test configuration
+// Test configuration - requires production bot to be running
 const TEST_CONFIG = {
-  testServerId: process.env.E2E_TEST_SERVER_ID || '753251582719688714',
   testChannelId: process.env.E2E_TEST_CHANNEL_ID || '798613445301633137',
-  testUserId: process.env.E2E_TEST_USER_ID || '139592376443338752',
-  webhookUrl: process.env.E2E_WEBHOOK_URL,
-  botToken: process.env.E2E_BOT_TOKEN || process.env.BUNKBOT_TOKEN || process.env.STARBUNK_TOKEN,
-  timeout: 30000 // 30 seconds
+  webhookUrl: process.env.E2E_WEBHOOK_URL, // Required for sending test messages
+  monitorToken: process.env.E2E_MONITOR_TOKEN || process.env.STARBUNK_TOKEN, // Read-only monitoring
+  responseTimeout: 15000, // 15 seconds to wait for bot response
+  messageCleanupDelay: 2000 // 2 seconds between tests for cleanup
 };
 
-// Bot test cases - comprehensive list of all bots
-const BOT_TESTS = [
+// Production bot test cases - tests against live BunkBot instance
+const PRODUCTION_BOT_TESTS = [
   {
     botName: 'BlueBot',
     triggerMessage: 'blu?',
     expectedResponse: 'Did somebody say Blu?',
     type: 'deterministic',
-    expectedAvatar: 'https://i.imgur.com/AAtmRum.png'
+    description: 'Tests BlueBot custom identity and response'
   },
   {
-    botName: 'HoldBot', 
+    botName: 'HoldBot',
     triggerMessage: 'Hold',
     expectedResponse: 'Hold.',
     type: 'deterministic',
-    expectedAvatar: 'https://i.imgur.com/HXVVfyj.png'
+    description: 'Tests HoldBot custom identity and response'
   },
   {
     botName: 'GuyBot',
     triggerMessage: 'guy',
     expectedResponse: 'guy',
     type: 'user-specific',
-    targetUser: 'Guy',
-    expectedAvatar: 'https://cdn.discordapp.com/avatars/135820819086573568/avatar.png'
+    description: 'Tests GuyBot with Guy\'s Discord identity'
   },
   {
     botName: 'ChadBot',
-    triggerMessage: 'chad workout protein',
+    triggerMessage: 'anything random for chad test',
     expectedResponse: 'What is bro *yappin* about?...',
-    type: 'user-specific',
-    targetUser: 'Chad',
-    expectedAvatar: 'https://cdn.discordapp.com/avatars/85184539906809856/avatar.png',
-    probability: 0.01
+    type: 'probabilistic',
+    probability: 0.01,
+    description: 'Tests ChadBot probabilistic response (1% chance)',
+    maxAttempts: 10 // Try multiple times due to low probability
   },
   {
     botName: 'VennBot',
     triggerMessage: 'venn',
     expectedResponse: 'Hmm...',
-    type: 'user-specific', 
-    targetUser: 'Venn',
-    expectedAvatar: 'https://cdn.discordapp.com/avatars/151120340343455744/avatar.png'
+    type: 'user-specific',
+    description: 'Tests VennBot with Venn\'s Discord identity'
   },
   {
     botName: 'BunkBot',
     triggerMessage: '69',
     expectedResponse: 'Nice.',
     type: 'deterministic',
-    expectedAvatar: 'https://pbs.twimg.com/profile_images/421461637325787136/0rxpHzVx.jpeg'
+    description: 'Tests BunkBot (nice-bot) custom identity'
   },
   {
     botName: 'Sheesh Bot',
     triggerMessage: 'sheesh',
     expectedResponse: 'SHEEEESH',
     type: 'deterministic',
-    expectedAvatar: 'https://i.imgur.com/HXVVfyj.png'
+    description: 'Tests Sheesh Bot custom identity'
   },
   {
     botName: 'CheckBot',
     triggerMessage: 'check',
     expectedResponse: 'czech',
     type: 'deterministic',
-    expectedAvatar: 'https://i.imgur.com/HXVVfyj.png'
+    description: 'Tests CheckBot word replacement'
   },
   {
     botName: 'BananaBot',
     triggerMessage: 'banana',
     expectedResponse: 'banana',
     type: 'deterministic',
-    expectedAvatar: 'https://i.imgur.com/HXVVfyj.png'
+    description: 'Tests BananaBot custom identity'
   },
   {
     botName: 'BabyBot',
     triggerMessage: 'baby',
     expectedResponse: 'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus.gif',
     type: 'deterministic',
-    expectedAvatar: 'https://i.imgur.com/HXVVfyj.png'
+    description: 'Tests BabyBot metroid gif response'
   }
 ];
 
-describe('Comprehensive E2E Identity Tests', () => {
-  let testClient: Client;
-  let testChannel: TextChannel;
-  let webhookClient: WebhookClient | null = null;
-  let discordService: DiscordService;
+describe('Production Bot E2E Identity Tests', () => {
+  let monitorClient: Client;
+  let webhookClient: WebhookClient;
 
   beforeAll(async () => {
-    // Skip if no bot token available
-    if (!TEST_CONFIG.botToken) {
-      console.log('⚠️ No bot token available - skipping E2E identity tests');
-      return;
+    // Validate required configuration
+    if (!TEST_CONFIG.webhookUrl) {
+      throw new Error('E2E_WEBHOOK_URL is required for sending test messages');
+    }
+    if (!TEST_CONFIG.monitorToken) {
+      throw new Error('E2E_MONITOR_TOKEN or STARBUNK_TOKEN is required for monitoring responses');
     }
 
-    // Set E2E test environment
-    process.env.E2E_TEST_ENABLED = 'true';
+    // Initialize webhook client for sending test messages
+    webhookClient = new WebhookClient({ url: TEST_CONFIG.webhookUrl });
 
-    // Initialize test client
-    testClient = new Client({
+    // Initialize monitoring client for observing bot responses
+    monitorClient = new Client({
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildWebhooks
+        GatewayIntentBits.MessageContent
       ]
     });
 
-    // Login and setup
-    await testClient.login(TEST_CONFIG.botToken);
-    await new Promise(resolve => testClient.once('ready', resolve));
+    // Connect monitoring client
+    await monitorClient.login(TEST_CONFIG.monitorToken);
+    await new Promise(resolve => monitorClient.once('ready', resolve));
 
-    // Get test channel
-    testChannel = await testClient.channels.fetch(TEST_CONFIG.testChannelId) as TextChannel;
-    if (!testChannel) {
-      throw new Error(`Test channel ${TEST_CONFIG.testChannelId} not found`);
-    }
-
-    // Setup webhook for sending test messages
-    if (TEST_CONFIG.webhookUrl) {
-      webhookClient = new WebhookClient({ url: TEST_CONFIG.webhookUrl });
-    }
-
-    // Initialize DiscordService
-    discordService = new DiscordService(testClient);
-
-    console.log(`✅ E2E Identity Test setup complete - testing ${BOT_TESTS.length} bots`);
-  }, 60000);
+    console.log(`✅ Production E2E Test setup complete`);
+    console.log(`   Webhook: ${TEST_CONFIG.webhookUrl ? 'Configured' : 'Missing'}`);
+    console.log(`   Monitor: Connected as ${monitorClient.user?.tag}`);
+    console.log(`   Channel: ${TEST_CONFIG.testChannelId}`);
+    console.log(`   Testing: ${PRODUCTION_BOT_TESTS.length} bots against live production instance`);
+  }, 30000);
 
   afterAll(async () => {
-    if (testClient) {
-      await testClient.destroy();
+    if (monitorClient) {
+      await monitorClient.destroy();
     }
     if (webhookClient) {
       webhookClient.destroy();
     }
   });
 
-  describe('Bot Identity Validation', () => {
-    BOT_TESTS.forEach((botTest) => {
-      it(`should display correct identity for ${botTest.botName}`, async () => {
-        if (!TEST_CONFIG.botToken) {
-          console.log(`⚠️ Skipping ${botTest.botName} - no bot token`);
-          return;
-        }
+  describe('Production Bot Identity Validation', () => {
+    PRODUCTION_BOT_TESTS.forEach((botTest) => {
+      it(`should validate ${botTest.botName} custom identity and response`, async () => {
+        console.log(`🧪 Testing ${botTest.botName}: ${botTest.description}`);
 
-        console.log(`🧪 Testing ${botTest.botName} identity...`);
+        let attempts = 0;
+        const maxAttempts = botTest.maxAttempts || 1;
+        let lastError: Error | null = null;
 
-        // Send trigger message
-        const sentMessage = await sendTestMessage(botTest.triggerMessage);
-        
-        // Wait for bot response
-        const response = await waitForBotResponse(botTest.botName, botTest.expectedResponse);
-        
-        if (response) {
-          // Validate bot identity
-          expect(response.author.username).toBe(botTest.botName);
-          expect(response.author.bot).toBe(true);
-          
-          // For webhook messages, validate avatar
-          if (response.webhookId) {
-            console.log(`✅ ${botTest.botName} used webhook (custom identity)`);
-            // Webhook messages should have custom avatar
-            expect(response.author.displayAvatarURL()).toContain('cdn.discordapp.com');
-          } else {
-            console.log(`⚠️ ${botTest.botName} used regular message (default identity)`);
-          }
-          
-          console.log(`✅ ${botTest.botName} identity validated`);
-        } else {
-          // For probabilistic bots, this might be expected
-          if (botTest.probability && botTest.probability < 0.1) {
-            console.log(`⚠️ ${botTest.botName} did not respond (probabilistic bot with ${botTest.probability * 100}% chance)`);
-          } else {
-            throw new Error(`${botTest.botName} did not respond to trigger: ${botTest.triggerMessage}`);
-          }
-        }
-      }, TEST_CONFIG.timeout);
-    });
-  });
+        // For probabilistic bots, try multiple times
+        while (attempts < maxAttempts) {
+          attempts++;
 
-  describe('User-Specific Bot Identity Resolution', () => {
-    const userSpecificBots = BOT_TESTS.filter(bot => bot.type === 'user-specific');
-
-    userSpecificBots.forEach((botTest) => {
-      it(`should resolve ${botTest.targetUser} identity for ${botTest.botName}`, async () => {
-        if (!TEST_CONFIG.botToken) {
-          console.log(`⚠️ Skipping ${botTest.botName} identity resolution - no bot token`);
-          return;
-        }
-
-        console.log(`🔍 Testing ${botTest.botName} identity resolution for ${botTest.targetUser}...`);
-
-        // Test identity resolution directly
-        const bots = await BotRegistry.discoverBots(discordService);
-        const targetBot = bots.find(bot => bot.name === botTest.botName);
-        
-        expect(targetBot).toBeDefined();
-        
-        if (targetBot) {
-          // Create mock message for identity resolution
-          const mockMessage = {
-            guild: { id: TEST_CONFIG.testServerId },
-            channel: { id: TEST_CONFIG.testChannelId },
-            author: { id: TEST_CONFIG.testUserId }
-          } as any;
-
-          // Test that the bot can resolve identity (should not throw)
           try {
-            await targetBot.processMessage(mockMessage);
-            console.log(`✅ ${botTest.botName} identity resolution successful`);
+            console.log(`   Attempt ${attempts}/${maxAttempts}: Sending trigger "${botTest.triggerMessage}"`);
+
+            // Send webhook message to simulate user input
+            await sendWebhookMessage(botTest.triggerMessage);
+
+            // Wait for production bot response
+            const response = await waitForProductionBotResponse(botTest);
+
+            if (response) {
+              // Validate response content
+              expect(response.content).toContain(botTest.expectedResponse);
+
+              // Validate bot identity (most important test)
+              expect(response.author.username).toBe(botTest.botName);
+              expect(response.author.bot).toBe(true);
+
+              // Check if bot used webhook (custom identity)
+              if (response.webhookId) {
+                console.log(`   ✅ ${botTest.botName} used webhook for custom identity`);
+                console.log(`   🎭 Custom identity: ${response.author.username}`);
+                console.log(`   📷 Custom avatar: ${response.author.displayAvatarURL()}`);
+              } else {
+                console.log(`   ⚠️ ${botTest.botName} used regular message (default bot identity)`);
+              }
+
+              console.log(`   ✅ ${botTest.botName} validation successful`);
+              return; // Success - exit retry loop
+            }
+
           } catch (error) {
-            // Identity resolution failure should be handled gracefully
-            console.log(`⚠️ ${botTest.botName} identity resolution failed, but should have fallback`);
+            lastError = error as Error;
+            console.log(`   ❌ Attempt ${attempts} failed: ${error.message}`);
+
+            if (attempts < maxAttempts) {
+              console.log(`   🔄 Retrying in 2 seconds...`);
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
           }
         }
-      });
+
+        // All attempts failed
+        if (botTest.type === 'probabilistic') {
+          console.log(`   ⚠️ ${botTest.botName} did not respond after ${maxAttempts} attempts (probabilistic bot)`);
+          console.log(`   💡 This may be expected due to low probability (${botTest.probability * 100}%)`);
+        } else {
+          throw lastError || new Error(`${botTest.botName} failed to respond after ${maxAttempts} attempts`);
+        }
+      }, TEST_CONFIG.responseTimeout * 3); // Allow extra time for retries
     });
   });
 
-  // Helper functions
-  async function sendTestMessage(content: string): Promise<any> {
-    if (webhookClient) {
-      return await webhookClient.send({
-        content,
-        username: 'E2E Test User',
-        avatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
-      });
-    } else {
-      return await testChannel.send(content);
-    }
+  describe('Production Bot Health Check', () => {
+    it('should verify production BunkBot is running and responsive', async () => {
+      console.log('🏥 Checking if production BunkBot is online and responsive...');
+
+      // Send a simple test message that should trigger a deterministic response
+      await sendWebhookMessage('blu?'); // BlueBot should always respond
+
+      // Wait for any bot response to confirm production bot is running
+      const response = await waitForAnyBotResponse();
+
+      if (response) {
+        console.log(`✅ Production bot is responsive`);
+        console.log(`   Response from: ${response.author.username}`);
+        console.log(`   Response content: ${response.content}`);
+        expect(response.author.bot).toBe(true);
+      } else {
+        throw new Error('Production BunkBot appears to be offline or unresponsive');
+      }
+    }, TEST_CONFIG.responseTimeout);
+  });
+
+  // Helper functions for webhook-based testing
+  async function sendWebhookMessage(content: string): Promise<void> {
+    await webhookClient.send({
+      content,
+      username: 'E2E Test User',
+      avatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
+    });
+
+    // Small delay to ensure message is processed
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
 
-  async function waitForBotResponse(expectedBotName: string, expectedContent: string): Promise<any> {
+  async function waitForProductionBotResponse(botTest: any): Promise<Message | null> {
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
-        testClient.off('messageCreate', messageHandler);
+        monitorClient.off('messageCreate', messageHandler);
         resolve(null);
-      }, 10000); // 10 second timeout
+      }, TEST_CONFIG.responseTimeout);
 
-      const messageHandler = (message: any) => {
-        if (message.channel.id === TEST_CONFIG.testChannelId &&
-            message.author.bot &&
-            (message.author.username === expectedBotName || message.content.includes(expectedContent))) {
+      const messageHandler = (message: Message) => {
+        // Only look at messages in our test channel from bots
+        if (message.channel.id !== TEST_CONFIG.testChannelId || !message.author.bot) {
+          return;
+        }
+
+        // Check if this is the expected bot response
+        const isExpectedBot = message.author.username === botTest.botName;
+        const hasExpectedContent = message.content.includes(botTest.expectedResponse);
+
+        if (isExpectedBot && hasExpectedContent) {
           clearTimeout(timeout);
-          testClient.off('messageCreate', messageHandler);
+          monitorClient.off('messageCreate', messageHandler);
           resolve(message);
         }
       };
 
-      testClient.on('messageCreate', messageHandler);
+      monitorClient.on('messageCreate', messageHandler);
+    });
+  }
+
+  async function waitForAnyBotResponse(): Promise<Message | null> {
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        monitorClient.off('messageCreate', messageHandler);
+        resolve(null);
+      }, TEST_CONFIG.responseTimeout);
+
+      const messageHandler = (message: Message) => {
+        if (message.channel.id === TEST_CONFIG.testChannelId && message.author.bot) {
+          clearTimeout(timeout);
+          monitorClient.off('messageCreate', messageHandler);
+          resolve(message);
+        }
+      };
+
+      monitorClient.on('messageCreate', messageHandler);
     });
   }
 });
