@@ -631,10 +631,16 @@ export class DiscordService {
 		if (messageFilter.isDebugMode()) {
 			const testingChannelIds = messageFilter.getTestingChannelIds();
 			if (testingChannelIds.length > 0 && !testingChannelIds.includes(channelId)) {
-				logger.warn(`[DiscordService] 🚫 DEBUG MODE: Blocking message to channel ${channelId} - not in TESTING_CHANNEL_IDS whitelist`);
-				logger.debug(`[DiscordService] Whitelisted channels: [${testingChannelIds.join(', ')}]`);
+				logger.warn(`[DiscordService] 🚫 DEBUG MODE: Blocking webhook message with bot identity to channel ${channelId} - not in TESTING_CHANNEL_IDS whitelist`);
+				logger.warn(`[DiscordService] Bot identity: ${botIdentity.botName} (${botIdentity.avatarUrl})`);
+				logger.warn(`[DiscordService] Whitelisted channels: [${testingChannelIds.join(', ')}]`);
+				logger.warn(`[DiscordService] To fix: Add channel ${channelId} to TESTING_CHANNEL_IDS environment variable or set DEBUG_MODE=false`);
 				return; // Silently discard the message
+			} else if (testingChannelIds.length > 0) {
+				logger.debug(`[DiscordService] ✅ DEBUG MODE: Channel ${channelId} is whitelisted, proceeding with webhook message`);
 			}
+		} else {
+			logger.debug(`[DiscordService] Debug mode disabled, proceeding with webhook message to channel ${channelId}`);
 		}
 
 		try {

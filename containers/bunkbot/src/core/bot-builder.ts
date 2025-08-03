@@ -227,18 +227,21 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 					// Send message using DiscordService if available, otherwise use webhooks
 					try {
 						if (validConfig.discordService) {
-							// Use DiscordService if provided (for tests)
+							// Use DiscordService for webhook-based custom identity
+							logger.debug(`[${validConfig.name}] 🎭 Sending message with custom identity: ${identity.botName} (${identity.avatarUrl})`);
 							await validConfig.discordService.sendMessageWithBotIdentity(
 								message.channel.id,
 								identity,
 								responseText
 							);
-							logger.debug(`Message sent via DiscordService as ${identity.botName}`);
+							logger.debug(`[${validConfig.name}] ✅ Message sent via DiscordService as ${identity.botName}`);
 						} else {
 							// Fallback to regular message sending (no custom identity)
+							logger.warn(`[${validConfig.name}] ⚠️ No DiscordService available - falling back to regular message sending (will appear as default bot identity)`);
+							logger.warn(`[${validConfig.name}] Expected identity: ${identity.botName} (${identity.avatarUrl})`);
 							if ('send' in message.channel) {
 								await message.channel.send(responseText);
-								logger.debug(`Message sent via regular channel (no custom identity)`);
+								logger.debug(`[${validConfig.name}] Message sent via regular channel (no custom identity)`);
 							} else {
 								logger.warn(`Channel does not support sending messages`);
 							}

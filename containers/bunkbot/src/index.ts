@@ -134,6 +134,7 @@ class BunkBotContainer {
 		try {
 			// Get the DiscordService from the container for bot identity support
 			const discordService = container.get<DiscordService>(ServiceId.DiscordService);
+			logger.info(`🎭 DiscordService initialized for bot identity system (webhook-based custom names/avatars)`);
 
 			// For now, focus on file-based bot loading only
 			// Database bot loading is temporarily disabled to fix compilation issues
