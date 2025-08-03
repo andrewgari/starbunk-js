@@ -25,5 +25,5 @@ export interface WebhookMessage {
 }
 
 // Re-export existing types with explicit naming to avoid conflicts
-export { MessageInfo as DiscordMessageInfo } from '../discord/messageInfo';
-export { MessageInfo as WebhookMessageInfo } from '../webhooks/types';
+export type { MessageInfo as DiscordMessageInfo } from '../discord/messageInfo';
+export type { MessageInfo as WebhookMessageInfo } from '../webhooks/types';

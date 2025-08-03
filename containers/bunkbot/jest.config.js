@@ -25,11 +25,6 @@ module.exports = {
 		'^@starbunk/shared$': '<rootDir>/../shared/src/index.ts',
 	},
 	transform: {
-		'^.+\\.tsx?$': [
-			'ts-jest',
-			{
-				isolatedModules: true,
-			},
-		],
+		'^.+\\.tsx?$': 'ts-jest',
 	},
 };

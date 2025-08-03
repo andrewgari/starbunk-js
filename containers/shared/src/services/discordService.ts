@@ -2,7 +2,6 @@ import { APIEmbed, Client, GatewayIntentBits, Guild, GuildMember, Message, Parti
 import schedule from 'node-schedule';
 
 import { BotIdentity } from "../types";
-import guildIds from '../discord/guildIds';
 import {
 	ChannelNotFoundError,
 	DiscordServiceError,
@@ -45,7 +44,8 @@ export interface ProtectedMethods {
 	retryBotProfileRefresh: (attempts?: number) => Promise<void>;
 }
 
-const DefaultGuildId = guildIds.StarbunkCrusaders;
+// Default Guild ID from environment variable (fallback to Starbunk Crusaders)
+const DefaultGuildId = process.env.GUILD_ID || '753251582719688714';
 
 export class DiscordService {
 	private memberCache = new Map<string, GuildMember>();

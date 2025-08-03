@@ -1,6 +1,5 @@
 import { ChannelType, GuildChannel, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel } from 'discord.js';
 import fs from 'fs/promises';
-import guildIds from '../../discord/guildIds';
 import { Campaign } from '../../domain/models';
 import { CampaignMetadata, CampaignRepository, CreateCampaignData } from '../../domain/repositories';
 import { RepositoryFactory } from '../../infrastructure/persistence/repositoryFactory';
@@ -139,7 +138,8 @@ export class CampaignService {
 
 		// Create Discord event
 		const discordService = getDiscordService();
-		const guild = discordService.getGuild(guildIds.StarbunkCrusaders);
+		// Default Guild ID from environment variable (fallback to Starbunk Crusaders)
+		const guild = discordService.getGuild(process.env.GUILD_ID || '753251582719688714');
 		const channel = guild.channels.cache.get(campaign.voiceChannelId);
 
 		if (!channel?.isVoiceBased()) {
@@ -190,7 +190,8 @@ export class CampaignService {
 		// If there's a Discord event for this date, delete it
 		if (session.discordEventId) {
 			const discordService = getDiscordService();
-			const guild = discordService.getGuild(guildIds.StarbunkCrusaders);
+			// Default Guild ID from environment variable (fallback to Starbunk Crusaders)
+			const guild = discordService.getGuild(process.env.GUILD_ID || '753251582719688714');
 			await guild.scheduledEvents.delete(session.discordEventId);
 		}
 

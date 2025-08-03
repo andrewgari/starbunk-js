@@ -2,8 +2,8 @@ import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCo
 import fs from 'fs';
 import path from 'path';
 import { Command } from '../discord/command';
-import { isDebugMode } from '../environment';
-import { logger } from '../services/logger';
+import { isDebugMode } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
 
 export class CommandHandler {
 	private commands: Collection<string, Command> = new Collection();
