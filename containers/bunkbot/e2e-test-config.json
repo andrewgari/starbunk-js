@@ -2,12 +2,11 @@
   "testEnvironment": {
     "description": "Live E2E Test Configuration for BunkBot",
     "safetyNote": "Tests will ONLY run in whitelisted servers/channels",
-    "testServerId": "REPLACE_WITH_YOUR_TEST_SERVER_ID",
+    "testServerId": "753251582719688714",
     "testChannelIds": [
-      "REPLACE_WITH_YOUR_TEST_CHANNEL_ID_1",
-      "REPLACE_WITH_YOUR_TEST_CHANNEL_ID_2"
+      "798613445301633137"
     ],
-    "testUserId": "REPLACE_WITH_YOUR_USER_ID_FOR_WEBHOOK"
+    "testUserId": "139592376443338752"
   },
   "botTests": [
     {

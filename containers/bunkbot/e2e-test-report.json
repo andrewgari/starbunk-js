@@ -1,0 +1,98 @@
+{
+  "timestamp": "2025-08-03T17:12:27.510Z",
+  "environment": {
+    "testServerId": "753251582719688714",
+    "testChannelId": "798613445301633137",
+    "nodeEnv": "test",
+    "debugMode": "false"
+  },
+  "results": {
+    "botTests": [
+      {
+        "botName": "BlueBot",
+        "triggerMessage": "blu",
+        "success": false,
+        "expectedResponse": "Did somebody say Blu?",
+        "error": "testChannel.on is not a function"
+      },
+      {
+        "botName": "HoldBot",
+        "triggerMessage": "Hold",
+        "success": false,
+        "expectedResponse": "Hold.",
+        "error": "testChannel.on is not a function"
+      },
+      {
+        "botName": "GuyBot",
+        "triggerMessage": "guy",
+        "success": false,
+        "expectedResponse": "guy",
+        "error": "testChannel.on is not a function"
+      },
+      {
+        "botName": "ChadBot",
+        "triggerMessage": "chad",
+        "success": false,
+        "expectedResponse": "chad",
+        "error": "testChannel.on is not a function"
+      },
+      {
+        "botName": "VennBot",
+        "triggerMessage": "venn",
+        "success": false,
+        "expectedResponse": "venn",
+        "error": "testChannel.on is not a function"
+      },
+      {
+        "botName": "NiceBot",
+        "triggerMessage": "nice",
+        "success": false,
+        "expectedResponse": "nice",
+        "error": "testChannel.on is not a function"
+      },
+      {
+        "botName": "SheeshBot",
+        "triggerMessage": "sheesh",
+        "success": false,
+        "expectedResponse": "sheesh",
+        "error": "testChannel.on is not a function"
+      },
+      {
+        "botName": "CheckBot",
+        "triggerMessage": "check",
+        "success": false,
+        "expectedResponse": "check",
+        "error": "testChannel.on is not a function"
+      },
+      {
+        "botName": "BananaBot",
+        "triggerMessage": "banana",
+        "success": false,
+        "expectedResponse": "banana",
+        "error": "testChannel.on is not a function"
+      },
+      {
+        "botName": "PickleBot",
+        "triggerMessage": "pickle",
+        "success": false,
+        "expectedResponse": "pickle",
+        "error": "testChannel.on is not a function"
+      }
+    ],
+    "slashCommandTests": [],
+    "controlTests": [
+      {
+        "name": "NoTriggerTest",
+        "message": "This message should not trigger any bots xyz123",
+        "success": false,
+        "error": "testChannel.on is not a function"
+      }
+    ],
+    "summary": {
+      "totalTests": 11,
+      "passed": 0,
+      "failed": 11,
+      "duration": 0
+    }
+  }
+}

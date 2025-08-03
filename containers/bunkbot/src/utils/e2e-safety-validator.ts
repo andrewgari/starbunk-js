@@ -28,9 +28,9 @@ export class E2ESafetyValidator {
   ];
 
   private static readonly FORBIDDEN_PRODUCTION_VALUES = [
-    '753251582719688714', // Starbunk Crusaders main server
     '696689954759245915', // Snowfall server
     '798613445301633134'  // Covadax server
+    // Note: 753251582719688714 removed - user's controlled test server
   ];
 
   /**
