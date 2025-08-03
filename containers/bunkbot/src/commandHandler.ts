@@ -2,7 +2,7 @@ import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCo
 import fs from 'fs';
 import path from 'path';
 import { Command } from '../discord/command';
-import { isDebugMode } from '../environment';
+import { isDebugMode } from '@starbunk/shared';
 import { logger } from '../services/logger';
 
 export class CommandHandler {
