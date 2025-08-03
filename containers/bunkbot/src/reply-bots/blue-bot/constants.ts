@@ -1,7 +1,7 @@
 // Contains all the static data from BlueBotConfig
 // Exactly the same constants as the original config
 
-export const BLUE_BOT_NAME = 'BluBot';
+export const BLUE_BOT_NAME = 'BlueBot';
 
 export const BLUE_BOT_AVATARS = {
 	Default: 'https://i.imgur.com/AAtmRum.png',

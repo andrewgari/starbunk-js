@@ -132,10 +132,13 @@ class BunkBotContainer {
 		logger.info('🤖 Initializing reply bot system...');
 
 		try {
+			// Get the DiscordService from the container for bot identity support
+			const discordService = container.get<DiscordService>(ServiceId.DiscordService);
+
 			// For now, focus on file-based bot loading only
 			// Database bot loading is temporarily disabled to fix compilation issues
 			logger.info('📁 Loading reply bots from file system...');
-			this.replyBots = await BotRegistry.discoverBots();
+			this.replyBots = await BotRegistry.discoverBots(discordService);
 
 			if (this.replyBots.length > 0) {
 				logger.info(`✅ Reply bot system initialized with ${this.replyBots.length} bots`);

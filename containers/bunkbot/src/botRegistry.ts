@@ -1,4 +1,4 @@
-import { logger } from '@starbunk/shared';
+import { logger, DiscordService } from '@starbunk/shared';
 import { getBotDefaults } from './config/botDefaults';
 import { BaseVoiceBot } from './core/voice-bot-adapter';
 import ReplyBot from './replyBot';
@@ -34,9 +34,10 @@ export class BotRegistry {
 
 	/**
 	 * Automatically discover and load all reply bots from the reply-bots directory
+	 * @param discordService Optional DiscordService instance to inject into bots for custom identity support
 	 * @returns Array of loaded reply bots
 	 */
-	public static async discoverBots(): Promise<ReplyBot[]> {
+	public static async discoverBots(discordService?: DiscordService): Promise<ReplyBot[]> {
 		logger.info('[BotRegistry] Discovering reply bots...');
 		const loadedBots: ReplyBot[] = [];
 		const registry = BotRegistry.getInstance();
@@ -109,11 +110,11 @@ export class BotRegistry {
 						continue;
 					}
 
-					// Adapt and register the bot
-					const adaptedBot = this.adaptBot(bot);
+					// Adapt and register the bot with DiscordService injection
+					const adaptedBot = this.adaptBot(bot, discordService);
 					registry.registerBot(adaptedBot);
 					loadedBots.push(adaptedBot);
-					logger.debug(`[BotRegistry] Successfully loaded bot: ${bot.name} from ${botDir}`);
+					logger.debug(`[BotRegistry] Successfully loaded bot: ${bot.name} from ${botDir}${discordService ? ' (with DiscordService)' : ' (no DiscordService)'}`);
 				} catch (error) {
 					// Enhanced error handling with more specific information
 					const errorMessage = error instanceof Error ? error.message : String(error);
@@ -191,10 +192,11 @@ export class BotRegistry {
 	/**
 	 * Adapt a ReplyBotImpl to a ReplyBot
 	 * @param bot Bot implementation to adapt
+	 * @param discordService Optional DiscordService instance to inject for custom identity support
 	 * @returns Adapted ReplyBot
 	 */
-	private static adaptBot(bot: ReplyBotImpl): ReplyBot {
-		return new ReplyBotAdapter(bot);
+	private static adaptBot(bot: ReplyBotImpl, discordService?: DiscordService): ReplyBot {
+		return new ReplyBotAdapter(bot, discordService);
 	}
 
 	public registerBot(bot: Bot): void {

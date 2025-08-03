@@ -112,13 +112,15 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 	const validConfig = validateBotConfig(config);
 	// Note: Database functionality disabled for now - using in-memory storage
 
-	return {
+	const botImpl = {
 		name: validConfig.name,
 		description: validConfig.description,
 		metadata: {
 			responseRate: validConfig.defaultResponseRate,
 			disabled: validConfig.disabled,
 		},
+		// Store config for potential DiscordService injection
+		_config: config,
 		async processMessage(message: Message): Promise<void> {
 			// Check if bot is disabled first
 			if (validConfig.disabled) {
@@ -244,6 +246,8 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 			}
 		},
 	};
+
+	return botImpl;
 }
 // Simple in-memory storage for bot data (replaces Prisma for now)
 const botStorage = new Map<string, string | number | boolean>();

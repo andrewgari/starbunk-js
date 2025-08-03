@@ -1,7 +1,8 @@
 import { Message } from 'discord.js';
-import { logger } from '@starbunk/shared';
+import { logger, DiscordService } from '@starbunk/shared';
 import { BotIdentity } from './types/botIdentity';
 import { ReplyBotImpl } from './core/bot-builder';
+import { BotFactory } from './core/bot-factory';
 import ReplyBot from './replyBot';
 
 /**
@@ -11,9 +12,17 @@ import ReplyBot from './replyBot';
 export class ReplyBotAdapter extends ReplyBot {
 	private replyBotImpl: ReplyBotImpl;
 
-	constructor(replyBotImpl: ReplyBotImpl) {
+	constructor(replyBotImpl: ReplyBotImpl, discordService?: DiscordService) {
 		super();
-		this.replyBotImpl = replyBotImpl;
+
+		// Inject DiscordService if provided
+		if (discordService) {
+			this.replyBotImpl = BotFactory.injectDiscordService(replyBotImpl, discordService);
+			logger.debug(`[ReplyBotAdapter] Injected DiscordService into ${replyBotImpl.name}`);
+		} else {
+			this.replyBotImpl = replyBotImpl;
+			logger.debug(`[ReplyBotAdapter] No DiscordService provided for ${replyBotImpl.name} - will use fallback messaging`);
+		}
 
 		// Set response rate based on bot configuration
 		// We'll extract it from the replyBotImpl's metadata if available
