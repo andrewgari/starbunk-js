@@ -144,19 +144,35 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 
 			// Enhanced bot message filtering
 			if (validConfig.skipBotMessages && message.author.bot) {
-				// Import the enhanced filtering function
-				const { shouldExcludeFromReplyBots } = await import('./conditions');
+				// Check if this is an E2E test message first
+				const isE2ETestMessage = (
+					process.env.E2E_TEST_ENABLED === 'true' && (
+						message.author?.username === 'E2E Test User' ||  // Webhook messages
+						message.webhookId !== null ||                     // Any webhook message
+						message.author?.id === process.env.E2E_TEST_USER_ID // E2E bot messages
+					)
+				);
 
-				if (shouldExcludeFromReplyBots(message)) {
+				if (isE2ETestMessage) {
 					if (isDebugMode()) {
-						logger.debug(`[${validConfig.name}] 🚫 Skipping excluded bot message from: ${message.author.username}`);
+						logger.debug(`[${validConfig.name}] ✅ Processing E2E test message from: ${message.author.username} (webhook: ${message.webhookId !== null})`);
 					}
-					return;
-				}
+					// Continue processing E2E test messages
+				} else {
+					// Import the enhanced filtering function
+					const { shouldExcludeFromReplyBots } = await import('./conditions');
 
-				// For non-excluded bot messages, log but continue processing
-				if (isDebugMode()) {
-					logger.debug(`[${validConfig.name}] ⚠️ Processing bot message from: ${message.author.username} (not excluded)`);
+					if (shouldExcludeFromReplyBots(message)) {
+						if (isDebugMode()) {
+							logger.debug(`[${validConfig.name}] 🚫 Skipping excluded bot message from: ${message.author.username}`);
+						}
+						return;
+					}
+
+					// For non-excluded bot messages, log but continue processing
+					if (isDebugMode()) {
+						logger.debug(`[${validConfig.name}] ⚠️ Processing bot message from: ${message.author.username} (not excluded)`);
+					}
 				}
 			}
 
