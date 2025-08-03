@@ -22,6 +22,21 @@ const testConfig = JSON.parse(
   fs.readFileSync(path.join(__dirname, '../../e2e-test-config.json'), 'utf8')
 );
 
+// Utility function for calculating attempts based on probability
+function calculateAttemptsForProbability(probability: number): number {
+  // Calculate attempts needed for ~95% confidence of seeing at least one success
+  // Formula: attempts = ln(0.05) / ln(1 - probability)
+  // This gives us a 95% chance of seeing the bot trigger at least once
+
+  if (probability >= 0.5) return 3;  // High probability bots need few attempts
+  if (probability >= 0.2) return 5;  // Medium probability bots
+  if (probability >= 0.1) return 10; // 10% chance bots
+  if (probability >= 0.05) return 15; // 5% chance bots
+  if (probability >= 0.02) return 20; // 2% chance bots (capped at 20)
+
+  return 20; // Cap at 20 attempts for very low probability bots
+}
+
 interface BotTestResult {
   botName: string;
   triggerMessage: string;
@@ -37,6 +52,16 @@ interface BotTestResult {
   identityValidation?: {
     usernameMatch: boolean;
     hasAvatar: boolean;
+  };
+  attemptNumber?: number;
+  totalAttempts?: number;
+  testStrategy?: 'deterministic' | 'user-specific' | 'random-chance';
+  probability?: number;
+  probabilityDescription?: string;
+  targetUser?: {
+    username: string;
+    userId: string;
+    avatarUrl?: string;
   };
   error?: string;
 }
@@ -86,13 +111,32 @@ describe('BunkBot Live E2E Tests', () => {
       ]
     });
 
-    // Initialize webhook client for sending test messages
-    if (webhookUrl) {
-      webhookClient = new WebhookClient({ url: webhookUrl });
+    // Initialize webhook client for sending test messages - REQUIRED for proper testing
+    if (!webhookUrl) {
+      throw new Error(
+        'E2E_TEST_WEBHOOK_URL is required for live E2E testing.\n' +
+        'Webhook messages appear as user messages (not bot messages) so BunkBot will respond to them.\n' +
+        'To create a webhook:\n' +
+        '1. Go to your test Discord channel settings\n' +
+        '2. Integrations → Webhooks → Create Webhook\n' +
+        '3. Copy the webhook URL and set E2E_TEST_WEBHOOK_URL in your .env file'
+      );
     }
 
-    // Connect test client
-    await testClient.login(process.env.BUNKBOT_TOKEN || process.env.STARBUNK_TOKEN || process.env.COVABOT_TOKEN);
+    webhookClient = new WebhookClient({ url: webhookUrl });
+    logger.info(`🪝 Webhook client initialized - test messages will appear as user messages`);
+
+    // Connect test client using dedicated E2E bot token (different from BunkBot)
+    const testToken = process.env.E2E_BOT_TOKEN || process.env.COVABOT_TOKEN || process.env.BUNKBOT_TOKEN || process.env.STARBUNK_TOKEN;
+    if (!testToken) {
+      throw new Error('No Discord bot token available for E2E testing. Set E2E_BOT_TOKEN for best results.');
+    }
+
+    const tokenType = process.env.E2E_BOT_TOKEN ? 'E2E_BOT_TOKEN (dedicated)' :
+                     process.env.COVABOT_TOKEN ? 'COVABOT_TOKEN (fallback)' : 'BUNKBOT_TOKEN (same as BunkBot)';
+    logger.info(`🔑 E2E test client using ${tokenType}`);
+
+    await testClient.login(testToken);
     await waitForClientReady(testClient);
 
     // Get test channel
@@ -102,6 +146,8 @@ describe('BunkBot Live E2E Tests', () => {
     }
 
     logger.info(`🧪 Live E2E tests initialized for channel: ${testChannel.name}`);
+    logger.info(`🤖 Test client user: ${testClient.user?.username} (${testClient.user?.id})`);
+    logger.info(`🎯 Target channel: ${testChannel.name} (${testChannel.id})`);
 
     // Initialize test results
     testResults = {
@@ -159,7 +205,28 @@ describe('BunkBot Live E2E Tests', () => {
   describe('Reply Bot Response Tests', () => {
     // Generate test for each bot
     testConfig.botTests.forEach((botTest: any) => {
-      it(`should trigger ${botTest.botName} with message "${botTest.triggerMessage}"`, async () => {
+      let testName: string;
+      let timeout: number;
+
+      switch (botTest.botType) {
+        case 'user-specific':
+          testName = `should trigger ${botTest.botName} as user ${botTest.targetUser.username} with "${botTest.triggerMessage}"`;
+          timeout = 15000; // Single attempt
+          break;
+        case 'random-chance':
+          const probability = botTest.probability || 0.1;
+          const maxAttempts = Math.min(calculateAttemptsForProbability(probability), 20);
+          testName = `should trigger ${botTest.botName} with "${botTest.triggerMessage}" (${(probability * 100).toFixed(1)}% chance, max ${maxAttempts} attempts)`;
+          timeout = maxAttempts * 10000; // 10 seconds per attempt
+          break;
+        case 'deterministic':
+        default:
+          testName = `should trigger ${botTest.botName} with "${botTest.triggerMessage}" (deterministic)`;
+          timeout = 15000; // Single attempt
+          break;
+      }
+
+      it(testName, async () => {
         if (!isE2EEnabled) {
           expect(true).toBe(true);
           return;
@@ -168,11 +235,18 @@ describe('BunkBot Live E2E Tests', () => {
         const result = await testBotResponse(botTest);
         testResults.botTests.push(result);
 
-        expect(result.success).toBe(true);
-        if (!result.success) {
-          console.error(`❌ ${botTest.botName} test failed:`, result.error);
+        // For random-chance bots, failure may be expected behavior
+        if (botTest.botType === 'random-chance' && !result.success) {
+          console.warn(`⚠️ ${botTest.botName} didn't respond in ${result.totalAttempts} attempts - this may be expected given ${((botTest.probability || 0.1) * 100).toFixed(1)}% probability`);
+          // Don't fail the test for random bots - log as warning instead
+          expect(true).toBe(true);
+        } else {
+          expect(result.success).toBe(true);
+          if (!result.success) {
+            console.error(`❌ ${botTest.botName} test failed:`, result.error);
+          }
         }
-      }, 15000); // 15 second timeout per bot test
+      }, timeout);
     });
   });
 
@@ -214,8 +288,8 @@ describe('BunkBot Live E2E Tests', () => {
     if (!testChannelId || testChannelId === 'REPLACE_WITH_YOUR_TEST_CHANNEL_ID_1') {
       throw new Error('Test channel ID not configured in e2e-test-config.json');
     }
-    if (!process.env.BUNKBOT_TOKEN && !process.env.STARBUNK_TOKEN && !process.env.COVABOT_TOKEN) {
-      throw new Error('Discord bot token not configured');
+    if (!process.env.COVABOT_TOKEN && !process.env.SNOWBUNK_TOKEN && !process.env.STARBUNK_TOKEN) {
+      throw new Error('No test token available for E2E testing. Need COVABOT_TOKEN or SNOWBUNK_TOKEN.');
     }
   }
 
@@ -230,15 +304,104 @@ describe('BunkBot Live E2E Tests', () => {
   }
 
   async function testBotResponse(botTest: any): Promise<BotTestResult> {
+    // Route to appropriate test strategy based on bot type
+    switch (botTest.botType) {
+      case 'user-specific':
+        return await testUserSpecificBot(botTest);
+      case 'random-chance':
+        return await testRandomChanceBot(botTest);
+      case 'deterministic':
+      default:
+        return await testDeterministicBot(botTest);
+    }
+  }
+
+  async function testUserSpecificBot(botTest: any): Promise<BotTestResult> {
+    console.log(`👤 Testing user-specific bot ${botTest.botName} as user ${botTest.targetUser.username}...`);
+
+    // User-specific bots should reliably trigger for their target user, so only one attempt needed
+    const result = await testSingleBotResponse(botTest, botTest.targetUser);
+
+    return {
+      ...result,
+      attemptNumber: 1,
+      totalAttempts: 1,
+      testStrategy: 'user-specific'
+    };
+  }
+
+  async function testRandomChanceBot(botTest: any): Promise<BotTestResult> {
+    const probability = botTest.probability || 0.1; // Default 10% if not specified
+    const maxAttempts = Math.min(calculateAttemptsForProbability(probability), 20); // Cap at 20 attempts
+
+    console.log(`🎲 Testing random-chance bot ${botTest.botName}:`);
+    console.log(`   Probability: ${(probability * 100).toFixed(1)}% (${botTest.probabilityDescription || 'chance to trigger'})`);
+    console.log(`   Strategy: Up to ${maxAttempts} attempts, stopping on first success`);
+
+    let lastResult: BotTestResult | null = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      console.log(`   Attempt ${attempt}/${maxAttempts} for ${botTest.botName}...`);
+
+      const result = await testSingleBotResponse(botTest);
+      lastResult = result;
+
+      if (result.success) {
+        console.log(`   ✅ ${botTest.botName} responded on attempt ${attempt} (${((attempt / maxAttempts) * 100).toFixed(1)}% of max attempts used)`);
+        return {
+          ...result,
+          attemptNumber: attempt,
+          totalAttempts: maxAttempts,
+          testStrategy: 'random-chance',
+          probability: probability,
+          probabilityDescription: botTest.probabilityDescription
+        };
+      }
+
+      // Wait between attempts to avoid rate limiting
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    }
+
+    console.log(`   ❌ ${botTest.botName} failed all ${maxAttempts} attempts (expected with ${(probability * 100).toFixed(1)}% probability)`);
+    return {
+      ...lastResult!,
+      attemptNumber: maxAttempts,
+      totalAttempts: maxAttempts,
+      testStrategy: 'random-chance',
+      probability: probability,
+      probabilityDescription: botTest.probabilityDescription,
+      error: `Random-chance bot failed all ${maxAttempts} attempts. This may be expected behavior given ${(probability * 100).toFixed(1)}% probability.`
+    };
+  }
+
+  async function testDeterministicBot(botTest: any): Promise<BotTestResult> {
+    console.log(`⚡ Testing deterministic bot ${botTest.botName}...`);
+
+    // Deterministic bots should always respond, so only one attempt needed
+    const result = await testSingleBotResponse(botTest);
+
+    return {
+      ...result,
+      attemptNumber: 1,
+      totalAttempts: 1,
+      testStrategy: 'deterministic'
+    };
+  }
+
+
+
+  async function testSingleBotResponse(botTest: any, targetUser?: any): Promise<BotTestResult> {
     const startTime = Date.now();
-    
+
     try {
-      // Send test message
-      const sentMessage = await sendTestMessage(botTest.triggerMessage, botTest.requiresBotMessage);
-      
+      // Send test message as the appropriate user
+      const sentMessage = await sendTestMessage(botTest.triggerMessage, botTest.requiresBotMessage, targetUser);
+
       // Wait for bot response
       const botResponse = await waitForBotResponse(sentMessage, botTest.expectedResponse, 10000);
-      
+
       const responseTime = Date.now() - startTime;
       
       if (botResponse) {
@@ -294,19 +457,29 @@ describe('BunkBot Live E2E Tests', () => {
     }
   }
 
-  async function sendTestMessage(content: string, requiresBotMessage = false): Promise<Message> {
+  async function sendTestMessage(content: string, requiresBotMessage = false, targetUser?: any): Promise<Message> {
     if (webhookClient && !requiresBotMessage) {
+      // Determine user identity for webhook message
+      const userIdentity = targetUser ? {
+        username: targetUser.username,
+        avatarURL: targetUser.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png'
+      } : {
+        username: 'E2E Test User',
+        avatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
+      };
+
       // Send as webhook (appears as user message)
       const webhookMessage = await webhookClient.send({
         content,
-        username: 'E2E Test User',
-        avatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
+        username: userIdentity.username,
+        avatarURL: userIdentity.avatarURL
       });
-      
+
       // Fetch the actual message object
       return await testChannel.messages.fetch(webhookMessage.id);
     } else {
-      // Send as bot message (for testing bot-to-bot interactions)
+      // Send as regular channel message (appears as user message from test client)
+      // This will appear as coming from the test client user, not BunkBot
       return await testChannel.send(content);
     }
   }

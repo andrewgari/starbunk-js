@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-03T17:12:27.510Z",
+  "timestamp": "2025-08-03T18:14:16.094Z",
   "environment": {
     "testServerId": "753251582719688714",
     "testChannelId": "798613445301633137",
@@ -10,73 +10,202 @@
     "botTests": [
       {
         "botName": "BlueBot",
-        "triggerMessage": "blu",
+        "triggerMessage": "blu?",
         "success": false,
         "expectedResponse": "Did somebody say Blu?",
-        "error": "testChannel.on is not a function"
+        "expectedBotName": "BlueBot",
+        "responseTime": 10226,
+        "error": "No bot response received within timeout"
       },
       {
         "botName": "HoldBot",
         "triggerMessage": "Hold",
         "success": false,
         "expectedResponse": "Hold.",
-        "error": "testChannel.on is not a function"
+        "expectedBotName": "HoldBot",
+        "responseTime": 10419,
+        "error": "No bot response received within timeout"
       },
       {
         "botName": "GuyBot",
         "triggerMessage": "guy",
         "success": false,
         "expectedResponse": "guy",
-        "error": "testChannel.on is not a function"
+        "expectedBotName": "GuyBot",
+        "responseTime": 10186,
+        "error": "Random bot failed all 3 attempts. Last error: No bot response received within timeout",
+        "attemptNumber": 3,
+        "totalAttempts": 3
       },
       {
-        "botName": "ChadBot",
+        "botName": "Chad Bot",
         "triggerMessage": "chad",
         "success": false,
         "expectedResponse": "chad",
-        "error": "testChannel.on is not a function"
+        "expectedBotName": "Chad Bot",
+        "responseTime": 10215,
+        "error": "No bot response received within timeout"
       },
       {
         "botName": "VennBot",
         "triggerMessage": "venn",
         "success": false,
-        "expectedResponse": "venn",
-        "error": "testChannel.on is not a function"
+        "expectedResponse": "Hmm...",
+        "expectedBotName": "VennBot",
+        "responseTime": 10310,
+        "error": "Random bot failed all 3 attempts. Last error: No bot response received within timeout",
+        "attemptNumber": 3,
+        "totalAttempts": 3
       },
       {
-        "botName": "NiceBot",
-        "triggerMessage": "nice",
+        "botName": "BunkBot",
+        "triggerMessage": "69",
         "success": false,
-        "expectedResponse": "nice",
-        "error": "testChannel.on is not a function"
+        "expectedResponse": "Nice.",
+        "expectedBotName": "BunkBot",
+        "responseTime": 10155,
+        "error": "No bot response received within timeout"
       },
       {
-        "botName": "SheeshBot",
+        "botName": "Sheesh Bot",
         "triggerMessage": "sheesh",
         "success": false,
-        "expectedResponse": "sheesh",
-        "error": "testChannel.on is not a function"
+        "expectedResponse": "SHEEEESH",
+        "expectedBotName": "Sheesh Bot",
+        "responseTime": 10226,
+        "error": "No bot response received within timeout"
       },
       {
         "botName": "CheckBot",
         "triggerMessage": "check",
         "success": false,
-        "expectedResponse": "check",
-        "error": "testChannel.on is not a function"
+        "expectedResponse": "czech",
+        "expectedBotName": "CheckBot",
+        "responseTime": 10157,
+        "error": "No bot response received within timeout"
       },
       {
         "botName": "BananaBot",
         "triggerMessage": "banana",
         "success": false,
         "expectedResponse": "banana",
-        "error": "testChannel.on is not a function"
+        "expectedBotName": "BananaBot",
+        "responseTime": 10263,
+        "error": "No bot response received within timeout"
       },
       {
-        "botName": "PickleBot",
-        "triggerMessage": "pickle",
+        "botName": "BabyBot",
+        "triggerMessage": "baby",
         "success": false,
-        "expectedResponse": "pickle",
-        "error": "testChannel.on is not a function"
+        "expectedResponse": "baby",
+        "expectedBotName": "BabyBot",
+        "responseTime": 10227,
+        "error": "No bot response received within timeout"
+      },
+      {
+        "botName": "Spider-Bot",
+        "triggerMessage": "spiderman",
+        "success": false,
+        "expectedResponse": "Spider-Man",
+        "expectedBotName": "Spider-Bot",
+        "responseTime": 10199,
+        "error": "No bot response received within timeout"
+      },
+      {
+        "botName": "ChaosBot",
+        "triggerMessage": "chaos",
+        "success": false,
+        "expectedResponse": "chaos",
+        "expectedBotName": "ChaosBot",
+        "responseTime": 10173,
+        "error": "No bot response received within timeout"
+      },
+      {
+        "botName": "GundamBot",
+        "triggerMessage": "gundam",
+        "success": false,
+        "expectedResponse": "gundam",
+        "expectedBotName": "GundamBot",
+        "responseTime": 10205,
+        "error": "No bot response received within timeout"
+      },
+      {
+        "botName": "TestBot",
+        "triggerMessage": "test",
+        "success": false,
+        "expectedResponse": "test",
+        "expectedBotName": "TestBot",
+        "responseTime": 10176,
+        "error": "No bot response received within timeout"
+      },
+      {
+        "botName": "Xander Crews",
+        "triggerMessage": "can't",
+        "success": false,
+        "expectedResponse": "Well, not with THAT attitude!!!",
+        "expectedBotName": "Xander Crews",
+        "responseTime": 10183,
+        "error": "No bot response received within timeout"
+      },
+      {
+        "botName": "Ezio Auditore Da Firenze",
+        "triggerMessage": "ezio",
+        "success": false,
+        "expectedResponse": "ezio",
+        "expectedBotName": "Ezio Auditore Da Firenze",
+        "responseTime": 10171,
+        "error": "No bot response received within timeout"
+      },
+      {
+        "botName": "Gerald",
+        "triggerMessage": "there house",
+        "success": false,
+        "expectedResponse": "their",
+        "expectedBotName": "Gerald",
+        "responseTime": 10230,
+        "error": "Random bot failed all 5 attempts. Last error: No bot response received within timeout",
+        "attemptNumber": 5,
+        "totalAttempts": 5
+      },
+      {
+        "botName": "Interrupt Bot",
+        "triggerMessage": "hello world",
+        "success": false,
+        "expectedResponse": "sorry",
+        "expectedBotName": "Interrupt Bot",
+        "responseTime": 10208,
+        "error": "Random bot failed all 5 attempts. Last error: No bot response received within timeout",
+        "attemptNumber": 5,
+        "totalAttempts": 5
+      },
+      {
+        "botName": "Macaroni Bot",
+        "triggerMessage": "macaroni",
+        "success": false,
+        "expectedResponse": "macaroni",
+        "expectedBotName": "Macaroni Bot",
+        "responseTime": 10225,
+        "error": "No bot response received within timeout"
+      },
+      {
+        "botName": "GremlinBot",
+        "triggerMessage": "gremlin",
+        "success": false,
+        "expectedResponse": "gremlin",
+        "expectedBotName": "GremlinBot",
+        "responseTime": 10177,
+        "error": "No bot response received within timeout"
+      },
+      {
+        "botName": "SigGreatBot",
+        "triggerMessage": "anything",
+        "success": false,
+        "expectedResponse": "Great!",
+        "expectedBotName": "SigGreatBot",
+        "responseTime": 10266,
+        "error": "Random bot failed all 5 attempts. Last error: No bot response received within timeout",
+        "attemptNumber": 5,
+        "totalAttempts": 5
       }
     ],
     "slashCommandTests": [],
@@ -84,14 +213,16 @@
       {
         "name": "NoTriggerTest",
         "message": "This message should not trigger any bots xyz123",
-        "success": false,
-        "error": "testChannel.on is not a function"
+        "success": true,
+        "actualResponses": 0,
+        "expectedResponses": 0,
+        "responseTime": 5166
       }
     ],
     "summary": {
-      "totalTests": 11,
-      "passed": 0,
-      "failed": 11,
+      "totalTests": 22,
+      "passed": 1,
+      "failed": 21,
       "duration": 0
     }
   }

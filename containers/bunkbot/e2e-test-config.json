@@ -11,73 +11,192 @@
   "botTests": [
     {
       "botName": "BlueBot",
-      "triggerMessage": "blu",
+      "triggerMessage": "blu?",
       "expectedResponse": "Did somebody say Blu?",
-      "description": "Tests blue bot response to 'blu' trigger",
-      "expectedBotName": "BluBot"
+      "description": "Tests blue bot response to 'blu?' trigger",
+      "expectedBotName": "BlueBot",
+      "botType": "deterministic"
     },
     {
       "botName": "HoldBot",
       "triggerMessage": "Hold",
       "expectedResponse": "Hold.",
       "description": "Tests hold bot exact pattern match",
-      "expectedBotName": "HoldBot"
+      "expectedBotName": "HoldBot",
+      "botType": "deterministic"
     },
     {
       "botName": "GuyBot",
       "triggerMessage": "guy",
       "expectedResponse": "guy",
-      "description": "Tests guy bot response",
-      "expectedBotName": "GuyBot"
+      "description": "Tests guy bot response (user-specific: Guy)",
+      "expectedBotName": "GuyBot",
+      "botType": "user-specific",
+      "targetUser": {
+        "username": "Guy",
+        "userId": "135820819086573568",
+        "avatarUrl": "https://cdn.discordapp.com/avatars/135820819086573568/avatar.png"
+      }
     },
     {
-      "botName": "ChadBot",
+      "botName": "Chad Bot",
       "triggerMessage": "chad",
-      "expectedResponse": "chad",
-      "description": "Tests chad bot response",
-      "expectedBotName": "ChadBot"
+      "expectedResponse": "What is bro *yappin* about?",
+      "description": "Tests chad bot response (user-specific: Chad)",
+      "expectedBotName": "Chad Bot",
+      "botType": "user-specific",
+      "targetUser": {
+        "username": "Chad",
+        "userId": "85184539906809856",
+        "avatarUrl": "https://cdn.discordapp.com/avatars/85184539906809856/avatar.png"
+      }
     },
     {
       "botName": "VennBot",
       "triggerMessage": "venn",
-      "expectedResponse": "venn",
-      "description": "Tests venn bot response",
-      "expectedBotName": "VennBot"
+      "expectedResponse": "Hmm...",
+      "description": "Tests venn bot response (user-specific: Venn)",
+      "expectedBotName": "VennBot",
+      "botType": "user-specific",
+      "targetUser": {
+        "username": "Venn",
+        "userId": "151120340343455744",
+        "avatarUrl": "https://cdn.discordapp.com/avatars/151120340343455744/avatar.png"
+      }
     },
     {
-      "botName": "NiceBot",
-      "triggerMessage": "nice",
-      "expectedResponse": "nice",
-      "description": "Tests nice bot response",
-      "expectedBotName": "NiceBot"
+      "botName": "BunkBot",
+      "triggerMessage": "69",
+      "expectedResponse": "Nice.",
+      "description": "Tests nice bot response to number 69",
+      "expectedBotName": "BunkBot",
+      "botType": "deterministic"
     },
     {
-      "botName": "SheeshBot",
+      "botName": "Sheesh Bot",
       "triggerMessage": "sheesh",
-      "expectedResponse": "sheesh",
+      "expectedResponse": "SHEEEESH",
       "description": "Tests sheesh bot response",
-      "expectedBotName": "SheeshBot"
+      "expectedBotName": "Sheesh Bot",
+      "botType": "deterministic"
     },
     {
       "botName": "CheckBot",
       "triggerMessage": "check",
-      "expectedResponse": "check",
-      "description": "Tests check bot response",
-      "expectedBotName": "CheckBot"
+      "expectedResponse": "czech",
+      "description": "Tests check bot word swap",
+      "expectedBotName": "CheckBot",
+      "botType": "deterministic"
     },
     {
       "botName": "BananaBot",
       "triggerMessage": "banana",
       "expectedResponse": "banana",
       "description": "Tests banana bot response",
-      "expectedBotName": "BananaBot"
+      "expectedBotName": "BananaBot",
+      "botType": "deterministic"
     },
     {
-      "botName": "PickleBot",
-      "triggerMessage": "pickle",
-      "expectedResponse": "pickle",
-      "description": "Tests pickle bot response",
-      "expectedBotName": "PickleBot"
+      "botName": "BabyBot",
+      "triggerMessage": "baby",
+      "expectedResponse": "baby",
+      "description": "Tests baby bot metroid gif response",
+      "expectedBotName": "BabyBot",
+      "botType": "deterministic"
+    },
+    {
+      "botName": "Spider-Bot",
+      "triggerMessage": "spiderman",
+      "expectedResponse": "Spider-Man",
+      "description": "Tests spider bot hyphenation correction",
+      "expectedBotName": "Spider-Bot",
+      "botType": "deterministic"
+    },
+    {
+      "botName": "ChaosBot",
+      "triggerMessage": "chaos",
+      "expectedResponse": "chaos",
+      "description": "Tests chaos bot Final Fantasy reference",
+      "expectedBotName": "ChaosBot",
+      "botType": "deterministic"
+    },
+    {
+      "botName": "GundamBot",
+      "triggerMessage": "gundam",
+      "expectedResponse": "gundam",
+      "description": "Tests gundam bot pronunciation joke",
+      "expectedBotName": "GundamBot",
+      "botType": "deterministic"
+    },
+    {
+      "botName": "TestBot",
+      "triggerMessage": "test",
+      "expectedResponse": "test",
+      "description": "Tests simple test bot response",
+      "expectedBotName": "TestBot",
+      "botType": "deterministic"
+    },
+    {
+      "botName": "Xander Crews",
+      "triggerMessage": "can't",
+      "expectedResponse": "Well, not with THAT attitude!!!",
+      "description": "Tests Xander Crews negative statement response",
+      "expectedBotName": "Xander Crews",
+      "botType": "deterministic"
+    },
+    {
+      "botName": "Ezio Auditore Da Firenze",
+      "triggerMessage": "ezio",
+      "expectedResponse": "ezio",
+      "description": "Tests Ezio Assassin's Creed quotes",
+      "expectedBotName": "Ezio Auditore Da Firenze",
+      "botType": "deterministic"
+    },
+    {
+      "botName": "Gerald",
+      "triggerMessage": "there house",
+      "expectedResponse": "their",
+      "description": "Tests Gerald grammar correction (5% chance)",
+      "expectedBotName": "Gerald",
+      "botType": "random-chance",
+      "probability": 0.05,
+      "probabilityDescription": "5% chance to trigger on grammar mistakes"
+    },
+    {
+      "botName": "Interrupt Bot",
+      "triggerMessage": "hello world",
+      "expectedResponse": "sorry",
+      "description": "Tests interrupt bot random interruption (2% chance)",
+      "expectedBotName": "Interrupt Bot",
+      "botType": "random-chance",
+      "probability": 0.02,
+      "probabilityDescription": "2% chance to interrupt any message"
+    },
+    {
+      "botName": "Macaroni Bot",
+      "triggerMessage": "macaroni",
+      "expectedResponse": "macaroni",
+      "description": "Tests macaroni bot Venn joke",
+      "expectedBotName": "Macaroni Bot",
+      "botType": "deterministic"
+    },
+    {
+      "botName": "GremlinBot",
+      "triggerMessage": "gremlin",
+      "expectedResponse": "gremlin",
+      "description": "Tests gremlin bot confusion response",
+      "expectedBotName": "GremlinBot",
+      "botType": "deterministic"
+    },
+    {
+      "botName": "SigGreatBot",
+      "triggerMessage": "anything",
+      "expectedResponse": "Great!",
+      "description": "Tests SigGreatBot random great response (10% chance)",
+      "expectedBotName": "SigGreatBot",
+      "botType": "random-chance",
+      "probability": 0.10,
+      "probabilityDescription": "10% chance to respond with 'Great!' to any message"
     }
   ],
   "controlTests": [
