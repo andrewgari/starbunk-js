@@ -1,0 +1,1110 @@
+
+> @starbunk/shared@1.0.0 test
+> jest --coverage --coverageReporters=text
+
+ts-jest[config] (WARN) 
+    The "ts-jest" config option "isolatedModules" is deprecated and will be removed in v30.0.0. Please use "isolatedModules: true" in /var/home/andrewgari/Repos/starbunk-js/containers/shared/tsconfig.json instead, see https://www.typescriptlang.org/tsconfig/#isolatedModules
+  
+PASS shared src/utils/__tests__/time.test.ts
+PASS shared src/services/llm/__tests__/llmFactory.test.ts
+PASS shared src/webhooks/__tests__/webhookService.test.ts
+  ● Console
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.785Z] Logger.formatMessage Invalid webhook URL provided
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at new warn (src/webhooks/webhookService.ts:22:17)
+      at Object.<anonymous> (src/webhooks/__tests__/webhookService.test.ts:58:20)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.789Z] Logger.formatMessage Invalid webhook URL provided
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at new warn (src/webhooks/webhookService.ts:22:17)
+      at Object.<anonymous> (src/webhooks/__tests__/webhookService.test.ts:58:20)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.790Z] Logger.formatMessage Invalid webhook URL provided
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at new warn (src/webhooks/webhookService.ts:22:17)
+      at Object.<anonymous> (src/webhooks/__tests__/webhookService.test.ts:58:20)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.790Z] Logger.formatMessage Invalid message info provided, using fallback values
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at WebhookService.warn [as writeMessage] (src/webhooks/webhookService.ts:35:17)
+      at Object.<anonymous> (src/webhooks/__tests__/webhookService.test.ts:132:25)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.793Z] Logger.formatMessage Invalid webhook URL provided
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at new warn (src/webhooks/webhookService.ts:22:17)
+      at Object.<anonymous> (src/webhooks/__tests__/webhookService.test.ts:58:20)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.794Z] Logger.formatMessage Invalid webhook URL provided
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at new warn (src/webhooks/webhookService.ts:22:17)
+      at Object.<anonymous> (src/webhooks/__tests__/webhookService.test.ts:58:20)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.795Z] Logger.formatMessage Invalid webhook URL provided
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at new warn (src/webhooks/webhookService.ts:22:17)
+      at Object.<anonymous> (src/webhooks/__tests__/webhookService.test.ts:58:20)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.796Z] Logger.formatMessage Invalid webhook URL provided
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at new warn (src/webhooks/webhookService.ts:22:17)
+      at Object.<anonymous> (src/webhooks/__tests__/webhookService.test.ts:58:20)
+
+PASS shared src/services/__tests__/messageFilter.test.ts
+  ● Console
+
+    console.log
+      [Environment] Looking for .env file at: /var/home/andrewgari/Repos/starbunk-js/containers/shared/.env
+
+      at Object.log (src/environment.ts:15:9)
+
+    console.log
+      [Environment] .env file exists: false
+
+      at Object.log (src/environment.ts:16:9)
+
+    console.log
+      [Environment] .env file loaded successfully: Yes
+
+      at Object.log (src/environment.ts:20:9)
+
+    console.log
+      [Environment] Environment variables loaded:
+
+      at Object.log (src/environment.ts:23:9)
+
+    console.log
+      [Environment] - STARBUNK_TOKEN: Set
+
+      at Object.log (src/environment.ts:24:9)
+
+    console.log
+      [Environment] - SNOWBUNK_TOKEN: Not set
+
+      at Object.log (src/environment.ts:25:9)
+
+    console.log
+      [Environment] - DISCORD_WEBHOOK_URL: Not set
+
+      at Object.log (src/environment.ts:26:9)
+
+    console.log
+      [Environment] - OPENAI_API_KEY: Not set
+
+      at Object.log (src/environment.ts:27:9)
+
+    console.log
+      [Environment] - OLLAMA_API_URL: Not set
+
+      at Object.log (src/environment.ts:28:9)
+
+    console.log
+      [Environment] - DEBUG_MODE: undefined
+
+      at Object.log (src/environment.ts:29:9)
+
+    console.log
+      [Environment] - TESTING_SERVER_IDS: Not set
+
+      at Object.log (src/environment.ts:30:9)
+
+    console.log
+      [Environment] - TESTING_CHANNEL_IDS: Not set
+
+      at Object.log (src/environment.ts:31:9)
+
+    console.log
+      [Environment] - Is Debug Mode Active: false
+
+      at Object.log (src/environment.ts:32:9)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.841Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.841Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.842Z] Logger.formatMessage   Testing Server IDs: None (all servers allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.842Z] Logger.formatMessage   Testing Channel IDs: None (all channels allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.843Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.843Z] Logger.formatMessage   Debug Mode: true
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.843Z] Logger.formatMessage   Testing Server IDs: 123456789012345678
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.844Z] Logger.formatMessage   Testing Channel IDs: 987654321098765432
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.844Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.845Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.845Z] Logger.formatMessage   Testing Server IDs: None (all servers allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.845Z] Logger.formatMessage   Testing Channel IDs: None (all channels allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.846Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.846Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.848Z] Logger.formatMessage   Testing Server IDs: allowed-server-id
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.849Z] Logger.formatMessage   Testing Channel IDs: None (all channels allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.849Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.850Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.850Z] Logger.formatMessage   Testing Server IDs: allowed-server-id
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.850Z] Logger.formatMessage   Testing Channel IDs: None (all channels allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.851Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.851Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.851Z] Logger.formatMessage   Testing Server IDs: None (all servers allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.851Z] Logger.formatMessage   Testing Channel IDs: allowed-channel-id
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.852Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.852Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.853Z] Logger.formatMessage   Testing Server IDs: None (all servers allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.853Z] Logger.formatMessage   Testing Channel IDs: allowed-channel-id
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.853Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.854Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.854Z] Logger.formatMessage   Testing Server IDs: allowed-server-id
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.854Z] Logger.formatMessage   Testing Channel IDs: allowed-channel-id
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.855Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.855Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.855Z] Logger.formatMessage   Testing Server IDs: allowed-server-id
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.855Z] Logger.formatMessage   Testing Channel IDs: None (all channels allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.857Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.857Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.857Z] Logger.formatMessage   Testing Server IDs: None (all servers allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.858Z] Logger.formatMessage   Testing Channel IDs: None (all channels allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.858Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.860Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.861Z] Logger.formatMessage   Testing Server IDs: None (all servers allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.861Z] Logger.formatMessage   Testing Channel IDs: None (all channels allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.861Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.861Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.862Z] Logger.formatMessage   Testing Server IDs: None (all servers allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.862Z] Logger.formatMessage   Testing Channel IDs: None (all channels allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.862Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.863Z] Logger.formatMessage   Debug Mode: false
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.863Z] Logger.formatMessage   Testing Server IDs: None (all servers allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.863Z] Logger.formatMessage   Testing Channel IDs: None (all channels allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.863Z] Logger.formatMessage 🔄 Message Filter configuration refreshed
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.864Z] Logger.formatMessage 🔧 Message Filter Configuration:
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.864Z] Logger.formatMessage   Debug Mode: true
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.864Z] Logger.formatMessage   Testing Server IDs: new-server-id
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.865Z] Logger.formatMessage   Testing Channel IDs: None (all channels allowed)
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+PASS shared tests/debug-configuration-validation.test.ts
+  ● Console
+
+    console.log
+      [Environment] Looking for .env file at: /var/home/andrewgari/Repos/starbunk-js/containers/shared/.env
+
+      at Object.log (src/environment.ts:15:9)
+
+    console.log
+      [Environment] .env file exists: false
+
+      at Object.log (src/environment.ts:16:9)
+
+    console.log
+      [Environment] .env file loaded successfully: Yes
+
+      at Object.log (src/environment.ts:20:9)
+
+    console.log
+      [Environment] Environment variables loaded:
+
+      at Object.log (src/environment.ts:23:9)
+
+    console.log
+      [Environment] - STARBUNK_TOKEN: Set
+
+      at Object.log (src/environment.ts:24:9)
+
+    console.log
+      [Environment] - SNOWBUNK_TOKEN: Not set
+
+      at Object.log (src/environment.ts:25:9)
+
+    console.log
+      [Environment] - DISCORD_WEBHOOK_URL: Not set
+
+      at Object.log (src/environment.ts:26:9)
+
+    console.log
+      [Environment] - OPENAI_API_KEY: Not set
+
+      at Object.log (src/environment.ts:27:9)
+
+    console.log
+      [Environment] - OLLAMA_API_URL: Not set
+
+      at Object.log (src/environment.ts:28:9)
+
+    console.log
+      [Environment] - DEBUG_MODE: undefined
+
+      at Object.log (src/environment.ts:29:9)
+
+    console.log
+      [Environment] - TESTING_SERVER_IDS: Not set
+
+      at Object.log (src/environment.ts:30:9)
+
+    console.log
+      [Environment] - TESTING_CHANNEL_IDS: Not set
+
+      at Object.log (src/environment.ts:31:9)
+
+    console.log
+      [Environment] - Is Debug Mode Active: false
+
+      at Object.log (src/environment.ts:32:9)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.921Z] Logger.formatMessage Parsed 1 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.922Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.922Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.923Z] Logger.formatMessage Invalid Discord IDs found and ignored: invalid-id
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at warn (src/utils/envValidation.ts:86:10)
+      at parseDiscordIdList (src/utils/envValidation.ts:100:9)
+      at Object.<anonymous> (tests/debug-configuration-validation.test.ts:146:38)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.923Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.924Z] Logger.formatMessage Parsed 1 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.925Z] Logger.formatMessage Parsed 1 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.926Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.926Z] Logger.formatMessage Invalid Discord IDs found and ignored: bad-id
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at warn (src/utils/envValidation.ts:86:10)
+      at parseDiscordIdList (src/utils/envValidation.ts:107:9)
+      at Object.<anonymous> (tests/debug-configuration-validation.test.ts:214:39)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.927Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.928Z] Logger.formatMessage Parsed 3 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.928Z] Logger.formatMessage Invalid Discord IDs found and ignored: invalid, also-invalid
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at warn (src/utils/envValidation.ts:86:10)
+      at Object.<anonymous> (tests/debug-configuration-validation.test.ts:282:37)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.929Z] Logger.formatMessage Parsed 3 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.930Z] Logger.formatMessage Parsed 1 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.930Z] Logger.formatMessage Parsed 1 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.931Z] Logger.formatMessage Parsed 1 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.931Z] Logger.formatMessage Parsed 1 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.932Z] Logger.formatMessage Parsed 100 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:31.932Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:31.935Z] Logger.formatMessage Invalid Discord IDs found and ignored: 123456789012345678;987654321098765432
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at warn (src/utils/envValidation.ts:86:10)
+      at parseDiscordIdList (src/utils/envValidation.ts:100:9)
+      at Object.<anonymous> (tests/debug-configuration-validation.test.ts:406:38)
+
+PASS shared src/services/__tests__/personalityService.test.ts
+  ● Console
+
+    console.log
+      [Environment] Looking for .env file at: undefined
+
+      at Object.log (src/environment.ts:15:9)
+
+    console.log
+      [Environment] .env file exists: false
+
+      at Object.log (src/environment.ts:16:9)
+
+    console.log
+      [Environment] .env file loaded successfully: Yes
+
+      at Object.log (src/environment.ts:20:9)
+
+    console.log
+      [Environment] Environment variables loaded:
+
+      at Object.log (src/environment.ts:23:9)
+
+    console.log
+      [Environment] - STARBUNK_TOKEN: Set
+
+      at Object.log (src/environment.ts:24:9)
+
+    console.log
+      [Environment] - SNOWBUNK_TOKEN: Not set
+
+      at Object.log (src/environment.ts:25:9)
+
+    console.log
+      [Environment] - DISCORD_WEBHOOK_URL: Not set
+
+      at Object.log (src/environment.ts:26:9)
+
+    console.log
+      [Environment] - OPENAI_API_KEY: Not set
+
+      at Object.log (src/environment.ts:27:9)
+
+    console.log
+      [Environment] - OLLAMA_API_URL: Not set
+
+      at Object.log (src/environment.ts:28:9)
+
+    console.log
+      [Environment] - DEBUG_MODE: undefined
+
+      at Object.log (src/environment.ts:29:9)
+
+    console.log
+      [Environment] - TESTING_SERVER_IDS: Not set
+
+      at Object.log (src/environment.ts:30:9)
+
+    console.log
+      [Environment] - TESTING_CHANNEL_IDS: Not set
+
+      at Object.log (src/environment.ts:31:9)
+
+    console.log
+      [Environment] - Is Debug Mode Active: false
+
+      at Object.log (src/environment.ts:32:9)
+
+PASS shared tests/debug-mode-integration.test.ts
+PASS shared src/utils/__tests__/envValidation.test.ts
+  ● Console
+
+    console.log
+      [Environment] Looking for .env file at: /var/home/andrewgari/Repos/starbunk-js/containers/shared/.env
+
+      at Object.log (src/environment.ts:15:9)
+
+    console.log
+      [Environment] .env file exists: false
+
+      at Object.log (src/environment.ts:16:9)
+
+    console.log
+      [Environment] .env file loaded successfully: Yes
+
+      at Object.log (src/environment.ts:20:9)
+
+    console.log
+      [Environment] Environment variables loaded:
+
+      at Object.log (src/environment.ts:23:9)
+
+    console.log
+      [Environment] - STARBUNK_TOKEN: Set
+
+      at Object.log (src/environment.ts:24:9)
+
+    console.log
+      [Environment] - SNOWBUNK_TOKEN: Not set
+
+      at Object.log (src/environment.ts:25:9)
+
+    console.log
+      [Environment] - DISCORD_WEBHOOK_URL: Not set
+
+      at Object.log (src/environment.ts:26:9)
+
+    console.log
+      [Environment] - OPENAI_API_KEY: Not set
+
+      at Object.log (src/environment.ts:27:9)
+
+    console.log
+      [Environment] - OLLAMA_API_URL: Not set
+
+      at Object.log (src/environment.ts:28:9)
+
+    console.log
+      [Environment] - DEBUG_MODE: undefined
+
+      at Object.log (src/environment.ts:29:9)
+
+    console.log
+      [Environment] - TESTING_SERVER_IDS: Not set
+
+      at Object.log (src/environment.ts:30:9)
+
+    console.log
+      [Environment] - TESTING_CHANNEL_IDS: Not set
+
+      at Object.log (src/environment.ts:31:9)
+
+    console.log
+      [Environment] - Is Debug Mode Active: false
+
+      at Object.log (src/environment.ts:32:9)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:32.042Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:32.043Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.warn
+      ⚠️ [2025-08-02T18:05:32.043Z] Logger.formatMessage Invalid Discord IDs found and ignored: invalid, 123
+
+      40 | 	warn(message: string, ...args: unknown[]): void {
+      41 | 		if (this.shouldLog(LogLevel.WARN)) {
+    > 42 | 			console.warn(this.formatMessage(chalk.yellow(message), '⚠️'), ...args);
+         | 			        ^
+      43 | 		}
+      44 | 	}
+      45 |
+
+      at Logger.warn (src/services/logger.ts:42:12)
+      at warn (src/utils/envValidation.ts:86:10)
+      at Object.<anonymous> (src/utils/__tests__/envValidation.test.ts:55:37)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:32.043Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:32.045Z] Logger.formatMessage Parsed 1 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:32.046Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:32.047Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+    console.info
+      ℹ️ [2025-08-02T18:05:32.047Z] Logger.formatMessage Parsed 2 valid Discord IDs
+
+      at Logger.info (src/services/logger.ts:36:12)
+
+PASS shared src/services/__tests__/container.test.ts
+PASS shared src/services/__tests__/discordGMService.test.ts
+PASS shared src/services/llm/__tests__/promptManager.test.ts
+PASS shared src/utils/__tests__/random.test.ts
+  ● Console
+
+    console.log
+      [Environment] Looking for .env file at: /var/home/andrewgari/Repos/starbunk-js/containers/shared/.env
+
+      at Object.log (src/environment.ts:15:9)
+
+    console.log
+      [Environment] .env file exists: false
+
+      at Object.log (src/environment.ts:16:9)
+
+    console.log
+      [Environment] .env file loaded successfully: Yes
+
+      at Object.log (src/environment.ts:20:9)
+
+    console.log
+      [Environment] Environment variables loaded:
+
+      at Object.log (src/environment.ts:23:9)
+
+    console.log
+      [Environment] - STARBUNK_TOKEN: Set
+
+      at Object.log (src/environment.ts:24:9)
+
+    console.log
+      [Environment] - SNOWBUNK_TOKEN: Not set
+
+      at Object.log (src/environment.ts:25:9)
+
+    console.log
+      [Environment] - DISCORD_WEBHOOK_URL: Not set
+
+      at Object.log (src/environment.ts:26:9)
+
+    console.log
+      [Environment] - OPENAI_API_KEY: Not set
+
+      at Object.log (src/environment.ts:27:9)
+
+    console.log
+      [Environment] - OLLAMA_API_URL: Not set
+
+      at Object.log (src/environment.ts:28:9)
+
+    console.log
+      [Environment] - DEBUG_MODE: undefined
+
+      at Object.log (src/environment.ts:29:9)
+
+    console.log
+      [Environment] - TESTING_SERVER_IDS: Not set
+
+      at Object.log (src/environment.ts:30:9)
+
+    console.log
+      [Environment] - TESTING_CHANNEL_IDS: Not set
+
+      at Object.log (src/environment.ts:31:9)
+
+    console.log
+      [Environment] - Is Debug Mode Active: false
+
+      at Object.log (src/environment.ts:32:9)
+
+PASS shared tests/logger.test.ts
+  ● Console
+
+    console.log
+      [Environment] Looking for .env file at: /var/home/andrewgari/Repos/starbunk-js/containers/shared/.env
+
+      at Object.log (src/environment.ts:15:9)
+
+    console.log
+      [Environment] .env file exists: false
+
+      at Object.log (src/environment.ts:16:9)
+
+    console.log
+      [Environment] .env file loaded successfully: Yes
+
+      at Object.log (src/environment.ts:20:9)
+
+    console.log
+      [Environment] Environment variables loaded:
+
+      at Object.log (src/environment.ts:23:9)
+
+    console.log
+      [Environment] - STARBUNK_TOKEN: Set
+
+      at Object.log (src/environment.ts:24:9)
+
+    console.log
+      [Environment] - SNOWBUNK_TOKEN: Not set
+
+      at Object.log (src/environment.ts:25:9)
+
+    console.log
+      [Environment] - DISCORD_WEBHOOK_URL: Not set
+
+      at Object.log (src/environment.ts:26:9)
+
+    console.log
+      [Environment] - OPENAI_API_KEY: Not set
+
+      at Object.log (src/environment.ts:27:9)
+
+    console.log
+      [Environment] - OLLAMA_API_URL: Not set
+
+      at Object.log (src/environment.ts:28:9)
+
+    console.log
+      [Environment] - DEBUG_MODE: undefined
+
+      at Object.log (src/environment.ts:29:9)
+
+    console.log
+      [Environment] - TESTING_SERVER_IDS: Not set
+
+      at Object.log (src/environment.ts:30:9)
+
+    console.log
+      [Environment] - TESTING_CHANNEL_IDS: Not set
+
+      at Object.log (src/environment.ts:31:9)
+
+    console.log
+      [Environment] - Is Debug Mode Active: false
+
+      at Object.log (src/environment.ts:32:9)
+
+PASS shared src/services/__tests__/logger.test.ts
+----------------------------------------------------|---------|----------|---------|---------|-----------------------------------------------
+File                                                | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                             
+----------------------------------------------------|---------|----------|---------|---------|-----------------------------------------------
+All files                                           |   20.03 |    21.51 |   18.47 |   20.37 |                                               
+ src                                                |   58.13 |       50 |   16.66 |   60.97 |                                               
+  config.ts                                         |       0 |        0 |       0 |       0 | 1-18                                          
+  environment.ts                                    |   89.28 |    52.63 |      50 |   89.28 | 36-37,49                                      
+  index-minimal.ts                                  |       0 |      100 |       0 |       0 | 2-9                                           
+ src/discord                                        |       0 |        0 |       0 |       0 |                                               
+  channelIds.ts                                     |       0 |      100 |     100 |       0 | 6-7                                           
+  clientFactory.ts                                  |       0 |        0 |       0 |       0 | 2-61                                          
+  discordClient.ts                                  |       0 |      100 |     100 |       0 | 1-3                                           
+  discordGuildMemberHelper.ts                       |       0 |        0 |       0 |       0 | 2-27                                          
+  getStarbunkClient.ts                              |       0 |        0 |       0 |       0 | 3-18                                          
+  guildIds.ts                                       |       0 |      100 |     100 |       0 | 6-7                                           
+  roleIds.ts                                        |       0 |      100 |     100 |       0 | 6-7                                           
+  userId.ts                                         |       0 |      100 |     100 |       0 | 14-16                                         
+  utils.ts                                          |       0 |        0 |       0 |       0 | 2-108                                         
+ src/domain/models                                  |       0 |        0 |       0 |       0 |                                               
+  index.ts                                          |       0 |        0 |       0 |       0 | 2-7                                           
+ src/infrastructure/persistence                     |       0 |        0 |       0 |       0 |                                               
+  repositoryFactory.ts                              |       0 |        0 |       0 |       0 | 1-38                                          
+ src/infrastructure/persistence/files               |       0 |        0 |       0 |       0 |                                               
+  localFileRepository.ts                            |       0 |        0 |       0 |       0 | 2-72                                          
+ src/infrastructure/persistence/sqlite/repositories |       0 |        0 |       0 |       0 |                                               
+  campaignRepository.ts                             |       0 |        0 |       0 |       0 | 5-138                                         
+  messageRepository.ts                              |       0 |      100 |       0 |       0 | 5-23                                          
+ src/interfaces                                     |       0 |      100 |       0 |       0 |                                               
+  index.ts                                          |       0 |      100 |       0 |       0 | 24                                            
+ src/services                                       |   23.51 |    24.04 |   25.54 |   23.72 |                                               
+  bootstrap.ts                                      |       0 |        0 |       0 |       0 | 1-148                                         
+  botFrequencyService.ts                            |       0 |        0 |       0 |       0 | 1-70                                          
+  container.ts                                      |   91.66 |      100 |      80 |   91.66 | 94                                            
+  discordGMService.ts                               |   53.48 |    41.66 |      40 |   53.48 | 46-89,148-165                                 
+  discordService.ts                                 |       2 |        0 |       0 |    2.04 | 51-798                                        
+  logger.ts                                         |   78.12 |       50 |   63.63 |   78.12 | 20,30,47-54,76                                
+  messageFilter.ts                                  |   93.67 |    91.66 |     100 |   93.58 | 93-95,116-117                                 
+  personalityService.ts                             |   63.63 |    53.12 |   57.14 |   63.21 | 10,21-23,35,67-68,107-108,126-128,153-203,208 
+  serviceContainer.ts                               |       0 |        0 |       0 |       0 | 19-174                                        
+  services.ts                                       |       0 |        0 |       0 |       0 | 39-115                                        
+  userService.ts                                    |       0 |        0 |       0 |       0 | 1-181                                         
+  webhookManager.ts                                 |   43.63 |    45.45 |   57.14 |   45.28 | 31-33,44-54,61,67-68,76-88,96-117             
+ src/services/configuration                         |       0 |        0 |       0 |       0 |                                               
+  configurationService.ts                           |       0 |        0 |       0 |       0 | 1-319                                         
+  index.ts                                          |       0 |      100 |     100 |       0 | 1-2                                           
+ src/services/database                              |       0 |        0 |       0 |       0 |                                               
+  configurationRepository.ts                        |       0 |        0 |       0 |       0 | 2-267                                         
+  databaseService.ts                                |       0 |        0 |       0 |       0 | 1-122                                         
+  index.ts                                          |       0 |      100 |     100 |       0 | 1-3                                           
+ src/services/errors                                |    42.1 |      100 |       0 |    42.1 |                                               
+  discordErrors.ts                                  |    42.1 |      100 |       0 |    42.1 | 4-5,11,17,23,29,35,41-42,48-49                
+ src/services/llm                                   |   21.69 |    30.76 |   28.94 |      22 |                                               
+  baseLlmProvider.ts                                |    5.88 |        0 |       0 |    5.88 | 8-63                                          
+  genericProvider.ts                                |   22.22 |        0 |       0 |   22.22 | 26-38                                         
+  index.ts                                          |       0 |      100 |       0 |       0 | 2-17                                          
+  llmFactory.ts                                     |     100 |      100 |     100 |     100 |                                               
+  llmManager.ts                                     |       0 |        0 |       0 |       0 | 2-272                                         
+  llmProvider.ts                                    |       0 |        0 |       0 |       0 | 3-5                                           
+  promptManager.ts                                  |     100 |      100 |     100 |     100 |                                               
+  standardLlmService.ts                             |       0 |        0 |       0 |       0 | 1-95                                          
+ src/services/llm/prompts                           |       0 |      100 |       0 |       0 |                                               
+  blueBotAcknowledgmentPrompt.ts                    |       0 |      100 |       0 |       0 | 6-108                                         
+  blueDetectorPrompt.ts                             |       0 |      100 |       0 |       0 | 6-79                                          
+  conditionCheckPrompt.ts                           |       0 |      100 |       0 |       0 | 6-54                                          
+  index.ts                                          |       0 |      100 |       0 |       0 | 1-11                                          
+ src/services/llm/providers                         |       4 |        0 |       0 |    4.13 |                                               
+  ollamaProvider.ts                                 |    2.06 |        0 |       0 |    2.15 | 27-258                                        
+  openaiProvider.ts                                 |   10.71 |        0 |       0 |   10.71 | 9-100                                         
+ src/types                                          |       0 |      100 |       0 |       0 |                                               
+  index.ts                                          |       0 |      100 |       0 |       0 | 28-29                                         
+ src/utils                                          |   31.62 |    34.48 |   28.07 |   32.78 |                                               
+  collection.ts                                     |       0 |      100 |       0 |       0 | 10-18                                         
+  debug.ts                                          |       0 |        0 |       0 |       0 | 2-64                                          
+  diagnostics.ts                                    |       0 |        0 |       0 |       0 | 2-212                                         
+  envValidation.ts                                  |   65.38 |       50 |   72.72 |      66 | 10-33,37-41                                   
+  errorUtils.ts                                     |      75 |      100 |     100 |      75 | 13                                            
+  random.ts                                         |     100 |      100 |     100 |     100 |                                               
+  time.ts                                           |   46.34 |       50 |   31.57 |   46.91 | 124-129,139-256                               
+ src/webhooks                                       |   61.01 |    62.16 |   71.42 |   60.34 |                                               
+  webhookService.ts                                 |   61.01 |    62.16 |   71.42 |   60.34 | 19-20,26-27,68-70,77-78,111-142               
+----------------------------------------------------|---------|----------|---------|---------|-----------------------------------------------
+
+Test Suites: 1 skipped, 14 passed, 14 of 15 total
+Tests:       4 skipped, 165 passed, 169 total
+Snapshots:   0 total
+Time:        2.189 s
+Ran all test suites.

@@ -19,7 +19,14 @@ jobs:
   analyze-build-performance:
     name: 📊 Analyze Build Performance
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    # Only run for expected trigger events (workflow_run, schedule, workflow_dispatch)
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
 
@@ -28,143 +35,153 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { owner, repo } = context.repo;
-            const analysisDate = new Date();
-            const daysBack = parseInt('${{ inputs.analysis_period || "30" }}');
-            const sinceDate = new Date(analysisDate.getTime() - (daysBack * 24 * 60 * 60 * 1000));
+            try {
+              const { owner, repo } = context.repo;
+              const analysisDate = new Date();
+              const daysBack = parseInt('${{ inputs.analysis_period || "30" }}');
+              const sinceDate = new Date(analysisDate.getTime() - (daysBack * 24 * 60 * 60 * 1000));
 
-            console.log(`Analyzing builds from ${sinceDate.toISOString()} to ${analysisDate.toISOString()}`);
+              console.log(`Analyzing builds from ${sinceDate.toISOString()} to ${analysisDate.toISOString()}`);
 
-            // Get workflow runs for the container build workflow
-            const { data: workflows } = await github.rest.actions.listRepoWorkflows({
-              owner, repo
-            });
+              // Get workflow runs for the container build workflow
+              const { data: workflows } = await github.rest.actions.listRepoWorkflows({
+                owner, repo
+              });
 
-            let containerWorkflow = workflows.workflows.find(w =>
-              w.name === 'Container Build, Test & Publish' ||
-              w.name.toLowerCase().includes('container') ||
-              w.name.toLowerCase().includes('build')
-            );
+              console.log(`Found ${workflows.workflows.length} total workflows`);
 
-            if (!containerWorkflow) {
-              console.log('Container build workflow not found, checking all workflows...');
-              console.log('Available workflows:', workflows.workflows.map(w => w.name));
-
-              // Use the first workflow that looks like a build workflow
-              const buildWorkflow = workflows.workflows.find(w =>
-                w.name.toLowerCase().includes('build') ||
-                w.name.toLowerCase().includes('container') ||
-                w.name.toLowerCase().includes('docker')
+              let containerWorkflow = workflows.workflows.find(w =>
+                w.name === 'Container Build, Test & Publish'
               );
 
-              if (!buildWorkflow) {
-                console.log('No build-related workflows found, skipping analysis');
-                return;
+              if (!containerWorkflow) {
+                console.log('Container Build, Test & Publish workflow not found, checking alternatives...');
+                console.log('Available workflows:', workflows.workflows.map(w => w.name));
+
+                // Use the first workflow that looks like a build workflow
+                const buildWorkflow = workflows.workflows.find(w =>
+                  w.name.toLowerCase().includes('container') && w.name.toLowerCase().includes('build')
+                );
+
+                if (!buildWorkflow) {
+                  console.log('No container build workflows found, generating basic report');
+                  await core.summary
+                    .addRaw('## 📊 Build Performance Analysis\n\n⚠️ No container build workflows found to analyze.\n\nAvailable workflows:\n' +
+                           workflows.workflows.map(w => `- ${w.name}`).join('\n'))
+                    .write();
+                  return;
+                }
+
+                console.log(`Using workflow: ${buildWorkflow.name}`);
+                containerWorkflow = buildWorkflow;
               }
 
-              console.log(`Using workflow: ${buildWorkflow.name}`);
-              containerWorkflow = buildWorkflow;
-            }
+              const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                owner, repo,
+                workflow_id: containerWorkflow.id,
+                created: `>=${sinceDate.toISOString()}`,
+                per_page: 100
+              });
 
-            const { data: runs } = await github.rest.actions.listWorkflowRuns({
-              owner, repo,
-              workflow_id: containerWorkflow.id,
-              created: `>=${sinceDate.toISOString()}`,
-              per_page: 100
-            });
+              console.log(`Found ${runs.workflow_runs.length} workflow runs`);
 
-            console.log(`Found ${runs.workflow_runs.length} workflow runs`);
+              // Analyze build metrics
+              let totalRuns = 0;
+              let successfulRuns = 0;
+              let failedRuns = 0;
+              let totalDuration = 0;
+              let optimizedBuilds = 0;
+              let fullBuilds = 0;
 
-            // Analyze build metrics
-            let totalRuns = 0;
-            let successfulRuns = 0;
-            let failedRuns = 0;
-            let totalDuration = 0;
-            let optimizedBuilds = 0;
-            let fullBuilds = 0;
+              const buildsByTrigger = {};
+              const buildsByBranch = {};
 
-            const buildsByTrigger = {};
-            const buildsByBranch = {};
+              for (const run of runs.workflow_runs) {
+                totalRuns++;
 
-            for (const run of runs.workflow_runs) {
-              totalRuns++;
+                if (run.conclusion === 'success') {
+                  successfulRuns++;
+                } else if (run.conclusion === 'failure') {
+                  failedRuns++;
+                }
 
-              if (run.conclusion === 'success') {
-                successfulRuns++;
-              } else if (run.conclusion === 'failure') {
-                failedRuns++;
+                // Calculate duration in minutes
+                const duration = (new Date(run.updated_at) - new Date(run.created_at)) / (1000 * 60);
+                totalDuration += duration;
+
+                // Track trigger types
+                const trigger = run.event;
+                buildsByTrigger[trigger] = (buildsByTrigger[trigger] || 0) + 1;
+
+                // Track branches
+                const branch = run.head_branch || 'unknown';
+                buildsByBranch[branch] = (buildsByBranch[branch] || 0) + 1;
+
+                // Estimate if this was an optimized build (duration < 8 minutes suggests partial build)
+                if (duration < 8) {
+                  optimizedBuilds++;
+                } else {
+                  fullBuilds++;
+                }
               }
 
-              // Calculate duration in minutes
-              const duration = (new Date(run.updated_at) - new Date(run.created_at)) / (1000 * 60);
-              totalDuration += duration;
+              const avgDuration = totalRuns > 0 ? (totalDuration / totalRuns).toFixed(1) : 0;
+              const successRate = totalRuns > 0 ? ((successfulRuns / totalRuns) * 100).toFixed(1) : 0;
+              const optimizationRate = totalRuns > 0 ? ((optimizedBuilds / totalRuns) * 100).toFixed(1) : 0;
 
-              // Track trigger types
-              const trigger = run.event;
-              buildsByTrigger[trigger] = (buildsByTrigger[trigger] || 0) + 1;
+              // Generate summary
+              const summary = `## 📊 Build Performance Analysis (Last ${daysBack} days)
 
-              // Track branches
-              const branch = run.head_branch || 'unknown';
-              buildsByBranch[branch] = (buildsByBranch[branch] || 0) + 1;
+### 🎯 Key Metrics
+- **Total Builds:** ${totalRuns}
+- **Success Rate:** ${successRate}% (${successfulRuns}/${totalRuns})
+- **Average Duration:** ${avgDuration} minutes
+- **Optimization Rate:** ${optimizationRate}% (${optimizedBuilds} optimized vs ${fullBuilds} full builds)
 
-              // Estimate if this was an optimized build (duration < 8 minutes suggests partial build)
-              if (duration < 8) {
-                optimizedBuilds++;
-              } else {
-                fullBuilds++;
-              }
+### 📈 Build Efficiency
+- **Time Saved:** ~${(fullBuilds * 12 - optimizedBuilds * 4).toFixed(0)} minutes through optimization
+- **Resource Savings:** ~${optimizationRate}% CI/CD resource reduction
+- **Failed Builds:** ${failedRuns} (${((failedRuns / totalRuns) * 100).toFixed(1)}%)
+
+### 🔄 Build Triggers
+${Object.entries(buildsByTrigger).map(([trigger, count]) =>
+  `- **${trigger}:** ${count} builds`
+).join('\n')}
+
+### 🌿 Branch Activity
+${Object.entries(buildsByBranch)
+  .sort(([,a], [,b]) => b - a)
+  .slice(0, 5)
+  .map(([branch, count]) => `- **${branch}:** ${count} builds`)
+  .join('\n')}
+
+### 💡 Recommendations
+${optimizationRate < 50 ?
+  '- ⚠️ Low optimization rate - consider reviewing path filters' :
+  '- ✅ Good optimization rate - path-based builds working well'
+}
+${successRate < 90 ?
+  '- ⚠️ Build reliability could be improved' :
+  '- ✅ Excellent build reliability'
+}
+${avgDuration > 10 ?
+  '- ⚠️ Consider further build optimizations' :
+  '- ✅ Good build performance'
+}`;
+
+              // Write to step summary
+              await core.summary
+                .addRaw(summary)
+                .write();
+
+              console.log('Build analysis completed');
+            } catch (error) {
+              console.error('Error analyzing builds:', error);
+              await core.summary
+                .addRaw(`## 📊 Build Performance Analysis\n\n❌ **Error**: ${error.message}\n\nPlease check the workflow permissions and try again.`)
+                .write();
+              throw error;
             }
-
-            const avgDuration = totalRuns > 0 ? (totalDuration / totalRuns).toFixed(1) : 0;
-            const successRate = totalRuns > 0 ? ((successfulRuns / totalRuns) * 100).toFixed(1) : 0;
-            const optimizationRate = totalRuns > 0 ? ((optimizedBuilds / totalRuns) * 100).toFixed(1) : 0;
-
-            // Generate summary
-            const summary = `## 📊 Build Performance Analysis (Last ${daysBack} days)
-
-            ### 🎯 Key Metrics
-            - **Total Builds:** ${totalRuns}
-            - **Success Rate:** ${successRate}% (${successfulRuns}/${totalRuns})
-            - **Average Duration:** ${avgDuration} minutes
-            - **Optimization Rate:** ${optimizationRate}% (${optimizedBuilds} optimized vs ${fullBuilds} full builds)
-
-            ### 📈 Build Efficiency
-            - **Time Saved:** ~${(fullBuilds * 12 - optimizedBuilds * 4).toFixed(0)} minutes through optimization
-            - **Resource Savings:** ~${optimizationRate}% CI/CD resource reduction
-            - **Failed Builds:** ${failedRuns} (${((failedRuns / totalRuns) * 100).toFixed(1)}%)
-
-            ### 🔄 Build Triggers
-            ${Object.entries(buildsByTrigger).map(([trigger, count]) =>
-              `- **${trigger}:** ${count} builds`
-            ).join('\n')}
-
-            ### 🌿 Branch Activity
-            ${Object.entries(buildsByBranch)
-              .sort(([,a], [,b]) => b - a)
-              .slice(0, 5)
-              .map(([branch, count]) => `- **${branch}:** ${count} builds`)
-              .join('\n')}
-
-            ### 💡 Recommendations
-            ${optimizationRate < 50 ?
-              '- ⚠️ Low optimization rate - consider reviewing path filters' :
-              '- ✅ Good optimization rate - path-based builds working well'
-            }
-            ${successRate < 90 ?
-              '- ⚠️ Build reliability could be improved' :
-              '- ✅ Excellent build reliability'
-            }
-            ${avgDuration > 10 ?
-              '- ⚠️ Consider further build optimizations' :
-              '- ✅ Good build performance'
-            }`;
-
-            // Write to step summary
-            await core.summary
-              .addRaw(summary)
-              .write();
-
-            console.log('Build analysis completed');
 
       - name: Check for build optimization opportunities
         run: |
