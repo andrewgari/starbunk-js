@@ -227,7 +227,13 @@ private async deployCommands(): Promise<void> {
 		});
 
 		this.client.on(Events.MessageCreate, async (message: any) => {
-			logger.debug(`💬 Received message from ${message.author?.username || 'unknown'}: ${message.content?.substring(0, 50) || 'no content'}...`);
+@@ containers/bunkbot/src/index.ts:230
+-			logger.info(`💬 [E2E DEBUG] Received message from ${message.author?.username || 'unknown'} (bot: ${message.author?.bot}): ${message.content?.substring(0, 50) || 'no content'}...`);
++			if (process.env.E2E_TEST_ENABLED === 'true') {
++				logger.info(`💬 [E2E DEBUG] Received message from ${message.author?.username || 'unknown'} (bot: ${message.author?.bot}): ${message.content?.substring(0, 50) || 'no content'}...`);
++			} else {
++				logger.debug(`Received message from ${message.author?.username || 'unknown'}: ${message.content?.substring(0, 50) || 'no content'}...`);
++			}
 			await this.handleMessage(message);
 		});
 
@@ -267,8 +273,23 @@ private async deployCommands(): Promise<void> {
 	}
 
 	private async handleMessage(message: any): Promise<void> {
-		// Skip bot messages
-		if (message.author.bot) return;
+		// Skip bot messages (except for E2E testing)
+		const isE2ETestMessage = (
+			process.env.E2E_TEST_ENABLED === 'true' && (
+				message.author?.username === 'E2E Test User' ||  // Webhook messages
+				message.webhookId !== null ||                     // Any webhook message
+				message.author?.id === process.env.E2E_TEST_USER_ID // E2E bot messages
+			)
+		);
+
+		if (message.author.bot && !isE2ETestMessage) {
+			logger.info(`💬 [E2E DEBUG] Skipping bot message from ${message.author?.username}`);
+			return;
+		}
+
+		if (isE2ETestMessage) {
+			logger.info(`💬 [E2E DEBUG] Processing E2E test message from ${message.author?.username} (webhook: ${message.webhookId !== null})`);
+		}
 
 		try {
 			// Create message context for filtering
@@ -276,6 +297,16 @@ private async deployCommands(): Promise<void> {
 
 			// Check if message should be processed
 			const filterResult = this.messageFilter.shouldProcessMessage(context);
+
+			// [E2E DEBUG] Force log filter decisions for E2E messages
+			if (isE2ETestMessage) {
+				logger.info(`💬 [E2E DEBUG] MessageFilter decision: ${filterResult.allowed ? 'ALLOWED' : 'BLOCKED'}`);
+				if (filterResult.reason) {
+					logger.info(`💬 [E2E DEBUG] Filter reason: ${filterResult.reason}`);
+				}
+				logger.info(`💬 [E2E DEBUG] Message context: Server=${context.serverId}, Channel=${context.channelId}, User=${context.username}`);
+			}
+
 			if (!filterResult.allowed) {
 				// Message was filtered out - no need to log unless in debug mode
 				if (this.messageFilter.isDebugMode()) {
@@ -285,6 +316,11 @@ private async deployCommands(): Promise<void> {
 			}
 
 			logger.debug(`Processing message from ${message.author.username}: ${message.content}`);
+
+			// [E2E DEBUG] Log when E2E messages reach reply bot processing
+			if (isE2ETestMessage) {
+				logger.info(`💬 [E2E DEBUG] Message passed all filters - sending to reply bot system`);
+			}
 
 			// Process message through reply bot system
 			await this.processMessageWithReplyBots(message);
@@ -304,7 +340,19 @@ private async deployCommands(): Promise<void> {
 			return;
 		}
 
+		const isE2ETestMessage = (
+			process.env.E2E_TEST_ENABLED === 'true' && (
+				message.author?.username === 'E2E Test User' ||
+				message.webhookId !== null ||
+				message.author?.id === process.env.E2E_TEST_USER_ID
+			)
+		);
+
 		logger.debug(`Processing message through ${this.replyBots.length} reply bots`);
+
+		if (isE2ETestMessage) {
+			logger.info(`💬 [E2E DEBUG] Processing E2E message through ${this.replyBots.length} reply bots`);
+		}
 
 		// Process message through each reply bot
 		for (const bot of this.replyBots) {
@@ -312,9 +360,22 @@ private async deployCommands(): Promise<void> {
 				// Check if bot should respond to this message
 				const shouldRespond = await bot.shouldRespond(message);
 
+				if (isE2ETestMessage) {
+					logger.info(`💬 [E2E DEBUG] ${bot.defaultBotName} shouldRespond: ${shouldRespond}`);
+				}
+
 				if (shouldRespond) {
 					logger.debug(`${bot.defaultBotName} will process message`);
+
+					if (isE2ETestMessage) {
+						logger.info(`💬 [E2E DEBUG] ${bot.defaultBotName} processing message...`);
+					}
+
 					await bot.processMessagePublic(message);
+
+					if (isE2ETestMessage) {
+						logger.info(`💬 [E2E DEBUG] ${bot.defaultBotName} finished processing`);
+					}
 				} else {
 					logger.debug(`${bot.defaultBotName} skipped message`);
 				}

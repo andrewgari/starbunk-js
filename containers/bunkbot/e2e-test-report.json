@@ -1,0 +1,274 @@
+{
+  "timestamp": "2025-08-03T18:34:25.048Z",
+  "environment": {
+    "testServerId": "753251582719688714",
+    "testChannelId": "798613445301633137",
+    "nodeEnv": "test",
+    "debugMode": "false"
+  },
+  "results": {
+    "botTests": [
+      {
+        "botName": "BlueBot",
+        "triggerMessage": "blu?",
+        "success": false,
+        "expectedResponse": "Did somebody say Blu?",
+        "expectedBotName": "BlueBot",
+        "responseTime": 10114,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "HoldBot",
+        "triggerMessage": "Hold",
+        "success": false,
+        "expectedResponse": "Hold.",
+        "expectedBotName": "HoldBot",
+        "responseTime": 10256,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "GuyBot",
+        "triggerMessage": "guy",
+        "success": false,
+        "expectedResponse": "guy",
+        "expectedBotName": "GuyBot",
+        "responseTime": 10173,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "user-specific"
+      },
+      {
+        "botName": "Chad Bot",
+        "triggerMessage": "chad",
+        "success": false,
+        "expectedResponse": "What is bro *yappin* about?",
+        "expectedBotName": "Chad Bot",
+        "responseTime": 10384,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "user-specific"
+      },
+      {
+        "botName": "VennBot",
+        "triggerMessage": "venn",
+        "success": false,
+        "expectedResponse": "Hmm...",
+        "expectedBotName": "VennBot",
+        "responseTime": 10208,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "user-specific"
+      },
+      {
+        "botName": "BunkBot",
+        "triggerMessage": "69",
+        "success": false,
+        "expectedResponse": "Nice.",
+        "expectedBotName": "BunkBot",
+        "responseTime": 10205,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "Sheesh Bot",
+        "triggerMessage": "sheesh",
+        "success": false,
+        "expectedResponse": "SHEEEESH",
+        "expectedBotName": "Sheesh Bot",
+        "responseTime": 10188,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "CheckBot",
+        "triggerMessage": "check",
+        "success": false,
+        "expectedResponse": "czech",
+        "expectedBotName": "CheckBot",
+        "responseTime": 10225,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "BananaBot",
+        "triggerMessage": "banana",
+        "success": false,
+        "expectedResponse": "banana",
+        "expectedBotName": "BananaBot",
+        "responseTime": 10167,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "BabyBot",
+        "triggerMessage": "baby",
+        "success": false,
+        "expectedResponse": "baby",
+        "expectedBotName": "BabyBot",
+        "responseTime": 10223,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "Spider-Bot",
+        "triggerMessage": "spiderman",
+        "success": false,
+        "expectedResponse": "Spider-Man",
+        "expectedBotName": "Spider-Bot",
+        "responseTime": 10301,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "ChaosBot",
+        "triggerMessage": "chaos",
+        "success": false,
+        "expectedResponse": "chaos",
+        "expectedBotName": "ChaosBot",
+        "responseTime": 10213,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "GundamBot",
+        "triggerMessage": "gundam",
+        "success": false,
+        "expectedResponse": "gundam",
+        "expectedBotName": "GundamBot",
+        "responseTime": 10180,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "TestBot",
+        "triggerMessage": "test",
+        "success": false,
+        "expectedResponse": "test",
+        "expectedBotName": "TestBot",
+        "responseTime": 10167,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "Xander Crews",
+        "triggerMessage": "can't",
+        "success": false,
+        "expectedResponse": "Well, not with THAT attitude!!!",
+        "expectedBotName": "Xander Crews",
+        "responseTime": 10223,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "Ezio Auditore Da Firenze",
+        "triggerMessage": "ezio",
+        "success": false,
+        "expectedResponse": "ezio",
+        "expectedBotName": "Ezio Auditore Da Firenze",
+        "responseTime": 10170,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "Gerald",
+        "triggerMessage": "there house",
+        "success": false,
+        "expectedResponse": "their",
+        "expectedBotName": "Gerald",
+        "responseTime": 10211,
+        "error": "Random-chance bot failed all 15 attempts. This may be expected behavior given 5.0% probability.",
+        "attemptNumber": 15,
+        "totalAttempts": 15,
+        "testStrategy": "random-chance",
+        "probability": 0.05,
+        "probabilityDescription": "5% chance to trigger on grammar mistakes"
+      },
+      {
+        "botName": "Macaroni Bot",
+        "triggerMessage": "macaroni",
+        "success": false,
+        "expectedResponse": "macaroni",
+        "expectedBotName": "Macaroni Bot",
+        "responseTime": 10285,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "GremlinBot",
+        "triggerMessage": "gremlin",
+        "success": false,
+        "expectedResponse": "gremlin",
+        "expectedBotName": "GremlinBot",
+        "responseTime": 10167,
+        "error": "No bot response received within timeout",
+        "attemptNumber": 1,
+        "totalAttempts": 1,
+        "testStrategy": "deterministic"
+      },
+      {
+        "botName": "Interrupt Bot",
+        "triggerMessage": "hello world",
+        "success": false,
+        "expectedResponse": "sorry",
+        "expectedBotName": "Interrupt Bot",
+        "responseTime": 10477,
+        "error": "Random-chance bot failed all 20 attempts. This may be expected behavior given 2.0% probability.",
+        "attemptNumber": 20,
+        "totalAttempts": 20,
+        "testStrategy": "random-chance",
+        "probability": 0.02,
+        "probabilityDescription": "2% chance to interrupt any message"
+      }
+    ],
+    "slashCommandTests": [],
+    "controlTests": [
+      {
+        "name": "NoTriggerTest",
+        "message": "This message should not trigger any bots xyz123",
+        "success": true,
+        "actualResponses": 0,
+        "expectedResponses": 0,
+        "responseTime": 5178
+      }
+    ],
+    "summary": {
+      "totalTests": 21,
+      "passed": 1,
+      "failed": 20,
+      "duration": 0
+    }
+  }
+}
