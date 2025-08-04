@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "discord": {
+      "command": "node",
+      "args": ["/var/home/andrewgari/Repos/starbunk-js/discord-mcp-server/build/index.js"],
+      "env": {
+        "DISCORD_TOKEN": "your_bot_token_here"
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "discord-mcp-server",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "discord-mcp-server": "build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc && node build/index.js",
+    "clean": "rm -rf build"
+  },
+  "keywords": ["mcp", "discord", "bot", "model-context-protocol"],
+  "author": "",
+  "license": "ISC",
+  "description": "A Model Context Protocol server for Discord integration",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.1",
+    "@types/node": "^24.2.0",
+    "discord.js": "^14.21.0",
+    "typescript": "^5.9.2"
+  }
+}
