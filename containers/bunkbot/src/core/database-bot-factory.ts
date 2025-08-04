@@ -1,6 +1,4 @@
-import { logger, getConfigurationService, BotConfig, BotTriggerConfig, BotResponseConfig } from '@starbunk/shared';
-import { LLMFactory, LLMProviderType } from '@starbunk/shared/services/llm/llmFactory';
-import { LLMMessage } from '@starbunk/shared/services/llm/llmService';
+import { logger, getConfigurationService, BotConfig, BotTriggerConfig, BotResponseConfig, container, ServiceId, DiscordService } from '@starbunk/shared';
 import { BotFactory } from './bot-factory';
 import { createTriggerResponse, TriggerResponse } from './trigger-response';
 import { matchesPattern } from './conditions';
@@ -43,6 +41,16 @@ export class DatabaseBotFactory {
 				return null;
 			}
 
+			// Get DiscordService from container for webhook-based custom identities
+			let discordService: DiscordService | undefined;
+			try {
+				discordService = container.get<DiscordService>(ServiceId.DiscordService);
+				logger.debug(`✅ Retrieved DiscordService for bot: ${config.displayName}`);
+			} catch (error) {
+				logger.warn(`⚠️  Could not retrieve DiscordService for bot ${config.displayName}:`, error instanceof Error ? error : new Error(String(error)));
+				logger.warn(`⚠️  Bot will use fallback messaging (no custom identity in webhooks)`);
+			}
+
 			// Create the bot using the existing BotFactory
 			const bot = BotFactory.createBot({
 				name: config.displayName,
@@ -53,9 +61,10 @@ export class DatabaseBotFactory {
 				},
 				skipBotMessages: true,
 				triggers: triggers,
+				discordService: discordService, // 🎭 CRITICAL: Inject DiscordService for custom identity support
 			}) as unknown as ReplyBot;
 
-			logger.info(`🎉 Successfully created bot: ${config.displayName} with ${triggers.length} triggers`);
+			logger.info(`🎉 Successfully created bot: ${config.displayName} with ${triggers.length} triggers${discordService ? ' (custom identity enabled)' : ' (fallback identity)'}`);
 			return bot;
 
 		} catch (error) {
@@ -139,9 +148,10 @@ export class DatabaseBotFactory {
 		// Find the best matching response for this trigger
 		// For now, use the first enabled response, but this could be more sophisticated
 		const responseConfig = config.responses.find((r: BotResponseConfig) => r.isEnabled);
-		
+
 		if (!responseConfig) {
-			return null;
+			logger.warn(`❌ No enabled response configuration found for bot: ${config.botName}`);
+			return staticResponse('Bot response not configured');
 		}
 
 		switch (responseConfig.type) {
@@ -152,97 +162,46 @@ export class DatabaseBotFactory {
 				break;
 
 			case 'random':
+				// For random responses, use alternatives array or parse content as JSON array
 				if (responseConfig.alternatives && responseConfig.alternatives.length > 0) {
-					return randomResponse(responseConfig.alternatives);
+					return () => responseConfig.alternatives![Math.floor(Math.random() * responseConfig.alternatives!.length)];
+				} else if (responseConfig.content) {
+					try {
+						const responses = Array.isArray(responseConfig.content)
+							? responseConfig.content
+							: JSON.parse(responseConfig.content);
+
+						if (!Array.isArray(responses)) {
+							logger.warn(`❌ Random response content is not an array for bot: ${config.botName}`);
+							return staticResponse(responseConfig.content);
+						}
+
+						return () => responses[Math.floor(Math.random() * responses.length)];
+					} catch (error) {
+						logger.warn(`❌ Failed to parse random responses for bot ${config.botName}:`, error);
+						return staticResponse(responseConfig.content);
+					}
 				}
 				break;
 
 			case 'llm':
-				try {
-					// Implement LLM response handling
-					logger.info(`🧠 Generating LLM response for bot: ${config.botName}`);
-
-					// Determine LLM provider (default to OpenAI if available, fallback to Ollama)
-					const provider = process.env.OPENAI_API_KEY ? LLMProviderType.OPENAI : LLMProviderType.OLLAMA;
-					const llmService = LLMFactory.createProviderFromEnv(provider, logger);
-
-					// Prepare messages for LLM
-					const messages: LLMMessage[] = [
-						{
-							role: 'system',
-							content: responseConfig.prompt || `You are ${config.botName}, a Discord bot. Respond in character based on your personality and the user's message.`
-						},
-						{
-							role: 'user',
-							content: message.content
-						}
-					];
-
-					// Generate response using LLM
-					const response = await llmService.generateCompletion({
-						messages,
-						model: responseConfig.model || 'gpt-3.5-turbo',
-						temperature: responseConfig.temperature || 0.7,
-						maxTokens: responseConfig.maxTokens || 150
-					});
-
-					return response.content;
-				} catch (error) {
-					logger.error(`❌ LLM response generation failed for bot ${config.botName}:`, error);
-					// Fallback to a default response if available
-					if (responseConfig.fallback) {
-						return responseConfig.fallback;
-					}
-					return null;
-				}
+				// For now, LLM responses are not implemented - use fallback
+				logger.warn(`⚠️  LLM responses not implemented yet for bot: ${config.botName}, using fallback`);
+				return staticResponse('LLM response not available');
 
 			case 'function':
-				try {
-					// Implement function-based responses
-					logger.info(`⚙️  Executing function response for bot: ${config.botName}`);
-
-					if (!responseConfig.functionName) {
-						logger.warn(`❌ No function name specified for bot: ${config.botName}`);
-						return null;
-					}
-
-					// Dynamic function execution based on function name
-					switch (responseConfig.functionName) {
-						case 'getCurrentTime':
-							return new Date().toLocaleTimeString();
-
-						case 'getRandomNumber': {
-							const min = responseConfig.parameters?.min || 1;
-							const max = responseConfig.parameters?.max || 100;
-							return `${Math.floor(Math.random() * (max - min + 1)) + min}`;
-						}
-
-						case 'getUserMention':
-							return `<@${message.author.id}>`;
-
-						case 'getServerInfo':
-							return `Server: ${message.guild?.name || 'Unknown'} (${message.guild?.memberCount || 0} members)`;
-
-						case 'echo': {
-							const echoText = responseConfig.parameters?.text || message.content;
-							return echoText;
-						}
-
-						default:
-							logger.warn(`❌ Unknown function: ${responseConfig.functionName} for bot: ${config.botName}`);
-							return responseConfig.fallback || null;
-					}
-				} catch (error) {
-					logger.error(`❌ Function execution failed for bot ${config.botName}:`, error);
-					return responseConfig.fallback || null;
-				}
+				// For now, function responses are not implemented - use fallback
+				logger.warn(`⚠️  Function responses not implemented yet for bot: ${config.botName}, using fallback`);
+				return staticResponse('Function response not available');
 
 			default:
-				logger.warn(`⚠️  Unknown response type: ${responseConfig.type} for bot: ${config.botName}`);
-				return null;
+				logger.warn(`❌ Unknown response type: ${responseConfig.type} for bot: ${config.botName}`);
+				return staticResponse(responseConfig.content || 'Unknown response type');
 		}
 
-		return null;
+		// Fallback if no response was created
+		logger.warn(`❌ Failed to create response for bot: ${config.botName}`);
+		return staticResponse('Bot response error');
 	}
 
 	/**

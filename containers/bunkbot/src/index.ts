@@ -24,7 +24,7 @@ import debugCommand from './commands/debug';
 
 // Import reply bot system
 import { BotRegistry } from './botRegistry';
-// import { DatabaseBotFactory } from './core/database-bot-factory'; // Temporarily disabled
+import { DatabaseBotFactory } from './core/database-bot-factory';
 import ReplyBot from './replyBot';
 
 // Import configuration services
@@ -139,10 +139,35 @@ class BunkBotContainer {
 			const discordService = container.get<DiscordService>(ServiceId.DiscordService);
 			logger.info(`🎭 DiscordService initialized for bot identity system (webhook-based custom names/avatars)`);
 
-			// For now, focus on file-based bot loading only
-			// Database bot loading is temporarily disabled to fix compilation issues
-			logger.info('📁 Loading reply bots from file system...');
-			this.replyBots = await BotRegistry.discoverBots(discordService);
+			// Load bots from database configuration (with custom identities)
+			logger.info('🗄️  Loading reply bots from database configuration...');
+			const databaseBots = await DatabaseBotFactory.createAllBotsFromConfig();
+			
+			// Load bots from file-system discovery (for additional bots like chaos-bot, spider-bot, etc.)
+			logger.info('📁 Loading reply bots from file-system discovery...');
+			const fileSystemBots = await BotRegistry.discoverBots(discordService);
+			
+			// Deduplicate bots - database bots take priority over file-system bots with same name
+			const botMap = new Map<string, ReplyBot>();
+			
+			// Add file-system bots first
+			fileSystemBots.forEach(bot => {
+				botMap.set(bot.defaultBotName.toLowerCase(), bot);
+			});
+			
+			// Add database bots, which will override file-system bots with same name
+			databaseBots.forEach(bot => {
+				const existingBot = botMap.get(bot.defaultBotName.toLowerCase());
+				if (existingBot) {
+					logger.info(`🔄 Database bot "${bot.defaultBotName}" overriding file-system bot with same name`);
+				}
+				botMap.set(bot.defaultBotName.toLowerCase(), bot);
+			});
+			
+			// Convert back to array
+			this.replyBots = Array.from(botMap.values());
+			
+			logger.info(`📊 Bot loading summary: ${databaseBots.length} database bots + ${fileSystemBots.length} file-system bots = ${this.replyBots.length} total bots (after deduplication)`);
 
 			if (this.replyBots.length > 0) {
 				logger.info(`✅ Reply bot system initialized with ${this.replyBots.length} bots`);
