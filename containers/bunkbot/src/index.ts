@@ -274,17 +274,37 @@ private async deployCommands(): Promise<void> {
 	}
 
 	private async handleMessage(message: any): Promise<void> {
-		// Skip bot messages (except for E2E testing)
-		const isE2ETestMessage = (
-			process.env.E2E_TEST_ENABLED === 'true' && (
-				message.author?.username === 'E2E Test User' ||  // Webhook messages
-				message.webhookId !== null ||                     // Any webhook message
-				message.author?.id === process.env.E2E_TEST_USER_ID // E2E bot messages
-			)
+		// Check if this is a message from our own bot (prevent infinite loops)
+		const isOurBotMessage = (
+			message.author?.id === this.client?.user?.id ||   // Direct bot messages
+			(message.webhookId && message.author?.bot &&
+			 message.author?.username !== 'E2E Test User')    // Our webhook responses (but not E2E test messages)
 		);
 
+		// Enhanced E2E test message detection (only for actual test messages)
+		const isE2ETestMessage = (
+			(process.env.E2E_TEST_ENABLED === 'true' || process.env.DEBUG_MODE === 'true') &&
+			message.author?.username === 'E2E Test User' &&  // Only actual E2E Test User messages
+			message.webhookId !== null                        // Must be webhook
+		);
+
+		// Enhanced logging for debugging
+		logger.info(`💬 [E2E DEBUG] Message from ${message.author?.username} (ID: ${message.author?.id}, bot: ${message.author?.bot}, webhook: ${message.webhookId !== null})`);
+		logger.info(`💬 [E2E DEBUG] Content: "${message.content?.substring(0, 100)}"`);
+		logger.info(`💬 [E2E DEBUG] Channel: ${message.channel?.id}, Guild: ${message.guild?.id}`);
+		logger.info(`💬 [E2E DEBUG] Our bot ID: ${this.client?.user?.id}`);
+		logger.info(`💬 [E2E DEBUG] Is our bot message: ${isOurBotMessage}`);
+		logger.info(`💬 [E2E DEBUG] Is E2E test message: ${isE2ETestMessage}`);
+
+		// Skip our own bot messages to prevent infinite loops
+		if (isOurBotMessage) {
+			logger.info(`💬 [E2E DEBUG] Skipping our own bot message from ${message.author?.username} to prevent infinite loop`);
+			return;
+		}
+
+		// Skip other bot messages (except E2E test messages)
 		if (message.author.bot && !isE2ETestMessage) {
-			logger.info(`💬 [E2E DEBUG] Skipping bot message from ${message.author?.username}`);
+			logger.info(`💬 [E2E DEBUG] Skipping bot message from ${message.author?.username} (ID: ${message.author?.id})`);
 			return;
 		}
 
@@ -341,13 +361,25 @@ private async deployCommands(): Promise<void> {
 			return;
 		}
 
-		const isE2ETestMessage = (
-			process.env.E2E_TEST_ENABLED === 'true' && (
-				message.author?.username === 'E2E Test User' ||
-				message.webhookId !== null ||
-				message.author?.id === process.env.E2E_TEST_USER_ID
-			)
+		// Check if this is a message from our own bot (prevent infinite loops)
+		const isOurBotMessage = (
+			message.author?.id === this.client?.user?.id ||   // Direct bot messages
+			(message.webhookId && message.author?.bot &&
+			 message.author?.username !== 'E2E Test User')    // Our webhook responses (but not E2E test messages)
 		);
+
+		// Enhanced E2E test message detection (only for actual test messages)
+		const isE2ETestMessage = (
+			(process.env.E2E_TEST_ENABLED === 'true' || process.env.DEBUG_MODE === 'true') &&
+			message.author?.username === 'E2E Test User' &&  // Only actual E2E Test User messages
+			message.webhookId !== null                        // Must be webhook
+		);
+
+		// Skip our own bot messages to prevent infinite loops
+		if (isOurBotMessage) {
+			logger.info(`💬 [E2E DEBUG] Skipping our own bot message in reply bot processing`);
+			return;
+		}
 
 		logger.debug(`Processing message through ${this.replyBots.length} reply bots`);
 

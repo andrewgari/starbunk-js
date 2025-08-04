@@ -1,7 +1,7 @@
 import { BotIdentity } from '../types/botIdentity';
 import { getBotIdentityFromDiscord } from '../core/get-bot-identity';
 import { ConfigurationService } from './configurationService';
-import { logger } from '@starbunk/shared';
+import { logger, isDebugMode, getTestingChannelIds } from '@starbunk/shared';
 import { Message } from 'discord.js';
 
 /**
@@ -327,16 +327,13 @@ export class BotIdentityService {
 	 */
 	private isTestingEnvironment(message?: Message): boolean {
 		// Check if we're in debug mode or testing channel
-		const { getMessageFilter } = require('./messageFilter');
-		const messageFilter = getMessageFilter();
-
-		if (messageFilter.isDebugMode()) {
+		if (isDebugMode()) {
 			return true;
 		}
 
 		// Check if message is from a testing channel
 		if (message?.channel?.id) {
-			const testingChannelIds = messageFilter.getTestingChannelIds();
+			const testingChannelIds = getTestingChannelIds();
 			if (testingChannelIds.includes(message.channel.id)) {
 				return true;
 			}

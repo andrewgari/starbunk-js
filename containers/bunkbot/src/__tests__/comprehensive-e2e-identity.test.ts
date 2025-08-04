@@ -95,6 +95,105 @@ const PRODUCTION_BOT_TESTS = [
     expectedResponse: 'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus.gif',
     type: 'deterministic',
     description: 'Tests BabyBot metroid gif response'
+  },
+  // Additional reply-bots that were missing from E2E tests
+  {
+    botName: 'Xander Crews',
+    triggerMessage: 'you can\'t do that',
+    expectedResponse: 'Well, not with *THAT* attitude!!!',
+    type: 'deterministic',
+    description: 'Tests Attitude Bot custom identity and response'
+  },
+  {
+    botName: 'ChaosBot',
+    triggerMessage: 'chaos',
+    expectedResponse: 'All I know is...I\'m here to kill Chaos',
+    type: 'deterministic',
+    description: 'Tests Chaos Bot custom identity and response'
+  },
+  {
+    botName: 'GremlinBot',
+    triggerMessage: 'gremlin',
+    expectedResponse: 'Could you repeat that? I don\'t speak *gremlin*',
+    type: 'deterministic',
+    description: 'Tests Pickle Bot (GremlinBot) custom identity and response'
+  },
+  {
+    botName: 'Interrupt Bot',
+    triggerMessage: 'This is a long message that should trigger interrupt bot',
+    expectedResponse: 'Oh, sorry... go ahead',
+    type: 'probabilistic',
+    probability: 0.01,
+    description: 'Tests Interrupt Bot probabilistic interruption (1% chance)',
+    maxAttempts: 10 // Try multiple times due to low probability
+  },
+  {
+    botName: 'Spider-Bot',
+    triggerMessage: 'spiderman',
+    expectedResponse: 'Spider-Man',
+    type: 'deterministic',
+    description: 'Tests Spider Bot hyphen correction'
+  },
+  {
+    botName: 'Ezio Auditore Da Firenze',
+    triggerMessage: 'ezio',
+    expectedResponse: 'Nothing is true; Everything is permitted',
+    type: 'deterministic',
+    description: 'Tests Ezio Bot custom identity and response'
+  },
+  {
+    botName: 'Macaroni Bot',
+    triggerMessage: 'macaroni',
+    expectedResponse: 'Correction: you mean Venn "Tyrone "The "Macaroni" Man" Johnson" Caelum',
+    type: 'deterministic',
+    description: 'Tests Macaroni Bot custom identity and response'
+  },
+  {
+    botName: 'SigGreatBot',
+    triggerMessage: 'sig is great',
+    expectedResponse: 'SigGreat.',
+    type: 'deterministic',
+    description: 'Tests Sig Great Bot custom identity and response'
+  },
+  {
+    botName: 'Gerald',
+    triggerMessage: 'there',
+    expectedResponse: 'their',
+    type: 'probabilistic',
+    probability: 0.15,
+    description: 'Tests Homonym Bot (Gerald) word replacement (15% chance)',
+    maxAttempts: 8
+  },
+  {
+    botName: 'Music Correct Bot',
+    triggerMessage: '!play some music',
+    expectedResponse: 'I see you\'re trying to activate the music bot',
+    type: 'deterministic',
+    description: 'Tests Music Correct Bot custom identity and response'
+  },
+  {
+    botName: 'GundamBot',
+    triggerMessage: 'gundam',
+    expectedResponse: 'That\'s the famous Unicorn Robot, "Gandum". There, I said it.',
+    type: 'deterministic',
+    description: 'Tests Gundam Bot custom identity and response'
+  },
+  {
+    botName: 'BotBot',
+    triggerMessage: 'Hello from another bot',
+    expectedResponse: 'Hello fellow bot!',
+    type: 'probabilistic',
+    probability: 0.05,
+    description: 'Tests Bot Bot response to other bot messages (5% chance)',
+    maxAttempts: 15, // Higher attempts due to low probability
+    isFromBot: true // Special flag to indicate this should come from a bot
+  },
+  {
+    botName: 'ExampleBot',
+    triggerMessage: 'example',
+    expectedResponse: 'This is an example response from the simplified bot architecture!',
+    type: 'deterministic',
+    description: 'Tests Example Bot custom identity and response'
   }
 ];
 
@@ -172,8 +271,8 @@ describe('Production Bot E2E Identity Tests', () => {
           try {
             console.log(`   Attempt ${attempts}/${maxAttempts}: Sending trigger "${botTest.triggerMessage}"`);
 
-            // Send webhook message to simulate user input
-            await sendWebhookMessage(botTest.triggerMessage);
+            // Send webhook message to simulate user input or bot input
+            await sendWebhookMessage(botTest.triggerMessage, botTest.isFromBot);
 
             // Wait for production bot response
             const response = await waitForProductionBotResponse(botTest);
@@ -232,7 +331,7 @@ describe('Production Bot E2E Identity Tests', () => {
       console.log('🏥 Checking if production BunkBot is online and responsive...');
 
       // Send a simple test message that should trigger a deterministic response
-      await sendWebhookMessage('blu?'); // BlueBot should always respond
+      await sendWebhookMessage('blu?', false); // BlueBot should always respond
 
       // Wait for any bot response to confirm production bot is running
       const response = await waitForAnyBotResponse();
@@ -249,12 +348,22 @@ describe('Production Bot E2E Identity Tests', () => {
   });
 
   // Helper functions for webhook-based testing
-  async function sendWebhookMessage(content: string): Promise<void> {
-    await webhookClient.send({
-      content,
-      username: 'E2E Test User',
-      avatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
-    });
+  async function sendWebhookMessage(content: string, isFromBot: boolean = false): Promise<void> {
+    if (isFromBot) {
+      // Send message as a bot to trigger BotBot
+      await webhookClient.send({
+        content,
+        username: 'Test Bot',
+        avatarURL: 'https://cdn.discordapp.com/embed/avatars/1.png'
+      });
+    } else {
+      // Send message as a regular user
+      await webhookClient.send({
+        content,
+        username: 'E2E Test User',
+        avatarURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
+      });
+    }
 
     // Small delay to ensure message is processed
     await new Promise(resolve => setTimeout(resolve, 500));

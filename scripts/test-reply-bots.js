@@ -33,7 +33,103 @@ const TEST_CONFIG = {
 			expectedResponse: null,
 			description: 'Nice bot should NOT respond to 42'
 		},
-		// Add more test cases for other bots
+		{
+			botName: 'blue-bot',
+			content: 'blu?',
+			expectedResponse: 'Did somebody say Blu?',
+			description: 'Blue bot should respond to blu?'
+		},
+		{
+			botName: 'hold-bot',
+			content: 'Hold',
+			expectedResponse: 'Hold.',
+			description: 'Hold bot should respond to Hold'
+		},
+		{
+			botName: 'attitude-bot',
+			content: 'you can\'t do that',
+			expectedResponse: 'Well, not with *THAT* attitude!!!',
+			description: 'Attitude bot should respond to "can\'t" statements'
+		},
+		{
+			botName: 'chaos-bot',
+			content: 'chaos',
+			expectedResponse: 'All I know is...I\'m here to kill Chaos',
+			description: 'Chaos bot should respond to chaos'
+		},
+		{
+			botName: 'pickle-bot',
+			content: 'gremlin',
+			expectedResponse: 'Could you repeat that? I don\'t speak *gremlin*',
+			description: 'Pickle bot should respond to gremlin'
+		},
+		{
+			botName: 'spider-bot',
+			content: 'spiderman',
+			expectedResponse: 'Spider-Man',
+			description: 'Spider bot should correct hyphen in spiderman'
+		},
+		{
+			botName: 'check-bot',
+			content: 'check',
+			expectedResponse: 'czech',
+			description: 'Check bot should respond with czech'
+		},
+		{
+			botName: 'banana-bot',
+			content: 'banana',
+			expectedResponse: 'banana',
+			description: 'Banana bot should respond to banana'
+		},
+		{
+			botName: 'baby-bot',
+			content: 'baby',
+			expectedResponse: 'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus.gif',
+			description: 'Baby bot should respond with metroid gif'
+		},
+		{
+			botName: 'sheesh-bot',
+			content: 'sheesh',
+			expectedResponse: 'SHEEEESH',
+			description: 'Sheesh bot should respond to sheesh'
+		},
+		{
+			botName: 'ezio-bot',
+			content: 'ezio',
+			expectedResponse: 'Nothing is true; Everything is permitted',
+			description: 'Ezio bot should respond with Assassin\'s Creed quote'
+		},
+		{
+			botName: 'gundam-bot',
+			content: 'gundam',
+			expectedResponse: 'That\'s the famous Unicorn Robot, "Gandum". There, I said it.',
+			description: 'Gundam bot should respond to gundam'
+		},
+		{
+			botName: 'macaroni-bot',
+			content: 'macaroni',
+			expectedResponse: 'Correction: you mean Venn "Tyrone "The "Macaroni" Man" Johnson" Caelum',
+			description: 'Macaroni bot should respond to macaroni'
+		},
+		{
+			botName: 'music-correct-bot',
+			content: '!play some music',
+			expectedResponse: 'I see you\'re trying to activate the music bot',
+			description: 'Music correct bot should respond to !play commands'
+		},
+		{
+			botName: 'bot-bot',
+			content: 'Hello from another bot',
+			expectedResponse: 'Hello fellow bot!',
+			description: 'Bot bot should respond to other bot messages (5% chance)',
+			isFromBot: true
+		},
+		{
+			botName: 'example-bot',
+			content: 'example',
+			expectedResponse: 'This is an example response from the simplified bot architecture!',
+			description: 'Example bot should respond to example keyword'
+		}
 	],
 	
 	// Test timeout in milliseconds
