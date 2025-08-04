@@ -48,6 +48,14 @@ web_modules/
 # TypeScript cache
 *.tsbuildinfo
 
+# Discord MCP Server build artifacts
+discord-mcp-server/build/
+discord-mcp-server/index.d.ts
+discord-mcp-server/index.js
+discord-mcp-server/index.js.map
+discord-mcp-server/package-lock.json
+discord-mcp-server/test.js
+
 # Optional npm cache directory
 .npm
 
