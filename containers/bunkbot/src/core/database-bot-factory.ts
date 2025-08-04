@@ -212,11 +212,3 @@ export class DatabaseBotFactory {
 		this.configService.clearCache();
 	}
 }
-
-// Helper function to create random response
-function randomResponse(alternatives: string[]): () => string {
-	return () => {
-		const randomIndex = Math.floor(Math.random() * alternatives.length);
-		return alternatives[randomIndex];
-	};
-}
