@@ -227,7 +227,13 @@ private async deployCommands(): Promise<void> {
 		});
 
 		this.client.on(Events.MessageCreate, async (message: any) => {
-			logger.info(`💬 [E2E DEBUG] Received message from ${message.author?.username || 'unknown'} (bot: ${message.author?.bot}): ${message.content?.substring(0, 50) || 'no content'}...`);
+@@ containers/bunkbot/src/index.ts:230
+-			logger.info(`💬 [E2E DEBUG] Received message from ${message.author?.username || 'unknown'} (bot: ${message.author?.bot}): ${message.content?.substring(0, 50) || 'no content'}...`);
++			if (process.env.E2E_TEST_ENABLED === 'true') {
++				logger.info(`💬 [E2E DEBUG] Received message from ${message.author?.username || 'unknown'} (bot: ${message.author?.bot}): ${message.content?.substring(0, 50) || 'no content'}...`);
++			} else {
++				logger.debug(`Received message from ${message.author?.username || 'unknown'}: ${message.content?.substring(0, 50) || 'no content'}...`);
++			}
 			await this.handleMessage(message);
 		});
 
