@@ -1,6 +1,6 @@
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
-import { createReplyBot, ReplyBotImpl } from './bot-builder';
+import { createReplyBot, ReplyBotImpl, ReplyBotConfig } from './bot-builder';
 import { DiscordService, logger } from '@starbunk/shared';
 
 /**
@@ -47,7 +47,7 @@ export class BotFactory {
 	 */
 	public static injectDiscordService(bot: ReplyBotImpl, discordService: DiscordService): ReplyBotImpl {
 		// Create a new bot with the same config but with DiscordService injected
-		const originalConfig = (bot as ReplyBotImpl & { _config?: unknown })._config;
+		const originalConfig = (bot as ReplyBotImpl & { _config?: ReplyBotConfig })._config;
 		if (originalConfig) {
 			return createReplyBot({
 				...originalConfig,
