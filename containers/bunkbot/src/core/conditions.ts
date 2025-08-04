@@ -1,4 +1,6 @@
 import { isDebugMode, logger } from '@starbunk/shared';
+import { LLMFactory, LLMProviderType } from '@starbunk/shared/dist/services/llm/llmFactory';
+import { LLMMessage } from '@starbunk/shared/dist/services/llm/llmService';
 import { Message } from 'discord.js';
 
 // Simple user IDs for testing and development
@@ -371,15 +373,43 @@ export function contextWithinTimeframeOf(
 export function llmDetects(prompt: string): TriggerCondition {
 	return async (message: Message): Promise<boolean> => {
 		try {
-			// TODO: Implement LLM service integration
-			logger.debug(`LLM detection requested for prompt: "${prompt}" on message: "${message.content}"`);
+			// Implement LLM service integration
+			logger.debug(`🧠 LLM detection requested for prompt: "${prompt}" on message: "${message.content}"`);
 
-			// For now, return false to disable LLM-based conditions
-			// This will be implemented when LLM service is properly integrated
-			return false;
+			// Determine LLM provider (default to OpenAI if available, fallback to Ollama)
+			const provider = process.env.OPENAI_API_KEY ? LLMProviderType.OPENAI : LLMProviderType.OLLAMA;
+			const llmService = LLMFactory.createProviderFromEnv(provider, logger);
+
+			// Prepare messages for LLM analysis
+			const messages: LLMMessage[] = [
+				{
+					role: 'system',
+					content: `You are a message analyzer. Analyze the user's message and respond with only "true" or "false" based on this criteria: ${prompt}`
+				},
+				{
+					role: 'user',
+					content: message.content
+				}
+			];
+
+			// Generate analysis using LLM
+			const response = await llmService.createCompletion({
+				messages,
+				model: 'gpt-3.5-turbo',
+				temperature: 0.1, // Low temperature for consistent analysis
+				maxTokens: 10 // Short response expected
+			});
+
+			// Parse the response to boolean
+			const result = response.content.toLowerCase().trim();
+			const isMatch = result === 'true' || result.startsWith('true');
+
+			logger.debug(`🧠 LLM analysis result: ${result} -> ${isMatch}`);
+			return isMatch;
 
 		} catch (error) {
-			logger.error(`LLM query failed in llmDetects: ${error instanceof Error ? error.message : String(error)}`);
+			logger.error(`❌ LLM query failed in llmDetects: ${error instanceof Error ? error.message : String(error)}`);
+			// Fallback to false on error to prevent bot from triggering unexpectedly
 			return false;
 		}
 	};

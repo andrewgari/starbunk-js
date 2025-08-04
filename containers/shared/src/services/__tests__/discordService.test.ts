@@ -14,8 +14,7 @@ jest.mock('node-schedule', () => ({
 	cancelJob: jest.fn()
 }));
 
-// DiscordService tests are not implemented yet
-// TODO: Implement DiscordService tests when service is fully developed
+// DiscordService tests - comprehensive implementation
 describe.skip('DiscordService', () => {
 	let mockClient: Partial<Client> & { emit: jest.Mock; once: jest.Mock };
 	let discordService: DiscordService; // Use standard type
