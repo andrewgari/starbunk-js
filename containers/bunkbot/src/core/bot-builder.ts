@@ -167,13 +167,11 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 
 			// Enhanced bot message filtering
 			if (validConfig.skipBotMessages && message.author.bot) {
-				// Check if this is an E2E test message first
+				// Check if this is an E2E test message first (must be specific E2E Test User)
 				const isE2ETestMessage = (
-					process.env.E2E_TEST_ENABLED === 'true' && (
-						message.author?.username === 'E2E Test User' ||  // Webhook messages
-						message.webhookId !== null ||                     // Any webhook message
-						message.author?.id === process.env.E2E_TEST_USER_ID // E2E bot messages
-					)
+					(process.env.E2E_TEST_ENABLED === 'true' || process.env.DEBUG_MODE === 'true') &&
+					message.author?.username === 'E2E Test User' &&  // Only actual E2E Test User messages
+					message.webhookId !== null                        // Must be webhook
 				);
 
 				if (isE2ETestMessage) {

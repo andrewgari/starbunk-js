@@ -1,9 +1,9 @@
 import { BotIdentity } from '../../types/botIdentity';
-import { and, fromUser, not, withChance } from '../../core/conditions';
+import { and, fromUser, not, withChance, matchesPattern } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { ConfigurationService } from '../../services/configurationService';
 import { BotIdentityService } from '../../services/botIdentityService';
-import { CHAD_BOT_NAME, CHAD_RESPONSE, CHAD_RESPONSE_CHANCE } from './constants';
+import { CHAD_BOT_NAME, CHAD_RESPONSE } from './constants';
 
 // Initialize services
 const configService = new ConfigurationService();
@@ -19,7 +19,7 @@ async function getChadUserId(): Promise<string | null> {
 	return configService.getUserIdByUsername('Chad');
 }
 
-// Chad bot trigger - 1% chance to respond, but never responds to the real Chad
+// Chad bot trigger - responds to gym/protein/fitness keywords, but never responds to the real Chad
 export const chadKeywordTrigger = createTriggerResponse({
 	name: 'chad-keyword-trigger',
 	priority: 1,
@@ -29,10 +29,11 @@ export const chadKeywordTrigger = createTriggerResponse({
 			return false; // Skip if Chad's user ID not found
 		}
 
-		// Check if message is not from Chad and passes chance check
+		// Check if message is not from Chad and contains fitness-related keywords
 		const notFromChad = not(fromUser(chadUserId));
-		const chanceCheck = withChance(CHAD_RESPONSE_CHANCE);
-		const combinedCondition = and(notFromChad, chanceCheck);
+		// Match gym/protein/fitness keywords (case-insensitive)
+		const keywordPattern = matchesPattern(/\b(gym|protein|gains|chad|workout|fitness|lifting|muscle|bulk|cut|rep|set)\b/i);
+		const combinedCondition = and(notFromChad, keywordPattern);
 
 		return combinedCondition(message);
 	},
