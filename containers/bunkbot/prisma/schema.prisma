@@ -17,13 +17,13 @@ datasource db {
 model Campaign {
   id            String       @id @default(uuid())
   name          String
-  system        String       // Stored as JSON string
+  system        Json
   textChannelId String
   voiceChannelId String
   gmId          String
   adventureId   String?
   isActive      Boolean      @default(true)
-  metadata      String?      // Stored as JSON string
+  metadata      Json?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
