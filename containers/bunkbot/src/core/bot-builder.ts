@@ -40,7 +40,7 @@ function getBotIdentityService(): BotIdentityService | null {
 		if (container && container.get) {
 			return container.get<BotIdentityService>(ServiceId.BotIdentityService);
 		}
-	} catch (error) {
+	} catch (_error) {
 		// Container might not be available or service not registered
 		logger.debug('[BotBuilder] BotIdentityService not available from container');
 	}

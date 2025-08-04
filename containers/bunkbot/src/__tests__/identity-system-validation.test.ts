@@ -5,7 +5,7 @@
  */
 
 import { BotRegistry } from '../botRegistry';
-import { DiscordService } from '@starbunk/shared';
+// import { DiscordService } from '@starbunk/shared';
 
 describe('Bot Identity System Validation', () => {
   let bots: any[];

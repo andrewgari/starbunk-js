@@ -5,8 +5,8 @@
  * isn't working in the live E2E test environment.
  */
 
-import { Client, GatewayIntentBits, TextChannel } from 'discord.js';
-import { DiscordService, logger } from '@starbunk/shared';
+import { Client, TextChannel } from 'discord.js';
+import { DiscordService } from '@starbunk/shared';
 import { BotIdentity } from '../types/botIdentity';
 
 // Mock logger to capture debug output

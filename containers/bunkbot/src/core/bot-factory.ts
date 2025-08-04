@@ -47,7 +47,7 @@ export class BotFactory {
 	 */
 	public static injectDiscordService(bot: ReplyBotImpl, discordService: DiscordService): ReplyBotImpl {
 		// Create a new bot with the same config but with DiscordService injected
-		const originalConfig = (bot as any)._config;
+		const originalConfig = (bot as ReplyBotImpl & { _config?: unknown })._config;
 		if (originalConfig) {
 			return createReplyBot({
 				...originalConfig,
