@@ -140,22 +140,15 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 				}
 			}
 
-			// Enhanced bot message filtering
-			if (validConfig.skipBotMessages && message.author.bot) {
-				// Import the enhanced filtering function
-				const { shouldExcludeFromReplyBots } = await import('./conditions');
-
-				if (shouldExcludeFromReplyBots(message)) {
-					if (isDebugMode()) {
-						logger.debug(`[${validConfig.name}] 🚫 Skipping excluded bot message from: ${message.author.username}`);
-					}
-					return;
-				}
-
-				// For non-excluded bot messages, log but continue processing
-				if (isDebugMode()) {
-					logger.debug(`[${validConfig.name}] ⚠️ Processing bot message from: ${message.author.username} (not excluded)`);
-				}
+			// NOTE: Bot message filtering is now handled by the centralized message filter
+			// at the main message handler level. The skipBotMessages config is deprecated
+			// but kept for backward compatibility. The centralized filter provides:
+			// - Default bot message blocking
+			// - Whitelist system for specific bot IDs  
+			// - Special handling for inverse behavior bots (BotBot)
+			// - Self-trigger prevention
+			if (isDebugMode() && validConfig.skipBotMessages && message.author.bot) {
+				logger.debug(`[${validConfig.name}] ⚠️ Bot message reached individual bot handler (bypassed centralized filter)`);
 			}
 
 			// Check blacklist (simple in-memory implementation)
