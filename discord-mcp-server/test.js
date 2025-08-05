@@ -32,13 +32,20 @@ server.on('close', (code) => {
   console.log('\n--- Test Results ---');
   console.log('Exit code:', code);
   
+  let testPassed = false;
+  
   if (errorOutput.includes('Failed to connect to Discord') || errorOutput.includes('Incorrect login details')) {
     console.log('✅ MCP server started correctly (expected Discord auth failure with fake token)');
+    testPassed = true;
   } else if (output.includes('Discord MCP Server') || errorOutput.includes('Discord MCP Server')) {
     console.log('✅ MCP server started correctly');
+    testPassed = true;
   } else {
     console.log('❌ Unexpected output:');
     console.log('STDOUT:', output);
     console.log('STDERR:', errorOutput);
+    testPassed = false;
   }
+  
+  process.exit(testPassed ? 0 : 1);
 });
