@@ -31,12 +31,16 @@ import ReplyBot from './replyBot';
 import { ConfigurationService } from './services/configurationService';
 import { BotIdentityService } from './services/botIdentityService';
 
+// Import centralized message filter
+import { getCentralizedMessageFilter, CentralizedMessageFilter } from './services/centralizedMessageFilter';
+
 class BunkBotContainer {
 	private client: any;
 	private webhookManager!: WebhookManager;
 	private messageFilter!: MessageFilter;
 	private configurationService!: ConfigurationService;
 	private botIdentityService!: BotIdentityService;
+	private centralizedMessageFilter!: CentralizedMessageFilter;
 	private hasInitialized = false;
 	private commands = new Map();
 	private healthServer: any;
@@ -117,6 +121,9 @@ class BunkBotContainer {
 		// Initialize configuration services
 		this.configurationService = new ConfigurationService();
 		this.botIdentityService = new BotIdentityService(this.configurationService);
+
+		// Initialize centralized message filter
+		this.centralizedMessageFilter = getCentralizedMessageFilter();
 
 		// Preload configuration cache
 		await this.configurationService.refreshCache();
@@ -240,6 +247,12 @@ private async deployCommands(): Promise<void> {
 		this.client.once(Events.ClientReady, async () => {
 			logger.info('🤖 BunkBot is ready and connected to Discord');
 
+			// Configure centralized message filter with bot ID now that client is ready
+			this.centralizedMessageFilter.updateConfig({
+				currentBotUserId: this.client.user?.id
+			});
+			logger.info(`🔧 Updated centralized message filter with bot ID: ${this.client.user?.id}`);
+
 			// Debug: Check if bot is in the target guild
 			const guildId = process.env.GUILD_ID;
 			if (guildId) {
@@ -267,19 +280,23 @@ private async deployCommands(): Promise<void> {
 	}
 
 	private async handleMessage(message: any): Promise<void> {
-		// Skip bot messages
-		if (message.author.bot) return;
-
 		try {
-			// Create message context for filtering
+			// Apply centralized message filtering
+			const filterResult = this.centralizedMessageFilter.shouldProcessMessage(message);
+			if (!filterResult.shouldProcess) {
+				// Message was filtered out - logging is handled in the filter
+				return;
+			}
+
+			// Create message context for legacy filtering (server/channel restrictions)
 			const context = MessageFilter.createContextFromMessage(message);
 
-			// Check if message should be processed
-			const filterResult = this.messageFilter.shouldProcessMessage(context);
-			if (!filterResult.allowed) {
+			// Check legacy message filter for server/channel restrictions
+			const legacyFilterResult = this.messageFilter.shouldProcessMessage(context);
+			if (!legacyFilterResult.allowed) {
 				// Message was filtered out - no need to log unless in debug mode
 				if (this.messageFilter.isDebugMode()) {
-					logger.debug(`Message filtered: ${filterResult.reason}`);
+					logger.debug(`Message filtered by legacy filter: ${legacyFilterResult.reason}`);
 				}
 				return;
 			}
@@ -309,7 +326,14 @@ private async deployCommands(): Promise<void> {
 		// Process message through each reply bot
 		for (const bot of this.replyBots) {
 			try {
-				// Check if bot should respond to this message
+				// Apply bot-specific centralized filtering
+				const botFilterResult = this.centralizedMessageFilter.shouldProcessMessage(message, bot.defaultBotName);
+				if (!botFilterResult.shouldProcess) {
+					logger.debug(`${bot.defaultBotName} skipped by centralized filter: ${botFilterResult.reason}`);
+					continue;
+				}
+
+				// Check if bot should respond to this message (legacy logic)
 				const shouldRespond = await bot.shouldRespond(message);
 
 				if (shouldRespond) {
