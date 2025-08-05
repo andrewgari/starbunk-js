@@ -165,31 +165,18 @@ describe('CentralizedMessageFilter', () => {
 			expect(result.wasBotMessage).toBe(true);
 		});
 
-		it('should handle different CovaBot name variations', () => {
-			const variations = [
-				{ username: 'CovaBot', displayName: 'CovaBot' },
-				{ username: 'COVABOT', displayName: 'COVABOT' },
-				{ username: 'cova-bot', displayName: 'cova-bot' },
-				{ username: 'cova_bot', displayName: 'cova_bot' },
-				{ username: 'TestBot', displayName: 'CovaBot' } // DisplayName contains pattern
-			];
+// … inside the forEach in the “should handle different CovaBot name variations” test
 
-			variations.forEach((authorData, index) => {
-				const message = createMockMessage({
-					author: { 
-						id: `44444444444444444${index}`, 
-						username: authorData.username, 
-						displayName: authorData.displayName,
-						bot: true 
-					}
-				});
-
-				const result = filter.shouldProcessMessage(message, 'BotBot');
-
-				expect(result.shouldProcess).toBe(false);
-				expect(result.reason).toBe(`Bot ${authorData.username} is excluded from processing`);
-			});
-		});
+const message = createMockMessage({
+  author: {
+    id: `44444444444444444${index}`,
+    username: authorData.username,
+    bot: true
+  },
+  member: {
+    displayName: authorData.displayName
+  }
+});
 	});
 
 	describe('Configuration management', () => {
