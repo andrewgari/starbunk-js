@@ -6,7 +6,7 @@ import { CentralizedMessageFilter, MessageFilterConfig } from '../centralizedMes
 import { Message } from 'discord.js';
 
 // Mock message helper
-function createMockMessage(overrides: Partial<any> = {}): Message {
+function createMockMessage(overrides: Partial<Message> = {}): Message {
 	return {
 		author: {
 			id: '123456789012345678',
