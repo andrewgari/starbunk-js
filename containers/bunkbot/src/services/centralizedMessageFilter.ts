@@ -49,6 +49,11 @@ export class CentralizedMessageFilter {
 
 	/**
 	 * Main filtering function - determines if a message should be processed
+	 * 
+	 * DEFAULT BEHAVIOR: Skip all bot messages to prevent infinite loops
+	 * EXCEPTIONS:
+	 * - Whitelisted bot IDs (E2E testing)
+	 * - Inverse behavior bots (BotBot) skip user messages instead
 	 */
 	public shouldProcessMessage(message: Message, requestingBotName?: string): MessageFilterResult {
 		const messageInfo = {
@@ -69,12 +74,12 @@ export class CentralizedMessageFilter {
 			return result;
 		}
 
-		// 2. Handle inverse behavior bots (BotBot)
+		// 2. Handle inverse behavior bots (BotBot) - they skip user messages instead
 		if (requestingBotName && this.config.inverseBehaviorBots.includes(requestingBotName)) {
 			return this.handleInverseBehaviorBot(message, messageInfo, requestingBotName);
 		}
 
-		// 3. Handle regular bots - check if it's a bot message
+		// 3. DEFAULT BEHAVIOR: Skip all bot messages (prevents infinite loops)
 		if (message.author.bot) {
 			return this.handleBotMessage(message, messageInfo, requestingBotName);
 		}
@@ -114,6 +119,9 @@ export class CentralizedMessageFilter {
 
 	/**
 	 * Handle messages from Discord bots
+	 * 
+	 * DEFAULT: Skip all bot messages to prevent infinite loops
+	 * EXCEPTION: Only whitelisted bot IDs (E2E testing) are allowed
 	 */
 	private handleBotMessage(
 		message: Message, 
@@ -121,21 +129,9 @@ export class CentralizedMessageFilter {
 		requestingBotName?: string,
 		isInverseBehaviorBot: boolean = false
 	): MessageFilterResult {
-		// Check whitelist first
-		if (this.config.whitelistedBotIds.includes(message.author.id)) {
-			const result: MessageFilterResult = {
-				shouldProcess: true,
-				reason: `Bot ${message.author.username} (${message.author.id}) is whitelisted`,
-				wasBotMessage: true,
-			};
-			this.logFilterDecision(messageInfo, result, requestingBotName);
-			return result;
-		}
-
-		// Apply default bot filtering behavior
+		// For inverse behavior bots (BotBot), handle differently
 		if (isInverseBehaviorBot) {
-			// Inverse behavior bot should process non-whitelisted bot messages
-			// but we still want to exclude certain problematic bots
+			// Still exclude problematic bots even for inverse behavior bots
 			if (this.shouldExcludeBotFromProcessing(message)) {
 				const result: MessageFilterResult = {
 					shouldProcess: false,
@@ -146,6 +142,7 @@ export class CentralizedMessageFilter {
 				return result;
 			}
 
+			// Inverse behavior bot processes bot messages (but not whitelisted ones get special handling)
 			const result: MessageFilterResult = {
 				shouldProcess: true,
 				reason: `Inverse behavior bot processing bot message from ${message.author.username}`,
@@ -155,10 +152,21 @@ export class CentralizedMessageFilter {
 			return result;
 		}
 
-		// Default behavior: ignore bot messages
+		// For regular bots: ONLY allow whitelisted bot IDs (E2E testing)
+		if (this.config.whitelistedBotIds.includes(message.author.id)) {
+			const result: MessageFilterResult = {
+				shouldProcess: true,
+				reason: `Bot ${message.author.username} (${message.author.id}) is whitelisted for E2E testing`,
+				wasBotMessage: true,
+			};
+			this.logFilterDecision(messageInfo, result, requestingBotName);
+			return result;
+		}
+
+		// DEFAULT BEHAVIOR: Skip all other bot messages to prevent infinite loops
 		const result: MessageFilterResult = {
 			shouldProcess: false,
-			reason: `Default bot filtering: ignoring message from bot ${message.author.username}`,
+			reason: `Default bot filtering: ignoring message from bot ${message.author.username} to prevent infinite loops`,
 			wasBotMessage: true,
 		};
 		this.logFilterDecision(messageInfo, result, requestingBotName);

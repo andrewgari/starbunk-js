@@ -70,7 +70,7 @@ describe('CentralizedMessageFilter', () => {
 			const result = filter.shouldProcessMessage(message);
 
 			expect(result.shouldProcess).toBe(false);
-			expect(result.reason).toBe('Default bot filtering: ignoring message from bot SomeBot');
+			expect(result.reason).toBe('Default bot filtering: ignoring message from bot SomeBot to prevent infinite loops');
 			expect(result.wasBotMessage).toBe(true);
 		});
 	});
@@ -84,7 +84,7 @@ describe('CentralizedMessageFilter', () => {
 			const result = filter.shouldProcessMessage(message);
 
 			expect(result.shouldProcess).toBe(false);
-			expect(result.reason).toBe('Default bot filtering: ignoring message from bot RandomBot');
+			expect(result.reason).toBe('Default bot filtering: ignoring message from bot RandomBot to prevent infinite loops');
 			expect(result.wasBotMessage).toBe(true);
 		});
 
@@ -96,7 +96,7 @@ describe('CentralizedMessageFilter', () => {
 			const result = filter.shouldProcessMessage(message);
 
 			expect(result.shouldProcess).toBe(true);
-			expect(result.reason).toBe('Bot WhitelistedBot (111111111111111111) is whitelisted');
+			expect(result.reason).toBe('Bot WhitelistedBot (111111111111111111) is whitelisted for E2E testing');
 			expect(result.wasBotMessage).toBe(true);
 		});
 
@@ -250,7 +250,7 @@ describe('CentralizedMessageFilter', () => {
 			const result = filter.shouldProcessMessage(message, 'UnknownBot');
 
 			expect(result.shouldProcess).toBe(false);
-			expect(result.reason).toBe('Default bot filtering: ignoring message from bot SomeBot');
+			expect(result.reason).toBe('Default bot filtering: ignoring message from bot SomeBot to prevent infinite loops');
 		});
 	});
 
