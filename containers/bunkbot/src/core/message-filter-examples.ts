@@ -2,7 +2,6 @@
  * Examples of custom message filtering functions for different bot behaviors
  */
 
-import { Message } from 'discord.js';
 import { MessageFilterFunction, defaultMessageFilter } from './bot-builder';
 import { ConfigurationService } from '../services/configurationService';
 
@@ -66,7 +65,7 @@ export function createChannelFilter(options: {
 		}
 		
 		return false;
-	});
+	};
 }
 
 /**
@@ -105,7 +104,7 @@ export function createRoleBasedFilter(options: {
 		}
 		
 		return false;
-	});
+	};
 }
 
 /**
@@ -150,7 +149,7 @@ export function createContentFilter(options: {
 		}
 		
 		return false;
-	});
+	};
 }
 
 /**
