@@ -170,7 +170,7 @@ export class CentralizedMessageFilter {
 	 */
 	private shouldExcludeBotFromProcessing(message: Message): boolean {
 		const botName = message.author.username?.toLowerCase() || '';
-		const displayName = (message.author as any).displayName?.toLowerCase() || '';
+		const displayName = message.member?.displayName?.toLowerCase() || '';
 
 		// Exclude CovaBot and its variants
 		const excludedPatterns = [
