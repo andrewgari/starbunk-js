@@ -10,7 +10,7 @@ export default BotFactory.createBot({
 		avatarUrl: '' // Will be overridden by dynamic identity
 	},
 	// Skip bot messages to avoid loops
-	skipBotMessages: true,
+
 	// Ordered by priority (higher number = higher priority)
 	triggers: [cringeTrigger, randomVennTrigger]
 });

@@ -5,6 +5,38 @@ import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
 
 /**
+ * Type for message filtering function
+ */
+export type MessageFilterFunction = (message: Message) => boolean | Promise<boolean>;
+
+/**
+ * Default message filter that bots use unless they provide their own
+ * Skips messages from excluded bots, allows others through
+ */
+export async function defaultMessageFilter(message: Message): Promise<boolean> {
+	// Skip messages from bots with enhanced filtering
+	if (message.author.bot) {
+		// Import the enhanced filtering function
+		const { shouldExcludeFromReplyBots } = await import('./conditions');
+		
+		if (shouldExcludeFromReplyBots(message)) {
+			if (isDebugMode()) {
+				logger.debug(`🚫 Skipping excluded bot message from: ${message.author.username}`);
+			}
+			return true; // Skip this message
+		}
+
+		// For non-excluded bot messages, log but continue processing
+		if (isDebugMode()) {
+			logger.debug(`⚠️ Processing bot message from: ${message.author.username} (not excluded)`);
+		}
+		return false; // Don't skip
+	}
+
+	return false; // Don't skip by default
+}
+
+/**
  * Strongly typed bot name
  */
 export type BotReplyName = string;
@@ -38,7 +70,8 @@ export interface ReplyBotConfig {
 	triggers: TriggerResponse[];
 	defaultResponseRate?: number; // Bot's default response rate (overrides global default)
 	responseRate?: number; // Specific response rate for this bot (overrides defaultResponseRate)
-	skipBotMessages?: boolean; // Whether to skip processing messages from other bots
+	messageFilter?: MessageFilterFunction; // Custom message filtering function
+	skipBotMessages?: boolean; // Whether to skip processing messages from other bots (deprecated - use messageFilter)
 	disabled?: boolean; // Whether the bot is disabled
 	discordService?: DiscordService; // Discord service for sending messages (optional)
 }
@@ -52,7 +85,7 @@ export interface ValidatedReplyBotConfig {
 	defaultIdentity: BotIdentity;
 	triggers: TriggerResponse[];
 	defaultResponseRate: number; // Bot's default response rate
-	skipBotMessages: boolean; // Whether to skip processing messages from other bots
+	messageFilter: MessageFilterFunction; // Message filtering function
 	disabled: boolean; // Whether the bot is disabled
 	discordService?: DiscordService; // Discord service for sending messages (optional)
 }
@@ -79,13 +112,25 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 	const responseRate = config.responseRate ?? config.defaultResponseRate ?? getBotDefaults().responseRate;
 	const disabled = config.disabled ?? false;
 
+	// Use custom messageFilter if provided, otherwise use default behavior
+	let messageFilter: MessageFilterFunction;
+	if (config.messageFilter) {
+		messageFilter = config.messageFilter;
+	} else if (config.skipBotMessages === false) {
+		// If explicitly set to false, never skip messages
+		messageFilter = async () => false;
+	} else {
+		// Default behavior - use default message filter
+		messageFilter = defaultMessageFilter;
+	}
+
 	return {
 		name: createBotReplyName(config.name),
 		description: createBotDescription(config.description),
 		defaultIdentity: config.defaultIdentity,
 		triggers: config.triggers,
 		defaultResponseRate: responseRate,
-		skipBotMessages: config.skipBotMessages ?? true, // Default to true for safer behavior
+		messageFilter,
 		disabled,
 		discordService: config.discordService, // DiscordService (optional)
 	};
@@ -140,22 +185,13 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 				}
 			}
 
-			// Enhanced bot message filtering
-			if (validConfig.skipBotMessages && message.author.bot) {
-				// Import the enhanced filtering function
-				const { shouldExcludeFromReplyBots } = await import('./conditions');
-
-				if (shouldExcludeFromReplyBots(message)) {
-					if (isDebugMode()) {
-						logger.debug(`[${validConfig.name}] 🚫 Skipping excluded bot message from: ${message.author.username}`);
-					}
-					return;
-				}
-
-				// For non-excluded bot messages, log but continue processing
+			// Use message filtering function
+			const shouldSkip = await validConfig.messageFilter(message);
+			if (shouldSkip) {
 				if (isDebugMode()) {
-					logger.debug(`[${validConfig.name}] ⚠️ Processing bot message from: ${message.author.username} (not excluded)`);
+					logger.debug(`[${validConfig.name}] 🚫 Skipping message based on filter from: ${message.author.username}`);
 				}
+				return;
 			}
 
 			// Check blacklist (simple in-memory implementation)

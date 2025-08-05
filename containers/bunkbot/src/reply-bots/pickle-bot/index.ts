@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: PICKLE_BOT_NAME,
 		avatarUrl: PICKLE_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [pickleTrigger]
 });

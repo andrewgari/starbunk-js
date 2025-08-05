@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: HOMONYM_BOT_NAME,
 		avatarUrl: HOMONYM_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [homonymTrigger]
 });

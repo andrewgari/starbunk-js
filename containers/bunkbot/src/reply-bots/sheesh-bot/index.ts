@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: SHEESH_BOT_NAME,
 		avatarUrl: SHEESH_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [sheeshTrigger]
 });

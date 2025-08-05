@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: CHECK_BOT_NAME,
 		avatarUrl: CHECK_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [checkTrigger]
 });

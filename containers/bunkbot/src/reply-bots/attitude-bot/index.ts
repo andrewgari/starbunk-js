@@ -10,6 +10,5 @@ export default BotFactory.createBot({
 		botName: ATTITUDE_BOT_NAME,
 		avatarUrl: ATTITUDE_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
 	triggers: [attitudeTrigger]
 });

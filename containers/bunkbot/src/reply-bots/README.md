@@ -24,7 +24,7 @@ export default createBot({
   responses: ['Hello there!', 'Hi!', 'Hey, how are you?'],
   avatarUrl: 'https://example.com/avatar.png',
   responseRate: 80 // Optional: respond 80% of the time
-  // skipBotMessages is true by default
+  // Default message filtering applies automatically
 });
 ```
 
@@ -40,7 +40,7 @@ The `createBot()` function accepts the following options:
 | `responses` | string[] | Yes | Array of possible responses |
 | `avatarUrl` | string | No | URL to the avatar image for your bot |
 | `responseRate` | number | No | Percentage chance of responding (0-100) |
-| `skipBotMessages` | boolean | No | Whether to ignore messages from other bots (defaults to true) |
+| `messageFilter` | function | No | Custom message filtering function (uses default filtering if not provided) |
 
 ### Pattern and Response Matching
 

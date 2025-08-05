@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: NICE_BOT_NAME,
 		avatarUrl: NICE_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [niceTrigger]
 });

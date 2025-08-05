@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: EZIO_BOT_NAME,
 		avatarUrl: EZIO_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [ezioTrigger]
 });

@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: GUY_BOT_NAME,
 		avatarUrl: GUY_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [guyTrigger]
 });

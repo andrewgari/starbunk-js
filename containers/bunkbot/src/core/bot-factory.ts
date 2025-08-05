@@ -2,6 +2,12 @@ import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
 import { createReplyBot, ReplyBotImpl } from './bot-builder';
 import { DiscordService } from '@starbunk/shared';
+import { Message } from 'discord.js';
+
+/**
+ * Type for message filtering function
+ */
+export type MessageFilterFunction = (message: Message) => boolean | Promise<boolean>;
 
 /**
  * Interface for bot configuration
@@ -13,7 +19,8 @@ export interface BotConfig {
 	triggers: TriggerResponse[];
 	defaultResponseRate?: number;
 	responseRate?: number;
-	skipBotMessages?: boolean;
+	messageFilter?: MessageFilterFunction;
+	skipBotMessages?: boolean; // Deprecated - use messageFilter instead
 	disabled?: boolean;
 	discordService?: DiscordService; // Discord service for sending messages (optional)
 }
@@ -31,3 +38,6 @@ export class BotFactory {
 		return createReplyBot(config);
 	}
 }
+
+// Re-export default message filter for reference in custom filters
+export { defaultMessageFilter } from './bot-builder';
