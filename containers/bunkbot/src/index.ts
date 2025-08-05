@@ -281,7 +281,8 @@ private async deployCommands(): Promise<void> {
 
 	private async handleMessage(message: any): Promise<void> {
 		try {
-			// Apply centralized message filtering
+			// Bot message filtering is now handled by the centralized message filter.
+			// The explicit `if (message.author.bot) return;` check is no longer needed here.
 			const filterResult = this.centralizedMessageFilter.shouldProcessMessage(message);
 			if (!filterResult.shouldProcess) {
 				// Message was filtered out - logging is handled in the filter
