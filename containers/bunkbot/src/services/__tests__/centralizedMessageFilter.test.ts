@@ -272,8 +272,10 @@ describe('CentralizedMessageFilter', () => {
 
 			filter.shouldProcessMessage(message);
 
-			// Verify that logging would occur (actual logger implementation may vary)
-			expect(true).toBe(true); // Placeholder - actual logging test would check logger calls
+			// Verify that logging occurred
+			expect(console.log).toHaveBeenCalled();
+			// Or more specifically:
+			// expect(console.log).toHaveBeenCalledWith(expect.stringContaining('[GLOBAL] ✅ ALLOWED'));
 		});
 	});
 });
