@@ -4,18 +4,19 @@
 
 import { MessageFilterFunction, defaultMessageFilter } from './bot-builder';
 import { ConfigurationService } from '../services/configurationService';
-
-// Initialize services for identity-based filtering
-const configService = new ConfigurationService();
+import { ChannelType } from 'discord.js';
 
 /**
  * Skip messages from the bot's own identity
  * Useful for bots that impersonate real users to avoid responding to themselves
  */
-export function createSelfAwareFilter(botIdentityUsername: string): MessageFilterFunction {
+export function createSelfAwareFilter(
+	botIdentityUsername: string, 
+	configService: ConfigurationService
+): MessageFilterFunction {
 	return async (message) => {
 		// Apply default filtering first (optional)
-		if (await defaultMessageFilter(message)) {
+		if (defaultMessageFilter(message)) {
 			return true;
 		}
 		
@@ -41,16 +42,16 @@ export function createChannelFilter(options: {
 }): MessageFilterFunction {
 	return async (message) => {
 		// Apply default filtering first (optional)
-		if (await defaultMessageFilter(message)) {
+		if (defaultMessageFilter(message)) {
 			return true;
 		}
 		// Handle DM filtering
-		if (message.channel.type === 'DM') {
+		if (message.channel.type === ChannelType.DM) {
 			return !options.allowDMs;
 		}
 		
 		// Handle guild channel filtering
-		if (message.channel.type === 'GUILD_TEXT') {
+		if (message.channel.type === ChannelType.GuildText) {
 			const channelName = message.channel.name;
 			
 			// Check blocked channels first
@@ -77,7 +78,7 @@ export function createRoleBasedFilter(options: {
 }): MessageFilterFunction {
 	return async (message) => {
 		// Apply default filtering first (optional)
-		if (await defaultMessageFilter(message)) {
+		if (defaultMessageFilter(message)) {
 			return true;
 		}
 		// Only works in guild channels
@@ -118,7 +119,7 @@ export function createContentFilter(options: {
 }): MessageFilterFunction {
 	return async (message) => {
 		// Apply default filtering first (optional)
-		if (await defaultMessageFilter(message)) {
+		if (defaultMessageFilter(message)) {
 			return true;
 		}
 		const content = message.content;
@@ -161,7 +162,7 @@ export function createTimeBasedFilter(options: {
 }): MessageFilterFunction {
 	return async (message) => {
 		// Apply default filtering first (optional)
-		if (await defaultMessageFilter(message)) {
+		if (defaultMessageFilter(message)) {
 			return true;
 		}
 		if (!options.allowedHours) {
@@ -170,38 +171,52 @@ export function createTimeBasedFilter(options: {
 		
 		const now = new Date();
 		const currentHour = options.timezone 
-			? new Date(now.toLocaleString("en-US", { timeZone: options.timezone })).getHours()
+			? new Intl.DateTimeFormat('en-US', { 
+				timeZone: options.timezone, 
+				hour: 'numeric', 
+				hour12: false 
+			}).formatToParts(now).find(part => part.type === 'hour')?.value || '0'
 			: now.getHours();
 		
-		return !options.allowedHours.includes(currentHour);
+		const hour = typeof currentHour === 'string' ? parseInt(currentHour, 10) : currentHour;
+		
+		return !options.allowedHours.includes(hour);
 	};
 }
 
 /**
  * Composite example: Chad bot that doesn't respond to itself and has time restrictions
+ * Factory function that creates a filter with injected dependencies
  */
-export const chadMessageFilter: MessageFilterFunction = async (message) => {
-	// Apply default filtering first (optional)
-	if (await defaultMessageFilter(message)) {
-		return true;
-	}
-	// Don't respond to Chad himself
-	const chadUserId = await configService.getUserIdByUsername('Chad');
-	if (chadUserId && message.author.id === chadUserId) {
-		return true;
-	}
-	
-	// Only respond during "gym hours" (6 AM - 10 PM EST)
-	const now = new Date();
-	const estHour = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" })).getHours();
-	if (estHour < 6 || estHour > 22) {
-		return true; // Chad is sleeping or resting
-	}
-	
-	// Don't respond to messages that are too short (Chad likes substance)
-	if (message.content.trim().length < 10) {
-		return true;
-	}
-	
-	return false;
-};
+export function createChadMessageFilter(configService: ConfigurationService): MessageFilterFunction {
+	return async (message) => {
+		// Apply default filtering first (optional)
+		if (defaultMessageFilter(message)) {
+			return true;
+		}
+		// Don't respond to Chad himself
+		const chadUserId = await configService.getUserIdByUsername('Chad');
+		if (chadUserId && message.author.id === chadUserId) {
+			return true;
+		}
+		
+		// Only respond during "gym hours" (6 AM - 10 PM EST)
+		const now = new Date();
+		const estHourPart = new Intl.DateTimeFormat('en-US', {
+			timeZone: 'America/New_York',
+			hour: 'numeric',
+			hour12: false
+		}).formatToParts(now).find(part => part.type === 'hour')?.value || '0';
+		const estHour = parseInt(estHourPart, 10);
+		if (estHour < 6 || estHour > 22) {
+			return true; // Chad is sleeping or resting
+		}
+		
+		// Don't respond to messages that are too short (Chad likes substance)
+		if (message.content.trim().length < 10) {
+			return true;
+		}
+		
+		return false;
+	};
+}

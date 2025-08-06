@@ -115,7 +115,10 @@ class DiscordMCPServer {
     async sendMessage(channelId, message) {
         try {
             const channel = await this.discordClient.channels.fetch(channelId);
-            if (!channel || (!channel.isTextBased())) {
+            if (!channel) {
+                throw new Error(`Channel ${channelId} not found`);
+            }
+            if (!channel.isTextBased()) {
                 throw new Error(`Channel ${channelId} not found or is not a text channel`);
             }
             const textChannel = channel;

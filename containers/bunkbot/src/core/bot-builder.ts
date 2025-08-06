@@ -3,6 +3,7 @@ import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
+import { shouldExcludeFromReplyBots } from './conditions';
 
 /**
  * Type for message filtering function
@@ -13,12 +14,9 @@ export type MessageFilterFunction = (message: Message) => boolean | Promise<bool
  * Default message filter that bots use unless they provide their own
  * Skips messages from excluded bots, allows others through
  */
-export async function defaultMessageFilter(message: Message): Promise<boolean> {
+export function defaultMessageFilter(message: Message): boolean {
 	// Skip messages from bots with enhanced filtering
 	if (message.author.bot) {
-		// Import the enhanced filtering function
-		const { shouldExcludeFromReplyBots } = await import('./conditions');
-		
 		if (shouldExcludeFromReplyBots(message)) {
 			if (isDebugMode()) {
 				logger.debug(`🚫 Skipping excluded bot message from: ${message.author.username}`);

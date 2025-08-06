@@ -40,7 +40,7 @@ The `createBot()` function accepts the following options:
 | `responses` | string[] | Yes | Array of possible responses |
 | `avatarUrl` | string | No | URL to the avatar image for your bot |
 | `responseRate` | number | No | Percentage chance of responding (0-100) |
-| `messageFilter` | function | No | Custom message filtering function (uses default filtering if not provided) |
+| `messageFilter` | `(message: Message) => boolean \| Promise<boolean>` | No | Custom message filtering function (uses default filtering if not provided) |
 
 ### Pattern and Response Matching
 

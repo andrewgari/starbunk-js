@@ -1,5 +1,10 @@
 import { BotFactory } from '../../core/bot-factory';
 import { createTriggerResponse } from '../../core/trigger-response';
+import { Message } from 'discord.js';
+import { shouldExcludeFromReplyBots } from '../../core/conditions';
+
+// Define spam words once for better performance
+const SPAM_WORDS = ['spam', 'advertisement', 'buy now'];
 
 export default BotFactory.createBot({
 	name: 'ExampleBot',
@@ -11,7 +16,7 @@ export default BotFactory.createBot({
 	triggers: [
 		createTriggerResponse({
 			name: 'example-trigger',
-			condition: (message: any) => {
+			condition: (message: Message) => {
 				const content = message.content.toLowerCase();
 				return /\bexample\b/i.test(content) || /\bsimple\b/i.test(content);
 			},
@@ -25,24 +30,24 @@ export default BotFactory.createBot({
 	
 	// Example of custom message filtering
 	// This bot defines its own complete filtering logic
-	messageFilter: async (message) => {
-		// Skip messages from bots (except non-excluded ones)
-		if (message.author.bot) {
-			const { shouldExcludeFromReplyBots } = await import('../../core/conditions');
-			if (shouldExcludeFromReplyBots(message)) {
-				return true; // Skip excluded bots
-			}
-		}
+	messageFilter: (message) => {
+		// Process message content once for better performance
+		const content = message.content;
+		const trimmedContent = content.trim();
 		
 		// Skip messages that are too short (less than 3 characters)
-		if (message.content.trim().length < 3) {
+		if (trimmedContent.length < 3) {
 			return true;
 		}
 		
+		// Skip messages from bots (except non-excluded ones)
+		if (message.author.bot && shouldExcludeFromReplyBots(message)) {
+			return true; // Skip excluded bots
+		}
+		
 		// Skip messages that contain spam keywords
-		const spamWords = ['spam', 'advertisement', 'buy now'];
-		const content = message.content.toLowerCase();
-		if (spamWords.some(word => content.includes(word))) {
+		const lowerContent = content.toLowerCase();
+		if (SPAM_WORDS.some(word => lowerContent.includes(word))) {
 			return true;
 		}
 		
