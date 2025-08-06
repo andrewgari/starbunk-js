@@ -40,7 +40,7 @@ The `createBot()` function accepts the following options:
 | `responses` | string[] | Yes | Array of possible responses |
 | `avatarUrl` | string | No | URL to the avatar image for your bot |
 | `responseRate` | number | No | Percentage chance of responding (0-100) |
-| `messageFilter` | `(message: Message) => boolean \| Promise<boolean>` | No | Custom message filtering function (uses default filtering if not provided) |
+| `messageFilter` | `(message: Message) => boolean \| Promise<boolean>` | No | Custom message filtering function (uses default filtering if not provided). E2E test clients are automatically whitelisted. |
 
 ### Pattern and Response Matching
 
@@ -50,6 +50,23 @@ The `createBot()` function handles different combinations of patterns and respon
 2. **Multiple patterns, one response**: The bot will respond with the same message for any matching pattern
 3. **Multiple patterns, multiple responses (equal count)**: Each pattern is matched with the corresponding response
 4. **One pattern, multiple responses**: The bot will randomly select one of the responses
+
+### E2E Testing Support
+
+Reply bots automatically whitelist E2E test clients to ensure they can receive bot responses during testing. Test clients are identified through:
+
+- **Runtime detection**: Messages from the same client ID as the bot (determined automatically at runtime)
+- **Environment variables**: Set `E2E_TEST_USER_ID` or `TEST_BOT_USER_ID` with your test client's Discord user ID
+- **Default test names**: Test clients named "TestBot", "E2EBot", "TestClient", or "E2E Test Bot" are automatically whitelisted
+- **Behavior**: E2E test clients bypass all message filters and will always receive bot responses (when triggers match)
+
+The runtime detection is the most reliable method as it automatically identifies when the bot is responding to messages from its own client instance during testing.
+
+Example:
+```bash
+# Optional: Set environment variable for additional test client
+export E2E_TEST_USER_ID="123456789012345678"
+```
 
 ## Traditional Approach (Advanced Usage)
 

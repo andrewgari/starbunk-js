@@ -1,7 +1,7 @@
 import { BotFactory } from '../../core/bot-factory';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { Message } from 'discord.js';
-import { shouldExcludeFromReplyBots } from '../../core/conditions';
+import { shouldExcludeFromReplyBots, isE2ETestClient } from '../../core/conditions';
 
 // Define spam words once for better performance
 const SPAM_WORDS = ['spam', 'advertisement', 'buy now'];
@@ -31,6 +31,11 @@ export default BotFactory.createBot({
 	// Example of custom message filtering
 	// This bot defines its own complete filtering logic
 	messageFilter: (message) => {
+		// Always allow E2E test clients (whitelisted for testing)
+		if (isE2ETestClient(message)) {
+			return false; // Don't skip - allow test clients
+		}
+
 		// Process message content once for better performance
 		const content = message.content;
 		const trimmedContent = content.trim();

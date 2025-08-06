@@ -3,7 +3,7 @@ import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
-import { shouldExcludeFromReplyBots } from './conditions';
+import { shouldExcludeFromReplyBots, isE2ETestClient } from './conditions';
 
 /**
  * Type for message filtering function
@@ -15,6 +15,19 @@ export type MessageFilterFunction = (message: Message) => boolean | Promise<bool
  * Skips messages from excluded bots, allows others through
  */
 export function defaultMessageFilter(message: Message): boolean {
+	// Handle null/undefined message gracefully
+	if (!message?.author) {
+		return false; // Default to not skip for malformed messages
+	}
+
+	// Always allow E2E test clients (whitelisted for testing)
+	if (isE2ETestClient(message)) {
+		if (isDebugMode()) {
+			logger.debug(`✅ Allowing E2E test client message from: ${message.author.username}`);
+		}
+		return false; // Don't skip - allow test clients
+	}
+
 	// Skip messages from bots with enhanced filtering
 	if (message.author.bot) {
 		if (shouldExcludeFromReplyBots(message)) {

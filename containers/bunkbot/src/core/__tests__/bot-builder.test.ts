@@ -1,7 +1,7 @@
 import { getDiscordService, DiscordService, logger, container, ServiceId } from '@starbunk/shared';
 import { Message, TextChannel, Webhook } from 'discord.js';
 import { mockBotIdentity, mockDiscordService, mockMessage, mockUser, mockGuild } from '../../test-utils/testUtils';
-import { createBotDescription, createBotReplyName, createReplyBot, setBotData } from '../bot-builder';
+import { createBotDescription, createBotReplyName, createReplyBot, setBotData, defaultMessageFilter } from '../bot-builder';
 
 // Mock the PrismaClient
 const mockBlacklistFindUnique = jest.fn().mockResolvedValue(null);
@@ -215,7 +215,7 @@ describe('Bot builder', () => {
 			expect(bot.metadata?.responseRate).toBe(100); // Default value
 		});
 
-		it('should skip bot messages by default when skipBotMessages is not specified', async () => {
+		it('should skip excluded bot messages by default when skipBotMessages is not specified', async () => {
 			const trigger = {
 				name: 'test-trigger',
 				condition: jest.fn().mockReturnValue(true),
@@ -234,18 +234,18 @@ describe('Bot builder', () => {
 			const bot = createReplyBot(config);
 			const botMessage = mockMessage({
 				content: 'Test message',
-				author: mockUser({ username: 'BotUser', bot: true })
+				author: mockUser({ id: '111222333444555666', username: 'CovaBot', bot: true })
 			});
 
 			await bot.processMessage(botMessage);
 
-			// Should skip the message without checking triggers since skipBotMessages defaults to true
+			// Should skip the message without checking triggers since CovaBot is excluded
 			expect(trigger.condition).not.toHaveBeenCalled();
 			expect(trigger.response).not.toHaveBeenCalled();
 			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
 		});
 
-		it('should skip bot messages when configured', async () => {
+		it('should skip excluded bot messages when configured', async () => {
 			const trigger = {
 				name: 'test-trigger',
 				condition: jest.fn().mockReturnValue(true),
@@ -264,12 +264,12 @@ describe('Bot builder', () => {
 			const bot = createReplyBot(config);
 			const botMessage = mockMessage({
 				content: 'Test message',
-				author: mockUser({ username: 'BotUser', bot: true })
+				author: mockUser({ id: '111222333444555666', username: 'CovaBot', bot: true })
 			});
 
 			await bot.processMessage(botMessage);
 
-			// Should skip the message without checking triggers
+			// Should skip the message without checking triggers since CovaBot is excluded
 			expect(trigger.condition).not.toHaveBeenCalled();
 			expect(trigger.response).not.toHaveBeenCalled();
 			expect(mockDiscordServiceInstance.sendMessageWithBotIdentity).not.toHaveBeenCalled();
@@ -295,7 +295,7 @@ describe('Bot builder', () => {
 			const bot = createReplyBot(config);
 			const botMessage = mockMessage({
 				content: 'Test message',
-				author: mockUser({ username: 'BotUser', bot: true })
+				author: mockUser({ id: '111222333444555666', username: 'CovaBot', bot: true })
 			});
 
 			await bot.processMessage(botMessage);
@@ -658,5 +658,123 @@ describe('Bot builder', () => {
 				);
 			});
 		});
+	});
+});
+
+describe('defaultMessageFilter', () => {
+	afterEach(() => {
+		// Clean up environment variables after each test
+		delete process.env.E2E_TEST_USER_ID;
+		delete process.env.TEST_BOT_USER_ID;
+	});
+
+	it('should allow E2E test client messages (runtime detection)', () => {
+		const testClientId = '123456789012345678';
+		const message = mockMessage({
+			content: 'test',
+			author: mockUser({ id: testClientId }),
+			client: {
+				user: mockUser({ id: testClientId })
+			}
+		});
+
+		const result = defaultMessageFilter(message);
+		expect(result).toBe(false); // false means don't skip (allow)
+	});
+
+	it('should allow E2E test client messages (by name)', () => {
+		const message = mockMessage({
+			content: 'test',
+			author: mockUser({ id: '123456789012345678', username: 'TestBot' })
+		});
+
+		const result = defaultMessageFilter(message);
+		expect(result).toBe(false); // false means don't skip (allow)
+	});
+
+	it('should allow E2E test client messages (by environment variable)', () => {
+		const testUserId = '123456789012345678';
+		process.env.E2E_TEST_USER_ID = testUserId;
+
+		const message = mockMessage({
+			content: 'test',
+			author: mockUser({ id: testUserId, username: 'RegularUser' })
+		});
+
+		const result = defaultMessageFilter(message);
+		expect(result).toBe(false); // false means don't skip (allow)
+	});
+
+	it('should skip excluded bot messages', () => {
+		const message = mockMessage({
+			content: 'test',
+			author: mockUser({ 
+				id: '123456789012345678', 
+				username: 'CovaBot',
+				bot: true 
+			})
+		});
+
+		const result = defaultMessageFilter(message);
+		expect(result).toBe(true); // true means skip
+	});
+
+	it('should allow non-excluded bot messages', () => {
+		const message = mockMessage({
+			content: 'test',
+			author: mockUser({ 
+				id: '123456789012345678', 
+				username: 'SomeOtherBot',
+				bot: true 
+			})
+		});
+
+		const result = defaultMessageFilter(message);
+		expect(result).toBe(false); // false means don't skip (allow)
+	});
+
+	it('should allow human user messages', () => {
+		const message = mockMessage({
+			content: 'test',
+			author: mockUser({ 
+				id: '123456789012345678', 
+				username: 'HumanUser',
+				bot: false 
+			})
+		});
+
+		const result = defaultMessageFilter(message);
+		expect(result).toBe(false); // false means don't skip (allow)
+	});
+
+	it('should prioritize E2E test client detection over exclusion', () => {
+		const testClientId = '123456789012345678';
+		const message = mockMessage({
+			content: 'test',
+			author: mockUser({ 
+				id: testClientId, 
+				username: 'CovaBot', // This would normally be excluded
+				bot: true 
+			}),
+			client: {
+				user: mockUser({ id: testClientId })
+			}
+		});
+
+		const result = defaultMessageFilter(message);
+		expect(result).toBe(false); // false means don't skip (E2E test client takes priority)
+	});
+
+	it('should handle null/undefined message gracefully', () => {
+		const result = defaultMessageFilter(null as any);
+		expect(result).toBe(false); // Default to not skip
+	});
+
+	it('should handle message without author gracefully', () => {
+		const message = mockMessage({ content: 'test' });
+		message.author = null as any;
+
+		const result = defaultMessageFilter(message);
+		expect(result).toBe(false); // Default to not skip
 	});
 });

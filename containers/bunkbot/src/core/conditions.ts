@@ -1,12 +1,6 @@
 import { isDebugMode, logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
 
-// Simple user IDs for testing and development
-const userIds = {
-	Cova: '139592376443338752', // Cova's actual Discord user ID
-	Venn: '123456789012345678', // Valid format placeholder for Venn
-	Chad: '123456789012345679' // Valid format placeholder for Chad
-};
 
 // Bot identification constants
 const BOT_IDENTIFIERS = {
@@ -22,7 +16,17 @@ const BOT_IDENTIFIERS = {
 
 	// Other bot identifiers to exclude
 	EXCLUDED_BOT_NAMES: ['CovaBot', 'Cova', 'DJCova', 'Snowbunk'],
-	EXCLUDED_BOT_IDS: [] as string[] // Can be populated with specific bot user IDs
+	EXCLUDED_BOT_IDS: [] as string[], // Can be populated with specific bot user IDs
+
+	// E2E Test client identifiers (whitelisted to allow bot responses during testing)
+	// Runtime detection via message.client.user.id is preferred over these static configurations
+	// Set environment variables E2E_TEST_USER_ID or TEST_BOT_USER_ID for additional test clients
+	TEST_CLIENT_NAMES: ['TestBot', 'E2EBot', 'TestClient', 'E2E Test Bot'],
+	TEST_CLIENT_IDS: [
+		process.env.E2E_TEST_USER_ID || '',
+		process.env.TEST_BOT_USER_ID || '',
+		'123456789012345680', // Default test bot ID placeholder
+	].filter(Boolean) as string[] // Remove empty strings
 };
 import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
@@ -109,10 +113,6 @@ export function contextContainsPhrase(phrase: string): ContextualTriggerConditio
 // Check if message is from specific user
 export function fromUser(userId: string | UserId): TriggerCondition {
 	return (message: Message) => {
-		if (isDebugMode()) {
-			// In debug mode, only allow Cova's user ID
-			return message.author.id === userIds.Cova;
-		}
 		const id = typeof userId === 'string' ? createUserId(userId) : userId;
 		return message.author.id === id;
 	};
@@ -215,6 +215,46 @@ export function isCovaBot(message: Message): boolean {
 			isCovaWebhook,
 			result
 		});
+	}
+
+	return result;
+}
+
+/**
+ * Check if message is from an E2E test client that should be whitelisted
+ */
+export function isE2ETestClient(message: Message): boolean {
+	if (!message?.author) return false;
+
+	const username = message.author.username?.toLowerCase() || '';
+	const displayName = message.author.displayName?.toLowerCase() || '';
+
+	// Check if it's from the same client ID at runtime (test scenario)
+	const runtimeClientId = message.client?.user?.id;
+	if (runtimeClientId && message.author.id === runtimeClientId) {
+		if (isDebugMode()) {
+			logger.debug(`✅ Identified E2E test client (same client ID): ${message.author.username} (${message.author.id})`);
+		}
+		return true;
+	}
+
+	// Check test client names
+	const isTestClientName = BOT_IDENTIFIERS.TEST_CLIENT_NAMES.some(name =>
+		username === name.toLowerCase() || displayName === name.toLowerCase()
+	);
+
+	// Check test client IDs from environment variables (checked dynamically for test flexibility)
+	const dynamicTestClientIds = [
+		process.env.E2E_TEST_USER_ID,
+		process.env.TEST_BOT_USER_ID,
+		...BOT_IDENTIFIERS.TEST_CLIENT_IDS
+	].filter(Boolean);
+	const isTestClientId = dynamicTestClientIds.includes(message.author.id);
+
+	const result = isTestClientName || isTestClientId;
+
+	if (result && isDebugMode()) {
+		logger.debug(`✅ Identified E2E test client: ${message.author.username} (${message.author.id})`);
 	}
 
 	return result;

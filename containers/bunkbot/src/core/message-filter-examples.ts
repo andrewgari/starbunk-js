@@ -5,6 +5,7 @@
 import { MessageFilterFunction, defaultMessageFilter } from './bot-builder';
 import { ConfigurationService } from '../services/configurationService';
 import { ChannelType } from 'discord.js';
+import { isE2ETestClient } from './conditions';
 
 /**
  * Skip messages from the bot's own identity
@@ -15,6 +16,11 @@ export function createSelfAwareFilter(
 	configService: ConfigurationService
 ): MessageFilterFunction {
 	return async (message) => {
+		// Always allow E2E test clients (whitelisted for testing)
+		if (isE2ETestClient(message)) {
+			return false; // Don't skip - allow test clients
+		}
+
 		// Apply default filtering first (optional)
 		if (defaultMessageFilter(message)) {
 			return true;
@@ -41,6 +47,11 @@ export function createChannelFilter(options: {
 	allowDMs?: boolean;
 }): MessageFilterFunction {
 	return async (message) => {
+		// Always allow E2E test clients (whitelisted for testing)
+		if (isE2ETestClient(message)) {
+			return false; // Don't skip - allow test clients
+		}
+
 		// Apply default filtering first (optional)
 		if (defaultMessageFilter(message)) {
 			return true;
@@ -77,6 +88,11 @@ export function createRoleBasedFilter(options: {
 	blockedRoles?: string[];
 }): MessageFilterFunction {
 	return async (message) => {
+		// Always allow E2E test clients (whitelisted for testing)
+		if (isE2ETestClient(message)) {
+			return false; // Don't skip - allow test clients
+		}
+
 		// Apply default filtering first (optional)
 		if (defaultMessageFilter(message)) {
 			return true;
@@ -118,6 +134,11 @@ export function createContentFilter(options: {
 	requiredPatterns?: RegExp[];
 }): MessageFilterFunction {
 	return async (message) => {
+		// Always allow E2E test clients (whitelisted for testing)
+		if (isE2ETestClient(message)) {
+			return false; // Don't skip - allow test clients
+		}
+
 		// Apply default filtering first (optional)
 		if (defaultMessageFilter(message)) {
 			return true;
@@ -161,6 +182,11 @@ export function createTimeBasedFilter(options: {
 	timezone?: string;
 }): MessageFilterFunction {
 	return async (message) => {
+		// Always allow E2E test clients (whitelisted for testing)
+		if (isE2ETestClient(message)) {
+			return false; // Don't skip - allow test clients
+		}
+
 		// Apply default filtering first (optional)
 		if (defaultMessageFilter(message)) {
 			return true;
@@ -190,6 +216,11 @@ export function createTimeBasedFilter(options: {
  */
 export function createChadMessageFilter(configService: ConfigurationService): MessageFilterFunction {
 	return async (message) => {
+		// Always allow E2E test clients (whitelisted for testing)
+		if (isE2ETestClient(message)) {
+			return false; // Don't skip - allow test clients
+		}
+
 		// Apply default filtering first (optional)
 		if (defaultMessageFilter(message)) {
 			return true;
