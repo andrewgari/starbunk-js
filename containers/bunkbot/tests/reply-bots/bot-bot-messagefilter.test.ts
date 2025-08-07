@@ -2,21 +2,26 @@ import { Message } from 'discord.js';
 import BotBot from '../../src/reply-bots/bot-bot';
 
 // Mock message creation helper
-const createMockMessage = (overrides: any = {}) => ({
-	content: 'test message',
-	author: {
-		id: '123456789',
-		username: 'testuser',
-		bot: false,
-	},
-	channel: {
-		id: 'channel123',
-		send: jest.fn().mockResolvedValue({}),
-	},
-	guild: {
-		id: 'guild123',
-	},
-	...overrides,
+import { Message } from 'discord.js';
+
+// Mock message creation helper
+const createMockMessage = (
+  overrides: Partial<Message> = {}
+): Partial<Message> => ({
+  content: 'test message',
+  author: {
+    id: '123456789',
+    username: 'testuser',
+    bot: false,
+  } as any, // Type assertion needed for mock
+  channel: {
+    id: 'channel123',
+    send: jest.fn().mockResolvedValue({}),
+  } as any, // Type assertion needed for mock
+  guild: {
+    id: 'guild123',
+  } as any, // Type assertion needed for mock
+  ...overrides,
 });
 
 describe('BotBot with new messageFilter system', () => {
