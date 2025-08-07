@@ -96,19 +96,32 @@ class DiscordMCPServer {
         });
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
             if (!this.discordClient.isReady()) {
-                throw new McpError(ErrorCode.InternalError, 'Discord client is not ready. Please ensure the bot token is valid and the bot is connected.');
+                throw new McpError(
+                    ErrorCode.InternalError,
+                    'Discord client is not ready. Please ensure the bot token is valid and the bot is connected.'
+                );
             }
             switch (request.params.name) {
                 case 'send_discord_message':
-                    return await this.sendMessage(request.params.arguments?.channelId, request.params.arguments?.message);
+                    const { channelId, message } = request.params.arguments || {};
+                    if (!channelId || !message) {
+                        throw new McpError(ErrorCode.InvalidParams, 'channelId and message are required');
+                    }
+                    return await this.sendMessage(channelId, message);
                 case 'get_discord_messages':
-                    return await this.getMessages(request.params.arguments?.channelId, request.params.arguments?.limit);
+                    return await this.getMessages(
+                        request.params.arguments?.channelId,
+                        request.params.arguments?.limit
+                    );
                 case 'get_discord_servers':
                     return await this.getServers();
                 case 'get_discord_channels':
                     return await this.getChannels(request.params.arguments?.serverId);
                 default:
-                    throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
+                    throw new McpError(
+                        ErrorCode.MethodNotFound,
+                        `Unknown tool: ${request.params.name}`
+                    );
             }
         });
     }
