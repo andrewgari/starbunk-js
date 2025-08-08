@@ -42,7 +42,6 @@ export class MessageProcessor {
 
 	async processMessage(message: Message): Promise<void> {
 		const correlationId = uuidv4();
-		const startTime = Date.now();
 		
 		logger.debug(`Processing message ${correlationId}`, {
 			messageId: message.id,
@@ -140,7 +139,6 @@ export class MessageProcessor {
 			
 			if (shouldRespond) {
 				// Bot triggered - process the message
-				const responseStartTime = Date.now();
 				const response = await bot.processMessage(message);
 				const totalLatency = Date.now() - startTime;
 				
@@ -244,7 +242,7 @@ export class MessageProcessor {
 		return false;
 	}
 
-	private trackMessageSkip(message: Message, reason: string, correlationId: string): void {
+	private trackMessageSkip(message: Message, reason: string, _correlationId: string): void {
 		try {
 			const structuredLogger = getStructuredLogger();
 			structuredLogger.logMessageFlow({
@@ -263,7 +261,7 @@ export class MessageProcessor {
 		}
 	}
 
-	private trackMessageError(message: Message, error: unknown, correlationId: string): void {
+	private trackMessageError(message: Message, error: unknown, _correlationId: string): void {
 		try {
 			const structuredLogger = getStructuredLogger();
 			structuredLogger.logMessageFlow({
@@ -319,7 +317,7 @@ export class MessageProcessor {
 
 			// Log structured data
 			const event = details.error ? 'bot_error' : 
-						 details.triggered ? 'bot_responded' : 'bot_skipped';
+				details.triggered ? 'bot_responded' : 'bot_skipped';
 			
 			structuredLogger.logMessageFlow({
 				event,
