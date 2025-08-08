@@ -35,7 +35,7 @@ const DELAY_MS = parseInt(process.env.E2E_DELAY_MS || '2000', 10);
 
 // Messages meant to trigger reply bots. Adjust as your bots/phrases evolve.
 // Because bots are file-discovered and currently none are present, this is a scaffold.
-type TestResult = { name: string; content: string; ok: boolean; replies: number; details?: string };
+type TestResult = { name: string; content: string; ok: boolean; replies: number; durationMs: number; details?: string };
 
 // Add your known triggers here as you (re)introduce reply bots.
 const testCases: { name: string; content: string }[] = [
@@ -167,6 +167,7 @@ async function main() {
     const attempts = (INCLUDE_CHANCE && tc.name.includes('(chance)')) ? CHANCE_ATTEMPTS : 1;
     let aggregated: Message[] = [];
 
+    const start = Date.now();
     for (let i = 0; i < attempts; i++) {
       const since = Date.now();
       await postViaWebhook(tc.content);
@@ -179,10 +180,11 @@ async function main() {
       await sleep(DELAY_MS);
     }
 
+    const durationMs = Date.now() - start;
     const botReplies = aggregated.filter(m => m.author.bot);
     const ok = botReplies.length > 0;
-    results.push({ name: tc.name, content: tc.content, ok, replies: botReplies.length, details: ok ? undefined : 'No replies' });
-    log(`Result for ${tc.name}: ${ok ? 'OK' : 'NO REPLY'}`);
+    results.push({ name: tc.name, content: tc.content, ok, replies: botReplies.length, durationMs, details: ok ? undefined : 'No replies' });
+    log(`Result for ${tc.name}: ${ok ? 'OK' : 'NO REPLY'} in ${durationMs}ms`);
   }
 
   log('E2E summary:');
@@ -254,7 +256,7 @@ async function postDiscordReport(results: TestResult[]) {
   // Build a readable details section
   const lines = results.map(r => {
     const icon = r.ok ? '✅' : '❌';
-    return `${icon} ${r.name} — replies=${r.replies} — trigger: ${r.content}`;
+    return `${icon} ${r.name} — replies=${r.replies} — duration=${r.durationMs}ms — trigger: ${r.content}`;
   });
 
   const debug = process.env.DEBUG_MODE === 'true';
@@ -280,12 +282,16 @@ async function postDiscordReport(results: TestResult[]) {
     inventorySection
   ].join('\n');
 
+  // Footer: include commit SHA if available
+  const commit = process.env.GIT_COMMIT || process.env.COMMIT_SHA || '';
+
   const embed = new EmbedBuilder()
     .setTitle('BunkBot Live E2E Report')
     .setDescription(description)
     .setColor(failed === 0 ? 0x2ecc71 : (passed === 0 ? 0xe74c3c : 0xf1c40f))
     .setTimestamp(new Date());
 
+  if (commit) embed.setFooter({ text: `commit ${commit.slice(0, 12)}` });
   await client.send({ embeds: [embed] });
 }
 
