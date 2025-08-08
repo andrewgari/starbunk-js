@@ -1,4 +1,4 @@
-import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { createServer, IncomingMessage, ServerResponse, Server } from 'http';
 import { logger } from '@starbunk/shared';
 
 interface HealthStatus {
@@ -16,7 +16,7 @@ interface HealthStatus {
 }
 
 export class HealthServer {
-	private server?: any;
+	private server?: Server;
 	private readonly port: number;
 	
 	constructor(port?: number) {
@@ -51,14 +51,25 @@ export class HealthServer {
 		res: ServerResponse, 
 		getHealthStatus: () => HealthStatus
 	): void {
-		if (req.url === '/health') {
+		const pathname = this.getPathname(req.url || '');
+		
+		if (pathname === '/health') {
 			this.handleHealthCheck(res, getHealthStatus);
-		} else if (req.url === '/ready') {
+		} else if (pathname === '/ready') {
 			this.handleReadinessCheck(res, getHealthStatus);
-		} else if (req.url === '/live') {
+		} else if (pathname === '/live') {
 			this.handleLivenessCheck(res, getHealthStatus);
 		} else {
 			this.handleNotFound(res);
+		}
+	}
+
+	private getPathname(url: string): string {
+		try {
+			return new URL(url, 'http://localhost').pathname;
+		} catch {
+			// Fallback for malformed URLs
+			return url.split('?')[0];
 		}
 	}
 

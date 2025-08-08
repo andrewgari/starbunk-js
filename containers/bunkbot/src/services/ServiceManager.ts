@@ -1,9 +1,10 @@
 import { logger, container, ServiceId, createDiscordClient, ClientConfigs, WebhookManager, getMessageFilter, MessageFilter, runStartupDiagnostics, validateEnvironment } from '@starbunk/shared';
 import { DiscordService } from '@starbunk/shared/dist/services/discordService';
+import { Client } from 'discord.js';
 
 export class ServiceManager {
 	private static instance?: ServiceManager;
-	private client?: any;
+	private client?: Client;
 	private webhookManager?: WebhookManager;
 	private messageFilter?: MessageFilter;
 	private initialized = false;
@@ -79,7 +80,7 @@ export class ServiceManager {
 		container.register(ServiceId.MessageFilter, this.messageFilter);
 	}
 
-	getClient(): any {
+	getClient(): Client {
 		if (!this.client) {
 			throw new Error('ServiceManager not initialized');
 		}

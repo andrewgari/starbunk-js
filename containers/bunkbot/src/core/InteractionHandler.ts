@@ -9,7 +9,7 @@ interface Command {
 export class InteractionHandler {
 	constructor(
 		private messageFilter: MessageFilter,
-		private commands: Map<string, Command>
+		private readonly commands: Map<string, Command>
 	) {}
 
 	async handleInteraction(interaction: CommandInteraction): Promise<void> {
@@ -73,12 +73,15 @@ export class InteractionHandler {
 
 	private async sendErrorResponse(interaction: CommandInteraction): Promise<void> {
 		try {
-			if (!interaction.replied && !interaction.deferred) {
-				await interaction.reply({
-					content: '❌ An error occurred while processing the command.',
-					ephemeral: true
-				});
+			if (interaction.replied || interaction.deferred) {
+				logger.error('Command failed after interaction was already handled - cannot send error response');
+				return;
 			}
+
+			await interaction.reply({
+				content: '❌ An error occurred while processing the command.',
+				ephemeral: true
+			});
 		} catch (replyError) {
 			logger.error('Failed to send error response:', ensureError(replyError));
 		}

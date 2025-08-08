@@ -3,6 +3,11 @@ import { Message } from 'discord.js';
 import { ReplyBotImpl } from './bot-builder';
 import { shouldExcludeFromReplyBots } from './conditions';
 
+interface BotProcessResult {
+	bot: string;
+	triggered: boolean;
+}
+
 export class MessageProcessor {
 	constructor(
 		private messageFilter: MessageFilter,
@@ -54,7 +59,7 @@ export class MessageProcessor {
 		this.logProcessingResults(results);
 	}
 
-	private async processBotResponse(bot: ReplyBotImpl, message: Message): Promise<{ bot: string; triggered: boolean }> {
+	private async processBotResponse(bot: ReplyBotImpl, message: Message): Promise<BotProcessResult> {
 		try {
 			const shouldRespond = await bot.shouldRespond(message);
 			if (shouldRespond) {
@@ -68,9 +73,9 @@ export class MessageProcessor {
 		}
 	}
 
-	private logProcessingResults(results: PromiseSettledResult<{ bot: string; triggered: boolean }>[]): void {
+	private logProcessingResults(results: PromiseSettledResult<BotProcessResult>[]): void {
 		const triggered = results
-			.filter((result): result is PromiseFulfilledResult<{ bot: string; triggered: boolean }> => 
+			.filter((result): result is PromiseFulfilledResult<BotProcessResult> => 
 				result.status === 'fulfilled' && result.value.triggered
 			)
 			.map(result => result.value.bot);
