@@ -33,6 +33,7 @@
 		"db:push": "npx prisma db push",
 		"test:bots": "node scripts/test-reply-bots.js",
 		"test:bunkbot": "cd containers/bunkbot && npm test",
+		"e2e:bunkbot:live": "cd containers/bunkbot && npm run e2e:live",
 		"test:djcova": "cd containers/djcova && npm test",
 		"test:starbunk-dnd": "cd containers/starbunk-dnd && npm test",
 		"test:covabot": "cd containers/covabot && npm test",

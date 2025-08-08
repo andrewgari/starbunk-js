@@ -1,0 +1,41 @@
+# Local Compose to run BunkBot from current branch (builds image from source)
+# Uses your root .env for configuration/secrets (not committed)
+
+services:
+  bunkbot:
+    build:
+      context: .
+      dockerfile: containers/bunkbot/Dockerfile
+    container_name: bunkbot-local
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      # Ensure these are present for live E2E webhook allowance
+      - DEBUG_MODE=${DEBUG_MODE:-true}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - E2E_TEST_WEBHOOK_URL=${E2E_TEST_WEBHOOK_URL:-}
+      - E2E_TEST_CHANNEL_ID=${E2E_TEST_CHANNEL_ID:-}
+      - E2E_ALLOW_WEBHOOK_TESTS=${E2E_ALLOW_WEBHOOK_TESTS:-false}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+# No external networks/volumes required for file-based reply-bots
+
