@@ -9,7 +9,8 @@ import {
 	container,
 	ServiceId,
 	getMessageFilter,
-	MessageFilter
+	MessageFilter,
+	initializeObservability
 } from '@starbunk/shared';
 
 class StarbunkDNDContainer {
@@ -22,6 +23,10 @@ class StarbunkDNDContainer {
 		logger.info('🐉 Initializing Starbunk-DND container...');
 
 		try {
+			// Initialize observability first
+			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('starbunk-dnd');
+			logger.info('✅ Observability initialized for Starbunk-DND');
+
 			// Validate environment
 			this.validateEnvironment();
 

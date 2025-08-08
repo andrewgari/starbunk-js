@@ -10,7 +10,8 @@ import {
 	container,
 	ServiceId,
 	getMessageFilter,
-	MessageFilter
+	MessageFilter,
+	initializeObservability
 } from '@starbunk/shared';
 import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
@@ -27,6 +28,10 @@ class DJCovaContainer {
 		logger.info('🎵 Initializing DJCova container...');
 
 		try {
+			// Initialize observability first
+			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('djcova');
+			logger.info('✅ Observability initialized for DJCova');
+
 			// Validate environment
 			this.validateEnvironment();
 

@@ -211,7 +211,18 @@ export class HealthServer {
 	private handleMetricsEndpoint(res: ServerResponse, getHealthStatus: () => HealthStatus): void {
 		try {
 			const status = this.enhanceHealthStatus(getHealthStatus());
-			const prometheusMetrics = this.formatPrometheusMetrics(status);
+			let prometheusMetrics = this.formatPrometheusMetrics(status);
+			
+			// Add observability metrics if available
+			try {
+				const { getMetrics } = require('@starbunk/shared');
+				const metrics = getMetrics();
+				const observabilityMetrics = metrics.getPrometheusMetrics();
+				prometheusMetrics += '\n' + observabilityMetrics;
+			} catch (error) {
+				// Observability metrics not available - continue without them
+				logger.debug('Observability metrics not available:', ensureError(error));
+			}
 			
 			res.writeHead(200, { 
 				'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'

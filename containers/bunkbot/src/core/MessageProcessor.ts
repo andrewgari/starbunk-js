@@ -1,13 +1,25 @@
-import { logger, ensureError, MessageFilter } from '@starbunk/shared';
+import { logger, ensureError, MessageFilter, getMetrics, getStructuredLogger, MessageFlowMetrics, getChannelActivityTracker } from '@starbunk/shared';
 import { Message } from 'discord.js';
 import { ReplyBotImpl } from './bot-builder';
 import { shouldExcludeFromReplyBots } from './conditions';
 import { v4 as uuidv4 } from 'uuid';
 
+// Helper function to safely get channel name
+function getChannelName(message: Message): string {
+    if ('name' in message.channel && message.channel.name) {
+        return message.channel.name;
+    }
+    return message.channel.type === 1 ? 'dm' : 'unknown';
+}
+
 interface BotProcessResult {
 	bot: string;
 	triggered: boolean;
 	error?: Error;
+	responseText?: string;
+	responseLatency?: number;
+	skipReason?: string;
+	conditionName?: string;
 }
 
 interface CircuitBreakerState {
@@ -30,6 +42,7 @@ export class MessageProcessor {
 
 	async processMessage(message: Message): Promise<void> {
 		const correlationId = uuidv4();
+		const startTime = Date.now();
 		
 		logger.debug(`Processing message ${correlationId}`, {
 			messageId: message.id,
@@ -37,20 +50,46 @@ export class MessageProcessor {
 			channelId: message.channel.id
 		});
 
-		if (!this.shouldProcessMessage(message)) return;
+		// Track message received
+		try {
+			const structuredLogger = getStructuredLogger();
+			structuredLogger.logMessageFlow({
+				event: 'message_received',
+				bot_name: 'system',
+				message_text: message.content,
+				user_id: message.author.id,
+				user_name: message.author.username,
+				channel_id: message.channel.id,
+				channel_name: getChannelName(message),
+				guild_id: message.guild?.id || 'dm'
+			});
+
+			// Track channel activity
+			const channelTracker = getChannelActivityTracker();
+			channelTracker.trackMessage(message);
+		} catch (error) {
+			logger.warn('Failed to log message flow or track channel activity:', ensureError(error));
+		}
+
+		if (!this.shouldProcessMessage(message)) {
+			this.trackMessageSkip(message, 'bot_exclusion', correlationId);
+			return;
+		}
 
 		try {
 			const context = MessageFilter.createContextFromMessage(message);
 			const filterResult = this.messageFilter.shouldProcessMessage(context);
 			
 			if (!filterResult.allowed) {
-				logger.debug(`Message filtered: ${filterResult.reason}`, { correlationId });
+				this.trackMessageSkip(message, filterResult.reason || 'unknown', correlationId);
+				logger.debug(`Message filtered: ${filterResult.reason || 'unknown'}`, { correlationId });
 				return;
 			}
 
 			await this.processWithReplyBots(message, correlationId);
 		} catch (error) {
 			logger.error('Error processing message:', ensureError(error), { correlationId });
+			this.trackMessageError(message, error, correlationId);
 		}
 	}
 
@@ -92,20 +131,73 @@ export class MessageProcessor {
 	}
 
 	private async processBotResponse(bot: ReplyBotImpl, message: Message, correlationId: string): Promise<BotProcessResult> {
+		const startTime = Date.now();
+		
 		try {
+			// Check if bot should respond
 			const shouldRespond = await bot.shouldRespond(message);
+			const responseLatency = Date.now() - startTime;
+			
 			if (shouldRespond) {
-				await bot.processMessage(message);
+				// Bot triggered - process the message
+				const responseStartTime = Date.now();
+				const response = await bot.processMessage(message);
+				const totalLatency = Date.now() - startTime;
+				
 				this.recordSuccess(bot.name);
-				return { bot: bot.name, triggered: true };
+				
+				// Track successful bot interaction
+				this.trackBotInteraction(message, bot.name, {
+					triggered: true,
+					responseLatency: totalLatency,
+					responseText: typeof response === 'string' ? response : undefined,
+					correlationId
+				});
+				
+				return { 
+					bot: bot.name, 
+					triggered: true, 
+					responseLatency: totalLatency,
+					responseText: typeof response === 'string' ? response : undefined
+				};
+			} else {
+				// Bot didn't trigger
+				this.trackBotInteraction(message, bot.name, {
+					triggered: false,
+					skipReason: 'condition_not_met',
+					responseLatency,
+					correlationId
+				});
+				
+				return { 
+					bot: bot.name, 
+					triggered: false, 
+					skipReason: 'condition_not_met',
+					responseLatency
+				};
 			}
-			return { bot: bot.name, triggered: false };
 		} catch (error) {
 			const processedError = ensureError(error);
+			const responseLatency = Date.now() - startTime;
+			
 			logger.error(`Error in bot ${bot.name}:`, processedError, { correlationId });
 			
 			this.recordFailure(bot.name);
-			return { bot: bot.name, triggered: false, error: processedError };
+			
+			// Track bot error
+			this.trackBotInteraction(message, bot.name, {
+				triggered: false,
+				error: processedError,
+				responseLatency,
+				correlationId
+			});
+			
+			return { 
+				bot: bot.name, 
+				triggered: false, 
+				error: processedError,
+				responseLatency
+			};
 		}
 	}
 
@@ -152,6 +244,103 @@ export class MessageProcessor {
 		return false;
 	}
 
+	private trackMessageSkip(message: Message, reason: string, correlationId: string): void {
+		try {
+			const structuredLogger = getStructuredLogger();
+			structuredLogger.logMessageFlow({
+				event: 'bot_skipped',
+				bot_name: 'system',
+				message_text: message.content,
+				user_id: message.author.id,
+				user_name: message.author.username,
+				channel_id: message.channel.id,
+				channel_name: getChannelName(message),
+				guild_id: message.guild?.id || 'dm',
+				skip_reason: reason
+			});
+		} catch (error) {
+			logger.warn('Failed to track message skip:', ensureError(error));
+		}
+	}
+
+	private trackMessageError(message: Message, error: unknown, correlationId: string): void {
+		try {
+			const structuredLogger = getStructuredLogger();
+			structuredLogger.logMessageFlow({
+				event: 'bot_error',
+				bot_name: 'system',
+				message_text: message.content,
+				user_id: message.author.id,
+				user_name: message.author.username,
+				channel_id: message.channel.id,
+				channel_name: getChannelName(message),
+				guild_id: message.guild?.id || 'dm',
+				error_message: ensureError(error).message
+			});
+		} catch (logError) {
+			logger.warn('Failed to track message error:', ensureError(logError));
+		}
+	}
+
+	private trackBotInteraction(
+		message: Message, 
+		botName: string, 
+		details: {
+			triggered: boolean;
+			responseLatency?: number;
+			responseText?: string;
+			skipReason?: string;
+			error?: Error;
+			correlationId: string;
+		}
+	): void {
+		try {
+			const metrics = getMetrics();
+			const structuredLogger = getStructuredLogger();
+
+			const baseMetrics: MessageFlowMetrics = {
+				botName,
+				messageText: message.content,
+				userId: message.author.id,
+				userName: message.author.username,
+				channelId: message.channel.id,
+				channelName: getChannelName(message),
+				guildId: message.guild?.id || 'dm',
+				triggered: details.triggered,
+				responseText: details.responseText,
+				responseLatency: details.responseLatency,
+				skipReason: details.skipReason,
+				circuitBreakerOpen: this.isCircuitOpen(botName),
+				timestamp: Date.now()
+			};
+
+			// Track metrics
+			metrics.trackMessageFlow(baseMetrics);
+
+			// Log structured data
+			const event = details.error ? 'bot_error' : 
+						 details.triggered ? 'bot_responded' : 'bot_skipped';
+			
+			structuredLogger.logMessageFlow({
+				event,
+				bot_name: botName,
+				message_text: message.content,
+				user_id: message.author.id,
+				user_name: message.author.username,
+				channel_id: message.channel.id,
+				channel_name: getChannelName(message),
+				guild_id: message.guild?.id || 'dm',
+				response_text: details.responseText,
+				response_latency_ms: details.responseLatency,
+				skip_reason: details.skipReason,
+				circuit_breaker_open: this.isCircuitOpen(botName),
+				error_message: details.error?.message
+			});
+		} catch (error) {
+			logger.warn('Failed to track bot interaction:', ensureError(error));
+		}
+	}
+
 	private recordFailure(botName: string): void {
 		const breaker = this.circuitBreakers.get(botName) || {
 			failures: 0,
@@ -166,10 +355,25 @@ export class MessageProcessor {
 		if (breaker.failures >= this.maxFailures && breaker.state === 'closed') {
 			breaker.state = 'open';
 			logger.warn(`Circuit breaker opened for bot: ${botName} (${breaker.failures} failures)`);
+			
+			// Track circuit breaker activation
+			try {
+				const metrics = getMetrics();
+				metrics.trackCircuitBreakerActivation(botName, `${breaker.failures}_failures`);
+			} catch (error) {
+				logger.warn('Failed to track circuit breaker activation:', ensureError(error));
+			}
 		} else if (breaker.state === 'half-open') {
 			// Failed during half-open, go back to open
 			breaker.state = 'open';
 			logger.warn(`Circuit breaker reopened for bot: ${botName}`);
+			
+			try {
+				const metrics = getMetrics();
+				metrics.trackCircuitBreakerActivation(botName, 'half_open_failure');
+			} catch (error) {
+				logger.warn('Failed to track circuit breaker reactivation:', ensureError(error));
+			}
 		}
 		
 		this.circuitBreakers.set(botName, breaker);

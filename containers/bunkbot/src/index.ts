@@ -12,7 +12,8 @@ import {
 	WebhookManager,
 	getMessageFilter,
 	MessageFilter,
-	runStartupDiagnostics
+	runStartupDiagnostics,
+	initializeObservability
 } from '@starbunk/shared';
 
 // Import DiscordService directly from the service file
@@ -31,6 +32,7 @@ import { shouldExcludeFromReplyBots } from './core/conditions';
 // Import configuration services
 import { ConfigurationService } from './services/configurationService';
 import { BotIdentityService } from './services/botIdentityService';
+import { MessageProcessor } from './core/MessageProcessor';
 
 class BunkBotContainer {
 	private client: any;
@@ -42,11 +44,16 @@ class BunkBotContainer {
 	private commands = new Map();
 	private healthServer: any;
 	private replyBots: ReplyBotImpl[] = [];
+	private messageProcessor!: MessageProcessor;
 
 	async initialize(): Promise<void> {
 		logger.info('🚀 Initializing BunkBot container...');
 
 		try {
+			// Initialize observability first
+			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('bunkbot');
+			logger.info('✅ Observability initialized with metrics, structured logging, and channel activity tracking');
+
 			// Run startup diagnostics
 			const diagnostics = await runStartupDiagnostics();
 			const failures = diagnostics.filter(d => d.status === 'fail');
@@ -70,6 +77,10 @@ class BunkBotContainer {
 
 			// Initialize reply bot system
 			await this.initializeReplyBots();
+
+			// Initialize message processor with observability
+			this.messageProcessor = new MessageProcessor(this.messageFilter, this.replyBots);
+			logger.info('✅ Message processor initialized with observability tracking');
 
 		// Register commands
 		this.registerCommands();
@@ -275,97 +286,12 @@ private async deployCommands(): Promise<void> {
 	}
 
 	private async handleMessage(message: any): Promise<void> {
-		logger.info(`🔥 HANDLE MESSAGE: Starting message processing...`);
+		logger.debug(`Processing message from ${message.author.username} in ${message.channel.name || 'DM'}`);
 		
-		// Check bot status using sophisticated filtering logic
-		logger.info(`🔥   Bot check: message.author.bot = ${message.author.bot}`);
-		if (message.author.bot) {
-			logger.info(`🔥   Message from bot - checking if it should be excluded...`);
-			const shouldExclude = shouldExcludeFromReplyBots(message);
-			logger.info(`🔥   shouldExcludeFromReplyBots = ${shouldExclude}`);
-			if (shouldExclude) {
-				logger.info(`🔥   ❌ DISCARDED: Bot message excluded from processing (author: ${message.author.username})`);
-				return;
-			}
-			logger.info(`🔥   ✅ Bot message allowed: Test client or whitelisted bot (author: ${message.author.username})`);
-		} else {
-			logger.info(`🔥   ✅ Bot check passed: Message from human user`);
-		}
-
-		try {
-			// Create message context for filtering
-			logger.info(`🔥   Creating message filter context...`);
-			const context = MessageFilter.createContextFromMessage(message);
-			logger.info(`🔥   Context created: server=${context.serverId}, channel=${context.channelId}, user=${context.username}`);
-
-			// Check if message should be processed
-			logger.info(`🔥   Checking message filter...`);
-			const filterResult = this.messageFilter.shouldProcessMessage(context);
-			logger.info(`🔥   Filter result: allowed=${filterResult.allowed}, reason="${filterResult.reason || 'none'}"`);
-			
-			if (!filterResult.allowed) {
-				logger.info(`🔥   ❌ DISCARDED: Message filtered out - ${filterResult.reason}`);
-				return;
-			}
-			logger.info(`🔥   ✅ Filter check passed: Message will be processed`);
-
-			logger.info(`🔥   Processing message from ${message.author.username}: "${message.content.substring(0, 100)}"`);
-
-			// Process message through reply bot system
-			logger.info(`🔥   → Passing to reply bot system...`);
-			await this.processMessageWithReplyBots(message);
-
-		} catch (error) {
-			logger.error('🔥   ❌ ERROR in handleMessage:', ensureError(error));
-		}
+		// Use the MessageProcessor which now includes comprehensive observability tracking
+		await this.messageProcessor.processMessage(message);
 	}
 
-	/**
-	 * Process a message through all loaded reply bots
-	 * @param message Discord message to process
-	 */
-	private async processMessageWithReplyBots(message: any): Promise<void> {
-		logger.info(`🔥 REPLY BOTS: Starting reply bot processing...`);
-		
-		if (this.replyBots.length === 0) {
-			logger.info(`🔥   ❌ NO BOTS: No reply bots loaded - skipping message processing`);
-			return;
-		}
-
-		logger.info(`🔥   Processing message through ${this.replyBots.length} reply bots`);
-
-		let botsTriggered = 0;
-		let botsSkipped = 0;
-
-		// Process message through each reply bot
-		for (const bot of this.replyBots) {
-			try {
-				logger.info(`🔥   Testing bot: ${bot.name}`);
-				
-				// Check if bot should respond to this message
-				const shouldRespond = await bot.shouldRespond(message);
-				logger.info(`🔥     shouldRespond = ${shouldRespond}`);
-
-				if (shouldRespond) {
-					logger.info(`🔥     ✅ TRIGGERED: ${bot.name} will process message`);
-					await bot.processMessage(message);
-					botsTriggered++;
-				} else {
-					logger.info(`🔥     ❌ SKIPPED: ${bot.name} conditions not met`);
-					botsSkipped++;
-				}
-			} catch (error) {
-				logger.error(`🔥     💥 ERROR: ${bot.name} failed:`, ensureError(error));
-				// Continue processing with other bots even if one fails
-			}
-		}
-		
-		logger.info(`🔥 REPLY BOTS: Summary - ${botsTriggered} triggered, ${botsSkipped} skipped`);
-		
-		if (botsTriggered === 0) {
-			logger.info(`🔥   ⚠️ NO BOTS TRIGGERED: None of the ${this.replyBots.length} bots matched this message`);
-		}
-	}
 
 	private async handleInteraction(interaction: any): Promise<void> {
 		if (interaction.isChatInputCommand()) {
