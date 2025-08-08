@@ -1,4 +1,4 @@
-import { isDebugMode, logger } from '@starbunk/shared';
+import { isDebugMode, logger, getTestingChannelIds } from '@starbunk/shared';
 import { Message } from 'discord.js';
 
 
@@ -228,6 +228,14 @@ export function shouldExcludeFromReplyBots(message: Message): boolean {
 		return true;
 	}
 
+	// Fast-path allow for non-bot messages after self-check
+	if (!message.author.bot) {
+		if (isDebugMode()) {
+			logger.debug(`✅ Allowing human message for reply bot processing from: ${message.author.username}`);
+		}
+		return false;
+	}
+
 	// Exclude messages from specified bots (CovaBot, DJCova, etc.)
 	const authorName = message.author.username;
 	if (BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.includes(authorName)) {
@@ -239,6 +247,29 @@ export function shouldExcludeFromReplyBots(message: Message): boolean {
 
 	// Exclude webhook messages from BunkBot reply bots to prevent self-triggering loops
 	if (message.webhookId && message.author.bot) {
+		// Allow explicit E2E webhook test messages when enabled, channel is whitelisted,
+		// and the message originated from the configured E2E webhook
+		const allowWebhookTests = process.env.E2E_ALLOW_WEBHOOK_TESTS === 'true';
+		if (allowWebhookTests) {
+			const allowedChannels = getTestingChannelIds();
+			const e2eWebhookUrl = process.env.E2E_TEST_WEBHOOK_URL || '';
+			// Discord provides only webhookId on messages; compare IDs, not full URL
+			const e2eWebhookIdMatch = e2eWebhookUrl.match(/webhooks\/(\d+)\//);
+			const e2eWebhookId = e2eWebhookIdMatch ? e2eWebhookIdMatch[1] : undefined;
+
+			if (
+				allowedChannels.length > 0 &&
+				allowedChannels.includes(message.channel.id) &&
+				e2eWebhookId &&
+				message.webhookId === e2eWebhookId
+			) {
+				if (isDebugMode()) {
+					logger.debug(`✅ Allowing E2E webhook test message in channel ${message.channel.id} from webhook ${e2eWebhookId}`);
+				}
+				return false; // do not exclude; let bots process this specific E2E webhook message
+			}
+		}
+
 		// Check if this is a webhook message from a BunkBot reply bot
 		// Reply bots use custom webhook names like "HoldBot", "TestBot", etc.
 

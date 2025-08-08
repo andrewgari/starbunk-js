@@ -20,19 +20,24 @@ export default BotFactory.createBot({
 			return true; // Skip non-bot messages
 		}
 
-		// Skip BunkBot self-messages (handled by default logic)
-		const { shouldExcludeFromReplyBots } = await import('../../core/conditions');
-		if (shouldExcludeFromReplyBots(message)) {
-			return true; // Skip BunkBot self-messages
+		// Explicitly skip BotBot's own messages to prevent self-triggering loops
+		if (message.client?.user && message.author.id === message.client.user.id) {
+			return true;
 		}
 
-		// For all other bot messages (CovaBot, other bots, etc.), apply 1% chance
+		// Use the shared exclusion logic (covers CovaBot and other excluded bots, and production webhooks)
+		const { shouldExcludeFromReplyBots } = await import('../../core/conditions');
+		if (shouldExcludeFromReplyBots(message)) {
+			return true;
+		}
+
+		// For remaining bot messages, apply 1% chance
 		const randomChance = Math.random() * 100;
 		if (randomChance > BOT_BOT_RESPONSE_RATE) {
 			return true; // Skip due to chance (99% of the time)
 		}
 
-		// Don't skip - process this bot message (1% chance)
+		// Process this bot message (1% chance)
 		return false;
 	},
 
