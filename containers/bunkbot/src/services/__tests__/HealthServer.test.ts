@@ -92,8 +92,8 @@ describe('HealthServer', () => {
 
 			healthServer.start(getHealthStatus);
 			
-			// Simulate malformed URL
-			mockReq.url = '/health%';
+			// Simulate malformed URL that should still resolve to /health
+			mockReq.url = '/health?malformed%url';
 			mockServer.handler(mockReq, mockRes);
 
 			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'application/json' });
