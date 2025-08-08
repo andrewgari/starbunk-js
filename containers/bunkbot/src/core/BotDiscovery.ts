@@ -48,29 +48,67 @@ export class BotDiscovery {
 	}
 
 	private isValidBotDirectory(dirent: fs.Dirent): boolean {
+		// Security: Prevent path traversal and invalid directory names
+		if (dirent.name.includes('..') || dirent.name.includes('/') || dirent.name.includes('\\')) {
+			return false;
+		}
+		
 		return dirent.isDirectory() &&
 			!dirent.name.startsWith('.') &&
-			!['dist', 'node_modules'].includes(dirent.name);
+			!['dist', 'node_modules', 'test', 'tests', '__tests__'].includes(dirent.name);
 	}
 
 	private async loadBotFromDirectory(directory: string): Promise<ReplyBotImpl> {
-		const botPath = path.join(this.botsDirectory, directory);
-		const indexPath = this.findIndexFile(botPath);
+		// Security: Validate directory name to prevent path traversal
+		if (directory.includes('..') || directory.includes('/') || directory.includes('\\')) {
+			throw new Error(`Invalid bot directory name: ${directory}`);
+		}
 
+		const botPath = path.join(this.botsDirectory, directory);
+		const resolvedPath = path.resolve(botPath);
+		
+		// Security: Ensure resolved path is within allowed bounds
+		if (!resolvedPath.startsWith(path.resolve(this.botsDirectory))) {
+			throw new Error(`Security violation: Bot path outside allowed directory: ${directory}`);
+		}
+
+		const indexPath = this.findIndexFile(botPath);
 		if (!indexPath) {
 			throw new Error(`No index file found in ${directory}`);
 		}
 
 		const absolutePath = path.resolve(indexPath);
-		const botModule = await import(absolutePath);
-		const bot = botModule.default;
+		
+		try {
+			// Production safety: Add timeout protection for bot loading
+			const loadTimeout = 10000; // 10 second timeout
+			const botModule = await Promise.race([
+				import(absolutePath),
+				new Promise<never>((_, reject) => 
+					setTimeout(() => reject(new Error(`Bot loading timeout: ${directory}`)), loadTimeout)
+				)
+			]);
+			
+			const bot = botModule.default;
 
-		if (!this.validateBot(bot)) {
-			throw new Error(`Invalid bot implementation in ${directory}`);
+			if (!this.validateBot(bot)) {
+				throw new Error(`Invalid bot implementation in ${directory}`);
+			}
+			
+			// Production safety: Check bot resource usage
+			if (bot.triggers && bot.triggers.length > 100) {
+				logger.warn(`Bot ${directory} has ${bot.triggers.length} triggers - may impact performance`);
+			}
+
+			logger.debug(`Successfully loaded bot: ${bot.name}`);
+			return bot;
+		} catch (error) {
+			// Clean up failed imports to prevent memory leaks
+			if (require.cache[absolutePath]) {
+				delete require.cache[absolutePath];
+			}
+			throw error;
 		}
-
-		logger.debug(`Successfully loaded bot: ${bot.name}`);
-		return bot;
 	}
 
 	private findIndexFile(botPath: string): string | null {
@@ -92,12 +130,33 @@ export class BotDiscovery {
 	private validateBot(bot: unknown): bot is ReplyBotImpl {
 		if (!bot || typeof bot !== 'object') return false;
 
-		const required = ['name', 'description', 'processMessage', 'shouldRespond'];
-		return required.every(prop => {
+		const requiredProps = ['name', 'description', 'processMessage', 'shouldRespond'];
+		const isValid = requiredProps.every(prop => {
 			const value = (bot as Record<string, unknown>)[prop];
-			return prop === 'name' || prop === 'description' ? 
-				typeof value === 'string' : typeof value === 'function';
+			if (prop === 'name' || prop === 'description') {
+				return typeof value === 'string' && value.length > 0 && value.length < 100;
+			}
+			return typeof value === 'function';
 		});
+		
+		if (!isValid) return false;
+		
+		// Additional security validations
+		const botObj = bot as ReplyBotImpl;
+		
+		// Validate name contains only safe characters
+		if (!/^[a-zA-Z0-9\s\-_]{1,50}$/.test(botObj.name)) {
+			logger.warn(`Bot name contains invalid characters: ${botObj.name}`);
+			return false;
+		}
+		
+		// Check for reasonable number of triggers (prevent resource exhaustion)
+		if (botObj.triggers && botObj.triggers.length > 200) {
+			logger.warn(`Bot has excessive triggers (${botObj.triggers.length}): ${botObj.name}`);
+			return false;
+		}
+		
+		return true;
 	}
 
 	private processDiscoveryResults(

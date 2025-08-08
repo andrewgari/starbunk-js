@@ -15,6 +15,14 @@ jest.mock('http', () => ({
 	createServer: jest.fn(),
 }));
 
+jest.mock('../../core/BotProcessor', () => ({
+	getBotStorageStats: jest.fn(() => ({
+		size: 0,
+		oldestItem: 0,
+		newestItem: 0
+	}))
+}));
+
 describe('HealthServer', () => {
 	let healthServer: HealthServer;
 	let mockServer: any;
@@ -77,7 +85,11 @@ describe('HealthServer', () => {
 			mockReq.url = '/health?version=1&timestamp=123';
 			mockServer.handler(mockReq, mockRes);
 
-			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'application/json' });
+			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 
+				'Content-Type': 'application/json',
+				'Cache-Control': 'no-cache, no-store, must-revalidate',
+				'X-Health-Check-Version': '2.0'
+			});
 			expect(mockRes.end).toHaveBeenCalled();
 			expect(getHealthStatus).toHaveBeenCalled();
 		});
@@ -96,7 +108,11 @@ describe('HealthServer', () => {
 			mockReq.url = '/health?malformed%url';
 			mockServer.handler(mockReq, mockRes);
 
-			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'application/json' });
+			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 
+				'Content-Type': 'application/json',
+				'Cache-Control': 'no-cache, no-store, must-revalidate',
+				'X-Health-Check-Version': '2.0'
+			});
 		});
 	});
 
@@ -118,7 +134,11 @@ describe('HealthServer', () => {
 			mockReq.url = '/health';
 			mockServer.handler(mockReq, mockRes);
 
-			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'application/json' });
+			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 
+				'Content-Type': 'application/json',
+				'Cache-Control': 'no-cache, no-store, must-revalidate',
+				'X-Health-Check-Version': '2.0'
+			});
 			expect(mockRes.end).toHaveBeenCalled();
 		});
 
@@ -126,7 +146,9 @@ describe('HealthServer', () => {
 			mockReq.url = '/ready';
 			mockServer.handler(mockReq, mockRes);
 
-			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'application/json' });
+			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 
+				'Content-Type': 'application/json'
+			});
 			expect(mockRes.end).toHaveBeenCalled();
 		});
 
@@ -134,7 +156,9 @@ describe('HealthServer', () => {
 			mockReq.url = '/live';
 			mockServer.handler(mockReq, mockRes);
 
-			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'application/json' });
+			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 
+				'Content-Type': 'application/json'
+			});
 			expect(mockRes.end).toHaveBeenCalled();
 		});
 
@@ -142,8 +166,12 @@ describe('HealthServer', () => {
 			mockReq.url = '/unknown';
 			mockServer.handler(mockReq, mockRes);
 
-			expect(mockRes.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
-			expect(mockRes.end).toHaveBeenCalledWith('Not Found');
+			expect(mockRes.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'application/json' });
+			expect(mockRes.end).toHaveBeenCalled();
+			const responseBody = JSON.parse((mockRes.end as jest.Mock).mock.calls[0][0]);
+			expect(responseBody).toHaveProperty('error', 'Not Found');
+			expect(responseBody).toHaveProperty('message');
+			expect(responseBody).toHaveProperty('timestamp');
 		});
 	});
 

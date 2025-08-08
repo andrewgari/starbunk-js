@@ -178,13 +178,153 @@ export class BotProcessor {
 	}
 }
 
-// Simple in-memory storage for bot data (replaces Prisma for now)
-const botStorage = new Map<string, string | number | boolean>();
+// TTL-based storage for bot data to prevent memory leaks
+interface StorageItem {
+	value: string | number | boolean;
+	expiry: number;
+	lastAccessed: number;
+}
+
+class TTLBotStorage {
+	private storage = new Map<string, StorageItem>();
+	private readonly defaultTTL = 24 * 60 * 60 * 1000; // 24 hours
+	private readonly maxSize = 10000; // Maximum number of items
+	private cleanupInterval?: NodeJS.Timeout;
+
+	constructor() {
+		this.startCleanupTimer();
+	}
+
+	set(key: string, value: string | number | boolean, ttl = this.defaultTTL): void {
+		// Prevent storage from growing too large
+		if (this.storage.size >= this.maxSize && !this.storage.has(key)) {
+			this.evictOldestItems(Math.floor(this.maxSize * 0.1)); // Remove 10% of items
+		}
+
+		const now = Date.now();
+		this.storage.set(key, {
+			value,
+			expiry: now + ttl,
+			lastAccessed: now
+		});
+	}
+
+	get(key: string): string | number | boolean | undefined {
+		const item = this.storage.get(key);
+		if (!item) return undefined;
+		
+		const now = Date.now();
+		if (now > item.expiry) {
+			this.storage.delete(key);
+			return undefined;
+		}
+		
+		// Update last accessed time
+		item.lastAccessed = now;
+		this.storage.set(key, item);
+		
+		return item.value;
+	}
+
+	has(key: string): boolean {
+		const item = this.storage.get(key);
+		if (!item) return false;
+		
+		if (Date.now() > item.expiry) {
+			this.storage.delete(key);
+			return false;
+		}
+		
+		return true;
+	}
+
+	delete(key: string): boolean {
+		return this.storage.delete(key);
+	}
+
+	clear(): void {
+		this.storage.clear();
+	}
+
+	size(): number {
+		return this.storage.size;
+	}
+
+	getStats(): { size: number; oldestItem: number; newestItem: number } {
+		const now = Date.now();
+		let oldest = now;
+		let newest = 0;
+		
+		for (const item of this.storage.values()) {
+			if (item.lastAccessed < oldest) oldest = item.lastAccessed;
+			if (item.lastAccessed > newest) newest = item.lastAccessed;
+		}
+		
+		return {
+			size: this.storage.size,
+			oldestItem: now - oldest,
+			newestItem: now - newest
+		};
+	}
+
+	private startCleanupTimer(): void {
+		this.cleanupInterval = setInterval(() => {
+			this.cleanup();
+		}, 5 * 60 * 1000); // Cleanup every 5 minutes
+
+		// Cleanup on process exit
+		process.on('exit', () => this.destroy());
+		process.on('SIGINT', () => this.destroy());
+		process.on('SIGTERM', () => this.destroy());
+	}
+
+	private cleanup(): void {
+		const now = Date.now();
+		let removedCount = 0;
+		
+		for (const [key, item] of this.storage.entries()) {
+			if (now > item.expiry) {
+				this.storage.delete(key);
+				removedCount++;
+			}
+		}
+		
+		if (removedCount > 0) {
+			logger.debug(`Cleaned up ${removedCount} expired bot storage items`);
+		}
+	}
+
+	private evictOldestItems(count: number): void {
+		const items = Array.from(this.storage.entries())
+			.sort(([, a], [, b]) => a.lastAccessed - b.lastAccessed)
+			.slice(0, count);
+			
+		for (const [key] of items) {
+			this.storage.delete(key);
+		}
+		
+		logger.debug(`Evicted ${items.length} oldest storage items to prevent memory exhaustion`);
+	}
+
+	destroy(): void {
+		if (this.cleanupInterval) {
+			clearInterval(this.cleanupInterval);
+			this.cleanupInterval = undefined;
+		}
+		this.storage.clear();
+	}
+}
+
+const botStorage = new TTLBotStorage();
 
 function getBotData(botName: string, key: string): string | number | boolean | undefined {
 	return botStorage.get(`${botName}:${key}`);
 }
 
-export function setBotData(botName: string, key: string, value: string | number | boolean): void {
-	botStorage.set(`${botName}:${key}`, value);
+export function setBotData(botName: string, key: string, value: string | number | boolean, ttlMs?: number): void {
+	botStorage.set(`${botName}:${key}`, value, ttlMs);
+}
+
+export function getBotStorageStats(): { size: number; oldestItem: number; newestItem: number } {
+	return botStorage.getStats();
 }
