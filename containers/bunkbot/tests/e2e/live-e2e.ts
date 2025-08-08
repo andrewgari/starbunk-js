@@ -1,10 +1,7 @@
 import 'dotenv/config';
 import { WebhookClient, Client, GatewayIntentBits, Message, EmbedBuilder } from 'discord.js';
-<<<<<<< HEAD
 import fs from 'fs';
 import path from 'path';
-=======
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
 
 // Simple logger
 const log = (...args: any[]) => console.log('[E2E]', ...args);
@@ -22,7 +19,6 @@ const GUILD_ID = process.env.E2E_TEST_SERVER_ID || process.env.GUILD_ID || '';
 const MONITOR_TOKEN = requireEnv('E2E_MONITOR_TOKEN');
 
 const TIMEOUT_MS = parseInt(process.env.E2E_TIMEOUT_MS || '20000', 10);
-<<<<<<< HEAD
 const INCLUDE_CHANCE = process.env.E2E_INCLUDE_CHANCE_BOTS === 'true';
 const CHANCE_ATTEMPTS = parseInt(process.env.E2E_CHANCE_ATTEMPTS || '5', 10);
 function detectAvailableBots(): string[] {
@@ -35,17 +31,11 @@ function detectAvailableBots(): string[] {
   }
 }
 
-=======
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
 const DELAY_MS = parseInt(process.env.E2E_DELAY_MS || '2000', 10);
 
 // Messages meant to trigger reply bots. Adjust as your bots/phrases evolve.
 // Because bots are file-discovered and currently none are present, this is a scaffold.
-<<<<<<< HEAD
 type TestResult = { name: string; content: string; ok: boolean; replies: number; durationMs: number; details?: string };
-=======
-type TestResult = { name: string; content: string; ok: boolean; replies: number; details?: string };
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
 
 // Add your known triggers here as you (re)introduce reply bots.
 const testCases: { name: string; content: string }[] = [
@@ -69,7 +59,6 @@ const testCases: { name: string; content: string }[] = [
   { name: 'AttitudeBot', content: "I can't believe it" },
   { name: 'VennBot (cringe)', content: 'that is cringe' },
   { name: 'SigGreatBot', content: 'siggles is great' },
-<<<<<<< HEAD
   { name: 'GuyBot', content: 'guy' },
   { name: 'SpiderBot (incorrect)', content: 'spiderman' },
   { name: 'SpiderBot (correct)', content: 'spider-man' },
@@ -82,8 +71,6 @@ const testCases: { name: string; content: string }[] = [
     { name: 'BotBot (chance)', content: 'triggering via bot may or may not be handled here' }
   ] : []),
 
-=======
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
   // Chance-based or identity-dependent (may be flaky): HomonymBot, ChadBot, BotBot, InterruptBot, VennBot random
 ];
 
@@ -170,16 +157,11 @@ async function main() {
     throw e;
   }
 
-<<<<<<< HEAD
   const inventory = detectAvailableBots();
-
-=======
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
   const results: TestResult[] = [];
 
   for (const tc of testCases) {
     log(`Posting test case: ${tc.name} -> "${tc.content}"`);
-<<<<<<< HEAD
 
     const attempts = (INCLUDE_CHANCE && tc.name.includes('(chance)')) ? CHANCE_ATTEMPTS : 1;
     let aggregated: Message[] = [];
@@ -202,23 +184,6 @@ async function main() {
     const ok = botReplies.length > 0;
     results.push({ name: tc.name, content: tc.content, ok, replies: botReplies.length, durationMs, details: ok ? undefined : 'No replies' });
     log(`Result for ${tc.name}: ${ok ? 'OK' : 'NO REPLY'} in ${durationMs}ms`);
-=======
-    const since = Date.now();
-    await postViaWebhook(tc.content);
-
-    try {
-      const responses = await withTimeout(monitorForResponses(client, since, false, tc.content), TIMEOUT_MS, 'Wait for responses');
-      const botReplies = responses.filter(m => m.author.bot);
-      const ok = botReplies.length > 0;
-      results.push({ name: tc.name, content: tc.content, ok, replies: botReplies.length, details: ok ? undefined : 'No replies' });
-      log(`Result for ${tc.name}: ${ok ? 'OK' : 'NO REPLY'}`);
-    } catch (e: any) {
-      results.push({ name: tc.name, content: tc.content, ok: false, replies: 0, details: e?.message || String(e) });
-      log(`Result for ${tc.name}: ERROR -> ${e?.message || e}`);
-    }
-
-    await sleep(DELAY_MS);
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
   }
 
   log('E2E summary:');
@@ -228,21 +193,15 @@ async function main() {
 
   // Exit code logic
   const allFail = results.every(r => !r.ok);
-<<<<<<< HEAD
   const failureThreshold = parseInt(process.env.E2E_FAILURE_THRESHOLD || '1', 10); // max failures to still pass
   const failedCount = results.filter(r => !r.ok).length;
-=======
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
   if (allFail) {
     log('All tests failed; treating run as SKIPPED (non-blocking).');
     process.exit(0);
   }
 
   const allOk = results.every(r => r.ok);
-<<<<<<< HEAD
   const passWithFailures = !allOk && failedCount <= failureThreshold;
-=======
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
 
   // Post a nicely formatted Discord report (always, even on failure)
   try {
@@ -251,7 +210,6 @@ async function main() {
     log('WARN: failed to post Discord E2E report:', err);
   }
 
-<<<<<<< HEAD
   process.exit(allOk || passWithFailures ? 0 : 1);
 }
 
@@ -286,12 +244,6 @@ async function postDiscordReport(results: TestResult[]) {
     }),
     '```'
   ].join('\n');
-=======
-  process.exit(allOk ? 0 : 1);
-}
-
-async function postDiscordReport(results: TestResult[]) {
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
   const client = new WebhookClient({ url: WEBHOOK_URL });
 
   const total = results.length;
@@ -303,11 +255,7 @@ async function postDiscordReport(results: TestResult[]) {
   // Build a readable details section
   const lines = results.map(r => {
     const icon = r.ok ? '✅' : '❌';
-<<<<<<< HEAD
     return `${icon} ${r.name} — replies=${r.replies} — duration=${r.durationMs}ms — trigger: ${r.content}`;
-=======
-    return `${icon} ${r.name} — replies=${r.replies} — trigger: ${r.content}`;
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
   });
 
   const debug = process.env.DEBUG_MODE === 'true';
@@ -323,45 +271,22 @@ async function postDiscordReport(results: TestResult[]) {
     `• Channel: <#${CHANNEL_ID}> (${CHANNEL_ID})`,
     `• DEBUG_MODE: ${debug}`,
     `• E2E_ALLOW_WEBHOOK_TESTS: ${e2eEnabled}`,
-<<<<<<< HEAD
     `• E2E_INCLUDE_CHANCE_BOTS: ${INCLUDE_CHANCE} (attempts=${CHANCE_ATTEMPTS})`,
-=======
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
     '',
     `**Details**`,
     '```',
     ...lines,
-<<<<<<< HEAD
     '```',
     '',
     inventorySection
   ].join('\n');
 
-  // Footer: include commit SHA if available (supports GITHUB_SHA), else fall back to local git
-  const commitEnv = process.env.GIT_COMMIT || process.env.COMMIT_SHA || process.env.GITHUB_SHA || '';
-  let commit = commitEnv;
-  if (!commit) {
-    try {
-      const { execSync } = await import('node:child_process');
-      commit = execSync('git rev-parse HEAD').toString().trim();
-    } catch {}
-  }
-
-=======
-    '```'
-  ].join('\n');
-
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
   const embed = new EmbedBuilder()
     .setTitle('BunkBot Live E2E Report')
     .setDescription(description)
     .setColor(failed === 0 ? 0x2ecc71 : (passed === 0 ? 0xe74c3c : 0xf1c40f))
     .setTimestamp(new Date());
 
-<<<<<<< HEAD
-  if (commit) embed.setFooter({ text: `commit ${commit.slice(0, 12)}` });
-=======
->>>>>>> 5450c0c (bunkbot e2e: allow E2E webhook messages in whitelisted channels; optimize filter (early self-check, human fast-path, specific bot excludes); BotBot self-exclusion; add comprehensive live E2E test cases + Discord embed report; compose helper for local runs)
   await client.send({ embeds: [embed] });
 }
 
