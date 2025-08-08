@@ -267,8 +267,8 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 						let discordService = validConfig.discordService;
 						if (!discordService) {
 							try {
-								const { container, ServiceId, DiscordService } = await import('@starbunk/shared');
-								discordService = container.get(ServiceId.DiscordService) as DiscordService;
+								const { container, ServiceId } = await import('@starbunk/shared');
+								discordService = container.get(ServiceId.DiscordService);
 							} catch (containerError) {
 								logger.debug('Could not get DiscordService from container:', containerError as Error);
 							}
