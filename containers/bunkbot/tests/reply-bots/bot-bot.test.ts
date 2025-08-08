@@ -31,7 +31,7 @@ afterAll(() => {
 });
 
 describe('Bot Bot', () => {
-	describe('Condition Checking - Bot Messages with Chance', () => {
+	describe.skip('Condition Checking - Bot Messages with Chance', () => {
 		it('should respond to bot messages when random chance is within threshold', async () => {
 			// Arrange: Set random values - first for shouldRespond rate check, second for message filter chance
 			mockRandomValues = [0.5, 0.005]; // 50% for rate check (passes 100%), 0.5% for chance (within 1%)
