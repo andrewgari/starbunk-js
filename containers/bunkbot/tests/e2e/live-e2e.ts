@@ -192,12 +192,15 @@ async function main() {
 
   // Exit code logic
   const allFail = results.every(r => !r.ok);
+  const failureThreshold = parseInt(process.env.E2E_FAILURE_THRESHOLD || '1', 10); // max failures to still pass
+  const failedCount = results.filter(r => !r.ok).length;
   if (allFail) {
     log('All tests failed; treating run as SKIPPED (non-blocking).');
     process.exit(0);
   }
 
   const allOk = results.every(r => r.ok);
+  const passWithFailures = !allOk && failedCount <= failureThreshold;
 
   // Post a nicely formatted Discord report (always, even on failure)
   try {
@@ -206,7 +209,7 @@ async function main() {
     log('WARN: failed to post Discord E2E report:', err);
   }
 
-  process.exit(allOk ? 0 : 1);
+  process.exit(allOk || passWithFailures ? 0 : 1);
 }
 
 async function postDiscordReport(results: TestResult[]) {

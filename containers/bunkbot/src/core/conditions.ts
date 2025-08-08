@@ -1,4 +1,6 @@
 import { isDebugMode, logger, getTestingChannelIds } from '@starbunk/shared';
+import { extractWebhookId } from '../utils/webhook';
+
 import { Message } from 'discord.js';
 
 
@@ -253,9 +255,7 @@ export function shouldExcludeFromReplyBots(message: Message): boolean {
 		if (allowWebhookTests) {
 			const allowedChannels = getTestingChannelIds();
 			const e2eWebhookUrl = process.env.E2E_TEST_WEBHOOK_URL || '';
-			// Discord provides only webhookId on messages; compare IDs, not full URL
-			const e2eWebhookIdMatch = e2eWebhookUrl.match(/webhooks\/(\d+)\//);
-			const e2eWebhookId = e2eWebhookIdMatch ? e2eWebhookIdMatch[1] : undefined;
+			const e2eWebhookId = extractWebhookId(e2eWebhookUrl);
 
 			if (
 				allowedChannels.length > 0 &&
