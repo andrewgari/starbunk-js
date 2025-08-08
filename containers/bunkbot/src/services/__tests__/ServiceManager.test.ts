@@ -7,6 +7,7 @@ jest.mock('@starbunk/shared', () => ({
 		info: jest.fn(),
 		debug: jest.fn(),
 		error: jest.fn(),
+		warn: jest.fn(),
 	},
 	container: {
 		register: jest.fn(),
@@ -25,6 +26,7 @@ jest.mock('@starbunk/shared', () => ({
 	getMessageFilter: jest.fn(() => ({})),
 	runStartupDiagnostics: jest.fn(() => Promise.resolve([])),
 	validateEnvironment: jest.fn(),
+	ensureError: jest.fn((error) => error instanceof Error ? error : new Error(String(error))),
 }));
 
 jest.mock('@starbunk/shared/dist/services/discordService', () => ({
@@ -64,9 +66,13 @@ describe('ServiceManager', () => {
 			const serviceManager = ServiceManager.getInstance();
 			
 			await serviceManager.initialize();
-			await serviceManager.initialize();
+			const callsAfterFirst = (logger.info as jest.Mock).mock.calls.length;
 			
-			expect(logger.info).toHaveBeenCalledTimes(2); // One for 'Core services initialized', one for success
+			await serviceManager.initialize();
+			const callsAfterSecond = (logger.info as jest.Mock).mock.calls.length;
+			
+			// Should not make additional calls after first initialization
+			expect(callsAfterSecond).toBe(callsAfterFirst);
 		});
 	});
 

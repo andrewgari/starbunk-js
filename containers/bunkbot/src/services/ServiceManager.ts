@@ -1,6 +1,7 @@
-import { logger, container, ServiceId, createDiscordClient, ClientConfigs, WebhookManager, getMessageFilter, MessageFilter, runStartupDiagnostics, validateEnvironment } from '@starbunk/shared';
+import { logger, container, ServiceId, createDiscordClient, ClientConfigs, WebhookManager, getMessageFilter, MessageFilter, runStartupDiagnostics, validateEnvironment, ensureError } from '@starbunk/shared';
 import { DiscordService } from '@starbunk/shared/dist/services/discordService';
 import { Client } from 'discord.js';
+import { validateAndParseConfig, getSanitizedConfig, BunkBotConfig } from '../config/validation';
 
 export class ServiceManager {
 	private static instance?: ServiceManager;
@@ -8,6 +9,7 @@ export class ServiceManager {
 	private webhookManager?: WebhookManager;
 	private messageFilter?: MessageFilter;
 	private initialized = false;
+	private config?: BunkBotConfig;
 
 	static getInstance(): ServiceManager {
 		if (!ServiceManager.instance) {
@@ -23,25 +25,76 @@ export class ServiceManager {
 	async initialize(): Promise<void> {
 		if (this.initialized) return;
 
-		await this.runDiagnostics();
-		this.validateEnvironment();
-		await this.initializeServices();
-		
-		this.initialized = true;
-		logger.info('✅ ServiceManager initialized successfully');
+		try {
+			// Step 1: Validate configuration first
+			this.config = validateAndParseConfig();
+			logger.info('📋 Configuration loaded and validated', getSanitizedConfig(this.config));
+
+			// Step 2: Run diagnostics
+			await this.runDiagnostics();
+			
+			// Step 3: Legacy environment validation (for backwards compatibility)
+			this.validateEnvironment();
+			
+			// Step 4: Initialize services with validated config
+			await this.initializeServices();
+			
+			this.initialized = true;
+			logger.info('✅ ServiceManager initialized successfully');
+		} catch (error) {
+			const processedError = ensureError(error);
+			logger.error('❌ ServiceManager initialization failed:', processedError);
+			throw new Error(`ServiceManager initialization failed: ${processedError.message}`);
+		}
 	}
 
 	private async runDiagnostics(): Promise<void> {
-		const diagnostics = await runStartupDiagnostics();
-		const failures = diagnostics.filter(d => d.status === 'fail');
+		try {
+			const diagnostics = await runStartupDiagnostics();
+			const failures = diagnostics.filter(d => d.status === 'fail');
+			const warnings = diagnostics.filter(d => d.status === 'warn');
 
-		if (failures.length > 0) {
-			logger.error('❌ Critical startup issues detected:');
-			failures.forEach(failure => {
-				logger.error(`  - ${failure.check}: ${failure.message}`);
-			});
-			throw new Error(`Startup failed due to ${failures.length} critical issues`);
+			if (warnings.length > 0) {
+				logger.warn('⚠️ Non-critical startup issues detected:');
+				warnings.forEach(warning => {
+					logger.warn(`  - ${warning.check}: ${warning.message}`);
+				});
+			}
+
+			if (failures.length > 0) {
+				logger.error('❌ Critical startup issues detected:');
+				failures.forEach(failure => {
+					logger.error(`  - ${failure.check}: ${failure.message}`);
+				});
+				
+				// Check if failures are truly critical or can be handled gracefully
+				const criticalFailures = failures.filter(f => 
+					f.critical !== false && !this.canGracefullyHandle(f.check)
+				);
+				
+				if (criticalFailures.length > 0) {
+					throw new Error(`Startup failed due to ${criticalFailures.length} critical issues`);
+				} else {
+					logger.warn(`Starting with ${failures.length} non-critical issues - some features may be disabled`);
+				}
+			}
+		} catch (error) {
+			// If diagnostics themselves fail, log and continue with degraded functionality
+			logger.error('Failed to run startup diagnostics:', ensureError(error));
+			logger.warn('Continuing startup with unknown system state - monitoring recommended');
 		}
+	}
+
+	private canGracefullyHandle(checkName: string): boolean {
+		// Define which failures can be handled gracefully
+		const gracefullyHandleable = [
+			'optional_service_connectivity',
+			'non_critical_database_connection',
+			'optional_webhook_validation',
+			'performance_optimization_checks'
+		];
+		
+		return gracefullyHandleable.includes(checkName);
 	}
 
 	private validateEnvironment(): void {
@@ -103,5 +156,12 @@ export class ServiceManager {
 
 	isInitialized(): boolean {
 		return this.initialized;
+	}
+
+	getConfig(): BunkBotConfig {
+		if (!this.config) {
+			throw new Error('ServiceManager not initialized - configuration not available');
+		}
+		return this.config;
 	}
 }

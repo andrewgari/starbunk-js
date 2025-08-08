@@ -10,7 +10,8 @@ import {
 	ServiceId,
 	WebhookManager,
 	getMessageFilter,
-	MessageFilter
+	MessageFilter,
+	initializeObservability
 } from '@starbunk/shared';
 
 class CovaBotContainer {
@@ -23,6 +24,10 @@ class CovaBotContainer {
 		logger.info('🤖 Initializing CovaBot container...');
 
 		try {
+			// Initialize observability first
+			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('covabot');
+			logger.info('✅ Observability initialized for CovaBot');
+
 			// Validate environment
 			this.validateEnvironment();
 
