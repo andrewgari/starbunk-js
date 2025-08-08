@@ -113,7 +113,7 @@ describe('BotBot with new messageFilter system', () => {
 		}
 	});
 
-	it('should skip excluded bot messages (like CovaBot)', async () => {
+	it('should process CovaBot messages with 1% chance (no longer excluded)', async () => {
 		// Create a CovaBot message
 		const covaBotMessage = createMockMessage({
 			content: 'Hello from CovaBot!',
@@ -124,19 +124,16 @@ describe('BotBot with new messageFilter system', () => {
 			},
 		});
 
-		// Mock Math.random to ensure we would normally respond
+		// Mock Math.random to ensure we would respond (within 1% chance)
 		const originalRandom = Math.random;
 		Math.random = jest.fn(() => 0.005); // 0.5% - within 1% chance
 
-		// Spy on channel.send to see if any message was sent
-		const sendSpy = jest.spyOn(covaBotMessage.channel, 'send');
-
 		try {
-			// Process the message
-			await BotBot.processMessage(covaBotMessage as Message);
+			// Test if the bot should respond - it should return true for CovaBot with favorable chance
+			const shouldRespond = await BotBot.shouldRespond(covaBotMessage as Message);
 
-			// Should not send any message because CovaBot is excluded
-			expect(sendSpy).not.toHaveBeenCalled();
+			// Should now respond to CovaBot messages with favorable chance (no longer excluded)
+			expect(shouldRespond).toBe(true);
 		} finally {
 			Math.random = originalRandom;
 		}

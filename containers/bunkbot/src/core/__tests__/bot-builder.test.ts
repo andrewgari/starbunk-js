@@ -662,49 +662,6 @@ describe('Bot builder', () => {
 });
 
 describe('defaultMessageFilter', () => {
-	afterEach(() => {
-		// Clean up environment variables after each test
-		delete process.env.E2E_TEST_USER_ID;
-		delete process.env.TEST_BOT_USER_ID;
-	});
-
-	it('should allow E2E test client messages (runtime detection)', () => {
-		const testClientId = '123456789012345678';
-		const message = mockMessage({
-			content: 'test',
-			author: mockUser({ id: testClientId }),
-			client: {
-				user: mockUser({ id: testClientId })
-			}
-		});
-
-		const result = defaultMessageFilter(message);
-		expect(result).toBe(false); // false means don't skip (allow)
-	});
-
-	it('should allow E2E test client messages (by name)', () => {
-		const message = mockMessage({
-			content: 'test',
-			author: mockUser({ id: '123456789012345678', username: 'TestBot' })
-		});
-
-		const result = defaultMessageFilter(message);
-		expect(result).toBe(false); // false means don't skip (allow)
-	});
-
-	it('should allow E2E test client messages (by environment variable)', () => {
-		const testUserId = '123456789012345678';
-		process.env.E2E_TEST_USER_ID = testUserId;
-
-		const message = mockMessage({
-			content: 'test',
-			author: mockUser({ id: testUserId, username: 'RegularUser' })
-		});
-
-		const result = defaultMessageFilter(message);
-		expect(result).toBe(false); // false means don't skip (allow)
-	});
-
 	it('should skip excluded bot messages', () => {
 		const message = mockMessage({
 			content: 'test',
@@ -747,14 +704,14 @@ describe('defaultMessageFilter', () => {
 		expect(result).toBe(false); // false means don't skip (allow)
 	});
 
-	it('should prioritize E2E test client detection over exclusion', () => {
+	it('should prioritize test client detection over exclusion', () => {
 		const testClientId = '123456789012345678';
 		const message = mockMessage({
 			content: 'test',
-			author: mockUser({ 
-				id: testClientId, 
+			author: mockUser({
+				id: testClientId,
 				username: 'CovaBot', // This would normally be excluded
-				bot: true 
+				bot: true
 			}),
 			client: {
 				user: mockUser({ id: testClientId })
@@ -762,7 +719,7 @@ describe('defaultMessageFilter', () => {
 		});
 
 		const result = defaultMessageFilter(message);
-		expect(result).toBe(false); // false means don't skip (E2E test client takes priority)
+		expect(result).toBe(false); // false means don't skip (test client takes priority)
 	});
 
 	it('should handle null/undefined message gracefully', () => {

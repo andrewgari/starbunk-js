@@ -1,8 +1,8 @@
 #!/usr/bin/env ts-node
 
 /**
- * Comprehensive test runner for BunkBot E2E and Unit Tests
- * 
+ * Comprehensive test runner for BunkBot Unit Tests
+ *
  * This script runs all the BunkBot tests in the correct order and provides
  * detailed reporting on test results, including debug mode vs production mode
  * behavior validation.
@@ -26,8 +26,8 @@ const TEST_SUITES: TestSuite[] = [
 	},
 	{
 		name: 'CovaBot Filtering',
-		file: 'covabot-filtering-e2e.test.ts',
-		description: 'E2E tests for CovaBot message filtering and exclusion',
+		file: 'covabot-filtering.test.ts',
+		description: 'Tests for CovaBot message filtering and exclusion',
 		critical: true
 	},
 	{
@@ -42,12 +42,7 @@ const TEST_SUITES: TestSuite[] = [
 		description: 'Tests for specific bot trigger patterns and responses',
 		critical: false
 	},
-	{
-		name: 'BunkBot E2E',
-		file: 'bunkbot-e2e.test.ts',
-		description: 'End-to-end integration tests for the entire BunkBot system',
-		critical: true
-	}
+
 ];
 
 interface TestResult {

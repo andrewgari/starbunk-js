@@ -3,7 +3,7 @@ import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
-import { shouldExcludeFromReplyBots, isE2ETestClient } from './conditions';
+import { shouldExcludeFromReplyBots } from './conditions';
 
 /**
  * Type for message filtering function
@@ -12,7 +12,7 @@ export type MessageFilterFunction = (message: Message) => boolean | Promise<bool
 
 /**
  * Default message filter that bots use unless they provide their own
- * Skips messages from excluded bots, allows others through
+ * Only skips BunkBot self-messages, allows all other messages through
  */
 export function defaultMessageFilter(message: Message): boolean {
 	// Handle null/undefined message gracefully
@@ -20,31 +20,19 @@ export function defaultMessageFilter(message: Message): boolean {
 		return false; // Default to not skip for malformed messages
 	}
 
-	// Always allow E2E test clients (whitelisted for testing)
-	if (isE2ETestClient(message)) {
+	// Only skip if message is from BunkBot itself (self-message)
+	if (shouldExcludeFromReplyBots(message)) {
 		if (isDebugMode()) {
-			logger.debug(`✅ Allowing E2E test client message from: ${message.author.username}`);
+			logger.debug(`🚫 Skipping BunkBot self-message`);
 		}
-		return false; // Don't skip - allow test clients
+		return true; // Skip this message
 	}
 
-	// Skip messages from bots with enhanced filtering
-	if (message.author.bot) {
-		if (shouldExcludeFromReplyBots(message)) {
-			if (isDebugMode()) {
-				logger.debug(`🚫 Skipping excluded bot message from: ${message.author.username}`);
-			}
-			return true; // Skip this message
-		}
-
-		// For non-excluded bot messages, log but continue processing
-		if (isDebugMode()) {
-			logger.debug(`⚠️ Processing bot message from: ${message.author.username} (not excluded)`);
-		}
-		return false; // Don't skip
+	// Allow all other messages (human, CovaBot, other bots, etc.)
+	if (isDebugMode()) {
+		logger.debug(`✅ Processing message from: ${message.author.username}`);
 	}
-
-	return false; // Don't skip by default
+	return false; // Don't skip
 }
 
 /**
@@ -158,6 +146,7 @@ export interface ReplyBotImpl {
 		disabled: boolean;
 		[key: string]: unknown;
 	};
+	shouldRespond(message: Message): Promise<boolean>;
 	processMessage(message: Message): Promise<void>;
 }
 
@@ -175,33 +164,49 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 			responseRate: validConfig.defaultResponseRate,
 			disabled: validConfig.disabled,
 		},
-		async processMessage(message: Message): Promise<void> {
+		async shouldRespond(message: Message): Promise<boolean> {
 			// Check if bot is disabled first
 			if (validConfig.disabled) {
-				logger.debug('Bot is disabled, skipping message');
-				return;
+				return false;
 			}
 
-			// Check response rate next, before any other processing
+			// Check response rate
 			if (validConfig.defaultResponseRate <= 0) {
-				logger.debug('Skipping message due to response rate');
-				return;
+				return false;
 			}
 
-			if (validConfig.defaultResponseRate < 100) {
-				const randomValue = Math.random() * 100;
-				if (randomValue >= validConfig.defaultResponseRate) {
-					logger.debug('Skipping message due to response rate');
-					return;
-				}
+			// Apply random response rate
+			if (Math.random() * 100 > validConfig.defaultResponseRate) {
+				return false;
 			}
 
-			// Use message filtering function
+			// Check message filter
 			const shouldSkip = await validConfig.messageFilter(message);
 			if (shouldSkip) {
-				if (isDebugMode()) {
-					logger.debug(`[${validConfig.name}] 🚫 Skipping message based on filter from: ${message.author.username}`);
+				return false;
+			}
+
+			// Check triggers - sort by priority and test each one
+			const sortedTriggers = [...validConfig.triggers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+			
+			for (const trigger of sortedTriggers) {
+				try {
+					const matches = await trigger.condition(message);
+					if (matches) {
+						return true; // At least one trigger matches
+					}
+				} catch (error) {
+					logger.debug(`[${validConfig.name}] Error checking trigger "${trigger.name}":`, error as Error);
 				}
+			}
+
+			return false; // No triggers matched
+		},
+		async processMessage(message: Message): Promise<void> {
+			// Use shouldRespond to determine if we should process this message
+			// This avoids duplicating all the filtering logic
+			const shouldProcess = await this.shouldRespond(message);
+			if (!shouldProcess) {
 				return;
 			}
 
@@ -248,23 +253,38 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 							logger.debug(`[${validConfig.name}] Identity resolution failed for trigger "${trigger.name}" - bot will remain silent`);
 							continue; // Skip this trigger, bot remains silent
 						}
+
+						// Debug log the resolved identity
+						logger.debug(`[${validConfig.name}] ✅ Identity resolved: name="${identity.botName}", avatar="${identity.avatarUrl}"`);
 					} catch (error) {
 						logger.error('Failed to get bot identity', error as Error);
 						continue;
 					}
 
-					// Send message using DiscordService if available, otherwise use webhooks
+					// Send message with custom bot identity using DiscordService
 					try {
-						if (validConfig.discordService) {
-							// Use DiscordService if provided (for tests)
-							await validConfig.discordService.sendMessageWithBotIdentity(
+						// Try to get DiscordService from container first
+						let discordService = validConfig.discordService;
+						if (!discordService) {
+							try {
+								const { container, ServiceId, DiscordService } = await import('@starbunk/shared');
+								discordService = container.get(ServiceId.DiscordService) as DiscordService;
+							} catch (containerError) {
+								logger.debug('Could not get DiscordService from container:', containerError as Error);
+							}
+						}
+
+						if (discordService) {
+							// Use DiscordService with custom bot identity (webhooks)
+							await discordService.sendMessageWithBotIdentity(
 								message.channel.id,
 								identity,
 								responseText
 							);
-							logger.debug(`Message sent via DiscordService as ${identity.botName}`);
+							logger.debug(`Message sent via DiscordService webhook as ${identity.botName}`);
 						} else {
 							// Fallback to regular message sending (no custom identity)
+							logger.warn(`No DiscordService available - falling back to regular message (no custom identity)`);
 							if ('send' in message.channel) {
 								await message.channel.send(responseText);
 								logger.debug(`Message sent via regular channel (no custom identity)`);

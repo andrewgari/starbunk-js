@@ -25,7 +25,8 @@ import debugCommand from './commands/debug';
 // Import reply bot system
 import { BotRegistry } from './botRegistry';
 // import { DatabaseBotFactory } from './core/database-bot-factory'; // Temporarily disabled
-import ReplyBot from './replyBot';
+import { ReplyBotImpl } from './core/bot-builder';
+import { shouldExcludeFromReplyBots } from './core/conditions';
 
 // Import configuration services
 import { ConfigurationService } from './services/configurationService';
@@ -40,7 +41,7 @@ class BunkBotContainer {
 	private hasInitialized = false;
 	private commands = new Map();
 	private healthServer: any;
-	private replyBots: ReplyBot[] = [];
+	private replyBots: ReplyBotImpl[] = [];
 
 	async initialize(): Promise<void> {
 		logger.info('🚀 Initializing BunkBot container...');
@@ -114,13 +115,13 @@ class BunkBotContainer {
 		this.messageFilter = getMessageFilter();
 		container.register(ServiceId.MessageFilter, this.messageFilter);
 
-		// Initialize configuration services
-		this.configurationService = new ConfigurationService();
-		this.botIdentityService = new BotIdentityService(this.configurationService);
+		// Initialize configuration services - temporarily disabled due to Prisma issues
+		// this.configurationService = new ConfigurationService();
+		// this.botIdentityService = new BotIdentityService(this.configurationService);
 
 		// Preload configuration cache
-		await this.configurationService.refreshCache();
-		logger.info('✅ Configuration services initialized and cache preloaded');
+		// await this.configurationService.refreshCache();
+		logger.info('✅ Configuration services temporarily disabled for logging test');
 
 		// Database services temporarily disabled to focus on file-based bot loading
 		logger.info('⚠️  Database services disabled - using file-based bot loading only');
@@ -141,7 +142,7 @@ class BunkBotContainer {
 				logger.info(`✅ Reply bot system initialized with ${this.replyBots.length} bots`);
 				logger.info('🤖 Active reply bots:');
 				this.replyBots.forEach(bot => {
-					logger.info(`   - ${bot.defaultBotName}: ${bot.description}`);
+					logger.info(`   - ${bot.name}: ${bot.description}`);
 				});
 			} else {
 				logger.warn('⚠️  No reply bots were loaded - only slash commands are active');
@@ -227,7 +228,14 @@ private async deployCommands(): Promise<void> {
 		});
 
 		this.client.on(Events.MessageCreate, async (message: any) => {
-			logger.debug(`💬 Received message from ${message.author?.username || 'unknown'}: ${message.content?.substring(0, 50) || 'no content'}...`);
+			logger.info(`🔥 DISCORD EVENT: MessageCreate received from ${message.author?.username || 'unknown'} (${message.author?.id || 'unknown'})`);
+			logger.info(`🔥   Content: "${message.content?.substring(0, 100) || 'no content'}"`);
+			logger.info(`🔥   Channel: ${message.channel?.name || 'unknown'} (${message.channel?.id || 'unknown'})`);
+			logger.info(`🔥   Guild: ${message.guild?.name || 'DM'} (${message.guild?.id || 'DM'})`);
+			logger.info(`🔥   Author isBot: ${message.author?.bot || false}`);
+			logger.info(`🔥   Webhook ID: ${message.webhookId || 'none'}`);
+			logger.info(`🔥 → Passing to handleMessage...`);
+			
 			await this.handleMessage(message);
 		});
 
@@ -267,30 +275,48 @@ private async deployCommands(): Promise<void> {
 	}
 
 	private async handleMessage(message: any): Promise<void> {
-		// Skip bot messages
-		if (message.author.bot) return;
+		logger.info(`🔥 HANDLE MESSAGE: Starting message processing...`);
+		
+		// Check bot status using sophisticated filtering logic
+		logger.info(`🔥   Bot check: message.author.bot = ${message.author.bot}`);
+		if (message.author.bot) {
+			logger.info(`🔥   Message from bot - checking if it should be excluded...`);
+			const shouldExclude = shouldExcludeFromReplyBots(message);
+			logger.info(`🔥   shouldExcludeFromReplyBots = ${shouldExclude}`);
+			if (shouldExclude) {
+				logger.info(`🔥   ❌ DISCARDED: Bot message excluded from processing (author: ${message.author.username})`);
+				return;
+			}
+			logger.info(`🔥   ✅ Bot message allowed: Test client or whitelisted bot (author: ${message.author.username})`);
+		} else {
+			logger.info(`🔥   ✅ Bot check passed: Message from human user`);
+		}
 
 		try {
 			// Create message context for filtering
+			logger.info(`🔥   Creating message filter context...`);
 			const context = MessageFilter.createContextFromMessage(message);
+			logger.info(`🔥   Context created: server=${context.serverId}, channel=${context.channelId}, user=${context.username}`);
 
 			// Check if message should be processed
+			logger.info(`🔥   Checking message filter...`);
 			const filterResult = this.messageFilter.shouldProcessMessage(context);
+			logger.info(`🔥   Filter result: allowed=${filterResult.allowed}, reason="${filterResult.reason || 'none'}"`);
+			
 			if (!filterResult.allowed) {
-				// Message was filtered out - no need to log unless in debug mode
-				if (this.messageFilter.isDebugMode()) {
-					logger.debug(`Message filtered: ${filterResult.reason}`);
-				}
+				logger.info(`🔥   ❌ DISCARDED: Message filtered out - ${filterResult.reason}`);
 				return;
 			}
+			logger.info(`🔥   ✅ Filter check passed: Message will be processed`);
 
-			logger.debug(`Processing message from ${message.author.username}: ${message.content}`);
+			logger.info(`🔥   Processing message from ${message.author.username}: "${message.content.substring(0, 100)}"`);
 
 			// Process message through reply bot system
+			logger.info(`🔥   → Passing to reply bot system...`);
 			await this.processMessageWithReplyBots(message);
 
 		} catch (error) {
-			logger.error('Error processing message:', ensureError(error));
+			logger.error('🔥   ❌ ERROR in handleMessage:', ensureError(error));
 		}
 	}
 
@@ -299,29 +325,45 @@ private async deployCommands(): Promise<void> {
 	 * @param message Discord message to process
 	 */
 	private async processMessageWithReplyBots(message: any): Promise<void> {
+		logger.info(`🔥 REPLY BOTS: Starting reply bot processing...`);
+		
 		if (this.replyBots.length === 0) {
-			logger.debug('No reply bots loaded - skipping message processing');
+			logger.info(`🔥   ❌ NO BOTS: No reply bots loaded - skipping message processing`);
 			return;
 		}
 
-		logger.debug(`Processing message through ${this.replyBots.length} reply bots`);
+		logger.info(`🔥   Processing message through ${this.replyBots.length} reply bots`);
+
+		let botsTriggered = 0;
+		let botsSkipped = 0;
 
 		// Process message through each reply bot
 		for (const bot of this.replyBots) {
 			try {
+				logger.info(`🔥   Testing bot: ${bot.name}`);
+				
 				// Check if bot should respond to this message
 				const shouldRespond = await bot.shouldRespond(message);
+				logger.info(`🔥     shouldRespond = ${shouldRespond}`);
 
 				if (shouldRespond) {
-					logger.debug(`${bot.defaultBotName} will process message`);
-					await bot.processMessagePublic(message);
+					logger.info(`🔥     ✅ TRIGGERED: ${bot.name} will process message`);
+					await bot.processMessage(message);
+					botsTriggered++;
 				} else {
-					logger.debug(`${bot.defaultBotName} skipped message`);
+					logger.info(`🔥     ❌ SKIPPED: ${bot.name} conditions not met`);
+					botsSkipped++;
 				}
 			} catch (error) {
-				logger.error(`Error processing message with ${bot.defaultBotName}:`, ensureError(error));
+				logger.error(`🔥     💥 ERROR: ${bot.name} failed:`, ensureError(error));
 				// Continue processing with other bots even if one fails
 			}
+		}
+		
+		logger.info(`🔥 REPLY BOTS: Summary - ${botsTriggered} triggered, ${botsSkipped} skipped`);
+		
+		if (botsTriggered === 0) {
+			logger.info(`🔥   ⚠️ NO BOTS TRIGGERED: None of the ${this.replyBots.length} bots matched this message`);
 		}
 	}
 
@@ -428,11 +470,11 @@ private async deployCommands(): Promise<void> {
 			});
 		}
 
-		// Disconnect configuration services
-		if (this.configurationService) {
-			await this.configurationService.disconnect();
-			logger.info('Configuration services disconnected');
-		}
+		// Disconnect configuration services - temporarily disabled
+		// if (this.configurationService) {
+		//	await this.configurationService.disconnect();
+		//	logger.info('Configuration services disconnected');
+		// }
 
 		// Stop Discord client
 		if (this.client) {

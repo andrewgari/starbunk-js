@@ -1,15 +1,14 @@
 import { BotFactory } from '../../core/bot-factory';
-import { GUY_BOT_AVATAR_URL, GUY_BOT_NAME } from './constants';
 import { guyTrigger } from './triggers';
 
-// Create the Guy Bot that responds to "guy" mentions
+// Create the Guy Bot with dynamic identity resolution
 export default BotFactory.createBot({
-	name: GUY_BOT_NAME,
+	name: 'GuyBot',
 	description: 'Responds to "guy" mentions with random meme responses',
 	defaultIdentity: {
-		botName: GUY_BOT_NAME,
-		avatarUrl: GUY_BOT_AVATAR_URL
+		botName: 'Guy',
+		avatarUrl: '' // Will be overridden by dynamic identity
 	},
-
+	// All triggers with their priorities
 	triggers: [guyTrigger]
 });

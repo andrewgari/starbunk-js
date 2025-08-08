@@ -5,7 +5,7 @@ import { botTrigger } from './triggers';
 // Create the BotBot that responds to other bots
 export default BotFactory.createBot({
 	name: BOT_BOT_NAME,
-	description: 'Responds to other bots with a 1% chance, skips non-bot messages',
+	description: 'Responds to any bot messages (except BunkBot self) with a 1% chance',
 	defaultIdentity: {
 		botName: BOT_BOT_NAME,
 		avatarUrl: BOT_BOT_AVATAR_URL,
@@ -13,20 +13,20 @@ export default BotFactory.createBot({
 	// Use 100% response rate since we handle chance in messageFilter
 	defaultResponseRate: 100,
 
-	// Custom message filter: inverted logic - skip non-bot messages, 1% chance on bot messages
+	// Custom message filter: skip non-bot messages, apply 1% chance to bot messages
 	messageFilter: async (message) => {
-		// Skip messages from non-bots (inverted logic)
+		// Skip messages from non-bots
 		if (!message.author.bot) {
 			return true; // Skip non-bot messages
 		}
 
-		// For bot messages, check if they should be excluded (like CovaBot)
+		// Skip BunkBot self-messages (handled by default logic)
 		const { shouldExcludeFromReplyBots } = await import('../../core/conditions');
 		if (shouldExcludeFromReplyBots(message)) {
-			return true; // Skip excluded bot messages
+			return true; // Skip BunkBot self-messages
 		}
 
-		// For non-excluded bot messages, apply 1% chance
+		// For all other bot messages (CovaBot, other bots, etc.), apply 1% chance
 		const randomChance = Math.random() * 100;
 		if (randomChance > BOT_BOT_RESPONSE_RATE) {
 			return true; // Skip due to chance (99% of the time)

@@ -1,19 +1,17 @@
 import { logger } from '@starbunk/shared';
 import { getBotDefaults } from './config/botDefaults';
 import { BaseVoiceBot } from './core/voice-bot-adapter';
-import ReplyBot from './replyBot';
 import fs from 'fs';
 import path from 'path';
-import { ReplyBotAdapter } from './adapter';
 import { ReplyBotImpl } from './core/bot-builder';
 
-// Define the Bot type as a union of ReplyBot and BaseVoiceBot
-type Bot = ReplyBot | BaseVoiceBot;
+// Define the Bot type as a union of ReplyBotImpl and BaseVoiceBot
+type Bot = ReplyBotImpl | BaseVoiceBot;
 
 export class BotRegistry {
 	private static instance = new BotRegistry();
 	private bots = new Map<string, Bot>();
-	private replyBots = new Map<string, ReplyBot>();
+	private replyBots = new Map<string, ReplyBotImpl>();
 	private voiceBots = new Map<string, BaseVoiceBot>();
 	private botStates = new Map<string, boolean>();
 
@@ -36,9 +34,9 @@ export class BotRegistry {
 	 * Automatically discover and load all reply bots from the reply-bots directory
 	 * @returns Array of loaded reply bots
 	 */
-	public static async discoverBots(): Promise<ReplyBot[]> {
+	public static async discoverBots(): Promise<ReplyBotImpl[]> {
 		logger.info('[BotRegistry] Discovering reply bots...');
-		const loadedBots: ReplyBot[] = [];
+		const loadedBots: ReplyBotImpl[] = [];
 		const registry = BotRegistry.getInstance();
 
 		try {
@@ -109,10 +107,9 @@ export class BotRegistry {
 						continue;
 					}
 
-					// Adapt and register the bot
-					const adaptedBot = this.adaptBot(bot);
-					registry.registerBot(adaptedBot);
-					loadedBots.push(adaptedBot);
+					// Register the bot directly (no adaptation needed)
+					registry.registerBot(bot);
+					loadedBots.push(bot);
 					logger.debug(`[BotRegistry] Successfully loaded bot: ${bot.name} from ${botDir}`);
 				} catch (error) {
 					// Enhanced error handling with more specific information
@@ -139,7 +136,7 @@ export class BotRegistry {
 				logger.info(`[BotRegistry] Successfully discovered and loaded ${loadedBots.length} reply bots`);
 				logger.info('[BotRegistry] Reply bots summary:');
 				loadedBots.forEach((bot) => {
-					logger.info(`   - ${bot.defaultBotName}`);
+					logger.info(`   - ${bot.name}`);
 				});
 			} else {
 				logger.warn('[BotRegistry] No reply bots were discovered');
@@ -178,6 +175,7 @@ export class BotRegistry {
 			name: 'string',
 			description: 'string',
 			processMessage: 'function',
+			shouldRespond: 'function',
 		} as const;
 
 		const missingProps = Object.entries(requiredProps).filter(([prop, type]) => {
@@ -188,21 +186,13 @@ export class BotRegistry {
 		return missingProps.length === 0;
 	}
 
-	/**
-	 * Adapt a ReplyBotImpl to a ReplyBot
-	 * @param bot Bot implementation to adapt
-	 * @returns Adapted ReplyBot
-	 */
-	private static adaptBot(bot: ReplyBotImpl): ReplyBot {
-		return new ReplyBotAdapter(bot);
-	}
 
 	public registerBot(bot: Bot): void {
 		const botName = this.getBotName(bot);
 		this.bots.set(botName, bot);
 
 		// Add to specific collection
-		if (bot instanceof ReplyBot) {
+		if (this.isReplyBot(bot)) {
 			this.replyBots.set(botName, bot);
 		} else if (bot instanceof BaseVoiceBot) {
 			this.voiceBots.set(botName, bot);
@@ -213,7 +203,7 @@ export class BotRegistry {
 		this.botStates.set(botName, defaults.enabled);
 
 		// Log registration
-		if (bot instanceof ReplyBot) {
+		if (this.isReplyBot(bot)) {
 			logger.debug(`[BotRegistry] Registered reply bot: ${botName} (enabled: ${defaults.enabled})`);
 		} else {
 			logger.debug(`[BotRegistry] Registered voice bot: ${botName} (enabled: ${defaults.enabled})`);
@@ -251,7 +241,10 @@ export class BotRegistry {
 			return false;
 		}
 		try {
-			await bot.setResponseRate(rate);
+			// ReplyBotImpl uses metadata to track response rate
+			if (bot.metadata) {
+				bot.metadata.responseRate = rate;
+			}
 			logger.info(`[BotRegistry] Set response rate for ${botName} to ${rate}%`);
 			return true;
 		} catch (error) {
@@ -270,7 +263,7 @@ export class BotRegistry {
 			return 0;
 		}
 		try {
-			const rate = await bot.getResponseRate();
+			const rate = bot.metadata?.responseRate ?? 100;
 			logger.debug(`[BotRegistry] Retrieved response rate for ${botName}: ${rate}%`);
 			return rate;
 		} catch (error) {
@@ -282,7 +275,7 @@ export class BotRegistry {
 		}
 	}
 
-	public getReplyBot(botName: string): ReplyBot | undefined {
+	public getReplyBot(botName: string): ReplyBotImpl | undefined {
 		return this.replyBots.get(botName);
 	}
 
@@ -303,6 +296,13 @@ export class BotRegistry {
 	}
 
 	private getBotName(bot: Bot): string {
-		return bot instanceof ReplyBot ? bot.defaultBotName : bot.name;
+		return this.isReplyBot(bot) ? bot.name : bot.name;
+	}
+
+	/**
+	 * Type guard to check if a bot is a ReplyBotImpl
+	 */
+	private isReplyBot(bot: Bot): bot is ReplyBotImpl {
+		return 'shouldRespond' in bot && 'processMessage' in bot && typeof (bot as ReplyBotImpl).shouldRespond === 'function';
 	}
 }

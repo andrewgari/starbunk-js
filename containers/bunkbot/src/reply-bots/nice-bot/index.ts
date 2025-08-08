@@ -1,15 +1,11 @@
-import { BotFactory } from '../../core/bot-factory';
-import { NICE_BOT_AVATAR_URL, NICE_BOT_NAME } from './constants';
-import { niceTrigger } from './triggers';
+import { createBot } from '../../createBot';
+import { NICE_BOT_AVATAR_URL, NICE_BOT_NAME, NICE_BOT_PATTERNS, NICE_BOT_RESPONSES } from './constants';
 
-// Create the Nice Bot that responds with "Nice." to specific numbers
-export default BotFactory.createBot({
+// Create the Nice Bot using the simplified API
+export default createBot({
 	name: NICE_BOT_NAME,
 	description: 'Responds with "Nice." to specific numbers',
-	defaultIdentity: {
-		botName: NICE_BOT_NAME,
-		avatarUrl: NICE_BOT_AVATAR_URL
-	},
-
-	triggers: [niceTrigger]
+	patterns: [NICE_BOT_PATTERNS.Default],
+	responses: [NICE_BOT_RESPONSES.Default],
+	avatarUrl: NICE_BOT_AVATAR_URL
 });

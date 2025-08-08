@@ -42,8 +42,9 @@ export class MessageFilter {
 	 *    bots should only post in the specified guild(s)
 	 * 2. Channel-only filtering: If TESTING_CHANNEL_IDS is specified but TESTING_SERVER_IDS is not,
 	 *    bots should only post in the specified channel(s) regardless of guild
-	 * 3. Combined filtering: If both are specified, bots should only post in the specified
-	 *    channel(s) within the specified guild(s)
+	 * 3. Combined filtering: If both are specified, Guild-level takes precedence:
+	 *    - If guild is whitelisted: ALL channels in that guild are allowed
+	 *    - If guild is not whitelisted: only whitelisted channels are allowed
 	 * 4. No filtering: If neither are specified, bots should post normally without restrictions
 	 */
 	public shouldProcessMessage(context: MessageContext): FilterResult {
@@ -86,30 +87,35 @@ export class MessageFilter {
 			return { allowed: true };
 		}
 
-		// Case 3: Combined filtering - both server AND channel must match
+		// Case 3: Combined filtering - Guild-level takes precedence over channel-level
 		if (hasServerRestriction && hasChannelRestriction) {
 			// First check server restriction
 			if (!context.serverId) {
-				const reason = 'Message is from DM, but server restriction is active';
+				// DM messages: only allow if channel is specifically whitelisted
+				if (this.testingChannelIds.includes(context.channelId)) {
+					this.logFilterDecision(context, true, 'DM message allowed - channel is whitelisted');
+					return { allowed: true };
+				}
+				const reason = 'Message is from DM, but channel is not in allowed testing channels';
 				this.logFilterDecision(context, false, reason);
 				return { allowed: false, reason };
 			}
 
-			if (!this.testingServerIds.includes(context.serverId)) {
-				const reason = `Server ${context.serverId} not in allowed testing servers: [${this.testingServerIds.join(', ')}]`;
-				this.logFilterDecision(context, false, reason);
-				return { allowed: false, reason };
+			// Guild-level whitelist takes precedence: if guild is whitelisted, allow ALL channels in that guild
+			if (this.testingServerIds.includes(context.serverId)) {
+				this.logFilterDecision(context, true, 'Guild-level whitelist takes precedence - all channels in this guild are allowed');
+				return { allowed: true };
 			}
 
-			// Then check channel restriction
-			if (!this.testingChannelIds.includes(context.channelId)) {
-				const reason = `Channel ${context.channelId} not in allowed testing channels: [${this.testingChannelIds.join(', ')}] (server restriction already passed)`;
-				this.logFilterDecision(context, false, reason);
-				return { allowed: false, reason };
+			// Guild is not whitelisted: only allow if channel is specifically whitelisted
+			if (this.testingChannelIds.includes(context.channelId)) {
+				this.logFilterDecision(context, true, 'Channel-level whitelist allows this specific channel');
+				return { allowed: true };
 			}
 
-			this.logFilterDecision(context, true, 'Both server and channel restrictions passed');
-			return { allowed: true };
+			const reason = `Guild ${context.serverId} not in allowed testing servers and channel ${context.channelId} not in allowed testing channels`;
+			this.logFilterDecision(context, false, reason);
+			return { allowed: false, reason };
 		}
 
 		// This should never be reached, but provide a safe fallback

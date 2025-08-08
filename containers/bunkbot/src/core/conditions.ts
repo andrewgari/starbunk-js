@@ -18,15 +18,6 @@ const BOT_IDENTIFIERS = {
 	EXCLUDED_BOT_NAMES: ['CovaBot', 'Cova', 'DJCova', 'Snowbunk'],
 	EXCLUDED_BOT_IDS: [] as string[], // Can be populated with specific bot user IDs
 
-	// E2E Test client identifiers (whitelisted to allow bot responses during testing)
-	// Runtime detection via message.client.user.id is preferred over these static configurations
-	// Set environment variables E2E_TEST_USER_ID or TEST_BOT_USER_ID for additional test clients
-	TEST_CLIENT_NAMES: ['TestBot', 'E2EBot', 'TestClient', 'E2E Test Bot'],
-	TEST_CLIENT_IDS: [
-		process.env.E2E_TEST_USER_ID || '',
-		process.env.TEST_BOT_USER_ID || '',
-		'123456789012345680', // Default test bot ID placeholder
-	].filter(Boolean) as string[] // Remove empty strings
 };
 import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
@@ -220,99 +211,42 @@ export function isCovaBot(message: Message): boolean {
 	return result;
 }
 
-/**
- * Check if message is from an E2E test client that should be whitelisted
- */
-export function isE2ETestClient(message: Message): boolean {
-	if (!message?.author) return false;
-
-	const username = message.author.username?.toLowerCase() || '';
-	const displayName = message.author.displayName?.toLowerCase() || '';
-
-	// Check if it's from the same client ID at runtime (test scenario)
-	const runtimeClientId = message.client?.user?.id;
-	if (runtimeClientId && message.author.id === runtimeClientId) {
-		if (isDebugMode()) {
-			logger.debug(`✅ Identified E2E test client (same client ID): ${message.author.username} (${message.author.id})`);
-		}
-		return true;
-	}
-
-	// Check test client names
-	const isTestClientName = BOT_IDENTIFIERS.TEST_CLIENT_NAMES.some(name =>
-		username === name.toLowerCase() || displayName === name.toLowerCase()
-	);
-
-	// Check test client IDs from environment variables (checked dynamically for test flexibility)
-	const dynamicTestClientIds = [
-		process.env.E2E_TEST_USER_ID,
-		process.env.TEST_BOT_USER_ID,
-		...BOT_IDENTIFIERS.TEST_CLIENT_IDS
-	].filter(Boolean);
-	const isTestClientId = dynamicTestClientIds.includes(message.author.id);
-
-	const result = isTestClientName || isTestClientId;
-
-	if (result && isDebugMode()) {
-		logger.debug(`✅ Identified E2E test client: ${message.author.username} (${message.author.id})`);
-	}
-
-	return result;
-}
 
 /**
  * Check if message should be excluded from reply bot processing
- * This implements the comprehensive bot filtering logic
+ * Simple logic: Only exclude BunkBot self-messages
  */
 export function shouldExcludeFromReplyBots(message: Message): boolean {
 	// Handle null/undefined message or author gracefully
 	if (!message?.author) return true; // Exclude malformed messages
 
-	// Always exclude non-bot messages from this check
-	if (!message.author.bot) return false;
-
-	// Check if it's CovaBot specifically
-	if (isCovaBot(message)) {
-		if (isDebugMode()) {
-			logger.debug(`❌ Excluding CovaBot message from reply bot processing`);
-		}
-		return true;
-	}
-
-	// Check if it's from the same client (self)
+	// Exclude if the message is from BunkBot itself (same client)
 	if (message.client?.user && message.author.id === message.client.user.id) {
 		if (isDebugMode()) {
-			logger.debug(`❌ Excluding self-message from reply bot processing`);
+			logger.debug(`❌ Excluding BunkBot self-message from reply bot processing`);
 		}
 		return true;
 	}
 
-	// Check excluded bot names
-	const username = message.author.username?.toLowerCase() || '';
-	const displayName = message.author.displayName?.toLowerCase() || '';
+	// Exclude webhook messages from BunkBot reply bots to prevent self-triggering loops
+	if (message.webhookId && message.author.bot) {
+		// Check if this is a webhook message from a BunkBot reply bot
+		// Reply bots use custom webhook names like "HoldBot", "TestBot", etc.
+		const authorName = message.author.username;
 
-	const isExcludedName = BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.some(name =>
-		username === name.toLowerCase() || displayName === name.toLowerCase()
-	);
-
-	if (isExcludedName) {
-		if (isDebugMode()) {
-			logger.debug(`❌ Excluding bot message from excluded name list: ${message.author.username}`);
+		// Exclude if it's from a BunkBot webhook (but allow CovaBot, DJCova, etc.)
+		if (!BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.includes(authorName)) {
+			// This is likely a BunkBot reply bot webhook - exclude it to prevent loops
+			if (isDebugMode()) {
+				logger.debug(`❌ Excluding BunkBot reply bot webhook message from: ${authorName} (webhook ID: ${message.webhookId})`);
+			}
+			return true;
 		}
-		return true;
 	}
 
-	// Check excluded bot IDs
-	if (BOT_IDENTIFIERS.EXCLUDED_BOT_IDS.includes(message.author.id)) {
-		if (isDebugMode()) {
-			logger.debug(`❌ Excluding bot message from excluded ID list: ${message.author.id}`);
-		}
-		return true;
-	}
-
-	// If we get here, the bot message is allowed
+	// Allow all other messages (human, CovaBot, DJCova, etc.)
 	if (isDebugMode()) {
-		logger.debug(`✅ Bot message allowed for reply bot processing: ${message.author.username}`);
+		logger.debug(`✅ Allowing message for reply bot processing from: ${message.author.username}`);
 	}
 
 	return false;

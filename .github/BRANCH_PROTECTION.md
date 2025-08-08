@@ -168,13 +168,12 @@ The `container-startup-validation.yml` workflow provides comprehensive validatio
 - Changes to shared dependencies
 
 #### **Manual Triggers**
-- Workflow dispatch with test level selection
-- `test:e2e` label for full E2E testing
+- Workflow dispatch for manual testing
 
 #### **Test Levels**
 1. **Unit Tests**: Fast component validation
-2. **Integration Tests**: Service interaction validation  
-3. **E2E Tests**: Full container startup validation
+2. **Integration Tests**: Service interaction validation
+3. **Container Startup Tests**: Service initialization validation
 
 #### **Matrix Strategy**
 - Tests multiple containers in parallel
@@ -195,10 +194,10 @@ The `container-startup-validation.yml` workflow provides comprehensive validatio
 - Verify Node.js version matches (20.x)
 - Ensure all dependencies are installed correctly
 
-#### **E2E tests timing out**
-- Increase timeout in workflow (currently 10 minutes)
-- Check container build performance
-- Verify test environment setup
+#### **Container startup tests failing**
+- Check environment variables are properly set
+- Verify container build performance
+- Ensure test environment setup is correct
 
 ### Debug Commands
 
