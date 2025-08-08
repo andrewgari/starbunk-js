@@ -281,8 +281,15 @@ async function postDiscordReport(results: TestResult[]) {
     inventorySection
   ].join('\n');
 
-  // Footer: include commit SHA if available
-  const commit = process.env.GIT_COMMIT || process.env.COMMIT_SHA || '';
+  // Footer: include commit SHA if available (supports GITHUB_SHA), else fall back to local git
+  const commitEnv = process.env.GIT_COMMIT || process.env.COMMIT_SHA || process.env.GITHUB_SHA || '';
+  let commit = commitEnv;
+  if (!commit) {
+    try {
+      const { execSync } = await import('node:child_process');
+      commit = execSync('git rev-parse HEAD').toString().trim();
+    } catch {}
+  }
 
   const embed = new EmbedBuilder()
     .setTitle('BunkBot Live E2E Report')
