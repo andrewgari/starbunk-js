@@ -100,7 +100,7 @@ export class BotRegistry {
 		return this.botStates.get(botName) ?? false;
 	}
 
-	public async setBotFrequency(botName: string, rate: number): Promise<boolean> {
+	public setBotFrequency(botName: string, rate: number): boolean {
 		const bot = this.replyBots.get(botName);
 		if (!bot?.metadata) {
 			logger.warn(`[BotRegistry] Cannot set frequency for bot: ${botName}`);
@@ -117,7 +117,7 @@ export class BotRegistry {
 		}
 	}
 
-	public async getBotFrequency(botName: string): Promise<number> {
+	public getBotFrequency(botName: string): number {
 		const bot = this.replyBots.get(botName);
 		if (!bot) {
 			logger.warn(`[BotRegistry] Cannot get frequency for non-existent bot: ${botName}`);

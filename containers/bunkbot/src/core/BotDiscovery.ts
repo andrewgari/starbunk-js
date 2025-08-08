@@ -74,7 +74,10 @@ export class BotDiscovery {
 	}
 
 	private findIndexFile(botPath: string): string | null {
-		const candidates = ['index.ts', 'index.js'];
+		// In production, look for .js files first, then .ts for development
+		const candidates = process.env.NODE_ENV === 'production' 
+			? ['index.js', 'index.ts']
+			: ['index.ts', 'index.js'];
 		
 		for (const candidate of candidates) {
 			const filePath = path.join(botPath, candidate);

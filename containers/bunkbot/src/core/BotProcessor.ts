@@ -6,7 +6,12 @@ import { TriggerResponse } from './trigger-response';
 import { ValidatedReplyBotConfig } from './bot-builder';
 
 export class BotProcessor {
-	constructor(private config: ValidatedReplyBotConfig) {}
+	private discordService?: DiscordService;
+	private sortedTriggers?: TriggerResponse[];
+
+	constructor(private config: ValidatedReplyBotConfig) {
+		this.initializeServices();
+	}
 
 	async shouldRespond(message: Message): Promise<boolean> {
 		if (this.config.disabled) return false;
@@ -117,7 +122,7 @@ export class BotProcessor {
 
 	private async sendResponse(response: { text: string; identity: BotIdentity }, message: Message): Promise<void> {
 		try {
-			const discordService = await this.getDiscordService();
+			const discordService = this.getDiscordService();
 			
 			if (discordService) {
 				await discordService.sendMessageWithBotIdentity(
@@ -135,18 +140,23 @@ export class BotProcessor {
 		}
 	}
 
-	private async getDiscordService(): Promise<DiscordService | null> {
+	private async initializeServices(): Promise<void> {
 		if (this.config.discordService) {
-			return this.config.discordService;
+			this.discordService = this.config.discordService;
+			return;
 		}
 
 		try {
 			const { container, ServiceId } = await import('@starbunk/shared');
-			return container.get(ServiceId.DiscordService);
+			this.discordService = container.get(ServiceId.DiscordService);
 		} catch (error) {
 			logger.debug('Could not get DiscordService from container:', error);
-			return null;
+			this.discordService = undefined;
 		}
+	}
+
+	private getDiscordService(): DiscordService | null {
+		return this.discordService || null;
 	}
 
 	private async sendFallbackMessage(message: Message, text: string): Promise<void> {
@@ -161,7 +171,10 @@ export class BotProcessor {
 	}
 
 	private getSortedTriggers(): TriggerResponse[] {
-		return [...this.config.triggers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+		if (!this.sortedTriggers) {
+			this.sortedTriggers = [...this.config.triggers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+		}
+		return this.sortedTriggers;
 	}
 }
 

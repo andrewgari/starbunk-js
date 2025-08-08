@@ -45,8 +45,15 @@ export class ServiceManager {
 	}
 
 	private validateEnvironment(): void {
+		// Check for any valid token (BUNKBOT_TOKEN, STARBUNK_TOKEN, or DISCORD_TOKEN)
+		const hasValidToken = process.env.BUNKBOT_TOKEN || process.env.STARBUNK_TOKEN || process.env.DISCORD_TOKEN;
+		
+		if (!hasValidToken) {
+			throw new Error('Missing required Discord token. Please set BUNKBOT_TOKEN, STARBUNK_TOKEN, or DISCORD_TOKEN environment variable.');
+		}
+
 		validateEnvironment({
-			required: ['STARBUNK_TOKEN'],
+			required: [],
 			optional: ['DATABASE_URL', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV']
 		});
 	}

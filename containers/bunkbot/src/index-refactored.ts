@@ -11,7 +11,7 @@ import { ServiceManager } from './services/ServiceManager';
 import { MessageProcessor } from './core/MessageProcessor';
 import { BotDiscovery } from './core/BotDiscovery';
 import { HealthServer } from './services/HealthServer';
-import { InteractionHandler } from './core/InteractionHandler';
+import { InteractionHandler, Command } from './core/InteractionHandler';
 import { ReplyBotImpl } from './core/bot-builder';
 
 class BunkBotContainer {
@@ -20,7 +20,7 @@ class BunkBotContainer {
 	private healthServer: HealthServer;
 	private interactionHandler?: InteractionHandler;
 	private hasInitialized = false;
-	private commands = new Map();
+	private commands = new Map<string, Command>();
 	private replyBots: ReplyBotImpl[] = [];
 
 	constructor() {

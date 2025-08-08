@@ -3,7 +3,7 @@ import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
-import { shouldExcludeFromReplyBots } from './conditions';
+import { shouldExcludeFromReplyBots } from './conditions-refactored';
 import { BotProcessor } from './BotProcessor';
 
 export type MessageFilterFunction = (message: Message) => boolean | Promise<boolean>;

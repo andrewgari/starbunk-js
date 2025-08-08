@@ -1,4 +1,4 @@
-import { isDebugMode, logger } from '@starbunk/shared';
+import { isDebugMode, logger, ensureError } from '@starbunk/shared';
 import { Message } from 'discord.js';
 import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
@@ -314,6 +314,3 @@ function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function ensureError(error: unknown): Error {
-	return error instanceof Error ? error : new Error(String(error));
-}

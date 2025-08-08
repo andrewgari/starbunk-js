@@ -1,8 +1,9 @@
 import { logger, ensureError, MessageFilter } from '@starbunk/shared';
-import { CommandInteraction } from 'discord.js';
+import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { RESTPostAPIChatInputApplicationCommandJSONBody } from 'discord-api-types/v10';
 
-interface Command {
-	data: Record<string, unknown>;
+export interface Command {
+	data: SlashCommandBuilder | RESTPostAPIChatInputApplicationCommandJSONBody;
 	execute(interaction: CommandInteraction): Promise<void>;
 }
 
