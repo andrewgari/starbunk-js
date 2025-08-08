@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import { WebhookClient, Client, GatewayIntentBits, Message, EmbedBuilder } from 'discord.js';
+import fs from 'fs';
+import path from 'path';
 
 // Simple logger
 const log = (...args: any[]) => console.log('[E2E]', ...args);
@@ -17,6 +19,18 @@ const GUILD_ID = process.env.E2E_TEST_SERVER_ID || process.env.GUILD_ID || '';
 const MONITOR_TOKEN = requireEnv('E2E_MONITOR_TOKEN');
 
 const TIMEOUT_MS = parseInt(process.env.E2E_TIMEOUT_MS || '20000', 10);
+const INCLUDE_CHANCE = process.env.E2E_INCLUDE_CHANCE_BOTS === 'true';
+const CHANCE_ATTEMPTS = parseInt(process.env.E2E_CHANCE_ATTEMPTS || '5', 10);
+function detectAvailableBots(): string[] {
+  const botsDir = path.resolve(__dirname, '../../src/reply-bots');
+  try {
+    const entries = fs.readdirSync(botsDir, { withFileTypes: true });
+    return entries.filter(e => e.isDirectory() && e.name.endsWith('-bot')).map(e => e.name);
+  } catch {
+    return [];
+  }
+}
+
 const DELAY_MS = parseInt(process.env.E2E_DELAY_MS || '2000', 10);
 
 // Messages meant to trigger reply bots. Adjust as your bots/phrases evolve.
@@ -45,6 +59,18 @@ const testCases: { name: string; content: string }[] = [
   { name: 'AttitudeBot', content: "I can't believe it" },
   { name: 'VennBot (cringe)', content: 'that is cringe' },
   { name: 'SigGreatBot', content: 'siggles is great' },
+  { name: 'GuyBot', content: 'guy' },
+  { name: 'SpiderBot (incorrect)', content: 'spiderman' },
+  { name: 'SpiderBot (correct)', content: 'spider-man' },
+
+  // Conditional for chance-based bots (non-blocking)
+  ...(process.env.E2E_INCLUDE_CHANCE_BOTS === 'true' ? [
+    { name: 'HomonymBot (chance)', content: 'I need to buy some flour to bake a flower cake' },
+    { name: 'ChadBot (chance)', content: 'this is the chad moment' },
+    { name: 'InterruptBot (chance)', content: 'I was going to say something very important but' },
+    { name: 'BotBot (chance)', content: 'triggering via bot may or may not be handled here' }
+  ] : []),
+
   // Chance-based or identity-dependent (may be flaky): HomonymBot, ChadBot, BotBot, InterruptBot, VennBot random
 ];
 
@@ -131,25 +157,32 @@ async function main() {
     throw e;
   }
 
+  const inventory = detectAvailableBots();
+
   const results: TestResult[] = [];
 
   for (const tc of testCases) {
     log(`Posting test case: ${tc.name} -> "${tc.content}"`);
-    const since = Date.now();
-    await postViaWebhook(tc.content);
 
-    try {
-      const responses = await withTimeout(monitorForResponses(client, since, false, tc.content), TIMEOUT_MS, 'Wait for responses');
-      const botReplies = responses.filter(m => m.author.bot);
-      const ok = botReplies.length > 0;
-      results.push({ name: tc.name, content: tc.content, ok, replies: botReplies.length, details: ok ? undefined : 'No replies' });
-      log(`Result for ${tc.name}: ${ok ? 'OK' : 'NO REPLY'}`);
-    } catch (e: any) {
-      results.push({ name: tc.name, content: tc.content, ok: false, replies: 0, details: e?.message || String(e) });
-      log(`Result for ${tc.name}: ERROR -> ${e?.message || e}`);
+    const attempts = (INCLUDE_CHANCE && tc.name.includes('(chance)')) ? CHANCE_ATTEMPTS : 1;
+    let aggregated: Message[] = [];
+
+    for (let i = 0; i < attempts; i++) {
+      const since = Date.now();
+      await postViaWebhook(tc.content);
+      try {
+        const responses = await withTimeout(monitorForResponses(client, since, false, tc.content), TIMEOUT_MS, 'Wait for responses');
+        aggregated = aggregated.concat(responses);
+      } catch (e) {
+        // ignore per-attempt timeout; we aggregate across attempts
+      }
+      await sleep(DELAY_MS);
     }
 
-    await sleep(DELAY_MS);
+    const botReplies = aggregated.filter(m => m.author.bot);
+    const ok = botReplies.length > 0;
+    results.push({ name: tc.name, content: tc.content, ok, replies: botReplies.length, details: ok ? undefined : 'No replies' });
+    log(`Result for ${tc.name}: ${ok ? 'OK' : 'NO REPLY'}`);
   }
 
   log('E2E summary:');
@@ -177,6 +210,36 @@ async function main() {
 }
 
 async function postDiscordReport(results: TestResult[]) {
+  const inventoryList = detectAvailableBots();
+  const deterministicNames = [
+    'AttitudeBot','BabyBot','BananaBot','BluBot: mention','BluBot: acknowledge','ChaosBot','CheckBot','EzioBot','GundamBot','GuyBot','HoldBot','MacaroniBot','MusicCorrectBot','NiceBot','PickleBot','SheeshBot','SigGreatBot','SpiderBot (incorrect)','SpiderBot (correct)','VennBot (cringe)'
+  ];
+  const chanceNames = ['HomonymBot (chance)','ChadBot (chance)','InterruptBot (chance)','BotBot (chance)'];
+  const testedNames = results.map(r => r.name);
+
+  const inventorySection = [
+    '**Bot Inventory**',
+    '```',
+    ...inventoryList.map(n => {
+      const display = n.replace(/-bot$/, '');
+      if (deterministicNames.includes(display) || deterministicNames.includes(display + ': mention') || deterministicNames.includes(display + ': acknowledge')) {
+        return `✓ ${n} — tested (deterministic)`;
+      }
+      if (chanceNames.some(c => c.startsWith(display))) {
+        return INCLUDE_CHANCE ? `~ ${n} — tested (chance)` : `- ${n} — excluded (chance-based)`;
+      }
+      if (n === 'cova-bot') {
+        return '- cova-bot — excluded (LLM/identity)';
+      }
+      if (n === 'example-bot') {
+        return '- example-bot — excluded (example)';
+      }
+      // default
+      const matched = testedNames.find(t => t.toLowerCase().startsWith(display.toLowerCase()));
+      return matched ? `✓ ${n} — tested` : `? ${n} — status unknown`;
+    }),
+    '```'
+  ].join('\n');
   const client = new WebhookClient({ url: WEBHOOK_URL });
 
   const total = results.length;
@@ -204,11 +267,14 @@ async function postDiscordReport(results: TestResult[]) {
     `• Channel: <#${CHANNEL_ID}> (${CHANNEL_ID})`,
     `• DEBUG_MODE: ${debug}`,
     `• E2E_ALLOW_WEBHOOK_TESTS: ${e2eEnabled}`,
+    `• E2E_INCLUDE_CHANCE_BOTS: ${INCLUDE_CHANCE} (attempts=${CHANCE_ATTEMPTS})`,
     '',
     `**Details**`,
     '```',
     ...lines,
-    '```'
+    '```',
+    '',
+    inventorySection
   ].join('\n');
 
   const embed = new EmbedBuilder()
