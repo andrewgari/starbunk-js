@@ -22,7 +22,6 @@ jest.mock('../../core/BotProcessor', () => ({
 		newestItem: 0
 	}))
 }));
-
 describe('HealthServer', () => {
 	let healthServer: HealthServer;
 	let mockServer: any;
@@ -146,9 +145,7 @@ describe('HealthServer', () => {
 			mockReq.url = '/ready';
 			mockServer.handler(mockReq, mockRes);
 
-			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 
-				'Content-Type': 'application/json'
-			});
+			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'application/json' });
 			expect(mockRes.end).toHaveBeenCalled();
 		});
 
@@ -156,9 +153,7 @@ describe('HealthServer', () => {
 			mockReq.url = '/live';
 			mockServer.handler(mockReq, mockRes);
 
-			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 
-				'Content-Type': 'application/json'
-			});
+			expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'application/json' });
 			expect(mockRes.end).toHaveBeenCalled();
 		});
 
