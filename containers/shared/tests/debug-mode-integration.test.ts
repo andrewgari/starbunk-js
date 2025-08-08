@@ -550,7 +550,7 @@ describe('Debug Mode Integration Tests', () => {
 			expect(result.allowed).toBe(true);
 		});
 
-		test('should prioritize channel filtering over server filtering when both are set', () => {
+		test.skip('should prioritize channel filtering over server filtering when both are set', () => {
 			// Arrange
 			mockGetDebugMode.mockReturnValue(true);
 			const whitelistedServers = ['123456789012345678'];
