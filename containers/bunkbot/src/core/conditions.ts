@@ -214,7 +214,7 @@ export function isCovaBot(message: Message): boolean {
 
 /**
  * Check if message should be excluded from reply bot processing
- * Simple logic: Only exclude BunkBot self-messages
+ * Excludes: BunkBot self-messages, CovaBot, DJCova, and other specified bots
  */
 export function shouldExcludeFromReplyBots(message: Message): boolean {
 	// Handle null/undefined message or author gracefully
@@ -228,13 +228,21 @@ export function shouldExcludeFromReplyBots(message: Message): boolean {
 		return true;
 	}
 
+	// Exclude messages from specified bots (CovaBot, DJCova, etc.)
+	const authorName = message.author.username;
+	if (BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.includes(authorName)) {
+		if (isDebugMode()) {
+			logger.debug(`❌ Excluding message from excluded bot: ${authorName}`);
+		}
+		return true;
+	}
+
 	// Exclude webhook messages from BunkBot reply bots to prevent self-triggering loops
 	if (message.webhookId && message.author.bot) {
 		// Check if this is a webhook message from a BunkBot reply bot
 		// Reply bots use custom webhook names like "HoldBot", "TestBot", etc.
-		const authorName = message.author.username;
 
-		// Exclude if it's from a BunkBot webhook (but allow CovaBot, DJCova, etc.)
+		// If it's NOT from an excluded bot (like CovaBot), it's likely a BunkBot webhook
 		if (!BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.includes(authorName)) {
 			// This is likely a BunkBot reply bot webhook - exclude it to prevent loops
 			if (isDebugMode()) {
@@ -244,7 +252,7 @@ export function shouldExcludeFromReplyBots(message: Message): boolean {
 		}
 	}
 
-	// Allow all other messages (human, CovaBot, DJCova, etc.)
+	// Allow all other messages (human, whitelisted bots, etc.)
 	if (isDebugMode()) {
 		logger.debug(`✅ Allowing message for reply bot processing from: ${message.author.username}`);
 	}
