@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: MUSIC_CORRECT_BOT_NAME,
 		avatarUrl: MUSIC_CORRECT_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [musicCorrectTrigger]
 });

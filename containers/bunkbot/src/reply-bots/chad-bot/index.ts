@@ -1,14 +1,13 @@
 import { BotFactory } from '../../core/bot-factory';
-import { CHAD_BOT_AVATAR_URL, CHAD_BOT_NAME } from './constants';
 import { chadKeywordTrigger } from './triggers';
 
-// Create the Chad Bot with keyword trigger
+// Create the Chad Bot with dynamic identity resolution
 export default BotFactory.createBot({
 	name: 'Chad Bot',
 	description: 'Responds to mentions of gym, protein, and other chad topics',
 	defaultIdentity: {
-		botName: CHAD_BOT_NAME,
-		avatarUrl: CHAD_BOT_AVATAR_URL
+		botName: 'Chad',
+		avatarUrl: '' // Will be overridden by dynamic identity
 	},
 	// Always process messages since we handle chance in the trigger
 	defaultResponseRate: 100,

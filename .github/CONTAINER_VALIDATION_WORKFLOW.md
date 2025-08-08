@@ -17,8 +17,7 @@ The Container Startup Validation workflow ensures that:
 ### **Triggers**
 - **Pull Requests**: When container code changes
 - **Push to Main**: For production validation
-- **Manual Dispatch**: With configurable test levels
-- **Label-based**: `test:e2e` label triggers full E2E tests
+- **Manual Dispatch**: For manual testing
 
 ### **Path-based Execution**
 Uses `.github/path-filters.yml` to run only when relevant files change:
@@ -50,13 +49,7 @@ Uses `.github/path-filters.yml` to run only when relevant files change:
 - **Coverage**: Environment validation, service initialization, Discord integration
 - **Speed**: Fast unit-level tests (< 1 minute)
 
-### **5. Container Health Tests (E2E)**
-- **Purpose**: Full container startup validation with Docker
-- **Trigger**: Main branch, `test:e2e` label, or manual dispatch
-- **Coverage**: Complete container lifecycle testing
-- **Duration**: Slower but comprehensive (5-10 minutes)
-
-### **6. Validation Summary**
+### **5. Validation Summary**
 - **Purpose**: Aggregates all test results
 - **Output**: GitHub PR status check
 - **Failure**: Blocks PR merging if critical tests fail
@@ -89,9 +82,9 @@ Uses `.github/path-filters.yml` to run only when relevant files change:
 ✅ Error handling and recovery
 ```
 
-### **E2E Health Tests (Comprehensive)**
+### **Container Startup Tests (Comprehensive)**
 ```
-✅ Full container startup with Docker
+✅ Service initialization validation
 ✅ Reply bot loading (24 bots)
 ✅ Discord connection establishment
 ✅ Health check server functionality
@@ -139,13 +132,11 @@ strategy:
 - **Unit Tests**: ~2 minutes per container
 - **CovaBot Filtering**: ~30 seconds
 - **Container Startup**: ~1 minute
-- **E2E Health Tests**: ~8 minutes (when triggered)
-- **Total (typical PR)**: ~5-7 minutes
+- **Total (typical PR)**: ~3-4 minutes
 
 ### **Resource Usage**
 - **Parallel Execution**: Up to 4 containers simultaneously
 - **Memory**: ~512MB per container test
-- **Docker**: Only for E2E tests (optional)
 
 ## 🔍 **Monitoring and Debugging**
 

@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: BANANA_BOT_NAME,
 		avatarUrl: BANANA_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [bananaTrigger]
 });

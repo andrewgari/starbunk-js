@@ -3,7 +3,7 @@ import { and, fromUser, not, withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { ConfigurationService } from '../../services/configurationService';
 import { BotIdentityService } from '../../services/botIdentityService';
-import { CHAD_BOT_NAME, CHAD_RESPONSE, CHAD_RESPONSE_CHANCE } from './constants';
+import { CHAD_RESPONSE, CHAD_RESPONSE_CHANCE } from './constants';
 
 // Initialize services
 const configService = new ConfigurationService();

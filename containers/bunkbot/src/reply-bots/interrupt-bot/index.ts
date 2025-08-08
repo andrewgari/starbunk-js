@@ -9,6 +9,6 @@ export default BotFactory.createBot({
 		botName: 'Venn',
 		avatarUrl: '' // Will be overridden by dynamic identity
 	},
-	skipBotMessages: true,
+
 	triggers: [interruptTrigger]
 });
