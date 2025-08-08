@@ -281,12 +281,16 @@ async function postDiscordReport(results: TestResult[]) {
     inventorySection
   ].join('\n');
 
+  // Footer: include commit SHA if available
+  const commit = process.env.GIT_COMMIT || process.env.COMMIT_SHA || '';
+
   const embed = new EmbedBuilder()
     .setTitle('BunkBot Live E2E Report')
     .setDescription(description)
     .setColor(failed === 0 ? 0x2ecc71 : (passed === 0 ? 0xe74c3c : 0xf1c40f))
     .setTimestamp(new Date());
 
+  if (commit) embed.setFooter({ text: `commit ${commit.slice(0, 12)}` });
   await client.send({ embeds: [embed] });
 }
 
