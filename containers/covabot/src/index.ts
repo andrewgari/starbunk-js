@@ -13,23 +13,31 @@ import {
 	MessageFilter,
 	initializeObservability
 } from '@starbunk/shared';
+import { createHealthServer, HealthServer } from './health';
 
-class CovaBotContainer {
+export class CovaBotContainer {
 	private client: any;
-	private webhookManager: WebhookManager;
-	private messageFilter: MessageFilter;
+	private webhookManager!: WebhookManager;
+	private messageFilter!: MessageFilter;
 	private hasInitialized = false;
+	private health?: HealthServer;
+
 
 	async initialize(): Promise<void> {
 		logger.info('🤖 Initializing CovaBot container...');
 
 		try {
 			// Initialize observability first
-			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('covabot');
+			initializeObservability('covabot');
 			logger.info('✅ Observability initialized for CovaBot');
 
 			// Validate environment
 			this.validateEnvironment();
+
+			// Start health server (skip during unit tests)
+			if (process.env.NODE_ENV !== 'test') {
+				this.health = createHealthServer(3003);
+			}
 
 			// Create Discord client
 			this.client = createDiscordClient(ClientConfigs.CovaBot);
@@ -151,6 +159,9 @@ class CovaBotContainer {
 		logger.info('Stopping CovaBot...');
 		if (this.client) {
 			await this.client.destroy();
+		}
+		if (this.health?.server) {
+			this.health.server.close();
 		}
 		logger.info('CovaBot stopped');
 	}
