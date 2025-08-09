@@ -19,6 +19,17 @@
 			"@shared/*": ["../shared/src/*"]
 		}
 	},
-	"include": ["src/index-minimal.ts"],
-	"exclude": ["node_modules", "dist", "tests"]
+	"include": [
+		"src/index.ts",
+		"src/health.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"tests",
+		"src/cova-bot/**",
+		"src/web/**",
+		"src/index-web.ts",
+		"src/services/personalityNotesServiceDb.ts"
+	]
 }
