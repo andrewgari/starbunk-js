@@ -16,8 +16,11 @@ export {
 	validateGuildInteraction,
 	sendErrorResponse,
 	sendSuccessResponse,
-	deferInteractionReply
+	deferInteractionReply,
 } from './discord/utils';
+
+export * from './utils/response';
+export * from './utils/time';
 
 export { WebhookManager } from './services/webhookManager';
 export { MessageFilter, getMessageFilter, resetMessageFilter } from './services/messageFilter';
@@ -26,20 +29,27 @@ export { DiscordService } from './services/discordService';
 export { DatabaseService, getDatabaseService } from './services/database/databaseService';
 export { ConfigurationRepository } from './services/database/configurationRepository';
 export { ConfigurationService, getConfigurationService } from './services/configuration/configurationService';
-export { UserService, getUserService, getUserId, getUsername, getUserConfig, createUserIdsObject } from './services/userService';
+export {
+	UserService,
+	getUserService,
+	getUserId,
+	getUsername,
+	getUserConfig,
+	createUserIdsObject,
+} from './services/userService';
 export type {
 	BotConfigurationData,
 	BotPatternData,
 	BotResponseData,
 	UserConfigurationData,
-	ServerConfigurationData
+	ServerConfigurationData,
 } from './services/database/types';
 export type {
 	BotConfig,
 	BotTriggerConfig,
 	BotResponseConfig,
 	UserConfig,
-	ServerConfig
+	ServerConfig,
 } from './services/configuration/types';
 
 // Bootstrap functions and service getters
@@ -51,7 +61,7 @@ export {
 	getDiscordService,
 	getDiscordGMService,
 	getLLMManager,
-	getWebhookService
+	getWebhookService,
 } from './services/bootstrap';
 
 // Export container and ServiceId from container (uses Symbol values)
@@ -64,23 +74,23 @@ export { LLMProviderType } from './services/llm/index';
 export { getPersonalityService } from './services/personalityService';
 
 // Observability
-export { 
+export {
 	initializeObservability,
-	MetricsService, 
-	initializeMetrics, 
+	MetricsService,
+	initializeMetrics,
 	getMetrics,
-	StructuredLogger, 
-	initializeStructuredLogger, 
+	StructuredLogger,
+	initializeStructuredLogger,
 	getStructuredLogger,
 	ChannelActivityTracker,
 	initializeChannelActivityTracker,
-	getChannelActivityTracker
+	getChannelActivityTracker,
 } from './services/observability';
-export type { 
+export type {
 	MessageFlowMetrics,
 	ChannelActivity,
 	LogContext,
 	MessageFlowLog,
 	ChannelActivityLog,
-	SystemLog
+	SystemLog,
 } from './services/observability';

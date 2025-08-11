@@ -11,13 +11,13 @@ import {
 	WebhookManager,
 	getMessageFilter,
 	MessageFilter,
-	initializeObservability
+	initializeObservability,
 } from '@starbunk/shared';
 
 class CovaBotContainer {
-	private client: any;
-	private webhookManager: WebhookManager;
-	private messageFilter: MessageFilter;
+	private client!: ReturnType<typeof createDiscordClient>;
+	private webhookManager!: WebhookManager;
+	private messageFilter!: MessageFilter;
 	private hasInitialized = false;
 
 	async initialize(): Promise<void> {
@@ -25,7 +25,11 @@ class CovaBotContainer {
 
 		try {
 			// Initialize observability first
-			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('covabot');
+			const {
+				metrics: _metrics,
+				logger: _structuredLogger,
+				channelTracker: _channelTracker,
+			} = initializeObservability('covabot');
 			logger.info('✅ Observability initialized for CovaBot');
 
 			// Validate environment
@@ -50,7 +54,15 @@ class CovaBotContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV']
+			optional: [
+				'DATABASE_URL',
+				'OPENAI_API_KEY',
+				'OLLAMA_API_URL',
+				'DEBUG_MODE',
+				'TESTING_SERVER_IDS',
+				'TESTING_CHANNEL_IDS',
+				'NODE_ENV',
+			],
 		});
 	}
 
@@ -180,7 +192,7 @@ process.on('SIGTERM', async () => {
 });
 
 if (require.main === module) {
-	main().catch(error => {
+	main().catch((error) => {
 		console.error('Fatal error:', ensureError(error));
 		process.exit(1);
 	});

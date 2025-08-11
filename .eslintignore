@@ -1,3 +1,9 @@
 # Container build outputs
 containers/*/dist/
 containers/*/node_modules/
+
+**/dist/
+**/build/
+**/.next/
+archive/
+**/*.js
