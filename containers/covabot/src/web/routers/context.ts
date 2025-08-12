@@ -1,6 +1,17 @@
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import { logger } from '@starbunk/shared';
 import { QdrantMemoryService } from '../../services/qdrantMemoryService';
+
+interface SearchRequestBody {
+	query?: string;
+	filters?: Record<string, unknown>;
+}
+interface EnhancedContextBody {
+	message?: string;
+	userId?: string;
+	channelId?: string;
+	options?: Record<string, unknown>;
+}
 
 export function createContextRouter(memoryService: QdrantMemoryService): express.Router {
 	const router = express.Router();
@@ -17,12 +28,17 @@ export function createContextRouter(memoryService: QdrantMemoryService): express
 	});
 
 	// Semantic search endpoint
-	router.post('/search', async (req: any, res: any) => {
+	const searchHandler: RequestHandler<
+		Record<string, never>,
+		{ success: boolean; data?: unknown; error?: string },
+		SearchRequestBody
+	> = async (req, res) => {
 		try {
 			const { query, filters = {} } = req.body;
 
 			if (!query || typeof query !== 'string') {
-				return res.status(400).json({ success: false, error: 'Query is required' });
+				res.status(400).json({ success: false, error: 'Query is required' });
+				return;
 			}
 
 			const results = await memoryService.searchMemory(query, filters);
@@ -31,18 +47,25 @@ export function createContextRouter(memoryService: QdrantMemoryService): express
 			logger.error('[WebServer] Error in semantic search:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to search memory' });
 		}
-	});
+	};
+
+	router.post('/search', searchHandler);
 
 	// Enhanced context generation
-	router.post('/context/enhanced', async (req: any, res: any) => {
+	const enhancedHandler: RequestHandler<
+		Record<string, never>,
+		{ success: boolean; data?: unknown; error?: string },
+		EnhancedContextBody
+	> = async (req, res) => {
 		try {
 			const { message, userId, channelId, options = {} } = req.body;
 
 			if (!message || !userId || !channelId) {
-				return res.status(400).json({
+				res.status(400).json({
 					success: false,
 					error: 'Message, userId, and channelId are required',
 				});
+				return;
 			}
 
 			const context = await memoryService.generateEnhancedContext(message, userId, channelId, options);
@@ -51,7 +74,9 @@ export function createContextRouter(memoryService: QdrantMemoryService): express
 			logger.error('[WebServer] Error generating enhanced context:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to generate enhanced context' });
 		}
-	});
+	};
+
+	router.post('/context/enhanced', enhancedHandler);
 
 	return router;
 }

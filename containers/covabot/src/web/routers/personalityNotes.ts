@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import { logger } from '@starbunk/shared';
 import { QdrantMemoryService } from '../../services/qdrantMemoryService';
 import {
@@ -8,27 +8,40 @@ import {
 	Priority,
 } from '../../types/memoryTypes';
 
+interface SearchQueryParams {
+	query?: string;
+	limit?: string;
+	category?: PersonalityCategory;
+	priority?: Priority;
+}
+
 export function createPersonalityNotesRouter(memoryService: QdrantMemoryService): express.Router {
 	const personalityRouter = express.Router();
 
 	// Search personality notes (must be before /:id route)
-	personalityRouter.get('/search', async (req: any, res: any) => {
+	const searchHandler: RequestHandler<
+		Record<string, never>,
+		{ success: boolean; data?: unknown; error?: string },
+		unknown,
+		SearchQueryParams
+	> = async (req, res) => {
 		try {
 			const query = req.query.query as string;
 			const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-			const category = req.query.category as PersonalityCategory;
-			const priority = req.query.priority as Priority;
+			const category = req.query.category as PersonalityCategory | undefined;
+			const priority = req.query.priority as Priority | undefined;
 
 			if (limit < 1 || limit > 100) {
-				return res.status(400).json({ success: false, error: 'Limit must be between 1 and 100' });
+				res.status(400).json({ success: false, error: 'Limit must be between 1 and 100' });
+				return;
 			}
 
 			let results;
 			if (query) {
 				const filters = category || priority ? { category, priority } : undefined;
-				results = await (memoryService as any).searchPersonalityNotes(query, filters, limit);
+				results = await memoryService.searchPersonalityNotes(query, filters, limit);
 			} else {
-				results = await (memoryService as any).searchPersonalityNotes('', undefined, limit);
+				results = await memoryService.searchPersonalityNotes('', undefined, limit);
 			}
 
 			res.json({ success: true, data: results });
@@ -36,12 +49,17 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 			logger.error('[WebServer] Error searching personality notes:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to search personality notes' });
 		}
-	});
+	};
+
+	personalityRouter.get('/search', searchHandler);
 
 	// Export/Import routes (must be before /:id route)
-	personalityRouter.get('/export', async (_req: any, res: any) => {
+	const exportHandler: RequestHandler<
+		Record<string, never>,
+		{ success: boolean; data?: unknown; error?: string }
+	> = async (_req, res) => {
 		try {
-			const notes = await (memoryService as any).searchPersonalityNotes('', undefined, 1000);
+			const notes = await memoryService.searchPersonalityNotes('', undefined, 1000);
 			const exportData = {
 				notes: notes,
 				exportDate: new Date().toISOString(),
@@ -53,19 +71,26 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 			logger.error('[WebServer] Error exporting personality notes:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to export personality notes' });
 		}
-	});
+	};
 
-	personalityRouter.post('/import', async (req: any, res: any) => {
+	personalityRouter.get('/export', exportHandler);
+
+	const importHandler: RequestHandler<
+		Record<string, never>,
+		{ success: boolean; data?: unknown; error?: string },
+		{ notes: Array<{ content: string; category?: PersonalityCategory; priority?: Priority }> }
+	> = async (req, res) => {
 		try {
 			const { notes } = req.body;
 
 			if (!Array.isArray(notes)) {
-				return res.status(400).json({ success: false, error: 'Notes must be an array' });
+				res.status(400).json({ success: false, error: 'Notes must be an array' });
+				return;
 			}
 
-			const importedNotes = [] as any[];
+			const importedNotes: Array<unknown> = [];
 			for (const noteData of notes) {
-				const note = await (memoryService as any).createPersonalityNote(noteData.content, {
+				const note = await memoryService.createPersonalityNote(noteData.content, {
 					category: noteData.category || 'knowledge',
 					priority: noteData.priority || 'medium',
 				});
@@ -77,20 +102,27 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 			logger.error('[WebServer] Error importing personality notes:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to import personality notes' });
 		}
-	});
+	};
+
+	personalityRouter.post('/import', importHandler);
 
 	// Bulk operations (must be before /:id route)
-	personalityRouter.post('/bulk', async (req: any, res: any) => {
+	const bulkCreateHandler: RequestHandler<
+		Record<string, never>,
+		{ success: boolean; data?: unknown; error?: string },
+		{ notes: Array<{ content: string; category?: PersonalityCategory; priority?: Priority }> }
+	> = async (req, res) => {
 		try {
 			const { notes } = req.body;
 
 			if (!Array.isArray(notes)) {
-				return res.status(400).json({ success: false, error: 'Notes must be an array' });
+				res.status(400).json({ success: false, error: 'Notes must be an array' });
+				return;
 			}
 
-			const createdNotes = [] as any[];
+			const createdNotes: Array<unknown> = [];
 			for (const noteData of notes) {
-				const note = await (memoryService as any).createPersonalityNote(noteData.content, {
+				const note = await memoryService.createPersonalityNote(noteData.content, {
 					category: noteData.category || 'knowledge',
 					priority: noteData.priority || 'medium',
 				});
@@ -102,19 +134,26 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 			logger.error('[WebServer] Error in bulk create:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to create notes in bulk' });
 		}
-	});
+	};
 
-	personalityRouter.delete('/bulk', async (req: any, res: any) => {
+	personalityRouter.post('/bulk', bulkCreateHandler);
+
+	const bulkDeleteHandler: RequestHandler<
+		Record<string, never>,
+		{ success: boolean; data?: unknown; error?: string },
+		{ ids: string[] }
+	> = async (req, res) => {
 		try {
 			const { ids } = req.body;
 
 			if (!Array.isArray(ids)) {
-				return res.status(400).json({ success: false, error: 'IDs must be an array' });
+				res.status(400).json({ success: false, error: 'IDs must be an array' });
+				return;
 			}
 
-			const results = [] as any[];
+			const results: Array<{ id: string; deleted: boolean }> = [];
 			for (const id of ids) {
-				const deleted = await (memoryService as any).deletePersonalityNote(id);
+				const deleted = await memoryService.deletePersonalityNote(id);
 				results.push({ id, deleted });
 			}
 
@@ -123,36 +162,57 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 			logger.error('[WebServer] Error in bulk delete:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to delete notes in bulk' });
 		}
-	});
+	};
+
+	personalityRouter.delete('/bulk', bulkDeleteHandler);
 
 	// Get all personality notes
-	personalityRouter.get('/', async (req: any, res: any) => {
+	const listHandler: RequestHandler<
+		Record<string, never>,
+		{ success: boolean; data?: unknown; error?: string },
+		unknown,
+		{ limit?: string }
+	> = async (req, res) => {
 		try {
 			const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-			const notes = await (memoryService as any).searchPersonalityNotes('', undefined, limit);
+			const notes = await memoryService.searchPersonalityNotes('', undefined, limit);
 			res.json({ success: true, data: notes });
 		} catch (error) {
 			logger.error('[WebServer] Error getting personality notes:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to get personality notes' });
 		}
-	});
+	};
+
+	personalityRouter.get('/', listHandler);
 
 	// Get personality note by ID
-	personalityRouter.get('/:id', async (req: any, res: any) => {
+	const getHandler: import('express').RequestHandler<
+		{ id: string },
+		{ success: boolean; data?: unknown; error?: string },
+		Record<string, never>,
+		Record<string, never>
+	> = async (req, res) => {
 		try {
-			const note = await (memoryService as any).getPersonalityNote(req.params.id);
+			const note = await memoryService.getPersonalityNote(req.params.id);
 			if (!note) {
-				return res.status(404).json({ success: false, error: 'Personality note not found' });
+				res.status(404).json({ success: false, error: 'Personality note not found' });
+				return;
 			}
 			res.json({ success: true, data: note });
 		} catch (error) {
 			logger.error('[WebServer] Error getting personality note:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to get personality note' });
 		}
-	});
+	};
+
+	personalityRouter.get('/:id', getHandler);
 
 	// Create new personality note
-	personalityRouter.post('/', async (req: any, res: any) => {
+	const createHandler: RequestHandler<
+		Record<string, never>,
+		{ success: boolean; data?: unknown; error?: string },
+		CreatePersonalityNoteRequest
+	> = async (req, res) => {
 		try {
 			const request: CreatePersonalityNoteRequest = {
 				content: req.body.content,
@@ -161,17 +221,19 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 			};
 
 			if (!request.content || !request.content.trim()) {
-				return res.status(400).json({ success: false, error: 'Content is required' });
+				res.status(400).json({ success: false, error: 'Content is required' });
+				return;
 			}
 
 			if (
 				!request.category ||
 				!['instruction', 'personality', 'behavior', 'knowledge', 'context'].includes(request.category)
 			) {
-				return res.status(400).json({ success: false, error: 'Invalid category' });
+				res.status(400).json({ success: false, error: 'Invalid category' });
+				return;
 			}
 
-			const note = await (memoryService as any).createPersonalityNote(request.content, {
+			const note = await memoryService.createPersonalityNote(request.content, {
 				category: request.category,
 				priority: request.priority,
 			});
@@ -180,10 +242,16 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 			logger.error('[WebServer] Error creating personality note:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to create personality note' });
 		}
-	});
+	};
+
+	personalityRouter.post('/', createHandler);
 
 	// Update personality note
-	personalityRouter.put('/:id', async (req: any, res: any) => {
+	const updateHandler: RequestHandler<
+		{ id: string },
+		{ success: boolean; data?: unknown; error?: string },
+		UpdatePersonalityNoteRequest
+	> = async (req, res) => {
 		try {
 			const request: UpdatePersonalityNoteRequest = {
 				content: req.body.content,
@@ -193,19 +261,22 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 			};
 
 			if (request.content !== undefined && (!request.content || !request.content.trim())) {
-				return res.status(400).json({ success: false, error: 'Content cannot be empty' });
+				res.status(400).json({ success: false, error: 'Content cannot be empty' });
+				return;
 			}
 
 			if (
 				request.category !== undefined &&
 				!['instruction', 'personality', 'behavior', 'knowledge', 'context'].includes(request.category)
 			) {
-				return res.status(400).json({ success: false, error: 'Invalid category' });
+				res.status(400).json({ success: false, error: 'Invalid category' });
+				return;
 			}
 
-			const note = await (memoryService as any).updatePersonalityNote(req.params.id, request);
+			const note = await memoryService.updatePersonalityNote(req.params.id, request);
 			if (!note) {
-				return res.status(404).json({ success: false, error: 'Personality note not found' });
+				res.status(404).json({ success: false, error: 'Personality note not found' });
+				return;
 			}
 
 			res.json({ success: true, data: note });
@@ -213,22 +284,32 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 			logger.error('[WebServer] Error updating personality note:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to update personality note' });
 		}
-	});
+	};
+
+	personalityRouter.put('/:id', updateHandler);
 
 	// Delete personality note
-	personalityRouter.delete('/:id', async (req: any, res: any) => {
+	const deleteHandler: RequestHandler<
+		{ id: string },
+		{ success: boolean; data?: unknown; error?: string },
+		Record<string, never>,
+		Record<string, never>
+	> = async (req, res) => {
 		try {
-			const deleted = await (memoryService as any).deletePersonalityNote(req.params.id);
+			const deleted = await memoryService.deletePersonalityNote(req.params.id);
 			if (!deleted) {
-				return res.status(404).json({ success: false, error: 'Personality note not found' });
+				res.status(404).json({ success: false, error: 'Personality note not found' });
+				return;
 			}
 
-			res.json({ success: true, message: 'Personality note deleted successfully' });
+			res.json({ success: true, data: { message: 'Personality note deleted successfully' } });
 		} catch (error) {
 			logger.error('[WebServer] Error deleting personality note:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to delete personality note' });
 		}
-	});
+	};
+
+	personalityRouter.delete('/:id', deleteHandler);
 
 	return personalityRouter;
 }
