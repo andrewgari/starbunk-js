@@ -2,8 +2,7 @@
 containers/*/dist/
 containers/*/node_modules/
 
-**/dist/
-**/build/
-**/.next/
-archive/
-**/*.js
+**/dist/**/*.js
+**/build/**/*.js
+**/.next/**/*.js
+archive/**/*.js

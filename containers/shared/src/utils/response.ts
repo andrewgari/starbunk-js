@@ -1,9 +1,9 @@
-import { Message } from 'discord.js';
+import { Message as DiscordMessage } from 'discord.js';
 
 /**
  * A function that generates a response string, optionally asynchronously.
  */
-export type ResponseGenerator = (message: Message) => string | Promise<string>;
+export type ResponseGenerator = (message: DiscordMessage) => string | Promise<string>;
 
 /**
  * Typed static message to ensure it's non-empty
@@ -48,7 +48,7 @@ export function weightedRandomResponse(
 	// Create a unique ID for this response set based on content
 	const responseSetId = validatedOptions.map((o) => o.toString()).join('|');
 
-	return (message: Message): string => {
+	return (message: DiscordMessage): string => {
 		// Get the key for this message context
 		const contextKey = `${responseSetId}:${message.channel.id}`;
 

@@ -8,6 +8,15 @@ import {
 	Priority,
 } from '../../types/memoryTypes';
 
+// Centralized valid categories list for DRY validation
+const VALID_PERSONALITY_CATEGORIES: PersonalityCategory[] = [
+	'instruction',
+	'personality',
+	'behavior',
+	'knowledge',
+	'context',
+];
+
 interface SearchQueryParams {
 	query?: string;
 	limit?: string;
@@ -225,10 +234,7 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 				return;
 			}
 
-			if (
-				!request.category ||
-				!['instruction', 'personality', 'behavior', 'knowledge', 'context'].includes(request.category)
-			) {
+			if (!request.category || !VALID_PERSONALITY_CATEGORIES.includes(request.category)) {
 				res.status(400).json({ success: false, error: 'Invalid category' });
 				return;
 			}
@@ -265,10 +271,7 @@ export function createPersonalityNotesRouter(memoryService: QdrantMemoryService)
 				return;
 			}
 
-			if (
-				request.category !== undefined &&
-				!['instruction', 'personality', 'behavior', 'knowledge', 'context'].includes(request.category)
-			) {
+			if (request.category !== undefined && !VALID_PERSONALITY_CATEGORIES.includes(request.category)) {
 				res.status(400).json({ success: false, error: 'Invalid category' });
 				return;
 			}
