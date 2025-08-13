@@ -165,18 +165,7 @@ describe('CentralizedMessageFilter', () => {
 			expect(result.wasBotMessage).toBe(true);
 		});
 
-// … inside the forEach in the “should handle different CovaBot name variations” test
-
-const message = createMockMessage({
-  author: {
-    id: `44444444444444444${index}`,
-    username: authorData.username,
-    bot: true
-  },
-  member: {
-    displayName: authorData.displayName
-  }
-});
+// Removed stray snippet from CovaBot name variations forEach; covered by other tests.
 	});
 
 	describe('Configuration management', () => {
@@ -244,8 +233,8 @@ const message = createMockMessage({
 	describe('Debug mode logging', () => {
 		beforeEach(() => {
 			filter.updateConfig({ debugMode: true });
-			// Mock logger to capture calls
-			jest.spyOn(console, 'log').mockImplementation(() => {});
+			// Mock logger to capture calls (Logger.info uses console.info)
+			jest.spyOn(console, 'info').mockImplementation(() => {});
 		});
 
 		afterEach(() => {
@@ -259,10 +248,10 @@ const message = createMockMessage({
 
 			filter.shouldProcessMessage(message);
 
-			// Verify that logging occurred
-			expect(console.log).toHaveBeenCalled();
+			// Verify that logging occurred (Logger.info -> console.info)
+			expect(console.info).toHaveBeenCalled();
 			// Or more specifically:
-			// expect(console.log).toHaveBeenCalledWith(expect.stringContaining('[GLOBAL] ✅ ALLOWED'));
+			// expect(console.info).toHaveBeenCalledWith(expect.stringContaining('[GLOBAL] ✅ ALLOWED'));
 		});
 	});
 });
