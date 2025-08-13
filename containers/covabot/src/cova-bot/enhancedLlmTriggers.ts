@@ -1,11 +1,8 @@
 import { Message } from 'discord.js';
-// import userId from '@starbunk/shared/dist/discord/userId'; // Unused import
+import { logger, PerformanceTimer, ResponseGenerator, weightedRandomResponse } from '@starbunk/shared';
 import { getLLMManager } from '@starbunk/shared';
 import { LLMProviderType } from '@starbunk/shared';
 import { PromptRegistry, PromptType } from '@starbunk/shared';
-import { logger } from '@starbunk/shared';
-import { PerformanceTimer } from '@starbunk/shared';
-import { ResponseGenerator, weightedRandomResponse } from '@starbunk/shared';
 import { COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_PROMPTS } from './constants';
 import { QdrantMemoryService } from '../services/qdrantMemoryService';
 
@@ -26,7 +23,7 @@ PromptRegistry.registerPrompt(PromptType.COVA_EMULATOR, {
 	systemContent: COVA_BOT_PROMPTS.EmulatorPrompt,
 	formatUserMessage: (message: string): string => message,
 	defaultTemperature: 0.7,
-	defaultMaxTokens: 200
+	defaultMaxTokens: 200,
 });
 
 // Register the decision prompt
@@ -34,7 +31,7 @@ PromptRegistry.registerPrompt(PromptType.COVA_DECISION, {
 	systemContent: COVA_BOT_PROMPTS.DecisionPrompt,
 	formatUserMessage: (message: string): string => message,
 	defaultTemperature: 0.2,
-	defaultMaxTokens: 10
+	defaultMaxTokens: 10,
 });
 
 /**
@@ -71,7 +68,7 @@ export const createEnhancedLLMEmulatorResponse = (): ResponseGenerator => {
 						personalityWeight: 1.0,
 						conversationWeight: 0.8,
 						similarityThreshold: 0.6,
-					}
+					},
 				);
 
 				// Create the user prompt with enhanced context
@@ -85,21 +82,17 @@ ${enhancedContext.combinedContext}
 Respond as Cova would to this message, taking into account both the personality instructions and the relevant conversation history above. Be natural and conversational.`;
 
 				// Create completion with enhanced context
-				const response = await getLLMManager().createPromptCompletion(
-					PromptType.COVA_EMULATOR,
-					userPrompt,
-					{
-						temperature: 0.7,
-						maxTokens: 250,
-						providerType: LLMProviderType.OLLAMA,
-						fallbackToDefault: true,
-					}
-				);
+				const response = await getLLMManager().createPromptCompletion(PromptType.COVA_EMULATOR, userPrompt, {
+					temperature: 0.7,
+					maxTokens: 250,
+					providerType: LLMProviderType.OLLAMA,
+					fallbackToDefault: true,
+				});
 
 				if (response) {
 					// Store both user message and bot response in conversation memory
 					const conversationId = `${message.channel.id}_${Date.now()}`;
-					
+
 					try {
 						// Store user message
 						await memoryService.storeConversation({
@@ -121,14 +114,18 @@ Respond as Cova would to this message, taking into account both the personality 
 
 						logger.debug(`[CovaBot] Stored conversation pair in memory: ${conversationId}`);
 					} catch (memoryError) {
-						logger.warn(`[CovaBot] Failed to store conversation in memory: ${memoryError instanceof Error ? memoryError.message : 'Unknown error'}`);
+						logger.warn(
+							`[CovaBot] Failed to store conversation in memory: ${memoryError instanceof Error ? memoryError.message : 'Unknown error'}`,
+						);
 						// Continue with response even if memory storage fails
 					}
 
 					// Update last response time
 					setLastResponseTime(message.channel.id);
 
-					logger.debug(`[CovaBot] Enhanced response generated with ${enhancedContext.metadata.personalityNotesUsed} personality notes and ${enhancedContext.metadata.conversationItemsUsed} conversation items`);
+					logger.debug(
+						`[CovaBot] Enhanced response generated with ${enhancedContext.metadata.personalityNotesUsed} personality notes and ${enhancedContext.metadata.conversationItemsUsed} conversation items`,
+					);
 					return response;
 				}
 
@@ -136,7 +133,9 @@ Respond as Cova would to this message, taking into account both the personality 
 				logger.warn('[CovaBot] LLM response was empty, using fallback');
 				return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES);
 			} catch (error) {
-				logger.error(`[CovaBot] Error in enhanced LLM response generation: ${error instanceof Error ? error.message : String(error)}`);
+				logger.error(
+					`[CovaBot] Error in enhanced LLM response generation: ${error instanceof Error ? error.message : String(error)}`,
+				);
 				return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES);
 			}
 		});
@@ -160,7 +159,7 @@ export const createEnhancedLLMDecisionLogic = (): ResponseGenerator => {
 					{
 						maxConversationHistory: 5,
 						similarityThreshold: 0.5,
-					}
+					},
 				);
 
 				// Enhanced decision prompt with conversation awareness
@@ -189,7 +188,7 @@ Respond with only "yes" or "no".`;
 						maxTokens: 5,
 						providerType: LLMProviderType.OLLAMA,
 						fallbackToDefault: true,
-					}
+					},
 				);
 
 				// Parse decision
@@ -230,11 +229,15 @@ Respond with only "yes" or "no".`;
 				// Final random check
 				const shouldRespond = Math.random() < probability;
 
-				logger.debug(`[CovaBot] Enhanced decision: LLM=${decision} → probability=${probability.toFixed(2)} → ${shouldRespond ? "RESPOND" : "DON'T RESPOND"}`);
+				logger.debug(
+					`[CovaBot] Enhanced decision: LLM=${decision} → probability=${probability.toFixed(2)} → ${shouldRespond ? 'RESPOND' : "DON'T RESPOND"}`,
+				);
 
 				return shouldRespond;
 			} catch (error) {
-				logger.error(`[CovaBot] Error in enhanced decision logic: ${error instanceof Error ? error.message : String(error)}`);
+				logger.error(
+					`[CovaBot] Error in enhanced decision logic: ${error instanceof Error ? error.message : String(error)}`,
+				);
 				// Fallback to simple randomization
 				return Math.random() < 0.25;
 			}
@@ -249,16 +252,11 @@ export const createEnhancedWebResponse = (memoryService: QdrantMemoryService) =>
 	return async (message: string, userId: string = 'web-user', channelId: string = 'web-channel'): Promise<string> => {
 		try {
 			// Generate enhanced context
-			const enhancedContext = await memoryService.generateEnhancedContext(
-				message,
-				userId,
-				channelId,
-				{
-					maxPersonalityNotes: 8,
-					maxConversationHistory: 6,
-					similarityThreshold: 0.6,
-				}
-			);
+			const enhancedContext = await memoryService.generateEnhancedContext(message, userId, channelId, {
+				maxPersonalityNotes: 8,
+				maxConversationHistory: 6,
+				similarityThreshold: 0.6,
+			});
 
 			// Create prompt for web testing
 			const userPrompt = `
@@ -270,21 +268,17 @@ ${enhancedContext.combinedContext}
 Respond as Cova would to this message, taking into account the personality instructions and conversation history.`;
 
 			// Generate response
-			const response = await getLLMManager().createPromptCompletion(
-				PromptType.COVA_EMULATOR,
-				userPrompt,
-				{
-					temperature: 0.7,
-					maxTokens: 200,
-					providerType: LLMProviderType.OLLAMA,
-					fallbackToDefault: true,
-				}
-			);
+			const response = await getLLMManager().createPromptCompletion(PromptType.COVA_EMULATOR, userPrompt, {
+				temperature: 0.7,
+				maxTokens: 200,
+				providerType: LLMProviderType.OLLAMA,
+				fallbackToDefault: true,
+			});
 
 			if (response) {
 				// Store conversation in memory for web testing
 				const conversationId = `web_${channelId}_${Date.now()}`;
-				
+
 				await memoryService.storeConversation({
 					content: message,
 					userId,
@@ -306,28 +300,34 @@ Respond as Cova would to this message, taking into account the personality instr
 
 			return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES);
 		} catch (error) {
-			logger.error(`[CovaBot] Error in enhanced web response: ${error instanceof Error ? error.message : String(error)}`);
+			logger.error(
+				`[CovaBot] Error in enhanced web response: ${error instanceof Error ? error.message : String(error)}`,
+			);
 			return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES);
 		}
 	};
 };
 
 // Initialize periodic cleanup - every 2 hours
-setInterval(() => {
-	const stats = perfTimer.getStatsString();
-	logger.info(`[CovaBot] Enhanced performance stats:\n${stats}`);
+setInterval(
+	() => {
+		const stats = perfTimer.getStatsString();
+		logger.info(`[CovaBot] Enhanced performance stats:\n${stats}`);
 
-	// Reset performance stats periodically
-	if (perfTimer.getStats()['enhanced-llm-decision']?.count > 500) {
-		logger.info(`[CovaBot] Resetting enhanced performance stats after threshold`);
-		perfTimer.reset();
-	}
-
-	// Clean up old response tracking
-	const now = Date.now();
-	for (const [channelId, time] of lastResponseTime.entries()) {
-		if (now - time > 24 * 60 * 60 * 1000) { // Older than 24 hours
-			lastResponseTime.delete(channelId);
+		// Reset performance stats periodically
+		if (perfTimer.getStats()['enhanced-llm-decision']?.count > 500) {
+			logger.info(`[CovaBot] Resetting enhanced performance stats after threshold`);
+			perfTimer.reset();
 		}
-	}
-}, 2 * 60 * 60 * 1000).unref(); // 2 hours in milliseconds
+
+		// Clean up old response tracking
+		const now = Date.now();
+		for (const [channelId, time] of lastResponseTime.entries()) {
+			if (now - time > 24 * 60 * 60 * 1000) {
+				// Older than 24 hours
+				lastResponseTime.delete(channelId);
+			}
+		}
+	},
+	2 * 60 * 60 * 1000,
+).unref(); // 2 hours in milliseconds

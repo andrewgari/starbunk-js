@@ -37,11 +37,12 @@
 		{
 			"files": ["**/__tests__/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)", "**/test-utils/**/*.[jt]s?(x)", "**/tests/**/*.[jt]s?(x)"],
 			"rules": {
-				"@typescript-eslint/no-explicit-any": "off"
+				"@typescript-eslint/no-explicit-any": "off",
+				"@typescript-eslint/no-unused-vars": "off"
 			}
 		},
 		{
-			"files": ["**/services/**/*.[jt]s?(x)"],
+			"files": ["**/services/**/*.[jt]s?(x)", "**/web/**/*.[jt]s?(x)"],
 			"rules": {
 				"@typescript-eslint/no-explicit-any": "off"
 			}
