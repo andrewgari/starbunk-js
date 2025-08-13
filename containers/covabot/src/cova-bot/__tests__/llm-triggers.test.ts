@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { logger } from '@starbunk/shared';
+import { logger, getLLMManager } from '@starbunk/shared';
 
 // Mock dependencies
 jest.mock('@starbunk/shared', () => ({
@@ -29,6 +29,7 @@ jest.mock('@starbunk/shared', () => ({
 		loadPersonalityEmbedding: jest.fn(),
 		generatePersonalityEmbedding: jest.fn(),
 	})),
+	weightedRandomResponse: jest.fn(() => () => 'fallback-response'),
 }));
 
 // Import after mocking
@@ -46,7 +47,7 @@ describe('LLM Triggers', () => {
 		mockLLMManager = {
 			createPromptCompletion: jest.fn(),
 		};
-		(bootstrap.getLLMManager as jest.Mock).mockReturnValue(mockLLMManager);
+		(getLLMManager as jest.Mock).mockReturnValue(mockLLMManager);
 
 		// Mock Personality Service
 		mockPersonalityService = {

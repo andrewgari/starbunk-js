@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import userId from './simplifiedUserId';
+import userId from '@starbunk/shared/dist/discord/userId';
 import {
 	getLLMManager,
 	LLMProviderType,
@@ -328,26 +328,19 @@ Based on the Response Decision System, should Cova respond to this message?`;
 	};
 };
 
-// Initialize periodic stats logging - every hour
-setInterval(
-	() => {
-		// const stats = perfTimer.getStatsString();
-		// logger.info(`[CovaBot] Performance stats:\n${stats}`);
-
-		// Reset after logging to avoid memory growth
-		// if (perfTimer.getStats()['llm-decision']?.count > 1000) {
-		//	logger.info(`[CovaBot] Resetting performance stats after threshold`);
-		//	perfTimer.reset();
-		// }
-
-		// Clean up old entries from last response tracking
-		const now = Date.now();
-		for (const [channelId, time] of lastResponseTime.entries()) {
-			if (now - time > 24 * 60 * 60 * 1000) {
-				// Older than 24 hours
-				lastResponseTime.delete(channelId);
+// Initialize periodic stats logging - every hour (but only outside tests)
+if (process.env.NODE_ENV !== 'test') {
+	setInterval(
+		() => {
+			// Clean up old entries from last response tracking
+			const now = Date.now();
+			for (const [channelId, time] of lastResponseTime.entries()) {
+				if (now - time > 24 * 60 * 60 * 1000) {
+					// Older than 24 hours
+					lastResponseTime.delete(channelId);
+				}
 			}
-		}
-	},
-	60 * 60 * 1000,
-).unref(); // 1 hour in milliseconds
+		},
+		60 * 60 * 1000,
+	).unref(); // 1 hour in milliseconds
+}

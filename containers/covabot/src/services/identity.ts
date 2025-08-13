@@ -118,7 +118,10 @@ async function fetchDiscordIdentity(userId: string, guildId?: string, message?: 
 			};
 		} else {
 			// Fallback to global identity
-			const user = discordService.getUser(userId);
+			const user =
+				typeof (discordService as any).getUserAsync === 'function'
+					? await (discordService as any).getUserAsync(userId)
+					: (discordService as any).getUser?.(userId);
 
 			if (!user) {
 				throw new Error(`User ${userId} not found`);

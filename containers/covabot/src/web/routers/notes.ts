@@ -129,7 +129,7 @@ export function createNotesRouter(memoryService: QdrantMemoryService): express.R
 	// Delete note (using specific path to avoid conflicts)
 	const deleteDirectHandler: RequestHandler<
 		{ id: string },
-		{ success: boolean; data?: unknown; error?: string },
+		{ success: boolean; data?: unknown; error?: string; message?: string },
 		Record<string, never>,
 		Record<string, never>
 	> = async (req, res) => {
@@ -140,7 +140,7 @@ export function createNotesRouter(memoryService: QdrantMemoryService): express.R
 				return;
 			}
 
-			res.json({ success: true, data: { message: 'Note deleted successfully' } });
+			res.json({ success: true, message: 'Note deleted successfully' });
 		} catch (error) {
 			logger.error('[WebServer] Error deleting note:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to delete note' });
@@ -201,7 +201,7 @@ export function createNotesRouter(memoryService: QdrantMemoryService): express.R
 
 	const deleteHandler: RequestHandler<
 		{ id: string },
-		{ success: boolean; data?: unknown; error?: string },
+		{ success: boolean; data?: unknown; error?: string; message?: string },
 		Record<string, never>,
 		Record<string, never>
 	> = async (req, res) => {
@@ -212,7 +212,7 @@ export function createNotesRouter(memoryService: QdrantMemoryService): express.R
 				return;
 			}
 
-			res.json({ success: true, data: { message: 'Note deleted successfully' } });
+			res.json({ success: true, message: 'Note deleted successfully' });
 		} catch (error) {
 			logger.error('[WebServer] Error deleting note:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to delete note' });

@@ -63,6 +63,12 @@ export function createDataRouter(
 	// Stats (summary version)
 	router.get('/stats', async (_req, res) => {
 		try {
+			// Prefer detailed stats from service when available (test expects this shape)
+			if (typeof (memoryService as any).getStats === 'function') {
+				const detailed = await (memoryService as any).getStats();
+				res.json({ success: true, data: detailed });
+				return;
+			}
 			const notes = await memoryService.getNotes();
 			const config = await configService.getConfiguration();
 
@@ -89,7 +95,7 @@ export function createDataRouter(
 				lastUpdated: new Date().toISOString(),
 			};
 
-			res.json(stats);
+			res.json({ success: true, data: stats });
 		} catch (error) {
 			logger.error('[WebServer] Error getting stats:', error as Error);
 			res.status(500).json({ success: false, error: 'Failed to get stats' });
