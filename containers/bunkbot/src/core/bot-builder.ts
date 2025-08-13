@@ -180,7 +180,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 				return false;
 			}
 
-<<<<<<< HEAD
+
 			// Check message filter
 			const shouldSkip = await validConfig.messageFilter(message);
 			if (shouldSkip) {
@@ -210,7 +210,6 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 			if (!shouldProcess) {
 				return;
 			}
-=======
 			// Check message filter
 			const shouldSkip = await validConfig.messageFilter(message);
 			if (shouldSkip) {
@@ -239,7 +238,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 			const shouldProcess = await this.shouldRespond(message);
 			if (!shouldProcess) {
 				return;
->>>>>>> origin/feature/covabot-dynamic-identity-debug
+
 			}
 
 			// Check blacklist (simple in-memory implementation)
