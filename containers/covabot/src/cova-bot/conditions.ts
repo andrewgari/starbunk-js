@@ -1,3 +1,5 @@
+// This module intentionally has no imports from shared to keep CovaBot self-contained for now.
+
 import { Message } from 'discord.js';
 
 /**

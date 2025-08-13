@@ -52,16 +52,18 @@ export class EmbeddingService {
 	private async _initialize(): Promise<void> {
 		try {
 			logger.info(`[EmbeddingService] Loading embedding model: ${this.config.model}`);
-			
+
 			const startTime = Date.now();
-			this.pipeline = await pipeline('feature-extraction', this.config.model, {
+			this.pipeline = (await pipeline('feature-extraction', this.config.model, {
 				quantized: true, // Use quantized model for better performance
-				progress_callback: (progress: any) => {
+				progress_callback: (progress: { status?: string; name?: string; progress?: number }) => {
 					if (progress.status === 'downloading') {
-						logger.debug(`[EmbeddingService] Downloading: ${progress.name} (${Math.round(progress.progress)}%)`);
+						logger.debug(
+							`[EmbeddingService] Downloading: ${progress.name} (${Math.round(progress.progress ?? 0)}%)`,
+						);
 					}
 				},
-			}) as any;
+			})) as unknown as Pipeline;
 
 			const loadTime = Date.now() - startTime;
 			logger.info(`[EmbeddingService] Model loaded successfully in ${loadTime}ms`);
@@ -69,13 +71,17 @@ export class EmbeddingService {
 			// Test the model with a simple embedding
 			const testEmbedding = await this.generateEmbedding('test');
 			if (testEmbedding.length !== this.config.dimensions) {
-				throw new Error(`Model dimension mismatch: expected ${this.config.dimensions}, got ${testEmbedding.length}`);
+				throw new Error(
+					`Model dimension mismatch: expected ${this.config.dimensions}, got ${testEmbedding.length}`,
+				);
 			}
 
 			this.isInitialized = true;
 			logger.info(`[EmbeddingService] Initialization complete. Model dimensions: ${testEmbedding.length}`);
 		} catch (error) {
-			logger.error(`[EmbeddingService] Failed to initialize: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[EmbeddingService] Failed to initialize: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			this.initializationPromise = null;
 			throw error;
 		}
@@ -103,16 +109,16 @@ export class EmbeddingService {
 
 		try {
 			const startTime = Date.now();
-			
+
 			// Preprocess text
 			const processedText = this.preprocessText(text);
-			
+
 			// Generate embedding
-			const output = await this.pipeline(processedText, { 
-				pooling: 'mean', 
-				normalize: true 
+			const output = await this.pipeline(processedText, {
+				pooling: 'mean',
+				normalize: true,
 			});
-			
+
 			const embedding = Array.from(output.data) as number[];
 			const duration = Date.now() - startTime;
 
@@ -122,7 +128,9 @@ export class EmbeddingService {
 			logger.debug(`[EmbeddingService] Generated embedding for text (${text.length} chars) in ${duration}ms`);
 			return embedding;
 		} catch (error) {
-			logger.error(`[EmbeddingService] Failed to generate embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[EmbeddingService] Failed to generate embedding: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -148,9 +156,7 @@ export class EmbeddingService {
 
 		for (let i = 0; i < texts.length; i += batchSize) {
 			const batch = texts.slice(i, i + batchSize);
-			const batchResults = await Promise.all(
-				batch.map(text => this.generateEmbedding(text))
-			);
+			const batchResults = await Promise.all(batch.map((text) => this.generateEmbedding(text)));
 			results.push(...batchResults);
 
 			// Log progress for large batches
@@ -169,7 +175,7 @@ export class EmbeddingService {
 	private preprocessText(text: string): string {
 		// Remove excessive whitespace
 		let processed = text.trim().replace(/\s+/g, ' ');
-		
+
 		// Truncate very long texts (transformers have token limits)
 		const maxLength = 512; // Conservative limit for most models
 		if (processed.length > maxLength) {
@@ -192,7 +198,7 @@ export class EmbeddingService {
 		let hash = 0;
 		for (let i = 0; i < text.length; i++) {
 			const char = text.charCodeAt(i);
-			hash = ((hash << 5) - hash) + char;
+			hash = (hash << 5) - hash + char;
 			hash = hash & hash; // Convert to 32-bit integer
 		}
 		return hash.toString();
