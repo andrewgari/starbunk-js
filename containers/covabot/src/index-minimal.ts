@@ -1,18 +1,18 @@
 // CovaBot - AI personality bot container (Minimal Bootstrap Demo)
 import { Events, Message } from 'discord.js';
-import { 
-	logger, 
-	ensureError, 
-	validateEnvironment, 
-	createDiscordClient, 
+import {
+	logger,
+	ensureError,
+	validateEnvironment,
+	createDiscordClient,
 	ClientConfigs,
 	container,
 	ServiceId,
-	WebhookManager 
+	WebhookManager,
 } from '@starbunk/shared';
 
 class CovaBotContainer {
-	private client: any;
+	private client!: ReturnType<typeof createDiscordClient>;
 	private webhookManager!: WebhookManager;
 	private hasInitialized = false;
 
@@ -42,7 +42,7 @@ class CovaBotContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG', 'NODE_ENV']
+			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG', 'NODE_ENV'],
 		});
 		logger.info('✅ Environment validation passed for CovaBot');
 	}
@@ -98,22 +98,22 @@ class CovaBotContainer {
 		try {
 			// Demo: AI personality responses
 			const content = message.content.toLowerCase();
-			
+
 			if (content.includes('cova') || content.includes('ai')) {
 				const responses = [
 					"I'm learning from every conversation! 🧠",
 					"That's an interesting perspective! 🤔",
-					"I love chatting with humans! 💬",
-					"Tell me more about that! 🎯",
-					"Fascinating! I'm always curious to learn! ✨"
+					'I love chatting with humans! 💬',
+					'Tell me more about that! 🎯',
+					"Fascinating! I'm always curious to learn! ✨",
 				];
-				
+
 				const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-				
+
 				await this.webhookManager.sendMessage(message.channel.id, {
 					content: randomResponse,
 					username: 'Cova',
-					avatarURL: 'https://cdn.discordapp.com/embed/avatars/1.png'
+					avatarURL: 'https://cdn.discordapp.com/embed/avatars/1.png',
 				});
 			}
 		} catch (error) {
@@ -175,7 +175,7 @@ process.on('SIGTERM', async () => {
 });
 
 if (require.main === module) {
-	main().catch(error => {
+	main().catch((error) => {
 		console.error('Fatal error:', ensureError(error));
 		process.exit(1);
 	});

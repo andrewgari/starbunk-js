@@ -19,6 +19,27 @@ import {
 	Priority,
 } from '../types/memoryTypes';
 
+// Compatibility types for legacy API calls (replacing any)
+interface PersonalityNoteMetadataCompat {
+	category?: PersonalityCategory;
+	priority?: Priority;
+	importance?: Priority; // legacy alias for priority
+}
+
+interface PersonalityNoteUpdateCompat {
+	content?: string;
+	category?: PersonalityCategory;
+	priority?: Priority;
+	importance?: Priority; // legacy alias for priority
+	isActive?: boolean;
+}
+
+interface PersonalityNoteSearchFiltersCompat {
+	category?: PersonalityCategory;
+	priority?: Priority;
+	importance?: Priority; // legacy alias for priority
+}
+
 /**
  * Unified memory service using Qdrant for both personality notes and conversation history
  * Replaces PersonalityNotesService and PersonalityNotesServiceDb
@@ -55,17 +76,16 @@ export class QdrantMemoryService {
 
 		try {
 			logger.info('[QdrantMemoryService] Initializing...');
-			
+
 			// Initialize services in parallel
-			await Promise.all([
-				this.qdrantService.initialize(),
-				this.embeddingService.initialize(),
-			]);
+			await Promise.all([this.qdrantService.initialize(), this.embeddingService.initialize()]);
 
 			this.isInitialized = true;
 			logger.info('[QdrantMemoryService] Initialization complete');
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to initialize: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to initialize: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -91,17 +111,19 @@ export class QdrantMemoryService {
 				// Semantic search using embedding
 				const queryEmbedding = await this.embeddingService.generateEmbedding(filters.search);
 				const results = await this.qdrantService.searchSimilar(queryEmbedding, searchFilters);
-				return results.map(r => r.item as PersonalityMemory);
+				return results.map((r) => r.item as PersonalityMemory);
 			} else {
 				// Get all personality notes and filter
 				const allResults = await this.qdrantService.searchSimilar(
 					new Array(this.embeddingService.getConfig().dimensions).fill(0), // Zero vector for all results
-					{ ...searchFilters, similarityThreshold: 0 }
+					{ ...searchFilters, similarityThreshold: 0 },
 				);
-				return allResults.map(r => r.item as PersonalityMemory);
+				return allResults.map((r) => r.item as PersonalityMemory);
 			}
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to get notes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to get notes: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -116,7 +138,9 @@ export class QdrantMemoryService {
 			const item = await this.qdrantService.getMemoryItem(id, 'personality');
 			return item as PersonalityMemory | null;
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to get note by ID: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to get note by ID: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -129,7 +153,7 @@ export class QdrantMemoryService {
 
 		try {
 			const startTime = Date.now();
-			
+
 			// Generate embedding
 			const embedding = await this.embeddingService.generateEmbedding(request.content);
 			this.recordEmbeddingTime(Date.now() - startTime);
@@ -156,7 +180,9 @@ export class QdrantMemoryService {
 			logger.info(`[QdrantMemoryService] Created personality note: ${note.id} (${note.category})`);
 			return note;
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to create note: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to create note: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -164,7 +190,7 @@ export class QdrantMemoryService {
 	/**
 	 * Create a new personality note with content and optional metadata (for test compatibility)
 	 */
-	async createPersonalityNote(content: string, metadata?: any): Promise<PersonalityMemory> {
+	async createPersonalityNote(content: string, metadata?: PersonalityNoteMetadataCompat): Promise<PersonalityMemory> {
 		const request: CreatePersonalityNoteRequest = {
 			content,
 			category: metadata?.category || 'knowledge',
@@ -174,7 +200,7 @@ export class QdrantMemoryService {
 		const note = await this.createNote(request);
 
 		// Add the metadata and embedding to the returned note for test compatibility
-		note.metadata = metadata || {};
+		note.metadata = (metadata as Record<string, unknown>) || {};
 		note.embedding = note.embedding || []; // Ensure embedding field exists
 
 		return note;
@@ -183,7 +209,7 @@ export class QdrantMemoryService {
 	/**
 	 * Update personality note (for test compatibility)
 	 */
-	async updatePersonalityNote(id: string, updates: any): Promise<PersonalityMemory | null> {
+	async updatePersonalityNote(id: string, updates: PersonalityNoteUpdateCompat): Promise<PersonalityMemory | null> {
 		const request: UpdatePersonalityNoteRequest = {
 			content: updates.content,
 			category: updates.category,
@@ -204,7 +230,11 @@ export class QdrantMemoryService {
 	/**
 	 * Search personality notes (for test compatibility)
 	 */
-	async searchPersonalityNotes(query: string, filters?: any, limit?: number): Promise<PersonalityMemory[]> {
+	async searchPersonalityNotes(
+		query: string,
+		filters?: PersonalityNoteSearchFiltersCompat,
+		limit?: number,
+	): Promise<PersonalityMemory[]> {
 		const searchFilters: MemorySearchFilters = {
 			search: query,
 			category: filters?.category,
@@ -275,7 +305,9 @@ export class QdrantMemoryService {
 			logger.info(`[QdrantMemoryService] Updated personality note: ${id}`);
 			return updatedNote;
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to update note: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to update note: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -293,7 +325,9 @@ export class QdrantMemoryService {
 			}
 			return deleted;
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to delete note: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to delete note: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -310,13 +344,16 @@ export class QdrantMemoryService {
 			}
 
 			// Group notes by category and priority
-			const notesByCategory = activeNotes.reduce((acc, note) => {
-				if (!acc[note.category]) {
-					acc[note.category] = [];
-				}
-				acc[note.category].push(note);
-				return acc;
-			}, {} as Record<string, PersonalityMemory[]>);
+			const notesByCategory = activeNotes.reduce(
+				(acc, note) => {
+					if (!acc[note.category]) {
+						acc[note.category] = [];
+					}
+					acc[note.category].push(note);
+					return acc;
+				},
+				{} as Record<string, PersonalityMemory[]>,
+			);
 
 			let contextString = 'PERSONALITY INSTRUCTIONS:\n\n';
 
@@ -336,7 +373,9 @@ export class QdrantMemoryService {
 
 			return contextString.trim();
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to get active notes for LLM: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to get active notes for LLM: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			return '';
 		}
 	}
@@ -353,7 +392,7 @@ export class QdrantMemoryService {
 
 		try {
 			const startTime = Date.now();
-			
+
 			// Generate embedding
 			const embedding = await this.embeddingService.generateEmbedding(request.content);
 			this.recordEmbeddingTime(Date.now() - startTime);
@@ -383,7 +422,9 @@ export class QdrantMemoryService {
 			logger.debug(`[QdrantMemoryService] Stored conversation: ${conversation.id}`);
 			return conversation;
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to store conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to store conversation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -395,13 +436,13 @@ export class QdrantMemoryService {
 		currentMessage: string,
 		userId: string,
 		channelId: string,
-		options: ContextGenerationOptions = {}
+		options: ContextGenerationOptions = {},
 	): Promise<string> {
 		await this.ensureInitialized();
 
 		try {
 			const startTime = Date.now();
-			
+
 			// Generate embedding for current message
 			const queryEmbedding = await this.embeddingService.generateEmbedding(currentMessage);
 
@@ -425,21 +466,23 @@ export class QdrantMemoryService {
 
 			// Format context
 			let context = 'RELEVANT CONVERSATION HISTORY:\n\n';
-			
+
 			for (const result of results) {
 				const conv = result.item as ConversationMemory;
 				const timeAgo = this.getTimeAgo(conv.createdAt);
 				const userLabel = conv.messageType === 'user' ? 'User' : 'Cova';
-				
+
 				context += `[${timeAgo}] ${userLabel}: ${conv.content}\n`;
-				
+
 				// Stop if similarity drops too low
 				if (result.score < (options.similarityThreshold || 0.6)) break;
 			}
 
 			return context.trim();
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to get conversation context: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to get conversation context: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			return '';
 		}
 	}
@@ -451,7 +494,7 @@ export class QdrantMemoryService {
 		currentMessage: string,
 		userId: string,
 		channelId: string,
-		options: ContextGenerationOptions = {}
+		options: ContextGenerationOptions = {},
 	): Promise<GeneratedContext> {
 		await this.ensureInitialized();
 
@@ -467,11 +510,11 @@ export class QdrantMemoryService {
 			const _conversationWeight = options.conversationWeight || 0.8; // Reserved for future weighting
 
 			let combinedContext = '';
-			
+
 			if (personalityContext) {
 				combinedContext += personalityContext;
 			}
-			
+
 			if (conversationContext) {
 				if (combinedContext) combinedContext += '\n\n';
 				combinedContext += conversationContext;
@@ -482,14 +525,20 @@ export class QdrantMemoryService {
 				conversationContext,
 				combinedContext,
 				metadata: {
-					personalityNotesUsed: personalityContext ? personalityContext.split('\n').filter(l => l.startsWith('- ')).length : 0,
-					conversationItemsUsed: conversationContext ? conversationContext.split('\n').filter(l => l.startsWith('[')).length : 0,
+					personalityNotesUsed: personalityContext
+						? personalityContext.split('\n').filter((l) => l.startsWith('- ')).length
+						: 0,
+					conversationItemsUsed: conversationContext
+						? conversationContext.split('\n').filter((l) => l.startsWith('[')).length
+						: 0,
 					averageSimilarity: 0.8, // TODO: Calculate actual average
 					contextLength: combinedContext.length,
 				},
 			};
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to generate enhanced context: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to generate enhanced context: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -529,7 +578,10 @@ export class QdrantMemoryService {
 	 * @returns Array of trimmed sentence tokens
 	 */
 	private tokenizeSentences(content: string): string[] {
-		return content.split(/[.!?]+/).filter(s => s.trim().length > 0).map(s => s.trim());
+		return content
+			.split(/[.!?]+/)
+			.filter((s) => s.trim().length > 0)
+			.map((s) => s.trim());
 	}
 
 	/**
@@ -539,7 +591,10 @@ export class QdrantMemoryService {
 	 * @returns Array of lowercase word tokens (≥3 characters)
 	 */
 	private tokenizeWords(content: string): string[] {
-		return content.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+		return content
+			.toLowerCase()
+			.split(/\s+/)
+			.filter((w) => w.length > 2);
 	}
 
 	/**
@@ -548,11 +603,11 @@ export class QdrantMemoryService {
 	private async analyzeSentiment(text: string): Promise<'positive' | 'negative' | 'neutral'> {
 		const positiveWords = ['good', 'great', 'awesome', 'love', 'like', 'happy', 'excellent', 'amazing'];
 		const negativeWords = ['bad', 'terrible', 'hate', 'sad', 'angry', 'frustrated', 'awful', 'horrible'];
-		
+
 		const words = text.toLowerCase().split(/\s+/);
-		const positiveCount = words.filter(word => positiveWords.includes(word)).length;
-		const negativeCount = words.filter(word => negativeWords.includes(word)).length;
-		
+		const positiveCount = words.filter((word) => positiveWords.includes(word)).length;
+		const negativeCount = words.filter((word) => negativeWords.includes(word)).length;
+
 		if (positiveCount > negativeCount) return 'positive';
 		if (negativeCount > positiveCount) return 'negative';
 		return 'neutral';
@@ -571,9 +626,9 @@ export class QdrantMemoryService {
 		};
 
 		const words = text.toLowerCase().split(/\s+/);
-		
+
 		for (const [topic, keywords] of Object.entries(topicKeywords)) {
-			if (keywords.some(keyword => words.includes(keyword))) {
+			if (keywords.some((keyword) => words.includes(keyword))) {
 				topics.push(topic);
 			}
 		}
@@ -625,7 +680,7 @@ export class QdrantMemoryService {
 
 			// Get personality notes
 			const personalityNotes = await this.getNotes();
-			const activePersonalityNotes = personalityNotes.filter(note => note.isActive);
+			const activePersonalityNotes = personalityNotes.filter((note) => note.isActive);
 
 			// Get conversation stats
 			const now = new Date();
@@ -640,22 +695,28 @@ export class QdrantMemoryService {
 			];
 
 			const [conv24h, conv7d, conv30d] = await Promise.all(
-				conversationFilters.map(filter =>
-					this.qdrantService.searchSimilar(
-						new Array(this.embeddingService.getConfig().dimensions).fill(0),
-						{ type: 'conversation', ...filter, similarityThreshold: 0, limit: 10000 }
-					)
-				)
+				conversationFilters.map((filter) =>
+					this.qdrantService.searchSimilar(new Array(this.embeddingService.getConfig().dimensions).fill(0), {
+						type: 'conversation',
+						...filter,
+						similarityThreshold: 0,
+						limit: 10000,
+					}),
+				),
 			);
 
 			// Calculate averages
-			const _avgSearchTime = this.performanceMetrics.searchTimes.length > 0
-				? this.performanceMetrics.searchTimes.reduce((a, b) => a + b, 0) / this.performanceMetrics.searchTimes.length
-				: 0;
+			const _avgSearchTime =
+				this.performanceMetrics.searchTimes.length > 0
+					? this.performanceMetrics.searchTimes.reduce((a, b) => a + b, 0) /
+						this.performanceMetrics.searchTimes.length
+					: 0;
 
-			const _avgEmbeddingTime = this.performanceMetrics.embeddingTimes.length > 0
-				? this.performanceMetrics.embeddingTimes.reduce((a, b) => a + b, 0) / this.performanceMetrics.embeddingTimes.length
-				: 0;
+			const _avgEmbeddingTime =
+				this.performanceMetrics.embeddingTimes.length > 0
+					? this.performanceMetrics.embeddingTimes.reduce((a, b) => a + b, 0) /
+						this.performanceMetrics.embeddingTimes.length
+					: 0;
 
 			return {
 				total: qdrantStats.totalVectors,
@@ -663,14 +724,20 @@ export class QdrantMemoryService {
 					personality: personalityNotes.length,
 					conversation: qdrantStats.totalVectors - personalityNotes.length,
 				},
-				byCategory: personalityNotes.reduce((acc, note) => {
-					acc[note.category] = (acc[note.category] || 0) + 1;
-					return acc;
-				}, {} as Partial<Record<PersonalityCategory, number>>),
-				byPriority: personalityNotes.reduce((acc, note) => {
-					acc[note.priority] = (acc[note.priority] || 0) + 1;
-					return acc;
-				}, {} as Partial<Record<Priority, number>>),
+				byCategory: personalityNotes.reduce(
+					(acc, note) => {
+						acc[note.category] = (acc[note.category] || 0) + 1;
+						return acc;
+					},
+					{} as Partial<Record<PersonalityCategory, number>>,
+				),
+				byPriority: personalityNotes.reduce(
+					(acc, note) => {
+						acc[note.priority] = (acc[note.priority] || 0) + 1;
+						return acc;
+					},
+					{} as Partial<Record<Priority, number>>,
+				),
 				activePersonalityNotes: activePersonalityNotes.length,
 				conversationHistory: {
 					total: qdrantStats.totalVectors - personalityNotes.length,
@@ -680,12 +747,20 @@ export class QdrantMemoryService {
 				},
 				storage: {
 					vectorCount: qdrantStats.totalVectors,
-					collectionSize: Object.values(qdrantStats.collections).reduce((sum, col) => sum + col.vectorCount, 0),
-					indexSize: Object.values(qdrantStats.collections).reduce((sum, col) => sum + col.indexedVectorsCount, 0),
+					collectionSize: Object.values(qdrantStats.collections).reduce(
+						(sum, col) => sum + col.vectorCount,
+						0,
+					),
+					indexSize: Object.values(qdrantStats.collections).reduce(
+						(sum, col) => sum + col.indexedVectorsCount,
+						0,
+					),
 				},
 			};
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to get stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to get stats: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -702,21 +777,24 @@ export class QdrantMemoryService {
 
 			const stats = this.isInitialized ? await this.getStats() : null;
 
-			const avgSearchTime = this.performanceMetrics.searchTimes.length > 0
-				? this.performanceMetrics.searchTimes.reduce((a, b) => a + b, 0) / this.performanceMetrics.searchTimes.length
-				: 0;
+			const avgSearchTime =
+				this.performanceMetrics.searchTimes.length > 0
+					? this.performanceMetrics.searchTimes.reduce((a, b) => a + b, 0) /
+						this.performanceMetrics.searchTimes.length
+					: 0;
 
-			const avgEmbeddingTime = this.performanceMetrics.embeddingTimes.length > 0
-				? this.performanceMetrics.embeddingTimes.reduce((a, b) => a + b, 0) / this.performanceMetrics.embeddingTimes.length
-				: 0;
+			const avgEmbeddingTime =
+				this.performanceMetrics.embeddingTimes.length > 0
+					? this.performanceMetrics.embeddingTimes.reduce((a, b) => a + b, 0) /
+						this.performanceMetrics.embeddingTimes.length
+					: 0;
 
 			const errors: string[] = [];
 			if (!qdrantHealth.connected) errors.push('Qdrant connection failed');
 			if (!embeddingHealth.isReady) errors.push('Embedding service not ready');
 			if (!this.isInitialized) errors.push('Memory service not initialized');
 
-			const status = errors.length === 0 ? 'healthy' :
-				errors.length === 1 ? 'degraded' : 'unhealthy';
+			const status = errors.length === 0 ? 'healthy' : errors.length === 1 ? 'degraded' : 'unhealthy';
 
 			return {
 				status,
@@ -752,10 +830,7 @@ export class QdrantMemoryService {
 	/**
 	 * Search memory items with semantic similarity
 	 */
-	async searchMemory(
-		query: string,
-		filters: MemorySearchFilters = {}
-	): Promise<MemorySearchResult[]> {
+	async searchMemory(query: string, filters: MemorySearchFilters = {}): Promise<MemorySearchResult[]> {
 		await this.ensureInitialized();
 
 		try {
@@ -772,7 +847,9 @@ export class QdrantMemoryService {
 			logger.debug(`[QdrantMemoryService] Semantic search for "${query}" returned ${results.length} results`);
 			return results;
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Failed to search memory: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Failed to search memory: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -786,7 +863,9 @@ export class QdrantMemoryService {
 			this.isInitialized = false;
 			logger.info('[QdrantMemoryService] Cleanup completed');
 		} catch (error) {
-			logger.error(`[QdrantMemoryService] Cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantMemoryService] Cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 		}
 	}
 

@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Run full CI checks before pushing
+npm run check:ci --silent

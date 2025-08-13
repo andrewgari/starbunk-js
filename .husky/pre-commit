@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+
+# Lint staged files and type-check the repo (Husky v9+)
+npx lint-staged
+npm run type-check --silent

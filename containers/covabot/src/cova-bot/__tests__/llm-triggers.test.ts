@@ -1,33 +1,35 @@
 import { Message } from 'discord.js';
-import { bootstrap, logger, userId } from '@starbunk/shared';
+import { logger, getLLMManager } from '@starbunk/shared';
 
 // Mock dependencies
 jest.mock('@starbunk/shared', () => ({
-	bootstrap: {
-		getLLMManager: jest.fn()
-	},
+	getLLMManager: jest.fn().mockReturnValue({
+		createPromptCompletion: jest.fn(),
+	}),
 	logger: {
 		info: jest.fn(),
 		error: jest.fn(),
 		warn: jest.fn(),
-		debug: jest.fn()
-	},
-	userId: {
-		Cova: 'cova-user-id'
+		debug: jest.fn(),
 	},
 	PromptRegistry: {
 		registerPrompt: jest.fn(),
-		getPrompt: jest.fn()
+		getPrompt: jest.fn(),
 	},
 	PromptType: {
-		COVA_EMULATOR: 'covaEmulator',
-		COVA_DECISION: 'covaDecision'
+		COVA_EMULATOR: 'COVA_EMULATOR',
+		COVA_DECISION: 'COVA_DECISION',
 	},
 	LLMProviderType: {
 		OPENAI: 'openai',
-		OLLAMA: 'ollama'
+		OLLAMA: 'ollama',
 	},
-	getPersonalityService: jest.fn()
+	getPersonalityService: jest.fn(() => ({
+		getPersonalityEmbedding: jest.fn(),
+		loadPersonalityEmbedding: jest.fn(),
+		generatePersonalityEmbedding: jest.fn(),
+	})),
+	weightedRandomResponse: jest.fn(() => () => 'fallback-response'),
 }));
 
 // Import after mocking
@@ -43,29 +45,29 @@ describe('LLM Triggers', () => {
 
 		// Mock LLM Manager
 		mockLLMManager = {
-			createPromptCompletion: jest.fn()
+			createPromptCompletion: jest.fn(),
 		};
-		(bootstrap.getLLMManager as jest.Mock).mockReturnValue(mockLLMManager);
+		(getLLMManager as jest.Mock).mockReturnValue(mockLLMManager);
 
 		// Mock Personality Service
 		mockPersonalityService = {
-			getPersonalityEmbedding: jest.fn().mockReturnValue(new Float32Array([1, 2, 3]))
+			getPersonalityEmbedding: jest.fn().mockReturnValue(new Float32Array([1, 2, 3])),
 		};
 
 		// Mock message
 		mockMessage = {
 			author: {
 				username: 'testuser',
-				bot: false
+				bot: false,
 			},
 			content: 'Hello Cova!',
 			channelId: 'channel123',
 			channel: {
-				name: 'general'
-			},
+				name: 'general',
+			} as any,
 			mentions: {
-				has: jest.fn().mockReturnValue(false)
-			}
+				has: jest.fn().mockReturnValue(false),
+			},
 		} as any;
 	});
 
@@ -85,9 +87,9 @@ describe('LLM Triggers', () => {
 					temperature: 0.7,
 					maxTokens: 250,
 					contextData: {
-						personalityEmbedding: [1, 2, 3]
-					}
-				})
+						personalityEmbedding: [1, 2, 3],
+					},
+				}),
 			);
 		});
 
@@ -99,9 +101,7 @@ describe('LLM Triggers', () => {
 
 			expect(result).toBeDefined();
 			expect(result.length).toBeGreaterThan(0);
-			expect(logger.debug).toHaveBeenCalledWith(
-				expect.stringContaining('Received empty response from LLM')
-			);
+			expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('Received empty response from LLM'));
 		});
 
 		it.skip('should truncate long responses (disabled: flaky due to non-deterministic LLM responses)', async () => {
@@ -114,7 +114,7 @@ describe('LLM Triggers', () => {
 			expect(result.length).toBeLessThanOrEqual(1900 + '... (truncated)'.length);
 			expect(result).toContain('... (truncated)');
 			expect(logger.warn).toHaveBeenCalledWith(
-				expect.stringContaining('Response exceeded Discord\'s character limit')
+				expect.stringContaining("Response exceeded Discord's character limit"),
 			);
 		});
 
@@ -126,9 +126,7 @@ describe('LLM Triggers', () => {
 
 			expect(result).toBeDefined();
 			expect(result.length).toBeGreaterThan(0);
-			expect(logger.warn).toHaveBeenCalledWith(
-				expect.stringContaining('LLM service error')
-			);
+			expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('LLM service error'));
 		});
 
 		it.skip('should handle missing personality embedding (disabled: flaky due to non-deterministic LLM responses)', async () => {
@@ -144,9 +142,9 @@ describe('LLM Triggers', () => {
 				expect.any(String),
 				expect.objectContaining({
 					contextData: {
-						personalityEmbedding: undefined
-					}
-				})
+						personalityEmbedding: undefined,
+					},
+				}),
 			);
 		});
 	});
@@ -159,9 +157,7 @@ describe('LLM Triggers', () => {
 			const result = await decisionCondition(mockMessage as Message);
 
 			expect(result).toBe(true);
-			expect(logger.debug).toHaveBeenCalledWith(
-				expect.stringContaining('Direct mention detected')
-			);
+			expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('Direct mention detected'));
 		});
 
 		it('should not respond to bot messages', async () => {
@@ -184,8 +180,8 @@ describe('LLM Triggers', () => {
 				expect.stringContaining('should Cova respond to this message?'),
 				expect.objectContaining({
 					temperature: 0.2,
-					maxTokens: 10
-				})
+					maxTokens: 10,
+				}),
 			);
 			// Result depends on randomization, but should be boolean
 			expect(typeof result).toBe('boolean');
@@ -193,13 +189,13 @@ describe('LLM Triggers', () => {
 
 		it('should handle different LLM decision responses', async () => {
 			const testCases = ['YES', 'LIKELY', 'UNLIKELY', 'NO'];
-			
+
 			for (const response of testCases) {
 				mockLLMManager.createPromptCompletion.mockResolvedValue(response);
-				
+
 				const decisionCondition = createLLMResponseDecisionCondition();
 				const result = await decisionCondition(mockMessage as Message);
-				
+
 				expect(typeof result).toBe('boolean');
 			}
 		});
@@ -213,7 +209,7 @@ describe('LLM Triggers', () => {
 			expect(typeof result).toBe('boolean');
 			expect(logger.error).toHaveBeenCalledWith(
 				expect.stringContaining('Error in decision logic'),
-				expect.any(Error)
+				expect.any(Error),
 			);
 		});
 
@@ -229,7 +225,7 @@ describe('LLM Triggers', () => {
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalledWith(
 				'COVA_DECISION',
 				expect.stringContaining('Channel: Unknown Channel'),
-				expect.any(Object)
+				expect.any(Object),
 			);
 		});
 	});
