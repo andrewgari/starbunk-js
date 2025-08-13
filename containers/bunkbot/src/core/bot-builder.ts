@@ -210,36 +210,6 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 			if (!shouldProcess) {
 				return;
 			}
-			// Check message filter
-			const shouldSkip = await validConfig.messageFilter(message);
-			if (shouldSkip) {
-				return false;
-			}
-
-			// Check triggers - sort by priority and test each one
-			const sortedTriggers = [...validConfig.triggers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
-			
-			for (const trigger of sortedTriggers) {
-				try {
-					const matches = await trigger.condition(message);
-					if (matches) {
-						return true; // At least one trigger matches
-					}
-				} catch (error) {
-					logger.debug(`[${validConfig.name}] Error checking trigger "${trigger.name}":`, error as Error);
-				}
-			}
-
-			return false; // No triggers matched
-		},
-		async processMessage(message: Message): Promise<void> {
-			// Use shouldRespond to determine if we should process this message
-			// This avoids duplicating all the filtering logic
-			const shouldProcess = await this.shouldRespond(message);
-			if (!shouldProcess) {
-				return;
-
-			}
 
 			// Check blacklist (simple in-memory implementation)
 			const guildId = message.guild?.id;
