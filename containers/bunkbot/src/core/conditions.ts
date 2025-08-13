@@ -1,6 +1,5 @@
 import { isDebugMode, logger, getTestingChannelIds } from '@starbunk/shared';
 import { extractWebhookId } from '../utils/webhook';
-
 import { Message } from 'discord.js';
 
 
