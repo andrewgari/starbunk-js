@@ -158,7 +158,6 @@ async function main() {
   }
 
   const inventory = detectAvailableBots();
-
   const results: TestResult[] = [];
 
   for (const tc of testCases) {
