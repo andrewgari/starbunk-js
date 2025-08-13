@@ -238,6 +238,7 @@ describe('Condition functions', () => {
 			// but we don't export it directly so we don't test it here
 		});
 	});
+
 });
 
 describe('Condition combiners', () => {

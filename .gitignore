@@ -160,7 +160,6 @@ cypress/downloads/
 data
 
 *.bak
-.mcp.json
 .idea
 .venv
 data/*

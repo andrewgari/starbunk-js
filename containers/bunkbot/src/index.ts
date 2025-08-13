@@ -12,7 +12,8 @@ import {
 	WebhookManager,
 	getMessageFilter,
 	MessageFilter,
-	runStartupDiagnostics
+	runStartupDiagnostics,
+	initializeObservability
 } from '@starbunk/shared';
 
 // Import DiscordService directly from the service file
@@ -25,14 +26,13 @@ import debugCommand from './commands/debug';
 // Import reply bot system
 import { BotRegistry } from './botRegistry';
 // import { DatabaseBotFactory } from './core/database-bot-factory'; // Temporarily disabled
-import ReplyBot from './replyBot';
+import { ReplyBotImpl } from './core/bot-builder';
+import { shouldExcludeFromReplyBots } from './core/conditions';
 
 // Import configuration services
 import { ConfigurationService } from './services/configurationService';
 import { BotIdentityService } from './services/botIdentityService';
-
-// Import centralized message filter
-import { getCentralizedMessageFilter, CentralizedMessageFilter } from './services/centralizedMessageFilter';
+import { MessageProcessor } from './core/MessageProcessor';
 
 class BunkBotContainer {
 	private client: any;
@@ -40,16 +40,20 @@ class BunkBotContainer {
 	private messageFilter!: MessageFilter;
 	private configurationService!: ConfigurationService;
 	private botIdentityService!: BotIdentityService;
-	private centralizedMessageFilter!: CentralizedMessageFilter;
 	private hasInitialized = false;
 	private commands = new Map();
 	private healthServer: any;
-	private replyBots: ReplyBot[] = [];
+	private replyBots: ReplyBotImpl[] = [];
+	private messageProcessor!: MessageProcessor;
 
 	async initialize(): Promise<void> {
 		logger.info('🚀 Initializing BunkBot container...');
 
 		try {
+			// Initialize observability first
+			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('bunkbot');
+			logger.info('✅ Observability initialized with metrics, structured logging, and channel activity tracking');
+
 			// Run startup diagnostics
 			const diagnostics = await runStartupDiagnostics();
 			const failures = diagnostics.filter(d => d.status === 'fail');
@@ -73,6 +77,10 @@ class BunkBotContainer {
 
 			// Initialize reply bot system
 			await this.initializeReplyBots();
+
+			// Initialize message processor with observability
+			this.messageProcessor = new MessageProcessor(this.messageFilter, this.replyBots);
+			logger.info('✅ Message processor initialized with observability tracking');
 
 		// Register commands
 		this.registerCommands();
@@ -118,16 +126,13 @@ class BunkBotContainer {
 		this.messageFilter = getMessageFilter();
 		container.register(ServiceId.MessageFilter, this.messageFilter);
 
-		// Initialize configuration services
-		this.configurationService = new ConfigurationService();
-		this.botIdentityService = new BotIdentityService(this.configurationService);
-
-		// Initialize centralized message filter
-		this.centralizedMessageFilter = getCentralizedMessageFilter();
+		// Initialize configuration services - temporarily disabled due to Prisma issues
+		// this.configurationService = new ConfigurationService();
+		// this.botIdentityService = new BotIdentityService(this.configurationService);
 
 		// Preload configuration cache
-		await this.configurationService.refreshCache();
-		logger.info('✅ Configuration services initialized and cache preloaded');
+		// await this.configurationService.refreshCache();
+		logger.info('✅ Configuration services temporarily disabled for logging test');
 
 		// Database services temporarily disabled to focus on file-based bot loading
 		logger.info('⚠️  Database services disabled - using file-based bot loading only');
@@ -148,7 +153,7 @@ class BunkBotContainer {
 				logger.info(`✅ Reply bot system initialized with ${this.replyBots.length} bots`);
 				logger.info('🤖 Active reply bots:');
 				this.replyBots.forEach(bot => {
-					logger.info(`   - ${bot.defaultBotName}: ${bot.description}`);
+					logger.info(`   - ${bot.name}: ${bot.description}`);
 				});
 			} else {
 				logger.warn('⚠️  No reply bots were loaded - only slash commands are active');
@@ -234,7 +239,14 @@ private async deployCommands(): Promise<void> {
 		});
 
 		this.client.on(Events.MessageCreate, async (message: any) => {
-			logger.debug(`💬 Received message from ${message.author?.username || 'unknown'}: ${message.content?.substring(0, 50) || 'no content'}...`);
+			logger.info(`🔥 DISCORD EVENT: MessageCreate received from ${message.author?.username || 'unknown'} (${message.author?.id || 'unknown'})`);
+			logger.info(`🔥   Content: "${message.content?.substring(0, 100) || 'no content'}"`);
+			logger.info(`🔥   Channel: ${message.channel?.name || 'unknown'} (${message.channel?.id || 'unknown'})`);
+			logger.info(`🔥   Guild: ${message.guild?.name || 'DM'} (${message.guild?.id || 'DM'})`);
+			logger.info(`🔥   Author isBot: ${message.author?.bot || false}`);
+			logger.info(`🔥   Webhook ID: ${message.webhookId || 'none'}`);
+			logger.info(`🔥 → Passing to handleMessage...`);
+			
 			await this.handleMessage(message);
 		});
 
@@ -246,12 +258,6 @@ private async deployCommands(): Promise<void> {
 
 		this.client.once(Events.ClientReady, async () => {
 			logger.info('🤖 BunkBot is ready and connected to Discord');
-
-			// Configure centralized message filter with bot ID now that client is ready
-			this.centralizedMessageFilter.updateConfig({
-				currentBotUserId: this.client.user?.id
-			});
-			logger.info(`🔧 Updated centralized message filter with bot ID: ${this.client.user?.id}`);
 
 			// Debug: Check if bot is in the target guild
 			const guildId = process.env.GUILD_ID;
@@ -280,75 +286,12 @@ private async deployCommands(): Promise<void> {
 	}
 
 	private async handleMessage(message: any): Promise<void> {
-		try {
-			// Bot message filtering is now handled by the centralized message filter.
-			// The explicit `if (message.author.bot) return;` check is no longer needed here.
-			const filterResult = this.centralizedMessageFilter.shouldProcessMessage(message);
-			if (!filterResult.shouldProcess) {
-				// Message was filtered out - logging is handled in the filter
-				return;
-			}
-
-			// Create message context for legacy filtering (server/channel restrictions)
-			const context = MessageFilter.createContextFromMessage(message);
-
-			// Check legacy message filter for server/channel restrictions
-			const legacyFilterResult = this.messageFilter.shouldProcessMessage(context);
-			if (!legacyFilterResult.allowed) {
-				// Message was filtered out - no need to log unless in debug mode
-				if (this.messageFilter.isDebugMode()) {
-					logger.debug(`Message filtered by legacy filter: ${legacyFilterResult.reason}`);
-				}
-				return;
-			}
-
-			logger.debug(`Processing message from ${message.author.username}: ${message.content}`);
-
-			// Process message through reply bot system
-			await this.processMessageWithReplyBots(message);
-
-		} catch (error) {
-			logger.error('Error processing message:', ensureError(error));
-		}
+		logger.debug(`Processing message from ${message.author.username} in ${message.channel.name || 'DM'}`);
+		
+		// Use the MessageProcessor which now includes comprehensive observability tracking
+		await this.messageProcessor.processMessage(message);
 	}
 
-	/**
-	 * Process a message through all loaded reply bots
-	 * @param message Discord message to process
-	 */
-	private async processMessageWithReplyBots(message: any): Promise<void> {
-		if (this.replyBots.length === 0) {
-			logger.debug('No reply bots loaded - skipping message processing');
-			return;
-		}
-
-		logger.debug(`Processing message through ${this.replyBots.length} reply bots`);
-
-		// Process message through each reply bot
-		for (const bot of this.replyBots) {
-			try {
-				// Apply bot-specific centralized filtering
-				const botFilterResult = this.centralizedMessageFilter.shouldProcessMessage(message, bot.defaultBotName);
-				if (!botFilterResult.shouldProcess) {
-					logger.debug(`${bot.defaultBotName} skipped by centralized filter: ${botFilterResult.reason}`);
-					continue;
-				}
-
-				// Check if bot should respond to this message (legacy logic)
-				const shouldRespond = await bot.shouldRespond(message);
-
-				if (shouldRespond) {
-					logger.debug(`${bot.defaultBotName} will process message`);
-					await bot.processMessagePublic(message);
-				} else {
-					logger.debug(`${bot.defaultBotName} skipped message`);
-				}
-			} catch (error) {
-				logger.error(`Error processing message with ${bot.defaultBotName}:`, ensureError(error));
-				// Continue processing with other bots even if one fails
-			}
-		}
-	}
 
 	private async handleInteraction(interaction: any): Promise<void> {
 		if (interaction.isChatInputCommand()) {
@@ -453,11 +396,11 @@ private async deployCommands(): Promise<void> {
 			});
 		}
 
-		// Disconnect configuration services
-		if (this.configurationService) {
-			await this.configurationService.disconnect();
-			logger.info('Configuration services disconnected');
-		}
+		// Disconnect configuration services - temporarily disabled
+		// if (this.configurationService) {
+		//	await this.configurationService.disconnect();
+		//	logger.info('Configuration services disconnected');
+		// }
 
 		// Stop Discord client
 		if (this.client) {

@@ -62,3 +62,25 @@ export { PromptRegistry, PromptType } from './services/llm/promptManager';
 export type { LLMPrompt } from './services/llm/promptManager';
 export { LLMProviderType } from './services/llm/index';
 export { getPersonalityService } from './services/personalityService';
+
+// Observability
+export { 
+	initializeObservability,
+	MetricsService, 
+	initializeMetrics, 
+	getMetrics,
+	StructuredLogger, 
+	initializeStructuredLogger, 
+	getStructuredLogger,
+	ChannelActivityTracker,
+	initializeChannelActivityTracker,
+	getChannelActivityTracker
+} from './services/observability';
+export type { 
+	MessageFlowMetrics,
+	ChannelActivity,
+	LogContext,
+	MessageFlowLog,
+	ChannelActivityLog,
+	SystemLog
+} from './services/observability';

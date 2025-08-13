@@ -24,7 +24,7 @@ export default createBot({
   responses: ['Hello there!', 'Hi!', 'Hey, how are you?'],
   avatarUrl: 'https://example.com/avatar.png',
   responseRate: 80 // Optional: respond 80% of the time
-  // skipBotMessages is true by default
+  // Default message filtering applies automatically
 });
 ```
 
@@ -40,7 +40,7 @@ The `createBot()` function accepts the following options:
 | `responses` | string[] | Yes | Array of possible responses |
 | `avatarUrl` | string | No | URL to the avatar image for your bot |
 | `responseRate` | number | No | Percentage chance of responding (0-100) |
-| `skipBotMessages` | boolean | No | Whether to ignore messages from other bots (defaults to true) |
+| `messageFilter` | `(message: Message) => boolean \| Promise<boolean>` | No | Custom message filtering function (uses default filtering if not provided) |
 
 ### Pattern and Response Matching
 
@@ -50,6 +50,8 @@ The `createBot()` function handles different combinations of patterns and respon
 2. **Multiple patterns, one response**: The bot will respond with the same message for any matching pattern
 3. **Multiple patterns, multiple responses (equal count)**: Each pattern is matched with the corresponding response
 4. **One pattern, multiple responses**: The bot will randomly select one of the responses
+
+
 
 ## Traditional Approach (Advanced Usage)
 

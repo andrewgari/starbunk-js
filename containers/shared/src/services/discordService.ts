@@ -99,15 +99,15 @@ export class DiscordService {
 	}
 
 	private async setupGuildCaching(): Promise<void> {
-		const guild = await this.getGuild(DefaultGuildId);
-
-		// Enable maximum caching for the guild
-		guild.members.cache.clear(); // Clear existing cache to ensure fresh state
-
-		logger.info('[DiscordService] Setting up guild caching...');
-
 		try {
-			// Initial population of cache
+			const guild = await this.getGuild(DefaultGuildId);
+
+			// Enable maximum caching for the guild
+			guild.members.cache.clear(); // Clear existing cache to ensure fresh state
+
+			logger.info('[DiscordService] Setting up guild caching...');
+
+		// Initial population of cache
 			const members = await guild.members.fetch();
 			logger.info(`[DiscordService] Successfully cached ${members.size} members`);
 
@@ -123,7 +123,13 @@ export class DiscordService {
 				logger.debug(`[DiscordService] Cache sweep completed: ${beforeSize - afterSize} members removed`);
 			}, 30 * 60 * 1000); // Run every 30 minutes
 		} catch (error) {
-			logger.error('[DiscordService] Failed to setup guild caching:', ensureError(error));
+			const errorObj = ensureError(error);
+			if (errorObj instanceof GuildNotFoundError) {
+				logger.warn(`[DiscordService] Guild ${DefaultGuildId} not accessible - skipping guild caching setup`);
+				logger.warn('[DiscordService] Bot may not have access to the configured GUILD_ID. Some features may be limited.');
+				return; // Continue without guild caching
+			}
+			logger.error('[DiscordService] Failed to setup guild caching:', errorObj);
 			throw new DiscordServiceError('Failed to setup guild caching');
 		}
 	}

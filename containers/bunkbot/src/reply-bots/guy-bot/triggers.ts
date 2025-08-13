@@ -3,7 +3,7 @@ import { matchesPattern } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { ConfigurationService } from '../../services/configurationService';
 import { BotIdentityService } from '../../services/botIdentityService';
-import { GUY_BOT_NAME, GUY_BOT_PATTERNS, getRandomGuyResponse } from './constants';
+import { GUY_BOT_PATTERNS, getRandomGuyResponse } from './constants';
 
 // Initialize services
 const configService = new ConfigurationService();

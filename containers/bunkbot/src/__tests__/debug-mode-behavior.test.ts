@@ -196,7 +196,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 				mockIsDebugMode.mockReturnValue(true);
 			});
 
-			it('should only match Cova user ID in debug mode', async () => {
+			it('should work the same as production mode (no special debug behavior)', async () => {
 				// Arrange
 				const covaMessage = mockMessage({
 					author: mockHumanUser({ id: TEST_USER_IDS.Cova })
@@ -217,10 +217,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 				const vennResult = await vennCondition(vennMessage);
 				const chadResult = await chadCondition(chadMessage);
 
-				// Assert: In debug mode, only Cova's actual message should return true
-				expect(covaResult).toBe(true);
-				expect(vennResult).toBe(false); // Should return false because message author is not Cova
-				expect(chadResult).toBe(false); // Should return false because message author is not Cova
+				// Assert: Each condition should match its corresponding user ID
+				expect(covaResult).toBe(true);  // Cova condition matches Cova message
+				expect(vennResult).toBe(true);  // Venn condition matches Venn message
+				expect(chadResult).toBe(true);  // Chad condition matches Chad message
 			});
 		});
 	});

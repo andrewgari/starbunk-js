@@ -14,36 +14,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database - Shared by services that need persistence
-  postgres:
-    image: postgres:15-alpine
-    container_name: starbunk-postgres
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-starbunk}
-      POSTGRES_USER: ${POSTGRES_USER:-starbunk}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-starbunk} -d ${POSTGRES_DB:-starbunk}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - starbunk-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   # BunkBot - Reply bots and admin commands
   bunkbot:
     image: ghcr.io/andrewgari/bunkbot:latest
@@ -57,16 +27,21 @@ services:
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
+      - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - BUNKBOT_HEALTH_PORT=${BUNKBOT_HEALTH_PORT:-3002}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
+      - LOKI_URL=${LOKI_URL:-}
+    ports:
+      - "${BUNKBOT_HEALTH_PORT:-3002}:${BUNKBOT_HEALTH_PORT:-3002}"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      test: ["CMD", "/bin/sh", "-c", "curl -f http://localhost:3002/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -99,11 +74,17 @@ services:
       - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DJCOVA_HEALTH_PORT=${DJCOVA_HEALTH_PORT:-3004}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
+      - LOKI_URL=${LOKI_URL:-}
     volumes:
       - djcova_cache:/app/cache
       - djcova_temp:/tmp
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f 'node dist/index.js' || exit 1"]
+      test: ["CMD", "/bin/sh", "-c", "curl -f http://localhost:3004/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -135,22 +116,25 @@ services:
       - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
+      - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - STARBUNK_DND_HEALTH_PORT=${STARBUNK_DND_HEALTH_PORT:-3005}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
+      - LOKI_URL=${LOKI_URL:-}
     volumes:
       - dnd_data:/app/data
       - dnd_campaigns:/app/data/campaigns
       - dnd_context:/app/data/llm_context
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      test: ["CMD", "/bin/sh", "-c", "curl -f http://localhost:3005/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -181,16 +165,19 @@ services:
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
+      - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - COVABOT_HEALTH_PORT=${COVABOT_HEALTH_PORT:-3003}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
+      - LOKI_URL=${LOKI_URL:-}
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
+      test: ["CMD", "/bin/sh", "-c", "curl -f http://localhost:3003/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -211,8 +198,6 @@ services:
 
 # Named volumes for persistent data
 volumes:
-  postgres_data:
-    driver: local
   djcova_cache:
     driver: local
   djcova_temp:

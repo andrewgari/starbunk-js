@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: GUNDAM_BOT_NAME,
 		avatarUrl: GUNDAM_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [gundamTrigger]
 });

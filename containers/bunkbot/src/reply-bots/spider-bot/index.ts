@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: SPIDER_BOT_NAME,
 		avatarUrl: SPIDER_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [correctSpellingTrigger, incorrectSpellingTrigger]
 });

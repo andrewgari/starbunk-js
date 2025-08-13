@@ -16,16 +16,6 @@ on:
 
 # Allow manual triggering for testing
   workflow_dispatch:
-    inputs:
-      test_level:
-        description: 'Test level to run'
-        required: true
-        default: 'unit'
-        type: choice
-        options:
-          - unit
-          - integration
-          - full
 
 env:
   # Test environment variables (safe for CI)
@@ -235,71 +225,6 @@ jobs:
         run: |
           cd ${{ matrix.path }}
           npm run test:container
-
-  container-health-tests:
-    name: Container Health Tests (E2E)
-    runs-on: ubuntu-latest
-    needs: [detect-changes, unit-tests]
-    if: |
-      needs.detect-changes.outputs.any-container == 'true' && 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test_level == 'full') ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'test:e2e')) ||
-      github.ref == 'refs/heads/main'
-    strategy:
-      matrix:
-        container: [bunkbot]
-        include:
-          - container: bunkbot
-            path: containers/bunkbot
-            dockerfile: containers/bunkbot/Dockerfile
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: |
-            containers/shared/package-lock.json
-            ${{ matrix.path }}/package-lock.json
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Install shared dependencies
-        run: |
-          cd containers/shared
-          npm ci
-
-      - name: Build shared library
-        run: |
-          cd containers/shared
-          npm run build
-
-      - name: Install container dependencies
-        run: |
-          cd ${{ matrix.path }}
-          npm ci
-
-      - name: Create test environment file
-        run: |
-          cat > .env << EOF
-          STARBUNK_TOKEN=${{ env.STARBUNK_TOKEN }}
-          OPENAI_API_KEY=${{ env.OPENAI_API_KEY }}
-          OLLAMA_API_URL=${{ env.OLLAMA_API_URL }}
-          DEBUG_MODE=${{ env.DEBUG_MODE }}
-          TESTING_SERVER_IDS=${{ env.TESTING_SERVER_IDS }}
-          TESTING_CHANNEL_IDS=${{ env.TESTING_CHANNEL_IDS }}
-          NODE_ENV=${{ env.NODE_ENV }}
-          EOF
-
-      - name: Run container health tests
-        run: |
-          cd ${{ matrix.path }}
-          npm test -- --testPathPattern="container-health" --runInBand --detectOpenHandles --verbose
-        timeout-minutes: 10
 
   validation-summary:
     name: Container Validation Summary

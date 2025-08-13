@@ -1,6 +1,5 @@
 // Constants for Guy Bot
-export const GUY_BOT_NAME = 'GuyBot';
-export const GUY_BOT_AVATAR_URL = 'https://i.imgur.com/default-guy.jpg';
+// Bot name and avatar URL are now resolved dynamically from Discord
 
 export const GUY_BOT_PATTERNS = {
 	Default: /\bguy\b/i

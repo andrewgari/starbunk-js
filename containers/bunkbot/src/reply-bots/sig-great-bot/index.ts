@@ -9,6 +9,6 @@ export default BotFactory.createBot({
 		botName: 'Sig',
 		avatarUrl: '' // Will be overridden by dynamic identity
 	},
-	skipBotMessages: true,
+
 	triggers: [sigGreatTrigger]
 });

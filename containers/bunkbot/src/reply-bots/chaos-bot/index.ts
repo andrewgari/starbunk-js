@@ -10,6 +10,6 @@ export default BotFactory.createBot({
 		botName: CHAOS_BOT_NAME,
 		avatarUrl: CHAOS_BOT_AVATAR_URL
 	},
-	skipBotMessages: true,
+
 	triggers: [chaosTrigger]
 });

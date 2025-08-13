@@ -132,16 +132,16 @@ describe('MessageFilter', () => {
 			expect(result.allowed).toBe(true);
 		});
 
-		test('should apply both server and channel restrictions', () => {
+		test('should apply guild-level precedence over channel restrictions', () => {
 			mockGetTestingServerIds.mockReturnValue(['allowed-server-id']);
 			mockGetTestingChannelIds.mockReturnValue(['allowed-channel-id']);
-			
+
 			const filter = new MessageFilter();
-			
-			// Should block if server is not allowed, even if channel is allowed
+
+			// Should block if server is not allowed and channel is not specifically whitelisted
 			let context: MessageContext = {
 				serverId: 'blocked-server-id',
-				channelId: 'allowed-channel-id',
+				channelId: 'some-other-channel-id',
 				userId: '111222333444555666',
 				username: 'testuser'
 			};
@@ -149,16 +149,27 @@ describe('MessageFilter', () => {
 			let result = filter.shouldProcessMessage(context);
 			expect(result.allowed).toBe(false);
 
-			// Should block if channel is not allowed, even if server is allowed
+			// Should allow if server is not whitelisted but channel is specifically whitelisted
 			context = {
-				serverId: 'allowed-server-id',
-				channelId: 'blocked-channel-id',
+				serverId: 'blocked-server-id',
+				channelId: 'allowed-channel-id',
 				userId: '111222333444555666',
 				username: 'testuser'
 			};
 
 			result = filter.shouldProcessMessage(context);
-			expect(result.allowed).toBe(false);
+			expect(result.allowed).toBe(true);
+
+			// Should allow ALL channels if server is whitelisted (guild-level precedence)
+			context = {
+				serverId: 'allowed-server-id',
+				channelId: 'any-channel-id-in-whitelisted-guild',
+				userId: '111222333444555666',
+				username: 'testuser'
+			};
+
+			result = filter.shouldProcessMessage(context);
+			expect(result.allowed).toBe(true);
 
 			// Should allow if both server and channel are allowed
 			context = {
@@ -173,19 +184,48 @@ describe('MessageFilter', () => {
 		});
 
 		test('should handle DM messages (no serverId)', () => {
+			// Test with only server restrictions - DMs should be allowed
 			mockGetTestingServerIds.mockReturnValue(['allowed-server-id']);
-			
-			const filter = new MessageFilter();
-			
-			const context: MessageContext = {
+
+			let filter = new MessageFilter();
+
+			let context: MessageContext = {
 				serverId: undefined,
 				channelId: '987654321098765432',
 				userId: '111222333444555666',
 				username: 'testuser'
 			};
 
-			// DM messages should be allowed when server restrictions exist but serverId is undefined
-			const result = filter.shouldProcessMessage(context);
+			// DM messages should be allowed when only server restrictions exist
+			let result = filter.shouldProcessMessage(context);
+			expect(result.allowed).toBe(true);
+
+			// Test with both server and channel restrictions - DMs only allowed if channel is whitelisted
+			mockGetTestingServerIds.mockReturnValue(['allowed-server-id']);
+			mockGetTestingChannelIds.mockReturnValue(['allowed-channel-id']);
+
+			filter = new MessageFilter();
+
+			// DM with non-whitelisted channel should be blocked
+			context = {
+				serverId: undefined,
+				channelId: 'non-whitelisted-dm-channel',
+				userId: '111222333444555666',
+				username: 'testuser'
+			};
+
+			result = filter.shouldProcessMessage(context);
+			expect(result.allowed).toBe(false);
+
+			// DM with whitelisted channel should be allowed
+			context = {
+				serverId: undefined,
+				channelId: 'allowed-channel-id',
+				userId: '111222333444555666',
+				username: 'testuser'
+			};
+
+			result = filter.shouldProcessMessage(context);
 			expect(result.allowed).toBe(true);
 		});
 	});
