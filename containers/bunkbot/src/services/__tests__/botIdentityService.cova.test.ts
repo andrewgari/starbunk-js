@@ -188,4 +188,41 @@ describe('BotIdentityService.getCovaIdentity', () => {
 		expect(mockDiscordService.getMemberAsync).toHaveBeenCalled();
 		expect(mockDiscordService.getMemberAsBotIdentity).toHaveBeenCalled();
 	});
+
+	it('expires cache after 1 hour and refetches identity on next call', async () => {
+		const COVA_ID = COVA_USER_ID;
+		mockConfig.getUserIdByUsername.mockResolvedValue(COVA_ID);
+		(mockConfig.getUserConfig as jest.Mock).mockResolvedValue({ id: COVA_ID, username: 'Cova', isActive: true });
+
+		const guildId = 'guild-ttl';
+		const message = createMockMessage(guildId) as Message;
+
+		// Control time via Date.now spy
+		const baseNow = Date.now();
+		let fakeNow = baseNow;
+		const dateNowSpy = jest.spyOn(Date, 'now').mockImplementation(() => fakeNow);
+
+		// First fetch -> caches
+		mockDiscordService.getMemberAsync.mockResolvedValueOnce(
+			createMockGuildMember(COVA_ID, 'Cova', 'FirstNick', 'first.png'),
+		);
+		const first = await identityService.getCovaIdentity(message);
+		expect(first!.botName).toBe('FirstNick');
+
+		// Advance logical time beyond 1 hour to expire cache
+		fakeNow = baseNow + 60 * 60 * 1000 + 1;
+
+		// Second call should refetch from Discord and cache new value
+		mockDiscordService.getMemberAsync.mockResolvedValueOnce(
+			createMockGuildMember(COVA_ID, 'Cova', 'SecondNick', 'second.png'),
+		);
+		const second = await identityService.getCovaIdentity(message);
+
+		expect(second).not.toBeNull();
+		expect(second!.botName).toBe('SecondNick');
+		expect(mockDiscordService.getMemberAsync).toHaveBeenCalledTimes(2);
+
+		// Cleanup
+		dateNowSpy.mockRestore();
+	});
 });
