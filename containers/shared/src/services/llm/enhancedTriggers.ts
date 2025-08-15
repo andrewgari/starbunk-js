@@ -214,7 +214,7 @@ export function createEnhancedLLMDecisionLogic(
                                         }
                                 }
 
-                                probability = Math.min(probability, 0.95);
+                                probability = Math.min(probability, MAX_PROBABILITY_CAP);
                                 const shouldRespond = Math.random() < probability;
 
                                 logger.debug(
