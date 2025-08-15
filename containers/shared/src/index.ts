@@ -71,6 +71,8 @@ export { container, ServiceId } from './services/container';
 export { PromptRegistry, PromptType } from './services/llm/promptManager';
 export type { LLMPrompt } from './services/llm/promptManager';
 export { LLMProviderType } from './services/llm/index';
+export { createEnhancedLLMEmulatorResponse, createEnhancedLLMDecisionLogic } from './services/llm';
+export type { MemoryService, EmulatorFactoryOptions, DecisionLogicOptions } from './services/llm';
 export { getPersonalityService } from './services/personalityService';
 
 // Observability

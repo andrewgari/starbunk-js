@@ -14,11 +14,13 @@
 		"emitDecoratorMetadata": true,
 		"isolatedModules": true,
 		"baseUrl": "./src",
-		"paths": {
-			"@/*": ["*"],
-			"@shared/*": ["../shared/src/*"]
-		}
-	},
+                "paths": {
+                        "@/*": ["*"],
+                        "@shared/*": ["../shared/src/*"],
+                        "@starbunk/shared": ["../shared/src"],
+                        "@starbunk/shared/*": ["../shared/src/*"]
+                }
+        },
 	"include": [
 		"src/index.ts",
 		"src/commands/**/*",
