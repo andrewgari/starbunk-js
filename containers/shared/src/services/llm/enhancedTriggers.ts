@@ -65,7 +65,11 @@ export function createEnhancedLLMEmulatorResponse(
         memoryService?: MemoryService,
         options: EmulatorFactoryOptions = {},
 ): ResponseGenerator {
-        const { fallbackResponses = [], completionOptions, contextOptions } = options;
+        const {
+          fallbackResponses = ['I ran into a hiccup. Please try again shortly.'],
+          completionOptions,
+          contextOptions,
+        } = options;
 
         return async (message: Message): Promise<string> => {
                 return await PerformanceTimer.time('enhanced-llm-emulator', async () => {
