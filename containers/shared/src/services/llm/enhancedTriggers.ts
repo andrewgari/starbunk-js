@@ -121,7 +121,7 @@ export function createEnhancedLLMEmulatorResponse(
                                                         });
                                                         await memoryService.storeConversation({
                                                                 content: response,
-                                                                userId: 'bot',
+                                                                userId: message.client.user.id,
                                                                 channelId: message.channel.id,
                                                                 messageType: 'bot',
                                                                 conversationId,
