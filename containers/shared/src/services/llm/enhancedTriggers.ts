@@ -228,7 +228,7 @@ export function createEnhancedLLMDecisionLogic(
                                 logger.error(
                                         `[LLM] Error in enhanced decision logic: ${error instanceof Error ? error.message : String(error)}`,
                                 );
-                                return Math.random() < 0.25;
+                                return Math.random() < FALLBACK_PROBABILITY;
                         }
                 });
         };
