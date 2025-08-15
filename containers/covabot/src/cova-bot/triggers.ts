@@ -24,13 +24,15 @@ async function getCovaIdentityWithValidation(message?: Message) {
 	}
 }
 
+const notFromCova = process.env.NODE_ENV === 'production' ? not(fromUser(userId.Cova)) : () => true;
+
 // Main trigger for CovaBot - uses LLM to decide if it should respond
 export const covaTrigger = createTriggerResponse({
 	name: 'cova-contextual-response',
 	priority: 3,
 	condition: and(
 		createLLMResponseDecisionCondition(), // This now handles all probability logic
-		not(fromUser(userId.Cova)),
+		notFromCova,
 		not(fromBot()),
 		// Removed withChance(50) since LLM decision now handles probability
 	),
@@ -42,7 +44,7 @@ export const covaTrigger = createTriggerResponse({
 export const covaDirectMentionTrigger = createTriggerResponse({
 	name: 'cova-direct-mention',
 	priority: 5, // Highest priority
-	condition: and((message) => message.mentions.has(userId.Cova), not(fromUser(userId.Cova)), not(fromBot())),
+	condition: and((message) => message.mentions.has(userId.Cova), notFromCova, not(fromBot())),
 	response: createLLMEmulatorResponse(),
 	identity: async (message) => getCovaIdentityWithValidation(message),
 });
