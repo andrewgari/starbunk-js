@@ -47,7 +47,7 @@ export const covaTrigger = createTriggerResponse({
 export const covaDirectMentionTrigger = createTriggerResponse({
 	name: 'cova-direct-mention',
 	priority: 5, // Highest priority
-	condition: and((message) => message.mentions.has(userId.Cova), notFromCova, not(fromBot())),
+	condition: and((message) => message.mentions.has(userId.Cova), notFromCova, notFromBots),
 	response: createLLMEmulatorResponse(),
 	identity: async (message) => getCovaIdentityWithValidation(message),
 });
