@@ -24,6 +24,7 @@ async function getCovaIdentityWithValidation(message?: Message) {
 	}
 }
 
+// Ignore self-messages only in production so test deployments can converse with Cova
 const notFromCova = process.env.NODE_ENV === 'production' ? not(fromUser(userId.Cova)) : (_message: Message) => true;
 
 // Main trigger for CovaBot - uses LLM to decide if it should respond
