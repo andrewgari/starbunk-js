@@ -24,7 +24,10 @@ async function getCovaIdentityWithValidation(message?: Message) {
 	}
 }
 
-const notFromCova = process.env.NODE_ENV === 'production' ? not(fromUser(userId.Cova)) : () => true;
+const notFromCova =
+        process.env.NODE_ENV === 'production'
+                ? not(fromUser(userId.Cova))
+                : (_message) => true;
 
 // Main trigger for CovaBot - uses LLM to decide if it should respond
 export const covaTrigger = createTriggerResponse({
