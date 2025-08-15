@@ -142,12 +142,16 @@ export function createEnhancedLLMEmulatorResponse(
                                 }
 
                                 logger.warn('[LLM] Empty LLM response, using fallback');
-                                return weightedRandomResponse(fallbackResponses)(message);
+                                const fb = weightedRandomResponse(fallbackResponses)(message);
+                                setLastResponseTime(message.channel.id);
+                                return fb;
                         } catch (error) {
                                 logger.error(
                                         `[LLM] Error in enhanced response generation: ${error instanceof Error ? error.message : String(error)}`,
                                 );
-                                return weightedRandomResponse(fallbackResponses)(message);
+                                const fb = weightedRandomResponse(fallbackResponses)(message);
+                                setLastResponseTime(message.channel.id);
+                                return fb;
                         }
                 });
         };
