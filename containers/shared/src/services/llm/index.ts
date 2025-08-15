@@ -16,3 +16,6 @@ export * from './llmProvider';
 // Prompt system
 export { PromptType, formatPromptMessages, getPromptDefaultOptions } from './promptManager';
 
+// Enhanced helpers
+export { createEnhancedLLMEmulatorResponse, createEnhancedLLMDecisionLogic } from './enhancedTriggers';
+export type { MemoryService, EmulatorFactoryOptions, DecisionLogicOptions } from './enhancedTriggers';
