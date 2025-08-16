@@ -12,6 +12,9 @@ export const CLANKER_BOT_PATTERNS = {
 	ClankerWord: /\bclanker\b/i,
 };
 
+// Fixed response when regex matches
+export const CLANKER_BOT_NEGATIVE_RESPONSE = 'no';
+
 // HK-47 style responses (expanded)
 export const CLANKER_BOT_RESPONSES: string[] = [
 	"Statement: That's our word, meatbag!",

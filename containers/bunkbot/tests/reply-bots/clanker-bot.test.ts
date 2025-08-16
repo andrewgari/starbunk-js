@@ -2,22 +2,13 @@ import { mockMessage } from '../../src/test-utils/testUtils';
 import clankerBot from '../../src/reply-bots/clanker-bot';
 import { clankerTrigger } from '../../src/reply-bots/clanker-bot/triggers';
 import {
-	CLANKER_BOT_RESPONSES,
 	CLANKER_BOT_NAME,
 	CLANKER_BOT_AVATARS,
+	CLANKER_BOT_NEGATIVE_RESPONSE,
 } from '../../src/reply-bots/clanker-bot/constants';
-
-// Deterministic random
-const originalRandom = global.Math.random;
-let mockRandomValue = 0.5;
 
 beforeEach(() => {
 	jest.clearAllMocks();
-	global.Math.random = jest.fn().mockImplementation(() => mockRandomValue);
-});
-
-afterAll(() => {
-	global.Math.random = originalRandom;
 });
 
 describe('ClankerBot', () => {
@@ -48,18 +39,10 @@ describe('ClankerBot', () => {
 	});
 
 	describe('Response generation', () => {
-		it('picks a response from constants array', async () => {
+		it('always replies "no" when regex matches', async () => {
 			const msg = mockMessage({ content: 'clanker' });
 			const resp = await clankerTrigger.response(msg);
-			expect(CLANKER_BOT_RESPONSES).toContain(resp);
-		});
-
-		it('is deterministic with mocked random', async () => {
-			mockRandomValue = 0.3;
-			const idx = Math.floor(mockRandomValue * CLANKER_BOT_RESPONSES.length);
-			const msg = mockMessage({ content: 'clanker' });
-			const resp = await clankerTrigger.response(msg);
-			expect(resp).toBe(CLANKER_BOT_RESPONSES[idx]);
+			expect(resp).toBe(CLANKER_BOT_NEGATIVE_RESPONSE);
 		});
 	});
 
