@@ -1,10 +1,58 @@
 import userId from './simplifiedUserId';
 import { and, fromBot, fromUser, not } from './conditions';
 import { createTriggerResponse } from './triggerResponseFactory';
-import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './simplifiedLlmTriggers';
 import { getCovaIdentity } from '../services/identity';
-import { logger } from '@starbunk/shared';
+import {
+	logger,
+	PromptRegistry,
+	PromptType,
+	createEnhancedLLMEmulatorResponse,
+	createEnhancedLLMDecisionLogic,
+} from '@starbunk/shared';
 import { Message } from 'discord.js';
+import { QdrantMemoryService } from '../services/qdrantMemoryService';
+import { COVA_BOT_FALLBACK_RESPONSES, COVA_BOT_PROMPTS } from './constants';
+
+// Register prompts for Covabot
+PromptRegistry.registerPrompt(PromptType.COVA_EMULATOR, {
+	systemContent: COVA_BOT_PROMPTS.EmulatorPrompt,
+	formatUserMessage: (message: string): string => message,
+	defaultTemperature: 0.7,
+	defaultMaxTokens: 200,
+});
+
+PromptRegistry.registerPrompt(PromptType.COVA_DECISION, {
+	systemContent: COVA_BOT_PROMPTS.DecisionPrompt,
+	formatUserMessage: (message: string): string => message,
+	defaultTemperature: 0.2,
+	defaultMaxTokens: 10,
+});
+
+const memoryService = QdrantMemoryService.getInstance();
+
+const enhancedResponse = createEnhancedLLMEmulatorResponse(PromptType.COVA_EMULATOR, memoryService, {
+	fallbackResponses: COVA_BOT_FALLBACK_RESPONSES,
+});
+
+const enhancedDecision = createEnhancedLLMDecisionLogic(PromptType.COVA_DECISION, memoryService, {
+	adjustProbability: (probability, message, context) => {
+		let prob = probability;
+		const isRecentConversation = context.lastResponseMinutes < 30;
+		prob *= isRecentConversation ? 1.2 : 0.7;
+
+		const content = message.content.toLowerCase();
+		if (content.includes('?') || content.includes('cova')) {
+			prob *= 1.3;
+		}
+		if (message.content.length < 15 && !content.includes('?')) {
+			prob *= 0.6;
+		}
+		if (context.conversationContext && context.conversationContext.length > 0) {
+			prob *= 1.1;
+		}
+		return Math.min(prob, 0.85);
+	},
+});
 
 // Enhanced identity function with validation and silent failure
 async function getCovaIdentityWithValidation(message?: Message) {
@@ -28,13 +76,8 @@ async function getCovaIdentityWithValidation(message?: Message) {
 export const covaTrigger = createTriggerResponse({
 	name: 'cova-contextual-response',
 	priority: 3,
-	condition: and(
-		createLLMResponseDecisionCondition(), // This now handles all probability logic
-		not(fromUser(userId.Cova)),
-		not(fromBot()),
-		// Removed withChance(50) since LLM decision now handles probability
-	),
-	response: createLLMEmulatorResponse(),
+	condition: and(enhancedDecision, not(fromUser(userId.Cova)), not(fromBot())),
+	response: enhancedResponse,
 	identity: async (message) => getCovaIdentityWithValidation(message),
 });
 
@@ -43,7 +86,7 @@ export const covaDirectMentionTrigger = createTriggerResponse({
 	name: 'cova-direct-mention',
 	priority: 5, // Highest priority
 	condition: and((message) => message.mentions.has(userId.Cova), not(fromUser(userId.Cova)), not(fromBot())),
-	response: createLLMEmulatorResponse(),
+	response: enhancedResponse,
 	identity: async (message) => getCovaIdentityWithValidation(message),
 });
 
