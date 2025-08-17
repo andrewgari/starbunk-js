@@ -37,6 +37,8 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-http://pushgateway:9091}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 30s
@@ -73,6 +75,8 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-http://pushgateway:9091}
     volumes:
       - djcova_latest_cache:/app/cache
       - djcova_latest_temp:/tmp
@@ -118,6 +122,8 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-http://pushgateway:9091}
     volumes:
       - dnd_latest_data:/app/data
       - dnd_latest_campaigns:/app/data/campaigns
@@ -207,6 +213,8 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-http://pushgateway:9091}
       # CovaBot-specific configuration
       - USE_DATABASE=${USE_DATABASE:-false}
       - COVABOT_DATA_DIR=/app/data
@@ -231,13 +239,21 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
+  # Monitoring - Pushgateway for metrics ingestion (Production only)
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: starbunk-pushgateway
+    restart: unless-stopped
+    ports:
+      - "9091:9091"
+    networks:
+      - starbunk-latest-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
         max-file: "3"
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
+
 
 # Named volumes for persistent data (latest/production)
 volumes:

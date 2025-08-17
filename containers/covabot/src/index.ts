@@ -13,6 +13,8 @@ import {
 	MessageFilter,
 	initializeObservability,
 } from '@starbunk/shared';
+import { CovaBot } from './cova-bot/covaBot';
+import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from './cova-bot/triggers';
 
 class CovaBotContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
@@ -53,8 +55,10 @@ class CovaBotContainer {
 
 	private validateEnvironment(): void {
 		validateEnvironment({
-			required: ['STARBUNK_TOKEN'],
+			required: [],
 			optional: [
+				'COVABOT_TOKEN',
+				'STARBUNK_TOKEN',
 				'DATABASE_URL',
 				'OPENAI_API_KEY',
 				'OLLAMA_API_URL',
@@ -113,8 +117,13 @@ class CovaBotContainer {
 	}
 
 	private async handleMessage(message: Message): Promise<void> {
-		// Skip bot messages
-		if (message.author.bot) return;
+		// Skip bot messages, except when running E2E webhook tests in debug mode on whitelisted channels
+		const isWebhookMessage = Boolean(message.webhookId);
+		const allowWebhookE2E =
+			process.env.E2E_ALLOW_WEBHOOK_TESTS === 'true' &&
+			this.messageFilter.isDebugMode() &&
+			this.messageFilter.getTestingChannelIds().includes(message.channel.id);
+		if (message.author.bot && !(isWebhookMessage && allowWebhookE2E)) return;
 
 		try {
 			// Create message context for filtering
@@ -130,18 +139,25 @@ class CovaBotContainer {
 				return;
 			}
 
-			// TODO: Process message with AI Cova personality
-			// This will be implemented when we fix the AI Cova imports
-			logger.debug(`Processing AI message from ${message.author.username}: ${message.content}`);
+			// Process message with AI Cova personality using triggers
+			const cova = new CovaBot({
+				name: 'CovaBot',
+				description: 'AI personality bot',
+				defaultIdentity: { botName: 'Cova', avatarUrl: '' },
+				triggers: [covaStatsCommandTrigger, covaDirectMentionTrigger, covaTrigger],
+				defaultResponseRate: 100,
+				skipBotMessages: true,
+			});
+			await cova.processMessage(message);
 		} catch (error) {
 			logger.error('Error in CovaBot message handling:', ensureError(error));
 		}
 	}
 
 	async start(): Promise<void> {
-		const token = process.env.STARBUNK_TOKEN;
+		const token = process.env.COVABOT_TOKEN || process.env.STARBUNK_TOKEN;
 		if (!token) {
-			throw new Error('STARBUNK_TOKEN environment variable is required');
+			throw new Error('COVABOT_TOKEN or STARBUNK_TOKEN environment variable is required');
 		}
 
 		await this.client.login(token);

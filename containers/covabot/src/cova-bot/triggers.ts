@@ -1,10 +1,13 @@
 import userId from './simplifiedUserId';
-import { and, fromBot, fromUser, not } from './conditions';
+import { and, fromBot, fromUser, not, type TriggerCondition } from './conditions';
 import { createTriggerResponse } from './triggerResponseFactory';
 import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './simplifiedLlmTriggers';
 import { getCovaIdentity } from '../services/identity';
 import { logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
+
+const DEBUG_MODE = process.env.DEBUG_MODE === 'true';
+const allowAllCondition: TriggerCondition = () => true;
 
 // Enhanced identity function with validation and silent failure
 async function getCovaIdentityWithValidation(message?: Message) {
@@ -29,10 +32,10 @@ export const covaTrigger = createTriggerResponse({
 	name: 'cova-contextual-response',
 	priority: 3,
 	condition: and(
-		createLLMResponseDecisionCondition(), // This now handles all probability logic
-		not(fromUser(userId.Cova)),
+		createLLMResponseDecisionCondition(), // Handles probability logic; in DEBUG returns true for all non-bots
+		// In production, ignore Cova (the person). In DEBUG_MODE we allow responding to Cova.
+		DEBUG_MODE ? allowAllCondition : not(fromUser(userId.Cova)),
 		not(fromBot()),
-		// Removed withChance(50) since LLM decision now handles probability
 	),
 	response: createLLMEmulatorResponse(),
 	identity: async (message) => getCovaIdentityWithValidation(message),
@@ -42,7 +45,11 @@ export const covaTrigger = createTriggerResponse({
 export const covaDirectMentionTrigger = createTriggerResponse({
 	name: 'cova-direct-mention',
 	priority: 5, // Highest priority
-	condition: and((message) => message.mentions.has(userId.Cova), not(fromUser(userId.Cova)), not(fromBot())),
+	condition: and(
+		(message) => message.mentions.has(userId.Cova),
+		DEBUG_MODE ? allowAllCondition : not(fromUser(userId.Cova)),
+		not(fromBot()),
+	),
 	response: createLLMEmulatorResponse(),
 	identity: async (message) => getCovaIdentityWithValidation(message),
 });

@@ -2,6 +2,8 @@ import { Message } from 'discord.js';
 import { logger } from '@starbunk/shared';
 import { TriggerCondition, ResponseGenerator } from '../types/triggerResponse';
 
+const DEBUG_MODE = process.env.DEBUG_MODE === 'true';
+
 /**
  * Simplified LLM response decision condition
  * For now, this will use a simple probability-based decision
@@ -9,13 +11,18 @@ import { TriggerCondition, ResponseGenerator } from '../types/triggerResponse';
 export function createLLMResponseDecisionCondition(): TriggerCondition {
 	return async (message: Message): Promise<boolean> => {
 		try {
-			// Simple heuristic: respond to questions, mentions, or with 10% probability
+			// Simple heuristic: in DEBUG, respond to all non-empty messages from non-bots
 			const content = message.content.toLowerCase();
 
 			// Don't respond to empty or whitespace-only messages
 			if (!content.trim()) {
 				logger.debug('[CovaBot] LLM decision: not responding to empty message');
 				return false;
+			}
+
+			if (DEBUG_MODE) {
+				logger.debug('[CovaBot] LLM decision: DEBUG_MODE active - respond to all non-bot messages');
+				return true;
 			}
 
 			// Always respond to questions
@@ -28,7 +35,6 @@ export function createLLMResponseDecisionCondition(): TriggerCondition {
 			const shouldRespond = Math.random() < 0.1;
 			logger.debug(`[CovaBot] LLM decision: ${shouldRespond ? 'responding' : 'not responding'} (random)`);
 			return shouldRespond;
-
 		} catch (error) {
 			logger.error('[CovaBot] Error in LLM decision condition:', error as Error);
 			return false;
@@ -39,51 +45,43 @@ export function createLLMResponseDecisionCondition(): TriggerCondition {
 /**
  * Simplified LLM emulator response
  * For now, this will return simple responses until the full LLM system is available
+ * IMPORTANT: On any error, return an empty string so CovaBot remains silent (no fallbacks)
  */
 export function createLLMEmulatorResponse(): ResponseGenerator {
 	return async (message: Message): Promise<string> => {
 		try {
 			logger.debug('[CovaBot] Generating simplified response');
-			
+
 			const content = message.content.toLowerCase();
-			
+
 			// Simple response patterns
 			if (content.includes('hello') || content.includes('hi')) {
-				return getRandomResponse([
-					"Hey there! 👋",
-					"Hello! How's it going?",
-					"Hi! What's up?",
-				]);
+				return getRandomResponse(['Hey there! 👋', "Hello! How's it going?", "Hi! What's up?"]);
 			}
-			
+
 			if (content.includes('?')) {
 				return getRandomResponse([
 					"That's a good question! 🤔",
-					"Hmm, let me think about that...",
-					"Interesting question!",
+					'Hmm, let me think about that...',
+					'Interesting question!',
 				]);
 			}
-			
+
 			if (content.includes('thanks') || content.includes('thank you')) {
-				return getRandomResponse([
-					"You're welcome! 😊",
-					"No problem!",
-					"Happy to help!",
-				]);
+				return getRandomResponse(["You're welcome! 😊", 'No problem!', 'Happy to help!']);
 			}
-			
+
 			// Default responses
 			return getRandomResponse([
-				"I see what you mean!",
+				'I see what you mean!',
 				"That's interesting!",
-				"Tell me more about that.",
-				"I hear you!",
-				"Makes sense to me.",
+				'Tell me more about that.',
+				'I hear you!',
+				'Makes sense to me.',
 			]);
-			
 		} catch (error) {
-			logger.error('[CovaBot] Error generating response:', error as Error);
-			return "Sorry, I'm having trouble responding right now.";
+			logger.error('[CovaBot] Error generating response (will remain silent):', error as Error);
+			return '';
 		}
 	};
 }
@@ -130,7 +128,7 @@ export class SimplePerformanceTimer {
 		}
 		const timings = this.timings.get(label)!;
 		timings.push(duration);
-		
+
 		// Keep only last 100 timings
 		if (timings.length > 100) {
 			timings.shift();
