@@ -1,7 +1,7 @@
 import { PromptRegistry, PromptType } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
 import { getPersonalityService } from '@starbunk/shared';
-import { createReplyBot } from '@/starbunk/bots/core';
+import { createReplyBot } from '@/core/bot-builder';
 import { COVA_BOT_PROMPTS } from './constants';
 import { covaDirectMentionTrigger, covaStatsCommandTrigger, covaTrigger } from './triggers';
 

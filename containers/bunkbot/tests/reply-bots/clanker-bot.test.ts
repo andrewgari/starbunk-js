@@ -4,7 +4,7 @@ import { clankerTrigger } from '../../src/reply-bots/clanker-bot/triggers';
 import {
 	CLANKER_BOT_NAME,
 	CLANKER_BOT_AVATARS,
-	CLANKER_BOT_NEGATIVE_RESPONSE,
+	CLANKER_BOT_RESPONSES,
 } from '../../src/reply-bots/clanker-bot/constants';
 
 beforeEach(() => {
@@ -39,10 +39,10 @@ describe('ClankerBot', () => {
 	});
 
 	describe('Response generation', () => {
-		it('always replies "no" when regex matches', async () => {
+		it('replies with one of the configured responses when regex matches', async () => {
 			const msg = mockMessage({ content: 'clanker' });
 			const resp = await clankerTrigger.response(msg);
-			expect(resp).toBe(CLANKER_BOT_NEGATIVE_RESPONSE);
+			expect(CLANKER_BOT_RESPONSES).toContain(resp);
 		});
 	});
 
