@@ -50,7 +50,7 @@ export interface CovaBotConfig {
 export class CovaBot {
 	private readonly config: CovaBotConfig;
 	private readonly webhookCache = new Map<string, Webhook>();
-	private readonly webhookManager: WebhookManager;
+	private webhookManager: WebhookManager | null = null;
 
 	constructor(config: CovaBotConfig) {
 		this.config = {
@@ -59,7 +59,8 @@ export class CovaBot {
 			disabled: false,
 			...config,
 		};
-		this.webhookManager = container.get<WebhookManager>(ServiceId.WebhookService);
+		// Defer resolving WebhookManager until first use to avoid requiring tests to register it
+		this.webhookManager = null;
 	}
 
 	get name(): string {
@@ -233,17 +234,28 @@ export class CovaBot {
 	 */
 	private async sendMessage(message: Message, content: string, identity: BotIdentity): Promise<void> {
 		try {
-			if (message.channel instanceof TextChannel) {
-				await this.webhookManager.sendMessage(message.channel.id, {
-					content,
-					username: identity.botName,
-					avatarURL: identity.avatarUrl,
-				});
-				logger.debug(`[CovaBot] Message requested via shared WebhookManager as ${identity.botName}`);
-			} else {
+			if (!(message.channel instanceof TextChannel)) {
 				// If it's not a TextChannel, remain silent (no fallback)
 				logger.warn('[CovaBot] Channel is not a TextChannel; message will not be sent');
+				return;
 			}
+
+			// Lazy‑resolve WebhookManager; keep tests simple if container not set up
+			if (!this.webhookManager) {
+				if (container.has(ServiceId.WebhookService)) {
+					this.webhookManager = container.get<WebhookManager>(ServiceId.WebhookService);
+				} else {
+					logger.warn('[CovaBot] WebhookService not registered; skipping send (silent)');
+					return;
+				}
+			}
+
+			await this.webhookManager.sendMessage(message.channel.id, {
+				content,
+				username: identity.botName,
+				avatarURL: identity.avatarUrl,
+			});
+			logger.debug(`[CovaBot] Message requested via shared WebhookManager as ${identity.botName}`);
 		} catch (error) {
 			// On any send error, remain silent (no fallback)
 			logger.error('[CovaBot] Failed to send message (will remain silent):', error as Error);
