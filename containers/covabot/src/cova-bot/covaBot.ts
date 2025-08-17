@@ -1,4 +1,4 @@
-import { logger } from '@starbunk/shared';
+import { logger, container, ServiceId, WebhookManager } from '@starbunk/shared';
 import { Message, TextChannel, Webhook, Client } from 'discord.js';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from '../types/triggerResponse';
@@ -24,7 +24,7 @@ export class MockMessage {
 		this.channelId = 'web-channel';
 		this.channel = {
 			send: async () => {},
-			id: this.channelId
+			id: this.channelId,
 		}; // No-op for web testing
 		this.client = { user: null }; // No client user for web testing
 	}
@@ -50,6 +50,7 @@ export interface CovaBotConfig {
 export class CovaBot {
 	private readonly config: CovaBotConfig;
 	private readonly webhookCache = new Map<string, Webhook>();
+	private readonly webhookManager: WebhookManager;
 
 	constructor(config: CovaBotConfig) {
 		this.config = {
@@ -58,7 +59,7 @@ export class CovaBot {
 			disabled: false,
 			...config,
 		};
-		// Identity service is now function-based
+		this.webhookManager = container.get<WebhookManager>(ServiceId.WebhookService);
 	}
 
 	get name(): string {
@@ -137,7 +138,6 @@ export class CovaBot {
 
 					logger.debug(`[CovaBot] Web response generated: "${responseText}"`);
 					return responseText;
-
 				} catch (error) {
 					logger.error(`[CovaBot] Error in trigger "${trigger.name}":`, error as Error);
 					continue; // Try next trigger
@@ -146,7 +146,6 @@ export class CovaBot {
 
 			// No triggers matched
 			return null;
-
 		} catch (error) {
 			logger.error('[CovaBot] Error processing web message:', error as Error);
 			return null;
@@ -185,7 +184,7 @@ export class CovaBot {
 					// Check if trigger condition matches
 					const matches = await trigger.condition(message);
 					logger.debug(`[CovaBot] Trigger "${trigger.name}" condition result: ${matches}`);
-					
+
 					if (!matches) continue;
 
 					// Get response text
@@ -198,20 +197,20 @@ export class CovaBot {
 					// Get Cova's Discord identity with server context
 					const identity = await this.getCovaIdentity(message);
 					if (!identity) {
-						logger.debug(`[CovaBot] Identity resolution failed for trigger "${trigger.name}" - bot will remain silent`);
+						logger.debug(
+							`[CovaBot] Identity resolution failed for trigger "${trigger.name}" - bot will remain silent`,
+						);
 						continue; // Skip this trigger, bot remains silent
 					}
 
 					// Send message with Cova's identity
 					await this.sendMessage(message, responseText, identity);
 					return; // Exit after first successful response
-
 				} catch (error) {
 					logger.error(`[CovaBot] Error in trigger "${trigger.name}":`, error as Error);
 					continue; // Try next trigger
 				}
 			}
-
 		} catch (error) {
 			logger.error('[CovaBot] Error processing message:', error as Error);
 		}
@@ -235,73 +234,26 @@ export class CovaBot {
 	private async sendMessage(message: Message, content: string, identity: BotIdentity): Promise<void> {
 		try {
 			if (message.channel instanceof TextChannel) {
-				// Use webhook for custom bot identity
-				const webhook = await this.getOrCreateWebhook(message.channel, message.client);
-				await webhook.send({
+				await this.webhookManager.sendMessage(message.channel.id, {
 					content,
 					username: identity.botName,
-					avatarURL: identity.avatarUrl
+					avatarURL: identity.avatarUrl,
 				});
-				logger.debug(`[CovaBot] Message sent via webhook as ${identity.botName}`);
-			} else if ('send' in message.channel) {
-				// Fallback to regular message for non-text channels
-				await message.channel.send(content);
-				logger.debug('[CovaBot] Message sent via regular channel (no webhook support)');
+				logger.debug(`[CovaBot] Message requested via shared WebhookManager as ${identity.botName}`);
 			} else {
-				logger.warn('[CovaBot] Channel does not support sending messages');
+				// If it's not a TextChannel, remain silent (no fallback)
+				logger.warn('[CovaBot] Channel is not a TextChannel; message will not be sent');
 			}
 		} catch (error) {
-			logger.error('[CovaBot] Failed to send message:', error as Error);
-			
-			// Fallback to regular message if webhook fails
-			try {
-				if ('send' in message.channel) {
-					await message.channel.send(content);
-					logger.debug('[CovaBot] Fallback message sent via regular channel');
-				}
-			} catch (fallbackError) {
-				logger.error('[CovaBot] Fallback message also failed:', fallbackError as Error);
-			}
+			// On any send error, remain silent (no fallback)
+			logger.error('[CovaBot] Failed to send message (will remain silent):', error as Error);
 		}
 	}
 
 	/**
-	 * Get or create webhook for custom identity
+	 * Deprecated: direct webhook management replaced by shared WebhookManager
 	 */
-	private async getOrCreateWebhook(channel: TextChannel, client: Client): Promise<Webhook> {
-		const cacheKey = channel.id;
-		const cachedWebhook = this.webhookCache.get(cacheKey);
-		
-		if (cachedWebhook) {
-			return cachedWebhook;
-		}
-
-		try {
-			// Try to find existing webhook
-			const webhooks = await channel.fetchWebhooks();
-			const existingWebhook = webhooks.find(w => w.owner?.id === client.user?.id);
-			
-			if (existingWebhook) {
-				this.webhookCache.set(cacheKey, existingWebhook);
-				return existingWebhook;
-			}
-
-			// Create new webhook if none exists
-			if (!client.user) {
-				throw new Error('Client user not available');
-			}
-
-			const newWebhook = await channel.createWebhook({
-				name: 'CovaBot Webhook',
-				avatar: client.user.displayAvatarURL()
-			});
-			
-			this.webhookCache.set(cacheKey, newWebhook);
-			return newWebhook;
-			
-		} catch (error) {
-			logger.error(`[CovaBot] Error in getOrCreateWebhook: ${error instanceof Error ? error.message : String(error)}`);
-			throw new Error(`Could not get or create webhook: ${error instanceof Error ? error.message : String(error)}`);
-		}
+	private async getOrCreateWebhook(_channel: TextChannel, _client: Client): Promise<Webhook> {
+		throw new Error('Direct webhook usage is deprecated in CovaBot; use WebhookManager via shared services');
 	}
 }

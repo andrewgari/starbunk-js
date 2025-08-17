@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Scrape Pushgateway (metrics pushed by services)
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['pushgateway:9091']
+
+  # Optionally scrape itself (Prometheus)
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
