@@ -6,8 +6,13 @@ export const clankerTrigger = createTriggerResponse({
 	name: 'clanker-word-trigger',
 	priority: 1,
 	condition: matchesPattern(CLANKER_BOT_PATTERNS.ClankerWord),
-	response: () => {
-		const idx = Math.floor(Math.random() * CLANKER_BOT_RESPONSES.length);
-		return CLANKER_BOT_RESPONSES[idx];
-	},
+response: () => {
+    const { length } = CLANKER_BOT_RESPONSES;
+    if (length === 0) {
+        // Safe fallback if misconfigured; alternatively, throw a typed error if preferred.
+        return 'Statement: Insult detected. Configuration missing responses.';
+    }
+    const idx = Math.floor(Math.random() * length);
+    return CLANKER_BOT_RESPONSES[idx];
+},
 });
