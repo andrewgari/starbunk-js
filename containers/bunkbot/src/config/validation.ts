@@ -20,7 +20,7 @@ export const ConfigSchema = z.object({
 			.min(1000, 'Health port must be >= 1000')
 			.max(65535, 'Health port must be <= 65535')
 			.default(3002),
-		nodeEnv: z.nativeEnum(NodeEnvironment).default(NodeEnvironment.Production),
+		nodeEnv: z.nativeEnum(NodeEnvironment).default(NodeEnvironment.Development),
 		maxRequestsPerMinute: z.coerce
 			.number()
 			.min(10, 'Rate limit must be at least 10 requests per minute')
