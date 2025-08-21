@@ -57,7 +57,11 @@ export enum NodeEnvironment {
 
 export function getNodeEnv(): NodeEnvironment {
 	const env = process.env.NODE_ENV as NodeEnvironment | undefined;
-	return env ?? NodeEnvironment.Development;
+	if (!env) {
+		console.warn('[Environment] Warning: NODE_ENV is not set. Defaulting to "production" for safety.');
+		return NodeEnvironment.Production;
+	}
+	return env;
 }
 
 export const isProduction = (): boolean => getNodeEnv() === NodeEnvironment.Production;
