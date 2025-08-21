@@ -49,24 +49,39 @@ export function setDebugMode(value: boolean): void {
 	process.env.DEBUG_MODE = value ? 'true' : 'false';
 }
 
+export enum NodeEnvironment {
+	Production = 'production',
+	Development = 'development',
+	Test = 'test',
+}
+
+export function getNodeEnv(): NodeEnvironment {
+	const env = process.env.NODE_ENV as NodeEnvironment | undefined;
+	return env ?? NodeEnvironment.Development;
+}
+
+export const isProduction = (): boolean => getNodeEnv() === NodeEnvironment.Production;
+export const isDevelopment = (): boolean => getNodeEnv() === NodeEnvironment.Development;
+export const isTest = (): boolean => getNodeEnv() === NodeEnvironment.Test;
+
 // Export default object with environment variables
 const environment = {
 	app: {
 		DEBUG_MODE: process.env.DEBUG_MODE,
 		TESTING_SERVER_IDS: process.env.TESTING_SERVER_IDS,
-		TESTING_CHANNEL_IDS: process.env.TESTING_CHANNEL_IDS
+		TESTING_CHANNEL_IDS: process.env.TESTING_CHANNEL_IDS,
 	},
 	discord: {
 		STARBUNK_TOKEN: process.env.STARBUNK_TOKEN,
 		SNOWBUNK_TOKEN: process.env.SNOWBUNK_TOKEN,
-		WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL
+		WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL,
 	},
 	llm: {
 		OPENAI_DEFAULT_MODEL: process.env.OPENAI_DEFAULT_MODEL,
 		OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 		OLLAMA_DEFAULT_MODEL: process.env.OLLAMA_DEFAULT_MODEL,
-		OLLAMA_API_URL: process.env.OLLAMA_API_URL
-	}
+		OLLAMA_API_URL: process.env.OLLAMA_API_URL,
+	},
 };
 
 // Export the environment object as frozen to prevent modifications

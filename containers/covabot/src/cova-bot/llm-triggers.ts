@@ -9,6 +9,7 @@ import {
 	getPersonalityService,
 	ResponseGenerator,
 	weightedRandomResponse,
+	isTest,
 } from '@starbunk/shared';
 import { COVA_BOT_FALLBACK_RESPONSES } from '../services/llm-response-service';
 import { QdrantMemoryService } from '../services/qdrantMemoryService';
@@ -329,7 +330,7 @@ Based on the Response Decision System, should Cova respond to this message?`;
 };
 
 // Initialize periodic stats logging - every hour (but only outside tests)
-if (process.env.NODE_ENV !== 'test') {
+if (!isTest()) {
 	setInterval(
 		() => {
 			// Clean up old entries from last response tracking

@@ -1,5 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse, Server } from 'http';
-import { logger, ensureError } from '@starbunk/shared';
+import { logger, ensureError, getNodeEnv } from '@starbunk/shared';
 import { getBotStorageStats } from '../core/BotProcessor';
 
 interface HealthStatus {
@@ -67,7 +67,7 @@ export class HealthServer {
 	private readonly port: number;
 	private metrics: HealthMetrics;
 	private readonly maxResponseTimes = 100; // Keep last 100 response times
-	
+
 	constructor(port?: number) {
 		this.port = port || parseInt(process.env.HEALTH_PORT || '3002');
 		this.metrics = {
@@ -75,7 +75,7 @@ export class HealthServer {
 			errorCount: 0,
 			responseTimes: [],
 			startTime: Date.now(),
-			lastDiscordPing: 0
+			lastDiscordPing: 0,
 		};
 	}
 
@@ -102,17 +102,13 @@ export class HealthServer {
 		});
 	}
 
-	private handleRequest(
-		req: IncomingMessage, 
-		res: ServerResponse, 
-		getHealthStatus: () => HealthStatus
-	): void {
+	private handleRequest(req: IncomingMessage, res: ServerResponse, getHealthStatus: () => HealthStatus): void {
 		const startTime = Date.now();
 		this.metrics.totalRequests++;
-		
+
 		try {
 			const pathname = this.getPathname(req.url || '');
-			
+
 			switch (pathname) {
 				case '/health':
 					this.handleHealthCheck(res, getHealthStatus);
@@ -158,10 +154,10 @@ export class HealthServer {
 			const status = this.enhanceHealthStatus(getHealthStatus());
 			const statusCode = this.getStatusCode(status.status);
 
-			res.writeHead(statusCode, { 
+			res.writeHead(statusCode, {
 				'Content-Type': 'application/json',
 				'Cache-Control': 'no-cache, no-store, must-revalidate',
-				'X-Health-Check-Version': '2.0'
+				'X-Health-Check-Version': '2.0',
 			});
 			res.end(JSON.stringify(status, null, 2));
 		} catch (error) {
@@ -172,10 +168,14 @@ export class HealthServer {
 
 	private getStatusCode(status: string): number {
 		switch (status) {
-			case 'healthy': return 200;
-			case 'degraded': return 200; // Still operational
-			case 'unhealthy': return 503;
-			default: return 503;
+			case 'healthy':
+				return 200;
+			case 'degraded':
+				return 200; // Still operational
+			case 'unhealthy':
+				return 503;
+			default:
+				return 503;
 		}
 	}
 
@@ -198,21 +198,23 @@ export class HealthServer {
 	}
 
 	private handleNotFound(res: ServerResponse): void {
-		res.writeHead(404, { 
-			'Content-Type': 'application/json'
+		res.writeHead(404, {
+			'Content-Type': 'application/json',
 		});
-		res.end(JSON.stringify({
-			error: 'Not Found',
-			message: 'Available endpoints: /health, /ready, /live, /metrics, /status',
-			timestamp: new Date().toISOString()
-		}));
+		res.end(
+			JSON.stringify({
+				error: 'Not Found',
+				message: 'Available endpoints: /health, /ready, /live, /metrics, /status',
+				timestamp: new Date().toISOString(),
+			}),
+		);
 	}
 
 	private handleMetricsEndpoint(res: ServerResponse, getHealthStatus: () => HealthStatus): void {
 		try {
 			const status = this.enhanceHealthStatus(getHealthStatus());
 			let prometheusMetrics = this.formatPrometheusMetrics(status);
-			
+
 			// Add observability metrics if available
 			try {
 				const { getMetrics } = require('@starbunk/shared');
@@ -223,9 +225,9 @@ export class HealthServer {
 				// Observability metrics not available - continue without them
 				logger.debug('Observability metrics not available:', ensureError(error));
 			}
-			
-			res.writeHead(200, { 
-				'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'
+
+			res.writeHead(200, {
+				'Content-Type': 'text/plain; version=0.0.4; charset=utf-8',
 			});
 			res.end(prometheusMetrics);
 		} catch (error) {
@@ -237,20 +239,26 @@ export class HealthServer {
 	private handleDetailedStatus(res: ServerResponse, getHealthStatus: () => HealthStatus): void {
 		try {
 			const status = this.enhanceHealthStatus(getHealthStatus());
-			
-			res.writeHead(200, { 
+
+			res.writeHead(200, {
 				'Content-Type': 'application/json',
-				'Cache-Control': 'no-cache'
+				'Cache-Control': 'no-cache',
 			});
-			res.end(JSON.stringify({
-				...status,
-				server: {
-					port: this.port,
-					uptime: Date.now() - this.metrics.startTime,
-					requestCount: this.metrics.totalRequests,
-					errorCount: this.metrics.errorCount
-				}
-			}, null, 2));
+			res.end(
+				JSON.stringify(
+					{
+						...status,
+						server: {
+							port: this.port,
+							uptime: Date.now() - this.metrics.startTime,
+							requestCount: this.metrics.totalRequests,
+							errorCount: this.metrics.errorCount,
+						},
+					},
+					null,
+					2,
+				),
+			);
 		} catch (error) {
 			logger.error('Detailed status error:', ensureError(error));
 			this.handleServerError(res);
@@ -260,18 +268,20 @@ export class HealthServer {
 	private handleServerError(res: ServerResponse): void {
 		if (!res.headersSent) {
 			res.writeHead(500, { 'Content-Type': 'application/json' });
-			res.end(JSON.stringify({
-				status: 'unhealthy',
-				error: 'Internal server error',
-				timestamp: new Date().toISOString()
-			}));
+			res.end(
+				JSON.stringify({
+					status: 'unhealthy',
+					error: 'Internal server error',
+					timestamp: new Date().toISOString(),
+				}),
+			);
 		}
 	}
 
 	private enhanceHealthStatus(baseStatus: HealthStatus): HealthStatus {
 		const memoryUsage = process.memoryUsage();
 		const storageStats = getBotStorageStats();
-		
+
 		return {
 			...baseStatus,
 			memory: {
@@ -279,33 +289,33 @@ export class HealthServer {
 				total: memoryUsage.rss + memoryUsage.external,
 				heapUsed: memoryUsage.heapUsed,
 				heapTotal: memoryUsage.heapTotal,
-				external: memoryUsage.external
+				external: memoryUsage.external,
 			},
 			metrics: {
 				totalRequests: this.metrics.totalRequests,
 				errorCount: this.metrics.errorCount,
 				errorRate: this.calculateErrorRate(),
 				avgResponseTime: this.calculateAvgResponseTime(),
-				activeConnections: 1 // Simplified for HTTP server
+				activeConnections: 1, // Simplified for HTTP server
 			},
 			dependencies: {
 				discord: {
 					status: baseStatus.discord.connected ? 'healthy' : 'unhealthy',
 					latency: this.metrics.lastDiscordPing,
-					lastCheck: Date.now()
+					lastCheck: Date.now(),
 				},
 				storage: {
 					status: storageStats.size > 8000 ? 'degraded' : 'healthy',
 					size: storageStats.size,
-					oldestItem: storageStats.oldestItem
-				}
+					oldestItem: storageStats.oldestItem,
+				},
 			},
 			configuration: {
-				nodeEnv: process.env.NODE_ENV || 'unknown',
+				nodeEnv: getNodeEnv(),
 				debugMode: process.env.DEBUG_MODE === 'true',
 				maxBotInstances: parseInt(process.env.MAX_BOT_INSTANCES || '50'),
-				circuitBreakerEnabled: process.env.ENABLE_CIRCUIT_BREAKER !== 'false'
-			}
+				circuitBreakerEnabled: process.env.ENABLE_CIRCUIT_BREAKER !== 'false',
+			},
 		};
 	}
 
@@ -322,7 +332,7 @@ export class HealthServer {
 
 	private recordResponseTime(time: number): void {
 		this.metrics.responseTimes.push(time);
-		
+
 		// Keep only the last N response times to prevent memory growth
 		if (this.metrics.responseTimes.length > this.maxResponseTimes) {
 			this.metrics.responseTimes.shift();
@@ -331,49 +341,49 @@ export class HealthServer {
 
 	private formatPrometheusMetrics(status: HealthStatus): string {
 		const lines = [];
-		
+
 		// Basic metrics
 		lines.push(`# HELP bunkbot_health_status Health status of BunkBot (1=healthy, 0.5=degraded, 0=unhealthy)`);
 		lines.push(`# TYPE bunkbot_health_status gauge`);
 		const healthValue = status.status === 'healthy' ? 1 : status.status === 'degraded' ? 0.5 : 0;
 		lines.push(`bunkbot_health_status ${healthValue}`);
-		
+
 		// Memory metrics
 		lines.push(`# HELP bunkbot_memory_usage_bytes Memory usage in bytes`);
 		lines.push(`# TYPE bunkbot_memory_usage_bytes gauge`);
 		lines.push(`bunkbot_memory_usage_bytes{type="heap_used"} ${status.memory.heapUsed}`);
 		lines.push(`bunkbot_memory_usage_bytes{type="heap_total"} ${status.memory.heapTotal}`);
 		lines.push(`bunkbot_memory_usage_bytes{type="external"} ${status.memory.external}`);
-		
+
 		// Request metrics
 		lines.push(`# HELP bunkbot_requests_total Total number of requests`);
 		lines.push(`# TYPE bunkbot_requests_total counter`);
 		lines.push(`bunkbot_requests_total ${status.metrics.totalRequests}`);
-		
+
 		lines.push(`# HELP bunkbot_errors_total Total number of errors`);
 		lines.push(`# TYPE bunkbot_errors_total counter`);
 		lines.push(`bunkbot_errors_total ${status.metrics.errorCount}`);
-		
+
 		lines.push(`# HELP bunkbot_response_time_milliseconds Average response time`);
 		lines.push(`# TYPE bunkbot_response_time_milliseconds gauge`);
 		lines.push(`bunkbot_response_time_milliseconds ${status.metrics.avgResponseTime}`);
-		
+
 		// Bot metrics
 		if (status.bots) {
 			lines.push(`# HELP bunkbot_loaded_bots Number of loaded bots`);
 			lines.push(`# TYPE bunkbot_loaded_bots gauge`);
 			lines.push(`bunkbot_loaded_bots ${status.bots.loaded}`);
-			
+
 			lines.push(`# HELP bunkbot_storage_size Bot storage size`);
 			lines.push(`# TYPE bunkbot_storage_size gauge`);
 			lines.push(`bunkbot_storage_size ${status.bots.storageSize || 0}`);
 		}
-		
+
 		// Uptime
 		lines.push(`# HELP bunkbot_uptime_seconds Uptime in seconds`);
 		lines.push(`# TYPE bunkbot_uptime_seconds counter`);
 		lines.push(`bunkbot_uptime_seconds ${Math.floor(status.uptime / 1000)}`);
-		
+
 		return lines.join('\n') + '\n';
 	}
 }

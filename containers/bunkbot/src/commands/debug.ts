@@ -1,24 +1,19 @@
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { logger, getTestingServerIds, getTestingChannelIds, isDebugMode, setDebugMode } from '@starbunk/shared';
+import {
+	logger,
+	getTestingServerIds,
+	getTestingChannelIds,
+	isDebugMode,
+	setDebugMode,
+	getNodeEnv,
+} from '@starbunk/shared';
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('debug')
 	.setDescription('Debug utilities')
-	.addSubcommand(subcommand =>
-		subcommand
-			.setName('toggle')
-			.setDescription('Toggle debug mode on/off')
-	)
-	.addSubcommand(subcommand =>
-		subcommand
-			.setName('status')
-			.setDescription('Check current debug status')
-	)
-	.addSubcommand(subcommand =>
-		subcommand
-			.setName('info')
-			.setDescription('Show debugging information')
-	);
+	.addSubcommand((subcommand) => subcommand.setName('toggle').setDescription('Toggle debug mode on/off'))
+	.addSubcommand((subcommand) => subcommand.setName('status').setDescription('Check current debug status'))
+	.addSubcommand((subcommand) => subcommand.setName('info').setDescription('Show debugging information'));
 
 export default {
 	data: commandBuilder.toJSON(),
@@ -29,7 +24,7 @@ export default {
 		if (!allowedUsers.includes(interaction.user.id)) {
 			await interaction.reply({
 				content: 'You do not have permission to use this command.',
-				ephemeral: true
+				ephemeral: true,
 			});
 			return;
 		}
@@ -49,7 +44,7 @@ export default {
 				logger.info(`Debug mode ${newStatus}`);
 				await interaction.reply({
 					content: `Debug mode is now ${newStatus}.`,
-					ephemeral: true
+					ephemeral: true,
 				});
 				break;
 
@@ -58,14 +53,14 @@ export default {
 				status = isDebugMode() ? 'enabled' : 'disabled';
 				await interaction.reply({
 					content: `Debug mode is currently ${status}.`,
-					ephemeral: true
+					ephemeral: true,
 				});
 				break;
 
 			case 'info':
 				// Get debug information
 				debugInfo = {
-					nodeEnv: process.env.NODE_ENV,
+					nodeEnv: getNodeEnv(),
 					debugMode: isDebugMode(),
 					testingServerIds: getTestingServerIds(),
 					testingChannelIds: getTestingChannelIds(),
@@ -74,23 +69,21 @@ export default {
 					nodeVersion: process.version,
 					uptime: Math.floor(process.uptime()) + ' seconds',
 					memoryUsage: process.memoryUsage(),
-					timestamp: new Date().toISOString()
+					timestamp: new Date().toISOString(),
 				};
 
-				infoMessage = '**Debug Information:**\n```json\n' +
-					JSON.stringify(debugInfo, null, 2) +
-					'\n```';
+				infoMessage = '**Debug Information:**\n```json\n' + JSON.stringify(debugInfo, null, 2) + '\n```';
 
 				await interaction.reply({
 					content: infoMessage,
-					ephemeral: true
+					ephemeral: true,
 				});
 				break;
 
 			default:
 				await interaction.reply({
 					content: 'Unknown subcommand',
-					ephemeral: true
+					ephemeral: true,
 				});
 		}
 	},
