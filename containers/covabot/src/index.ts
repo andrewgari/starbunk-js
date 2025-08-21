@@ -12,6 +12,8 @@ import {
 	getMessageFilter,
 	MessageFilter,
 	initializeObservability,
+	getMetrics,
+	isProduction,
 } from '@starbunk/shared';
 import { CovaBot } from './cova-bot/covaBot';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from './cova-bot/triggers';
@@ -124,6 +126,34 @@ class CovaBotContainer {
 			this.messageFilter.isDebugMode() &&
 			this.messageFilter.getTestingChannelIds().includes(message.channel.id);
 		if (message.author.bot && !(isWebhookMessage && allowWebhookE2E)) return;
+
+		// Early exit in production to avoid responding to Cova's own messages unless in debug mode
+		if (isProduction() && message.author.id === process.env.COVA_USER_ID && !this.messageFilter.isDebugMode()) {
+			try {
+				const metrics = getMetrics();
+				const channelName =
+					'name' in message.channel && message.channel.name
+						? message.channel.name
+						: message.channel.type === 1
+							? 'dm'
+							: 'unknown';
+				metrics.trackMessageFlow({
+					botName: 'CovaBot',
+					messageText: message.content,
+					userId: message.author.id,
+					userName: message.author.username,
+					channelId: message.channel.id,
+					channelName,
+					guildId: message.guild?.id || 'dm',
+					triggered: false,
+					skipReason: 'prod_cova',
+					timestamp: Date.now(),
+				});
+			} catch (error) {
+				logger.warn('Failed to track prod_cova skip:', ensureError(error));
+			}
+			return;
+		}
 
 		try {
 			// Create message context for filtering

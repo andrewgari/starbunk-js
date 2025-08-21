@@ -4,7 +4,15 @@ export { ensureError } from './utils/errorUtils';
 export { validateEnvironment, getDebugMode, getTestingServerIds, getTestingChannelIds } from './utils/envValidation';
 export { runStartupDiagnostics, StartupDiagnostics } from './utils/diagnostics';
 export type { DiagnosticResult } from './utils/diagnostics';
-export { isDebugMode, setDebugMode } from './environment';
+export {
+	isDebugMode,
+	setDebugMode,
+	isProduction,
+	isDevelopment,
+	isTest,
+	getNodeEnv,
+	NodeEnvironment,
+} from './environment';
 export { createDiscordClient, ClientConfigs } from './discord/clientFactory';
 export {
 	getClientFromInteraction,

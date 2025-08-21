@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../logger';
+import { isDevelopment } from '../../environment';
 import { DatabaseConnectionOptions } from './types';
 
 export class DatabaseService {
@@ -44,7 +45,7 @@ export class DatabaseService {
 						url: databaseUrl,
 					},
 				},
-				log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+				log: isDevelopment() ? ['query', 'info', 'warn', 'error'] : ['error'],
 			});
 
 			// Test the connection
@@ -54,7 +55,10 @@ export class DatabaseService {
 			this.isConnected = true;
 			logger.info('✅ Database connection established successfully');
 		} catch (error) {
-			logger.error('❌ Failed to connect to database:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'❌ Failed to connect to database:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			this.prisma = null;
 			this.isConnected = false;
 			throw error;
@@ -108,8 +112,11 @@ export class DatabaseService {
 					throw error;
 				}
 
-				logger.warn(`Database operation failed (attempt ${attempt}/${retries}), retrying in ${delay}ms...`, error);
-				await new Promise(resolve => setTimeout(resolve, delay));
+				logger.warn(
+					`Database operation failed (attempt ${attempt}/${retries}), retrying in ${delay}ms...`,
+					error,
+				);
+				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
 		}
 
