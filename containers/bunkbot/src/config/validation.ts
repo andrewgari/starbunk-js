@@ -1,5 +1,38 @@
 import { z } from 'zod';
-import { logger, ensureError, getNodeEnv, NodeEnvironment } from '@starbunk/shared';
+++ b/package.json
+@@
+ {
+   …,
+  "workspaces": ["containers/*"]
+ }
+---
+++ b/tsconfig.json
+@@ compilerOptions {
+  "paths": {
+    "@starbunk/shared": ["containers/shared/src/index.ts"],
+    "@starbunk/shared/*": ["containers/shared/src/*"]
+  }
+ }
+---
+++ b/containers/bunkbot/tsconfig.json
+@@ compilerOptions.paths {
+    "@starbunk/shared": ["../shared/src/index.ts"],
+    "@starbunk/shared/*": ["../shared/src/*"]
+ }
+---
+++ b/containers/shared/package.json
+@@ {
+-  "module": null,
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./*": "./dist/*.js"
+  }
+ }
 
 // Discord ID validation regex
 const DISCORD_ID_REGEX = /^\d{17,19}$/;
