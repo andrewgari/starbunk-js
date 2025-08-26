@@ -2,7 +2,7 @@
 // Bot name and avatar URL are now resolved dynamically from Discord
 
 export const GUY_BOT_PATTERNS = {
-	Default: /\bguy\b/i
+	Default: /\bguy\b/i,
 };
 
 export const GUY_BOT_RESPONSES = [
@@ -28,7 +28,10 @@ export const GUY_BOT_RESPONSES = [
 	'True Grit',
 	'MisterMisterMisterMisterMisterMisterMisterMisterMisterMisterMisterMisterBeeeeeeeeeeeeeeeeeeeeeeeeeeast',
 	"It's a message you can say",
-	'Blimbo'
+	'Blimbo',
+	'Good News, we can finally be bees',
+	"That's what they called me in High School",
+	"That's what's happenin'",
 ];
 
 // Helper function to get a random response
