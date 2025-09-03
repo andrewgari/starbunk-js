@@ -10,6 +10,7 @@ import {
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
 import { logger } from '@starbunk/shared';
+import { Readable } from 'stream';
 import { IdleManager, createIdleManager, IdleManagerConfig } from './services/idleManager';
 import { getMusicConfig } from './config/musicConfig';
 
@@ -35,31 +36,39 @@ export class DJCova {
 		this.setupIdleManagement();
 	}
 
-	async start(url: string): Promise<void> {
+	async start(source: string | Readable): Promise<void> {
 		if (this.resource) {
 			logger.warn('Attempted to start playback while already playing');
 			return;
 		}
 
-		logger.info(`🎵 Starting playback from URL: ${url}`);
+		logger.info('🎵 Starting playback');
 
 		try {
-			const stream = ytdl(url, {
-				filter: 'audioonly',
-				quality: 'highestaudio',
-				highWaterMark: 1 << 25,
-				dlChunkSize: 0,
-				requestOptions: {
-					headers: {
-						'User-Agent':
-							'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
-						'Accept-Language': 'en-US,en;q=0.9',
+			let stream: Readable;
+			let inputType: StreamType = StreamType.Arbitrary;
+
+			if (typeof source === 'string') {
+				stream = ytdl(source, {
+					filter: 'audioonly',
+					quality: 'highestaudio',
+					highWaterMark: 1 << 25,
+					dlChunkSize: 0,
+					requestOptions: {
+						headers: {
+							'User-Agent':
+								'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+							'Accept-Language': 'en-US,en;q=0.9',
+						},
 					},
-				},
-			});
+				});
+				inputType = StreamType.WebmOpus;
+			} else {
+				stream = source;
+			}
 
 			this.resource = createAudioResource(stream, {
-				inputType: StreamType.WebmOpus,
+				inputType,
 				inlineVolume: true,
 			});
 
@@ -122,7 +131,7 @@ export class DJCova {
 				logger.success('Player successfully subscribed to connection.');
 			}
 			return subscription;
-		} catch (error) {
+		} catch (_error) {
 			logger.error('Failed to subscribe player to the connection.');
 			return undefined;
 		}
@@ -168,7 +177,11 @@ export class DJCova {
 	/**
 	 * Initialize idle management for a specific guild and channel
 	 */
-	initializeIdleManagement(guildId: string, channelId?: string, notificationCallback?: (message: string) => Promise<void>): void {
+	initializeIdleManagement(
+		guildId: string,
+		channelId?: string,
+		notificationCallback?: (message: string) => Promise<void>,
+	): void {
 		// Clean up existing idle manager
 		if (this.idleManager) {
 			this.idleManager.destroy();
@@ -185,7 +198,7 @@ export class DJCova {
 			channelId,
 			onDisconnect: async (reason: string) => {
 				await this.handleAutoDisconnect(reason);
-			}
+			},
 		};
 
 		this.idleManager = createIdleManager(idleConfig);
@@ -233,7 +246,7 @@ export class DJCova {
 
 		return {
 			isActive: this.idleManager.isIdleTimerActive(),
-			timeoutSeconds: this.idleManager.getTimeoutSeconds()
+			timeoutSeconds: this.idleManager.getTimeoutSeconds(),
 		};
 	}
 
