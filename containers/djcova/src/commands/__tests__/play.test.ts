@@ -9,8 +9,8 @@ jest.mock('@starbunk/shared', () => ({
 		warn: jest.fn(),
 		info: jest.fn(),
 		error: jest.fn(),
-		success: jest.fn()
-	}
+		success: jest.fn(),
+	},
 }));
 
 // Mock the play command module since it has import issues
@@ -20,24 +20,31 @@ jest.mock('../play', () => {
 		default: {
 			data: {
 				name: 'play',
-				description: 'Play a YouTube link in voice chat',
+				description: 'Play a YouTube link or audio file in voice chat',
 				options: [
 					{
 						name: 'song',
 						description: 'YouTube video URL',
-						required: true,
-						type: 3 // STRING type
-					}
-				]
+						required: false,
+						type: 3, // STRING type
+					},
+					{
+						name: 'file',
+						description: 'Audio file (.mp3, .wav, etc.)',
+						required: false,
+						type: 11, // ATTACHMENT type
+					},
+				],
 			},
 			async execute(interaction: any) {
 				// Mock implementation for testing
-				const url = interaction.options.get('song')?.value;
+				const attachment = interaction.options.getAttachment('file');
+				const url = interaction.options.getString('song');
 				const member = interaction.member;
 
-				if (!url) {
-					logger.warn('Play command executed without URL');
-					await interaction.reply('Please provide a valid YouTube link!');
+				if (!attachment && !url) {
+					logger.warn('Play command executed without URL or attachment');
+					await interaction.reply('Please provide a YouTube link or audio file!');
 					return;
 				}
 
@@ -48,9 +55,10 @@ jest.mock('../play', () => {
 				}
 
 				await interaction.deferReply();
-				await interaction.followUp(`🎶 Now playing: ${url}`);
-			}
-		}
+				const name = attachment ? attachment.name : url;
+				await interaction.followUp(`🎶 Now playing: ${name}`);
+			},
+		},
 	};
 });
 
@@ -71,68 +79,85 @@ describe('Play Command', () => {
 			id: 'voice123',
 			guild: {
 				id: 'guild123',
-				voiceAdapterCreator: jest.fn()
-			}
+				voiceAdapterCreator: jest.fn(),
+			},
 		} as any;
 
 		// Mock guild member
 		mockMember = {
 			voice: {
-				channel: mockVoiceChannel
-			}
+				channel: mockVoiceChannel,
+			},
 		} as any;
 
 		// Mock interaction
 		mockInteraction = {
 			options: {
-				get: jest.fn().mockReturnValue({ value: 'https://youtube.com/watch?v=test' })
+				getString: jest.fn().mockReturnValue('https://youtube.com/watch?v=test'),
+				getAttachment: jest.fn().mockReturnValue(null),
 			},
 			member: mockMember,
 			reply: jest.fn().mockResolvedValue(undefined),
 			deferReply: jest.fn().mockResolvedValue(undefined),
-			followUp: jest.fn().mockResolvedValue(undefined)
+			followUp: jest.fn().mockResolvedValue(undefined),
 		} as any;
 	});
 
 	describe('command data', () => {
 		it('should have correct command name and description', () => {
 			expect(playCommand.data.name).toBe('play');
-			expect(playCommand.data.description).toBe('Play a YouTube link in voice chat');
+			expect(playCommand.data.description).toBe('Play a YouTube link or audio file in voice chat');
 		});
 
-		it('should require a song parameter', () => {
+		it('should include song and file options', () => {
 			const songOption = playCommand.data.options?.find((opt: any) => opt.name === 'song');
+			const fileOption = playCommand.data.options?.find((opt: any) => opt.name === 'file');
 			expect(songOption).toBeDefined();
-			expect(songOption?.required).toBe(true);
+			expect(songOption?.required).toBe(false);
+			expect(fileOption).toBeDefined();
+			expect(fileOption?.required).toBe(false);
 		});
 	});
 
 	describe('execute', () => {
-		it('should reply with error when no URL provided', async () => {
-			// Mock no URL
-			(mockInteraction.options!.get as jest.Mock).mockReturnValue(null);
+		it('should reply with error when no source provided', async () => {
+			(mockInteraction.options!.getString as jest.Mock).mockReturnValue(null);
+			(mockInteraction.options!.getAttachment as jest.Mock).mockReturnValue(null);
 
 			await playCommand.execute(mockInteraction as CommandInteraction);
 
-			expect(mockInteraction.reply).toHaveBeenCalledWith('Please provide a valid YouTube link!');
-			expect(logger.warn).toHaveBeenCalledWith('Play command executed without URL');
+			expect(mockInteraction.reply).toHaveBeenCalledWith('Please provide a YouTube link or audio file!');
+			expect(logger.warn).toHaveBeenCalledWith('Play command executed without URL or attachment');
 		});
 
 		it('should reply with error when user not in voice channel', async () => {
-			// Mock no voice channel
 			mockMember!.voice = { channel: null } as any;
 
 			await playCommand.execute(mockInteraction as CommandInteraction);
 
-			expect(mockInteraction.reply).toHaveBeenCalledWith('You need to be in a voice channel to use this command!');
+			expect(mockInteraction.reply).toHaveBeenCalledWith(
+				'You need to be in a voice channel to use this command!',
+			);
 			expect(logger.warn).toHaveBeenCalledWith('Play command executed outside voice channel');
 		});
 
-		it('should successfully play music when all conditions are met', async () => {
+		it('should successfully play music with URL', async () => {
 			await playCommand.execute(mockInteraction as CommandInteraction);
 
 			expect(mockInteraction.deferReply).toHaveBeenCalled();
 			expect(mockInteraction.followUp).toHaveBeenCalledWith('🎶 Now playing: https://youtube.com/watch?v=test');
+		});
+
+		it('should successfully play music with file', async () => {
+			(mockInteraction.options!.getString as jest.Mock).mockReturnValue(null);
+			(mockInteraction.options!.getAttachment as jest.Mock).mockReturnValue({
+				name: 'song.mp3',
+			});
+
+			await playCommand.execute(mockInteraction as CommandInteraction);
+
+			expect(mockInteraction.deferReply).toHaveBeenCalled();
+			expect(mockInteraction.followUp).toHaveBeenCalledWith('🎶 Now playing: song.mp3');
 		});
 	});
 });
