@@ -10,6 +10,7 @@ import {
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
 import { logger } from '@starbunk/shared';
+import fs from 'fs';
 import { Readable } from 'stream';
 import { IdleManager, createIdleManager, IdleManagerConfig } from './services/idleManager';
 import { getMusicConfig } from './config/musicConfig';
@@ -36,7 +37,7 @@ export class DJCova {
 		this.setupIdleManagement();
 	}
 
-	async start(source: string | Readable): Promise<void> {
+	async start(url: string): Promise<void> {
 		if (this.resource) {
 			logger.warn('Attempted to start playback while already playing');
 			return;
@@ -48,8 +49,8 @@ export class DJCova {
 			let stream: Readable;
 			let inputType: StreamType = StreamType.Arbitrary;
 
-			if (typeof source === 'string') {
-				stream = ytdl(source, {
+			if (ytdl.validateURL(url)) {
+				stream = ytdl(url, {
 					filter: 'audioonly',
 					quality: 'highestaudio',
 					highWaterMark: 1 << 25,
@@ -64,7 +65,30 @@ export class DJCova {
 				});
 				inputType = StreamType.WebmOpus;
 			} else {
-				stream = source;
+				if (/^https?:\/\//.test(url)) {
+					try {
+						const response = await fetch(url);
+						if (!response.ok || !response.body) {
+							logger.error(
+								`Failed to fetch audio file from ${url}: ${response.status} ${response.statusText}`,
+							);
+							return;
+						}
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						stream = Readable.fromWeb(response.body as any);
+					} catch (error) {
+						logger.error(`Failed to fetch audio file from ${url}`, error as Error);
+						return;
+					}
+				} else {
+					try {
+						await fs.promises.access(url, fs.constants.R_OK);
+						stream = fs.createReadStream(url);
+					} catch (error) {
+						logger.error(`Failed to access local audio file at ${url}`, error as Error);
+						return;
+					}
+				}
 			}
 
 			this.resource = createAudioResource(stream, {
