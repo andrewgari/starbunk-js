@@ -81,7 +81,11 @@ export default {
 					await sendErrorResponse(interaction, 'Failed to retrieve the provided audio file.');
 					return;
 				}
-				source = Readable.fromWeb(response.body as unknown as ReadableStream<Uint8Array>);
+				if (typeof response.body !== 'object' || typeof (response.body as any).getReader !== 'function') {
+					await sendErrorResponse(interaction, 'The provided audio file stream is not supported in this environment.');
+					return;
+				}
+				source = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
 			} else {
 				source = url!;
 			}
