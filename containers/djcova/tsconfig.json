@@ -12,12 +12,14 @@
 		"resolveJsonModule": true,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
-		"baseUrl": "./src",
-		"paths": {
-			"@/*": ["*"],
-			"@shared/*": ["../shared/src/*"]
-		}
-	},
-	"include": ["src/**/*"],
-	"exclude": ["node_modules", "dist", "tests", "**/*.test.ts", "**/__tests__/**"]
+                "baseUrl": "./src",
+                "paths": {
+                        "@/*": ["*"],
+                        "@shared/*": ["../shared/src/*"],
+                "@starbunk/shared": ["../shared/src"]
+                },
+                "noResolve": true
+        },
+        "include": ["src/commands/play.ts", "src/djCova.ts", "src/typings.d.ts"],
+        "exclude": ["node_modules", "dist", "tests", "**/*.test.ts", "**/__tests__/**"]
 }
