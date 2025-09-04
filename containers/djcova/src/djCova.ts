@@ -75,7 +75,7 @@ export class DJCova {
 							return;
 						}
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						stream = Readable.fromWeb(response.body as any);
+						stream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
 					} catch (error) {
 						logger.error(`Failed to fetch audio file from ${url}`, error as Error);
 						return;
