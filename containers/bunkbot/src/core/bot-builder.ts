@@ -180,6 +180,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 				return false;
 			}
 
+
 			// Check message filter
 			const shouldSkip = await validConfig.messageFilter(message);
 			if (shouldSkip) {
@@ -188,7 +189,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 
 			// Check triggers - sort by priority and test each one
 			const sortedTriggers = [...validConfig.triggers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
-			
+
 			for (const trigger of sortedTriggers) {
 				try {
 					const matches = await trigger.condition(message);
