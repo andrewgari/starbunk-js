@@ -1,25 +1,39 @@
 {
-	"compilerOptions": {
-		"target": "ES2022",
-		"module": "commonjs",
-		"lib": ["ES2022"],
-		"outDir": "./dist",
-		"rootDir": "./src",
-		"strict": true,
-		"esModuleInterop": true,
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"resolveJsonModule": true,
-		"experimentalDecorators": true,
-		"emitDecoratorMetadata": true,
-                "baseUrl": "./src",
-                "paths": {
-                        "@/*": ["*"],
-                        "@shared/*": ["../shared/src/*"],
-                "@starbunk/shared": ["../shared/src"]
-                },
-                "noResolve": true
-        },
-        "include": ["src/commands/play.ts", "src/djCova.ts", "src/typings.d.ts"],
-        "exclude": ["node_modules", "dist", "tests", "**/*.test.ts", "**/__tests__/**"]
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "isolatedModules": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"],
+      "@starbunk/shared": ["../shared/src/index.ts"],
+      "@starbunk/shared/*": ["../shared/src/*"]
+    }
+  },
+  "include": [
+    "src/index.ts",
+    "src/commands/**/*",
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "src/**/__tests__/**",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts"
+  ]
 }
+

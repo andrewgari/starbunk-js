@@ -2,7 +2,9 @@
 	"compilerOptions": {
 		"target": "ES2022",
 		"module": "commonjs",
+		"moduleResolution": "node",
 		"lib": ["ES2022"],
+		"types": ["node"],
 		"outDir": "./dist",
 		"rootDir": "./src",
 		"strict": true,
@@ -16,7 +18,9 @@
 		"baseUrl": "./src",
 		"paths": {
 			"@/*": ["*"],
-			"@shared/*": ["../shared/src/*"]
+			"@shared/*": ["../shared/src/*"],
+			"@starbunk/shared": ["../shared/src/index.ts"],
+			"@starbunk/shared/*": ["../shared/src/*"]
 		}
 	},
 	"include": [
@@ -41,8 +45,9 @@
 		"dist",
 		"tests",
 		"src/test-utils/**/*",
-		"src/__tests__/**/*",
-		"src/core/__tests__/**/*",
+		"src/**/__tests__/**",
+		"src/**/*.test.ts",
+		"src/**/*.spec.ts",
 		"src/commandHandler.ts",
 		"src/commands/botCommandHandler.ts",
 		"src/core/llm-conditions.ts",

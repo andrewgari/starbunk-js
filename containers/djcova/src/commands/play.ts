@@ -1,5 +1,5 @@
 import { AudioPlayerStatus } from '@discordjs/voice';
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { Attachment, ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { Readable } from 'stream';
 import {
 	logger,
@@ -20,7 +20,7 @@ const commandBuilder = new SlashCommandBuilder()
 
 export default {
 	data: commandBuilder.toJSON(),
-	async execute(interaction: CommandInteraction) {
+	async execute(interaction: ChatInputCommandInteraction) {
 		const attachment = interaction.options.getAttachment('file');
 		const url = interaction.options.getString('song');
 
@@ -40,7 +40,7 @@ export default {
 		const { voiceChannel } = voiceValidation;
 
 		try {
-			const sourceName = attachment ? attachment.name : url!;
+			const sourceName = attachment ? ((attachment as Attachment).name ?? 'attachment') : url!;
 			logger.info(`🎵 Attempting to play: ${sourceName}`);
 			await deferInteractionReply(interaction);
 
@@ -77,11 +77,14 @@ export default {
 			let source: string | Readable;
 			if (attachment) {
 				const response = await fetch(attachment.url);
-				if (!response.body) {
+				const body = response.body;
+				if (!body) {
 					await sendErrorResponse(interaction, 'Failed to retrieve the provided audio file.');
 					return;
 				}
-				source = Readable.fromWeb(response.body as unknown as ReadableStream<Uint8Array>);
+				// Convert the web ReadableStream from fetch() into a Node.js Readable
+				const webStream = body as unknown as ReadableStream<Uint8Array>;
+				source = Readable.fromWeb(webStream);
 			} else {
 				source = url!;
 			}
