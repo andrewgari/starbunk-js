@@ -3,7 +3,9 @@
 		"composite": true,
 		"target": "ES2022",
 		"module": "commonjs",
+		"moduleResolution": "node",
 		"lib": ["ES2022"],
+		"types": ["node"],
 		"outDir": "./dist",
 		"rootDir": "./src",
 		"strict": true,
@@ -24,7 +26,15 @@
 		}
 	},
 	"include": [
-		"src/**/*"
+		"src/**/*",
+		"src/**/*.d.ts"
 	],
-	"exclude": ["node_modules", "dist", "tests"]
+	"exclude": [
+		"node_modules",
+		"dist",
+		"tests",
+		"src/**/__tests__/**",
+		"src/**/*.test.ts",
+		"src/**/*.spec.ts"
+	]
 }

@@ -2,55 +2,49 @@ import {
 	AudioPlayer,
 	AudioPlayerStatus,
 	AudioResource,
-	createAudioPlayer,
-	createAudioResource,
+	AudioPlayerError,
 	PlayerSubscription,
 	StreamType,
 	VoiceConnection,
+	createAudioPlayer,
+	createAudioResource,
 } from '@discordjs/voice';
 import ytdl from '@distube/ytdl-core';
+import type { Readable } from 'stream';
 import { logger } from '@starbunk/shared';
-import fs from 'fs';
-import { Readable } from 'stream';
-import { IdleManager, createIdleManager, IdleManagerConfig } from './services/idleManager';
-import { getMusicConfig } from './config/musicConfig';
+import { createIdleManager, IdleManager } from './services/idleManager';
 
 export class DJCova {
 	private player: AudioPlayer;
 	private resource: AudioResource | undefined;
-	private volume: number = 50; // Default volume 50%
+	private volume = 50; // percentage
+
 	private idleManager: IdleManager | null = null;
 	private currentGuildId: string | null = null;
 	private currentChannelId: string | null = null;
-	private notificationCallback: ((message: string) => Promise<void>) | null = null;
+	private notificationCallback: ((message: string) => Promise<void>) | undefined;
 
-	// Event listener references for proper cleanup
-	private onPlayingListener: (() => void) | null = null;
-	private onIdleListener: (() => void) | null = null;
-	private onErrorListener: ((error: Error) => void) | null = null;
+	private onPlayingListener?: () => void;
+	private onIdleListener?: () => void;
+	private onErrorListener?: (error: AudioPlayerError) => void;
 
 	constructor() {
 		logger.debug('🎵 Initializing DJCova audio player');
 		this.player = createAudioPlayer();
-
-		// Set up audio player event listeners for idle management
 		this.setupIdleManagement();
 	}
 
-	async start(url: string): Promise<void> {
+	async start(source: string | Readable): Promise<void> {
 		if (this.resource) {
 			logger.warn('Attempted to start playback while already playing');
 			return;
 		}
 
-		logger.info('🎵 Starting playback');
-
 		try {
-			let stream: Readable;
-			let inputType: StreamType = StreamType.Arbitrary;
-
-			if (ytdl.validateURL(url)) {
-				stream = ytdl(url, {
+			let audio: Readable;
+			if (typeof source === 'string') {
+				logger.info(`🎵 Starting playback from URL: ${source}`);
+				audio = ytdl(source, {
 					filter: 'audioonly',
 					quality: 'highestaudio',
 					highWaterMark: 1 << 25,
@@ -62,36 +56,16 @@ export class DJCova {
 							'Accept-Language': 'en-US,en;q=0.9',
 						},
 					},
-				});
-				inputType = StreamType.WebmOpus;
+				}) as unknown as Readable;
 			} else {
-				if (/^https?:\/\//.test(url)) {
-					try {
-						const response = await fetch(url);
-						if (!response.ok || !response.body) {
-							logger.error(
-								`Failed to fetch audio file from ${url}: ${response.status} ${response.statusText}`,
-							);
-							return;
-						}
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						stream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
-					} catch (error) {
-						logger.error(`Failed to fetch audio file from ${url}`, error as Error);
-						return;
-					}
-				} else {
-					try {
-						await fs.promises.access(url, fs.constants.R_OK);
-						stream = fs.createReadStream(url);
-					} catch (error) {
-						logger.error(`Failed to access local audio file at ${url}`, error as Error);
-						return;
-					}
-				}
+				logger.info('🎵 Starting playback from provided audio stream');
+				audio = source;
 			}
 
-			this.resource = createAudioResource(stream, {
+			// If youtube (string), assume WebmOpus; otherwise allow arbitrary
+			const inputType = typeof source === 'string' ? StreamType.WebmOpus : StreamType.Arbitrary;
+
+			this.resource = createAudioResource(audio, {
 				inputType,
 				inlineVolume: true,
 			});
@@ -102,7 +76,6 @@ export class DJCova {
 
 			logger.debug('▶️ Playing resource...');
 			this.player.play(this.resource);
-			logger.success('🎵 Audio resource created and playback started');
 		} catch (error) {
 			logger.error('Failed to start audio playback', error as Error);
 		}
@@ -113,8 +86,6 @@ export class DJCova {
 			logger.warn('Attempted to play without an active audio resource');
 			return;
 		}
-
-		logger.debug('▶️ Playing audio resource');
 		this.player.play(this.resource);
 	}
 
@@ -130,12 +101,9 @@ export class DJCova {
 	}
 
 	changeVolume(vol: number): void {
-		logger.info(`🔊 Adjusting volume to ${vol}%`);
 		this.volume = Math.max(0, Math.min(vol, 100));
 		if (this.resource?.volume) {
 			this.resource.volume.setVolume(this.volume / 100);
-		} else {
-			logger.warn('Attempted to change volume without active resource');
 		}
 	}
 
@@ -148,161 +116,103 @@ export class DJCova {
 	}
 
 	subscribe(channel: VoiceConnection): PlayerSubscription | undefined {
-		logger.debug(`🎧 Subscribing to voice channel`);
 		try {
 			const subscription = channel.subscribe(this.player);
 			if (subscription) {
-				logger.success('Player successfully subscribed to connection.');
+				logger.debug('Player subscribed to connection');
 			}
 			return subscription;
-		} catch (_error) {
-			logger.error('Failed to subscribe player to the connection.');
+		} catch (error) {
+			logger.error('Failed to subscribe player to the connection.', error as Error);
 			return undefined;
 		}
 	}
 
 	on(status: AudioPlayerStatus, callback: () => void): void {
-		logger.debug(`📡 Registering listener for ${status} status`);
 		this.player.on(status, callback);
 	}
 
-	/**
-	 * Set up idle management for auto-disconnect functionality
-	 */
+	/** Set up base idle management listeners (no guild context yet) */
 	private setupIdleManagement(): void {
-		// Create listener functions as class properties for proper cleanup
+		// hook player events for idle timer management when configured
 		this.onPlayingListener = () => {
-			logger.debug('Audio player started playing, resetting idle timer');
 			if (this.idleManager) {
 				this.idleManager.resetIdleTimer();
 			}
 		};
-
 		this.onIdleListener = () => {
-			logger.debug('Audio player became idle, starting idle timer');
 			if (this.idleManager) {
 				this.idleManager.startIdleTimer();
 			}
 		};
-
-		this.onErrorListener = (error: Error) => {
-			logger.error('Audio player error:', error);
-			if (this.idleManager) {
-				this.idleManager.startIdleTimer();
-			}
+		this.onErrorListener = (err: AudioPlayerError) => {
+			logger.error('Audio player error', err);
 		};
 
-		// Register the event listeners
 		this.player.on(AudioPlayerStatus.Playing, this.onPlayingListener);
 		this.player.on(AudioPlayerStatus.Idle, this.onIdleListener);
 		this.player.on('error', this.onErrorListener);
 	}
 
-	/**
-	 * Initialize idle management for a specific guild and channel
-	 */
+	/** Initialize idle management for a specific guild/channel */
 	initializeIdleManagement(
 		guildId: string,
 		channelId?: string,
 		notificationCallback?: (message: string) => Promise<void>,
 	): void {
-		// Clean up existing idle manager
-		if (this.idleManager) {
-			this.idleManager.destroy();
-		}
-
 		this.currentGuildId = guildId;
-		this.currentChannelId = channelId || null;
-		this.notificationCallback = notificationCallback || null;
+		this.currentChannelId = channelId ?? null;
+		this.notificationCallback = notificationCallback;
 
-		const config = getMusicConfig();
-		const idleConfig: IdleManagerConfig = {
-			timeoutSeconds: config.idleTimeoutSeconds,
+		const timeoutSeconds = Number(process.env.MUSIC_IDLE_TIMEOUT_SECONDS ?? '30');
+		this.idleManager = createIdleManager({
 			guildId,
 			channelId,
+			timeoutSeconds,
 			onDisconnect: async (reason: string) => {
 				await this.handleAutoDisconnect(reason);
 			},
-		};
-
-		this.idleManager = createIdleManager(idleConfig);
-		logger.info(`Idle management initialized for guild ${guildId} with ${config.idleTimeoutSeconds}s timeout`);
+		});
 	}
 
-	/**
-	 * Handle auto-disconnect due to inactivity
-	 */
+	/** Handle auto-disconnect (idle) */
 	private async handleAutoDisconnect(reason: string): Promise<void> {
 		try {
-			// Stop the music player
 			this.stop();
-
-			// Send notification to users
-			const message = `🔇 ${reason}`;
 			if (this.notificationCallback) {
-				await this.notificationCallback(message);
+				await this.notificationCallback(`🔇 ${reason}`);
 			}
-
-			logger.info(`Auto-disconnect completed for guild ${this.currentGuildId}: ${reason}`);
-		} catch (error) {
-			logger.error('Error during auto-disconnect:', error instanceof Error ? error : new Error(String(error)));
+		} catch (err) {
+			logger.error('Error during auto-disconnect', err as Error);
 		}
 	}
 
-	/**
-	 * Manually disconnect and cleanup idle management
-	 */
+	/** Manual disconnect and cleanup */
 	disconnect(): void {
+		this.stop();
 		if (this.idleManager) {
 			this.idleManager.cancelIdleTimer();
 		}
-		this.stop();
-		logger.debug('Manual disconnect completed');
 	}
 
-	/**
-	 * Get idle management status
-	 */
+	/** Idle status snapshot */
 	getIdleStatus(): { isActive: boolean; timeoutSeconds: number } | null {
-		if (!this.idleManager) {
-			return null;
-		}
-
+		if (!this.idleManager) return null;
 		return {
 			isActive: this.idleManager.isIdleTimerActive(),
 			timeoutSeconds: this.idleManager.getTimeoutSeconds(),
 		};
 	}
 
-	/**
-	 * Cleanup resources when destroying the music player
-	 */
+	/** Cleanup resources */
 	destroy(): void {
-		// Remove event listeners to prevent memory leaks
-		if (this.onPlayingListener) {
-			this.player.off(AudioPlayerStatus.Playing, this.onPlayingListener);
-			this.onPlayingListener = null;
+		try {
+			this.disconnect();
+			if (this.onPlayingListener) this.player.off(AudioPlayerStatus.Playing, this.onPlayingListener);
+			if (this.onIdleListener) this.player.off(AudioPlayerStatus.Idle, this.onIdleListener);
+			if (this.onErrorListener) this.player.off('error', this.onErrorListener);
+		} catch {
+			// ignore
 		}
-
-		if (this.onIdleListener) {
-			this.player.off(AudioPlayerStatus.Idle, this.onIdleListener);
-			this.onIdleListener = null;
-		}
-
-		if (this.onErrorListener) {
-			this.player.off('error', this.onErrorListener);
-			this.onErrorListener = null;
-		}
-
-		// Cleanup idle manager
-		if (this.idleManager) {
-			this.idleManager.destroy();
-			this.idleManager = null;
-		}
-
-		// Stop the music player
-		this.stop();
-
-		logger.debug('DJCova music player destroyed with proper cleanup');
 	}
 }

@@ -1,21 +1,13 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import {
-	logger,
-	sendErrorResponse,
-	sendSuccessResponse,
-	container,
-	ServiceId
-} from '@starbunk/shared';
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { logger, sendErrorResponse, sendSuccessResponse, container, ServiceId } from '@starbunk/shared';
 import { disconnectVoiceConnection } from '../utils/voiceUtils';
 import { DJCova } from '../djCova';
 
-const commandBuilder = new SlashCommandBuilder()
-	.setName('stop')
-	.setDescription('Stop playing and leave channel');
+const commandBuilder = new SlashCommandBuilder().setName('stop').setDescription('Stop playing and leave channel');
 
 export default {
 	data: commandBuilder.toJSON(),
-	async execute(interaction: CommandInteraction) {
+	async execute(interaction: ChatInputCommandInteraction) {
 		try {
 			// Get music player from container
 			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);

@@ -1,11 +1,5 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import {
-	logger,
-	sendErrorResponse,
-	sendSuccessResponse,
-	container,
-	ServiceId
-} from '@starbunk/shared';
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { logger, sendErrorResponse, sendSuccessResponse, container, ServiceId } from '@starbunk/shared';
 import { DJCova } from '../djCova';
 
 const commandBuilder = new SlashCommandBuilder()
@@ -15,12 +9,12 @@ const commandBuilder = new SlashCommandBuilder()
 
 export default {
 	data: commandBuilder.toJSON(),
-	async execute(interaction: CommandInteraction) {
+	async execute(interaction: ChatInputCommandInteraction) {
 		try {
 			// Get volume from the 'noise' option (as defined in the command builder)
-			const vol = interaction.options.get('noise')?.value as number;
+			const vol = interaction.options.getInteger('noise', true);
 
-			if (!vol || vol < 1 || vol > 100) {
+			if (vol < 1 || vol > 100) {
 				await sendErrorResponse(interaction, 'Volume must be between 1 and 100!');
 				return;
 			}
