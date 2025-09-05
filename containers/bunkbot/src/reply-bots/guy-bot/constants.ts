@@ -29,7 +29,7 @@ export const GUY_BOT_RESPONSES = [
 	'MisterMisterMisterMisterMisterMisterMisterMisterMisterMisterMisterMisterBeeeeeeeeeeeeeeeeeeeeeeeeeeast',
 	"It's a message you can say",
 	'Blimbo',
-	'Good News, we can finally be bees',
+	'Good news, we can finally be bees',
 	"That's what they called me in High School",
 	"That's what's happenin'",
 ];
