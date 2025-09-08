@@ -82,8 +82,8 @@ export class ProductionLLMService implements LLMService {
 		try {
 			// Circuit breaker pattern - fail fast if unhealthy
 			if (!this.isHealthy && this.config.provider !== 'emulator') {
-				logger.warn('[LLMService] Service unhealthy, falling back to emulator');
-				return this.generateEmulatorResponse(message);
+				logger.warn('[LLMService] Service unhealthy, remaining silent');
+				return '';
 			}
 
 			// Add correlation ID for tracing
@@ -101,8 +101,9 @@ export class ProductionLLMService implements LLMService {
 					break;
 				case 'emulator':
 				default:
-					response = await this.generateEmulatorResponse(message);
-					break;
+					// No emulator fallback - remain silent if no LLM configured
+					logger.info('[LLMService] No LLM configured, remaining silent');
+					return '';
 			}
 
 			// Log performance metrics
@@ -114,46 +115,51 @@ export class ProductionLLMService implements LLMService {
 			const duration = Date.now() - startTime;
 			logger.error(`[LLMService] Error generating response after ${duration}ms:`, error as Error);
 
-			// Graceful degradation - always fall back to emulator
-			logger.info('[LLMService] Falling back to emulator response');
-			return this.generateEmulatorResponse(message);
+			// No fallback - remain silent on LLM failure
+			logger.info('[LLMService] LLM failed, remaining silent');
+			return '';
 		}
 	}
 
 	async shouldRespond(message: Message): Promise<boolean> {
 		try {
-			// TODO: Implement LLM-based decision making
-			// For now, use the existing logic from simplifiedLlmTriggers
-			const content = message.content.toLowerCase();
-
-			// High interest topics
-			if (this.isHighInterestContent(content)) {
-				return true;
+			// Use LLM to make decision about whether to respond
+			if (this.config.provider === 'emulator' || !this.isHealthy) {
+				// If no LLM is available, don't respond
+				logger.debug('[LLMService] No LLM available for decision making, not responding');
+				return false;
 			}
 
-			// Direct engagement
-			if (this.isDirectEngagement(content, message)) {
-				return true;
+			const correlationId = `decision_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+			logger.debug(`[LLMService] Making LLM decision [${correlationId}]`);
+
+			let decision: string;
+			switch (this.config.provider) {
+				case 'openai':
+					decision = await this.getOpenAIDecision(message, correlationId);
+					break;
+				case 'ollama':
+					decision = await this.getOllamaDecision(message, correlationId);
+					break;
+				default:
+					logger.debug('[LLMService] No LLM provider configured for decision making');
+					return false;
 			}
 
-			// Moderate interest with probability
-			if (this.isModerateInterestContent(content)) {
-				return Math.random() < 0.4;
-			}
+			const shouldRespond = decision.toUpperCase().includes('YES') || decision.toUpperCase().includes('LIKELY');
+			logger.debug(`[LLMService] LLM decision: ${decision} -> ${shouldRespond} [${correlationId}]`);
+			return shouldRespond;
 
-			// Baseline probability
-			return Math.random() < 0.05;
 		} catch (error) {
-			logger.error('[LLMService] Error in shouldRespond decision:', error as Error);
+			logger.error('[LLMService] Error in shouldRespond decision:', ensureError(error));
 			return false;
 		}
 	}
 
 	private async generateOpenAIResponse(message: Message, context?: string, correlationId?: string): Promise<string> {
 		// TODO: Implement OpenAI integration with proper error handling
-		// For now, fall back to emulator
 		logger.warn(`[LLMService] OpenAI integration not yet implemented [${correlationId}]`);
-		return this.generateEmulatorResponse(message);
+		return '';
 	}
 
 	private async generateOllamaResponse(message: Message, context?: string, correlationId?: string): Promise<string> {
@@ -162,7 +168,7 @@ export class ProductionLLMService implements LLMService {
 
 		if (!apiUrl) {
 			logger.warn(`[LLMService] No Ollama API URL configured [${correlationId}]`);
-			return this.generateEmulatorResponse(message);
+			return '';
 		}
 
 		try {
@@ -206,53 +212,65 @@ export class ProductionLLMService implements LLMService {
 			}
 		} catch (error) {
 			logger.error(`[LLMService] Ollama request failed [${correlationId}]:`, ensureError(error));
-			logger.info(`[LLMService] Falling back to emulator [${correlationId}]`);
-			return this.generateEmulatorResponse(message);
+			logger.info(`[LLMService] LLM failed, remaining silent [${correlationId}]`);
+			return '';
 		}
 	}
 
-	private async generateEmulatorResponse(message: Message): Promise<string> {
-		// Use the existing emulator logic as a fallback
-		const content = message.content.toLowerCase();
+	private async getOpenAIDecision(message: Message, correlationId: string): Promise<string> {
+		// TODO: Implement OpenAI decision making
+		logger.warn(`[LLMService] OpenAI decision making not yet implemented [${correlationId}]`);
+		return 'NO';
+	}
 
-		// Simple personality-based responses
-		if (content.includes('hello') || content.includes('hi')) {
-			return this.getRandomResponse(['Hey there!', "Hi! What's up?", "Hey! How's it going?"]);
+	private async getOllamaDecision(message: Message, correlationId: string): Promise<string> {
+		const apiUrl = this.config.apiUrl;
+		const model = this.config.model || 'mistral:latest';
+
+		if (!apiUrl) {
+			logger.warn(`[LLMService] No Ollama API URL configured for decision [${correlationId}]`);
+			return 'NO';
 		}
 
-		if (content.includes('?')) {
-			return this.getRandomResponse([
-				"Hmm, that's a good question...",
-				'Yeah, let me think about that.',
-				"Interesting question! What's the context?",
-			]);
+		try {
+			logger.debug(`[LLMService] Making Ollama decision request to ${apiUrl} [${correlationId}]`);
+
+			const prompt = `${COVA_BOT_PROMPTS.DecisionPrompt}
+
+Message to analyze: "${message.content}"`;
+
+			const requestBody = {
+				model: model,
+				prompt: prompt,
+				stream: false,
+				options: {
+					temperature: 0.3, // Lower temperature for more consistent decision making
+					num_predict: 10, // Short response needed
+				},
+			};
+
+			const response = await fetch(`${apiUrl}/api/generate`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(requestBody),
+				signal: AbortSignal.timeout(10000), // Shorter timeout for decisions
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+			}
+
+			const data = (await response.json()) as { response?: string };
+			logger.debug(`[LLMService] Ollama decision received: ${data.response} [${correlationId}]`);
+
+			return data.response?.trim() || 'NO';
+
+		} catch (error) {
+			logger.error(`[LLMService] Ollama decision request failed [${correlationId}]:`, ensureError(error));
+			return 'NO';
 		}
-
-		return this.getRandomResponse([
-			'Yeah, I see what you mean.',
-			'Hmm, interesting.',
-			"That's pretty cool.",
-			'Makes sense to me.',
-		]);
-	}
-
-	private isHighInterestContent(content: string): boolean {
-		return (
-			content.match(/\\b(typescript|javascript|react|node|discord|bot|programming|code|cova|error|bug)\\b/i) !==
-			null
-		);
-	}
-
-	private isDirectEngagement(content: string, message: Message): boolean {
-		return message.mentions.users.size > 0 || content.includes('@') || content.includes('cova');
-	}
-
-	private isModerateInterestContent(content: string): boolean {
-		return content.match(/\\b(game|gaming|comic|batman|superman)\\b/i) !== null;
-	}
-
-	private getRandomResponse(responses: string[]): string {
-		return responses[Math.floor(Math.random() * responses.length)];
 	}
 
 	/**
