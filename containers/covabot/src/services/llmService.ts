@@ -195,7 +195,7 @@ export class ProductionLLMService implements LLMService {
 				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 			}
 
-			const data = await response.json();
+			const data = (await response.json()) as { response?: string };
 			logger.info(`[LLMService] Ollama response received [${correlationId}]`);
 			logger.debug(`[LLMService] Ollama response data: ${JSON.stringify(data)} [${correlationId}]`);
 
