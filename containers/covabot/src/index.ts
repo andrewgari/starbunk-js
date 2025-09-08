@@ -12,6 +12,7 @@ import {
 	getMessageFilter,
 	MessageFilter,
 	initializeObservability,
+	DiscordService,
 } from '@starbunk/shared';
 import { CovaBot } from './cova-bot/covaBot';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from './cova-bot/triggers';
@@ -73,6 +74,10 @@ class CovaBotContainer {
 	private async initializeServices(): Promise<void> {
 		// Register Discord client
 		container.register(ServiceId.DiscordClient, this.client);
+
+		// Register DiscordService from client
+		const discordService = new DiscordService(this.client);
+		container.register(ServiceId.DiscordService, discordService);
 
 		// Initialize webhook manager for AI personality responses
 		this.webhookManager = new WebhookManager(this.client);
@@ -142,9 +147,14 @@ class CovaBotContainer {
 			// Process message with AI Cova personality using triggers
 			const cova = new CovaBot({
 				name: 'CovaBot',
-				description: 'AI personality bot',
-				defaultIdentity: { botName: 'Cova', avatarUrl: '' },
+				description: 'AI personality bot with contextual response logic',
+				defaultIdentity: {
+					botName: 'Cova',
+					avatarUrl:
+						'https://cdn.discordapp.com/avatars/139592376443338752/8d9b24dbb47e564f3292d5c86c5ed075.png?size=256',
+				},
 				triggers: [covaStatsCommandTrigger, covaDirectMentionTrigger, covaTrigger],
+				// Set to 100% since response logic is handled in individual triggers
 				defaultResponseRate: 100,
 				skipBotMessages: true,
 			});
