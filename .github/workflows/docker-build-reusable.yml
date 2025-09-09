@@ -28,12 +28,34 @@ on:
 # This workflow should ONLY be called by other workflows, never triggered directly
 # If you see this workflow failing, it means it's being triggered incorrectly
 
+
+
 jobs:
+  changes:
+    name: Detect Docker-related changes
+    runs-on: ubuntu-latest
+    outputs:
+      docker_related: ${{ steps.filter.outputs.docker_related }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Determine changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docker_related:
+              - 'containers/${{ inputs.container_name }}/**'
+              - 'containers/${{ inputs.container_name }}/Dockerfile'
+              - 'docker-compose*.yml'
+              - '.github/workflows/docker-*.yml'
+
   build-and-push:
     name: 🐳 Build & Push ${{ inputs.container_name }}
+    needs: changes
     runs-on: ubuntu-latest
-    # Only run if this is a workflow_call event (called by another workflow)
-    if: github.event_name == 'workflow_call'
+    # Only run if called and relevant paths changed
+    if: github.event_name == 'workflow_call' && needs.changes.outputs.docker_related == 'true'
     permissions:
       contents: read
       packages: write
@@ -54,9 +76,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          # NOTE: network=host is required for accessing local npm registry during build
-          # This is a controlled environment (GitHub Actions) with trusted code only
-          # Security risk is mitigated by running only on trusted runners
           driver-opts: |
             network=host
           buildkitd-flags: --allow-insecure-entitlement network.host
