@@ -3,8 +3,6 @@ import { logger, ensureError } from '@starbunk/shared';
 import { TriggerCondition, ResponseGenerator } from '../types/triggerResponse';
 import { createLLMService, LLMService } from '../services/llmService';
 
-const DEBUG_MODE = process.env.DEBUG_MODE === 'true';
-
 // Lazy-initialized LLM service
 let llmService: LLMService | null = null;
 
@@ -31,10 +29,9 @@ export function createLLMResponseDecisionCondition(): TriggerCondition {
 			// Use LLM service to make decision
 			const llmSvc = getLLMService();
 			const shouldRespond = await llmSvc.shouldRespond(message);
-			
+
 			logger.debug(`[CovaBot] LLM decision: ${shouldRespond ? 'responding' : 'not responding'}`);
 			return shouldRespond;
-
 		} catch (error) {
 			logger.error('[CovaBot] Error in LLM decision condition:', ensureError(error));
 			return false;
@@ -68,7 +65,6 @@ export function createLLMEmulatorResponse(): ResponseGenerator {
 			const duration = Date.now() - startTime;
 			logger.debug(`[CovaBot] LLM returned empty response, remaining silent after ${duration}ms`);
 			return '';
-
 		} catch (error) {
 			const duration = Date.now() - startTime;
 			logger.error(
@@ -79,7 +75,6 @@ export function createLLMEmulatorResponse(): ResponseGenerator {
 		}
 	};
 }
-
 
 /**
  * Simple performance timing utility

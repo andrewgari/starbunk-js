@@ -1,11 +1,11 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { logger } from '@starbunk/shared';
-import { 
-	MemoryItem, 
-	MemorySearchFilters, 
-	MemorySearchResult, 
+import {
+	MemoryItem,
+	MemorySearchFilters,
+	MemorySearchResult,
 	QdrantCollectionConfig,
-	MemoryType 
+	MemoryType,
 } from '../types/memoryTypes';
 
 /**
@@ -52,10 +52,12 @@ export class QdrantService {
 
 			// Initialize collections
 			await this.initializeCollections();
-			
+
 			logger.info('[QdrantService] Initialization complete');
 		} catch (error) {
-			logger.error(`[QdrantService] Failed to initialize: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantService] Failed to initialize: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -95,7 +97,7 @@ export class QdrantService {
 	private async createCollectionIfNotExists(config: QdrantCollectionConfig): Promise<void> {
 		try {
 			const collections = await this.client.getCollections();
-			const exists = collections.collections.some(c => c.name === config.name);
+			const exists = collections.collections.some((c) => c.name === config.name);
 
 			if (!exists) {
 				await this.client.createCollection(config.name, {
@@ -113,7 +115,9 @@ export class QdrantService {
 
 			this.collections.set(config.name, config);
 		} catch (error) {
-			logger.error(`[QdrantService] Failed to create collection ${config.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantService] Failed to create collection ${config.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -127,41 +131,47 @@ export class QdrantService {
 		}
 
 		const collectionName = this.getCollectionName(item.type);
-		
+
 		try {
 			await this.client.upsert(collectionName, {
 				wait: true,
-				points: [{
-					id: item.id,
-					vector: item.embedding,
-					payload: {
-						content: item.content,
-						type: item.type,
-						createdAt: item.createdAt.toISOString(),
-						updatedAt: item.updatedAt.toISOString(),
-						...item.metadata,
-						// Type-specific fields
-						...(item.type === 'personality' ? {
-							category: item.category,
-							priority: item.priority,
-							isActive: item.isActive,
-							tokens: item.tokens,
-						} : {
-							userId: item.userId,
-							channelId: item.channelId,
-							messageType: item.messageType,
-							conversationId: item.conversationId,
-							sentiment: item.sentiment,
-							topics: item.topics,
-							replyToId: item.replyToId,
-						}),
+				points: [
+					{
+						id: item.id,
+						vector: item.embedding,
+						payload: {
+							content: item.content,
+							type: item.type,
+							createdAt: item.createdAt.toISOString(),
+							updatedAt: item.updatedAt.toISOString(),
+							...item.metadata,
+							// Type-specific fields
+							...(item.type === 'personality'
+								? {
+										category: item.category,
+										priority: item.priority,
+										isActive: item.isActive,
+										tokens: item.tokens,
+									}
+								: {
+										userId: item.userId,
+										channelId: item.channelId,
+										messageType: item.messageType,
+										conversationId: item.conversationId,
+										sentiment: item.sentiment,
+										topics: item.topics,
+										replyToId: item.replyToId,
+									}),
+						},
 					},
-				}],
+				],
 			});
 
 			logger.debug(`[QdrantService] Stored ${item.type} memory item: ${item.id}`);
 		} catch (error) {
-			logger.error(`[QdrantService] Failed to store memory item: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantService] Failed to store memory item: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -169,10 +179,7 @@ export class QdrantService {
 	/**
 	 * Search for similar memory items
 	 */
-	async searchSimilar(
-		queryEmbedding: number[],
-		filters: MemorySearchFilters = {}
-	): Promise<MemorySearchResult[]> {
+	async searchSimilar(queryEmbedding: number[], filters: MemorySearchFilters = {}): Promise<MemorySearchResult[]> {
 		const collectionName = filters.type ? this.getCollectionName(filters.type) : null;
 		const limit = filters.limit || 10;
 		const threshold = filters.similarityThreshold || 0.7;
@@ -182,7 +189,9 @@ export class QdrantService {
 			const qdrantFilter = this.buildQdrantFilter(filters);
 
 			// Search in specific collection or both
-			const collections = collectionName ? [collectionName] : [this.PERSONALITY_COLLECTION, this.CONVERSATION_COLLECTION];
+			const collections = collectionName
+				? [collectionName]
+				: [this.PERSONALITY_COLLECTION, this.CONVERSATION_COLLECTION];
 			const allResults: MemorySearchResult[] = [];
 
 			for (const collection of collections) {
@@ -195,7 +204,7 @@ export class QdrantService {
 						score_threshold: threshold,
 					});
 
-					const results = searchResult.map(result => ({
+					const results = searchResult.map((result) => ({
 						item: this.payloadToMemoryItem(result.payload!, result.id as string),
 						score: result.score || 0,
 						distance: 1 - (result.score || 0), // Convert similarity to distance
@@ -203,7 +212,9 @@ export class QdrantService {
 
 					allResults.push(...results);
 				} catch (error) {
-					logger.warn(`[QdrantService] Search failed for collection ${collection}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+					logger.warn(
+						`[QdrantService] Search failed for collection ${collection}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+					);
 				}
 			}
 
@@ -220,7 +231,9 @@ export class QdrantService {
 	 * Get memory item by ID
 	 */
 	async getMemoryItem(id: string, type?: MemoryType): Promise<MemoryItem | null> {
-		const collections = type ? [this.getCollectionName(type)] : [this.PERSONALITY_COLLECTION, this.CONVERSATION_COLLECTION];
+		const collections = type
+			? [this.getCollectionName(type)]
+			: [this.PERSONALITY_COLLECTION, this.CONVERSATION_COLLECTION];
 
 		for (const collection of collections) {
 			try {
@@ -251,7 +264,9 @@ export class QdrantService {
 	 * Delete memory item
 	 */
 	async deleteMemoryItem(id: string, type?: MemoryType): Promise<boolean> {
-		const collections = type ? [this.getCollectionName(type)] : [this.PERSONALITY_COLLECTION, this.CONVERSATION_COLLECTION];
+		const collections = type
+			? [this.getCollectionName(type)]
+			: [this.PERSONALITY_COLLECTION, this.CONVERSATION_COLLECTION];
 
 		for (const collection of collections) {
 			try {
@@ -285,14 +300,16 @@ export class QdrantService {
 					const info = await this.client.getCollection(collectionName);
 					const vectorCount = info.vectors_count || 0;
 					const indexedCount = info.indexed_vectors_count || 0;
-					
+
 					stats[collectionName] = {
 						vectorCount,
 						indexedVectorsCount: indexedCount,
 					};
 					totalVectors += vectorCount;
 				} catch (error) {
-					logger.warn(`[QdrantService] Failed to get stats for ${collectionName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+					logger.warn(
+						`[QdrantService] Failed to get stats for ${collectionName}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+					);
 					stats[collectionName] = { vectorCount: 0, indexedVectorsCount: 0 };
 				}
 			}
@@ -302,7 +319,9 @@ export class QdrantService {
 				totalVectors,
 			};
 		} catch (error) {
-			logger.error(`[QdrantService] Failed to get stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			logger.error(
+				`[QdrantService] Failed to get stats: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 			throw error;
 		}
 	}
@@ -315,21 +334,20 @@ export class QdrantService {
 		collections: string[];
 		vectorCount: number;
 	}> {
+		// In test environments (or when Qdrant is not explicitly enabled), avoid network calls
+		if (process.env.NODE_ENV === 'test' && process.env.USE_QDRANT !== 'true') {
+			return { connected: false, collections: [], vectorCount: 0 };
+		}
 		try {
 			const collections = await this.client.getCollections();
 			const stats = await this.getStats();
-
 			return {
 				connected: true,
-				collections: collections.collections.map(c => c.name),
+				collections: collections.collections.map((c) => c.name),
 				vectorCount: stats.totalVectors,
 			};
 		} catch (_error) {
-			return {
-				connected: false,
-				collections: [],
-				vectorCount: 0,
-			};
+			return { connected: false, collections: [], vectorCount: 0 };
 		}
 	}
 
@@ -385,13 +403,13 @@ export class QdrantService {
 			if (filters.timeRange.start) {
 				conditions.push({
 					key: 'createdAt',
-					range: { gte: filters.timeRange.start.toISOString() }
+					range: { gte: filters.timeRange.start.toISOString() },
 				});
 			}
 			if (filters.timeRange.end) {
 				conditions.push({
 					key: 'createdAt',
-					range: { lte: filters.timeRange.end.toISOString() }
+					range: { lte: filters.timeRange.end.toISOString() },
 				});
 			}
 		}

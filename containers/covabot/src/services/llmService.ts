@@ -82,8 +82,8 @@ export class ProductionLLMService implements LLMService {
 		try {
 			// Circuit breaker pattern - fail fast if unhealthy
 			if (!this.isHealthy && this.config.provider !== 'emulator') {
-				logger.warn('[LLMService] Service unhealthy, remaining silent');
-				return '';
+				logger.warn('[LLMService] Service unhealthy, falling back to emulator');
+				return this.generateEmulatorResponse(message);
 			}
 
 			// Add correlation ID for tracing
@@ -100,10 +100,12 @@ export class ProductionLLMService implements LLMService {
 					response = await this.generateOllamaResponse(message, context, correlationId);
 					break;
 				case 'emulator':
+					response = await this.generateEmulatorResponse(message, context, correlationId);
+					break;
 				default:
-					// No emulator fallback - remain silent if no LLM configured
-					logger.info('[LLMService] No LLM configured, remaining silent');
-					return '';
+					logger.info('[LLMService] No LLM configured, falling back to emulator');
+					response = await this.generateEmulatorResponse(message, context, correlationId);
+					break;
 			}
 
 			// Log performance metrics
@@ -115,18 +117,28 @@ export class ProductionLLMService implements LLMService {
 			const duration = Date.now() - startTime;
 			logger.error(`[LLMService] Error generating response after ${duration}ms:`, error as Error);
 
-			// No fallback - remain silent on LLM failure
-			logger.info('[LLMService] LLM failed, remaining silent');
-			return '';
+			// Fallback to emulator on failure
+			logger.info('[LLMService] LLM failed, falling back to emulator');
+			return this.generateEmulatorResponse(message, context, `fallback_${Date.now()}`);
 		}
 	}
 
 	async shouldRespond(message: Message): Promise<boolean> {
 		try {
-			// Use LLM to make decision about whether to respond
-			if (this.config.provider === 'emulator' || !this.isHealthy) {
-				// If no LLM is available, don't respond
-				logger.debug('[LLMService] No LLM available for decision making, not responding');
+			// Fast-path: when using emulator (no real LLM), respond to non-empty messages
+			if (this.config.provider === 'emulator') {
+				const content = message.content?.trim();
+				if (!content) {
+					logger.debug('[LLMService] Emulator decision: empty message, not responding');
+					return false;
+				}
+				logger.debug('[LLMService] Emulator decision: responding to non-empty message');
+				return true;
+			}
+
+			// If real provider is unhealthy, do not respond
+			if (!this.isHealthy) {
+				logger.debug('[LLMService] LLM unhealthy for decision making, not responding');
 				return false;
 			}
 
@@ -149,7 +161,6 @@ export class ProductionLLMService implements LLMService {
 			const shouldRespond = decision.toUpperCase().includes('YES') || decision.toUpperCase().includes('LIKELY');
 			logger.debug(`[LLMService] LLM decision: ${decision} -> ${shouldRespond} [${correlationId}]`);
 			return shouldRespond;
-
 		} catch (error) {
 			logger.error('[LLMService] Error in shouldRespond decision:', ensureError(error));
 			return false;
@@ -159,7 +170,12 @@ export class ProductionLLMService implements LLMService {
 	private async generateOpenAIResponse(message: Message, context?: string, correlationId?: string): Promise<string> {
 		// TODO: Implement OpenAI integration with proper error handling
 		logger.warn(`[LLMService] OpenAI integration not yet implemented [${correlationId}]`);
-		return '';
+		logger.info('[LLMService] Falling back to emulator for OpenAI provider');
+		return this.generateEmulatorResponse(
+			message,
+			context,
+			correlationId ? `openai_fallback_${correlationId}` : undefined,
+		);
 	}
 
 	private async generateOllamaResponse(message: Message, context?: string, correlationId?: string): Promise<string> {
@@ -202,8 +218,8 @@ export class ProductionLLMService implements LLMService {
 			}
 
 			const data = (await response.json()) as { response?: string };
-			logger.info(`[LLMService] Ollama response received [${correlationId}]`);
-			logger.debug(`[LLMService] Ollama response data: ${JSON.stringify(data)} [${correlationId}]`);
+			const respLen = data.response?.length ?? 0;
+			logger.info(`[LLMService] Ollama response received [${correlationId}] (chars=${respLen})`);
 
 			if (data.response) {
 				return data.response.trim();
@@ -212,9 +228,26 @@ export class ProductionLLMService implements LLMService {
 			}
 		} catch (error) {
 			logger.error(`[LLMService] Ollama request failed [${correlationId}]:`, ensureError(error));
-			logger.info(`[LLMService] LLM failed, remaining silent [${correlationId}]`);
-			return '';
+			logger.info(`[LLMService] Ollama failed, falling back to emulator [${correlationId}]`);
+			return this.generateEmulatorResponse(
+				message,
+				context,
+				correlationId ? `ollama_fallback_${correlationId}` : undefined,
+			);
 		}
+	}
+
+	private async generateEmulatorResponse(
+		message: Message,
+		context?: string,
+		correlationId?: string,
+	): Promise<string> {
+		// Simple deterministic emulator for tests and fallback behavior
+		const content = message.content?.trim() || '';
+		const prefix = context ? '[ctx] ' : '';
+		const reply = `${prefix}${content ? `You said: ${content}` : 'Hello!'}`;
+		logger.debug(`[LLMService] Emulator response [${correlationId}] (chars=${reply.length})`);
+		return reply;
 	}
 
 	private async getOpenAIDecision(message: Message, correlationId: string): Promise<string> {
@@ -266,7 +299,6 @@ Message to analyze: "${message.content}"`;
 			logger.debug(`[LLMService] Ollama decision received: ${data.response} [${correlationId}]`);
 
 			return data.response?.trim() || 'NO';
-
 		} catch (error) {
 			logger.error(`[LLMService] Ollama decision request failed [${correlationId}]:`, ensureError(error));
 			return 'NO';
@@ -303,7 +335,7 @@ export function createLLMService(): LLMService {
 	else if (process.env.OLLAMA_API_URL) {
 		config.provider = 'ollama';
 		config.apiUrl = process.env.OLLAMA_API_URL;
-		config.model = process.env.OLLAMA_MODEL || 'llama2';
+		config.model = process.env.OLLAMA_MODEL || 'mistral:latest';
 	}
 
 	logger.info(`[LLMService] Initializing ${config.provider} service`);
