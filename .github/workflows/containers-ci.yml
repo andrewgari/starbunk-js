@@ -65,6 +65,14 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Install deps (shared)
+        run: npm ci
+        working-directory: containers/shared
+
+      - name: Build (shared)
+        run: npm run build --silent
+        working-directory: containers/shared
+
       - name: Install deps (covabot)
         run: npm ci
         working-directory: containers/covabot
@@ -90,6 +98,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+
+      - name: Install deps (shared)
+        run: npm ci
+        working-directory: containers/shared
+
+      - name: Build (shared)
+        run: npm run build --silent
+        working-directory: containers/shared
 
       - name: Install deps (bunkbot)
         run: npm ci
