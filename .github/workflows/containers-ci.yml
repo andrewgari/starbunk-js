@@ -2,7 +2,20 @@ name: Containers CI
 
 on:
   pull_request:
+    paths:
+      - 'containers/shared/**'
+      - 'containers/covabot/**'
+      - 'containers/bunkbot/**'
+      - '.github/workflows/containers-ci.yml'
   push:
+    branches:
+      - main
+      - feature/**
+    paths:
+      - 'containers/shared/**'
+      - 'containers/covabot/**'
+      - 'containers/bunkbot/**'
+      - '.github/workflows/containers-ci.yml'
 
 jobs:
   changes:
