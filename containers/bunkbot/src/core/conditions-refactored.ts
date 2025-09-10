@@ -44,23 +44,28 @@ export function createDuration(value: number): Duration {
 }
 
 // Pattern matching conditions
-export const matchesPattern = (pattern: RegExp): TriggerCondition =>
-	(message: Message) => pattern.test(message.content);
+export const matchesPattern =
+	(pattern: RegExp): TriggerCondition =>
+	(message: Message) =>
+		pattern.test(message.content);
 
-export const contextMatchesPattern = (pattern: RegExp): ContextualTriggerCondition =>
-	(context: ResponseContext) => pattern.test(context.content);
+export const contextMatchesPattern =
+	(pattern: RegExp): ContextualTriggerCondition =>
+	(context: ResponseContext) =>
+		pattern.test(context.content);
 
 export const containsWord = (word: string): TriggerCondition => {
 	const wordRegex = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'i');
 	return (message: Message) => wordRegex.test(message.content);
 };
 
-export const contextContainsWord = (word: string): ContextualTriggerCondition =>
-	(context: ResponseContext) => context.hasWord(word);
+export const contextContainsWord =
+	(word: string): ContextualTriggerCondition =>
+	(context: ResponseContext) =>
+		context.hasWord(word);
 
 export function containsPhrase(phrase: string): TriggerCondition {
-	return (message: Message) =>
-		message.content.toLowerCase().includes(phrase.toLowerCase());
+	return (message: Message) => message.content.toLowerCase().includes(phrase.toLowerCase());
 }
 
 export function contextContainsPhrase(phrase: string): ContextualTriggerCondition {
@@ -98,12 +103,12 @@ export function withChance(chance: number): Condition {
 export function withinTimeframeOf(
 	timestampFn: () => number,
 	duration: number | Duration,
-	unit: TimeUnit
+	unit: TimeUnit,
 ): TriggerCondition {
 	const dur = typeof duration === 'number' ? createDuration(duration) : duration;
 	const multipliers = { ms: 1, s: 1000, m: 60 * 1000, h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000 };
 	const durationMs = dur * multipliers[unit];
-	
+
 	return () => {
 		const now = Date.now();
 		const timestamp = timestampFn();
@@ -114,7 +119,7 @@ export function withinTimeframeOf(
 export function contextWithinTimeframeOf(
 	timestampFn: () => number,
 	duration: number | Duration,
-	unit: TimeUnit
+	unit: TimeUnit,
 ): ContextualTriggerCondition {
 	const standardCondition = withinTimeframeOf(timestampFn, duration, unit);
 	return () => standardCondition({} as Message);
@@ -128,13 +133,15 @@ class BotDetector {
 		const username = message.author.username?.toLowerCase() || '';
 		const displayName = message.author.displayName?.toLowerCase() || '';
 
-		const isCovaUsername = BOT_IDENTIFIERS.COVABOT_USERNAMES.some(name =>
-			username === name.toLowerCase() || displayName === name.toLowerCase()
+		const isCovaUsername = BOT_IDENTIFIERS.COVABOT_USERNAMES.some(
+			(name) => username === name.toLowerCase() || displayName === name.toLowerCase(),
 		);
 
-		const isCovaWebhook = message.webhookId && BOT_IDENTIFIERS.COVABOT_WEBHOOK_NAMES.some(name =>
-			username === name.toLowerCase() || displayName === name.toLowerCase()
-		);
+		const isCovaWebhook =
+			!!message.webhookId &&
+			BOT_IDENTIFIERS.COVABOT_WEBHOOK_NAMES.some(
+				(name) => username === name.toLowerCase() || displayName === name.toLowerCase(),
+			);
 
 		const result = isCovaUsername || isCovaWebhook;
 
@@ -144,7 +151,7 @@ class BotDetector {
 				displayName: message.author.displayName,
 				isBot: message.author.bot,
 				webhookId: message.webhookId,
-				result
+				result,
 			});
 		}
 
@@ -295,7 +302,7 @@ export function withDefaultBotBehavior(botName: string, condition: TriggerCondit
 					author: message.author.username,
 					isBot: message.author.bot,
 					content: message.content.substring(0, 50) + (message.content.length > 50 ? '...' : ''),
-					result
+					result,
 				};
 
 				logger.debug(`[${botName}] ${result ? '✅' : '❌'} Condition result`, messageInfo);
@@ -313,4 +320,3 @@ export function withDefaultBotBehavior(botName: string, condition: TriggerCondit
 function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-

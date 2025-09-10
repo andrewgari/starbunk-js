@@ -1,3 +1,5 @@
+import type { Message } from 'discord.js';
+
 import { BotIdentity } from '../../types/botIdentity';
 import { and, fromUser, matchesPattern, or, withChance } from '../../core/conditions';
 import { weightedRandomResponse } from '../../core/responses';
@@ -5,19 +7,45 @@ import { createTriggerResponse } from '../../core/trigger-response';
 import { ConfigurationService } from '../../services/configurationService';
 import { BotIdentityService } from '../../services/botIdentityService';
 import { VENN_BOT_NAME, VENN_PATTERNS, VENN_RESPONSES, VENN_TRIGGER_CHANCE } from './constants';
+import { isDebugMode } from '@starbunk/shared';
+import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
 
-// Initialize services
-const configService = new ConfigurationService();
-const identityService = new BotIdentityService(configService);
-
-// Get Venn's identity using the identity service with message context
-async function getVennIdentity(message?: any): Promise<BotIdentity | null> {
-	return identityService.getVennIdentity(message);
+// Lazily construct services to avoid Prisma at import time
+function getIdentityService(): BotIdentityService | null {
+	try {
+		const cs = new ConfigurationService();
+		return new BotIdentityService(cs);
+	} catch {
+		return null;
+	}
 }
 
-// Get Venn's user ID from configuration
+// Get Venn's identity using the identity service with message context; fallback to E2E test member when available
+async function getVennIdentity(message?: Message): Promise<BotIdentity | null> {
+	const svc = getIdentityService();
+	if (svc) {
+		try {
+			return await svc.getVennIdentity(message);
+		} catch {}
+	}
+	const testId = (process.env.E2E_TEST_MEMBER_ID || process.env.E2E_ID_SIGGREAT) as string | undefined;
+	if (isDebugMode() && testId) {
+		return getBotIdentityFromDiscord({ userId: testId, fallbackName: VENN_BOT_NAME, message });
+	}
+	return null;
+}
+
+// Get Venn's user ID from configuration (debug fallback)
 async function getVennUserId(): Promise<string | null> {
-	return configService.getUserIdByUsername('Venn');
+	if (isDebugMode() && (process.env.E2E_TEST_MEMBER_ID || process.env.E2E_ID_SIGGREAT)) {
+		return (process.env.E2E_TEST_MEMBER_ID || process.env.E2E_ID_SIGGREAT) as string;
+	}
+	try {
+		const cs = new ConfigurationService();
+		return await cs.getUserIdByUsername('Venn');
+	} catch {
+		return null;
+	}
 }
 
 // Trigger for cringe messages
@@ -33,7 +61,7 @@ export const cringeTrigger = createTriggerResponse({
 		}
 		return identity;
 	},
-	priority: 2
+	priority: 2,
 });
 
 // Random trigger for Venn's messages
@@ -49,7 +77,7 @@ export const randomVennTrigger = createTriggerResponse({
 		// Original logic: trigger on Venn's messages with chance OR cringe patterns
 		const vennMessageWithChance = and(
 			fromUser(vennUserId),
-			withChance(VENN_TRIGGER_CHANCE) // 1% chance to trigger
+			withChance(VENN_TRIGGER_CHANCE), // 1% chance to trigger
 		);
 		const cringePattern = matchesPattern(VENN_PATTERNS.Cringe);
 		const combinedCondition = or(vennMessageWithChance, cringePattern);
@@ -65,6 +93,5 @@ export const randomVennTrigger = createTriggerResponse({
 		}
 		return identity;
 	},
-	priority: 1
+	priority: 1,
 });
-

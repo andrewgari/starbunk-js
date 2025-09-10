@@ -1,13 +1,8 @@
-import {
-	AudioPlayer,
-	AudioPlayerStatus,
-	AudioResource,
-	createAudioPlayer,
-	createAudioResource,
-	PlayerSubscription,
-	StreamType,
-	VoiceConnection,
-} from '@discordjs/voice';
+import { createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } from '@discordjs/voice';
+// Local structural types derived from factory return types
+type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
+type PlayerSubscriptionLike = { unsubscribe(): void };
+type VoiceConnectionLike = { subscribe: (p: AudioPlayerLike) => PlayerSubscriptionLike | undefined };
 import ytdl from '@distube/ytdl-core';
 import { logger } from '@starbunk/shared';
 import { Readable } from 'stream';
@@ -15,8 +10,8 @@ import { IdleManager, createIdleManager, IdleManagerConfig } from './services/id
 import { getMusicConfig } from './config/musicConfig';
 
 export class DJCova {
-	private player: AudioPlayer;
-	private resource: AudioResource | undefined;
+	private player: AudioPlayerLike;
+	private resource: ReturnType<typeof createAudioResource> | undefined;
 	private volume: number = 50; // Default volume 50%
 	private idleManager: IdleManager | null = null;
 	private currentGuildId: string | null = null;
@@ -46,7 +41,7 @@ export class DJCova {
 
 		try {
 			let stream: Readable;
-			let inputType: StreamType = StreamType.Arbitrary;
+			let inputType = StreamType.Arbitrary;
 
 			if (typeof source === 'string') {
 				stream = ytdl(source, {
@@ -119,11 +114,11 @@ export class DJCova {
 		return this.volume;
 	}
 
-	getPlayer(): AudioPlayer {
+	getPlayer(): AudioPlayerLike {
 		return this.player;
 	}
 
-	subscribe(channel: VoiceConnection): PlayerSubscription | undefined {
+	subscribe(channel: VoiceConnectionLike): PlayerSubscriptionLike | undefined {
 		logger.debug(`🎧 Subscribing to voice channel`);
 		try {
 			const subscription = channel.subscribe(this.player);
@@ -137,7 +132,7 @@ export class DJCova {
 		}
 	}
 
-	on(status: AudioPlayerStatus, callback: () => void): void {
+	on(status: Parameters<AudioPlayerLike['on']>[0], callback: () => void): void {
 		logger.debug(`📡 Registering listener for ${status} status`);
 		this.player.on(status, callback);
 	}

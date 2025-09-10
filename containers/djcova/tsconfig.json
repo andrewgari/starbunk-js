@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"composite": true,
 		"target": "ES2022",
 		"module": "commonjs",
 		"lib": ["ES2022"],
@@ -12,14 +13,28 @@
 		"resolveJsonModule": true,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
-                "baseUrl": "./src",
-                "paths": {
-                        "@/*": ["*"],
-                        "@shared/*": ["../shared/src/*"],
-                "@starbunk/shared": ["../shared/src"]
-                },
-                "noResolve": true
-        },
-        "include": ["src/commands/play.ts", "src/djCova.ts", "src/typings.d.ts"],
-        "exclude": ["node_modules", "dist", "tests", "**/*.test.ts", "**/__tests__/**"]
+		"isolatedModules": true,
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"baseUrl": "./src",
+		"paths": {
+			"@/*": ["*"],
+			"@starbunk/shared": ["../../packages/shared/src"],
+			"@starbunk/shared/*": ["../../packages/shared/src/*"]
+		}
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"tests",
+		"src/**/__tests__/**",
+		"src/services/personalityNotesServiceDb.ts",
+		"src/cova-bot/enhancedLlmTriggers.ts",
+		"src/cova-bot/llm-triggers.ts",
+		"src/cova-bot/index.ts"
+	],
+	"references": [
+		{ "path": "../../packages/shared" }
+	]
 }

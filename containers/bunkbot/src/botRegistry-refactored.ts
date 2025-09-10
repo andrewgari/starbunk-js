@@ -1,4 +1,4 @@
-import { logger } from '@starbunk/shared';
+import { logger, ensureError } from '@starbunk/shared';
 import { getBotDefaults } from './config/botDefaults';
 import { BaseVoiceBot } from './core/voice-bot-adapter';
 import { ReplyBotImpl } from './core/bot-builder';
@@ -40,7 +40,7 @@ export class BotRegistry {
 			// Log results
 			if (result.bots.length > 0) {
 				logger.info(`[BotRegistry] Successfully loaded ${result.bots.length} reply bots`);
-				result.bots.forEach(bot => logger.info(`   - ${bot.name}`));
+				result.bots.forEach((bot) => logger.info(`   - ${bot.name}`));
 			} else {
 				logger.warn('[BotRegistry] No reply bots discovered');
 			}
@@ -55,7 +55,7 @@ export class BotRegistry {
 
 			return result.bots;
 		} catch (error) {
-			logger.error('[BotRegistry] Critical error discovering reply bots:', error);
+			logger.error('[BotRegistry] Critical error discovering reply bots:', ensureError(error));
 			return [];
 		}
 	}
@@ -112,7 +112,7 @@ export class BotRegistry {
 			logger.info(`[BotRegistry] Set response rate for ${botName} to ${rate}%`);
 			return true;
 		} catch (error) {
-			logger.error(`[BotRegistry] Error setting response rate for ${botName}:`, error);
+			logger.error(`[BotRegistry] Error setting response rate for ${botName}:`, ensureError(error));
 			return false;
 		}
 	}
@@ -155,8 +155,10 @@ export class BotRegistry {
 	}
 
 	private isReplyBot(bot: Bot): bot is ReplyBotImpl {
-		return 'shouldRespond' in bot && 
-			   'processMessage' in bot && 
-			   typeof (bot as ReplyBotImpl).shouldRespond === 'function';
+		return (
+			'shouldRespond' in bot &&
+			'processMessage' in bot &&
+			typeof (bot as ReplyBotImpl).shouldRespond === 'function'
+		);
 	}
 }

@@ -30,6 +30,11 @@ jobs:
       containers: ${{ steps.filter.outputs.containers }}
       tests: ${{ steps.filter.outputs.tests }}
       config: ${{ steps.filter.outputs.config }}
+      # Per-container change flags (direct container dir only, not workflows)
+      bunkbot: ${{ steps.which-containers.outputs.bunkbot }}
+      djcova: ${{ steps.which-containers.outputs.djcova }}
+      covabot: ${{ steps.which-containers.outputs.covabot }}
+      starbunk-dnd: ${{ steps.which-containers.outputs.starbunk-dnd }}
       should-run-quality: ${{ steps.should-run.outputs.result }}
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +46,20 @@ jobs:
         id: filter
         with:
           filters: '.github/path-filters.yml'
+
+      - name: Detect which containers changed (direct)
+        uses: dorny/paths-filter@v3
+        id: which-containers
+        with:
+          filters: |
+            bunkbot:
+              - 'containers/bunkbot/**'
+            djcova:
+              - 'containers/djcova/**'
+            covabot:
+              - 'containers/covabot/**'
+            starbunk-dnd:
+              - 'containers/starbunk-dnd/**'
 
       - name: Determine if quality checks should run
         id: should-run
@@ -84,8 +103,41 @@ jobs:
       - name: Build shared package for type checking
         run: cd containers/shared && npm run build
 
-      - name: Run TypeScript compilation check
-        run: npm run type-check
+      - name: Run TypeScript compilation check (changed areas only)
+        env:
+          BUNKBOT: ${{ needs.detect-changes.outputs.bunkbot }}
+          DJCOVA: ${{ needs.detect-changes.outputs.djcova }}
+          COVABOT: ${{ needs.detect-changes.outputs.covabot }}
+          STARBUNK_DND: ${{ needs.detect-changes.outputs.starbunk-dnd }}
+          SHARED: ${{ needs.detect-changes.outputs.shared }}
+        run: |
+          set -e
+          FAILED=0
+
+          echo "Type-checking shared..."
+          (cd containers/shared && npm run type-check) || FAILED=1
+
+          if [ "$BUNKBOT" = "true" ]; then
+            echo "Type-checking bunkbot..."
+            (cd containers/bunkbot && npm run type-check) || FAILED=1
+          fi
+          if [ "$DJCOVA" = "true" ]; then
+            echo "Type-checking djcova..."
+            (cd containers/djcova && npm run type-check) || FAILED=1
+          fi
+          if [ "$COVABOT" = "true" ]; then
+            echo "Type-checking covabot..."
+            (cd containers/covabot && npm run type-check) || FAILED=1
+          fi
+          if [ "$STARBUNK_DND" = "true" ]; then
+            echo "Type-checking starbunk-dnd..."
+            (cd containers/starbunk-dnd && npm run type-check) || FAILED=1
+          fi
+
+          if [ $FAILED -ne 0 ]; then
+            echo "TypeScript compilation failed in one or more targets"
+            exit 1
+          fi
 
       - name: Run ESLint with detailed output
         run: |
@@ -323,8 +375,33 @@ jobs:
           npm ci
           npm run setup:containers
 
-      - name: Build all containers
-        run: npm run build
+      - name: Build changed containers only
+        env:
+          BUNKBOT: ${{ needs.detect-changes.outputs.bunkbot }}
+          DJCOVA: ${{ needs.detect-changes.outputs.djcova }}
+          COVABOT: ${{ needs.detect-changes.outputs.covabot }}
+          STARBUNK_DND: ${{ needs.detect-changes.outputs.starbunk-dnd }}
+        run: |
+          set -e
+          echo "Building shared first (required by containers)..."
+          (cd containers/shared && npm ci && npm run build)
+
+          if [ "$BUNKBOT" = "true" ]; then
+            echo "Building bunkbot..."
+            (cd containers/bunkbot && npm ci && npm run build) || exit 1
+          fi
+          if [ "$DJCOVA" = "true" ]; then
+            echo "Building djcova..."
+            (cd containers/djcova && npm ci && npm run build) || exit 1
+          fi
+          if [ "$COVABOT" = "true" ]; then
+            echo "Building covabot..."
+            (cd containers/covabot && npm ci && npm run build) || exit 1
+          fi
+          if [ "$STARBUNK_DND" = "true" ]; then
+            echo "Building starbunk-dnd..."
+            (cd containers/starbunk-dnd && npm ci && npm run build) || exit 1
+          fi
 
       - name: Analyze bundle sizes
         run: |

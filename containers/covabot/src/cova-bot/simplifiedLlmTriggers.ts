@@ -1,97 +1,79 @@
 import { Message } from 'discord.js';
-import { logger } from '@starbunk/shared';
+import { logger, ensureError } from '@starbunk/shared';
 import { TriggerCondition, ResponseGenerator } from '../types/triggerResponse';
+import { createLLMService, LLMService } from '../services/llmService';
 
-const DEBUG_MODE = process.env.DEBUG_MODE === 'true';
+// Lazy-initialized LLM service
+let llmService: LLMService | null = null;
+
+function getLLMService(): LLMService {
+	if (!llmService) {
+		llmService = createLLMService();
+	}
+	return llmService;
+}
 
 /**
- * Simplified LLM response decision condition
- * For now, this will use a simple probability-based decision
+ * Pure LLM-driven response decision condition
+ * Uses LLM to determine when Cova would naturally respond - no keyword matching or fallbacks
  */
 export function createLLMResponseDecisionCondition(): TriggerCondition {
 	return async (message: Message): Promise<boolean> => {
 		try {
-			// Simple heuristic: in DEBUG, respond to all non-empty messages from non-bots
-			const content = message.content.toLowerCase();
-
 			// Don't respond to empty or whitespace-only messages
-			if (!content.trim()) {
+			if (!message.content.trim()) {
 				logger.debug('[CovaBot] LLM decision: not responding to empty message');
 				return false;
 			}
 
-			if (DEBUG_MODE) {
-				logger.debug('[CovaBot] LLM decision: DEBUG_MODE active - respond to all non-bot messages');
-				return true;
-			}
+			// Use LLM service to make decision
+			const llmSvc = getLLMService();
+			const shouldRespond = await llmSvc.shouldRespond(message);
 
-			// Always respond to questions
-			if (content.includes('?') || content.startsWith('cova')) {
-				logger.debug('[CovaBot] LLM decision: responding to question or mention');
-				return true;
-			}
-
-			// 10% chance to respond to other messages
-			const shouldRespond = Math.random() < 0.1;
-			logger.debug(`[CovaBot] LLM decision: ${shouldRespond ? 'responding' : 'not responding'} (random)`);
+			logger.debug(`[CovaBot] LLM decision: ${shouldRespond ? 'responding' : 'not responding'}`);
 			return shouldRespond;
 		} catch (error) {
-			logger.error('[CovaBot] Error in LLM decision condition:', error as Error);
+			logger.error('[CovaBot] Error in LLM decision condition:', ensureError(error));
 			return false;
 		}
 	};
 }
 
 /**
- * Simplified LLM emulator response
- * For now, this will return simple responses until the full LLM system is available
- * IMPORTANT: On any error, return an empty string so CovaBot remains silent (no fallbacks)
+ * Pure LLM-driven response generator
+ * Uses only LLM for responses - no keyword matching or fallback responses
+ * IMPORTANT: On any error or LLM failure, return empty string so CovaBot remains silent
  */
 export function createLLMEmulatorResponse(): ResponseGenerator {
 	return async (message: Message): Promise<string> => {
+		const startTime = Date.now();
+
 		try {
-			logger.debug('[CovaBot] Generating simplified response');
+			logger.debug('[CovaBot] Generating pure LLM response');
 
-			const content = message.content.toLowerCase();
+			// Use LLM service for response generation - no fallbacks
+			const llmSvc = getLLMService();
+			const response = await llmSvc.generateResponse(message);
 
-			// Simple response patterns
-			if (content.includes('hello') || content.includes('hi')) {
-				return getRandomResponse(['Hey there! 👋', "Hello! How's it going?", "Hi! What's up?"]);
+			if (response && response.trim()) {
+				const duration = Date.now() - startTime;
+				logger.debug(`[CovaBot] LLM response generated in ${duration}ms`);
+				return response.trim();
 			}
 
-			if (content.includes('?')) {
-				return getRandomResponse([
-					"That's a good question! 🤔",
-					'Hmm, let me think about that...',
-					'Interesting question!',
-				]);
-			}
-
-			if (content.includes('thanks') || content.includes('thank you')) {
-				return getRandomResponse(["You're welcome! 😊", 'No problem!', 'Happy to help!']);
-			}
-
-			// Default responses
-			return getRandomResponse([
-				'I see what you mean!',
-				"That's interesting!",
-				'Tell me more about that.',
-				'I hear you!',
-				'Makes sense to me.',
-			]);
+			// If LLM returns empty or no response, remain silent
+			const duration = Date.now() - startTime;
+			logger.debug(`[CovaBot] LLM returned empty response, remaining silent after ${duration}ms`);
+			return '';
 		} catch (error) {
-			logger.error('[CovaBot] Error generating response (will remain silent):', error as Error);
+			const duration = Date.now() - startTime;
+			logger.error(
+				`[CovaBot] Error generating LLM response after ${duration}ms (remaining silent):`,
+				ensureError(error),
+			);
 			return '';
 		}
 	};
-}
-
-/**
- * Get a random response from an array
- */
-function getRandomResponse(responses: string[]): string {
-	const index = Math.floor(Math.random() * responses.length);
-	return responses[index];
 }
 
 /**

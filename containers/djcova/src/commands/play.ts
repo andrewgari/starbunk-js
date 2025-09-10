@@ -1,6 +1,22 @@
 import { AudioPlayerStatus } from '@discordjs/voice';
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
+// Minimal interaction shape for this command
+type InteractionLike = {
+	options: {
+		getString(name: string): string | null;
+		getAttachment(name: string): { url: string; name: string } | null;
+	};
+	guild?: { id: string } | null;
+	channelId: string;
+	replied?: boolean;
+	deferred?: boolean;
+	reply: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
+	followUp: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
+};
+
 import { Readable } from 'stream';
+import type { ReadableStream as WebReadableStream } from 'node:stream/web';
+
 import {
 	logger,
 	sendErrorResponse,
@@ -11,16 +27,27 @@ import {
 } from '@starbunk/shared';
 import { validateVoiceChannelAccess, createVoiceConnection, subscribePlayerToConnection } from '../utils/voiceUtils';
 import { DJCova } from '../djCova';
+// Local minimal types for builder options
+export type StringOpt = {
+	setName(n: string): StringOpt;
+	setDescription(d: string): StringOpt;
+	setRequired(r: boolean): StringOpt;
+};
+export type AttachmentOpt = { setName(n: string): AttachmentOpt; setDescription(d: string): AttachmentOpt };
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('play')
 	.setDescription('Play a YouTube link or audio file in voice chat')
-	.addStringOption((option) => option.setName('song').setDescription('YouTube video URL').setRequired(false))
-	.addAttachmentOption((option) => option.setName('file').setDescription('Audio file (.mp3, .wav, etc.)'));
+	.addStringOption((option: StringOpt) =>
+		option.setName('song').setDescription('YouTube video URL').setRequired(false),
+	)
+	.addAttachmentOption((option: AttachmentOpt) =>
+		option.setName('file').setDescription('Audio file (.mp3, .wav, etc.)'),
+	);
 
 export default {
 	data: commandBuilder.toJSON(),
-	async execute(interaction: CommandInteraction) {
+	async execute(interaction: InteractionLike) {
 		const attachment = interaction.options.getAttachment('file');
 		const url = interaction.options.getString('song');
 
@@ -81,7 +108,7 @@ export default {
 					await sendErrorResponse(interaction, 'Failed to retrieve the provided audio file.');
 					return;
 				}
-				source = Readable.fromWeb(response.body as unknown as ReadableStream<Uint8Array>);
+				source = Readable.fromWeb(response.body as WebReadableStream);
 			} else {
 				source = url!;
 			}

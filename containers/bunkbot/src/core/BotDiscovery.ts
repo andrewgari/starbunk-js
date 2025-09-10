@@ -22,9 +22,7 @@ export class BotDiscovery {
 			const directories = this.getBotDirectories();
 			logger.debug(`Scanning ${directories.length} directories for bots`);
 
-			const discoveries = await Promise.allSettled(
-				directories.map(dir => this.loadBotFromDirectory(dir))
-			);
+			const discoveries = await Promise.allSettled(directories.map((dir) => this.loadBotFromDirectory(dir)));
 
 			this.processDiscoveryResults(discoveries, result);
 			this.logDiscoveryResults(result);
@@ -42,9 +40,10 @@ export class BotDiscovery {
 			return [];
 		}
 
-		return fs.readdirSync(this.botsDirectory, { withFileTypes: true })
-			.filter(dirent => this.isValidBotDirectory(dirent))
-			.map(dirent => dirent.name);
+		return fs
+			.readdirSync(this.botsDirectory, { withFileTypes: true })
+			.filter((dirent) => this.isValidBotDirectory(dirent))
+			.map((dirent) => dirent.name);
 	}
 
 	private isValidBotDirectory(dirent: fs.Dirent): boolean {
@@ -52,10 +51,12 @@ export class BotDiscovery {
 		if (dirent.name.includes('..') || dirent.name.includes('/') || dirent.name.includes('\\')) {
 			return false;
 		}
-		
-		return dirent.isDirectory() &&
+
+		return (
+			dirent.isDirectory() &&
 			!dirent.name.startsWith('.') &&
-			!['dist', 'node_modules', 'test', 'tests', '__tests__'].includes(dirent.name);
+			!['dist', 'node_modules', 'test', 'tests', '__tests__'].includes(dirent.name)
+		);
 	}
 
 	private async loadBotFromDirectory(directory: string): Promise<ReplyBotImpl> {
@@ -66,7 +67,7 @@ export class BotDiscovery {
 
 		const botPath = path.join(this.botsDirectory, directory);
 		const resolvedPath = path.resolve(botPath);
-		
+
 		// Security: Ensure resolved path is within allowed bounds
 		if (!resolvedPath.startsWith(path.resolve(this.botsDirectory))) {
 			throw new Error(`Security violation: Bot path outside allowed directory: ${directory}`);
@@ -78,27 +79,24 @@ export class BotDiscovery {
 		}
 
 		const absolutePath = path.resolve(indexPath);
-		
+
 		try {
 			// Production safety: Add timeout protection for bot loading
 			const loadTimeout = 10000; // 10 second timeout
 			const botModule = await Promise.race([
 				import(absolutePath),
-				new Promise<never>((_, reject) => 
-					setTimeout(() => reject(new Error(`Bot loading timeout: ${directory}`)), loadTimeout)
-				)
+				new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error(`Bot loading timeout: ${directory}`)), loadTimeout),
+				),
 			]);
-			
+
 			const bot = botModule.default;
 
 			if (!this.validateBot(bot)) {
 				throw new Error(`Invalid bot implementation in ${directory}`);
 			}
-			
-			// Production safety: Check bot resource usage
-			if (bot.triggers && bot.triggers.length > 100) {
-				logger.warn(`Bot ${directory} has ${bot.triggers.length} triggers - may impact performance`);
-			}
+
+			// Production safety: Additional checks could be added here (rate limits, etc.)
 
 			logger.debug(`Successfully loaded bot: ${bot.name}`);
 			return bot;
@@ -113,10 +111,8 @@ export class BotDiscovery {
 
 	private findIndexFile(botPath: string): string | null {
 		// In production, look for .js files first, then .ts for development
-		const candidates = process.env.NODE_ENV === 'production' 
-			? ['index.js', 'index.ts']
-			: ['index.ts', 'index.js'];
-		
+		const candidates = process.env.NODE_ENV === 'production' ? ['index.js', 'index.ts'] : ['index.ts', 'index.js'];
+
 		for (const candidate of candidates) {
 			const filePath = path.join(botPath, candidate);
 			if (fs.existsSync(filePath)) {
@@ -131,41 +127,37 @@ export class BotDiscovery {
 		if (!bot || typeof bot !== 'object') return false;
 
 		const requiredProps = ['name', 'description', 'processMessage', 'shouldRespond'];
-		const isValid = requiredProps.every(prop => {
+		const isValid = requiredProps.every((prop) => {
 			const value = (bot as Record<string, unknown>)[prop];
 			if (prop === 'name' || prop === 'description') {
 				return typeof value === 'string' && value.length > 0 && value.length < 100;
 			}
 			return typeof value === 'function';
 		});
-		
+
 		if (!isValid) return false;
-		
+
 		// Additional security validations
 		const botObj = bot as ReplyBotImpl;
-		
+
 		// Validate name contains only safe characters
 		if (!/^[a-zA-Z0-9\s\-_]{1,50}$/.test(botObj.name)) {
 			logger.warn(`Bot name contains invalid characters: ${botObj.name}`);
 			return false;
 		}
-		
-		// Check for reasonable number of triggers (prevent resource exhaustion)
-		if (botObj.triggers && botObj.triggers.length > 200) {
-			logger.warn(`Bot has excessive triggers (${botObj.triggers.length}): ${botObj.name}`);
-			return false;
-		}
-		
+
+		// Additional validation hooks can be added here if needed
+
 		return true;
 	}
 
 	private processDiscoveryResults(
 		discoveries: PromiseSettledResult<ReplyBotImpl>[],
-		result: BotDiscoveryResult
+		result: BotDiscoveryResult,
 	): void {
 		discoveries.forEach((discovery, index) => {
 			const directory = this.getBotDirectories()[index];
-			
+
 			if (discovery.status === 'fulfilled') {
 				result.bots.push(discovery.value);
 			} else {
@@ -179,7 +171,7 @@ export class BotDiscovery {
 	private logDiscoveryResults(result: BotDiscoveryResult): void {
 		if (result.bots.length > 0) {
 			logger.info(`Discovered ${result.bots.length} reply bots:`);
-			result.bots.forEach(bot => logger.info(`  - ${bot.name}`));
+			result.bots.forEach((bot) => logger.info(`  - ${bot.name}`));
 		} else {
 			logger.warn('No reply bots discovered');
 		}

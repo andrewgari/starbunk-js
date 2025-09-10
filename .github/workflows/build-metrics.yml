@@ -1,12 +1,14 @@
 name: Build Metrics & Monitoring
 
 on:
-  workflow_run:
-    workflows: ["Container Build, Test & Publish"]
-    types: [completed]
-  schedule:
-    # Run weekly to analyze build trends
-    - cron: '0 8 * * 1'  # Monday at 8 AM UTC
+  pull_request:
+    paths:
+      - '.github/workflows/build-metrics.yml'
+      - '.github/workflows/docker-build-reusable.yml'
+      - '.github/workflows/containers-ci.yml'
+      - '.github/actions/**'
+      - 'scripts/ci/**'
+      - 'infra/ci/**'
   workflow_dispatch:
     inputs:
       analysis_period:
@@ -14,14 +16,17 @@ on:
         required: false
         default: '30'
         type: string
+  schedule:
+    # Run weekly to analyze build trends
+    - cron: '0 8 * * 1'  # Monday at 8 AM UTC
 
 jobs:
   analyze-build-performance:
     name: 📊 Analyze Build Performance
     runs-on: ubuntu-latest
-    # Only run for expected trigger events (workflow_run, schedule, workflow_dispatch)
+    # Only run for expected trigger events (pull_request, schedule, workflow_dispatch)
     if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'pull_request' ||
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch'
     permissions:

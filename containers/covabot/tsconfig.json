@@ -14,9 +14,13 @@
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
 		"isolatedModules": true,
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
 		"baseUrl": "./src",
 		"paths": {
-			"@/*": ["*"]
+			"@/*": ["*"],
+			"@starbunk/shared": ["../../containers/shared/src"],
+			"@starbunk/shared/*": ["../../containers/shared/src/*"]
 		}
 	},
 	"include": ["src/**/*.ts"],

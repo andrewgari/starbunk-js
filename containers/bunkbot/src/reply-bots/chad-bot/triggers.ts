@@ -1,22 +1,50 @@
+import type { Message } from 'discord.js';
+
 import { BotIdentity } from '../../types/botIdentity';
 import { and, fromUser, not, withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { ConfigurationService } from '../../services/configurationService';
 import { BotIdentityService } from '../../services/botIdentityService';
 import { CHAD_RESPONSE, CHAD_RESPONSE_CHANCE } from './constants';
+import { isDebugMode } from '@starbunk/shared';
+import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
 
-// Initialize services
-const configService = new ConfigurationService();
-const identityService = new BotIdentityService(configService);
-
-// Get Chad's identity using the identity service with message context
-async function getChadIdentity(message?: any): Promise<BotIdentity | null> {
-	return identityService.getChadIdentity(message);
+// Lazily construct services to avoid Prisma at import time
+function getIdentityService(): BotIdentityService | null {
+	try {
+		const cs = new ConfigurationService();
+		return new BotIdentityService(cs);
+	} catch {
+		return null;
+	}
 }
 
-// Get Chad's user ID from configuration
+// Get Chad's identity using the identity service with message context; fallback to E2E test member when available
+async function getChadIdentity(message?: Message): Promise<BotIdentity | null> {
+	const svc = getIdentityService();
+	if (svc) {
+		try {
+			return await svc.getChadIdentity(message);
+		} catch {}
+	}
+	const testId = (process.env.E2E_TEST_MEMBER_ID || process.env.E2E_ID_SIGGREAT) as string | undefined;
+	if (isDebugMode() && testId) {
+		return getBotIdentityFromDiscord({ userId: testId, fallbackName: 'Chad', message });
+	}
+	return null;
+}
+
+// Get Chad's user ID from configuration (debug fallback)
 async function getChadUserId(): Promise<string | null> {
-	return configService.getUserIdByUsername('Chad');
+	if (isDebugMode() && (process.env.E2E_TEST_MEMBER_ID || process.env.E2E_ID_SIGGREAT)) {
+		return (process.env.E2E_TEST_MEMBER_ID || process.env.E2E_ID_SIGGREAT) as string;
+	}
+	try {
+		const cs = new ConfigurationService();
+		return await cs.getUserIdByUsername('Chad');
+	} catch {
+		return null;
+	}
 }
 
 // Chad bot trigger - 1% chance to respond, but never responds to the real Chad

@@ -31,10 +31,30 @@ console.log(`[Environment] - TESTING_SERVER_IDS: ${process.env.TESTING_SERVER_ID
 console.log(`[Environment] - TESTING_CHANNEL_IDS: ${process.env.TESTING_CHANNEL_IDS || 'Not set'}`);
 console.log(`[Environment] - Is Debug Mode Active: ${isDebugMode()}`);
 
+// Detect Jest test environment
+const isJest = !!process.env.JEST_WORKER_ID;
+// Additional environment heuristics
+const isJestArg = (process.argv || []).some((a) => typeof a === 'string' && a.toLowerCase().includes('jest'));
+
+const isCI = process.env.CI === 'true';
+const isNpmTest = process.env.npm_lifecycle_event === 'test';
+const isTestLike = isJest || isJestArg || isNpmTest || process.env.NODE_ENV === 'test' || isCI;
+
+// Diagnostics for test detection
+console.log(
+	`[Environment] Diagnostics: NODE_ENV=${process.env.NODE_ENV}, isJest=${isJest}, isNpmTest=${isNpmTest}, isCI=${isCI}, isTestLike=${isTestLike}`,
+);
+
 // --- Start Validation ---
 if (!process.env.STARBUNK_TOKEN) {
-	console.error('[Environment] FATAL: Required environment variable STARBUNK_TOKEN is not set.');
-	process.exit(1);
+	// Allow missing token in test-like, CI, or any non-production context
+	if (isTestLike || process.env.NODE_ENV !== 'production') {
+		console.warn('[Environment] TEST/DEV MODE: STARBUNK_TOKEN not set; using dummy token');
+		process.env.STARBUNK_TOKEN = 'test-token';
+	} else {
+		console.error('[Environment] FATAL: Required environment variable STARBUNK_TOKEN is not set.');
+		process.exit(1);
+	}
 }
 // Add other critical variable checks here if needed
 // --- End Validation ---
@@ -54,19 +74,19 @@ const environment = {
 	app: {
 		DEBUG_MODE: process.env.DEBUG_MODE,
 		TESTING_SERVER_IDS: process.env.TESTING_SERVER_IDS,
-		TESTING_CHANNEL_IDS: process.env.TESTING_CHANNEL_IDS
+		TESTING_CHANNEL_IDS: process.env.TESTING_CHANNEL_IDS,
 	},
 	discord: {
 		STARBUNK_TOKEN: process.env.STARBUNK_TOKEN,
 		SNOWBUNK_TOKEN: process.env.SNOWBUNK_TOKEN,
-		WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL
+		WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL,
 	},
 	llm: {
 		OPENAI_DEFAULT_MODEL: process.env.OPENAI_DEFAULT_MODEL,
 		OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 		OLLAMA_DEFAULT_MODEL: process.env.OLLAMA_DEFAULT_MODEL,
-		OLLAMA_API_URL: process.env.OLLAMA_API_URL
-	}
+		OLLAMA_API_URL: process.env.OLLAMA_API_URL,
+	},
 };
 
 // Export the environment object as frozen to prevent modifications

@@ -1,17 +1,28 @@
 import { isDebugMode } from '@starbunk/shared';
-import { and, fromUser, matchesPattern, or, withChance } from '../../core/conditions';
+import { and, fromUser, matchesPattern, withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { ConfigurationService } from '../../services/configurationService';
 import { BANANA_BOT_PATTERNS, getRandomBananaResponse } from './constants';
 
-// Initialize configuration service
-const configService = new ConfigurationService();
+// Lazily create configuration service to avoid Prisma init at import time
+function getConfigService(): ConfigurationService | null {
+	try {
+		return new ConfigurationService();
+	} catch {
+		return null;
+	}
+}
 
-// Get target user ID based on debug mode
+// Get target user ID based on debug mode (with safe fallbacks for E2E)
 async function getTargetUserId(): Promise<string | null> {
-	// In debug mode, use Cova's ID instead of Venn's for easier testing
+	// In debug mode, prefer E2E test member ID if available
+	if (isDebugMode() && (process.env.E2E_TEST_MEMBER_ID || process.env.E2E_ID_SIGGREAT)) {
+		return (process.env.E2E_TEST_MEMBER_ID || process.env.E2E_ID_SIGGREAT) as string;
+	}
+	const cs = getConfigService();
+	if (!cs) return null;
 	const targetUsername = isDebugMode() ? 'Cova' : 'Venn';
-	return configService.getUserIdByUsername(targetUsername);
+	return cs.getUserIdByUsername(targetUsername);
 }
 
 // Trigger for banana mentions or target user's messages
@@ -34,5 +45,5 @@ export const bananaTrigger = createTriggerResponse({
 		return false;
 	},
 	response: async () => getRandomBananaResponse(),
-	priority: 1
+	priority: 1,
 });

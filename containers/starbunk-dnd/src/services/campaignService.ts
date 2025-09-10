@@ -1,11 +1,120 @@
 import { ChannelType, GuildChannel, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel } from 'discord.js';
 import fs from 'fs/promises';
-import { Campaign } from '../../domain/models';
-import { CampaignMetadata, CampaignRepository, CreateCampaignData } from '../../domain/repositories';
-import { RepositoryFactory } from '../../infrastructure/persistence/repositoryFactory';
+import type { Campaign, GameSystem } from '../types/game';
+
+// Minimal in-memory repository to satisfy types during refactor away from domain/infrastructure layers
+export type CampaignMetadata = {
+	name: string;
+	system: GameSystem;
+	textChannelId: string;
+	voiceChannelId: string;
+	gmId: string;
+	isActive: boolean;
+	adventureId: string;
+	sessions: Array<{
+		date: string;
+		title: string;
+		description?: string;
+		discordEventId?: string;
+		isRecurring?: boolean;
+		recurringInterval?: 'weekly' | 'biweekly' | 'monthly';
+		skippedDates?: string[];
+	}>;
+	characters: Array<{ name: string; class: string }>;
+	reminders: Array<{ message: string; time: string }>;
+};
+
+export type CreateCampaignData = {
+	name: string;
+	system: GameSystem;
+	textChannelId: string;
+	voiceChannelId: string;
+	gmId: string;
+	isActive: boolean;
+	adventureId: string;
+};
+
+interface CampaignRepository {
+	create(data: CreateCampaignData): Promise<Campaign>;
+	findById(id: string): Promise<Campaign | null>;
+	findAll(): Promise<Campaign[]>;
+	update(id: string, updates: Partial<Campaign>): Promise<Campaign>;
+	updateMetadata(id: string, metadata: CampaignMetadata): Promise<void>;
+	getMetadata(id: string): Promise<CampaignMetadata | null>;
+}
+
+class InMemoryCampaignRepository implements CampaignRepository {
+	private static instance: InMemoryCampaignRepository;
+	private campaigns = new Map<string, Campaign>();
+	private metadata = new Map<string, CampaignMetadata>();
+
+	static getInstance(): InMemoryCampaignRepository {
+		if (!this.instance) this.instance = new InMemoryCampaignRepository();
+		return this.instance;
+	}
+
+	async create(data: CreateCampaignData): Promise<Campaign> {
+		const id = data.textChannelId; // stable unique id per text channel
+		const now = new Date();
+		const campaign: Campaign = {
+			id,
+			name: data.name,
+			system: data.system,
+			gmId: data.gmId,
+			textChannelId: data.textChannelId,
+			voiceChannelId: data.voiceChannelId,
+			adventureId: data.adventureId,
+			isActive: data.isActive,
+			createdAt: now,
+			updatedAt: now,
+		};
+		this.campaigns.set(id, campaign);
+		// initialize empty metadata if not set later by updateMetadata
+		if (!this.metadata.has(id)) {
+			this.metadata.set(id, {
+				name: data.name,
+				system: data.system,
+				textChannelId: data.textChannelId,
+				voiceChannelId: data.voiceChannelId,
+				gmId: data.gmId,
+				isActive: data.isActive,
+				adventureId: data.adventureId,
+				sessions: [],
+				characters: [],
+				reminders: [],
+			});
+		}
+		return campaign;
+	}
+
+	async findById(id: string): Promise<Campaign | null> {
+		return this.campaigns.get(id) ?? null;
+	}
+
+	async findAll(): Promise<Campaign[]> {
+		return Array.from(this.campaigns.values());
+	}
+
+	async update(id: string, updates: Partial<Campaign>): Promise<Campaign> {
+		const existing = this.campaigns.get(id);
+		if (!existing) throw new Error(`Campaign ${id} not found`);
+		const updated: Campaign = { ...existing, ...updates, updatedAt: new Date() };
+		this.campaigns.set(id, updated);
+		return updated;
+	}
+
+	async updateMetadata(id: string, metadata: CampaignMetadata): Promise<void> {
+		if (!this.campaigns.has(id)) throw new Error(`Campaign ${id} not found`);
+		this.metadata.set(id, metadata);
+	}
+
+	async getMetadata(id: string): Promise<CampaignMetadata | null> {
+		return this.metadata.get(id) ?? null;
+	}
+}
 import { getDiscordService } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
-import { GameSystem, SUPPORTED_SYSTEMS } from '../types/game';
+import { SUPPORTED_SYSTEMS } from '../types/game';
 import { CampaignFileService } from './campaignFileService';
 
 export class CampaignService {
@@ -14,8 +123,7 @@ export class CampaignService {
 	private fileService: CampaignFileService;
 
 	private constructor() {
-		const factory = RepositoryFactory.getInstance();
-		this.campaignRepository = factory.getCampaignRepository();
+		this.campaignRepository = InMemoryCampaignRepository.getInstance();
 		this.fileService = CampaignFileService.getInstance();
 	}
 
@@ -31,16 +139,18 @@ export class CampaignService {
 		name: string,
 		system: GameSystem,
 		gmId: string,
-		existingVoiceChannel?: GuildChannel
+		existingVoiceChannel?: GuildChannel,
 	): Promise<Campaign> {
 		const guild = channel.guild;
 
 		// Use existing voice channel or create a new one
-		const voiceChannel = existingVoiceChannel || await guild.channels.create({
-			name: `${name}-voice`,
-			type: ChannelType.GuildVoice,
-			parent: channel.parent
-		});
+		const voiceChannel =
+			existingVoiceChannel ||
+			(await guild.channels.create({
+				name: `${name}-voice`,
+				type: ChannelType.GuildVoice,
+				parent: channel.parent,
+			}));
 
 		// Create campaign with both channel IDs
 		const campaignData: CreateCampaignData = {
@@ -50,7 +160,7 @@ export class CampaignService {
 			voiceChannelId: voiceChannel.id,
 			gmId,
 			isActive: true,
-			adventureId: 'default'
+			adventureId: 'default',
 		};
 
 		// Create campaign
@@ -67,11 +177,13 @@ export class CampaignService {
 			adventureId: 'default',
 			sessions: [],
 			characters: [],
-			reminders: []
+			reminders: [],
 		};
 
 		await this.campaignRepository.updateMetadata(campaign.id, metadata);
-		logger.info(`Created new campaign ${name} with text channel ${channel.id} and voice channel ${voiceChannel.id}`);
+		logger.info(
+			`Created new campaign ${name} with text channel ${channel.id} and voice channel ${voiceChannel.id}`,
+		);
 
 		return campaign;
 	}
@@ -126,7 +238,7 @@ export class CampaignService {
 		title: string,
 		description?: string,
 		isRecurring?: boolean,
-		recurringInterval?: 'weekly' | 'biweekly' | 'monthly'
+		recurringInterval?: 'weekly' | 'biweekly' | 'monthly',
 	): Promise<void> {
 		const campaign = await this.campaignRepository.findById(campaignId);
 		if (!campaign) {
@@ -152,19 +264,22 @@ export class CampaignService {
 			scheduledStartTime: eventDate,
 			privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
 			entityType: GuildScheduledEventEntityType.Voice,
-			channel: channel
+			channel: channel,
 		});
 
 		// Update campaign metadata
-		metadata.sessions = [...metadata.sessions, {
-			date,
-			title,
-			description,
-			discordEventId: event.id,
-			isRecurring,
-			recurringInterval,
-			skippedDates: []
-		}];
+		metadata.sessions = [
+			...metadata.sessions,
+			{
+				date,
+				title,
+				description,
+				discordEventId: event.id,
+				isRecurring,
+				recurringInterval,
+				skippedDates: [],
+			},
+		];
 
 		await this.campaignRepository.updateMetadata(campaignId, metadata);
 		logger.info(`Scheduled session for campaign ${campaign.name} on ${date}`);
@@ -179,7 +294,7 @@ export class CampaignService {
 		const metadata = await this.getCampaignMetadata(campaignId);
 
 		// Find the recurring session that would occur on this date
-		const session = metadata.sessions.find(s => s.isRecurring && this.isSessionOnDate(s, date));
+		const session = metadata.sessions.find((s) => s.isRecurring && this.isSessionOnDate(s, date));
 		if (!session) {
 			throw new Error('No recurring session found for this date');
 		}
@@ -273,7 +388,10 @@ export class CampaignService {
 						campaigns.push(campaign);
 					}
 				} catch (error) {
-					logger.error(`Error loading campaign from directory ${dir}:`, error instanceof Error ? error : new Error(String(error)));
+					logger.error(
+						`Error loading campaign from directory ${dir}:`,
+						error instanceof Error ? error : new Error(String(error)),
+					);
 					// Continue with other campaigns even if one fails
 				}
 			}
@@ -299,7 +417,7 @@ export class CampaignService {
 			voiceChannelId: voiceChannel.id,
 			gmId: textChannel.guild.ownerId, // Default to server owner as GM
 			isActive: true,
-			adventureId: 'default'
+			adventureId: 'default',
 		};
 
 		await this.campaignRepository.create(campaignData);

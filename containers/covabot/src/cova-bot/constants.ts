@@ -3,35 +3,44 @@
 export const COVA_BOT_NAME = 'CovaBot';
 
 export const COVA_BOT_AVATARS = {
-	Default: 'https://i.imgur.com/NtfJZP5.png'
+	Default: 'https://i.imgur.com/NtfJZP5.png',
 };
 
 export const COVA_BOT_PATTERNS = {
 	Mention: /\b(cova|covadax|cove|covs|covie)\b/i,
-	Question: /\b(cova|covadax|cove|covs|covie).*(\?|what|how|why|when|where|who|which|is|are|can|could|should|would|will)/i,
-	AtMention: /<@!?139592376443338752>/
+	Question:
+		/\b(cova|covadax|cove|covs|covie).*(\?|what|how|why|when|where|who|which|is|are|can|could|should|would|will)/i,
+	AtMention: /<@!?139592376443338752>/,
 };
 
 export const COVA_BOT_CONFIG = {
-	ResponseRate: 0,
+	// Response rates by context type
+	ResponseRates: {
+		HighInterest: 100, // Technical topics, direct questions, expertise areas
+		DirectEngagement: 100, // Mentions, direct questions to Cova
+		ModerateInterest: 40, // Gaming, comics, general programming
+		DebugMode: 20, // Reduced from 100% to prevent spam
+		Baseline: 5, // General conversation baseline
+	},
 	// Cooldown periods for rate limiting
 	Cooldowns: {
 		ConversationTimeout: 60, // seconds
 		CacheDecisionTimeout: 30, // seconds
-		CacheCleanupThreshold: 20 // entries
-	}
+		CacheCleanupThreshold: 20, // entries
+	},
 };
 
 export const COVA_BOT_FALLBACK_RESPONSES = [
 	"Yeah, that's pretty cool.",
-	"Interesting.",
-	"Hmm, I see what you mean.",
-	"I'm not sure about that.",
+	'Hmm, interesting.',
+	'I see what you mean.',
 	"That's wild.",
-	"Neat.",
-	"lol",
-	"👀",
-	"Tell me more about that."
+	'Neat.',
+	'lol yeah',
+	'Tell me more about that.',
+	'Makes sense to me.',
+	'I hear you.',
+	'Yeah, totally.',
 ];
 
 export const COVA_BOT_PROMPTS = {
@@ -194,7 +203,13 @@ You are analyzing whether Cova would naturally respond to a Discord message base
 - Automated bot messages or system notifications
 
 Respond with only: YES, LIKELY, UNLIKELY, or NO based on this analysis.
-	`
+	`,
+
+	// LLM Generation prompt for Ollama/OpenAI
+	LLMGenerationPrompt: (messageContent: string, context?: string) => {
+		const contextPart = context ? ` Context: ${context}` : '';
+		return `You are Cova, a friendly AI personality in a Discord server. Respond naturally to: "${messageContent}"${contextPart}`;
+	},
 };
 
 // Constants for Cova Bot

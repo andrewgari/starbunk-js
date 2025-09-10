@@ -3,6 +3,9 @@
 	"version": "1.0.0",
 	"description": "CovaBot - AI personality bot container",
 	"main": "dist/index-minimal.js",
+	"engines": {
+		"node": ">=18"
+	},
 	"scripts": {
 		"build": "tsc && tsc-alias",
 		"start": "node dist/index-minimal.js",

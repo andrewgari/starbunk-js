@@ -1,18 +1,39 @@
-import { BehaviorSubject, Observable } from 'rxjs';
 import { logger } from '@starbunk/shared';
 import { QueryContext, StorageError, StorageItem, StoragePath } from '../types/storage';
 import { FileStorageAdapter } from './fileStorageAdapter';
+
+// Minimal observable implementation to avoid external rxjs dependency
+type Unsubscribe = { unsubscribe: () => void };
+type ObservableLike<T> = { subscribe: (fn: (v: T) => void) => Unsubscribe };
+class SimpleSubject<T> {
+	private listeners: Array<(v: T) => void> = [];
+	next(value: T) {
+		for (const l of this.listeners) l(value);
+	}
+	asObservable(): ObservableLike<T> {
+		return {
+			subscribe: (fn: (v: T) => void): Unsubscribe => {
+				this.listeners.push(fn);
+				return {
+					unsubscribe: () => {
+						this.listeners = this.listeners.filter((f) => f !== fn);
+					},
+				};
+			},
+		};
+	}
+}
 
 export class StorageService {
 	private static instance: StorageService;
 	private fileAdapter: FileStorageAdapter;
 	private cache: Map<string, StorageItem>;
-	private storageUpdates: BehaviorSubject<void>;
+	private storageUpdates: SimpleSubject<void>;
 
 	private constructor() {
 		this.fileAdapter = FileStorageAdapter.getInstance();
 		this.cache = new Map();
-		this.storageUpdates = new BehaviorSubject<void>(undefined);
+		this.storageUpdates = new SimpleSubject<void>();
 
 		// Subscribe to file updates to refresh cache
 		this.fileAdapter.getFileUpdates().subscribe(() => {
@@ -28,13 +49,7 @@ export class StorageService {
 	}
 
 	private generateStorageKey(path: StoragePath): string {
-		return [
-			path.campaignId,
-			path.adventureId,
-			path.scope,
-			path.category,
-			...(path.subPath || [])
-		].join('/');
+		return [path.campaignId, path.adventureId, path.scope, path.category, ...(path.subPath || [])].join('/');
 	}
 
 	private validateAccess(path: StoragePath, isGM: boolean): boolean {
@@ -55,7 +70,7 @@ export class StorageService {
 		content: string,
 		userId: string,
 		isGM: boolean,
-		tags: string[] = []
+		tags: string[] = [],
 	): Promise<StorageItem> {
 		if (!this.validateAccess(path, isGM)) {
 			throw new StorageError('Unauthorized access', 'UNAUTHORIZED');
@@ -70,8 +85,8 @@ export class StorageService {
 				createdAt: new Date(),
 				updatedAt: new Date(),
 				createdBy: userId,
-				tags
-			}
+				tags,
+			},
 		};
 
 		// Store in file system
@@ -86,7 +101,7 @@ export class StorageService {
 		return item;
 	}
 
-	public getStorageUpdates(): Observable<void> {
+	public getStorageUpdates(): ObservableLike<void> {
 		return this.storageUpdates.asObservable();
 	}
 
@@ -94,7 +109,7 @@ export class StorageService {
 		// First, try to get items from cache
 		const items = await this.getAllItems();
 
-		return items.filter(item => {
+		return items.filter((item) => {
 			// Filter by campaign and adventure
 			if (item.path.campaignId !== context.campaignId) return false;
 			if (item.path.adventureId !== context.adventureId) return false;
@@ -105,9 +120,7 @@ export class StorageService {
 			// Search content and tags
 			const searchText = context.query.toLowerCase();
 			const contentMatch = item.content.toLowerCase().includes(searchText);
-			const tagMatch = item.metadata.tags.some(tag =>
-				tag.toLowerCase().includes(searchText)
-			);
+			const tagMatch = item.metadata.tags.some((tag) => tag.toLowerCase().includes(searchText));
 
 			return contentMatch || tagMatch;
 		});
@@ -120,10 +133,10 @@ export class StorageService {
 				campaignId: '*',
 				adventureId: '*',
 				scope: 'public',
-				category: 'context'
+				category: 'context',
 			});
 
-			items.forEach(item => {
+			items.forEach((item) => {
 				const key = this.generateStorageKey(item.path);
 				this.cache.set(key, item);
 			});
@@ -132,10 +145,7 @@ export class StorageService {
 		return Array.from(this.cache.values());
 	}
 
-	public async getItem(
-		path: StoragePath,
-		isGM: boolean
-	): Promise<StorageItem | undefined> {
+	public async getItem(path: StoragePath, isGM: boolean): Promise<StorageItem | undefined> {
 		if (!this.validateAccess(path, isGM)) {
 			throw new StorageError('Unauthorized access', 'UNAUTHORIZED');
 		}
@@ -154,10 +164,7 @@ export class StorageService {
 		return item;
 	}
 
-	public async deleteItem(
-		path: StoragePath,
-		isGM: boolean
-	): Promise<void> {
+	public async deleteItem(path: StoragePath, isGM: boolean): Promise<void> {
 		if (!this.validateAccess(path, isGM)) {
 			throw new StorageError('Unauthorized access', 'UNAUTHORIZED');
 		}
@@ -181,12 +188,7 @@ export class StorageService {
 		logger.info(`Deleted item at ${key}`);
 	}
 
-	public async updateItem(
-		path: StoragePath,
-		content: string,
-		isGM: boolean,
-		tags?: string[]
-	): Promise<StorageItem> {
+	public async updateItem(path: StoragePath, content: string, isGM: boolean, tags?: string[]): Promise<StorageItem> {
 		if (!this.validateAccess(path, isGM)) {
 			throw new StorageError('Unauthorized access', 'UNAUTHORIZED');
 		}
@@ -204,8 +206,8 @@ export class StorageService {
 			metadata: {
 				...existing.metadata,
 				updatedAt: new Date(),
-				tags: tags || existing.metadata.tags
-			}
+				tags: tags || existing.metadata.tags,
+			},
 		};
 
 		// Update in file system

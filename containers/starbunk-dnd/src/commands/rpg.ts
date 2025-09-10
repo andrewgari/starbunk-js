@@ -1,10 +1,4 @@
-import {
-	ChannelType,
-	ChatInputCommandInteraction,
-	GuildChannel,
-	GuildMember,
-	SlashCommandBuilder
-} from 'discord.js';
+import { ChannelType, ChatInputCommandInteraction, GuildChannel, GuildMember, SlashCommandBuilder } from 'discord.js';
 import { logger } from '@starbunk/shared';
 import { CampaignService } from '../services/campaignService';
 import { HelpService } from '../services/helpService';
@@ -16,21 +10,18 @@ import { getCampaignContext, getCampaignPermissions } from '../utils/campaignChe
 const data = new SlashCommandBuilder()
 	.setName('rpg')
 	.setDescription('RPG game management commands')
-	.addSubcommandGroup(group =>
+	.addSubcommandGroup((group) =>
 		group
 			.setName('campaign')
 			.setDescription('Campaign management commands')
-			.addSubcommand(subcommand =>
+			.addSubcommand((subcommand) =>
 				subcommand
 					.setName('create')
 					.setDescription('Create a new campaign')
-					.addStringOption(option =>
-						option
-							.setName('name')
-							.setDescription('Campaign name')
-							.setRequired(true)
+					.addStringOption((option) =>
+						option.setName('name').setDescription('Campaign name').setRequired(true),
 					)
-					.addStringOption(option =>
+					.addStringOption((option) =>
 						option
 							.setName('system')
 							.setDescription('Game system')
@@ -38,172 +29,113 @@ const data = new SlashCommandBuilder()
 							.addChoices(
 								...Object.entries(SUPPORTED_SYSTEMS).map(([key, system]) => ({
 									name: system.name,
-									value: key
-								}))
-							)
+									value: key,
+								})),
+							),
 					)
-					.addStringOption(option =>
-						option
-							.setName('help')
-							.setDescription('Get help with this command')
-					)
+					.addStringOption((option) => option.setName('help').setDescription('Get help with this command')),
 			)
-			.addSubcommand(subcommand =>
+			.addSubcommand((subcommand) =>
 				subcommand
 					.setName('list')
 					.setDescription('List all campaigns')
-					.addStringOption(option =>
-						option
-							.setName('help')
-							.setDescription('Get help with this command')
-					)
+					.addStringOption((option) => option.setName('help').setDescription('Get help with this command')),
 			)
-			.addSubcommand(subcommand =>
+			.addSubcommand((subcommand) =>
 				subcommand
 					.setName('set-active')
 					.setDescription('Set a campaign as active in the current channel')
-					.addStringOption(option =>
-						option
-							.setName('campaign')
-							.setDescription('Campaign name')
-							.setRequired(true)
+					.addStringOption((option) =>
+						option.setName('campaign').setDescription('Campaign name').setRequired(true),
 					)
-					.addStringOption(option =>
-						option
-							.setName('help')
-							.setDescription('Get help with this command')
-					)
+					.addStringOption((option) => option.setName('help').setDescription('Get help with this command')),
 			)
-			.addSubcommand(subcommand =>
+			.addSubcommand((subcommand) =>
 				subcommand
 					.setName('rename')
 					.setDescription('Rename the current campaign')
-					.addStringOption(option =>
-						option
-							.setName('name')
-							.setDescription('New campaign name')
-							.setRequired(true)
+					.addStringOption((option) =>
+						option.setName('name').setDescription('New campaign name').setRequired(true),
 					)
-					.addStringOption(option =>
-						option
-							.setName('help')
-							.setDescription('Get help with this command')
-					)
+					.addStringOption((option) => option.setName('help').setDescription('Get help with this command')),
 			)
-			.addSubcommand(subcommand =>
+			.addSubcommand((subcommand) =>
 				subcommand
 					.setName('link-channels')
 					.setDescription('Link text and voice channels for a campaign')
-					.addChannelOption(option =>
-						option
-							.setName('voice_channel')
-							.setDescription('Voice channel to link')
-							.setRequired(true)
+					.addChannelOption((option) =>
+						option.setName('voice_channel').setDescription('Voice channel to link').setRequired(true),
 					)
-					.addStringOption(option =>
-						option
-							.setName('help')
-							.setDescription('Get help with this command')
-					)
-			)
+					.addStringOption((option) => option.setName('help').setDescription('Get help with this command')),
+			),
 	)
-	.addSubcommandGroup(group =>
+	.addSubcommandGroup((group) =>
 		group
 			.setName('vector')
 			.setDescription('Vector database management commands')
-			.addSubcommand(subcommand =>
+			.addSubcommand((subcommand) =>
 				subcommand
 					.setName('build')
 					.setDescription('Build vector database for the current campaign')
-					.addBooleanOption(option =>
-						option
-							.setName('include_gm')
-							.setDescription('Include GM-only content in the vector database')
+					.addBooleanOption((option) =>
+						option.setName('include_gm').setDescription('Include GM-only content in the vector database'),
 					)
-					.addStringOption(option =>
-						option
-							.setName('model')
-							.setDescription('Vector model to use (optional)')
+					.addStringOption((option) =>
+						option.setName('model').setDescription('Vector model to use (optional)'),
 					)
-					.addIntegerOption(option =>
-						option
-							.setName('chunk_size')
-							.setDescription('Size of text chunks (optional)')
+					.addIntegerOption((option) =>
+						option.setName('chunk_size').setDescription('Size of text chunks (optional)'),
 					)
-					.addStringOption(option =>
-						option
-							.setName('help')
-							.setDescription('Get help with this command')
-					)
-			)
+					.addStringOption((option) => option.setName('help').setDescription('Get help with this command')),
+			),
 	)
-	.addSubcommandGroup(group =>
+	.addSubcommandGroup((group) =>
 		group
 			.setName('game')
 			.setDescription('Game management commands')
-			.addSubcommand(subcommand =>
+			.addSubcommand((subcommand) =>
 				subcommand
 					.setName('ask')
 					.setDescription('Ask a question about the game')
-					.addStringOption(option =>
-						option
-							.setName('question')
-							.setDescription('Your question about the game')
-							.setRequired(true)
+					.addStringOption((option) =>
+						option.setName('question').setDescription('Your question about the game').setRequired(true),
 					)
-					.addStringOption(option =>
-						option
-							.setName('help')
-							.setDescription('Get help with this command')
-					)
-			)
+					.addStringOption((option) => option.setName('help').setDescription('Get help with this command')),
+			),
 	)
-	.addSubcommandGroup(group =>
+	.addSubcommandGroup((group) =>
 		group
 			.setName('session')
 			.setDescription('Session management commands')
-			.addSubcommand(subcommand =>
+			.addSubcommand((subcommand) =>
 				subcommand
 					.setName('schedule')
 					.setDescription('Schedule a gaming session')
-					.addStringOption(option =>
+					.addStringOption((option) =>
 						option
 							.setName('date')
 							.setDescription('Session date and time (YYYY-MM-DD HH:mm)')
-							.setRequired(true)
+							.setRequired(true),
 					)
-					.addStringOption(option =>
-						option
-							.setName('title')
-							.setDescription('Session title')
-							.setRequired(true)
+					.addStringOption((option) =>
+						option.setName('title').setDescription('Session title').setRequired(true),
 					)
-					.addStringOption(option =>
-						option
-							.setName('description')
-							.setDescription('Session description')
+					.addStringOption((option) => option.setName('description').setDescription('Session description'))
+					.addBooleanOption((option) =>
+						option.setName('recurring').setDescription('Whether this is a recurring session'),
 					)
-					.addBooleanOption(option =>
-						option
-							.setName('recurring')
-							.setDescription('Whether this is a recurring session')
-					)
-					.addStringOption(option =>
+					.addStringOption((option) =>
 						option
 							.setName('interval')
 							.setDescription('Recurring interval (if recurring)')
 							.addChoices(
 								{ name: 'Weekly', value: 'weekly' },
 								{ name: 'Biweekly', value: 'biweekly' },
-								{ name: 'Monthly', value: 'monthly' }
-							)
+								{ name: 'Monthly', value: 'monthly' },
+							),
 					)
-					.addStringOption(option =>
-						option
-							.setName('help')
-							.setDescription('Get help with this command')
-					)
-			)
+					.addStringOption((option) => option.setName('help').setDescription('Get help with this command')),
+			),
 	);
 
 export default {
@@ -229,8 +161,9 @@ export default {
 			const activeCampaign = await campaignService.getCampaignByChannel(interaction.channelId);
 			if (!activeCampaign && !skipCampaignCheck) {
 				await interaction.reply({
-					content: 'This channel is not associated with any active campaign. Use `/rpg campaign create` to create one.',
-					ephemeral: true
+					content:
+						'This channel is not associated with any active campaign. Use `/rpg campaign create` to create one.',
+					ephemeral: true,
 				});
 				return;
 			}
@@ -238,10 +171,10 @@ export default {
 			// Handle help option for any subcommand
 			const helpTopic = interaction.options.getString('help');
 			if (helpTopic !== null) {
-				const helpContent = await helpService.getRelevantHelp(`${group} ${subcommand}`, permissions.canManageCampaign);
+				const helpContent = await helpService.getRelevantHelp(`${group} ${subcommand}`, permissions.canManage);
 				await interaction.reply({
 					content: helpService.formatHelpContent(helpContent),
-					ephemeral: true
+					ephemeral: true,
 				});
 				return;
 			}
@@ -250,10 +183,10 @@ export default {
 			if (group === 'campaign') {
 				switch (subcommand) {
 					case 'create': {
-						if (!permissions.canManageCampaign) {
+						if (!permissions.canManage) {
 							await interaction.reply({
 								content: 'You do not have permission to create campaigns.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
@@ -265,7 +198,7 @@ export default {
 						if (!system) {
 							await interaction.reply({
 								content: `Invalid system ID "${systemId}". Supported systems are: ${Object.keys(SUPPORTED_SYSTEMS).join(', ')}`,
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
@@ -273,7 +206,7 @@ export default {
 						if (!interaction.channel?.isTextBased() || !(interaction.channel instanceof GuildChannel)) {
 							await interaction.reply({
 								content: 'This command can only be used in guild text channels.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
@@ -284,7 +217,7 @@ export default {
 							if (existingCampaign) {
 								await interaction.reply({
 									content: `There is already a campaign "${existingCampaign.name}" active in this channel. Please use a different channel or deactivate the existing campaign first.`,
-									ephemeral: true
+									ephemeral: true,
 								});
 								return;
 							}
@@ -293,18 +226,21 @@ export default {
 								interaction.channel,
 								name,
 								system,
-								interaction.user.id
+								interaction.user.id,
 							);
 
 							await interaction.reply({
 								content: `Campaign "${name}" created successfully! Use \`/rpg campaign set-active\` to set it as the active campaign in a channel.`,
-								ephemeral: true
+								ephemeral: true,
 							});
 						} catch (error: unknown) {
-							logger.error('Error creating campaign:', error instanceof Error ? error : new Error(String(error)));
+							logger.error(
+								'Error creating campaign:',
+								error instanceof Error ? error : new Error(String(error)),
+							);
 							await interaction.reply({
 								content: `Failed to create campaign: ${error instanceof Error ? error.message : 'Unknown error'}`,
-								ephemeral: true
+								ephemeral: true,
 							});
 						}
 						break;
@@ -315,60 +251,58 @@ export default {
 						if (campaigns.length === 0) {
 							await interaction.reply({
 								content: 'No campaigns found. Use `/rpg campaign create` to create one.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
 
-						const campaignList = campaigns
-							.map(c => `• **${c.name}** (${c.system.name})`)
-							.join('\n');
+						const campaignList = campaigns.map((c) => `• **${c.name}** (${c.system.name})`).join('\n');
 
 						await interaction.reply({
 							content: `**Available Campaigns:**\n${campaignList}`,
-							ephemeral: true
+							ephemeral: true,
 						});
 						break;
 					}
 
 					case 'set-active': {
-						if (!permissions.canManageCampaign) {
+						if (!permissions.canManage) {
 							await interaction.reply({
 								content: 'You do not have permission to manage campaigns.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
 
 						const campaignName = interaction.options.getString('campaign', true);
 						const campaigns = await campaignService.listCampaigns();
-						const campaign = campaigns.find(c => c.name === campaignName);
+						const campaign = campaigns.find((c) => c.name === campaignName);
 
 						if (!campaign) {
 							await interaction.reply({
 								content: `Campaign "${campaignName}" not found.`,
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
 
 						await campaignService.updateCampaign(campaign.id, {
 							textChannelId: interaction.channelId,
-							isActive: true
+							isActive: true,
 						});
 
 						await interaction.reply({
 							content: `Campaign "${campaignName}" is now active in this channel.`,
-							ephemeral: true
+							ephemeral: true,
 						});
 						break;
 					}
 
 					case 'rename': {
-						if (!permissions.canManageCampaign) {
+						if (!permissions.canManage) {
 							await interaction.reply({
 								content: 'You do not have permission to manage campaigns.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
@@ -376,7 +310,7 @@ export default {
 						if (!activeCampaign) {
 							await interaction.reply({
 								content: 'No active campaign in this channel.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
@@ -386,16 +320,16 @@ export default {
 
 						await interaction.reply({
 							content: `Campaign renamed to "${newName}".`,
-							ephemeral: true
+							ephemeral: true,
 						});
 						break;
 					}
 
 					case 'link-channels': {
-						if (!permissions.canManageCampaign) {
+						if (!permissions.canManage) {
 							await interaction.reply({
 								content: 'You do not have permission to manage campaigns.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
@@ -405,7 +339,7 @@ export default {
 						if (voiceChannel.type !== ChannelType.GuildVoice || !(voiceChannel instanceof GuildChannel)) {
 							await interaction.reply({
 								content: 'Please select a voice channel from this server.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
@@ -413,19 +347,24 @@ export default {
 						if (!interaction.channel?.isTextBased() || !(interaction.channel instanceof GuildChannel)) {
 							await interaction.reply({
 								content: 'This command can only be used in server text channels.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
 
 						// Check if either channel is already linked to a campaign
-						const existingCampaignByText = await campaignService.getCampaignByChannel(interaction.channelId);
-						const existingCampaignByVoice = await campaignService.getCampaignByVoiceChannel(voiceChannel.id);
+						const existingCampaignByText = await campaignService.getCampaignByChannel(
+							interaction.channelId,
+						);
+						const existingCampaignByVoice = await campaignService.getCampaignByVoiceChannel(
+							voiceChannel.id,
+						);
 
 						if (existingCampaignByText || existingCampaignByVoice) {
 							await interaction.reply({
-								content: 'One or both channels are already linked to a campaign. Please unlink them first.',
-								ephemeral: true
+								content:
+									'One or both channels are already linked to a campaign. Please unlink them first.',
+								ephemeral: true,
 							});
 							return;
 						}
@@ -434,7 +373,7 @@ export default {
 
 						await interaction.reply({
 							content: `Successfully linked text channel ${interaction.channel} with voice channel ${voiceChannel}!`,
-							ephemeral: true
+							ephemeral: true,
 						});
 						break;
 					}
@@ -445,10 +384,10 @@ export default {
 			if (group === 'vector') {
 				switch (subcommand) {
 					case 'build': {
-						if (!permissions.canManageCampaign) {
+						if (!permissions.canManage) {
 							await interaction.reply({
 								content: 'Only GMs can manage the vector database.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
@@ -461,26 +400,29 @@ export default {
 							const chunkSize = interaction.options.getInteger('chunk_size');
 
 							const vectorService = VectorService.getInstance();
-							if (!permissions.campaignId) {
+							if (!activeCampaign?.id) {
 								await interaction.editReply({
-									content: 'No active campaign found. Please select a campaign first.'
+									content: 'No active campaign found. Please select a campaign first.',
 								});
 								return;
 							}
 
-							await vectorService.generateVectors(permissions.campaignId, {
+							await vectorService.generateVectors(activeCampaign.id, {
 								includeGMContent: includeGM,
 								...(model && { modelName: model }),
-								...(chunkSize && { chunkSize })
+								...(chunkSize && { chunkSize }),
 							});
 
 							await interaction.editReply({
-								content: `Successfully built vector database for campaign.\n${includeGM ? 'GM content included.' : 'Only player content was processed.'}`
+								content: `Successfully built vector database for campaign.\n${includeGM ? 'GM content included.' : 'Only player content was processed.'}`,
 							});
 						} catch (error) {
-							logger.error('Error building vector database:', error instanceof Error ? error : new Error(String(error)));
+							logger.error(
+								'Error building vector database:',
+								error instanceof Error ? error : new Error(String(error)),
+							);
 							await interaction.editReply({
-								content: 'Failed to build vector database. Please check the logs for details.'
+								content: 'Failed to build vector database. Please check the logs for details.',
 							});
 						}
 						break;
@@ -498,37 +440,36 @@ export default {
 							const question = interaction.options.getString('question', true);
 							const vectorService = VectorService.getInstance();
 
-							if (!permissions.campaignId) {
+							if (!activeCampaign?.id) {
 								await interaction.editReply({
-									content: 'No active campaign found. Please select a campaign first.'
+									content: 'No active campaign found. Please select a campaign first.',
 								});
 								return;
 							}
 
-							const results = await vectorService.searchCampaignContent(
-								permissions.campaignId,
-								question,
-								{
-									limit: 3,
-									includeGMContent: permissions.canManageCampaign
-								}
-							);
+							const results = await vectorService.searchCampaignContent(activeCampaign.id, question, {
+								limit: 3,
+								includeGMContent: permissions.canManage,
+							});
 
 							const gameLLMService = await GameLLMService.getInstance();
 							const answer = await gameLLMService.answerQuestion(
 								question,
-								results.map(r => r.text).join('\n\n'),
-								permissions.canManageCampaign,
-								activeCampaign!
+								results.map((r) => r.text).join('\n\n'),
+								permissions.canManage,
+								activeCampaign!,
 							);
 
 							await interaction.editReply({
-								content: answer
+								content: answer,
 							});
 						} catch (error) {
-							logger.error('Error answering game question:', error instanceof Error ? error : new Error(String(error)));
+							logger.error(
+								'Error answering game question:',
+								error instanceof Error ? error : new Error(String(error)),
+							);
 							await interaction.editReply({
-								content: 'Failed to answer your question. Please try again later.'
+								content: 'Failed to answer your question. Please try again later.',
 							});
 						}
 						break;
@@ -540,10 +481,10 @@ export default {
 			if (group === 'session') {
 				switch (subcommand) {
 					case 'schedule': {
-						if (!permissions.canManageCampaign) {
+						if (!permissions.canManage) {
 							await interaction.reply({
 								content: 'Only GMs can schedule sessions.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
@@ -551,7 +492,7 @@ export default {
 						if (!activeCampaign) {
 							await interaction.reply({
 								content: 'No active campaign in this channel.',
-								ephemeral: true
+								ephemeral: true,
 							});
 							return;
 						}
@@ -560,12 +501,15 @@ export default {
 						const title = interaction.options.getString('title', true);
 						const description = interaction.options.getString('description');
 						const isRecurring = interaction.options.getBoolean('recurring') ?? false;
-						const recurringInterval = isRecurring ? interaction.options.getString('interval') as 'weekly' | 'biweekly' | 'monthly' | null : null;
+						const recurringInterval = isRecurring
+							? (interaction.options.getString('interval') as 'weekly' | 'biweekly' | 'monthly' | null)
+							: null;
 
 						if (isRecurring && !recurringInterval) {
 							await interaction.reply({
-								content: 'Please specify a recurring interval (weekly, biweekly, or monthly) for recurring sessions.',
-								ephemeral: true
+								content:
+									'Please specify a recurring interval (weekly, biweekly, or monthly) for recurring sessions.',
+								ephemeral: true,
 							});
 							return;
 						}
@@ -577,18 +521,22 @@ export default {
 								title,
 								description ?? undefined,
 								isRecurring,
-								recurringInterval ?? undefined
+								recurringInterval ?? undefined,
 							);
 
 							await interaction.reply({
 								content: `Session "${title}" scheduled for ${date}${isRecurring ? ` (recurring ${recurringInterval})` : ''}.`,
-								ephemeral: false
+								ephemeral: false,
 							});
 						} catch (error) {
-							logger.error('Error scheduling session:', error instanceof Error ? error : new Error(String(error)));
+							logger.error(
+								'Error scheduling session:',
+								error instanceof Error ? error : new Error(String(error)),
+							);
 							await interaction.reply({
-								content: 'Failed to schedule session. Please check the date format (YYYY-MM-DD HH:mm) and try again.',
-								ephemeral: true
+								content:
+									'Failed to schedule session. Please check the date format (YYYY-MM-DD HH:mm) and try again.',
+								ephemeral: true,
 							});
 						}
 						break;
@@ -601,19 +549,22 @@ export default {
 			try {
 				await interaction.reply({
 					content: 'An error occurred while processing the command. Please try again later.',
-					ephemeral: true
+					ephemeral: true,
 				});
 			} catch (_replyError) {
 				// If we can't reply normally, try to follow up
 				try {
 					await interaction.followUp({
 						content: 'An error occurred while processing the command. Please try again later.',
-						ephemeral: true
+						ephemeral: true,
 					});
 				} catch (followUpError) {
-					logger.error('Failed to respond to command error:', followUpError instanceof Error ? followUpError : new Error(String(followUpError)));
+					logger.error(
+						'Failed to respond to command error:',
+						followUpError instanceof Error ? followUpError : new Error(String(followUpError)),
+					);
 				}
 			}
 		}
-	}
+	},
 };

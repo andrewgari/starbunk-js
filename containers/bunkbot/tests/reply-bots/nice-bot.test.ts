@@ -204,7 +204,7 @@ describe('Nice Bot', () => {
 
 			// Assert: Bot should have the correct name
 			expect(botName).toBe(NICE_BOT_NAME);
-			expect(botName).toBe('BunkBot');
+			expect(botName).toBe('NiceBot');
 		});
-});
+	});
 });

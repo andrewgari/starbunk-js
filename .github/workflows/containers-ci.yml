@@ -1,0 +1,189 @@
+name: Containers CI
+
+on:
+  pull_request:
+    paths:
+      - 'containers/shared/**'
+      - 'containers/covabot/**'
+      - 'containers/bunkbot/**'
+      - 'containers/djcova/**'
+      - '.github/workflows/containers-ci.yml'
+  push:
+    branches:
+      - main
+      - feature/**
+    paths:
+      - 'containers/shared/**'
+      - 'containers/covabot/**'
+      - 'containers/bunkbot/**'
+      - 'containers/djcova/**'
+      - '.github/workflows/containers-ci.yml'
+
+jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    outputs:
+      shared: ${{ steps.filter.outputs.shared }}
+      covabot: ${{ steps.filter.outputs.covabot }}
+      bunkbot: ${{ steps.filter.outputs.bunkbot }}
+      djcova: ${{ steps.filter.outputs.djcova }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared:
+              - 'containers/shared/**'
+              - 'packages/shared/**'
+            covabot:
+              - 'containers/covabot/**'
+            bunkbot:
+              - 'containers/bunkbot/**'
+            djcova:
+              - 'containers/djcova/**'
+
+  shared:
+    name: Shared (tests)
+    needs: changes
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install deps (shared)
+        if: needs.changes.outputs.shared == 'true'
+        run: npm ci
+        working-directory: containers/shared
+
+      - name: Run tests (shared)
+        if: needs.changes.outputs.shared == 'true'
+        run: npm test --silent
+        working-directory: containers/shared
+
+  covabot:
+    name: CovaBot (tests + build)
+    needs: changes
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install deps (shared)
+        if: needs.changes.outputs.covabot == 'true' || needs.changes.outputs.shared == 'true'
+        run: npm ci
+        working-directory: containers/shared
+
+      - name: Build (shared)
+        if: needs.changes.outputs.covabot == 'true' || needs.changes.outputs.shared == 'true'
+        run: npm run build --silent
+        working-directory: containers/shared
+
+      - name: Install deps (covabot)
+        if: needs.changes.outputs.covabot == 'true'
+        run: npm ci
+        working-directory: containers/covabot
+
+      - name: Run tests (covabot)
+        if: needs.changes.outputs.covabot == 'true'
+        run: npm test --silent
+        working-directory: containers/covabot
+
+      - name: Build (covabot)
+        if: needs.changes.outputs.covabot == 'true'
+        run: npm run build --silent
+        working-directory: containers/covabot
+
+  bunkbot:
+    name: BunkBot (tests)
+    needs: changes
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install deps (shared)
+        if: needs.changes.outputs.bunkbot == 'true' || needs.changes.outputs.shared == 'true'
+        run: npm ci
+        working-directory: containers/shared
+
+      - name: Build (shared)
+        if: needs.changes.outputs.bunkbot == 'true' || needs.changes.outputs.shared == 'true'
+        run: npm run build --silent
+        working-directory: containers/shared
+
+      - name: Install deps (bunkbot)
+        if: needs.changes.outputs.bunkbot == 'true'
+        run: npm ci
+        working-directory: containers/bunkbot
+
+      - name: Run tests (bunkbot)
+        if: needs.changes.outputs.bunkbot == 'true'
+        run: npm test --silent
+        working-directory: containers/bunkbot
+
+      # NOTE: Build step intentionally omitted for now to keep scope minimal
+      # and avoid compiling test/refactor files. We can enable after tightening tsconfig.
+
+
+  djcova:
+    name: DJCova (tests + build)
+    needs: changes
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install deps (shared)
+        if: needs.changes.outputs.djcova == 'true' || needs.changes.outputs.shared == 'true'
+        run: npm ci
+        working-directory: containers/shared
+
+      - name: Build (shared)
+        if: needs.changes.outputs.djcova == 'true' || needs.changes.outputs.shared == 'true'
+        run: npm run build --silent
+        working-directory: containers/shared
+
+      - name: Install deps (djcova)
+        if: needs.changes.outputs.djcova == 'true'
+        run: npm ci
+        working-directory: containers/djcova
+
+      - name: Run tests (djcova)
+        if: needs.changes.outputs.djcova == 'true'
+        run: npm test --silent
+        working-directory: containers/djcova
+
+      - name: Build (djcova)
+        if: needs.changes.outputs.djcova == 'true'
+        run: npm run build --silent
+        working-directory: containers/djcova
