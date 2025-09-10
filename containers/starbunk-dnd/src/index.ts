@@ -1,6 +1,5 @@
 // Starbunk-DND - D&D features and Snowbunk bridge container
 import { Events } from 'discord.js';
-import type { CommandInteraction, Interaction } from 'discord.js';
 
 import {
 	logger,
@@ -15,10 +14,24 @@ import {
 	initializeObservability,
 } from '@starbunk/shared';
 
+type ChatInputInteraction = {
+	isChatInputCommand(): boolean;
+	commandName: string;
+	reply: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
+	followUp: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
+	user?: { username?: string };
+	deferred?: boolean;
+	replied?: boolean;
+	channelId?: string;
+	guildId?: string;
+};
+
+type Destroyable = { destroy: () => Promise<void> | void };
+
 class StarbunkDNDContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
 	private messageFilter!: MessageFilter;
-	private snowbunkClient: unknown | null = null;
+	private snowbunkClient: Destroyable | null = null;
 	private hasInitialized = false;
 
 	async initialize(): Promise<void> {
@@ -121,8 +134,8 @@ class StarbunkDNDContainer {
 			logger.warn('Discord client warning:', warning);
 		});
 
-		this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-			if (!interaction.isChatInputCommand()) return;
+		this.client.on(Events.InteractionCreate, async (interaction: unknown) => {
+			if (!this.isChatInputCommand(interaction)) return;
 			await this.handleInteraction(interaction);
 		});
 
@@ -132,7 +145,7 @@ class StarbunkDNDContainer {
 		});
 	}
 
-	private async handleInteraction(interaction: CommandInteraction): Promise<void> {
+	private async handleInteraction(interaction: ChatInputInteraction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
 				// Create interaction context for filtering
@@ -164,6 +177,13 @@ class StarbunkDNDContainer {
 				logger.error('Error processing D&D interaction:', ensureError(error));
 			}
 		}
+	}
+
+	private isChatInputCommand(i: unknown): i is ChatInputInteraction {
+		return (
+			typeof (i as { isChatInputCommand?: unknown })?.isChatInputCommand === 'function' &&
+			(i as { isChatInputCommand: () => boolean }).isChatInputCommand()
+		);
 	}
 
 	async start(): Promise<void> {

@@ -1,6 +1,5 @@
 // DJCova - Music service container
 import { Events } from 'discord.js';
-import type { CommandInteraction, Interaction } from 'discord.js';
 
 import {
 	logger,
@@ -16,6 +15,18 @@ import {
 } from '@starbunk/shared';
 import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
+
+type ChatInputInteraction = {
+	isChatInputCommand(): boolean;
+	commandName: string;
+	reply: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
+	followUp: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
+	user?: { username?: string };
+	deferred?: boolean;
+	replied?: boolean;
+	channelId?: string;
+	guildId?: string;
+};
 
 class DJCovaContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
@@ -98,8 +109,8 @@ class DJCovaContainer {
 			logger.warn('Discord client warning:', warning);
 		});
 
-		this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-			if (!interaction.isChatInputCommand()) return;
+		this.client.on(Events.InteractionCreate, async (interaction: unknown) => {
+			if (!this.isChatInputCommand(interaction)) return;
 			await this.handleInteraction(interaction);
 		});
 
@@ -109,7 +120,7 @@ class DJCovaContainer {
 		});
 	}
 
-	private async handleInteraction(interaction: CommandInteraction): Promise<void> {
+	private async handleInteraction(interaction: ChatInputInteraction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
 				// Create interaction context for filtering
@@ -140,6 +151,13 @@ class DJCovaContainer {
 				logger.error('Error processing music interaction:', ensureError(error));
 			}
 		}
+	}
+
+	private isChatInputCommand(i: unknown): i is ChatInputInteraction {
+		return (
+			typeof (i as { isChatInputCommand?: unknown })?.isChatInputCommand === 'function' &&
+			(i as { isChatInputCommand: () => boolean }).isChatInputCommand()
+		);
 	}
 
 	async start(): Promise<void> {
