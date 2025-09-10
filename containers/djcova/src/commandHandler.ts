@@ -190,12 +190,15 @@ export class CommandHandler {
 
 				if (debugMode && guildIds.length > 0) {
 					// Register commands to guilds in parallel for better performance
-					const registrationPromises = guildIds.map(async (gid) => {
+					const registrationPromises = guildIds.map(async (gid: string) => {
 						try {
 							await rest.put(Routes.applicationGuildCommands(clientId, gid), { body: commandData });
 							logger.info(`Registered ${commandData.length} commands to guild ${gid}`);
 						} catch (error) {
-							logger.error(`Failed to register commands to guild ${gid}:`, error);
+							logger.error(
+								`Failed to register commands to guild ${gid}:`,
+								error instanceof Error ? error : new Error(String(error)),
+							);
 							throw error;
 						}
 					});
