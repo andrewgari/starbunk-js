@@ -3,7 +3,7 @@ import { BotFactory } from './bot-factory';
 import { createTriggerResponse, TriggerResponse } from './trigger-response';
 import { matchesPattern } from './conditions';
 import { staticResponse } from './responses';
-import ReplyBot from '../replyBot';
+import type { ReplyBotImpl } from './bot-builder';
 
 export class DatabaseBotFactory {
 	private static configService = getConfigurationService();
@@ -11,7 +11,7 @@ export class DatabaseBotFactory {
 	/**
 	 * Create a reply bot from database configuration
 	 */
-	public static async createBotFromConfig(botName: string): Promise<ReplyBot | null> {
+	public static async createBotFromConfig(botName: string): Promise<ReplyBotImpl | null> {
 		try {
 			logger.info(`🤖 Loading bot configuration for: ${botName}`);
 
@@ -51,13 +51,15 @@ export class DatabaseBotFactory {
 				},
 				skipBotMessages: true,
 				triggers: triggers,
-			}) as unknown as ReplyBot;
+			});
 
 			logger.info(`🎉 Successfully created bot: ${config.displayName} with ${triggers.length} triggers`);
 			return bot;
-
 		} catch (error) {
-			logger.error(`❌ Failed to create bot from config for ${botName}:`, error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				`❌ Failed to create bot from config for ${botName}:`,
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			return null;
 		}
 	}
@@ -65,12 +67,12 @@ export class DatabaseBotFactory {
 	/**
 	 * Create all enabled bots from database configurations
 	 */
-	public static async createAllBotsFromConfig(): Promise<ReplyBot[]> {
+	public static async createAllBotsFromConfig(): Promise<ReplyBotImpl[]> {
 		try {
 			logger.info('🤖 Loading all bot configurations from database...');
 
 			const configs = await this.configService.getAllBotConfigurations();
-			const bots: ReplyBot[] = [];
+			const bots: ReplyBotImpl[] = [];
 
 			for (const config of configs) {
 				if (!config.isEnabled) {
@@ -86,9 +88,11 @@ export class DatabaseBotFactory {
 
 			logger.info(`✅ Successfully created ${bots.length} bots from database configurations`);
 			return bots;
-
 		} catch (error) {
-			logger.error('❌ Failed to create bots from database configurations:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'❌ Failed to create bots from database configurations:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			return [];
 		}
 	}
@@ -108,7 +112,9 @@ export class DatabaseBotFactory {
 				// Find corresponding response for this trigger
 				const response = this.createResponseFromConfig(config, triggerConfig);
 				if (!response) {
-					logger.warn(`⚠️  No valid response found for trigger: ${triggerConfig.name} in bot: ${config.botName}`);
+					logger.warn(
+						`⚠️  No valid response found for trigger: ${triggerConfig.name} in bot: ${config.botName}`,
+					);
 					continue;
 				}
 
@@ -121,9 +127,11 @@ export class DatabaseBotFactory {
 
 				triggers.push(trigger);
 				logger.debug(`✅ Created trigger: ${triggerConfig.name} for bot: ${config.botName}`);
-
 			} catch (error) {
-				logger.error(`❌ Failed to create trigger ${triggerConfig.name} for bot ${config.botName}:`, error instanceof Error ? error : new Error(String(error)));
+				logger.error(
+					`❌ Failed to create trigger ${triggerConfig.name} for bot ${config.botName}:`,
+					error instanceof Error ? error : new Error(String(error)),
+				);
 			}
 		}
 
@@ -133,11 +141,14 @@ export class DatabaseBotFactory {
 	/**
 	 * Create response function from bot configuration
 	 */
-	private static createResponseFromConfig(config: BotConfig, _triggerConfig: BotTriggerConfig): (message: import('discord.js').Message) => Promise<string> | string {
+	private static createResponseFromConfig(
+		config: BotConfig,
+		_triggerConfig: BotTriggerConfig,
+	): ((message: import('discord.js').Message) => Promise<string> | string) | null {
 		// Find the best matching response for this trigger
 		// For now, use the first enabled response, but this could be more sophisticated
 		const responseConfig = config.responses.find((r: BotResponseConfig) => r.isEnabled);
-		
+
 		if (!responseConfig) {
 			return null;
 		}

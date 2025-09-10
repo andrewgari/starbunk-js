@@ -1,5 +1,7 @@
 // Starbunk-DND - D&D features and Snowbunk bridge container
 import { Events } from 'discord.js';
+import type { CommandInteraction, Interaction } from 'discord.js';
+
 import {
 	logger,
 	ensureError,
@@ -10,13 +12,13 @@ import {
 	ServiceId,
 	getMessageFilter,
 	MessageFilter,
-	initializeObservability
+	initializeObservability,
 } from '@starbunk/shared';
 
 class StarbunkDNDContainer {
-	private client: any;
-	private messageFilter: MessageFilter;
-	private snowbunkClient: any = null;
+	private client!: ReturnType<typeof createDiscordClient>;
+	private messageFilter!: MessageFilter;
+	private snowbunkClient: unknown | null = null;
 	private hasInitialized = false;
 
 	async initialize(): Promise<void> {
@@ -24,7 +26,11 @@ class StarbunkDNDContainer {
 
 		try {
 			// Initialize observability first
-			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('starbunk-dnd');
+			const {
+				metrics: _metrics,
+				logger: _structuredLogger,
+				channelTracker: _channelTracker,
+			} = initializeObservability('starbunk-dnd');
 			logger.info('✅ Observability initialized for Starbunk-DND');
 
 			// Validate environment
@@ -52,7 +58,17 @@ class StarbunkDNDContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['SNOWBUNK_TOKEN', 'DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'VECTOR_CONTEXT_DIR', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV']
+			optional: [
+				'SNOWBUNK_TOKEN',
+				'DATABASE_URL',
+				'OPENAI_API_KEY',
+				'OLLAMA_API_URL',
+				'VECTOR_CONTEXT_DIR',
+				'DEBUG_MODE',
+				'TESTING_SERVER_IDS',
+				'TESTING_CHANNEL_IDS',
+				'NODE_ENV',
+			],
 		});
 	}
 
@@ -105,7 +121,8 @@ class StarbunkDNDContainer {
 			logger.warn('Discord client warning:', warning);
 		});
 
-		this.client.on(Events.InteractionCreate, async (interaction: any) => {
+		this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+			if (!interaction.isChatInputCommand()) return;
 			await this.handleInteraction(interaction);
 		});
 
@@ -115,7 +132,7 @@ class StarbunkDNDContainer {
 		});
 	}
 
-	private async handleInteraction(interaction: any): Promise<void> {
+	private async handleInteraction(interaction: CommandInteraction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
 				// Create interaction context for filtering
@@ -128,13 +145,13 @@ class StarbunkDNDContainer {
 					if (this.messageFilter.isDebugMode()) {
 						await interaction.reply({
 							content: `🚫 D&D command filtered: ${filterResult.reason}`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					} else {
 						// Silently ignore in production mode
 						await interaction.reply({
 							content: '🚫 D&D commands are not available in this server/channel.',
-							ephemeral: true
+							ephemeral: true,
 						});
 					}
 					return;
@@ -206,7 +223,7 @@ process.on('SIGTERM', async () => {
 });
 
 if (require.main === module) {
-	main().catch(error => {
+	main().catch((error) => {
 		console.error('Fatal error:', ensureError(error));
 		process.exit(1);
 	});

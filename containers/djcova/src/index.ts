@@ -1,6 +1,7 @@
 // DJCova - Music service container
-import { Events, Client } from 'discord.js';
-import { PlayerSubscription } from '@discordjs/voice';
+import { Events } from 'discord.js';
+import type { CommandInteraction, Interaction } from 'discord.js';
+
 import {
 	logger,
 	ensureError,
@@ -11,17 +12,17 @@ import {
 	ServiceId,
 	getMessageFilter,
 	MessageFilter,
-	initializeObservability
+	initializeObservability,
 } from '@starbunk/shared';
 import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
 
 class DJCovaContainer {
-	private client!: Client;
+	private client!: ReturnType<typeof createDiscordClient>;
 	private messageFilter!: MessageFilter;
 	private commandHandler!: CommandHandler;
 	private musicPlayer!: DJCova;
-	public activeSubscription: PlayerSubscription | null = null;
+	public activeSubscription: { unsubscribe(): void } | null = null;
 	private hasInitialized = false;
 
 	async initialize(): Promise<void> {
@@ -29,7 +30,11 @@ class DJCovaContainer {
 
 		try {
 			// Initialize observability first
-			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('djcova');
+			const {
+				metrics: _metrics,
+				logger: _structuredLogger,
+				channelTracker: _channelTracker,
+			} = initializeObservability('djcova');
 			logger.info('✅ Observability initialized for DJCova');
 
 			// Validate environment
@@ -54,7 +59,13 @@ class DJCovaContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN', 'CLIENT_ID'],
-			optional: ['DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV', 'MUSIC_IDLE_TIMEOUT_SECONDS']
+			optional: [
+				'DEBUG_MODE',
+				'TESTING_SERVER_IDS',
+				'TESTING_CHANNEL_IDS',
+				'NODE_ENV',
+				'MUSIC_IDLE_TIMEOUT_SECONDS',
+			],
 		});
 	}
 
@@ -87,7 +98,8 @@ class DJCovaContainer {
 			logger.warn('Discord client warning:', warning);
 		});
 
-		this.client.on(Events.InteractionCreate, async (interaction: any) => {
+		this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+			if (!interaction.isChatInputCommand()) return;
 			await this.handleInteraction(interaction);
 		});
 
@@ -97,7 +109,7 @@ class DJCovaContainer {
 		});
 	}
 
-	private async handleInteraction(interaction: any): Promise<void> {
+	private async handleInteraction(interaction: CommandInteraction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
 				// Create interaction context for filtering
@@ -110,13 +122,13 @@ class DJCovaContainer {
 					if (this.messageFilter.isDebugMode()) {
 						await interaction.reply({
 							content: `🚫 Music command filtered: ${filterResult.reason}`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					} else {
 						// Silently ignore in production mode
 						await interaction.reply({
 							content: '🚫 Music commands are not available in this server/channel.',
-							ephemeral: true
+							ephemeral: true,
 						});
 					}
 					return;
@@ -161,7 +173,6 @@ class DJCovaContainer {
 		}
 		logger.info('DJCova stopped');
 	}
-
 }
 
 // Main execution
@@ -188,7 +199,7 @@ process.on('SIGTERM', async () => {
 });
 
 if (require.main === module) {
-	main().catch(error => {
+	main().catch((error) => {
 		console.error('Fatal error:', ensureError(error));
 		process.exit(1);
 	});

@@ -1,16 +1,16 @@
 import { logger, ensureError, MessageFilter } from '@starbunk/shared';
 import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { RESTPostAPIChatInputApplicationCommandJSONBody } from 'discord-api-types/v10';
+import { RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord-api-types/v10';
 
 export interface Command {
-	data: SlashCommandBuilder | RESTPostAPIChatInputApplicationCommandJSONBody;
+	data: SlashCommandBuilder | RESTPostAPIChatInputApplicationCommandsJSONBody;
 	execute(interaction: CommandInteraction): Promise<void>;
 }
 
 export class InteractionHandler {
 	constructor(
 		private messageFilter: MessageFilter,
-		private readonly commands: Map<string, Command>
+		private readonly commands: Map<string, Command>,
 	) {}
 
 	async handleInteraction(interaction: CommandInteraction): Promise<void> {
@@ -32,7 +32,7 @@ export class InteractionHandler {
 	private shouldProcessInteraction(interaction: CommandInteraction): boolean {
 		const context = MessageFilter.createContextFromInteraction(interaction);
 		const result = this.messageFilter.shouldProcessMessage(context);
-		
+
 		if (!result.allowed) {
 			logger.debug(`Interaction filtered: ${result.reason}`);
 		}
@@ -41,7 +41,7 @@ export class InteractionHandler {
 	}
 
 	private async sendFilteredResponse(interaction: CommandInteraction): Promise<void> {
-		const message = this.messageFilter.isDebugMode() 
+		const message = this.messageFilter.isDebugMode()
 			? '🚫 Command filtered in debug mode'
 			: '🚫 This command is not available in this server/channel.';
 
@@ -50,7 +50,7 @@ export class InteractionHandler {
 
 	private async executeCommand(interaction: CommandInteraction): Promise<void> {
 		const command = this.commands.get(interaction.commandName);
-		
+
 		if (!command) {
 			await this.sendUnknownCommandResponse(interaction);
 			return;
@@ -63,12 +63,12 @@ export class InteractionHandler {
 
 	private async sendUnknownCommandResponse(interaction: CommandInteraction): Promise<void> {
 		const availableCommands = Array.from(this.commands.keys())
-			.map(cmd => `\`${cmd}\``)
+			.map((cmd) => `\`${cmd}\``)
 			.join(', ');
 
 		await interaction.reply({
 			content: `❓ Unknown command: \`${interaction.commandName}\`\nAvailable: ${availableCommands}`,
-			ephemeral: true
+			ephemeral: true,
 		});
 	}
 
@@ -81,7 +81,7 @@ export class InteractionHandler {
 
 			await interaction.reply({
 				content: '❌ An error occurred while processing the command.',
-				ephemeral: true
+				ephemeral: true,
 			});
 		} catch (replyError) {
 			logger.error('Failed to send error response:', ensureError(replyError));

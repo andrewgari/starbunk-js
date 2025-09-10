@@ -1,109 +1,110 @@
-import { AutocompleteInteraction, ChatInputCommandInteraction, PermissionFlagsBits, SlashCommandBuilder, TextChannel } from 'discord.js';
-import userId from '../../discord/userId';
-import { logger } from '@starbunk/shared';
-import { BotRegistry } from '../bots/botRegistry';
+import {
+	AutocompleteInteraction,
+	ChatInputCommandInteraction,
+	PermissionFlagsBits,
+	SlashCommandBuilder,
+	TextChannel,
+} from 'discord.js';
+import { logger, getUserId } from '@starbunk/shared';
+import { BotRegistry } from '../botRegistry';
+import { getBotDefaults } from '../config/botDefaults';
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('bot')
 	.setDescription('Manage bot settings')
-	.addSubcommand(subcommand =>
+	.addSubcommand((subcommand) =>
 		subcommand
 			.setName('enable')
 			.setDescription('Enable a bot')
-			.addStringOption(option =>
+			.addStringOption((option) =>
 				option
 					.setName('bot_name')
 					.setDescription('Name of the bot to enable')
 					.setRequired(true)
-					.setAutocomplete(true)
-			)
+					.setAutocomplete(true),
+			),
 	)
-	.addSubcommand(subcommand =>
+	.addSubcommand((subcommand) =>
 		subcommand
 			.setName('disable')
 			.setDescription('Disable a bot')
-			.addStringOption(option =>
+			.addStringOption((option) =>
 				option
 					.setName('bot_name')
 					.setDescription('Name of the bot to disable')
 					.setRequired(true)
-					.setAutocomplete(true)
-			)
+					.setAutocomplete(true),
+			),
 	)
-	.addSubcommand(subcommand =>
+	.addSubcommand((subcommand) =>
 		subcommand
 			.setName('frequency')
-			.setDescription('Set a reply bot\'s response frequency')
-			.addStringOption(option =>
+			.setDescription("Set a reply bot's response frequency")
+			.addStringOption((option) =>
 				option
 					.setName('bot_name')
 					.setDescription('Name of the bot to adjust')
 					.setRequired(true)
-					.setAutocomplete(true)
+					.setAutocomplete(true),
 			)
-			.addIntegerOption(option =>
+			.addIntegerOption((option) =>
 				option
 					.setName('rate')
 					.setDescription('Response rate (0-100)')
 					.setRequired(true)
 					.setMinValue(0)
-					.setMaxValue(100)
-			)
+					.setMaxValue(100),
+			),
 	)
-	.addSubcommand(subcommand =>
+	.addSubcommand((subcommand) =>
 		subcommand
 			.setName('reset-frequency')
-			.setDescription('Reset a reply bot\'s response frequency to default')
-			.addStringOption(option =>
+			.setDescription("Reset a reply bot's response frequency to default")
+			.addStringOption((option) =>
 				option
 					.setName('bot_name')
 					.setDescription('Name of the bot to reset')
 					.setRequired(true)
-					.setAutocomplete(true)
-			)
+					.setAutocomplete(true),
+			),
 	)
-	.addSubcommand(subcommand =>
+	.addSubcommand((subcommand) =>
 		subcommand
 			.setName('volume')
-			.setDescription('Set a voice bot\'s volume')
-			.addStringOption(option =>
+			.setDescription("Set a voice bot's volume")
+			.addStringOption((option) =>
 				option
 					.setName('bot_name')
 					.setDescription('Name of the bot to adjust')
 					.setRequired(true)
-					.setAutocomplete(true)
+					.setAutocomplete(true),
 			)
-			.addIntegerOption(option =>
+			.addIntegerOption((option) =>
 				option
 					.setName('volume')
 					.setDescription('Volume level (0-100)')
 					.setRequired(true)
 					.setMinValue(0)
-					.setMaxValue(100)
-			)
+					.setMaxValue(100),
+			),
 	)
-	.addSubcommand(subcommand =>
-		subcommand
-			.setName('list-bots')
-			.setDescription('List all available bots and their status')
+	.addSubcommand((subcommand) =>
+		subcommand.setName('list-bots').setDescription('List all available bots and their status'),
 	)
-	.addSubcommand(subcommand =>
+	.addSubcommand((subcommand) =>
 		subcommand
 			.setName('report')
 			.setDescription('Report a bot to Cova')
-			.addStringOption(option =>
+			.addStringOption((option) =>
 				option
 					.setName('bot_name')
 					.setDescription('Name of the bot to report')
 					.setRequired(true)
-					.setAutocomplete(true)
+					.setAutocomplete(true),
 			)
-			.addStringOption(option =>
-				option
-					.setName('message')
-					.setDescription('Report message explaining the issue')
-					.setRequired(true)
-			)
+			.addStringOption((option) =>
+				option.setName('message').setDescription('Report message explaining the issue').setRequired(true),
+			),
 	)
 	.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages);
 
@@ -120,7 +121,7 @@ export default {
 		if (adminCommands.includes(subcommand) && !isAdmin) {
 			await interaction.reply({
 				content: 'You need administrator permissions to use this command.',
-				ephemeral: true
+				ephemeral: true,
 			});
 			return;
 		}
@@ -133,12 +134,12 @@ export default {
 					if (success) {
 						await interaction.reply({
 							content: `Bot ${botName} has been enabled.`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					} else {
 						await interaction.reply({
 							content: `Bot ${botName} not found.`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					}
 					break;
@@ -150,22 +151,28 @@ export default {
 					if (success) {
 						// Notify Cova about bot disable
 						try {
-							const cova = await interaction.client.users.fetch(userId.Cova);
+							const covaUserId = await getUserId('Cova');
+							const cova = covaUserId ? await interaction.client.users.fetch(covaUserId) : null;
 							if (cova) {
-								await cova.send(`Bot Disabled Notification: ${botName} was disabled by ${interaction.user.tag}`);
+								await cova.send(
+									`Bot Disabled Notification: ${botName} was disabled by ${interaction.user.tag}`,
+								);
 							}
 						} catch (error) {
-							logger.error('[BotCommand] Error notifying Cova about bot disable:', error instanceof Error ? error : new Error(String(error)));
+							logger.error(
+								'[BotCommand] Error notifying Cova about bot disable:',
+								error instanceof Error ? error : new Error(String(error)),
+							);
 						}
 
 						await interaction.reply({
 							content: `Bot ${botName} has been disabled.`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					} else {
 						await interaction.reply({
 							content: `Bot ${botName} not found.`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					}
 					break;
@@ -177,12 +184,12 @@ export default {
 					if (success) {
 						await interaction.reply({
 							content: `Set ${botName}'s response rate to ${rate}%`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					} else {
 						await interaction.reply({
 							content: `Failed to set response rate for ${botName}. Bot not found or invalid rate.`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					}
 					break;
@@ -191,16 +198,18 @@ export default {
 					const botName = interaction.options.getString('bot_name', true);
 					const bot = botRegistry.getReplyBot(botName);
 					if (bot) {
-						await bot.resetResponseRate();
-						const newRate = await bot.getResponseRate();
+						const defaultRate = getBotDefaults().responseRate;
+						const success = await botRegistry.setBotFrequency(botName, defaultRate);
 						await interaction.reply({
-							content: `Reset ${botName}'s response rate to default (${newRate}%)`,
-							ephemeral: true
+							content: success
+								? `Reset ${botName}'s response rate to default (${defaultRate}%)`
+								: `Failed to reset ${botName}'s response rate`,
+							ephemeral: true,
 						});
 					} else {
 						await interaction.reply({
 							content: `Bot ${botName} not found or is not a reply bot.`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					}
 					break;
@@ -213,12 +222,12 @@ export default {
 						bot.setVolume(volume / 100);
 						await interaction.reply({
 							content: `Set ${botName}'s volume to ${volume}%`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					} else {
 						await interaction.reply({
 							content: `Bot ${botName} is not a voice bot or does not exist`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					}
 					break;
@@ -230,7 +239,7 @@ export default {
 					if (replyBots.length === 0 && voiceBots.length === 0) {
 						await interaction.reply({
 							content: 'No bots registered.',
-							ephemeral: true
+							ephemeral: true,
 						});
 						return;
 					}
@@ -259,7 +268,7 @@ export default {
 
 					await interaction.reply({
 						content: message,
-						ephemeral: true
+						ephemeral: true,
 					});
 					break;
 				}
@@ -268,27 +277,32 @@ export default {
 					const reportMessage = interaction.options.getString('message', true);
 
 					try {
-						const cova = await interaction.client.users.fetch(userId.Cova);
+						const covaUserId = await getUserId('Cova');
+						const cova = covaUserId ? await interaction.client.users.fetch(covaUserId) : null;
 						if (cova) {
 							const reporter = interaction.user.tag;
 							const channel = interaction.channel as TextChannel;
-							const reportContent = `Bot Report from ${reporter} in #${channel.name}:\n` +
+							const reportContent =
+								`Bot Report from ${reporter} in #${channel.name}:\n` +
 								`Bot: ${botName}\n` +
 								`Message: ${reportMessage}`;
 							await cova.send(reportContent);
 
 							await interaction.reply({
 								content: 'Your report has been sent to Cova.',
-								ephemeral: true
+								ephemeral: true,
 							});
 						} else {
 							throw new Error('Could not find Cova');
 						}
 					} catch (error) {
-						logger.error('[BotCommand] Error sending bot report:', error instanceof Error ? error : new Error(String(error)));
+						logger.error(
+							'[BotCommand] Error sending bot report:',
+							error instanceof Error ? error : new Error(String(error)),
+						);
 						await interaction.reply({
 							content: 'Failed to send report. Please try again later.',
-							ephemeral: true
+							ephemeral: true,
 						});
 					}
 					break;
@@ -310,7 +324,7 @@ export default {
 
 					await interaction.reply({
 						content: helpText,
-						ephemeral: true
+						ephemeral: true,
 					});
 				}
 			}
@@ -318,7 +332,7 @@ export default {
 			logger.error('Error executing bot command:', error instanceof Error ? error : new Error(String(error)));
 			await interaction.reply({
 				content: 'An error occurred while executing the command',
-				ephemeral: true
+				ephemeral: true,
 			});
 		}
 	},
@@ -340,13 +354,14 @@ export default {
 				choices = [...botRegistry.getReplyBotNames(), ...botRegistry.getVoiceBotNames()];
 			}
 
-			const filtered = choices.filter(choice => choice.toLowerCase().includes(focusedValue));
-			await interaction.respond(
-				filtered.map(choice => ({ name: choice, value: choice }))
-			);
+			const filtered = choices.filter((choice) => choice.toLowerCase().includes(focusedValue));
+			await interaction.respond(filtered.map((choice) => ({ name: choice, value: choice })));
 		} catch (error) {
-			logger.error('Error in bot command autocomplete:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'Error in bot command autocomplete:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			await interaction.respond([]);
 		}
-	}
+	},
 };

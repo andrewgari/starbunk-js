@@ -1,4 +1,4 @@
-import { Message, User, Guild, GuildMember, TextChannel, VoiceChannel, Client } from 'discord.js';
+import { Message, User, Guild, GuildMember, TextChannel, VoiceChannel, Client, Collection } from 'discord.js';
 import { BotIdentity } from '../types/botIdentity';
 import { DiscordService } from '@starbunk/shared';
 
@@ -25,8 +25,8 @@ export function mockUser(overrides: Partial<User> = {}): User {
 		globalName: null,
 		avatarDecoration: null,
 		displayName: 'testuser',
-		...overrides
-	} as User;
+		...overrides,
+	} as unknown as User;
 
 	return defaultUser;
 }
@@ -35,25 +35,26 @@ export function mockUser(overrides: Partial<User> = {}): User {
  * Mock Discord Client for testing
  */
 export function mockClient(overrides: Partial<Client> = {}): Partial<Client> {
+	// Provide a minimal default client.user so tests that rely on self-detection work.
+	// Cast as any to avoid strict ClientUser type constraints.
+	const defaultClient: Partial<Client> = {
+		user: mockUser({
+			id: '111111111111111111',
+			bot: true,
+			username: 'BunkBot',
+			displayName: 'BunkBot',
+		} as unknown as Partial<User>) as any,
+	};
 	return {
-		user: mockUser({ bot: true }),
-		guilds: {
-			cache: new Map()
-		},
-		channels: {
-			cache: new Map()
-		},
-		users: {
-			cache: new Map()
-		},
-		...overrides
+		...defaultClient,
+		...overrides,
 	};
 }
 
 /**
  * Mock Discord Message for testing
  */
-export function mockMessage(overrides: Partial<Message> = {}): Message {
+export function mockMessage(overrides: any = {}): Message {
 	const defaultMessage = {
 		id: '123456789',
 		content: 'test message',
@@ -72,12 +73,12 @@ export function mockMessage(overrides: Partial<Message> = {}): Message {
 			everyone: false,
 			here: false,
 			repliedUser: null,
-			crosspostedChannels: new Map()
+			crosspostedChannels: new Map(),
 		},
 		attachments: new Map(),
 		embeds: [],
 		reactions: {
-			cache: new Map()
+			cache: new Map(),
 		},
 		pinned: false,
 		tts: false,
@@ -97,13 +98,11 @@ export function mockMessage(overrides: Partial<Message> = {}): Message {
 		applicationId: null,
 		activity: null,
 		call: null,
-		...overrides
-	} as Message;
+		...overrides,
+	} as unknown as Message;
 
 	return defaultMessage;
 }
-
-
 
 /**
  * Mock Discord Guild for testing
@@ -115,19 +114,19 @@ export function mockGuild(overrides: Partial<Guild> = {}): Guild {
 		icon: 'guild_icon_hash',
 		features: [],
 		commands: {
-			cache: new Map()
+			cache: new Map(),
 		},
 		members: {
-			cache: new Map()
+			cache: new Map(),
 		},
 		channels: {
-			cache: new Map()
+			cache: new Map(),
 		},
 		roles: {
-			cache: new Map()
+			cache: new Map(),
 		},
-		...overrides
-	} as Guild;
+		...overrides,
+	} as unknown as Guild;
 
 	return defaultGuild;
 }
@@ -145,7 +144,7 @@ export function mockGuildMember(overrides: Partial<GuildMember> = {}): GuildMemb
 		joinedTimestamp: Date.now() - 86400000, // 1 day ago
 		premiumSinceTimestamp: null,
 		roles: {
-			cache: new Map()
+			cache: new Map(),
 		},
 		voice: {
 			channel: null,
@@ -157,10 +156,10 @@ export function mockGuildMember(overrides: Partial<GuildMember> = {}): GuildMemb
 			selfVideo: false,
 			sessionId: null,
 			streaming: false,
-			suppress: false
+			suppress: false,
 		},
-		...overrides
-	} as GuildMember;
+		...overrides,
+	} as unknown as GuildMember;
 
 	return defaultMember;
 }
@@ -176,7 +175,7 @@ export function mockTextChannel(overrides: Partial<TextChannel> = {}): TextChann
 		guild: mockGuild(),
 		position: 0,
 		permissionOverwrites: {
-			cache: new Map()
+			cache: new Map(),
 		},
 		topic: null,
 		nsfw: false,
@@ -192,8 +191,8 @@ export function mockTextChannel(overrides: Partial<TextChannel> = {}): TextChann
 			find: jest.fn().mockReturnValue(undefined),
 		}),
 		send: jest.fn().mockResolvedValue(undefined),
-		...overrides
-	} as TextChannel;
+		...overrides,
+	} as unknown as TextChannel;
 
 	// Ensure the mock is recognized as a TextChannel instance
 	Object.setPrototypeOf(defaultChannel, TextChannel.prototype);
@@ -212,15 +211,15 @@ export function mockVoiceChannel(overrides: Partial<VoiceChannel> = {}): VoiceCh
 		guild: mockGuild(),
 		position: 0,
 		permissionOverwrites: {
-			cache: new Map()
+			cache: new Map(),
 		},
 		bitrate: 64000,
 		userLimit: 0,
 		rtcRegion: null,
 		videoQualityMode: null,
 		members: new Map(),
-		...overrides
-	} as VoiceChannel;
+		...overrides,
+	} as unknown as VoiceChannel;
 
 	return defaultChannel;
 }
@@ -232,7 +231,7 @@ export function mockBotIdentity(overrides: Partial<BotIdentity> = {}): BotIdenti
 	return {
 		botName: 'TestBot',
 		avatarUrl: 'https://example.com/avatar.png',
-		...overrides
+		...overrides,
 	};
 }
 
@@ -246,17 +245,12 @@ export function mockDiscordService(overrides: Partial<DiscordService> = {}): Par
 		getGuild: jest.fn().mockReturnValue(mockGuild()),
 		getMember: jest.fn().mockReturnValue(mockGuildMember()),
 		getMemberAsync: jest.fn().mockResolvedValue(mockGuildMember()),
-		getChannel: jest.fn().mockReturnValue(mockTextChannel()),
-		getRole: jest.fn().mockReturnValue({}),
 		sendMessage: jest.fn().mockResolvedValue(mockMessage()),
 		sendMessageWithBotIdentity: jest.fn().mockResolvedValue(mockMessage()),
-		sendBulkMessages: jest.fn().mockResolvedValue([]),
 		sendWebhookMessage: jest.fn().mockResolvedValue(mockMessage()),
-		...overrides
+		...overrides,
 	};
 }
-
-
 
 /**
  * Create a mock CovaBot user for testing bot filtering
@@ -267,7 +261,7 @@ export function mockCovaBotUser(overrides: Partial<User> = {}): User {
 		username: 'CovaBot',
 		displayName: 'CovaBot',
 		bot: true,
-		...overrides
+		...overrides,
 	});
 }
 
@@ -278,7 +272,7 @@ export function mockCovaBotMessage(overrides: Partial<Message> = {}): Message {
 	return mockMessage({
 		author: mockCovaBotUser(),
 		content: 'Hello from CovaBot!',
-		...overrides
+		...overrides,
 	});
 }
 
@@ -291,7 +285,7 @@ export function mockGenericBotUser(overrides: Partial<User> = {}): User {
 		username: 'GenericBot',
 		displayName: 'GenericBot',
 		bot: true,
-		...overrides
+		...overrides,
 	});
 }
 
@@ -302,7 +296,7 @@ export function mockGenericBotMessage(overrides: Partial<Message> = {}): Message
 	return mockMessage({
 		author: mockGenericBotUser(),
 		content: 'Hello from a generic bot!',
-		...overrides
+		...overrides,
 	});
 }
 
@@ -315,7 +309,7 @@ export function mockHumanUser(overrides: Partial<User> = {}): User {
 		username: 'HumanUser',
 		displayName: 'Human User',
 		bot: false,
-		...overrides
+		...overrides,
 	});
 }
 
@@ -326,7 +320,7 @@ export function mockHumanMessage(overrides: Partial<Message> = {}): Message {
 	return mockMessage({
 		author: mockHumanUser(),
 		content: 'Hello from a human!',
-		...overrides
+		...overrides,
 	});
 }
 
@@ -337,7 +331,7 @@ export function mockTestingChannel(overrides: Partial<TextChannel> = {}): TextCh
 	return mockTextChannel({
 		id: '123456789012345678', // Testing channel ID
 		name: 'testing-channel',
-		...overrides
+		...overrides,
 	});
 }
 
@@ -348,6 +342,6 @@ export function mockProductionChannel(overrides: Partial<TextChannel> = {}): Tex
 	return mockTextChannel({
 		id: '987654321098765432', // Production channel ID
 		name: 'general',
-		...overrides
+		...overrides,
 	});
 }

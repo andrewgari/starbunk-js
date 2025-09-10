@@ -1,16 +1,37 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { BehaviorSubject, Observable } from 'rxjs';
 import { logger } from '@starbunk/shared';
 import { StorageError, StorageItem, StoragePath } from '../types/storage';
 
+// Minimal observable implementation to avoid external rxjs dependency
+type Unsubscribe = { unsubscribe: () => void };
+type ObservableLike<T> = { subscribe: (fn: (v: T) => void) => Unsubscribe };
+class SimpleSubject<T> {
+	private listeners: Array<(v: T) => void> = [];
+	next(value: T) {
+		for (const l of this.listeners) l(value);
+	}
+	asObservable(): ObservableLike<T> {
+		return {
+			subscribe: (fn: (v: T) => void): Unsubscribe => {
+				this.listeners.push(fn);
+				return {
+					unsubscribe: () => {
+						this.listeners = this.listeners.filter((f) => f !== fn);
+					},
+				};
+			},
+		};
+	}
+}
+
 export class FileStorageAdapter {
 	private static instance: FileStorageAdapter;
-	private fileUpdates: BehaviorSubject<void>;
+	private fileUpdates: SimpleSubject<void>;
 	private baseDir: string;
 
 	private constructor() {
-		this.fileUpdates = new BehaviorSubject<void>(undefined);
+		this.fileUpdates = new SimpleSubject<void>();
 		this.baseDir = path.resolve('/app/data/campaigns');
 	}
 
@@ -21,7 +42,7 @@ export class FileStorageAdapter {
 		return FileStorageAdapter.instance;
 	}
 
-	public getFileUpdates(): Observable<void> {
+	public getFileUpdates(): ObservableLike<void> {
 		return this.fileUpdates.asObservable();
 	}
 
@@ -32,7 +53,7 @@ export class FileStorageAdapter {
 			storagePath.adventureId,
 			storagePath.scope,
 			storagePath.category,
-			...(storagePath.subPath || [])
+			...(storagePath.subPath || []),
 		];
 
 		if (id) {

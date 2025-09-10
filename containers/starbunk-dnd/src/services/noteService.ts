@@ -1,5 +1,5 @@
 import path from 'path';
-import { Campaign } from '../../domain/models';
+import type { Campaign } from '../types/game';
 import { logger } from '@starbunk/shared';
 import { Note } from '../types/game';
 import { TextWithMetadata } from '../types/textWithMetadata';
@@ -51,7 +51,7 @@ export class NoteService {
 			userId: data.userId,
 			contentLength: data.content.length,
 			isGM: data.isGM,
-			tags: data.tags
+			tags: data.tags,
 		});
 
 		try {
@@ -65,7 +65,7 @@ export class NoteService {
 				category: 'general', // Default category
 				tags: data.tags,
 				isGMOnly: data.isGM, // Default to user's GM status
-				timestamp: new Date()
+				timestamp: new Date(),
 			};
 
 			// Save the note immediately with basic info
@@ -74,8 +74,11 @@ export class NoteService {
 			logger.info('[NoteService] Successfully saved initial note');
 
 			// Start async operations after initial save
-			this.processNoteAsync(data.campaignId, note).catch(error => {
-				logger.error('[NoteService] Error in async note processing:', error instanceof Error ? error : new Error(String(error)));
+			this.processNoteAsync(data.campaignId, note).catch((error) => {
+				logger.error(
+					'[NoteService] Error in async note processing:',
+					error instanceof Error ? error : new Error(String(error)),
+				);
 			});
 
 			return note;
@@ -103,7 +106,10 @@ export class NoteService {
 			// Save vector data
 			await this.saveNoteAsVector(campaignId, note);
 		} catch (error) {
-			logger.error('[NoteService] Error in async note processing:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'[NoteService] Error in async note processing:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 		}
 	}
 
@@ -118,24 +124,24 @@ export class NoteService {
 			const noteMetadata = {
 				file: `note_${note.timestamp.toISOString()}.json`,
 				is_gm_content: note.isGMOnly,
-				chunk_size: note.content.length
+				chunk_size: note.content.length,
 			};
 
 			// Create text with metadata object
 			const textWithMetadata: TextWithMetadata = {
 				text: note.content,
-				metadata: noteMetadata
+				metadata: noteMetadata,
 			};
 
 			// Generate vectors and save
-			await this.vectorService.generateVectorsFromTexts(
-				campaignId,
-				[textWithMetadata]
-			);
+			await this.vectorService.generateVectorsFromTexts(campaignId, [textWithMetadata]);
 
 			logger.debug('[NoteService] Vector embedding created and saved successfully');
 		} catch (error) {
-			logger.error('[NoteService] Error saving note as vector:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'[NoteService] Error saving note as vector:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			throw error;
 		}
 	}
@@ -149,24 +155,24 @@ export class NoteService {
 			const noteMetadata = {
 				file: `note_${note.timestamp.toISOString()}.json`,
 				is_gm_content: note.isGMOnly,
-				chunk_size: note.content.length
+				chunk_size: note.content.length,
 			};
 
 			// Create text with metadata object
 			const textWithMetadata: TextWithMetadata = {
 				text: note.content,
-				metadata: noteMetadata
+				metadata: noteMetadata,
 			};
 
 			// Generate vectors and save
-			await this.vectorService.generateVectorsFromTexts(
-				campaignId,
-				[textWithMetadata]
-			);
+			await this.vectorService.generateVectorsFromTexts(campaignId, [textWithMetadata]);
 
 			logger.info('[NoteService] Successfully converted note to vector format');
 		} catch (error) {
-			logger.error('[NoteService] Error converting note to vector:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'[NoteService] Error converting note to vector:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			throw error;
 		}
 	}
@@ -183,18 +189,14 @@ export class NoteService {
 			const notes = await this.loadNotes(campaignId, options.isGM);
 
 			// Filter out GM-only notes for non-GM users
-			return options.isGM ? notes : notes.filter(note => !note.isGMOnly);
+			return options.isGM ? notes : notes.filter((note) => !note.isGMOnly);
 		} catch (error) {
 			logger.error('Error getting notes:', error instanceof Error ? error : new Error(String(error)));
 			throw new Error('Failed to get notes');
 		}
 	}
 
-	public async searchNotes(
-		campaign: Campaign,
-		query: string,
-		options: { isGM: boolean }
-	): Promise<Note[]> {
+	public async searchNotes(campaign: Campaign, query: string, options: { isGM: boolean }): Promise<Note[]> {
 		try {
 			// Load all notes for the campaign
 			const notes = await this.loadNotes(campaign.id, options.isGM);
@@ -203,18 +205,19 @@ export class NoteService {
 			}
 
 			// Filter out GM-only notes if user is not GM
-			const accessibleNotes = options.isGM
-				? notes
-				: notes.filter(note => !note.isGMOnly);
+			const accessibleNotes = options.isGM ? notes : notes.filter((note) => !note.isGMOnly);
 
 			// Simple text search
 			const searchTerms = query.toLowerCase().split(/\s+/);
-			return accessibleNotes.filter(note => {
+			return accessibleNotes.filter((note) => {
 				const noteText = `${note.content} ${note.category} ${note.tags.join(' ')}`.toLowerCase();
-				return searchTerms.every(term => noteText.includes(term));
+				return searchTerms.every((term) => noteText.includes(term));
 			});
 		} catch (error) {
-			logger.error('[NoteService] Error searching notes:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'[NoteService] Error searching notes:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			return [];
 		}
 	}
@@ -223,7 +226,7 @@ export class NoteService {
 		logger.debug('[NoteService] Saving note to storage...', {
 			campaignId,
 			category: note.category,
-			timestamp: note.timestamp
+			timestamp: note.timestamp,
 		});
 
 		try {
@@ -279,7 +282,10 @@ export class NoteService {
 			logger.debug(`[NoteService] Loaded ${notes.length} notes`);
 			return notes;
 		} catch (error) {
-			logger.error('[NoteService] Error loading notes:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'[NoteService] Error loading notes:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			throw new Error('Failed to load notes');
 		}
 	}

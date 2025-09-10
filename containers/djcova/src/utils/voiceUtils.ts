@@ -1,29 +1,32 @@
 // DJCova-specific voice utilities
-import {
-	GuildMember,
-	CommandInteraction,
-	VoiceBasedChannel
-} from 'discord.js';
-import {
-	joinVoiceChannel,
-	VoiceConnection,
-	getVoiceConnection,
-	VoiceConnectionStatus,
-	AudioPlayer,
-	PlayerSubscription,
-	DiscordGatewayAdapterCreator
-} from '@discordjs/voice';
+// Local structural types to avoid relying on external library type names
+import { joinVoiceChannel } from '@discordjs/voice';
+
+type VoiceConnectionLike = ReturnType<typeof joinVoiceChannel>;
+type PlayerSubscriptionLike = ReturnType<VoiceConnectionLike['subscribe']>;
+type AudioPlayerLike = Parameters<VoiceConnectionLike['subscribe']>[0];
+
+type GuildMemberLike = { voice: { channel: VoiceChannelLike | null } };
+
+type VoiceChannelLike = {
+	id: string;
+	name: string;
+	guild: { id: string; voiceAdapterCreator: unknown };
+	permissionsFor(member: GuildMemberLike): { has(perms: string[] | string): boolean } | null;
+};
+
+type InteractionLike = { member?: unknown; guild?: { id: string } | null; channelId: string };
+
+import { getVoiceConnection, VoiceConnectionStatus } from '@discordjs/voice';
+
 import { logger } from '@starbunk/shared';
 
 /**
  * Join a voice channel and return the connection
  */
-export function createVoiceConnection(
-	channel: VoiceBasedChannel,
-	adapterCreator: DiscordGatewayAdapterCreator
-): VoiceConnection {
+export function createVoiceConnection(channel: VoiceChannelLike, adapterCreator: unknown): VoiceConnectionLike {
 	logger.debug(`Joining voice channel: ${channel.name} (${channel.id})`);
-	
+
 	const connection = joinVoiceChannel({
 		channelId: channel.id,
 		guildId: channel.guild.id,
@@ -49,7 +52,7 @@ export function createVoiceConnection(
 /**
  * Get existing voice connection for a guild
  */
-export function getGuildVoiceConnection(guildId: string): VoiceConnection | undefined {
+export function getGuildVoiceConnection(guildId: string): VoiceConnectionLike | undefined {
 	return getVoiceConnection(guildId);
 }
 
@@ -68,9 +71,9 @@ export function disconnectVoiceConnection(guildId: string): void {
  * Subscribe an audio player to a voice connection
  */
 export function subscribePlayerToConnection(
-	connection: VoiceConnection,
-	player: AudioPlayer
-): PlayerSubscription | undefined {
+	connection: VoiceConnectionLike,
+	player: AudioPlayerLike,
+): PlayerSubscriptionLike | undefined {
 	try {
 		const subscription = connection.subscribe(player);
 		if (subscription) {
@@ -80,7 +83,10 @@ export function subscribePlayerToConnection(
 		}
 		return subscription;
 	} catch (error) {
-		logger.error('Error subscribing player to connection:', error instanceof Error ? error : new Error(String(error)));
+		logger.error(
+			'Error subscribing player to connection:',
+			error instanceof Error ? error : new Error(String(error)),
+		);
 		return undefined;
 	}
 }
@@ -88,24 +94,24 @@ export function subscribePlayerToConnection(
 /**
  * Validate that user is in a voice channel for voice commands
  */
-export function validateVoiceChannelAccess(interaction: CommandInteraction): {
+export function validateVoiceChannelAccess(interaction: InteractionLike): {
 	isValid: boolean;
-	member?: GuildMember;
-	voiceChannel?: VoiceBasedChannel;
+	member?: GuildMemberLike;
+	voiceChannel?: VoiceChannelLike;
 	errorMessage?: string;
 } {
 	if (!interaction.guild) {
 		return {
 			isValid: false,
-			errorMessage: 'This command can only be used in a server.'
+			errorMessage: 'This command can only be used in a server.',
 		};
 	}
 
-	const member = interaction.member as GuildMember;
+	const member = interaction.member as GuildMemberLike;
 	if (!member) {
 		return {
 			isValid: false,
-			errorMessage: 'Could not find your server membership.'
+			errorMessage: 'Could not find your server membership.',
 		};
 	}
 
@@ -113,21 +119,21 @@ export function validateVoiceChannelAccess(interaction: CommandInteraction): {
 	if (!voiceChannel) {
 		return {
 			isValid: false,
-			errorMessage: 'You need to be in a voice channel to use this command.'
+			errorMessage: 'You need to be in a voice channel to use this command.',
 		};
 	}
 
 	return {
 		isValid: true,
 		member,
-		voiceChannel
+		voiceChannel,
 	};
 }
 
 /**
  * Check if bot has permission to join a voice channel
  */
-export function canJoinVoiceChannel(channel: VoiceBasedChannel, botMember: GuildMember): boolean {
+export function canJoinVoiceChannel(channel: VoiceChannelLike, botMember: GuildMemberLike): boolean {
 	const permissions = channel.permissionsFor(botMember);
-	return !!(permissions?.has(['Connect', 'Speak']));
+	return !!permissions?.has(['Connect', 'Speak']);
 }

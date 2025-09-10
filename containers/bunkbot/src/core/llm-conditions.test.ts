@@ -1,15 +1,15 @@
-import { LLMManager } from '@starbunk/shared';
 import { PromptType } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
 import { mockMessage } from '../test-utils/testUtils';
 import { createLLMCondition } from './llm-conditions';
 
-// Mock the LLMManager
-jest.mock('@starbunk/shared');
+type LLMManagerLike = { createPromptCompletion: jest.Mock<Promise<string>, any> };
+
+// Mock the shared package for logger
 jest.mock('@starbunk/shared');
 
 describe('llm-conditions', () => {
-	let mockLLMManager: jest.Mocked<LLMManager>;
+	let mockLLMManager: LLMManagerLike;
 
 	beforeEach(() => {
 		// Clear all mocks
@@ -18,7 +18,7 @@ describe('llm-conditions', () => {
 		// Create a mock LLMManager
 		mockLLMManager = {
 			createPromptCompletion: jest.fn(),
-		} as unknown as jest.Mocked<LLMManager>;
+		};
 	});
 
 	describe('createLLMCondition', () => {
@@ -30,7 +30,7 @@ describe('llm-conditions', () => {
 
 			// Create condition
 			const condition = createLLMCondition(prompt, {
-				llmManager: mockLLMManager
+				llmManager: mockLLMManager,
 			});
 
 			// Test
@@ -41,7 +41,7 @@ describe('llm-conditions', () => {
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalledWith(
 				PromptType.CONDITION_CHECK,
 				`${prompt} Message: "I love cats!"`,
-				expect.any(Object)
+				expect.any(Object),
 			);
 		});
 
@@ -52,13 +52,13 @@ describe('llm-conditions', () => {
 			const regexFallback = /cats/i;
 
 			mockLLMManager.createPromptCompletion.mockRejectedValue(
-				new Error('Prompt type conditionCheck not registered')
+				new Error('Prompt type conditionCheck not registered'),
 			);
 
 			// Create condition
 			const condition = createLLMCondition(prompt, {
 				llmManager: mockLLMManager,
-				regexFallback
+				regexFallback,
 			});
 
 			// Test
@@ -68,7 +68,7 @@ describe('llm-conditions', () => {
 			expect(result).toBe(true);
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalled();
 			expect(logger.warn).toHaveBeenCalledWith(
-				expect.stringContaining('LLM condition failed, using regex fallback')
+				expect.stringContaining('LLM condition failed, using regex fallback'),
 			);
 		});
 
@@ -78,12 +78,12 @@ describe('llm-conditions', () => {
 			const message = mockMessage({ content: 'I love cats!' });
 
 			mockLLMManager.createPromptCompletion.mockRejectedValue(
-				new Error('Prompt type conditionCheck not registered')
+				new Error('Prompt type conditionCheck not registered'),
 			);
 
 			// Create condition
 			const condition = createLLMCondition(prompt, {
-				llmManager: mockLLMManager
+				llmManager: mockLLMManager,
 			});
 
 			// Test
@@ -92,9 +92,7 @@ describe('llm-conditions', () => {
 			// Verify
 			expect(result).toBe(false);
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalled();
-			expect(logger.warn).toHaveBeenCalledWith(
-				expect.stringContaining('LLM condition failed')
-			);
+			expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('LLM condition failed'));
 		});
 
 		it('should use regex fallback correctly when provided', async () => {
@@ -103,14 +101,12 @@ describe('llm-conditions', () => {
 			const message = mockMessage({ content: 'I love dogs!' });
 			const regexFallback = /cats/i;
 
-			mockLLMManager.createPromptCompletion.mockRejectedValue(
-				new Error('LLM error')
-			);
+			mockLLMManager.createPromptCompletion.mockRejectedValue(new Error('LLM error'));
 
 			// Create condition
 			const condition = createLLMCondition(prompt, {
 				llmManager: mockLLMManager,
-				regexFallback
+				regexFallback,
 			});
 
 			// Test
@@ -120,7 +116,7 @@ describe('llm-conditions', () => {
 			expect(result).toBe(false); // Should be false because 'dogs' doesn't match /cats/i
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalled();
 			expect(logger.warn).toHaveBeenCalledWith(
-				expect.stringContaining('LLM condition failed, using regex fallback')
+				expect.stringContaining('LLM condition failed, using regex fallback'),
 			);
 		});
 	});

@@ -1,5 +1,7 @@
 // BunkBot - Reply bots and admin commands container
 import { Events } from 'discord.js';
+import type { Message, Interaction } from 'discord.js';
+
 import { logger, ensureError } from '@starbunk/shared';
 
 // Import commands
@@ -52,12 +54,12 @@ class BunkBotContainer {
 		try {
 			const discovery = new BotDiscovery();
 			const result = await discovery.discoverBots();
-			
+
 			this.replyBots = result.bots;
 
 			if (this.replyBots.length > 0) {
 				logger.info(`✅ Loaded ${this.replyBots.length} reply bots`);
-				this.replyBots.forEach(bot => {
+				this.replyBots.forEach((bot) => {
 					logger.info(`   - ${bot.name}: ${bot.description}`);
 				});
 			} else {
@@ -77,7 +79,7 @@ class BunkBotContainer {
 
 	private setupComponents(): void {
 		const messageFilter = this.serviceManager.getMessageFilter();
-		
+
 		this.messageProcessor = new MessageProcessor(messageFilter, this.replyBots);
 		this.interactionHandler = new InteractionHandler(messageFilter, this.commands);
 	}
@@ -87,8 +89,8 @@ class BunkBotContainer {
 			const client = this.serviceManager.getClient();
 			logger.info('🚀 Deploying slash commands to Discord...');
 
-			const commandData = Array.from(this.commands.values()).map(command => command.data);
-			logger.info(`📋 Commands to deploy: ${commandData.map(cmd => cmd.name).join(', ')}`);
+			const commandData = Array.from(this.commands.values()).map((command) => command.data);
+			logger.info(`📋 Commands to deploy: ${commandData.map((cmd) => cmd.name).join(', ')}`);
 
 			const guildId = process.env.GUILD_ID;
 			if (guildId && process.env.DEBUG_MODE === 'true') {
@@ -97,7 +99,7 @@ class BunkBotContainer {
 				await guild.commands.set(commandData);
 			} else {
 				logger.info('🌍 Deploying commands globally');
-				await client.application.commands.set(commandData);
+				await client.application!.commands.set(commandData);
 			}
 
 			logger.info(`✅ Successfully deployed ${commandData.length} slash commands`);
@@ -108,19 +110,56 @@ class BunkBotContainer {
 	}
 
 	private startHealthServer(): void {
-		this.healthServer.start(() => ({
-			status: 'healthy',
-			timestamp: new Date().toISOString(),
-			discord: {
-				connected: this.serviceManager.getClient()?.isReady() || false,
-				initialized: this.hasInitialized
-			},
-			uptime: process.uptime(),
-			bots: {
-				loaded: this.replyBots.length,
-				active: this.replyBots.filter(bot => !bot.metadata?.disabled).length
-			}
-		}));
+		this.healthServer.start(() => {
+			const memory = process.memoryUsage();
+			return {
+				status: 'healthy',
+				timestamp: new Date().toISOString(),
+				discord: {
+					connected: this.serviceManager.getClient()?.isReady() || false,
+					initialized: this.hasInitialized,
+				},
+				uptime: process.uptime(),
+				memory: {
+					used: memory.rss,
+					total: memory.rss + memory.external,
+					heapUsed: memory.heapUsed,
+					heapTotal: memory.heapTotal,
+					external: memory.external,
+				},
+				metrics: {
+					totalRequests: 0,
+					errorCount: 0,
+					errorRate: 0,
+					avgResponseTime: 0,
+					activeConnections: 0,
+				},
+				bots: {
+					loaded: this.replyBots.length,
+					active: this.replyBots.filter((bot) => !bot.metadata?.disabled).length,
+					circuitBreakersOpen: 0,
+					storageSize: 0,
+				},
+				dependencies: {
+					discord: {
+						status: this.serviceManager.getClient()?.isReady() || false ? 'healthy' : 'unhealthy',
+						latency: 0,
+						lastCheck: Date.now(),
+					},
+					storage: {
+						status: 'healthy',
+						size: 0,
+						oldestItem: Date.now(),
+					},
+				},
+				configuration: {
+					nodeEnv: process.env.NODE_ENV || 'unknown',
+					debugMode: process.env.DEBUG_MODE === 'true',
+					maxBotInstances: parseInt(process.env.MAX_BOT_INSTANCES || '50'),
+					circuitBreakerEnabled: process.env.ENABLE_CIRCUIT_BREAKER !== 'false',
+				},
+			};
+		});
 	}
 
 	private setupEventHandlers(): void {
@@ -134,12 +173,13 @@ class BunkBotContainer {
 			logger.warn('Discord client warning:', warning);
 		});
 
-		client.on(Events.MessageCreate, async (message: any) => {
+		client.on(Events.MessageCreate, async (message: Message) => {
 			logger.debug(`Message from ${message.author?.username}: "${message.content?.substring(0, 50)}"`);
 			await this.messageProcessor?.processMessage(message);
 		});
 
-		client.on(Events.InteractionCreate, async (interaction: any) => {
+		client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+			if (!interaction.isChatInputCommand()) return;
 			logger.debug(`Interaction: ${interaction.commandName} from ${interaction.user?.username}`);
 			await this.interactionHandler?.handleInteraction(interaction);
 		});
@@ -178,7 +218,7 @@ class BunkBotContainer {
 
 	private getDiscordToken(): string {
 		const token = process.env.BUNKBOT_TOKEN || process.env.STARBUNK_TOKEN || process.env.TOKEN;
-		
+
 		if (!token) {
 			throw new Error('No Discord token found. Set BUNKBOT_TOKEN, STARBUNK_TOKEN, or TOKEN');
 		}
@@ -210,7 +250,7 @@ class BunkBotContainer {
 		logger.info('Stopping BunkBot...');
 
 		await this.healthServer.stop();
-		
+
 		const client = this.serviceManager.getClient();
 		if (client) {
 			await client.destroy();
@@ -240,7 +280,6 @@ async function main(): Promise<void> {
 
 		process.on('SIGINT', () => shutdown('SIGINT'));
 		process.on('SIGTERM', () => shutdown('SIGTERM'));
-
 	} catch (error) {
 		logger.error('Failed to start BunkBot:', ensureError(error));
 		if (bunkBot) {
@@ -251,7 +290,7 @@ async function main(): Promise<void> {
 }
 
 if (require.main === module) {
-	main().catch(error => {
+	main().catch((error) => {
 		console.error('Fatal error:', ensureError(error));
 		process.exit(1);
 	});

@@ -1,17 +1,31 @@
-import { Collection, CommandInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, SlashCommandBuilder } from 'discord.js';
+import { REST, Routes } from 'discord.js';
 import fs from 'fs';
+// Minimal interaction shape used by this handler (structural typing)
+type InteractionLike = {
+	commandName: string;
+	replied?: boolean;
+	deferred?: boolean;
+	reply: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
+	followUp: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
+};
+
 import path from 'path';
 import { logger, isDebugMode } from '@starbunk/shared';
 
 // Command interface for DJCova music commands
 
+import type { RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord-api-types/v10';
+
+type CommandData =
+	| RESTPostAPIChatInputApplicationCommandsJSONBody
+	| { name: string; toJSON?: () => RESTPostAPIChatInputApplicationCommandsJSONBody };
 export interface Command {
-    data: RESTPostAPIChatInputApplicationCommandsJSONBody | SlashCommandBuilder;
-    execute: (interaction: CommandInteraction) => Promise<void>;
+	data?: CommandData;
+	execute: (interaction: InteractionLike) => Promise<void>;
 }
 
 export class CommandHandler {
-	private commands: Collection<string, Command> = new Collection();
+	private commands: Map<string, Command> = new Map();
 
 	constructor() {
 		logger.info('Initializing CommandHandler');
@@ -30,13 +44,16 @@ export class CommandHandler {
 			}
 
 			// Check if we're running under ts-node
-			const isTsNode = process.argv[0].includes('ts-node') ||
+			const isTsNode =
+				process.argv[0].includes('ts-node') ||
 				(process.env.npm_lifecycle_script && process.env.npm_lifecycle_script.includes('ts-node'));
 			logger.debug(`Running with ts-node: ${isTsNode}`);
 
 			// Debug more information about environment
 			if (isDebug) {
-				logger.debug(`Loading commands with: NODE_ENV=${process.env.NODE_ENV}, ts-node=${isTsNode}, __dirname=${__dirname}`);
+				logger.debug(
+					`Loading commands with: NODE_ENV=${process.env.NODE_ENV}, ts-node=${isTsNode}, __dirname=${__dirname}`,
+				);
 				logger.debug(`Command: ${process.argv.join(' ')}`);
 				if (process.env.npm_lifecycle_script) {
 					logger.debug(`npm script: ${process.env.npm_lifecycle_script}`);
@@ -48,19 +65,20 @@ export class CommandHandler {
 			const prodExtension = '.js';
 
 			// Determine the file extension to use based on environment
-			const fileExtension = (isDev || isTsNode) ? devExtension : prodExtension;
+			const fileExtension = isDev || isTsNode ? devExtension : prodExtension;
 
 			// When running in development or using ts-node, we use the src directory path
 			// In production, use the dist directory
-			const baseDir = (isDev || isTsNode) ? process.cwd() + '/src' : process.cwd() + '/dist';
+			const baseDir = isDev || isTsNode ? process.cwd() + '/src' : process.cwd() + '/dist';
 			const commandDir = path.resolve(baseDir, 'commands');
 
 			logger.debug(`Looking for commands in: ${commandDir}`);
 			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
 
 			// Find all command files using the direct path
-			const commandFiles = fs.readdirSync(commandDir)
-				.filter(file => {
+			const commandFiles = fs
+				.readdirSync(commandDir)
+				.filter((file) => {
 					// In development mode, only load .ts files
 					if (isDev || isTsNode) {
 						return file.endsWith('.ts') && !file.endsWith('.d.ts') && !file.endsWith('adapter.ts');
@@ -68,9 +86,11 @@ export class CommandHandler {
 					// In production mode, only load .js files
 					return file.endsWith('.js') && !file.endsWith('adapter.js');
 				})
-				.map(file => path.join(commandDir, file));
+				.map((file) => path.join(commandDir, file));
 
-			logger.info(`Found ${commandFiles.length} command files to load: ${commandFiles.map(f => path.basename(f)).join(', ')}`);
+			logger.info(
+				`Found ${commandFiles.length} command files to load: ${commandFiles.map((f) => path.basename(f)).join(', ')}`,
+			);
 
 			let successCount = 0;
 			for (const commandFile of commandFiles) {
@@ -88,13 +108,21 @@ export class CommandHandler {
 							logger.info(`✅ Command loaded successfully: ${command.data.name}`);
 							successCount++;
 						} else {
-							logger.warn(`⚠️ Command in file ${path.basename(commandFile)} doesn't match expected format: must have data and execute properties`);
+							logger.warn(
+								`⚠️ Command in file ${path.basename(commandFile)} doesn't match expected format: must have data and execute properties`,
+							);
 						}
 					} catch (error) {
-						logger.error(`❌ Failed to load command: ${commandFile}`, error instanceof Error ? error : new Error(String(error)));
+						logger.error(
+							`❌ Failed to load command: ${commandFile}`,
+							error instanceof Error ? error : new Error(String(error)),
+						);
 					}
 				} catch (error) {
-					logger.error(`❌ Failed to process command file: ${commandFile}`, error instanceof Error ? error : new Error(String(error)));
+					logger.error(
+						`❌ Failed to process command file: ${commandFile}`,
+						error instanceof Error ? error : new Error(String(error)),
+					);
 				}
 			}
 
@@ -128,11 +156,15 @@ export class CommandHandler {
 			const commandData: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 
 			// Collect all command data, converting SlashCommandBuilder to JSON if needed
-			this.commands.forEach(command => {
+			this.commands.forEach((command: Command) => {
 				if (!command.data) return;
 
 				// If the command data is a SlashCommandBuilder or has toJSON method
-				if (typeof command.data === 'object' && 'toJSON' in command.data && typeof command.data.toJSON === 'function') {
+				if (
+					typeof command.data === 'object' &&
+					'toJSON' in command.data &&
+					typeof command.data.toJSON === 'function'
+				) {
 					commandData.push(command.data.toJSON());
 				} else {
 					// Plain object data
@@ -141,22 +173,22 @@ export class CommandHandler {
 			});
 
 			logger.debug(`Registering ${commandData.length} commands with Discord API`);
-			logger.debug(`Command data: ${JSON.stringify(commandData.map(cmd => cmd.name))}`);
+			logger.debug(`Command data: ${JSON.stringify(commandData.map((cmd) => cmd.name))}`);
 
 			// Only register commands if we have some
 			if (commandData.length > 0) {
 				// Register globally instead of guild-specific for music commands
-				await rest.put(
-					Routes.applicationCommands(process.env.CLIENT_ID),
-					{ body: commandData }
-				);
+				await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commandData });
 
 				logger.info('Successfully registered application commands with Discord');
 			} else {
 				logger.warn('No commands to register with Discord');
 			}
 		} catch (error) {
-			logger.error('Error registering commands with Discord:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'Error registering commands with Discord:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			throw error;
 		}
 	}
@@ -167,7 +199,7 @@ export class CommandHandler {
 		this.commands.set(commandName, command);
 	}
 
-	public async handleInteraction(interaction: CommandInteraction): Promise<void> {
+	public async handleInteraction(interaction: InteractionLike): Promise<void> {
 		const commandName = interaction.commandName;
 		const command = this.commands.get(commandName);
 
@@ -181,7 +213,10 @@ export class CommandHandler {
 			await command.execute(interaction);
 			logger.debug(`Command ${commandName} executed successfully`);
 		} catch (error) {
-			logger.error(`Error executing command ${commandName}:`, error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				`Error executing command ${commandName}:`,
+				error instanceof Error ? error : new Error(String(error)),
+			);
 
 			// Respond to the user with an error message
 			const errorMessage = 'There was an error executing this command.';

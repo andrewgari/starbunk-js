@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
 
-# Lint staged files and type-check the repo (Husky v9+)
+# Lint staged files and type-check only Shared and BunkBot (path-scoped)
 npx lint-staged
-npm run type-check --silent
+npm run type-check:shared --silent && npm run type-check:bunkbot --silent

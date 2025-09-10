@@ -1,21 +1,22 @@
-import { CommandInteraction, SlashCommandBuilder } from 'discord.js';
-import {
-	logger,
-	sendErrorResponse,
-	sendSuccessResponse,
-	container,
-	ServiceId
-} from '@starbunk/shared';
+import { SlashCommandBuilder } from 'discord.js';
+import { logger, sendErrorResponse, sendSuccessResponse, container, ServiceId } from '@starbunk/shared';
+
+// Minimal interaction shape for this command
+type InteractionLike = {
+	guild?: { id: string } | null;
+	replied?: boolean;
+	deferred?: boolean;
+	reply: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
+	followUp: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
+};
 import { disconnectVoiceConnection } from '../utils/voiceUtils';
 import { DJCova } from '../djCova';
 
-const commandBuilder = new SlashCommandBuilder()
-	.setName('stop')
-	.setDescription('Stop playing and leave channel');
+const commandBuilder = new SlashCommandBuilder().setName('stop').setDescription('Stop playing and leave channel');
 
 export default {
 	data: commandBuilder.toJSON(),
-	async execute(interaction: CommandInteraction) {
+	async execute(interaction: InteractionLike) {
 		try {
 			// Get music player from container
 			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);

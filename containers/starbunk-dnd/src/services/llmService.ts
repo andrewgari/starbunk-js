@@ -1,4 +1,4 @@
-import { StandardLLMService } from '../../services/llm/standardLlmService';
+import { StandardLLMService } from '@starbunk/shared/dist/services/llm/standardLlmService';
 import { logger } from '@starbunk/shared';
 import { Campaign } from '../types/game';
 
@@ -7,8 +7,7 @@ export class GameLLMService {
 	private standardLlmService!: StandardLLMService;
 	private isInitialized = false;
 
-	private constructor() {
-	}
+	private constructor() {}
 
 	private async initialize(): Promise<void> {
 		if (this.isInitialized) {
@@ -20,9 +19,11 @@ export class GameLLMService {
 			this.standardLlmService = await StandardLLMService.getInstance();
 			this.isInitialized = true;
 			logger.info('[GameLLMService] Successfully initialized.');
-
 		} catch (error) {
-			logger.error('[GameLLMService] Error during initialization (failed to get StandardLLMService):', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'[GameLLMService] Error during initialization (failed to get StandardLLMService):',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			this.isInitialized = false;
 			throw error;
 		}
@@ -58,7 +59,10 @@ export class GameLLMService {
 			logger.debug('[GameLLMService] Received response from StandardLLMService');
 			return response;
 		} catch (error) {
-			logger.error('[GameLLMService] Error during delegated response generation:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'[GameLLMService] Error during delegated response generation:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			throw error;
 		}
 	}
@@ -93,7 +97,7 @@ IMPORTANT: Your response must be ONLY valid JSON in this exact format:
 				return {
 					category: 'general',
 					suggestedTags: [],
-					isGMContent: false
+					isGMContent: false,
 				};
 			}
 
@@ -105,7 +109,7 @@ IMPORTANT: Your response must be ONLY valid JSON in this exact format:
 				return {
 					category: 'general',
 					suggestedTags: [],
-					isGMContent: false
+					isGMContent: false,
 				};
 			}
 
@@ -118,26 +122,32 @@ IMPORTANT: Your response must be ONLY valid JSON in this exact format:
 			return {
 				category: parsed.category.toLowerCase(),
 				suggestedTags: parsed.suggestedTags,
-				isGMContent: parsed.isGMContent
+				isGMContent: parsed.isGMContent,
 			};
 		} catch (error) {
-			logger.error('Error parsing categorization response:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'Error parsing categorization response:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 			return {
 				category: 'general',
 				suggestedTags: [],
-				isGMContent: false
+				isGMContent: false,
 			};
 		}
 	}
 
-	public async determineRelevantContext(question: string, availableContent: Array<{
-		category: string;
-		content: string;
-		tags: string[];
-	}>): Promise<number[]> {
+	public async determineRelevantContext(
+		question: string,
+		availableContent: Array<{
+			category: string;
+			content: string;
+			tags: string[];
+		}>,
+	): Promise<number[]> {
 		logger.debug('[GameLLMService] Determining relevant context...', {
 			question,
-			availableContentCount: availableContent.length
+			availableContentCount: availableContent.length,
 		});
 
 		const systemPrompt = `You are a helpful assistant that identifies relevant content for RPG game questions.
@@ -159,7 +169,7 @@ ${availableContent.map((c, i) => `${i + 1}. [${c.category}] ${c.content.substrin
 Return ONLY a JSON array of the most relevant piece indices (max 3).`;
 
 		logger.debug('[GameLLMService] Built context selection prompt', {
-			promptLength: prompt.length
+			promptLength: prompt.length,
 		});
 
 		try {
@@ -174,20 +184,20 @@ Return ONLY a JSON array of the most relevant piece indices (max 3).`;
 			}
 
 			const parsed = JSON.parse(jsonMatch[0]);
-			if (!Array.isArray(parsed) || !parsed.every(n => typeof n === 'number')) {
+			if (!Array.isArray(parsed) || !parsed.every((n) => typeof n === 'number')) {
 				logger.warn('[GameLLMService] Invalid array format in response, using default');
 				return [1];
 			}
 
 			// Validate indices are within bounds
-			const validIndices = parsed.filter(i => i >= 1 && i <= availableContent.length);
+			const validIndices = parsed.filter((i) => i >= 1 && i <= availableContent.length);
 			if (validIndices.length === 0) {
 				logger.warn('[GameLLMService] No valid indices found, using default');
 				return [1];
 			}
 
 			logger.debug('[GameLLMService] Successfully parsed context selection', {
-				selectedIndices: validIndices
+				selectedIndices: validIndices,
 			});
 			return validIndices;
 		} catch (error) {
@@ -204,7 +214,7 @@ Return ONLY a JSON array of the most relevant piece indices (max 3).`;
 			isGM,
 			campaignSystem: campaign.system,
 			hasContext: !!context,
-			contextPreview: context ? context.substring(0, 100) + '...' : 'No context provided'
+			contextPreview: context ? context.substring(0, 100) + '...' : 'No context provided',
 		});
 
 		const systemPrompt = `You are an expert game master and rules advisor EXCLUSIVELY for ${campaign.system.name} ${campaign.system.version}.
@@ -289,7 +299,7 @@ What is the damage of a longsword?
 
 		logger.debug('[GameLLMService] Built answer prompt', {
 			promptLength: prompt.length,
-			hasContext: !!context
+			hasContext: !!context,
 		});
 
 		try {
