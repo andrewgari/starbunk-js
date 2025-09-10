@@ -23,7 +23,7 @@ COPY containers/starbunk-dnd ./
 # Build shared package and container in one step
 RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
     cd .. && npm install "./shared/${SHARED_TGZ}" && \
-    npm run build && \
+    npm run build:docker && \
     npm prune --omit=dev
 
 # Stage 2: Runtime - Minimal production image

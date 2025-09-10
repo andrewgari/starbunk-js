@@ -5,6 +5,7 @@
 	"main": "dist/index.js",
 	"scripts": {
 		"build": "tsc && tsc-alias",
+		"build:docker": "tsc -p tsconfig.docker.json && tsc-alias -p tsconfig.docker.json",
 		"start": "node dist/index.js",
 		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
 		"test": "npx -y tsx src/commands/__tests__/play.test.ts",
