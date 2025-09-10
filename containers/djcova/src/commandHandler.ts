@@ -177,10 +177,34 @@ export class CommandHandler {
 
 			// Only register commands if we have some
 			if (commandData.length > 0) {
-				// Register globally instead of guild-specific for music commands
-				await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commandData });
+				const clientId = process.env.CLIENT_ID;
+				if (!clientId) {
+					throw new Error('CLIENT_ID environment variable is required');
+				}
 
-				logger.info('Successfully registered application commands with Discord');
+				const debugMode = process.env.DEBUG_MODE === 'true';
+				const guildIds = (process.env.TESTING_SERVER_IDS || '')
+					.split(',')
+					.map((s: string) => s.trim())
+					.filter(Boolean);
+
+				if (debugMode && guildIds.length > 0) {
+					// Register commands to guilds in parallel for better performance
+					const registrationPromises = guildIds.map(async (gid) => {
+						try {
+							await rest.put(Routes.applicationGuildCommands(clientId, gid), { body: commandData });
+							logger.info(`Registered ${commandData.length} commands to guild ${gid}`);
+						} catch (error) {
+							logger.error(`Failed to register commands to guild ${gid}:`, error);
+							throw error;
+						}
+					});
+
+					await Promise.all(registrationPromises);
+				} else {
+					await rest.put(Routes.applicationCommands(clientId), { body: commandData });
+					logger.info('Successfully registered application commands with Discord');
+				}
 			} else {
 				logger.warn('No commands to register with Discord');
 			}
