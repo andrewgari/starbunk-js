@@ -1,17 +1,37 @@
+import type { Message } from 'discord.js';
+
 import { BotIdentity } from '../../types/botIdentity';
 import { matchesPattern } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { ConfigurationService } from '../../services/configurationService';
 import { BotIdentityService } from '../../services/botIdentityService';
 import { GUY_BOT_PATTERNS, getRandomGuyResponse } from './constants';
+import { isDebugMode } from '@starbunk/shared';
+import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';
 
-// Initialize services
-const configService = new ConfigurationService();
-const identityService = new BotIdentityService(configService);
+// Lazily construct services to avoid Prisma at import time
+function getIdentityService(): BotIdentityService | null {
+	try {
+		const cs = new ConfigurationService();
+		return new BotIdentityService(cs);
+	} catch {
+		return null;
+	}
+}
 
-// Get Guy's identity using the identity service with message context
-async function getGuyIdentity(message?: any): Promise<BotIdentity | null> {
-	return identityService.getGuyIdentity(message);
+// Get Guy's identity using the identity service with message context; fallback to E2E test member when available
+async function getGuyIdentity(message?: Message): Promise<BotIdentity | null> {
+	const svc = getIdentityService();
+	if (svc) {
+		try {
+			return await svc.getGuyIdentity(message);
+		} catch {}
+	}
+	const testId = (process.env.E2E_TEST_MEMBER_ID || process.env.E2E_ID_SIGGREAT) as string | undefined;
+	if (isDebugMode() && testId) {
+		return getBotIdentityFromDiscord({ userId: testId, fallbackName: 'Guy', message });
+	}
+	return null;
 }
 
 // Trigger for guy mentions
@@ -27,5 +47,5 @@ export const guyTrigger = createTriggerResponse({
 		}
 		return identity;
 	},
-	priority: 1
+	priority: 1,
 });
