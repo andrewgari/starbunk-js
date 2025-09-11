@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'containers/shared/**'
+      - 'containers/shared/**'
       - 'containers/covabot/**'
       - 'containers/bunkbot/**'
       - 'containers/djcova/**'
@@ -13,6 +14,7 @@ on:
       - main
       - feature/**
     paths:
+      - 'containers/shared/**'
       - 'containers/shared/**'
       - 'containers/covabot/**'
       - 'containers/bunkbot/**'
@@ -32,15 +34,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Determine changes
         id: filter
         uses: dorny/paths-filter@v3
         with:
+          base: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           filters: |
             shared:
               - 'containers/shared/**'
-              - 'packages/shared/**'
+              - 'containers/shared/**'
             covabot:
               - 'containers/covabot/**'
             bunkbot:
@@ -51,20 +57,27 @@ jobs:
   shared:
     name: Shared (tests)
     needs: changes
+    if: needs.changes.outputs.shared == 'true'
 
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Install deps (shared)
+      - name: Install deps (root)
         if: needs.changes.outputs.shared == 'true'
         run: npm ci
+
+      - name: Install deps (shared)
+        if: needs.changes.outputs.shared == 'true'
+        run: npm install --silent
         working-directory: containers/shared
 
       - name: Run tests (shared)
@@ -75,6 +88,7 @@ jobs:
   covabot:
     name: CovaBot (tests + build)
     needs: changes
+    if: needs.changes.outputs.covabot == 'true' || needs.changes.outputs.shared == 'true'
 
     runs-on: ubuntu-latest
     steps:
@@ -86,9 +100,13 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install deps (shared)
+      - name: Install deps (root)
         if: needs.changes.outputs.covabot == 'true' || needs.changes.outputs.shared == 'true'
         run: npm ci
+
+      - name: Install deps (shared)
+        if: needs.changes.outputs.covabot == 'true' || needs.changes.outputs.shared == 'true'
+        run: npm install --silent
         working-directory: containers/shared
 
       - name: Build (shared)
@@ -96,10 +114,12 @@ jobs:
         run: npm run build --silent
         working-directory: containers/shared
 
+
       - name: Install deps (covabot)
         if: needs.changes.outputs.covabot == 'true'
-        run: npm ci
+        run: npm install --silent
         working-directory: containers/covabot
+
 
       - name: Run tests (covabot)
         if: needs.changes.outputs.covabot == 'true'
@@ -114,6 +134,7 @@ jobs:
   bunkbot:
     name: BunkBot (tests)
     needs: changes
+    if: needs.changes.outputs.bunkbot == 'true' || needs.changes.outputs.shared == 'true'
 
     runs-on: ubuntu-latest
     steps:
@@ -125,9 +146,13 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install deps (shared)
+      - name: Install deps (root)
         if: needs.changes.outputs.bunkbot == 'true' || needs.changes.outputs.shared == 'true'
         run: npm ci
+
+      - name: Install deps (shared)
+        if: needs.changes.outputs.bunkbot == 'true' || needs.changes.outputs.shared == 'true'
+        run: npm install --silent
         working-directory: containers/shared
 
       - name: Build (shared)
@@ -135,10 +160,12 @@ jobs:
         run: npm run build --silent
         working-directory: containers/shared
 
+
       - name: Install deps (bunkbot)
         if: needs.changes.outputs.bunkbot == 'true'
-        run: npm ci
+        run: npm install --silent
         working-directory: containers/bunkbot
+
 
       - name: Run tests (bunkbot)
         if: needs.changes.outputs.bunkbot == 'true'
@@ -152,6 +179,7 @@ jobs:
   djcova:
     name: DJCova (tests + build)
     needs: changes
+    if: needs.changes.outputs.djcova == 'true' || needs.changes.outputs.shared == 'true'
 
     runs-on: ubuntu-latest
     steps:
@@ -163,9 +191,13 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install deps (shared)
+      - name: Install deps (root)
         if: needs.changes.outputs.djcova == 'true' || needs.changes.outputs.shared == 'true'
         run: npm ci
+
+      - name: Install deps (shared)
+        if: needs.changes.outputs.djcova == 'true' || needs.changes.outputs.shared == 'true'
+        run: npm install --silent
         working-directory: containers/shared
 
       - name: Build (shared)
@@ -173,10 +205,12 @@ jobs:
         run: npm run build --silent
         working-directory: containers/shared
 
+
       - name: Install deps (djcova)
         if: needs.changes.outputs.djcova == 'true'
-        run: npm ci
+        run: npm install --silent
         working-directory: containers/djcova
+
 
       - name: Run tests (djcova)
         if: needs.changes.outputs.djcova == 'true'

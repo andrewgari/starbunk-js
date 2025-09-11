@@ -1,4 +1,5 @@
 #!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
 
-# Run full CI checks before pushing
-npm run check:ci --silent
+# Run comprehensive pre-push gate (fast checks + targeted container builds)
+bash scripts/pre-push.sh
