@@ -115,6 +115,12 @@ jobs:
         working-directory: containers/shared
 
 
+      - name: Install deps (covabot)
+        if: needs.changes.outputs.covabot == 'true'
+        run: npm install --silent
+        working-directory: containers/covabot
+
+
       - name: Run tests (covabot)
         if: needs.changes.outputs.covabot == 'true'
         run: npm test --silent
@@ -122,7 +128,7 @@ jobs:
 
       - name: Build (covabot)
         if: needs.changes.outputs.covabot == 'true'
-        run: npm run build --silent
+        run: npm run build:docker --silent
         working-directory: containers/covabot
 
   bunkbot:
@@ -153,6 +159,12 @@ jobs:
         if: needs.changes.outputs.bunkbot == 'true' || needs.changes.outputs.shared == 'true'
         run: npm run build --silent
         working-directory: containers/shared
+
+
+      - name: Install deps (bunkbot)
+        if: needs.changes.outputs.bunkbot == 'true'
+        run: npm install --silent
+        working-directory: containers/bunkbot
 
 
       - name: Run tests (bunkbot)
@@ -194,6 +206,12 @@ jobs:
         working-directory: containers/shared
 
 
+      - name: Install deps (djcova)
+        if: needs.changes.outputs.djcova == 'true'
+        run: npm install --silent
+        working-directory: containers/djcova
+
+
       - name: Run tests (djcova)
         if: needs.changes.outputs.djcova == 'true'
         run: npm test --silent
@@ -201,5 +219,5 @@ jobs:
 
       - name: Build (djcova)
         if: needs.changes.outputs.djcova == 'true'
-        run: npm run build --silent
+        run: npm run build:docker --silent
         working-directory: containers/djcova
