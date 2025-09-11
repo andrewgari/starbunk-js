@@ -128,7 +128,7 @@ jobs:
 
       - name: Build (covabot)
         if: needs.changes.outputs.covabot == 'true'
-        run: npm run build:docker --silent
+        run: npm run build --silent
         working-directory: containers/covabot
 
   bunkbot:
@@ -219,5 +219,5 @@ jobs:
 
       - name: Build (djcova)
         if: needs.changes.outputs.djcova == 'true'
-        run: npm run build:docker --silent
+        run: npm run build --silent
         working-directory: containers/djcova
