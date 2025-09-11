@@ -37,6 +37,8 @@ jobs:
         id: filter
         uses: dorny/paths-filter@v3
         with:
+          base: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           filters: |
             shared:
               - 'containers/shared/**'
@@ -51,6 +53,7 @@ jobs:
   shared:
     name: Shared (tests)
     needs: changes
+    if: needs.changes.outputs.shared == 'true'
 
     runs-on: ubuntu-latest
     steps:
@@ -75,6 +78,7 @@ jobs:
   covabot:
     name: CovaBot (tests + build)
     needs: changes
+    if: needs.changes.outputs.covabot == 'true' || needs.changes.outputs.shared == 'true'
 
     runs-on: ubuntu-latest
     steps:
@@ -114,6 +118,7 @@ jobs:
   bunkbot:
     name: BunkBot (tests)
     needs: changes
+    if: needs.changes.outputs.bunkbot == 'true' || needs.changes.outputs.shared == 'true'
 
     runs-on: ubuntu-latest
     steps:
@@ -152,6 +157,7 @@ jobs:
   djcova:
     name: DJCova (tests + build)
     needs: changes
+    if: needs.changes.outputs.djcova == 'true' || needs.changes.outputs.shared == 'true'
 
     runs-on: ubuntu-latest
     steps:
