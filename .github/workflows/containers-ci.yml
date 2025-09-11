@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - 'containers/shared/**'
-      - 'containers/shared/**'
       - 'containers/covabot/**'
       - 'containers/bunkbot/**'
       - 'containers/djcova/**'
@@ -14,7 +13,6 @@ on:
       - main
       - feature/**
     paths:
-      - 'containers/shared/**'
       - 'containers/shared/**'
       - 'containers/covabot/**'
       - 'containers/bunkbot/**'
@@ -45,7 +43,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           filters: |
             shared:
-              - 'containers/shared/**'
               - 'containers/shared/**'
             covabot:
               - 'containers/covabot/**'
