@@ -3,6 +3,7 @@ name: Containers CI
 on:
   pull_request:
     paths:
+      - 'packages/shared/**'
       - 'containers/shared/**'
       - 'containers/covabot/**'
       - 'containers/bunkbot/**'
@@ -13,6 +14,7 @@ on:
       - main
       - feature/**
     paths:
+      - 'packages/shared/**'
       - 'containers/shared/**'
       - 'containers/covabot/**'
       - 'containers/bunkbot/**'
@@ -76,7 +78,7 @@ jobs:
       - name: Run tests (shared)
         if: needs.changes.outputs.shared == 'true'
         run: npm test --silent
-        working-directory: containers/shared
+        working-directory: packages/shared
 
   covabot:
     name: CovaBot (tests + build)
@@ -100,7 +102,7 @@ jobs:
       - name: Build (shared)
         if: needs.changes.outputs.covabot == 'true' || needs.changes.outputs.shared == 'true'
         run: npm run build --silent
-        working-directory: containers/shared
+        working-directory: packages/shared
 
 
       - name: Run tests (covabot)
@@ -135,7 +137,7 @@ jobs:
       - name: Build (shared)
         if: needs.changes.outputs.bunkbot == 'true' || needs.changes.outputs.shared == 'true'
         run: npm run build --silent
-        working-directory: containers/shared
+        working-directory: packages/shared
 
 
       - name: Run tests (bunkbot)
@@ -169,7 +171,7 @@ jobs:
       - name: Build (shared)
         if: needs.changes.outputs.djcova == 'true' || needs.changes.outputs.shared == 'true'
         run: npm run build --silent
-        working-directory: containers/shared
+        working-directory: packages/shared
 
 
       - name: Run tests (djcova)
