@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@starbunk/shared": ["./shared/src"],
+      "@starbunk/shared/*": ["./shared/src/*"]
+    }
+  },
+  "references": [{ "path": "./shared" }]
+}
+

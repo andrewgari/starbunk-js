@@ -175,4 +175,9 @@ scripts/
 scripts/*
 
 *.md
+
+# Allow the pre-push gate script to be tracked
+!scripts/
+!scripts/pre-push.sh
+
 !README.md

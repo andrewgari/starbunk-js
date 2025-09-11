@@ -25,7 +25,7 @@ COPY prisma ./prisma
 RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
     cd .. && npm install "./shared/${SHARED_TGZ}" && \
     npx prisma generate && \
-    npm run build && \
+    npm run build:docker && \
     npm prune --omit=dev
 
 # Stage 2: Runtime - Minimal production image

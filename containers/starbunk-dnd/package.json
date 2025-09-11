@@ -5,6 +5,7 @@
 	"main": "dist/index-minimal.js",
 	"scripts": {
 		"build": "tsc && tsc-alias",
+		"build:docker": "tsc -p tsconfig.docker.json && tsc-alias -p tsconfig.docker.json",
 		"start": "node dist/index-minimal.js",
 		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index-minimal.ts",
 		"test": "jest",

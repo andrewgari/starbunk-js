@@ -5,6 +5,7 @@
 	"main": "dist/index.js",
 	"scripts": {
 		"build": "tsc && tsc-alias",
+		"build:docker": "tsc -p tsconfig.docker.json && tsc-alias -p tsconfig.docker.json",
 		"start": "node dist/index.js",
 		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
 		"test": "jest",
@@ -47,6 +48,7 @@
 		"ts-node-dev": "^2.0.0",
 		"tsc-alias": "^1.8.11",
 		"tsconfig-paths": "^4.2.0",
+		"prisma": "^6.7.0",
 		"typescript": "~5.3.0"
 	}
 }
