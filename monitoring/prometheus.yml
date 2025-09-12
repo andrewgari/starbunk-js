@@ -1,16 +1,131 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    cluster: 'starbunk-discord-bots'
+    environment: 'production'
+
+# Rule files for alerting (can be added later)
+rule_files:
+  # - "alert_rules.yml"
 
 scrape_configs:
-  # Scrape Pushgateway (metrics pushed by services)
+  # Scrape Pushgateway (metrics pushed by services) 
   - job_name: 'pushgateway'
     honor_labels: true
     static_configs:
       - targets: ['pushgateway:9091']
+    scrape_interval: 15s
+    scrape_timeout: 10s
 
-  # Optionally scrape itself (Prometheus)
+  # BunkBot - Reply bots and admin commands
+  - job_name: 'bunkbot'
+    static_configs:
+      - targets: ['starbunk-bunkbot:3002']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'bunkbot'
+      - source_labels: []
+        target_label: service
+        replacement: 'bunkbot'
+      - source_labels: []
+        target_label: container
+        replacement: 'starbunk-bunkbot'
+
+  # DJCova - Music service
+  - job_name: 'djcova'
+    static_configs:
+      - targets: ['starbunk-djcova:3004']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'djcova'
+      - source_labels: []
+        target_label: service
+        replacement: 'djcova'
+      - source_labels: []
+        target_label: container
+        replacement: 'starbunk-djcova'
+
+  # Starbunk-DND - D&D features and bridge
+  - job_name: 'starbunk-dnd'
+    static_configs:
+      - targets: ['starbunk-dnd:3005']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'starbunk-dnd'
+      - source_labels: []
+        target_label: service
+        replacement: 'starbunk-dnd'
+      - source_labels: []
+        target_label: container
+        replacement: 'starbunk-dnd'
+
+  # CovaBot - AI personality bot
+  - job_name: 'covabot'
+    static_configs:
+      - targets: ['starbunk-covabot:3003']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'covabot'
+      - source_labels: []
+        target_label: service
+        replacement: 'covabot'
+      - source_labels: []
+        target_label: container
+        replacement: 'starbunk-covabot'
+
+  # PostgreSQL Database (if postgresql_exporter is available)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['starbunk-postgres:9187']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'postgres'
+      - source_labels: []
+        target_label: service
+        replacement: 'postgres'
+    # This job will fail if postgres_exporter is not running - that's OK
+
+  # Prometheus itself
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'prometheus'
+      - source_labels: []
+        target_label: service
+        replacement: 'prometheus'
 

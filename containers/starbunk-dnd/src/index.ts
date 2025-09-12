@@ -12,6 +12,8 @@ import {
 	getMessageFilter,
 	MessageFilter,
 	initializeObservability,
+	createStarbunkDNDMetrics,
+	type StarbunkDNDMetrics
 } from '@starbunk/shared';
 
 type ChatInputInteraction = {
@@ -31,6 +33,7 @@ type Destroyable = { destroy: () => Promise<void> | void };
 class StarbunkDNDContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
 	private messageFilter!: MessageFilter;
+	private starbunkDNDMetrics!: StarbunkDNDMetrics;
 	private snowbunkClient: Destroyable | null = null;
 	private hasInitialized = false;
 
@@ -40,11 +43,24 @@ class StarbunkDNDContainer {
 		try {
 			// Initialize observability first
 			const {
-				metrics: _metrics,
+				metrics,
 				logger: _structuredLogger,
 				channelTracker: _channelTracker,
 			} = initializeObservability('starbunk-dnd');
 			logger.info('✅ Observability initialized for Starbunk-DND');
+
+			// Initialize Starbunk-DND-specific metrics collector
+			try {
+				this.starbunkDNDMetrics = createStarbunkDNDMetrics(metrics, {
+					enableDetailedTracking: true,
+					enablePerformanceMetrics: true,
+					enableErrorTracking: true
+				});
+				logger.info('✅ Starbunk-DND-specific metrics collector initialized for D&D campaign and LLM monitoring');
+			} catch (error) {
+				logger.warn('⚠️ Starbunk-DND metrics initialization failed, continuing without container-specific metrics:', ensureError(error));
+				this.starbunkDNDMetrics = undefined;
+			}
 
 			// Validate environment
 			this.validateEnvironment();
@@ -209,6 +225,17 @@ class StarbunkDNDContainer {
 
 	async stop(): Promise<void> {
 		logger.info('Stopping Starbunk-DND...');
+		
+		// Clean up metrics collector
+		if (this.starbunkDNDMetrics) {
+			try {
+				await this.starbunkDNDMetrics.cleanup();
+				logger.info('✅ Starbunk-DND metrics collector cleaned up');
+			} catch (error) {
+				logger.error('❌ Error cleaning up Starbunk-DND metrics:', ensureError(error));
+			}
+		}
+		
 		if (this.snowbunkClient) {
 			await this.snowbunkClient.destroy();
 		}
@@ -234,11 +261,29 @@ async function main(): Promise<void> {
 // Graceful shutdown
 process.on('SIGINT', async () => {
 	logger.info('Received SIGINT signal, shutting down Starbunk-DND...');
+	
+	try {
+		const { shutdownObservability } = await import('@starbunk/shared');
+		await shutdownObservability();
+		logger.info('Observability stack shutdown completed');
+	} catch (error) {
+		logger.error('Error during observability shutdown:', ensureError(error));
+	}
+	
 	process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
 	logger.info('Received SIGTERM signal, shutting down Starbunk-DND...');
+	
+	try {
+		const { shutdownObservability } = await import('@starbunk/shared');
+		await shutdownObservability();
+		logger.info('Observability stack shutdown completed');
+	} catch (error) {
+		logger.error('Error during observability shutdown:', ensureError(error));
+	}
+	
 	process.exit(0);
 });
 

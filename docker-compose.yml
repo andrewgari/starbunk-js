@@ -54,11 +54,21 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Observability Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - METRICS_PORT=${BUNKBOT_METRICS_PORT:-3002}
+      - HEALTH_PORT=${BUNKBOT_HEALTH_PORT:-3002}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
     depends_on:
       postgres:
         condition: service_healthy
+    ports:
+      # Metrics and health endpoint port
+      - "${BUNKBOT_METRICS_PORT:-3002}:3002"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -93,12 +103,22 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Observability Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - METRICS_PORT=${DJCOVA_METRICS_PORT:-3004}
+      - HEALTH_PORT=${DJCOVA_HEALTH_PORT:-3004}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
     volumes:
       # Unraid-compatible host path mounts
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
+    ports:
+      # Metrics and health endpoint port
+      - "${DJCOVA_METRICS_PORT:-3004}:3004"
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f 'node dist/index.js' || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3004/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -139,16 +159,26 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Observability Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - METRICS_PORT=${STARBUNK_DND_METRICS_PORT:-3005}
+      - HEALTH_PORT=${STARBUNK_DND_HEALTH_PORT:-3005}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
     volumes:
       # Unraid-compatible host path mounts
       - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/data:/app/data
       - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/campaigns:/app/data/campaigns
       - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/context:/app/data/llm_context
+    ports:
+      # Metrics and health endpoint port
+      - "${STARBUNK_DND_METRICS_PORT:-3005}:3005"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3005/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -189,16 +219,25 @@ services:
       - USE_DATABASE=${USE_DATABASE:-false}
       - COVABOT_DATA_DIR=/app/data
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+      # Observability Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - METRICS_PORT=${COVABOT_METRICS_PORT:-3003}
+      - HEALTH_PORT=${COVABOT_HEALTH_PORT:-3003}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
     volumes:
       # Unraid-compatible host path mount for CovaBot personality notes
       - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
     ports:
       - "${COVABOT_WEB_PORT:-7080}:7080"
+      # Metrics and health endpoint port
+      - "${COVABOT_METRICS_PORT:-3003}:3003"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:7080/api/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || curl -f http://localhost:7080/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

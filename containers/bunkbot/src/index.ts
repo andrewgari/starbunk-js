@@ -13,7 +13,9 @@ import {
 	getMessageFilter,
 	MessageFilter,
 	runStartupDiagnostics,
-	initializeObservability
+	initializeObservability,
+	createBunkBotMetrics,
+	type BunkBotMetrics
 } from '@starbunk/shared';
 
 // Import DiscordService directly from the service file
@@ -45,6 +47,7 @@ class BunkBotContainer {
 	private healthServer: any;
 	private replyBots: ReplyBotImpl[] = [];
 	private messageProcessor!: MessageProcessor;
+	private bunkBotMetrics?: BunkBotMetrics;
 
 	async initialize(): Promise<void> {
 		logger.info('🚀 Initializing BunkBot container...');
@@ -53,6 +56,19 @@ class BunkBotContainer {
 			// Initialize observability first
 			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('bunkbot');
 			logger.info('✅ Observability initialized with metrics, structured logging, and channel activity tracking');
+
+			// Initialize BunkBot-specific metrics collector
+			try {
+				this.bunkBotMetrics = createBunkBotMetrics(metrics, {
+					enableDetailedTracking: true,
+					enablePerformanceMetrics: true,
+					enableErrorTracking: true
+				});
+				logger.info('✅ BunkBot-specific metrics collector initialized for production monitoring');
+			} catch (error) {
+				logger.warn('⚠️ BunkBot metrics initialization failed, continuing without container-specific metrics:', ensureError(error));
+				this.bunkBotMetrics = undefined;
+			}
 
 			// Run startup diagnostics
 			const diagnostics = await runStartupDiagnostics();
@@ -78,9 +94,10 @@ class BunkBotContainer {
 			// Initialize reply bot system
 			await this.initializeReplyBots();
 
-			// Initialize message processor with observability
-			this.messageProcessor = new MessageProcessor(this.messageFilter, this.replyBots);
-			logger.info('✅ Message processor initialized with observability tracking');
+			// Initialize message processor with observability and BunkBot-specific metrics
+			this.messageProcessor = new MessageProcessor(this.messageFilter, this.replyBots, this.bunkBotMetrics);
+			const metricsStatus = this.bunkBotMetrics ? 'with BunkBot-specific metrics' : 'with base metrics only';
+			logger.info(`✅ Message processor initialized with observability tracking ${metricsStatus}`);
 
 		// Register commands
 		this.registerCommands();
@@ -144,10 +161,20 @@ class BunkBotContainer {
 		logger.info('🤖 Initializing reply bot system...');
 
 		try {
+			// Track bot registry loading performance
+			const loadStartTime = Date.now();
+			
 			// For now, focus on file-based bot loading only
 			// Database bot loading is temporarily disabled to fix compilation issues
 			logger.info('📁 Loading reply bots from file system...');
 			this.replyBots = await BotRegistry.discoverBots();
+
+			const loadDuration = Date.now() - loadStartTime;
+			
+			// Track bot registry load metrics
+			if (this.bunkBotMetrics) {
+				this.bunkBotMetrics.trackBotRegistryLoad(this.replyBots.length, loadDuration);
+			}
 
 			if (this.replyBots.length > 0) {
 				logger.info(`✅ Reply bot system initialized with ${this.replyBots.length} bots`);
@@ -160,6 +187,10 @@ class BunkBotContainer {
 			}
 		} catch (error) {
 			logger.error('❌ Failed to initialize reply bot system:', ensureError(error));
+			// Track failed bot registry load
+			if (this.bunkBotMetrics) {
+				this.bunkBotMetrics.trackBotRegistryLoad(0, Date.now());
+			}
 			// Don't throw here - allow BunkBot to continue with just slash commands
 			this.replyBots = [];
 		}
@@ -389,6 +420,16 @@ private async deployCommands(): Promise<void> {
 	async stop(): Promise<void> {
 		logger.info('Stopping BunkBot...');
 
+		// Clean up metrics collector first
+		if (this.bunkBotMetrics) {
+			try {
+				await this.bunkBotMetrics.cleanup();
+				logger.info('✅ BunkBot metrics collector cleaned up successfully');
+			} catch (error) {
+				logger.error('❌ Error cleaning up BunkBot metrics:', ensureError(error));
+			}
+		}
+
 		// Stop health server
 		if (this.healthServer) {
 			this.healthServer.close(() => {
@@ -428,8 +469,23 @@ async function main(): Promise<void> {
 		const shutdown = async (signal: string) => {
 			logger.info(`Received ${signal} signal, shutting down BunkBot...`);
 			if (bunkBot) {
-				await bunkBot.stop();
+				try {
+					await bunkBot.stop();
+					logger.info('BunkBot shutdown completed successfully');
+				} catch (error) {
+					logger.error('Error during BunkBot shutdown:', ensureError(error));
+				}
 			}
+			
+			// Final cleanup of observability stack
+			try {
+				const { shutdownObservability } = await import('@starbunk/shared');
+				await shutdownObservability();
+				logger.info('Observability stack shutdown completed');
+			} catch (error) {
+				logger.error('Error during observability shutdown:', ensureError(error));
+			}
+			
 			process.exit(0);
 		};
 

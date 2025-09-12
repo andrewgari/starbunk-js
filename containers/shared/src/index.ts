@@ -1,7 +1,15 @@
 // Shared utilities and services for all containers
 export { logger } from './services/logger';
 export { ensureError } from './utils/errorUtils';
-export { validateEnvironment, getDebugMode, getTestingServerIds, getTestingChannelIds } from './utils/envValidation';
+export { 
+	validateEnvironment, 
+	getDebugMode, 
+	getTestingServerIds, 
+	getTestingChannelIds,
+	validateObservabilityEnvironment,
+	getObservabilityEnvVars,
+	type ObservabilityConfig
+} from './utils/envValidation';
 export { runStartupDiagnostics, StartupDiagnostics } from './utils/diagnostics';
 export type { DiagnosticResult } from './utils/diagnostics';
 export { isDebugMode, setDebugMode } from './environment';
@@ -24,7 +32,7 @@ export * from './utils/time';
 
 export { WebhookManager } from './services/webhookManager';
 export { MessageFilter, getMessageFilter, resetMessageFilter } from './services/messageFilter';
-export type { MessageContext, FilterResult } from './services/messageFilter';
+export type { FilterResult } from './services/messageFilter';
 export { DiscordService } from './services/discordService';
 export { DatabaseService, getDatabaseService } from './services/database/databaseService';
 export { ConfigurationRepository } from './services/database/configurationRepository';
@@ -73,9 +81,12 @@ export type { LLMPrompt } from './services/llm/promptManager';
 export { LLMProviderType } from './services/llm/index';
 export { getPersonalityService } from './services/personalityService';
 
-// Observability
+// Observability - Production-ready metrics infrastructure
 export {
 	initializeObservability,
+	initializeObservabilityLegacy,
+	shutdownObservability,
+	ProductionMetricsService,
 	MetricsService,
 	initializeMetrics,
 	getMetrics,
@@ -85,6 +96,19 @@ export {
 	ChannelActivityTracker,
 	initializeChannelActivityTracker,
 	getChannelActivityTracker,
+	HttpEndpointsService,
+	initializeHttpEndpoints,
+	getHttpEndpoints,
+	// Container-specific metrics
+	BunkBotMetricsCollector,
+	createBunkBotMetrics,
+	DJCovaMetricsCollector,
+	createDJCovaMetrics,
+	StarbunkDNDMetricsCollector,
+	createStarbunkDNDMetrics,
+	CovaBotMetricsCollector,
+	createCovaBotMetrics,
+	ContainerMetricsBase,
 } from './services/observability';
 export type {
 	MessageFlowMetrics,
@@ -93,4 +117,16 @@ export type {
 	MessageFlowLog,
 	ChannelActivityLog,
 	SystemLog,
+	MetricsConfiguration,
+	EndpointsConfig,
+	HealthCheckFunction,
+	HealthCheckResult,
+	// Container-specific metrics types
+	BunkBotMetrics,
+	DJCovaMetrics,
+	StarbunkDNDMetrics,
+	CovaBotMetrics,
+	MessageContext,
+	ContainerMetricsFactory,
+	ContainerMetricsConfig,
 } from './services/observability';
