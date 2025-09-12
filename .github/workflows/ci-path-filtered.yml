@@ -89,7 +89,8 @@ jobs:
       - name: Build image (bunkbot)
         uses: docker/build-push-action@v6
         with:
-          context: containers/bunkbot
+          context: .
+          file: containers/bunkbot/Dockerfile
           push: false
           tags: local/bunkbot:ci
           load: true
@@ -129,7 +130,8 @@ jobs:
       - name: Build image (djcova)
         uses: docker/build-push-action@v6
         with:
-          context: containers/djcova
+          context: .
+          file: containers/djcova/Dockerfile
           push: false
           tags: local/djcova:ci
           load: true
@@ -169,7 +171,8 @@ jobs:
       - name: Build image (starbunk-dnd)
         uses: docker/build-push-action@v6
         with:
-          context: containers/starbunk-dnd
+          context: .
+          file: containers/starbunk-dnd/Dockerfile
           push: false
           tags: local/starbunk-dnd:ci
           load: true
@@ -209,7 +212,8 @@ jobs:
       - name: Build image (covabot)
         uses: docker/build-push-action@v6
         with:
-          context: containers/covabot
+          context: .
+          file: containers/covabot/Dockerfile
           push: false
           tags: local/covabot:ci
           load: true
@@ -249,7 +253,8 @@ jobs:
       - name: Build image (snowbunk)
         uses: docker/build-push-action@v6
         with:
-          context: containers/snowbunk
+          context: .
+          file: containers/snowbunk/Dockerfile
           push: false
           tags: local/snowbunk:ci
           load: true
