@@ -12,6 +12,8 @@ import {
 	getMessageFilter,
 	MessageFilter,
 	initializeObservability,
+	createDJCovaMetrics,
+	type DJCovaMetrics
 } from '@starbunk/shared';
 import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
@@ -33,6 +35,7 @@ class DJCovaContainer {
 	private messageFilter!: MessageFilter;
 	private commandHandler!: CommandHandler;
 	private musicPlayer!: DJCova;
+	private djCovaMetrics!: DJCovaMetrics;
 	public activeSubscription: { unsubscribe(): void } | null = null;
 	private hasInitialized = false;
 
@@ -42,11 +45,24 @@ class DJCovaContainer {
 		try {
 			// Initialize observability first
 			const {
-				metrics: _metrics,
+				metrics,
 				logger: _structuredLogger,
 				channelTracker: _channelTracker,
 			} = initializeObservability('djcova');
 			logger.info('✅ Observability initialized for DJCova');
+
+			// Initialize DJCova-specific metrics collector
+			try {
+				this.djCovaMetrics = createDJCovaMetrics(metrics, {
+					enableDetailedTracking: true,
+					enablePerformanceMetrics: true,
+					enableErrorTracking: true
+				});
+				logger.info('✅ DJCova-specific metrics collector initialized for music service monitoring');
+			} catch (error) {
+				logger.warn('⚠️ DJCova metrics initialization failed, continuing without container-specific metrics:', ensureError(error));
+				this.djCovaMetrics = undefined;
+			}
 
 			// Validate environment
 			this.validateEnvironment();
@@ -88,8 +104,8 @@ class DJCovaContainer {
 		this.messageFilter = getMessageFilter();
 		container.register(ServiceId.MessageFilter, this.messageFilter);
 
-		// Initialize music player
-		this.musicPlayer = new DJCova();
+		// Initialize music player with metrics
+		this.musicPlayer = new DJCova(this.djCovaMetrics);
 		container.register(ServiceId.MusicPlayer, this.musicPlayer);
 
 		// Initialize command handler
@@ -183,6 +199,17 @@ class DJCovaContainer {
 
 	async stop(): Promise<void> {
 		logger.info('Stopping DJCova...');
+		
+		// Clean up metrics collector
+		if (this.djCovaMetrics) {
+			try {
+				await this.djCovaMetrics.cleanup();
+				logger.info('✅ DJCova metrics collector cleaned up');
+			} catch (error) {
+				logger.error('❌ Error cleaning up DJCova metrics:', ensureError(error));
+			}
+		}
+		
 		if (this.activeSubscription) {
 			this.activeSubscription.unsubscribe();
 		}
@@ -208,11 +235,29 @@ async function main(): Promise<void> {
 // Graceful shutdown
 process.on('SIGINT', async () => {
 	logger.info('Received SIGINT signal, shutting down DJCova...');
+	
+	try {
+		const { shutdownObservability } = await import('@starbunk/shared');
+		await shutdownObservability();
+		logger.info('Observability stack shutdown completed');
+	} catch (error) {
+		logger.error('Error during observability shutdown:', ensureError(error));
+	}
+	
 	process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
 	logger.info('Received SIGTERM signal, shutting down DJCova...');
+	
+	try {
+		const { shutdownObservability } = await import('@starbunk/shared');
+		await shutdownObservability();
+		logger.info('Observability stack shutdown completed');
+	} catch (error) {
+		logger.error('Error during observability shutdown:', ensureError(error));
+	}
+	
 	process.exit(0);
 });
 

@@ -1,4 +1,4 @@
-import { logger, container, ServiceId, WebhookManager } from '@starbunk/shared';
+import { logger, container, ServiceId, WebhookManager, type CovaBotMetrics } from '@starbunk/shared';
 import { Message, TextChannel, Webhook, Client } from 'discord.js';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from '../types/triggerResponse';
@@ -51,14 +51,16 @@ export class CovaBot {
 	private readonly config: CovaBotConfig;
 	private readonly webhookCache = new Map<string, Webhook>();
 	private webhookManager: WebhookManager | null = null;
+	private metrics?: CovaBotMetrics;
 
-	constructor(config: CovaBotConfig) {
+	constructor(config: CovaBotConfig, metrics?: CovaBotMetrics) {
 		this.config = {
 			defaultResponseRate: 100,
 			skipBotMessages: true,
 			disabled: false,
 			...config,
 		};
+		this.metrics = metrics;
 		// Defer resolving WebhookManager until first use to avoid requiring tests to register it
 		this.webhookManager = null;
 	}
@@ -157,6 +159,22 @@ export class CovaBot {
 	 * Process incoming Discord message
 	 */
 	async processMessage(message: Message): Promise<void> {
+		const startTime = Date.now();
+		let responseGenerated = false;
+		let triggerType: 'mention' | 'keyword' | 'probability' | 'stats' = 'probability';
+
+		// Create message context for metrics
+		const messageContext = this.metrics ? {
+			messageId: message.id,
+			userId: message.author.id,
+			username: message.author.username,
+			channelId: message.channel.id,
+			channelName: message.channel instanceof TextChannel ? message.channel.name : 'unknown',
+			guildId: message.guild?.id || 'dm',
+			messageLength: message.content.length,
+			timestamp: Date.now()
+		} : undefined;
+
 		try {
 			// Check if bot is disabled
 			if (this.config.disabled) {
@@ -182,11 +200,25 @@ export class CovaBot {
 			// Process triggers in priority order
 			for (const trigger of sortedTriggers) {
 				try {
+					// Determine trigger type based on name
+					if (trigger.name.includes('mention')) {
+						triggerType = 'mention';
+					} else if (trigger.name.includes('stats')) {
+						triggerType = 'stats';
+					} else if (trigger.name.includes('keyword')) {
+						triggerType = 'keyword';
+					}
+
 					// Check if trigger condition matches
 					const matches = await trigger.condition(message);
 					logger.debug(`[CovaBot] Trigger "${trigger.name}" condition result: ${matches}`);
 
 					if (!matches) continue;
+
+					// Track personality trigger
+					if (this.metrics && messageContext) {
+						this.metrics.trackPersonalityTrigger(triggerType, messageContext);
+					}
 
 					// Get response text
 					const responseText = await trigger.response(message);
@@ -206,14 +238,37 @@ export class CovaBot {
 
 					// Send message with Cova's identity
 					await this.sendMessage(message, responseText, identity);
+					
+					// Track successful response
+					const responseTime = Date.now() - startTime;
+					responseGenerated = true;
+					
+					if (this.metrics) {
+						const responseType = responseText.length > 100 ? 'complex' : 'simple';
+						this.metrics.trackPersonalityResponse(responseTime, responseText.length, responseType);
+					}
+					
 					return; // Exit after first successful response
 				} catch (error) {
 					logger.error(`[CovaBot] Error in trigger "${trigger.name}":`, error as Error);
+					
+					// Track error response
+					if (this.metrics && !responseGenerated) {
+						const responseTime = Date.now() - startTime;
+						this.metrics.trackPersonalityResponse(responseTime, 0, 'error');
+					}
+					
 					continue; // Try next trigger
 				}
 			}
 		} catch (error) {
 			logger.error('[CovaBot] Error processing message:', error as Error);
+			
+			// Track error response if no response was generated
+			if (this.metrics && !responseGenerated) {
+				const responseTime = Date.now() - startTime;
+				this.metrics.trackPersonalityResponse(responseTime, 0, 'error');
+			}
 		}
 	}
 

@@ -4,7 +4,7 @@ type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 type PlayerSubscriptionLike = { unsubscribe(): void };
 type VoiceConnectionLike = { subscribe: (p: AudioPlayerLike) => PlayerSubscriptionLike | undefined };
 import ytdl from '@distube/ytdl-core';
-import { logger } from '@starbunk/shared';
+import { logger, type DJCovaMetrics } from '@starbunk/shared';
 import { Readable } from 'stream';
 import { IdleManager, createIdleManager, IdleManagerConfig } from './services/idleManager';
 import { getMusicConfig } from './config/musicConfig';
@@ -17,15 +17,21 @@ export class DJCova {
 	private currentGuildId: string | null = null;
 	private currentChannelId: string | null = null;
 	private notificationCallback: ((message: string) => Promise<void>) | null = null;
+	private metrics?: DJCovaMetrics;
 
 	// Event listener references for proper cleanup
 	private onPlayingListener: (() => void) | null = null;
 	private onIdleListener: (() => void) | null = null;
 	private onErrorListener: ((error: Error) => void) | null = null;
 
-	constructor() {
+	// Session tracking for metrics
+	private currentSessionStart?: number;
+	private currentSource?: string;
+
+	constructor(metrics?: DJCovaMetrics) {
 		logger.debug('🎵 Initializing DJCova audio player');
 		this.player = createAudioPlayer();
+		this.metrics = metrics;
 
 		// Set up audio player event listeners for idle management
 		this.setupIdleManagement();
@@ -37,9 +43,30 @@ export class DJCova {
 			return;
 		}
 
+		const startTime = Date.now();
+		this.currentSessionStart = startTime;
+		this.currentSource = typeof source === 'string' ? source : 'file';
+
+		// Track music session start
+		if (this.metrics && this.currentGuildId) {
+			this.metrics.trackMusicSessionStart(
+				this.currentGuildId,
+				'system', // userId would come from command context
+				this.currentSource
+			);
+		}
+
 		logger.info('🎵 Starting playback');
 
 		try {
+			// Track audio processing start
+			if (this.metrics && this.currentGuildId) {
+				const audioType = typeof source === 'string' 
+					? (source.includes('youtube') || source.includes('youtu.be') ? 'youtube' : 'stream')
+					: 'file';
+				this.metrics.trackAudioProcessingStart(this.currentGuildId, audioType);
+			}
+
 			let stream: Readable;
 			let inputType = StreamType.Arbitrary;
 
@@ -73,9 +100,30 @@ export class DJCova {
 
 			logger.debug('▶️ Playing resource...');
 			this.player.play(this.resource);
+			
+			// Track successful audio processing
+			const processingTime = Date.now() - startTime;
+			if (this.metrics && this.currentGuildId) {
+				this.metrics.trackAudioProcessingComplete(this.currentGuildId, processingTime, true);
+			}
+
 			logger.success('🎵 Audio resource created and playback started');
 		} catch (error) {
+			// Track failed audio processing
+			const processingTime = Date.now() - startTime;
+			if (this.metrics && this.currentGuildId) {
+				this.metrics.trackAudioProcessingComplete(this.currentGuildId, processingTime, false);
+			}
+
 			logger.error('Failed to start audio playback', error as Error);
+			
+			// End the session due to error
+			if (this.currentSessionStart && this.metrics && this.currentGuildId) {
+				const sessionDuration = Date.now() - this.currentSessionStart;
+				this.metrics.trackMusicSessionEnd(this.currentGuildId, sessionDuration, 'error');
+			}
+			
+			throw error;
 		}
 	}
 
@@ -89,10 +137,19 @@ export class DJCova {
 		this.player.play(this.resource);
 	}
 
-	stop(): void {
+	stop(reason: 'stopped' | 'completed' | 'error' | 'idle' = 'stopped'): void {
 		logger.info('⏹️ Stopping audio playback');
+		
+		// Track session end if there was an active session
+		if (this.currentSessionStart && this.metrics && this.currentGuildId) {
+			const sessionDuration = Date.now() - this.currentSessionStart;
+			this.metrics.trackMusicSessionEnd(this.currentGuildId, sessionDuration, reason);
+		}
+		
 		this.player.stop();
 		this.resource = undefined;
+		this.currentSessionStart = undefined;
+		this.currentSource = undefined;
 	}
 
 	pause(): void {
@@ -101,8 +158,15 @@ export class DJCova {
 	}
 
 	changeVolume(vol: number): void {
+		const oldVolume = this.volume;
 		logger.info(`🔊 Adjusting volume to ${vol}%`);
 		this.volume = Math.max(0, Math.min(vol, 100));
+		
+		// Track volume change
+		if (this.metrics && this.currentGuildId) {
+			this.metrics.trackVolumeChange(this.currentGuildId, oldVolume, this.volume);
+		}
+		
 		if (this.resource?.volume) {
 			this.resource.volume.setVolume(this.volume / 100);
 		} else {
@@ -146,6 +210,11 @@ export class DJCova {
 			logger.debug('Audio player started playing, resetting idle timer');
 			if (this.idleManager) {
 				this.idleManager.resetIdleTimer();
+				
+				// Track idle timer reset
+				if (this.metrics && this.currentGuildId) {
+					this.metrics.trackIdleTimerReset(this.currentGuildId);
+				}
 			}
 		};
 
@@ -196,6 +265,11 @@ export class DJCova {
 			},
 		};
 
+		// Track idle timer start
+		if (this.metrics) {
+			this.metrics.trackIdleTimerStart(guildId, config.idleTimeoutSeconds);
+		}
+
 		this.idleManager = createIdleManager(idleConfig);
 		logger.info(`Idle management initialized for guild ${guildId} with ${config.idleTimeoutSeconds}s timeout`);
 	}
@@ -205,8 +279,14 @@ export class DJCova {
 	 */
 	private async handleAutoDisconnect(reason: string): Promise<void> {
 		try {
-			// Stop the music player
-			this.stop();
+			// Track idle disconnect
+			if (this.metrics && this.currentGuildId && this.currentSessionStart) {
+				const idleDuration = Date.now() - this.currentSessionStart;
+				this.metrics.trackIdleDisconnect(this.currentGuildId, idleDuration);
+			}
+
+			// Stop the music player (this will also track session end)
+			this.stop('idle');
 
 			// Send notification to users
 			const message = `🔇 ${reason}`;

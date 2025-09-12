@@ -1,0 +1,682 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "starbunk-dnd",
+    "title": "Starbunk Discord Bot - D&D Campaign Management",
+    "tags": ["starbunk", "discord", "dnd", "campaigns", "llm", "ai"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "schemaVersion": 37,
+    "version": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": [
+        {
+          "name": "campaign",
+          "type": "query",
+          "query": "label_values(dnd_campaign_messages_total{service=\"starbunk-dnd\"}, campaign_id)",
+          "refresh": 1,
+          "includeAll": true,
+          "allValue": ".*",
+          "multi": true,
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          "options": [],
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        },
+        {
+          "name": "guild_id",
+          "type": "query",
+          "query": "label_values(dnd_campaign_messages_total{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}, guild_id)",
+          "refresh": 2,
+          "includeAll": true,
+          "allValue": ".*",
+          "multi": true,
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          "options": [],
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Campaigns",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count by () (dnd_active_campaigns{service=\"starbunk-dnd\", campaign_id=~\"$campaign\", guild_id=~\"$guild_id\"})",
+            "legendFormat": "Active Campaigns"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 1
+                },
+                {
+                  "color": "green",
+                  "value": 3
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Campaign Messages (Last Hour)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(increase(dnd_campaign_messages_total{service=\"starbunk-dnd\", campaign_id=~\"$campaign\", guild_id=~\"$guild_id\"}[1h]))",
+            "legendFormat": "Messages"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 6,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "LLM Queries (Last Hour)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(increase(llm_queries_total{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}[1h]))",
+            "legendFormat": "LLM Queries"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Vector Searches (Last Hour)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(increase(vector_searches_total{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}[1h]))",
+            "legendFormat": "Vector Searches"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 18,
+          "y": 0
+        }
+      },
+      {
+        "id": 5,
+        "title": "Campaign Message Activity",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum by (campaign_id) (rate(dnd_campaign_messages_total{service=\"starbunk-dnd\", campaign_id=~\"$campaign\", guild_id=~\"$guild_id\"}[5m]))",
+            "legendFormat": "Campaign {{campaign_id}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 1,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "axisGridShow": true,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "axisCenteredZero": false,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 6
+        }
+      },
+      {
+        "id": 6,
+        "title": "LLM Response Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(llm_response_duration_ms_bucket{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}[5m])) by (le, llm_provider))",
+            "legendFormat": "{{llm_provider}} - 50th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(llm_response_duration_ms_bucket{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}[5m])) by (le, llm_provider))",
+            "legendFormat": "{{llm_provider}} - 95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(llm_response_duration_ms_bucket{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}[5m])) by (le, llm_provider))",
+            "legendFormat": "{{llm_provider}} - 99th percentile"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 1,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "axisGridShow": true,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "axisCenteredZero": false,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 5000
+                },
+                {
+                  "color": "red",
+                  "value": 15000
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 6
+        }
+      },
+      {
+        "id": 7,
+        "title": "LLM Provider Usage",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (llm_provider) (increase(llm_queries_total{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}[1h]))",
+            "legendFormat": "{{llm_provider}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "displayMode": "table",
+              "calculation": "lastNotNull"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 14
+        }
+      },
+      {
+        "id": 8,
+        "title": "Vector Search Performance",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(vector_search_duration_ms_bucket{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}[5m])) by (le))",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(vector_search_duration_ms_bucket{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}[5m])) by (le))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "avg(vector_search_results_count{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}) * 100",
+            "legendFormat": "Average Results × 100"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 1,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "axisGridShow": true,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "axisCenteredZero": false,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": ".*Results.*"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "short"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 14
+        }
+      },
+      {
+        "id": 9,
+        "title": "Campaign Player Activity",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum by (campaign_id, player_count) (dnd_campaign_player_count{service=\"starbunk-dnd\", campaign_id=~\"$campaign\", guild_id=~\"$guild_id\"})",
+            "legendFormat": "",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          },
+          {
+            "expr": "sum by (campaign_id) (increase(dnd_campaign_messages_total{service=\"starbunk-dnd\", campaign_id=~\"$campaign\", guild_id=~\"$guild_id\"}[1h]))",
+            "legendFormat": "",
+            "format": "table",
+            "instant": true,
+            "refId": "B"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "seriesToColumns",
+            "options": {
+              "byField": "campaign_id"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "__name__": true,
+                "Time": true,
+                "job": true,
+                "instance": true,
+                "service": true,
+                "guild_id": true
+              },
+              "indexByName": {
+                "campaign_id": 0,
+                "player_count": 1,
+                "Value #B": 2
+              },
+              "renameByName": {
+                "campaign_id": "Campaign ID",
+                "player_count": "Active Players",
+                "Value #B": "Messages (1h)"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto",
+              "inspect": false
+            },
+            "mappings": []
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Active Players"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "short"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Messages (1h)"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "short"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 22
+        }
+      },
+      {
+        "id": 10,
+        "title": "LLM Error Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum by (llm_provider, error_type) (rate(llm_errors_total{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}[5m]))",
+            "legendFormat": "{{llm_provider}} - {{error_type}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {
+              "drawStyle": "bars",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 1,
+              "fillOpacity": 100,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "normal",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "axisGridShow": true,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "axisCenteredZero": false,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "color": {
+              "mode": "palette-classic"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 0.001
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 22
+        }
+      },
+      {
+        "id": 11,
+        "title": "Character Sheet Operations",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum by (operation) (rate(dnd_character_operations_total{service=\"starbunk-dnd\", campaign_id=~\"$campaign\"}[5m]))",
+            "legendFormat": "{{operation}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 1,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "normal",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "axisGridShow": true,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "axisCenteredZero": false,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 30
+        }
+      },
+      {
+        "id": 12,
+        "title": "Cross-Server Bridge Activity",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum by (source_guild, target_guild) (rate(dnd_bridge_messages_total{service=\"starbunk-dnd\"}[5m]))",
+            "legendFormat": "{{source_guild}} → {{target_guild}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 1,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "axisGridShow": true,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "axisCenteredZero": false,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 30
+        }
+      }
+    ]
+  }
+}

@@ -13,6 +13,8 @@ import {
 	MessageFilter,
 	initializeObservability,
 	DiscordService,
+	createCovaBotMetrics,
+	type CovaBotMetrics
 } from '@starbunk/shared';
 import { CovaBot } from './cova-bot/covaBot';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from './cova-bot/triggers';
@@ -21,6 +23,7 @@ class CovaBotContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
 	private webhookManager!: WebhookManager;
 	private messageFilter!: MessageFilter;
+	private covaBotMetrics!: CovaBotMetrics;
 	private hasInitialized = false;
 
 	async initialize(): Promise<void> {
@@ -29,11 +32,24 @@ class CovaBotContainer {
 		try {
 			// Initialize observability first
 			const {
-				metrics: _metrics,
+				metrics,
 				logger: _structuredLogger,
 				channelTracker: _channelTracker,
 			} = initializeObservability('covabot');
 			logger.info('✅ Observability initialized for CovaBot');
+
+			// Initialize CovaBot-specific metrics collector
+			try {
+				this.covaBotMetrics = createCovaBotMetrics(metrics, {
+					enableDetailedTracking: true,
+					enablePerformanceMetrics: true,
+					enableErrorTracking: true
+				});
+				logger.info('✅ CovaBot-specific metrics collector initialized for AI personality monitoring');
+			} catch (error) {
+				logger.warn('⚠️ CovaBot metrics initialization failed, continuing without container-specific metrics:', ensureError(error));
+				this.covaBotMetrics = undefined;
+			}
 
 			// Validate environment
 			this.validateEnvironment();
@@ -157,7 +173,7 @@ class CovaBotContainer {
 				// Set to 100% since response logic is handled in individual triggers
 				defaultResponseRate: 100,
 				skipBotMessages: true,
-			});
+			}, this.covaBotMetrics);
 			await cova.processMessage(message);
 		} catch (error) {
 			logger.error('Error in CovaBot message handling:', ensureError(error));
@@ -187,6 +203,17 @@ class CovaBotContainer {
 
 	async stop(): Promise<void> {
 		logger.info('Stopping CovaBot...');
+		
+		// Clean up metrics collector
+		if (this.covaBotMetrics) {
+			try {
+				await this.covaBotMetrics.cleanup();
+				logger.info('✅ CovaBot metrics collector cleaned up');
+			} catch (error) {
+				logger.error('❌ Error cleaning up CovaBot metrics:', ensureError(error));
+			}
+		}
+		
 		if (this.client) {
 			await this.client.destroy();
 		}
@@ -209,11 +236,29 @@ async function main(): Promise<void> {
 // Graceful shutdown
 process.on('SIGINT', async () => {
 	logger.info('Received SIGINT signal, shutting down CovaBot...');
+	
+	try {
+		const { shutdownObservability } = await import('@starbunk/shared');
+		await shutdownObservability();
+		logger.info('Observability stack shutdown completed');
+	} catch (error) {
+		logger.error('Error during observability shutdown:', ensureError(error));
+	}
+	
 	process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
 	logger.info('Received SIGTERM signal, shutting down CovaBot...');
+	
+	try {
+		const { shutdownObservability } = await import('@starbunk/shared');
+		await shutdownObservability();
+		logger.info('Observability stack shutdown completed');
+	} catch (error) {
+		logger.error('Error during observability shutdown:', ensureError(error));
+	}
+	
 	process.exit(0);
 });
 

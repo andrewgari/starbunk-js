@@ -1,4 +1,4 @@
-import { logger, ensureError, MessageFilter, getMetrics, getStructuredLogger, MessageFlowMetrics, getChannelActivityTracker } from '@starbunk/shared';
+import { logger, ensureError, MessageFilter, getMetrics, getStructuredLogger, MessageFlowMetrics, getChannelActivityTracker, type BunkBotMetrics } from '@starbunk/shared';
 import { Message } from 'discord.js';
 import { ReplyBotImpl } from './bot-builder';
 import { shouldExcludeFromReplyBots } from './conditions';
@@ -34,20 +34,30 @@ export class MessageProcessor {
 	private readonly maxFailures = 3;
 	private readonly resetTimeout = 60000; // 1 minute
 	private readonly halfOpenMaxAttempts = 1;
+	private bunkBotMetrics?: BunkBotMetrics;
 
 	constructor(
 		private messageFilter: MessageFilter,
-		private replyBots: ReplyBotImpl[] = []
-	) {}
+		private replyBots: ReplyBotImpl[] = [],
+		bunkBotMetrics?: BunkBotMetrics
+	) {
+		this.bunkBotMetrics = bunkBotMetrics;
+	}
 
 	async processMessage(message: Message): Promise<void> {
 		const correlationId = uuidv4();
+		const startTime = Date.now();
 		
 		logger.debug(`Processing message ${correlationId}`, {
 			messageId: message.id,
 			author: message.author.username,
 			channelId: message.channel.id
 		});
+
+		// Track message processing start with BunkBot-specific metrics
+		if (this.bunkBotMetrics) {
+			this.bunkBotMetrics.trackMessageProcessingStart(message.id, this.replyBots.length);
+		}
 
 		// Track message received
 		try {
@@ -70,8 +80,11 @@ export class MessageProcessor {
 			logger.warn('Failed to log message flow or track channel activity:', ensureError(error));
 		}
 
+		let triggeredBots = 0;
+		
 		if (!this.shouldProcessMessage(message)) {
 			this.trackMessageSkip(message, 'bot_exclusion', correlationId);
+			this.completeMessageProcessing(message.id, triggeredBots, startTime);
 			return;
 		}
 
@@ -82,13 +95,16 @@ export class MessageProcessor {
 			if (!filterResult.allowed) {
 				this.trackMessageSkip(message, filterResult.reason || 'unknown', correlationId);
 				logger.debug(`Message filtered: ${filterResult.reason || 'unknown'}`, { correlationId });
+				this.completeMessageProcessing(message.id, triggeredBots, startTime);
 				return;
 			}
 
-			await this.processWithReplyBots(message, correlationId);
+			triggeredBots = await this.processWithReplyBots(message, correlationId);
+			this.completeMessageProcessing(message.id, triggeredBots, startTime);
 		} catch (error) {
 			logger.error('Error processing message:', ensureError(error), { correlationId });
 			this.trackMessageError(message, error, correlationId);
+			this.completeMessageProcessing(message.id, triggeredBots, startTime);
 		}
 	}
 
@@ -106,10 +122,10 @@ export class MessageProcessor {
 		return true;
 	}
 
-	private async processWithReplyBots(message: Message, correlationId: string): Promise<void> {
+	private async processWithReplyBots(message: Message, correlationId: string): Promise<number> {
 		if (this.replyBots.length === 0) {
 			logger.debug('No reply bots loaded - skipping processing', { correlationId });
-			return;
+			return 0;
 		}
 
 		// Filter bots by circuit breaker state
@@ -117,7 +133,7 @@ export class MessageProcessor {
 		
 		if (availableBots.length === 0) {
 			logger.warn('All bots have open circuit breakers - message processing skipped', { correlationId });
-			return;
+			return 0;
 		}
 
 		logger.debug(`Processing with ${availableBots.length}/${this.replyBots.length} available bots`, { correlationId });
@@ -126,11 +142,24 @@ export class MessageProcessor {
 			availableBots.map(bot => this.processBotResponse(bot, message, correlationId))
 		);
 
-		this.logProcessingResults(results, correlationId);
+		const triggeredCount = this.logProcessingResults(results, correlationId);
+		return triggeredCount;
 	}
 
 	private async processBotResponse(bot: ReplyBotImpl, message: Message, correlationId: string): Promise<BotProcessResult> {
 		const startTime = Date.now();
+		
+		// Create message context for BunkBot metrics
+		const messageContext = this.bunkBotMetrics ? {
+			messageId: message.id,
+			userId: message.author.id,
+			username: message.author.username,
+			channelId: message.channel.id,
+			channelName: getChannelName(message),
+			guildId: message.guild?.id || 'dm',
+			messageLength: message.content.length,
+			timestamp: Date.now()
+		} : undefined;
 		
 		try {
 			// Check if bot should respond
@@ -138,13 +167,23 @@ export class MessageProcessor {
 			const responseLatency = Date.now() - startTime;
 			
 			if (shouldRespond) {
+				// Track bot trigger with BunkBot metrics
+				if (this.bunkBotMetrics && messageContext) {
+					this.bunkBotMetrics.trackBotTrigger(bot.name, 'condition_met', messageContext);
+				}
+				
 				// Bot triggered - process the message
 				const response = await bot.processMessage(message);
 				const totalLatency = Date.now() - startTime;
 				
 				this.recordSuccess(bot.name);
 				
-				// Track successful bot interaction
+				// Track bot response with BunkBot metrics
+				if (this.bunkBotMetrics && messageContext) {
+					this.bunkBotMetrics.trackBotResponse(bot.name, 'condition_met', totalLatency, messageContext);
+				}
+				
+				// Track successful bot interaction (existing metrics)
 				this.trackBotInteraction(message, bot.name, {
 					triggered: true,
 					responseLatency: totalLatency,
@@ -159,6 +198,11 @@ export class MessageProcessor {
 					responseText: typeof response === 'string' ? response : undefined
 				};
 			} else {
+				// Track bot skip with BunkBot metrics
+				if (this.bunkBotMetrics && messageContext) {
+					this.bunkBotMetrics.trackBotSkip(bot.name, 'condition_not_met', messageContext);
+				}
+				
 				// Bot didn't trigger
 				this.trackBotInteraction(message, bot.name, {
 					triggered: false,
@@ -182,6 +226,11 @@ export class MessageProcessor {
 			
 			this.recordFailure(bot.name);
 			
+			// Track bot skip due to error with BunkBot metrics
+			if (this.bunkBotMetrics && messageContext) {
+				this.bunkBotMetrics.trackBotSkip(bot.name, 'processing_error', messageContext);
+			}
+			
 			// Track bot error
 			this.trackBotInteraction(message, bot.name, {
 				triggered: false,
@@ -199,7 +248,7 @@ export class MessageProcessor {
 		}
 	}
 
-	private logProcessingResults(results: PromiseSettledResult<BotProcessResult>[], correlationId: string): void {
+	private logProcessingResults(results: PromiseSettledResult<BotProcessResult>[], correlationId: string): number {
 		const triggered = [];
 		const failed = [];
 		
@@ -222,6 +271,15 @@ export class MessageProcessor {
 		
 		if (failed.length > 0) {
 			logger.warn(`Bots with errors: ${failed.join(', ')}`, { correlationId });
+		}
+		
+		return triggered.length;
+	}
+
+	private completeMessageProcessing(messageId: string, triggeredBots: number, startTime: number): void {
+		if (this.bunkBotMetrics) {
+			const processingTime = Date.now() - startTime;
+			this.bunkBotMetrics.trackMessageProcessingComplete(messageId, triggeredBots, processingTime);
 		}
 	}
 
@@ -354,12 +412,17 @@ export class MessageProcessor {
 			breaker.state = 'open';
 			logger.warn(`Circuit breaker opened for bot: ${botName} (${breaker.failures} failures)`);
 			
-			// Track circuit breaker activation
+			// Track circuit breaker activation in base metrics
 			try {
 				const metrics = getMetrics();
 				metrics.trackCircuitBreakerActivation(botName, `${breaker.failures}_failures`);
 			} catch (error) {
 				logger.warn('Failed to track circuit breaker activation:', ensureError(error));
+			}
+			
+			// Track circuit breaker state in BunkBot metrics
+			if (this.bunkBotMetrics) {
+				this.bunkBotMetrics.trackCircuitBreakerState(botName, 'open', breaker.failures);
 			}
 		} else if (breaker.state === 'half-open') {
 			// Failed during half-open, go back to open
@@ -371,6 +434,11 @@ export class MessageProcessor {
 				metrics.trackCircuitBreakerActivation(botName, 'half_open_failure');
 			} catch (error) {
 				logger.warn('Failed to track circuit breaker reactivation:', ensureError(error));
+			}
+			
+			// Track circuit breaker state in BunkBot metrics
+			if (this.bunkBotMetrics) {
+				this.bunkBotMetrics.trackCircuitBreakerState(botName, 'open', breaker.failures);
 			}
 		}
 		
@@ -385,6 +453,11 @@ export class MessageProcessor {
 				breaker.state = 'closed';
 				breaker.failures = 0;
 				logger.info(`Circuit breaker closed for bot: ${botName} (recovered)`);
+				
+				// Track circuit breaker recovery in BunkBot metrics
+				if (this.bunkBotMetrics) {
+					this.bunkBotMetrics.trackCircuitBreakerState(botName, 'closed', 0);
+				}
 			}
 			breaker.lastSuccess = Date.now();
 			this.circuitBreakers.set(botName, breaker);

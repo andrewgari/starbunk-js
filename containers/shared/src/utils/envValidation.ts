@@ -113,3 +113,98 @@ export function getTestingChannelIds(): string[] {
 export function getDebugMode(): boolean {
 	return getEnvVarBoolean('DEBUG_MODE', false);
 }
+
+/**
+ * Validates observability-related environment variables
+ */
+export interface ObservabilityConfig {
+	metricsEnabled?: boolean;
+	pushEnabled?: boolean;
+	structuredLoggingEnabled?: boolean;
+	runtimeMetricsEnabled?: boolean;
+	pushGatewayUrl?: string;
+	lokiUrl?: string;
+	pushInterval?: number;
+	circuitBreakerThreshold?: number;
+}
+
+export function validateObservabilityEnvironment(): ObservabilityConfig {
+	const config: ObservabilityConfig = {
+		metricsEnabled: getEnvVarBoolean('ENABLE_METRICS', true),
+		pushEnabled: getEnvVarBoolean('ENABLE_METRICS_PUSH', false),
+		structuredLoggingEnabled: getEnvVarBoolean('ENABLE_STRUCTURED_LOGGING', false),
+		runtimeMetricsEnabled: getEnvVarBoolean('ENABLE_RUNTIME_METRICS', true),
+		pushGatewayUrl: process.env.PROMETHEUS_PUSHGATEWAY_URL,
+		lokiUrl: process.env.LOKI_URL,
+		pushInterval: parseInt(process.env.METRICS_PUSH_INTERVAL || '30000'),
+		circuitBreakerThreshold: parseInt(process.env.METRICS_CIRCUIT_BREAKER_THRESHOLD || '5')
+	};
+
+	// Validate URLs if provided
+	if (config.pushGatewayUrl && !isValidUrl(config.pushGatewayUrl)) {
+		logger.warn(`Invalid PROMETHEUS_PUSHGATEWAY_URL: ${config.pushGatewayUrl}`);
+		config.pushGatewayUrl = undefined;
+		config.pushEnabled = false;
+	}
+
+	if (config.lokiUrl && !isValidUrl(config.lokiUrl)) {
+		logger.warn(`Invalid LOKI_URL: ${config.lokiUrl}`);
+		config.lokiUrl = undefined;
+		config.structuredLoggingEnabled = false;
+	}
+
+	// Validate intervals
+	if (config.pushInterval && config.pushInterval < 1000) {
+		logger.warn(`METRICS_PUSH_INTERVAL too low (${config.pushInterval}ms), setting to 1000ms minimum`);
+		config.pushInterval = 1000;
+	}
+
+	if (config.circuitBreakerThreshold && config.circuitBreakerThreshold < 1) {
+		logger.warn(`METRICS_CIRCUIT_BREAKER_THRESHOLD too low (${config.circuitBreakerThreshold}), setting to 1 minimum`);
+		config.circuitBreakerThreshold = 1;
+	}
+
+	// Log configuration
+	logger.info('Observability configuration validated:', {
+		metricsEnabled: config.metricsEnabled,
+		pushEnabled: config.pushEnabled,
+		structuredLoggingEnabled: config.structuredLoggingEnabled,
+		runtimeMetricsEnabled: config.runtimeMetricsEnabled,
+		pushInterval: config.pushInterval,
+		circuitBreakerThreshold: config.circuitBreakerThreshold,
+		hasPushGateway: !!config.pushGatewayUrl,
+		hasLoki: !!config.lokiUrl
+	});
+
+	return config;
+}
+
+/**
+ * Validates if a string is a valid URL
+ */
+function isValidUrl(urlString: string): boolean {
+	try {
+		const url = new URL(urlString);
+		return url.protocol === 'http:' || url.protocol === 'https:';
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Gets observability-related environment variables with validation
+ */
+export function getObservabilityEnvVars(): Required<ObservabilityConfig> {
+	const config = validateObservabilityEnvironment();
+	
+	return {
+		metricsEnabled: config.metricsEnabled ?? true,
+		pushEnabled: config.pushEnabled ?? false,
+		structuredLoggingEnabled: config.structuredLoggingEnabled ?? false,
+		runtimeMetricsEnabled: config.runtimeMetricsEnabled ?? true,
+		pushGatewayUrl: config.pushGatewayUrl ?? '',
+		lokiUrl: config.lokiUrl ?? '',
+		pushInterval: config.pushInterval ?? 30000,
+		circuitBreakerThreshold: config.circuitBreakerThreshold ?? 5
+	};
+}

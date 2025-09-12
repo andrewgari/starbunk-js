@@ -1,6 +1,7 @@
 import { logger } from '../logger';
 import { ensureError } from '../../utils/errorUtils';
 import fetch from 'node-fetch';
+import * as promClient from 'prom-client';
 
 // Prometheus-style metrics registry
 interface MetricValue {
