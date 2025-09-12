@@ -18,6 +18,10 @@ on:
       - 'package-lock.json'
       - '.github/workflows/**'
 
+
+env:
+  HUSKY: 0
+
 jobs:
   changes:
     name: Detect changed paths

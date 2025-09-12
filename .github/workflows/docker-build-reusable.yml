@@ -31,32 +31,11 @@ on:
 
 
 jobs:
-  changes:
-    name: Detect Docker-related changes
-    runs-on: ubuntu-latest
-    outputs:
-      docker_related: ${{ steps.filter.outputs.docker_related }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Determine changes
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            docker_related:
-              - 'containers/${{ inputs.container_name }}/**'
-              - 'containers/${{ inputs.container_name }}/Dockerfile'
-              - 'docker/docker-compose*.yml'
-              - 'docker/podman-compose*.yml'
-              - '.github/workflows/docker-*.yml'
-
   build-and-push:
     name: 🐳 Build & Push ${{ inputs.container_name }}
-    needs: changes
     runs-on: ubuntu-latest
-    # Only run if called and relevant paths changed
-    if: github.event_name == 'workflow_call' && needs.changes.outputs.docker_related == 'true'
+    # Only run when called by another workflow
+    if: github.event_name == 'workflow_call'
     permissions:
       contents: read
       packages: write

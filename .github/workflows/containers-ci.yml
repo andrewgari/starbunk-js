@@ -4,22 +4,29 @@ on:
   pull_request:
     paths:
       - 'containers/shared/**'
-      - 'containers/shared/**'
-      - 'containers/covabot/**'
       - 'containers/bunkbot/**'
       - 'containers/djcova/**'
-      - '.github/workflows/containers-ci.yml'
+      - 'containers/starbunk-dnd/**'
+      - 'containers/snowbunk/**'
+      - 'containers/covabot/**'
+      - 'docker/**'
+      - '.github/workflows/**'
   push:
     branches:
       - main
       - feature/**
     paths:
       - 'containers/shared/**'
-      - 'containers/shared/**'
-      - 'containers/covabot/**'
       - 'containers/bunkbot/**'
       - 'containers/djcova/**'
-      - '.github/workflows/containers-ci.yml'
+      - 'containers/starbunk-dnd/**'
+      - 'containers/snowbunk/**'
+      - 'containers/covabot/**'
+      - 'docker/**'
+      - '.github/workflows/**'
+
+env:
+  HUSKY: 0
 
 jobs:
   changes:

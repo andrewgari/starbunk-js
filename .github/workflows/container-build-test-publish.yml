@@ -3,12 +3,27 @@ name: Container Build, Test & Publish
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - 'containers/**'
+      - 'docker/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
+      - '.github/path-filters.yml'
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened, closed, labeled, unlabeled]
+    paths:
+      - 'containers/**'
+      - 'docker/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
+      - '.github/path-filters.yml'
 
 env:
   REGISTRY: ghcr.io
+  HUSKY: 0
 
 jobs:
   # Detect which containers have changed to optimize CI execution
