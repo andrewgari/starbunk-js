@@ -70,6 +70,10 @@ jobs:
         run: |
           cd containers/shared
           npm ci
+      - name: Build shared
+        run: |
+          cd containers/shared
+          npm run build
       - name: Install bunkbot deps
         run: |
           cd containers/bunkbot
@@ -111,6 +115,10 @@ jobs:
         run: |
           cd containers/shared
           npm ci
+      - name: Build shared
+        run: |
+          cd containers/shared
+          npm run build
       - name: Install djcova deps
         run: |
           cd containers/djcova
@@ -152,6 +160,10 @@ jobs:
         run: |
           cd containers/shared
           npm ci
+      - name: Build shared
+        run: |
+          cd containers/shared
+          npm run build
       - name: Install starbunk-dnd deps
         run: |
           cd containers/starbunk-dnd
@@ -193,6 +205,10 @@ jobs:
         run: |
           cd containers/shared
           npm ci
+      - name: Build shared
+        run: |
+          cd containers/shared
+          npm run build
       - name: Install covabot deps
         run: |
           cd containers/covabot
@@ -234,6 +250,10 @@ jobs:
         run: |
           cd containers/shared
           npm ci
+      - name: Build shared
+        run: |
+          cd containers/shared
+          npm run build
       - name: Install snowbunk deps
         run: |
           cd containers/snowbunk
