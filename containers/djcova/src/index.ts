@@ -35,7 +35,7 @@ class DJCovaContainer {
 	private messageFilter!: MessageFilter;
 	private commandHandler!: CommandHandler;
 	private musicPlayer!: DJCova;
-	private djCovaMetrics!: DJCovaMetrics;
+	private djCovaMetrics?: DJCovaMetrics;
 	public activeSubscription: { unsubscribe(): void } | null = null;
 	private hasInitialized = false;
 
