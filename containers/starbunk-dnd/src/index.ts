@@ -33,7 +33,7 @@ type Destroyable = { destroy: () => Promise<void> | void };
 class StarbunkDNDContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
 	private messageFilter!: MessageFilter;
-	private starbunkDNDMetrics!: StarbunkDNDMetrics;
+	private starbunkDNDMetrics?: StarbunkDNDMetrics;
 	private snowbunkClient: Destroyable | null = null;
 	private hasInitialized = false;
 

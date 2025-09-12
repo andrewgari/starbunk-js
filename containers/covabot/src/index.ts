@@ -23,7 +23,7 @@ class CovaBotContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
 	private webhookManager!: WebhookManager;
 	private messageFilter!: MessageFilter;
-	private covaBotMetrics!: CovaBotMetrics;
+	private covaBotMetrics?: CovaBotMetrics;
 	private hasInitialized = false;
 
 	async initialize(): Promise<void> {

@@ -93,6 +93,11 @@ export interface StarbunkDNDMetrics {
     // File Processing Metrics
     trackFileProcessing(fileType: string, fileSizeBytes: number, processingTime: number, success: boolean): void;
     trackFileUpload(fileName: string, sizeBytes: number, uploadTime: number): void;
+    
+    // Base methods from ContainerMetricsBase
+    getHealthStatus(): Record<string, any>;
+    cleanup(): Promise<void>;
+    getMetricsSummary(): Record<string, any>;
 }
 
 // ============================================================================
@@ -120,6 +125,11 @@ export interface CovaBotMetrics {
     // User Engagement Tracking
     trackUserInteraction(userId: string, interactionType: 'mention' | 'reply' | 'conversation'): void;
     trackUserEngagementSession(userId: string, sessionDuration: number, messageCount: number): void;
+    
+    // Base methods from ContainerMetricsBase
+    getHealthStatus(): Record<string, any>;
+    cleanup(): Promise<void>;
+    getMetricsSummary(): Record<string, any>;
 }
 
 // ============================================================================
