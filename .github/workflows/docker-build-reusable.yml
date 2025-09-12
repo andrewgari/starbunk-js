@@ -47,7 +47,8 @@ jobs:
             docker_related:
               - 'containers/${{ inputs.container_name }}/**'
               - 'containers/${{ inputs.container_name }}/Dockerfile'
-              - 'docker-compose*.yml'
+              - 'docker/docker-compose*.yml'
+              - 'docker/podman-compose*.yml'
               - '.github/workflows/docker-*.yml'
 
   build-and-push:

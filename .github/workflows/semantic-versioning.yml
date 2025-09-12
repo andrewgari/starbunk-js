@@ -248,9 +248,9 @@ jobs:
 
           #### Docker Compose (Recommended)
           \`\`\`bash
-          # Update your docker-compose.yml to use the new version
-          docker-compose pull
-          docker-compose up -d
+          # Update docker/docker-compose.yml to use the new version
+          docker compose -f docker/docker-compose.yml pull
+          docker compose -f docker/docker-compose.yml up -d
           \`\`\`
 
           #### Individual Containers

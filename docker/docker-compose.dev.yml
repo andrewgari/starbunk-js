@@ -29,8 +29,8 @@ services:
 
   covabot-dev:
     build:
-      context: .
-      dockerfile: containers/covabot/Dockerfile
+      context: ..
+      dockerfile: ../containers/covabot/Dockerfile
     container_name: covabot-dev
     networks:
       - covabot-dev-network
@@ -56,7 +56,7 @@ services:
       - DEBUG_MODE=true
       - TESTING_CHANNEL_IDS=123456789012345678
     volumes:
-      - ./containers/covabot:/app
+      - ../containers/covabot:/app
       - covabot_node_modules:/app/node_modules
     restart: unless-stopped
     healthcheck:

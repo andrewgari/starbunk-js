@@ -1,22 +1,43 @@
-version: '3.8'
+# Podman Compose for Production Deployment (Latest Images)
+# =========================================================
+# This file is designed for production deployment using Podman with the latest stable images.
+#
+# Containers included: bunkbot, djcova, starbunk-dnd, snowbunk, covabot (5 containers)
+# Note: snowbunk is only available in production deployment
+#
+# Prerequisites:
+#   - Ensure .env file exists in the repository root
+#   - All required environment variables must be defined in .env file
+#   - Verify all latest images are available in GHCR
+#   - Podman and podman-compose installed
+#
+# Usage:
+#   podman compose -f docker/podman-compose.latest.yml up -d
+#   # OR (older syntax)
+#   podman-compose -f docker/podman-compose.latest.yml up -d
+#
+# Image Format: ghcr.io/andrewgari/{service}:latest
+# Example: ghcr.io/andrewgari/bunkbot:latest
+#
+# Podman-specific considerations:
+#   - Health checks are built into containers but not supported in compose format
+#   - Logging configuration may differ slightly from Docker
+#   - Network handling is compatible with Docker Compose
 
 services:
   # PostgreSQL Database - Shared by services that need persistence
   postgres:
     image: postgres:15-alpine
-    container_name: starbunk-postgres
+    container_name: starbunk-postgres-latest
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-starbunk}
       POSTGRES_USER: ${POSTGRES_USER:-starbunk}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
-      # Unraid-compatible host path mount
-      - ${UNRAID_APPDATA_PATH:-./data}/postgres:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d:ro
+      - postgres_latest_data:/var/lib/postgresql/data
+      - ../init-db:/docker-entrypoint-initdb.d:ro
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
@@ -26,20 +47,18 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - starbunk-network
+      - starbunk-latest-network
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
-  # BunkBot - Reply bots and admin commands
+  # BunkBot - Reply bots and admin commands (Latest Stable)
   bunkbot:
     image: ghcr.io/andrewgari/bunkbot:latest
-    container_name: starbunk-bunkbot
+    container_name: starbunk-bunkbot-latest
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -50,13 +69,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-false}
-      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
-      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
-      - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 30s
@@ -64,7 +77,7 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-network
+      - starbunk-latest-network
     logging:
       driver: "json-file"
       options:
@@ -77,26 +90,21 @@ services:
         reservations:
           memory: 256M
 
-  # DJCova - Music service
+  # DJCova - Music service (Latest Stable)
   djcova:
     image: ghcr.io/andrewgari/djcova:latest
-    container_name: starbunk-djcova
+    container_name: starbunk-djcova-latest
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
-      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
-      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      # Unraid-compatible host path mounts
-      - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
-      - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
+      - djcova_latest_cache:/app/cache
+      - djcova_latest_temp:/tmp
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'node dist/index.js' || exit 1"]
       interval: 30s
@@ -104,7 +112,7 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-network
+      - starbunk-latest-network
     logging:
       driver: "json-file"
       options:
@@ -117,13 +125,11 @@ services:
         reservations:
           memory: 512M
 
-  # Starbunk-DND - D&D features and bridge
+  # Starbunk-DND - D&D features and bridge (Latest Stable)
   starbunk-dnd:
     image: ghcr.io/andrewgari/starbunk-dnd:latest
-    container_name: starbunk-dnd
+    container_name: starbunk-dnd-latest
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -136,17 +142,11 @@ services:
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
       - DEBUG_MODE=${DEBUG_MODE:-false}
-      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
-      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      # Unraid-compatible host path mounts
-      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/data:/app/data
-      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/campaigns:/app/data/campaigns
-      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/context:/app/data/llm_context
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - dnd_latest_data:/app/data
+      - dnd_latest_campaigns:/app/data/campaigns
+      - dnd_latest_context:/app/data/llm_context
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
       interval: 30s
@@ -154,7 +154,7 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-network
+      - starbunk-latest-network
     logging:
       driver: "json-file"
       options:
@@ -167,13 +167,11 @@ services:
         reservations:
           memory: 512M
 
-  # CovaBot - AI personality bot
+  # CovaBot - AI personality bot (Latest Stable)
   covabot:
     image: ghcr.io/andrewgari/covabot:latest
-    container_name: starbunk-covabot
+    container_name: starbunk-covabot-latest
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -183,28 +181,15 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - DEBUG_MODE=${DEBUG_MODE:-false}
-      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
-      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      - USE_DATABASE=${USE_DATABASE:-false}
-      - COVABOT_DATA_DIR=/app/data
-      - COVABOT_API_KEY=${COVABOT_API_KEY:-}
-    volumes:
-      # Unraid-compatible host path mount for CovaBot personality notes
-      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
-    ports:
-      - "${COVABOT_WEB_PORT:-7080}:7080"
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:7080/api/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
     networks:
-      - starbunk-network
+      - starbunk-latest-network
     logging:
       driver: "json-file"
       options:
@@ -217,14 +202,23 @@ services:
         reservations:
           memory: 256M
 
-# Note: Using host path mounts for Unraid compatibility
-# Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
-# Default fallback to ./data/ for non-Unraid environments
+# Named volumes for persistent data (latest/production)
+volumes:
+  djcova_latest_cache:
+    driver: local
+  djcova_latest_temp:
+    driver: local
+  dnd_latest_data:
+    driver: local
+  dnd_latest_campaigns:
+    driver: local
+  dnd_latest_context:
+    driver: local
 
-# Custom network for service communication
+# Custom network for service communication (latest/production)
 networks:
-  starbunk-network:
+  starbunk-latest-network:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.22.0.0/16
