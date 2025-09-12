@@ -65,7 +65,7 @@ cp .env.example .env
 # Edit .env with your tokens and configuration
 
 # Start all containers
-docker-compose up -d
+docker compose -f docker/docker-compose.yml up -d
 
 # Monitor logs
 npm run logs
@@ -280,14 +280,36 @@ cd containers/bunkbot && npm test
 ### Production Deployment
 ```bash
 # Build and start all containers
-docker-compose up -d
+docker compose -f docker/docker-compose.yml up -d
 
 # Scale specific containers
-docker-compose up -d --scale djcova=2 --scale bunkbot=3
+docker compose -f docker/docker-compose.yml up -d --scale djcova=2 --scale bunkbot=3
 
 # Update specific container
-docker-compose up -d --no-deps bunkbot
+docker compose -f docker/docker-compose.yml up -d --no-deps bunkbot
 ```
+
+
+## 🧩 Local Quality Gates (Husky)
+
+To prevent low‑quality code from reaching the repo, Husky hooks enforce local gates:
+
+- Pre-commit (fast): lints only staged files with lint-staged for quick feedback
+- Pre-push (comprehensive): runs the same checks as CI via `npm run check:ci` (type‑check, lint, unit tests)
+
+Behavior
+- Pushes are blocked if checks fail. Fix issues locally, then push again.
+- CI disables Husky via `HUSKY=0` internally, so hooks won’t run in Actions.
+
+Useful commands
+- Run full gate locally: `npm run check:ci`
+- Run tests only: `npm test`
+- Run lints only: `npm run lint`
+- Run type-checks only: `npm run type-check`
+
+Temporarily skip (not recommended)
+- `HUSKY=0 git push`
+
 
 ### CI/CD Pipeline
 The project includes GitHub Actions workflows for:
@@ -310,22 +332,22 @@ The project includes GitHub Actions workflows for:
 ### Container Won't Start
 ```bash
 # Check container logs
-docker-compose logs bunkbot
+docker compose -f docker/docker-compose.yml logs bunkbot
 
 # Check environment variables
-docker-compose config
+docker compose -f docker/docker-compose.yml config
 
 # Rebuild container
-docker-compose build --no-cache bunkbot
+docker compose -f docker/docker-compose.yml build --no-cache bunkbot
 ```
 
 ### Database Connection Issues
 ```bash
 # Check PostgreSQL status
-docker-compose ps postgres
+docker compose -f docker/docker-compose.yml ps postgres
 
 # Test database connection
-docker-compose exec postgres psql -U starbunk -d starbunk
+docker compose -f docker/docker-compose.yml exec postgres psql -U starbunk -d starbunk
 ```
 
 ## 📜 License

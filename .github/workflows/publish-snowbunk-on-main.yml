@@ -9,12 +9,12 @@ on:
       - '.github/workflows/**'
       - '.github/path-filters.yml'
       - 'Dockerfile*'
-      - 'docker-compose*.yml'
-      - 'podman-compose*.yml'
+      - 'docker/docker-compose*.yml'
+      - 'docker/podman-compose*.yml'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig.json'
-      - '.dockerignore'
+      - 'docker/.dockerignore'
 
 permissions:
   contents: read

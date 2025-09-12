@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env sh
 set -e
 
-# Lint staged files and type-check only Shared and BunkBot (path-scoped)
-npx lint-staged
-npm run type-check:shared --silent && npm run type-check:bunkbot --silent
+# Pre-commit: quick feedback on staged files
+# - Lints only changed files; full type-check/tests enforced in pre-push
+npx --no-install lint-staged

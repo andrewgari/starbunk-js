@@ -4,12 +4,12 @@
 services:
   bunkbot:
     build:
-      context: .
-      dockerfile: containers/bunkbot/Dockerfile
+      context: ..
+      dockerfile: ../containers/bunkbot/Dockerfile
     container_name: bunkbot-local
     restart: unless-stopped
     env_file:
-      - .env
+      - ../.env
     environment:
       - NODE_ENV=production
       # Ensure these are present for live E2E webhook allowance

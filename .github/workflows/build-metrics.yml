@@ -205,7 +205,7 @@ ${avgDuration > 10 ?
               echo "$size $file" >> $GITHUB_STEP_SUMMARY
             done
             echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "💡 Consider adding large files to .dockerignore" >> $GITHUB_STEP_SUMMARY
+            echo "💡 Consider adding large files to docker/.dockerignore" >> $GITHUB_STEP_SUMMARY
           else
             echo "✅ No large files found in container directories" >> $GITHUB_STEP_SUMMARY
           fi
@@ -224,11 +224,11 @@ ${avgDuration > 10 ?
             fi
           done
 
-          # Check for root .dockerignore
-          if [ -f ".dockerignore" ]; then
-            echo "✅ Root .dockerignore exists" >> $GITHUB_STEP_SUMMARY
+          # Check for root docker/.dockerignore
+          if [ -f "docker/.dockerignore" ]; then
+            echo "✅ Root docker/.dockerignore exists" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ Root .dockerignore missing" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Root docker/.dockerignore missing" >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Generate optimization recommendations

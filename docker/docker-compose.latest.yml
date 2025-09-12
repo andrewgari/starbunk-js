@@ -6,12 +6,12 @@
 # Note: snowbunk is only available in production deployment
 #
 # Prerequisites:
-#   - Ensure .env file exists in the same directory as this compose file
+#   - Ensure .env file exists in the repository root
 #   - All required environment variables must be defined in .env file
 #   - Verify all latest images are available in GHCR
 #
 # Usage:
-#   docker-compose -f docker-compose.latest.yml up -d
+#   docker compose -f docker/docker-compose.latest.yml up -d
 #
 # Image Format: ghcr.io/andrewgari/{service}:latest
 # Example: ghcr.io/andrewgari/bunkbot:latest
@@ -23,7 +23,7 @@ services:
     container_name: starbunk-bunkbot-latest
     restart: unless-stopped
     env_file:
-      - .env
+      - ../.env
     environment:
       - NODE_ENV=production
       - BUNKBOT_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
@@ -65,7 +65,7 @@ services:
     container_name: starbunk-djcova-latest
     restart: unless-stopped
     env_file:
-      - .env
+      - ../.env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -106,7 +106,7 @@ services:
     container_name: starbunk-dnd-latest
     restart: unless-stopped
     env_file:
-      - .env
+      - ../.env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -154,7 +154,7 @@ services:
     container_name: starbunk-snowbunk-latest
     restart: unless-stopped
     env_file:
-      - .env
+      - ../.env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -200,7 +200,7 @@ services:
     container_name: starbunk-covabot-latest
     restart: unless-stopped
     env_file:
-      - .env
+      - ../.env
     environment:
       - NODE_ENV=production
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
@@ -223,7 +223,7 @@ services:
       - USE_QDRANT=${USE_QDRANT:-true}
     volumes:
       # Unraid-compatible host path mount for CovaBot personality notes (production)
-      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
+      - ${UNRAID_APPDATA_PATH:-../data}/covabot:/app/data
     ports:
       # Expose web interface for personality management (production)
       - "${COVABOT_WEB_PORT:-7080}:7080"

@@ -16,7 +16,8 @@ on:
       - "containers/**/Dockerfile"
       - "containers/**/.dockerignore"
       - ".github/workflows/**"
-      - "docker-compose*.yml"
+      - "docker/docker-compose*.yml"
+      - "docker/podman-compose*.yml"
   pull_request_review:
     types: [dismissed]
 

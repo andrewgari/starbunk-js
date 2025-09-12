@@ -3,10 +3,20 @@ name: Security Check
 on:
     pull_request:
         types: [opened, synchronize, reopened]
+        paths:
+            - 'containers/**'
+            - 'package.json'
+            - 'package-lock.json'
+            - 'containers/*/package.json'
+            - 'containers/*/package-lock.json'
+            - '.github/workflows/security.yml'
         paths-ignore:
             - '**.md'
             - '.github/ISSUE_TEMPLATE/**'
             - 'docs/**'
+
+env:
+    HUSKY: 0
 
 jobs:
     # Initial check to determine what files changed (reusing same pattern)

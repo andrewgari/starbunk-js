@@ -5,13 +5,13 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - 'containers/**'
-      - 'shared/**'
+      - 'containers/shared/**'
       - '.github/workflows/container-startup-validation.yml'
   push:
     branches: [main]
     paths:
       - 'containers/**'
-      - 'shared/**'
+      - 'containers/shared/**'
       - '.github/workflows/container-startup-validation.yml'
 
 # Allow manual triggering for testing
@@ -19,6 +19,7 @@ on:
 
 env:
   # Test environment variables (safe for CI)
+  HUSKY: '0'
   STARBUNK_TOKEN: ${{ secrets.STARBUNK_TOKEN || 'test-token-placeholder-70-chars-long-for-validation-testing-purposes' }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'test-openai-key' }}
   OLLAMA_API_URL: ${{ secrets.OLLAMA_API_URL || 'http://localhost:11434' }}

@@ -1,5 +1,11 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+#!/usr/bin/env sh
+set -e
 
-# Run comprehensive pre-push gate (fast checks + targeted container builds)
-bash scripts/pre-push.sh
+# Pre-push: enforce local quality gates
+# - Type-check, lint, and unit tests (fast, consistent with CI)
+# - Keep hooks strict; if they fail, fix the code rather than skipping tests
+
+# If developer wants to temporarily skip hooks: HUSKY=0 git push (not recommended)
+
+echo "[husky] pre-push: running npm run check:ci"
+npm run check:ci
