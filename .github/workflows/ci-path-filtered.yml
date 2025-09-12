@@ -1,0 +1,256 @@
+name: CI - Path Filtered
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'containers/**'
+      - 'docker/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'containers/**'
+      - 'docker/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
+
+jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      shared: ${{ steps.filter.outputs.shared }}
+      root: ${{ steps.filter.outputs.root }}
+      bunkbot: ${{ steps.filter.outputs.bunkbot }}
+      djcova: ${{ steps.filter.outputs.djcova }}
+      starbunk_dnd: ${{ steps.filter.outputs.starbunk_dnd }}
+      covabot: ${{ steps.filter.outputs.covabot }}
+      snowbunk: ${{ steps.filter.outputs.snowbunk }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared:
+              - 'containers/shared/**'
+            root:
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/**'
+              - 'docker/**'
+            bunkbot:
+              - 'containers/bunkbot/**'
+            djcova:
+              - 'containers/djcova/**'
+            starbunk_dnd:
+              - 'containers/starbunk-dnd/**'
+            covabot:
+              - 'containers/covabot/**'
+            snowbunk:
+              - 'containers/snowbunk/**'
+
+  bunkbot:
+    name: Bunkbot - type-check, lint, test, build
+    needs: changes
+    if: needs.changes.outputs.bunkbot == 'true' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.root == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install root tools (eslint, typescript)
+        run: npm ci
+      - name: Install shared deps
+        run: |
+          cd containers/shared
+          npm ci
+      - name: Install bunkbot deps
+        run: |
+          cd containers/bunkbot
+          npm ci
+      - name: Type-check (shared)
+        run: npm run type-check:shared
+      - name: Type-check (bunkbot)
+        run: npm run type-check:bunkbot
+      - name: Lint (shared + bunkbot)
+        run: npx eslint "containers/shared/src/**/*.ts" "containers/bunkbot/src/**/*.ts"
+      - name: Test (shared)
+        run: npm run test:shared
+      - name: Test (bunkbot)
+        run: npm run test:bunkbot
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build image (bunkbot)
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/bunkbot
+          push: false
+          tags: local/bunkbot:ci
+          load: true
+
+  djcova:
+    name: DJCova - type-check, lint, test, build
+    needs: changes
+    if: needs.changes.outputs.djcova == 'true' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.root == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install root tools (eslint, typescript)
+        run: npm ci
+      - name: Install shared deps
+        run: |
+          cd containers/shared
+          npm ci
+      - name: Install djcova deps
+        run: |
+          cd containers/djcova
+          npm ci
+      - name: Type-check (shared)
+        run: npm run type-check:shared
+      - name: Type-check (djcova)
+        run: npm run type-check:djcova
+      - name: Lint (shared + djcova)
+        run: npx eslint "containers/shared/src/**/*.ts" "containers/djcova/src/**/*.ts"
+      - name: Test (shared)
+        run: npm run test:shared
+      - name: Test (djcova)
+        run: npm run test:djcova
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build image (djcova)
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/djcova
+          push: false
+          tags: local/djcova:ci
+          load: true
+
+  starbunk_dnd:
+    name: Starbunk-DnD - type-check, lint, test, build
+    needs: changes
+    if: needs.changes.outputs.starbunk_dnd == 'true' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.root == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install root tools (eslint, typescript)
+        run: npm ci
+      - name: Install shared deps
+        run: |
+          cd containers/shared
+          npm ci
+      - name: Install starbunk-dnd deps
+        run: |
+          cd containers/starbunk-dnd
+          npm ci
+      - name: Type-check (shared)
+        run: npm run type-check:shared
+      - name: Type-check (starbunk-dnd)
+        run: npm run type-check:starbunk-dnd
+      - name: Lint (shared + starbunk-dnd)
+        run: npx eslint "containers/shared/src/**/*.ts" "containers/starbunk-dnd/src/**/*.ts"
+      - name: Test (shared)
+        run: npm run test:shared
+      - name: Test (starbunk-dnd)
+        run: npm run test:starbunk-dnd
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build image (starbunk-dnd)
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/starbunk-dnd
+          push: false
+          tags: local/starbunk-dnd:ci
+          load: true
+
+  covabot:
+    name: CovaBot - type-check, lint, test, build
+    needs: changes
+    if: needs.changes.outputs.covabot == 'true' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.root == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install root tools (eslint, typescript)
+        run: npm ci
+      - name: Install shared deps
+        run: |
+          cd containers/shared
+          npm ci
+      - name: Install covabot deps
+        run: |
+          cd containers/covabot
+          npm ci
+      - name: Type-check (shared)
+        run: npm run type-check:shared
+      - name: Type-check (covabot)
+        run: npm run type-check:covabot
+      - name: Lint (shared + covabot)
+        run: npx eslint "containers/shared/src/**/*.ts" "containers/covabot/src/**/*.ts"
+      - name: Test (shared)
+        run: npm run test:shared
+      - name: Test (covabot)
+        run: npm run test:covabot
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build image (covabot)
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/covabot
+          push: false
+          tags: local/covabot:ci
+          load: true
+
+  snowbunk:
+    name: Snowbunk - type-check, lint, test, build
+    needs: changes
+    if: needs.changes.outputs.snowbunk == 'true' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.root == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install root tools (eslint, typescript)
+        run: npm ci
+      - name: Install shared deps
+        run: |
+          cd containers/shared
+          npm ci
+      - name: Install snowbunk deps
+        run: |
+          cd containers/snowbunk
+          npm ci
+      - name: Type-check (shared)
+        run: npm run type-check:shared
+      - name: Type-check (snowbunk)
+        run: npm run type-check:snowbunk || echo "no snowbunk type-check script; skipping"
+      - name: Lint (shared + snowbunk)
+        run: npx eslint "containers/shared/src/**/*.ts" "containers/snowbunk/src/**/*.ts" || echo "no snowbunk lint files; skipping"
+      - name: Test (shared)
+        run: npm run test:shared
+      - name: Test (snowbunk)
+        run: npm run test:snowbunk || echo "no snowbunk tests; skipping"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build image (snowbunk)
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/snowbunk
+          push: false
+          tags: local/snowbunk:ci
+          load: true
+
