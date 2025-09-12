@@ -30,7 +30,7 @@ services:
   covabot-dev:
     build:
       context: ..
-      dockerfile: containers/covabot/Dockerfile
+      dockerfile: ../containers/covabot/Dockerfile
     container_name: covabot-dev
     networks:
       - covabot-dev-network
