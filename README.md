@@ -289,6 +289,28 @@ docker compose -f docker/docker-compose.yml up -d --scale djcova=2 --scale bunkb
 docker compose -f docker/docker-compose.yml up -d --no-deps bunkbot
 ```
 
+
+## 🧩 Local Quality Gates (Husky)
+
+To prevent low‑quality code from reaching the repo, Husky hooks enforce local gates:
+
+- Pre-commit (fast): lints only staged files with lint-staged for quick feedback
+- Pre-push (comprehensive): runs the same checks as CI via `npm run check:ci` (type‑check, lint, unit tests)
+
+Behavior
+- Pushes are blocked if checks fail. Fix issues locally, then push again.
+- CI disables Husky via `HUSKY=0` internally, so hooks won’t run in Actions.
+
+Useful commands
+- Run full gate locally: `npm run check:ci`
+- Run tests only: `npm test`
+- Run lints only: `npm run lint`
+- Run type-checks only: `npm run type-check`
+
+Temporarily skip (not recommended)
+- `HUSKY=0 git push`
+
+
 ### CI/CD Pipeline
 The project includes GitHub Actions workflows for:
 - **Continuous Integration**: Build and test all containers
