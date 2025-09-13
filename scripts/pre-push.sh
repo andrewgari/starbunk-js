@@ -103,13 +103,13 @@ get_affected_containers() {
     # Check if shared package changed
     if echo "$changed_files" | grep -q "^containers/shared/"; then
         shared_changed=true
-        log_warning "Shared package changed - validating all containers"
+        log_warning "Shared package changed - validating all containers" >&2
     fi
 
     # Check if critical infrastructure changed
     if echo "$changed_files" | grep -qE "^(package\.json|package-lock\.json|tsconfig\.json|docker-compose.*\.yml|\.github/|scripts/)"; then
         infrastructure_changed=true
-        log_warning "Critical infrastructure changed - validating all containers"
+        log_warning "Critical infrastructure changed - validating all containers" >&2
     fi
 
     # If shared or infrastructure changed, validate all containers
@@ -182,11 +182,26 @@ validate_container() {
     # Step 3: Linting
     log_info "[${container}] ${LINTING} Linting..."
     step_start_time=$(date +%s)
-    if ! npm run lint >/dev/null 2>&1; then
-        log_error "[${container}] Linting failed"
-        npm run lint # Show errors
-        return 1
+
+    # Check if container has its own lint script, otherwise use root lint
+    if npm run --silent lint >/dev/null 2>&1; then
+        if ! npm run lint >/dev/null 2>&1; then
+            log_error "[${container}] Linting failed"
+            npm run lint # Show errors
+            return 1
+        fi
+    else
+        # Fall back to root lint for this container
+        cd "$PROJECT_ROOT"
+        if ! npx eslint "containers/${container}/src/**/*.ts" --format=compact >/dev/null 2>&1; then
+            log_error "[${container}] Linting failed (using root eslint)"
+            npx eslint "containers/${container}/src/**/*.ts" --format=compact # Show errors
+            cd "$PROJECT_ROOT/containers/$container"
+            return 1
+        fi
+        cd "$PROJECT_ROOT/containers/$container"
     fi
+
     step_duration=$(( $(date +%s) - step_start_time ))
     log_success "[${container}] Linting completed ($(format_time $step_duration))"
 
