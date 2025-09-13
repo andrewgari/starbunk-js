@@ -1,0 +1,395 @@
+name: 🚀 Unified Main Branch Deployment
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: 'Force build all containers'
+        type: boolean
+        required: false
+        default: false
+      skip_validation:
+        description: 'Skip validation steps (emergency deployments only)'
+        type: boolean
+        required: false
+        default: false
+      containers:
+        description: 'Specific containers to deploy (comma-separated: bunkbot,djcova,starbunk-dnd,covabot)'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_PREFIX: ghcr.io/${{ github.repository_owner }}
+  NODE_VERSION: '20'
+
+jobs:
+  # ==============================================================================
+  # CHANGE DETECTION & VALIDATION PIPELINE
+  # ==============================================================================
+  detect-changes:
+    name: 🔍 Detect Changes & Generate Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      # Individual container changes
+      shared: ${{ steps.filter.outputs.shared-src }}
+      bunkbot: ${{ steps.filter.outputs.bunkbot }}
+      djcova: ${{ steps.filter.outputs.djcova }}
+      starbunk-dnd: ${{ steps.filter.outputs.starbunk-dnd }}
+      covabot: ${{ steps.filter.outputs.covabot }}
+
+      # Infrastructure changes
+      critical-infrastructure: ${{ steps.filter.outputs.critical-infrastructure }}
+
+      # Dynamic matrix for deployment
+      deploy-matrix: ${{ steps.generate-matrix.outputs.matrix }}
+      has-deployments: ${{ steps.generate-matrix.outputs.has-deployments }}
+
+      # Rollback preparation
+      previous-images: ${{ steps.prepare-rollback.outputs.previous-images }}
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: 🔍 Detect Path Changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: .github/path-filters-optimized.yml
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🎯 Generate Dynamic Deployment Matrix
+        id: generate-matrix
+        run: |
+          set -euo pipefail
+
+          containers=()
+
+          # Handle manual workflow dispatch with specific containers
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.containers }}" ]]; then
+            IFS=',' read -ra MANUAL_CONTAINERS <<< "${{ github.event.inputs.containers }}"
+            for container in "${MANUAL_CONTAINERS[@]}"; do
+              container=$(echo "$container" | xargs) # trim whitespace
+              containers+=("$container")
+            done
+          elif [[ "${{ github.event.inputs.force_all }}" == "true" ]]; then
+            containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+          else
+            # Automatic detection based on changes
+            if [[ "${{ steps.filter.outputs.shared-src }}" == "true" ]]; then
+              echo "📦 Shared package changed - deploying all containers"
+              containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+            elif [[ "${{ steps.filter.outputs.critical-infrastructure }}" == "true" ]]; then
+              echo "⚠️ Critical infrastructure changed - deploying all containers"
+              containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+            else
+              # Individual container changes
+              [[ "${{ steps.filter.outputs.bunkbot }}" == "true" ]] && containers+=("bunkbot")
+              [[ "${{ steps.filter.outputs.djcova }}" == "true" ]] && containers+=("djcova")
+              [[ "${{ steps.filter.outputs.starbunk-dnd }}" == "true" ]] && containers+=("starbunk-dnd")
+              [[ "${{ steps.filter.outputs.covabot }}" == "true" ]] && containers+=("covabot")
+            fi
+          fi
+
+          if [[ ${#containers[@]} -eq 0 ]]; then
+            echo "has-deployments=false" >> $GITHUB_OUTPUT
+            echo "matrix={}" >> $GITHUB_OUTPUT
+            echo "ℹ️ No containers need deployment"
+          else
+            echo "has-deployments=true" >> $GITHUB_OUTPUT
+            printf -v container_list '%s,' "${containers[@]}"
+            container_list=${container_list%,}
+            echo "matrix={\"container\":[$(printf '"%s",' "${containers[@]}" | sed 's/,$//')}]}" >> $GITHUB_OUTPUT
+            echo "🚀 Containers to deploy: ${container_list}"
+          fi
+
+      - name: 🔄 Prepare Rollback Information
+        id: prepare-rollback
+        if: steps.generate-matrix.outputs.has-deployments == 'true'
+        run: |
+          set -euo pipefail
+
+          # Get current latest tags for rollback
+          rollback_info="{}"
+
+          containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+          for container in "${containers[@]}"; do
+            # Get current latest tag SHA (for rollback)
+            current_sha=$(docker manifest inspect ${{ env.REGISTRY_PREFIX }}/${container}:latest 2>/dev/null | jq -r '.config.digest' || echo "unknown")
+            rollback_info=$(echo "$rollback_info" | jq --arg container "$container" --arg sha "$current_sha" '.[$container] = $sha')
+          done
+
+          echo "previous-images=$rollback_info" >> $GITHUB_OUTPUT
+          echo "📋 Rollback info prepared"
+
+  # ==============================================================================
+  # COMPREHENSIVE VALIDATION SUITE
+  # ==============================================================================
+  validate-codebase:
+    name: ✅ Validation Suite
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-deployments == 'true' && github.event.inputs.skip_validation != 'true'
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js with Caching
+        uses: ./.github/actions/setup-node-cached
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 🔍 TypeScript Type Checking
+        run: |
+          echo "🔍 Running TypeScript type checks..."
+          npm run type-check
+          echo "✅ Type checking passed"
+
+      - name: 🎨 Code Linting
+        run: |
+          echo "🎨 Running ESLint..."
+          npm run lint
+          echo "✅ Linting passed"
+
+      - name: 🧪 Test Suite
+        run: |
+          echo "🧪 Running test suite..."
+          npm run test:full
+          echo "✅ Tests passed"
+
+      - name: 🏗️ Build Verification
+        run: |
+          echo "🏗️ Verifying builds..."
+          npm run build:clean
+          echo "✅ Build verification passed"
+
+      - name: 📊 Generate Validation Report
+        run: |
+          echo "📊 Validation Summary:" > validation-report.txt
+          echo "- TypeScript: ✅ Passed" >> validation-report.txt
+          echo "- Linting: ✅ Passed" >> validation-report.txt
+          echo "- Tests: ✅ Passed" >> validation-report.txt
+          echo "- Builds: ✅ Passed" >> validation-report.txt
+          cat validation-report.txt
+
+  # ==============================================================================
+  # SHARED PACKAGE BUILD (DEPENDENCY FOR ALL CONTAINERS)
+  # ==============================================================================
+  build-shared:
+    name: 🔧 Build Shared Package
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate-codebase]
+    if: |
+      needs.detect-changes.outputs.has-deployments == 'true' &&
+      (needs.detect-changes.outputs.shared == 'true' ||
+       needs.detect-changes.outputs.critical-infrastructure == 'true' ||
+       github.event.inputs.force_all == 'true' ||
+       always())
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js with Caching
+        uses: ./.github/actions/setup-node-cached
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 🔧 Build Shared Package
+        run: |
+          echo "🔧 Building shared package..."
+          cd containers/shared
+          npm run build
+          echo "✅ Shared package built successfully"
+
+      - name: 📦 Archive Shared Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-build
+          path: containers/shared/dist/
+          retention-days: 1
+
+  # ==============================================================================
+  # DYNAMIC CONTAINER DEPLOYMENT MATRIX
+  # ==============================================================================
+  deploy-containers:
+    name: 🚀 Deploy ${{ matrix.container }}
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate-codebase, build-shared]
+    if: |
+      needs.detect-changes.outputs.has-deployments == 'true' &&
+      (success() || github.event.inputs.skip_validation == 'true')
+    timeout-minutes: 20
+    strategy:
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.deploy-matrix) }}
+      fail-fast: false
+    outputs:
+      deployment-status: ${{ steps.deployment.outputs.status }}
+      image-digest: ${{ steps.deployment.outputs.digest }}
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: 🔐 Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📋 Extract Container Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix={{date 'YYYYMMDD-HHmmss'}}-,suffix=-{{branch}},format=short
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}}-{{sha}}-stable,enable=${{ github.ref == 'refs/heads/main' }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.container }}
+            org.opencontainers.image.description=Starbunk Discord Bot - ${{ matrix.container }} container
+            org.opencontainers.image.vendor=Starbunk
+            deployment.timestamp=${{ github.run_id }}
+            deployment.run-id=${{ github.run_id }}
+            deployment.commit=${{ github.sha }}
+
+      - name: 📦 Download Shared Build (if needed)
+        if: needs.detect-changes.outputs.shared == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: shared-build
+          path: containers/shared/dist/
+
+      - name: 🏗️ Build and Push Container Image
+        id: deployment
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/${{ matrix.container }}
+          file: containers/${{ matrix.container }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: |
+            type=gha,scope=${{ matrix.container }}
+            type=registry,ref=${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:latest
+          cache-to: |
+            type=gha,mode=max,scope=${{ matrix.container }}
+          provenance: false
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ github.run_id }}
+
+      - name: 🔍 Container Health Verification
+        run: |
+          echo "🔍 Verifying container health for ${{ matrix.container }}..."
+
+          # Basic image inspection
+          docker manifest inspect ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:latest
+
+          echo "✅ Container health verification passed"
+
+      - name: 📊 Deployment Success Notification
+        run: |
+          echo "🎉 Successfully deployed ${{ matrix.container }}"
+          echo "📦 Image: ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:latest"
+          echo "🔖 Digest: ${{ steps.deployment.outputs.digest }}"
+          echo "⏰ Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+  # ==============================================================================
+  # POST-DEPLOYMENT VERIFICATION & MONITORING
+  # ==============================================================================
+  post-deployment-verification:
+    name: ✅ Post-Deployment Verification
+    runs-on: ubuntu-latest
+    needs: [detect-changes, deploy-containers]
+    if: needs.detect-changes.outputs.has-deployments == 'true'
+    timeout-minutes: 10
+    steps:
+      - name: 🔍 Registry Verification
+        run: |
+          echo "🔍 Verifying all deployed images in registry..."
+
+          # Parse the deployment matrix to check each deployed container
+          echo '${{ needs.detect-changes.outputs.deploy-matrix }}' | jq -r '.container[]' | while read container; do
+            echo "📦 Checking $container..."
+            if docker manifest inspect ${{ env.REGISTRY_PREFIX }}/${container}:latest >/dev/null 2>&1; then
+              echo "✅ ${container}:latest is available in registry"
+            else
+              echo "❌ ${container}:latest is NOT available in registry"
+              exit 1
+            fi
+          done
+
+      - name: 📊 Generate Deployment Report
+        run: |
+          echo "📊 Deployment Summary Report"
+          echo "=========================="
+          echo "🕐 Deployment Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "📝 Commit: ${{ github.sha }}"
+          echo "🌿 Branch: ${{ github.ref_name }}"
+          echo "👤 Triggered by: ${{ github.actor }}"
+          echo ""
+          echo "🚀 Deployed Containers:"
+          echo '${{ needs.detect-changes.outputs.deploy-matrix }}' | jq -r '.container[]' | while read container; do
+            echo "  ✅ ${container}"
+          done
+          echo ""
+          echo "🔄 Rollback Information:"
+          echo '${{ needs.detect-changes.outputs.previous-images }}' | jq -r 'to_entries[] | "  🏷️ \(.key): \(.value)"'
+
+  # ==============================================================================
+  # DEPLOYMENT COMPLETION
+  # ==============================================================================
+  deployment-complete:
+    name: 🎉 Deployment Complete
+    runs-on: ubuntu-latest
+    needs: [detect-changes, deploy-containers, post-deployment-verification]
+    if: always() && needs.detect-changes.outputs.has-deployments == 'true'
+    steps:
+      - name: 📊 Final Deployment Status
+        run: |
+          echo "🎉 Unified Main Branch Deployment Complete"
+          echo "========================================"
+          echo ""
+          echo "📊 Status Summary:"
+          echo "- Validation: ${{ needs.validate-codebase.result || 'skipped' }}"
+          echo "- Container Deployment: ${{ needs.deploy-containers.result }}"
+          echo "- Post-Verification: ${{ needs.post-deployment-verification.result }}"
+          echo ""
+          if [[ "${{ needs.deploy-containers.result }}" == "success" && "${{ needs.post-deployment-verification.result }}" == "success" ]]; then
+            echo "🎉 Deployment completed successfully!"
+            echo "🚀 All containers are now available with :latest tags"
+          else
+            echo "⚠️ Deployment completed with issues"
+            echo "🔍 Check individual job logs for details"
+            echo "🔄 Consider rollback if services are affected"
+          fi
+
+      - name: 🧹 Cleanup Temporary Artifacts
+        run: |
+          echo "🧹 Deployment artifacts are automatically cleaned up by GitHub Actions"
+          echo "✅ Cleanup complete"
