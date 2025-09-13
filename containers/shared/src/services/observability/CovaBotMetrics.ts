@@ -88,7 +88,7 @@ export class CovaBotMetricsCollector extends ContainerMetricsBase implements Cov
 		logger.info('CovaBot metrics collector initialized with AI personality and engagement tracking');
 	}
 
-	private initializeMetrics(config: ContainerMetricsConfig): void {
+	private initializeMetrics(_config: ContainerMetricsConfig): void {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
 		// AI Personality Response Metrics
 		this.personalityTriggerCounter = new promClient.Counter({
@@ -663,7 +663,7 @@ export class CovaBotMetricsCollector extends ContainerMetricsBase implements Cov
 		return Math.min(Math.max(score, 0), 100);
 	}
 
-	private updateUserEngagement(userId: string, activityType: string): void {
+	private updateUserEngagement(userId: string, _activityType: string): void {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
 		const now = Date.now();
 		let session = this.userSessions.get(userId);
