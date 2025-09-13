@@ -1,5 +1,5 @@
 // BunkBot - Reply bots and admin commands container (Minimal Bootstrap Demo)
-import { Events } from 'discord.js';
+import { Events, Client, Message, Interaction } from 'discord.js';
 import {
 	ClientConfigs,
 	container,
@@ -12,7 +12,7 @@ import {
 } from '@starbunk/shared';
 
 class BunkBotContainer {
-	private client: any;
+	private client!: Client;
 	private webhookManager!: WebhookManager;
 	private hasInitialized = false;
 
@@ -93,11 +93,11 @@ class BunkBotContainer {
 			logger.warn('Discord client warning:', warning);
 		});
 
-		this.client.on(Events.MessageCreate, async (message: any) => {
+		this.client.on(Events.MessageCreate, async (message: Message) => {
 			await this.handleMessage(message);
 		});
 
-		this.client.on(Events.InteractionCreate, async (interaction: any) => {
+		this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 			await this.handleInteraction(interaction);
 		});
 
@@ -107,7 +107,7 @@ class BunkBotContainer {
 		});
 	}
 
-	private async handleMessage(message: any): Promise<void> {
+	private async handleMessage(message: Message): Promise<void> {
 		// Skip bot messages
 		if (message.author.bot) return;
 
@@ -125,7 +125,7 @@ class BunkBotContainer {
 		}
 	}
 
-	private async handleInteraction(interaction: any): Promise<void> {
+	private async handleInteraction(interaction: Interaction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
 				// Demo: Simple admin command

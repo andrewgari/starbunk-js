@@ -3,12 +3,12 @@ export { logger } from './services/logger';
 export { ensureError } from './utils/errorUtils';
 
 // Simple container for dependency injection
-export const container = new Map<string, any>();
+export const container = new Map<string, unknown>();
 
 // Service IDs
 export const ServiceId = {
 	Logger: 'Logger',
 	DiscordClient: 'DiscordClient',
 	WebhookService: 'WebhookService',
-	LLMManager: 'LLMManager'
+	LLMManager: 'LLMManager',
 } as const;
