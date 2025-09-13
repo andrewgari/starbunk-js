@@ -547,8 +547,8 @@ jobs:
             console.log('  context.payload.pull_request?.head?.sha:', context.payload.pull_request?.head?.sha);
             console.log('  github.context.payload.after:', context.payload.after);
 
-            // For PRs, GitHub prefers the merge commit SHA
-            const sha = context.sha;
+            // For PRs, use the head commit SHA (not the merge commit)
+            const sha = context.payload.pull_request?.head?.sha || context.sha;
             const success = '${{ steps.check-validation-results.outputs.overall_success }}' === 'true';
             const failureReason = '${{ steps.check-validation-results.outputs.failure_reason }}';
             const shouldValidate = '${{ needs.detect-changes.outputs.should-validate }}';
