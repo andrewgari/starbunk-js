@@ -11,7 +11,7 @@ import {
 } from '@starbunk/shared';
 
 class StarbunkDNDContainer {
-	private client: Client;
+	private client!: Client;
 	private snowbunkClient: Client | null = null;
 	private hasInitialized = false;
 

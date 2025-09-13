@@ -37,14 +37,14 @@ import { BotIdentityService } from './services/botIdentityService';
 import { MessageProcessor } from './core/MessageProcessor';
 
 class BunkBotContainer {
-	private client: Client;
+	private client!: Client;
 	private webhookManager!: WebhookManager;
 	private messageFilter!: MessageFilter;
 	private configurationService!: ConfigurationService;
 	private botIdentityService!: BotIdentityService;
 	private hasInitialized = false;
 	private commands = new Map();
-	private healthServer: unknown;
+	private healthServer: import('http').Server | null = null;
 	private replyBots: ReplyBotImpl[] = [];
 	private messageProcessor!: MessageProcessor;
 	private bunkBotMetrics?: BunkBotMetrics;
@@ -227,7 +227,7 @@ class BunkBotContainer {
 			} else {
 				// Deploy commands globally (available in all servers)
 				logger.info('🌍 Deploying commands globally');
-				await this.client.application.commands.set(commandData);
+				await this.client.application!.commands.set(commandData);
 			}
 
 			logger.info(`✅ Successfully deployed ${commandData.length} slash commands to Discord`);
@@ -278,7 +278,9 @@ class BunkBotContainer {
 				`🔥 DISCORD EVENT: MessageCreate received from ${message.author?.username || 'unknown'} (${message.author?.id || 'unknown'})`,
 			);
 			logger.info(`🔥   Content: "${message.content?.substring(0, 100) || 'no content'}"`);
-			logger.info(`🔥   Channel: ${message.channel?.name || 'unknown'} (${message.channel?.id || 'unknown'})`);
+			logger.info(
+				`🔥   Channel: ${message.channel && 'name' in message.channel ? message.channel.name : 'unknown'} (${message.channel?.id || 'unknown'})`,
+			);
 			logger.info(`🔥   Guild: ${message.guild?.name || 'DM'} (${message.guild?.id || 'DM'})`);
 			logger.info(`🔥   Author isBot: ${message.author?.bot || false}`);
 			logger.info(`🔥   Webhook ID: ${message.webhookId || 'none'}`);
@@ -289,7 +291,7 @@ class BunkBotContainer {
 
 		this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 			logger.info(
-				`🎮 Received interaction: ${interaction.type} from ${interaction.user?.username || 'unknown'} - Command: ${interaction.commandName || 'N/A'}`,
+				`🎮 Received interaction: ${interaction.type} from ${interaction.user?.username || 'unknown'} - Command: ${'commandName' in interaction ? interaction.commandName : 'N/A'}`,
 			);
 			logger.info(
 				`🔍 Interaction details: Guild=${interaction.guildId}, Channel=${interaction.channelId}, User=${interaction.user?.id}`,
@@ -329,7 +331,9 @@ class BunkBotContainer {
 	}
 
 	private async handleMessage(message: Message): Promise<void> {
-		logger.debug(`Processing message from ${message.author.username} in ${message.channel.name || 'DM'}`);
+		logger.debug(
+			`Processing message from ${message.author.username} in ${message.channel && 'name' in message.channel ? message.channel.name : 'DM'}`,
+		);
 
 		// Use the MessageProcessor which now includes comprehensive observability tracking
 		await this.messageProcessor.processMessage(message);
