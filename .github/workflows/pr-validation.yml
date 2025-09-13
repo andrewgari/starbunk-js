@@ -538,7 +538,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const sha = '${{ github.event.pull_request.head.sha }}';
+            const sha = context.payload.pull_request?.head?.sha || context.sha;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const success = '${{ steps.check-validation-results.outputs.overall_success }}' === 'true';
