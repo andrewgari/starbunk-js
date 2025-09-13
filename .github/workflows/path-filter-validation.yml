@@ -157,7 +157,7 @@ jobs:
           echo "### 🔧 Optimization Recommendations" >> $GITHUB_STEP_SUMMARY
 
           # Check for optimization opportunities
-          if grep -q "containers/\*/\*\*" .github/path-filters-optimized.yml; then
+          if grep -q "apps/\*/\*\*" .github/path-filters-optimized.yml; then
             echo "- ✅ Using specific container paths" >> $GITHUB_STEP_SUMMARY
           else
             echo "- ⚠️ Consider using more specific container paths" >> $GITHUB_STEP_SUMMARY

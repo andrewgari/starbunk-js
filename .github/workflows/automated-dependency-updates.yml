@@ -104,7 +104,7 @@ jobs:
       - name: Generate container matrix
         id: set-matrix
         run: |
-          CONTAINERS=$(ls -d containers/*/ | sed 's|containers/||g' | sed 's|/||g' | jq -R -s -c 'split("\n")[:-1]')
+          CONTAINERS=$(ls -d apps/*/ | sed 's|apps/||g' | sed 's|/||g' | jq -R -s -c 'split("\n")[:-1]')
           echo "containers=$CONTAINERS" >> $GITHUB_OUTPUT
           echo "Generated container matrix: $CONTAINERS"
 
@@ -172,7 +172,7 @@ jobs:
 
       - name: Update container dependencies
         run: |
-          cd containers/${{ matrix.container }}
+          cd apps/${{ matrix.container }}
 
           # Update dependencies
           npx npm-check-updates ${{ steps.strategy.outputs.strategy }} --upgrade
@@ -184,7 +184,7 @@ jobs:
 
       - name: Run security audit after updates
         run: |
-          cd containers/${{ matrix.container }}
+          cd apps/${{ matrix.container }}
           npm audit --audit-level=moderate || exit 1
 
       - name: Commit changes

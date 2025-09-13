@@ -34,13 +34,13 @@ print_error() {
 # Test scenarios
 test_scenarios=(
     # Scenario 1: BunkBot source change
-    "containers/bunkbot/src/index.ts|Expected: bunkbot only"
+    "apps/bunkbot/src/index.ts|Expected: bunkbot only"
 
     # Scenario 2: Shared package change
-    "containers/shared/src/logger.ts|Expected: ALL containers"
+    "packages/shared/src/logger.ts|Expected: ALL containers"
 
     # Scenario 3: Test file change
-    "containers/bunkbot/src/__tests__/bot.test.ts|Expected: tests only, no builds"
+    "apps/bunkbot/src/__tests__/bot.test.ts|Expected: tests only, no builds"
 
     # Scenario 4: Root package.json change
     "package.json|Expected: ALL containers (critical infrastructure)"
@@ -52,10 +52,10 @@ test_scenarios=(
     ".github/workflows/pr-validation.yml|Expected: ALL containers (infrastructure)"
 
     # Scenario 7: Multiple container changes
-    "containers/bunkbot/src/bot.ts containers/djcova/src/music.ts|Expected: bunkbot, djcova"
+    "apps/bunkbot/src/bot.ts apps/djcova/src/music.ts|Expected: bunkbot, djcova"
 
     # Scenario 8: Mixed changes (source + tests)
-    "containers/bunkbot/src/index.ts containers/bunkbot/__tests__/bot.test.ts|Expected: bunkbot build + tests"
+    "apps/bunkbot/src/index.ts apps/bunkbot/__tests__/bot.test.ts|Expected: bunkbot build + tests"
 
     # Scenario 9: Docker compose change
     "docker-compose.yml|Expected: ALL containers"
@@ -73,20 +73,20 @@ simulate_path_filter() {
 
     case "$filter_type" in
         "shared-src")
-            if [[ "$file_path" =~ ^containers/shared/src/ ]] || \
-               [[ "$file_path" =~ ^containers/shared/package\.json$ ]]; then
+            if [[ "$file_path" =~ ^packages/shared/src/ ]] || \
+               [[ "$file_path" =~ ^packages/shared/package\.json$ ]]; then
                 return 0
             fi
             ;;
         "bunkbot")
-            if [[ "$file_path" =~ ^containers/bunkbot/ ]] && \
+            if [[ "$file_path" =~ ^apps/bunkbot/ ]] && \
                [[ ! "$file_path" =~ \.test\. ]] && \
                [[ ! "$file_path" =~ __tests__ ]]; then
                 return 0
             fi
             ;;
         "djcova")
-            if [[ "$file_path" =~ ^containers/djcova/ ]] && \
+            if [[ "$file_path" =~ ^apps/djcova/ ]] && \
                [[ ! "$file_path" =~ \.test\. ]] && \
                [[ ! "$file_path" =~ __tests__ ]]; then
                 return 0

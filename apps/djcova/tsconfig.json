@@ -1,0 +1,43 @@
+{
+	"compilerOptions": {
+		"composite": true,
+		"target": "ES2022",
+		"module": "commonjs",
+		"lib": ["ES2022"],
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+		"isolatedModules": true,
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"baseUrl": "./src",
+		"paths": {
+			"@/*": ["*"],
+			"@starbunk/shared": ["../../packages/shared/src"],
+			"@starbunk/shared/*": ["../../packages/shared/src/*"]
+		}
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"tests",
+		"src/**/__tests__/**",
+		"src/services/personalityNotesServiceDb.ts",
+		"src/cova-bot/enhancedLlmTriggers.ts",
+		"src/cova-bot/llm-triggers.ts",
+		"src/cova-bot/index.ts",
+		"src/commands/**/*.ts",
+		"src/index.ts",
+		"src/commandHandler.ts"
+	],
+	"references": [
+		{ "path": "../../packages/shared" }
+	]
+}

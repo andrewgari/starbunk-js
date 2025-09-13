@@ -28,13 +28,13 @@ jobs:
               with:
                   filters: |
                       containers:
-                          - 'containers/**'
+                          - 'apps/**'
                       package_json:
                           - 'package.json'
                           - 'package-lock.json'
                       container_packages:
-                          - 'containers/*/package.json'
-                          - 'containers/*/package-lock.json'
+                          - 'apps/*/package.json'
+                          - 'apps/*/package-lock.json'
 
     security:
         name: '🔒 Security - Check Dependencies'

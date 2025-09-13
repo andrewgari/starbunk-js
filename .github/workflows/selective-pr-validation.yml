@@ -265,13 +265,13 @@ jobs:
           path: |
             ~/.npm
             node_modules
-            containers/shared/node_modules
-            containers/bunkbot/node_modules
-            containers/djcova/node_modules
-            containers/starbunk-dnd/node_modules
-            containers/covabot/node_modules
-            containers/shared/dist
-          key: deps-v3-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**', 'containers/shared/package.json', 'containers/shared/tsconfig.json') }}
+            packages/shared/node_modules
+            apps/bunkbot/node_modules
+            apps/djcova/node_modules
+            apps/starbunk-dnd/node_modules
+            apps/covabot/node_modules
+            packages/shared/dist
+          key: deps-v3-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('packages/shared/src/**', 'packages/shared/package.json', 'packages/shared/tsconfig.json') }}
           restore-keys: |
             deps-v3-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
             deps-v3-${{ runner.os }}-
@@ -286,19 +286,19 @@ jobs:
           root_pid=$!
 
           # Install container dependencies in parallel (background jobs)
-          (cd containers/shared && npm ci --prefer-offline --no-audit --silent) &
+          (cd packages/shared && npm ci --prefer-offline --no-audit --silent) &
           shared_pid=$!
 
-          (cd containers/bunkbot && npm ci --prefer-offline --no-audit --silent) &
+          (cd apps/bunkbot && npm ci --prefer-offline --no-audit --silent) &
           bunkbot_pid=$!
 
-          (cd containers/djcova && npm ci --prefer-offline --no-audit --silent) &
+          (cd apps/djcova && npm ci --prefer-offline --no-audit --silent) &
           djcova_pid=$!
 
-          (cd containers/starbunk-dnd && npm ci --prefer-offline --no-audit --silent) &
+          (cd apps/starbunk-dnd && npm ci --prefer-offline --no-audit --silent) &
           dnd_pid=$!
 
-          (cd containers/covabot && npm ci --prefer-offline --no-audit --silent) &
+          (cd apps/covabot && npm ci --prefer-offline --no-audit --silent) &
           covabot_pid=$!
 
           # Wait for all installations with timeout protection
@@ -311,7 +311,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           echo "🔨 Building shared package..."
-          cd containers/shared
+          cd packages/shared
           npm run build
           echo "✅ Shared package built successfully"
 
@@ -341,39 +341,39 @@ jobs:
           path: |
             ~/.npm
             node_modules
-            containers/shared/node_modules
-            containers/bunkbot/node_modules
-            containers/djcova/node_modules
-            containers/starbunk-dnd/node_modules
-            containers/covabot/node_modules
-            containers/shared/dist
-          key: deps-v3-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**', 'containers/shared/package.json', 'containers/shared/tsconfig.json') }}
+            packages/shared/node_modules
+            apps/bunkbot/node_modules
+            apps/djcova/node_modules
+            apps/starbunk-dnd/node_modules
+            apps/covabot/node_modules
+            packages/shared/dist
+          key: deps-v3-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('packages/shared/src/**', 'packages/shared/package.json', 'packages/shared/tsconfig.json') }}
           fail-on-cache-miss: true
 
       - name: 🔨 Build BunkBot
         run: |
           echo "🔨 Building BunkBot container..."
-          cd containers/bunkbot
+          cd apps/bunkbot
           npm run build
           echo "✅ BunkBot build completed"
 
       - name: 🧪 Test BunkBot
         run: |
           echo "🧪 Running BunkBot tests..."
-          cd containers/bunkbot
+          cd apps/bunkbot
           npm test -- --passWithNoTests --coverage=false --verbose
           echo "✅ BunkBot tests completed"
 
       - name: 🧹 Lint BunkBot
         run: |
           echo "🧹 Linting BunkBot code..."
-          cd containers/bunkbot
+          cd apps/bunkbot
           if npm run --silent lint 2>/dev/null; then
             npm run lint
           else
             echo "Using root ESLint configuration for BunkBot"
             cd ../..
-            npx eslint "containers/bunkbot/src/**/*.ts" --format=stylish
+            npx eslint "apps/bunkbot/src/**/*.ts" --format=stylish
           fi
           echo "✅ BunkBot linting completed"
 
@@ -399,39 +399,39 @@ jobs:
           path: |
             ~/.npm
             node_modules
-            containers/shared/node_modules
-            containers/bunkbot/node_modules
-            containers/djcova/node_modules
-            containers/starbunk-dnd/node_modules
-            containers/covabot/node_modules
-            containers/shared/dist
-          key: deps-v3-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**', 'containers/shared/package.json', 'containers/shared/tsconfig.json') }}
+            packages/shared/node_modules
+            apps/bunkbot/node_modules
+            apps/djcova/node_modules
+            apps/starbunk-dnd/node_modules
+            apps/covabot/node_modules
+            packages/shared/dist
+          key: deps-v3-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('packages/shared/src/**', 'packages/shared/package.json', 'packages/shared/tsconfig.json') }}
           fail-on-cache-miss: true
 
       - name: 🔨 Build Starbunk-DND
         run: |
           echo "🔨 Building Starbunk-DND container..."
-          cd containers/starbunk-dnd
+          cd apps/starbunk-dnd
           npm run build
           echo "✅ Starbunk-DND build completed"
 
       - name: 🧪 Test Starbunk-DND
         run: |
           echo "🧪 Running Starbunk-DND tests..."
-          cd containers/starbunk-dnd
+          cd apps/starbunk-dnd
           npm test -- --passWithNoTests --coverage=false --verbose
           echo "✅ Starbunk-DND tests completed"
 
       - name: 🧹 Lint Starbunk-DND
         run: |
           echo "🧹 Linting Starbunk-DND code..."
-          cd containers/starbunk-dnd
+          cd apps/starbunk-dnd
           if npm run --silent lint 2>/dev/null; then
             npm run lint
           else
             echo "Using root ESLint configuration for Starbunk-DND"
             cd ../..
-            npx eslint "containers/starbunk-dnd/src/**/*.ts" --format=stylish
+            npx eslint "apps/starbunk-dnd/src/**/*.ts" --format=stylish
           fi
           echo "✅ Starbunk-DND linting completed"
 
@@ -457,39 +457,39 @@ jobs:
           path: |
             ~/.npm
             node_modules
-            containers/shared/node_modules
-            containers/bunkbot/node_modules
-            containers/djcova/node_modules
-            containers/starbunk-dnd/node_modules
-            containers/covabot/node_modules
-            containers/shared/dist
-          key: deps-v3-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**', 'containers/shared/package.json', 'containers/shared/tsconfig.json') }}
+            packages/shared/node_modules
+            apps/bunkbot/node_modules
+            apps/djcova/node_modules
+            apps/starbunk-dnd/node_modules
+            apps/covabot/node_modules
+            packages/shared/dist
+          key: deps-v3-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('packages/shared/src/**', 'packages/shared/package.json', 'packages/shared/tsconfig.json') }}
           fail-on-cache-miss: true
 
       - name: 🔨 Build CovaBot
         run: |
           echo "🔨 Building CovaBot container..."
-          cd containers/covabot
+          cd apps/covabot
           npm run build
           echo "✅ CovaBot build completed"
 
       - name: 🧪 Test CovaBot
         run: |
           echo "🧪 Running CovaBot tests..."
-          cd containers/covabot
+          cd apps/covabot
           npm test -- --passWithNoTests --coverage=false --verbose
           echo "✅ CovaBot tests completed"
 
       - name: 🧹 Lint CovaBot
         run: |
           echo "🧹 Linting CovaBot code..."
-          cd containers/covabot
+          cd apps/covabot
           if npm run --silent lint 2>/dev/null; then
             npm run lint
           else
             echo "Using root ESLint configuration for CovaBot"
             cd ../..
-            npx eslint "containers/covabot/src/**/*.ts" --format=stylish
+            npx eslint "apps/covabot/src/**/*.ts" --format=stylish
           fi
           echo "✅ CovaBot linting completed"
 
@@ -536,7 +536,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: containers/bunkbot/Dockerfile
+          file: apps/bunkbot/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -585,7 +585,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: containers/djcova/Dockerfile
+          file: apps/djcova/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -634,7 +634,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: containers/starbunk-dnd/Dockerfile
+          file: apps/starbunk-dnd/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -683,7 +683,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: containers/covabot/Dockerfile
+          file: apps/covabot/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

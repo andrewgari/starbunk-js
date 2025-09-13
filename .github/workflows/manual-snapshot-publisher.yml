@@ -420,7 +420,7 @@ jobs:
 
           for container in "${containers[@]}"; do
             echo "🔨 Building $container..."
-            cd "containers/$container"
+            cd "apps/$container"
 
             if npm run build --if-present; then
               echo "✅ $container build successful"
@@ -471,7 +471,7 @@ jobs:
         run: |
           echo "🔧 Building shared package for snapshot publishing..."
 
-          cd containers/shared
+          cd packages/shared
 
           if [[ "${{ inputs.debug_mode }}" == "true" ]]; then
             echo "🐛 Debug - Shared package contents before build:"
@@ -491,7 +491,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: shared-build-${{ needs.validate-inputs.outputs.final-tag }}
-          path: containers/shared/dist/
+          path: packages/shared/dist/
           retention-days: 7
 
   # =============================================================================
@@ -535,7 +535,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: shared-build-${{ needs.validate-inputs.outputs.final-tag }}
-          path: containers/shared/dist/
+          path: packages/shared/dist/
 
       - name: 📋 Extract Container Metadata
         id: meta
@@ -561,8 +561,8 @@ jobs:
         id: build-push
         uses: docker/build-push-action@v6
         with:
-          context: containers/${{ matrix.container }}
-          file: containers/${{ matrix.container }}/Dockerfile
+          context: apps/${{ matrix.container }}
+          file: apps/${{ matrix.container }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

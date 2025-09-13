@@ -55,13 +55,13 @@ jobs:
               container_dir="starbunk-dnd"
             fi
 
-            if [ -f "containers/$container_dir/package.json" ]; then
+            if [ -f "apps/$container_dir/package.json" ]; then
               # Extract dependencies from package.json
-              deps=$(jq -r '.dependencies // {} | keys | join(", ")' "containers/$container_dir/package.json" 2>/dev/null || echo "none")
-              dev_deps=$(jq -r '.devDependencies // {} | keys | length' "containers/$container_dir/package.json" 2>/dev/null || echo "0")
+              deps=$(jq -r '.dependencies // {} | keys | join(", ")' "apps/$container_dir/package.json" 2>/dev/null || echo "none")
+              dev_deps=$(jq -r '.devDependencies // {} | keys | length' "apps/$container_dir/package.json" 2>/dev/null || echo "0")
 
               # Check if it uses shared package
-              uses_shared=$(jq -r '.dependencies | has("@starbunk/shared")' "containers/$container_dir/package.json" 2>/dev/null || echo "false")
+              uses_shared=$(jq -r '.dependencies | has("@starbunk/shared")' "apps/$container_dir/package.json" 2>/dev/null || echo "false")
 
               # Determine build priority (shared dependencies build first)
               if [ "$uses_shared" = "true" ]; then
@@ -148,29 +148,29 @@ jobs:
             fi
 
             # Check if container directory exists
-            if [ ! -d "containers/$container_dir" ]; then
-              echo "❌ Container directory missing: containers/$container_dir"
+            if [ ! -d "apps/$container_dir" ]; then
+              echo "❌ Container directory missing: apps/$container_dir"
               validation_errors=$((validation_errors + 1))
               continue
             fi
 
             # Check if Dockerfile exists
-            if [ ! -f "containers/$container_dir/Dockerfile" ]; then
-              echo "❌ Dockerfile missing: containers/$container_dir/Dockerfile"
+            if [ ! -f "apps/$container_dir/Dockerfile" ]; then
+              echo "❌ Dockerfile missing: apps/$container_dir/Dockerfile"
               validation_errors=$((validation_errors + 1))
             else
-              echo "✅ Dockerfile found: containers/$container_dir/Dockerfile"
+              echo "✅ Dockerfile found: apps/$container_dir/Dockerfile"
             fi
 
             # Check if package.json exists
-            if [ ! -f "containers/$container_dir/package.json" ]; then
-              echo "⚠️  package.json missing: containers/$container_dir/package.json"
+            if [ ! -f "apps/$container_dir/package.json" ]; then
+              echo "⚠️  package.json missing: apps/$container_dir/package.json"
             else
-              echo "✅ package.json found: containers/$container_dir/package.json"
+              echo "✅ package.json found: apps/$container_dir/package.json"
 
               # Validate package.json structure
-              if ! jq empty "containers/$container_dir/package.json" 2>/dev/null; then
-                echo "❌ Invalid JSON in: containers/$container_dir/package.json"
+              if ! jq empty "apps/$container_dir/package.json" 2>/dev/null; then
+                echo "❌ Invalid JSON in: apps/$container_dir/package.json"
                 validation_errors=$((validation_errors + 1))
               fi
             fi

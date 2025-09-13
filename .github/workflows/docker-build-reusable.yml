@@ -45,8 +45,8 @@ jobs:
         with:
           filters: |
             docker_related:
-              - 'containers/${{ inputs.container_name }}/**'
-              - 'containers/${{ inputs.container_name }}/Dockerfile'
+              - 'apps/${{ inputs.container_name }}/**'
+              - 'apps/${{ inputs.container_name }}/Dockerfile'
               - 'docker-compose*.yml'
               - '.github/workflows/docker-*.yml'
 
@@ -100,12 +100,12 @@ jobs:
         run: |
           CONTAINER_DIR="${{ inputs.container_name }}"
 
-          if [ ! -d "containers/$CONTAINER_DIR" ]; then
-            echo "Error: Container directory containers/$CONTAINER_DIR does not exist"
+          if [ ! -d "apps/$CONTAINER_DIR" ]; then
+            echo "Error: Container directory apps/$CONTAINER_DIR does not exist"
             exit 1
           fi
-          if [ ! -f "containers/$CONTAINER_DIR/Dockerfile" ]; then
-            echo "Error: Dockerfile not found in containers/$CONTAINER_DIR"
+          if [ ! -f "apps/$CONTAINER_DIR/Dockerfile" ]; then
+            echo "Error: Dockerfile not found in apps/$CONTAINER_DIR"
             exit 1
           fi
 
@@ -115,7 +115,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: containers/${{ env.CONTAINER_DIR }}/Dockerfile
+          file: apps/${{ env.CONTAINER_DIR }}/Dockerfile
           push: ${{ inputs.push_image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

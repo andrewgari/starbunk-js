@@ -209,8 +209,8 @@ jobs:
 
           # Update container package.json files
           for container in shared bunkbot djcova starbunk-dnd covabot; do
-            if [ -f "containers/$container/package.json" ]; then
-              cd containers/$container
+            if [ -f "apps/$container/package.json" ]; then
+              cd apps/$container
               npm version $NEW_VERSION --no-git-tag-version
               cd ../..
             fi
@@ -281,7 +281,7 @@ jobs:
         run: |
           NEW_VERSION="${{ needs.analyze-commits.outputs.new-version }}"
 
-          git add package.json containers/*/package.json
+          git add package.json apps/*/package.json
           git commit -m "chore(release): bump version to v${NEW_VERSION}" \
                      -m "Updated all package.json files to version ${NEW_VERSION}" \
                      -m "Automated version bump for ${{ needs.analyze-commits.outputs.release-type }} release" \

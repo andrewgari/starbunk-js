@@ -55,14 +55,14 @@ runs:
 
         # Include shared package source in cache key since it affects builds
         SHARED_HASH=""
-        if [ -d "containers/shared/src" ]; then
-          SHARED_HASH=$(find containers/shared/src -name "*.ts" -o -name "*.js" -exec cat {} \; 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "no-shared")
+        if [ -d "packages/shared/src" ]; then
+          SHARED_HASH=$(find packages/shared/src -name "*.ts" -o -name "*.js" -exec cat {} \; 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "no-shared")
         fi
 
         # Include shared package config files
         SHARED_CONFIG_HASH=""
-        if [ -f "containers/shared/package.json" ]; then
-          SHARED_CONFIG_HASH=$(cat containers/shared/package.json containers/shared/tsconfig.json 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "no-config")
+        if [ -f "packages/shared/package.json" ]; then
+          SHARED_CONFIG_HASH=$(cat packages/shared/package.json packages/shared/tsconfig.json 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "no-config")
         fi
 
         CACHE_KEY="node-${{ inputs.node-version }}-${{ runner.os }}-deps-${LOCKFILE_HASH}-shared-${SHARED_HASH}-config-${SHARED_CONFIG_HASH}"
@@ -77,13 +77,13 @@ runs:
         path: |
           ~/.npm
           node_modules
-          containers/shared/node_modules
-          containers/bunkbot/node_modules
-          containers/djcova/node_modules
-          containers/starbunk-dnd/node_modules
-          containers/covabot/node_modules
-          containers/shared/dist
-          containers/shared/lib
+          packages/shared/node_modules
+          apps/bunkbot/node_modules
+          apps/djcova/node_modules
+          apps/starbunk-dnd/node_modules
+          apps/covabot/node_modules
+          packages/shared/dist
+          packages/shared/lib
         key: ${{ steps.cache-key.outputs.cache-key }}
         restore-keys: |
           node-${{ inputs.node-version }}-${{ runner.os }}-deps-
@@ -116,19 +116,19 @@ runs:
         root_pid=$!
 
         # Install container dependencies in parallel
-        install_container_deps "containers/shared" "shared" &
+        install_container_deps "packages/shared" "shared" &
         shared_pid=$!
 
-        install_container_deps "containers/bunkbot" "bunkbot" &
+        install_container_deps "apps/bunkbot" "bunkbot" &
         bunkbot_pid=$!
 
-        install_container_deps "containers/djcova" "djcova" &
+        install_container_deps "apps/djcova" "djcova" &
         djcova_pid=$!
 
-        install_container_deps "containers/starbunk-dnd" "starbunk-dnd" &
+        install_container_deps "apps/starbunk-dnd" "starbunk-dnd" &
         dnd_pid=$!
 
-        install_container_deps "containers/covabot" "covabot" &
+        install_container_deps "apps/covabot" "covabot" &
         covabot_pid=$!
 
         # Wait for all installations to complete
@@ -146,9 +146,9 @@ runs:
       if: inputs.build-shared == 'true' && steps.cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        if [ -d "containers/shared" ] && [ -f "containers/shared/package.json" ]; then
+        if [ -d "packages/shared" ] && [ -f "packages/shared/package.json" ]; then
           echo "🔨 Building shared package..."
-          cd containers/shared
+          cd packages/shared
 
           # Check if build script exists
           if npm run --silent build --dry-run 2>/dev/null; then
@@ -175,14 +175,14 @@ runs:
 
         # Check container setups
         for container in shared bunkbot djcova starbunk-dnd covabot; do
-          if [ -d "containers/$container" ]; then
-            if [ -d "containers/$container/node_modules" ]; then
+          if [ -d "apps/$container" ]; then
+            if [ -d "apps/$container/node_modules" ]; then
               echo "✅ $container: Dependencies installed"
             else
               echo "⚠️  $container: No node_modules found"
             fi
 
-            if [ "$container" = "shared" ] && [ -d "containers/shared/dist" ]; then
+            if [ "$container" = "shared" ] && [ -d "packages/shared/dist" ]; then
               echo "✅ shared: Build artifacts found"
             fi
           fi

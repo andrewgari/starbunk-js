@@ -58,41 +58,41 @@ jobs:
         with:
           filters: |
             shared:
-              - 'containers/shared/src/**/*.ts'
-              - 'containers/shared/src/**/*.js'
-              - 'containers/shared/package.json'
-              - 'containers/shared/tsconfig.json'
-              - '!containers/shared/**/*.test.ts'
-              - '!containers/shared/**/*.spec.ts'
-              - '!containers/shared/**/*.md'
+              - 'packages/shared/src/**/*.ts'
+              - 'packages/shared/src/**/*.js'
+              - 'packages/shared/package.json'
+              - 'packages/shared/tsconfig.json'
+              - '!packages/shared/**/*.test.ts'
+              - '!packages/shared/**/*.spec.ts'
+              - '!packages/shared/**/*.md'
             bunkbot:
-              - 'containers/bunkbot/src/**'
-              - 'containers/bunkbot/package.json'
-              - 'containers/bunkbot/tsconfig.json'
-              - 'containers/bunkbot/Dockerfile*'
-              - '!containers/bunkbot/**/*.test.ts'
-              - '!containers/bunkbot/**/*.md'
+              - 'apps/bunkbot/src/**'
+              - 'apps/bunkbot/package.json'
+              - 'apps/bunkbot/tsconfig.json'
+              - 'apps/bunkbot/Dockerfile*'
+              - '!apps/bunkbot/**/*.test.ts'
+              - '!apps/bunkbot/**/*.md'
             djcova:
-              - 'containers/djcova/src/**'
-              - 'containers/djcova/package.json'
-              - 'containers/djcova/tsconfig.json'
-              - 'containers/djcova/Dockerfile*'
-              - '!containers/djcova/**/*.test.ts'
-              - '!containers/djcova/**/*.md'
+              - 'apps/djcova/src/**'
+              - 'apps/djcova/package.json'
+              - 'apps/djcova/tsconfig.json'
+              - 'apps/djcova/Dockerfile*'
+              - '!apps/djcova/**/*.test.ts'
+              - '!apps/djcova/**/*.md'
             starbunk-dnd:
-              - 'containers/starbunk-dnd/src/**'
-              - 'containers/starbunk-dnd/package.json'
-              - 'containers/starbunk-dnd/tsconfig.json'
-              - 'containers/starbunk-dnd/Dockerfile*'
-              - '!containers/starbunk-dnd/**/*.test.ts'
-              - '!containers/starbunk-dnd/**/*.md'
+              - 'apps/starbunk-dnd/src/**'
+              - 'apps/starbunk-dnd/package.json'
+              - 'apps/starbunk-dnd/tsconfig.json'
+              - 'apps/starbunk-dnd/Dockerfile*'
+              - '!apps/starbunk-dnd/**/*.test.ts'
+              - '!apps/starbunk-dnd/**/*.md'
             covabot:
-              - 'containers/covabot/src/**'
-              - 'containers/covabot/package.json'
-              - 'containers/covabot/tsconfig.json'
-              - 'containers/covabot/Dockerfile*'
-              - '!containers/covabot/**/*.test.ts'
-              - '!containers/covabot/**/*.md'
+              - 'apps/covabot/src/**'
+              - 'apps/covabot/package.json'
+              - 'apps/covabot/tsconfig.json'
+              - 'apps/covabot/Dockerfile*'
+              - '!apps/covabot/**/*.test.ts'
+              - '!apps/covabot/**/*.md'
             critical:
               - 'package-lock.json'
               - 'tsconfig.json'
@@ -107,7 +107,7 @@ jobs:
               - '**/tests/**'
               - '**/__tests__/**'
               - 'jest.config.js'
-              - 'containers/*/jest.config.js'
+              - 'apps/*/jest.config.js'
             docs:
               - '**/*.md'
               - 'docs/**'
@@ -207,14 +207,14 @@ jobs:
           path: |
             ~/.npm
             node_modules
-            containers/shared/node_modules
-            containers/bunkbot/node_modules
-            containers/djcova/node_modules
-            containers/starbunk-dnd/node_modules
-            containers/covabot/node_modules
-            containers/shared/dist
+            packages/shared/node_modules
+            apps/bunkbot/node_modules
+            apps/djcova/node_modules
+            apps/starbunk-dnd/node_modules
+            apps/covabot/node_modules
+            packages/shared/dist
             /tmp/jest_cache
-          key: deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**/*.ts', 'containers/shared/package.json', 'containers/shared/tsconfig.json') }}
+          key: deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('packages/shared/src/**/*.ts', 'packages/shared/package.json', 'packages/shared/tsconfig.json') }}
           restore-keys: |
             deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
             deps-v2-${{ runner.os }}-
@@ -229,19 +229,19 @@ jobs:
           root_pid=$!
 
           # Install container dependencies in parallel using absolute paths
-          (cd containers/shared && npm ci --prefer-offline --no-audit) &
+          (cd packages/shared && npm ci --prefer-offline --no-audit) &
           shared_pid=$!
 
-          (cd containers/bunkbot && npm ci --prefer-offline --no-audit) &
+          (cd apps/bunkbot && npm ci --prefer-offline --no-audit) &
           bunkbot_pid=$!
 
-          (cd containers/djcova && npm ci --prefer-offline --no-audit) &
+          (cd apps/djcova && npm ci --prefer-offline --no-audit) &
           djcova_pid=$!
 
-          (cd containers/starbunk-dnd && npm ci --prefer-offline --no-audit) &
+          (cd apps/starbunk-dnd && npm ci --prefer-offline --no-audit) &
           dnd_pid=$!
 
-          (cd containers/covabot && npm ci --prefer-offline --no-audit) &
+          (cd apps/covabot && npm ci --prefer-offline --no-audit) &
           covabot_pid=$!
 
           # Wait for all installations
@@ -253,7 +253,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           echo "🔨 Building shared package..."
-          cd containers/shared && npm run build
+          cd packages/shared && npm run build
           echo "✅ Shared package built"
 
   # Comprehensive validation job matrix
@@ -281,33 +281,33 @@ jobs:
           path: |
             ~/.npm
             node_modules
-            containers/shared/node_modules
-            containers/bunkbot/node_modules
-            containers/djcova/node_modules
-            containers/starbunk-dnd/node_modules
-            containers/covabot/node_modules
-            containers/shared/dist
+            packages/shared/node_modules
+            apps/bunkbot/node_modules
+            apps/djcova/node_modules
+            apps/starbunk-dnd/node_modules
+            apps/covabot/node_modules
+            packages/shared/dist
             /tmp/jest_cache
-          key: deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**/*.ts', 'containers/shared/package.json', 'containers/shared/tsconfig.json') }}
+          key: deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('packages/shared/src/**/*.ts', 'packages/shared/package.json', 'packages/shared/tsconfig.json') }}
           fail-on-cache-miss: true
 
       - name: TypeScript compilation check
         run: |
           echo "🔍 Type-checking ${{ matrix.container }}..."
-          cd containers/${{ matrix.container }}
+          cd apps/${{ matrix.container }}
           npm run type-check
 
       - name: Lint code
         run: |
           echo "🧹 Linting ${{ matrix.container }}..."
-          cd containers/${{ matrix.container }}
+          cd apps/${{ matrix.container }}
           # Run eslint if script exists, otherwise fallback to root lint
           if npm run --silent lint 2>/dev/null; then
             npm run lint
           else
             echo "No container-specific lint script, using root lint for ${{ matrix.container }}"
             cd ../..
-            npx eslint "containers/${{ matrix.container }}/src/**/*.ts" --format=compact
+            npx eslint "apps/${{ matrix.container }}/src/**/*.ts" --format=compact
           fi
 
       - name: Run unit tests
@@ -316,13 +316,13 @@ jobs:
           NODE_ENV: test
         run: |
           echo "🧪 Testing ${{ matrix.container }}..."
-          cd containers/${{ matrix.container }}
+          cd apps/${{ matrix.container }}
           npm test -- --passWithNoTests --coverage=false --verbose --testTimeout=30000 --maxWorkers=2
 
       - name: Build container
         run: |
           echo "🔨 Building ${{ matrix.container }}..."
-          cd containers/${{ matrix.container }}
+          cd apps/${{ matrix.container }}
           npm run build
 
   # Docker image building and publishing
@@ -391,7 +391,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: containers/${{ matrix.container }}/Dockerfile
+          file: apps/${{ matrix.container }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

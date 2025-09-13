@@ -196,7 +196,7 @@ ${avgDuration > 10 ?
           echo "### 📦 Large Files Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          large_files=$(find containers/ -type f -size +1M 2>/dev/null | head -10)
+          large_files=$(find apps/ -type f -size +1M 2>/dev/null | head -10)
           if [ -n "$large_files" ]; then
             echo "**Large files found (>1MB):**" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
@@ -217,7 +217,7 @@ ${avgDuration > 10 ?
 
           containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
           for container in "${containers[@]}"; do
-            if [ -f "containers/$container/.dockerignore" ]; then
+            if [ -f "apps/$container/.dockerignore" ]; then
               echo "✅ $container has .dockerignore" >> $GITHUB_STEP_SUMMARY
             else
               echo "⚠️ $container missing .dockerignore" >> $GITHUB_STEP_SUMMARY
