@@ -18,7 +18,7 @@ module.exports = {
 	],
 	moduleNameMapper: {
 		'^@/(.*)$': '<rootDir>/src/$1',
-		'^@starbunk/shared$': '<rootDir>/../shared/src/index.ts',
+		'^@starbunk/shared$': '<rootDir>/../../packages/shared/src/index.ts',
 		'^@starbunk/shared/dist/(.*)$': '<rootDir>/../shared/src/$1',
 		'^@xenova/transformers$': '<rootDir>/tests/mocks/transformers.ts',
 	},
