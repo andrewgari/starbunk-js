@@ -21,9 +21,7 @@ on:
         required: false
         type: string
         default: 'ghcr.io'
-    secrets:
-      GITHUB_TOKEN:
-        required: true
+    secrets: {}
 
 # This workflow should ONLY be called by other workflows, never triggered directly
 # If you see this workflow failing, it means it's being triggered incorrectly

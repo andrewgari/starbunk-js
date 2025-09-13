@@ -3,30 +3,12 @@ name: 📸 Manual Snapshot Publisher
 on:
   workflow_dispatch:
     inputs:
-      # Container Selection - Checkboxes for flexibility
-      publish_bunkbot:
-        description: '📦 Publish BunkBot container'
-        type: boolean
+      # Container Selection
+      containers:
+        description: 'Containers to publish (comma-separated: bunkbot,djcova,starbunk-dnd,covabot)'
+        type: string
         required: false
-        default: true
-
-      publish_djcova:
-        description: '🎵 Publish DJCova container'
-        type: boolean
-        required: false
-        default: true
-
-      publish_starbunk_dnd:
-        description: '🎲 Publish Starbunk-DND container'
-        type: boolean
-        required: false
-        default: true
-
-      publish_covabot:
-        description: '🤖 Publish CovaBot container'
-        type: boolean
-        required: false
-        default: true
+        default: 'bunkbot,djcova,starbunk-dnd,covabot'
 
       # Tagging Configuration
       tag_strategy:
@@ -56,31 +38,17 @@ on:
         type: string
         required: false
 
-      # Build and Validation Options
-      skip_validation:
-        description: '🚨 Skip pre-build validation (emergency mode only)'
-        type: boolean
+      # Build Options
+      build_mode:
+        description: 'Build mode configuration'
+        type: choice
         required: false
-        default: false
-
-      skip_tests:
-        description: '⚡ Skip test suite (faster builds)'
-        type: boolean
-        required: false
-        default: false
-
-      force_rebuild_shared:
-        description: '🔄 Force rebuild shared package'
-        type: boolean
-        required: false
-        default: false
-
-      # Emergency and Debugging Options
-      emergency_mode:
-        description: '🚨 Emergency mode (skip all validation, maximum speed)'
-        type: boolean
-        required: false
-        default: false
+        default: 'standard'
+        options:
+          - 'standard'     # Standard build with all validation
+          - 'fast'         # Skip tests for faster builds
+          - 'emergency'    # Skip all validation, maximum speed
+          - 'rebuild'      # Force rebuild shared package
 
       debug_mode:
         description: '🐛 Enable verbose debugging output'
@@ -139,28 +107,24 @@ jobs:
         run: |
           echo "🔍 Validating container selection..."
 
-          selected_count=0
+          # Parse comma-separated container list
+          IFS=',' read -ra SELECTED <<< "${{ inputs.containers }}"
           containers=()
 
-          if [[ "${{ inputs.publish_bunkbot }}" == "true" ]]; then
-            containers+=("bunkbot")
-            ((selected_count++))
-          fi
+          for container in "${SELECTED[@]}"; do
+            container=$(echo "$container" | xargs) # trim whitespace
+            case "$container" in
+              "bunkbot"|"djcova"|"starbunk-dnd"|"covabot")
+                containers+=("$container")
+                echo "  ✅ $container selected for publishing"
+                ;;
+              *)
+                echo "⚠️  Warning: Unknown container '$container' ignored"
+                ;;
+            esac
+          done
 
-          if [[ "${{ inputs.publish_djcova }}" == "true" ]]; then
-            containers+=("djcova")
-            ((selected_count++))
-          fi
-
-          if [[ "${{ inputs.publish_starbunk_dnd }}" == "true" ]]; then
-            containers+=("starbunk-dnd")
-            ((selected_count++))
-          fi
-
-          if [[ "${{ inputs.publish_covabot }}" == "true" ]]; then
-            containers+=("covabot")
-            ((selected_count++))
-          fi
+          selected_count=${#containers[@]}
 
           if [[ $selected_count -eq 0 ]]; then
             echo "❌ Error: At least one container must be selected for publishing"
@@ -175,12 +139,13 @@ jobs:
         run: |
           echo "🎯 Generating deployment matrix..."
 
-          containers=()
+          # Parse comma-separated container list
+          IFS=',' read -ra containers <<< "${{ inputs.containers }}"
 
-          [[ "${{ inputs.publish_bunkbot }}" == "true" ]] && containers+=("bunkbot")
-          [[ "${{ inputs.publish_djcova }}" == "true" ]] && containers+=("djcova")
-          [[ "${{ inputs.publish_starbunk_dnd }}" == "true" ]] && containers+=("starbunk-dnd")
-          [[ "${{ inputs.publish_covabot }}" == "true" ]] && containers+=("covabot")
+          # Trim whitespace from each container
+          for i in "${!containers[@]}"; do
+            containers[i]=$(echo "${containers[i]}" | xargs)
+          done
 
           # Generate JSON matrix
           printf -v container_list '%s,' "${containers[@]}"
@@ -302,31 +267,55 @@ jobs:
         run: |
           echo "⚙️ Generating build configuration..."
 
-          SKIP_VALIDATION="${{ inputs.skip_validation }}"
-          SKIP_TESTS="${{ inputs.skip_tests }}"
-          EMERGENCY_MODE="${{ inputs.emergency_mode }}"
+          BUILD_MODE="${{ inputs.build_mode }}"
 
-          # Emergency mode overrides all safety checks
-          if [[ "$EMERGENCY_MODE" == "true" ]]; then
-            SKIP_VALIDATION="true"
-            SKIP_TESTS="true"
-            echo "🚨 Emergency mode activated - all validation disabled"
-          fi
+          # Set flags based on build mode
+          case "$BUILD_MODE" in
+            "emergency")
+              SKIP_VALIDATION="true"
+              SKIP_TESTS="true"
+              EMERGENCY_MODE="true"
+              FORCE_REBUILD="false"
+              echo "🚨 Emergency mode activated - all validation disabled"
+              ;;
+            "fast")
+              SKIP_VALIDATION="false"
+              SKIP_TESTS="true"
+              EMERGENCY_MODE="false"
+              FORCE_REBUILD="false"
+              echo "⚡ Fast mode - skipping tests for faster builds"
+              ;;
+            "rebuild")
+              SKIP_VALIDATION="false"
+              SKIP_TESTS="false"
+              EMERGENCY_MODE="false"
+              FORCE_REBUILD="true"
+              echo "🔄 Rebuild mode - forcing shared package rebuild"
+              ;;
+            "standard"|*)
+              SKIP_VALIDATION="false"
+              SKIP_TESTS="false"
+              EMERGENCY_MODE="false"
+              FORCE_REBUILD="false"
+              echo "📋 Standard mode - full validation and testing"
+              ;;
+          esac
 
           BUILD_CONFIG="{
             \"skip_validation\": $SKIP_VALIDATION,
             \"skip_tests\": $SKIP_TESTS,
             \"emergency_mode\": $EMERGENCY_MODE,
             \"debug_mode\": \"${{ inputs.debug_mode }}\",
-            \"force_rebuild_shared\": \"${{ inputs.force_rebuild_shared }}\"
+            \"force_rebuild_shared\": $FORCE_REBUILD
           }"
 
           echo "validation-config=$BUILD_CONFIG" >> $GITHUB_OUTPUT
           echo "emergency-mode=$EMERGENCY_MODE" >> $GITHUB_OUTPUT
 
-          echo "📊 Build configuration:"
+          echo "📊 Build configuration ($BUILD_MODE mode):"
           echo "  - Skip validation: $SKIP_VALIDATION"
           echo "  - Skip tests: $SKIP_TESTS"
+          echo "  - Force rebuild shared: $FORCE_REBUILD"
           echo "  - Emergency mode: $EMERGENCY_MODE"
           echo "  - Debug mode: ${{ inputs.debug_mode }}"
 
