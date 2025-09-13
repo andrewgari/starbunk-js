@@ -1,0 +1,573 @@
+name: PR Validation & Snapshot Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: 'Force build all containers'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  NODE_VERSION: '20'
+  CONTAINERS: 'bunkbot,djcova,starbunk-dnd,covabot'
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Detect changes using optimized path filters
+  detect-changes:
+    name: 🔍 Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      shared: ${{ steps.changes.outputs.shared }}
+      critical: ${{ steps.changes.outputs.critical }}
+      infrastructure: ${{ steps.changes.outputs.infrastructure }}
+      tests-only: ${{ steps.changes.outputs.tests }}
+      docs-only: ${{ steps.changes.outputs.docs }}
+      bunkbot: ${{ steps.changes.outputs.bunkbot }}
+      djcova: ${{ steps.changes.outputs.djcova }}
+      starbunk-dnd: ${{ steps.changes.outputs.starbunk-dnd }}
+      covabot: ${{ steps.changes.outputs.covabot }}
+      containers-matrix: ${{ steps.matrix.outputs.containers }}
+      should-validate: ${{ steps.matrix.outputs.should-validate }}
+      should-build-images: ${{ steps.matrix.outputs.should-build-images }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared:
+              - 'containers/shared/src/**/*.ts'
+              - 'containers/shared/src/**/*.js'
+              - 'containers/shared/package.json'
+              - 'containers/shared/tsconfig.json'
+              - '!containers/shared/**/*.test.ts'
+              - '!containers/shared/**/*.spec.ts'
+              - '!containers/shared/**/*.md'
+            bunkbot:
+              - 'containers/bunkbot/src/**'
+              - 'containers/bunkbot/package.json'
+              - 'containers/bunkbot/tsconfig.json'
+              - 'containers/bunkbot/Dockerfile*'
+              - '!containers/bunkbot/**/*.test.ts'
+              - '!containers/bunkbot/**/*.md'
+            djcova:
+              - 'containers/djcova/src/**'
+              - 'containers/djcova/package.json'
+              - 'containers/djcova/tsconfig.json'
+              - 'containers/djcova/Dockerfile*'
+              - '!containers/djcova/**/*.test.ts'
+              - '!containers/djcova/**/*.md'
+            starbunk-dnd:
+              - 'containers/starbunk-dnd/src/**'
+              - 'containers/starbunk-dnd/package.json'
+              - 'containers/starbunk-dnd/tsconfig.json'
+              - 'containers/starbunk-dnd/Dockerfile*'
+              - '!containers/starbunk-dnd/**/*.test.ts'
+              - '!containers/starbunk-dnd/**/*.md'
+            covabot:
+              - 'containers/covabot/src/**'
+              - 'containers/covabot/package.json'
+              - 'containers/covabot/tsconfig.json'
+              - 'containers/covabot/Dockerfile*'
+              - '!containers/covabot/**/*.test.ts'
+              - '!containers/covabot/**/*.md'
+            critical:
+              - 'package-lock.json'
+              - 'tsconfig.json'
+              - '.dockerignore'
+            infrastructure:
+              - 'docker-compose*.yml'
+              - '.github/workflows/**'
+              - '.github/actions/**'
+            tests:
+              - '**/*.test.ts'
+              - '**/*.spec.ts'
+              - '**/tests/**'
+              - '**/__tests__/**'
+              - 'jest.config.js'
+              - 'containers/*/jest.config.js'
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+              - '.github/ISSUE_TEMPLATE/**'
+              - 'LICENSE'
+
+      - name: Build container matrix
+        id: matrix
+        run: |
+          containers=()
+          force_all="${{ github.event.inputs.force_all }}"
+
+          echo "🔍 Change detection results:"
+          echo "  shared: ${{ steps.changes.outputs.shared }}"
+          echo "  critical: ${{ steps.changes.outputs.critical }}"
+          echo "  bunkbot: ${{ steps.changes.outputs.bunkbot }}"
+          echo "  djcova: ${{ steps.changes.outputs.djcova }}"
+          echo "  starbunk-dnd: ${{ steps.changes.outputs.starbunk-dnd }}"
+          echo "  covabot: ${{ steps.changes.outputs.covabot }}"
+          echo "  force_all: $force_all"
+
+          # If shared, critical changes, or force_all - build everything
+          if [[ "${{ steps.changes.outputs.shared }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.critical }}" == "true" ]] || \
+             [[ "$force_all" == "true" ]]; then
+            echo "📦 Shared/critical changes detected - building all containers"
+            containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+          else
+            # Build only changed containers
+            echo "🎯 Building only changed containers"
+            [[ "${{ steps.changes.outputs.bunkbot }}" == "true" ]] && containers+=("bunkbot")
+            [[ "${{ steps.changes.outputs.djcova }}" == "true" ]] && containers+=("djcova")
+            [[ "${{ steps.changes.outputs.starbunk-dnd }}" == "true" ]] && containers+=("starbunk-dnd")
+            [[ "${{ steps.changes.outputs.covabot }}" == "true" ]] && containers+=("covabot")
+          fi
+
+          # Determine if we should run validation
+          should_validate="false"
+          should_build_images="false"
+
+          if [ ${#containers[@]} -gt 0 ] || \
+             [[ "${{ steps.changes.outputs.tests }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.infrastructure }}" == "true" ]]; then
+            should_validate="true"
+          fi
+
+          if [ ${#containers[@]} -gt 0 ]; then
+            should_build_images="true"
+          fi
+
+          # Only skip if it's docs-only changes
+          if [[ "${{ steps.changes.outputs.docs }}" == "true" ]] && [ ${#containers[@]} -eq 0 ] && \
+             [[ "${{ steps.changes.outputs.tests }}" == "false" ]] && \
+             [[ "${{ steps.changes.outputs.infrastructure }}" == "false" ]]; then
+            should_validate="false"
+            should_build_images="false"
+            echo "📚 Documentation-only changes - skipping validation"
+          fi
+
+          # Output matrix
+          if [ ${#containers[@]} -eq 0 ]; then
+            matrix="[]"
+          else
+            matrix=$(printf '%s\n' "${containers[@]}" | jq -R . | jq -s -c .)
+          fi
+
+          echo "containers=$matrix" >> $GITHUB_OUTPUT
+          echo "should-validate=$should_validate" >> $GITHUB_OUTPUT
+          echo "should-build-images=$should_build_images" >> $GITHUB_OUTPUT
+
+          echo "📋 Final matrix: $matrix"
+          echo "🔄 Should validate: $should_validate"
+          echo "🐳 Should build images: $should_build_images"
+
+  # Prepare dependencies with advanced caching
+  prepare-dependencies:
+    name: 📦 Prepare Dependencies
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.should-validate == 'true'
+    outputs:
+      cache-key: ${{ steps.cache.outputs.cache-hit }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Cache dependencies and builds
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            containers/shared/node_modules
+            containers/bunkbot/node_modules
+            containers/djcova/node_modules
+            containers/starbunk-dnd/node_modules
+            containers/covabot/node_modules
+            containers/shared/dist
+          key: deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**/*.ts', 'containers/shared/package.json', 'containers/shared/tsconfig.json') }}
+          restore-keys: |
+            deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
+            deps-v2-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          echo "🚀 Installing dependencies in parallel..."
+
+          # Install root dependencies
+          npm ci --prefer-offline --no-audit &
+          root_pid=$!
+
+          # Install container dependencies in parallel
+          cd containers/shared && npm ci --prefer-offline --no-audit &
+          shared_pid=$!
+
+          cd ../bunkbot && npm ci --prefer-offline --no-audit &
+          bunkbot_pid=$!
+
+          cd ../djcova && npm ci --prefer-offline --no-audit &
+          djcova_pid=$!
+
+          cd ../starbunk-dnd && npm ci --prefer-offline --no-audit &
+          dnd_pid=$!
+
+          cd ../covabot && npm ci --prefer-offline --no-audit &
+          covabot_pid=$!
+
+          # Wait for all installations
+          wait $root_pid $shared_pid $bunkbot_pid $djcova_pid $dnd_pid $covabot_pid
+
+          echo "✅ All dependencies installed"
+
+      - name: Build shared package
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          echo "🔨 Building shared package..."
+          cd containers/shared && npm run build
+          echo "✅ Shared package built"
+
+  # Comprehensive validation job matrix
+  validate-containers:
+    name: 🧪 Validate ${{ matrix.container }}
+    runs-on: ubuntu-latest
+    needs: [detect-changes, prepare-dependencies]
+    if: needs.detect-changes.outputs.should-validate == 'true' && fromJson(needs.detect-changes.outputs.containers-matrix)[0] != null
+    strategy:
+      fail-fast: false
+      matrix:
+        container: ${{ fromJson(needs.detect-changes.outputs.containers-matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Restore dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            containers/shared/node_modules
+            containers/bunkbot/node_modules
+            containers/djcova/node_modules
+            containers/starbunk-dnd/node_modules
+            containers/covabot/node_modules
+            containers/shared/dist
+          key: deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**/*.ts', 'containers/shared/package.json', 'containers/shared/tsconfig.json') }}
+          fail-on-cache-miss: true
+
+      - name: TypeScript compilation check
+        run: |
+          echo "🔍 Type-checking ${{ matrix.container }}..."
+          cd containers/${{ matrix.container }}
+          npm run type-check
+
+      - name: Lint code
+        run: |
+          echo "🧹 Linting ${{ matrix.container }}..."
+          cd containers/${{ matrix.container }}
+          # Run eslint if script exists, otherwise fallback to root lint
+          if npm run --silent lint 2>/dev/null; then
+            npm run lint
+          else
+            echo "No container-specific lint script, using root lint for ${{ matrix.container }}"
+            cd ../..
+            npx eslint "containers/${{ matrix.container }}/src/**/*.ts" --format=compact
+          fi
+
+      - name: Run unit tests
+        run: |
+          echo "🧪 Testing ${{ matrix.container }}..."
+          cd containers/${{ matrix.container }}
+          npm test -- --passWithNoTests --coverage=false
+
+      - name: Build container
+        run: |
+          echo "🔨 Building ${{ matrix.container }}..."
+          cd containers/${{ matrix.container }}
+          npm run build
+
+  # Docker image building and publishing
+  build-publish-images:
+    name: 🐳 Build & Publish ${{ matrix.container }}
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate-containers]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.should-build-images == 'true' &&
+      (needs.validate-containers.result == 'success' || needs.validate-containers.result == 'skipped') &&
+      fromJson(needs.detect-changes.outputs.containers-matrix)[0] != null
+    strategy:
+      fail-fast: false
+      matrix:
+        container: ${{ fromJson(needs.detect-changes.outputs.containers-matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.13.0
+            network=host
+          config-inline: |
+            [worker.oci]
+              max-parallelism = 4
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache-${{ matrix.container }}
+          key: buildx-${{ matrix.container }}-${{ github.sha }}
+          restore-keys: |
+            buildx-${{ matrix.container }}-${{ github.event.pull_request.base.sha || 'main' }}
+            buildx-${{ matrix.container }}-
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}
+          tags: |
+            # PR snapshots
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ matrix.container }},enable={{is_pr}}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ matrix.container }}-{{sha}},enable={{is_pr}}
+            # Main branch images
+            type=ref,event=branch,enable={{is_default_branch}}
+            type=sha,prefix=main-,enable={{is_default_branch}}
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.container }}
+            org.opencontainers.image.description=Starbunk Discord Bot - ${{ matrix.container }} service
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: containers/${{ matrix.container }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=local,src=/tmp/.buildx-cache-${{ matrix.container }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}:buildcache
+          cache-to: |
+            type=local,dest=/tmp/.buildx-cache-${{ matrix.container }}-new,mode=max
+            type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}:buildcache,mode=max
+          platforms: linux/amd64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            CONTAINER_NAME=${{ matrix.container }}
+          provenance: false
+          sbom: false
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache-${{ matrix.container }}
+          if [ -d "/tmp/.buildx-cache-${{ matrix.container }}-new" ]; then
+            mv /tmp/.buildx-cache-${{ matrix.container }}-new /tmp/.buildx-cache-${{ matrix.container }}
+          fi
+
+      - name: Comment PR with image info
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const container = '${{ matrix.container }}';
+            const prNumber = context.issue.number;
+            const imageUrl = '${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}:pr-' + prNumber + '-' + container;
+
+            const body = `🐳 **Docker Image Published for \`${container}\`**
+
+            📦 **Image:** \`${imageUrl}\`
+            📋 **SHA:** \`${{ github.sha }}\`
+            🏷️ **Tags:**
+            ${JSON.stringify(${{ steps.meta.outputs.tags }}.split('\n'), null, 2).replace(/"/g, '`').replace(/,/g, '\n')}
+
+            **Pull command:**
+            \`\`\`bash
+            docker pull ${imageUrl}
+            \`\`\`
+
+            <details>
+            <summary>🔍 View all tags</summary>
+
+            ${JSON.stringify(${{ steps.meta.outputs.tags }}.split('\n'), null, 2).replace(/"/g, '`')}
+            </details>`;
+
+            // Find existing comment for this container
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const existingComment = comments.data.find(comment =>
+              comment.body.includes(`Docker Image Published for \`${container}\``) &&
+              comment.user.login === 'github-actions[bot]'
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body
+              });
+            }
+
+  # Final success gate for branch protection
+  pr-validation-success:
+    name: ✅ PR Validation Complete
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate-containers, build-publish-images]
+    if: always()
+    steps:
+      - name: Check validation results
+        run: |
+          echo "🔍 Checking validation results..."
+
+          should_validate="${{ needs.detect-changes.outputs.should-validate }}"
+          should_build="${{ needs.detect-changes.outputs.should-build-images }}"
+          validate_result="${{ needs.validate-containers.result }}"
+          build_result="${{ needs.build-publish-images.result }}"
+
+          echo "Should validate: $should_validate"
+          echo "Should build: $should_build"
+          echo "Validation result: $validate_result"
+          echo "Build result: $build_result"
+
+          # If no validation needed (docs-only), success
+          if [[ "$should_validate" == "false" ]]; then
+            echo "✅ Documentation-only changes - validation skipped"
+            exit 0
+          fi
+
+          # Check validation results
+          if [[ "$validate_result" == "failure" ]]; then
+            echo "❌ Validation failed"
+            exit 1
+          fi
+
+          # Check build results if builds were expected
+          if [[ "$should_build" == "true" ]] && [[ "$build_result" == "failure" ]]; then
+            echo "❌ Image build failed"
+            exit 1
+          fi
+
+          # All good
+          echo "✅ All validations passed!"
+
+          # Summary
+          if [[ "$should_build" == "true" ]]; then
+            echo "🎉 Validation complete with Docker images published"
+          else
+            echo "🎉 Validation complete (no images built)"
+          fi
+
+      - name: Post PR summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const shouldValidate = '${{ needs.detect-changes.outputs.should-validate }}';
+            const shouldBuild = '${{ needs.detect-changes.outputs.should-build-images }}';
+            const containers = JSON.parse('${{ needs.detect-changes.outputs.containers-matrix }}');
+
+            let body = '## 🚀 PR Validation Summary\n\n';
+
+            if (shouldValidate === 'false') {
+              body += '📚 **Documentation-only changes** - validation skipped\n';
+            } else {
+              body += '✅ **All validations passed!**\n\n';
+
+              if (containers.length > 0) {
+                body += `### 📦 Validated Containers\n`;
+                containers.forEach(container => {
+                  body += `- ✅ **${container}**\n  - TypeScript compilation\n  - ESLint checks\n  - Unit tests\n  - Build process\n`;
+                });
+
+                if (shouldBuild === 'true') {
+                  body += `\n### 🐳 Published Images\n`;
+                  containers.forEach(container => {
+                    body += `- 📦 \`ghcr.io/${{ github.repository_owner }}/${container}:pr-${{ github.event.pull_request.number }}-${container}\`\n`;
+                  });
+                }
+              }
+            }
+
+            // Find and update existing summary comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.data.find(comment =>
+              comment.body.includes('PR Validation Summary') &&
+              comment.user.login === 'github-actions[bot]'
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }

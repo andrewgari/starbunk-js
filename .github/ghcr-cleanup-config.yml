@@ -1,0 +1,150 @@
+# GHCR Image Lifecycle Management Configuration
+# This configuration file controls the behavior of the GHCR cleanup and monitoring system
+
+# Container Configuration
+containers:
+  - name: bunkbot
+    enabled: true
+    pr_retention_count: 10
+    pr_retention_days: 30
+    preserve_tags:
+      - latest
+      - main
+    preserve_patterns:
+      - "^v\\d+\\.\\d+\\.\\d+$"  # Semantic versions
+      - "^\\d{4}-\\d{2}-\\d{2}$"  # Date-based tags
+
+  - name: djcova
+    enabled: true
+    pr_retention_count: 10
+    pr_retention_days: 30
+    preserve_tags:
+      - latest
+      - main
+    preserve_patterns:
+      - "^v\\d+\\.\\d+\\.\\d+$"
+      - "^\\d{4}-\\d{2}-\\d{2}$"
+
+  - name: starbunk-dnd
+    enabled: true
+    pr_retention_count: 10
+    pr_retention_days: 30
+    preserve_tags:
+      - latest
+      - main
+    preserve_patterns:
+      - "^v\\d+\\.\\d+\\.\\d+$"
+      - "^\\d{4}-\\d{2}-\\d{2}$"
+
+  - name: covabot
+    enabled: true
+    pr_retention_count: 10
+    pr_retention_days: 30
+    preserve_tags:
+      - latest
+      - main
+    preserve_patterns:
+      - "^v\\d+\\.\\d+\\.\\d+$"
+      - "^\\d{4}-\\d{2}-\\d{2}$"
+
+  - name: snowbunk
+    enabled: true
+    pr_retention_count: 10
+    pr_retention_days: 30
+    preserve_tags:
+      - latest
+      - main
+    preserve_patterns:
+      - "^v\\d+\\.\\d+\\.\\d+$"
+      - "^\\d{4}-\\d{2}-\\d{2}$"
+
+# Cleanup Schedules
+schedules:
+  # Daily cleanup of PR images
+  pr_cleanup:
+    enabled: true
+    cron: "0 2 * * *"  # 2 AM UTC daily
+    description: "Clean up old PR snapshot images"
+
+  # Weekly full cleanup
+  full_cleanup:
+    enabled: true
+    cron: "0 3 * * 0"  # 3 AM UTC on Sundays
+    description: "Full cleanup including untagged images"
+
+  # Health monitoring
+  health_check:
+    enabled: true
+    cron: "0 */6 * * *"  # Every 6 hours
+    description: "Monitor GHCR health and generate reports"
+
+# Safety Configuration
+safety:
+  # Always preserve at least this many images per container
+  min_images_to_preserve: 3
+
+  # Never delete images newer than this (in hours)
+  min_age_hours: 2
+
+  # Maximum number of images to delete in a single run (rate limiting)
+  max_deletions_per_run: 50
+
+  # Require confirmation for manual cleanup operations
+  require_manual_confirmation: true
+
+  # Enable dry-run mode by default for manual operations
+  default_dry_run: true
+
+# Monitoring Configuration
+monitoring:
+  # Enable Slack notifications (requires SLACK_WEBHOOK_URL secret)
+  slack_enabled: false
+  slack_channel: "#ci-cd-alerts"
+
+  # Enable Discord notifications (requires DISCORD_WEBHOOK_URL secret)
+  discord_enabled: false
+
+  # Storage thresholds for alerts
+  storage_warning_gb: 50
+  storage_critical_gb: 100
+
+  # Health check thresholds
+  max_failed_operations: 3
+  alert_on_consecutive_failures: true
+
+# Reporting Configuration
+reporting:
+  # Generate detailed reports
+  detailed_reports: true
+
+  # Include storage usage analysis
+  include_storage_analysis: true
+
+  # Include cleanup recommendations
+  include_recommendations: true
+
+  # Archive reports as workflow artifacts
+  archive_reports: true
+
+  # Retention period for reports (in days)
+  report_retention_days: 90
+
+# Advanced Configuration
+advanced:
+  # Parallel processing settings
+  max_concurrent_operations: 3
+
+  # API rate limiting
+  api_delay_ms: 1000
+  max_retries: 3
+
+  # Enable debug logging
+  debug_logging: false
+
+  # Custom exclusion patterns (images matching these patterns will never be deleted)
+  global_exclusions:
+    - "snapshot-*"  # Never delete snapshot images
+    - "*-backup"    # Never delete backup images
+
+  # Emergency stop - disable all cleanup operations
+  emergency_stop: false
