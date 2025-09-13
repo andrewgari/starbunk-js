@@ -22,6 +22,7 @@ permissions:
   contents: read
   packages: write
   pull-requests: write
+  statuses: write
 
 concurrency:
   group: pr-validation-${{ github.event.pull_request.number || github.ref }}
