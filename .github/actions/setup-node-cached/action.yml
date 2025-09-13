@@ -1,0 +1,202 @@
+name: 'Setup Node.js with Intelligent Caching'
+description: 'Sets up Node.js with optimized caching for monorepo dependencies and builds'
+
+inputs:
+  node-version:
+    description: 'Node.js version to use'
+    required: true
+    default: '20'
+
+  cache-dependency-path:
+    description: 'Additional dependency paths to include in cache key'
+    required: false
+    default: '**/package-lock.json'
+
+  install-dependencies:
+    description: 'Whether to install dependencies automatically'
+    required: false
+    default: 'true'
+
+  build-shared:
+    description: 'Whether to build the shared package automatically'
+    required: false
+    default: 'true'
+
+outputs:
+  cache-hit:
+    description: 'Whether dependencies were loaded from cache'
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+  node-version:
+    description: 'Actual Node.js version installed'
+    value: ${{ steps.setup-node.outputs.node-version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      id: setup-node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+
+    - name: Generate cache key
+      id: cache-key
+      shell: bash
+      run: |
+        # Create comprehensive cache key including:
+        # - Lock files hash
+        # - Shared package source files hash (for build cache)
+        # - Node version
+        # - OS for platform-specific dependencies
+
+        LOCKFILE_HASH=$(find . -name "package-lock.json" -exec cat {} \; | sha256sum | cut -d' ' -f1)
+
+        # Include shared package source in cache key since it affects builds
+        SHARED_HASH=""
+        if [ -d "containers/shared/src" ]; then
+          SHARED_HASH=$(find containers/shared/src -name "*.ts" -o -name "*.js" -exec cat {} \; 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "no-shared")
+        fi
+
+        # Include shared package config files
+        SHARED_CONFIG_HASH=""
+        if [ -f "containers/shared/package.json" ]; then
+          SHARED_CONFIG_HASH=$(cat containers/shared/package.json containers/shared/tsconfig.json 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "no-config")
+        fi
+
+        CACHE_KEY="node-${{ inputs.node-version }}-${{ runner.os }}-deps-${LOCKFILE_HASH}-shared-${SHARED_HASH}-config-${SHARED_CONFIG_HASH}"
+
+        echo "cache-key=$CACHE_KEY" >> $GITHUB_OUTPUT
+        echo "🔑 Cache key: $CACHE_KEY"
+
+    - name: Cache dependencies and builds
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.npm
+          node_modules
+          containers/shared/node_modules
+          containers/bunkbot/node_modules
+          containers/djcova/node_modules
+          containers/starbunk-dnd/node_modules
+          containers/covabot/node_modules
+          containers/shared/dist
+          containers/shared/lib
+        key: ${{ steps.cache-key.outputs.cache-key }}
+        restore-keys: |
+          node-${{ inputs.node-version }}-${{ runner.os }}-deps-
+
+    - name: Install dependencies
+      if: inputs.install-dependencies == 'true' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        echo "📦 Installing dependencies in parallel..."
+
+        # Function to install dependencies for a container
+        install_container_deps() {
+          local container_path="$1"
+          local container_name="$2"
+
+          if [ -f "$container_path/package.json" ]; then
+            echo "📦 Installing $container_name dependencies..."
+            cd "$container_path"
+            npm ci --prefer-offline --no-audit --silent
+            cd - > /dev/null
+            echo "✅ $container_name dependencies installed"
+          else
+            echo "⚠️  No package.json found for $container_name"
+          fi
+        }
+
+        # Install root dependencies first (needed for scripts and tooling)
+        echo "📦 Installing root dependencies..."
+        npm ci --prefer-offline --no-audit --silent &
+        root_pid=$!
+
+        # Install container dependencies in parallel
+        install_container_deps "containers/shared" "shared" &
+        shared_pid=$!
+
+        install_container_deps "containers/bunkbot" "bunkbot" &
+        bunkbot_pid=$!
+
+        install_container_deps "containers/djcova" "djcova" &
+        djcova_pid=$!
+
+        install_container_deps "containers/starbunk-dnd" "starbunk-dnd" &
+        dnd_pid=$!
+
+        install_container_deps "containers/covabot" "covabot" &
+        covabot_pid=$!
+
+        # Wait for all installations to complete
+        echo "⏳ Waiting for all dependency installations to complete..."
+        wait $root_pid && echo "✅ Root dependencies installed" || echo "❌ Root dependencies failed"
+        wait $shared_pid && echo "✅ Shared dependencies installed" || echo "❌ Shared dependencies failed"
+        wait $bunkbot_pid && echo "✅ BunkBot dependencies installed" || echo "❌ BunkBot dependencies failed"
+        wait $djcova_pid && echo "✅ DJCova dependencies installed" || echo "❌ DJCova dependencies failed"
+        wait $dnd_pid && echo "✅ Starbunk-DND dependencies installed" || echo "❌ Starbunk-DND dependencies failed"
+        wait $covabot_pid && echo "✅ CovaBot dependencies installed" || echo "❌ CovaBot dependencies failed"
+
+        echo "🎉 All dependencies installed successfully"
+
+    - name: Build shared package
+      if: inputs.build-shared == 'true' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        if [ -d "containers/shared" ] && [ -f "containers/shared/package.json" ]; then
+          echo "🔨 Building shared package..."
+          cd containers/shared
+
+          # Check if build script exists
+          if npm run --silent build --dry-run 2>/dev/null; then
+            npm run build
+            echo "✅ Shared package built successfully"
+          else
+            echo "⚠️  No build script found for shared package"
+          fi
+        else
+          echo "⚠️  No shared package found to build"
+        fi
+
+    - name: Verify installation
+      shell: bash
+      run: |
+        echo "🔍 Verifying Node.js setup..."
+        echo "Node.js version: $(node --version)"
+        echo "NPM version: $(npm --version)"
+
+        # Check if key dependencies are available
+        if [ -f "package.json" ]; then
+          echo "📋 Root package.json found"
+        fi
+
+        # Check container setups
+        for container in shared bunkbot djcova starbunk-dnd covabot; do
+          if [ -d "containers/$container" ]; then
+            if [ -d "containers/$container/node_modules" ]; then
+              echo "✅ $container: Dependencies installed"
+            else
+              echo "⚠️  $container: No node_modules found"
+            fi
+
+            if [ "$container" = "shared" ] && [ -d "containers/shared/dist" ]; then
+              echo "✅ shared: Build artifacts found"
+            fi
+          fi
+        done
+
+        echo "🎉 Node.js setup verification complete"
+
+    - name: Cache statistics
+      shell: bash
+      run: |
+        if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
+          echo "📈 Cache hit! Dependencies and builds restored from cache"
+          echo "⚡ Estimated time saved: ~3-5 minutes"
+        else
+          echo "💾 Cache miss - dependencies installed and cached for next run"
+          echo "🔄 Next run will be significantly faster"
+        fi

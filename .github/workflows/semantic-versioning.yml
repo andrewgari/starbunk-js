@@ -340,11 +340,11 @@ jobs:
             const { owner, repo } = context.repo;
             const newVersion = '${{ needs.analyze-commits.outputs.new-version }}';
 
-            // Trigger the container build workflow
+            // Trigger the main branch deployment workflow
             await github.rest.actions.createWorkflowDispatch({
               owner,
               repo,
-              workflow_id: 'container-build-test-publish.yml',
+              workflow_id: 'publish-main.yml',
               ref: 'main',
               inputs: {
                 version: newVersion,

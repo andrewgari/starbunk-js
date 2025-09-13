@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - '.github/path-filters.yml'
-      - '.github/workflows/container-build-test-publish.yml'
+      - '.github/path-filters-optimized.yml'
+      - '.github/workflows/pr-validation.yml'
+      - '.github/workflows/publish-main.yml'
   workflow_dispatch:
     inputs:
       test_branch:
