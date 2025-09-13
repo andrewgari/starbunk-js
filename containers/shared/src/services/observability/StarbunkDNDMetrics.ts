@@ -85,7 +85,7 @@ export class StarbunkDNDMetricsCollector extends ContainerMetricsBase implements
 		logger.info('Starbunk-DND metrics collector initialized with D&D campaign and LLM tracking');
 	}
 
-	private initializeMetrics(config: ContainerMetricsConfig): void {
+	private initializeMetrics(_config: ContainerMetricsConfig): void {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
 		// Campaign Management Metrics
 		this.campaignOperationCounter = new promClient.Counter({

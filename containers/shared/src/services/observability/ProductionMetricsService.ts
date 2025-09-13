@@ -853,17 +853,17 @@ export class ProductionMetricsService extends EventEmitter {
 // Maintain backward compatibility by extending the existing interface
 export class MetricsService extends ProductionMetricsService {
 	// Legacy methods for backward compatibility
-	incrementCounter(name: string, labels: Record<string, string> = {}, value: number = 1): void {
+	incrementCounter(name: string, _labels: Record<string, string> = {}, _value: number = 1): void {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
 		logger.warn('MetricsService.incrementCounter is deprecated. Use specific tracking methods instead.');
 	}
 
-	setGauge(name: string, value: number, labels: Record<string, string> = {}): void {
+	setGauge(name: string, _value: number, _labels: Record<string, string> = {}): void {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
 		logger.warn('MetricsService.setGauge is deprecated. Use specific tracking methods instead.');
 	}
 
-	observeHistogram(name: string, value: number, labels: Record<string, string> = {}): void {
+	observeHistogram(name: string, _value: number, _labels: Record<string, string> = {}): void {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
 		logger.warn('MetricsService.observeHistogram is deprecated. Use specific tracking methods instead.');
 	}

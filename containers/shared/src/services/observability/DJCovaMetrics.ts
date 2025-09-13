@@ -72,7 +72,7 @@ export class DJCovaMetricsCollector extends ContainerMetricsBase implements DJCo
 		logger.info('DJCova metrics collector initialized with production-ready music service tracking');
 	}
 
-	private initializeMetrics(config: ContainerMetricsConfig): void {
+	private initializeMetrics(_config: ContainerMetricsConfig): void {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
 		// Music Session Metrics
 		this.musicSessionCounter = new promClient.Counter({
