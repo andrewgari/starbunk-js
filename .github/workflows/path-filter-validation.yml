@@ -65,7 +65,7 @@ jobs:
           missing_filters=()
 
           for container in "${containers[@]}"; do
-            if ! grep -q "^${container}:" .github/path-filters-optimized.yml; then
+            if ! grep -q "^${container}-src:" .github/path-filters-optimized.yml; then
               missing_filters+=("$container")
             fi
           done
@@ -78,7 +78,7 @@ jobs:
           fi
 
           # Check for shared filter
-          if ! grep -q "^shared:" .github/path-filters-optimized.yml; then
+          if ! grep -q "^shared-src:" .github/path-filters-optimized.yml; then
             echo "❌ Missing shared path filter"
             exit 1
           else
@@ -129,7 +129,7 @@ jobs:
 
           # Count filters
           total_filters=$(grep -c "^[a-zA-Z]" .github/path-filters-optimized.yml)
-          container_filters=$(grep -E -c "^(bunkbot|djcova|starbunk-dnd|covabot):" .github/path-filters-optimized.yml)
+          container_filters=$(grep -E -c "^(bunkbot|djcova|starbunk-dnd|covabot)-src:" .github/path-filters-optimized.yml)
 
           echo "### 📋 Filter Statistics" >> $GITHUB_STEP_SUMMARY
           echo "- **Total filters:** $total_filters" >> $GITHUB_STEP_SUMMARY
@@ -145,8 +145,8 @@ jobs:
           # Check each container
           containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
           for container in "${containers[@]}"; do
-            if grep -q "^${container}:" .github/path-filters-optimized.yml; then
-              pattern_count=$(sed -n "/^${container}:/,/^[a-zA-Z]/p" .github/path-filters-optimized.yml | grep -c "^  -")
+            if grep -q "^${container}-src:" .github/path-filters-optimized.yml; then
+              pattern_count=$(sed -n "/^${container}-src:/,/^[a-zA-Z]/p" .github/path-filters-optimized.yml | grep -c "^  -")
               echo "| $container | ✅ Covered | $pattern_count patterns |" >> $GITHUB_STEP_SUMMARY
             else
               echo "| $container | ❌ Missing | 0 patterns |" >> $GITHUB_STEP_SUMMARY

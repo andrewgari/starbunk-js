@@ -226,20 +226,20 @@ jobs:
           npm ci --prefer-offline --no-audit &
           root_pid=$!
 
-          # Install container dependencies in parallel
-          cd containers/shared && npm ci --prefer-offline --no-audit &
+          # Install container dependencies in parallel using absolute paths
+          (cd containers/shared && npm ci --prefer-offline --no-audit) &
           shared_pid=$!
 
-          cd ../bunkbot && npm ci --prefer-offline --no-audit &
+          (cd containers/bunkbot && npm ci --prefer-offline --no-audit) &
           bunkbot_pid=$!
 
-          cd ../djcova && npm ci --prefer-offline --no-audit &
+          (cd containers/djcova && npm ci --prefer-offline --no-audit) &
           djcova_pid=$!
 
-          cd ../starbunk-dnd && npm ci --prefer-offline --no-audit &
+          (cd containers/starbunk-dnd && npm ci --prefer-offline --no-audit) &
           dnd_pid=$!
 
-          cd ../covabot && npm ci --prefer-offline --no-audit &
+          (cd containers/covabot && npm ci --prefer-offline --no-audit) &
           covabot_pid=$!
 
           # Wait for all installations
@@ -370,12 +370,12 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}
           tags: |
             # PR snapshots
-            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ matrix.container }},enable={{is_pr}}
-            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ matrix.container }}-{{sha}},enable={{is_pr}}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ matrix.container }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ matrix.container }}-{{sha}},enable=${{ github.event_name == 'pull_request' }}
             # Main branch images
-            type=ref,event=branch,enable={{is_default_branch}}
-            type=sha,prefix=main-,enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=main-,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
           labels: |
             org.opencontainers.image.title=${{ matrix.container }}
             org.opencontainers.image.description=Starbunk Discord Bot - ${{ matrix.container }} service
