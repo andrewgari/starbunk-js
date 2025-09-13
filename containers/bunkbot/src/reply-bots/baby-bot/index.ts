@@ -7,18 +7,18 @@ export default BotFactory.createBot({
 	description: 'Posts a Metroid gif when someone mentions "baby"',
 	defaultIdentity: {
 		botName: 'BabyBot',
-		avatarUrl: 'https://i.redd.it/qc9qus78dc581.jpg'
+		avatarUrl: 'https://i.redd.it/qc9qus78dc581.jpg',
 	},
 	triggers: [
 		createTriggerResponse({
 			name: 'baby-trigger',
-			condition: (message: any) => {
+			condition: (message: { content: string }) => {
 				return /\bbaby\b/i.test(message.content);
 			},
 			response: () => {
 				return 'https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif';
 			},
-			priority: 1
-		})
-	]
+			priority: 1,
+		}),
+	],
 });

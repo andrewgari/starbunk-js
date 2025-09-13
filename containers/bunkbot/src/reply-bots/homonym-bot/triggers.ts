@@ -1,8 +1,14 @@
 import { Message } from 'discord.js';
-import { BotIdentity } from '../../types/botIdentity';
+import type { BotIdentity as _BotIdentity } from '../../types/botIdentity';
 import { withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { HOMONYM_BOT_AVATAR_URL, HOMONYM_BOT_NAME, HOMONYM_BOT_RESPONSE_RATE, HOMONYM_PAIRS, getRandomCorrection } from './constants';
+import {
+	HOMONYM_BOT_AVATAR_URL,
+	HOMONYM_BOT_NAME,
+	HOMONYM_BOT_RESPONSE_RATE,
+	HOMONYM_PAIRS,
+	getRandomCorrection,
+} from './constants';
 
 // Helper function to find homonyms in a message
 function findHomonymsInMessage(message: string): string[] {
@@ -12,7 +18,7 @@ function findHomonymsInMessage(message: string): string[] {
 	for (const word of words) {
 		// Clean the word from punctuation
 		const cleanWord = word.replace(/[.,!?]$/, '');
-		const pair = HOMONYM_PAIRS.find(p => p.words.includes(cleanWord));
+		const pair = HOMONYM_PAIRS.find((p) => p.words.includes(cleanWord));
 		if (pair) {
 			foundHomonyms.push(cleanWord);
 		}
@@ -42,7 +48,7 @@ export const homonymTrigger = createTriggerResponse({
 	},
 	identity: {
 		botName: HOMONYM_BOT_NAME,
-		avatarUrl: HOMONYM_BOT_AVATAR_URL
+		avatarUrl: HOMONYM_BOT_AVATAR_URL,
 	},
-	priority: 1
+	priority: 1,
 });
