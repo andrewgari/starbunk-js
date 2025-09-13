@@ -43,7 +43,7 @@ jobs:
             try {
               const { owner, repo } = context.repo;
               const analysisDate = new Date();
-              const daysBack = parseInt('${{ inputs.analysis_period || "30" }}');
+              const daysBack = parseInt('${{ inputs.analysis_period }}' || '30');
               const sinceDate = new Date(analysisDate.getTime() - (daysBack * 24 * 60 * 60 * 1000));
 
               console.log(`Analyzing builds from ${sinceDate.toISOString()} to ${analysisDate.toISOString()}`);
