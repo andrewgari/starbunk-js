@@ -35,6 +35,8 @@ jobs:
   changes:
     name: Detect Docker-related changes
     runs-on: ubuntu-latest
+    # Only run if called via workflow_call (not on push/other events)
+    if: github.event_name == 'workflow_call'
     outputs:
       docker_related: ${{ steps.filter.outputs.docker_related }}
     steps:
