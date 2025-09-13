@@ -5,7 +5,7 @@ on:
     paths:
       - '.github/workflows/build-metrics.yml'
       - '.github/workflows/docker-build-reusable.yml'
-      - '.github/workflows/containers-ci.yml'
+      - '.github/workflows/pr-validation.yml'
       - '.github/actions/**'
       - 'scripts/ci/**'
       - 'infra/ci/**'

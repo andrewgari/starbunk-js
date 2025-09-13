@@ -1,0 +1,552 @@
+name: GHCR Health Monitoring
+
+# Comprehensive health monitoring and alerting system for GHCR registry,
+# providing storage usage tracking, cleanup recommendations, and proactive alerts.
+
+on:
+  # Regular health checks every 6 hours
+  schedule:
+    - cron: '0 */6 * * *'
+
+  # Weekly comprehensive health reports
+  schedule:
+    - cron: '0 8 * * 1'  # Mondays at 8 AM UTC
+
+  # Manual health check trigger
+  workflow_dispatch:
+    inputs:
+      check_type:
+        description: 'Type of health check to perform'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - 'standard'        # Regular health check
+          - 'comprehensive'   # Full analysis with recommendations
+          - 'storage-only'    # Storage usage analysis only
+          - 'api-health'      # API accessibility and rate limits
+          - 'emergency'       # Emergency health check after incidents
+
+      generate_report:
+        description: 'Generate detailed report artifact'
+        required: false
+        default: true
+        type: boolean
+
+      notify_on_warnings:
+        description: 'Send notifications for warnings (not just errors)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CONFIG_FILE: '.github/ghcr-cleanup-config.yml'
+  UTILS_SCRIPT: '.github/scripts/ghcr-cleanup-utils.js'
+
+jobs:
+  # System health assessment
+  health-assessment:
+    name: 🏥 System Health Assessment
+    runs-on: ubuntu-latest
+    outputs:
+      health_status: ${{ steps.health-check.outputs.health_status }}
+      storage_usage_gb: ${{ steps.health-check.outputs.storage_usage_gb }}
+      total_images: ${{ steps.health-check.outputs.total_images }}
+      api_rate_remaining: ${{ steps.health-check.outputs.api_rate_remaining }}
+      needs_attention: ${{ steps.health-check.outputs.needs_attention }}
+
+    permissions:
+      packages: read
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Load configuration
+        id: load-config
+        run: |
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "❌ Configuration file not found: $CONFIG_FILE"
+            echo "Creating minimal configuration..."
+            mkdir -p $(dirname "$CONFIG_FILE")
+            cat > "$CONFIG_FILE" << 'EOF'
+            monitoring:
+              storage_warning_gb: 50
+              storage_critical_gb: 100
+            EOF
+          fi
+          echo "✅ Configuration loaded"
+
+      - name: Comprehensive health check
+        id: health-check
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+
+            // Load configuration
+            let config;
+            try {
+              const configYaml = fs.readFileSync('${{ env.CONFIG_FILE }}', 'utf8');
+              config = yaml.load(configYaml);
+            } catch (error) {
+              console.log('⚠️ Using minimal configuration due to error:', error.message);
+              config = {
+                monitoring: {
+                  storage_warning_gb: 50,
+                  storage_critical_gb: 100
+                },
+                containers: []
+              };
+            }
+
+            const checkType = '${{ github.event.inputs.check_type || 'standard' }}';
+            console.log(`🏥 Starting ${checkType} health assessment`);
+
+            // Default containers if not in config
+            const containers = config.containers?.length > 0
+              ? config.containers.map(c => c.name)
+              : ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot', 'snowbunk'];
+
+            let healthStatus = 'healthy';
+            let totalStorageBytes = 0;
+            let totalImages = 0;
+            let criticalIssues = [];
+            let warnings = [];
+            let recommendations = [];
+
+            console.log(`📦 Checking ${containers.length} containers...`);
+
+            // Check each container
+            for (const container of containers) {
+              try {
+                console.log(`\n🔍 Analyzing container: ${container}`);
+
+                // Get all versions
+                const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByUser({
+                  package_type: 'container',
+                  package_name: container,
+                  username: context.repo.owner,
+                  per_page: 100
+                });
+
+                totalImages += versions.length;
+                console.log(`  📊 Found ${versions.length} images`);
+
+                // Calculate storage usage (estimate based on image count and metadata)
+                let containerStorageBytes = 0;
+                let prImages = 0;
+                let untaggedImages = 0;
+                let oldImages = 0;
+
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+                for (const version of versions) {
+                  const tags = version.metadata?.container?.tags || [];
+                  const createdAt = new Date(version.created_at);
+
+                  // Estimate storage (rough calculation)
+                  containerStorageBytes += 250 * 1024 * 1024; // 250MB average per image
+
+                  // Categorize images
+                  if (tags.some(tag => tag.startsWith('pr-'))) {
+                    prImages++;
+                  }
+                  if (tags.length === 0) {
+                    untaggedImages++;
+                  }
+                  if (createdAt < cutoffDate) {
+                    oldImages++;
+                  }
+                }
+
+                totalStorageBytes += containerStorageBytes;
+                const containerStorageGB = Math.round((containerStorageBytes / (1024 * 1024 * 1024)) * 100) / 100;
+
+                console.log(`  💾 Estimated storage: ${containerStorageGB} GB`);
+                console.log(`  🏷️  PR images: ${prImages}, Untagged: ${untaggedImages}, Old images: ${oldImages}`);
+
+                // Generate container-specific recommendations
+                if (prImages > 20) {
+                  recommendations.push(`📦 ${container}: Consider more frequent PR image cleanup (${prImages} PR images)`);
+                }
+                if (untaggedImages > 10) {
+                  warnings.push(`📦 ${container}: ${untaggedImages} untagged images found`);
+                }
+                if (oldImages > 15) {
+                  recommendations.push(`📦 ${container}: ${oldImages} images older than 30 days could be cleaned`);
+                }
+
+              } catch (error) {
+                console.log(`  ❌ Error checking ${container}: ${error.message}`);
+                criticalIssues.push(`📦 ${container}: Failed to analyze - ${error.message}`);
+
+                if (error.status === 404) {
+                  recommendations.push(`📦 ${container}: Package not found - may need to be created or permissions checked`);
+                } else if (error.status === 403) {
+                  criticalIssues.push(`📦 ${container}: Access denied - check token permissions`);
+                }
+              }
+            }
+
+            // Calculate total storage in GB
+            const totalStorageGB = Math.round((totalStorageBytes / (1024 * 1024 * 1024)) * 100) / 100;
+
+            // Check storage thresholds
+            const warningThreshold = config.monitoring?.storage_warning_gb || 50;
+            const criticalThreshold = config.monitoring?.storage_critical_gb || 100;
+
+            if (totalStorageGB >= criticalThreshold) {
+              healthStatus = 'critical';
+              criticalIssues.push(`💾 Storage usage critical: ${totalStorageGB} GB (threshold: ${criticalThreshold} GB)`);
+            } else if (totalStorageGB >= warningThreshold) {
+              if (healthStatus === 'healthy') healthStatus = 'warning';
+              warnings.push(`💾 Storage usage warning: ${totalStorageGB} GB (threshold: ${warningThreshold} GB)`);
+            }
+
+            // Check API rate limits
+            try {
+              const rateLimit = await github.rest.rateLimit.get();
+              const remaining = rateLimit.data.resources.core.remaining;
+              const total = rateLimit.data.resources.core.limit;
+              const resetTime = new Date(rateLimit.data.resources.core.reset * 1000);
+
+              console.log(`\n🔥 API Rate Limit: ${remaining}/${total} remaining (resets at ${resetTime.toISOString()})`);
+
+              if (remaining < total * 0.1) { // Less than 10% remaining
+                warnings.push(`🔥 API rate limit low: ${remaining}/${total} remaining`);
+              }
+
+              core.setOutput('api_rate_remaining', remaining.toString());
+            } catch (error) {
+              warnings.push(`🔥 Unable to check API rate limits: ${error.message}`);
+              core.setOutput('api_rate_remaining', 'unknown');
+            }
+
+            // Determine final health status
+            if (criticalIssues.length > 0) {
+              healthStatus = 'critical';
+            } else if (warnings.length > 0 && healthStatus === 'healthy') {
+              healthStatus = 'warning';
+            }
+
+            // Set outputs
+            core.setOutput('health_status', healthStatus);
+            core.setOutput('storage_usage_gb', totalStorageGB.toString());
+            core.setOutput('total_images', totalImages.toString());
+            core.setOutput('needs_attention', (criticalIssues.length > 0 || warnings.length > 0).toString());
+
+            // Generate summary report
+            console.log('\n📋 GHCR Health Assessment Summary');
+            console.log(`=====================================`);
+            console.log(`🏥 Overall Status: ${healthStatus.toUpperCase()}`);
+            console.log(`💾 Total Storage: ${totalStorageGB} GB`);
+            console.log(`📦 Total Images: ${totalImages}`);
+            console.log(`🏷️  Containers Checked: ${containers.length}`);
+
+            if (criticalIssues.length > 0) {
+              console.log(`\n🚨 CRITICAL ISSUES (${criticalIssues.length}):`);
+              criticalIssues.forEach(issue => console.log(`  ${issue}`));
+            }
+
+            if (warnings.length > 0) {
+              console.log(`\n⚠️  WARNINGS (${warnings.length}):`);
+              warnings.forEach(warning => console.log(`  ${warning}`));
+            }
+
+            if (recommendations.length > 0) {
+              console.log(`\n💡 RECOMMENDATIONS (${recommendations.length}):`);
+              recommendations.forEach(rec => console.log(`  ${rec}`));
+            }
+
+            // Store results for other jobs
+            const results = {
+              healthStatus,
+              totalStorageGB,
+              totalImages,
+              containers: containers.length,
+              criticalIssues,
+              warnings,
+              recommendations,
+              timestamp: new Date().toISOString()
+            };
+
+            fs.writeFileSync('health-results.json', JSON.stringify(results, null, 2));
+
+  # Generate detailed reports
+  generate-reports:
+    name: 📊 Generate Health Reports
+    runs-on: ubuntu-latest
+    needs: health-assessment
+    if: github.event.inputs.generate_report != 'false'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download health results
+        run: |
+          # Health results are passed through the filesystem in the same job
+          echo "Health assessment completed with status: ${{ needs.health-assessment.outputs.health_status }}"
+
+      - name: Generate comprehensive report
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+
+            // Create comprehensive health report
+            const report = `# GHCR Health Monitoring Report
+
+            **Generated:** ${new Date().toISOString()}
+            **Overall Status:** ${{ needs.health-assessment.outputs.health_status }}
+            **Storage Usage:** ${{ needs.health-assessment.outputs.storage_usage_gb }} GB
+            **Total Images:** ${{ needs.health-assessment.outputs.total_images }}
+            **API Rate Remaining:** ${{ needs.health-assessment.outputs.api_rate_remaining }}
+
+            ## Summary
+
+            This automated health check monitors the GitHub Container Registry for the starbunk-js project.
+
+            ### Key Metrics
+            - **Storage Usage:** ${{ needs.health-assessment.outputs.storage_usage_gb }} GB
+            - **Image Count:** ${{ needs.health-assessment.outputs.total_images }}
+            - **Health Status:** ${{ needs.health-assessment.outputs.health_status }}
+
+            ### Next Steps
+            ${{ needs.health-assessment.outputs.needs_attention == 'true' && '⚠️ This registry needs attention. Review the warnings and recommendations above.' || '✅ No immediate action required. Continue regular monitoring.' }}
+
+            ## Automated Actions Available
+
+            To perform cleanup operations, use the GHCR Lifecycle Management workflow:
+
+            \`\`\`bash
+            # Quick PR cleanup
+            gh workflow run ghcr-lifecycle-management.yml --field operation_type=pr_cleanup --field dry_run=false
+
+            # Full registry cleanup
+            gh workflow run ghcr-lifecycle-management.yml --field operation_type=full_cleanup --field dry_run=false
+
+            # Generate detailed analysis
+            gh workflow run ghcr-lifecycle-management.yml --field operation_type=report
+            \`\`\`
+
+            ---
+            *Generated by GHCR Health Monitoring System*
+            `;
+
+            console.log(report);
+            fs.writeFileSync('ghcr-health-report.md', report);
+
+            // Create GitHub job summary
+            await core.summary
+              .addHeading('🏥 GHCR Health Monitoring Report')
+              .addTable([
+                [{data: 'Metric', header: true}, {data: 'Value', header: true}],
+                ['Overall Status', '${{ needs.health-assessment.outputs.health_status }}'],
+                ['Storage Usage', '${{ needs.health-assessment.outputs.storage_usage_gb }} GB'],
+                ['Total Images', '${{ needs.health-assessment.outputs.total_images }}'],
+                ['API Rate Remaining', '${{ needs.health-assessment.outputs.api_rate_remaining }}']
+              ])
+              .addDetails(
+                'Report Details',
+                'Check the downloaded artifact for the complete health report with recommendations.'
+              )
+              .write();
+
+      - name: Upload health report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghcr-health-report-${{ github.run_number }}
+          path: ghcr-health-report.md
+          retention-days: 90
+
+  # Notifications and alerting
+  notifications:
+    name: 🔔 Notifications and Alerts
+    runs-on: ubuntu-latest
+    needs: health-assessment
+    if: |
+      needs.health-assessment.outputs.needs_attention == 'true' &&
+      (needs.health-assessment.outputs.health_status == 'critical' ||
+       (needs.health-assessment.outputs.health_status == 'warning' && github.event.inputs.notify_on_warnings == 'true'))
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare notification message
+        id: message
+        run: |
+          STATUS="${{ needs.health-assessment.outputs.health_status }}"
+          STORAGE="${{ needs.health-assessment.outputs.storage_usage_gb }}"
+          IMAGES="${{ needs.health-assessment.outputs.total_images }}"
+
+          if [ "$STATUS" = "critical" ]; then
+            EMOJI="🚨"
+            URGENCY="CRITICAL"
+          else
+            EMOJI="⚠️"
+            URGENCY="WARNING"
+          fi
+
+          MESSAGE="$EMOJI GHCR Health Alert - $URGENCY
+
+          **Repository:** ${{ github.repository }}
+          **Status:** $STATUS
+          **Storage Usage:** ${STORAGE} GB
+          **Total Images:** $IMAGES
+          **Timestamp:** $(date -u)
+
+          **Action Required:** Review the health monitoring workflow logs and consider running cleanup operations.
+
+          **Quick Actions:**
+          - Review: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Cleanup: Run the GHCR Lifecycle Management workflow
+          - Documentation: .github/GHCR-CLEANUP.md"
+
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          echo "$MESSAGE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Issue (Critical Only)
+        if: needs.health-assessment.outputs.health_status == 'critical'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `🚨 GHCR Health Critical Alert - ${{ needs.health-assessment.outputs.storage_usage_gb }} GB Usage`;
+            const body = `${{ steps.message.outputs.message }}
+
+            ## Automatic Alert
+            This issue was automatically created by the GHCR Health Monitoring system.
+
+            ### Immediate Actions Required:
+            1. **Review Storage Usage**: Current usage is ${{ needs.health-assessment.outputs.storage_usage_gb }} GB
+            2. **Run Cleanup Operations**: Use the GHCR Lifecycle Management workflow
+            3. **Check for Issues**: Review the [monitoring workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            ### Quick Cleanup Commands:
+            \`\`\`bash
+            # Emergency cleanup (extends normal limits)
+            gh workflow run ghcr-lifecycle-management.yml --field operation_type=emergency --field dry_run=false
+
+            # Standard full cleanup
+            gh workflow run ghcr-lifecycle-management.yml --field operation_type=full_cleanup --field dry_run=false
+            \`\`\`
+
+            **This issue will be automatically closed when the health status improves.**
+            `;
+
+            try {
+              const response = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['ghcr-health', 'critical', 'automated']
+              });
+              console.log(`📋 Created critical health alert issue: #${response.data.number}`);
+            } catch (error) {
+              console.log(`⚠️ Failed to create issue: ${error.message}`);
+            }
+
+      - name: Log notification
+        run: |
+          echo "🔔 Health notification prepared"
+          echo "${{ steps.message.outputs.message }}"
+
+  # Cleanup recommendations
+  cleanup-recommendations:
+    name: 💡 Cleanup Recommendations
+    runs-on: ubuntu-latest
+    needs: health-assessment
+    if: |
+      github.event.inputs.check_type == 'comprehensive' ||
+      needs.health-assessment.outputs.health_status != 'healthy'
+
+    steps:
+      - name: Generate cleanup recommendations
+        run: |
+          echo "💡 GHCR Cleanup Recommendations"
+          echo "================================"
+
+          STORAGE=${{ needs.health-assessment.outputs.storage_usage_gb }}
+          IMAGES=${{ needs.health-assessment.outputs.total_images }}
+          STATUS="${{ needs.health-assessment.outputs.health_status }}"
+
+          echo "Current Status: $STATUS"
+          echo "Storage Usage: ${STORAGE} GB"
+          echo "Total Images: $IMAGES"
+          echo ""
+
+          # Storage-based recommendations
+          if (( $(echo "$STORAGE > 75" | bc -l) )); then
+            echo "🚨 HIGH PRIORITY RECOMMENDATIONS:"
+            echo "- Run emergency cleanup: gh workflow run ghcr-lifecycle-management.yml --field operation_type=emergency"
+            echo "- Consider reducing PR retention from 10 to 5 images per container"
+            echo "- Review and clean untagged images immediately"
+          elif (( $(echo "$STORAGE > 50" | bc -l) )); then
+            echo "⚠️  MEDIUM PRIORITY RECOMMENDATIONS:"
+            echo "- Run full cleanup: gh workflow run ghcr-lifecycle-management.yml --field operation_type=full_cleanup"
+            echo "- Schedule more frequent automated cleanups"
+          else
+            echo "✅ LOW PRIORITY RECOMMENDATIONS:"
+            echo "- Current usage is acceptable"
+            echo "- Continue regular monitoring"
+          fi
+
+          echo ""
+          echo "📋 REGULAR MAINTENANCE:"
+          echo "- Review cleanup configuration monthly"
+          echo "- Monitor storage trends weekly"
+          echo "- Validate cleanup workflows quarterly"
+
+          echo ""
+          echo "🔗 USEFUL LINKS:"
+          echo "- Documentation: .github/GHCR-CLEANUP.md"
+          echo "- Configuration: .github/ghcr-cleanup-config.yml"
+          echo "- Workflows: .github/workflows/ghcr-*.yml"
+
+  # Summary
+  summary:
+    name: 📋 Health Check Summary
+    runs-on: ubuntu-latest
+    needs: [health-assessment, generate-reports, notifications, cleanup-recommendations]
+    if: always()
+
+    steps:
+      - name: Create final summary
+        run: |
+          echo "## 🏥 GHCR Health Monitoring Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Overall Status:** ${{ needs.health-assessment.outputs.health_status || 'unknown' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Storage Usage:** ${{ needs.health-assessment.outputs.storage_usage_gb || 'unknown' }} GB" >> $GITHUB_STEP_SUMMARY
+          echo "**Total Images:** ${{ needs.health-assessment.outputs.total_images || 'unknown' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Needs Attention:** ${{ needs.health-assessment.outputs.needs_attention || 'unknown' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Job Results:" >> $GITHUB_STEP_SUMMARY
+          echo "- Health Assessment: ${{ needs.health-assessment.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Report Generation: ${{ needs.generate-reports.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Notifications: ${{ needs.notifications.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Recommendations: ${{ needs.cleanup-recommendations.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.health-assessment.outputs.needs_attention }}" = "true" ]; then
+            echo "⚠️ **Action Required:** This registry needs attention. Review the detailed reports and recommendations." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **Status:** Registry is healthy. Continue regular monitoring." >> $GITHUB_STEP_SUMMARY
+          fi
