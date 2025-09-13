@@ -21,7 +21,10 @@ on:
         required: false
         type: string
         default: 'ghcr.io'
-    secrets: {}
+    secrets:
+      GITHUB_TOKEN:
+        description: 'GitHub token for container registry authentication'
+        required: false
 
 # This workflow should ONLY be called by other workflows, never triggered directly
 # If you see this workflow failing, it means it's being triggered incorrectly
