@@ -213,6 +213,7 @@ jobs:
             containers/starbunk-dnd/node_modules
             containers/covabot/node_modules
             containers/shared/dist
+            /tmp/jest_cache
           key: deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**/*.ts', 'containers/shared/package.json', 'containers/shared/tsconfig.json') }}
           restore-keys: |
             deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
@@ -286,6 +287,7 @@ jobs:
             containers/starbunk-dnd/node_modules
             containers/covabot/node_modules
             containers/shared/dist
+            /tmp/jest_cache
           key: deps-v2-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**/*.ts', 'containers/shared/package.json', 'containers/shared/tsconfig.json') }}
           fail-on-cache-miss: true
 
@@ -309,10 +311,13 @@ jobs:
           fi
 
       - name: Run unit tests
+        env:
+          CI: true
+          NODE_ENV: test
         run: |
           echo "🧪 Testing ${{ matrix.container }}..."
           cd containers/${{ matrix.container }}
-          npm test -- --passWithNoTests --coverage=false
+          npm test -- --passWithNoTests --coverage=false --verbose --testTimeout=30000 --maxWorkers=2
 
       - name: Build container
         run: |
@@ -419,12 +424,17 @@ jobs:
             const prNumber = context.issue.number;
             const imageUrl = '${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}:pr-' + prNumber + '-' + container;
 
+            // Get tags from environment variable to avoid template string interpolation issues
+            const tagsEnv = process.env.DOCKER_METADATA_OUTPUT_TAGS || '';
+            const tagsList = tagsEnv.split('\n').filter(tag => tag.trim());
+            const tagsFormatted = tagsList.map(tag => `- \`${tag}\``).join('\n');
+
             const body = `🐳 **Docker Image Published for \`${container}\`**
 
             📦 **Image:** \`${imageUrl}\`
             📋 **SHA:** \`${{ github.sha }}\`
             🏷️ **Tags:**
-            ${JSON.stringify(${{ steps.meta.outputs.tags }}.split('\n'), null, 2).replace(/"/g, '`').replace(/,/g, '\n')}
+            ${tagsFormatted}
 
             **Pull command:**
             \`\`\`bash
@@ -434,7 +444,9 @@ jobs:
             <details>
             <summary>🔍 View all tags</summary>
 
-            ${JSON.stringify(${{ steps.meta.outputs.tags }}.split('\n'), null, 2).replace(/"/g, '`')}
+            \`\`\`
+            ${tagsList.join('\n')}
+            \`\`\`
             </details>`;
 
             // Find existing comment for this container

@@ -24,7 +24,7 @@ COPY prisma ./prisma
 # Build shared package and container in one step
 RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
     cd .. && npm install "./shared/${SHARED_TGZ}" && \
-    npx prisma generate && \
+    PRISMA_CLI_QUERY_ENGINE_TYPE=binary npx prisma generate && \
     npm run build:docker && \
     npm prune --omit=dev
 
