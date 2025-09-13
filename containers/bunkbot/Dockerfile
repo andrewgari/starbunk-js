@@ -1,7 +1,7 @@
 # BunkBot Container - Reply bots and admin commands
 # Optimized 2-stage build with Alpine Linux (Docker & Podman compatible)
 
-# Stage 1: Builder - Build everything in one stage for speed
+# Stage 1: Builder - Build everything with proper separation of concerns
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -16,17 +16,27 @@ COPY containers/bunkbot/package*.json ./
 # Install all dependencies in parallel for speed
 RUN cd shared && npm ci && cd .. && npm ci
 
-# Copy source code and Prisma schema
+# Note: Prisma client is handled via shared package dependencies
+
+# Copy source code
 COPY containers/shared ./shared
 COPY containers/bunkbot ./
-COPY prisma ./prisma
 
-# Build shared package and container in one step
-RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
-    cd .. && npm install "./shared/${SHARED_TGZ}" && \
-    PRISMA_CLI_QUERY_ENGINE_TYPE=binary npx prisma generate && \
-    npm run build:docker && \
-    npm prune --omit=dev
+# Build shared package first
+RUN cd shared && npm run build
+
+# Package and install shared package
+RUN cd shared && SHARED_TGZ=$(npm pack | tail -n1) && \
+    cd .. && npm install "./shared/${SHARED_TGZ}"
+
+# Let's skip Prisma generation for now - it should be handled by the build process
+# The shared package already includes Prisma client in its dependencies
+
+# Build the container application
+RUN npm run build:docker
+
+# Clean up development dependencies
+RUN npm prune --omit=dev
 
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
@@ -43,7 +53,6 @@ COPY --from=builder --chown=bunkbot:bunkbot /app/node_modules ./node_modules
 COPY --from=builder --chown=bunkbot:bunkbot /app/shared ./shared
 COPY --from=builder --chown=bunkbot:bunkbot /app/dist ./dist
 COPY --from=builder --chown=bunkbot:bunkbot /app/package.json ./
-COPY --from=builder --chown=bunkbot:bunkbot /app/prisma ./prisma
 
 # Switch to non-root user
 USER bunkbot

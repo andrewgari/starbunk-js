@@ -10,40 +10,62 @@ const { TestEnvironment } = require('jest-environment-node');
 
 class CustomTestEnvironment extends TestEnvironment {
   constructor(config, context) {
-    // Force DEBUG_MODE to false BEFORE calling super
+    // Simplified debug mode configuration
     process.env.DEBUG_MODE = 'false';
     process.env.NODE_ENV = 'test';
-    
+
     super(config, context);
-    
-    // Also set it in the global environment
+
     this.global.process.env.DEBUG_MODE = 'false';
     this.global.process.env.NODE_ENV = 'test';
   }
 
   async setup() {
     await super.setup();
-    
-    // Ensure DEBUG_MODE is false in the test environment
+
     this.global.process.env.DEBUG_MODE = 'false';
     this.global.process.env.NODE_ENV = 'test';
-    
-    // Force the shared library to recognize the change
+
     try {
-      // Clear require cache to force fresh import
-      const sharedPath = require.resolve('@starbunk/shared');
-      delete require.cache[sharedPath];
-      
       const { setDebugMode } = require('@starbunk/shared');
       setDebugMode(false);
-      
-      console.log('[Custom Jest Environment] DEBUG_MODE forced to false');
     } catch (error) {
-      console.log('[Custom Jest Environment] Could not import setDebugMode:', error.message);
+      console.warn('[Custom Jest Environment] Debug mode setup failed:', error);
     }
   }
 
   async teardown() {
+    // Explicit cleanup to prevent resource leaks
+    try {
+      // Attempt to import and use closeAllConnections if available
+      let sharedModule;
+      try {
+        sharedModule = require('@starbunk/shared');
+      } catch {
+        console.warn('[Custom Jest Environment] Could not import shared module');
+      }
+
+      if (sharedModule && typeof sharedModule.closeAllConnections === 'function') {
+        await sharedModule.closeAllConnections();
+      }
+    } catch (error) {
+      console.warn('[Custom Jest Environment] Connection cleanup error:', error);
+    }
+
+    // Gracefully handle clearing timers
+    try {
+      const activeTimers = this.global.setTimeout._activeTimers || [];
+      activeTimers.forEach(timer => {
+        try {
+          this.global.clearTimeout(timer);
+        } catch (clearError) {
+          console.warn('[Custom Jest Environment] Could not clear timer:', clearError);
+        }
+      });
+    } catch (error) {
+      console.warn('[Custom Jest Environment] Timer cleanup error:', error);
+    }
+
     await super.teardown();
   }
 }

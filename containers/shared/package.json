@@ -14,7 +14,9 @@
 		"dev": "tsc --watch",
 		"test": "jest",
 		"type-check": "tsc --noEmit",
-		"clean": "rimraf dist"
+		"clean": "rimraf dist",
+		"lint": "eslint --ext .ts src",
+		"lint:fix": "eslint --ext .ts src --fix"
 	},
 	"dependencies": {
 		"@prisma/client": "^6.7.0",

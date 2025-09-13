@@ -1,74 +1,58 @@
 // Legacy MetricsService (maintain backward compatibility)
-export { 
-    MetricsService, 
-    type MessageFlowMetrics,
-    type ChannelActivity
-} from './MetricsService';
+export { MetricsService, type MessageFlowMetrics, type ChannelActivity } from './MetricsService';
 
 // Production-ready metrics service
-export { 
-    ProductionMetricsService,
-    initializeMetrics, 
-    getMetrics,
-    type MetricsConfiguration
+export {
+	ProductionMetricsService,
+	initializeMetrics,
+	getMetrics,
+	type MetricsConfiguration,
 } from './ProductionMetricsService';
 
-export { 
-    StructuredLogger, 
-    initializeStructuredLogger, 
-    getStructuredLogger,
-    type LogContext,
-    type MessageFlowLog,
-    type ChannelActivityLog,
-    type SystemLog
+export {
+	StructuredLogger,
+	initializeStructuredLogger,
+	getStructuredLogger,
+	type LogContext,
+	type MessageFlowLog,
+	type ChannelActivityLog,
+	type SystemLog,
 } from './StructuredLogger';
 
 export {
-    ChannelActivityTracker,
-    initializeChannelActivityTracker,
-    getChannelActivityTracker
+	ChannelActivityTracker,
+	initializeChannelActivityTracker,
+	getChannelActivityTracker,
 } from './ChannelActivityTracker';
 
 export {
-    HttpEndpointsService,
-    initializeHttpEndpoints,
-    getHttpEndpoints,
-    type EndpointsConfig,
-    type HealthCheckFunction,
-    type HealthCheckResult
+	HttpEndpointsService,
+	initializeHttpEndpoints,
+	getHttpEndpoints,
+	type EndpointsConfig,
+	type HealthCheckFunction,
+	type HealthCheckResult,
 } from './HttpEndpointsService';
 
 // Container-specific metrics exports
 export {
-    type BunkBotMetrics,
-    type DJCovaMetrics,
-    type StarbunkDNDMetrics,
-    type CovaBotMetrics,
-    type MessageContext,
-    ContainerMetricsBase,
-    type ContainerMetricsFactory,
-    type ContainerMetricsConfig
+	type BunkBotMetrics,
+	type DJCovaMetrics,
+	type StarbunkDNDMetrics,
+	type CovaBotMetrics,
+	type MessageContext,
+	ContainerMetricsBase,
+	type ContainerMetricsFactory,
+	type ContainerMetricsConfig,
 } from './ContainerMetrics';
 
-export {
-    BunkBotMetricsCollector,
-    createBunkBotMetrics
-} from './BunkBotMetrics';
+export { BunkBotMetricsCollector, createBunkBotMetrics } from './BunkBotMetrics';
 
-export {
-    DJCovaMetricsCollector,
-    createDJCovaMetrics
-} from './DJCovaMetrics';
+export { DJCovaMetricsCollector, createDJCovaMetrics } from './DJCovaMetrics';
 
-export {
-    StarbunkDNDMetricsCollector,
-    createStarbunkDNDMetrics
-} from './StarbunkDNDMetrics';
+export { StarbunkDNDMetricsCollector, createStarbunkDNDMetrics } from './StarbunkDNDMetrics';
 
-export {
-    CovaBotMetricsCollector,
-    createCovaBotMetrics
-} from './CovaBotMetrics';
+export { CovaBotMetricsCollector, createCovaBotMetrics } from './CovaBotMetrics';
 
 // Import validation utilities
 import { validateObservabilityEnvironment, type ObservabilityConfig } from '../../utils/envValidation';
@@ -80,126 +64,125 @@ import { initializeChannelActivityTracker } from './ChannelActivityTracker';
 import { initializeHttpEndpoints, type EndpointsConfig } from './HttpEndpointsService';
 
 interface ObservabilityComponents {
-    metrics: ProductionMetricsService;
-    logger: import('./StructuredLogger').StructuredLogger;
-    channelTracker: import('./ChannelActivityTracker').ChannelActivityTracker;
-    httpEndpoints: import('./HttpEndpointsService').HttpEndpointsService;
-    config: ObservabilityConfig;
+	metrics: ProductionMetricsService;
+	logger: import('./StructuredLogger').StructuredLogger;
+	channelTracker: import('./ChannelActivityTracker').ChannelActivityTracker;
+	httpEndpoints: import('./HttpEndpointsService').HttpEndpointsService;
+	config: ObservabilityConfig;
 }
 
 // Enhanced initialization with full production-ready observability stack
 export function initializeObservability(
-    service: string, 
-    options?: {
-        metricsConfig?: Partial<MetricsConfiguration>;
-        endpointsConfig?: Partial<EndpointsConfig>;
-        skipHttpEndpoints?: boolean;
-    }
+	service: string,
+	options?: {
+		metricsConfig?: Partial<MetricsConfiguration>;
+		endpointsConfig?: Partial<EndpointsConfig>;
+		skipHttpEndpoints?: boolean;
+	},
 ): ObservabilityComponents {
-    // Validate environment configuration
-    const envConfig = validateObservabilityEnvironment();
-    
-    // Initialize metrics service with production features
-    const metricsConfig: Partial<MetricsConfiguration> = {
-        enableCollection: envConfig.metricsEnabled,
-        enablePush: envConfig.pushEnabled,
-        pushInterval: envConfig.pushInterval,
-        pushGatewayUrl: envConfig.pushGatewayUrl,
-        circuitBreakerThreshold: envConfig.circuitBreakerThreshold,
-        enableRuntimeMetrics: envConfig.runtimeMetricsEnabled,
-        ...options?.metricsConfig
-    };
-    
-    const metrics = initializeMetrics(service, metricsConfig);
-    
-    // Initialize structured logger
-    const structuredLogger = initializeStructuredLogger(service);
-    
-    // Initialize channel activity tracker
-    const channelTracker = initializeChannelActivityTracker();
-    
-    // Initialize HTTP endpoints service (if not skipped)
-    let httpEndpoints: import('./HttpEndpointsService').HttpEndpointsService;
-    
-    if (!options?.skipHttpEndpoints) {
-        const endpointsConfig: Partial<EndpointsConfig> = {
-            enableMetrics: envConfig.metricsEnabled,
-            enableHealth: true,
-            enableReady: true,
-            enablePprof: process.env.NODE_ENV === 'development',
-            ...options?.endpointsConfig
-        };
-        
-        httpEndpoints = initializeHttpEndpoints(service, endpointsConfig);
-        httpEndpoints.setMetricsService(metrics);
-        
-        // Start HTTP endpoints server in production mode
-        if (envConfig.metricsEnabled || process.env.ENABLE_HTTP_ENDPOINTS !== 'false') {
-            httpEndpoints.start().catch(error => {
-                // Log error but don't fail initialization
-                console.error('Failed to start HTTP endpoints server:', error);
-            });
-        }
-    } else {
-        // Create a minimal stub if HTTP endpoints are skipped
-        httpEndpoints = {} as any;
-    }
-    
-    return { 
-        metrics, 
-        logger: structuredLogger, 
-        channelTracker, 
-        httpEndpoints,
-        config: envConfig
-    };
+	// Validate environment configuration
+	const envConfig = validateObservabilityEnvironment();
+
+	// Initialize metrics service with production features
+	const metricsConfig: Partial<MetricsConfiguration> = {
+		enableCollection: envConfig.metricsEnabled,
+		enablePush: envConfig.pushEnabled,
+		pushInterval: envConfig.pushInterval,
+		pushGatewayUrl: envConfig.pushGatewayUrl,
+		circuitBreakerThreshold: envConfig.circuitBreakerThreshold,
+		enableRuntimeMetrics: envConfig.runtimeMetricsEnabled,
+		...options?.metricsConfig,
+	};
+
+	const metrics = initializeMetrics(service, metricsConfig);
+
+	// Initialize structured logger
+	const structuredLogger = initializeStructuredLogger(service);
+
+	// Initialize channel activity tracker
+	const channelTracker = initializeChannelActivityTracker();
+
+	// Initialize HTTP endpoints service (if not skipped)
+	let httpEndpoints: import('./HttpEndpointsService').HttpEndpointsService;
+
+	if (!options?.skipHttpEndpoints) {
+		const endpointsConfig: Partial<EndpointsConfig> = {
+			enableMetrics: envConfig.metricsEnabled,
+			enableHealth: true,
+			enableReady: true,
+			enablePprof: process.env.NODE_ENV === 'development',
+			...options?.endpointsConfig,
+		};
+
+		httpEndpoints = initializeHttpEndpoints(service, endpointsConfig);
+		httpEndpoints.setMetricsService(metrics);
+
+		// Start HTTP endpoints server in production mode
+		if (envConfig.metricsEnabled || process.env.ENABLE_HTTP_ENDPOINTS !== 'false') {
+			httpEndpoints.start().catch((error) => {
+				// Log error but don't fail initialization
+				console.error('Failed to start HTTP endpoints server::', error); // eslint-disable-line @typescript-eslint/no-unused-vars
+			});
+		}
+	} else {
+		// Create a minimal stub if HTTP endpoints are skipped
+		httpEndpoints = {} as any;
+	}
+
+	return {
+		metrics,
+		logger: structuredLogger,
+		channelTracker,
+		httpEndpoints,
+		config: envConfig,
+	};
 }
 
 // Legacy initialization for backward compatibility
 export function initializeObservabilityLegacy(service: string) {
-    const result = initializeObservability(service, { skipHttpEndpoints: true });
-    return { 
-        metrics: result.metrics, 
-        logger: result.logger, 
-        channelTracker: result.channelTracker 
-    };
+	const result = initializeObservability(service, { skipHttpEndpoints: true });
+	return {
+		metrics: result.metrics,
+		logger: result.logger,
+		channelTracker: result.channelTracker,
+	};
 }
 
 // Graceful shutdown helper
 export async function shutdownObservability(): Promise<void> {
-    try {
-        // Get all global instances and shut them down
-        const promises = [];
-        
-        // Shutdown metrics service
-        try {
-            const metrics = await import('./ProductionMetricsService').then(m => m.getMetrics());
-            promises.push(metrics.shutdown());
-        } catch (error) {
-            // Service not initialized, ignore
-        }
-        
-        // Shutdown HTTP endpoints
-        try {
-            const httpEndpoints = await import('./HttpEndpointsService').then(m => m.getHttpEndpoints());
-            promises.push(httpEndpoints.stop());
-        } catch (error) {
-            // Service not initialized, ignore
-        }
-        
-        // Shutdown structured logger
-        try {
-            const structuredLogger = await import('./StructuredLogger').then(m => m.getStructuredLogger());
-            if (structuredLogger && typeof (structuredLogger as any).shutdown === 'function') {
-                promises.push((structuredLogger as any).shutdown());
-            }
-        } catch (error) {
-            // Service not initialized, ignore
-        }
-        
-        await Promise.allSettled(promises);
-        console.log('Observability stack shutdown complete');
-        
-    } catch (error) {
-        console.error('Error during observability shutdown:', error);
-    }
+	try {
+		// Get all global instances and shut them down
+		const promises = [];
+
+		// Shutdown metrics service
+		try {
+			const metrics = await import('./ProductionMetricsService').then((m) => m.getMetrics());
+			promises.push(metrics.shutdown());
+		} catch (_error) {
+			// Service not initialized, ignore
+		}
+
+		// Shutdown HTTP endpoints
+		try {
+			const httpEndpoints = await import('./HttpEndpointsService').then((m) => m.getHttpEndpoints());
+			promises.push(httpEndpoints.stop());
+		} catch (_error) {
+			// Service not initialized, ignore
+		}
+
+		// Shutdown structured logger
+		try {
+			const structuredLogger = await import('./StructuredLogger').then((m) => m.getStructuredLogger());
+			if (structuredLogger && typeof (structuredLogger as any).shutdown === 'function') {
+				promises.push((structuredLogger as any).shutdown());
+			}
+		} catch (_error) {
+			// Service not initialized, ignore
+		}
+
+		await Promise.allSettled(promises);
+		console.log('Observability stack shutdown complete');
+	} catch (error) {
+		console.error('Error during observability shutdown::', error); // eslint-disable-line @typescript-eslint/no-unused-vars
+	}
 }

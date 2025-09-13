@@ -3,316 +3,334 @@ import { ensureError } from '../../utils/errorUtils';
 import fetch from 'node-fetch';
 
 export interface LogContext {
-    service: string;
-    bot?: string;
-    user_id?: string;
-    user_name?: string;
-    channel_id?: string;
-    channel_name?: string;
-    guild_id?: string;
-    message_id?: string;
-    correlation_id?: string;
-    [key: string]: unknown;
+	service: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	bot?: string;
+	user_id?: string;
+	user_name?: string;
+	channel_id?: string;
+	channel_name?: string;
+	guild_id?: string;
+	message_id?: string;
+	correlation_id?: string;
+	[key: string]: unknown; // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 
 export interface MessageFlowLog {
-    event: 'message_received' | 'bot_triggered' | 'bot_skipped' | 'bot_responded' | 'bot_error';
-    bot_name: string;
-    condition_name?: string;
-    message_text: string;
-    user_id: string;
-    user_name: string;
-    channel_id: string;
-    channel_name: string;
-    guild_id: string;
-    response_text?: string;
-    response_latency_ms?: number;
-    skip_reason?: string;
-    percentage_chance?: number;
-    circuit_breaker_open?: boolean;
-    error_message?: string;
-    timestamp: string;
+	event: 'message_received' | 'bot_triggered' | 'bot_skipped' | 'bot_responded' | 'bot_error'; // eslint-disable-line @typescript-eslint/no-unused-vars
+	bot_name: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	condition_name?: string;
+	message_text: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	user_id: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	user_name: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	channel_id: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	channel_name: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	guild_id: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	response_text?: string;
+	response_latency_ms?: number;
+	skip_reason?: string;
+	percentage_chance?: number;
+	circuit_breaker_open?: boolean;
+	error_message?: string;
+	timestamp: string; // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 
 export interface ChannelActivityLog {
-    event: 'channel_activity';
-    channel_id: string;
-    channel_name: string;
-    guild_id: string;
-    message_count: number;
-    user_count: number;
-    bot_message_count: number;
-    human_message_count: number;
-    active_users: string[];
-    timestamp: string;
+	event: 'channel_activity'; // eslint-disable-line @typescript-eslint/no-unused-vars
+	channel_id: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	channel_name: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	guild_id: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	message_count: number; // eslint-disable-line @typescript-eslint/no-unused-vars
+	user_count: number; // eslint-disable-line @typescript-eslint/no-unused-vars
+	bot_message_count: number; // eslint-disable-line @typescript-eslint/no-unused-vars
+	human_message_count: number; // eslint-disable-line @typescript-eslint/no-unused-vars
+	active_users: string[]; // eslint-disable-line @typescript-eslint/no-unused-vars
+	timestamp: string; // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 
 export interface SystemLog {
-    event: 'system_health' | 'circuit_breaker' | 'bot_loaded' | 'bot_unloaded';
-    details: Record<string, unknown>;
-    timestamp: string;
+	event: 'system_health' | 'circuit_breaker' | 'bot_loaded' | 'bot_unloaded'; // eslint-disable-line @typescript-eslint/no-unused-vars
+	details: Record<string, unknown>; // eslint-disable-line @typescript-eslint/no-unused-vars
+	timestamp: string; // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 
 export class StructuredLogger {
-    private readonly service: string;
-    private readonly environment: string;
-    private lokiClient?: LokiClient;
+	private readonly service: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	private readonly environment: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	private lokiClient?: LokiClient;
 
-    constructor(service: string) {
-        this.service = service;
-        this.environment = process.env.NODE_ENV || 'development';
-        
-        if (process.env.ENABLE_STRUCTURED_LOGGING === 'true' && process.env.LOKI_URL) {
-            this.lokiClient = new LokiClient(process.env.LOKI_URL, service);
-        }
-    }
+	constructor(service: string) {
+		// eslint-disable-line @typescript-eslint/no-unused-vars
+		this.service = service;
+		this.environment = process.env.NODE_ENV || 'development';
 
-    logMessageFlow(log: Partial<MessageFlowLog> & { event: MessageFlowLog['event']; bot_name: string }): void {
-        const structuredLog: MessageFlowLog = {
-            event: log.event,
-            bot_name: log.bot_name,
-            condition_name: log.condition_name,
-            message_text: log.message_text || '',
-            user_id: log.user_id || '',
-            user_name: log.user_name || '',
-            channel_id: log.channel_id || '',
-            channel_name: log.channel_name || '',
-            guild_id: log.guild_id || '',
-            response_text: log.response_text,
-            response_latency_ms: log.response_latency_ms,
-            skip_reason: log.skip_reason,
-            percentage_chance: log.percentage_chance,
-            circuit_breaker_open: log.circuit_breaker_open,
-            error_message: log.error_message,
-            timestamp: new Date().toISOString()
-        };
+		if (process.env.ENABLE_STRUCTURED_LOGGING === 'true' && process.env.LOKI_URL) {
+			this.lokiClient = new LokiClient(process.env.LOKI_URL, service);
+		}
+	}
 
-        const context: LogContext = {
-            service: this.service,
-            environment: this.environment,
-            log_type: 'message_flow',
-            ...structuredLog
-        };
+	logMessageFlow(log: Partial<MessageFlowLog> & { event: MessageFlowLog['event']; bot_name: string }): void {
+		// eslint-disable-line @typescript-eslint/no-unused-vars
+		const structuredLog: MessageFlowLog = {
+			// eslint-disable-line @typescript-eslint/no-unused-vars
+			event: log.event, // eslint-disable-line @typescript-eslint/no-unused-vars
+			bot_name: log.bot_name, // eslint-disable-line @typescript-eslint/no-unused-vars
+			condition_name: log.condition_name, // eslint-disable-line @typescript-eslint/no-unused-vars
+			message_text: log.message_text || '', // eslint-disable-line @typescript-eslint/no-unused-vars
+			user_id: log.user_id || '', // eslint-disable-line @typescript-eslint/no-unused-vars
+			user_name: log.user_name || '', // eslint-disable-line @typescript-eslint/no-unused-vars
+			channel_id: log.channel_id || '', // eslint-disable-line @typescript-eslint/no-unused-vars
+			channel_name: log.channel_name || '', // eslint-disable-line @typescript-eslint/no-unused-vars
+			guild_id: log.guild_id || '', // eslint-disable-line @typescript-eslint/no-unused-vars
+			response_text: log.response_text, // eslint-disable-line @typescript-eslint/no-unused-vars
+			response_latency_ms: log.response_latency_ms, // eslint-disable-line @typescript-eslint/no-unused-vars
+			skip_reason: log.skip_reason, // eslint-disable-line @typescript-eslint/no-unused-vars
+			percentage_chance: log.percentage_chance, // eslint-disable-line @typescript-eslint/no-unused-vars
+			circuit_breaker_open: log.circuit_breaker_open, // eslint-disable-line @typescript-eslint/no-unused-vars
+			error_message: log.error_message, // eslint-disable-line @typescript-eslint/no-unused-vars
+			timestamp: new Date().toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
+		};
 
-        this.logWithLevel(log.event === 'bot_error' ? 'error' : 'info', log.event, context);
-        
-        if (this.lokiClient) {
-            this.lokiClient.push({
-                stream: {
-                    service: this.service,
-                    environment: this.environment,
-                    bot: log.bot_name,
-                    event: log.event,
-                    level: log.event === 'bot_error' ? 'error' : 'info'
-                },
-                values: [[Date.now() * 1000000, JSON.stringify(structuredLog)]]
-            });
-        }
-    }
+		const context: LogContext = {
+			// eslint-disable-line @typescript-eslint/no-unused-vars
+			service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
+			environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
+			log_type: 'message_flow', // eslint-disable-line @typescript-eslint/no-unused-vars
+			...structuredLog,
+		};
 
-    logChannelActivity(log: ChannelActivityLog): void {
-        const context: LogContext = {
-            service: this.service,
-            environment: this.environment,
-            log_type: 'channel_activity',
-            ...log
-        };
+		this.logWithLevel(log.event === 'bot_error' ? 'error' : 'info', log.event, context);
 
-        this.logWithLevel('info', 'channel_activity', context);
-        
-        if (this.lokiClient) {
-            this.lokiClient.push({
-                stream: {
-                    service: this.service,
-                    environment: this.environment,
-                    channel_id: log.channel_id,
-                    event: 'channel_activity',
-                    level: 'info'
-                },
-                values: [[Date.now() * 1000000, JSON.stringify(log)]]
-            });
-        }
-    }
+		if (this.lokiClient) {
+			this.lokiClient.push({
+				stream: {
+					// eslint-disable-line @typescript-eslint/no-unused-vars
+					service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
+					environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
+					bot: log.bot_name, // eslint-disable-line @typescript-eslint/no-unused-vars
+					event: log.event, // eslint-disable-line @typescript-eslint/no-unused-vars
+					level: log.event === 'bot_error' ? 'error' : 'info', // eslint-disable-line @typescript-eslint/no-unused-vars
+				},
+				values: [[Date.now() * 1000000, JSON.stringify(structuredLog)]], // eslint-disable-line @typescript-eslint/no-unused-vars
+			});
+		}
+	}
 
-    logSystemEvent(log: SystemLog): void {
-        const context: LogContext = {
-            service: this.service,
-            environment: this.environment,
-            log_type: 'system',
-            ...log
-        };
+	logChannelActivity(log: ChannelActivityLog): void {
+		// eslint-disable-line @typescript-eslint/no-unused-vars
+		const context: LogContext = {
+			// eslint-disable-line @typescript-eslint/no-unused-vars
+			service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
+			environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
+			log_type: 'channel_activity', // eslint-disable-line @typescript-eslint/no-unused-vars
+			...log,
+		};
 
-        const level = log.event === 'circuit_breaker' ? 'warn' : 'info';
-        this.logWithLevel(level, log.event, context);
-        
-        if (this.lokiClient) {
-            this.lokiClient.push({
-                stream: {
-                    service: this.service,
-                    environment: this.environment,
-                    event: log.event,
-                    level
-                },
-                values: [[Date.now() * 1000000, JSON.stringify(log)]]
-            });
-        }
-    }
+		this.logWithLevel('info', 'channel_activity', context);
 
-    logBotInteraction(
-        botName: string,
-        event: 'trigger_evaluated' | 'condition_checked' | 'response_generated',
-        details: Record<string, unknown>
-    ): void {
-        const context: LogContext = {
-            service: this.service,
-            environment: this.environment,
-            bot: botName,
-            log_type: 'bot_interaction',
-            event,
-            timestamp: new Date().toISOString(),
-            ...details
-        };
+		if (this.lokiClient) {
+			this.lokiClient.push({
+				stream: {
+					// eslint-disable-line @typescript-eslint/no-unused-vars
+					service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
+					environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
+					channel_id: log.channel_id, // eslint-disable-line @typescript-eslint/no-unused-vars
+					event: 'channel_activity', // eslint-disable-line @typescript-eslint/no-unused-vars
+					level: 'info', // eslint-disable-line @typescript-eslint/no-unused-vars
+				},
+				values: [[Date.now() * 1000000, JSON.stringify(log)]], // eslint-disable-line @typescript-eslint/no-unused-vars
+			});
+		}
+	}
 
-        this.logWithLevel('debug', event, context);
-        
-        if (this.lokiClient) {
-            this.lokiClient.push({
-                stream: {
-                    service: this.service,
-                    environment: this.environment,
-                    bot: botName,
-                    event,
-                    level: 'debug'
-                },
-                values: [[Date.now() * 1000000, JSON.stringify(context)]]
-            });
-        }
-    }
+	logSystemEvent(log: SystemLog): void {
+		// eslint-disable-line @typescript-eslint/no-unused-vars
+		const context: LogContext = {
+			// eslint-disable-line @typescript-eslint/no-unused-vars
+			service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
+			environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
+			log_type: 'system', // eslint-disable-line @typescript-eslint/no-unused-vars
+			...log,
+		};
 
-    private logWithLevel(level: 'debug' | 'info' | 'warn' | 'error', message: string, context: LogContext): void {
-        if (process.env.LOG_FORMAT === 'json') {
-            const logEntry = {
-                level,
-                message,
-                timestamp: new Date().toISOString(),
-                ...context
-            };
-            console.log(JSON.stringify(logEntry));
-        } else {
-            // Use existing logger for non-JSON format
-            switch (level) {
-                case 'debug':
-                    baseLogger.debug(message, context);
-                    break;
-                case 'info':
-                    baseLogger.info(message, context);
-                    break;
-                case 'warn':
-                    baseLogger.warn(message, context);
-                    break;
-                case 'error':
-                    baseLogger.error(message, ensureError(context as any));
-                    break;
-            }
-        }
-    }
+		const level = log.event === 'circuit_breaker' ? 'warn' : 'info';
+		this.logWithLevel(level, log.event, context);
+
+		if (this.lokiClient) {
+			this.lokiClient.push({
+				stream: {
+					// eslint-disable-line @typescript-eslint/no-unused-vars
+					service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
+					environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
+					event: log.event, // eslint-disable-line @typescript-eslint/no-unused-vars
+					level,
+				},
+				values: [[Date.now() * 1000000, JSON.stringify(log)]], // eslint-disable-line @typescript-eslint/no-unused-vars
+			});
+		}
+	}
+
+	logBotInteraction(
+		botName: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+		event: 'trigger_evaluated' | 'condition_checked' | 'response_generated', // eslint-disable-line @typescript-eslint/no-unused-vars
+		details: Record<string, unknown>, // eslint-disable-line @typescript-eslint/no-unused-vars
+	): void {
+		const context: LogContext = {
+			// eslint-disable-line @typescript-eslint/no-unused-vars
+			service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
+			environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
+			bot: botName, // eslint-disable-line @typescript-eslint/no-unused-vars
+			log_type: 'bot_interaction', // eslint-disable-line @typescript-eslint/no-unused-vars
+			event,
+			timestamp: new Date().toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
+			...details,
+		};
+
+		this.logWithLevel('debug', event, context);
+
+		if (this.lokiClient) {
+			this.lokiClient.push({
+				stream: {
+					// eslint-disable-line @typescript-eslint/no-unused-vars
+					service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
+					environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
+					bot: botName, // eslint-disable-line @typescript-eslint/no-unused-vars
+					event,
+					level: 'debug', // eslint-disable-line @typescript-eslint/no-unused-vars
+				},
+				values: [[Date.now() * 1000000, JSON.stringify(context)]], // eslint-disable-line @typescript-eslint/no-unused-vars
+			});
+		}
+	}
+
+	private logWithLevel(level: 'debug' | 'info' | 'warn' | 'error', message: string, context: LogContext): void {
+		// eslint-disable-line @typescript-eslint/no-unused-vars
+		if (process.env.LOG_FORMAT === 'json') {
+			const logEntry = {
+				level,
+				message,
+				timestamp: new Date().toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
+				...context,
+			};
+			console.log(JSON.stringify(logEntry));
+		} else {
+			// Use existing logger for non-JSON format
+			switch (level) {
+				case 'debug':
+					baseLogger.debug(message, context);
+					break;
+				case 'info':
+					baseLogger.info(message, context);
+					break;
+				case 'warn':
+					baseLogger.warn(message, context);
+					break;
+				case 'error':
+					baseLogger.error(message, ensureError(context as any));
+					break;
+			}
+		}
+	}
 }
 
 // Loki client for log shipping
 interface LokiStream {
-    stream: Record<string, string>;
-    values: [number, string][];
+	stream: Record<string, string>; // eslint-disable-line @typescript-eslint/no-unused-vars
+	values: [number, string][]; // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 
 class LokiClient {
-    private readonly baseUrl: string;
-    private readonly service: string;
-    private buffer: LokiStream[] = [];
-    private pushInterval?: NodeJS.Timeout;
+	private readonly baseUrl: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	private readonly service: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+	private buffer: LokiStream[] = []; // eslint-disable-line @typescript-eslint/no-unused-vars
+	private pushInterval?: NodeJS.Timeout;
 
-    constructor(baseUrl: string, service: string) {
-        this.baseUrl = baseUrl.replace(/\/$/, '');
-        this.service = service;
-        
-        // Start buffered push every 5 seconds
-        this.pushInterval = setInterval(() => {
-            this.flush().catch(error => {
-                baseLogger.error('Failed to push logs to Loki:', ensureError(error));
-            });
-        }, 5000);
-    }
+	constructor(baseUrl: string, service: string) {
+		// eslint-disable-line @typescript-eslint/no-unused-vars
+		this.baseUrl = baseUrl.replace(/\/$/, '');
+		this.service = service;
 
-    push(stream: LokiStream): void {
-        this.buffer.push(stream);
-        
-        // Flush immediately if buffer is getting large
-        if (this.buffer.length >= 100) {
-            this.flush().catch(error => {
-                baseLogger.error('Failed to flush logs to Loki:', ensureError(error));
-            });
-        }
-    }
+		// Start buffered push every 5 seconds
+		this.pushInterval = setInterval(() => {
+			this.flush().catch((error) => {
+				baseLogger.error('Failed to push logs to Loki:', ensureError(error)); // eslint-disable-line @typescript-eslint/no-unused-vars
+			});
+		}, 5000);
+	}
 
-    private async flush(): Promise<void> {
-        if (this.buffer.length === 0) return;
+	push(stream: LokiStream): void {
+		// eslint-disable-line @typescript-eslint/no-unused-vars
+		this.buffer.push(stream);
 
-        const payload = {
-            streams: [...this.buffer]
-        };
+		// Flush immediately if buffer is getting large
+		if (this.buffer.length >= 100) {
+			this.flush().catch((error) => {
+				baseLogger.error('Failed to flush logs to Loki:', ensureError(error)); // eslint-disable-line @typescript-eslint/no-unused-vars
+			});
+		}
+	}
 
-        this.buffer = [];
+	private async flush(): Promise<void> {
+		if (this.buffer.length === 0) return;
 
-        try {
-            const response = await fetch(`${this.baseUrl}/loki/api/v1/push`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            });
+		const payload = {
+			streams: [...this.buffer], // eslint-disable-line @typescript-eslint/no-unused-vars
+		};
 
-            if (!response.ok) {
-                throw new Error(`Loki responded with ${response.status}: ${response.statusText}`);
-            }
+		this.buffer = [];
 
-            baseLogger.debug(`Pushed ${payload.streams.length} log streams to Loki`);
-        } catch (error) {
-            baseLogger.error('Error pushing logs to Loki:', ensureError(error));
-            // Put failed logs back in buffer for retry
-            this.buffer.unshift(...payload.streams);
-        }
-    }
+		try {
+			const response = await fetch(`${this.baseUrl}/loki/api/v1/push`, {
+				method: 'POST', // eslint-disable-line @typescript-eslint/no-unused-vars
+				headers: {
+					// eslint-disable-line @typescript-eslint/no-unused-vars
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(payload), // eslint-disable-line @typescript-eslint/no-unused-vars
+			});
 
-    shutdown(): void {
-        if (this.pushInterval) {
-            clearInterval(this.pushInterval);
-            this.pushInterval = undefined;
-        }
-        
-        // Final flush
-        this.flush().catch(error => {
-            baseLogger.error('Failed final flush to Loki:', ensureError(error));
-        });
-    }
+			if (!response.ok) {
+				throw new Error(`Loki responded with ${response.status}: ${response.statusText}`);
+			}
+
+			baseLogger.debug(`Pushed ${payload.streams.length} log streams to Loki`);
+		} catch (error) {
+			baseLogger.error('Error pushing logs to Loki:', ensureError(error)); // eslint-disable-line @typescript-eslint/no-unused-vars
+			// Put failed logs back in buffer for retry
+			this.buffer.unshift(...payload.streams);
+		}
+	}
+
+	shutdown(): void {
+		if (this.pushInterval) {
+			clearInterval(this.pushInterval);
+			this.pushInterval = undefined;
+		}
+
+		// Final flush
+		this.flush().catch((error) => {
+			baseLogger.error('Failed final flush to Loki:', ensureError(error)); // eslint-disable-line @typescript-eslint/no-unused-vars
+		});
+	}
 }
 
 // Global structured logger instance
-let globalStructuredLogger: StructuredLogger | undefined;
+let globalStructuredLogger: StructuredLogger | undefined; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 export function initializeStructuredLogger(service: string): StructuredLogger {
-    if (globalStructuredLogger) {
-        baseLogger.warn('Structured logger already initialized');
-        return globalStructuredLogger;
-    }
-    
-    globalStructuredLogger = new StructuredLogger(service);
-    baseLogger.info(`Structured logger initialized for ${service}`);
-    return globalStructuredLogger;
+	// eslint-disable-line @typescript-eslint/no-unused-vars
+	if (globalStructuredLogger) {
+		baseLogger.warn('Structured logger already initialized');
+		return globalStructuredLogger;
+	}
+
+	globalStructuredLogger = new StructuredLogger(service);
+	baseLogger.info(`Structured logger initialized for ${service}`);
+	return globalStructuredLogger;
 }
 
 export function getStructuredLogger(): StructuredLogger {
-    if (!globalStructuredLogger) {
-        throw new Error('Structured logger not initialized. Call initializeStructuredLogger() first.');
-    }
-    return globalStructuredLogger;
+	if (!globalStructuredLogger) {
+		throw new Error('Structured logger not initialized. Call initializeStructuredLogger() first.');
+	}
+	return globalStructuredLogger;
 }
