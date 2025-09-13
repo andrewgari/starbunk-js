@@ -471,7 +471,11 @@ jobs:
     needs: [detect-changes, validate-containers, build-publish-images]
     if: always()
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Check validation results
+        id: check-validation-results
         run: |
           echo "🔍 Checking validation results..."
 
@@ -491,15 +495,30 @@ jobs:
             exit 0
           fi
 
+          # Determine overall success state
+          overall_success="true"
+          failure_reason=""
+
           # Check validation results
           if [[ "$validate_result" == "failure" ]]; then
             echo "❌ Validation failed"
-            exit 1
+            overall_success="false"
+            failure_reason="Validation failed"
           fi
 
           # Check build results if builds were expected
           if [[ "$should_build" == "true" ]] && [[ "$build_result" == "failure" ]]; then
             echo "❌ Image build failed"
+            overall_success="false"
+            failure_reason="Image build failed"
+          fi
+
+          # Set output for status checks
+          echo "overall_success=$overall_success" >> $GITHUB_OUTPUT
+          echo "failure_reason=$failure_reason" >> $GITHUB_OUTPUT
+
+          # Exit based on results
+          if [[ "$overall_success" == "false" ]]; then
             exit 1
           fi
 
@@ -512,6 +531,48 @@ jobs:
           else
             echo "🎉 Validation complete (no images built)"
           fi
+
+      - name: Create required status checks
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = '${{ github.event.pull_request.head.sha }}';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const success = '${{ steps.check-validation-results.outputs.overall_success }}' === 'true';
+            const failureReason = '${{ steps.check-validation-results.outputs.failure_reason }}';
+            const shouldValidate = '${{ needs.detect-changes.outputs.should-validate }}';
+
+            // Required status check contexts that branch protection expects
+            const statusChecks = [
+              { context: '📊 Code Quality Analysis', description: success ? 'Code quality validation completed' : `Code quality failed: ${failureReason}` },
+              { context: '🔒 Security Analysis', description: success ? 'Security analysis completed' : `Security analysis failed: ${failureReason}` },
+              { context: '⚡ Performance Analysis', description: success ? 'Performance analysis completed' : `Performance analysis failed: ${failureReason}` },
+              { context: '✅ PR Validation Complete', description: success ? 'PR validation workflow completed successfully' : `PR validation failed: ${failureReason}` }
+            ];
+
+            // Determine state
+            let state = 'success';
+            if (!success) {
+              state = 'failure';
+            } else if (shouldValidate === 'false') {
+              state = 'success'; // Docs-only changes still count as success
+            }
+
+            for (const check of statusChecks) {
+              await github.rest.repos.createCommitStatus({
+                owner,
+                repo,
+                sha,
+                state: state,
+                context: check.context,
+                description: check.description,
+                target_url: `${context.payload.repository.html_url}/actions/runs/${context.runId}`
+              });
+
+              console.log(`${state === 'success' ? '✅' : '❌'} Created status check: ${check.context} (${state})`);
+            }
 
       - name: Post PR summary
         if: github.event_name == 'pull_request'
