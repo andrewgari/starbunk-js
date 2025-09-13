@@ -19,8 +19,8 @@
 		"baseUrl": "./src",
 		"paths": {
 			"@/*": ["*"],
-			"@starbunk/shared": ["../../containers/shared/src"],
-			"@starbunk/shared/*": ["../../containers/shared/src/*"]
+			"@starbunk/shared": ["../shared/src"],
+			"@starbunk/shared/*": ["../shared/src/*"]
 		}
 	},
 	"include": ["src/**/*.ts"],

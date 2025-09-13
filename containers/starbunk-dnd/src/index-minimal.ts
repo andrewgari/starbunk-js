@@ -1,18 +1,18 @@
 // Starbunk-DND - D&D features and Snowbunk bridge container (Minimal Bootstrap Demo)
-import { Events } from 'discord.js';
-import { 
-	logger, 
-	ensureError, 
-	validateEnvironment, 
-	createDiscordClient, 
+import { Events, Client, Interaction } from 'discord.js';
+import {
+	logger,
+	ensureError,
+	validateEnvironment,
+	createDiscordClient,
 	ClientConfigs,
 	container,
-	ServiceId 
+	ServiceId,
 } from '@starbunk/shared';
 
 class StarbunkDNDContainer {
-	private client: any;
-	private snowbunkClient: any = null;
+	private client!: Client;
+	private snowbunkClient: Client | null = null;
 	private hasInitialized = false;
 
 	async initialize(): Promise<void> {
@@ -44,7 +44,15 @@ class StarbunkDNDContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['SNOWBUNK_TOKEN', 'DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'VECTOR_CONTEXT_DIR', 'DEBUG', 'NODE_ENV']
+			optional: [
+				'SNOWBUNK_TOKEN',
+				'DATABASE_URL',
+				'OPENAI_API_KEY',
+				'OLLAMA_API_URL',
+				'VECTOR_CONTEXT_DIR',
+				'DEBUG',
+				'NODE_ENV',
+			],
 		});
 		logger.info('✅ Environment validation passed for Starbunk-DND');
 	}
@@ -99,7 +107,7 @@ class StarbunkDNDContainer {
 			logger.warn('Discord client warning:', warning);
 		});
 
-		this.client.on(Events.InteractionCreate, async (interaction: any) => {
+		this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 			await this.handleInteraction(interaction);
 		});
 
@@ -109,7 +117,7 @@ class StarbunkDNDContainer {
 		});
 	}
 
-	private async handleInteraction(interaction: any): Promise<void> {
+	private async handleInteraction(interaction: Interaction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
 				// Demo: D&D commands
@@ -120,10 +128,11 @@ class StarbunkDNDContainer {
 					case 'campaign':
 						await interaction.reply('📚 Campaign management available! (Demo mode)');
 						break;
-					case 'roll':
+					case 'roll': {
 						const roll = Math.floor(Math.random() * 20) + 1;
 						await interaction.reply(`🎲 You rolled a ${roll}!`);
 						break;
+					}
 					default:
 						logger.debug(`Unknown D&D command: ${interaction.commandName}`);
 				}
@@ -190,7 +199,7 @@ process.on('SIGTERM', async () => {
 });
 
 if (require.main === module) {
-	main().catch(error => {
+	main().catch((error) => {
 		console.error('Fatal error:', ensureError(error));
 		process.exit(1);
 	});

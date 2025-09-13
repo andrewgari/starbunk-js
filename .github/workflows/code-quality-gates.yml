@@ -45,7 +45,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter
         with:
-          filters: '.github/path-filters.yml'
+          filters: '.github/path-filters-optimized.yml'
 
       - name: Detect which containers changed (direct)
         uses: dorny/paths-filter@v3
@@ -67,10 +67,14 @@ jobs:
           if [ "${{ steps.filter.outputs.shared }}" = "true" ] ||
              [ "${{ steps.filter.outputs.containers }}" = "true" ] ||
              [ "${{ steps.filter.outputs.tests }}" = "true" ] ||
-             [ "${{ steps.filter.outputs.config }}" = "true" ]; then
+             [ "${{ steps.filter.outputs.config }}" = "true" ] ||
+             [ "${{ steps.filter.outputs.critical-infrastructure }}" = "true" ] ||
+             [ "${{ steps.filter.outputs.container-validation }}" = "true" ]; then
             echo "result=true" >> $GITHUB_OUTPUT
+            echo "🔍 Quality checks will run - relevant changes detected"
           else
             echo "result=false" >> $GITHUB_OUTPUT
+            echo "⏭️ Quality checks skipped - no relevant changes"
           fi
 
   # Code quality analysis

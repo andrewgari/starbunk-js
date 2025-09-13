@@ -24,8 +24,7 @@ try {
 	const { setDebugMode, isDebugMode } = require('@starbunk/shared');
 	setDebugMode(false);
 
-	console.log('[Jest Setup] DEBUG_MODE forced to false using setDebugMode()');
-	console.log('[Jest Setup] Final DEBUG_MODE verification:', isDebugMode());
+	// Environment setup: DEBUG_MODE forced to false
 } catch (error) {
 	console.log('[Jest Setup] Could not import setDebugMode, using environment variable only');
 	console.log('[Jest Setup] Error:', error.message);

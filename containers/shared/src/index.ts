@@ -1,14 +1,14 @@
 // Shared utilities and services for all containers
 export { logger } from './services/logger';
 export { ensureError } from './utils/errorUtils';
-export { 
-	validateEnvironment, 
-	getDebugMode, 
-	getTestingServerIds, 
+export {
+	validateEnvironment,
+	getDebugMode,
+	getTestingServerIds,
 	getTestingChannelIds,
 	validateObservabilityEnvironment,
 	getObservabilityEnvVars,
-	type ObservabilityConfig
+	type ObservabilityConfig,
 } from './utils/envValidation';
 export { runStartupDiagnostics, StartupDiagnostics } from './utils/diagnostics';
 export type { DiagnosticResult } from './utils/diagnostics';
@@ -74,6 +74,29 @@ export {
 
 // Export container and ServiceId from container (uses Symbol values)
 export { container, ServiceId } from './services/container';
+
+// Add utility for closing resources
+export async function closeAllConnections() {
+	try {
+		// Close database connections if using Prisma
+		const { PrismaClient } = require('@prisma/client');
+		const prisma = new PrismaClient();
+		await prisma.$disconnect();
+	} catch (error) {
+		console.warn('[Shared] Could not close Prisma connection:', error);
+	}
+
+	try {
+		// Close Discord client connections if applicable
+		const { getDiscordClient } = require('./discord/clientFactory');
+		const client = getDiscordClient();
+		if (client && client.isReady()) {
+			await client.destroy();
+		}
+	} catch (error) {
+		console.warn('[Shared] Could not close Discord client:', error);
+	}
+}
 
 // LLM and Prompt Management
 export { PromptRegistry, PromptType } from './services/llm/promptManager';

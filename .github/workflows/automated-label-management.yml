@@ -40,7 +40,7 @@ jobs:
               console.log('Changed files:', changedFiles);
 
               // Container-specific labels
-              const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot', 'snowbunk'];
+              const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot'];
               containers.forEach(container => {
                 if (changedFiles.some(file => file.startsWith(`containers/${container}/`))) {
                   labelsToAdd.push(container);
@@ -187,7 +187,7 @@ jobs:
               }
 
               // Container-specific issues
-              const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot', 'snowbunk'];
+              const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot'];
               containers.forEach(container => {
                 if (title.includes(container) || body.includes(container)) {
                   labelsToAdd.push(container);
@@ -273,7 +273,6 @@ jobs:
               'djcova': [],
               'covabot': [],
               'starbunk-dnd': [],
-              'snowbunk': []
             };
 
             // Request reviews from container maintainers if configured

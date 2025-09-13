@@ -3,7 +3,6 @@ name: Path Filter Validation
 on:
   pull_request:
     paths:
-      - '.github/path-filters.yml'
       - '.github/path-filters-optimized.yml'
       - '.github/workflows/pr-validation.yml'
       - '.github/workflows/publish-main.yml'
@@ -29,9 +28,9 @@ jobs:
           echo "🔍 Validating path filter syntax..."
           pip install --quiet pyyaml
 
-          # Check if path-filters.yml exists and is valid YAML
-          if [ ! -f ".github/path-filters.yml" ]; then
-            echo "❌ Error: .github/path-filters.yml not found"
+          # Check if path-filters-optimized.yml exists and is valid YAML
+          if [ ! -f ".github/path-filters-optimized.yml" ]; then
+            echo "❌ Error: .github/path-filters-optimized.yml not found"
             exit 1
           fi
 
@@ -40,7 +39,7 @@ jobs:
           import yaml
           import sys
           try:
-              with open('.github/path-filters.yml', 'r') as f:
+              with open('.github/path-filters-optimized.yml', 'r') as f:
                   yaml.safe_load(f)
               print('✅ YAML syntax is valid')
           except yaml.YAMLError as e:
@@ -66,7 +65,7 @@ jobs:
           missing_filters=()
 
           for container in "${containers[@]}"; do
-            if ! grep -q "^${container}:" .github/path-filters.yml; then
+            if ! grep -q "^${container}-src:" .github/path-filters-optimized.yml; then
               missing_filters+=("$container")
             fi
           done
@@ -79,7 +78,7 @@ jobs:
           fi
 
           # Check for shared filter
-          if ! grep -q "^shared:" .github/path-filters.yml; then
+          if ! grep -q "^shared-src:" .github/path-filters-optimized.yml; then
             echo "❌ Missing shared path filter"
             exit 1
           else
@@ -94,25 +93,25 @@ jobs:
           issues_found=0
 
           # Check for overly broad patterns
-          if grep -q "\*\*$" .github/path-filters.yml; then
+          if grep -q "\*\*$" .github/path-filters-optimized.yml; then
             echo "⚠️ Warning: Found patterns ending with '**' which may be overly broad"
-            grep -n "\*\*$" .github/path-filters.yml
+            grep -n "\*\*$" .github/path-filters-optimized.yml
             issues_found=$((issues_found + 1))
           fi
 
           # Check for missing exclusions
-          if ! grep -q "node_modules" .github/path-filters.yml; then
+          if ! grep -q "node_modules" .github/path-filters-optimized.yml; then
             echo "⚠️ Warning: No node_modules exclusions found"
             issues_found=$((issues_found + 1))
           fi
 
-          if ! grep -q "dist" .github/path-filters.yml; then
+          if ! grep -q "dist" .github/path-filters-optimized.yml; then
             echo "⚠️ Warning: No dist directory exclusions found"
             issues_found=$((issues_found + 1))
           fi
 
           # Check for documentation exclusions
-          if ! grep -q "README.md" .github/path-filters.yml; then
+          if ! grep -q "README.md" .github/path-filters-optimized.yml; then
             echo "⚠️ Warning: No README.md exclusions found"
             issues_found=$((issues_found + 1))
           fi
@@ -129,14 +128,14 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Count filters
-          total_filters=$(grep -c "^[a-zA-Z]" .github/path-filters.yml)
-          container_filters=$(grep -E -c "^(bunkbot|djcova|starbunk-dnd|covabot):" .github/path-filters.yml)
+          total_filters=$(grep -c "^[a-zA-Z]" .github/path-filters-optimized.yml)
+          container_filters=$(grep -E -c "^(bunkbot|djcova|starbunk-dnd|covabot)-src:" .github/path-filters-optimized.yml)
 
           echo "### 📋 Filter Statistics" >> $GITHUB_STEP_SUMMARY
           echo "- **Total filters:** $total_filters" >> $GITHUB_STEP_SUMMARY
           echo "- **Container filters:** $container_filters" >> $GITHUB_STEP_SUMMARY
-          echo "- **Shared filters:** $(grep -c "^shared" .github/path-filters.yml)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Root file filters:** $(grep -c "^root-files" .github/path-filters.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Shared filters:** $(grep -c "^shared" .github/path-filters-optimized.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Root file filters:** $(grep -c "^root-files" .github/path-filters-optimized.yml)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### 🎯 Filter Coverage" >> $GITHUB_STEP_SUMMARY
@@ -146,8 +145,8 @@ jobs:
           # Check each container
           containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
           for container in "${containers[@]}"; do
-            if grep -q "^${container}:" .github/path-filters.yml; then
-              pattern_count=$(sed -n "/^${container}:/,/^[a-zA-Z]/p" .github/path-filters.yml | grep -c "^  -")
+            if grep -q "^${container}-src:" .github/path-filters-optimized.yml; then
+              pattern_count=$(sed -n "/^${container}-src:/,/^[a-zA-Z]/p" .github/path-filters-optimized.yml | grep -c "^  -")
               echo "| $container | ✅ Covered | $pattern_count patterns |" >> $GITHUB_STEP_SUMMARY
             else
               echo "| $container | ❌ Missing | 0 patterns |" >> $GITHUB_STEP_SUMMARY
@@ -158,19 +157,19 @@ jobs:
           echo "### 🔧 Optimization Recommendations" >> $GITHUB_STEP_SUMMARY
 
           # Check for optimization opportunities
-          if grep -q "containers/\*/\*\*" .github/path-filters.yml; then
+          if grep -q "containers/\*/\*\*" .github/path-filters-optimized.yml; then
             echo "- ✅ Using specific container paths" >> $GITHUB_STEP_SUMMARY
           else
             echo "- ⚠️ Consider using more specific container paths" >> $GITHUB_STEP_SUMMARY
           fi
 
-          if grep -q "!\*\*/\*.md" .github/path-filters.yml; then
+          if grep -q "!\*\*/\*.md" .github/path-filters-optimized.yml; then
             echo "- ✅ Excluding documentation files" >> $GITHUB_STEP_SUMMARY
           else
             echo "- ⚠️ Consider excluding documentation files" >> $GITHUB_STEP_SUMMARY
           fi
 
-          if grep -q "!.*/node_modules/\*\*" .github/path-filters.yml; then
+          if grep -q "!.*/node_modules/\*\*" .github/path-filters-optimized.yml; then
             echo "- ✅ Excluding node_modules directories" >> $GITHUB_STEP_SUMMARY
           else
             echo "- ⚠️ Consider excluding node_modules directories" >> $GITHUB_STEP_SUMMARY
@@ -194,7 +193,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter
         with:
-          filters: '.github/path-filters.yml'
+          filters: '.github/path-filters-optimized.yml'
 
       - name: Report simulation results
         run: |

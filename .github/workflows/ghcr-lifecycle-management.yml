@@ -11,11 +11,12 @@ on:
     # Weekly full cleanup at 3 AM UTC on Sundays
     - cron: '0 3 * * 0'
 
-  # Triggered after successful merges to main
+  # Triggered after successful merges to main or PR cleanup
   workflow_run:
     workflows:
       - "PR Validation"
       - "Publish on Main"
+      - "PR Cleanup"
     types: [completed]
     branches: [main]
 

@@ -1,5 +1,5 @@
 // BunkBot - Reply bots and admin commands container
-import { Events } from 'discord.js';
+import { Events, Client, Message, Interaction } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import {
 	logger,
@@ -15,7 +15,7 @@ import {
 	runStartupDiagnostics,
 	initializeObservability,
 	createBunkBotMetrics,
-	type BunkBotMetrics
+	type BunkBotMetrics,
 } from '@starbunk/shared';
 
 // Import DiscordService directly from the service file
@@ -29,7 +29,7 @@ import debugCommand from './commands/debug';
 import { BotRegistry } from './botRegistry';
 // import { DatabaseBotFactory } from './core/database-bot-factory'; // Temporarily disabled
 import { ReplyBotImpl } from './core/bot-builder';
-import { shouldExcludeFromReplyBots } from './core/conditions';
+import { shouldExcludeFromReplyBots as _shouldExcludeFromReplyBots } from './core/conditions';
 
 // Import configuration services
 import { ConfigurationService } from './services/configurationService';
@@ -37,14 +37,14 @@ import { BotIdentityService } from './services/botIdentityService';
 import { MessageProcessor } from './core/MessageProcessor';
 
 class BunkBotContainer {
-	private client: any;
+	private client!: Client;
 	private webhookManager!: WebhookManager;
 	private messageFilter!: MessageFilter;
 	private configurationService!: ConfigurationService;
 	private botIdentityService!: BotIdentityService;
 	private hasInitialized = false;
 	private commands = new Map();
-	private healthServer: any;
+	private healthServer: import('http').Server | null = null;
 	private replyBots: ReplyBotImpl[] = [];
 	private messageProcessor!: MessageProcessor;
 	private bunkBotMetrics?: BunkBotMetrics;
@@ -54,7 +54,11 @@ class BunkBotContainer {
 
 		try {
 			// Initialize observability first
-			const { metrics, logger: structuredLogger, channelTracker } = initializeObservability('bunkbot');
+			const {
+				metrics,
+				logger: _structuredLogger,
+				channelTracker: _channelTracker,
+			} = initializeObservability('bunkbot');
 			logger.info('✅ Observability initialized with metrics, structured logging, and channel activity tracking');
 
 			// Initialize BunkBot-specific metrics collector
@@ -62,17 +66,20 @@ class BunkBotContainer {
 				this.bunkBotMetrics = createBunkBotMetrics(metrics, {
 					enableDetailedTracking: true,
 					enablePerformanceMetrics: true,
-					enableErrorTracking: true
+					enableErrorTracking: true,
 				});
 				logger.info('✅ BunkBot-specific metrics collector initialized for production monitoring');
 			} catch (error) {
-				logger.warn('⚠️ BunkBot metrics initialization failed, continuing without container-specific metrics:', ensureError(error));
+				logger.warn(
+					'⚠️ BunkBot metrics initialization failed, continuing without container-specific metrics:',
+					ensureError(error),
+				);
 				this.bunkBotMetrics = undefined;
 			}
 
 			// Run startup diagnostics
 			const diagnostics = await runStartupDiagnostics();
-			const failures = diagnostics.filter(d => d.status === 'fail');
+			const failures = diagnostics.filter((d) => d.status === 'fail');
 
 			if (failures.length > 0) {
 				logger.error('❌ Critical startup issues detected:');
@@ -99,8 +106,8 @@ class BunkBotContainer {
 			const metricsStatus = this.bunkBotMetrics ? 'with BunkBot-specific metrics' : 'with base metrics only';
 			logger.info(`✅ Message processor initialized with observability tracking ${metricsStatus}`);
 
-		// Register commands
-		this.registerCommands();
+			// Register commands
+			this.registerCommands();
 
 			// Set up event handlers
 			this.setupEventHandlers();
@@ -118,7 +125,7 @@ class BunkBotContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['DATABASE_URL', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV']
+			optional: ['DATABASE_URL', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV'],
 		});
 	}
 
@@ -129,10 +136,7 @@ class BunkBotContainer {
 		// Initialize and register Discord service for bot identity functionality
 		const discordService = new DiscordService(this.client);
 		// Use the same approach as the bootstrap function
-		container.register(
-			ServiceId.DiscordService,
-			discordService
-		);
+		container.register(ServiceId.DiscordService, discordService);
 		logger.info('✅ Discord identity service initialized and registered');
 
 		// Initialize webhook manager
@@ -163,14 +167,14 @@ class BunkBotContainer {
 		try {
 			// Track bot registry loading performance
 			const loadStartTime = Date.now();
-			
+
 			// For now, focus on file-based bot loading only
 			// Database bot loading is temporarily disabled to fix compilation issues
 			logger.info('📁 Loading reply bots from file system...');
 			this.replyBots = await BotRegistry.discoverBots();
 
 			const loadDuration = Date.now() - loadStartTime;
-			
+
 			// Track bot registry load metrics
 			if (this.bunkBotMetrics) {
 				this.bunkBotMetrics.trackBotRegistryLoad(this.replyBots.length, loadDuration);
@@ -179,7 +183,7 @@ class BunkBotContainer {
 			if (this.replyBots.length > 0) {
 				logger.info(`✅ Reply bot system initialized with ${this.replyBots.length} bots`);
 				logger.info('🤖 Active reply bots:');
-				this.replyBots.forEach(bot => {
+				this.replyBots.forEach((bot) => {
 					logger.info(`   - ${bot.name}: ${bot.description}`);
 				});
 			} else {
@@ -196,42 +200,42 @@ class BunkBotContainer {
 		}
 	}
 
-private registerCommands(): void {
-	// Register available commands
-	this.commands.set('ping', pingCommand);
-	this.commands.set('debug', debugCommand);
+	private registerCommands(): void {
+		// Register available commands
+		this.commands.set('ping', pingCommand);
+		this.commands.set('debug', debugCommand);
 
-	logger.info(`Registered ${this.commands.size} commands: ${Array.from(this.commands.keys()).join(', ')}`);
-}
-
-private async deployCommands(): Promise<void> {
-	try {
-		logger.info('🚀 Deploying slash commands to Discord...');
-		logger.info(`🔍 Bot Application ID: ${this.client.application?.id || 'Unknown'}`);
-		logger.info(`🔍 Bot User ID: ${this.client.user?.id || 'Unknown'}`);
-
-		// Collect command data
-		const commandData = Array.from(this.commands.values()).map(command => command.data);
-		logger.info(`📋 Commands to deploy: ${commandData.map(cmd => cmd.name).join(', ')}`);
-
-		// Deploy commands to specific guild for faster updates during development
-		const guildId = process.env.GUILD_ID;
-		if (guildId && process.env.DEBUG_MODE === 'true') {
-			logger.info(`🎯 Deploying commands to guild ${guildId} (debug mode)`);
-			const guild = await this.client.guilds.fetch(guildId);
-			await guild.commands.set(commandData);
-		} else {
-			// Deploy commands globally (available in all servers)
-			logger.info('🌍 Deploying commands globally');
-			await this.client.application.commands.set(commandData);
-		}
-
-		logger.info(`✅ Successfully deployed ${commandData.length} slash commands to Discord`);
-	} catch (error) {
-		logger.error('❌ Failed to deploy commands to Discord:', ensureError(error));
-		throw error;
+		logger.info(`Registered ${this.commands.size} commands: ${Array.from(this.commands.keys()).join(', ')}`);
 	}
-}
+
+	private async deployCommands(): Promise<void> {
+		try {
+			logger.info('🚀 Deploying slash commands to Discord...');
+			logger.info(`🔍 Bot Application ID: ${this.client.application?.id || 'Unknown'}`);
+			logger.info(`🔍 Bot User ID: ${this.client.user?.id || 'Unknown'}`);
+
+			// Collect command data
+			const commandData = Array.from(this.commands.values()).map((command) => command.data);
+			logger.info(`📋 Commands to deploy: ${commandData.map((cmd) => cmd.name).join(', ')}`);
+
+			// Deploy commands to specific guild for faster updates during development
+			const guildId = process.env.GUILD_ID;
+			if (guildId && process.env.DEBUG_MODE === 'true') {
+				logger.info(`🎯 Deploying commands to guild ${guildId} (debug mode)`);
+				const guild = await this.client.guilds.fetch(guildId);
+				await guild.commands.set(commandData);
+			} else {
+				// Deploy commands globally (available in all servers)
+				logger.info('🌍 Deploying commands globally');
+				await this.client.application!.commands.set(commandData);
+			}
+
+			logger.info(`✅ Successfully deployed ${commandData.length} slash commands to Discord`);
+		} catch (error) {
+			logger.error('❌ Failed to deploy commands to Discord:', ensureError(error));
+			throw error;
+		}
+	}
 
 	private startHealthServer(): void {
 		this.healthServer = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -241,9 +245,9 @@ private async deployCommands(): Promise<void> {
 					timestamp: new Date().toISOString(),
 					discord: {
 						connected: this.client?.isReady() || false,
-						initialized: this.hasInitialized
+						initialized: this.hasInitialized,
 					},
-					uptime: process.uptime()
+					uptime: process.uptime(),
 				};
 
 				res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -269,21 +273,29 @@ private async deployCommands(): Promise<void> {
 			logger.warn('Discord client warning:', warning);
 		});
 
-		this.client.on(Events.MessageCreate, async (message: any) => {
-			logger.info(`🔥 DISCORD EVENT: MessageCreate received from ${message.author?.username || 'unknown'} (${message.author?.id || 'unknown'})`);
+		this.client.on(Events.MessageCreate, async (message: Message) => {
+			logger.info(
+				`🔥 DISCORD EVENT: MessageCreate received from ${message.author?.username || 'unknown'} (${message.author?.id || 'unknown'})`,
+			);
 			logger.info(`🔥   Content: "${message.content?.substring(0, 100) || 'no content'}"`);
-			logger.info(`🔥   Channel: ${message.channel?.name || 'unknown'} (${message.channel?.id || 'unknown'})`);
+			logger.info(
+				`🔥   Channel: ${message.channel && 'name' in message.channel ? message.channel.name : 'unknown'} (${message.channel?.id || 'unknown'})`,
+			);
 			logger.info(`🔥   Guild: ${message.guild?.name || 'DM'} (${message.guild?.id || 'DM'})`);
 			logger.info(`🔥   Author isBot: ${message.author?.bot || false}`);
 			logger.info(`🔥   Webhook ID: ${message.webhookId || 'none'}`);
 			logger.info(`🔥 → Passing to handleMessage...`);
-			
+
 			await this.handleMessage(message);
 		});
 
-		this.client.on(Events.InteractionCreate, async (interaction: any) => {
-			logger.info(`🎮 Received interaction: ${interaction.type} from ${interaction.user?.username || 'unknown'} - Command: ${interaction.commandName || 'N/A'}`);
-			logger.info(`🔍 Interaction details: Guild=${interaction.guildId}, Channel=${interaction.channelId}, User=${interaction.user?.id}`);
+		this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+			logger.info(
+				`🎮 Received interaction: ${interaction.type} from ${interaction.user?.username || 'unknown'} - Command: ${'commandName' in interaction ? interaction.commandName : 'N/A'}`,
+			);
+			logger.info(
+				`🔍 Interaction details: Guild=${interaction.guildId}, Channel=${interaction.channelId}, User=${interaction.user?.id}`,
+			);
 			await this.handleInteraction(interaction);
 		});
 
@@ -297,7 +309,9 @@ private async deployCommands(): Promise<void> {
 					const guild = await this.client.guilds.fetch(guildId);
 					logger.info(`✅ Bot is present in guild: ${guild.name} (${guild.id})`);
 					logger.info(`🔍 Guild member count: ${guild.memberCount}`);
-					logger.info(`🔍 Bot permissions in guild: ${guild.members.me?.permissions.toArray().join(', ') || 'Unknown'}`);
+					logger.info(
+						`🔍 Bot permissions in guild: ${guild.members.me?.permissions.toArray().join(', ') || 'Unknown'}`,
+					);
 				} catch (error) {
 					logger.error(`❌ Bot is NOT in guild ${guildId}:`, ensureError(error));
 					logger.error('🚨 This explains why slash commands are not working!');
@@ -316,15 +330,16 @@ private async deployCommands(): Promise<void> {
 		});
 	}
 
-	private async handleMessage(message: any): Promise<void> {
-		logger.debug(`Processing message from ${message.author.username} in ${message.channel.name || 'DM'}`);
-		
+	private async handleMessage(message: Message): Promise<void> {
+		logger.debug(
+			`Processing message from ${message.author.username} in ${message.channel && 'name' in message.channel ? message.channel.name : 'DM'}`,
+		);
+
 		// Use the MessageProcessor which now includes comprehensive observability tracking
 		await this.messageProcessor.processMessage(message);
 	}
 
-
-	private async handleInteraction(interaction: any): Promise<void> {
+	private async handleInteraction(interaction: Interaction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
 				// Create interaction context for filtering
@@ -337,13 +352,13 @@ private async deployCommands(): Promise<void> {
 					if (this.messageFilter.isDebugMode()) {
 						await interaction.reply({
 							content: `🚫 Command filtered: ${filterResult.reason}`,
-							ephemeral: true
+							ephemeral: true,
 						});
 					} else {
 						// Silently ignore in production mode
 						await interaction.reply({
 							content: '🚫 This command is not available in this server/channel.',
-							ephemeral: true
+							ephemeral: true,
 						});
 					}
 					return;
@@ -362,11 +377,14 @@ private async deployCommands(): Promise<void> {
 				} else {
 					logger.warn(`❓ Unknown command: ${commandName}`);
 					await interaction.reply({
-						content: `❓ Unknown command: \`${commandName}\`\nAvailable commands: ${Array.from(this.commands.keys()).map(cmd => `\`${cmd}\``).join(', ')}`,
-						ephemeral: true
+						content: `❓ Unknown command: \`${commandName}\`\nAvailable commands: ${Array.from(
+							this.commands.keys(),
+						)
+							.map((cmd) => `\`${cmd}\``)
+							.join(', ')}`,
+						ephemeral: true,
 					});
 				}
-
 			} catch (error) {
 				logger.error(`Error processing command ${interaction.commandName}:`, ensureError(error));
 
@@ -375,7 +393,7 @@ private async deployCommands(): Promise<void> {
 					if (!interaction.replied && !interaction.deferred) {
 						await interaction.reply({
 							content: '❌ An error occurred while processing the command.',
-							ephemeral: true
+							ephemeral: true,
 						});
 					}
 				} catch (replyError) {
@@ -390,7 +408,9 @@ private async deployCommands(): Promise<void> {
 		const token = process.env.BUNKBOT_TOKEN || process.env.STARBUNK_TOKEN || process.env.TOKEN;
 
 		if (!token) {
-			throw new Error('No Discord token found. Please set BUNKBOT_TOKEN, STARBUNK_TOKEN, or TOKEN environment variable.');
+			throw new Error(
+				'No Discord token found. Please set BUNKBOT_TOKEN, STARBUNK_TOKEN, or TOKEN environment variable.',
+			);
 		}
 
 		// Log which token variable is being used (without exposing the actual token)
@@ -450,7 +470,6 @@ private async deployCommands(): Promise<void> {
 
 		logger.info('BunkBot stopped');
 	}
-
 }
 
 // Main execution
@@ -476,7 +495,7 @@ async function main(): Promise<void> {
 					logger.error('Error during BunkBot shutdown:', ensureError(error));
 				}
 			}
-			
+
 			// Final cleanup of observability stack
 			try {
 				const { shutdownObservability } = await import('@starbunk/shared');
@@ -485,7 +504,7 @@ async function main(): Promise<void> {
 			} catch (error) {
 				logger.error('Error during observability shutdown:', ensureError(error));
 			}
-			
+
 			process.exit(0);
 		};
 
@@ -494,7 +513,6 @@ async function main(): Promise<void> {
 
 		// Keep process alive indefinitely
 		// The Discord client connection will keep the event loop active
-
 	} catch (error) {
 		logger.error('Failed to start BunkBot:', ensureError(error));
 		if (bunkBot) {
@@ -507,7 +525,7 @@ async function main(): Promise<void> {
 // Note: Graceful shutdown is now handled within the main function
 
 if (require.main === module) {
-	main().catch(error => {
+	main().catch((error) => {
 		console.error('Fatal error:', ensureError(error));
 		process.exit(1);
 	});

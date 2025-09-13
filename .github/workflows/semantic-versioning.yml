@@ -208,7 +208,7 @@ jobs:
           npm version $NEW_VERSION --no-git-tag-version
 
           # Update container package.json files
-          for container in shared bunkbot djcova starbunk-dnd covabot snowbunk; do
+          for container in shared bunkbot djcova starbunk-dnd covabot; do
             if [ -f "containers/$container/package.json" ]; then
               cd containers/$container
               npm version $NEW_VERSION --no-git-tag-version
@@ -242,7 +242,6 @@ jobs:
           - \`ghcr.io/andrewgari/djcova:${NEW_VERSION}\`
           - \`ghcr.io/andrewgari/starbunk-dnd:${NEW_VERSION}\`
           - \`ghcr.io/andrewgari/covabot:${NEW_VERSION}\`
-          - \`ghcr.io/andrewgari/snowbunk:${NEW_VERSION}\`
 
           ### 🚀 Deployment
 
@@ -259,7 +258,6 @@ jobs:
           docker pull ghcr.io/andrewgari/djcova:${NEW_VERSION}
           docker pull ghcr.io/andrewgari/starbunk-dnd:${NEW_VERSION}
           docker pull ghcr.io/andrewgari/covabot:${NEW_VERSION}
-          docker pull ghcr.io/andrewgari/snowbunk:${NEW_VERSION}
           \`\`\`
 
           ### 🔧 Breaking Changes

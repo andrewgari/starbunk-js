@@ -4,12 +4,19 @@
 	"description": "Shared services and utilities for Starbunk containers",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
+	"files": [
+		"dist/**/*",
+		"package.json",
+		"README.md"
+	],
 	"scripts": {
 		"build": "tsc",
 		"dev": "tsc --watch",
 		"test": "jest",
 		"type-check": "tsc --noEmit",
-		"clean": "rimraf dist"
+		"clean": "rimraf dist",
+		"lint": "eslint --ext .ts src",
+		"lint:fix": "eslint --ext .ts src --fix"
 	},
 	"dependencies": {
 		"@prisma/client": "^6.7.0",

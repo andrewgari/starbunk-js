@@ -7,12 +7,20 @@ on:
       - 'containers/**'
       - 'shared/**'
       - '.github/workflows/container-startup-validation.yml'
+      - '.github/workflows/code-quality-gates.yml'
+      - '.github/workflows/build-metrics.yml'
+      - '.github/workflows/pr-validation.yml'
+      - '.github/path-filters*.yml'
   push:
     branches: [main]
     paths:
       - 'containers/**'
       - 'shared/**'
       - '.github/workflows/container-startup-validation.yml'
+      - '.github/workflows/code-quality-gates.yml'
+      - '.github/workflows/build-metrics.yml'
+      - '.github/workflows/pr-validation.yml'
+      - '.github/path-filters*.yml'
 
 # Allow manual triggering for testing
   workflow_dispatch:
@@ -36,7 +44,6 @@ jobs:
       covabot: ${{ steps.changes.outputs.covabot }}
       djcova: ${{ steps.changes.outputs.djcova }}
       starbunk-dnd: ${{ steps.changes.outputs.starbunk-dnd }}
-      snowbunk: ${{ steps.changes.outputs.snowbunk }}
       shared: ${{ steps.changes.outputs.shared }}
       container-validation: ${{ steps.changes.outputs.container-validation }}
       any-container: ${{ steps.set-flags.outputs.any-container }}
@@ -48,7 +55,7 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: changes
         with:
-          filters: '.github/path-filters.yml'
+          filters: '.github/path-filters-optimized.yml'
 
       - name: Set validation flags
         id: set-flags
@@ -58,19 +65,21 @@ jobs:
              [[ "${{ steps.changes.outputs.covabot }}" == "true" ]] || \
              [[ "${{ steps.changes.outputs.djcova }}" == "true" ]] || \
              [[ "${{ steps.changes.outputs.starbunk-dnd }}" == "true" ]] || \
-             [[ "${{ steps.changes.outputs.snowbunk }}" == "true" ]] || \
              [[ "${{ steps.changes.outputs.shared }}" == "true" ]] || \
-             [[ "${{ steps.changes.outputs.container-validation }}" == "true" ]]; then
+             [[ "${{ steps.changes.outputs.container-validation }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.critical-infrastructure }}" == "true" ]]; then
             echo "any-container=true" >> $GITHUB_OUTPUT
+            echo "🔍 Container validation will run - changes detected"
           else
             echo "any-container=false" >> $GITHUB_OUTPUT
+            echo "⏭️ Container validation skipped - no relevant changes"
           fi
 
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     needs: detect-changes
-    if: ((github.event_name == 'push' && startsWith(github.ref, 'refs/heads/main')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'startup-validation'))) && needs.detect-changes.outputs.any-container == 'true'
+    if: needs.detect-changes.outputs.any-container == 'true'
     strategy:
       matrix:
         container: [bunkbot, covabot, djcova, starbunk-dnd]
@@ -147,7 +156,7 @@ jobs:
     name: CovaBot Filtering Tests
     runs-on: ubuntu-latest
     needs: detect-changes
-    if: ((github.event_name == 'push' && startsWith(github.ref, 'refs/heads/main')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'startup-validation'))) && (needs.detect-changes.outputs.bunkbot == 'true' || needs.detect-changes.outputs.shared == 'true')
+    if: needs.detect-changes.outputs.bunkbot == 'true' || needs.detect-changes.outputs.shared == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -185,7 +194,7 @@ jobs:
     name: Container Startup Tests
     runs-on: ubuntu-latest
     needs: detect-changes
-    if: ((github.event_name == 'push' && startsWith(github.ref, 'refs/heads/main')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'startup-validation'))) && needs.detect-changes.outputs.any-container == 'true'
+    if: needs.detect-changes.outputs.any-container == 'true'
     strategy:
       matrix:
         container: [bunkbot]
@@ -230,7 +239,7 @@ jobs:
     name: Container Validation Summary
     runs-on: ubuntu-latest
     needs: [detect-changes, unit-tests, covabot-filtering-tests, container-startup-tests]
-    if: always() && ((github.event_name == 'push' && startsWith(github.ref, 'refs/heads/main')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'startup-validation'))) && needs.detect-changes.outputs.any-container == 'true'
+    if: always() && needs.detect-changes.outputs.any-container == 'true'
     steps:
       - name: Check test results
         run: |

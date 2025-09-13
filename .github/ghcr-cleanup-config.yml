@@ -47,16 +47,6 @@ containers:
       - "^v\\d+\\.\\d+\\.\\d+$"
       - "^\\d{4}-\\d{2}-\\d{2}$"
 
-  - name: snowbunk
-    enabled: true
-    pr_retention_count: 10
-    pr_retention_days: 30
-    preserve_tags:
-      - latest
-      - main
-    preserve_patterns:
-      - "^v\\d+\\.\\d+\\.\\d+$"
-      - "^\\d{4}-\\d{2}-\\d{2}$"
 
 # Cleanup Schedules
 schedules:

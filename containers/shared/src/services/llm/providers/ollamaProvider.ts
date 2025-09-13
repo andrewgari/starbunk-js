@@ -31,7 +31,7 @@ export class OllamaProvider extends GenericProvider {
 		'llama3:70b',
 		'mistral',
 		'mixtral',
-		'phi3'
+		'phi3',
 	];
 
 	constructor(config: LLMServiceConfig) {
@@ -49,7 +49,7 @@ export class OllamaProvider extends GenericProvider {
 		try {
 			this.logger.debug(`Attempting to connect to Ollama API at ${this.baseUrl}`);
 			const response = await fetch(`${this.baseUrl}/api/tags`, {
-				signal: controller.signal
+				signal: controller.signal,
 			});
 
 			if (!response.ok) {
@@ -72,7 +72,10 @@ export class OllamaProvider extends GenericProvider {
 			if (error instanceof Error && error.name === 'AbortError') {
 				this.logger.error(`Ollama API connection timed out after 5 seconds: ${this.baseUrl}`);
 			} else {
-				this.logger.error('Error connecting to Ollama API:', error instanceof Error ? error : new Error(String(error)));
+				this.logger.error(
+					'Error connecting to Ollama API:',
+					error instanceof Error ? error : new Error(String(error)),
+				);
 			}
 			return false;
 		} finally {
@@ -113,7 +116,7 @@ export class OllamaProvider extends GenericProvider {
 	 */
 	protected async callProviderAPI(options: LLMCompletionOptions): Promise<OllamaResponse> {
 		// Check health before proceeding
-		if (!await this.isHealthy()) {
+		if (!(await this.isHealthy())) {
 			throw new Error('Ollama service is not available. Please ensure Ollama is running (`ollama serve`)');
 		}
 
@@ -125,7 +128,7 @@ export class OllamaProvider extends GenericProvider {
 		let prompt = lastMessage.content;
 
 		// If there's a system message, prepend it
-		const systemMessage = options.messages.find(msg => msg.role === 'system');
+		const systemMessage = options.messages.find((msg) => msg.role === 'system');
 		if (systemMessage) {
 			prompt = `${systemMessage.content}\n\n${prompt}`;
 		}
@@ -133,7 +136,7 @@ export class OllamaProvider extends GenericProvider {
 		// Very simple request body for generate endpoint
 		const requestBody = {
 			model: options.model || this.config.defaultModel || 'llama3',
-			prompt: prompt
+			prompt: prompt,
 		};
 
 		// Make sure we have a model specified
@@ -157,16 +160,18 @@ export class OllamaProvider extends GenericProvider {
 				const response = await fetch(`${this.baseUrl}/api/generate`, {
 					method: 'POST',
 					headers: {
-						'Content-Type': 'application/json'
+						'Content-Type': 'application/json',
 					},
-					body: JSON.stringify(requestBody)
+					body: JSON.stringify(requestBody),
 				});
 
 				// Log detailed response information
 				this.logger.debug(`Ollama API response status: ${response.status} ${response.statusText}`);
 
 				if (response.status === 404) {
-					this.logger.error(`Ollama API 404 Not Found error - URL: ${this.baseUrl}/api/generate, model: ${options.model}`);
+					this.logger.error(
+						`Ollama API 404 Not Found error - URL: ${this.baseUrl}/api/generate, model: ${options.model}`,
+					);
 
 					// Fall back to a default model if specified model is not found
 					if (options.model !== 'llama3') {
@@ -181,8 +186,10 @@ export class OllamaProvider extends GenericProvider {
 					// Try to get more error details from response body
 					try {
 						const errorText = await response.text();
-						throw new Error(`Ollama API error: ${response.statusText} (${response.status}). Details: ${errorText}`);
-					} catch (e) {
+						throw new Error(
+							`Ollama API error: ${response.statusText} (${response.status}). Details: ${errorText}`,
+						);
+					} catch (_e) {
 						throw new Error(`Ollama API error: ${response.statusText} (${response.status})`);
 					}
 				}
@@ -205,22 +212,24 @@ export class OllamaProvider extends GenericProvider {
 							if (chunk && typeof chunk === 'object' && 'response' in chunk) {
 								parsedContent += chunk.response;
 							}
-						} catch (parseError) {
+						} catch (_parseError) {
 							this.logger.warn(`Failed to parse JSON line: ${line}`);
 						}
 					}
 
 					this.logger.debug(`Extracted content length: ${parsedContent.length}`);
 				} catch (e) {
-					this.logger.warn(`Error parsing Ollama generate response, using raw response: ${e instanceof Error ? e.message : String(e)}`);
+					this.logger.warn(
+						`Error parsing Ollama generate response, using raw response: ${e instanceof Error ? e.message : String(e)}`,
+					);
 					parsedContent = responseText.trim().substring(0, 1500); // Fallback with truncation
 				}
 
 				// Adapt the generate response to match the expected format
 				return {
 					message: {
-						content: parsedContent
-					}
+						content: parsedContent,
+					},
 				};
 			} catch (error) {
 				lastError = error instanceof Error ? error : new Error(String(error));
@@ -230,7 +239,7 @@ export class OllamaProvider extends GenericProvider {
 				if (attempts < maxRetries) {
 					const backoffTime = Math.min(1000 * Math.pow(2, attempts - 1), 5000);
 					this.logger.debug(`Retrying in ${backoffTime}ms...`);
-					await new Promise(resolve => setTimeout(resolve, backoffTime));
+					await new Promise((resolve) => setTimeout(resolve, backoffTime));
 				}
 			}
 		}
@@ -258,7 +267,7 @@ export class OllamaProvider extends GenericProvider {
 		return {
 			content: ollamaResponse.message?.content || '',
 			model: options.model || defaultModel,
-			provider: this.getProviderName()
+			provider: this.getProviderName(),
 		};
 	}
 }
