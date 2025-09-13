@@ -527,10 +527,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot
           tags: |
-            type=raw,value=pr-${{ github.event.pull_request.number }}-bunkbot,enable={{is_pr}}
-            type=ref,event=branch,enable={{is_default_branch}}
-            type=sha,prefix=main-,enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-bunkbot,enable=${{ github.event_name == 'pull_request' }}
+            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=main-,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push BunkBot image
         uses: docker/build-push-action@v5
@@ -576,10 +576,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova
           tags: |
-            type=raw,value=pr-${{ github.event.pull_request.number }}-djcova,enable={{is_pr}}
-            type=ref,event=branch,enable={{is_default_branch}}
-            type=sha,prefix=main-,enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-djcova,enable=${{ github.event_name == 'pull_request' }}
+            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=main-,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push DJCova image
         uses: docker/build-push-action@v5
@@ -625,10 +625,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd
           tags: |
-            type=raw,value=pr-${{ github.event.pull_request.number }}-starbunk-dnd,enable={{is_pr}}
-            type=ref,event=branch,enable={{is_default_branch}}
-            type=sha,prefix=main-,enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-starbunk-dnd,enable=${{ github.event_name == 'pull_request' }}
+            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=main-,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push Starbunk-DND image
         uses: docker/build-push-action@v5
@@ -674,10 +674,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot
           tags: |
-            type=raw,value=pr-${{ github.event.pull_request.number }}-covabot,enable={{is_pr}}
-            type=ref,event=branch,enable={{is_default_branch}}
-            type=sha,prefix=main-,enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-covabot,enable=${{ github.event_name == 'pull_request' }}
+            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=main-,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push CovaBot image
         uses: docker/build-push-action@v5

@@ -320,13 +320,13 @@ jobs:
           images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.container }}
           tags: |
             # PR snapshots
-            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ inputs.container }},enable={{is_pr}}
-            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ inputs.container }}-{{sha}},enable={{is_pr}}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ inputs.container }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ inputs.container }}-{{sha}},enable=${{ github.event_name == 'pull_request' }}
 
             # Main branch images
-            type=ref,event=branch,enable={{is_default_branch}}
-            type=sha,prefix=main-,enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=main-,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
             # Manual dispatch tags
             type=raw,value=manual-${{ inputs.container }}-{{sha}},enable=${{ github.event_name == 'workflow_dispatch' }}
