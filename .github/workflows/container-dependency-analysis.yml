@@ -38,11 +38,10 @@ jobs:
           dependencies["bunkbot"]="shared"
           dependencies["djcova"]="shared"
           dependencies["starbunk-dnd"]="shared"
-          dependencies["snowbunk"]="shared"
           dependencies["covabot"]="shared"
 
           # Analyze package.json dependencies for each container
-          containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
+          containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
 
           echo "### Container Dependency Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -50,9 +49,9 @@ jobs:
           echo "|-----------|-------------------|----------------|----------------|" >> $GITHUB_STEP_SUMMARY
 
           for container in "${containers[@]}"; do
-            # Map container name to directory (both starbunk-dnd and snowbunk use starbunk-dnd directory)
+            # Map container name to directory (both starbunk-dnd and  use starbunk-dnd directory)
             container_dir="$container"
-            if [ "$container" = "snowbunk" ]; then
+            if [ "$container" = "" ]; then
               container_dir="starbunk-dnd"
             fi
 
@@ -100,7 +99,7 @@ jobs:
                 "estimated_build_time": "4m"
               },
               {
-                "container": "snowbunk",
+                "container": "",
                 "depends_on": ["shared"],
                 "build_priority": 2,
                 "estimated_build_time": "4m"
@@ -117,7 +116,7 @@ jobs:
           )
 
           # Optimal build order (shared first, then containers in parallel)
-          build_order='["shared", "bunkbot,djcova,starbunk-dnd,snowbunk,covabot"]'
+          build_order='["shared", "bunkbot,djcova,starbunk-dnd,covabot"]'
 
           echo "dependency-matrix=$(echo "$dependency_matrix" | jq -c .)" >> $GITHUB_OUTPUT
           echo "build-order=$build_order" >> $GITHUB_OUTPUT
@@ -136,15 +135,15 @@ jobs:
         run: |
           echo "🔧 Validating container configurations..."
 
-          containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
+          containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
           validation_errors=0
 
           for container in "${containers[@]}"; do
             echo "Validating $container..."
 
-            # Map container name to directory (both starbunk-dnd and snowbunk use starbunk-dnd directory)
+            # Map container name to directory (both starbunk-dnd and  use starbunk-dnd directory)
             container_dir="$container"
-            if [ "$container" = "snowbunk" ]; then
+            if [ "$container" = "" ]; then
               container_dir="starbunk-dnd"
             fi
 

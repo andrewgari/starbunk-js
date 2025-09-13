@@ -1,0 +1,513 @@
+name: Unified Container CI
+
+# Reusable workflow for container validation and building
+# Supports both individual container workflows and batch processing
+
+on:
+  workflow_call:
+    inputs:
+      container:
+        description: 'Container name to validate and build'
+        required: true
+        type: string
+      skip-validation:
+        description: 'Skip validation steps (build → test → lint)'
+        required: false
+        type: boolean
+        default: false
+      skip-build:
+        description: 'Skip Docker image build'
+        required: false
+        type: boolean
+        default: false
+      cache-key-suffix:
+        description: 'Additional cache key suffix for dependency caching'
+        required: false
+        type: string
+        default: ''
+      build-platforms:
+        description: 'Docker build platforms'
+        required: false
+        type: string
+        default: 'linux/amd64'
+      registry:
+        description: 'Container registry URL'
+        required: false
+        type: string
+        default: 'ghcr.io'
+      push-images:
+        description: 'Push built images to registry'
+        required: false
+        type: boolean
+        default: true
+
+    outputs:
+      validation-result:
+        description: 'Result of validation steps (success/failure/skipped)'
+        value: ${{ jobs.validate.outputs.result }}
+      build-result:
+        description: 'Result of Docker build (success/failure/skipped)'
+        value: ${{ jobs.build.outputs.result }}
+      image-tags:
+        description: 'Docker image tags that were built'
+        value: ${{ jobs.build.outputs.tags }}
+      image-digest:
+        description: 'Docker image digest'
+        value: ${{ jobs.build.outputs.digest }}
+
+  workflow_dispatch:
+    inputs:
+      container:
+        description: 'Container name to validate and build'
+        required: true
+        type: choice
+        options:
+          - bunkbot
+          - djcova
+          - starbunk-dnd
+          - covabot
+        default: 'bunkbot'
+      skip-validation:
+        description: 'Skip validation steps'
+        required: false
+        type: boolean
+        default: false
+      skip-build:
+        description: 'Skip Docker build'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '20'
+  CONTAINER: ${{ inputs.container }}
+  REGISTRY: ${{ inputs.registry }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # =============================================================================
+  # VALIDATION JOB - Build → Test → Lint sequence
+  # =============================================================================
+  validate:
+    name: 🧪 Validate ${{ inputs.container }}
+    runs-on: ubuntu-latest
+    if: inputs.skip-validation != true
+
+    outputs:
+      result: ${{ steps.validation-result.outputs.result }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js with caching
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Restore dependency cache
+        id: deps-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            containers/shared/node_modules
+            containers/${{ inputs.container }}/node_modules
+            containers/shared/dist
+          key: deps-unified-v1-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**', 'containers/shared/package.json') }}${{ inputs.cache-key-suffix }}
+          restore-keys: |
+            deps-unified-v1-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
+            deps-unified-v1-${{ runner.os }}-
+
+      - name: Install dependencies if cache miss
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "🚀 Installing dependencies..."
+
+          # Parallel installation with error handling
+          (npm ci --prefer-offline --no-audit --silent || exit 1) &
+          root_pid=$!
+
+          (cd containers/shared && npm ci --prefer-offline --no-audit --silent || exit 1) &
+          shared_pid=$!
+
+          (cd containers/${{ inputs.container }} && npm ci --prefer-offline --no-audit --silent || exit 1) &
+          container_pid=$!
+
+          # Wait for all with error propagation
+          wait $root_pid || { echo "❌ Root dependency installation failed"; exit 1; }
+          wait $shared_pid || { echo "❌ Shared dependency installation failed"; exit 1; }
+          wait $container_pid || { echo "❌ Container dependency installation failed"; exit 1; }
+
+          echo "✅ Dependencies installed successfully"
+
+      - name: Build shared package if needed
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "🔨 Building shared package..."
+          cd containers/shared
+          npm run build || { echo "❌ Shared package build failed"; exit 1; }
+          echo "✅ Shared package built"
+
+      - name: Save dependency cache
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            containers/shared/node_modules
+            containers/${{ inputs.container }}/node_modules
+            containers/shared/dist
+          key: deps-unified-v1-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**', 'containers/shared/package.json') }}${{ inputs.cache-key-suffix }}
+
+      # Step 1: Build
+      - name: 🔨 Build ${{ inputs.container }}
+        id: build-step
+        run: |
+          echo "🔨 Building ${{ inputs.container }} container..."
+          cd containers/${{ inputs.container }}
+
+          # Check if build script exists
+          if ! npm run --silent build --dry-run 2>/dev/null; then
+            echo "⚠️  No build script found for ${{ inputs.container }}, skipping build step"
+            echo "build-skipped=true" >> $GITHUB_OUTPUT
+          else
+            npm run build || {
+              echo "❌ ${{ inputs.container }} build failed"
+              echo "::error title=Build Failed::Container ${{ inputs.container }} failed to build"
+              exit 1
+            }
+            echo "✅ ${{ inputs.container }} build completed successfully"
+            echo "build-skipped=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 2: Test
+      - name: 🧪 Test ${{ inputs.container }}
+        id: test-step
+        run: |
+          echo "🧪 Running ${{ inputs.container }} tests..."
+          cd containers/${{ inputs.container }}
+
+          # Run tests with comprehensive options
+          npm test -- --passWithNoTests --coverage=false --verbose --testTimeout=30000 || {
+            echo "❌ ${{ inputs.container }} tests failed"
+            echo "::error title=Tests Failed::Container ${{ inputs.container }} tests failed"
+            exit 1
+          }
+          echo "✅ ${{ inputs.container }} tests completed successfully"
+
+      # Step 3: Lint
+      - name: 🧹 Lint ${{ inputs.container }}
+        id: lint-step
+        run: |
+          echo "🧹 Linting ${{ inputs.container }} code..."
+          cd containers/${{ inputs.container }}
+
+          # Try container-specific lint first, fallback to root
+          if npm run --silent lint --dry-run 2>/dev/null; then
+            npm run lint || {
+              echo "❌ ${{ inputs.container }} linting failed"
+              echo "::error title=Lint Failed::Container ${{ inputs.container }} linting failed"
+              exit 1
+            }
+          else
+            echo "Using root ESLint configuration for ${{ inputs.container }}"
+            cd ../..
+            npx eslint "containers/${{ inputs.container }}/src/**/*.ts" --format=stylish || {
+              echo "❌ ${{ inputs.container }} linting failed (root config)"
+              echo "::error title=Lint Failed::Container ${{ inputs.container }} linting failed"
+              exit 1
+            }
+          fi
+          echo "✅ ${{ inputs.container }} linting completed successfully"
+
+      # TypeScript type checking (additional safety check)
+      - name: 🔍 TypeScript Check ${{ inputs.container }}
+        id: typecheck-step
+        run: |
+          echo "🔍 Type-checking ${{ inputs.container }}..."
+          cd containers/${{ inputs.container }}
+
+          # Try container-specific type-check, fallback to tsc
+          if npm run --silent type-check --dry-run 2>/dev/null; then
+            npm run type-check || {
+              echo "❌ ${{ inputs.container }} type checking failed"
+              echo "::error title=Type Check Failed::Container ${{ inputs.container }} type checking failed"
+              exit 1
+            }
+          else
+            npx tsc --noEmit || {
+              echo "❌ ${{ inputs.container }} type checking failed (direct tsc)"
+              echo "::error title=Type Check Failed::Container ${{ inputs.container }} type checking failed"
+              exit 1
+            }
+          fi
+          echo "✅ ${{ inputs.container }} type checking completed successfully"
+
+      - name: Set validation result
+        id: validation-result
+        if: always()
+        run: |
+          if [[ "${{ steps.build-step.outcome }}" == "success" ]] && \
+             [[ "${{ steps.test-step.outcome }}" == "success" ]] && \
+             [[ "${{ steps.lint-step.outcome }}" == "success" ]] && \
+             [[ "${{ steps.typecheck-step.outcome }}" == "success" ]]; then
+            echo "result=success" >> $GITHUB_OUTPUT
+            echo "✅ All validation steps passed for ${{ inputs.container }}"
+          else
+            echo "result=failure" >> $GITHUB_OUTPUT
+            echo "❌ Validation failed for ${{ inputs.container }}"
+          fi
+
+  # =============================================================================
+  # DOCKER BUILD JOB - Container image building and publishing
+  # =============================================================================
+  build:
+    name: 🐳 Build ${{ inputs.container }} Image
+    runs-on: ubuntu-latest
+    needs: validate
+    if: |
+      always() &&
+      inputs.skip-build != true &&
+      (needs.validate.result == 'success' || needs.validate.result == 'skipped')
+
+    outputs:
+      result: ${{ steps.build-result.outputs.result }}
+      tags: ${{ steps.meta.outputs.tags }}
+      digest: ${{ steps.build-push.outputs.digest }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.13.0
+            network=host
+          config-inline: |
+            [worker.oci]
+              max-parallelism = 4
+
+      - name: Login to Container Registry
+        if: inputs.push-images == true
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache-${{ inputs.container }}
+          key: buildx-unified-${{ inputs.container }}-${{ github.sha }}
+          restore-keys: |
+            buildx-unified-${{ inputs.container }}-${{ github.event.pull_request.base.sha || 'main' }}
+            buildx-unified-${{ inputs.container }}-
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.container }}
+          tags: |
+            # PR snapshots
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ inputs.container }},enable={{is_pr}}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ inputs.container }}-{{sha}},enable={{is_pr}}
+
+            # Main branch images
+            type=ref,event=branch,enable={{is_default_branch}}
+            type=sha,prefix=main-,enable={{is_default_branch}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+            # Manual dispatch tags
+            type=raw,value=manual-${{ inputs.container }}-{{sha}},enable=${{ github.event_name == 'workflow_dispatch' }}
+          labels: |
+            org.opencontainers.image.title=${{ inputs.container }}
+            org.opencontainers.image.description=Starbunk Discord Bot - ${{ inputs.container }} service
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created={{date 'YYYY-MM-DDTHH:mm:ssZ'}}
+
+            # Custom labels for monitoring and debugging
+            starbunk.container.name=${{ inputs.container }}
+            starbunk.validation.skipped=${{ inputs.skip-validation }}
+            starbunk.build.trigger=${{ github.event_name }}
+            starbunk.workflow.run-id=${{ github.run_id }}
+
+      - name: Verify Dockerfile exists
+        run: |
+          dockerfile_path="containers/${{ inputs.container }}/Dockerfile"
+          if [[ ! -f "$dockerfile_path" ]]; then
+            echo "❌ Dockerfile not found at: $dockerfile_path"
+            echo "::error title=Dockerfile Missing::Container ${{ inputs.container }} Dockerfile not found"
+            exit 1
+          fi
+          echo "✅ Dockerfile found at: $dockerfile_path"
+
+      - name: Build and push Docker image
+        id: build-push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: containers/${{ inputs.container }}/Dockerfile
+          push: ${{ inputs.push-images }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ inputs.build-platforms }}
+          cache-from: |
+            type=local,src=/tmp/.buildx-cache-${{ inputs.container }}
+            type=registry,ref=${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.container }}:buildcache
+          cache-to: |
+            type=local,dest=/tmp/.buildx-cache-${{ inputs.container }}-new,mode=max
+            type=registry,ref=${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.container }}:buildcache,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            CONTAINER_NAME=${{ inputs.container }}
+            BUILD_DATE={{date 'YYYY-MM-DDTHH:mm:ssZ'}}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ github.ref_name }}
+          provenance: false
+          sbom: false
+
+      - name: Move Docker cache
+        if: always()
+        run: |
+          rm -rf /tmp/.buildx-cache-${{ inputs.container }}
+          if [ -d "/tmp/.buildx-cache-${{ inputs.container }}-new" ]; then
+            mv /tmp/.buildx-cache-${{ inputs.container }}-new /tmp/.buildx-cache-${{ inputs.container }}
+          fi
+
+      - name: Set build result
+        id: build-result
+        if: always()
+        run: |
+          if [[ "${{ steps.build-push.outcome }}" == "success" ]]; then
+            echo "result=success" >> $GITHUB_OUTPUT
+            echo "✅ Docker build successful for ${{ inputs.container }}"
+          else
+            echo "result=failure" >> $GITHUB_OUTPUT
+            echo "❌ Docker build failed for ${{ inputs.container }}"
+          fi
+
+      # Image security scanning (production-ready feature)
+      - name: 🔒 Security scan Docker image
+        if: steps.build-push.outcome == 'success' && inputs.push-images == true
+        run: |
+          echo "🔒 Running security scan on ${{ inputs.container }} image..."
+
+          # Extract the first tag for scanning
+          first_tag=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "Scanning image: $first_tag"
+
+          # Use docker scout if available, otherwise skip with warning
+          if command -v docker &> /dev/null && docker scout version &> /dev/null; then
+            docker scout cves "$first_tag" || echo "⚠️  Security scan completed with findings"
+          else
+            echo "⚠️  Docker Scout not available - skipping security scan"
+            echo "🔒 Consider integrating with your preferred security scanning tool"
+          fi
+
+  # =============================================================================
+  # REPORTING AND OBSERVABILITY
+  # =============================================================================
+  report:
+    name: 📊 Generate Report
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    if: always()
+
+    steps:
+      - name: Generate container metrics
+        run: |
+          echo "📊 Generating metrics for ${{ inputs.container }}..."
+
+          # Create structured metrics for monitoring
+          cat > container-metrics.json << EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "container": "${{ inputs.container }}",
+            "workflow_run_id": "${{ github.run_id }}",
+            "repository": "${{ github.repository }}",
+            "ref": "${{ github.ref }}",
+            "sha": "${{ github.sha }}",
+            "event": "${{ github.event_name }}",
+            "pr_number": "${{ github.event.pull_request.number }}",
+            "validation": {
+              "enabled": ${{ inputs.skip-validation != true }},
+              "result": "${{ needs.validate.result }}",
+              "skipped": ${{ inputs.skip-validation == true }}
+            },
+            "build": {
+              "enabled": ${{ inputs.skip-build != true }},
+              "result": "${{ needs.build.result }}",
+              "skipped": ${{ inputs.skip-build == true }},
+              "push_enabled": ${{ inputs.push-images }},
+              "platforms": "${{ inputs.build-platforms }}",
+              "digest": "${{ needs.build.outputs.digest }}"
+            },
+            "performance": {
+              "cache_key_suffix": "${{ inputs.cache-key-suffix }}",
+              "registry": "${{ inputs.registry }}"
+            }
+          }
+          EOF
+
+          echo "Container metrics:"
+          cat container-metrics.json | jq '.' || cat container-metrics.json
+
+      - name: Output workflow summary
+        run: |
+          echo "# 🚀 Container CI Summary - ${{ inputs.container }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Validation section
+          if [[ "${{ inputs.skip-validation }}" == "true" ]]; then
+            echo "⏭️  **Validation**: Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            validation_result="${{ needs.validate.result }}"
+            if [[ "$validation_result" == "success" ]]; then
+              echo "✅ **Validation**: Passed (build → test → lint → typecheck)" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ **Validation**: Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+          # Build section
+          if [[ "${{ inputs.skip-build }}" == "true" ]]; then
+            echo "⏭️  **Docker Build**: Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            build_result="${{ needs.build.result }}"
+            if [[ "$build_result" == "success" ]]; then
+              echo "✅ **Docker Build**: Success" >> $GITHUB_STEP_SUMMARY
+              if [[ "${{ inputs.push-images }}" == "true" ]]; then
+                echo "📦 **Registry Push**: Enabled" >> $GITHUB_STEP_SUMMARY
+                # Show first few tags
+                tags="${{ needs.build.outputs.tags }}"
+                echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+                echo "$tags" | head -3 >> $GITHUB_STEP_SUMMARY
+                echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "📦 **Registry Push**: Disabled" >> $GITHUB_STEP_SUMMARY
+              fi
+            else
+              echo "❌ **Docker Build**: Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+          # Configuration
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Container**: \`${{ inputs.container }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: \`${{ inputs.registry }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platforms**: \`${{ inputs.build-platforms }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY

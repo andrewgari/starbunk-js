@@ -45,7 +45,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter
         with:
-          filters: '.github/path-filters.yml'
+          filters: '.github/path-filters-optimized.yml'
 
       - name: Detect which containers changed (direct)
         uses: dorny/paths-filter@v3

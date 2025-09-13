@@ -36,7 +36,6 @@ jobs:
       covabot: ${{ steps.changes.outputs.covabot }}
       djcova: ${{ steps.changes.outputs.djcova }}
       starbunk-dnd: ${{ steps.changes.outputs.starbunk-dnd }}
-      snowbunk: ${{ steps.changes.outputs.snowbunk }}
       shared: ${{ steps.changes.outputs.shared }}
       container-validation: ${{ steps.changes.outputs.container-validation }}
       any-container: ${{ steps.set-flags.outputs.any-container }}
@@ -48,7 +47,7 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: changes
         with:
-          filters: '.github/path-filters.yml'
+          filters: '.github/path-filters-optimized.yml'
 
       - name: Set validation flags
         id: set-flags
@@ -58,7 +57,6 @@ jobs:
              [[ "${{ steps.changes.outputs.covabot }}" == "true" ]] || \
              [[ "${{ steps.changes.outputs.djcova }}" == "true" ]] || \
              [[ "${{ steps.changes.outputs.starbunk-dnd }}" == "true" ]] || \
-             [[ "${{ steps.changes.outputs.snowbunk }}" == "true" ]] || \
              [[ "${{ steps.changes.outputs.shared }}" == "true" ]] || \
              [[ "${{ steps.changes.outputs.container-validation }}" == "true" ]]; then
             echo "any-container=true" >> $GITHUB_OUTPUT

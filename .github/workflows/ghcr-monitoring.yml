@@ -4,13 +4,12 @@ name: GHCR Health Monitoring
 # providing storage usage tracking, cleanup recommendations, and proactive alerts.
 
 on:
-  # Regular health checks every 6 hours
+  # Regular health checks and comprehensive reports
   schedule:
+    # Regular health checks every 6 hours
     - cron: '0 */6 * * *'
-
-  # Weekly comprehensive health reports
-  schedule:
-    - cron: '0 8 * * 1'  # Mondays at 8 AM UTC
+    # Weekly comprehensive health reports on Mondays at 8 AM UTC
+    - cron: '0 8 * * 1'
 
   # Manual health check trigger
   workflow_dispatch:
@@ -115,7 +114,7 @@ jobs:
             // Default containers if not in config
             const containers = config.containers?.length > 0
               ? config.containers.map(c => c.name)
-              : ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot', 'snowbunk'];
+              : ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot'];
 
             let healthStatus = 'healthy';
             let totalStorageBytes = 0;

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       containers:
-        description: 'Containers to build (comma-separated: bunkbot,djcova,starbunk-dnd,snowbunk,covabot or "all")'
+        description: 'Containers to build (comma-separated: bunkbot,djcova,starbunk-dnd,covabot or "all")'
         required: true
         default: 'all'
         type: string
@@ -37,7 +37,6 @@ jobs:
       bunkbot: ${{ steps.parse.outputs.bunkbot }}
       djcova: ${{ steps.parse.outputs.djcova }}
       starbunk-dnd: ${{ steps.parse.outputs.starbunk-dnd }}
-      snowbunk: ${{ steps.parse.outputs.snowbunk }}
       covabot: ${{ steps.parse.outputs.covabot }}
     steps:
       - name: Parse container selection
@@ -47,7 +46,7 @@ jobs:
 
           # Normalize input
           if [ "$CONTAINERS" = "all" ]; then
-            CONTAINERS="bunkbot,djcova,starbunk-dnd,snowbunk,covabot"
+            CONTAINERS="bunkbot,djcova,starbunk-dnd,covabot"
           fi
 
           echo "containers=$CONTAINERS" >> $GITHUB_OUTPUT
@@ -71,11 +70,6 @@ jobs:
             echo "starbunk-dnd=false" >> $GITHUB_OUTPUT
           fi
 
-          if echo "$CONTAINERS" | grep -q "snowbunk"; then
-            echo "snowbunk=true" >> $GITHUB_OUTPUT
-          else
-            echo "snowbunk=false" >> $GITHUB_OUTPUT
-          fi
 
           if echo "$CONTAINERS" | grep -q "covabot"; then
             echo "covabot=true" >> $GITHUB_OUTPUT
@@ -152,16 +146,6 @@ jobs:
     secrets:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-snowbunk:
-    needs: prepare
-    if: needs.prepare.outputs.snowbunk == 'true'
-    uses: ./.github/workflows/docker-build-reusable.yml
-    with:
-      container_name: snowbunk
-      image_tag: ${{ needs.prepare.outputs.tag }}
-      push_image: ${{ inputs.push_to_registry }}
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-covabot:
     needs: prepare
     if: needs.prepare.outputs.covabot == 'true'
@@ -175,7 +159,7 @@ jobs:
 
   summary:
     runs-on: ubuntu-latest
-    needs: [prepare, build-bunkbot, build-djcova, build-starbunk-dnd, build-snowbunk, build-covabot]
+    needs: [prepare, build-bunkbot, build-djcova, build-starbunk-dnd, build-covabot]
     if: always()
     steps:
       - name: Build Summary
@@ -191,7 +175,6 @@ jobs:
           echo "| bunkbot | ${{ needs.prepare.outputs.bunkbot }} | ${{ needs.build-bunkbot.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| djcova | ${{ needs.prepare.outputs.djcova }} | ${{ needs.build-djcova.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| starbunk-dnd | ${{ needs.prepare.outputs.starbunk-dnd }} | ${{ needs.build-starbunk-dnd.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| snowbunk | ${{ needs.prepare.outputs.snowbunk }} | ${{ needs.build-snowbunk.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| covabot | ${{ needs.prepare.outputs.covabot }} | ${{ needs.build-covabot.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -205,9 +188,6 @@ jobs:
             fi
             if [ "${{ needs.prepare.outputs.starbunk-dnd }}" = "true" ]; then
               echo "- \`ghcr.io/${{ github.repository_owner }}/starbunk-dnd:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-            fi
-            if [ "${{ needs.prepare.outputs.snowbunk }}" = "true" ]; then
-              echo "- \`ghcr.io/${{ github.repository_owner }}/snowbunk:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
             fi
             if [ "${{ needs.prepare.outputs.covabot }}" = "true" ]; then
               echo "- \`ghcr.io/${{ github.repository_owner }}/covabot:${{ needs.prepare.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY

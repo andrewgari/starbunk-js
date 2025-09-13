@@ -34,7 +34,6 @@ jobs:
       covabot: ${{ steps.changes.outputs.covabot }}
       djcova: ${{ steps.changes.outputs.djcova }}
       starbunk-dnd: ${{ steps.changes.outputs.starbunk-dnd }}
-      snowbunk: ${{ steps.changes.outputs.snowbunk }}
       shared: ${{ steps.changes.outputs.shared }}
       docker: ${{ steps.changes.outputs.docker }}
       workflows: ${{ steps.changes.outputs.workflows }}
@@ -49,7 +48,7 @@ jobs:
         uses: dorny/paths-filter@v3
         id: changes
         with:
-          filters: .github/path-filters.yml
+          filters: .github/path-filters-optimized.yml
           token: ${{ secrets.GITHUB_TOKEN }}
 
   claude-review:
@@ -145,7 +144,6 @@ jobs:
           ${{ needs.detect-changes.outputs.covabot == 'true' }} && containers+=("covabot")
           ${{ needs.detect-changes.outputs.djcova == 'true' }} && containers+=("djcova")
           ${{ needs.detect-changes.outputs.starbunk-dnd == 'true' }} && containers+=("starbunk-dnd")
-          ${{ needs.detect-changes.outputs.snowbunk == 'true' }} && containers+=("snowbunk")
           ${{ needs.detect-changes.outputs.shared == 'true' }} && containers+=("shared")
 
           for container in "${containers[@]}"; do
@@ -187,7 +185,6 @@ jobs:
           ${{ needs.detect-changes.outputs.covabot == 'true' }} && echo "- **CovaBot**: AI personality with Qdrant vector database" >> container-context.md
           ${{ needs.detect-changes.outputs.djcova == 'true' }} && echo "- **DJCova**: Music bot with voice channel management" >> container-context.md
           ${{ needs.detect-changes.outputs.starbunk-dnd == 'true' }} && echo "- **Starbunk-DnD**: D&D game mechanics and character management" >> container-context.md
-          ${{ needs.detect-changes.outputs.snowbunk == 'true' }} && echo "- **Snowbunk**: Specialized functionality with minimal resources" >> container-context.md
           ${{ needs.detect-changes.outputs.shared == 'true' }} && echo "- **Shared Library**: Core utilities affecting all containers" >> container-context.md
 
           echo "" >> container-context.md
@@ -290,16 +287,6 @@ jobs:
             - Performance with complex game calculations
             ' || '' }}
 
-            ### Snowbunk Container (${{ needs.detect-changes.outputs.snowbunk == 'true' && '✅ MODIFIED' || '⏭️ SKIPPED' }})
-            ${{ needs.detect-changes.outputs.snowbunk == 'true' && '
-            **Focus Areas:**
-            - Specialized functionality implementation
-            - Minimal resource usage optimization
-            - Production-only deployment considerations
-            - Lightweight service architecture
-            - Efficient Discord API usage
-
-            **Key Concerns:**
             - Resource efficiency and memory usage
             - Minimal dependency footprint
             - Production stability and reliability

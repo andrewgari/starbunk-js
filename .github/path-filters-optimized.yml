@@ -73,19 +73,6 @@ covabot-src:
   - '!containers/covabot/**/tests/**'
   - '!containers/covabot/**/*.md'
 
-# Legacy container (appears to exist but not documented in CLAUDE.md)
-snowbunk-src:
-  - 'containers/snowbunk/src/**'
-  - 'containers/snowbunk/lib/**'
-  - 'containers/snowbunk/package.json'
-  - 'containers/snowbunk/package-lock.json'
-  - 'containers/snowbunk/tsconfig.json'
-  - 'containers/snowbunk/Dockerfile*'
-  - 'containers/snowbunk/.dockerignore'
-  - '!containers/snowbunk/**/*.test.*'
-  - '!containers/snowbunk/**/__tests__/**'
-  - '!containers/snowbunk/**/tests/**'
-  - '!containers/snowbunk/**/*.md'
 
 # =============================================================================
 # CONTAINER BUILD DEPENDENCY MATRIX - Optimized for selective rebuilds
@@ -160,21 +147,6 @@ covabot:
   - '!**/tests/**'
   - '!**/*.md'
 
-snowbunk:
-  - 'containers/snowbunk/src/**'
-  - 'containers/snowbunk/lib/**'
-  - 'containers/snowbunk/package.json'
-  - 'containers/snowbunk/Dockerfile*'
-  - 'containers/shared/src/**'
-  - 'containers/shared/lib/**'
-  - 'containers/shared/package.json'
-  - 'docker-compose*.yml'
-  - 'package.json'
-  - 'tsconfig.json'
-  - '!**/*.test.*'
-  - '!**/__tests__/**'
-  - '!**/tests/**'
-  - '!**/*.md'
 
 # =============================================================================
 # TEST-ONLY FILTERS - Trigger tests but not builds

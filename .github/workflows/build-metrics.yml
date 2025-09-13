@@ -215,7 +215,7 @@ ${avgDuration > 10 ?
           echo "### 🚫 Docker Ignore Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          containers=("bunkbot" "djcova" "starbunk-dnd" "snowbunk" "covabot")
+          containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
           for container in "${containers[@]}"; do
             if [ -f "containers/$container/.dockerignore" ]; then
               echo "✅ $container has .dockerignore" >> $GITHUB_STEP_SUMMARY
