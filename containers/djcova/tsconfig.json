@@ -19,8 +19,8 @@
 		"baseUrl": "./src",
 		"paths": {
 			"@/*": ["*"],
-			"@starbunk/shared": ["../../packages/shared/src"],
-			"@starbunk/shared/*": ["../../packages/shared/src/*"]
+			"@starbunk/shared": ["../shared/src"],
+			"@starbunk/shared/*": ["../shared/src/*"]
 		}
 	},
 	"include": ["src/**/*.ts"],
@@ -38,6 +38,6 @@
 		"src/commandHandler.ts"
 	],
 	"references": [
-		{ "path": "../../packages/shared" }
+		{ "path": "../shared" }
 	]
 }

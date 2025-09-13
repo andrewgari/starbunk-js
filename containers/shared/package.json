@@ -4,6 +4,11 @@
 	"description": "Shared services and utilities for Starbunk containers",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
+	"files": [
+		"dist/**/*",
+		"package.json",
+		"README.md"
+	],
 	"scripts": {
 		"build": "tsc",
 		"dev": "tsc --watch",
