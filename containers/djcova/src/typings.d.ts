@@ -1,7 +1,7 @@
 /* eslint-disable */
 declare module '@discordjs/voice';
 declare module '@distube/ytdl-core';
-declare module 'discord.js';
+// Discord.js types are provided by the package itself
 declare module '../utils/voiceUtils';
 declare module 'fs';
 declare module 'path';
