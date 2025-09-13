@@ -48,13 +48,12 @@ jobs:
         with:
           filters: |
             docker_related:
-              - 'apps/${{ inputs.container_name }}/**'
-              - 'apps/${{ inputs.container_name }}/Dockerfile'
+              - 'apps/**'
               - 'docker-compose*.yml'
               - '.github/workflows/docker-*.yml'
 
   build-and-push:
-    name: 🐳 Build & Push ${{ inputs.container_name }}
+    name: 🐳 Build & Push Container
     needs: changes
     runs-on: ubuntu-latest
     # Only run if called and relevant paths changed
