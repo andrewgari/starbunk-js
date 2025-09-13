@@ -208,13 +208,20 @@ jobs:
           npm version $NEW_VERSION --no-git-tag-version
 
           # Update container package.json files
-          for container in shared bunkbot djcova starbunk-dnd covabot; do
+          for container in bunkbot djcova starbunk-dnd covabot; do
             if [ -f "apps/$container/package.json" ]; then
               cd apps/$container
               npm version $NEW_VERSION --no-git-tag-version
               cd ../..
             fi
           done
+
+          # Update shared package
+          if [ -f "packages/shared/package.json" ]; then
+            cd packages/shared
+            npm version $NEW_VERSION --no-git-tag-version
+            cd ../..
+          fi
 
       - name: Generate release notes
         id: release-notes
