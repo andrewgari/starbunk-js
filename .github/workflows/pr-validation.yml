@@ -1,11 +1,10 @@
-name: PR Validation & Snapshot Build (Legacy)
+name: PR Validation & Snapshot Build
 
 on:
-  # Disabled automatic triggers - using selective-pr-validation.yml instead
-  # pull_request:
-  #   types: [opened, synchronize, reopened, ready_for_review]
-  # push:
-  #   branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       force_all:
@@ -13,10 +12,6 @@ on:
         required: false
         type: boolean
         default: false
-      reason:
-        description: 'Reason for using legacy workflow'
-        required: true
-        type: string
 
 env:
   REGISTRY: ghcr.io
