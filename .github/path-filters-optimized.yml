@@ -198,6 +198,14 @@ shared-tests:
 # CRITICAL INFRASTRUCTURE - Always triggers full rebuild
 # =============================================================================
 
+# Container validation workflows and related infrastructure
+container-validation:
+  - '.github/workflows/container-startup-validation.yml'
+  - '.github/workflows/code-quality-gates.yml'
+  - '.github/workflows/build-metrics.yml'
+  - '.github/workflows/pr-validation.yml'
+  - '.github/path-filters*.yml'
+
 critical-infrastructure:
   - '.github/workflows/**'
   - '.github/actions/**'
