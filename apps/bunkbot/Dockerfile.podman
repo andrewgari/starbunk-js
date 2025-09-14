@@ -31,8 +31,11 @@ RUN apk add --no-cache python3 make g++ openssl
 COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
 COPY apps/bunkbot/package.json apps/bunkbot/package-lock.json ./
 
-# Install all dependencies (including dev) and clean up
-RUN cd shared && npm ci && cd .. && npm ci && npm cache clean --force
+# Install shared dependencies (including dev)
+RUN cd shared && npm ci && npm cache clean --force
+
+# Install container dependencies (including dev)
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY packages/shared ./shared

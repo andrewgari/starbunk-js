@@ -19,9 +19,11 @@ RUN apk add --no-cache \
 COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
 COPY apps/bunkbot/package.json apps/bunkbot/package-lock.json ./
 
-# Install dependencies with npm ci for reproducible builds
-RUN cd shared && npm ci --only=production --no-audit && \
-    cd .. && npm ci --only=production --no-audit
+# Install shared dependencies first
+RUN cd shared && npm ci --only=production --no-audit
+
+# Install container dependencies
+RUN npm ci --only=production --no-audit
 
 # Stage 2: Builder - Build application
 FROM node:20-alpine AS builder

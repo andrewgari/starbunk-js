@@ -13,8 +13,11 @@ RUN apk add --no-cache python3 make g++ openssl curl dumb-init
 COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
 COPY apps/covabot/package.json apps/covabot/package-lock.json ./
 
-# Install all dependencies in parallel for speed
-RUN cd shared && npm ci && cd .. && npm ci
+# Install shared dependencies first
+RUN cd shared && npm ci
+
+# Install container dependencies
+RUN npm ci
 
 # Copy source code
 COPY packages/shared ./shared

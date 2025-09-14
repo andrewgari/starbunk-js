@@ -13,8 +13,11 @@ RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
 COPY apps/bunkbot/package.json apps/bunkbot/package-lock.json ./
 
-# Install all dependencies in parallel for speed
-RUN cd shared && npm ci && cd .. && npm ci
+# Install shared dependencies first
+RUN cd shared && npm ci
+
+# Install container dependencies
+RUN npm ci
 
 # Note: Prisma client is handled via shared package dependencies
 

@@ -40,9 +40,14 @@ describe('Comprehensive Chat Testing Suite', () => {
 				data: {
 					userMessage: expect.any(String),
 					timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
-					botResponse: expect.anything(), // can be string or null
+					// botResponse can be string or null, so we'll check it separately
 				},
 			});
+
+			// Check botResponse separately - it can be string or null
+			expect(typeof response.body.data.botResponse === 'string' || response.body.data.botResponse === null).toBe(
+				true,
+			);
 
 			// Validate specific values
 			expect(response.body.success).toBe(true);
