@@ -16,8 +16,8 @@ RUN apk add --no-cache \
     && rm -rf /var/cache/apk/*
 
 # Copy package files for dependency installation (better Docker layer caching)
-COPY containers/shared/package*.json ./shared/
-COPY containers/bunkbot/package*.json ./
+COPY packages/shared/package*.json ./shared/
+COPY apps/bunkbot/package*.json ./
 
 # Install dependencies with npm ci for reproducible builds
 RUN cd shared && npm ci --only=production --no-audit && \
@@ -33,8 +33,8 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=dependencies /app/shared/node_modules ./shared/node_modules
 
 # Copy source code and configuration
-COPY containers/shared ./shared
-COPY containers/bunkbot ./
+COPY packages/shared ./shared
+COPY apps/bunkbot ./
 COPY prisma ./prisma
 COPY tsconfig.json ./
 
