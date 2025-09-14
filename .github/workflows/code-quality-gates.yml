@@ -337,7 +337,11 @@ jobs:
           # Run audit for each container
           for container in shared bunkbot djcova starbunk-dnd covabot; do
             echo "Auditing $container..."
-            cd apps/$container
+            if [ "$container" = "shared" ]; then
+              cd packages/$container
+            else
+              cd apps/$container
+            fi
             npm audit --audit-level=moderate || true
             cd ../..
           done

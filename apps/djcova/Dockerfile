@@ -13,11 +13,11 @@ RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
 COPY apps/djcova/package.json apps/djcova/package-lock.json ./
 
-# Install all dependencies in parallel for speed
-RUN echo "=== Starting npm ci in shared ===" && \
-    cd shared && ls -la && npm ci && \
-    echo "=== Starting npm ci in root ===" && \
-    cd .. && pwd && ls -la && npm ci
+# Install shared dependencies first
+RUN cd shared && npm ci
+
+# Install container dependencies
+RUN npm ci
 
 # Copy source code
 COPY packages/shared ./shared
