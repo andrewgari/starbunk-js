@@ -10,8 +10,8 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ openssl curl dumb-init
 
 # Copy package files for better caching
-COPY packages/shared/package*.json ./shared/
-COPY apps/covabot/package*.json ./
+COPY packages/shared/package*.json packages/shared/package-lock.json ./shared/
+COPY apps/covabot/package*.json apps/covabot/package-lock.json ./
 
 # Install all dependencies in parallel for speed
 RUN cd shared && npm ci && cd .. && npm ci

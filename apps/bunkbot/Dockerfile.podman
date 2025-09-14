@@ -10,8 +10,8 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files for dependency installation
-COPY packages/shared/package*.json ./shared/
-COPY apps/bunkbot/package*.json ./
+COPY packages/shared/package*.json packages/shared/package-lock.json ./shared/
+COPY apps/bunkbot/package*.json apps/bunkbot/package-lock.json ./
 
 # Install shared dependencies and clean up
 RUN cd shared && npm ci --only=production && npm cache clean --force
@@ -28,8 +28,8 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files
-COPY packages/shared/package*.json ./shared/
-COPY apps/bunkbot/package*.json ./
+COPY packages/shared/package*.json packages/shared/package-lock.json ./shared/
+COPY apps/bunkbot/package*.json apps/bunkbot/package-lock.json ./
 
 # Install all dependencies (including dev) and clean up
 RUN cd shared && npm ci && cd .. && npm ci && npm cache clean --force

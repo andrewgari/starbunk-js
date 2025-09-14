@@ -16,8 +16,8 @@ RUN apk add --no-cache \
     && rm -rf /var/cache/apk/*
 
 # Copy package files for dependency installation (better Docker layer caching)
-COPY packages/shared/package*.json ./shared/
-COPY apps/bunkbot/package*.json ./
+COPY packages/shared/package*.json packages/shared/package-lock.json ./shared/
+COPY apps/bunkbot/package*.json apps/bunkbot/package-lock.json ./
 
 # Install dependencies with npm ci for reproducible builds
 RUN cd shared && npm ci --only=production --no-audit && \
