@@ -14,7 +14,7 @@ COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
 COPY apps/djcova/package.json apps/djcova/package-lock.json ./
 
 # Install all dependencies in parallel for speed
-RUN cd shared && npm ci && cd .. && npm ci
+RUN cd shared && ls -la && npm ci && cd .. && ls -la && npm ci
 
 # Copy source code
 COPY packages/shared ./shared
