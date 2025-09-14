@@ -10,8 +10,8 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 
 # Copy package files for better caching
-COPY packages/shared/package*.json packages/shared/package-lock.json ./shared/
-COPY apps/starbunk-dnd/package*.json apps/starbunk-dnd/package-lock.json ./
+COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
+COPY apps/starbunk-dnd/package.json apps/starbunk-dnd/package-lock.json ./
 
 # Install all dependencies in parallel for speed
 RUN cd shared && npm ci && cd .. && npm ci
