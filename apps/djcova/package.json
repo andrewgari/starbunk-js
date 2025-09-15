@@ -1,0 +1,44 @@
+{
+	"name": "@starbunk/djcova",
+	"version": "1.0.0",
+	"description": "DJCova - Music service container",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "tsc && tsc-alias",
+		"build:docker": "tsc -p tsconfig.docker.json && tsc-alias -p tsconfig.docker.json",
+		"start": "node dist/index.js",
+		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
+		"test": "npx -y tsx src/commands/__tests__/play.test.ts",
+		"type-check": "tsc --noEmit",
+		"clean": "rimraf dist"
+	},
+	"dependencies": {
+		"@discordjs/builders": "^1.6.5",
+		"@discordjs/rest": "^2.5.0",
+		"@discordjs/voice": "^0.18.0",
+		"@distube/yt-dlp": "^2.0.1",
+		"@distube/ytdl-core": "^4.16.10",
+		"@starbunk/shared": "file:../../packages/shared",
+		"chalk": "^4.1.2",
+		"discord-api-types": "^0.38.23",
+		"discord.js": "^14.18.0",
+		"dotenv": "^16.5.0",
+		"ffmpeg-static": "^5.2.0",
+		"opusscript": "^0.0.8",
+		"play-dl": "^1.9.7",
+		"ytdl-core": "^4.11.5"
+	},
+	"devDependencies": {
+		"@types/jest": "^29.5.14",
+		"@types/node": "^20.17.14",
+		"cross-env": "^7.0.3",
+		"jest": "^29.7.0",
+		"rimraf": "^5.0.1",
+		"ts-jest": "^29.2.6",
+		"ts-node": "^10.9.2",
+		"ts-node-dev": "^2.0.0",
+		"tsc-alias": "^1.8.11",
+		"tsconfig-paths": "^4.2.0",
+		"typescript": "~5.3.0"
+	}
+}

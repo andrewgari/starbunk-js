@@ -101,7 +101,7 @@ get_affected_containers() {
     local infrastructure_changed=false
 
     # Check if shared package changed
-    if echo "$changed_files" | grep -q "^containers/shared/"; then
+    if echo "$changed_files" | grep -q "^packages/shared/"; then
         shared_changed=true
         log_warning "Shared package changed - validating all containers" >&2
     fi
@@ -117,19 +117,19 @@ get_affected_containers() {
         containers=("shared" "bunkbot" "djcova" "starbunk-dnd" "covabot")
     else
         # Check individual container changes
-        if echo "$changed_files" | grep -q "^containers/shared/"; then
+        if echo "$changed_files" | grep -q "^packages/shared/"; then
             containers+=("shared")
         fi
-        if echo "$changed_files" | grep -q "^containers/bunkbot/"; then
+        if echo "$changed_files" | grep -q "^apps/bunkbot/"; then
             containers+=("bunkbot")
         fi
-        if echo "$changed_files" | grep -q "^containers/djcova/"; then
+        if echo "$changed_files" | grep -q "^apps/djcova/"; then
             containers+=("djcova")
         fi
-        if echo "$changed_files" | grep -q "^containers/starbunk-dnd/"; then
+        if echo "$changed_files" | grep -q "^apps/starbunk-dnd/"; then
             containers+=("starbunk-dnd")
         fi
-        if echo "$changed_files" | grep -q "^containers/covabot/"; then
+        if echo "$changed_files" | grep -q "^apps/covabot/"; then
             containers+=("covabot")
         fi
     fi
@@ -151,11 +151,18 @@ validate_container() {
     echo
     log_info "[${container}] Starting validation..."
 
-    # Navigate to container directory
-    cd "$PROJECT_ROOT/containers/$container" || {
-        log_error "[${container}] Directory not found"
-        return 1
-    }
+    # Navigate to container directory (shared is in packages/, others in apps/)
+    if [ "$container" = "shared" ]; then
+        cd "$PROJECT_ROOT/packages/$container" || {
+            log_error "[${container}] Directory not found"
+            return 1
+        }
+    else
+        cd "$PROJECT_ROOT/apps/$container" || {
+            log_error "[${container}] Directory not found"
+            return 1
+        }
+    fi
 
     # Step 1: Build
     log_info "[${container}] ${BUILDING} Building..."
@@ -193,13 +200,23 @@ validate_container() {
     else
         # Fall back to root lint for this container
         cd "$PROJECT_ROOT"
-        if ! npx eslint "containers/${container}/src/**/*.ts" --format=compact >/dev/null 2>&1; then
-            log_error "[${container}] Linting failed (using root eslint)"
-            npx eslint "containers/${container}/src/**/*.ts" --format=compact # Show errors
-            cd "$PROJECT_ROOT/containers/$container"
-            return 1
+        if [ "$container" = "shared" ]; then
+            if ! npx eslint "packages/${container}/src/**/*.ts" --format=compact >/dev/null 2>&1; then
+                log_error "[${container}] Linting failed (using root eslint)"
+                npx eslint "packages/${container}/src/**/*.ts" --format=compact # Show errors
+                cd "$PROJECT_ROOT/packages/$container"
+                return 1
+            fi
+            cd "$PROJECT_ROOT/packages/$container"
+        else
+            if ! npx eslint "apps/${container}/src/**/*.ts" --format=compact >/dev/null 2>&1; then
+                log_error "[${container}] Linting failed (using root eslint)"
+                npx eslint "apps/${container}/src/**/*.ts" --format=compact # Show errors
+                cd "$PROJECT_ROOT/apps/$container"
+                return 1
+            fi
+            cd "$PROJECT_ROOT/apps/$container"
         fi
-        cd "$PROJECT_ROOT/containers/$container"
     fi
 
     step_duration=$(( $(date +%s) - step_start_time ))

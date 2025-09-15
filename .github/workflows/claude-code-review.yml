@@ -4,17 +4,17 @@ on:
   pull_request:
     types: [review_requested, synchronize]
     paths:
-      - "containers/**/*.ts"
-      - "containers/**/*.tsx"
-      - "containers/**/*.js"
-      - "containers/**/*.jsx"
-      - "containers/**/test/**"
-      - "containers/**/*.test.*"
-      - "containers/**/*.spec.*"
-      - "containers/**/src/**"
-      - "containers/**/package.json"
-      - "containers/**/Dockerfile"
-      - "containers/**/.dockerignore"
+      - "apps/**/*.ts"
+      - "apps/**/*.tsx"
+      - "apps/**/*.js"
+      - "apps/**/*.jsx"
+      - "apps/**/test/**"
+      - "apps/**/*.test.*"
+      - "apps/**/*.spec.*"
+      - "apps/**/src/**"
+      - "apps/**/package.json"
+      - "apps/**/Dockerfile"
+      - "apps/**/.dockerignore"
       - ".github/workflows/**"
       - "docker-compose*.yml"
   pull_request_review:
@@ -103,7 +103,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: |
             package-lock.json
-            containers/*/package-lock.json
+            apps/*/package-lock.json
 
       - name: Cache dependencies
         uses: actions/cache@v4
@@ -111,7 +111,7 @@ jobs:
           path: |
             ~/.npm
             node_modules
-            containers/*/node_modules
+            apps/*/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
@@ -121,7 +121,7 @@ jobs:
 
       - name: Install container dependencies
         run: |
-          for container in containers/*/; do
+          for container in apps/*/; do
             if [ -f "$container/package.json" ]; then
               echo "Installing dependencies for $container"
               cd "$container" && npm ci --prefer-offline --no-audit && cd ../..
@@ -148,7 +148,7 @@ jobs:
 
           for container in "${containers[@]}"; do
             echo "Checking container: $container"
-            cd "containers/$container"
+            cd "apps/$container"
 
             # Run linting
             if ! npm run lint 2>&1 | tee "../../${container}-lint.txt"; then

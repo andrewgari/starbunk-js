@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
-      - 'containers/**'
+      - 'apps/**'
       - 'shared/**'
       - '.github/workflows/container-startup-validation.yml'
       - '.github/workflows/code-quality-gates.yml'
@@ -14,7 +14,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'containers/**'
+      - 'apps/**'
       - 'shared/**'
       - '.github/workflows/container-startup-validation.yml'
       - '.github/workflows/code-quality-gates.yml'
@@ -85,16 +85,16 @@ jobs:
         container: [bunkbot, covabot, djcova, starbunk-dnd]
         include:
           - container: bunkbot
-            path: containers/bunkbot
+            path: apps/bunkbot
             test-script: test:unit
           - container: covabot
-            path: containers/covabot
+            path: apps/covabot
             test-script: test
           - container: djcova
-            path: containers/djcova
+            path: apps/djcova
             test-script: test
           - container: starbunk-dnd
-            path: containers/starbunk-dnd
+            path: apps/starbunk-dnd
             test-script: test
     steps:
       - name: Checkout code
@@ -106,17 +106,17 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: |
-            containers/shared/package-lock.json
+            packages/shared/package-lock.json
             ${{ matrix.path }}/package-lock.json
 
       - name: Install shared dependencies
         run: |
-          cd containers/shared
+          cd packages/shared
           npm ci
 
       - name: Build shared library
         run: |
-          cd containers/shared
+          cd packages/shared
           npm run build
 
       - name: Install container dependencies
@@ -167,27 +167,27 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: |
-            containers/shared/package-lock.json
-            containers/bunkbot/package-lock.json
+            packages/shared/package-lock.json
+            apps/bunkbot/package-lock.json
 
       - name: Install shared dependencies
         run: |
-          cd containers/shared
+          cd packages/shared
           npm ci
 
       - name: Build shared library
         run: |
-          cd containers/shared
+          cd packages/shared
           npm run build
 
       - name: Install BunkBot dependencies
         run: |
-          cd containers/bunkbot
+          cd apps/bunkbot
           npm ci
 
       - name: Run CovaBot filtering tests
         run: |
-          cd containers/bunkbot
+          cd apps/bunkbot
           npm test -- --testPathPattern="covabot-filtering" --verbose
 
   container-startup-tests:
@@ -200,8 +200,8 @@ jobs:
         container: [bunkbot]
         include:
           - container: bunkbot
-            path: containers/bunkbot
-            dockerfile: containers/bunkbot/Dockerfile
+            path: apps/bunkbot
+            dockerfile: apps/bunkbot/Dockerfile
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -212,17 +212,17 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: |
-            containers/shared/package-lock.json
+            packages/shared/package-lock.json
             ${{ matrix.path }}/package-lock.json
 
       - name: Install shared dependencies
         run: |
-          cd containers/shared
+          cd packages/shared
           npm ci
 
       - name: Build shared library
         run: |
-          cd containers/shared
+          cd packages/shared
           npm run build
 
       - name: Install container dependencies

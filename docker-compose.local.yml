@@ -5,7 +5,7 @@ services:
   bunkbot:
     build:
       context: .
-      dockerfile: containers/bunkbot/Dockerfile
+      dockerfile: apps/bunkbot/Dockerfile
     container_name: bunkbot-local
     restart: unless-stopped
     env_file:

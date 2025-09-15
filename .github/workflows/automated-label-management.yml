@@ -42,13 +42,13 @@ jobs:
               // Container-specific labels
               const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot'];
               containers.forEach(container => {
-                if (changedFiles.some(file => file.startsWith(`containers/${container}/`))) {
+                if (changedFiles.some(file => file.startsWith(`apps/${container}/`))) {
                   labelsToAdd.push(container);
                 }
               });
 
               // Shared library changes
-              if (changedFiles.some(file => file.startsWith('containers/shared/'))) {
+              if (changedFiles.some(file => file.startsWith('packages/shared/'))) {
                 labelsToAdd.push('shared-library');
               }
 
@@ -145,7 +145,7 @@ jobs:
               if (title.includes('breaking') ||
                   body.includes('breaking change') ||
                   title.includes('!:') ||
-                  changedFiles.some(file => file.startsWith('containers/shared/src/'))) {
+                  changedFiles.some(file => file.startsWith('packages/shared/src/'))) {
                 labelsToAdd.push('breaking-change');
               }
 

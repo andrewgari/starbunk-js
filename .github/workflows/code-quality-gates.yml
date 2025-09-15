@@ -53,13 +53,13 @@ jobs:
         with:
           filters: |
             bunkbot:
-              - 'containers/bunkbot/**'
+              - 'apps/bunkbot/**'
             djcova:
-              - 'containers/djcova/**'
+              - 'apps/djcova/**'
             covabot:
-              - 'containers/covabot/**'
+              - 'apps/covabot/**'
             starbunk-dnd:
-              - 'containers/starbunk-dnd/**'
+              - 'apps/starbunk-dnd/**'
 
       - name: Determine if quality checks should run
         id: should-run
@@ -105,7 +105,7 @@ jobs:
           npm run setup:containers
 
       - name: Build shared package for type checking
-        run: cd containers/shared && npm run build
+        run: cd packages/shared && npm run build
 
       - name: Run TypeScript compilation check (changed areas only)
         env:
@@ -119,23 +119,23 @@ jobs:
           FAILED=0
 
           echo "Type-checking shared..."
-          (cd containers/shared && npm run type-check) || FAILED=1
+          (cd packages/shared && npm run type-check) || FAILED=1
 
           if [ "$BUNKBOT" = "true" ]; then
             echo "Type-checking bunkbot..."
-            (cd containers/bunkbot && npm run type-check) || FAILED=1
+            (cd apps/bunkbot && npm run type-check) || FAILED=1
           fi
           if [ "$DJCOVA" = "true" ]; then
             echo "Type-checking djcova..."
-            (cd containers/djcova && npm run type-check) || FAILED=1
+            (cd apps/djcova && npm run type-check) || FAILED=1
           fi
           if [ "$COVABOT" = "true" ]; then
             echo "Type-checking covabot..."
-            (cd containers/covabot && npm run type-check) || FAILED=1
+            (cd apps/covabot && npm run type-check) || FAILED=1
           fi
           if [ "$STARBUNK_DND" = "true" ]; then
             echo "Type-checking starbunk-dnd..."
-            (cd containers/starbunk-dnd && npm run type-check) || FAILED=1
+            (cd apps/starbunk-dnd && npm run type-check) || FAILED=1
           fi
 
           if [ $FAILED -ne 0 ]; then
@@ -195,7 +195,7 @@ jobs:
           npm install -g complexity-report
 
           # Analyze complexity for all TypeScript files
-          find containers/*/src -name "*.ts" -not -path "*/node_modules/*" -not -name "*.test.ts" -not -name "*.spec.ts" > ts-files.txt
+          find apps/*/src -name "*.ts" -not -path "*/node_modules/*" -not -name "*.test.ts" -not -name "*.spec.ts" > ts-files.txt
 
           COMPLEX_FILES=0
           TOTAL_FILES=0
@@ -256,7 +256,7 @@ jobs:
         with:
           name: coverage-reports
           path: |
-            containers/shared/coverage/
+            packages/shared/coverage/
             eslint-results.json
           retention-days: 30
 
@@ -337,7 +337,11 @@ jobs:
           # Run audit for each container
           for container in shared bunkbot djcova starbunk-dnd covabot; do
             echo "Auditing $container..."
-            cd containers/$container
+            if [ "$container" = "shared" ]; then
+              cd packages/$container
+            else
+              cd apps/$container
+            fi
             npm audit --audit-level=moderate || true
             cd ../..
           done
@@ -388,23 +392,23 @@ jobs:
         run: |
           set -e
           echo "Building shared first (required by containers)..."
-          (cd containers/shared && npm ci && npm run build)
+          (cd packages/shared && npm ci && npm run build)
 
           if [ "$BUNKBOT" = "true" ]; then
             echo "Building bunkbot..."
-            (cd containers/bunkbot && npm ci && npm run build) || exit 1
+            (cd apps/bunkbot && npm ci && npm run build) || exit 1
           fi
           if [ "$DJCOVA" = "true" ]; then
             echo "Building djcova..."
-            (cd containers/djcova && npm ci && npm run build) || exit 1
+            (cd apps/djcova && npm ci && npm run build) || exit 1
           fi
           if [ "$COVABOT" = "true" ]; then
             echo "Building covabot..."
-            (cd containers/covabot && npm ci && npm run build) || exit 1
+            (cd apps/covabot && npm ci && npm run build) || exit 1
           fi
           if [ "$STARBUNK_DND" = "true" ]; then
             echo "Building starbunk-dnd..."
-            (cd containers/starbunk-dnd && npm ci && npm run build) || exit 1
+            (cd apps/starbunk-dnd && npm ci && npm run build) || exit 1
           fi
 
       - name: Analyze bundle sizes
@@ -413,8 +417,8 @@ jobs:
           echo "" >> bundle-analysis.md
 
           for container in bunkbot djcova starbunk-dnd covabot; do
-            if [ -d "containers/$container/dist" ]; then
-              SIZE=$(du -sh containers/$container/dist | cut -f1)
+            if [ -d "apps/$container/dist" ]; then
+              SIZE=$(du -sh apps/$container/dist | cut -f1)
               echo "- **$container**: $SIZE" >> bundle-analysis.md
             fi
           done
@@ -426,9 +430,9 @@ jobs:
           echo "" >> bundle-analysis.md
 
           for container in bunkbot djcova starbunk-dnd covabot; do
-            if [ -f "containers/$container/dist/index.js" ]; then
+            if [ -f "apps/$container/dist/index.js" ]; then
               # Basic analysis - count requires and estimate memory usage
-              REQUIRES=$(grep -c "require\|import" containers/$container/dist/index.js || echo "0")
+              REQUIRES=$(grep -c "require\|import" apps/$container/dist/index.js || echo "0")
               echo "- **$container**: ~$((REQUIRES * 2))MB estimated (based on $REQUIRES dependencies)" >> bundle-analysis.md
             fi
           done

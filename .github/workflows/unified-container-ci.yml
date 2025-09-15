@@ -116,10 +116,10 @@ jobs:
           path: |
             ~/.npm
             node_modules
-            containers/shared/node_modules
-            containers/${{ inputs.container }}/node_modules
-            containers/shared/dist
-          key: deps-unified-v1-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**', 'containers/shared/package.json') }}${{ inputs.cache-key-suffix }}
+            packages/shared/node_modules
+            apps/${{ inputs.container }}/node_modules
+            packages/shared/dist
+          key: deps-unified-v1-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('packages/shared/src/**', 'packages/shared/package.json') }}${{ inputs.cache-key-suffix }}
           restore-keys: |
             deps-unified-v1-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
             deps-unified-v1-${{ runner.os }}-
@@ -133,10 +133,10 @@ jobs:
           (npm ci --prefer-offline --no-audit --silent || exit 1) &
           root_pid=$!
 
-          (cd containers/shared && npm ci --prefer-offline --no-audit --silent || exit 1) &
+          (cd packages/shared && npm ci --prefer-offline --no-audit --silent || exit 1) &
           shared_pid=$!
 
-          (cd containers/${{ inputs.container }} && npm ci --prefer-offline --no-audit --silent || exit 1) &
+          (cd apps/${{ inputs.container }} && npm ci --prefer-offline --no-audit --silent || exit 1) &
           container_pid=$!
 
           # Wait for all with error propagation
@@ -150,7 +150,7 @@ jobs:
         if: steps.deps-cache.outputs.cache-hit != 'true'
         run: |
           echo "🔨 Building shared package..."
-          cd containers/shared
+          cd packages/shared
           npm run build || { echo "❌ Shared package build failed"; exit 1; }
           echo "✅ Shared package built"
 
@@ -161,17 +161,17 @@ jobs:
           path: |
             ~/.npm
             node_modules
-            containers/shared/node_modules
-            containers/${{ inputs.container }}/node_modules
-            containers/shared/dist
-          key: deps-unified-v1-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('containers/shared/src/**', 'containers/shared/package.json') }}${{ inputs.cache-key-suffix }}
+            packages/shared/node_modules
+            apps/${{ inputs.container }}/node_modules
+            packages/shared/dist
+          key: deps-unified-v1-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('packages/shared/src/**', 'packages/shared/package.json') }}${{ inputs.cache-key-suffix }}
 
       # Step 1: Build
       - name: 🔨 Build ${{ inputs.container }}
         id: build-step
         run: |
           echo "🔨 Building ${{ inputs.container }} container..."
-          cd containers/${{ inputs.container }}
+          cd apps/${{ inputs.container }}
 
           # Check if build script exists
           if ! npm run --silent build --dry-run 2>/dev/null; then
@@ -192,7 +192,7 @@ jobs:
         id: test-step
         run: |
           echo "🧪 Running ${{ inputs.container }} tests..."
-          cd containers/${{ inputs.container }}
+          cd apps/${{ inputs.container }}
 
           # Run tests with comprehensive options
           npm test -- --passWithNoTests --coverage=false --verbose --testTimeout=30000 || {
@@ -207,7 +207,7 @@ jobs:
         id: lint-step
         run: |
           echo "🧹 Linting ${{ inputs.container }} code..."
-          cd containers/${{ inputs.container }}
+          cd apps/${{ inputs.container }}
 
           # Try container-specific lint first, fallback to root
           if npm run --silent lint --dry-run 2>/dev/null; then
@@ -219,7 +219,7 @@ jobs:
           else
             echo "Using root ESLint configuration for ${{ inputs.container }}"
             cd ../..
-            npx eslint "containers/${{ inputs.container }}/src/**/*.ts" --format=stylish || {
+            npx eslint "apps/${{ inputs.container }}/src/**/*.ts" --format=stylish || {
               echo "❌ ${{ inputs.container }} linting failed (root config)"
               echo "::error title=Lint Failed::Container ${{ inputs.container }} linting failed"
               exit 1
@@ -232,7 +232,7 @@ jobs:
         id: typecheck-step
         run: |
           echo "🔍 Type-checking ${{ inputs.container }}..."
-          cd containers/${{ inputs.container }}
+          cd apps/${{ inputs.container }}
 
           # Try container-specific type-check, fallback to tsc
           if npm run --silent type-check --dry-run 2>/dev/null; then
@@ -346,7 +346,7 @@ jobs:
 
       - name: Verify Dockerfile exists
         run: |
-          dockerfile_path="containers/${{ inputs.container }}/Dockerfile"
+          dockerfile_path="apps/${{ inputs.container }}/Dockerfile"
           if [[ ! -f "$dockerfile_path" ]]; then
             echo "❌ Dockerfile not found at: $dockerfile_path"
             echo "::error title=Dockerfile Missing::Container ${{ inputs.container }} Dockerfile not found"
@@ -359,7 +359,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: containers/${{ inputs.container }}/Dockerfile
+          file: apps/${{ inputs.container }}/Dockerfile
           push: ${{ inputs.push-images }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -213,7 +213,7 @@ jobs:
       - name: 🔧 Build Shared Package
         run: |
           echo "🔧 Building shared package..."
-          cd containers/shared
+          cd packages/shared
           npm run build
           echo "✅ Shared package built successfully"
 
@@ -221,7 +221,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: shared-build
-          path: containers/shared/dist/
+          path: packages/shared/dist/
           retention-days: 1
 
   # ==============================================================================
@@ -279,14 +279,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: shared-build
-          path: containers/shared/dist/
+          path: packages/shared/dist/
 
       - name: 🏗️ Build and Push Container Image
         id: deployment
         uses: docker/build-push-action@v6
         with:
-          context: containers/${{ matrix.container }}
-          file: containers/${{ matrix.container }}/Dockerfile
+          context: apps/${{ matrix.container }}
+          file: apps/${{ matrix.container }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

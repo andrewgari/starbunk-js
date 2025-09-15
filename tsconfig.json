@@ -12,10 +12,10 @@
 	"include": [],
 	"exclude": ["node_modules", "dist", "archive"],
 	"references": [
-		{ "path": "./containers/shared" },
-		{ "path": "./containers/bunkbot" },
-		{ "path": "./containers/djcova" },
-		{ "path": "./containers/starbunk-dnd" },
-		{ "path": "./containers/covabot" }
+		{ "path": "./packages/shared" },
+		{ "path": "./apps/bunkbot" },
+		{ "path": "./apps/djcova" },
+		{ "path": "./apps/starbunk-dnd" },
+		{ "path": "./apps/covabot" }
 	]
 }
