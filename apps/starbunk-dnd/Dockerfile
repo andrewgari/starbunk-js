@@ -9,9 +9,9 @@ WORKDIR /app
 # Install all system dependencies in one layer
 RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 
-# Copy package files for better caching
-COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
-COPY apps/starbunk-dnd/package.json apps/starbunk-dnd/package-lock.json ./
+# Copy package files for better caching (skip package-lock.json due to Alpine compatibility issues)
+COPY packages/shared/package.json ./shared/
+COPY apps/starbunk-dnd/package.json ./
 
 # Install shared dependencies first
 RUN cd shared && npm install
@@ -22,7 +22,6 @@ RUN npm install
 # Copy source code (skip package files that are already copied)
 COPY packages/shared ./shared
 COPY apps/starbunk-dnd/src ./src
-COPY apps/starbunk-dnd/scripts ./scripts
 COPY apps/starbunk-dnd/tests ./tests
 COPY apps/starbunk-dnd/jest.config.js apps/starbunk-dnd/tsconfig*.json apps/starbunk-dnd/.dockerignore ./
 

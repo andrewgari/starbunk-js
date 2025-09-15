@@ -9,9 +9,9 @@ WORKDIR /app
 # Install all system dependencies in one layer
 RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 
-# Copy package files for better caching
-COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
-COPY apps/djcova/package.json apps/djcova/package-lock.json ./
+# Copy package files for better caching (skip package-lock.json due to Alpine compatibility issues)
+COPY packages/shared/package.json ./shared/
+COPY apps/djcova/package.json ./
 
 # Install shared dependencies first
 RUN cd shared && npm install
@@ -22,7 +22,6 @@ RUN npm install
 # Copy source code (skip package files that are already copied)
 COPY packages/shared ./shared
 COPY apps/djcova/src ./src
-COPY apps/djcova/scripts ./scripts
 COPY apps/djcova/tests ./tests
 COPY apps/djcova/jest.config.js apps/djcova/tsconfig*.json apps/djcova/.dockerignore ./
 
