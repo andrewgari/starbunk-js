@@ -14,14 +14,17 @@ COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
 COPY apps/starbunk-dnd/package.json apps/starbunk-dnd/package-lock.json ./
 
 # Install shared dependencies first
-RUN cd shared && npm ci
+RUN cd shared && npm install
 
 # Install container dependencies
-RUN npm ci
+RUN npm install
 
-# Copy source code
+# Copy source code (skip package files that are already copied)
 COPY packages/shared ./shared
-COPY apps/starbunk-dnd ./
+COPY apps/starbunk-dnd/src ./src
+COPY apps/starbunk-dnd/scripts ./scripts
+COPY apps/starbunk-dnd/tests ./tests
+COPY apps/starbunk-dnd/jest.config.js apps/starbunk-dnd/tsconfig*.json apps/starbunk-dnd/.dockerignore ./
 
 # Build shared package and container in one step
 RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \

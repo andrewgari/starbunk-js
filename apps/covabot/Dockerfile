@@ -14,14 +14,17 @@ COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
 COPY apps/covabot/package.json apps/covabot/package-lock.json ./
 
 # Install shared dependencies first
-RUN cd shared && npm ci
+RUN cd shared && npm install
 
 # Install container dependencies
-RUN npm ci
+RUN npm install
 
-# Copy source code
+# Copy source code (skip package files that are already copied)
 COPY packages/shared ./shared
-COPY apps/covabot ./
+COPY apps/covabot/src ./src
+COPY apps/covabot/scripts ./scripts
+COPY apps/covabot/tests ./tests
+COPY apps/covabot/jest.config.js apps/covabot/tsconfig*.json apps/covabot/.dockerignore ./
 
 # Build shared package and container in one step
 RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \

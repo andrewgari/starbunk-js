@@ -14,16 +14,17 @@ COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
 COPY apps/bunkbot/package.json apps/bunkbot/package-lock.json ./
 
 # Install shared dependencies first
-RUN cd shared && npm ci
+RUN cd shared && npm install
 
 # Install container dependencies
-RUN npm ci
+RUN npm install
 
-# Note: Prisma client is handled via shared package dependencies
-
-# Copy source code
+# Copy source code (skip package files that are already copied)
 COPY packages/shared ./shared
-COPY apps/bunkbot ./
+COPY apps/bunkbot/src ./src
+COPY apps/bunkbot/scripts ./scripts
+COPY apps/bunkbot/tests ./tests
+COPY apps/bunkbot/jest.config.js apps/bunkbot/tsconfig*.json apps/bunkbot/.dockerignore ./
 
 # Build shared package first
 RUN cd shared && npm run build

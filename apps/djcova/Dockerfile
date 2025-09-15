@@ -14,14 +14,17 @@ COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
 COPY apps/djcova/package.json apps/djcova/package-lock.json ./
 
 # Install shared dependencies first
-RUN cd shared && npm ci
+RUN cd shared && npm install
 
 # Install container dependencies
-RUN npm ci
+RUN npm install
 
-# Copy source code
+# Copy source code (skip package files that are already copied)
 COPY packages/shared ./shared
-COPY apps/djcova ./
+COPY apps/djcova/src ./src
+COPY apps/djcova/scripts ./scripts
+COPY apps/djcova/tests ./tests
+COPY apps/djcova/jest.config.js apps/djcova/tsconfig*.json apps/djcova/.dockerignore ./
 
 # Build shared package and container in one step
 RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
