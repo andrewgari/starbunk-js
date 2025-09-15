@@ -567,10 +567,10 @@ jobs:
 
             // Required status check contexts that branch protection expects
             const statusChecks = [
-              { context: '📊 Code Quality Analysis', description: success ? 'Code quality validation completed' : `Code quality failed: ${failureReason}` },
-              { context: '🔒 Security Analysis', description: success ? 'Security analysis completed' : `Security analysis failed: ${failureReason}` },
-              { context: '⚡ Performance Analysis', description: success ? 'Performance analysis completed' : `Performance analysis failed: ${failureReason}` },
-              { context: '✅ PR Validation Complete', description: success ? 'PR validation workflow completed successfully' : `PR validation failed: ${failureReason}` }
+              { context: 'Code Quality Analysis', description: success ? 'Code quality validation completed' : `Code quality failed: ${failureReason}` },
+              { context: 'Security Analysis', description: success ? 'Security analysis completed' : `Security analysis failed: ${failureReason}` },
+              { context: 'Performance Analysis', description: success ? 'Performance analysis completed' : `Performance analysis failed: ${failureReason}` },
+              { context: 'PR Validation Complete', description: success ? 'PR validation workflow completed successfully' : `PR validation failed: ${failureReason}` }
             ];
 
             // Determine state
