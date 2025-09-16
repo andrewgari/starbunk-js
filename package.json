@@ -13,7 +13,7 @@
     "build:starbunk-dnd": "cd apps/starbunk-dnd && npm run build",
     "build:covabot": "cd apps/covabot && npm run build",
     "start": "docker compose up -d",
-    "start:dev": "docker compose -f docker-compose.dev.yml up -d",
+    "start:dev": "docker compose -f infrastructure/docker/docker-compose.dev.yml up -d",
     "stop": "docker compose down",
     "logs": "docker compose logs -f",
     "logs:bunkbot": "docker compose logs -f bunkbot",
