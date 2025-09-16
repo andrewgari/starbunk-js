@@ -9,16 +9,21 @@ WORKDIR /app
 # Install all system dependencies in one layer
 RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 
-# Copy package files for better caching
-COPY containers/shared/package*.json ./shared/
-COPY containers/starbunk-dnd/package*.json ./
+# Copy package files for better caching (skip package-lock.json due to Alpine compatibility issues)
+COPY packages/shared/package.json ./shared/
+COPY apps/starbunk-dnd/package.json ./
 
-# Install all dependencies in parallel for speed
-RUN cd shared && npm ci && cd .. && npm ci
+# Install shared dependencies first
+RUN cd shared && npm install
 
-# Copy source code
-COPY containers/shared ./shared
-COPY containers/starbunk-dnd ./
+# Install container dependencies
+RUN npm install
+
+# Copy source code (skip package files that are already copied)
+COPY packages/shared ./shared
+COPY apps/starbunk-dnd/src ./src
+COPY apps/starbunk-dnd/tests ./tests
+COPY apps/starbunk-dnd/jest.config.js apps/starbunk-dnd/tsconfig*.json apps/starbunk-dnd/.dockerignore ./
 
 # Build shared package and container in one step
 RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \

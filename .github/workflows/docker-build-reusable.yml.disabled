@@ -23,7 +23,8 @@ on:
         default: 'ghcr.io'
     secrets:
       GITHUB_TOKEN:
-        required: true
+        description: 'GitHub token for container registry authentication'
+        required: false
 
 # This workflow should ONLY be called by other workflows, never triggered directly
 # If you see this workflow failing, it means it's being triggered incorrectly
@@ -34,6 +35,8 @@ jobs:
   changes:
     name: Detect Docker-related changes
     runs-on: ubuntu-latest
+    # Only run if called via workflow_call (not on push/other events)
+    if: github.event_name == 'workflow_call'
     outputs:
       docker_related: ${{ steps.filter.outputs.docker_related }}
     steps:
@@ -51,7 +54,7 @@ jobs:
               - '.github/workflows/docker-*.yml'
 
   build-and-push:
-    name: 🐳 Build & Push ${{ inputs.container_name }}
+    name: 🐳 Build & Push Container
     needs: changes
     runs-on: ubuntu-latest
     # Only run if called and relevant paths changed
@@ -63,10 +66,10 @@ jobs:
     steps:
       - name: Debug inputs
         run: |
-          echo "Container name: ${{ inputs.container_name }}"
-          echo "Image tag: ${{ inputs.image_tag }}"
-          echo "Push image: ${{ inputs.push_image }}"
-          echo "Registry: ${{ inputs.registry }}"
+          echo "Container name: ${{ inputs.container_name || 'not-provided' }}"
+          echo "Image tag: ${{ inputs.image_tag || 'not-provided' }}"
+          echo "Push image: ${{ inputs.push_image || 'false' }}"
+          echo "Registry: ${{ inputs.registry || 'not-provided' }}"
           echo "Event name: ${{ github.event_name }}"
           echo "Ref: ${{ github.ref }}"
 
@@ -81,10 +84,10 @@ jobs:
           buildkitd-flags: --allow-insecure-entitlement network.host
 
       - name: Log in to Container Registry
-        if: ${{ inputs.push_image }}
+        if: ${{ inputs.push_image || false }}
         uses: docker/login-action@v3
         with:
-          registry: ${{ inputs.registry }}
+          registry: ${{ inputs.registry || 'ghcr.io' }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -92,13 +95,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.container_name }}
+          images: ${{ inputs.registry || 'ghcr.io' }}/${{ github.repository_owner }}/${{ inputs.container_name || 'unknown-container' }}
           tags: |
-            type=raw,value=${{ inputs.image_tag }}
+            type=raw,value=${{ inputs.image_tag || 'unknown-tag' }}
 
       - name: Verify container directory exists
         run: |
-          CONTAINER_DIR="${{ inputs.container_name }}"
+          CONTAINER_DIR="${{ inputs.container_name || 'unknown-container' }}"
 
           if [ ! -d "apps/$CONTAINER_DIR" ]; then
             echo "Error: Container directory apps/$CONTAINER_DIR does not exist"
@@ -116,22 +119,22 @@ jobs:
         with:
           context: .
           file: apps/${{ env.CONTAINER_DIR }}/Dockerfile
-          push: ${{ inputs.push_image }}
+          push: ${{ inputs.push_image || false }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
-            type=gha,scope=${{ inputs.container_name }}
-            type=registry,ref=${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.container_name }}:buildcache
+            type=gha,scope=${{ inputs.container_name || 'unknown-container' }}
+            type=registry,ref=${{ inputs.registry || 'ghcr.io' }}/${{ github.repository_owner }}/${{ inputs.container_name || 'unknown-container' }}:buildcache
           cache-to: |
-            type=gha,mode=max,scope=${{ inputs.container_name }}
-            type=registry,ref=${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.container_name }}:buildcache,mode=max
+            type=gha,mode=max,scope=${{ inputs.container_name || 'unknown-container' }}
+            type=registry,ref=${{ inputs.registry || 'ghcr.io' }}/${{ github.repository_owner }}/${{ inputs.container_name || 'unknown-container' }}:buildcache,mode=max
           platforms: linux/amd64
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
       - name: Output image details
         run: |
-          echo "Built image: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.container_name }}:${{ inputs.image_tag }}"
-          echo "Container: ${{ inputs.container_name }}"
-          echo "Tag: ${{ inputs.image_tag }}"
-          echo "Pushed: ${{ inputs.push_image }}"
+          echo "Built image: ${{ inputs.registry || 'ghcr.io' }}/${{ github.repository_owner }}/${{ inputs.container_name || 'unknown-container' }}:${{ inputs.image_tag || 'unknown-tag' }}"
+          echo "Container: ${{ inputs.container_name || 'unknown-container' }}"
+          echo "Tag: ${{ inputs.image_tag || 'unknown-tag' }}"
+          echo "Pushed: ${{ inputs.push_image || 'false' }}"

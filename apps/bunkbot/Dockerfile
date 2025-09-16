@@ -9,18 +9,23 @@ WORKDIR /app
 # Install all system dependencies in one layer
 RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 
-# Copy package files for better caching
-COPY containers/shared/package*.json ./shared/
-COPY containers/bunkbot/package*.json ./
+# Copy package files for better caching (skip package-lock.json due to Alpine compatibility issues)
+COPY packages/shared/package.json ./shared/
+COPY apps/bunkbot/package.json ./
 
-# Install all dependencies in parallel for speed
-RUN cd shared && npm ci && cd .. && npm ci
+# Install shared dependencies first
+RUN cd shared && npm install
 
-# Note: Prisma client is handled via shared package dependencies
+# Install container dependencies
+RUN npm install
 
-# Copy source code
-COPY containers/shared ./shared
-COPY containers/bunkbot ./
+# Copy source code (skip package files that are already copied)
+COPY packages/shared ./shared
+COPY apps/bunkbot/src ./src
+COPY apps/bunkbot/tests ./tests
+COPY apps/bunkbot/jest.config.js apps/bunkbot/tsconfig*.json apps/bunkbot/.dockerignore ./
+# Copy scripts directory if it exists (bunkbot has scripts, others don't)
+COPY apps/bunkbot/scripts ./scripts
 
 # Build shared package first
 RUN cd shared && npm run build

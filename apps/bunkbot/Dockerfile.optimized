@@ -16,12 +16,14 @@ RUN apk add --no-cache \
     && rm -rf /var/cache/apk/*
 
 # Copy package files for dependency installation (better Docker layer caching)
-COPY containers/shared/package*.json ./shared/
-COPY containers/bunkbot/package*.json ./
+COPY packages/shared/package.json packages/shared/package-lock.json ./shared/
+COPY apps/bunkbot/package.json apps/bunkbot/package-lock.json ./
 
-# Install dependencies with npm ci for reproducible builds
-RUN cd shared && npm ci --only=production --no-audit && \
-    cd .. && npm ci --only=production --no-audit
+# Install shared dependencies first
+RUN cd shared && npm ci --only=production --no-audit
+
+# Install container dependencies
+RUN npm ci --only=production --no-audit
 
 # Stage 2: Builder - Build application
 FROM node:20-alpine AS builder
@@ -33,8 +35,8 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=dependencies /app/shared/node_modules ./shared/node_modules
 
 # Copy source code and configuration
-COPY containers/shared ./shared
-COPY containers/bunkbot ./
+COPY packages/shared ./shared
+COPY apps/bunkbot ./
 COPY prisma ./prisma
 COPY tsconfig.json ./
 

@@ -32,7 +32,7 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",
-    "test:bots": "echo 'Bot testing script not available - use individual container tests'",
+    "test:bots": "node scripts/test-reply-bots.js",
     "test:bunkbot": "cd apps/bunkbot && npm test",
     "e2e:bunkbot:live": "cd apps/bunkbot && npm run e2e:live",
     "test:djcova": "cd apps/djcova && npm test",

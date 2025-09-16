@@ -1,13 +1,5 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { logger, sendErrorResponse, sendSuccessResponse, container, ServiceId } from '@starbunk/shared';
-
-// Minimal interaction shape for this command
-type InteractionLike = {
-	replied?: boolean;
-	deferred?: boolean;
-	reply: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
-	followUp: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
-};
 import { DJCova } from '../djCova';
 
 const commandBuilder = new SlashCommandBuilder()
@@ -16,7 +8,7 @@ const commandBuilder = new SlashCommandBuilder()
 
 export default {
 	data: commandBuilder.toJSON(),
-	async execute(interaction: InteractionLike) {
+	async execute(interaction: ChatInputCommandInteraction) {
 		try {
 			// Get music player from container
 			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);

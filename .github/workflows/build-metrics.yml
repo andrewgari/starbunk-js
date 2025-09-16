@@ -43,7 +43,7 @@ jobs:
             try {
               const { owner, repo } = context.repo;
               const analysisDate = new Date();
-              const daysBack = parseInt('${{ inputs.analysis_period || "30" }}');
+              const daysBack = parseInt('${{ inputs.analysis_period }}' || '30');
               const sinceDate = new Date(analysisDate.getTime() - (daysBack * 24 * 60 * 60 * 1000));
 
               console.log(`Analyzing builds from ${sinceDate.toISOString()} to ${analysisDate.toISOString()}`);
@@ -135,44 +135,42 @@ jobs:
               const optimizationRate = totalRuns > 0 ? ((optimizedBuilds / totalRuns) * 100).toFixed(1) : 0;
 
               // Generate summary
-              const summary = `## 📊 Build Performance Analysis (Last ${daysBack} days)
-
-### 🎯 Key Metrics
-- **Total Builds:** ${totalRuns}
-- **Success Rate:** ${successRate}% (${successfulRuns}/${totalRuns})
-- **Average Duration:** ${avgDuration} minutes
-- **Optimization Rate:** ${optimizationRate}% (${optimizedBuilds} optimized vs ${fullBuilds} full builds)
-
-### 📈 Build Efficiency
-- **Time Saved:** ~${(fullBuilds * 12 - optimizedBuilds * 4).toFixed(0)} minutes through optimization
-- **Resource Savings:** ~${optimizationRate}% CI/CD resource reduction
-- **Failed Builds:** ${failedRuns} (${((failedRuns / totalRuns) * 100).toFixed(1)}%)
-
-### 🔄 Build Triggers
-${Object.entries(buildsByTrigger).map(([trigger, count]) =>
-  `- **${trigger}:** ${count} builds`
-).join('\n')}
-
-### 🌿 Branch Activity
-${Object.entries(buildsByBranch)
-  .sort(([,a], [,b]) => b - a)
-  .slice(0, 5)
-  .map(([branch, count]) => `- **${branch}:** ${count} builds`)
-  .join('\n')}
-
-### 💡 Recommendations
-${optimizationRate < 50 ?
-  '- ⚠️ Low optimization rate - consider reviewing path filters' :
-  '- ✅ Good optimization rate - path-based builds working well'
-}
-${successRate < 90 ?
-  '- ⚠️ Build reliability could be improved' :
-  '- ✅ Excellent build reliability'
-}
-${avgDuration > 10 ?
-  '- ⚠️ Consider further build optimizations' :
-  '- ✅ Good build performance'
-}`;
+              const summary = [
+                '## 📊 Build Performance Analysis (Last ' + daysBack + ' days)',
+                '',
+                '### 🎯 Key Metrics',
+                '- **Total Builds:** ' + totalRuns,
+                '- **Success Rate:** ' + successRate + '% (' + successfulRuns + '/' + totalRuns + ')',
+                '- **Average Duration:** ' + avgDuration + ' minutes',
+                '- **Optimization Rate:** ' + optimizationRate + '% (' + optimizedBuilds + ' optimized vs ' + fullBuilds + ' full builds)',
+                '',
+                '### 📈 Build Efficiency',
+                '- **Time Saved:** ~' + (fullBuilds * 12 - optimizedBuilds * 4).toFixed(0) + ' minutes through optimization',
+                '- **Resource Savings:** ~' + optimizationRate + '% CI/CD resource reduction',
+                '- **Failed Builds:** ' + failedRuns + ' (' + ((failedRuns / totalRuns) * 100).toFixed(1) + '%)',
+                '',
+                '### 🔄 Build Triggers',
+                ...Object.entries(buildsByTrigger).map(([trigger, count]) =>
+                  '- **' + trigger + ':** ' + count + ' builds'
+                ),
+                '',
+                '### 🌿 Branch Activity',
+                ...Object.entries(buildsByBranch)
+                  .sort(([,a], [,b]) => b - a)
+                  .slice(0, 5)
+                  .map(([branch, count]) => '- **' + branch + ':** ' + count + ' builds'),
+                '',
+                '### 💡 Recommendations',
+                optimizationRate < 50 ?
+                  '- ⚠️ Low optimization rate - consider reviewing path filters' :
+                  '- ✅ Good optimization rate - path-based builds working well',
+                successRate < 90 ?
+                  '- ⚠️ Build reliability could be improved' :
+                  '- ✅ Excellent build reliability',
+                avgDuration > 10 ?
+                  '- ⚠️ Consider further build optimizations' :
+                  '- ✅ Good build performance'
+              ].join('\n');
 
               // Write to step summary
               await core.summary
@@ -196,7 +194,7 @@ ${avgDuration > 10 ?
           echo "### 📦 Large Files Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          large_files=$(find apps/ -type f -size +1M 2>/dev/null | head -10)
+          large_files=$(find apps/ packages/ -type f -size +1M 2>/dev/null | head -10)
           if [ -n "$large_files" ]; then
             echo "**Large files found (>1MB):**" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
