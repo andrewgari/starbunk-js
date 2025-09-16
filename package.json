@@ -32,7 +32,7 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",
-    "test:bots": "node scripts/test-reply-bots.js",
+    "test:bots": "echo 'Bot testing script not available - use individual container tests'",
     "test:bunkbot": "cd apps/bunkbot && npm test",
     "e2e:bunkbot:live": "cd apps/bunkbot && npm run e2e:live",
     "test:djcova": "cd apps/djcova && npm test",
@@ -65,7 +65,14 @@
     "setup:bunkbot": "cd apps/bunkbot && npm install",
     "setup:djcova": "cd apps/djcova && npm install",
     "setup:starbunk-dnd": "cd apps/starbunk-dnd && npm install",
-    "setup:covabot": "cd apps/covabot && npm install"
+    "setup:covabot": "cd apps/covabot && npm install",
+    "validate:structure": "tools/scripts/validation/run-all-validations.sh",
+    "validate:root": "tools/scripts/validation/check-root-directory.sh",
+    "validate:naming": "tools/scripts/validation/check-naming-conventions.sh",
+    "validate:temp-files": "tools/scripts/validation/check-temporary-files.sh",
+    "validate:docs": "tools/scripts/validation/check-documentation-structure.sh",
+    "health-check": "tools/scripts/monitoring/structure-health-check.sh",
+    "health-check:json": "tools/scripts/monitoring/structure-health-check.sh --json"
   },
   "engines": {
     "node": ">=16.0.0"

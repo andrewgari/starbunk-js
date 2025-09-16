@@ -1,0 +1,272 @@
+name: Repository Structure Validation
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**/*.md'
+      - '*.md'
+      - 'monitoring/**'
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'migration/**'
+  workflow_dispatch:
+    inputs:
+      validation_level:
+        description: 'Validation level (basic, full, strict)'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - basic
+          - full
+          - strict
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  validate-structure:
+    runs-on: ubuntu-latest
+    name: Validate Repository Structure
+
+    outputs:
+      structure-status: ${{ steps.structure-check.outputs.status }}
+      health-score: ${{ steps.health-check.outputs.score }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Make scripts executable
+        run: |
+          chmod +x tools/scripts/validation/*.sh
+          chmod +x tools/scripts/monitoring/*.sh
+
+      - name: Check root directory compliance
+        id: root-check
+        run: |
+          echo "::group::Root Directory Compliance Check"
+          if tools/scripts/validation/check-root-directory.sh; then
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "::notice::Root directory compliance check passed"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "::error::Root directory compliance check failed"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: Check file naming conventions
+        id: naming-check
+        run: |
+          echo "::group::File Naming Conventions Check"
+          if tools/scripts/validation/check-naming-conventions.sh; then
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "::notice::File naming conventions check passed"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "::error::File naming conventions check failed"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: Check for temporary files
+        id: temp-check
+        run: |
+          echo "::group::Temporary Files Check"
+          if tools/scripts/validation/check-temporary-files.sh; then
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "::notice::Temporary files check passed"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "::error::Temporary files check failed"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: Validate documentation structure
+        id: docs-check
+        run: |
+          echo "::group::Documentation Structure Check"
+          if tools/scripts/validation/check-documentation-structure.sh; then
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "::notice::Documentation structure check passed"
+          else
+            echo "status=warning" >> $GITHUB_OUTPUT
+            echo "::warning::Documentation structure check had warnings"
+          fi
+          echo "::endgroup::"
+
+      - name: Run comprehensive structure validation
+        id: structure-check
+        run: |
+          echo "::group::Comprehensive Structure Validation"
+          if tools/scripts/validation/run-all-validations.sh; then
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "::notice::All structure validations passed"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "::error::Structure validation failed"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: Generate structure health report
+        id: health-check
+        run: |
+          echo "::group::Repository Structure Health Check"
+
+          # Generate health report
+          tools/scripts/monitoring/structure-health-check.sh --report-file=structure-health-report.txt
+
+          # Extract health score (if available)
+          if grep -q "Final Health Score:" structure-health-report.txt; then
+            SCORE=$(grep "Final Health Score:" structure-health-report.txt | grep -o '[0-9]\+')
+            echo "score=$SCORE" >> $GITHUB_OUTPUT
+            echo "::notice::Repository health score: $SCORE/100"
+          else
+            echo "score=unknown" >> $GITHUB_OUTPUT
+            echo "::warning::Could not determine health score"
+          fi
+
+          # Generate JSON report for artifacts
+          tools/scripts/monitoring/structure-health-check.sh --json > structure-health.json
+
+          echo "::endgroup::"
+
+      - name: Upload structure health report
+        uses: actions/upload-artifact@v4
+        with:
+          name: structure-health-report-${{ github.run_id }}
+          path: |
+            structure-health-report.txt
+            structure-health.json
+          retention-days: 30
+
+      - name: Comment on PR with health report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read the health report
+            let report = '';
+            try {
+              report = fs.readFileSync('structure-health-report.txt', 'utf8');
+            } catch (error) {
+              console.log('Could not read health report:', error);
+              return;
+            }
+
+            // Extract key metrics
+            const healthScore = '${{ steps.health-check.outputs.score }}';
+            const structureStatus = '${{ steps.structure-check.outputs.status }}';
+
+            // Create comment body
+            let commentBody = `## 🏗️ Repository Structure Validation Report
+
+            **Overall Status**: ${structureStatus === 'passed' ? '✅ PASSED' : '❌ FAILED'}
+            **Health Score**: ${healthScore}/100
+
+            ### Validation Results:
+            - Root Directory Compliance: ${{ steps.root-check.outputs.status === 'passed' ? '✅' : '❌' }}
+            - File Naming Conventions: ${{ steps.naming-check.outputs.status === 'passed' ? '✅' : '❌' }}
+            - Temporary Files Check: ${{ steps.temp-check.outputs.status === 'passed' ? '✅' : '❌' }}
+            - Documentation Structure: ${{ steps.docs-check.outputs.status === 'passed' ? '✅' : steps.docs-check.outputs.status === 'warning' ? '⚠️' : '❌' }}
+
+            <details>
+            <summary>📊 Detailed Health Report</summary>
+
+            \`\`\`
+            ${report}
+            \`\`\`
+            </details>
+
+            ---
+            *This report was generated automatically by the repository structure validation workflow.*
+            *For more information, see the [Agentic Style Guide](docs/development/agentic-style-guide.md).*
+            `;
+
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+
+  # Optional job for strict validation (manual trigger)
+  strict-validation:
+    if: github.event_name == 'workflow_dispatch' && inputs.validation_level == 'strict'
+    runs-on: ubuntu-latest
+    name: Strict Structure Validation
+    needs: validate-structure
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run ESLint with structure rules
+        run: |
+          echo "::group::ESLint Structure Rules"
+          npm run lint
+          echo "::endgroup::"
+
+      - name: Validate TypeScript compilation
+        run: |
+          echo "::group::TypeScript Compilation Check"
+          npm run type-check
+          echo "::endgroup::"
+
+      - name: Check for dependency issues
+        run: |
+          echo "::group::Dependency Validation"
+          npm audit --audit-level moderate
+          echo "::endgroup::"
+
+      - name: Validate container architecture
+        run: |
+          echo "::group::Container Architecture Validation"
+          # Check that each app has required structure
+          for app in apps/*/; do
+            if [[ -d "$app" ]]; then
+              app_name=$(basename "$app")
+              echo "Validating $app_name architecture..."
+
+              # Required files check
+              required_files=("package.json" "tsconfig.json" "Dockerfile" "src/index.ts")
+              for file in "${required_files[@]}"; do
+                if [[ ! -f "$app$file" ]]; then
+                  echo "::error::Missing required file: $app$file"
+                  exit 1
+                fi
+              done
+
+              echo "✅ $app_name architecture is valid"
+            fi
+          done
+          echo "::endgroup::"
