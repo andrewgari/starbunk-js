@@ -1,37 +1,18 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { logger, sendErrorResponse, sendSuccessResponse, container, ServiceId } from '@starbunk/shared';
-
-// Minimal interaction shape for this command
-type InteractionLike = {
-	options: {
-		get(name: string): { value?: number } | null;
-	};
-	replied?: boolean;
-	deferred?: boolean;
-	reply: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
-	followUp: (opts: { content: string; ephemeral?: boolean }) => Promise<unknown>;
-};
 import { DJCova } from '../djCova';
-// Local minimal type for integer option builder
-export type IntegerOpt = {
-	setName(n: string): IntegerOpt;
-	setDescription(d: string): IntegerOpt;
-	setRequired(r: boolean): IntegerOpt;
-};
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('volume')
 	.setDescription('It makes the noises go up and down')
-	.addIntegerOption((option: IntegerOpt) =>
-		option.setName('noise').setDescription('set player volume %').setRequired(true),
-	);
+	.addIntegerOption((option) => option.setName('noise').setDescription('set player volume %').setRequired(true));
 
 export default {
 	data: commandBuilder.toJSON(),
-	async execute(interaction: InteractionLike) {
+	async execute(interaction: ChatInputCommandInteraction) {
 		try {
 			// Get volume from the 'noise' option (as defined in the command builder)
-			const vol = interaction.options.get('noise')?.value as number;
+			const vol = interaction.options.getInteger('noise');
 
 			if (!vol || vol < 1 || vol > 100) {
 				await sendErrorResponse(interaction, 'Volume must be between 1 and 100!');
