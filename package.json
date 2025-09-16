@@ -13,7 +13,7 @@
     "build:starbunk-dnd": "cd apps/starbunk-dnd && npm run build",
     "build:covabot": "cd apps/covabot && npm run build",
     "start": "docker compose up -d",
-    "start:dev": "docker compose -f docker-compose.dev.yml up -d",
+    "start:dev": "docker compose -f infrastructure/docker/docker-compose.dev.yml up -d",
     "stop": "docker compose down",
     "logs": "docker compose logs -f",
     "logs:bunkbot": "docker compose logs -f bunkbot",
@@ -65,7 +65,14 @@
     "setup:bunkbot": "cd apps/bunkbot && npm install",
     "setup:djcova": "cd apps/djcova && npm install",
     "setup:starbunk-dnd": "cd apps/starbunk-dnd && npm install",
-    "setup:covabot": "cd apps/covabot && npm install"
+    "setup:covabot": "cd apps/covabot && npm install",
+    "validate:structure": "tools/scripts/validation/run-all-validations.sh",
+    "validate:root": "tools/scripts/validation/check-root-directory.sh",
+    "validate:naming": "tools/scripts/validation/check-naming-conventions.sh",
+    "validate:temp-files": "tools/scripts/validation/check-temporary-files.sh",
+    "validate:docs": "tools/scripts/validation/check-documentation-structure.sh",
+    "health-check": "tools/scripts/monitoring/structure-health-check.sh",
+    "health-check:json": "tools/scripts/monitoring/structure-health-check.sh --json"
   },
   "engines": {
     "node": ">=16.0.0"

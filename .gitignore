@@ -181,3 +181,11 @@ scripts/*
 !scripts/pre-push.sh
 
 !README.md
+
+# Build artifacts and temporary files
+*.tsbuildinfo
+*.bak
+*.backup
+logs/
+data/logs/
+*.tsbuildinfo

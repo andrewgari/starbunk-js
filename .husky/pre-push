@@ -1,5 +1,17 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+# Run comprehensive structure validation first
+echo "🔍 Running comprehensive repository structure validation..."
+tools/scripts/validation/run-all-validations.sh
+
 # Run comprehensive pre-push gate (fast checks + targeted container builds)
-bash scripts/pre-push.sh
+echo "🚀 Running pre-push validation..."
+if [[ -f "scripts/development/pre-push.sh" ]]; then
+  bash scripts/development/pre-push.sh
+elif [[ -f "tools/scripts/development/pre-push.sh" ]]; then
+  bash tools/scripts/development/pre-push.sh
+else
+  echo "⚠️  Pre-push script not found - running basic checks"
+  npm run type-check && npm run lint && npm run test
+fi

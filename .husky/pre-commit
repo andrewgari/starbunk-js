@@ -1,6 +1,17 @@
 #!/bin/sh
 set -e
 
+echo "🔍 Running pre-commit validation checks..."
+
+# Repository structure validation
+echo "📁 Validating repository structure..."
+tools/scripts/validation/check-root-directory.sh
+tools/scripts/validation/check-naming-conventions.sh
+tools/scripts/validation/check-temporary-files.sh
+
 # Lint staged files and type-check only Shared and BunkBot (path-scoped)
+echo "🧹 Running code quality checks..."
 npx lint-staged
 npm run type-check:shared --silent && npm run type-check:bunkbot --silent
+
+echo "✅ Pre-commit checks completed successfully!"
