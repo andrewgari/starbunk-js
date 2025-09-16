@@ -54,6 +54,39 @@ export { StarbunkDNDMetricsCollector, createStarbunkDNDMetrics } from './Starbun
 
 export { CovaBotMetricsCollector, createCovaBotMetrics } from './CovaBotMetrics';
 
+// Unified metrics system exports
+export {
+	UnifiedMetricsCollector,
+	initializeUnifiedMetricsCollector,
+	getUnifiedMetricsCollector,
+	type UnifiedMetricsConfig,
+	type ServiceComponent,
+	type HealthCheckResult as UnifiedHealthCheckResult,
+	type ServiceHealthStatus,
+} from './UnifiedMetricsCollector';
+
+export {
+	ServiceAwareMetricsService,
+	createServiceMetrics,
+	initializeServiceMetrics,
+	getServiceMetrics,
+	getAllServiceMetrics,
+	type ServiceMetricsConfiguration,
+	type ComponentTracker,
+	type ServiceMetricContext,
+	type ServiceMessageFlowMetrics,
+} from './ServiceMetricsRegistry';
+
+export {
+	UnifiedMetricsEndpoint,
+	initializeUnifiedMetricsEndpoint,
+	getUnifiedMetricsEndpoint,
+	startUnifiedMetricsSystem,
+	type UnifiedEndpointConfig,
+	type ServiceRegistrationInfo,
+	type ServiceHealthResult,
+} from './UnifiedMetricsEndpoint';
+
 // Import validation utilities
 import { validateObservabilityEnvironment, type ObservabilityConfig } from '../../utils/envValidation';
 
@@ -148,11 +181,101 @@ export function initializeObservabilityLegacy(service: string) {
 	};
 }
 
+// Enhanced initialization with unified metrics support
+interface UnifiedObservabilityComponents extends ObservabilityComponents {
+	unifiedEndpoint?: import('./UnifiedMetricsEndpoint').UnifiedMetricsEndpoint;
+	serviceMetrics?: import('./ServiceMetricsRegistry').ServiceAwareMetricsService;
+}
+
+export function initializeUnifiedObservability(
+	service: string,
+	options?: {
+		metricsConfig?: Partial<MetricsConfiguration>;
+		endpointsConfig?: Partial<EndpointsConfig>;
+		unifiedConfig?: Partial<import('./UnifiedMetricsEndpoint').UnifiedEndpointConfig>;
+		enableUnified?: boolean;
+		skipHttpEndpoints?: boolean;
+	},
+): UnifiedObservabilityComponents {
+	// Start with standard observability
+	const standardComponents = initializeObservability(service, {
+		metricsConfig: options?.metricsConfig,
+		endpointsConfig: options?.endpointsConfig,
+		skipHttpEndpoints: options?.skipHttpEndpoints,
+	});
+
+	const envConfig = validateObservabilityEnvironment();
+	const enableUnified = options?.enableUnified ?? envConfig.unifiedMetricsEnabled ?? true;
+
+	let unifiedEndpoint: import('./UnifiedMetricsEndpoint').UnifiedMetricsEndpoint | undefined;
+	let serviceMetrics: import('./ServiceMetricsRegistry').ServiceAwareMetricsService | undefined;
+
+	if (enableUnified) {
+		try {
+			// Initialize unified metrics endpoint (this will create the collector)
+			const { initializeUnifiedMetricsEndpoint } = require('./UnifiedMetricsEndpoint');
+			unifiedEndpoint = initializeUnifiedMetricsEndpoint(options?.unifiedConfig);
+
+			// Create service-aware metrics instance
+			const { initializeServiceMetrics } = require('./ServiceMetricsRegistry');
+			serviceMetrics = initializeServiceMetrics(service, {
+				enableServiceLabels: true,
+				enableComponentTracking: true,
+				autoRegisterWithUnified: false, // Manual registration for better control
+			});
+
+			// Register service with unified endpoint
+			unifiedEndpoint.registerService(service, {
+				enableServiceLabels: true,
+				enableComponentTracking: true,
+			}).catch((error) => {
+				console.error(`Failed to register ${service} with unified metrics:`, error);
+			});
+
+			console.log(`Unified observability initialized for ${service}`, {
+				unifiedEndpoint: unifiedEndpoint.getMetricsEndpoint(),
+				healthEndpoint: unifiedEndpoint.getHealthEndpoint(),
+			});
+
+		} catch (error) {
+			console.error('Failed to initialize unified observability, falling back to standard:', error);
+		}
+	}
+
+	return {
+		...standardComponents,
+		unifiedEndpoint,
+		serviceMetrics,
+	};
+}
+
 // Graceful shutdown helper
 export async function shutdownObservability(): Promise<void> {
 	try {
 		// Get all global instances and shut them down
 		const promises = [];
+
+		// Shutdown unified metrics first
+		try {
+			const { getUnifiedMetricsEndpoint } = await import('./UnifiedMetricsEndpoint');
+			const unifiedEndpoint = getUnifiedMetricsEndpoint();
+			promises.push(unifiedEndpoint.shutdown());
+		} catch (_error) {
+			// Service not initialized, ignore
+		}
+
+		// Shutdown service metrics
+		try {
+			const { getAllServiceMetrics } = await import('./ServiceMetricsRegistry');
+			const serviceMetrics = getAllServiceMetrics();
+			for (const [service, metrics] of serviceMetrics) {
+				promises.push(metrics.shutdown().catch((error) => {
+					console.error(`Error shutting down metrics for ${service}:`, error);
+				}));
+			}
+		} catch (_error) {
+			// Service not initialized, ignore
+		}
 
 		// Shutdown metrics service
 		try {

@@ -1,0 +1,204 @@
+{
+  "dashboard": {
+    "title": "DJCova - Music Service",
+    "tags": ["discord", "djcova", "music"],
+    "panels": [
+      {
+        "id": 1,
+        "title": "Voice Connection Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "discord_bot_voice_connections_total{service=\"djcova\",component=\"voice_connection\"}",
+            "legendFormat": "Active Connections",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 10}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Active Music Sessions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "discord_bot_music_sessions_total{service=\"djcova\",component=\"music_session\"}",
+            "legendFormat": "Sessions",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Audio Processing Latency",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "discord_bot_audio_processing_duration_ms{service=\"djcova\",component=\"audio_processing\"}",
+            "legendFormat": "Processing Time",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 1000},
+                {"color": "red", "value": 5000}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Queue Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "discord_bot_queue_length{service=\"djcova\",component=\"queue_management\"}",
+            "legendFormat": "Queue Length",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "continuous-GrYlRd"}
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Music Commands Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(discord_bot_music_commands_total{service=\"djcova\"}[5m])",
+            "legendFormat": "{{ command_name }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "displayName": "${__field.labels.command_name}"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "id": 6,
+        "title": "Voice Connection Duration",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "discord_bot_voice_connection_duration_ms{service=\"djcova\",component=\"voice_connection\"}",
+            "legendFormat": "Connection Duration",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+      },
+      {
+        "id": 7,
+        "title": "Audio Processing Performance",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(discord_bot_audio_processing_duration_ms_bucket{service=\"djcova\"}[5m]))",
+            "legendFormat": "95th percentile",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(discord_bot_audio_processing_duration_ms_bucket{service=\"djcova\"}[5m]))",
+            "legendFormat": "50th percentile",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms"
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12}
+      },
+      {
+        "id": 8,
+        "title": "Most Popular Commands",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "topk(5, sum by (command_name) (rate(discord_bot_music_commands_total{service=\"djcova\"}[1h])))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "displayName": "${__field.labels.command_name}"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}
+      },
+      {
+        "id": 9,
+        "title": "Guild Activity",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum by (guild_id) (rate(discord_bot_music_commands_total{service=\"djcova\"}[1h]))",
+            "refId": "A",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "displayName": "Guild Activity"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "guild_id",
+          "type": "query",
+          "query": "label_values(discord_bot_music_commands_total{service=\"djcova\"}, guild_id)",
+          "refresh": "on_time_range_change",
+          "includeAll": true
+        }
+      ]
+    }
+  }
+}

@@ -126,6 +126,16 @@ export interface ObservabilityConfig {
 	lokiUrl?: string;
 	pushInterval?: number;
 	circuitBreakerThreshold?: number;
+	// Unified metrics configuration
+	unifiedMetricsEnabled?: boolean;
+	unifiedMetricsHost?: string;
+	unifiedMetricsPort?: number;
+	unifiedMetricsAuth?: string;
+	unifiedHealthEnabled?: boolean;
+	unifiedCorsEnabled?: boolean;
+	unifiedAutoDiscovery?: boolean;
+	unifiedAutoRegistration?: boolean;
+	unifiedHealthCheckInterval?: number;
 }
 
 export function validateObservabilityEnvironment(): ObservabilityConfig {
@@ -138,6 +148,16 @@ export function validateObservabilityEnvironment(): ObservabilityConfig {
 		lokiUrl: process.env.LOKI_URL,
 		pushInterval: parseInt(process.env.METRICS_PUSH_INTERVAL || '30000'),
 		circuitBreakerThreshold: parseInt(process.env.METRICS_CIRCUIT_BREAKER_THRESHOLD || '5'),
+		// Unified metrics configuration
+		unifiedMetricsEnabled: getEnvVarBoolean('ENABLE_UNIFIED_METRICS', true),
+		unifiedMetricsHost: process.env.UNIFIED_METRICS_HOST || '192.168.50.3',
+		unifiedMetricsPort: parseInt(process.env.UNIFIED_METRICS_PORT || '3001'),
+		unifiedMetricsAuth: process.env.UNIFIED_METRICS_AUTH_TOKEN,
+		unifiedHealthEnabled: getEnvVarBoolean('ENABLE_UNIFIED_HEALTH', true),
+		unifiedCorsEnabled: getEnvVarBoolean('ENABLE_UNIFIED_CORS', false),
+		unifiedAutoDiscovery: getEnvVarBoolean('UNIFIED_AUTO_DISCOVERY', true),
+		unifiedAutoRegistration: getEnvVarBoolean('UNIFIED_AUTO_REGISTRATION', true),
+		unifiedHealthCheckInterval: parseInt(process.env.UNIFIED_HEALTH_CHECK_INTERVAL || '30000'),
 	};
 
 	// Validate URLs if provided
@@ -166,6 +186,17 @@ export function validateObservabilityEnvironment(): ObservabilityConfig {
 		config.circuitBreakerThreshold = 1;
 	}
 
+	// Validate unified metrics configuration
+	if (config.unifiedMetricsPort && (config.unifiedMetricsPort < 1024 || config.unifiedMetricsPort > 65535)) {
+		logger.warn(`Invalid UNIFIED_METRICS_PORT (${config.unifiedMetricsPort}), setting to 3001`);
+		config.unifiedMetricsPort = 3001;
+	}
+
+	if (config.unifiedHealthCheckInterval && config.unifiedHealthCheckInterval < 5000) {
+		logger.warn(`UNIFIED_HEALTH_CHECK_INTERVAL too low (${config.unifiedHealthCheckInterval}ms), setting to 5000ms minimum`);
+		config.unifiedHealthCheckInterval = 5000;
+	}
+
 	// Log configuration
 	logger.info('Observability configuration validated:', {
 		metricsEnabled: config.metricsEnabled,
@@ -176,6 +207,12 @@ export function validateObservabilityEnvironment(): ObservabilityConfig {
 		circuitBreakerThreshold: config.circuitBreakerThreshold,
 		hasPushGateway: !!config.pushGatewayUrl,
 		hasLoki: !!config.lokiUrl,
+		// Unified metrics
+		unifiedMetricsEnabled: config.unifiedMetricsEnabled,
+		unifiedMetricsEndpoint: `http://${config.unifiedMetricsHost}:${config.unifiedMetricsPort}/metrics`,
+		unifiedHealthEnabled: config.unifiedHealthEnabled,
+		unifiedAutoDiscovery: config.unifiedAutoDiscovery,
+		unifiedAutoRegistration: config.unifiedAutoRegistration,
 	});
 
 	return config;
@@ -208,5 +245,15 @@ export function getObservabilityEnvVars(): Required<ObservabilityConfig> {
 		lokiUrl: config.lokiUrl ?? '',
 		pushInterval: config.pushInterval ?? 30000,
 		circuitBreakerThreshold: config.circuitBreakerThreshold ?? 5,
+		// Unified metrics
+		unifiedMetricsEnabled: config.unifiedMetricsEnabled ?? true,
+		unifiedMetricsHost: config.unifiedMetricsHost ?? '192.168.50.3',
+		unifiedMetricsPort: config.unifiedMetricsPort ?? 3001,
+		unifiedMetricsAuth: config.unifiedMetricsAuth ?? '',
+		unifiedHealthEnabled: config.unifiedHealthEnabled ?? true,
+		unifiedCorsEnabled: config.unifiedCorsEnabled ?? false,
+		unifiedAutoDiscovery: config.unifiedAutoDiscovery ?? true,
+		unifiedAutoRegistration: config.unifiedAutoRegistration ?? true,
+		unifiedHealthCheckInterval: config.unifiedHealthCheckInterval ?? 30000,
 	};
 }

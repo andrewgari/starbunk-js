@@ -151,7 +151,7 @@ validate_container() {
     echo
     log_info "[${container}] Starting validation..."
 
-    # Navigate to container directory (shared is in packages/, others in apps/)
+    # Navigate to container directory
     if [ "$container" = "shared" ]; then
         cd "$PROJECT_ROOT/packages/$container" || {
             log_error "[${container}] Directory not found"
@@ -200,21 +200,23 @@ validate_container() {
     else
         # Fall back to root lint for this container
         cd "$PROJECT_ROOT"
+        local container_path
         if [ "$container" = "shared" ]; then
-            if ! npx eslint "packages/${container}/src/**/*.ts" --format=compact >/dev/null 2>&1; then
-                log_error "[${container}] Linting failed (using root eslint)"
-                npx eslint "packages/${container}/src/**/*.ts" --format=compact # Show errors
-                cd "$PROJECT_ROOT/packages/$container"
-                return 1
-            fi
+            container_path="packages/${container}/src/**/*.ts"
+        else
+            container_path="apps/${container}/src/**/*.ts"
+        fi
+
+        if ! npx eslint "$container_path" --format=compact >/dev/null 2>&1; then
+            log_error "[${container}] Linting failed (using root eslint)"
+            npx eslint "$container_path" --format=compact # Show errors
+            return 1
+        fi
+
+        # Return to container directory
+        if [ "$container" = "shared" ]; then
             cd "$PROJECT_ROOT/packages/$container"
         else
-            if ! npx eslint "apps/${container}/src/**/*.ts" --format=compact >/dev/null 2>&1; then
-                log_error "[${container}] Linting failed (using root eslint)"
-                npx eslint "apps/${container}/src/**/*.ts" --format=compact # Show errors
-                cd "$PROJECT_ROOT/apps/$container"
-                return 1
-            fi
             cd "$PROJECT_ROOT/apps/$container"
         fi
     fi

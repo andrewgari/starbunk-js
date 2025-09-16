@@ -1,0 +1,82 @@
+# Prometheus scraping configuration for Starbunk Discord Bots
+# Add this to your Prometheus prometheus.yml file
+
+scrape_configs:
+  # Unified Discord Bot Metrics Endpoint
+  - job_name: 'starbunk-discord-bots'
+    static_configs:
+      - targets: ['192.168.50.3:3001']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    scheme: http
+
+    # Service discovery and labeling
+    metric_relabel_configs:
+      # Preserve service and component labels from metrics
+      - source_labels: [__name__]
+        target_label: __tmp_metric_name
+
+      # Add job-level labels
+      - target_label: job
+        replacement: 'discord-bots'
+
+      # Add environment label
+      - target_label: environment
+        replacement: 'development'  # Change to 'production' for prod
+
+      # Add cluster label
+      - target_label: cluster
+        replacement: 'starbunk-homelab'
+
+    # Health check endpoint (optional)
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: '192.168.50.3:3001'
+
+  # Health check endpoint as separate job (optional)
+  - job_name: 'starbunk-discord-bots-health'
+    static_configs:
+      - targets: ['192.168.50.3:3001']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metrics_path: /health
+    scheme: http
+
+    # Health checks don't produce Prometheus metrics
+    # but this job can be used for uptime monitoring
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'up'
+        target_label: health_check
+        replacement: 'enabled'
+
+# Alerting rules for Discord bot monitoring
+rule_files:
+  - "discord_bot_alerts.yml"
+
+# Example alert rules (create discord_bot_alerts.yml)
+# groups:
+#   - name: discord_bot_alerts
+#     rules:
+#       - alert: DiscordBotDown
+#         expr: up{job="starbunk-discord-bots"} == 0
+#         for: 1m
+#         labels:
+#           severity: critical
+#         annotations:
+#           summary: "Discord bot metrics endpoint is down"
+#           description: "The unified metrics endpoint for Discord bots has been down for more than 1 minute."
+#
+#       - alert: HighBotResponseLatency
+#         expr: discord_bot_response_duration_ms{quantile="0.95"} > 5000
+#         for: 2m
+#         labels:
+#           severity: warning
+#         annotations:
+#           summary: "High bot response latency detected"
+#           description: "Bot {{ $labels.service }}.{{ $labels.component }} has high response latency ({{ $value }}ms)"

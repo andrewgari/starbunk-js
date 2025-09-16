@@ -1,0 +1,197 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Starbunk Discord Bots - Overview",
+    "tags": ["discord", "bots", "starbunk"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"starbunk-discord-bots\"}",
+            "legendFormat": "{{ service }} Health",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "value": "1",
+                "text": "Healthy"
+              },
+              {
+                "type": "value",
+                "value": "0",
+                "text": "Down"
+              }
+            ],
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Messages Processed by Service",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(discord_bot_messages_processed_total[5m])",
+            "legendFormat": "{{ service }}.{{ component }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "displayName": "${__field.labels.service}.${__field.labels.component}"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "id": 3,
+        "title": "Bot Triggers by Service",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(discord_bot_bot_triggers_total[5m])",
+            "legendFormat": "{{ service }}.{{ bot_name }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "displayName": "${__field.labels.service}.${__field.labels.bot_name}"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+      },
+      {
+        "id": 4,
+        "title": "Response Latency by Component",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(discord_bot_response_duration_ms_bucket[5m]))",
+            "legendFormat": "{{ service }}.{{ component }} (p95)",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(discord_bot_response_duration_ms_bucket[5m]))",
+            "legendFormat": "{{ service }}.{{ component }} (p50)",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "displayName": "${__field.labels.service}.${__field.labels.component}"
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12}
+      },
+      {
+        "id": 5,
+        "title": "Service Component Breakdown",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (service) (rate(discord_bot_messages_processed_total[5m]))",
+            "legendFormat": "{{ service }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "displayName": "${__field.labels.service}"
+          }
+        },
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 20}
+      },
+      {
+        "id": 6,
+        "title": "Memory Usage by Service",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "nodejs_memory_usage_bytes{type=\"heapUsed\"}",
+            "legendFormat": "Heap Used",
+            "refId": "A"
+          },
+          {
+            "expr": "nodejs_memory_usage_bytes{type=\"rss\"}",
+            "legendFormat": "RSS",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        },
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 20}
+      },
+      {
+        "id": 7,
+        "title": "Active Components",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "count by (service, component) (discord_bot_messages_processed_total)",
+            "legendFormat": "{{ service }}.{{ component }}",
+            "refId": "A",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "displayName": "Component"
+          }
+        },
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 20}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "query": "label_values(discord_bot_messages_processed_total, service)",
+          "refresh": "on_time_range_change",
+          "includeAll": true,
+          "allValue": ".*"
+        },
+        {
+          "name": "component",
+          "type": "query",
+          "query": "label_values(discord_bot_messages_processed_total{service=~\"$service\"}, component)",
+          "refresh": "on_time_range_change",
+          "includeAll": true,
+          "allValue": ".*"
+        }
+      ]
+    },
+    "annotations": {
+      "list": []
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "dashboard": {
+    "title": "BunkBot - Reply Bot Service",
+    "tags": ["discord", "bunkbot", "reply-bot"],
+    "panels": [
+      {
+        "id": 1,
+        "title": "Bot Triggers by Bot Name",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(discord_bot_bot_triggers_total{service=\"bunkbot\"}[5m])",
+            "legendFormat": "{{ bot_name }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "displayName": "${__field.labels.bot_name}"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Webhook Delivery Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(discord_bot_webhook_deliveries_total{service=\"bunkbot\",status=\"success\"}[5m]) / rate(discord_bot_webhook_deliveries_total{service=\"bunkbot\"}[5m]) * 100",
+            "legendFormat": "Success Rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 90},
+                {"color": "green", "value": 95}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Message Processing Pipeline",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(discord_bot_messages_processed_total{service=\"bunkbot\",component=\"message_processor\"}[5m])",
+            "legendFormat": "Messages Processed",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(discord_bot_bot_triggers_total{service=\"bunkbot\"}[5m])",
+            "legendFormat": "Bot Triggers",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(discord_bot_webhook_deliveries_total{service=\"bunkbot\"}[5m])",
+            "legendFormat": "Webhooks Sent",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops"
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Top Reply Bots by Activity",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, sum by (bot_name) (rate(discord_bot_bot_triggers_total{service=\"bunkbot\"}[1h])))",
+            "refId": "A",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "displayName": "Bot Name"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 5,
+        "title": "Response Time Distribution",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "rate(discord_bot_response_duration_ms_bucket{service=\"bunkbot\"}[5m])",
+            "legendFormat": "{{ le }}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "bot_name",
+          "type": "query",
+          "query": "label_values(discord_bot_bot_triggers_total{service=\"bunkbot\"}, bot_name)",
+          "refresh": "on_time_range_change",
+          "includeAll": true
+        }
+      ]
+    }
+  }
+}
