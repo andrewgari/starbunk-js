@@ -85,7 +85,7 @@ describe('Unified Metrics Integration Tests', () => {
 		await unifiedEndpoint.initialize();
 
 		// Give server time to start
-		await new Promise(resolve => setTimeout(resolve, 1000));
+		await new Promise((resolve) => setTimeout(resolve, 1000));
 	});
 
 	afterEach(async () => {
@@ -106,7 +106,7 @@ describe('Unified Metrics Integration Tests', () => {
 			}
 
 			// Small delay to ensure cleanup
-			await new Promise(resolve => setTimeout(resolve, 500));
+			await new Promise((resolve) => setTimeout(resolve, 500));
 		} catch (error) {
 			console.warn('Error during test cleanup:', error);
 		}
@@ -131,7 +131,7 @@ describe('Unified Metrics Integration Tests', () => {
 		it('should create unified collector instance', () => {
 			expect(collector).toBeDefined();
 
-			const stats = collector.getCollectorStats();
+			const stats = collector.getCollectorStats() as any;
 			expect(stats.isRunning).toBe(true);
 			expect(stats.endpoint).toBe(`http://${TEST_CONFIG.host}:${TEST_CONFIG.port}/metrics`);
 		});
@@ -187,7 +187,7 @@ describe('Unified Metrics Integration Tests', () => {
 			}
 
 			// Give time for registration
-			await new Promise(resolve => setTimeout(resolve, 500));
+			await new Promise((resolve) => setTimeout(resolve, 500));
 		});
 
 		it('should collect metrics from all services via unified endpoint', async () => {
@@ -277,7 +277,7 @@ describe('Unified Metrics Integration Tests', () => {
 				serviceMetrics.set(serviceName, service);
 			}
 
-			await new Promise(resolve => setTimeout(resolve, 500));
+			await new Promise((resolve) => setTimeout(resolve, 500));
 		});
 
 		it('should provide unified health endpoint', async () => {
@@ -307,7 +307,7 @@ describe('Unified Metrics Integration Tests', () => {
 			testService.updateComponentHealth('audio_processing', 'unhealthy');
 
 			// Wait for health check cycle
-			await new Promise(resolve => setTimeout(resolve, 1000));
+			await new Promise((resolve) => setTimeout(resolve, 1000));
 
 			const response = await fetch(`http://${TEST_CONFIG.host}:${TEST_CONFIG.port}/health`);
 			const healthData = await response.json();
@@ -381,9 +381,9 @@ describe('Unified Metrics Integration Tests', () => {
 			try {
 				await unifiedEndpoint.registerService('invalid-service');
 				expect(true).toBe(false); // Should not reach here
-			} catch (error) {
+			} catch (error: unknown) {
 				expect(error).toBeDefined();
-				expect(error.message).toContain('Unknown service');
+				expect((error as Error).message).toContain('Unknown service');
 			}
 
 			// Verify other services still work
@@ -397,18 +397,22 @@ describe('Unified Metrics Integration Tests', () => {
 
 			// Generate operations with invalid data
 			try {
-				service.trackServiceOperation({
-					service: 'bunkbot',
-					component: 'invalid_component',
-					operation: 'test',
-				}, -1, true); // Invalid duration
+				service.trackServiceOperation(
+					{
+						service: 'bunkbot',
+						component: 'invalid_component',
+						operation: 'test',
+					},
+					-1,
+					true,
+				); // Invalid duration
 
 				// Should not crash - verify endpoint still works
 				const response = await fetch(`http://${TEST_CONFIG.host}:${TEST_CONFIG.port}/metrics`);
 				expect(response.ok).toBe(true);
-			} catch (error) {
+			} catch (error: unknown) {
 				// Errors should be handled gracefully
-				console.log('Expected error handled:', error.message);
+				console.log('Expected error handled:', (error as Error).message);
 			}
 		});
 
@@ -463,7 +467,7 @@ describe('Unified Metrics Integration Tests', () => {
 		}
 
 		// Wait for metrics to be processed
-		await new Promise(resolve => setTimeout(resolve, 100));
+		await new Promise((resolve) => setTimeout(resolve, 100));
 	}
 
 	function getExpectedComponents(serviceName: string): string[] {
@@ -518,11 +522,15 @@ describe('Unified Metrics Performance', () => {
 
 		// Generate high-frequency metrics
 		for (let i = 0; i < numOperations; i++) {
-			service.trackServiceOperation({
-				service: 'bunkbot',
-				component: 'reply_bot',
-				operation: 'high_freq_test',
-			}, Math.random() * 10, true);
+			service.trackServiceOperation(
+				{
+					service: 'bunkbot',
+					component: 'reply_bot',
+					operation: 'high_freq_test',
+				},
+				Math.random() * 10,
+				true,
+			);
 		}
 
 		const endTime = Date.now();
@@ -531,7 +539,9 @@ describe('Unified Metrics Performance', () => {
 		// Should complete within reasonable time (adjust threshold as needed)
 		expect(duration).toBeLessThan(5000); // 5 seconds max
 
-		console.log(`Processed ${numOperations} operations in ${duration}ms (${(numOperations / duration * 1000).toFixed(2)} ops/sec)`);
+		console.log(
+			`Processed ${numOperations} operations in ${duration}ms (${((numOperations / duration) * 1000).toFixed(2)} ops/sec)`,
+		);
 	});
 
 	it('should serve metrics endpoint quickly under load', async () => {
@@ -542,11 +552,15 @@ describe('Unified Metrics Performance', () => {
 
 			// Generate baseline metrics
 			for (let i = 0; i < 100; i++) {
-				service.trackServiceOperation({
-					service: serviceName,
-					component: getExpectedComponents(serviceName)[0],
-					operation: 'baseline',
-				}, 10, true);
+				service.trackServiceOperation(
+					{
+						service: serviceName,
+						component: getExpectedComponents(serviceName)[0],
+						operation: 'baseline',
+					},
+					10,
+					true,
+				);
 			}
 		}
 
@@ -554,10 +568,10 @@ describe('Unified Metrics Performance', () => {
 		const requests = [];
 		for (let i = 0; i < 10; i++) {
 			requests.push(
-				fetch('http://127.0.0.1:3003/metrics').then(response => {
+				fetch('http://127.0.0.1:3003/metrics').then((response) => {
 					expect(response.ok).toBe(true);
 					return response.text();
-				})
+				}),
 			);
 		}
 

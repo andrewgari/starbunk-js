@@ -136,6 +136,8 @@ describe('Metrics Infrastructure Integration', () => {
 		expect(() => {
 			observability.logger.logSystemEvent({
 				event: 'bot_loaded', // eslint-disable-line @typescript-eslint/no-unused-vars
+				level: 'info', // eslint-disable-line @typescript-eslint/no-unused-vars
+				message: 'Bot loaded successfully', // eslint-disable-line @typescript-eslint/no-unused-vars
 				details: {
 					// eslint-disable-line @typescript-eslint/no-unused-vars
 					bot_count: 5, // eslint-disable-line @typescript-eslint/no-unused-vars

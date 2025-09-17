@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { logger } from '../logger';
 import { ensureError } from '../../utils/errorUtils';
-import { ProductionMetricsService, type MetricsConfiguration } from './ProductionMetricsService';
+import { ProductionMetricsService } from './ProductionMetricsService';
 import * as promClient from 'prom-client';
 import { performance } from 'perf_hooks';
 
@@ -166,7 +166,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 	private readonly startTime = Date.now();
 
 	// Unified metrics for monitoring the collector itself
-	private collectorMetrics: {
+	private collectorMetrics!: {
 		requestsTotal: promClient.Counter<string>;
 		requestDuration: promClient.Histogram<string>;
 		serviceRegistrations: promClient.Gauge<string>;
@@ -206,10 +206,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 		});
 
 		// Initialize circuit breaker
-		this.circuitBreaker = new MetricsCircuitBreaker(
-			this.config.circuitBreakerThreshold,
-			60000
-		);
+		this.circuitBreaker = new MetricsCircuitBreaker(this.config.circuitBreakerThreshold, 60000);
 
 		// Initialize collector's own metrics
 		this.initializeCollectorMetrics();
@@ -292,7 +289,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 			};
 
 			// Initialize component metrics for each service
-			components.forEach(component => {
+			components.forEach((component) => {
 				const componentMetrics: ComponentMetrics = {
 					component,
 					counters: new Map(),
@@ -320,14 +317,16 @@ export class UnifiedMetricsCollector extends EventEmitter {
 		try {
 			const serviceRegistry = this.serviceRegistries.get(service);
 			if (!serviceRegistry) {
-				throw new Error(`Unknown service: ${service}. Must be one of: ${Array.from(this.serviceRegistries.keys()).join(', ')}`);
+				throw new Error(
+					`Unknown service: ${service}. Must be one of: ${Array.from(this.serviceRegistries.keys()).join(', ')}`,
+				);
 			}
 
 			// Extract metrics from the service's registry and re-register with unified labels
 			const serviceMetricsRegistry = (metricsService as any).registry as promClient.Registry;
 			const metrics = serviceMetricsRegistry.getMetricsAsArray();
 
-			metrics.forEach(metric => {
+			metrics.forEach((metric) => {
 				try {
 					// Clone metric with service/component labels
 					this.addServiceMetricToUnified(service, metric);
@@ -349,7 +348,6 @@ export class UnifiedMetricsCollector extends EventEmitter {
 			});
 
 			this.emit('service_registered', { service, metricsCount: metrics.length });
-
 		} catch (error) {
 			logger.error(`Failed to register service metrics for ${service}:`, ensureError(error));
 			this.collectorMetrics.errorCount.inc({
@@ -414,7 +412,6 @@ export class UnifiedMetricsCollector extends EventEmitter {
 				}
 				componentMetrics.lastUpdate = Date.now();
 			}
-
 		} catch (error) {
 			// Metric might already exist - this is expected for shared metrics
 			logger.debug(`Metric ${unifiedMetricName} already exists or failed to create:`, ensureError(error));
@@ -461,7 +458,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 		// Find matching component
 		for (const [component, patterns] of Object.entries(componentPatterns)) {
 			if (Array.from(serviceComponents).includes(component)) {
-				if (patterns.some(pattern => pattern.test(metricName))) {
+				if (patterns.some((pattern) => pattern.test(metricName))) {
 					return component;
 				}
 			}
@@ -470,14 +467,14 @@ export class UnifiedMetricsCollector extends EventEmitter {
 		return null;
 	}
 
-	private createUnifiedMetricName(originalName: string, service: string, component: string): string {
+	private createUnifiedMetricName(originalName: string, _service: string, _component: string): string {
 		// If already follows the convention, return as-is
 		if (originalName.startsWith('discord_bot_')) {
 			return originalName;
 		}
 
 		// Create unified naming convention: discord_bot_{metric_name}_{total|duration_ms|...}
-		let baseName = originalName
+		const baseName = originalName
 			.replace(/^(bot_|discord_|metrics_|http_)/, '') // Remove common prefixes
 			.replace(/_total$|_count$/, '') // Remove common suffixes temporarily
 			.replace(/[^a-z0-9_]/g, '_') // Sanitize
@@ -488,7 +485,11 @@ export class UnifiedMetricsCollector extends EventEmitter {
 		let suffix = 'total';
 		if (originalName.includes('duration') || originalName.includes('latency') || originalName.includes('time')) {
 			suffix = 'duration_ms';
-		} else if (originalName.includes('ratio') || originalName.includes('percentage') || originalName.includes('utilization')) {
+		} else if (
+			originalName.includes('ratio') ||
+			originalName.includes('percentage') ||
+			originalName.includes('utilization')
+		) {
 			suffix = 'ratio';
 		} else if (originalName.includes('size') || originalName.includes('bytes') || originalName.includes('memory')) {
 			suffix = 'bytes';
@@ -504,7 +505,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 		service: string,
 		component: string,
 		name: string,
-		checkFunction: () => Promise<HealthCheckResult>
+		checkFunction: () => Promise<HealthCheckResult>,
 	): void {
 		const serviceRegistry = this.serviceRegistries.get(service);
 		if (!serviceRegistry) {
@@ -560,7 +561,6 @@ export class UnifiedMetricsCollector extends EventEmitter {
 				host: this.config.host,
 				port: this.config.port,
 			});
-
 		} catch (error) {
 			logger.error('Failed to start unified metrics server:', ensureError(error));
 			throw error;
@@ -636,7 +636,6 @@ export class UnifiedMetricsCollector extends EventEmitter {
 				endpoint: routePath,
 				status_code: statusCode.toString(),
 			});
-
 		} catch (error) {
 			logger.error(`Error handling ${method} ${path}:`, ensureError(error));
 			this.sendErrorResponse(res, 500, 'Internal server error');
@@ -649,17 +648,18 @@ export class UnifiedMetricsCollector extends EventEmitter {
 			this.requestCount--;
 			const duration = performance.now() - startTime;
 
-			this.collectorMetrics.requestDuration.observe({
-				method,
-				endpoint: path,
-				status_code: (res.statusCode || 500).toString(),
-			}, duration);
+			this.collectorMetrics.requestDuration.observe(
+				{
+					method,
+					endpoint: path,
+					status_code: (res.statusCode || 500).toString(),
+				},
+				duration,
+			);
 
 			// Update circuit breaker state metric
 			const cbState = this.circuitBreaker.getState();
-			this.collectorMetrics.circuitBreakerState.set(
-				cbState === 'open' ? 1 : cbState === 'half-open' ? 0.5 : 0
-			);
+			this.collectorMetrics.circuitBreakerState.set(cbState === 'open' ? 1 : cbState === 'half-open' ? 0.5 : 0);
 		}
 	}
 
@@ -676,7 +676,6 @@ export class UnifiedMetricsCollector extends EventEmitter {
 				});
 				res.end(metrics);
 			});
-
 		} catch (error) {
 			logger.error('Error getting unified metrics:', ensureError(error));
 			this.collectorMetrics.errorCount.inc({
@@ -719,7 +718,6 @@ export class UnifiedMetricsCollector extends EventEmitter {
 			res.end(JSON.stringify(response, null, 2));
 
 			return { overallStatus };
-
 		} catch (error) {
 			logger.error('Error performing health checks:', ensureError(error));
 			this.collectorMetrics.errorCount.inc({
@@ -756,7 +754,10 @@ export class UnifiedMetricsCollector extends EventEmitter {
 							const result = await Promise.race([
 								checkFunction(),
 								new Promise<HealthCheckResult>((_, reject) =>
-									setTimeout(() => reject(new Error('Health check timeout')), this.config.healthCheckTimeout)
+									setTimeout(
+										() => reject(new Error('Health check timeout')),
+										this.config.healthCheckTimeout,
+									),
 								),
 							]);
 
@@ -767,12 +768,14 @@ export class UnifiedMetricsCollector extends EventEmitter {
 								timestamp: new Date().toISOString(),
 							});
 
-							this.collectorMetrics.healthCheckDuration.observe({
-								service,
-								component,
-								status: result.status,
-							}, duration);
-
+							this.collectorMetrics.healthCheckDuration.observe(
+								{
+									service,
+									component,
+									status: result.status,
+								},
+								duration,
+							);
 						} catch (error) {
 							const duration = Math.round(performance.now() - checkStart);
 							componentChecks.push({
@@ -782,18 +785,21 @@ export class UnifiedMetricsCollector extends EventEmitter {
 								timestamp: new Date().toISOString(),
 							});
 
-							this.collectorMetrics.healthCheckDuration.observe({
-								service,
-								component,
-								status: 'fail',
-							}, duration);
+							this.collectorMetrics.healthCheckDuration.observe(
+								{
+									service,
+									component,
+									status: 'fail',
+								},
+								duration,
+							);
 						}
 					}
 				}
 
 				// Determine component status
-				const hasFailures = componentChecks.some(check => check.status === 'fail');
-				const hasWarnings = componentChecks.some(check => check.status === 'warn');
+				const hasFailures = componentChecks.some((check) => check.status === 'fail');
+				const hasWarnings = componentChecks.some((check) => check.status === 'warn');
 
 				let componentStatus: 'pass' | 'warn' | 'fail';
 				if (hasFailures) {
@@ -812,8 +818,8 @@ export class UnifiedMetricsCollector extends EventEmitter {
 			}
 
 			// Determine service status
-			const hasFailedComponents = serviceHealth.components.some(c => c.status === 'fail');
-			const hasDegradedComponents = serviceHealth.components.some(c => c.status === 'warn');
+			const hasFailedComponents = serviceHealth.components.some((c) => c.status === 'fail');
+			const hasDegradedComponents = serviceHealth.components.some((c) => c.status === 'warn');
 
 			if (hasFailedComponents) {
 				serviceHealth.status = 'unhealthy';
@@ -830,8 +836,8 @@ export class UnifiedMetricsCollector extends EventEmitter {
 	}
 
 	private determineOverallHealth(serviceResults: ServiceHealthStatus[]): string {
-		const hasUnhealthy = serviceResults.some(s => s.status === 'unhealthy');
-		const hasDegraded = serviceResults.some(s => s.status === 'degraded');
+		const hasUnhealthy = serviceResults.some((s) => s.status === 'unhealthy');
+		const hasDegraded = serviceResults.some((s) => s.status === 'degraded');
 
 		if (hasUnhealthy) return 'unhealthy';
 		if (hasDegraded) return 'degraded';
@@ -854,7 +860,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 						lastActivity: registry.lastActivity,
 						healthChecks: Array.from(registry.healthChecks.keys()),
 					},
-				])
+				]),
 			),
 			configuration: {
 				host: this.config.host,
@@ -902,18 +908,21 @@ export class UnifiedMetricsCollector extends EventEmitter {
 	}
 
 	private async handleServicesInfo(res: ServerResponse): Promise<void> {
-		const services = SERVICE_COMPONENTS.reduce((acc, { service, component, description }) => {
-			if (!acc[service]) {
-				acc[service] = {
-					service,
-					components: [],
-					registered: this.serviceRegistries.has(service),
-					lastActivity: this.serviceRegistries.get(service)?.lastActivity || null,
-				};
-			}
-			acc[service].components.push({ component, description });
-			return acc;
-		}, {} as Record<string, any>);
+		const services = SERVICE_COMPONENTS.reduce(
+			(acc, { service, component, description }) => {
+				if (!acc[service]) {
+					acc[service] = {
+						service,
+						components: [],
+						registered: this.serviceRegistries.has(service),
+						lastActivity: this.serviceRegistries.get(service)?.lastActivity || null,
+					};
+				}
+				acc[service].components.push({ component, description });
+				return acc;
+			},
+			{} as Record<string, any>,
+		);
 
 		res.writeHead(200, {
 			'Content-Type': 'application/json',
@@ -939,12 +948,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 		return token === this.config.authToken;
 	}
 
-	private sendErrorResponse(
-		res: ServerResponse,
-		statusCode: number,
-		message: string,
-		details?: object,
-	): void {
+	private sendErrorResponse(res: ServerResponse, statusCode: number, message: string, details?: object): void {
 		const errorResponse = {
 			error: {
 				code: statusCode,
@@ -980,7 +984,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 			const startTime = Date.now();
 
 			while (this.requestCount > 0 && Date.now() - startTime < maxWait) {
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			if (this.requestCount > 0) {
@@ -1003,7 +1007,6 @@ export class UnifiedMetricsCollector extends EventEmitter {
 
 			logger.info('Unified metrics server stopped');
 			this.emit('server_stopped');
-
 		} catch (error) {
 			logger.error('Error stopping unified metrics server:', ensureError(error));
 			throw error;

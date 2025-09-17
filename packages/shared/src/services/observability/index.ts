@@ -225,18 +225,21 @@ export function initializeUnifiedObservability(
 			});
 
 			// Register service with unified endpoint
-			unifiedEndpoint.registerService(service, {
-				enableServiceLabels: true,
-				enableComponentTracking: true,
-			}).catch((error) => {
-				console.error(`Failed to register ${service} with unified metrics:`, error);
-			});
+			if (unifiedEndpoint) {
+				unifiedEndpoint
+					.registerService(service, {
+						enableServiceLabels: true,
+						enableComponentTracking: true,
+					})
+					.catch((error) => {
+						console.error(`Failed to register ${service} with unified metrics:`, error);
+					});
 
-			console.log(`Unified observability initialized for ${service}`, {
-				unifiedEndpoint: unifiedEndpoint.getMetricsEndpoint(),
-				healthEndpoint: unifiedEndpoint.getHealthEndpoint(),
-			});
-
+				console.log(`Unified observability initialized for ${service}`, {
+					unifiedEndpoint: unifiedEndpoint.getMetricsEndpoint(),
+					healthEndpoint: unifiedEndpoint.getHealthEndpoint(),
+				});
+			}
 		} catch (error) {
 			console.error('Failed to initialize unified observability, falling back to standard:', error);
 		}
@@ -269,9 +272,11 @@ export async function shutdownObservability(): Promise<void> {
 			const { getAllServiceMetrics } = await import('./ServiceMetricsRegistry');
 			const serviceMetrics = getAllServiceMetrics();
 			for (const [service, metrics] of serviceMetrics) {
-				promises.push(metrics.shutdown().catch((error) => {
-					console.error(`Error shutting down metrics for ${service}:`, error);
-				}));
+				promises.push(
+					metrics.shutdown().catch((error) => {
+						console.error(`Error shutting down metrics for ${service}:`, error);
+					}),
+				);
 			}
 		} catch (_error) {
 			// Service not initialized, ignore
