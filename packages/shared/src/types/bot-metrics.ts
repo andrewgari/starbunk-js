@@ -129,7 +129,7 @@ export interface TimeRangeQuery {
 /**
  * Bot performance analytics result
  */
-// export interface BotPerformanceAnalytics {
+export interface BotPerformanceAnalytics {
 	/** Bot name */
 	botName: string;
 	/** Analysis time range */
@@ -180,7 +180,7 @@ export interface TimeRangeQuery {
 /**
  * Channel activity analytics
  */
-// export interface ChannelActivityAnalytics {
+export interface ChannelActivityAnalytics {
 	/** Channel ID */
 	channelId: string;
 	/** Guild ID (if applicable) */
@@ -218,7 +218,7 @@ export interface TimeRangeQuery {
 /**
  * User interaction analytics
  */
-// export interface UserInteractionAnalytics {
+export interface UserInteractionAnalytics {
 	/** User ID */
 	userId: string;
 	/** Analysis time range */
@@ -499,12 +499,15 @@ export interface IBotTriggerMetricsService {
 	trackBatchTriggers(events: BotTriggerEvent[]): Promise<ServiceOperationResult<BatchOperationResult>>;
 
 	// Query methods
-// 	getBotMetrics(filter: BotMetricsFilter, timeRange?: TimeRangeQuery): Promise<ServiceOperationResult<BotPerformanceAnalytics>>;
-// 	getChannelMetrics(channelId: string, timeRange: TimeRangeQuery): Promise<ServiceOperationResult<ChannelActivityAnalytics>>;
-// 	getUserMetrics(userId: string, timeRange: TimeRangeQuery): Promise<ServiceOperationResult<UserInteractionAnalytics>>;
+	// 	getBotMetrics(filter: BotMetricsFilter, timeRange?: TimeRangeQuery): Promise<ServiceOperationResult<BotPerformanceAnalytics>>;
+	// 	getChannelMetrics(channelId: string, timeRange: TimeRangeQuery): Promise<ServiceOperationResult<ChannelActivityAnalytics>>;
+	// 	getUserMetrics(userId: string, timeRange: TimeRangeQuery): Promise<ServiceOperationResult<UserInteractionAnalytics>>;
 
 	// Aggregation methods
-	getAggregatedMetrics(filter: BotMetricsFilter, timeRange: TimeRangeQuery): Promise<ServiceOperationResult<BotMetricsAggregation[]>>;
+	getAggregatedMetrics(
+		filter: BotMetricsFilter,
+		timeRange: TimeRangeQuery,
+	): Promise<ServiceOperationResult<BotMetricsAggregation[]>>;
 
 	// Prometheus integration
 	exportPrometheusMetrics(): Promise<ServiceOperationResult<string>>;

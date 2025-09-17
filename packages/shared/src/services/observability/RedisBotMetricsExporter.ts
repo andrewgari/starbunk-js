@@ -17,11 +17,10 @@ import type Redis from 'ioredis';
 import { logger } from '../logger';
 import { ensureError } from '../../utils/errorUtils';
 import type { BotTriggerMetricsService } from './BotTriggerMetricsService';
-import type {
-// 	BotPerformanceAnalytics,
+import type {} from // 	BotPerformanceAnalytics,
 // 	ChannelActivityAnalytics,
 // 	UserInteractionAnalytics
-} from '../../types/bot-metrics';
+'../../types/bot-metrics';
 
 // Export configuration
 export interface RedisMetricsExporterConfig {
@@ -111,7 +110,7 @@ class ExportCircuitBreaker {
 
 	constructor(
 		private readonly threshold: number,
-		private readonly resetTimeout: number
+		private readonly resetTimeout: number,
 	) {}
 
 	async execute<T>(operation: () => Promise<T>): Promise<T> {
@@ -122,7 +121,7 @@ class ExportCircuitBreaker {
 		try {
 			const _result = await operation();
 			this.onSuccess();
-			return result;
+			return _result;
 		} catch (error) {
 			this.onFailure();
 			throw error;
@@ -144,7 +143,7 @@ class ExportCircuitBreaker {
 		if (this.failureCount >= this.threshold) {
 			this.state = 'OPEN';
 			logger.warn('Redis export circuit breaker OPEN', {
-				failures: this.failureCount
+				failures: this.failureCount,
 			});
 
 			// Schedule reset to HALF_OPEN
@@ -166,7 +165,7 @@ class ExportCircuitBreaker {
 		return {
 			state: this.state,
 			failureCount: this.failureCount,
-			lastFailureTime: this.lastFailureTime
+			lastFailureTime: this.lastFailureTime,
 		};
 	}
 
@@ -209,10 +208,7 @@ export class RedisBotMetricsExporter {
 	private exportDurationHistogram!: promClient.Histogram<string>;
 	private cacheHitRateGauge!: promClient.Gauge<string>;
 
-	constructor(
-		registry: promClient.Registry,
-		config?: RedisMetricsExporterConfig
-	) {
+	constructor(registry: promClient.Registry, config?: RedisMetricsExporterConfig) {
 		this.registry = registry;
 		this.config = {
 			cacheTTL: config?.cacheTTL ?? 15000,
@@ -224,18 +220,18 @@ export class RedisBotMetricsExporter {
 			exportTimeout: config?.exportTimeout ?? 5000,
 			enableDetailedLabels: config?.enableDetailedLabels ?? false,
 			batchSize: config?.batchSize ?? 100,
-			scanCount: config?.scanCount ?? 1000
+			scanCount: config?.scanCount ?? 1000,
 		};
 
 		this.circuitBreaker = new ExportCircuitBreaker(
 			this.config.circuitBreakerThreshold,
-			this.config.circuitBreakerResetTimeout
+			this.config.circuitBreakerResetTimeout,
 		);
 
 		this.initializeMetrics();
 		logger.info('Redis bot metrics exporter initialized', {
 			cacheTTL: this.config.cacheTTL,
-			circuitBreakerEnabled: this.config.enableCircuitBreaker
+			circuitBreakerEnabled: this.config.enableCircuitBreaker,
 		});
 	}
 
@@ -245,14 +241,14 @@ export class RedisBotMetricsExporter {
 			name: 'bunkbot_redis_triggers_total',
 			help: 'Total bot triggers from Redis',
 			labelNames: ['bot_name', 'condition_name', 'channel_id', 'guild_id'],
-			registers: [this.registry]
+			registers: [this.registry],
 		});
 
 		this.botResponsesCounter = new promClient.Counter({
 			name: 'bunkbot_redis_responses_total',
 			help: 'Total bot responses from Redis',
 			labelNames: ['bot_name', 'condition_name', 'success'],
-			registers: [this.registry]
+			registers: [this.registry],
 		});
 
 		this.botResponseDurationHistogram = new promClient.Histogram({
@@ -260,55 +256,55 @@ export class RedisBotMetricsExporter {
 			help: 'Bot response duration from Redis in seconds',
 			labelNames: ['bot_name', 'condition_name'],
 			buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
-			registers: [this.registry]
+			registers: [this.registry],
 		});
 
 		this.uniqueUsersGauge = new promClient.Gauge({
 			name: 'bunkbot_redis_unique_users_daily',
 			help: 'Unique users per bot per day from Redis',
 			labelNames: ['bot_name', 'channel_id'],
-			registers: [this.registry]
+			registers: [this.registry],
 		});
 
 		this.channelActivityGauge = new promClient.Gauge({
 			name: 'bunkbot_redis_channel_activity',
 			help: 'Channel activity level from Redis',
 			labelNames: ['channel_id', 'guild_id'],
-			registers: [this.registry]
+			registers: [this.registry],
 		});
 
 		// System metrics
 		this.redisConnectionGauge = new promClient.Gauge({
 			name: 'bunkbot_redis_connection_status',
 			help: 'Redis connection status (1=connected, 0=disconnected)',
-			registers: [this.registry]
+			registers: [this.registry],
 		});
 
 		this.batchOperationsCounter = new promClient.Counter({
 			name: 'bunkbot_redis_batch_operations_total',
 			help: 'Total Redis batch operations',
 			labelNames: ['operation', 'success'],
-			registers: [this.registry]
+			registers: [this.registry],
 		});
 
 		this.circuitBreakerStateGauge = new promClient.Gauge({
 			name: 'bunkbot_redis_circuit_breaker_state',
 			help: 'Circuit breaker state for Redis exports (0=closed, 1=open, 2=half-open)',
 			labelNames: ['bot_name'],
-			registers: [this.registry]
+			registers: [this.registry],
 		});
 
 		this.exportDurationHistogram = new promClient.Histogram({
 			name: 'bunkbot_redis_export_duration_seconds',
 			help: 'Duration of Redis metrics export in seconds',
 			buckets: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
-			registers: [this.registry]
+			registers: [this.registry],
 		});
 
 		this.cacheHitRateGauge = new promClient.Gauge({
 			name: 'bunkbot_redis_cache_hit_rate',
 			help: 'Cache hit rate for Redis metrics export',
-			registers: [this.registry]
+			registers: [this.registry],
 		});
 	}
 
@@ -373,7 +369,7 @@ export class RedisBotMetricsExporter {
 			this.lastExportTime = Date.now();
 
 			logger.debug('Redis metrics export completed', {
-				duration: `${duration}s`
+				duration: `${duration}s`,
 			});
 		} catch (error) {
 			logger.error('Failed to export Redis metrics:', ensureError(error));
@@ -429,9 +425,9 @@ export class RedisBotMetricsExporter {
 				memoryUsage: 0,
 				connectionStatus: 'connected',
 				exportDuration: 0,
-				cacheHitRate: this.getCacheHitRate()
+				cacheHitRate: this.getCacheHitRate(),
 			},
-			timestamp: Date.now()
+			timestamp: Date.now(),
 		};
 
 		try {
@@ -493,7 +489,6 @@ export class RedisBotMetricsExporter {
 
 			aggregation.systemMetrics.exportDuration = Date.now() - startTime;
 			aggregation.systemMetrics.connectionStatus = 'connected';
-
 		} catch (error) {
 			logger.error('Failed to aggregate Redis metrics:', ensureError(error));
 			aggregation.systemMetrics.connectionStatus = 'error';
@@ -521,7 +516,7 @@ export class RedisBotMetricsExporter {
 					'MATCH',
 					pattern,
 					'COUNT',
-					this.config.scanCount
+					this.config.scanCount,
 				);
 				cursor = newCursor;
 				keys.push(...batch);
@@ -551,54 +546,37 @@ export class RedisBotMetricsExporter {
 
 			// Update trigger counts
 			for (const [condition, count] of metrics.conditionDistribution) {
-				this.botTriggersCounter.labels(
-					botName,
-					condition,
-					'all',  // channel_id placeholder
-					'all'   // guild_id placeholder
-				).inc(count);
+				this.botTriggersCounter
+					.labels(
+						botName,
+						condition,
+						'all', // channel_id placeholder
+						'all', // guild_id placeholder
+					)
+					.inc(count);
 			}
 
 			// Update response counts
-			this.botResponsesCounter.labels(
-				botName,
-				'all',
-				'true'
-			).inc(metrics.totalResponses);
+			this.botResponsesCounter.labels(botName, 'all', 'true').inc(metrics.totalResponses);
 
-			this.botResponsesCounter.labels(
-				botName,
-				'all',
-				'false'
-			).inc(metrics.totalFailures);
+			this.botResponsesCounter.labels(botName, 'all', 'false').inc(metrics.totalFailures);
 
 			// Update response duration
 			if (metrics.avgResponseTime > 0) {
-				this.botResponseDurationHistogram.labels(
-					botName,
-					'all'
-				).observe(metrics.avgResponseTime / 1000); // Convert to seconds
+				this.botResponseDurationHistogram.labels(botName, 'all').observe(metrics.avgResponseTime / 1000); // Convert to seconds
 			}
 
 			// Update unique users
-			this.uniqueUsersGauge.labels(
-				botName,
-				'all'
-			).set(metrics.uniqueUsers);
+			this.uniqueUsersGauge.labels(botName, 'all').set(metrics.uniqueUsers);
 		}
 
 		// Update channel metrics
 		for (const [channelId, metrics] of aggregation.channelMetrics) {
-			this.channelActivityGauge.labels(
-				channelId,
-				metrics.guildId || 'unknown'
-			).set(metrics.totalActivity);
+			this.channelActivityGauge.labels(channelId, metrics.guildId || 'unknown').set(metrics.totalActivity);
 		}
 
 		// Update system metrics
-		this.redisConnectionGauge.set(
-			aggregation.systemMetrics.connectionStatus === 'connected' ? 1 : 0
-		);
+		this.redisConnectionGauge.set(aggregation.systemMetrics.connectionStatus === 'connected' ? 1 : 0);
 
 		// Update circuit breaker state
 		const cbState = this.circuitBreaker.getState();
@@ -623,7 +601,7 @@ export class RedisBotMetricsExporter {
 			uniqueUsers: parseInt(data.unique_users || '0', 10),
 			uniqueChannels: parseInt(data.unique_channels || '0', 10),
 			conditionDistribution: this.parseConditionDistribution(data),
-			lastActivity: parseInt(data.last_activity || '0', 10)
+			lastActivity: parseInt(data.last_activity || '0', 10),
 		};
 	}
 
@@ -637,7 +615,7 @@ export class RedisBotMetricsExporter {
 			totalActivity: parseInt(data.bot_triggers || '0', 10),
 			uniqueBots: parseInt(data.unique_bots || '0', 10),
 			uniqueUsers: parseInt(data.unique_users || '0', 10),
-			lastActivity: parseInt(data.last_trigger || '0', 10)
+			lastActivity: parseInt(data.last_trigger || '0', 10),
 		};
 	}
 
@@ -707,7 +685,7 @@ export class RedisBotMetricsExporter {
 		this.cache.set(key, {
 			data,
 			timestamp: Date.now(),
-			ttl
+			ttl,
 		});
 	}
 
@@ -737,7 +715,7 @@ export class RedisBotMetricsExporter {
 			const keysToDelete: string[] = [];
 
 			for (const [key, entry] of this.cache) {
-				if (now - entry.timestamp > entry.ttl) {
+				if (_now - entry.timestamp > entry.ttl) {
 					keysToDelete.push(key);
 				}
 			}
@@ -763,7 +741,7 @@ export class RedisBotMetricsExporter {
 			lastExportTime: this.lastExportTime,
 			exportInProgress: this.exportInProgress,
 			circuitBreaker: this.circuitBreaker.getStats(),
-			redisConnected: this.redis ? true : false
+			redisConnected: this.redis ? true : false,
 		};
 	}
 
@@ -801,7 +779,7 @@ export class RedisBotMetricsExporter {
  */
 export function createRedisBotMetricsExporter(
 	registry: promClient.Registry,
-	config?: RedisMetricsExporterConfig
+	config?: RedisMetricsExporterConfig,
 ): RedisBotMetricsExporter {
 	return new RedisBotMetricsExporter(registry, config);
 }

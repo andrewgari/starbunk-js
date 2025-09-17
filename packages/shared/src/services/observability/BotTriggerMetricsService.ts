@@ -20,9 +20,9 @@ import { ensureError } from '../../utils/errorUtils';
 import {
 	type BotTriggerEvent,
 	type BotMetricsFilter,
-// 	type BotPerformanceAnalytics,
-// 	type ChannelActivityAnalytics,
-// 	type UserInteractionAnalytics,
+	type BotPerformanceAnalytics,
+	type ChannelActivityAnalytics,
+	type UserInteractionAnalytics,
 	type BotMetricsAggregation,
 	type TimeRangeQuery,
 	type BotMetricsServiceConfig,
@@ -31,7 +31,7 @@ import {
 	type CircuitBreakerState,
 	type CircuitBreakerStats,
 	type BatchOperationResult,
-	type PrometheusMetricsExport,
+	type PrometheusMetricsExport as _PrometheusMetricsExport,
 	type IBotTriggerMetricsService,
 } from '../../types/bot-metrics';
 import * as promClient from 'prom-client';
@@ -78,7 +78,7 @@ class CircuitBreaker {
 		try {
 			const _result = await operation();
 			this.onSuccess();
-			return result;
+			return _result;
 		} catch (error) {
 			this.onFailure();
 			throw error;
@@ -742,10 +742,7 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 	/**
 	 * Get bot performance analytics
 	 */
-	async getBotMetrics(
-		filter: BotMetricsFilter,
-		timeRange?: TimeRangeQuery,
-	): Promise<ServiceOperationResult<any>> {
+	async getBotMetrics(filter: BotMetricsFilter, timeRange?: TimeRangeQuery): Promise<ServiceOperationResult<any>> {
 		if (!this.isInitialized) {
 			await this.initialize();
 		}
@@ -762,7 +759,7 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 			this.redisOperationDuration.observe({ operation }, duration);
 			this.redisOperationCounter.inc({ operation, success: 'true' });
 
-			return { success: true, data: result };
+			return { success: true, data: _result };
 		} catch (error) {
 			const duration = (Date.now() - startTime) / 1000;
 			this.redisOperationDuration.observe({ operation }, duration);
@@ -791,14 +788,14 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 	private async computeBotAnalytics(
 		filter: BotMetricsFilter,
 		timeRange?: TimeRangeQuery,
-// 	): Promise<BotPerformanceAnalytics> {
+	): Promise<BotPerformanceAnalytics> {
 		if (!filter.botName) {
 			throw new Error('Bot name is required for analytics');
 		}
 
 		const _now = Date.now();
-		const startTimestamp = timeRange?.startTime ?? now - 24 * 60 * 60 * 1000; // 24 hours ago
-		const endTimestamp = timeRange?.endTime ?? now;
+		const startTimestamp = timeRange?.startTime ?? _now - 24 * 60 * 60 * 1000; // 24 hours ago
+		const endTimestamp = timeRange?.endTime ?? _now;
 
 		const botKey = this.KEYS.BOT_TRIGGERS(filter.botName);
 		const perfKey = this.KEYS.PERFORMANCE_STATS(filter.botName);
@@ -820,7 +817,9 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 
 		// Get performance data
 		const responseTimes = await this.redis.zrangebyscore(perfKey, startTimestamp, endTimestamp);
-		const responseTimeNumbers = responseTimes.map((rt: string) => parseFloat(rt)).sort((a: number, b: number) => a - b);
+		const responseTimeNumbers = responseTimes
+			.map((rt: string) => parseFloat(rt))
+			.sort((a: number, b: number) => a - b);
 
 		// Calculate percentiles
 		const p95Index = Math.floor(responseTimeNumbers.length * 0.95);
@@ -873,7 +872,7 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 	async getChannelMetrics(
 		channelId: string,
 		timeRange: TimeRangeQuery,
-// 	): Promise<ServiceOperationResult<ChannelActivityAnalytics>> {
+	): Promise<ServiceOperationResult<ChannelActivityAnalytics>> {
 		if (!this.isInitialized) {
 			await this.initialize();
 		}
@@ -890,7 +889,7 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 			this.redisOperationDuration.observe({ operation }, duration);
 			this.redisOperationCounter.inc({ operation, success: 'true' });
 
-			return { success: true, data: result };
+			return { success: true, data: _result };
 		} catch (error) {
 			const duration = (Date.now() - startTime) / 1000;
 			this.redisOperationDuration.observe({ operation }, duration);
@@ -918,7 +917,7 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 	private async computeChannelAnalytics(
 		channelId: string,
 		timeRange: TimeRangeQuery,
-// 	): Promise<ChannelActivityAnalytics> {
+	): Promise<ChannelActivityAnalytics> {
 		const channelKey = this.KEYS.CHANNEL_ACTIVITY(channelId);
 		const channelStats = await this.redis.hgetall(channelKey);
 
@@ -951,7 +950,7 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 	async getUserMetrics(
 		userId: string,
 		timeRange: TimeRangeQuery,
-// 	): Promise<ServiceOperationResult<UserInteractionAnalytics>> {
+	): Promise<ServiceOperationResult<UserInteractionAnalytics>> {
 		if (!this.isInitialized) {
 			await this.initialize();
 		}
@@ -968,7 +967,7 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 			this.redisOperationDuration.observe({ operation }, duration);
 			this.redisOperationCounter.inc({ operation, success: 'true' });
 
-			return { success: true, data: result };
+			return { success: true, data: _result };
 		} catch (error) {
 			const duration = (Date.now() - startTime) / 1000;
 			this.redisOperationDuration.observe({ operation }, duration);
@@ -993,7 +992,7 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 	/**
 	 * Compute user analytics (internal method)
 	 */
-// 	private async computeUserAnalytics(userId: string, timeRange: TimeRangeQuery): Promise<UserInteractionAnalytics> {
+	private async computeUserAnalytics(userId: string, timeRange: TimeRangeQuery): Promise<UserInteractionAnalytics> {
 		const userKey = this.KEYS.USER_INTERACTIONS(userId);
 		const userStats = await this.redis.hgetall(userKey);
 
@@ -1042,7 +1041,7 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 			this.redisOperationDuration.observe({ operation }, duration);
 			this.redisOperationCounter.inc({ operation, success: 'true' });
 
-			return { success: true, data: result };
+			return { success: true, data: _result };
 		} catch (error) {
 			const duration = (Date.now() - startTime) / 1000;
 			this.redisOperationDuration.observe({ operation }, duration);
@@ -1288,7 +1287,7 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 
 		try {
 			// Clean up old events
-			const eventCutoff = now - eventRetentionDays * 24 * 60 * 60 * 1000;
+			const eventCutoff = _now - eventRetentionDays * 24 * 60 * 60 * 1000;
 			// Implementation would scan and delete old event keys
 
 			// Clean up old aggregations
@@ -1374,9 +1373,7 @@ export async function initializeBotTriggerMetricsService(
  */
 export function getBotTriggerMetricsService(): BotTriggerMetricsService {
 	if (!globalInstance) {
-		throw new Error(
-			'BotTriggerMetricsService not initialized. Call initializeBotTriggerMetricsService() first.',
-		);
+		throw new Error('BotTriggerMetricsService not initialized. Call initializeBotTriggerMetricsService() first.');
 	}
 	return globalInstance;
 }

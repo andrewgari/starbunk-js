@@ -19,15 +19,15 @@ import type { BotTriggerMetricsService } from '../BotTriggerMetricsService';
 
 // Mock Redis interface
 const mockRedis = {
-	ping: jest.fn(),
-	connect: jest.fn(),
+	ping: jest.fn().mockResolvedValue('PONG'),
+	connect: jest.fn().mockResolvedValue(undefined),
 	pipeline: jest.fn(),
-	scan: jest.fn(),
-	hgetall: jest.fn(),
-	dbsize: jest.fn(),
-	info: jest.fn(),
+	scan: jest.fn().mockResolvedValue(['0', []]),
+	hgetall: jest.fn().mockResolvedValue({}),
+	dbsize: jest.fn().mockResolvedValue(0),
+	info: jest.fn().mockResolvedValue(''),
 	on: jest.fn(),
-	quit: jest.fn(),
+	quit: jest.fn().mockResolvedValue('OK'),
 } as unknown as Redis;
 
 // Mock pipeline interface
@@ -67,8 +67,6 @@ describe('RedisBotMetricsExporter', () => {
 
 		// Setup default mocks
 		(mockRedis.pipeline as jest.Mock).mockReturnValue(mockPipeline);
-		(mockRedis.ping as jest.Mock).mockResolvedValue('PONG');
-		(mockRedis.scan as jest.Mock).mockResolvedValue(['0', []]);
 		mockPipeline.exec.mockResolvedValue([]);
 
 		// Create exporter with test configuration
@@ -210,9 +208,9 @@ describe('RedisBotMetricsExporter', () => {
 			let exportCount = 0;
 			const trackingRedis = {
 				...mockRedis,
-				scan: jest.fn().mockImplementation(async (cursor: string, match: string, pattern: string) => {
+				scan: jest.fn().mockImplementation(async (...args: any[]) => {
 					exportCount++;
-					await new Promise(resolve => setTimeout(resolve, 100));
+					await new Promise((resolve) => setTimeout(resolve, 100));
 					return ['0', []];
 				}),
 			} as unknown as Redis;
@@ -220,11 +218,7 @@ describe('RedisBotMetricsExporter', () => {
 			await exporter.initialize(trackingRedis);
 
 			// Start multiple exports concurrently
-			const exports = Promise.all([
-				exporter.exportMetrics(),
-				exporter.exportMetrics(),
-				exporter.exportMetrics(),
-			]);
+			const exports = Promise.all([exporter.exportMetrics(), exporter.exportMetrics(), exporter.exportMetrics()]);
 
 			await exports;
 
@@ -235,7 +229,7 @@ describe('RedisBotMetricsExporter', () => {
 		it('should handle large number of Redis keys efficiently', async () => {
 			const manyKeys = Array.from({ length: 500 }, (_, i) => `bot:bot${i}:stats`);
 
-			(mockRedis.scan as jest.Mock).mockImplementation((cursor: string) => {
+			(mockRedis.scan as jest.Mock).mockImplementation((cursor: string, ...args: any[]) => {
 				if (cursor === '0') {
 					return Promise.resolve(['123', manyKeys.slice(0, 100)]);
 				} else if (cursor === '123') {
@@ -321,7 +315,8 @@ describe('RedisBotMetricsExporter', () => {
 
 			const intermittentRedis = {
 				...mockRedis,
-				scan: jest.fn()
+				scan: jest
+					.fn()
 					.mockRejectedValueOnce(new Error('Error 1'))
 					.mockRejectedValueOnce(new Error('Error 2'))
 					.mockResolvedValue(['0', []]),
@@ -367,7 +362,7 @@ describe('RedisBotMetricsExporter', () => {
 		it('should generate bot trigger metrics', async () => {
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 
 			expect(metrics).toContain('bunkbot_redis_triggers_total');
 			expect(metrics).toContain('bot_name="testbot"');
@@ -377,7 +372,7 @@ describe('RedisBotMetricsExporter', () => {
 		it('should generate response metrics with success/failure labels', async () => {
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 
 			expect(metrics).toContain('bunkbot_redis_responses_total');
 			expect(metrics).toContain('success="true"');
@@ -387,7 +382,7 @@ describe('RedisBotMetricsExporter', () => {
 		it('should generate response duration histograms', async () => {
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 
 			expect(metrics).toContain('bunkbot_redis_response_duration_seconds');
 			expect(metrics).toContain('_bucket{');
@@ -397,7 +392,7 @@ describe('RedisBotMetricsExporter', () => {
 		it('should generate unique user metrics', async () => {
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 
 			expect(metrics).toContain('bunkbot_redis_unique_users_daily');
 			expect(metrics).toContain('bot_name="testbot"');
@@ -406,7 +401,7 @@ describe('RedisBotMetricsExporter', () => {
 		it('should generate channel activity metrics', async () => {
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 
 			expect(metrics).toContain('bunkbot_redis_channel_activity');
 			expect(metrics).toContain('channel_id="test-channel"');
@@ -416,7 +411,7 @@ describe('RedisBotMetricsExporter', () => {
 		it('should generate system metrics', async () => {
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 
 			expect(metrics).toContain('bunkbot_redis_connection_status');
 			expect(metrics).toContain('bunkbot_redis_export_duration_seconds');
@@ -433,13 +428,13 @@ describe('RedisBotMetricsExporter', () => {
 			mockPipeline.exec.mockResolvedValue([
 				[null, {}], // Empty bot data
 				[null, {}], // Empty channel data
-				[null, 0],  // Zero database size
+				[null, 0], // Zero database size
 				[null, ''], // Empty memory info
 			]);
 
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 			expect(metrics).toContain('bunkbot_redis_connection_status');
 		});
 
@@ -454,7 +449,7 @@ describe('RedisBotMetricsExporter', () => {
 
 			await detailedExporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 			expect(metrics).toContain('bunkbot_redis_triggers_total');
 
 			await detailedExporter.shutdown();
@@ -470,26 +465,29 @@ describe('RedisBotMetricsExporter', () => {
 			(mockRedis.scan as jest.Mock).mockResolvedValueOnce(['0', ['bot:parsebot:stats']]);
 
 			mockPipeline.exec.mockResolvedValue([
-				[null, {
-					total_triggers: '150',
-					total_responses: '140',
-					total_failures: '10',
-					avg_response_time: '200.5',
-					p95_response_time: '350.7',
-					unique_users: '30',
-					unique_channels: '8',
-					'condition:greeting': '80',
-					'condition:farewell': '40',
-					'condition:help': '30',
-					last_activity: '1234567890',
-				}],
+				[
+					null,
+					{
+						total_triggers: '150',
+						total_responses: '140',
+						total_failures: '10',
+						avg_response_time: '200.5',
+						p95_response_time: '350.7',
+						unique_users: '30',
+						unique_channels: '8',
+						'condition:greeting': '80',
+						'condition:farewell': '40',
+						'condition:help': '30',
+						last_activity: '1234567890',
+					},
+				],
 				[null, 1500],
 				[null, 'used_memory:2097152\r\n'],
 			]);
 
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 
 			expect(metrics).toContain('bot_name="parsebot"');
 			expect(metrics).toContain('condition_name="greeting"');
@@ -503,20 +501,23 @@ describe('RedisBotMetricsExporter', () => {
 				.mockResolvedValueOnce(['0', ['channel:parsechannel:activity']]);
 
 			mockPipeline.exec.mockResolvedValue([
-				[null, {
-					bot_triggers: '75',
-					unique_bots: '5',
-					unique_users: '25',
-					last_trigger: '1234567890',
-					guild_id: 'parse-guild',
-				}],
+				[
+					null,
+					{
+						bot_triggers: '75',
+						unique_bots: '5',
+						unique_users: '25',
+						last_trigger: '1234567890',
+						guild_id: 'parse-guild',
+					},
+				],
 				[null, 2000],
 				[null, 'used_memory:1048576\r\n'],
 			]);
 
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 
 			expect(metrics).toContain('channel_id="parsechannel"');
 			expect(metrics).toContain('guild_id="parse-guild"');
@@ -546,7 +547,7 @@ describe('RedisBotMetricsExporter', () => {
 
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 			expect(metrics).toContain('bunkbot_redis_connection_status 1');
 		});
 	});
@@ -606,7 +607,7 @@ describe('RedisBotMetricsExporter', () => {
 			await shortCacheExporter.exportMetrics();
 
 			// Wait for cache to expire
-			await new Promise(resolve => setTimeout(resolve, 150));
+			await new Promise((resolve) => setTimeout(resolve, 150));
 
 			// Reset mocks to verify new Redis calls
 			jest.clearAllMocks();
@@ -650,7 +651,10 @@ describe('RedisBotMetricsExporter', () => {
 			await limitedExporter.initialize(mockRedis);
 
 			// Mock many keys
-			(mockRedis.scan as jest.Mock).mockResolvedValue(['0', Array.from({ length: 15000 }, (_, i) => `bot:bot${i}:stats`)]);
+			(mockRedis.scan as jest.Mock).mockResolvedValue([
+				'0',
+				Array.from({ length: 15000 }, (_, i) => `bot:bot${i}:stats`),
+			]);
 
 			await limitedExporter.exportMetrics();
 
@@ -722,7 +726,7 @@ describe('RedisBotMetricsExporter', () => {
 
 			await exporter.exportMetrics();
 
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 			expect(metrics).toContain('bunkbot_redis_connection_status');
 		});
 
@@ -786,7 +790,7 @@ describe('RedisBotMetricsExporter', () => {
 			expect(stats.cacheHitRate).toBe(0);
 
 			// Verify metrics are reset
-			const metrics = await registry.getMetricsAsString();
+			const metrics = await registry.metrics();
 			expect(metrics).toBe(''); // Should be empty after reset
 		});
 
@@ -815,27 +819,33 @@ describe('RedisBotMetricsExporter', () => {
 
 		mockPipeline.exec.mockResolvedValue([
 			// Bot metrics
-			[null, {
-				total_triggers: '100',
-				total_responses: '95',
-				total_failures: '5',
-				avg_response_time: '150.5',
-				p95_response_time: '250.0',
-				unique_users: '25',
-				unique_channels: '5',
-				'condition:greeting': '50',
-				'condition:farewell': '30',
-				'condition:help': '20',
-				last_activity: '1234567890',
-			}],
+			[
+				null,
+				{
+					total_triggers: '100',
+					total_responses: '95',
+					total_failures: '5',
+					avg_response_time: '150.5',
+					p95_response_time: '250.0',
+					unique_users: '25',
+					unique_channels: '5',
+					'condition:greeting': '50',
+					'condition:farewell': '30',
+					'condition:help': '20',
+					last_activity: '1234567890',
+				},
+			],
 			// Channel metrics
-			[null, {
-				bot_triggers: '200',
-				unique_bots: '3',
-				unique_users: '15',
-				last_trigger: '1234567890',
-				guild_id: 'test-guild',
-			}],
+			[
+				null,
+				{
+					bot_triggers: '200',
+					unique_bots: '3',
+					unique_users: '15',
+					last_trigger: '1234567890',
+					guild_id: 'test-guild',
+				},
+			],
 			// System metrics
 			[null, 5000], // dbsize
 			[null, 'used_memory:2097152\r\nused_memory_human:2.00M\r\n'], // memory info

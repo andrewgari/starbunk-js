@@ -366,11 +366,11 @@ export class DiscordService {
 		try {
 			// Check cooldown
 			const _now = Date.now();
-			if (now - this.lastFetchTimestamp < this.FETCH_COOLDOWN) {
+			if (_now - this.lastFetchTimestamp < this.FETCH_COOLDOWN) {
 				logger.debug('[DiscordService] Skipping refresh due to cooldown');
 				return;
 			}
-			this.lastFetchTimestamp = now;
+			this.lastFetchTimestamp = _now;
 
 			logger.info('[DiscordService] Starting bot profile refresh');
 			const guild = await this.getGuild(DefaultGuildId);

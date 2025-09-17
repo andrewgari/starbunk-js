@@ -48,26 +48,30 @@ jest.mock('ioredis', () => {
 	return MockRedis;
 });
 
-// Get references to the mocks after they're created
-const mockRedis = jest.mocked({
+// Create mock Redis instance with proper types
+interface MockRedis extends Redis {
+	[key: string]: any;
+}
+
+const mockRedis: MockRedis = {
 	on: jest.fn(),
-	connect: jest.fn(),
-	ping: jest.fn(),
-	script: jest.fn(),
-	eval: jest.fn(),
+	connect: jest.fn().mockResolvedValue(undefined as any),
+	ping: jest.fn().mockResolvedValue('PONG' as any),
+	script: jest.fn().mockResolvedValue('script_hash' as any),
+	eval: jest.fn().mockResolvedValue('OK' as any),
 	pipeline: jest.fn(),
-	quit: jest.fn(),
-	hset: jest.fn(),
-	hincrby: jest.fn(),
-	expire: jest.fn(),
-	zadd: jest.fn(),
-	hmget: jest.fn(),
-	hgetall: jest.fn(),
-	zrangebyscore: jest.fn(),
-	scan: jest.fn(),
-	dbsize: jest.fn(),
-	info: jest.fn(),
-});
+	quit: jest.fn().mockResolvedValue('OK' as any),
+	hset: jest.fn().mockResolvedValue(1 as any),
+	hincrby: jest.fn().mockResolvedValue(1 as any),
+	expire: jest.fn().mockResolvedValue(1 as any),
+	zadd: jest.fn().mockResolvedValue(1 as any),
+	hmget: jest.fn().mockResolvedValue([] as any),
+	hgetall: jest.fn().mockResolvedValue({} as any),
+	zrangebyscore: jest.fn().mockResolvedValue([] as any),
+	scan: jest.fn().mockResolvedValue(['0', []] as any),
+	dbsize: jest.fn().mockResolvedValue(0 as any),
+	info: jest.fn().mockResolvedValue('' as any),
+} as any;
 
 const mockPipeline = {
 	hset: jest.fn().mockReturnThis(),
@@ -95,14 +99,8 @@ describe('BotTriggerMetricsService', () => {
 		jest.clearAllMocks();
 
 		// Setup pipeline mock
-		mockRedis.pipeline.mockReturnValue(mockPipeline);
+		(mockRedis.pipeline as jest.Mock).mockReturnValue(mockPipeline);
 		mockPipeline.exec.mockResolvedValue([]);
-
-		// Setup default successful responses
-		mockRedis.connect.mockResolvedValue(undefined);
-		mockRedis.ping.mockResolvedValue('PONG');
-		mockRedis.script.mockResolvedValue('script_hash');
-		mockRedis.eval.mockResolvedValue('OK');
 
 		config = createProductionConfig('localhost', 6379);
 		service = new BotTriggerMetricsService(config);
@@ -125,7 +123,7 @@ describe('BotTriggerMetricsService', () => {
 		});
 
 		it('should handle Redis connection failures during initialization', async () => {
-			mockRedis.connect.mockRejectedValue(new Error('Connection failed'));
+			(mockRedis.connect as jest.Mock).mockRejectedValue(new Error('Connection failed'));
 
 			await expect(service.initialize()).rejects.toThrow('Connection failed');
 		});
@@ -158,26 +156,26 @@ describe('BotTriggerMetricsService', () => {
 
 			const _result = await service.trackBotTrigger(event);
 
-			expect(result.success).toBe(true);
+			expect(_result.success).toBe(true);
 		});
 
 		it('should open circuit breaker after threshold failures', async () => {
 			const event: BotTriggerEvent = createTestEvent();
 
 			// Mock Redis operations to fail
-			mockRedis.eval.mockRejectedValue(new Error('Redis error'));
+			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Redis error'));
 			mockPipeline.exec.mockRejectedValue(new Error('Pipeline error'));
 
 			// Trigger failures to reach threshold (default: 5)
 			for (let i = 0; i < 5; i++) {
 				const _result = await service.trackBotTrigger(event);
-				expect(result.success).toBe(false);
+				expect(_result.success).toBe(false);
 			}
 
 			// Circuit should be open now
 			const _result = await service.trackBotTrigger(event);
-			expect(result.success).toBe(false);
-			expect(result.error?.code).toBe('TRACKING_FAILED');
+			expect(_result.success).toBe(false);
+			expect(_result.error?.code).toBe('TRACKING_FAILED');
 		});
 
 		it('should transition to half-open state after timeout', async () => {
@@ -197,19 +195,19 @@ describe('BotTriggerMetricsService', () => {
 			await testService.initialize();
 
 			// Trigger failures to open circuit
-			mockRedis.eval.mockRejectedValue(new Error('Redis error'));
+			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Redis error'));
 			mockPipeline.exec.mockRejectedValue(new Error('Pipeline error'));
 
 			await testService.trackBotTrigger(event);
 			await testService.trackBotTrigger(event);
 
 			// Wait for reset timeout
-			await new Promise(resolve => setTimeout(resolve, 150));
+			await new Promise((resolve) => setTimeout(resolve, 150));
 
 			// Next operation should attempt execution (half-open state)
-			mockRedis.eval.mockResolvedValueOnce('OK');
+			(mockRedis.eval as jest.Mock).mockResolvedValueOnce('OK');
 			const _result = await testService.trackBotTrigger(event);
-			expect(result.success).toBe(true);
+			expect(_result.success).toBe(true);
 
 			await testService.cleanup();
 		});
@@ -226,20 +224,16 @@ describe('BotTriggerMetricsService', () => {
 		});
 
 		it('should batch events and flush when batch size reached', async () => {
-			const events = [
-				createTestEvent('event1'),
-				createTestEvent('event2'),
-				createTestEvent('event3'),
-			];
+			const events = [createTestEvent('event1'), createTestEvent('event2'), createTestEvent('event3')];
 
 			// Track events - should trigger flush on 3rd event
 			for (const event of events) {
 				const _result = await service.trackBotTrigger(event);
-				expect(result.success).toBe(true);
+				expect(_result.success).toBe(true);
 			}
 
 			// Wait a bit for batch processing
-			await new Promise(resolve => setTimeout(resolve, 50));
+			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Should have processed all events
 			expect(mockRedis.eval).toHaveBeenCalledTimes(3);
@@ -249,33 +243,30 @@ describe('BotTriggerMetricsService', () => {
 			const event = createTestEvent();
 
 			const _result = await service.trackBotTrigger(event);
-			expect(result.success).toBe(true);
+			expect(_result.success).toBe(true);
 
 			// Wait for batch flush interval
-			await new Promise(resolve => setTimeout(resolve, 150));
+			await new Promise((resolve) => setTimeout(resolve, 150));
 
 			// Should have flushed the single event
 			expect(mockRedis.eval).toHaveBeenCalledTimes(1);
 		});
 
 		it('should handle batch processing errors gracefully', async () => {
-			const events = [
-				createTestEvent('event1'),
-				createTestEvent('event2'),
-			];
+			const events = [createTestEvent('event1'), createTestEvent('event2')];
 
 			// Mock batch processing failure
-			mockRedis.eval.mockRejectedValue(new Error('Batch processing failed'));
+			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Batch processing failed'));
 			mockPipeline.exec.mockRejectedValue(new Error('Batch processing failed'));
 
 			// Track events
 			for (const event of events) {
 				const _result = await service.trackBotTrigger(event);
-				expect(result.success).toBe(true); // Should succeed for batched operations
+				expect(_result.success).toBe(true); // Should succeed for batched operations
 			}
 
 			// Wait for batch processing attempt
-			await new Promise(resolve => setTimeout(resolve, 150));
+			await new Promise((resolve) => setTimeout(resolve, 150));
 		});
 	});
 
@@ -292,7 +283,7 @@ describe('BotTriggerMetricsService', () => {
 
 			const _result = await service.trackBotTrigger(event);
 
-			expect(result.success).toBe(true);
+			expect(_result.success).toBe(true);
 			expect(mockRedis.eval).toHaveBeenCalledWith(
 				expect.any(String), // Lua script
 				8, // Number of keys
@@ -316,11 +307,11 @@ describe('BotTriggerMetricsService', () => {
 			const event = createTestEvent();
 
 			// Mock Lua script failure
-			mockRedis.eval.mockRejectedValue(new Error('Script execution failed'));
+			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Script execution failed'));
 
 			const _result = await service.trackBotTrigger(event);
 
-			expect(result.success).toBe(true);
+			expect(_result.success).toBe(true);
 			expect(mockPipeline.hset).toHaveBeenCalled();
 			expect(mockPipeline.hincrby).toHaveBeenCalled();
 			expect(mockPipeline.expire).toHaveBeenCalled();
@@ -334,30 +325,26 @@ describe('BotTriggerMetricsService', () => {
 		});
 
 		it('should process batch of events successfully', async () => {
-			const events = [
-				createTestEvent('batch1'),
-				createTestEvent('batch2'),
-				createTestEvent('batch3'),
-			];
+			const events = [createTestEvent('batch1'), createTestEvent('batch2'), createTestEvent('batch3')];
 
 			const _result = await service.trackBatchTriggers(events);
 
-			expect(result.success).toBe(true);
-			expect(result.data?.successful).toBe(3);
-			expect(result.data?.failed).toBe(0);
-			expect(result.data?.processingTimeMs).toBeGreaterThan(0);
+			expect(_result.success).toBe(true);
+			expect(_result.data?.successful).toBe(3);
+			expect(_result.data?.failed).toBe(0);
+			expect(_result.data?.processingTimeMs).toBeGreaterThan(0);
 		});
 
 		it('should handle batch processing failures', async () => {
 			const events = [createTestEvent('batch1')];
 
-			mockRedis.eval.mockRejectedValue(new Error('Batch processing failed'));
+			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Batch processing failed'));
 			mockPipeline.exec.mockRejectedValue(new Error('Batch processing failed'));
 
 			const _result = await service.trackBatchTriggers(events);
 
-			expect(result.success).toBe(false);
-			expect(result.error?.code).toBe('BATCH_PROCESSING_FAILED');
+			expect(_result.success).toBe(false);
+			expect(_result.error?.code).toBe('BATCH_PROCESSING_FAILED');
 		});
 	});
 
@@ -375,21 +362,21 @@ describe('BotTriggerMetricsService', () => {
 			};
 
 			// Mock Redis responses
-			mockRedis.hmget.mockResolvedValue(['100', '95', '5', '5000']); // Basic stats
-			mockRedis.zrangebyscore.mockResolvedValue(['100', '150', '200']); // Response times
-			mockRedis.hgetall.mockResolvedValue({
-				'condition1': '50',
-				'condition2': '45',
+			(mockRedis.hmget as jest.Mock).mockResolvedValue(['100', '95', '5', '5000']); // Basic stats
+			(mockRedis.zrangebyscore as jest.Mock).mockResolvedValue(['100', '150', '200']); // Response times
+			(mockRedis.hgetall as jest.Mock).mockResolvedValue({
+				condition1: '50',
+				condition2: '45',
 			});
 
 			const _result = await service.getBotMetrics(filter, timeRange);
 
-			expect(result.success).toBe(true);
-			expect(result.data).toBeDefined();
-			expect(result.data?.botName).toBe('testBot');
-			expect(result.data?.stats.totalTriggers).toBe(100);
-			expect(result.data?.stats.totalResponses).toBe(95);
-			expect(result.data?.topConditions).toHaveLength(2);
+			expect(_result.success).toBe(true);
+			expect(_result.data).toBeDefined();
+			expect(_result.data?.botName).toBe('testBot');
+			expect(_result.data?.stats.totalTriggers).toBe(100);
+			expect(_result.data?.stats.totalResponses).toBe(95);
+			expect(_result.data?.topConditions).toHaveLength(2);
 		});
 
 		it('should handle missing bot name in filter', async () => {
@@ -397,8 +384,8 @@ describe('BotTriggerMetricsService', () => {
 
 			const _result = await service.getBotMetrics(filter);
 
-			expect(result.success).toBe(false);
-			expect(result.error?.code).toBe('ANALYTICS_FAILED');
+			expect(_result.success).toBe(false);
+			expect(_result.error?.code).toBe('ANALYTICS_FAILED');
 		});
 
 		it('should retrieve channel metrics successfully', async () => {
@@ -409,17 +396,17 @@ describe('BotTriggerMetricsService', () => {
 				period: 'hour',
 			};
 
-			mockRedis.hgetall.mockResolvedValue({
+			(mockRedis.hgetall as jest.Mock).mockResolvedValue({
 				bot_triggers: '25',
 				last_trigger: Date.now().toString(),
 			});
 
 			const _result = await service.getChannelMetrics(channelId, timeRange);
 
-			expect(result.success).toBe(true);
-			expect(result.data).toBeDefined();
-			expect(result.data?.channelId).toBe(channelId);
-			expect(result.data?.stats.totalBotTriggers).toBe(25);
+			expect(_result.success).toBe(true);
+			expect(_result.data).toBeDefined();
+			expect(_result.data?.channelId).toBe(channelId);
+			expect(_result.data?.stats.totalBotTriggers).toBe(25);
 		});
 
 		it('should retrieve user metrics successfully', async () => {
@@ -430,17 +417,17 @@ describe('BotTriggerMetricsService', () => {
 				period: 'day',
 			};
 
-			mockRedis.hgetall.mockResolvedValue({
+			(mockRedis.hgetall as jest.Mock).mockResolvedValue({
 				bot_triggers: '15',
 				last_trigger: Date.now().toString(),
 			});
 
 			const _result = await service.getUserMetrics(userId, timeRange);
 
-			expect(result.success).toBe(true);
-			expect(result.data).toBeDefined();
-			expect(result.data?.userId).toBe(userId);
-			expect(result.data?.stats.totalBotTriggers).toBe(15);
+			expect(_result.success).toBe(true);
+			expect(_result.data).toBeDefined();
+			expect(_result.data?.userId).toBe(userId);
+			expect(_result.data?.stats.totalBotTriggers).toBe(15);
 		});
 	});
 
@@ -458,7 +445,7 @@ describe('BotTriggerMetricsService', () => {
 			};
 
 			// Mock aggregation data
-			mockRedis.hgetall.mockResolvedValue({
+			(mockRedis.hgetall as jest.Mock).mockResolvedValue({
 				triggers: '50',
 				responses: '48',
 				failures: '2',
@@ -471,9 +458,9 @@ describe('BotTriggerMetricsService', () => {
 
 			const _result = await service.getAggregatedMetrics(filter, timeRange);
 
-			expect(result.success).toBe(true);
-			expect(result.data).toBeDefined();
-			expect(Array.isArray(result.data)).toBe(true);
+			expect(_result.success).toBe(true);
+			expect(_result.data).toBeDefined();
+			expect(Array.isArray(_result.data)).toBe(true);
 		});
 
 		it('should generate correct time keys for different periods', async () => {
@@ -486,7 +473,7 @@ describe('BotTriggerMetricsService', () => {
 				period: 'hour',
 			};
 
-			mockRedis.hgetall.mockResolvedValue({});
+			(mockRedis.hgetall as jest.Mock).mockResolvedValue({});
 			await service.getAggregatedMetrics(filter, hourlyRange);
 
 			// Test daily aggregation
@@ -509,7 +496,7 @@ describe('BotTriggerMetricsService', () => {
 		});
 
 		it('should return healthy status when Redis is connected', async () => {
-			mockRedis.ping.mockResolvedValue('PONG');
+			(mockRedis.ping as jest.Mock).mockResolvedValue('PONG');
 
 			const health = await service.getHealthStatus();
 
@@ -520,7 +507,7 @@ describe('BotTriggerMetricsService', () => {
 		});
 
 		it('should return unhealthy status when Redis is disconnected', async () => {
-			mockRedis.ping.mockRejectedValue(new Error('Connection lost'));
+			(mockRedis.ping as jest.Mock).mockRejectedValue(new Error('Connection lost'));
 
 			const health = await service.getHealthStatus();
 
@@ -532,7 +519,7 @@ describe('BotTriggerMetricsService', () => {
 		it('should include circuit breaker status in health check', async () => {
 			// Trigger circuit breaker to open
 			const event = createTestEvent();
-			mockRedis.eval.mockRejectedValue(new Error('Redis error'));
+			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Redis error'));
 			mockPipeline.exec.mockRejectedValue(new Error('Redis error'));
 
 			// Cause failures to open circuit breaker
@@ -555,9 +542,9 @@ describe('BotTriggerMetricsService', () => {
 		it('should export Prometheus metrics successfully', async () => {
 			const _result = await service.exportPrometheusMetrics();
 
-			expect(result.success).toBe(true);
-			expect(typeof result.data).toBe('string');
-			expect(result.data).toContain('# HELP');
+			expect(_result.success).toBe(true);
+			expect(typeof _result.data).toBe('string');
+			expect(_result.data).toContain('# HELP');
 		});
 
 		it('should update circuit breaker gauge in metrics', async () => {
@@ -586,19 +573,19 @@ describe('BotTriggerMetricsService', () => {
 			const _result = await service.trackBotTrigger(malformedEvent);
 
 			// Should still attempt processing and handle the error gracefully
-			expect(result).toBeDefined();
+			expect(_result).toBeDefined();
 		});
 
 		it('should handle Redis timeout errors', async () => {
 			const event = createTestEvent();
 
-			mockRedis.eval.mockRejectedValue(new Error('Command timed out'));
+			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Command timed out'));
 			mockPipeline.exec.mockRejectedValue(new Error('Command timed out'));
 
 			const _result = await service.trackBotTrigger(event);
 
-			expect(result.success).toBe(false);
-			expect(result.error?.message).toContain('Command timed out');
+			expect(_result.success).toBe(false);
+			expect(_result.error?.message).toContain('Command timed out');
 		});
 
 		it('should auto-initialize when not initialized', async () => {
@@ -607,7 +594,7 @@ describe('BotTriggerMetricsService', () => {
 
 			const _result = await uninitializedService.trackBotTrigger(event);
 
-			expect(result.success).toBe(true);
+			expect(_result.success).toBe(true);
 			expect(mockRedis.connect).toHaveBeenCalled();
 
 			await uninitializedService.cleanup();
@@ -622,17 +609,17 @@ describe('BotTriggerMetricsService', () => {
 		it('should cleanup resources successfully', async () => {
 			const _result = await service.cleanup();
 
-			expect(result.success).toBe(true);
+			expect(_result.success).toBe(true);
 			expect(mockRedis.quit).toHaveBeenCalled();
 		});
 
 		it('should handle cleanup failures gracefully', async () => {
-			mockRedis.quit.mockRejectedValue(new Error('Quit failed'));
+			(mockRedis.quit as jest.Mock).mockRejectedValue(new Error('Quit failed'));
 
 			const _result = await service.cleanup();
 
-			expect(result.success).toBe(false);
-			expect(result.error?.code).toBe('CLEANUP_FAILED');
+			expect(_result.success).toBe(false);
+			expect(_result.error?.code).toBe('CLEANUP_FAILED');
 		});
 	});
 
@@ -648,24 +635,24 @@ describe('BotTriggerMetricsService', () => {
 			const events = Array.from({ length: 1000 }, (_, i) => createTestEvent(`event${i}`));
 			const startTime = Date.now();
 
-			const promises = events.map(event => service.trackBotTrigger(event));
+			const promises = events.map((event) => service.trackBotTrigger(event));
 			const results = await Promise.all(promises);
 
 			const processingTime = Date.now() - startTime;
 
-			expect(results.every(r => r.success)).toBe(true);
+			expect(results.every((r) => r.success)).toBe(true);
 			expect(processingTime).toBeLessThan(5000); // Should complete within 5 seconds
 		});
 
 		it('should handle concurrent batch operations', async () => {
 			const batches = Array.from({ length: 10 }, (_, batchIndex) =>
-				Array.from({ length: 50 }, (_, i) => createTestEvent(`batch${batchIndex}_event${i}`))
+				Array.from({ length: 50 }, (_, i) => createTestEvent(`batch${batchIndex}_event${i}`)),
 			);
 
-			const promises = batches.map(batch => service.trackBatchTriggers(batch));
+			const promises = batches.map((batch) => service.trackBatchTriggers(batch));
 			const results = await Promise.all(promises);
 
-			expect(results.every(r => r.success)).toBe(true);
+			expect(results.every((r) => r.success)).toBe(true);
 			expect(results.reduce((sum, r) => sum + (r.data?.successful || 0), 0)).toBe(500);
 		});
 	});

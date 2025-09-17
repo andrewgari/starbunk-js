@@ -38,8 +38,8 @@ describe('PersonalityService', () => {
 
 			const _result = await service.loadPersonalityEmbedding('personality.json');
 
-			expect(result).toBeInstanceOf(Float32Array);
-			expect(Array.from(result!)).toEqual(mockEmbedding);
+			expect(_result).toBeInstanceOf(Float32Array);
+			expect(Array.from(_result!)).toEqual(mockEmbedding);
 			expect(mockLogger.info).toHaveBeenCalledWith(
 				expect.stringContaining('Successfully loaded personality embedding'),
 			);
@@ -59,7 +59,7 @@ describe('PersonalityService', () => {
 
 			const _result = await service.loadPersonalityEmbedding('personality.json');
 
-			expect(result).toBeNull();
+			expect(_result).toBeNull();
 			expect(mockLogger.error).toHaveBeenCalledWith(
 				expect.stringContaining('Failed to load JSON personality embedding'),
 			);
@@ -73,8 +73,8 @@ describe('PersonalityService', () => {
 
 			const _result = await service.loadPersonalityEmbedding('personality.npy');
 
-			expect(result).toBeInstanceOf(Float32Array);
-			expect(Array.from(result!)).toEqual([1, 2, 3, 4, 5]);
+			expect(_result).toBeInstanceOf(Float32Array);
+			expect(Array.from(_result!)).toEqual([1, 2, 3, 4, 5]);
 		});
 
 		it('should log NPY warning only once', async () => {
@@ -93,7 +93,7 @@ describe('PersonalityService', () => {
 		it('should return null when VectorEmbeddingService is not available', async () => {
 			const _result = await service.generatePersonalityEmbedding('test description', true);
 
-			expect(result).toBeNull();
+			expect(_result).toBeNull();
 			expect(mockLogger.warn).toHaveBeenCalledWith(
 				expect.stringContaining('VectorEmbeddingService not available'),
 			);
@@ -102,7 +102,7 @@ describe('PersonalityService', () => {
 		it('should handle missing embedding service gracefully', async () => {
 			const _result = await service.generatePersonalityEmbedding('test description');
 
-			expect(result).toBeNull();
+			expect(_result).toBeNull();
 			expect(mockLogger.warn).toHaveBeenCalledWith(
 				expect.stringContaining('VectorEmbeddingService not available'),
 			);

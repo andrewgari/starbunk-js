@@ -87,7 +87,7 @@ describe('DiscordGMService', () => {
 			const _result = await discordGMService.processGMCommand(mockMessage);
 
 			// Verify results
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(processNoteSpy).toHaveBeenCalledWith('Test note content');
 		});
 
@@ -102,7 +102,7 @@ describe('DiscordGMService', () => {
 			const _result = await discordGMService.processGMCommand(mockMessage);
 
 			// Verify results
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(mockDiscordService.sendMessage).not.toHaveBeenCalled();
 		});
 
@@ -117,7 +117,7 @@ describe('DiscordGMService', () => {
 			const _result = await discordGMService.processGMCommand(mockMessage);
 
 			// Verify results
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(mockDiscordService.sendMessage).not.toHaveBeenCalled();
 		});
 
@@ -135,7 +135,7 @@ describe('DiscordGMService', () => {
 			const _result = await discordGMService.processGMCommand(mockMessage);
 
 			// Verify results
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(sendGMAlertSpy).toHaveBeenCalledWith('Unknown GM command: gm-unknown');
 		});
 	});

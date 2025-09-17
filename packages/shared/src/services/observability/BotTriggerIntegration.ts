@@ -15,7 +15,7 @@ import {
 } from './BotTriggerMetricsService';
 import {
 	type BotTriggerEvent,
-	type BotMetricsServiceConfig,
+	type BotMetricsServiceConfig as _BotMetricsServiceConfig,
 	type ServiceOperationResult,
 } from '../../types/bot-metrics';
 import type { MessageContext } from './ContainerMetrics';
@@ -147,14 +147,7 @@ class Enhanced_BunkBotMetricsCollector extends _BunkBotMetricsCollector {
 
 		// If enhanced tracking is enabled, update the detailed event in Redis
 		if (this.isEnhancedTrackingEnabled && this.botTriggerService) {
-			this.updateDetailedBotResponse(
-				botName,
-				conditionName,
-				responseTime,
-				messageContext,
-				success,
-				responseType,
-			);
+			this.updateDetailedBotResponse(botName, conditionName, responseTime, messageContext, success, responseType);
 		}
 	}
 
@@ -184,8 +177,8 @@ class Enhanced_BunkBotMetricsCollector extends _BunkBotMetricsCollector {
 
 			const _result = await this.botTriggerService!.trackBotTrigger(triggerEvent);
 
-			if (!result.success) {
-				logger.warn('Failed to track detailed bot trigger:', result.error);
+			if (!_result.success) {
+				logger.warn('Failed to track detailed bot trigger:', _result.error);
 			} else {
 				logger.debug(`Detailed bot trigger tracked: ${botName} -> ${conditionName}`, {
 					triggerId: triggerEvent.triggerId,
@@ -231,8 +224,8 @@ class Enhanced_BunkBotMetricsCollector extends _BunkBotMetricsCollector {
 
 			const _result = await this.botTriggerService!.trackBotTrigger(responseEvent);
 
-			if (!result.success) {
-				logger.warn('Failed to track detailed bot response:', result.error);
+			if (!_result.success) {
+				logger.warn('Failed to track detailed bot response:', _result.error);
 			} else {
 				logger.debug(`Detailed bot response tracked: ${botName} (${responseTime}ms, ${success})`, {
 					triggerId: responseEvent.triggerId,
@@ -374,7 +367,14 @@ class BotTriggerTracker {
 			return;
 		}
 
-		this.metricsCollector.trackBotResponse(botName, conditionName, responseTime, messageContext, success, responseType);
+		this.metricsCollector.trackBotResponse(
+			botName,
+			conditionName,
+			responseTime,
+			messageContext,
+			success,
+			responseType,
+		);
 	}
 
 	/**
@@ -403,13 +403,13 @@ class BotTriggerTracker {
 		}
 
 		const _now = Date.now();
-		const startTime = now - hours * 60 * 60 * 1000;
+		const startTime = _now - hours * 60 * 60 * 1000;
 
 		return await botTriggerService.getBotMetrics(
 			{ botName },
 			{
 				startTime,
-				endTime: now,
+				endTime: _now,
 				period: 'hour',
 			},
 		);
@@ -500,13 +500,6 @@ async function initializeBotMetricsSystem(
 // Convenience Exports
 // ============================================================================
 
-export type {
-	BotTriggerIntegrationConfig,
-};
+export type { BotTriggerIntegrationConfig };
 
-export {
-	Enhanced_BunkBotMetricsCollector,
-	BotTriggerTracker,
-	createEnvironmentConfig,
-	initializeBotMetricsSystem,
-};
+export { Enhanced_BunkBotMetricsCollector, BotTriggerTracker, createEnvironmentConfig, initializeBotMetricsSystem };

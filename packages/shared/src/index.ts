@@ -123,7 +123,7 @@ export {
 	initializeHttpEndpoints,
 	getHttpEndpoints,
 	// Container-specific metrics
-	_BunkBotMetricsCollector,
+	BunkBotMetricsCollector,
 	createBunkBotMetrics,
 	DJCovaMetricsCollector,
 	createDJCovaMetrics,
@@ -139,7 +139,7 @@ export {
 	getBotTriggerMetricsService,
 	createProductionConfig,
 	// Bot Trigger Integration
-	Enhanced_BunkBotMetricsCollector,
+	EnhancedBunkBotMetricsCollector,
 	createEnhancedBunkBotMetrics,
 	BotTriggerTracker,
 	createEnvironmentConfig,
@@ -170,9 +170,9 @@ export type {
 export type {
 	BotTriggerEvent,
 	BotMetricsFilter,
-// 	BotPerformanceAnalytics,
-// 	ChannelActivityAnalytics,
-// 	UserInteractionAnalytics,
+	// 	BotPerformanceAnalytics,
+	// 	ChannelActivityAnalytics,
+	// 	UserInteractionAnalytics,
 	BotMetricsAggregation,
 	TimeRangeQuery,
 	BotMetricsServiceConfig,

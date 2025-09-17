@@ -17,7 +17,7 @@ console.log(`[Environment] .env file exists: ${envExists}`);
 
 // Load environment variables from .env file - looking in project root
 const _result = configDotenv({ path: envPath });
-console.log(`[Environment] .env file loaded successfully: ${result.parsed ? 'Yes' : 'No'}`);
+console.log(`[Environment] .env file loaded successfully: ${_result.parsed ? 'Yes' : 'No'}`);
 
 // Log available environment variables for debugging
 console.log('[Environment] Environment variables loaded:');

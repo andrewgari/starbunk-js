@@ -99,8 +99,8 @@ export class ConfigurationRepository {
 				})),
 			};
 
-			this.setCache(cacheKey, result);
-			return result;
+			this.setCache(cacheKey, _result);
+			return _result;
 		} catch (error) {
 			logger.error(
 				`Failed to get bot configuration for ${botName}:`,
@@ -163,8 +163,8 @@ export class ConfigurationRepository {
 				})),
 			}));
 
-			this.setCache(cacheKey, result);
-			return result;
+			this.setCache(cacheKey, _result);
+			return _result;
 		} catch (error) {
 			logger.error(
 				'Failed to get all bot configurations:',
@@ -200,8 +200,8 @@ export class ConfigurationRepository {
 				metadata: config.metadata,
 			};
 
-			this.setCache(cacheKey, result);
-			return result;
+			this.setCache(cacheKey, _result);
+			return _result;
 		} catch (error) {
 			logger.error(
 				`Failed to get user configuration for ${userId}:`,
@@ -268,8 +268,8 @@ export class ConfigurationRepository {
 				settings: config.settings,
 			};
 
-			this.setCache(cacheKey, result);
-			return result;
+			this.setCache(cacheKey, _result);
+			return _result;
 		} catch (error) {
 			logger.error(
 				`Failed to get server configuration for ${serverId}:`,

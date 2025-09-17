@@ -671,15 +671,15 @@ export class CovaBotMetricsCollector extends ContainerMetricsBase implements Cov
 		if (!session) {
 			session = {
 				userId,
-				sessionStart: now, // eslint-disable-line @typescript-eslint/no-unused-vars
+				sessionStart: _now, // eslint-disable-line @typescript-eslint/no-unused-vars
 				messageCount: 0, // eslint-disable-line @typescript-eslint/no-unused-vars
-				lastInteraction: now, // eslint-disable-line @typescript-eslint/no-unused-vars
+				lastInteraction: _now, // eslint-disable-line @typescript-eslint/no-unused-vars
 				engagementScore: 0, // eslint-disable-line @typescript-eslint/no-unused-vars
 			};
 		}
 
 		session.messageCount++;
-		session.lastInteraction = now;
+		session.lastInteraction = _now;
 
 		this.userSessions.set(userId, session);
 		this.updateActiveUsersGauge();
@@ -690,7 +690,7 @@ export class CovaBotMetricsCollector extends ContainerMetricsBase implements Cov
 		const ageCounts = { recent: 0, medium: 0, old: 0 }; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 		for (const context of this.activeContexts.values()) {
-			const age = now - context.lastUpdate;
+			const age = _now - context.lastUpdate;
 			if (age < 5 * 60 * 1000) ageCounts.recent++;
 			else if (age < 30 * 60 * 1000) ageCounts.medium++;
 			else ageCounts.old++;
@@ -706,7 +706,7 @@ export class CovaBotMetricsCollector extends ContainerMetricsBase implements Cov
 		const activityLevels = { high: 0, medium: 0, low: 0 }; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 		for (const session of this.userSessions.values()) {
-			const timeSinceLastInteraction = now - session.lastInteraction;
+			const timeSinceLastInteraction = _now - session.lastInteraction;
 			if (timeSinceLastInteraction < 5 * 60 * 1000) activityLevels.high++;
 			else if (timeSinceLastInteraction < 30 * 60 * 1000) activityLevels.medium++;
 			else activityLevels.low++;
@@ -750,14 +750,14 @@ export class CovaBotMetricsCollector extends ContainerMetricsBase implements Cov
 
 		// Clean up stale user sessions
 		for (const [userId, session] of this.userSessions.entries()) {
-			if (now - session.lastInteraction > sessionTimeout) {
-				this.trackUserEngagementSession(userId, now - session.sessionStart, session.messageCount);
+			if (_now - session.lastInteraction > sessionTimeout) {
+				this.trackUserEngagementSession(userId, _now - session.sessionStart, session.messageCount);
 			}
 		}
 
 		// Clean up stale contexts
 		for (const [userId, context] of this.activeContexts.entries()) {
-			if (now - context.lastUpdate > contextTimeout) {
+			if (_now - context.lastUpdate > contextTimeout) {
 				this.trackContextExpiry(userId, context.contextItems);
 			}
 		}

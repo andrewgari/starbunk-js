@@ -307,7 +307,7 @@ export class HttpEndpointsService {
 				'Content-Type': 'application/json',
 				'Cache-Control': 'no-cache, no-store, must-revalidate',
 			});
-			res.end(JSON.stringify(result, null, 2));
+			res.end(JSON.stringify(_result, null, 2));
 		} catch (error) {
 			logger.error('Error checking readiness:', ensureError(error)); // eslint-disable-line @typescript-eslint/no-unused-vars
 			this.sendErrorResponse(res, 500, 'Readiness check failed');
@@ -331,7 +331,7 @@ export class HttpEndpointsService {
 			'Content-Type': 'application/json',
 			'Cache-Control': 'no-cache, no-store, must-revalidate',
 		});
-		res.end(JSON.stringify(result, null, 2));
+		res.end(JSON.stringify(_result, null, 2));
 	}
 
 	private async handleMetricsSummary(res: ServerResponse): Promise<void> {
@@ -419,8 +419,8 @@ export class HttpEndpointsService {
 
 				return {
 					name,
-					status: result.status, // eslint-disable-line @typescript-eslint/no-unused-vars
-					output: result.output, // eslint-disable-line @typescript-eslint/no-unused-vars
+					status: _result.status, // eslint-disable-line @typescript-eslint/no-unused-vars
+					output: _result.output, // eslint-disable-line @typescript-eslint/no-unused-vars
 					time: new Date().toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
 					duration_ms: Math.round(performance.now() - checkStart), // eslint-disable-line @typescript-eslint/no-unused-vars
 				};

@@ -231,7 +231,7 @@ export class PerformanceTimer {
 		try {
 			const _result = await fn();
 			timer.measure(label);
-			return result;
+			return _result;
 		} catch (error) {
 			timer.measure(label); // Still measure even if there's an error
 			throw error;

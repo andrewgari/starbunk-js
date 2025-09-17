@@ -37,7 +37,7 @@ export class DebugUtils {
 			const _result = await fn();
 			const end = performance.now();
 			logger.debug(`⏱️ ${label} took ${(end - start).toFixed(2)}ms`);
-			return result;
+			return _result;
 		} catch (error) {
 			const end = performance.now();
 			logger.error(`⏱️ ${label} failed after ${(end - start).toFixed(2)}ms`, error as Error);

@@ -103,7 +103,7 @@ export class ChannelActivityTracker {
 					userCount: activeUsers, // eslint-disable-line @typescript-eslint/no-unused-vars
 					botMessageCount: stats.botMessageCount, // eslint-disable-line @typescript-eslint/no-unused-vars
 					humanMessageCount: stats.humanMessageCount, // eslint-disable-line @typescript-eslint/no-unused-vars
-					timestamp: now, // eslint-disable-line @typescript-eslint/no-unused-vars
+					timestamp: _now, // eslint-disable-line @typescript-eslint/no-unused-vars
 				};
 
 				// Track metrics
@@ -120,7 +120,7 @@ export class ChannelActivityTracker {
 					bot_message_count: stats.botMessageCount, // eslint-disable-line @typescript-eslint/no-unused-vars
 					human_message_count: stats.humanMessageCount, // eslint-disable-line @typescript-eslint/no-unused-vars
 					active_users: stats.recentUsers, // eslint-disable-line @typescript-eslint/no-unused-vars
-					timestamp: new Date(now).toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
+					timestamp: new Date(_now).toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
 				});
 
 				// Reset counters for next interval
@@ -149,7 +149,7 @@ export class ChannelActivityTracker {
 		const _result: Record<string, Omit<ChannelStats, 'userSet'>> = {}; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 		for (const [channelId, stats] of this.channelStats.entries()) {
-			result[channelId] = {
+			_result[channelId] = {
 				channelId: stats.channelId, // eslint-disable-line @typescript-eslint/no-unused-vars
 				channelName: stats.channelName, // eslint-disable-line @typescript-eslint/no-unused-vars
 				guildId: stats.guildId, // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -161,7 +161,7 @@ export class ChannelActivityTracker {
 			};
 		}
 
-		return result;
+		return _result;
 	}
 
 	shutdown(): void {

@@ -61,7 +61,7 @@ const mockBotTriggerService = {
 	getBotMetrics: jest.fn(),
 	getHealthStatus: jest.fn(),
 	cleanup: jest.fn(),
-} as unknown as BotTriggerMetricsService;
+} as any;
 
 const MockBotTriggerMetricsService = BotTriggerMetricsService as jest.MockedClass<typeof BotTriggerMetricsService>;
 
@@ -184,7 +184,7 @@ describe('BotTriggerIntegration', () => {
 							password: 'test-password',
 							db: 2,
 						}),
-					})
+					}),
 				);
 			});
 		});
@@ -193,8 +193,12 @@ describe('BotTriggerIntegration', () => {
 			const messageContext: MessageContext = {
 				messageId: 'message123',
 				userId: 'user123',
+				username: 'testuser',
 				channelId: 'channel123',
+				channelName: 'test-channel',
 				guildId: 'guild123',
+				messageLength: 20,
+				timestamp: Date.now(),
 			};
 
 			beforeEach(async () => {
@@ -207,7 +211,7 @@ describe('BotTriggerIntegration', () => {
 				expect(mock_BunkBotMetricsCollector.trackBotTrigger).toHaveBeenCalledWith(
 					'testBot',
 					'testCondition',
-					messageContext
+					messageContext,
 				);
 			});
 
@@ -218,15 +222,19 @@ describe('BotTriggerIntegration', () => {
 					'testBot',
 					'testCondition',
 					150,
-					messageContext
+					messageContext,
 				);
 			});
 
 			it('should handle enhanced tracking when disabled', async () => {
 				// Create collector without enhanced tracking
-				const basicCollector = createEnhancedBunkBotMetrics(mockMetricsService, {}, {
-					enableEnhancedTracking: false,
-				});
+				const basicCollector = createEnhancedBunkBotMetrics(
+					mockMetricsService,
+					{},
+					{
+						enableEnhancedTracking: false,
+					},
+				);
 
 				basicCollector.trackBotTrigger('testBot', 'testCondition', messageContext);
 
@@ -333,8 +341,12 @@ describe('BotTriggerIntegration', () => {
 			const messageContext: MessageContext = {
 				messageId: 'message123',
 				userId: 'user123',
+				username: 'testuser',
 				channelId: 'channel123',
+				channelName: 'test-channel',
 				guildId: 'guild123',
+				messageLength: 20,
+				timestamp: Date.now(),
 			};
 
 			it('should track triggers when initialized', () => {
@@ -343,7 +355,7 @@ describe('BotTriggerIntegration', () => {
 				expect(mock_BunkBotMetricsCollector.trackBotTrigger).toHaveBeenCalledWith(
 					'testBot',
 					'testCondition',
-					messageContext
+					messageContext,
 				);
 			});
 
@@ -356,7 +368,7 @@ describe('BotTriggerIntegration', () => {
 					150,
 					messageContext,
 					true,
-					'message'
+					'message',
 				);
 			});
 
@@ -373,13 +385,13 @@ describe('BotTriggerIntegration', () => {
 			it('should retrieve bot analytics when enhanced tracking is enabled', async () => {
 				const _result = await tracker.getBotAnalytics('testBot', 24);
 
-				expect(result.success).toBe(true);
-				expect(result.data).toBeDefined();
+				expect(_result.success).toBe(true);
+				expect(_result.data).toBeDefined();
 				expect(mockBotTriggerService.getBotMetrics).toHaveBeenCalledWith(
 					{ botName: 'testBot' },
 					expect.objectContaining({
 						period: 'hour',
-					})
+					}),
 				);
 			});
 
@@ -388,22 +400,26 @@ describe('BotTriggerIntegration', () => {
 
 				const _result = await uninitializedTracker.getBotAnalytics('testBot');
 
-				expect(result.success).toBe(false);
-				expect(result.error?.code).toBe('NOT_INITIALIZED');
+				expect(_result.success).toBe(false);
+				expect(_result.error?.code).toBe('NOT_INITIALIZED');
 			});
 
 			it('should handle analytics when enhanced tracking disabled', async () => {
 				const basicTracker = new BotTriggerTracker({ enableEnhancedTracking: false });
-				const basicCollector = createEnhancedBunkBotMetrics(mockMetricsService, {}, {
-					enableEnhancedTracking: false,
-				});
+				const basicCollector = createEnhancedBunkBotMetrics(
+					mockMetricsService,
+					{},
+					{
+						enableEnhancedTracking: false,
+					},
+				);
 
 				await basicTracker.initialize(basicCollector);
 
 				const _result = await basicTracker.getBotAnalytics('testBot');
 
-				expect(result.success).toBe(false);
-				expect(result.error?.code).toBe('ENHANCED_TRACKING_DISABLED');
+				expect(_result.success).toBe(false);
+				expect(_result.error?.code).toBe('ENHANCED_TRACKING_DISABLED');
 
 				await basicTracker.cleanup();
 			});
@@ -538,7 +554,9 @@ describe('BotTriggerIntegration', () => {
 			mockBotTriggerService.initialize.mockRejectedValue(new Error('System initialization failed'));
 
 			// Should throw initialization error
-			await expect(initializeBotMetricsSystem(mockMetricsService)).rejects.toThrow('System initialization failed');
+			await expect(initializeBotMetricsSystem(mockMetricsService)).rejects.toThrow(
+				'System initialization failed',
+			);
 		});
 	});
 
@@ -549,6 +567,13 @@ describe('BotTriggerIntegration', () => {
 
 			const incompleteContext = {
 				messageId: 'message123',
+				userId: 'user123',
+				username: 'testuser',
+				channelId: 'channel123',
+				channelName: 'test-channel',
+				guildId: 'guild123',
+				messageLength: 0,
+				timestamp: Date.now(),
 			} as MessageContext;
 
 			// Should not throw
@@ -563,14 +588,18 @@ describe('BotTriggerIntegration', () => {
 			await collector.initializeEnhancedTracking();
 
 			mock_BunkBotMetricsCollector.sanitizeLabel.mockImplementation((label: string) =>
-				label.replace(/[^a-zA-Z0-9_]/g, '_')
+				label.replace(/[^a-zA-Z0-9_]/g, '_'),
 			);
 
 			const messageContext: MessageContext = {
 				messageId: 'message123',
 				userId: 'user123',
+				username: 'testuser',
 				channelId: 'channel123',
+				channelName: 'test-channel',
 				guildId: 'guild123',
+				messageLength: 20,
+				timestamp: Date.now(),
 			};
 
 			collector.trackBotTrigger('test-bot!@#', 'test condition', messageContext);

@@ -46,7 +46,7 @@ export {
 	type ContainerMetricsConfig,
 } from './ContainerMetrics';
 
-export { BunkBotMetricsCollector, createBunkBotMetrics } from './BunkBotMetrics';
+export { _BunkBotMetricsCollector as BunkBotMetricsCollector, createBunkBotMetrics } from './BunkBotMetrics';
 
 export { DJCovaMetricsCollector, createDJCovaMetrics } from './DJCovaMetrics';
 
@@ -98,7 +98,7 @@ export {
 
 // Bot Trigger Integration
 export {
-	EnhancedBunkBotMetricsCollector,
+	Enhanced_BunkBotMetricsCollector as EnhancedBunkBotMetricsCollector,
 	createEnhancedBunkBotMetrics,
 	BotTriggerTracker,
 	createEnvironmentConfig,
@@ -110,7 +110,7 @@ export {
 export {
 	RedisBotMetricsExporter,
 	createRedisBotMetricsExporter,
-	type RedisMetricsExporterConfig
+	type RedisMetricsExporterConfig,
 } from './RedisBotMetricsExporter';
 
 // Import validation utilities

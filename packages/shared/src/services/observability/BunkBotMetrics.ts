@@ -7,7 +7,11 @@ import { logger } from '../logger';
 import { ensureError } from '../../utils/errorUtils';
 import { BunkBotMetrics, ContainerMetricsBase, MessageContext, ContainerMetricsConfig } from './ContainerMetrics';
 import { ProductionMetricsService } from './ProductionMetricsService';
-import { RedisBotMetricsExporter, type RedisMetricsExporterConfig, createRedisBotMetricsExporter } from './RedisBotMetricsExporter';
+import {
+	RedisBotMetricsExporter,
+	type RedisMetricsExporterConfig,
+	createRedisBotMetricsExporter,
+} from './RedisBotMetricsExporter';
 import type { BotTriggerMetricsService } from './BotTriggerMetricsService';
 import type Redis from 'ioredis';
 
@@ -366,7 +370,7 @@ export class _BunkBotMetricsCollector extends ContainerMetricsBase implements Bu
 			const _result = triggeredBots > 0 ? 'triggered' : 'no_triggers';
 
 			this.messageProcessingCounter.inc({
-				processing_result: result, // eslint-disable-line @typescript-eslint/no-unused-vars
+				processing_result: _result, // eslint-disable-line @typescript-eslint/no-unused-vars
 				bot_count: String(this.botRegistryStats.totalBots), // eslint-disable-line @typescript-eslint/no-unused-vars
 				channel_type: channelType, // eslint-disable-line @typescript-eslint/no-unused-vars
 			});
@@ -506,7 +510,7 @@ export class _BunkBotMetricsCollector extends ContainerMetricsBase implements Bu
 	async initializeRedisExport(
 		redis: Redis,
 		triggerMetricsService?: BotTriggerMetricsService,
-		exportConfig?: RedisMetricsExporterConfig
+		exportConfig?: RedisMetricsExporterConfig,
 	): Promise<void> {
 		try {
 			logger.info('Initializing Redis metrics export for BunkBot');
@@ -526,7 +530,7 @@ export class _BunkBotMetricsCollector extends ContainerMetricsBase implements Bu
 				enableDetailedLabels: false,
 				batchSize: 100,
 				scanCount: 1000,
-				...exportConfig
+				...exportConfig,
 			});
 
 			// Initialize the exporter
@@ -551,7 +555,7 @@ export class _BunkBotMetricsCollector extends ContainerMetricsBase implements Bu
 		}
 
 		// Initial export
-		this.exportRedisMetrics().catch(error => {
+		this.exportRedisMetrics().catch((error) => {
 			logger.error('Initial Redis metrics export failed:', ensureError(error));
 		});
 

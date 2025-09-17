@@ -52,10 +52,10 @@ export class DiscordGMService {
 	 */
 	public async sendGMAlert(message: string): Promise<Message> {
 		const _result = await this.discordService.sendMessage(GM_CHANNEL_ID, message);
-		if (!result) {
+		if (!_result) {
 			throw new Error('Failed to send GM alert - message was blocked by debug mode filtering');
 		}
-		return result;
+		return _result;
 	}
 
 	/**
@@ -67,10 +67,10 @@ export class DiscordGMService {
 		const severityEmoji = this.getSeverityEmoji(options.severity);
 		const formattedMessage = `${severityEmoji} **${options.title}**\n${options.description}`;
 		const _result = await this.discordService.sendMessage(GM_CHANNEL_ID, formattedMessage);
-		if (!result) {
+		if (!_result) {
 			throw new Error('Failed to send formatted GM alert - message was blocked by debug mode filtering');
 		}
-		return result;
+		return _result;
 	}
 
 	/**

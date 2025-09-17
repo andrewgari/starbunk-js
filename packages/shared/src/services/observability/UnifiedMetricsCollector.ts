@@ -121,7 +121,7 @@ class MetricsCircuitBreaker {
 		try {
 			const _result = await operation();
 			this.onSuccess();
-			return result;
+			return _result;
 		} catch (error) {
 			this.onFailure();
 			throw error;
@@ -763,7 +763,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 
 							const duration = Math.round(performance.now() - checkStart);
 							componentChecks.push({
-								...result,
+								..._result,
 								duration_ms: duration,
 								timestamp: new Date().toISOString(),
 							});
@@ -772,7 +772,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 								{
 									service,
 									component,
-									status: result.status,
+									status: _result.status,
 								},
 								duration,
 							);

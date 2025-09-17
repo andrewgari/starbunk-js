@@ -43,17 +43,17 @@ describe('Environment Validation Utilities', () => {
 	describe('parseDiscordIdList', () => {
 		test('should parse valid comma-separated Discord IDs', () => {
 			const _result = parseDiscordIdList('753251582719688714,836445923105308672');
-			expect(result).toEqual(['753251582719688714', '836445923105308672']);
+			expect(_result).toEqual(['753251582719688714', '836445923105308672']);
 		});
 
 		test('should handle whitespace around IDs', () => {
 			const _result = parseDiscordIdList(' 753251582719688714 , 836445923105308672 ');
-			expect(result).toEqual(['753251582719688714', '836445923105308672']);
+			expect(_result).toEqual(['753251582719688714', '836445923105308672']);
 		});
 
 		test('should filter out invalid IDs', () => {
 			const _result = parseDiscordIdList('753251582719688714,invalid,836445923105308672,123');
-			expect(result).toEqual(['753251582719688714', '836445923105308672']);
+			expect(_result).toEqual(['753251582719688714', '836445923105308672']);
 		});
 
 		test('should handle empty or undefined input', () => {
@@ -64,12 +64,12 @@ describe('Environment Validation Utilities', () => {
 
 		test('should handle single ID', () => {
 			const _result = parseDiscordIdList('753251582719688714');
-			expect(result).toEqual(['753251582719688714']);
+			expect(_result).toEqual(['753251582719688714']);
 		});
 
 		test('should handle trailing commas', () => {
 			const _result = parseDiscordIdList('753251582719688714,836445923105308672,');
-			expect(result).toEqual(['753251582719688714', '836445923105308672']);
+			expect(_result).toEqual(['753251582719688714', '836445923105308672']);
 		});
 	});
 
@@ -77,13 +77,13 @@ describe('Environment Validation Utilities', () => {
 		test('should return parsed server IDs from environment', () => {
 			process.env.TESTING_SERVER_IDS = '753251582719688714,836445923105308672';
 			const _result = getTestingServerIds();
-			expect(result).toEqual(['753251582719688714', '836445923105308672']);
+			expect(_result).toEqual(['753251582719688714', '836445923105308672']);
 		});
 
 		test('should return empty array when not set', () => {
 			delete process.env.TESTING_SERVER_IDS;
 			const _result = getTestingServerIds();
-			expect(result).toEqual([]);
+			expect(_result).toEqual([]);
 		});
 	});
 
@@ -91,13 +91,13 @@ describe('Environment Validation Utilities', () => {
 		test('should return parsed channel IDs from environment', () => {
 			process.env.TESTING_CHANNEL_IDS = '123456789012345678,987654321098765432';
 			const _result = getTestingChannelIds();
-			expect(result).toEqual(['123456789012345678', '987654321098765432']);
+			expect(_result).toEqual(['123456789012345678', '987654321098765432']);
 		});
 
 		test('should return empty array when not set', () => {
 			delete process.env.TESTING_CHANNEL_IDS;
 			const _result = getTestingChannelIds();
-			expect(result).toEqual([]);
+			expect(_result).toEqual([]);
 		});
 	});
 
