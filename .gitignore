@@ -189,3 +189,4 @@ scripts/*
 logs/
 data/logs/
 *.tsbuildinfo
+*.tsbuildinfo

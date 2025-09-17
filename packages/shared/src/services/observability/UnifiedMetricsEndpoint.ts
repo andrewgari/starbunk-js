@@ -1,7 +1,15 @@
 import { logger } from '../logger';
 import { ensureError } from '../../utils/errorUtils';
-import { UnifiedMetricsCollector, initializeUnifiedMetricsCollector, type UnifiedMetricsConfig } from './UnifiedMetricsCollector';
-import { ServiceAwareMetricsService, initializeServiceMetrics, getAllServiceMetrics, type ServiceMetricsConfiguration } from './ServiceMetricsRegistry';
+import {
+	UnifiedMetricsCollector,
+	initializeUnifiedMetricsCollector,
+	type UnifiedMetricsConfig,
+} from './UnifiedMetricsCollector';
+import {
+	ServiceAwareMetricsService,
+	initializeServiceMetrics,
+	type ServiceMetricsConfiguration,
+} from './ServiceMetricsRegistry';
 import { validateObservabilityEnvironment, type ObservabilityConfig } from '../../utils/envValidation';
 import { EventEmitter } from 'events';
 
@@ -194,7 +202,6 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 				endpoint: `http://${this.config.collectorConfig.host}:${this.config.collectorConfig.port}/metrics`,
 				registeredServices: Array.from(this.serviceRegistrations.keys()),
 			});
-
 		} catch (error) {
 			logger.error('Failed to initialize unified metrics endpoint:', ensureError(error));
 			throw error;
@@ -206,7 +213,7 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 	 */
 	async registerService(
 		serviceName: string,
-		serviceConfig?: Partial<ServiceMetricsConfiguration>
+		serviceConfig?: Partial<ServiceMetricsConfiguration>,
 	): Promise<ServiceAwareMetricsService> {
 		try {
 			logger.info(`Registering service: ${serviceName}`);
@@ -249,7 +256,6 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 			});
 
 			return serviceMetrics;
-
 		} catch (error) {
 			logger.error(`Failed to register service ${serviceName}:`, ensureError(error));
 			throw error;
@@ -304,7 +310,7 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 		};
 
 		const requiredVars = serviceEnvVars[serviceName] || [];
-		return requiredVars.every(varName => !!process.env[varName]);
+		return requiredVars.every((varName) => !!process.env[varName]);
 	}
 
 	/**
@@ -315,55 +321,57 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 
 		// Add health check for each component
 		componentTrackers.forEach((tracker, componentName) => {
-			this.collector.addHealthCheck(
-				serviceName,
-				componentName,
-				'component_health',
-				async () => {
-					const healthStatus = serviceMetrics.getServiceHealthStatus() as any;
-					const componentHealth = healthStatus.components[componentName];
+			this.collector.addHealthCheck(serviceName, componentName, 'component_health', async () => {
+				const healthStatus = serviceMetrics.getServiceHealthStatus() as any;
+				const componentHealth = healthStatus.components[componentName];
 
-					if (!componentHealth) {
-						return {
-							status: 'warn',
-							output: `Component ${componentName} not found`,
-						};
-					}
-
-					const status = componentHealth.status === 'healthy' ? 'pass' :
-								  componentHealth.status === 'degraded' ? 'warn' : 'fail';
-
+				if (!componentHealth) {
 					return {
-						status,
-						output: `Component ${componentName}: ${componentHealth.status} (${componentHealth.operationCount} ops, ${Math.round(componentHealth.errorRate * 100)}% errors)`,
+						status: 'warn',
+						output: `Component ${componentName} not found`,
+						timestamp: new Date().toISOString(),
 					};
 				}
-			);
+
+				const status =
+					componentHealth.status === 'healthy'
+						? 'pass'
+						: componentHealth.status === 'degraded'
+							? 'warn'
+							: 'fail';
+
+				return {
+					status,
+					output: `Component ${componentName}: ${componentHealth.status} (${componentHealth.operationCount} ops, ${Math.round(componentHealth.errorRate * 100)}% errors)`,
+					timestamp: new Date().toISOString(),
+				};
+			});
 		});
 
 		// Add overall service health check
-		this.collector.addHealthCheck(
-			serviceName,
-			'service',
-			'overall_health',
-			async () => {
-				try {
-					const healthStatus = serviceMetrics.getServiceHealthStatus() as any;
-					const status = healthStatus.status === 'healthy' ? 'pass' :
-								  healthStatus.status === 'shutting_down' ? 'warn' : 'fail';
+		this.collector.addHealthCheck(serviceName, 'service', 'overall_health', async () => {
+			try {
+				const healthStatus = serviceMetrics.getServiceHealthStatus() as any;
+				const status =
+					healthStatus.status === 'healthy'
+						? 'pass'
+						: healthStatus.status === 'shutting_down'
+							? 'warn'
+							: 'fail';
 
-					return {
-						status,
-						output: `Service ${serviceName}: ${healthStatus.status} (uptime: ${Math.round(healthStatus.uptime)}s)`,
-					};
-				} catch (error) {
-					return {
-						status: 'fail',
-						output: `Service ${serviceName} health check failed: ${ensureError(error).message}`,
-					};
-				}
+				return {
+					status,
+					output: `Service ${serviceName}: ${healthStatus.status} (uptime: ${Math.round(healthStatus.uptime)}s)`,
+					timestamp: new Date().toISOString(),
+				};
+			} catch (error) {
+				return {
+					status: 'fail',
+					output: `Service ${serviceName} health check failed: ${ensureError(error).message}`,
+					timestamp: new Date().toISOString(),
+				};
 			}
-		);
+		});
 	}
 
 	/**
@@ -406,7 +414,6 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 				// Update registration info
 				registrationInfo.healthStatus = healthCheck.status;
 				registrationInfo.lastActivity = Date.now();
-
 			} catch (error) {
 				logger.warn(`Health check failed for service ${serviceName}:`, ensureError(error));
 				registrationInfo.healthStatus = 'unhealthy';
@@ -414,9 +421,9 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 		}
 
 		if (this.config.enableMetricsLogging && results.length > 0) {
-			const healthySvcs = results.filter(r => r.status === 'healthy').length;
-			const degradedSvcs = results.filter(r => r.status === 'degraded').length;
-			const unhealthySvcs = results.filter(r => r.status === 'unhealthy').length;
+			const healthySvcs = results.filter((r) => r.status === 'healthy').length;
+			const degradedSvcs = results.filter((r) => r.status === 'degraded').length;
+			const unhealthySvcs = results.filter((r) => r.status === 'unhealthy').length;
 
 			logger.debug('Service health summary', {
 				total: results.length,
@@ -432,26 +439,35 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 	/**
 	 * Check health of a specific service
 	 */
-	private async checkServiceHealth(serviceName: string, registrationInfo: ServiceRegistrationInfo): Promise<ServiceHealthResult> {
-		const startTime = Date.now();
+	private async checkServiceHealth(
+		serviceName: string,
+		registrationInfo: ServiceRegistrationInfo,
+	): Promise<ServiceHealthResult> {
+		const _startTime = Date.now(); // TODO: Add timing metrics if needed
 
 		try {
 			const healthStatus = registrationInfo.instance.getServiceHealthStatus() as any;
 			const metricsSummary = registrationInfo.instance.getServiceMetricsSummary() as any;
 
 			// Convert component health information
-			const components = Object.entries(healthStatus.components || {}).map(([component, info]: [string, any]) => ({
-				component,
-				status: info.status === 'healthy' ? 'pass' as const :
-						info.status === 'degraded' ? 'warn' as const : 'fail' as const,
-				lastActivity: info.lastActivity,
-				operationCount: info.operationCount,
-				errorRate: info.errorRate,
-			}));
+			const components = Object.entries(healthStatus.components || {}).map(
+				([component, info]: [string, any]) => ({
+					component,
+					status:
+						info.status === 'healthy'
+							? ('pass' as const)
+							: info.status === 'degraded'
+								? ('warn' as const)
+								: ('fail' as const),
+					lastActivity: info.lastActivity,
+					operationCount: info.operationCount,
+					errorRate: info.errorRate,
+				}),
+			);
 
 			// Determine overall service status
-			const hasFailures = components.some(c => c.status === 'fail');
-			const hasWarnings = components.some(c => c.status === 'warn');
+			const hasFailures = components.some((c) => c.status === 'fail');
+			const hasWarnings = components.some((c) => c.status === 'warn');
 
 			let overallStatus: 'healthy' | 'degraded' | 'unhealthy';
 			if (hasFailures || healthStatus.status === 'unhealthy') {
@@ -476,7 +492,6 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 				},
 				timestamp: Date.now(),
 			};
-
 		} catch (error) {
 			logger.error(`Error checking health for service ${serviceName}:`, ensureError(error));
 			return {
@@ -583,7 +598,7 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 			// Wait for service shutdowns with timeout
 			await Promise.race([
 				Promise.allSettled(shutdownPromises),
-				new Promise(resolve => setTimeout(resolve, this.config.shutdownTimeout)),
+				new Promise((resolve) => setTimeout(resolve, this.config.shutdownTimeout)),
 			]);
 
 			// Stop unified collector
@@ -594,7 +609,6 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 
 			logger.info('Unified metrics endpoint shutdown complete');
 			this.emit('shutdown_complete');
-
 		} catch (error) {
 			logger.error('Error during unified metrics endpoint shutdown:', ensureError(error));
 			throw error;
@@ -631,15 +645,13 @@ export function getUnifiedMetricsEndpoint(): UnifiedMetricsEndpoint {
 }
 
 // Convenience function to start the entire unified metrics system
-export async function startUnifiedMetricsSystem(config?: Partial<UnifiedEndpointConfig>): Promise<UnifiedMetricsEndpoint> {
+export async function startUnifiedMetricsSystem(
+	config?: Partial<UnifiedEndpointConfig>,
+): Promise<UnifiedMetricsEndpoint> {
 	const endpoint = initializeUnifiedMetricsEndpoint(config);
 	await endpoint.initialize();
 	return endpoint;
 }
 
 // Export types
-export type {
-	UnifiedEndpointConfig,
-	ServiceRegistrationInfo,
-	ServiceHealthResult,
-};
+export type { UnifiedEndpointConfig, ServiceRegistrationInfo, ServiceHealthResult };

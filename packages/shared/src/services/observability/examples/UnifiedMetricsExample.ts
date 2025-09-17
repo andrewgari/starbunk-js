@@ -7,7 +7,6 @@ import { logger } from '../../logger';
 import {
 	initializeUnifiedObservability,
 	startUnifiedMetricsSystem,
-	type UnifiedEndpointConfig,
 	type ServiceMetricContext,
 	type ServiceMessageFlowMetrics,
 } from '../index';
@@ -47,9 +46,8 @@ export class BunkBotWithUnifiedMetrics {
 			}
 
 			this.isInitialized = true;
-
-		} catch (error) {
-			logger.error('Failed to initialize unified metrics:', error);
+		} catch (error: unknown) {
+			logger.error('Failed to initialize unified metrics:', error as Error);
 			throw error;
 		}
 	}
@@ -93,9 +91,8 @@ export class BunkBotWithUnifiedMetrics {
 			};
 
 			this.observability.serviceMetrics.trackServiceMessageFlow(messageFlowMetrics);
-
-		} catch (error) {
-			logger.error('Error tracking bot trigger:', error);
+		} catch (error: unknown) {
+			logger.error('Error tracking bot trigger:', error as Error);
 		}
 	}
 
@@ -110,7 +107,6 @@ export class BunkBotWithUnifiedMetrics {
 			// Track successful processing
 			const duration = Date.now() - startTime;
 			this.trackMessageProcessing(messageContext, duration, true);
-
 		} catch (error) {
 			// Track failed processing
 			const duration = Date.now() - startTime;
@@ -129,8 +125,8 @@ export class BunkBotWithUnifiedMetrics {
 			metadata: {
 				channel_id: messageContext.channelId,
 				guild_id: messageContext.guildId,
-				message_length: messageContext.messageText?.length || 0,
-				error_type: success ? undefined : 'processing_error',
+				message_length: (messageContext.messageText?.length ?? 0) as number,
+				error_type: success ? 'none' : 'processing_error',
 			},
 		};
 
@@ -147,17 +143,16 @@ export class BunkBotWithUnifiedMetrics {
 
 			// Track successful delivery
 			const duration = Date.now() - startTime;
-			this.trackWebhookDelivery(webhookUrl, duration, true);
-
+			this.trackWebhookDelivery(webhookUrl, payload, duration, true);
 		} catch (error) {
 			// Track failed delivery
 			const duration = Date.now() - startTime;
-			this.trackWebhookDelivery(webhookUrl, duration, false);
+			this.trackWebhookDelivery(webhookUrl, payload, duration, false);
 			throw error;
 		}
 	}
 
-	private trackWebhookDelivery(webhookUrl: string, duration: number, success: boolean): void {
+	private trackWebhookDelivery(webhookUrl: string, payload: any, duration: number, success: boolean): void {
 		if (!this.observability.serviceMetrics) return;
 
 		const context: ServiceMetricContext = {
@@ -166,8 +161,8 @@ export class BunkBotWithUnifiedMetrics {
 			operation: 'deliver_webhook',
 			metadata: {
 				webhook_host: new URL(webhookUrl).hostname,
-				payload_size: JSON.stringify({}).length,
-				error_type: success ? undefined : 'delivery_error',
+				payload_size: JSON.stringify(payload).length,
+				error_type: success ? 'none' : 'delivery_error',
 			},
 		};
 
@@ -196,9 +191,8 @@ export class BunkBotWithUnifiedMetrics {
 			// Update other components similarly
 			this.observability.serviceMetrics.updateComponentHealth('message_processor', 'healthy');
 			this.observability.serviceMetrics.updateComponentHealth('webhook_delivery', 'healthy');
-
-		} catch (error) {
-			logger.error('Error updating component health:', error);
+		} catch (error: unknown) {
+			logger.error('Error updating component health:', error as Error);
 		}
 	}
 
@@ -224,19 +218,18 @@ export class BunkBotWithUnifiedMetrics {
 			}
 
 			logger.info('BunkBot unified metrics shutdown complete');
-
-		} catch (error) {
-			logger.error('Error during shutdown:', error);
+		} catch (error: unknown) {
+			logger.error('Error during shutdown:', error as Error);
 		}
 	}
 
 	// Simulation methods for example
 	private async simulateMessageProcessing(): Promise<void> {
-		await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+		await new Promise((resolve) => setTimeout(resolve, Math.random() * 100));
 	}
 
-	private async simulateWebhookDelivery(url: string, payload: any): Promise<void> {
-		await new Promise(resolve => setTimeout(resolve, Math.random() * 200));
+	private async simulateWebhookDelivery(_url: string, _payload: any): Promise<void> {
+		await new Promise((resolve) => setTimeout(resolve, Math.random() * 200));
 		// Simulate occasional failures
 		if (Math.random() < 0.1) {
 			throw new Error('Webhook delivery failed');
@@ -311,7 +304,6 @@ export class DJCovaWithUnifiedMetrics {
 			};
 
 			this.observability.serviceMetrics.trackServiceOperation(context, duration, true);
-
 		} catch (error) {
 			const duration = Date.now() - startTime;
 			const context: ServiceMetricContext = {
@@ -331,7 +323,7 @@ export class DJCovaWithUnifiedMetrics {
 	}
 
 	private async simulateAudioProcessing(): Promise<void> {
-		await new Promise(resolve => setTimeout(resolve, Math.random() * 500));
+		await new Promise((resolve) => setTimeout(resolve, Math.random() * 500));
 	}
 }
 
@@ -369,9 +361,8 @@ export async function initializeStandaloneUnifiedMetrics(): Promise<void> {
 			await unifiedEndpoint.shutdown();
 			process.exit(0);
 		});
-
-	} catch (error) {
-		logger.error('Failed to initialize standalone unified metrics:', error);
+	} catch (error: unknown) {
+		logger.error('Failed to initialize standalone unified metrics:', error as Error);
 		throw error;
 	}
 }
