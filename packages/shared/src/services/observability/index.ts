@@ -194,6 +194,7 @@ export function initializeUnifiedObservability(
 		endpointsConfig?: Partial<EndpointsConfig>;
 		unifiedConfig?: Partial<import('./UnifiedMetricsEndpoint').UnifiedEndpointConfig>;
 		enableUnified?: boolean;
+		enableStructuredLogging?: boolean;
 		skipHttpEndpoints?: boolean;
 	},
 ): UnifiedObservabilityComponents {
@@ -206,6 +207,18 @@ export function initializeUnifiedObservability(
 
 	const envConfig = validateObservabilityEnvironment();
 	const enableUnified = options?.enableUnified ?? envConfig.unifiedMetricsEnabled ?? true;
+
+	// Configure structured logging
+	try {
+		const { logger } = require('../logger');
+		logger.setServiceName(service);
+		if (options?.enableStructuredLogging ?? envConfig.structuredLoggingEnabled) {
+			logger.enableStructuredLogging(true);
+		}
+	} catch (error) {
+		// Logger import failed, continue without configuration
+		console.warn('Failed to configure structured logging:', error);
+	}
 
 	let unifiedEndpoint: import('./UnifiedMetricsEndpoint').UnifiedMetricsEndpoint | undefined;
 	let serviceMetrics: import('./ServiceMetricsRegistry').ServiceAwareMetricsService | undefined;
