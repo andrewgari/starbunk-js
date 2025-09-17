@@ -137,7 +137,7 @@ describe('Memory Service - Comprehensive Database Integration Tests', () => {
 			});
 
 			it('should return null when updating non-existent note', async () => {
-				const result = await memoryService.updatePersonalityNote('non-existent', { content: 'test' });
+				const _result = await memoryService.updatePersonalityNote('non-existent', { content: 'test' });
 
 				expect(result).toBeNull();
 			});
@@ -155,7 +155,7 @@ describe('Memory Service - Comprehensive Database Integration Tests', () => {
 			it('should delete existing personality note', async () => {
 				const noteId = MOCK_PERSONALITY_NOTES[0].id;
 
-				const result = await memoryService.deletePersonalityNote(noteId);
+				const _result = await memoryService.deletePersonalityNote(noteId);
 
 				expect(result).toBe(true);
 
@@ -165,7 +165,7 @@ describe('Memory Service - Comprehensive Database Integration Tests', () => {
 			});
 
 			it('should return false when deleting non-existent note', async () => {
-				const result = await memoryService.deletePersonalityNote('non-existent-id');
+				const _result = await memoryService.deletePersonalityNote('non-existent-id');
 
 				expect(result).toBe(false);
 			});

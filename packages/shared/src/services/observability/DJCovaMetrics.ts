@@ -620,11 +620,11 @@ export class DJCovaMetricsCollector extends ContainerMetricsBase implements DJCo
 	}
 
 	private cleanupStaleConnections(): void {
-		const now = Date.now();
+		const _now = Date.now();
 		const staleThreshold = 10 * 60 * 1000; // 10 minutes
 
 		for (const [guildId, connection] of this.voiceConnections.entries()) {
-			if (now - connection.lastUpdate > staleThreshold) {
+			if (_now - connection.lastUpdate > staleThreshold) {
 				this.voiceConnections.delete(guildId);
 				logger.debug(`Cleaned up stale voice connection: ${guildId}`); // eslint-disable-line @typescript-eslint/no-unused-vars
 			}

@@ -710,11 +710,11 @@ export class StarbunkDNDMetricsCollector extends ContainerMetricsBase implements
 	}
 
 	private cleanupStaleLLMRequests(): void {
-		const now = Date.now();
+		const _now = Date.now();
 		const staleThreshold = 10 * 60 * 1000; // 10 minutes
 
 		for (const [requestId, request] of this.activeLLMRequests.entries()) {
-			if (now - request.startTime > staleThreshold) {
+			if (_now - request.startTime > staleThreshold) {
 				this.activeLLMRequests.delete(requestId);
 				logger.debug(`Cleaned up stale LLM request: ${requestId}`); // eslint-disable-line @typescript-eslint/no-unused-vars
 			}

@@ -47,7 +47,7 @@ describe('ConfigurationService', () => {
 			mockPrisma.userConfiguration.findUnique.mockResolvedValue(mockUser);
 
 			// Act
-			const result = await configService.getUserConfig('85184539906809856');
+			const _result = await configService.getUserConfig('85184539906809856');
 
 			// Assert
 			expect(result).toEqual({
@@ -66,7 +66,7 @@ describe('ConfigurationService', () => {
 			mockPrisma.userConfiguration.findUnique.mockResolvedValue(null);
 
 			// Act
-			const result = await configService.getUserConfig('nonexistent');
+			const _result = await configService.getUserConfig('nonexistent');
 
 			// Assert
 			expect(result).toBeNull();
@@ -77,7 +77,7 @@ describe('ConfigurationService', () => {
 			mockPrisma.userConfiguration.findUnique.mockRejectedValue(new Error('Database error'));
 
 			// Act
-			const result = await configService.getUserConfig('85184539906809856');
+			const _result = await configService.getUserConfig('85184539906809856');
 
 			// Assert
 			expect(result).toBeNull();
@@ -96,7 +96,7 @@ describe('ConfigurationService', () => {
 			mockPrisma.userConfiguration.findFirst.mockResolvedValue(mockUser);
 
 			// Act
-			const result = await configService.getUserIdByUsername('Chad');
+			const _result = await configService.getUserIdByUsername('Chad');
 
 			// Assert
 			expect(result).toBe('85184539906809856');
@@ -121,7 +121,7 @@ describe('ConfigurationService', () => {
 			mockPrisma.userConfiguration.findFirst.mockResolvedValue(mockUser);
 
 			// Act
-			const result = await configService.getUserIdByUsername('chad');
+			const _result = await configService.getUserIdByUsername('chad');
 
 			// Assert
 			expect(result).toBe('85184539906809856');
@@ -132,7 +132,7 @@ describe('ConfigurationService', () => {
 			mockPrisma.userConfiguration.findFirst.mockResolvedValue(null);
 
 			// Act
-			const result = await configService.getUserIdByUsername('NonExistent');
+			const _result = await configService.getUserIdByUsername('NonExistent');
 
 			// Assert
 			expect(result).toBeNull();
@@ -154,7 +154,7 @@ describe('ConfigurationService', () => {
 			mockPrisma.botConfiguration.findUnique.mockResolvedValue(mockBot);
 
 			// Act
-			const result = await configService.getBotConfig('chad-bot');
+			const _result = await configService.getBotConfig('chad-bot');
 
 			// Assert
 			expect(result).toEqual({
@@ -173,7 +173,7 @@ describe('ConfigurationService', () => {
 			mockPrisma.botConfiguration.findUnique.mockResolvedValue(null);
 
 			// Act
-			const result = await configService.getBotConfig('nonexistent-bot');
+			const _result = await configService.getBotConfig('nonexistent-bot');
 
 			// Assert
 			expect(result).toBeNull();
@@ -246,7 +246,7 @@ describe('BotIdentityService', () => {
 			});
 
 			// Act
-			const result = await identityService.getBotIdentityByUsername('Chad', undefined, 'ChadBot');
+			const _result = await identityService.getBotIdentityByUsername('Chad', undefined, 'ChadBot');
 
 			// Assert
 			expect(mockConfigService.getUserIdByUsername).toHaveBeenCalledWith('Chad');
@@ -259,7 +259,7 @@ describe('BotIdentityService', () => {
 			mockConfigService.getUserIdByUsername.mockResolvedValue(null);
 
 			// Act
-			const result = await identityService.getBotIdentityByUsername('NonExistent', undefined, 'FallbackBot');
+			const _result = await identityService.getBotIdentityByUsername('NonExistent', undefined, 'FallbackBot');
 
 			// Assert - Implementation returns null when user not found (bot remains silent)
 			expect(result).toBeNull();

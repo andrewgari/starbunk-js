@@ -204,7 +204,7 @@ export class StructuredLogger {
 
 	private logWithLevel(level: 'debug' | 'info' | 'warn' | 'error', message: string, context: LogContext): void {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
-		if (process.env.LOG_FORMAT === 'json') {
+		if (process.env.ENABLE_STRUCTURED_LOGGING === 'true') {
 			const logEntry = {
 				level,
 				message,

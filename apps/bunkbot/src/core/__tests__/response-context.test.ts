@@ -108,7 +108,7 @@ describe('ResponseContext', () => {
 			const standardCondition = asCondition(contextCondition);
 
 			const message = createMessageWithMentions('Hello world');
-			const result = await standardCondition(message);
+			const _result = await standardCondition(message);
 
 			expect(result).toBe(true);
 			expect(contextCondition).toHaveBeenCalledWith(
@@ -124,7 +124,7 @@ describe('ResponseContext', () => {
 			const standardCondition = asCondition(contextCondition);
 
 			const message = createMessageWithMentions('Hello world');
-			const result = await standardCondition(message);
+			const _result = await standardCondition(message);
 
 			expect(result).toBe(true);
 			expect(contextCondition).toHaveBeenCalled();
@@ -137,7 +137,7 @@ describe('ResponseContext', () => {
 			const standardGenerator = asResponseGenerator(contextGenerator);
 
 			const message = createMessageWithMentions('Hello world');
-			const result = await standardGenerator(message);
+			const _result = await standardGenerator(message);
 
 			expect(result).toBe('Response text');
 			expect(contextGenerator).toHaveBeenCalledWith(
@@ -153,7 +153,7 @@ describe('ResponseContext', () => {
 			const standardGenerator = asResponseGenerator(contextGenerator);
 
 			const message = createMessageWithMentions('Hello world');
-			const result = await standardGenerator(message);
+			const _result = await standardGenerator(message);
 
 			expect(result).toBe('Async response');
 			expect(contextGenerator).toHaveBeenCalled();

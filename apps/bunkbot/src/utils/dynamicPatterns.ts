@@ -170,10 +170,10 @@ export function createCachedDynamicPattern(
 	const cacheKey = `${patternTemplate}:${flags || ''}`;
 
 	return async () => {
-		const now = Date.now();
+		const _now = Date.now();
 		const cached = patternCache.get(cacheKey);
 
-		if (cached && now - cached.timestamp < CACHE_EXPIRY) {
+		if (cached && _now - cached.timestamp < CACHE_EXPIRY) {
 			return cached.pattern;
 		}
 
@@ -181,7 +181,7 @@ export function createCachedDynamicPattern(
 			const resolvedPattern = await replacePlaceholdersWithUserIds(configService, patternTemplate);
 			const pattern = new RegExp(resolvedPattern, flags);
 
-			patternCache.set(cacheKey, { pattern, timestamp: now });
+			patternCache.set(cacheKey, { pattern, timestamp: _now });
 			return pattern;
 		} catch (error) {
 			console.error('Failed to create cached dynamic pattern:', error);

@@ -94,9 +94,9 @@ export function withChance(chance: number): Condition {
 		if (isDebugMode()) return true;
 
 		const random = Math.random() * 100;
-		const result = random <= chance;
-		logger.debug(`withChance(${chance}): random=${Math.round(random)}, result=${result}`);
-		return result;
+		const _result = random <= chance;
+		logger.debug(`withChance(${chance}): random=${Math.round(random)}, result=${_result}`);
+		return _result;
 	};
 }
 
@@ -110,9 +110,9 @@ export function withinTimeframeOf(
 	const durationMs = dur * multipliers[unit];
 
 	return () => {
-		const now = Date.now();
+		const _now = Date.now();
 		const timestamp = timestampFn();
-		return now - timestamp <= durationMs;
+		return _now - timestamp <= durationMs;
 	};
 }
 
@@ -143,7 +143,7 @@ class BotDetector {
 				(name) => username === name.toLowerCase() || displayName === name.toLowerCase(),
 			);
 
-		const result = isCovaUsername || isCovaWebhook;
+		const _result = isCovaUsername || isCovaWebhook;
 
 		if (isDebugMode()) {
 			logger.debug('🤖 CovaBot Detection:', {
@@ -151,11 +151,11 @@ class BotDetector {
 				displayName: message.author.displayName,
 				isBot: message.author.bot,
 				webhookId: message.webhookId,
-				result,
+				result: _result,
 			});
 		}
 
-		return result;
+		return _result;
 	}
 
 	static shouldExcludeFromReplyBots(message: Message): boolean {
@@ -257,8 +257,8 @@ export function contextLlmDetects(prompt: string): ContextualTriggerCondition {
 export function and(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
 		for (const condition of conditions) {
-			const result = condition(message);
-			const isMatch = result instanceof Promise ? await result : result;
+			const _result = condition(message);
+			const isMatch = _result instanceof Promise ? await _result : _result;
 			if (!isMatch) return false;
 		}
 		return true;
@@ -269,8 +269,8 @@ export function or(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
 		for (const condition of conditions) {
 			try {
-				const result = condition(message);
-				const isMatch = result instanceof Promise ? await result : result;
+				const _result = condition(message);
+				const isMatch = _result instanceof Promise ? await _result : _result;
 				if (isMatch) return true;
 			} catch (error) {
 				logger.debug(`Error in condition: ${error instanceof Error ? error.message : String(error)}`);
@@ -295,20 +295,20 @@ export function withDefaultBotBehavior(botName: string, condition: TriggerCondit
 				return false;
 			}
 
-			const result = await condition(message);
+			const _result = await condition(message);
 
 			if (isDebugMode()) {
 				const messageInfo = {
 					author: message.author.username,
 					isBot: message.author.bot,
 					content: message.content.substring(0, 50) + (message.content.length > 50 ? '...' : ''),
-					result,
+					result: _result,
 				};
 
-				logger.debug(`[${botName}] ${result ? '✅' : '❌'} Condition result`, messageInfo);
+				logger.debug(`[${botName}] ${_result ? '✅' : '❌'} Condition result`, messageInfo);
 			}
 
-			return result;
+			return _result;
 		} catch (error) {
 			logger.error(`[${botName}] 💥 Error in condition:`, ensureError(error));
 			return false;

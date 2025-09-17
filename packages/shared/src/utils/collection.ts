@@ -8,12 +8,12 @@ declare global {
 }
 
 Array.prototype.shuffle = function <T>(): T[] {
-	const result = [...this];
+	const _result = [...this];
 
-	for (let i = result.length - 1; i > 0; i--) {
+	for (let i = _result.length - 1; i > 0; i--) {
 		const randomIndex = Math.floor(Math.random() * (i + 1));
-		[result[i], result[randomIndex]] = [result[randomIndex], result[i]];
+		[_result[i], _result[randomIndex]] = [_result[randomIndex], _result[i]];
 	}
 
-	return result;
+	return _result;
 };

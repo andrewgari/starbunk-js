@@ -267,7 +267,7 @@ describe('Starbunk-DND Debug Mode Functionality', () => {
 				channelId: allowedChannelId,
 			});
 			const context = MessageFilter.createContextFromInteraction(rollInteraction);
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
 			expect(result.allowed).toBe(true);
@@ -286,7 +286,7 @@ describe('Starbunk-DND Debug Mode Functionality', () => {
 				guild: { id: blockedServerId },
 			});
 			const context = MessageFilter.createContextFromInteraction(characterInteraction);
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
 			expect(result.allowed).toBe(false);
@@ -309,7 +309,7 @@ describe('Starbunk-DND Debug Mode Functionality', () => {
 				channelId: allowedChannelId,
 			});
 			const context = MessageFilter.createContextFromInteraction(campaignInteraction);
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
 			expect(result.allowed).toBe(true);
@@ -372,7 +372,7 @@ describe('Starbunk-DND Debug Mode Functionality', () => {
 					channelId: allowedChannelId,
 				});
 				const context = MessageFilter.createContextFromInteraction(interaction);
-				const result = filter.shouldProcessMessage(context);
+				const _result = filter.shouldProcessMessage(context);
 				expect(result.allowed).toBe(true);
 			});
 		});
@@ -449,7 +449,7 @@ describe('Starbunk-DND Debug Mode Functionality', () => {
 					options: command.options,
 				});
 				const context = MessageFilter.createContextFromInteraction(interaction);
-				const result = filter.shouldProcessMessage(context);
+				const _result = filter.shouldProcessMessage(context);
 
 				// Assert - All D&D commands should be blocked
 				expect(result.allowed).toBe(false);

@@ -110,7 +110,7 @@ describe('BunkBot Debug Mode Functionality', () => {
 
 			// Act & Assert - Test multiple times to ensure deterministic behavior
 			for (let i = 0; i < 10; i++) {
-				const result = condition();
+				const _result = condition();
 				expect(result).toBe(true);
 			}
 		});
@@ -123,7 +123,7 @@ describe('BunkBot Debug Mode Functionality', () => {
 
 			// Act & Assert - Test multiple times
 			for (let i = 0; i < 10; i++) {
-				const result = condition();
+				const _result = condition();
 				expect(result).toBe(false);
 			}
 		});
@@ -139,7 +139,7 @@ describe('BunkBot Debug Mode Functionality', () => {
 
 			// Assert - All subsequent calls should return true (deterministic in debug)
 			for (let i = 0; i < 5; i++) {
-				const result = condition();
+				const _result = condition();
 				expect(result).toBe(true);
 			}
 			expect(firstResult).toBe(true);
@@ -241,7 +241,7 @@ describe('BunkBot Debug Mode Functionality', () => {
 			// Act & Assert - Should allow all messages when no restrictions
 			const message = createMockMessage();
 			const context = MessageFilter.createContextFromMessage(message);
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 			expect(result.allowed).toBe(true);
 		});
 
@@ -358,7 +358,7 @@ describe('BunkBot Debug Mode Functionality', () => {
 				content: 'This should be blocked',
 			});
 			const blockedContext = MessageFilter.createContextFromMessage(blockedMessage);
-			const result = filter.shouldProcessMessage(blockedContext);
+			const _result = filter.shouldProcessMessage(blockedContext);
 
 			// Assert
 			expect(result.allowed).toBe(false);
@@ -382,7 +382,7 @@ describe('BunkBot Debug Mode Functionality', () => {
 				content: 'This should be allowed',
 			});
 			const allowedContext = MessageFilter.createContextFromMessage(allowedMessage);
-			const result = filter.shouldProcessMessage(allowedContext);
+			const _result = filter.shouldProcessMessage(allowedContext);
 
 			// Assert
 			expect(result.allowed).toBe(true);
@@ -406,7 +406,7 @@ describe('BunkBot Debug Mode Functionality', () => {
 				commandName: 'ping',
 			});
 			const blockedContext = MessageFilter.createContextFromInteraction(blockedInteraction);
-			const result = filter.shouldProcessMessage(blockedContext);
+			const _result = filter.shouldProcessMessage(blockedContext);
 
 			// Assert
 			expect(result.allowed).toBe(false);
@@ -432,7 +432,7 @@ describe('BunkBot Debug Mode Functionality', () => {
 				content: 'trigger some bot response',
 			});
 			const blockedContext = MessageFilter.createContextFromMessage(blockedMessage);
-			const result = filter.shouldProcessMessage(blockedContext);
+			const _result = filter.shouldProcessMessage(blockedContext);
 
 			// Assert - Message should be blocked before any bot processing
 			expect(result.allowed).toBe(false);
@@ -455,7 +455,7 @@ describe('BunkBot Debug Mode Functionality', () => {
 				content: 'This should not trigger webhooks',
 			});
 			const blockedContext = MessageFilter.createContextFromMessage(blockedMessage);
-			const result = filter.shouldProcessMessage(blockedContext);
+			const _result = filter.shouldProcessMessage(blockedContext);
 
 			// Assert - No external services should be called
 			expect(result.allowed).toBe(false);

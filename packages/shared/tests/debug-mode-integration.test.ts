@@ -149,13 +149,13 @@ describe('Debug Mode Integration Tests', () => {
 			};
 
 			// Act
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
-			expect(result.allowed).toBe(false);
-			expect(result.reason).toContain('blocked-server');
-			expect(result.reason).toContain('not in allowed testing servers');
-			expect(result.reason).toContain('allowed-server');
+			expect(_result.allowed).toBe(false);
+			expect(_result.reason).toContain('blocked-server');
+			expect(_result.reason).toContain('not in allowed testing servers');
+			expect(_result.reason).toContain('allowed-server');
 		});
 	});
 
@@ -193,8 +193,8 @@ describe('Debug Mode Integration Tests', () => {
 				username: 'testuser',
 			};
 
-			const result = filter.shouldProcessMessage(context);
-			expect(result.allowed).toBe(true);
+			const _result = filter.shouldProcessMessage(context);
+			expect(_result.allowed).toBe(true);
 		});
 	});
 
@@ -306,10 +306,10 @@ describe('Debug Mode Integration Tests', () => {
 				username: 'testuser',
 			};
 
-			const result = filter.shouldProcessMessage(dmContext);
+			const _result = filter.shouldProcessMessage(dmContext);
 
 			// Assert - DM messages should be allowed even with server restrictions
-			expect(result.allowed).toBe(true);
+			expect(_result.allowed).toBe(true);
 		});
 	});
 
@@ -369,12 +369,12 @@ describe('Debug Mode Integration Tests', () => {
 
 			messageTypes.forEach((messageType) => {
 				// Act
-				const result = filter.shouldProcessMessage(messageType.context);
+				const _result = filter.shouldProcessMessage(messageType.context);
 
 				// Assert - All message types should be blocked
-				expect(result.allowed).toBe(false);
-				expect(result.reason).toContain(`Channel ${blockedChannelId} not in allowed testing channels`);
-				expect(result.reason).toContain('[777888999000111222, 333444555666777888]');
+				expect(_result.allowed).toBe(false);
+				expect(_result.reason).toContain(`Channel ${blockedChannelId} not in allowed testing channels`);
+				expect(_result.reason).toContain('[777888999000111222, 333444555666777888]');
 			});
 		});
 
@@ -423,11 +423,11 @@ describe('Debug Mode Integration Tests', () => {
 
 			messageTypes.forEach((messageType) => {
 				// Act
-				const result = filter.shouldProcessMessage(messageType.context);
+				const _result = filter.shouldProcessMessage(messageType.context);
 
 				// Assert - All message types should be allowed
-				expect(result.allowed).toBe(true);
-				expect(result.reason).toBeUndefined();
+				expect(_result.allowed).toBe(true);
+				expect(_result.reason).toBeUndefined();
 			});
 		});
 
@@ -449,12 +449,12 @@ describe('Debug Mode Integration Tests', () => {
 				content: 'This should be blocked',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert - Should provide detailed reason
-			expect(result.allowed).toBe(false);
-			expect(result.reason).toContain('Channel 999999999999999999 not in allowed testing channels');
-			expect(result.reason).toContain('[777888999000111222, 333444555666777888]');
+			expect(_result.allowed).toBe(false);
+			expect(_result.reason).toContain('Channel 999999999999999999 not in allowed testing channels');
+			expect(_result.reason).toContain('[777888999000111222, 333444555666777888]');
 		});
 
 		test('should handle multiple blocked channels consistently', () => {
@@ -476,11 +476,11 @@ describe('Debug Mode Integration Tests', () => {
 					content: 'Test message',
 				};
 
-				const result = filter.shouldProcessMessage(context);
+				const _result = filter.shouldProcessMessage(context);
 
 				// Assert - All blocked channels should be consistently blocked
-				expect(result.allowed).toBe(false);
-				expect(result.reason).toContain(`Channel ${blockedChannelId} not in allowed testing channels`);
+				expect(_result.allowed).toBe(false);
+				expect(_result.reason).toContain(`Channel ${blockedChannelId} not in allowed testing channels`);
 			});
 		});
 
@@ -508,10 +508,10 @@ describe('Debug Mode Integration Tests', () => {
 				content: 'This should trigger external services',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Simulate proper message processing pipeline
-			if (result.allowed) {
+			if (_result.allowed) {
 				mockExternalServiceCall();
 				mockDatabaseWrite();
 				mockAPIRequest();
@@ -519,7 +519,7 @@ describe('Debug Mode Integration Tests', () => {
 			}
 
 			// Assert - No external services should be called when message is filtered
-			expect(result.allowed).toBe(false);
+			expect(_result.allowed).toBe(false);
 			expect(mockExternalServiceCall).not.toHaveBeenCalled();
 			expect(mockDatabaseWrite).not.toHaveBeenCalled();
 			expect(mockAPIRequest).not.toHaveBeenCalled();
@@ -544,10 +544,10 @@ describe('Debug Mode Integration Tests', () => {
 				content: 'Test message',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert - Should allow all channels when whitelist is empty
-			expect(result.allowed).toBe(true);
+			expect(_result.allowed).toBe(true);
 		});
 
 		test.skip('should prioritize channel filtering over server filtering when both are set', () => {
@@ -572,11 +572,11 @@ describe('Debug Mode Integration Tests', () => {
 				content: 'Test message',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert - Should be blocked due to channel restriction
-			expect(result.allowed).toBe(false);
-			expect(result.reason).toContain('Channel 999999999999999999 not in allowed testing channels');
+			expect(_result.allowed).toBe(false);
+			expect(_result.reason).toContain('Channel 999999999999999999 not in allowed testing channels');
 		});
 	});
 });

@@ -34,10 +34,10 @@ export class DebugUtils {
 
 		const start = performance.now();
 		try {
-			const result = await fn();
+			const _result = await fn();
 			const end = performance.now();
 			logger.debug(`⏱️ ${label} took ${(end - start).toFixed(2)}ms`);
-			return result;
+			return _result;
 		} catch (error) {
 			const end = performance.now();
 			logger.error(`⏱️ ${label} failed after ${(end - start).toFixed(2)}ms`, error as Error);

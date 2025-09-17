@@ -321,7 +321,7 @@ setInterval(
 		}
 
 		// Clean up old response tracking
-		const now = Date.now();
+		const _now = Date.now();
 		for (const [channelId, time] of lastResponseTime.entries()) {
 			if (now - time > 24 * 60 * 60 * 1000) {
 				// Older than 24 hours

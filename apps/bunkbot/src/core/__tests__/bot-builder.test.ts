@@ -678,7 +678,7 @@ describe('defaultMessageFilter', () => {
 			}),
 		});
 
-		const result = defaultMessageFilter(message);
+		const _result = defaultMessageFilter(message);
 		expect(result).toBe(true); // true means skip
 	});
 
@@ -692,7 +692,7 @@ describe('defaultMessageFilter', () => {
 			}),
 		});
 
-		const result = defaultMessageFilter(message);
+		const _result = defaultMessageFilter(message);
 		expect(result).toBe(false); // false means don't skip (allow)
 	});
 
@@ -706,7 +706,7 @@ describe('defaultMessageFilter', () => {
 			}),
 		});
 
-		const result = defaultMessageFilter(message);
+		const _result = defaultMessageFilter(message);
 		expect(result).toBe(false); // false means don't skip (allow)
 	});
 
@@ -724,12 +724,12 @@ describe('defaultMessageFilter', () => {
 			},
 		});
 
-		const result = defaultMessageFilter(message);
+		const _result = defaultMessageFilter(message);
 		expect(result).toBe(false); // false means don't skip (test client takes priority)
 	});
 
 	it('should handle null/undefined message gracefully', () => {
-		const result = defaultMessageFilter(null as any);
+		const _result = defaultMessageFilter(null as any);
 		expect(result).toBe(false); // Default to not skip
 	});
 
@@ -737,7 +737,7 @@ describe('defaultMessageFilter', () => {
 		const message = mockMessage({ content: 'test' });
 		message.author = null as any;
 
-		const result = defaultMessageFilter(message);
+		const _result = defaultMessageFilter(message);
 		expect(result).toBe(false); // Default to not skip
 	});
 });

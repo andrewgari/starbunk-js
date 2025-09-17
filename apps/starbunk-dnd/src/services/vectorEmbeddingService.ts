@@ -268,8 +268,8 @@ export class VectorEmbeddingService {
 						// Extract text from DOCX using mammoth
 						logger.debug(`[VectorEmbeddingService] 📄 Extracting text from DOCX file: ${relativeFilePath}`);
 						const buffer = await fs.readFile(file);
-						const result = await mammoth.extractRawText({ buffer });
-						content = result.value;
+						const _result = await mammoth.extractRawText({ buffer });
+						content = _result.value;
 						logger.debug(`[VectorEmbeddingService] ✅ Extracted ${content.length} characters from DOCX`);
 					} else {
 						// Read regular text files
@@ -485,25 +485,25 @@ export class VectorEmbeddingService {
 			// Parse stdout as JSON
 			try {
 				logger.debug('[VectorEmbeddingService] 🔄 Parsing Python script output...');
-				const result = JSON.parse(stdout);
-				if (result.status === 'success') {
+				const _result = JSON.parse(stdout);
+				if (_result.status === 'success') {
 					logger.info('[VectorEmbeddingService] ✅ Vectors saved successfully', {
-						outputPath: result.output_path,
-						shape: result.shape,
-						dtype: result.dtype,
-						fileSize: result.file_size_bytes || 'unknown',
-						fileSizeMB: result.file_size_bytes
-							? (result.file_size_bytes / (1024 * 1024)).toFixed(2) + 'MB'
+						outputPath: _result.output_path,
+						shape: _result.shape,
+						dtype: _result.dtype,
+						fileSize: _result.file_size_bytes || 'unknown',
+						fileSizeMB: _result.file_size_bytes
+							? (_result.file_size_bytes / (1024 * 1024)).toFixed(2) + 'MB'
 							: 'unknown',
 						conversionTimeMs: pythonExecutionTime,
 					});
-				} else if (result.status === 'warning') {
+				} else if (_result.status === 'warning') {
 					logger.warn('[VectorEmbeddingService] ⚠️ Vectors saved with warnings:', {
-						message: result.message,
-						outputPath: result.output_path,
+						message: _result.message,
+						outputPath: _result.output_path,
 					});
 				} else {
-					throw new Error(`Python script returned error status: ${JSON.stringify(result)}`);
+					throw new Error(`Python script returned error status: ${JSON.stringify(_result)}`);
 				}
 			} catch (e) {
 				if (e instanceof SyntaxError) {
@@ -743,12 +743,12 @@ export class VectorEmbeddingService {
 
 					// Parse stdout as JSON
 					try {
-						const result = JSON.parse(stdout);
-						if (result.status === 'success') {
+						const _result = JSON.parse(stdout);
+						if (_result.status === 'success') {
 							logger.info('[VectorEmbeddingService] ✅ NPY vectors loaded successfully', {
-								shape: result.shape,
-								dtype: result.dtype,
-								outputPath: result.output_path,
+								shape: _result.shape,
+								dtype: _result.dtype,
+								outputPath: _result.output_path,
 							});
 
 							// Load vectors from temporary JSON file
@@ -757,14 +757,14 @@ export class VectorEmbeddingService {
 								count: vectors.length,
 								dimensions: vectors[0]?.length || 0,
 							});
-						} else if (result.status === 'warning') {
+						} else if (_result.status === 'warning') {
 							logger.warn('[VectorEmbeddingService] ⚠️ Python script warning:', {
-								message: result.message,
-								outputPath: result.output_path,
+								message: _result.message,
+								outputPath: _result.output_path,
 							});
-							throw new Error(`Python script returned warning: ${result.message}`);
+							throw new Error(`Python script returned warning: ${_result.message}`);
 						} else {
-							throw new Error(`Python script returned unexpected status: ${result.status}`);
+							throw new Error(`Python script returned unexpected status: ${_result.status}`);
 						}
 					} catch (e) {
 						const parseError = new Error(
@@ -833,7 +833,7 @@ export class VectorEmbeddingService {
 			logger.debug('[VectorEmbeddingService] 🔄 Converting vectors to Float32Array...');
 			const vectorsFloat32 = vectors.map((v) => new Float32Array(v));
 
-			const result = {
+			const _result = {
 				vectors: vectorsFloat32,
 				metadata,
 				texts,
@@ -846,7 +846,7 @@ export class VectorEmbeddingService {
 				dimensions: vectorsFloat32[0]?.length || 0,
 			});
 
-			return result;
+			return _result;
 		} catch (error) {
 			if (error instanceof VectorFileError) {
 				const logInfo = {

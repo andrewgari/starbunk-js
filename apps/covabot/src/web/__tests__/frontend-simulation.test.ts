@@ -35,7 +35,7 @@ describe('Frontend Chat Interface Simulation', () => {
 					.send({ message: interaction.message })
 					.expect(200);
 
-				const result = {
+				const _result = {
 					userMessage: interaction.message,
 					botResponse: response.body.data.botResponse,
 					timestamp: response.body.data.timestamp,

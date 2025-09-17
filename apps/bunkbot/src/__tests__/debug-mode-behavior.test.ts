@@ -68,7 +68,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
 				expect(result).toBe(false);
@@ -84,7 +84,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
 				expect(result).toBe(true);
@@ -100,7 +100,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
 				expect(result).toBe(true);
@@ -119,7 +119,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
 				expect(result).toBe(true);
@@ -132,7 +132,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
 				expect(result).toBe(true);
@@ -145,7 +145,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
 				expect(result).toBe(true);
@@ -268,7 +268,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 			// Act
 			const wrappedCondition = withDefaultBotBehavior(botName, testCondition);
-			const result = await wrappedCondition(humanMessage);
+			const _result = await wrappedCondition(humanMessage);
 
 			// Assert
 			expect(result).toBe(true);
@@ -295,7 +295,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 			// Act
 			const wrappedCondition = withDefaultBotBehavior(botName, testCondition);
-			const result = await wrappedCondition(humanMessage);
+			const _result = await wrappedCondition(humanMessage);
 
 			// Assert
 			expect(result).toBe(false);
@@ -322,7 +322,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 			// Act
 			const wrappedCondition = withDefaultBotBehavior(botName, testCondition);
-			const result = await wrappedCondition(covaBotMessage);
+			const _result = await wrappedCondition(covaBotMessage);
 
 			// Assert
 			expect(result).toBe(false);
@@ -348,7 +348,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 			// Act
 			const wrappedCondition = withDefaultBotBehavior(botName, errorCondition);
-			const result = await wrappedCondition(message);
+			const _result = await wrappedCondition(message);
 
 			// Assert
 			expect(result).toBe(false);

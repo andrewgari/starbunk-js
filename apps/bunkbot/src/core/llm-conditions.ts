@@ -37,9 +37,9 @@ export function createLLMCondition(prompt: string, options: LLMConditionOptions 
 				},
 			);
 
-			const result = response.toLowerCase().includes('yes');
-			logger.debug(`LLM condition check result: ${result}`);
-			return result;
+			const _result = response.toLowerCase().includes('yes');
+			logger.debug(`LLM condition check result: ${_result}`);
+			return _result;
 		} catch (error) {
 			// If LLM fails and we have a regex fallback, use it
 			if (options.regexFallback) {

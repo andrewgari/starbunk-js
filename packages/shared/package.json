@@ -24,6 +24,7 @@
 		"chalk": "^4.1.2",
 		"date-fns": "^4.1.0",
 		"discord.js": "^14.18.0",
+		"ioredis": "^5.3.2",
 		"dotenv": "^16.5.0",
 		"envalid": "^8.0.0",
 		"node-fetch": "^2.7.0",
@@ -36,6 +37,7 @@
 	},
 	"devDependencies": {
 		"@types/jest": "^29.5.14",
+		"@types/ioredis": "^5.0.0",
 		"@types/node": "^20.17.14",
 		"@types/node-schedule": "^2.1.7",
 		"@types/uuid": "^10.0.0",

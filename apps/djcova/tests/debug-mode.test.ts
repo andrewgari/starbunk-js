@@ -153,7 +153,7 @@ describe('DJCova Debug Mode Functionality', () => {
 				channelId: allowedChannelId,
 			});
 			const context = MessageFilter.createContextFromInteraction(interaction);
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert - Should be allowed
 			expect(result.allowed).toBe(true);
@@ -174,7 +174,7 @@ describe('DJCova Debug Mode Functionality', () => {
 				guild: { id: allowedServerId },
 			});
 			const context = MessageFilter.createContextFromInteraction(playInteraction);
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
 			expect(result.allowed).toBe(true);
@@ -193,7 +193,7 @@ describe('DJCova Debug Mode Functionality', () => {
 				guild: { id: blockedServerId },
 			});
 			const context = MessageFilter.createContextFromInteraction(skipInteraction);
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
 			expect(result.allowed).toBe(false);
@@ -213,7 +213,7 @@ describe('DJCova Debug Mode Functionality', () => {
 				channelId: allowedChannelId,
 			});
 			const context = MessageFilter.createContextFromInteraction(queueInteraction);
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
 			expect(result.allowed).toBe(true);
@@ -300,7 +300,7 @@ describe('DJCova Debug Mode Functionality', () => {
 				},
 			});
 			const context = MessageFilter.createContextFromInteraction(interaction);
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert - Text channel filtering should still apply
 			expect(result.allowed).toBe(true);
@@ -327,7 +327,7 @@ describe('DJCova Debug Mode Functionality', () => {
 				},
 			});
 			const context = MessageFilter.createContextFromInteraction(interaction);
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert - Should be blocked before voice validation
 			expect(result.allowed).toBe(false);
@@ -413,7 +413,7 @@ describe('DJCova Debug Mode Functionality', () => {
 					options: command.options,
 				});
 				const context = MessageFilter.createContextFromInteraction(interaction);
-				const result = filter.shouldProcessMessage(context);
+				const _result = filter.shouldProcessMessage(context);
 
 				// Assert - All music commands should be blocked
 				expect(result.allowed).toBe(false);

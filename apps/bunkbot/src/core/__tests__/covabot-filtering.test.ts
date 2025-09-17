@@ -52,7 +52,7 @@ describe('CovaBot Filtering Logic', () => {
 				bot: true,
 			} as User;
 
-			const result = isCovaBot(mockMessage as Message);
+			const _result = isCovaBot(mockMessage as Message);
 			expect(result).toBe(true);
 		});
 
@@ -64,7 +64,7 @@ describe('CovaBot Filtering Logic', () => {
 				bot: true,
 			} as User;
 
-			const result = isCovaBot(mockMessage as Message);
+			const _result = isCovaBot(mockMessage as Message);
 			expect(result).toBe(true);
 		});
 
@@ -75,7 +75,7 @@ describe('CovaBot Filtering Logic', () => {
 				bot: true,
 			} as User;
 
-			const result = isCovaBot(mockMessage as Message);
+			const _result = isCovaBot(mockMessage as Message);
 			expect(result).toBe(true);
 		});
 
@@ -87,7 +87,7 @@ describe('CovaBot Filtering Logic', () => {
 				bot: true,
 			} as User;
 
-			const result = isCovaBot(mockMessage as Message);
+			const _result = isCovaBot(mockMessage as Message);
 			expect(result).toBe(false);
 		});
 
@@ -99,7 +99,7 @@ describe('CovaBot Filtering Logic', () => {
 				bot: false,
 			} as User;
 
-			const result = isCovaBot(mockMessage as Message);
+			const _result = isCovaBot(mockMessage as Message);
 			expect(result).toBe(false);
 		});
 
@@ -111,7 +111,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 			mockMessage.webhookId = 'webhook123';
 
-			const result = isCovaBot(mockMessage as Message);
+			const _result = isCovaBot(mockMessage as Message);
 			expect(result).toBe(true);
 		});
 	});
@@ -124,7 +124,7 @@ describe('CovaBot Filtering Logic', () => {
 				bot: true,
 			} as User;
 
-			const result = shouldExcludeFromReplyBots(mockMessage as Message);
+			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
 			expect(result).toBe(true);
 		});
 
@@ -135,7 +135,7 @@ describe('CovaBot Filtering Logic', () => {
 				bot: true,
 			} as User;
 
-			const result = shouldExcludeFromReplyBots(mockMessage as Message);
+			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
 			expect(result).toBe(true);
 		});
 
@@ -146,13 +146,13 @@ describe('CovaBot Filtering Logic', () => {
 				bot: true,
 			} as User;
 
-			const result = shouldExcludeFromReplyBots(mockMessage as Message);
+			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
 			expect(result).toBe(true);
 		});
 
 		it('should NOT exclude regular user messages', () => {
 			// mockMessage already has a regular user setup
-			const result = shouldExcludeFromReplyBots(mockMessage as Message);
+			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
 			expect(result).toBe(false);
 		});
 
@@ -164,7 +164,7 @@ describe('CovaBot Filtering Logic', () => {
 				bot: true,
 			} as User;
 
-			const result = shouldExcludeFromReplyBots(mockMessage as Message);
+			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
 			expect(result).toBe(false);
 		});
 
@@ -179,7 +179,7 @@ describe('CovaBot Filtering Logic', () => {
 				bot: true,
 			} as User;
 
-			const result = shouldExcludeFromReplyBots(mockMessage as Message);
+			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
 			expect(result).toBe(false); // Should not exclude if client user is missing
 		});
 	});
@@ -193,7 +193,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const condition = fromBotExcludingCovaBot();
-			const result = condition(mockMessage as Message);
+			const _result = condition(mockMessage as Message);
 			expect(result).toBe(true);
 		});
 
@@ -205,14 +205,14 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const condition = fromBotExcludingCovaBot();
-			const result = condition(mockMessage as Message);
+			const _result = condition(mockMessage as Message);
 			expect(result).toBe(false);
 		});
 
 		it('should NOT match regular user messages', () => {
 			// mockMessage already has a regular user setup
 			const condition = fromBotExcludingCovaBot();
-			const result = condition(mockMessage as Message);
+			const _result = condition(mockMessage as Message);
 			expect(result).toBe(false);
 		});
 
@@ -224,7 +224,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const condition = fromBotExcludingCovaBot();
-			const result = condition(mockMessage as Message);
+			const _result = condition(mockMessage as Message);
 			expect(result).toBe(false);
 		});
 	});

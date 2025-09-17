@@ -159,7 +159,7 @@ export class QdrantMemoryService {
 			this.recordEmbeddingTime(Date.now() - startTime);
 
 			// Create memory item
-			const now = new Date();
+			const _now = new Date();
 			const note: PersonalityMemory = {
 				id: uuidv4(),
 				type: 'personality',
@@ -169,8 +169,8 @@ export class QdrantMemoryService {
 				isActive: true,
 				tokens: this.tokenizeContent(request.content),
 				embedding,
-				createdAt: now,
-				updatedAt: now,
+				createdAt: _now,
+				updatedAt: _now,
 				metadata: {},
 			};
 
@@ -398,7 +398,7 @@ export class QdrantMemoryService {
 			this.recordEmbeddingTime(Date.now() - startTime);
 
 			// Create conversation memory
-			const now = new Date();
+			const _now = new Date();
 			const conversation: ConversationMemory = {
 				id: uuidv4(),
 				type: 'conversation',
@@ -411,8 +411,8 @@ export class QdrantMemoryService {
 				topics: await this.extractTopics(request.content),
 				replyToId: request.replyToId,
 				embedding,
-				createdAt: now,
-				updatedAt: now,
+				createdAt: _now,
+				updatedAt: _now,
 				metadata: {},
 			};
 
@@ -467,15 +467,15 @@ export class QdrantMemoryService {
 			// Format context
 			let context = 'RELEVANT CONVERSATION HISTORY:\n\n';
 
-			for (const result of results) {
-				const conv = result.item as ConversationMemory;
+			for (const _result of results) {
+				const conv = _result.item as ConversationMemory;
 				const timeAgo = this.getTimeAgo(conv.createdAt);
 				const userLabel = conv.messageType === 'user' ? 'User' : 'Cova';
 
 				context += `[${timeAgo}] ${userLabel}: ${conv.content}\n`;
 
 				// Stop if similarity drops too low
-				if (result.score < (options.similarityThreshold || 0.6)) break;
+				if (_result.score < (options.similarityThreshold || 0.6)) break;
 			}
 
 			return context.trim();
@@ -640,8 +640,8 @@ export class QdrantMemoryService {
 	 * Get human-readable time ago string
 	 */
 	private getTimeAgo(timestamp: Date): string {
-		const now = new Date();
-		const diffMs = now.getTime() - timestamp.getTime();
+		const _now = new Date();
+		const diffMs = _now.getTime() - timestamp.getTime();
 		const diffMins = Math.floor(diffMs / (1000 * 60));
 		const diffHours = Math.floor(diffMins / 60);
 		const diffDays = Math.floor(diffHours / 24);
@@ -683,10 +683,10 @@ export class QdrantMemoryService {
 			const activePersonalityNotes = personalityNotes.filter((note) => note.isActive);
 
 			// Get conversation stats
-			const now = new Date();
-			const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-			const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-			const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+			const _now = new Date();
+			const last24Hours = new Date(_now.getTime() - 24 * 60 * 60 * 1000);
+			const last7Days = new Date(_now.getTime() - 7 * 24 * 60 * 60 * 1000);
+			const last30Days = new Date(_now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
 			const conversationFilters = [
 				{ timeRange: { start: last24Hours } },

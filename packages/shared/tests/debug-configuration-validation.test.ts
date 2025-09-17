@@ -31,10 +31,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: 'true' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 
 		test('should return true for DEBUG_MODE=1', () => {
@@ -42,10 +42,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: '1' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 
 		test('should return false for DEBUG_MODE=false', () => {
@@ -53,10 +53,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: 'false' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		test('should return false for DEBUG_MODE=0', () => {
@@ -64,10 +64,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: '0' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		test('should return false when DEBUG_MODE is not set', () => {
@@ -75,10 +75,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: undefined });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		test('should handle case-insensitive values', () => {
@@ -86,10 +86,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: 'TRUE' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 
 		test('should return false for invalid values', () => {
@@ -97,10 +97,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: 'invalid' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 	});
 
@@ -110,10 +110,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '123456789012345678' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
-			expect(result).toEqual(['123456789012345678']);
+			expect(_result).toEqual(['123456789012345678']);
 		});
 
 		test('should parse multiple valid Discord IDs', () => {
@@ -121,10 +121,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '123456789012345678,987654321098765432' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
-			expect(result).toEqual(['123456789012345678', '987654321098765432']);
+			expect(_result).toEqual(['123456789012345678', '987654321098765432']);
 		});
 
 		test('should handle whitespace around IDs', () => {
@@ -132,10 +132,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: ' 123456789012345678 , 987654321098765432 ' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
-			expect(result).toEqual(['123456789012345678', '987654321098765432']);
+			expect(_result).toEqual(['123456789012345678', '987654321098765432']);
 		});
 
 		test('should filter out invalid Discord IDs', () => {
@@ -143,10 +143,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '123456789012345678,invalid-id,987654321098765432' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
-			expect(result).toEqual(['123456789012345678', '987654321098765432']);
+			expect(_result).toEqual(['123456789012345678', '987654321098765432']);
 		});
 
 		test('should return empty array when not set', () => {
@@ -154,10 +154,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: undefined });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
-			expect(result).toEqual([]);
+			expect(_result).toEqual([]);
 		});
 
 		test('should return empty array for empty string', () => {
@@ -165,10 +165,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
-			expect(result).toEqual([]);
+			expect(_result).toEqual([]);
 		});
 
 		test('should handle trailing commas', () => {
@@ -176,10 +176,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '123456789012345678,' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
-			expect(result).toEqual(['123456789012345678']);
+			expect(_result).toEqual(['123456789012345678']);
 		});
 	});
 
@@ -189,10 +189,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_CHANNEL_IDS: '777888999000111222' });
 
 			// Act
-			const result = getTestingChannelIds();
+			const _result = getTestingChannelIds();
 
 			// Assert
-			expect(result).toEqual(['777888999000111222']);
+			expect(_result).toEqual(['777888999000111222']);
 		});
 
 		test('should parse multiple valid Discord IDs', () => {
@@ -200,10 +200,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_CHANNEL_IDS: '777888999000111222,333444555666777888' });
 
 			// Act
-			const result = getTestingChannelIds();
+			const _result = getTestingChannelIds();
 
 			// Assert
-			expect(result).toEqual(['777888999000111222', '333444555666777888']);
+			expect(_result).toEqual(['777888999000111222', '333444555666777888']);
 		});
 
 		test('should filter out invalid Discord IDs', () => {
@@ -211,10 +211,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_CHANNEL_IDS: '777888999000111222,bad-id,333444555666777888' });
 
 			// Act
-			const result = getTestingChannelIds();
+			const _result = getTestingChannelIds();
 
 			// Assert
-			expect(result).toEqual(['777888999000111222', '333444555666777888']);
+			expect(_result).toEqual(['777888999000111222', '333444555666777888']);
 		});
 
 		test('should return empty array when not set', () => {
@@ -222,10 +222,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_CHANNEL_IDS: undefined });
 
 			// Act
-			const result = getTestingChannelIds();
+			const _result = getTestingChannelIds();
 
 			// Assert
-			expect(result).toEqual([]);
+			expect(_result).toEqual([]);
 		});
 	});
 
@@ -268,10 +268,10 @@ describe('Debug Configuration Validation', () => {
 			const input = '123456789012345678,987654321098765432,777888999000111222';
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
-			expect(result).toEqual(['123456789012345678', '987654321098765432', '777888999000111222']);
+			expect(_result).toEqual(['123456789012345678', '987654321098765432', '777888999000111222']);
 		});
 
 		test('should handle mixed valid and invalid IDs', () => {
@@ -279,10 +279,10 @@ describe('Debug Configuration Validation', () => {
 			const input = '123456789012345678,invalid,987654321098765432,also-invalid,777888999000111222';
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
-			expect(result).toEqual(['123456789012345678', '987654321098765432', '777888999000111222']);
+			expect(_result).toEqual(['123456789012345678', '987654321098765432', '777888999000111222']);
 		});
 
 		test('should handle undefined input', () => {
@@ -290,10 +290,10 @@ describe('Debug Configuration Validation', () => {
 			const input = undefined;
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
-			expect(result).toEqual([]);
+			expect(_result).toEqual([]);
 		});
 
 		test('should handle empty string input', () => {
@@ -301,10 +301,10 @@ describe('Debug Configuration Validation', () => {
 			const input = '';
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
-			expect(result).toEqual([]);
+			expect(_result).toEqual([]);
 		});
 
 		test('should handle whitespace-only input', () => {
@@ -312,10 +312,10 @@ describe('Debug Configuration Validation', () => {
 			const input = '   ';
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
-			expect(result).toEqual([]);
+			expect(_result).toEqual([]);
 		});
 
 		test('should handle single ID with whitespace', () => {
@@ -323,10 +323,10 @@ describe('Debug Configuration Validation', () => {
 			const input = '  123456789012345678  ';
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
-			expect(result).toEqual(['123456789012345678']);
+			expect(_result).toEqual(['123456789012345678']);
 		});
 	});
 
@@ -380,12 +380,12 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: longList });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
-			expect(result).toHaveLength(100);
-			expect(result[0]).toBe('123456789012345600');
-			expect(result[99]).toBe('123456789012345699');
+			expect(_result).toHaveLength(100);
+			expect(_result[0]).toBe('123456789012345600');
+			expect(_result[99]).toBe('123456789012345699');
 		});
 
 		test('should handle malformed comma-separated values', () => {
@@ -393,10 +393,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: ',,123456789012345678,,987654321098765432,,' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
-			expect(result).toEqual(['123456789012345678', '987654321098765432']);
+			expect(_result).toEqual(['123456789012345678', '987654321098765432']);
 		});
 
 		test('should handle special characters in environment values', () => {
@@ -404,10 +404,10 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '123456789012345678;987654321098765432' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
-			expect(result).toEqual([]); // Should be empty as semicolon is not a valid separator
+			expect(_result).toEqual([]); // Should be empty as semicolon is not a valid separator
 		});
 	});
 });

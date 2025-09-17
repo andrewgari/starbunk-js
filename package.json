@@ -93,8 +93,10 @@
   "homepage": "https://github.com/andrewgari/starbunk-js#readme",
   "dependencies": {
     "@prisma/client": "^5.7.1",
+    "@types/ioredis": "^4.28.10",
     "axios": "^1.11.0",
     "dotenv": "^16.6.1",
+    "ioredis": "^5.7.0",
     "prisma": "^5.7.1",
     "tsx": "^4.6.2",
     "uuid": "^11.1.0"
