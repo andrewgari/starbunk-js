@@ -7,6 +7,8 @@ interface LogEntry {
 	timestamp: string;
 	message: string;
 	service?: string;
+	service_name?: string;
+	container_name?: string;
 	caller?: string;
 	data?: unknown;
 	error?: {
@@ -101,8 +103,21 @@ export class Logger implements LoggerInterface {
 			message,
 		};
 
+		// Add service name (for backward compatibility)
 		if (this.serviceName) {
 			logEntry.service = this.serviceName;
+		}
+
+		// Add container_name and service_name as top-level properties
+		const containerName = process.env.CONTAINER_NAME || this.serviceName;
+		const serviceName = process.env.SERVICE_NAME || this.serviceName;
+
+		if (containerName) {
+			logEntry.container_name = containerName;
+		}
+
+		if (serviceName) {
+			logEntry.service_name = serviceName;
 		}
 
 		// Add caller info if not in production
