@@ -245,6 +245,11 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 			// Add service-specific health checks to the unified collector
 			this.addServiceHealthChecks(serviceName, serviceMetrics);
 
+			// Initialize Redis metrics export for BunkBot
+			if (serviceName === 'bunkbot') {
+				await this.initializeBunkBotRedisExport(serviceMetrics);
+			}
+
 			logger.info(`Service ${serviceName} registered successfully`, {
 				componentCount: registrationInfo.componentCount,
 				hasUnifiedCollector: true,
@@ -311,6 +316,106 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 
 		const requiredVars = serviceEnvVars[serviceName] || [];
 		return requiredVars.every((varName) => !!process.env[varName]);
+	}
+
+	/**
+	 * Initialize Redis metrics export for BunkBot
+	 */
+	private async initializeBunkBotRedisExport(serviceMetrics: ServiceAwareMetricsService): Promise<void> {
+		try {
+			// Check if Redis is configured
+			const redisHost = process.env.REDIS_HOST || process.env.BOT_METRICS_REDIS_HOST;
+			const redisPort = process.env.REDIS_PORT || process.env.BOT_METRICS_REDIS_PORT || '6379';
+
+			if (!redisHost) {
+				logger.info('Redis not configured for BunkBot, skipping Redis metrics export');
+				return;
+			}
+
+			logger.info('Initializing Redis metrics export for BunkBot', {
+				redisHost,
+				redisPort
+			});
+
+			// Attempt to import and initialize Redis components
+			try {
+				const Redis = (await import('ioredis')).default;
+				const { BotTriggerMetricsService } = await import('./BotTriggerMetricsService');
+				const { _BunkBotMetricsCollector } = await import('./BunkBotMetrics');
+
+				// Create Redis connection
+				const redis = new Redis({
+					host: redisHost,
+					port: parseInt(redisPort, 10),
+					password: process.env.REDIS_PASSWORD || process.env.BOT_METRICS_REDIS_PASSWORD,
+					db: parseInt(process.env.REDIS_DB || '0', 10),
+					lazyConnect: true,
+					enableOfflineQueue: false,
+					maxRetriesPerRequest: 1
+				});
+
+				// Test connection
+				await redis.connect();
+				await redis.ping();
+
+				// Initialize bot trigger metrics service if needed
+				let triggerMetricsService: any;
+				if (process.env.ENABLE_BOT_TRIGGER_METRICS === 'true') {
+					triggerMetricsService = new BotTriggerMetricsService({
+						redis: {
+							host: redisHost,
+							port: parseInt(redisPort, 10),
+							password: process.env.REDIS_PASSWORD,
+							db: parseInt(process.env.REDIS_DB || '0', 10)
+						},
+						enableBatchOperations: true,
+						enableCircuitBreaker: true
+					});
+					await triggerMetricsService.initialize();
+				}
+
+				// Get BunkBot metrics collector from service metrics
+				// The serviceMetrics might have a reference to the actual collector
+				const registry = (serviceMetrics as any).registry || (this.collector as any).registry;
+
+				// Check if we can get the BunkBot collector instance
+				if (typeof (serviceMetrics as any).getBunkBotCollector === 'function') {
+					const bunkBotCollector = (serviceMetrics as any).getBunkBotCollector();
+					if (bunkBotCollector && typeof bunkBotCollector.initializeRedisExport === 'function') {
+						await bunkBotCollector.initializeRedisExport(redis, triggerMetricsService, {
+							cacheTTL: 15000,
+							enableCircuitBreaker: true,
+							exportTimeout: 5000
+						});
+						logger.info('Redis metrics export initialized for BunkBot collector');
+					}
+				} else {
+					// Create a standalone Redis exporter and register with the collector
+					const { createRedisBotMetricsExporter } = await import('./RedisBotMetricsExporter');
+					const redisExporter = createRedisBotMetricsExporter(registry, {
+						cacheTTL: 15000,
+						enableCircuitBreaker: true,
+						exportTimeout: 5000
+					});
+					await redisExporter.initialize(redis, triggerMetricsService);
+
+					// Start periodic export
+					setInterval(() => {
+						redisExporter.exportMetrics().catch(error => {
+							logger.error('Redis metrics export failed:', error);
+						});
+					}, 15000);
+
+					logger.info('Standalone Redis metrics exporter initialized for BunkBot');
+				}
+
+			} catch (error) {
+				logger.error('Failed to initialize Redis metrics export for BunkBot:', ensureError(error));
+				// Don't throw - allow service to continue without Redis export
+			}
+		} catch (error) {
+			logger.warn('Redis metrics export initialization skipped:', ensureError(error));
+		}
 	}
 
 	/**

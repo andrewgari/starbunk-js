@@ -53,7 +53,7 @@ class BunkBotContainer {
 
 		try {
 			const discovery = new BotDiscovery();
-			const result = await discovery.discoverBots();
+			const _result = await discovery.discoverBots();
 
 			this.replyBots = result.bots;
 

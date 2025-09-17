@@ -55,7 +55,7 @@ class InMemoryCampaignRepository implements CampaignRepository {
 
 	async create(data: CreateCampaignData): Promise<Campaign> {
 		const id = data.textChannelId; // stable unique id per text channel
-		const now = new Date();
+		const _now = new Date();
 		const campaign: Campaign = {
 			id,
 			name: data.name,

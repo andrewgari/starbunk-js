@@ -123,7 +123,7 @@ export {
 	initializeHttpEndpoints,
 	getHttpEndpoints,
 	// Container-specific metrics
-	BunkBotMetricsCollector,
+	_BunkBotMetricsCollector,
 	createBunkBotMetrics,
 	DJCovaMetricsCollector,
 	createDJCovaMetrics,
@@ -132,6 +132,18 @@ export {
 	CovaBotMetricsCollector,
 	createCovaBotMetrics,
 	ContainerMetricsBase,
+	// Bot Trigger Metrics Service
+	BotTriggerMetricsService,
+	createBotTriggerMetricsService,
+	initializeBotTriggerMetricsService,
+	getBotTriggerMetricsService,
+	createProductionConfig,
+	// Bot Trigger Integration
+	Enhanced_BunkBotMetricsCollector,
+	createEnhancedBunkBotMetrics,
+	BotTriggerTracker,
+	createEnvironmentConfig,
+	initializeBotMetricsSystem,
 } from './services/observability';
 export type {
 	MessageFlowMetrics,
@@ -153,3 +165,25 @@ export type {
 	ContainerMetricsFactory,
 	ContainerMetricsConfig,
 } from './services/observability';
+
+// Bot metrics types (MessageContext is re-exported from observability)
+export type {
+	BotTriggerEvent,
+	BotMetricsFilter,
+// 	BotPerformanceAnalytics,
+// 	ChannelActivityAnalytics,
+// 	UserInteractionAnalytics,
+	BotMetricsAggregation,
+	TimeRangeQuery,
+	BotMetricsServiceConfig,
+	ServiceOperationResult,
+	HealthCheckResult as BotMetricsHealthCheck,
+	IBotTriggerMetricsService,
+	CircuitBreakerState,
+	RedisConfiguration,
+	PrometheusMetricsExport,
+	BatchOperationResult,
+} from './types/bot-metrics';
+
+// Bot trigger integration types
+export type { BotTriggerIntegrationConfig } from './services/observability';

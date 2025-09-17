@@ -16,7 +16,7 @@ export class BotDiscovery {
 	}
 
 	async discoverBots(): Promise<BotDiscoveryResult> {
-		const result: BotDiscoveryResult = { bots: [], errors: [] };
+		const _result: BotDiscoveryResult = { bots: [], errors: [] };
 
 		try {
 			const directories = this.getBotDirectories();

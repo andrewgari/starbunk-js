@@ -85,7 +85,7 @@ const requestCounts = new Map<string, { count: number; resetTime: number }>();
 export const rateLimit = (maxRequests: number = 100, windowMs: number = 60000) => {
 	return (req: Request, res: Response, next: NextFunction) => {
 		const clientId = req.ip || 'unknown';
-		const now = Date.now();
+		const _now = Date.now();
 
 		const clientData = requestCounts.get(clientId);
 

@@ -137,6 +137,14 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 /**
  * Public interface for a reply bot implementation
  */
+// Enhanced trigger result for detailed tracking
+export interface BotTriggerResult {
+	triggered: boolean;
+	conditionName?: string;
+	responseText?: string;
+	error?: Error;
+}
+
 export interface ReplyBotImpl {
 	readonly name: BotReplyName;
 	readonly description: BotDescription;
@@ -147,6 +155,8 @@ export interface ReplyBotImpl {
 	};
 	shouldRespond(message: Message): Promise<boolean>;
 	processMessage(message: Message): Promise<void>;
+	// Enhanced interface for detailed trigger tracking
+	shouldRespondWithDetails?(message: Message): Promise<BotTriggerResult>;
 }
 
 /**
@@ -200,6 +210,59 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 			}
 
 			return false; // No triggers matched
+		},
+
+		async shouldRespondWithDetails(message: Message): Promise<BotTriggerResult> {
+			try {
+				// Check if bot is disabled first
+				if (validConfig.disabled) {
+					return { triggered: false, conditionName: 'bot_disabled' };
+				}
+
+				// Check response rate
+				if (validConfig.defaultResponseRate <= 0) {
+					return { triggered: false, conditionName: 'response_rate_zero' };
+				}
+
+				// Apply random response rate
+				if (Math.random() * 100 > validConfig.defaultResponseRate) {
+					return { triggered: false, conditionName: 'response_rate_filter' };
+				}
+
+				// Check message filter
+				const shouldSkip = await validConfig.messageFilter(message);
+				if (shouldSkip) {
+					return { triggered: false, conditionName: 'message_filter' };
+				}
+
+				// Check triggers - sort by priority and test each one
+				const sortedTriggers = [...validConfig.triggers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+
+				for (const trigger of sortedTriggers) {
+					try {
+						const matches = await trigger.condition(message);
+						if (matches) {
+							// Return the specific condition that triggered
+							return {
+								triggered: true,
+								conditionName: trigger.name
+							};
+						}
+					} catch (error) {
+						logger.debug(`[${validConfig.name}] Error checking trigger "${trigger.name}":`, error as Error);
+						// Continue to next trigger on error
+					}
+				}
+
+				return { triggered: false, conditionName: 'no_conditions_met' };
+			} catch (error) {
+				logger.error(`[${validConfig.name}] Error in shouldRespondWithDetails:`, error as Error);
+				return {
+					triggered: false,
+					conditionName: 'processing_error',
+					error: error as Error
+				};
+			}
 		},
 		async processMessage(message: Message): Promise<void> {
 			// Use shouldRespond to determine if we should process this message

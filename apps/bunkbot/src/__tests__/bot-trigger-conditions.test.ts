@@ -191,7 +191,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = fromBotExcludingCovaBot();
-				const result = await condition(genericBotMessage);
+				const _result = await condition(genericBotMessage);
 
 				// Assert
 				expect(result).toBe(true);
@@ -205,7 +205,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = fromBotExcludingCovaBot();
-				const result = await condition(covaBotMessage);
+				const _result = await condition(covaBotMessage);
 
 				// Assert
 				expect(result).toBe(false);
@@ -219,7 +219,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = fromBotExcludingCovaBot();
-				const result = await condition(humanMessage);
+				const _result = await condition(humanMessage);
 
 				// Assert
 				expect(result).toBe(false);
@@ -266,7 +266,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
 				expect(result).toBe(true);
@@ -279,7 +279,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
 				expect(result).toBe(false);
@@ -292,7 +292,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
 				expect(result).toBe(true);
@@ -311,7 +311,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
 				expect(result).toBe(true);
@@ -362,7 +362,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = containsPhrase('test');
-				const result = await condition(message);
+				const _result = await condition(message);
 
 				// Assert
 				expect(result).toBe(true);
@@ -374,7 +374,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = containsPhrase('test');
-				const result = await condition(message);
+				const _result = await condition(message);
 
 				// Assert
 				expect(result).toBe(true);
@@ -389,7 +389,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = matchesPattern(pattern);
-				const result = await condition(message);
+				const _result = await condition(message);
 
 				// Assert
 				expect(result).toBe(true);
@@ -408,7 +408,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = and(containsWord('guy'), containsWord('test'));
-				const result = await condition(message);
+				const _result = await condition(message);
 
 				// Assert
 				expect(result).toBe(true);
@@ -423,7 +423,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = and(containsWord('guy'), containsWord('missing'));
-				const result = await condition(message);
+				const _result = await condition(message);
 
 				// Assert
 				expect(result).toBe(false);
@@ -440,7 +440,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = or(containsWord('guy'), containsWord('missing'));
-				const result = await condition(message);
+				const _result = await condition(message);
 
 				// Assert
 				expect(result).toBe(true);
@@ -455,7 +455,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = or(containsWord('missing1'), containsWord('missing2'));
-				const result = await condition(message);
+				const _result = await condition(message);
 
 				// Assert
 				expect(result).toBe(false);
@@ -472,7 +472,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 
 				// Act
 				const condition = not(containsWord('guy'));
-				const result = await condition(message);
+				const _result = await condition(message);
 
 				// Assert
 				expect(result).toBe(false);

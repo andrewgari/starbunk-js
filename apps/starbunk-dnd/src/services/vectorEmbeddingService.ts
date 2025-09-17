@@ -268,7 +268,7 @@ export class VectorEmbeddingService {
 						// Extract text from DOCX using mammoth
 						logger.debug(`[VectorEmbeddingService] 📄 Extracting text from DOCX file: ${relativeFilePath}`);
 						const buffer = await fs.readFile(file);
-						const result = await mammoth.extractRawText({ buffer });
+						const _result = await mammoth.extractRawText({ buffer });
 						content = result.value;
 						logger.debug(`[VectorEmbeddingService] ✅ Extracted ${content.length} characters from DOCX`);
 					} else {
@@ -485,7 +485,7 @@ export class VectorEmbeddingService {
 			// Parse stdout as JSON
 			try {
 				logger.debug('[VectorEmbeddingService] 🔄 Parsing Python script output...');
-				const result = JSON.parse(stdout);
+				const _result = JSON.parse(stdout);
 				if (result.status === 'success') {
 					logger.info('[VectorEmbeddingService] ✅ Vectors saved successfully', {
 						outputPath: result.output_path,
@@ -743,7 +743,7 @@ export class VectorEmbeddingService {
 
 					// Parse stdout as JSON
 					try {
-						const result = JSON.parse(stdout);
+						const _result = JSON.parse(stdout);
 						if (result.status === 'success') {
 							logger.info('[VectorEmbeddingService] ✅ NPY vectors loaded successfully', {
 								shape: result.shape,
@@ -833,7 +833,7 @@ export class VectorEmbeddingService {
 			logger.debug('[VectorEmbeddingService] 🔄 Converting vectors to Float32Array...');
 			const vectorsFloat32 = vectors.map((v) => new Float32Array(v));
 
-			const result = {
+			const _result = {
 				vectors: vectorsFloat32,
 				metadata,
 				texts,

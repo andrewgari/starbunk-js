@@ -60,7 +60,7 @@ describe.skip('Reply Bots Debug Mode Behavior', () => {
 
 			// Act & Assert - Should always trigger in debug mode
 			for (let i = 0; i < 20; i++) {
-				const result = condition();
+				const _result = condition();
 				expect(result).toBe(true);
 			}
 		});
@@ -115,7 +115,7 @@ describe.skip('Reply Bots Debug Mode Behavior', () => {
 
 			// Act & Assert - Should always trigger in debug mode
 			for (let i = 0; i < 10; i++) {
-				const result = condition(message);
+				const _result = condition(message);
 				expect(result).toBe(true);
 			}
 		});
@@ -131,7 +131,7 @@ describe.skip('Reply Bots Debug Mode Behavior', () => {
 
 			// Act & Assert - Should never trigger from real Chad
 			for (let i = 0; i < 10; i++) {
-				const result = condition(message);
+				const _result = condition(message);
 				expect(result).toBe(false);
 			}
 		});
@@ -221,7 +221,7 @@ describe.skip('Reply Bots Debug Mode Behavior', () => {
 
 			// Act & Assert - Should always trigger in debug mode
 			for (let i = 0; i < 10; i++) {
-				const result = condition(message);
+				const _result = condition(message);
 				expect(result).toBe(true);
 			}
 		});
@@ -236,7 +236,7 @@ describe.skip('Reply Bots Debug Mode Behavior', () => {
 
 			// Act & Assert - Should trigger due to bot check OR debug mode
 			for (let i = 0; i < 10; i++) {
-				const result = condition(message);
+				const _result = condition(message);
 				expect(result).toBe(true);
 			}
 		});

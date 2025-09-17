@@ -169,7 +169,7 @@ export function createTimeBasedFilter(options: {
 			return false;
 		}
 
-		const now = new Date();
+		const _now = new Date();
 		const currentHour = options.timezone
 			? new Intl.DateTimeFormat('en-US', {
 					timeZone: options.timezone,
@@ -203,7 +203,7 @@ export function createChadMessageFilter(configService: ConfigurationService): Me
 		}
 
 		// Only respond during "gym hours" (6 AM - 10 PM EST)
-		const now = new Date();
+		const _now = new Date();
 		const estHourPart =
 			new Intl.DateTimeFormat('en-US', {
 				timeZone: 'America/New_York',

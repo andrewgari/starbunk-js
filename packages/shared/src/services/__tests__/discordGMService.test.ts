@@ -84,7 +84,7 @@ describe('DiscordGMService', () => {
 			} as Message;
 
 			// Process the message
-			const result = await discordGMService.processGMCommand(mockMessage);
+			const _result = await discordGMService.processGMCommand(mockMessage);
 
 			// Verify results
 			expect(result).toBe(true);
@@ -99,7 +99,7 @@ describe('DiscordGMService', () => {
 			} as Message;
 
 			// Process the message
-			const result = await discordGMService.processGMCommand(mockMessage);
+			const _result = await discordGMService.processGMCommand(mockMessage);
 
 			// Verify results
 			expect(result).toBe(false);
@@ -114,7 +114,7 @@ describe('DiscordGMService', () => {
 			} as Message;
 
 			// Process the message
-			const result = await discordGMService.processGMCommand(mockMessage);
+			const _result = await discordGMService.processGMCommand(mockMessage);
 
 			// Verify results
 			expect(result).toBe(false);
@@ -132,7 +132,7 @@ describe('DiscordGMService', () => {
 			} as Message;
 
 			// Process the message
-			const result = await discordGMService.processGMCommand(mockMessage);
+			const _result = await discordGMService.processGMCommand(mockMessage);
 
 			// Verify results
 			expect(result).toBe(false);

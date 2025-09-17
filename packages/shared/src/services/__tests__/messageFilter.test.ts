@@ -61,7 +61,7 @@ describe('MessageFilter', () => {
 				content: 'test message',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 			expect(result.allowed).toBe(true);
 			expect(result.reason).toBeUndefined();
 		});
@@ -78,7 +78,7 @@ describe('MessageFilter', () => {
 				username: 'testuser',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 			expect(result.allowed).toBe(false);
 			expect(result.reason).toContain('Server blocked-server-id not in allowed testing servers');
 		});
@@ -95,7 +95,7 @@ describe('MessageFilter', () => {
 				username: 'testuser',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 			expect(result.allowed).toBe(true);
 		});
 
@@ -111,7 +111,7 @@ describe('MessageFilter', () => {
 				username: 'testuser',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 			expect(result.allowed).toBe(false);
 			expect(result.reason).toContain('Channel blocked-channel-id not in allowed testing channels');
 		});
@@ -128,7 +128,7 @@ describe('MessageFilter', () => {
 				username: 'testuser',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 			expect(result.allowed).toBe(true);
 		});
 

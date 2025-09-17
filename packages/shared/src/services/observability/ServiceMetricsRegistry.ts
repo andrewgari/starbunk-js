@@ -3,7 +3,7 @@ import { ensureError } from '../../utils/errorUtils';
 import { ProductionMetricsService, type MetricsConfiguration } from './ProductionMetricsService';
 import { UnifiedMetricsCollector } from './UnifiedMetricsCollector';
 import * as promClient from 'prom-client';
-import { EventEmitter } from 'events';
+import { _EventEmitter } from 'events';
 
 // Enhanced service-aware metrics configuration
 interface ServiceMetricsConfiguration extends MetricsConfiguration {
@@ -349,7 +349,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 		}
 
 		// Update activity gauge (operations per minute approximation)
-		const now = Date.now();
+		const _now = Date.now();
 		const oneMinuteAgo = now - 60000;
 		const recentActivity = tracker.lastActivity > oneMinuteAgo ? tracker.operationCount : 0;
 

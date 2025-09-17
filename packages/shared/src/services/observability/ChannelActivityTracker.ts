@@ -86,7 +86,7 @@ export class ChannelActivityTracker {
 		try {
 			const metrics = getMetrics();
 			const structuredLogger = getStructuredLogger();
-			const now = Date.now();
+			const _now = Date.now();
 
 			for (const [_channelId, stats] of this.channelStats.entries()) {
 				// Calculate messages per minute
@@ -146,7 +146,7 @@ export class ChannelActivityTracker {
 	}
 
 	getChannelStats(): Record<string, Omit<ChannelStats, 'userSet'>> {
-		const result: Record<string, Omit<ChannelStats, 'userSet'>> = {}; // eslint-disable-line @typescript-eslint/no-unused-vars
+		const _result: Record<string, Omit<ChannelStats, 'userSet'>> = {}; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 		for (const [channelId, stats] of this.channelStats.entries()) {
 			result[channelId] = {

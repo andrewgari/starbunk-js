@@ -620,7 +620,7 @@ export class DJCovaMetricsCollector extends ContainerMetricsBase implements DJCo
 	}
 
 	private cleanupStaleConnections(): void {
-		const now = Date.now();
+		const _now = Date.now();
 		const staleThreshold = 10 * 60 * 1000; // 10 minutes
 
 		for (const [guildId, connection] of this.voiceConnections.entries()) {

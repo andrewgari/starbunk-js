@@ -295,7 +295,7 @@ export class HttpEndpointsService {
 				healthResult.checks.every((check) => check.status !== 'fail');
 
 			const statusCode = isReady ? 200 : 503;
-			const result = {
+			const _result = {
 				status: isReady ? 'ready' : 'not_ready', // eslint-disable-line @typescript-eslint/no-unused-vars
 				timestamp: new Date().toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
 				service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -317,7 +317,7 @@ export class HttpEndpointsService {
 	private async handleLiveness(res: ServerResponse): Promise<void> {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
 		// Liveness is simpler - just check if the process is responsive
-		const result = {
+		const _result = {
 			status: this.isShuttingDown ? 'shutting_down' : 'alive', // eslint-disable-line @typescript-eslint/no-unused-vars
 			timestamp: new Date().toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
 			service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -412,7 +412,7 @@ export class HttpEndpointsService {
 		const checkPromises = Array.from(this.healthChecks.entries()).map(async ([name, checkFunction]) => {
 			const checkStart = performance.now();
 			try {
-				const result = (await Promise.race([
+				const _result = (await Promise.race([
 					checkFunction(),
 					new Promise((_, reject) => setTimeout(() => reject(new Error('Health check timeout')), 5000)),
 				])) as any;

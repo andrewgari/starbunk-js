@@ -229,7 +229,7 @@ export class PerformanceTimer {
 		timer.mark(label);
 
 		try {
-			const result = await fn();
+			const _result = await fn();
 			timer.measure(label);
 			return result;
 		} catch (error) {

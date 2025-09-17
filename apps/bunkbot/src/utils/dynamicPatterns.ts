@@ -170,7 +170,7 @@ export function createCachedDynamicPattern(
 	const cacheKey = `${patternTemplate}:${flags || ''}`;
 
 	return async () => {
-		const now = Date.now();
+		const _now = Date.now();
 		const cached = patternCache.get(cacheKey);
 
 		if (cached && now - cached.timestamp < CACHE_EXPIRY) {

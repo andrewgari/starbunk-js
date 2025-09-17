@@ -93,7 +93,7 @@ export class SimplePerformanceTimer {
 	async time<T>(label: string, fn: () => Promise<T>): Promise<T> {
 		const start = Date.now();
 		try {
-			const result = await fn();
+			const _result = await fn();
 			const duration = Date.now() - start;
 			this.recordTiming(label, duration);
 			return result;

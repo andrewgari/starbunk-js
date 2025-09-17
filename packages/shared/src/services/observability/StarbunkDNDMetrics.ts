@@ -710,7 +710,7 @@ export class StarbunkDNDMetricsCollector extends ContainerMetricsBase implements
 	}
 
 	private cleanupStaleLLMRequests(): void {
-		const now = Date.now();
+		const _now = Date.now();
 		const staleThreshold = 10 * 60 * 1000; // 10 minutes
 
 		for (const [requestId, request] of this.activeLLMRequests.entries()) {

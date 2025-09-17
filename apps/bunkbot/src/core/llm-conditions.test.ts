@@ -34,7 +34,7 @@ describe('llm-conditions', () => {
 			});
 
 			// Test
-			const result = await condition(message);
+			const _result = await condition(message);
 
 			// Verify
 			expect(result).toBe(true);
@@ -62,7 +62,7 @@ describe('llm-conditions', () => {
 			});
 
 			// Test
-			const result = await condition(message);
+			const _result = await condition(message);
 
 			// Verify
 			expect(result).toBe(true);
@@ -87,7 +87,7 @@ describe('llm-conditions', () => {
 			});
 
 			// Test
-			const result = await condition(message);
+			const _result = await condition(message);
 
 			// Verify
 			expect(result).toBe(false);
@@ -110,7 +110,7 @@ describe('llm-conditions', () => {
 			});
 
 			// Test
-			const result = await condition(message);
+			const _result = await condition(message);
 
 			// Verify
 			expect(result).toBe(false); // Should be false because 'dogs' doesn't match /cats/i

@@ -55,7 +55,7 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 		// Simple timing without PerformanceTimer for now
 		const startTime = Date.now();
 		try {
-			const result = await (async () => {
+			const _result = await (async () => {
 				try {
 					logger.debug(`[CovaBot] Generating response with personality emulation`);
 
@@ -206,7 +206,7 @@ export const createLLMResponseDecisionCondition = () => {
 		// Simple timing without PerformanceTimer for now
 		const startTime = Date.now();
 		try {
-			const result = await (async () => {
+			const _result = await (async () => {
 				try {
 					// Skip bot messages FIRST - even if they mention Cova
 					if (message.author.bot) {
@@ -343,7 +343,7 @@ if (process.env.NODE_ENV !== 'test') {
 	setInterval(
 		() => {
 			// Clean up old entries from last response tracking
-			const now = Date.now();
+			const _now = Date.now();
 			for (const [channelId, time] of lastResponseTime.entries()) {
 				if (now - time > 24 * 60 * 60 * 1000) {
 					// Older than 24 hours

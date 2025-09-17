@@ -94,7 +94,7 @@ export function withChance(chance: number): Condition {
 		if (isDebugMode()) return true;
 
 		const random = Math.random() * 100;
-		const result = random <= chance;
+		const _result = random <= chance;
 		logger.debug(`withChance(${chance}): random=${Math.round(random)}, result=${result}`);
 		return result;
 	};
@@ -110,7 +110,7 @@ export function withinTimeframeOf(
 	const durationMs = dur * multipliers[unit];
 
 	return () => {
-		const now = Date.now();
+		const _now = Date.now();
 		const timestamp = timestampFn();
 		return now - timestamp <= durationMs;
 	};
@@ -143,7 +143,7 @@ class BotDetector {
 				(name) => username === name.toLowerCase() || displayName === name.toLowerCase(),
 			);
 
-		const result = isCovaUsername || isCovaWebhook;
+		const _result = isCovaUsername || isCovaWebhook;
 
 		if (isDebugMode()) {
 			logger.debug('🤖 CovaBot Detection:', {
@@ -257,7 +257,7 @@ export function contextLlmDetects(prompt: string): ContextualTriggerCondition {
 export function and(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
 		for (const condition of conditions) {
-			const result = condition(message);
+			const _result = condition(message);
 			const isMatch = result instanceof Promise ? await result : result;
 			if (!isMatch) return false;
 		}
@@ -269,7 +269,7 @@ export function or(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
 		for (const condition of conditions) {
 			try {
-				const result = condition(message);
+				const _result = condition(message);
 				const isMatch = result instanceof Promise ? await result : result;
 				if (isMatch) return true;
 			} catch (error) {
@@ -295,7 +295,7 @@ export function withDefaultBotBehavior(botName: string, condition: TriggerCondit
 				return false;
 			}
 
-			const result = await condition(message);
+			const _result = await condition(message);
 
 			if (isDebugMode()) {
 				const messageInfo = {

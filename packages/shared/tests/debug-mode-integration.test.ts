@@ -149,7 +149,7 @@ describe('Debug Mode Integration Tests', () => {
 			};
 
 			// Act
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
 			expect(result.allowed).toBe(false);
@@ -193,7 +193,7 @@ describe('Debug Mode Integration Tests', () => {
 				username: 'testuser',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 			expect(result.allowed).toBe(true);
 		});
 	});
@@ -306,7 +306,7 @@ describe('Debug Mode Integration Tests', () => {
 				username: 'testuser',
 			};
 
-			const result = filter.shouldProcessMessage(dmContext);
+			const _result = filter.shouldProcessMessage(dmContext);
 
 			// Assert - DM messages should be allowed even with server restrictions
 			expect(result.allowed).toBe(true);
@@ -369,7 +369,7 @@ describe('Debug Mode Integration Tests', () => {
 
 			messageTypes.forEach((messageType) => {
 				// Act
-				const result = filter.shouldProcessMessage(messageType.context);
+				const _result = filter.shouldProcessMessage(messageType.context);
 
 				// Assert - All message types should be blocked
 				expect(result.allowed).toBe(false);
@@ -423,7 +423,7 @@ describe('Debug Mode Integration Tests', () => {
 
 			messageTypes.forEach((messageType) => {
 				// Act
-				const result = filter.shouldProcessMessage(messageType.context);
+				const _result = filter.shouldProcessMessage(messageType.context);
 
 				// Assert - All message types should be allowed
 				expect(result.allowed).toBe(true);
@@ -449,7 +449,7 @@ describe('Debug Mode Integration Tests', () => {
 				content: 'This should be blocked',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert - Should provide detailed reason
 			expect(result.allowed).toBe(false);
@@ -476,7 +476,7 @@ describe('Debug Mode Integration Tests', () => {
 					content: 'Test message',
 				};
 
-				const result = filter.shouldProcessMessage(context);
+				const _result = filter.shouldProcessMessage(context);
 
 				// Assert - All blocked channels should be consistently blocked
 				expect(result.allowed).toBe(false);
@@ -508,7 +508,7 @@ describe('Debug Mode Integration Tests', () => {
 				content: 'This should trigger external services',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Simulate proper message processing pipeline
 			if (result.allowed) {
@@ -544,7 +544,7 @@ describe('Debug Mode Integration Tests', () => {
 				content: 'Test message',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert - Should allow all channels when whitelist is empty
 			expect(result.allowed).toBe(true);
@@ -572,7 +572,7 @@ describe('Debug Mode Integration Tests', () => {
 				content: 'Test message',
 			};
 
-			const result = filter.shouldProcessMessage(context);
+			const _result = filter.shouldProcessMessage(context);
 
 			// Assert - Should be blocked due to channel restriction
 			expect(result.allowed).toBe(false);

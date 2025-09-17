@@ -36,7 +36,7 @@ export function fromBot(includeSelf = true): TriggerCondition {
 export function and(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
 		for (const condition of conditions) {
-			const result = condition(message);
+			const _result = condition(message);
 			const isMatch = result instanceof Promise ? await result : result;
 			if (!isMatch) {
 				return false;
@@ -52,7 +52,7 @@ export function and(...conditions: TriggerCondition[]): TriggerCondition {
 export function or(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
 		for (const condition of conditions) {
-			const result = condition(message);
+			const _result = condition(message);
 			const isMatch = result instanceof Promise ? await result : result;
 			if (isMatch) {
 				return true;
@@ -67,7 +67,7 @@ export function or(...conditions: TriggerCondition[]): TriggerCondition {
  */
 export function not(condition: TriggerCondition): TriggerCondition {
 	return async (message: Message) => {
-		const result = condition(message);
+		const _result = condition(message);
 		const isMatch = result instanceof Promise ? await result : result;
 		return !isMatch;
 	};

@@ -189,7 +189,7 @@ export class ConfigurationService {
 	 * Refresh cache if it's expired
 	 */
 	private async refreshCacheIfNeeded(): Promise<void> {
-		const now = Date.now();
+		const _now = Date.now();
 		if (now - this.lastCacheUpdate > this.cacheExpiry) {
 			await this.refreshCache();
 		}

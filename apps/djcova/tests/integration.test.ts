@@ -151,7 +151,7 @@ describe('DJCova Integration Tests', () => {
 
 	describe('Voice Channel Validation', () => {
 		it('should validate successful voice channel access', () => {
-			const result = validateVoiceChannelAccess(mockInteraction);
+			const _result = validateVoiceChannelAccess(mockInteraction);
 
 			expect(result.isValid).toBe(true);
 			expect(result.member).toBeDefined();
@@ -161,7 +161,7 @@ describe('DJCova Integration Tests', () => {
 		it('should reject interaction without guild', () => {
 			mockInteraction.guild = null;
 
-			const result = validateVoiceChannelAccess(mockInteraction);
+			const _result = validateVoiceChannelAccess(mockInteraction);
 
 			expect(result.isValid).toBe(false);
 			expect(result.errorMessage).toBe('This command can only be used in a server.');
@@ -174,7 +174,7 @@ describe('DJCova Integration Tests', () => {
 			} as any;
 			mockInteraction.member = memberWithoutVoice;
 
-			const result = validateVoiceChannelAccess(mockInteraction);
+			const _result = validateVoiceChannelAccess(mockInteraction);
 
 			expect(result.isValid).toBe(false);
 			expect(result.errorMessage).toBe('You need to be in a voice channel to use this command.');

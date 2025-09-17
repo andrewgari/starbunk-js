@@ -36,7 +36,7 @@ describe('PersonalityService', () => {
 			const mockEmbedding = [1, 2, 3, 4, 5];
 			mockFs.readFile.mockResolvedValueOnce(JSON.stringify(mockEmbedding));
 
-			const result = await service.loadPersonalityEmbedding('personality.json');
+			const _result = await service.loadPersonalityEmbedding('personality.json');
 
 			expect(result).toBeInstanceOf(Float32Array);
 			expect(Array.from(result!)).toEqual(mockEmbedding);
@@ -57,7 +57,7 @@ describe('PersonalityService', () => {
 		it('should handle missing JSON file gracefully', async () => {
 			mockFs.readFile.mockRejectedValueOnce(new Error('File not found'));
 
-			const result = await service.loadPersonalityEmbedding('personality.json');
+			const _result = await service.loadPersonalityEmbedding('personality.json');
 
 			expect(result).toBeNull();
 			expect(mockLogger.error).toHaveBeenCalledWith(
@@ -71,7 +71,7 @@ describe('PersonalityService', () => {
 			const data = Buffer.from(new Float32Array([1, 2, 3, 4, 5]).buffer);
 			mockFs.readFile.mockResolvedValueOnce(Buffer.concat([header, data]));
 
-			const result = await service.loadPersonalityEmbedding('personality.npy');
+			const _result = await service.loadPersonalityEmbedding('personality.npy');
 
 			expect(result).toBeInstanceOf(Float32Array);
 			expect(Array.from(result!)).toEqual([1, 2, 3, 4, 5]);
@@ -91,7 +91,7 @@ describe('PersonalityService', () => {
 
 	describe('generatePersonalityEmbedding', () => {
 		it('should return null when VectorEmbeddingService is not available', async () => {
-			const result = await service.generatePersonalityEmbedding('test description', true);
+			const _result = await service.generatePersonalityEmbedding('test description', true);
 
 			expect(result).toBeNull();
 			expect(mockLogger.warn).toHaveBeenCalledWith(
@@ -100,7 +100,7 @@ describe('PersonalityService', () => {
 		});
 
 		it('should handle missing embedding service gracefully', async () => {
-			const result = await service.generatePersonalityEmbedding('test description');
+			const _result = await service.generatePersonalityEmbedding('test description');
 
 			expect(result).toBeNull();
 			expect(mockLogger.warn).toHaveBeenCalledWith(

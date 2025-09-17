@@ -30,7 +30,7 @@ export class BotRegistry {
 
 		try {
 			const discovery = new BotDiscovery();
-			const result = await discovery.discoverBots();
+			const _result = await discovery.discoverBots();
 
 			// Register discovered bots
 			for (const bot of result.bots) {

@@ -37,7 +37,7 @@ export function createLLMCondition(prompt: string, options: LLMConditionOptions 
 				},
 			);
 
-			const result = response.toLowerCase().includes('yes');
+			const _result = response.toLowerCase().includes('yes');
 			logger.debug(`LLM condition check result: ${result}`);
 			return result;
 		} catch (error) {

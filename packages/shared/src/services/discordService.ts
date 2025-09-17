@@ -365,7 +365,7 @@ export class DiscordService {
 	protected async refreshBotProfiles(): Promise<void> {
 		try {
 			// Check cooldown
-			const now = Date.now();
+			const _now = Date.now();
 			if (now - this.lastFetchTimestamp < this.FETCH_COOLDOWN) {
 				logger.debug('[DiscordService] Skipping refresh due to cooldown');
 				return;

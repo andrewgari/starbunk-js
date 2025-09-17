@@ -237,7 +237,7 @@ export class QdrantService {
 
 		for (const collection of collections) {
 			try {
-				const result = await this.client.retrieve(collection, {
+				const _result = await this.client.retrieve(collection, {
 					ids: [id],
 					with_payload: true,
 				});

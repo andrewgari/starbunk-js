@@ -136,6 +136,19 @@ export interface ObservabilityConfig {
 	unifiedAutoDiscovery?: boolean;
 	unifiedAutoRegistration?: boolean;
 	unifiedHealthCheckInterval?: number;
+	// Redis configuration for bot trigger metrics
+	redisEnabled?: boolean;
+	redisHost?: string;
+	redisPort?: number;
+	redisPassword?: string;
+	redisDb?: number;
+	redisBatchSize?: number;
+	redisBatchFlushInterval?: number;
+	redisCircuitBreakerThreshold?: number;
+	redisConnectionTimeout?: number;
+	redisRetryDelay?: number;
+	redisMaxRetries?: number;
+	enableEnhancedBotTracking?: boolean;
 }
 
 export function validateObservabilityEnvironment(): ObservabilityConfig {
@@ -158,6 +171,19 @@ export function validateObservabilityEnvironment(): ObservabilityConfig {
 		unifiedAutoDiscovery: getEnvVarBoolean('UNIFIED_AUTO_DISCOVERY', true),
 		unifiedAutoRegistration: getEnvVarBoolean('UNIFIED_AUTO_REGISTRATION', true),
 		unifiedHealthCheckInterval: parseInt(process.env.UNIFIED_HEALTH_CHECK_INTERVAL || '30000'),
+		// Redis configuration for bot trigger metrics
+		redisEnabled: getEnvVarBoolean('ENABLE_REDIS_METRICS', true),
+		redisHost: process.env.REDIS_HOST || (process.env.NODE_ENV === 'development' ? 'localhost' : 'redis'),
+		redisPort: parseInt(process.env.REDIS_PORT || '6379'),
+		redisPassword: process.env.REDIS_PASSWORD,
+		redisDb: parseInt(process.env.REDIS_DB || '0'),
+		redisBatchSize: parseInt(process.env.REDIS_BATCH_SIZE || '100'),
+		redisBatchFlushInterval: parseInt(process.env.REDIS_BATCH_FLUSH_INTERVAL || '5000'),
+		redisCircuitBreakerThreshold: parseInt(process.env.REDIS_CIRCUIT_BREAKER_THRESHOLD || '3'),
+		redisConnectionTimeout: parseInt(process.env.REDIS_CONNECTION_TIMEOUT || '10000'),
+		redisRetryDelay: parseInt(process.env.REDIS_RETRY_DELAY || '1000'),
+		redisMaxRetries: parseInt(process.env.REDIS_MAX_RETRIES || '3'),
+		enableEnhancedBotTracking: getEnvVarBoolean('ENABLE_ENHANCED_BOT_TRACKING', true),
 	};
 
 	// Validate URLs if provided
@@ -197,6 +223,42 @@ export function validateObservabilityEnvironment(): ObservabilityConfig {
 		config.unifiedHealthCheckInterval = 5000;
 	}
 
+	// Validate Redis configuration
+	if (config.redisPort && (config.redisPort < 1 || config.redisPort > 65535)) {
+		logger.warn(`Invalid REDIS_PORT (${config.redisPort}), setting to 6379`);
+		config.redisPort = 6379;
+	}
+
+	if (config.redisDb && (config.redisDb < 0 || config.redisDb > 15)) {
+		logger.warn(`Invalid REDIS_DB (${config.redisDb}), setting to 0`);
+		config.redisDb = 0;
+	}
+
+	if (config.redisBatchSize && config.redisBatchSize < 10) {
+		logger.warn(`REDIS_BATCH_SIZE too low (${config.redisBatchSize}), setting to 10 minimum`);
+		config.redisBatchSize = 10;
+	}
+
+	if (config.redisBatchFlushInterval && config.redisBatchFlushInterval < 1000) {
+		logger.warn(`REDIS_BATCH_FLUSH_INTERVAL too low (${config.redisBatchFlushInterval}ms), setting to 1000ms minimum`);
+		config.redisBatchFlushInterval = 1000;
+	}
+
+	if (config.redisCircuitBreakerThreshold && config.redisCircuitBreakerThreshold < 1) {
+		logger.warn(`REDIS_CIRCUIT_BREAKER_THRESHOLD too low (${config.redisCircuitBreakerThreshold}), setting to 1 minimum`);
+		config.redisCircuitBreakerThreshold = 1;
+	}
+
+	if (config.redisConnectionTimeout && config.redisConnectionTimeout < 1000) {
+		logger.warn(`REDIS_CONNECTION_TIMEOUT too low (${config.redisConnectionTimeout}ms), setting to 1000ms minimum`);
+		config.redisConnectionTimeout = 1000;
+	}
+
+	if (config.redisMaxRetries && config.redisMaxRetries < 0) {
+		logger.warn(`REDIS_MAX_RETRIES invalid (${config.redisMaxRetries}), setting to 3`);
+		config.redisMaxRetries = 3;
+	}
+
 	// Log configuration
 	logger.info('Observability configuration validated:', {
 		metricsEnabled: config.metricsEnabled,
@@ -213,6 +275,15 @@ export function validateObservabilityEnvironment(): ObservabilityConfig {
 		unifiedHealthEnabled: config.unifiedHealthEnabled,
 		unifiedAutoDiscovery: config.unifiedAutoDiscovery,
 		unifiedAutoRegistration: config.unifiedAutoRegistration,
+		// Redis configuration
+		redisEnabled: config.redisEnabled,
+		redisEndpoint: `${config.redisHost}:${config.redisPort}`,
+		redisDb: config.redisDb,
+		hasRedisPassword: !!config.redisPassword,
+		redisBatchSize: config.redisBatchSize,
+		redisBatchFlushInterval: config.redisBatchFlushInterval,
+		redisCircuitBreakerThreshold: config.redisCircuitBreakerThreshold,
+		enableEnhancedBotTracking: config.enableEnhancedBotTracking,
 	});
 
 	return config;
@@ -255,5 +326,18 @@ export function getObservabilityEnvVars(): Required<ObservabilityConfig> {
 		unifiedAutoDiscovery: config.unifiedAutoDiscovery ?? true,
 		unifiedAutoRegistration: config.unifiedAutoRegistration ?? true,
 		unifiedHealthCheckInterval: config.unifiedHealthCheckInterval ?? 30000,
+		// Redis configuration
+		redisEnabled: config.redisEnabled ?? true,
+		redisHost: config.redisHost ?? (process.env.NODE_ENV === 'development' ? 'localhost' : 'redis'),
+		redisPort: config.redisPort ?? 6379,
+		redisPassword: config.redisPassword ?? '',
+		redisDb: config.redisDb ?? 0,
+		redisBatchSize: config.redisBatchSize ?? 100,
+		redisBatchFlushInterval: config.redisBatchFlushInterval ?? 5000,
+		redisCircuitBreakerThreshold: config.redisCircuitBreakerThreshold ?? 3,
+		redisConnectionTimeout: config.redisConnectionTimeout ?? 10000,
+		redisRetryDelay: config.redisRetryDelay ?? 1000,
+		redisMaxRetries: config.redisMaxRetries ?? 3,
+		enableEnhancedBotTracking: config.enableEnhancedBotTracking ?? true,
 	};
 }

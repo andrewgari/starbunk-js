@@ -159,7 +159,7 @@ export class QdrantMemoryService {
 			this.recordEmbeddingTime(Date.now() - startTime);
 
 			// Create memory item
-			const now = new Date();
+			const _now = new Date();
 			const note: PersonalityMemory = {
 				id: uuidv4(),
 				type: 'personality',
@@ -398,7 +398,7 @@ export class QdrantMemoryService {
 			this.recordEmbeddingTime(Date.now() - startTime);
 
 			// Create conversation memory
-			const now = new Date();
+			const _now = new Date();
 			const conversation: ConversationMemory = {
 				id: uuidv4(),
 				type: 'conversation',
@@ -467,7 +467,7 @@ export class QdrantMemoryService {
 			// Format context
 			let context = 'RELEVANT CONVERSATION HISTORY:\n\n';
 
-			for (const result of results) {
+			for (const _result of results) {
 				const conv = result.item as ConversationMemory;
 				const timeAgo = this.getTimeAgo(conv.createdAt);
 				const userLabel = conv.messageType === 'user' ? 'User' : 'Cova';
@@ -640,7 +640,7 @@ export class QdrantMemoryService {
 	 * Get human-readable time ago string
 	 */
 	private getTimeAgo(timestamp: Date): string {
-		const now = new Date();
+		const _now = new Date();
 		const diffMs = now.getTime() - timestamp.getTime();
 		const diffMins = Math.floor(diffMs / (1000 * 60));
 		const diffHours = Math.floor(diffMins / 60);
@@ -683,7 +683,7 @@ export class QdrantMemoryService {
 			const activePersonalityNotes = personalityNotes.filter((note) => note.isActive);
 
 			// Get conversation stats
-			const now = new Date();
+			const _now = new Date();
 			const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 			const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 			const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);

@@ -161,7 +161,7 @@ export class StartupDiagnostics {
 	private logResults(): void {
 		logger.info('📊 Diagnostic Results:');
 
-		for (const result of this.results) {
+		for (const _result of this.results) {
 			const icon = result.status === 'pass' ? '✅' : result.status === 'warn' ? '⚠️' : '❌';
 			const message = `${icon} ${result.check}: ${result.message}`;
 

@@ -665,7 +665,7 @@ export class CovaBotMetricsCollector extends ContainerMetricsBase implements Cov
 
 	private updateUserEngagement(userId: string, _activityType: string): void {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
-		const now = Date.now();
+		const _now = Date.now();
 		let session = this.userSessions.get(userId);
 
 		if (!session) {
@@ -686,7 +686,7 @@ export class CovaBotMetricsCollector extends ContainerMetricsBase implements Cov
 	}
 
 	private updateActiveContextsGauge(): void {
-		const now = Date.now();
+		const _now = Date.now();
 		const ageCounts = { recent: 0, medium: 0, old: 0 }; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 		for (const context of this.activeContexts.values()) {
@@ -702,7 +702,7 @@ export class CovaBotMetricsCollector extends ContainerMetricsBase implements Cov
 	}
 
 	private updateActiveUsersGauge(): void {
-		const now = Date.now();
+		const _now = Date.now();
 		const activityLevels = { high: 0, medium: 0, low: 0 }; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 		for (const session of this.userSessions.values()) {
@@ -744,7 +744,7 @@ export class CovaBotMetricsCollector extends ContainerMetricsBase implements Cov
 	}
 
 	private cleanupStaleSessions(): void {
-		const now = Date.now();
+		const _now = Date.now();
 		const sessionTimeout = 30 * 60 * 1000; // 30 minutes
 		const contextTimeout = 60 * 60 * 1000; // 1 hour
 

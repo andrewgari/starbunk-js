@@ -87,6 +87,32 @@ export {
 	type ServiceHealthResult,
 } from './UnifiedMetricsEndpoint';
 
+// Bot Trigger Metrics Service
+export {
+	BotTriggerMetricsService,
+	createBotTriggerMetricsService,
+	initializeBotTriggerMetricsService,
+	getBotTriggerMetricsService,
+	createProductionConfig,
+} from './BotTriggerMetricsService';
+
+// Bot Trigger Integration
+export {
+	EnhancedBunkBotMetricsCollector,
+	createEnhancedBunkBotMetrics,
+	BotTriggerTracker,
+	createEnvironmentConfig,
+	initializeBotMetricsSystem,
+	type BotTriggerIntegrationConfig,
+} from './BotTriggerIntegration';
+
+// Redis Bot Metrics Exporter
+export {
+	RedisBotMetricsExporter,
+	createRedisBotMetricsExporter,
+	type RedisMetricsExporterConfig
+} from './RedisBotMetricsExporter';
+
 // Import validation utilities
 import { validateObservabilityEnvironment, type ObservabilityConfig } from '../../utils/envValidation';
 

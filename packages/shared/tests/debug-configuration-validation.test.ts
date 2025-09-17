@@ -31,7 +31,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: 'true' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
 			expect(result).toBe(true);
@@ -42,7 +42,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: '1' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
 			expect(result).toBe(true);
@@ -53,7 +53,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: 'false' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
 			expect(result).toBe(false);
@@ -64,7 +64,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: '0' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
 			expect(result).toBe(false);
@@ -75,7 +75,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: undefined });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
 			expect(result).toBe(false);
@@ -86,7 +86,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: 'TRUE' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
 			expect(result).toBe(true);
@@ -97,7 +97,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ DEBUG_MODE: 'invalid' });
 
 			// Act
-			const result = getDebugMode();
+			const _result = getDebugMode();
 
 			// Assert
 			expect(result).toBe(false);
@@ -110,7 +110,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '123456789012345678' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
 			expect(result).toEqual(['123456789012345678']);
@@ -121,7 +121,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '123456789012345678,987654321098765432' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
 			expect(result).toEqual(['123456789012345678', '987654321098765432']);
@@ -132,7 +132,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: ' 123456789012345678 , 987654321098765432 ' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
 			expect(result).toEqual(['123456789012345678', '987654321098765432']);
@@ -143,7 +143,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '123456789012345678,invalid-id,987654321098765432' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
 			expect(result).toEqual(['123456789012345678', '987654321098765432']);
@@ -154,7 +154,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: undefined });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
 			expect(result).toEqual([]);
@@ -165,7 +165,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
 			expect(result).toEqual([]);
@@ -176,7 +176,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '123456789012345678,' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
 			expect(result).toEqual(['123456789012345678']);
@@ -189,7 +189,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_CHANNEL_IDS: '777888999000111222' });
 
 			// Act
-			const result = getTestingChannelIds();
+			const _result = getTestingChannelIds();
 
 			// Assert
 			expect(result).toEqual(['777888999000111222']);
@@ -200,7 +200,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_CHANNEL_IDS: '777888999000111222,333444555666777888' });
 
 			// Act
-			const result = getTestingChannelIds();
+			const _result = getTestingChannelIds();
 
 			// Assert
 			expect(result).toEqual(['777888999000111222', '333444555666777888']);
@@ -211,7 +211,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_CHANNEL_IDS: '777888999000111222,bad-id,333444555666777888' });
 
 			// Act
-			const result = getTestingChannelIds();
+			const _result = getTestingChannelIds();
 
 			// Assert
 			expect(result).toEqual(['777888999000111222', '333444555666777888']);
@@ -222,7 +222,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_CHANNEL_IDS: undefined });
 
 			// Act
-			const result = getTestingChannelIds();
+			const _result = getTestingChannelIds();
 
 			// Assert
 			expect(result).toEqual([]);
@@ -268,7 +268,7 @@ describe('Debug Configuration Validation', () => {
 			const input = '123456789012345678,987654321098765432,777888999000111222';
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
 			expect(result).toEqual(['123456789012345678', '987654321098765432', '777888999000111222']);
@@ -279,7 +279,7 @@ describe('Debug Configuration Validation', () => {
 			const input = '123456789012345678,invalid,987654321098765432,also-invalid,777888999000111222';
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
 			expect(result).toEqual(['123456789012345678', '987654321098765432', '777888999000111222']);
@@ -290,7 +290,7 @@ describe('Debug Configuration Validation', () => {
 			const input = undefined;
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
 			expect(result).toEqual([]);
@@ -301,7 +301,7 @@ describe('Debug Configuration Validation', () => {
 			const input = '';
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
 			expect(result).toEqual([]);
@@ -312,7 +312,7 @@ describe('Debug Configuration Validation', () => {
 			const input = '   ';
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
 			expect(result).toEqual([]);
@@ -323,7 +323,7 @@ describe('Debug Configuration Validation', () => {
 			const input = '  123456789012345678  ';
 
 			// Act
-			const result = parseDiscordIdList(input);
+			const _result = parseDiscordIdList(input);
 
 			// Assert
 			expect(result).toEqual(['123456789012345678']);
@@ -380,7 +380,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: longList });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
 			expect(result).toHaveLength(100);
@@ -393,7 +393,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: ',,123456789012345678,,987654321098765432,,' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
 			expect(result).toEqual(['123456789012345678', '987654321098765432']);
@@ -404,7 +404,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({ TESTING_SERVER_IDS: '123456789012345678;987654321098765432' });
 
 			// Act
-			const result = getTestingServerIds();
+			const _result = getTestingServerIds();
 
 			// Assert
 			expect(result).toEqual([]); // Should be empty as semicolon is not a valid separator

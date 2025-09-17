@@ -119,7 +119,7 @@ class MetricsCircuitBreaker {
 		}
 
 		try {
-			const result = await operation();
+			const _result = await operation();
 			this.onSuccess();
 			return result;
 		} catch (error) {
@@ -751,7 +751,7 @@ export class UnifiedMetricsCollector extends EventEmitter {
 					if (checkKey.startsWith(`${service}.${component}.`)) {
 						const checkStart = performance.now();
 						try {
-							const result = await Promise.race([
+							const _result = await Promise.race([
 								checkFunction(),
 								new Promise<HealthCheckResult>((_, reject) =>
 									setTimeout(

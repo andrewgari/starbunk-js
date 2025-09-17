@@ -169,7 +169,7 @@ export class PersonalityNotesService {
 	async createNote(request: CreateNoteRequest): Promise<PersonalityNote> {
 		await this.ensureLoaded();
 
-		const now = new Date();
+		const _now = new Date();
 		const note: PersonalityNote = {
 			id: uuidv4(),
 			content: request.content.trim(),
@@ -200,7 +200,7 @@ export class PersonalityNotesService {
 		}
 
 		const note = this.notes[noteIndex];
-		const now = new Date();
+		const _now = new Date();
 
 		// Update fields
 		if (request.content !== undefined) {

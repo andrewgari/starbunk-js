@@ -8,7 +8,7 @@ declare global {
 }
 
 Array.prototype.shuffle = function <T>(): T[] {
-	const result = [...this];
+	const _result = [...this];
 
 	for (let i = result.length - 1; i > 0; i--) {
 		const randomIndex = Math.floor(Math.random() * (i + 1));
