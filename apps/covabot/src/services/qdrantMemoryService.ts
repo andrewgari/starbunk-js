@@ -169,8 +169,8 @@ export class QdrantMemoryService {
 				isActive: true,
 				tokens: this.tokenizeContent(request.content),
 				embedding,
-				createdAt: now,
-				updatedAt: now,
+				createdAt: _now,
+				updatedAt: _now,
 				metadata: {},
 			};
 
@@ -411,8 +411,8 @@ export class QdrantMemoryService {
 				topics: await this.extractTopics(request.content),
 				replyToId: request.replyToId,
 				embedding,
-				createdAt: now,
-				updatedAt: now,
+				createdAt: _now,
+				updatedAt: _now,
 				metadata: {},
 			};
 
@@ -468,14 +468,14 @@ export class QdrantMemoryService {
 			let context = 'RELEVANT CONVERSATION HISTORY:\n\n';
 
 			for (const _result of results) {
-				const conv = result.item as ConversationMemory;
+				const conv = _result.item as ConversationMemory;
 				const timeAgo = this.getTimeAgo(conv.createdAt);
 				const userLabel = conv.messageType === 'user' ? 'User' : 'Cova';
 
 				context += `[${timeAgo}] ${userLabel}: ${conv.content}\n`;
 
 				// Stop if similarity drops too low
-				if (result.score < (options.similarityThreshold || 0.6)) break;
+				if (_result.score < (options.similarityThreshold || 0.6)) break;
 			}
 
 			return context.trim();
@@ -641,7 +641,7 @@ export class QdrantMemoryService {
 	 */
 	private getTimeAgo(timestamp: Date): string {
 		const _now = new Date();
-		const diffMs = now.getTime() - timestamp.getTime();
+		const diffMs = _now.getTime() - timestamp.getTime();
 		const diffMins = Math.floor(diffMs / (1000 * 60));
 		const diffHours = Math.floor(diffMins / 60);
 		const diffDays = Math.floor(diffHours / 24);
@@ -684,9 +684,9 @@ export class QdrantMemoryService {
 
 			// Get conversation stats
 			const _now = new Date();
-			const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-			const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-			const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+			const last24Hours = new Date(_now.getTime() - 24 * 60 * 60 * 1000);
+			const last7Days = new Date(_now.getTime() - 7 * 24 * 60 * 60 * 1000);
+			const last30Days = new Date(_now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
 			const conversationFilters = [
 				{ timeRange: { start: last24Hours } },

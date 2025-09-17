@@ -190,7 +190,7 @@ export class ConfigurationService {
 	 */
 	private async refreshCacheIfNeeded(): Promise<void> {
 		const _now = Date.now();
-		if (now - this.lastCacheUpdate > this.cacheExpiry) {
+		if (_now - this.lastCacheUpdate > this.cacheExpiry) {
 			await this.refreshCache();
 		}
 	}

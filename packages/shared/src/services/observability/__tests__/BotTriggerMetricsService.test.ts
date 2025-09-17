@@ -11,6 +11,8 @@
  * - Data aggregation and analytics
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { jest } from '@jest/globals';
 import type Redis from 'ioredis';
 import { BotTriggerMetricsService, createProductionConfig } from '../BotTriggerMetricsService';
@@ -54,31 +56,31 @@ interface MockRedis extends Redis {
 }
 
 const mockRedis: MockRedis = {
-	on: jest.fn(),
-	connect: jest.fn().mockResolvedValue(undefined as any),
-	ping: jest.fn().mockResolvedValue('PONG' as any),
-	script: jest.fn().mockResolvedValue('script_hash' as any),
-	eval: jest.fn().mockResolvedValue('OK' as any),
-	pipeline: jest.fn(),
-	quit: jest.fn().mockResolvedValue('OK' as any),
-	hset: jest.fn().mockResolvedValue(1 as any),
-	hincrby: jest.fn().mockResolvedValue(1 as any),
-	expire: jest.fn().mockResolvedValue(1 as any),
-	zadd: jest.fn().mockResolvedValue(1 as any),
-	hmget: jest.fn().mockResolvedValue([] as any),
-	hgetall: jest.fn().mockResolvedValue({} as any),
-	zrangebyscore: jest.fn().mockResolvedValue([] as any),
-	scan: jest.fn().mockResolvedValue(['0', []] as any),
-	dbsize: jest.fn().mockResolvedValue(0 as any),
-	info: jest.fn().mockResolvedValue('' as any),
+	on: jest.fn() as any,
+	connect: jest.fn().mockResolvedValue(undefined) as any,
+	ping: jest.fn().mockResolvedValue('PONG') as any,
+	script: jest.fn().mockResolvedValue('script_hash') as any,
+	eval: jest.fn().mockResolvedValue('OK') as any,
+	pipeline: jest.fn() as any,
+	quit: jest.fn().mockResolvedValue('OK') as any,
+	hset: jest.fn().mockResolvedValue(1) as any,
+	hincrby: jest.fn().mockResolvedValue(1) as any,
+	expire: jest.fn().mockResolvedValue(1) as any,
+	zadd: jest.fn().mockResolvedValue(1) as any,
+	hmget: jest.fn().mockResolvedValue([]) as any,
+	hgetall: jest.fn().mockResolvedValue({}) as any,
+	zrangebyscore: jest.fn().mockResolvedValue([]) as any,
+	scan: jest.fn().mockResolvedValue(['0', []]) as any,
+	dbsize: jest.fn().mockResolvedValue(0) as any,
+	info: jest.fn().mockResolvedValue('') as any,
 } as any;
 
 const mockPipeline = {
-	hset: jest.fn().mockReturnThis(),
-	hincrby: jest.fn().mockReturnThis(),
-	expire: jest.fn().mockReturnThis(),
-	zadd: jest.fn().mockReturnThis(),
-	exec: jest.fn(),
+	hset: jest.fn().mockReturnThis() as any,
+	hincrby: jest.fn().mockReturnThis() as any,
+	expire: jest.fn().mockReturnThis() as any,
+	zadd: jest.fn().mockReturnThis() as any,
+	exec: jest.fn() as any,
 };
 
 // Mock logger
@@ -100,7 +102,7 @@ describe('BotTriggerMetricsService', () => {
 
 		// Setup pipeline mock
 		(mockRedis.pipeline as jest.Mock).mockReturnValue(mockPipeline);
-		mockPipeline.exec.mockResolvedValue([]);
+		(mockPipeline.exec as jest.Mock).mockResolvedValue([]);
 
 		config = createProductionConfig('localhost', 6379);
 		service = new BotTriggerMetricsService(config);

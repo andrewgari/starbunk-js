@@ -11,6 +11,8 @@
  * - Memory usage tracking and cleanup
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { jest } from '@jest/globals';
 import { RedisBotMetricsExporter, createRedisBotMetricsExporter } from '../RedisBotMetricsExporter';
 import * as promClient from 'prom-client';

@@ -89,11 +89,11 @@ export const rateLimit = (maxRequests: number = 100, windowMs: number = 60000) =
 
 		const clientData = requestCounts.get(clientId);
 
-		if (!clientData || now > clientData.resetTime) {
+		if (!clientData || _now > clientData.resetTime) {
 			// Reset or initialize counter
 			requestCounts.set(clientId, {
 				count: 1,
-				resetTime: now + windowMs,
+				resetTime: _now + windowMs,
 			});
 			return next();
 		}

@@ -177,8 +177,8 @@ export class PersonalityNotesService {
 			priority: request.priority || 'medium',
 			isActive: true,
 			tokens: this.tokenizeContent(request.content),
-			createdAt: now,
-			updatedAt: now,
+			createdAt: _now,
+			updatedAt: _now,
 		};
 
 		this.notes.push(note);
@@ -217,7 +217,7 @@ export class PersonalityNotesService {
 			note.isActive = request.isActive;
 		}
 
-		note.updatedAt = now;
+		note.updatedAt = _now;
 
 		await this.saveNotes();
 

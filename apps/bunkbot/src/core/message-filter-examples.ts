@@ -176,9 +176,9 @@ export function createTimeBasedFilter(options: {
 					hour: 'numeric',
 					hour12: false,
 				})
-					.formatToParts(now)
+					.formatToParts(_now)
 					.find((part) => part.type === 'hour')?.value || '0'
-			: now.getHours();
+			: _now.getHours();
 
 		const hour = typeof currentHour === 'string' ? parseInt(currentHour, 10) : currentHour;
 
@@ -210,7 +210,7 @@ export function createChadMessageFilter(configService: ConfigurationService): Me
 				hour: 'numeric',
 				hour12: false,
 			})
-				.formatToParts(now)
+				.formatToParts(_now)
 				.find((part) => part.type === 'hour')?.value || '0';
 		const estHour = parseInt(estHourPart, 10);
 		if (estHour < 6 || estHour > 22) {

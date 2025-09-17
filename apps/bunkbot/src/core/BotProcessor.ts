@@ -204,8 +204,8 @@ class TTLBotStorage {
 		const _now = Date.now();
 		this.storage.set(key, {
 			value,
-			expiry: now + ttl,
-			lastAccessed: now,
+			expiry: _now + ttl,
+			lastAccessed: _now,
 		});
 	}
 
@@ -214,13 +214,13 @@ class TTLBotStorage {
 		if (!item) return undefined;
 
 		const _now = Date.now();
-		if (now > item.expiry) {
+		if (_now > item.expiry) {
 			this.storage.delete(key);
 			return undefined;
 		}
 
 		// Update last accessed time
-		item.lastAccessed = now;
+		item.lastAccessed = _now;
 		this.storage.set(key, item);
 
 		return item.value;
@@ -252,7 +252,7 @@ class TTLBotStorage {
 
 	getStats(): { size: number; oldestItem: number; newestItem: number } {
 		const _now = Date.now();
-		let oldest = now;
+		let oldest = _now;
 		let newest = 0;
 
 		for (const item of this.storage.values()) {
@@ -262,8 +262,8 @@ class TTLBotStorage {
 
 		return {
 			size: this.storage.size,
-			oldestItem: now - oldest,
-			newestItem: now - newest,
+			oldestItem: _now - oldest,
+			newestItem: _now - newest,
 		};
 	}
 
@@ -286,7 +286,7 @@ class TTLBotStorage {
 		let removedCount = 0;
 
 		for (const [key, item] of this.storage.entries()) {
-			if (now > item.expiry) {
+			if (_now > item.expiry) {
 				this.storage.delete(key);
 				removedCount++;
 			}

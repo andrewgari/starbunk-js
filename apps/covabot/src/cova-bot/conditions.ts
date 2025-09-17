@@ -37,7 +37,7 @@ export function and(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
 		for (const condition of conditions) {
 			const _result = condition(message);
-			const isMatch = result instanceof Promise ? await result : result;
+			const isMatch = _result instanceof Promise ? await _result : _result;
 			if (!isMatch) {
 				return false;
 			}
@@ -53,7 +53,7 @@ export function or(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
 		for (const condition of conditions) {
 			const _result = condition(message);
-			const isMatch = result instanceof Promise ? await result : result;
+			const isMatch = _result instanceof Promise ? await _result : _result;
 			if (isMatch) {
 				return true;
 			}
@@ -68,7 +68,7 @@ export function or(...conditions: TriggerCondition[]): TriggerCondition {
 export function not(condition: TriggerCondition): TriggerCondition {
 	return async (message: Message) => {
 		const _result = condition(message);
-		const isMatch = result instanceof Promise ? await result : result;
+		const isMatch = _result instanceof Promise ? await _result : _result;
 		return !isMatch;
 	};
 }

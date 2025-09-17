@@ -33,11 +33,11 @@ export class InteractionHandler {
 		const context = MessageFilter.createContextFromInteraction(interaction);
 		const _result = this.messageFilter.shouldProcessMessage(context);
 
-		if (!result.allowed) {
-			logger.debug(`Interaction filtered: ${result.reason}`);
+		if (!_result.allowed) {
+			logger.debug(`Interaction filtered: ${_result.reason}`);
 		}
 
-		return result.allowed;
+		return _result.allowed;
 	}
 
 	private async sendFilteredResponse(interaction: CommandInteraction): Promise<void> {

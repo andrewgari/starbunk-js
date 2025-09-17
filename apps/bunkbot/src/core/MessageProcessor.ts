@@ -7,7 +7,7 @@ import {
 	MessageFlowMetrics,
 	getChannelActivityTracker,
 	type BunkBotMetrics,
-	Enhanced_BunkBotMetricsCollector,
+	EnhancedBunkBotMetricsCollector,
 	BotTriggerTracker,
 	type MessageContext,
 } from '@starbunk/shared';
@@ -47,14 +47,14 @@ export class MessageProcessor {
 	private readonly resetTimeout = 60000; // 1 minute
 	private readonly halfOpenMaxAttempts = 1;
 	private bunkBotMetrics?: BunkBotMetrics;
-	private enhancedMetrics?: Enhanced_BunkBotMetricsCollector;
+	private enhancedMetrics?: EnhancedBunkBotMetricsCollector;
 	private triggerTracker?: BotTriggerTracker;
 
 	constructor(
 		private messageFilter: MessageFilter,
 		private replyBots: ReplyBotImpl[] = [],
 		bunkBotMetrics?: BunkBotMetrics,
-		enhancedMetrics?: Enhanced_BunkBotMetricsCollector,
+		enhancedMetrics?: EnhancedBunkBotMetricsCollector,
 		triggerTracker?: BotTriggerTracker,
 	) {
 		this.bunkBotMetrics = bunkBotMetrics;
@@ -228,7 +228,7 @@ export class MessageProcessor {
 						totalLatency,
 						messageContext,
 						true,
-						'message'
+						'message',
 					);
 				}
 
@@ -317,15 +317,15 @@ export class MessageProcessor {
 		const failed = [];
 
 		for (const _result of results) {
-			if (result.status === 'fulfilled') {
-				if (result.value.triggered) {
-					triggered.push(result.value.bot);
+			if (_result.status === 'fulfilled') {
+				if (_result.value.triggered) {
+					triggered.push(_result.value.bot);
 				}
-				if (result.value.error) {
-					failed.push(result.value.bot);
+				if (_result.value.error) {
+					failed.push(_result.value.bot);
 				}
 			} else {
-				logger.error('Bot processing promise rejected:', result.reason, { correlationId });
+				logger.error('Bot processing promise rejected:', _result.reason, { correlationId });
 			}
 		}
 

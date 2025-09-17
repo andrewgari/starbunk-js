@@ -16,7 +16,7 @@ import {
 	initializeObservability,
 	createBunkBotMetrics,
 	type BunkBotMetrics,
-	Enhanced_BunkBotMetricsCollector,
+	EnhancedBunkBotMetricsCollector,
 	BotTriggerTracker,
 	initializeBotMetricsSystem,
 } from '@starbunk/shared';
@@ -51,7 +51,7 @@ class BunkBotContainer {
 	private replyBots: ReplyBotImpl[] = [];
 	private messageProcessor!: MessageProcessor;
 	private bunkBotMetrics?: BunkBotMetrics;
-	private enhancedMetrics?: Enhanced_BunkBotMetricsCollector;
+	private enhancedMetrics?: EnhancedBunkBotMetricsCollector;
 	private triggerTracker?: BotTriggerTracker;
 
 	async initialize(): Promise<void> {
@@ -142,14 +142,14 @@ class BunkBotContainer {
 				this.replyBots,
 				this.bunkBotMetrics,
 				this.enhancedMetrics,
-				this.triggerTracker
+				this.triggerTracker,
 			);
 
 			const metricsStatus = this.enhancedMetrics
 				? 'with enhanced Redis-based metrics'
 				: this.bunkBotMetrics
-				? 'with basic BunkBot metrics'
-				: 'with base metrics only';
+					? 'with basic BunkBot metrics'
+					: 'with base metrics only';
 			logger.info(`✅ Message processor initialized ${metricsStatus}`);
 
 			// Register commands

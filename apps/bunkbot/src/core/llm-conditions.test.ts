@@ -37,7 +37,7 @@ describe('llm-conditions', () => {
 			const _result = await condition(message);
 
 			// Verify
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalledWith(
 				PromptType.CONDITION_CHECK,
 				`${prompt} Message: "I love cats!"`,
@@ -65,7 +65,7 @@ describe('llm-conditions', () => {
 			const _result = await condition(message);
 
 			// Verify
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalled();
 			expect(logger.warn).toHaveBeenCalledWith(
 				expect.stringContaining('LLM condition failed, using regex fallback'),
@@ -90,7 +90,7 @@ describe('llm-conditions', () => {
 			const _result = await condition(message);
 
 			// Verify
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalled();
 			expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('LLM condition failed'));
 		});
@@ -113,7 +113,7 @@ describe('llm-conditions', () => {
 			const _result = await condition(message);
 
 			// Verify
-			expect(result).toBe(false); // Should be false because 'dogs' doesn't match /cats/i
+			expect(_result).toBe(false); // Should be false because 'dogs' doesn't match /cats/i
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalled();
 			expect(logger.warn).toHaveBeenCalledWith(
 				expect.stringContaining('LLM condition failed, using regex fallback'),

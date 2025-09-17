@@ -96,7 +96,7 @@ export class SimplePerformanceTimer {
 			const _result = await fn();
 			const duration = Date.now() - start;
 			this.recordTiming(label, duration);
-			return result;
+			return _result;
 		} catch (error) {
 			const duration = Date.now() - start;
 			this.recordTiming(label, duration);

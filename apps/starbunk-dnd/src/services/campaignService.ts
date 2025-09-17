@@ -65,8 +65,8 @@ class InMemoryCampaignRepository implements CampaignRepository {
 			voiceChannelId: data.voiceChannelId,
 			adventureId: data.adventureId,
 			isActive: data.isActive,
-			createdAt: now,
-			updatedAt: now,
+			createdAt: _now,
+			updatedAt: _now,
 		};
 		this.campaigns.set(id, campaign);
 		// initialize empty metadata if not set later by updateMetadata

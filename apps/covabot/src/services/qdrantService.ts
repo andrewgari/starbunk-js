@@ -242,8 +242,8 @@ export class QdrantService {
 					with_payload: true,
 				});
 
-				if (result.length > 0) {
-					return this.payloadToMemoryItem(result[0].payload!, id);
+				if (_result.length > 0) {
+					return this.payloadToMemoryItem(_result[0].payload!, id);
 				}
 			} catch (_error) {
 				logger.debug(`[QdrantService] Item not found in collection ${collection}: ${id}`);
