@@ -82,8 +82,8 @@ export class ProductionLLMService implements LLMService {
 		try {
 			// Circuit breaker pattern - fail fast if unhealthy
 			if (!this.isHealthy && this.config.provider !== 'emulator') {
-				logger.warn('[LLMService] Service unhealthy, falling back to emulator');
-				return this.generateEmulatorResponse(message);
+				logger.warn('[LLMService] Service unhealthy, remaining silent');
+				return '';
 			}
 
 			// Add correlation ID for tracing
@@ -100,11 +100,12 @@ export class ProductionLLMService implements LLMService {
 					response = await this.generateOllamaResponse(message, context, correlationId);
 					break;
 				case 'emulator':
-					response = await this.generateEmulatorResponse(message, context, correlationId);
+					logger.info('[LLMService] Emulator provider selected; remaining silent (no hardcoded responses)');
+					response = '';
 					break;
 				default:
-					logger.info('[LLMService] No LLM configured, falling back to emulator');
-					response = await this.generateEmulatorResponse(message, context, correlationId);
+					logger.info('[LLMService] No LLM configured; remaining silent');
+					response = '';
 					break;
 			}
 
@@ -117,23 +118,18 @@ export class ProductionLLMService implements LLMService {
 			const duration = Date.now() - startTime;
 			logger.error(`[LLMService] Error generating response after ${duration}ms:`, error as Error);
 
-			// Fallback to emulator on failure
-			logger.info('[LLMService] LLM failed, falling back to emulator');
-			return this.generateEmulatorResponse(message, context, `fallback_${Date.now()}`);
+			// Remain silent on failure
+			logger.info('[LLMService] LLM failed; remaining silent');
+			return '';
 		}
 	}
 
 	async shouldRespond(message: Message): Promise<boolean> {
 		try {
-			// Fast-path: when using emulator (no real LLM), respond to non-empty messages
+			// Do not respond when using emulator (no hardcoded responses allowed)
 			if (this.config.provider === 'emulator') {
-				const content = message.content?.trim();
-				if (!content) {
-					logger.debug('[LLMService] Emulator decision: empty message, not responding');
-					return false;
-				}
-				logger.debug('[LLMService] Emulator decision: responding to non-empty message');
-				return true;
+				logger.debug('[LLMService] Emulator provider: will not respond (no hardcoded responses)');
+				return false;
 			}
 
 			// If real provider is unhealthy, do not respond
@@ -170,12 +166,8 @@ export class ProductionLLMService implements LLMService {
 	private async generateOpenAIResponse(message: Message, context?: string, correlationId?: string): Promise<string> {
 		// TODO: Implement OpenAI integration with proper error handling
 		logger.warn(`[LLMService] OpenAI integration not yet implemented [${correlationId}]`);
-		logger.info('[LLMService] Falling back to emulator for OpenAI provider');
-		return this.generateEmulatorResponse(
-			message,
-			context,
-			correlationId ? `openai_fallback_${correlationId}` : undefined,
-		);
+		logger.info('[LLMService] Remaining silent for OpenAI provider');
+		return '';
 	}
 
 	private async generateOllamaResponse(message: Message, context?: string, correlationId?: string): Promise<string> {
@@ -228,12 +220,8 @@ export class ProductionLLMService implements LLMService {
 			}
 		} catch (error) {
 			logger.error(`[LLMService] Ollama request failed [${correlationId}]:`, ensureError(error));
-			logger.info(`[LLMService] Ollama failed, falling back to emulator [${correlationId}]`);
-			return this.generateEmulatorResponse(
-				message,
-				context,
-				correlationId ? `ollama_fallback_${correlationId}` : undefined,
-			);
+			logger.info(`[LLMService] Ollama failed; remaining silent [${correlationId}]`);
+			return '';
 		}
 	}
 
@@ -324,18 +312,21 @@ export function createLLMService(): LLMService {
 		provider: 'emulator', // Default to emulator
 	};
 
-	// Check for OpenAI configuration
-	if (process.env.OPENAI_API_KEY) {
-		config.provider = 'openai';
-		config.apiKey = process.env.OPENAI_API_KEY;
-		config.model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
+	// During tests, never hit external LLMs; remain silent if LLM is unavailable
+	if (process.env.NODE_ENV === 'test') {
+		config.provider = 'emulator';
 	}
-
-	// Check for Ollama configuration
+	// In non-test envs prefer Ollama (implemented) when available
 	else if (process.env.OLLAMA_API_URL) {
 		config.provider = 'ollama';
 		config.apiUrl = process.env.OLLAMA_API_URL;
 		config.model = process.env.OLLAMA_MODEL || 'mistral:latest';
+	}
+	// Otherwise use OpenAI if configured (currently returns silence until implemented)
+	else if (process.env.OPENAI_API_KEY) {
+		config.provider = 'openai';
+		config.apiKey = process.env.OPENAI_API_KEY;
+		config.model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
 	}
 
 	logger.info(`[LLMService] Initializing ${config.provider} service`);

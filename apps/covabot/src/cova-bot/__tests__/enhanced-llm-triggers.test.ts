@@ -195,14 +195,12 @@ describe('Enhanced LLM Triggers Tests', () => {
 			15000,
 		); // 15 second timeout for real LLM
 
-		it('should fallback gracefully when LLM service fails', async () => {
-			// Create a generator that will definitely fail
+		it('should remain silent when LLM service fails (no hardcoded fallback)', async () => {
+			// Create a generator that will attempt real LLM, then fail and use fallback
 			const failingGenerator = new EnhancedLLMResponseGenerator();
 
-			// Mock the LLM service to fail
+			// Mock the LLM service to fail if it was initialized
 			if (failingGenerator.isUsingRealLLM()) {
-				// Override the service to simulate failure
-				// Create a proper mock type
 				const mockLLMService: LLMService = {
 					isInitialized: () => true,
 					createSimpleCompletion: async () => {
@@ -220,12 +218,9 @@ describe('Enhanced LLM Triggers Tests', () => {
 
 			const response = await failingGenerator.generateResponse(mockMessage);
 
+			// New behavior: no fallback text; remain silent on failure
 			expect(typeof response).toBe('string');
-			expect(response.length).toBeGreaterThan(0);
-
-			// Should get a fallback response, not an error
-			expect(response).not.toContain('error');
-			expect(response).not.toContain('undefined');
+			expect(response.length).toBe(0);
 		});
 	});
 
