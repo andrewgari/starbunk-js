@@ -195,6 +195,7 @@ export class RedisBotMetricsExporter {
 	private lastExportTime = 0;
 	private cacheHits = 0;
 	private cacheMisses = 0;
+	private cleanupInterval?: NodeJS.Timeout;
 
 	// Prometheus metrics
 	private botTriggersCounter!: promClient.Counter<string>;
@@ -339,8 +340,15 @@ export class RedisBotMetricsExporter {
 	 * Export metrics to Prometheus
 	 */
 	async exportMetrics(): Promise<void> {
-		if (!this.isInitialized || !this.redis) {
+		if (!this.isInitialized) {
 			logger.warn('Redis metrics exporter not initialized');
+			return;
+		}
+
+		// If Redis is not connected but we're initialized, still update lastExportTime
+		if (!this.redis) {
+			logger.warn('Redis not connected for metrics export');
+			this.lastExportTime = Date.now();
 			return;
 		}
 
@@ -373,6 +381,8 @@ export class RedisBotMetricsExporter {
 			});
 		} catch (error) {
 			logger.error('Failed to export Redis metrics:', ensureError(error));
+			// Still update lastExportTime even on failure for tracking purposes
+			this.lastExportTime = Date.now();
 			// Don't throw - graceful degradation
 		} finally {
 			this.exportInProgress = false;
@@ -710,7 +720,7 @@ export class RedisBotMetricsExporter {
 	 * Start periodic cache cleanup
 	 */
 	private startCacheCleanup(): void {
-		setInterval(() => {
+		this.cleanupInterval = setInterval(() => {
 			const _now = Date.now();
 			const keysToDelete: string[] = [];
 
@@ -767,6 +777,12 @@ export class RedisBotMetricsExporter {
 	 * Shutdown the exporter
 	 */
 	async shutdown(): Promise<void> {
+		// Clear the cleanup interval
+		if (this.cleanupInterval) {
+			clearInterval(this.cleanupInterval);
+			this.cleanupInterval = undefined;
+		}
+
 		this.reset();
 		this.cache.clear();
 		this.isInitialized = false;

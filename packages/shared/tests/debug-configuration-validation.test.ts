@@ -11,6 +11,15 @@ import {
 const mockEnv = (envVars: Record<string, string | undefined>) => {
 	const originalEnv = process.env;
 	process.env = { ...originalEnv, ...envVars };
+
+	// Delete any environment variables that are explicitly set to undefined
+	// This ensures proper isolation when testing missing environment variables
+	Object.entries(envVars).forEach(([key, value]) => {
+		if (value === undefined) {
+			delete process.env[key];
+		}
+	});
+
 	return () => {
 		process.env = originalEnv;
 	};
@@ -355,7 +364,7 @@ describe('Debug Configuration Validation', () => {
 			restoreEnv = mockEnv({
 				DEBUG_MODE: 'true',
 				TESTING_SERVER_IDS: '123456789012345678',
-				// TESTING_CHANNEL_IDS not set
+				TESTING_CHANNEL_IDS: undefined, // Explicitly unset this to test empty behavior
 			});
 
 			// Act

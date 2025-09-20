@@ -34,7 +34,7 @@ describe('LLM Conditions', () => {
 			});
 
 			// Execute
-			const _result = await condition(message);
+			const result = await condition(message);
 
 			// Verify
 			expect(result).toBe(true);
@@ -57,7 +57,7 @@ describe('LLM Conditions', () => {
 			});
 
 			// Execute
-			const _result = await condition(message);
+			const result = await condition(message);
 
 			// Verify
 			expect(result).toBe(false);
@@ -79,7 +79,7 @@ describe('LLM Conditions', () => {
 			});
 
 			// Execute
-			const _result = await condition(message);
+			const result = await condition(message);
 
 			// Verify - should use the fallback and match
 			expect(result).toBe(true);
@@ -102,7 +102,7 @@ describe('LLM Conditions', () => {
 			});
 
 			// Execute
-			const _result = await condition(message);
+			const result = await condition(message);
 
 			// Verify - should use the fallback but not match
 			expect(result).toBe(false);
@@ -122,7 +122,7 @@ describe('LLM Conditions', () => {
 			});
 
 			// Execute
-			const _result = await condition(message);
+			const result = await condition(message);
 
 			// Verify - should fail
 			expect(result).toBe(false);

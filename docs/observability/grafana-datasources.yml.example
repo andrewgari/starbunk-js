@@ -1,0 +1,29 @@
+apiVersion: 1
+
+# Provision Prometheus and Loki datasources
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: 2.53.0
+      timeInterval: 15s
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: "${DS_PROMETHEUS}"
+          matcherRegex: "traceID=(\\w+)"
+          name: "traceID"
+          url: "$${__value.raw}"
+

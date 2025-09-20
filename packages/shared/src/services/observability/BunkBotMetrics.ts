@@ -15,6 +15,8 @@ import {
 import type { BotTriggerMetricsService } from './BotTriggerMetricsService';
 import type Redis from 'ioredis';
 
+type BotResponseType = 'message' | 'reaction' | 'webhook' | 'none';
+
 export class _BunkBotMetricsCollector extends ContainerMetricsBase implements BunkBotMetrics {
 	// Reply Bot Metrics
 	private botTriggerCounter!: promClient.Counter<string>;
@@ -209,6 +211,8 @@ export class _BunkBotMetricsCollector extends ContainerMetricsBase implements Bu
 		conditionName: string, // eslint-disable-line @typescript-eslint/no-unused-vars
 		responseTime: number, // eslint-disable-line @typescript-eslint/no-unused-vars
 		messageContext: MessageContext, // eslint-disable-line @typescript-eslint/no-unused-vars
+		success?: boolean, // eslint-disable-line @typescript-eslint/no-unused-vars
+		responseType?: BotResponseType, // eslint-disable-line @typescript-eslint/no-unused-vars
 	): void {
 		try {
 			const labels = {
@@ -217,7 +221,7 @@ export class _BunkBotMetricsCollector extends ContainerMetricsBase implements Bu
 				user_id: messageContext.userId, // eslint-disable-line @typescript-eslint/no-unused-vars
 				channel_id: messageContext.channelId, // eslint-disable-line @typescript-eslint/no-unused-vars
 				guild_id: messageContext.guildId, // eslint-disable-line @typescript-eslint/no-unused-vars
-				response_type: responseTime < 100 ? 'fast' : responseTime < 1000 ? 'normal' : 'slow', // eslint-disable-line @typescript-eslint/no-unused-vars
+				response_type: responseType ?? (responseTime < 100 ? 'fast' : responseTime < 1000 ? 'normal' : 'slow'), // eslint-disable-line @typescript-eslint/no-unused-vars
 			};
 
 			this.botResponseCounter.inc(labels);

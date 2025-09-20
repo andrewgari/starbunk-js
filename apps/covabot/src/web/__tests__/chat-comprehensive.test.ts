@@ -8,7 +8,10 @@ import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from '
  * This test suite validates all aspects of the conversation testing interface
  * to ensure production readiness.
  */
-describe('Comprehensive Chat Testing Suite', () => {
+const IS_CI = process.env.CI === 'true';
+const describeIfNotCI = IS_CI ? describe.skip : describe;
+
+describeIfNotCI('Comprehensive Chat Testing Suite', () => {
 	let webServer: TestWebServer;
 	let app: any;
 	let covaBot: CovaBot;

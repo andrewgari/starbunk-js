@@ -218,21 +218,21 @@ describe('Condition functions', () => {
 
 	describe('withinTimeframeOf', () => {
 		it('should return true when timestamp is within timeframe', () => {
-			const _now = Date.now();
+			const now = Date.now();
 			const timestampFn = () => now - 1000; // 1 second ago
 			const condition = withinTimeframeOf(timestampFn, 5, 's');
 			expect(condition(mockMessage())).toBe(true);
 		});
 
 		it('should return false when timestamp is outside timeframe', () => {
-			const _now = Date.now();
+			const now = Date.now();
 			const timestampFn = () => now - 10000; // 10 seconds ago
 			const condition = withinTimeframeOf(timestampFn, 5, 's');
 			expect(condition(mockMessage())).toBe(false);
 		});
 
 		it('should handle different time units', () => {
-			const _now = Date.now();
+			const now = Date.now();
 			const timestampFn = () => now - 30 * 1000; // 30 seconds ago
 
 			// Should be within 1 minute
@@ -261,7 +261,7 @@ describe('Condition combiners', () => {
 			const condition2 = () => true;
 			const combined = and(condition1, condition2);
 
-			const _result = await combined(mockMessage());
+			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 		});
 
@@ -270,7 +270,7 @@ describe('Condition combiners', () => {
 			const condition2 = () => false;
 			const combined = and(condition1, condition2);
 
-			const _result = await combined(mockMessage());
+			const result = await combined(mockMessage());
 			expect(result).toBe(false);
 		});
 
@@ -279,7 +279,7 @@ describe('Condition combiners', () => {
 			const condition2 = jest.fn().mockReturnValue(true);
 			const combined = and(condition1, condition2);
 
-			const _result = await combined(mockMessage());
+			const result = await combined(mockMessage());
 			expect(result).toBe(false);
 			expect(condition1).toHaveBeenCalled();
 			expect(condition2).not.toHaveBeenCalled();
@@ -290,7 +290,7 @@ describe('Condition combiners', () => {
 			const condition2 = jest.fn().mockResolvedValue(true);
 			const combined = and(condition1, condition2);
 
-			const _result = await combined(mockMessage());
+			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 			expect(condition1).toHaveBeenCalled();
 			expect(condition2).toHaveBeenCalled();
@@ -303,7 +303,7 @@ describe('Condition combiners', () => {
 			const condition2 = () => true;
 			const combined = or(condition1, condition2);
 
-			const _result = await combined(mockMessage());
+			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 		});
 
@@ -312,7 +312,7 @@ describe('Condition combiners', () => {
 			const condition2 = () => false;
 			const combined = or(condition1, condition2);
 
-			const _result = await combined(mockMessage());
+			const result = await combined(mockMessage());
 			expect(result).toBe(false);
 		});
 
@@ -321,7 +321,7 @@ describe('Condition combiners', () => {
 			const condition2 = jest.fn().mockReturnValue(false);
 			const combined = or(condition1, condition2);
 
-			const _result = await combined(mockMessage());
+			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 			expect(condition1).toHaveBeenCalled();
 			expect(condition2).not.toHaveBeenCalled();
@@ -332,7 +332,7 @@ describe('Condition combiners', () => {
 			const condition2 = jest.fn().mockResolvedValue(true);
 			const combined = or(condition1, condition2);
 
-			const _result = await combined(mockMessage());
+			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 		});
 
@@ -343,7 +343,7 @@ describe('Condition combiners', () => {
 			const condition2 = jest.fn().mockReturnValue(true);
 			const combined = or(errorFn, condition2);
 
-			const _result = await combined(mockMessage());
+			const result = await combined(mockMessage());
 			expect(result).toBe(true);
 			expect(errorFn).toHaveBeenCalled();
 			expect(condition2).toHaveBeenCalled();
@@ -355,7 +355,7 @@ describe('Condition combiners', () => {
 			const condition = () => true;
 			const negated = not(condition);
 
-			const _result = await negated(mockMessage());
+			const result = await negated(mockMessage());
 			expect(result).toBe(false);
 		});
 
@@ -363,7 +363,7 @@ describe('Condition combiners', () => {
 			const condition = () => false;
 			const negated = not(condition);
 
-			const _result = await negated(mockMessage());
+			const result = await negated(mockMessage());
 			expect(result).toBe(true);
 		});
 
@@ -371,7 +371,7 @@ describe('Condition combiners', () => {
 			const condition = jest.fn().mockResolvedValue(true);
 			const negated = not(condition);
 
-			const _result = await negated(mockMessage());
+			const result = await negated(mockMessage());
 			expect(result).toBe(false);
 			expect(condition).toHaveBeenCalled();
 		});

@@ -11,20 +11,54 @@
  */
 
 import { jest } from '@jest/globals';
-import {
+import type { MessageContext } from '../ContainerMetrics';
+import type { ProductionMetricsService } from '../ProductionMetricsService';
+
+// Mock initializeBotTriggerMetricsService function
+jest.mock('../BotTriggerMetricsService', () => {
+	const actual = jest.requireActual('../BotTriggerMetricsService');
+
+	// Create mock service inside the factory to avoid hoisting issues
+	const internalMockService = {
+		initialize: jest.fn(),
+		trackBotTrigger: jest.fn(),
+		getBotMetrics: jest.fn(),
+		getHealthStatus: jest.fn(),
+		cleanup: jest.fn(),
+	};
+
+	// Mock initializeBotTriggerMetricsService to simulate real behavior
+	const mockInitialize = jest.fn().mockImplementation(async (config) => {
+		// Simulate the real function behavior: create instance and call initialize
+		if (internalMockService.initialize) {
+			await internalMockService.initialize();
+		}
+		return internalMockService;
+	});
+
+	return {
+		...actual,
+		BotTriggerMetricsService: jest.fn(() => internalMockService),
+		initializeBotTriggerMetricsService: mockInitialize,
+		// Export the mock service for test access
+		__mockService: internalMockService,
+	};
+});
+
+// Get the mock service from the mocked module
+const { __mockService: mockBotTriggerService } = require('../BotTriggerMetricsService');
+
+// Import modules after mocks are set up
+const {
 	Enhanced_BunkBotMetricsCollector,
 	BotTriggerTracker,
 	createEnhancedBunkBotMetrics,
 	createEnvironmentConfig,
 	initializeBotMetricsSystem,
-} from '../BotTriggerIntegration';
-import { BotTriggerMetricsService } from '../BotTriggerMetricsService';
-import type { MessageContext } from '../ContainerMetrics';
-import type { ProductionMetricsService } from '../ProductionMetricsService';
+} = require('../BotTriggerIntegration');
+const { BotTriggerMetricsService, initializeBotTriggerMetricsService } = require('../BotTriggerMetricsService');
 
 // Mock dependencies
-jest.mock('../BotTriggerMetricsService');
-jest.mock('../BunkBotMetrics');
 jest.mock('../../logger', () => ({
 	logger: {
 		info: jest.fn(),
@@ -41,29 +75,45 @@ const mockMetricsService = {
 	observeHistogram: jest.fn(),
 } as unknown as ProductionMetricsService;
 
-// Mock _BunkBotMetricsCollector
+// Mock _BunkBotMetricsCollector with enhanced methods
 const mock_BunkBotMetricsCollector = {
+	// Base class methods
 	trackBotTrigger: jest.fn(),
 	trackBotResponse: jest.fn(),
 	sanitizeLabel: jest.fn((label: string) => label),
 	getHealthStatus: jest.fn(() => ({ status: 'healthy' })),
 	cleanup: jest.fn(),
+
+	// Enhanced methods added by Enhanced_BunkBotMetricsCollector
+	initializeEnhancedTracking: jest.fn().mockResolvedValue(undefined),
+	getEnhancedHealthStatus: jest.fn().mockResolvedValue({
+		enhancedTracking: {
+			enabled: true,
+			redisHealth: {
+				service: 'BotTriggerMetricsService',
+				status: 'healthy',
+				timestamp: Date.now(),
+				checks: {
+					redis: { status: 'connected', latency: 10 },
+					circuitBreaker: { status: 'CLOSED', failureCount: 0 },
+					memory: { usage: 100000, limit: 1000000 },
+				},
+				metrics: {
+					operationsPerSecond: 10,
+					avgResponseTime: 50,
+					errorRate: 0.01,
+				},
+			},
+		},
+	}),
+	getBotTriggerService: jest.fn(() => mockBotTriggerService),
 };
 
 jest.mock('../BunkBotMetrics', () => ({
 	_BunkBotMetricsCollector: jest.fn(() => mock_BunkBotMetricsCollector),
 }));
 
-// Mock BotTriggerMetricsService
-const mockBotTriggerService = {
-	initialize: jest.fn(),
-	trackBotTrigger: jest.fn(),
-	getBotMetrics: jest.fn(),
-	getHealthStatus: jest.fn(),
-	cleanup: jest.fn(),
-} as any;
-
-const MockBotTriggerMetricsService = BotTriggerMetricsService as jest.MockedClass<typeof BotTriggerMetricsService>;
+// Reference to the mocked initializeBotTriggerMetricsService function for test expectations
 
 describe('BotTriggerIntegration', () => {
 	let originalEnv: NodeJS.ProcessEnv;
@@ -74,11 +124,11 @@ describe('BotTriggerIntegration', () => {
 		// Save original environment
 		originalEnv = { ...process.env };
 
-		// Setup mocks
-		MockBotTriggerMetricsService.mockImplementation(() => mockBotTriggerService as any);
+		// Setup mock behavior (mocks are already configured in the jest.mock call)
 
 		// Mock successful operations by default
 		mockBotTriggerService.initialize.mockResolvedValue(undefined);
+		(initializeBotTriggerMetricsService as jest.Mock).mockResolvedValue(mockBotTriggerService);
 		mockBotTriggerService.trackBotTrigger.mockResolvedValue({ success: true });
 		mockBotTriggerService.getBotMetrics.mockResolvedValue({
 			success: true,
@@ -148,24 +198,27 @@ describe('BotTriggerIntegration', () => {
 			it('should initialize enhanced tracking successfully', async () => {
 				await collector.initializeEnhancedTracking();
 
-				expect(MockBotTriggerMetricsService).toHaveBeenCalled();
+				expect(initializeBotTriggerMetricsService).toHaveBeenCalled();
 				expect(mockBotTriggerService.initialize).toHaveBeenCalled();
 			});
 
 			it('should handle Redis connection failure gracefully', async () => {
-				mockBotTriggerService.initialize.mockRejectedValue(new Error('Redis connection failed'));
+				// Mock the function to reject
+				(initializeBotTriggerMetricsService as jest.Mock).mockRejectedValueOnce(
+					new Error('Redis connection failed'),
+				);
 
 				await collector.initializeEnhancedTracking();
 
 				// Should not throw and fall back to standard metrics only
-				expect(MockBotTriggerMetricsService).toHaveBeenCalled();
+				expect(initializeBotTriggerMetricsService).toHaveBeenCalled();
 			});
 
 			it('should not initialize twice', async () => {
 				await collector.initializeEnhancedTracking();
 				await collector.initializeEnhancedTracking();
 
-				expect(mockBotTriggerService.initialize).toHaveBeenCalledTimes(1);
+				expect(initializeBotTriggerMetricsService).toHaveBeenCalledTimes(1);
 			});
 
 			it('should use environment-based Redis configuration', async () => {
@@ -176,7 +229,7 @@ describe('BotTriggerIntegration', () => {
 
 				await collector.initializeEnhancedTracking();
 
-				expect(MockBotTriggerMetricsService).toHaveBeenCalledWith(
+				expect(initializeBotTriggerMetricsService).toHaveBeenCalledWith(
 					expect.objectContaining({
 						redis: expect.objectContaining({
 							host: 'test-redis',
@@ -223,6 +276,8 @@ describe('BotTriggerIntegration', () => {
 					'testCondition',
 					150,
 					messageContext,
+					true,
+					'message',
 				);
 			});
 
@@ -522,7 +577,7 @@ describe('BotTriggerIntegration', () => {
 			expect(system.metricsCollector).toBeInstanceOf(Enhanced_BunkBotMetricsCollector);
 			expect(system.tracker).toBeInstanceOf(BotTriggerTracker);
 			expect(system.config).toBeDefined();
-			expect(MockBotTriggerMetricsService).toHaveBeenCalled();
+			expect(initializeBotTriggerMetricsService).toHaveBeenCalled();
 
 			// Cleanup
 			await system.tracker.cleanup();

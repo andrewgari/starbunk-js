@@ -1,0 +1,114 @@
+{
+  "title": "Starbunk - CovaBot AI & Engagement",
+  "uid": "starbunk-covabot-ai",
+  "schemaVersion": 38,
+  "version": 1,
+  "editable": true,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Personality triggers rate (5m)",
+      "gridPos": {"x":0,"y":0,"w":6,"h":4},
+      "targets": [
+        {"expr":"sum(rate(covabot_personality_triggers_total[5m])) by (trigger_type)","legendFormat":"{{trigger_type}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Responses rate (5m)",
+      "gridPos": {"x":6,"y":0,"w":6,"h":4},
+      "targets": [
+        {"expr":"sum(rate(covabot_personality_responses_total[5m])) by (response_type,success)","legendFormat":"{{response_type}}/{{success}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Response p90 (ms) by type",
+      "gridPos": {"x":12,"y":0,"w":12,"h":8},
+      "targets": [
+        {"expr":"histogram_quantile(0.90, sum by (le, response_type) (rate(covabot_personality_response_duration_ms_bucket[5m])))","legendFormat":"p90 {{response_type}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Context retrieval p90 (ms)",
+      "gridPos": {"x":0,"y":4,"w":12,"h":8},
+      "targets": [
+        {"expr":"histogram_quantile(0.90, sum by (le, context_size_category) (rate(covabot_context_retrieval_duration_ms_bucket[5m])))","legendFormat":"{{context_size_category}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Context retrievals rate (5m)",
+      "gridPos": {"x":12,"y":8,"w":6,"h":4},
+      "targets": [
+        {"expr":"sum(rate(covabot_context_retrievals_total[5m])) by (context_size_category,cache_hit)","legendFormat":"{{context_size_category}}/{{cache_hit}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Active contexts by age",
+      "gridPos": {"x":18,"y":8,"w":6,"h":4},
+      "targets": [
+        {"expr":"covabot_active_contexts","legendFormat":"{{context_age_category}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Memory hit rate %",
+      "gridPos": {"x":0,"y":12,"w":6,"h":4},
+      "targets": [
+        {"expr":"avg(covabot_memory_hit_rate_percent)","legendFormat":"hit% {{memory_type}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory ops rate (5m)",
+      "gridPos": {"x":6,"y":12,"w":6,"h":4},
+      "targets": [
+        {"expr":"sum(rate(covabot_memory_operations_total[5m])) by (operation,memory_type)","legendFormat":"{{operation}}/{{memory_type}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM response p90 (ms)",
+      "gridPos": {"x":12,"y":12,"w":12,"h":6},
+      "targets": [
+        {"expr":"histogram_quantile(0.90, sum by (le, model) (rate(covabot_personality_llm_response_time_ms_bucket[5m])))","legendFormat":"{{model}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "LLM requests & errors (5m)",
+      "gridPos": {"x":0,"y":16,"w":12,"h":4},
+      "targets": [
+        {"expr":"sum(rate(covabot_personality_llm_requests_total[5m])) by (model,prompt_type,success)","legendFormat":"req {{model}}/{{prompt_type}}/{{success}}","datasource":"Prometheus"},
+        {"expr":"sum(rate(covabot_personality_llm_errors_total[5m])) by (model,error_type)","legendFormat":"err {{model}}/{{error_type}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "User engagement score",
+      "gridPos": {"x":12,"y":18,"w":6,"h":4},
+      "targets": [
+        {"expr":"covabot_user_engagement_score","legendFormat":"{{engagement_category}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Active users by activity level",
+      "gridPos": {"x":18,"y":18,"w":6,"h":4},
+      "targets": [
+        {"expr":"sum(covabot_active_users) by (activity_level)","legendFormat":"{{activity_level}}","datasource":"Prometheus"}
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Logs (covabot)",
+      "gridPos": {"x":0,"y":22,"w":24,"h":8},
+      "datasource": "Loki",
+      "targets": [ {"expr":"{com_starbunk_service=\"covabot\"}","refId":"A"} ]
+    }
+  ]
+}
+

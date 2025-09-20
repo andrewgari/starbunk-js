@@ -172,10 +172,17 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 		return mappings[service] || {};
 	}
 
+	private sanitizeServiceNameForMetrics(serviceName: string): string {
+		// Convert dashes to underscores to make valid Prometheus metric names
+		return serviceName.replace(/-/g, '_');
+	}
+
 	private initializeServiceMetrics(): void {
+		const sanitizedServiceName = this.sanitizeServiceNameForMetrics(this.serviceConfig.serviceName);
+
 		// Service operations counter with component labels
 		this.serviceOperationsCounter = new promClient.Counter({
-			name: `discord_bot_${this.serviceConfig.serviceName}_operations_total`,
+			name: `discord_bot_${sanitizedServiceName}_operations_total`,
 			help: `Total operations for ${this.serviceConfig.serviceName} service`,
 			labelNames: ['service', 'component', 'operation', 'status'],
 			registers: [this.serviceMetricsRegistry],
@@ -183,7 +190,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 		// Service latency histogram with component labels
 		this.serviceLatencyHistogram = new promClient.Histogram({
-			name: `discord_bot_${this.serviceConfig.serviceName}_operation_duration_ms`,
+			name: `discord_bot_${sanitizedServiceName}_operation_duration_ms`,
 			help: `Operation duration for ${this.serviceConfig.serviceName} service`,
 			labelNames: ['service', 'component', 'operation'],
 			buckets: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
@@ -192,7 +199,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 		// Service errors counter
 		this.serviceErrorsCounter = new promClient.Counter({
-			name: `discord_bot_${this.serviceConfig.serviceName}_errors_total`,
+			name: `discord_bot_${sanitizedServiceName}_errors_total`,
 			help: `Total errors for ${this.serviceConfig.serviceName} service`,
 			labelNames: ['service', 'component', 'operation', 'error_type'],
 			registers: [this.serviceMetricsRegistry],
@@ -200,7 +207,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 		// Component health gauge
 		this.componentHealthGauge = new promClient.Gauge({
-			name: `discord_bot_${this.serviceConfig.serviceName}_component_health`,
+			name: `discord_bot_${sanitizedServiceName}_component_health`,
 			help: `Component health status (1=healthy, 0.5=degraded, 0=unhealthy)`,
 			labelNames: ['service', 'component'],
 			registers: [this.serviceMetricsRegistry],
@@ -208,7 +215,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 		// Component activity gauge
 		this.componentActivityGauge = new promClient.Gauge({
-			name: `discord_bot_${this.serviceConfig.serviceName}_component_activity`,
+			name: `discord_bot_${sanitizedServiceName}_component_activity`,
 			help: `Component activity level (operations per minute)`,
 			labelNames: ['service', 'component'],
 			registers: [this.serviceMetricsRegistry],

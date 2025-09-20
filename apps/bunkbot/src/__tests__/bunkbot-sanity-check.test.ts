@@ -207,7 +207,7 @@ describe('BunkBot Comprehensive Sanity Check', () => {
 				});
 
 				const _result = messageFilter.shouldProcessMessage(message);
-				expect(result).toBe(true);
+				expect(_result).toBe(true);
 			});
 		});
 	});

@@ -93,10 +93,12 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 		this.envConfig = validateObservabilityEnvironment();
 
 		// Merge configuration with environment defaults
+		const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
 		this.config = {
 			collectorConfig: {
-				port: parseInt(process.env.UNIFIED_METRICS_PORT || '3001'),
-				host: process.env.UNIFIED_METRICS_HOST || '192.168.50.3',
+				// In tests, bind to an ephemeral port and loopback to avoid conflicts across workers
+				port: isTestEnv ? 0 : parseInt(process.env.UNIFIED_METRICS_PORT || '3001'),
+				host: isTestEnv ? '127.0.0.1' : process.env.UNIFIED_METRICS_HOST || '192.168.50.3',
 				enableMetrics: this.envConfig.metricsEnabled,
 				enableHealth: true,
 				enableServiceInfo: true,
@@ -115,8 +117,9 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 			healthCheckInterval: userConfig?.healthCheckInterval || 30000,
 			healthCheckTimeout: userConfig?.healthCheckTimeout || 5000,
 			enableCircuitBreaker: userConfig?.enableCircuitBreaker !== false,
-			enableGracefulShutdown: userConfig?.enableGracefulShutdown !== false,
-			shutdownTimeout: userConfig?.shutdownTimeout || 30000,
+			enableGracefulShutdown: userConfig?.enableGracefulShutdown ?? !isTestEnv,
+			// Shorter shutdown in tests prevents open-handle warnings and speeds up teardown
+			shutdownTimeout: userConfig?.shutdownTimeout ?? (isTestEnv ? 1000 : 30000),
 			enableMetricsLogging: userConfig?.enableMetricsLogging === true,
 			enablePerformanceMonitoring: userConfig?.enablePerformanceMonitoring !== false,
 		};
@@ -217,6 +220,11 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 	): Promise<ServiceAwareMetricsService> {
 		try {
 			logger.info(`Registering service: ${serviceName}`);
+
+			// Validate service name before proceeding
+			if (!this.knownServices.includes(serviceName)) {
+				throw new Error(`Unknown service: ${serviceName}. Must be one of: ${this.knownServices.join(', ')}`);
+			}
 
 			// Create or get service-aware metrics instance
 			const serviceMetrics = initializeServiceMetrics(serviceName, {
@@ -334,7 +342,7 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 
 			logger.info('Initializing Redis metrics export for BunkBot', {
 				redisHost,
-				redisPort
+				redisPort,
 			});
 
 			// Attempt to import and initialize Redis components
@@ -351,7 +359,7 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 					db: parseInt(process.env.REDIS_DB || '0', 10),
 					lazyConnect: true,
 					enableOfflineQueue: false,
-					maxRetriesPerRequest: 1
+					maxRetriesPerRequest: 1,
 				});
 
 				// Test connection
@@ -366,10 +374,10 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 							host: redisHost,
 							port: parseInt(redisPort, 10),
 							password: process.env.REDIS_PASSWORD,
-							db: parseInt(process.env.REDIS_DB || '0', 10)
+							db: parseInt(process.env.REDIS_DB || '0', 10),
 						},
 						enableBatchOperations: true,
-						enableCircuitBreaker: true
+						enableCircuitBreaker: true,
 					});
 					await triggerMetricsService.initialize();
 				}
@@ -385,7 +393,7 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 						await bunkBotCollector.initializeRedisExport(redis, triggerMetricsService, {
 							cacheTTL: 15000,
 							enableCircuitBreaker: true,
-							exportTimeout: 5000
+							exportTimeout: 5000,
 						});
 						logger.info('Redis metrics export initialized for BunkBot collector');
 					}
@@ -395,20 +403,19 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 					const redisExporter = createRedisBotMetricsExporter(registry, {
 						cacheTTL: 15000,
 						enableCircuitBreaker: true,
-						exportTimeout: 5000
+						exportTimeout: 5000,
 					});
 					await redisExporter.initialize(redis, triggerMetricsService);
 
 					// Start periodic export
 					setInterval(() => {
-						redisExporter.exportMetrics().catch(error => {
+						redisExporter.exportMetrics().catch((error) => {
 							logger.error('Redis metrics export failed:', error);
 						});
 					}, 15000);
 
 					logger.info('Standalone Redis metrics exporter initialized for BunkBot');
 				}
-
 			} catch (error) {
 				logger.error('Failed to initialize Redis metrics export for BunkBot:', ensureError(error));
 				// Don't throw - allow service to continue without Redis export
@@ -453,30 +460,33 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 			});
 		});
 
-		// Add overall service health check
-		this.collector.addHealthCheck(serviceName, 'service', 'overall_health', async () => {
-			try {
-				const healthStatus = serviceMetrics.getServiceHealthStatus() as any;
-				const status =
-					healthStatus.status === 'healthy'
-						? 'pass'
-						: healthStatus.status === 'shutting_down'
-							? 'warn'
-							: 'fail';
+		// Add overall service health check using the first component
+		const firstComponent = serviceMetrics.getComponentTrackers().keys().next().value;
+		if (firstComponent) {
+			this.collector.addHealthCheck(serviceName, firstComponent, 'overall_health', async () => {
+				try {
+					const healthStatus = serviceMetrics.getServiceHealthStatus() as any;
+					const status =
+						healthStatus.status === 'healthy'
+							? 'pass'
+							: healthStatus.status === 'shutting_down'
+								? 'warn'
+								: 'fail';
 
-				return {
-					status,
-					output: `Service ${serviceName}: ${healthStatus.status} (uptime: ${Math.round(healthStatus.uptime)}s)`,
-					timestamp: new Date().toISOString(),
-				};
-			} catch (error) {
-				return {
-					status: 'fail',
-					output: `Service ${serviceName} health check failed: ${ensureError(error).message}`,
-					timestamp: new Date().toISOString(),
-				};
-			}
-		});
+					return {
+						status,
+						output: `Service ${serviceName}: ${healthStatus.status} (uptime: ${Math.round(healthStatus.uptime)}s)`,
+						timestamp: new Date().toISOString(),
+					};
+				} catch (error) {
+					return {
+						status: 'fail',
+						output: `Service ${serviceName} health check failed: ${ensureError(error).message}`,
+						timestamp: new Date().toISOString(),
+					};
+				}
+			});
+		}
 	}
 
 	/**
@@ -747,6 +757,13 @@ export function getUnifiedMetricsEndpoint(): UnifiedMetricsEndpoint {
 		throw new Error('Unified metrics endpoint not initialized. Call initializeUnifiedMetricsEndpoint() first.');
 	}
 	return globalUnifiedEndpoint;
+}
+
+/**
+ * Reset the global unified metrics endpoint - FOR TESTING ONLY
+ */
+export function resetUnifiedMetricsEndpoint(): void {
+	globalUnifiedEndpoint = undefined;
 }
 
 // Convenience function to start the entire unified metrics system

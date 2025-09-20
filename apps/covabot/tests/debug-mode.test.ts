@@ -135,6 +135,12 @@ describe('CovaBot Debug Mode Functionality', () => {
 		mockIsDebugMode.mockReturnValue(false);
 	});
 
+	afterEach(() => {
+		// Clear any process event listeners that might be hanging
+		process.removeAllListeners('unhandledRejection');
+		process.removeAllListeners('uncaughtException');
+	});
+
 	describe('AI Response Filtering', () => {
 		test('should only process AI interactions in allowed guilds when TESTING_SERVER_IDS is set', () => {
 			// Arrange
@@ -192,7 +198,7 @@ describe('CovaBot Debug Mode Functionality', () => {
 			const _result = filter.shouldProcessMessage(dmContext);
 
 			// Assert - DM messages should be allowed even with server restrictions
-			expect(result.allowed).toBe(true);
+			expect(_result.allowed).toBe(true);
 		});
 	});
 
@@ -284,7 +290,7 @@ describe('CovaBot Debug Mode Functionality', () => {
 			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
-			expect(result.allowed).toBe(true);
+			expect(_result.allowed).toBe(true);
 		});
 
 		test('should filter personality commands correctly', () => {
@@ -303,7 +309,7 @@ describe('CovaBot Debug Mode Functionality', () => {
 			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
-			expect(result.allowed).toBe(false);
+			expect(_result.allowed).toBe(false);
 		});
 
 		test('should filter mention-based AI responses correctly', () => {
@@ -326,7 +332,7 @@ describe('CovaBot Debug Mode Functionality', () => {
 			const _result = filter.shouldProcessMessage(context);
 
 			// Assert
-			expect(result.allowed).toBe(true);
+			expect(_result.allowed).toBe(true);
 		});
 	});
 
@@ -362,7 +368,7 @@ describe('CovaBot Debug Mode Functionality', () => {
 			for (let i = 0; i < 5; i++) {
 				const context = MessageFilter.createContextFromMessage(message);
 				const _result = filter.shouldProcessMessage(context);
-				expect(result.allowed).toBe(true);
+				expect(_result.allowed).toBe(true);
 			}
 		});
 	});
@@ -421,7 +427,7 @@ describe('CovaBot Debug Mode Functionality', () => {
 				});
 				const context = MessageFilter.createContextFromMessage(message);
 				const _result = filter.shouldProcessMessage(context);
-				expect(result.allowed).toBe(true);
+				expect(_result.allowed).toBe(true);
 			});
 		});
 
@@ -500,8 +506,8 @@ describe('CovaBot Debug Mode Functionality', () => {
 				const _result = filter.shouldProcessMessage(context);
 
 				// Assert - All AI commands should be blocked
-				expect(result.allowed).toBe(false);
-				expect(result.reason).toContain('Channel 999999999999999999 not in allowed testing channels');
+				expect(_result.allowed).toBe(false);
+				expect(_result.reason).toContain('Channel 999999999999999999 not in allowed testing channels');
 			});
 		});
 
@@ -537,8 +543,8 @@ describe('CovaBot Debug Mode Functionality', () => {
 				const _result = filter.shouldProcessMessage(context);
 
 				// Assert - All mention-based responses should be blocked
-				expect(result.allowed).toBe(false);
-				expect(result.reason).toContain('Channel 999999999999999999 not in allowed testing channels');
+				expect(_result.allowed).toBe(false);
+				expect(_result.reason).toContain('Channel 999999999999999999 not in allowed testing channels');
 			});
 		});
 

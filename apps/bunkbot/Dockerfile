@@ -62,9 +62,15 @@ COPY --from=builder --chown=bunkbot:bunkbot /app/package.json ./
 # Switch to non-root user
 USER bunkbot
 
-# Health check
+# Monitoring labels for Grafana/Prometheus discovery
+LABEL com.starbunk.service="bunkbot"
+LABEL prometheus.io/scrape="true"
+LABEL prometheus.io/path="/metrics"
+LABEL prometheus.io/port="3000"
+
+# Health check (prefers HEALTH_PORT, then METRICS_PORT, else defaults)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3001/health || exit 1
+    CMD sh -c 'PORT="${HEALTH_PORT:-${METRICS_PORT:-3002}}"; curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1'
 
 EXPOSE 3001
 

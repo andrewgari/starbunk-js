@@ -252,9 +252,9 @@ export class MessageProcessor {
 					responseText: typeof response === 'string' ? response : undefined,
 				};
 			} else {
-				// Track bot skip with enhanced metrics
-				if (this.enhancedMetrics) {
-					this.enhancedMetrics.trackBotSkip(bot.name, 'condition_not_met', messageContext);
+				// Track bot skip using legacy BunkBot metrics (enhanced metrics use base for skips)
+				if (this.bunkBotMetrics) {
+					this.bunkBotMetrics.trackBotSkip(bot.name, 'condition_not_met', messageContext);
 				}
 
 				// Track bot skip with legacy BunkBot metrics (fallback)
@@ -285,9 +285,9 @@ export class MessageProcessor {
 
 			this.recordFailure(bot.name);
 
-			// Track bot skip due to error with enhanced metrics
-			if (this.enhancedMetrics) {
-				this.enhancedMetrics.trackBotSkip(bot.name, 'processing_error', messageContext);
+			// Track bot skip due to error using legacy BunkBot metrics (enhanced metrics use base for skips)
+			if (this.bunkBotMetrics) {
+				this.bunkBotMetrics.trackBotSkip(bot.name, 'processing_error', messageContext);
 			}
 
 			// Track bot skip due to error with legacy BunkBot metrics (fallback)
@@ -548,9 +548,9 @@ export class MessageProcessor {
 			}
 		}
 
-		// Update enhanced metrics with new bot count
-		if (this.enhancedMetrics) {
-			this.enhancedMetrics.trackBotRegistryUpdate(0, 0, bots.length); // Full update
+		// Update metrics with new bot count
+		if (this.bunkBotMetrics) {
+			this.bunkBotMetrics.trackBotRegistryUpdate(0, 0, bots.length); // Full update
 		}
 	}
 

@@ -1055,5 +1055,12 @@ export function getUnifiedMetricsCollector(): UnifiedMetricsCollector {
 	return globalUnifiedCollector;
 }
 
+/**
+ * Reset the global unified metrics collector - FOR TESTING ONLY
+ */
+export function resetUnifiedMetricsCollector(): void {
+	globalUnifiedCollector = undefined;
+}
+
 // Export types
 export type { UnifiedMetricsConfig, ServiceComponent, HealthCheckResult, ServiceHealthStatus };

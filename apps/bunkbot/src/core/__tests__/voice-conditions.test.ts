@@ -58,7 +58,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel123');
 
 			const condition = userJoined();
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(true);
 		});
@@ -68,7 +68,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState(); // No channel
 
 			const condition = userJoined();
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 		});
@@ -78,7 +78,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel456');
 
 			const condition = userJoined();
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 		});
@@ -90,7 +90,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState(); // No channel
 
 			const condition = userLeft();
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(true);
 		});
@@ -100,7 +100,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel123');
 
 			const condition = userLeft();
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 		});
@@ -110,7 +110,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel456');
 
 			const condition = userLeft();
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 		});
@@ -122,7 +122,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel456');
 
 			const condition = userSwitched();
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(true);
 		});
@@ -132,7 +132,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel123');
 
 			const condition = userSwitched();
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 		});
@@ -142,7 +142,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState(); // No channel
 
 			const condition = userSwitched();
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 		});
@@ -154,7 +154,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel456', 'gaming-voice');
 
 			const condition = channelNameMatches(/gaming/i);
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(true);
 		});
@@ -164,7 +164,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel456', 'music-voice');
 
 			const condition = channelNameMatches(/gaming/i);
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 		});
@@ -174,7 +174,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState(); // No channel
 
 			const condition = channelNameMatches(/gaming/i);
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 		});
@@ -186,7 +186,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel123', 'gaming-voice');
 
 			const condition = joiningChannel(/gaming/i);
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(true);
 		});
@@ -196,7 +196,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel456', 'gaming-voice');
 
 			const condition = joiningChannel(/gaming/i);
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(true);
 		});
@@ -206,7 +206,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState('channel123', 'music-voice');
 
 			const condition = joiningChannel(/gaming/i);
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 		});
@@ -216,7 +216,7 @@ describe('Voice Conditions', () => {
 			const newState = createMockVoiceState(); // No channel
 
 			const condition = joiningChannel(/gaming/i);
-			const _result = await condition(oldState as any, newState as any);
+			const result = await condition(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 		});
@@ -231,7 +231,7 @@ describe('Voice Conditions', () => {
 			const oldState = createMockVoiceState();
 			const newState = createMockVoiceState('channel123');
 
-			const _result = await combined(oldState as any, newState as any);
+			const result = await combined(oldState as any, newState as any);
 
 			expect(result).toBe(true);
 			expect(condition1).toHaveBeenCalledWith(oldState, newState);
@@ -246,7 +246,7 @@ describe('Voice Conditions', () => {
 			const oldState = createMockVoiceState();
 			const newState = createMockVoiceState('channel123');
 
-			const _result = await combined(oldState as any, newState as any);
+			const result = await combined(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 			expect(condition1).toHaveBeenCalledWith(oldState, newState);
@@ -261,7 +261,7 @@ describe('Voice Conditions', () => {
 			const oldState = createMockVoiceState();
 			const newState = createMockVoiceState('channel123');
 
-			const _result = await combined(oldState as any, newState as any);
+			const result = await combined(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 			expect(condition1).toHaveBeenCalledWith(oldState, newState);
@@ -278,7 +278,7 @@ describe('Voice Conditions', () => {
 			const oldState = createMockVoiceState();
 			const newState = createMockVoiceState('channel123');
 
-			const _result = await combined(oldState as any, newState as any);
+			const result = await combined(oldState as any, newState as any);
 
 			expect(result).toBe(true);
 			expect(condition1).toHaveBeenCalledWith(oldState, newState);
@@ -293,7 +293,7 @@ describe('Voice Conditions', () => {
 			const oldState = createMockVoiceState();
 			const newState = createMockVoiceState('channel123');
 
-			const _result = await combined(oldState as any, newState as any);
+			const result = await combined(oldState as any, newState as any);
 
 			expect(result).toBe(false);
 			expect(condition1).toHaveBeenCalledWith(oldState, newState);
@@ -308,7 +308,7 @@ describe('Voice Conditions', () => {
 			const oldState = createMockVoiceState();
 			const newState = createMockVoiceState('channel123');
 
-			const _result = await combined(oldState as any, newState as any);
+			const result = await combined(oldState as any, newState as any);
 
 			expect(result).toBe(true);
 			expect(condition1).toHaveBeenCalledWith(oldState, newState);
@@ -357,7 +357,7 @@ describe('Voice Conditions', () => {
 			});
 
 			// Call the mocked function
-			const _result = findRandomVoiceChannel(state as any, /restricted/i);
+			const result = findRandomVoiceChannel(state as any, /restricted/i);
 
 			expect(result).not.toBeNull();
 			expect(result?.name).not.toMatch(/restricted/i);
@@ -367,7 +367,7 @@ describe('Voice Conditions', () => {
 			const state = createMockVoiceState('channel1', 'general-voice');
 			// Empty channel cache - already set up in createMockVoiceState
 
-			const _result = findRandomVoiceChannel(state as any, /restricted/i);
+			const result = findRandomVoiceChannel(state as any, /restricted/i);
 
 			expect(result).toBeNull();
 			expect(logger.warn).toHaveBeenCalledWith('No alternative voice channels found');
@@ -386,7 +386,7 @@ describe('Voice Conditions', () => {
 				state.guild.channels.cache.set(channel.id, channel);
 			});
 
-			const _result = findRandomVoiceChannel(state as any, /restricted/i);
+			const result = findRandomVoiceChannel(state as any, /restricted/i);
 
 			expect(result).toBeNull();
 			expect(logger.warn).toHaveBeenCalledWith('No alternative voice channels found');
@@ -405,7 +405,7 @@ describe('Voice Conditions', () => {
 				state.guild.channels.cache.set(channel.id, channel);
 			});
 
-			const _result = findRandomVoiceChannel(state as any, /text/i);
+			const result = findRandomVoiceChannel(state as any, /text/i);
 
 			expect(result).not.toBeNull();
 			expect(result?.name).toBe('general-voice');

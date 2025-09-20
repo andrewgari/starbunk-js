@@ -1251,6 +1251,12 @@ export class BotTriggerMetricsService implements IBotTriggerMetricsService {
 	 * Start periodic health checks and maintenance
 	 */
 	private startHealthChecks(): void {
+		// Avoid background intervals during tests to prevent open handle leaks
+		if (process.env.NODE_ENV === 'test') {
+			logger.debug('Skipping periodic health checks in test environment');
+			return;
+		}
+
 		// Health check every 30 seconds
 		setInterval(async () => {
 			try {
@@ -1365,6 +1371,11 @@ export async function initializeBotTriggerMetricsService(
 	await globalInstance.initialize();
 
 	logger.info('Global BotTriggerMetricsService instance initialized');
+	// eslint-disable-next-line no-console
+	console.log('[BotTriggerMetricsService] Global instance initialized with Redis', {
+		host: config.redis.host,
+		port: config.redis.port,
+	});
 	return globalInstance;
 }
 

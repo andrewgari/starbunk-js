@@ -50,7 +50,7 @@ describe('ConfigurationService', () => {
 			const _result = await configService.getUserConfig('85184539906809856');
 
 			// Assert
-			expect(result).toEqual({
+			expect(_result).toEqual({
 				userId: '85184539906809856',
 				username: 'Chad',
 				displayName: 'Chad',
@@ -69,7 +69,7 @@ describe('ConfigurationService', () => {
 			const _result = await configService.getUserConfig('nonexistent');
 
 			// Assert
-			expect(result).toBeNull();
+			expect(_result).toBeNull();
 		});
 
 		it('should handle database errors gracefully', async () => {
@@ -80,7 +80,7 @@ describe('ConfigurationService', () => {
 			const _result = await configService.getUserConfig('85184539906809856');
 
 			// Assert
-			expect(result).toBeNull();
+			expect(_result).toBeNull();
 		});
 	});
 
@@ -99,7 +99,7 @@ describe('ConfigurationService', () => {
 			const _result = await configService.getUserIdByUsername('Chad');
 
 			// Assert
-			expect(result).toBe('85184539906809856');
+			expect(_result).toBe('85184539906809856');
 			expect(mockPrisma.userConfiguration.findFirst).toHaveBeenCalledWith({
 				where: {
 					username: {
@@ -124,7 +124,7 @@ describe('ConfigurationService', () => {
 			const _result = await configService.getUserIdByUsername('chad');
 
 			// Assert
-			expect(result).toBe('85184539906809856');
+			expect(_result).toBe('85184539906809856');
 		});
 
 		it('should return null when username does not exist', async () => {
@@ -135,7 +135,7 @@ describe('ConfigurationService', () => {
 			const _result = await configService.getUserIdByUsername('NonExistent');
 
 			// Assert
-			expect(result).toBeNull();
+			expect(_result).toBeNull();
 		});
 	});
 
@@ -157,7 +157,7 @@ describe('ConfigurationService', () => {
 			const _result = await configService.getBotConfig('chad-bot');
 
 			// Assert
-			expect(result).toEqual({
+			expect(_result).toEqual({
 				botName: 'chad-bot',
 				displayName: 'Chad Bot',
 				description: 'Responds to chad topics',
@@ -176,7 +176,7 @@ describe('ConfigurationService', () => {
 			const _result = await configService.getBotConfig('nonexistent-bot');
 
 			// Assert
-			expect(result).toBeNull();
+			expect(_result).toBeNull();
 		});
 	});
 
@@ -250,8 +250,8 @@ describe('BotIdentityService', () => {
 
 			// Assert
 			expect(mockConfigService.getUserIdByUsername).toHaveBeenCalledWith('Chad');
-			expect(result).not.toBeNull();
-			expect(result!.botName).toBe('ChadBot');
+			expect(_result).not.toBeNull();
+			expect(_result!.botName).toBe('ChadBot');
 		});
 
 		it('should return null when user not found (no fallback)', async () => {
@@ -262,7 +262,7 @@ describe('BotIdentityService', () => {
 			const _result = await identityService.getBotIdentityByUsername('NonExistent', undefined, 'FallbackBot');
 
 			// Assert - Implementation returns null when user not found (bot remains silent)
-			expect(result).toBeNull();
+			expect(_result).toBeNull();
 		});
 	});
 

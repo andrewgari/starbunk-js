@@ -99,8 +99,8 @@ describe('BunkBot Container Startup Components', () => {
 	describe('Environment Validation', () => {
 		it('should validate required environment variables', () => {
 			const _result = validateEnvironment();
-			expect(result.isValid).toBe(true);
-			expect(result.errors).toHaveLength(0);
+			expect(_result.isValid).toBe(true);
+			expect(_result.errors).toHaveLength(0);
 		});
 
 		it('should detect missing STARBUNK_TOKEN', () => {
@@ -112,14 +112,14 @@ describe('BunkBot Container Startup Components', () => {
 
 			// The validation might still pass if other required vars are present
 			// This test mainly ensures the function doesn't crash
-			expect(result).toBeDefined();
-			expect(result.isValid).toBeDefined();
+			expect(_result).toBeDefined();
+			expect(_result.isValid).toBeDefined();
 		});
 
 		it('should handle debug mode configuration', () => {
 			process.env.DEBUG_MODE = 'true';
 			const _result = validateEnvironment();
-			expect(result.isValid).toBe(true);
+			expect(_result.isValid).toBe(true);
 		});
 	});
 

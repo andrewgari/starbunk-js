@@ -103,7 +103,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(mentionMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(mockLogger.debug).toHaveBeenCalledWith(
 				expect.stringContaining('Direct mention detected, will respond'),
 			);
@@ -119,7 +119,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(mentionMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(mentionMessage.mentions.has).toHaveBeenCalledWith(userId.Cova);
 		});
 	});
@@ -136,7 +136,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(botMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(mockLLMManager.createPromptCompletion).not.toHaveBeenCalled();
 		});
 
@@ -154,7 +154,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(botMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 	});
 
@@ -218,7 +218,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/probability.*→.*RESPOND/));
 
 			mockRandom.mockRestore();
@@ -236,7 +236,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/probability.*→.*DON'T RESPOND/));
 
 			mockRandom.mockRestore();
@@ -256,7 +256,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 
 			mockRandom.mockRestore();
 		});
@@ -273,7 +273,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 
 			mockRandom.mockRestore();
 		});
@@ -290,7 +290,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 
 			mockRandom.mockRestore();
 		});
@@ -309,7 +309,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/probability.*DON'T RESPOND/));
 
 			mockRandom.mockRestore();
@@ -329,7 +329,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Error in decision logic'));
 
 			mockRandom.mockRestore();
@@ -347,7 +347,7 @@ describe('LLM Decision Logic', () => {
 
 			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 
 			mockRandom.mockRestore();
 		});

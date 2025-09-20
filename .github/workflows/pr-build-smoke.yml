@@ -1,0 +1,136 @@
+name: PR Build and Smoke Test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changed containers
+    runs-on: ubuntu-latest
+    outputs:
+      bunkbot: ${{ steps.filter.outputs.bunkbot }}
+      djcova: ${{ steps.filter.outputs.djcova }}
+      covabot: ${{ steps.filter.outputs.covabot }}
+      starbunk_dnd: ${{ steps.filter.outputs.starbunk_dnd }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'packages/shared/**'
+            bunkbot:
+              - 'apps/bunkbot/**'
+              - 'packages/shared/**'
+              - 'package.json'
+            djcova:
+              - 'apps/djcova/**'
+              - 'packages/shared/**'
+              - 'package.json'
+            covabot:
+              - 'apps/covabot/**'
+              - 'packages/shared/**'
+              - 'package.json'
+            starbunk_dnd:
+              - 'apps/starbunk-dnd/**'
+              - 'packages/shared/**'
+              - 'package.json'
+
+  build_bunkbot:
+    name: Build + Smoke (bunkbot)
+    needs: changes
+    if: needs.changes.outputs.bunkbot == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: |
+          docker build -f apps/bunkbot/Dockerfile -t bunkbot:pr-${{ github.event.number }} .
+      - name: Smoke start container
+        run: |
+          docker run -d --name bunkbot-smoke \
+            -e CI_SMOKE_MODE=true -e HEALTH_PORT=3001 \
+            -p 127.0.0.1:3001:3001 \
+            bunkbot:pr-${{ github.event.number }}
+          echo "Waiting for health..."
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3001/health > /dev/null; then
+              echo "Health OK"; break; fi; sleep 1; done
+          docker logs bunkbot-smoke || true
+          docker rm -f bunkbot-smoke
+
+  build_djcova:
+    name: Build + Smoke (djcova)
+    needs: changes
+    if: needs.changes.outputs.djcova == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: |
+          docker build -f apps/djcova/Dockerfile -t djcova:pr-${{ github.event.number }} .
+      - name: Smoke start container
+        run: |
+          docker run -d --name djcova-smoke \
+            -e CI_SMOKE_MODE=true -e HEALTH_PORT=3004 \
+            -p 127.0.0.1:3004:3004 \
+            djcova:pr-${{ github.event.number }}
+          echo "Waiting for health..."
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3004/health > /dev/null; then
+              echo "Health OK"; break; fi; sleep 1; done
+          docker logs djcova-smoke || true
+          docker rm -f djcova-smoke
+
+  build_covabot:
+    name: Build + Smoke (covabot)
+    needs: changes
+    if: needs.changes.outputs.covabot == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: |
+          docker build -f apps/covabot/Dockerfile -t covabot:pr-${{ github.event.number }} .
+      - name: Smoke start container
+        run: |
+          docker run -d --name covabot-smoke \
+            -e CI_SMOKE_MODE=true -e HEALTH_PORT=3003 \
+            -p 127.0.0.1:3003:3003 \
+            covabot:pr-${{ github.event.number }}
+          echo "Waiting for health..."
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3003/health > /dev/null; then
+              echo "Health OK"; break; fi; sleep 1; done
+          docker logs covabot-smoke || true
+          docker rm -f covabot-smoke
+
+  build_starbunk_dnd:
+    name: Build + Smoke (starbunk-dnd)
+    needs: changes
+    if: needs.changes.outputs.starbunk_dnd == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: |
+          docker build -f apps/starbunk-dnd/Dockerfile -t starbunk-dnd:pr-${{ github.event.number }} .
+      - name: Smoke start container
+        run: |
+          docker run -d --name starbunk-dnd-smoke \
+            -e CI_SMOKE_MODE=true -e HEALTH_PORT=3005 \
+            -p 127.0.0.1:3005:3005 \
+            starbunk-dnd:pr-${{ github.event.number }}
+          echo "Waiting for health..."
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3005/health > /dev/null; then
+              echo "Health OK"; break; fi; sleep 1; done
+          docker logs starbunk-dnd-smoke || true
+          docker rm -f starbunk-dnd-smoke
+

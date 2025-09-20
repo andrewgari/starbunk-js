@@ -118,7 +118,7 @@ describe('Trigger Response', () => {
 				});
 
 				const message = mockMessage('Test message');
-				const _result = await trigger.matches(message);
+				const result = await trigger.matches(message);
 
 				expect(result).toBe(true);
 				expect(condition).toHaveBeenCalledWith(message);
@@ -134,7 +134,7 @@ describe('Trigger Response', () => {
 				});
 
 				const message = mockMessage('Test message');
-				const _result = await trigger.matches(message);
+				const result = await trigger.matches(message);
 
 				expect(result).toBe(false);
 				expect(condition).toHaveBeenCalledWith(message);
@@ -150,7 +150,7 @@ describe('Trigger Response', () => {
 				});
 
 				const message = mockMessage('Test message');
-				const _result = await trigger.matches(message);
+				const result = await trigger.matches(message);
 
 				expect(result).toBe(true);
 				expect(condition).toHaveBeenCalledWith(message);
@@ -168,7 +168,7 @@ describe('Trigger Response', () => {
 				});
 
 				const message = mockMessage('Test message');
-				const _result = await trigger.matches(message);
+				const result = await trigger.matches(message);
 
 				expect(result).toBe(false);
 				expect(condition).toHaveBeenCalledWith(message);
@@ -187,7 +187,7 @@ describe('Trigger Response', () => {
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
-				const _result = await trigger.getIdentity(message, defaultIdentity);
+				const result = await trigger.getIdentity(message, defaultIdentity);
 
 				expect(result).toBe(defaultIdentity);
 			});
@@ -204,7 +204,7 @@ describe('Trigger Response', () => {
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
-				const _result = await trigger.getIdentity(message, defaultIdentity);
+				const result = await trigger.getIdentity(message, defaultIdentity);
 
 				expect(result).toBe(customIdentity);
 			});
@@ -222,7 +222,7 @@ describe('Trigger Response', () => {
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
-				const _result = await trigger.getIdentity(message, defaultIdentity);
+				const result = await trigger.getIdentity(message, defaultIdentity);
 
 				expect(result).toBe(customIdentity);
 				expect(identityFn).toHaveBeenCalledWith(message);
@@ -241,7 +241,7 @@ describe('Trigger Response', () => {
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
-				const _result = await trigger.getIdentity(message, defaultIdentity);
+				const result = await trigger.getIdentity(message, defaultIdentity);
 
 				expect(result).toBe(customIdentity);
 				expect(identityFn).toHaveBeenCalledWith(message);
@@ -261,7 +261,7 @@ describe('Trigger Response', () => {
 
 				const message = mockMessage('Test message');
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
-				const _result = await trigger.getIdentity(message, defaultIdentity);
+				const result = await trigger.getIdentity(message, defaultIdentity);
 
 				expect(result).toBe(null); // Bot should remain silent when identity resolution fails
 				expect(identityFn).toHaveBeenCalledWith(message);
@@ -287,7 +287,7 @@ describe('Trigger Response', () => {
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const botName = 'TestBot';
 
-				const _result = await trigger.process(message, defaultIdentity, botName);
+				const result = await trigger.process(message, defaultIdentity, botName);
 
 				expect(result).toBe(true);
 				expect(condition).toHaveBeenCalledWith(message);
@@ -314,7 +314,7 @@ describe('Trigger Response', () => {
 				const defaultIdentity = { botName: 'DefaultBot', avatarUrl: 'default.jpg' };
 				const botName = 'TestBot';
 
-				const _result = await trigger.process(message, defaultIdentity, botName);
+				const result = await trigger.process(message, defaultIdentity, botName);
 
 				expect(result).toBe(false);
 				expect(condition).toHaveBeenCalledWith(message);

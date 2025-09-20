@@ -8,6 +8,7 @@ describe.skip('BunkBot Container Health Check - DISABLED: Flaky in CI (requires 
 	const CONTAINER_NAME = 'bunkbot-health-test';
 	const CONTAINER_IMAGE = 'bunkbot-health';
 	const TEST_TIMEOUT = 90000; // 1.5 minutes
+	let activeTimeouts: NodeJS.Timeout[] = [];
 
 	beforeAll(async () => {
 		console.log('🏗️  Building BunkBot container for health check...');
@@ -25,6 +26,10 @@ describe.skip('BunkBot Container Health Check - DISABLED: Flaky in CI (requires 
 	}, 150000);
 
 	afterAll(async () => {
+		// Clear any remaining timeouts
+		activeTimeouts.forEach((timeout) => clearTimeout(timeout));
+		activeTimeouts = [];
+
 		try {
 			await execAsync(`podman rm -f ${CONTAINER_NAME} 2>/dev/null || true`);
 			await execAsync(`podman rmi -f ${CONTAINER_IMAGE} 2>/dev/null || true`);
@@ -34,6 +39,10 @@ describe.skip('BunkBot Container Health Check - DISABLED: Flaky in CI (requires 
 	});
 
 	afterEach(async () => {
+		// Clear any remaining timeouts
+		activeTimeouts.forEach((timeout) => clearTimeout(timeout));
+		activeTimeouts = [];
+
 		try {
 			await execAsync(`podman rm -f ${CONTAINER_NAME} 2>/dev/null || true`);
 		} catch (error) {
@@ -60,7 +69,10 @@ describe.skip('BunkBot Container Health Check - DISABLED: Flaky in CI (requires 
 			console.log(`📦 Container started: ${containerId.trim().substring(0, 12)}...`);
 
 			// Wait for initialization
-			await new Promise((resolve) => setTimeout(resolve, 20000));
+			await new Promise((resolve) => {
+				const timeout = setTimeout(resolve, 20000);
+				activeTimeouts.push(timeout);
+			});
 
 			// Get container logs
 			const { stdout: logs } = await execAsync(`podman logs ${CONTAINER_NAME}`);
@@ -117,7 +129,10 @@ describe.skip('BunkBot Container Health Check - DISABLED: Flaky in CI (requires 
 			);
 
 			// Wait for bot loading
-			await new Promise((resolve) => setTimeout(resolve, 15000));
+			await new Promise((resolve) => {
+				const timeout = setTimeout(resolve, 15000);
+				activeTimeouts.push(timeout);
+			});
 
 			const { stdout: logs } = await execAsync(`podman logs ${CONTAINER_NAME}`);
 
@@ -157,7 +172,10 @@ describe.skip('BunkBot Container Health Check - DISABLED: Flaky in CI (requires 
 			);
 
 			// Wait for environment validation
-			await new Promise((resolve) => setTimeout(resolve, 10000));
+			await new Promise((resolve) => {
+				const timeout = setTimeout(resolve, 10000);
+				activeTimeouts.push(timeout);
+			});
 
 			const { stdout: logs } = await execAsync(`podman logs ${CONTAINER_NAME}`);
 
@@ -193,7 +211,10 @@ describe.skip('BunkBot Container Health Check - DISABLED: Flaky in CI (requires 
 			);
 
 			// Wait for Discord connection
-			await new Promise((resolve) => setTimeout(resolve, 25000));
+			await new Promise((resolve) => {
+				const timeout = setTimeout(resolve, 25000);
+				activeTimeouts.push(timeout);
+			});
 
 			const { stdout: logs } = await execAsync(`podman logs ${CONTAINER_NAME}`);
 
@@ -231,7 +252,10 @@ describe.skip('BunkBot Container Health Check - DISABLED: Flaky in CI (requires 
 			);
 
 			// Wait for full startup
-			await new Promise((resolve) => setTimeout(resolve, 30000));
+			await new Promise((resolve) => {
+				const timeout = setTimeout(resolve, 30000);
+				activeTimeouts.push(timeout);
+			});
 
 			// Check container is still running
 			const { stdout: status } = await execAsync(

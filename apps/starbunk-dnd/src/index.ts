@@ -1,5 +1,6 @@
 // Starbunk-DND - D&D features and Snowbunk bridge container
 import { Events } from 'discord.js';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 
 import {
 	logger,
@@ -253,6 +254,26 @@ class StarbunkDNDContainer {
 
 // Main execution
 async function main(): Promise<void> {
+	if (process.env.CI_SMOKE_MODE === 'true') {
+		logger.info('CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
+		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT) : 3005;
+		const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+			if (req.url === '/health') {
+				res.writeHead(200, { 'Content-Type': 'application/json' });
+				res.end(JSON.stringify({ status: 'healthy', mode: 'smoke', timestamp: new Date().toISOString() }));
+				return;
+			}
+			res.writeHead(404, { 'Content-Type': 'text/plain' });
+			res.end('Not Found');
+		});
+		server.listen(port, () => logger.info(`🏥 [SMOKE] Starbunk-DND health server running on port ${port}`));
+		const shutdown = (_signal: string) => {
+			server.close(() => process.exit(0));
+		};
+		process.on('SIGINT', () => shutdown('SIGINT'));
+		process.on('SIGTERM', () => shutdown('SIGTERM'));
+		return;
+	}
 	try {
 		const starbunkDND = new StarbunkDNDContainer();
 		await starbunkDND.initialize();

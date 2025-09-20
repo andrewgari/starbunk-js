@@ -53,9 +53,12 @@ interface BotTriggerIntegrationConfig {
  * Enhanced BunkBot metrics collector that integrates Redis-based detailed tracking
  * with the existing Prometheus metrics system
  */
-class Enhanced_BunkBotMetricsCollector extends _BunkBotMetricsCollector {
+export class Enhanced_BunkBotMetricsCollector {
+	private base: _BunkBotMetricsCollector;
+
 	private botTriggerService?: BotTriggerMetricsService;
 	private integrationConfig: BotTriggerIntegrationConfig;
+	private initializing?: Promise<void>;
 	private isEnhancedTrackingEnabled = false;
 
 	constructor(
@@ -63,7 +66,7 @@ class Enhanced_BunkBotMetricsCollector extends _BunkBotMetricsCollector {
 		config: import('./ContainerMetrics').ContainerMetricsConfig = {},
 		integrationConfig: BotTriggerIntegrationConfig = {},
 	) {
-		super(metrics, config);
+		this.base = new _BunkBotMetricsCollector(metrics, config);
 		this.integrationConfig = integrationConfig;
 	}
 
@@ -75,47 +78,62 @@ class Enhanced_BunkBotMetricsCollector extends _BunkBotMetricsCollector {
 			logger.warn('Enhanced tracking already initialized');
 			return;
 		}
-
-		try {
-			// Create Redis configuration
-			const redisConfig = createProductionConfig(
-				this.integrationConfig.redis?.host ?? process.env.REDIS_HOST ?? 'localhost',
-				this.integrationConfig.redis?.port ?? parseInt(process.env.REDIS_PORT ?? '6379', 10),
-			);
-
-			// Override with custom settings if provided
-			if (this.integrationConfig.redis?.password) {
-				redisConfig.redis.password = this.integrationConfig.redis.password;
-			}
-			if (this.integrationConfig.redis?.db !== undefined) {
-				redisConfig.redis.db = this.integrationConfig.redis.db;
-			}
-
-			// Configure batch operations
-			if (this.integrationConfig.enableBatchOperations !== undefined) {
-				redisConfig.enableBatchOperations = this.integrationConfig.enableBatchOperations;
-			}
-			if (this.integrationConfig.batchSize) {
-				redisConfig.batchSize = this.integrationConfig.batchSize;
-			}
-
-			// Initialize the bot trigger service
-			this.botTriggerService = await initializeBotTriggerMetricsService(redisConfig);
-
-			this.isEnhancedTrackingEnabled = true;
-			logger.info('Enhanced BunkBot metrics tracking initialized with Redis backend', {
-				redis: {
-					host: redisConfig.redis.host,
-					port: redisConfig.redis.port,
-					db: redisConfig.redis.db,
-				},
-				batchOperations: redisConfig.enableBatchOperations,
-			});
-		} catch (error) {
-			logger.error('Failed to initialize enhanced tracking:', ensureError(error));
-			// Continue without enhanced tracking - fall back to standard Prometheus metrics
-			this.isEnhancedTrackingEnabled = false;
+		if (this.initializing) {
+			logger.warn('Enhanced tracking initialization already in progress');
+			await this.initializing;
+			return;
 		}
+		this.initializing = (async () => {
+			try {
+				// Create Redis configuration
+				const redisConfig = createProductionConfig(
+					this.integrationConfig.redis?.host ?? process.env.REDIS_HOST ?? 'localhost',
+					this.integrationConfig.redis?.port ?? parseInt(process.env.REDIS_PORT ?? '6379', 10),
+				);
+				// Override with custom settings if provided or use environment fallbacks
+				if (this.integrationConfig.redis?.password) {
+					redisConfig.redis.password = this.integrationConfig.redis.password;
+				} else if (process.env.REDIS_PASSWORD) {
+					redisConfig.redis.password = process.env.REDIS_PASSWORD;
+				}
+				if (this.integrationConfig.redis?.db !== undefined) {
+					redisConfig.redis.db = this.integrationConfig.redis.db;
+				} else if (process.env.REDIS_DB !== undefined) {
+					redisConfig.redis.db = parseInt(process.env.REDIS_DB, 10);
+				}
+				// Configure batch operations
+				if (this.integrationConfig.enableBatchOperations !== undefined) {
+					redisConfig.enableBatchOperations = this.integrationConfig.enableBatchOperations;
+				}
+				if (this.integrationConfig.batchSize) {
+					redisConfig.batchSize = this.integrationConfig.batchSize;
+				}
+				// Initialize the bot trigger service
+				const service = await initializeBotTriggerMetricsService(redisConfig);
+				if (service && typeof service.initialize === 'function') {
+					await service.initialize();
+				}
+				this.botTriggerService = service;
+				this.isEnhancedTrackingEnabled = true;
+				logger.info('Enhanced BunkBot metrics tracking initialized with Redis backend', {
+					redis: {
+						host: redisConfig.redis.host,
+						port: redisConfig.redis.port,
+						db: redisConfig.redis.db,
+					},
+					batchOperations: redisConfig.enableBatchOperations,
+				});
+			} catch (error) {
+				const err = ensureError(error);
+				logger.error('Failed to initialize enhanced tracking:', err);
+				// Continue without enhanced tracking - fall back to standard Prometheus metrics
+				this.isEnhancedTrackingEnabled = false;
+				this.botTriggerService = undefined;
+			} finally {
+				this.initializing = undefined;
+			}
+		})();
+		await this.initializing;
 	}
 
 	/**
@@ -123,7 +141,7 @@ class Enhanced_BunkBotMetricsCollector extends _BunkBotMetricsCollector {
 	 */
 	trackBotTrigger(botName: string, conditionName: string, messageContext: MessageContext): void {
 		// Always call the base implementation for Prometheus metrics
-		super.trackBotTrigger(botName, conditionName, messageContext);
+		this.base.trackBotTrigger(botName, conditionName, messageContext);
 
 		// If enhanced tracking is enabled, also store detailed event data in Redis
 		if (this.isEnhancedTrackingEnabled && this.botTriggerService) {
@@ -143,12 +161,36 @@ class Enhanced_BunkBotMetricsCollector extends _BunkBotMetricsCollector {
 		responseType: 'message' | 'reaction' | 'webhook' | 'none' = 'message',
 	): void {
 		// Always call the base implementation for Prometheus metrics
-		super.trackBotResponse(botName, conditionName, responseTime, messageContext);
+		this.base.trackBotResponse(botName, conditionName, responseTime, messageContext, success, responseType);
 
 		// If enhanced tracking is enabled, update the detailed event in Redis
 		if (this.isEnhancedTrackingEnabled && this.botTriggerService) {
 			this.updateDetailedBotResponse(botName, conditionName, responseTime, messageContext, success, responseType);
 		}
+	}
+
+	/**
+	 * Track a bot skip event to maintain parity with base collector
+	 */
+	trackBotSkip(botName: string, skipReason: string, messageContext: MessageContext): void {
+		// Always forward to base Prometheus metrics
+		(this.base as any).trackBotSkip?.(botName, skipReason, messageContext);
+		// Enhanced Redis tracking is currently focused on triggers/responses only
+	}
+
+	/**
+	 * Track bot registry updates to maintain parity with base collector
+	 */
+	trackBotRegistryUpdate(added: number, removed: number, updated: number): void {
+		(this.base as any).trackBotRegistryUpdate?.(added, removed, updated);
+	}
+
+	/**
+	 * Proxy to base sanitizeLabel if available
+	 */
+	sanitizeLabel(label: string): string {
+		const anyBase = this.base as any;
+		return typeof anyBase.sanitizeLabel === 'function' ? anyBase.sanitizeLabel(label) : label;
 	}
 
 	/**
@@ -242,7 +284,8 @@ class Enhanced_BunkBotMetricsCollector extends _BunkBotMetricsCollector {
 	 * Get enhanced health status including Redis metrics service
 	 */
 	async getEnhancedHealthStatus(): Promise<Record<string, any>> {
-		const baseHealth = this.getHealthStatus();
+		const maybePromise = (this.base as any).getHealthStatus?.();
+		const baseHealth = await Promise.resolve(maybePromise ?? {});
 
 		if (this.isEnhancedTrackingEnabled && this.botTriggerService) {
 			try {
@@ -283,9 +326,12 @@ class Enhanced_BunkBotMetricsCollector extends _BunkBotMetricsCollector {
 	/**
 	 * Cleanup enhanced tracking resources
 	 */
+
 	async cleanup(): Promise<void> {
 		// Cleanup base resources
-		await super.cleanup();
+		if ((this.base as any).cleanup) {
+			await (this.base as any).cleanup();
+		}
 
 		// Cleanup Redis resources
 		if (this.botTriggerService) {
@@ -458,7 +504,7 @@ function createEnvironmentConfig(): BotTriggerIntegrationConfig {
 			password: process.env.REDIS_PASSWORD,
 			db: parseInt(process.env.REDIS_DB ?? '0', 10),
 		},
-		enableEnhancedTracking: process.env.ENABLE_ENHANCED_BOT_TRACKING !== 'false',
+		enableEnhancedTracking: process.env.ENABLE_ENHANCED_BOT_TRACKING === 'true',
 		enableBatchOperations: isProduction,
 		batchSize: isProduction ? 100 : 10,
 		environment: isProduction ? 'production' : 'development',
@@ -476,12 +522,30 @@ async function initializeBotMetricsSystem(
 	tracker: BotTriggerTracker;
 	config: BotTriggerIntegrationConfig;
 }> {
-	const config = { ...createEnvironmentConfig(), ...customConfig };
+	const base = createEnvironmentConfig();
+	const config: BotTriggerIntegrationConfig = {
+		...base,
+		...customConfig,
+		redis: { ...base.redis, ...(customConfig?.redis ?? {}) },
+	};
 
 	const metricsCollector = createEnhancedBunkBotMetrics(metricsService, {}, config);
 	const tracker = new BotTriggerTracker(config);
 
 	await tracker.initialize(metricsCollector);
+	// If enhanced tracking was requested but did not initialize, surface failure for system init
+	if (config.enableEnhancedTracking && !metricsCollector.getBotTriggerService()) {
+		logger.warn('Enhanced tracking requested but service unavailable', {
+			enableEnhancedTracking: config.enableEnhancedTracking,
+			redisHost: config.redis?.host,
+			redisPort: config.redis?.port,
+		});
+		if (process.env.SKIP_ENHANCED_TRACKING_INIT_FAIL === 'true') {
+			logger.warn('Proceeding without enhanced tracking (override via SKIP_ENHANCED_TRACKING_INIT_FAIL)');
+		} else {
+			throw new Error('System initialization failed');
+		}
+	}
 
 	logger.info('Complete bot metrics system initialized', {
 		enhancedTracking: config.enableEnhancedTracking,
@@ -502,4 +566,4 @@ async function initializeBotMetricsSystem(
 
 export type { BotTriggerIntegrationConfig };
 
-export { Enhanced_BunkBotMetricsCollector, BotTriggerTracker, createEnvironmentConfig, initializeBotMetricsSystem };
+export { BotTriggerTracker, createEnvironmentConfig, initializeBotMetricsSystem };

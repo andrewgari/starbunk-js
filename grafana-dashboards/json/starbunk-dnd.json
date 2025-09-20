@@ -1,0 +1,65 @@
+{
+  "title": "Starbunk - DND Campaigns & LLM",
+  "uid": "starbunk-dnd-deep",
+  "schemaVersion": 38,
+  "version": 1,
+  "editable": true,
+  "panels": [
+    {"type":"stat","title":"Active campaigns by status","gridPos":{"x":0,"y":0,"w":8,"h":4},
+      "targets":[{"expr":"sum(starbunk_dnd_active_campaigns) by (status)","legendFormat":"{{status}}","datasource":"Prometheus"}]
+    },
+    {"type":"timeseries","title":"Campaign op p90 (ms)","gridPos":{"x":8,"y":0,"w":8,"h":6},
+      "targets":[{"expr":"histogram_quantile(0.90, sum by (le, operation) (rate(starbunk_dnd_campaign_operation_duration_ms_bucket[5m])))","legendFormat":"{{operation}}","datasource":"Prometheus"}]
+    },
+    {"type":"stat","title":"Player actions rate (5m)","gridPos":{"x":16,"y":0,"w":8,"h":4},
+      "targets":[{"expr":"sum(rate(starbunk_dnd_player_actions_total[5m])) by (action_type)","legendFormat":"{{action_type}}","datasource":"Prometheus"}]
+    },
+    {"type":"timeseries","title":"LLM response p90 (ms)","gridPos":{"x":0,"y":4,"w":12,"h":6},
+      "targets":[{"expr":"histogram_quantile(0.90, sum by (le, provider, model) (rate(starbunk_dnd_llm_response_time_ms_bucket[5m])))","legendFormat":"{{provider}}/{{model}}","datasource":"Prometheus"}]
+    },
+    {"type":"stat","title":"LLM requests & errors (5m)","gridPos":{"x":12,"y":4,"w":12,"h":4},
+      "targets":[
+        {"expr":"sum(rate(starbunk_dnd_llm_requests_total[5m])) by (provider,model,request_type,success)","legendFormat":"req {{provider}}/{{model}}/{{request_type}}/{{success}}","datasource":{"type":"prometheus","uid":"Prometheus"}},
+        {"expr":"sum(rate(starbunk_dnd_llm_errors_total[5m])) by (provider,model,error_type)","legendFormat":"err {{provider}}/{{model}}/{{error_type}}","datasource":"Prometheus"}
+      ]
+    },
+    {"type":"stat","title":"LLM cost (USD)","gridPos":{"x":0,"y":10,"w":6,"h":4},
+      "targets":[{"expr":"sum(starbunk_dnd_llm_estimated_cost_usd)","legendFormat":"session est","datasource":"Prometheus"}]
+    },
+    {"type":"timeseries","title":"Vector embed p90 (ms)","gridPos":{"x":6,"y":10,"w":9,"h":6},
+      "targets":[{"expr":"histogram_quantile(0.90, sum by (le, document_count_category) (rate(starbunk_dnd_vector_embedding_duration_ms_bucket[5m])))","legendFormat":"{{document_count_category}}","datasource":"Prometheus"}]
+    },
+    {"type":"stat","title":"Vector ops (5m)","gridPos":{"x":15,"y":10,"w":9,"h":4},
+      "targets":[
+        {"expr":"sum(rate(starbunk_dnd_vector_embeddings_total[5m])) by (document_type,success)","legendFormat":"emb {{document_type}}/{{success}}","datasource":"Prometheus"},
+        {"expr":"sum(rate(starbunk_dnd_vector_similarity_searches_total[5m])) by (query_type,result_count_category)","legendFormat":"search {{query_type}}/{{result_count_category}}","datasource":"Prometheus"},
+        {"expr":"sum(rate(starbunk_dnd_vector_index_operations_total[5m])) by (operation)","legendFormat":"index {{operation}}","datasource":"Prometheus"}
+      ]
+    },
+    {"type":"stat","title":"Index document count","gridPos":{"x":0,"y":16,"w":6,"h":4},
+      "targets":[{"expr":"sum(starbunk_dnd_vector_index_document_count) by (index_type)","legendFormat":"{{index_type}}","datasource":"Prometheus"}]
+    },
+    {"type":"timeseries","title":"Bridge latency p90 (ms)","gridPos":{"x":6,"y":16,"w":9,"h":6},
+      "targets":[{"expr":"histogram_quantile(0.90, sum by (le, source_guild, target_guild) (rate(starbunk_dnd_bridge_latency_ms_bucket[5m])))","legendFormat":"{{source_guild}}→{{target_guild}}","datasource":"Prometheus"}]
+    },
+    {"type":"stat","title":"Bridge msgs & errors (5m)","gridPos":{"x":15,"y":16,"w":9,"h":4},
+      "targets":[
+        {"expr":"sum(rate(starbunk_dnd_bridge_messages_total[5m])) by (source_guild,target_guild,message_type,success)","legendFormat":"msg {{source_guild}}→{{target_guild}}/{{message_type}}/{{success}}","datasource":"Prometheus"},
+        {"expr":"sum(rate(starbunk_dnd_bridge_errors_total[5m])) by (source_guild,target_guild,error_type)","legendFormat":"err {{source_guild}}→{{target_guild}}/{{error_type}}","datasource":"Prometheus"}
+      ]
+    },
+    {"type":"timeseries","title":"File processing p90 (ms)","gridPos":{"x":0,"y":22,"w":12,"h":6},
+      "targets":[{"expr":"histogram_quantile(0.90, sum by (le, file_type, size_category) (rate(starbunk_dnd_file_processing_duration_ms_bucket[5m])))","legendFormat":"{{file_type}}/{{size_category}}","datasource":"Prometheus"}]
+    },
+    {"type":"stat","title":"File ops (5m)","gridPos":{"x":12,"y":22,"w":12,"h":6},
+      "targets":[
+        {"expr":"sum(rate(starbunk_dnd_file_processing_total[5m])) by (file_type,success,size_category)","legendFormat":"proc {{file_type}}/{{size_category}}/{{success}}","datasource":"Prometheus"},
+        {"expr":"sum(rate(starbunk_dnd_file_uploads_total[5m])) by (file_extension,size_category)","legendFormat":"upl {{file_extension}}/{{size_category}}","datasource":"Prometheus"}
+      ]
+    },
+    {"type":"logs","title":"Logs (starbunk-dnd)","gridPos":{"x":0,"y":28,"w":24,"h":8},"datasource":"Loki",
+      "targets":[{"expr":"{com_starbunk_service=\"starbunk-dnd\"}","refId":"A"}]
+    }
+  ]
+}
+

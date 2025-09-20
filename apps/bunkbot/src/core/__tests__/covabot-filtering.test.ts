@@ -53,7 +53,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const _result = isCovaBot(mockMessage as Message);
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 
 		it('should identify CovaBot by display name', () => {
@@ -65,7 +65,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const _result = isCovaBot(mockMessage as Message);
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 
 		it('should identify Cova by username', () => {
@@ -76,7 +76,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const _result = isCovaBot(mockMessage as Message);
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 
 		it('should NOT identify non-CovaBot bots', () => {
@@ -88,7 +88,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const _result = isCovaBot(mockMessage as Message);
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		it('should NOT identify non-bot users', () => {
@@ -100,7 +100,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const _result = isCovaBot(mockMessage as Message);
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		it('should handle webhook messages from CovaBot', () => {
@@ -112,7 +112,7 @@ describe('CovaBot Filtering Logic', () => {
 			mockMessage.webhookId = 'webhook123';
 
 			const _result = isCovaBot(mockMessage as Message);
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 	});
 
@@ -125,7 +125,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 
 		it('should exclude self messages', () => {
@@ -136,7 +136,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 
 		it('should exclude DJCova messages', () => {
@@ -147,13 +147,13 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 
 		it('should NOT exclude regular user messages', () => {
 			// mockMessage already has a regular user setup
 			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		it('should NOT exclude allowed bot messages', () => {
@@ -165,7 +165,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		it('should handle missing client user gracefully', () => {
@@ -180,7 +180,7 @@ describe('CovaBot Filtering Logic', () => {
 			} as User;
 
 			const _result = shouldExcludeFromReplyBots(mockMessage as Message);
-			expect(result).toBe(false); // Should not exclude if client user is missing
+			expect(_result).toBe(false); // Should not exclude if client user is missing
 		});
 	});
 
@@ -194,7 +194,7 @@ describe('CovaBot Filtering Logic', () => {
 
 			const condition = fromBotExcludingCovaBot();
 			const _result = condition(mockMessage as Message);
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 		});
 
 		it('should NOT match CovaBot messages', () => {
@@ -206,14 +206,14 @@ describe('CovaBot Filtering Logic', () => {
 
 			const condition = fromBotExcludingCovaBot();
 			const _result = condition(mockMessage as Message);
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		it('should NOT match regular user messages', () => {
 			// mockMessage already has a regular user setup
 			const condition = fromBotExcludingCovaBot();
 			const _result = condition(mockMessage as Message);
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		it('should NOT match self messages', () => {
@@ -225,7 +225,7 @@ describe('CovaBot Filtering Logic', () => {
 
 			const condition = fromBotExcludingCovaBot();
 			const _result = condition(mockMessage as Message);
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 	});
 });

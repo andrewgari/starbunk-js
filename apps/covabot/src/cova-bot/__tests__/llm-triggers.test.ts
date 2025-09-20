@@ -100,7 +100,7 @@ describe('LLM Triggers', () => {
 			const _result = await responseGenerator(mockMessage as Message);
 
 			expect(result).toBeDefined();
-			expect(result.length).toBeGreaterThan(0);
+			expect(_result.length).toBeGreaterThan(0);
 			expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('Received empty response from LLM'));
 		});
 
@@ -111,7 +111,7 @@ describe('LLM Triggers', () => {
 			const responseGenerator = createLLMEmulatorResponse();
 			const _result = await responseGenerator(mockMessage as Message);
 
-			expect(result.length).toBeLessThanOrEqual(1900 + '... (truncated)'.length);
+			expect(_result.length).toBeLessThanOrEqual(1900 + '... (truncated)'.length);
 			expect(result).toContain('... (truncated)');
 			expect(logger.warn).toHaveBeenCalledWith(
 				expect.stringContaining("Response exceeded Discord's character limit"),
@@ -124,8 +124,8 @@ describe('LLM Triggers', () => {
 			const responseGenerator = createLLMEmulatorResponse();
 			const _result = await responseGenerator(mockMessage as Message);
 
-			expect(result).toBeDefined();
-			expect(result.length).toBeGreaterThan(0);
+			expect(_result).toBeDefined();
+			expect(_result.length).toBeGreaterThan(0);
 			expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('LLM service error'));
 		});
 
@@ -156,7 +156,7 @@ describe('LLM Triggers', () => {
 			const decisionCondition = createLLMResponseDecisionCondition();
 			const _result = await decisionCondition(mockMessage as Message);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('Direct mention detected'));
 		});
 
@@ -166,7 +166,7 @@ describe('LLM Triggers', () => {
 			const decisionCondition = createLLMResponseDecisionCondition();
 			const _result = await decisionCondition(mockMessage as Message);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		it.skip('should use LLM to make response decisions (disabled: flaky due to non-deterministic LLM responses)', async () => {
@@ -196,7 +196,7 @@ describe('LLM Triggers', () => {
 				const decisionCondition = createLLMResponseDecisionCondition();
 				const _result = await decisionCondition(mockMessage as Message);
 
-				expect(typeof result).toBe('boolean');
+				expect(typeof _result).toBe('boolean');
 			}
 		});
 
