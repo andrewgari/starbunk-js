@@ -169,7 +169,7 @@ export class PersonalityNotesService {
 	async createNote(request: CreateNoteRequest): Promise<PersonalityNote> {
 		await this.ensureLoaded();
 
-		const now = new Date();
+		const _now = new Date();
 		const note: PersonalityNote = {
 			id: uuidv4(),
 			content: request.content.trim(),
@@ -177,8 +177,8 @@ export class PersonalityNotesService {
 			priority: request.priority || 'medium',
 			isActive: true,
 			tokens: this.tokenizeContent(request.content),
-			createdAt: now,
-			updatedAt: now,
+			createdAt: _now,
+			updatedAt: _now,
 		};
 
 		this.notes.push(note);
@@ -200,7 +200,7 @@ export class PersonalityNotesService {
 		}
 
 		const note = this.notes[noteIndex];
-		const now = new Date();
+		const _now = new Date();
 
 		// Update fields
 		if (request.content !== undefined) {
@@ -217,7 +217,7 @@ export class PersonalityNotesService {
 			note.isActive = request.isActive;
 		}
 
-		note.updatedAt = now;
+		note.updatedAt = _now;
 
 		await this.saveNotes();
 

@@ -77,7 +77,7 @@ describe('LLM Triggers', () => {
 			mockLLMManager.createPromptCompletion.mockResolvedValue(mockResponse);
 
 			const responseGenerator = createLLMEmulatorResponse();
-			const result = await responseGenerator(mockMessage as Message);
+			const _result = await responseGenerator(mockMessage as Message);
 
 			expect(result).toBe(mockResponse);
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalledWith(
@@ -97,10 +97,10 @@ describe('LLM Triggers', () => {
 			mockLLMManager.createPromptCompletion.mockResolvedValue('');
 
 			const responseGenerator = createLLMEmulatorResponse();
-			const result = await responseGenerator(mockMessage as Message);
+			const _result = await responseGenerator(mockMessage as Message);
 
 			expect(result).toBeDefined();
-			expect(result.length).toBeGreaterThan(0);
+			expect(_result.length).toBeGreaterThan(0);
 			expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('Received empty response from LLM'));
 		});
 
@@ -109,9 +109,9 @@ describe('LLM Triggers', () => {
 			mockLLMManager.createPromptCompletion.mockResolvedValue(longResponse);
 
 			const responseGenerator = createLLMEmulatorResponse();
-			const result = await responseGenerator(mockMessage as Message);
+			const _result = await responseGenerator(mockMessage as Message);
 
-			expect(result.length).toBeLessThanOrEqual(1900 + '... (truncated)'.length);
+			expect(_result.length).toBeLessThanOrEqual(1900 + '... (truncated)'.length);
 			expect(result).toContain('... (truncated)');
 			expect(logger.warn).toHaveBeenCalledWith(
 				expect.stringContaining("Response exceeded Discord's character limit"),
@@ -122,10 +122,10 @@ describe('LLM Triggers', () => {
 			mockLLMManager.createPromptCompletion.mockRejectedValue(new Error('LLM service unavailable'));
 
 			const responseGenerator = createLLMEmulatorResponse();
-			const result = await responseGenerator(mockMessage as Message);
+			const _result = await responseGenerator(mockMessage as Message);
 
-			expect(result).toBeDefined();
-			expect(result.length).toBeGreaterThan(0);
+			expect(_result).toBeDefined();
+			expect(_result.length).toBeGreaterThan(0);
 			expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('LLM service error'));
 		});
 
@@ -134,7 +134,7 @@ describe('LLM Triggers', () => {
 			mockLLMManager.createPromptCompletion.mockResolvedValue('Test response');
 
 			const responseGenerator = createLLMEmulatorResponse();
-			const result = await responseGenerator(mockMessage as Message);
+			const _result = await responseGenerator(mockMessage as Message);
 
 			expect(result).toBe('Test response');
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalledWith(
@@ -154,9 +154,9 @@ describe('LLM Triggers', () => {
 			(mockMessage.mentions!.has as jest.Mock).mockReturnValue(true);
 
 			const decisionCondition = createLLMResponseDecisionCondition();
-			const result = await decisionCondition(mockMessage as Message);
+			const _result = await decisionCondition(mockMessage as Message);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('Direct mention detected'));
 		});
 
@@ -164,16 +164,16 @@ describe('LLM Triggers', () => {
 			mockMessage.author!.bot = true;
 
 			const decisionCondition = createLLMResponseDecisionCondition();
-			const result = await decisionCondition(mockMessage as Message);
+			const _result = await decisionCondition(mockMessage as Message);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 
 		it.skip('should use LLM to make response decisions (disabled: flaky due to non-deterministic LLM responses)', async () => {
 			mockLLMManager.createPromptCompletion.mockResolvedValue('YES');
 
 			const decisionCondition = createLLMResponseDecisionCondition();
-			const result = await decisionCondition(mockMessage as Message);
+			const _result = await decisionCondition(mockMessage as Message);
 
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalledWith(
 				'COVA_DECISION',
@@ -194,9 +194,9 @@ describe('LLM Triggers', () => {
 				mockLLMManager.createPromptCompletion.mockResolvedValue(response);
 
 				const decisionCondition = createLLMResponseDecisionCondition();
-				const result = await decisionCondition(mockMessage as Message);
+				const _result = await decisionCondition(mockMessage as Message);
 
-				expect(typeof result).toBe('boolean');
+				expect(typeof _result).toBe('boolean');
 			}
 		});
 
@@ -204,7 +204,7 @@ describe('LLM Triggers', () => {
 			mockLLMManager.createPromptCompletion.mockRejectedValue(new Error('LLM error'));
 
 			const decisionCondition = createLLMResponseDecisionCondition();
-			const result = await decisionCondition(mockMessage as Message);
+			const _result = await decisionCondition(mockMessage as Message);
 
 			expect(typeof result).toBe('boolean');
 			expect(logger.error).toHaveBeenCalledWith(
@@ -219,7 +219,7 @@ describe('LLM Triggers', () => {
 			mockLLMManager.createPromptCompletion.mockResolvedValue('YES');
 
 			const decisionCondition = createLLMResponseDecisionCondition();
-			const result = await decisionCondition(mockMessage as Message);
+			const _result = await decisionCondition(mockMessage as Message);
 
 			expect(typeof result).toBe('boolean');
 			expect(mockLLMManager.createPromptCompletion).toHaveBeenCalledWith(

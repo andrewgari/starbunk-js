@@ -30,9 +30,9 @@ class CircuitBreaker {
 		}
 
 		try {
-			const result = await operation();
+			const _result = await operation();
 			this.onSuccess();
-			return result;
+			return _result;
 		} catch (error) {
 			this.onFailure();
 			throw error;

@@ -295,7 +295,7 @@ export class HttpEndpointsService {
 				healthResult.checks.every((check) => check.status !== 'fail');
 
 			const statusCode = isReady ? 200 : 503;
-			const result = {
+			const _result = {
 				status: isReady ? 'ready' : 'not_ready', // eslint-disable-line @typescript-eslint/no-unused-vars
 				timestamp: new Date().toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
 				service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -307,7 +307,7 @@ export class HttpEndpointsService {
 				'Content-Type': 'application/json',
 				'Cache-Control': 'no-cache, no-store, must-revalidate',
 			});
-			res.end(JSON.stringify(result, null, 2));
+			res.end(JSON.stringify(_result, null, 2));
 		} catch (error) {
 			logger.error('Error checking readiness:', ensureError(error)); // eslint-disable-line @typescript-eslint/no-unused-vars
 			this.sendErrorResponse(res, 500, 'Readiness check failed');
@@ -317,7 +317,7 @@ export class HttpEndpointsService {
 	private async handleLiveness(res: ServerResponse): Promise<void> {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
 		// Liveness is simpler - just check if the process is responsive
-		const result = {
+		const _result = {
 			status: this.isShuttingDown ? 'shutting_down' : 'alive', // eslint-disable-line @typescript-eslint/no-unused-vars
 			timestamp: new Date().toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
 			service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -331,7 +331,7 @@ export class HttpEndpointsService {
 			'Content-Type': 'application/json',
 			'Cache-Control': 'no-cache, no-store, must-revalidate',
 		});
-		res.end(JSON.stringify(result, null, 2));
+		res.end(JSON.stringify(_result, null, 2));
 	}
 
 	private async handleMetricsSummary(res: ServerResponse): Promise<void> {
@@ -412,15 +412,15 @@ export class HttpEndpointsService {
 		const checkPromises = Array.from(this.healthChecks.entries()).map(async ([name, checkFunction]) => {
 			const checkStart = performance.now();
 			try {
-				const result = (await Promise.race([
+				const _result = (await Promise.race([
 					checkFunction(),
 					new Promise((_, reject) => setTimeout(() => reject(new Error('Health check timeout')), 5000)),
 				])) as any;
 
 				return {
 					name,
-					status: result.status, // eslint-disable-line @typescript-eslint/no-unused-vars
-					output: result.output, // eslint-disable-line @typescript-eslint/no-unused-vars
+					status: _result.status, // eslint-disable-line @typescript-eslint/no-unused-vars
+					output: _result.output, // eslint-disable-line @typescript-eslint/no-unused-vars
 					time: new Date().toISOString(), // eslint-disable-line @typescript-eslint/no-unused-vars
 					duration_ms: Math.round(performance.now() - checkStart), // eslint-disable-line @typescript-eslint/no-unused-vars
 				};

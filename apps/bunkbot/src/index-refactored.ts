@@ -53,9 +53,9 @@ class BunkBotContainer {
 
 		try {
 			const discovery = new BotDiscovery();
-			const result = await discovery.discoverBots();
+			const _result = await discovery.discoverBots();
 
-			this.replyBots = result.bots;
+			this.replyBots = _result.bots;
 
 			if (this.replyBots.length > 0) {
 				logger.info(`✅ Loaded ${this.replyBots.length} reply bots`);

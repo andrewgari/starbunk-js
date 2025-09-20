@@ -7,8 +7,17 @@ import { logger } from '../logger';
 import { ensureError } from '../../utils/errorUtils';
 import { BunkBotMetrics, ContainerMetricsBase, MessageContext, ContainerMetricsConfig } from './ContainerMetrics';
 import { ProductionMetricsService } from './ProductionMetricsService';
+import {
+	RedisBotMetricsExporter,
+	type RedisMetricsExporterConfig,
+	createRedisBotMetricsExporter,
+} from './RedisBotMetricsExporter';
+import type { BotTriggerMetricsService } from './BotTriggerMetricsService';
+import type Redis from 'ioredis';
 
-export class BunkBotMetricsCollector extends ContainerMetricsBase implements BunkBotMetrics {
+type BotResponseType = 'message' | 'reaction' | 'webhook' | 'none';
+
+export class _BunkBotMetricsCollector extends ContainerMetricsBase implements BunkBotMetrics {
 	// Reply Bot Metrics
 	private botTriggerCounter!: promClient.Counter<string>;
 	private botResponseCounter!: promClient.Counter<string>;
@@ -41,6 +50,12 @@ export class BunkBotMetricsCollector extends ContainerMetricsBase implements Bun
 		lastLoadTime: 0, // eslint-disable-line @typescript-eslint/no-unused-vars
 		loadFailures: 0, // eslint-disable-line @typescript-eslint/no-unused-vars
 	};
+
+	// Redis metrics export
+	private redisExporter?: RedisBotMetricsExporter;
+	private redisExportInterval?: NodeJS.Timeout;
+	private redisConnection?: Redis;
+	private triggerMetricsService?: BotTriggerMetricsService;
 
 	constructor(metrics: ProductionMetricsService, config: ContainerMetricsConfig = {}) {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
@@ -196,6 +211,8 @@ export class BunkBotMetricsCollector extends ContainerMetricsBase implements Bun
 		conditionName: string, // eslint-disable-line @typescript-eslint/no-unused-vars
 		responseTime: number, // eslint-disable-line @typescript-eslint/no-unused-vars
 		messageContext: MessageContext, // eslint-disable-line @typescript-eslint/no-unused-vars
+		success?: boolean, // eslint-disable-line @typescript-eslint/no-unused-vars
+		responseType?: BotResponseType, // eslint-disable-line @typescript-eslint/no-unused-vars
 	): void {
 		try {
 			const labels = {
@@ -204,7 +221,7 @@ export class BunkBotMetricsCollector extends ContainerMetricsBase implements Bun
 				user_id: messageContext.userId, // eslint-disable-line @typescript-eslint/no-unused-vars
 				channel_id: messageContext.channelId, // eslint-disable-line @typescript-eslint/no-unused-vars
 				guild_id: messageContext.guildId, // eslint-disable-line @typescript-eslint/no-unused-vars
-				response_type: responseTime < 100 ? 'fast' : responseTime < 1000 ? 'normal' : 'slow', // eslint-disable-line @typescript-eslint/no-unused-vars
+				response_type: responseType ?? (responseTime < 100 ? 'fast' : responseTime < 1000 ? 'normal' : 'slow'), // eslint-disable-line @typescript-eslint/no-unused-vars
 			};
 
 			this.botResponseCounter.inc(labels);
@@ -354,10 +371,10 @@ export class BunkBotMetricsCollector extends ContainerMetricsBase implements Bun
 			this.concurrentMessageGauge.set(this.activeMessageProcessing.size);
 
 			const channelType = messageId.includes('dm') ? 'dm' : 'guild';
-			const result = triggeredBots > 0 ? 'triggered' : 'no_triggers';
+			const _result = triggeredBots > 0 ? 'triggered' : 'no_triggers';
 
 			this.messageProcessingCounter.inc({
-				processing_result: result, // eslint-disable-line @typescript-eslint/no-unused-vars
+				processing_result: _result, // eslint-disable-line @typescript-eslint/no-unused-vars
 				bot_count: String(this.botRegistryStats.totalBots), // eslint-disable-line @typescript-eslint/no-unused-vars
 				channel_type: channelType, // eslint-disable-line @typescript-eslint/no-unused-vars
 			});
@@ -487,8 +504,124 @@ export class BunkBotMetricsCollector extends ContainerMetricsBase implements Bun
 		};
 	}
 
+	// ============================================================================
+	// Redis Metrics Export Methods
+	// ============================================================================
+
+	/**
+	 * Initialize Redis metrics export
+	 */
+	async initializeRedisExport(
+		redis: Redis,
+		triggerMetricsService?: BotTriggerMetricsService,
+		exportConfig?: RedisMetricsExporterConfig,
+	): Promise<void> {
+		try {
+			logger.info('Initializing Redis metrics export for BunkBot');
+
+			this.redisConnection = redis;
+			this.triggerMetricsService = triggerMetricsService;
+
+			// Create Redis exporter with the same registry
+			this.redisExporter = createRedisBotMetricsExporter(this.registry, {
+				cacheTTL: 15000, // 15 seconds cache for Prometheus scraping
+				enableCircuitBreaker: true,
+				circuitBreakerThreshold: 3,
+				circuitBreakerResetTimeout: 30000,
+				maxConcurrentOperations: 10,
+				enablePerformanceTracking: true,
+				exportTimeout: 5000,
+				enableDetailedLabels: false,
+				batchSize: 100,
+				scanCount: 1000,
+				...exportConfig,
+			});
+
+			// Initialize the exporter
+			await this.redisExporter.initialize(redis, triggerMetricsService);
+
+			// Start periodic export (every 15 seconds for Prometheus scraping)
+			this.startRedisExportInterval(15000);
+
+			logger.info('Redis metrics export initialized successfully');
+		} catch (error) {
+			logger.error('Failed to initialize Redis metrics export:', ensureError(error));
+			// Don't throw - allow BunkBot to continue without Redis export
+		}
+	}
+
+	/**
+	 * Start periodic Redis metrics export
+	 */
+	private startRedisExportInterval(interval: number = 15000): void {
+		if (this.redisExportInterval) {
+			clearInterval(this.redisExportInterval);
+		}
+
+		// Initial export
+		this.exportRedisMetrics().catch((error) => {
+			logger.error('Initial Redis metrics export failed:', ensureError(error));
+		});
+
+		// Periodic export
+		this.redisExportInterval = setInterval(async () => {
+			await this.exportRedisMetrics();
+		}, interval);
+
+		logger.info(`Started Redis metrics export interval (${interval}ms)`);
+	}
+
+	/**
+	 * Export Redis metrics to Prometheus
+	 */
+	async exportRedisMetrics(): Promise<void> {
+		if (!this.redisExporter) {
+			logger.debug('Redis exporter not initialized, skipping export');
+			return;
+		}
+
+		try {
+			await this.redisExporter.exportMetrics();
+			logger.debug('Redis metrics exported to Prometheus');
+		} catch (error) {
+			logger.error('Failed to export Redis metrics:', ensureError(error));
+			// Don't throw - graceful degradation
+		}
+	}
+
+	/**
+	 * Get Redis exporter statistics
+	 */
+	getRedisExporterStats(): Record<string, any> | null {
+		if (!this.redisExporter) {
+			return null;
+		}
+
+		return this.redisExporter.getStats();
+	}
+
+	/**
+	 * Stop Redis metrics export
+	 */
+	async stopRedisExport(): Promise<void> {
+		if (this.redisExportInterval) {
+			clearInterval(this.redisExportInterval);
+			this.redisExportInterval = undefined;
+		}
+
+		if (this.redisExporter) {
+			await this.redisExporter.shutdown();
+			this.redisExporter = undefined;
+		}
+
+		logger.info('Redis metrics export stopped');
+	}
+
 	async cleanup(): Promise<void> {
 		try {
+			// Stop Redis export
+			await this.stopRedisExport();
+
 			// Clear internal state
 			this.activeMessageProcessing.clear();
 			this.concurrentMessageGauge.set(0);
@@ -512,6 +645,6 @@ export class BunkBotMetricsCollector extends ContainerMetricsBase implements Bun
 export function createBunkBotMetrics(
 	metrics: ProductionMetricsService, // eslint-disable-line @typescript-eslint/no-unused-vars
 	config: ContainerMetricsConfig = {}, // eslint-disable-line @typescript-eslint/no-unused-vars
-): BunkBotMetricsCollector {
-	return new BunkBotMetricsCollector(metrics, config);
+): _BunkBotMetricsCollector {
+	return new _BunkBotMetricsCollector(metrics, config);
 }

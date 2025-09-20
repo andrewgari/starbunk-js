@@ -154,32 +154,32 @@ export class StartupDiagnostics {
 		});
 	}
 
-	private addResult(result: DiagnosticResult): void {
-		this.results.push(result);
+	private addResult(_result: DiagnosticResult): void {
+		this.results.push(_result);
 	}
 
 	private logResults(): void {
 		logger.info('📊 Diagnostic Results:');
 
-		for (const result of this.results) {
-			const icon = result.status === 'pass' ? '✅' : result.status === 'warn' ? '⚠️' : '❌';
-			const message = `${icon} ${result.check}: ${result.message}`;
+		for (const _result of this.results) {
+			const icon = _result.status === 'pass' ? '✅' : _result.status === 'warn' ? '⚠️' : '❌';
+			const message = `${icon} ${_result.check}: ${_result.message}`;
 
-			if (result.status === 'fail') {
-				if (result.details) {
-					logger.error(`${message} - Details: ${JSON.stringify(result.details)}`);
+			if (_result.status === 'fail') {
+				if (_result.details) {
+					logger.error(`${message} - Details: ${JSON.stringify(_result.details)}`);
 				} else {
 					logger.error(message);
 				}
-			} else if (result.status === 'warn') {
-				if (result.details) {
-					logger.warn(`${message} - Details: ${JSON.stringify(result.details)}`);
+			} else if (_result.status === 'warn') {
+				if (_result.details) {
+					logger.warn(`${message} - Details: ${JSON.stringify(_result.details)}`);
 				} else {
 					logger.warn(message);
 				}
 			} else {
-				if (result.details) {
-					logger.info(`${message} - Details: ${JSON.stringify(result.details)}`);
+				if (_result.details) {
+					logger.info(`${message} - Details: ${JSON.stringify(_result.details)}`);
 				} else {
 					logger.info(message);
 				}

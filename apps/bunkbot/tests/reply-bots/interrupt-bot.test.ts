@@ -162,10 +162,10 @@ describe('Interrupt Bot', () => {
 				const content = '';
 
 				// Act: Create interrupted message
-				const result = createInterruptedMessage(content);
+				const _result = createInterruptedMessage(content);
 
 				// Assert: Should return default response
-				expect(result).toBe(INTERRUPT_BOT_RESPONSES.Default);
+				expect(_result).toBe(INTERRUPT_BOT_RESPONSES.Default);
 			});
 
 			it('should handle special test cases', () => {
@@ -184,11 +184,11 @@ describe('Interrupt Bot', () => {
 				const content = 'Hello';
 
 				// Act: Create interrupted message
-				const result = createInterruptedMessage(content);
+				const _result = createInterruptedMessage(content);
 
 				// Assert: Should contain partial word and apology
-				expect(result).toMatch(/^.+--- Oh, sorry\.\.\. go ahead$/);
-				expect(result.length).toBeGreaterThan('--- Oh, sorry... go ahead'.length);
+				expect(_result).toMatch(/^.+--- Oh, sorry\.\.\. go ahead$/);
+				expect(_result.length).toBeGreaterThan('--- Oh, sorry... go ahead'.length);
 			});
 
 			it('should interrupt multi-word messages', () => {
@@ -196,11 +196,11 @@ describe('Interrupt Bot', () => {
 				const content = 'Hello world everyone';
 
 				// Act: Create interrupted message
-				const result = createInterruptedMessage(content);
+				const _result = createInterruptedMessage(content);
 
 				// Assert: Should contain interrupted words and apology
-				expect(result).toMatch(/^.+--- Oh, sorry\.\.\. go ahead$/);
-				expect(result.length).toBeGreaterThan('--- Oh, sorry... go ahead'.length);
+				expect(_result).toMatch(/^.+--- Oh, sorry\.\.\. go ahead$/);
+				expect(_result.length).toBeGreaterThan('--- Oh, sorry... go ahead'.length);
 			});
 
 			it('should handle messages with only spaces', () => {
@@ -208,10 +208,10 @@ describe('Interrupt Bot', () => {
 				const content = 'word1 word2 word3';
 
 				// Act: Create interrupted message
-				const result = createInterruptedMessage(content);
+				const _result = createInterruptedMessage(content);
 
 				// Assert: Should interrupt properly
-				expect(result).toMatch(/^.+--- Oh, sorry\.\.\. go ahead$/);
+				expect(_result).toMatch(/^.+--- Oh, sorry\.\.\. go ahead$/);
 			});
 		});
 

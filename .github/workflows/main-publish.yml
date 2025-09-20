@@ -1,0 +1,157 @@
+name: Publish Containers (main)
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: andrewgari
+
+jobs:
+  changes:
+    name: Detect changed containers
+    runs-on: ubuntu-latest
+    outputs:
+      bunkbot: ${{ steps.filter.outputs.bunkbot }}
+      djcova: ${{ steps.filter.outputs.djcova }}
+      covabot: ${{ steps.filter.outputs.covabot }}
+      starbunk_dnd: ${{ steps.filter.outputs.starbunk_dnd }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'packages/shared/**'
+            bunkbot:
+              - 'apps/bunkbot/**'
+              - 'packages/shared/**'
+              - 'package.json'
+            djcova:
+              - 'apps/djcova/**'
+              - 'packages/shared/**'
+              - 'package.json'
+            covabot:
+              - 'apps/covabot/**'
+              - 'packages/shared/**'
+              - 'package.json'
+            starbunk_dnd:
+              - 'apps/starbunk-dnd/**'
+              - 'packages/shared/**'
+              - 'package.json'
+
+  publish_bunkbot:
+    name: Build + Push (bunkbot)
+    needs: changes
+    if: needs.changes.outputs.bunkbot == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set image tags
+        id: tags
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.OWNER }}/bunkbot"
+          echo "image=${IMAGE}" >> $GITHUB_OUTPUT
+          echo "tags=${IMAGE}:latest,${IMAGE}:sha-${GITHUB_SHA}" >> $GITHUB_OUTPUT
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/bunkbot/Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+
+  publish_djcova:
+    name: Build + Push (djcova)
+    needs: changes
+    if: needs.changes.outputs.djcova == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set image tags
+        id: tags
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.OWNER }}/djcova"
+          echo "image=${IMAGE}" >> $GITHUB_OUTPUT
+          echo "tags=${IMAGE}:latest,${IMAGE}:sha-${GITHUB_SHA}" >> $GITHUB_OUTPUT
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/djcova/Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+
+  publish_covabot:
+    name: Build + Push (covabot)
+    needs: changes
+    if: needs.changes.outputs.covabot == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set image tags
+        id: tags
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.OWNER }}/covabot"
+          echo "image=${IMAGE}" >> $GITHUB_OUTPUT
+          echo "tags=${IMAGE}:latest,${IMAGE}:sha-${GITHUB_SHA}" >> $GITHUB_OUTPUT
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/covabot/Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+
+  publish_starbunk_dnd:
+    name: Build + Push (starbunk-dnd)
+    needs: changes
+    if: needs.changes.outputs.starbunk_dnd == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set image tags
+        id: tags
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.OWNER }}/starbunk-dnd"
+          echo "image=${IMAGE}" >> $GITHUB_OUTPUT
+          echo "tags=${IMAGE}:latest,${IMAGE}:sha-${GITHUB_SHA}" >> $GITHUB_OUTPUT
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/starbunk-dnd/Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+

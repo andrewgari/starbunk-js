@@ -1,9 +1,7 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
 
 # Run comprehensive structure validation first
 echo "🔍 Running comprehensive repository structure validation..."
-tools/scripts/validation/run-all-validations.sh
+bash tools/scripts/validation/run-all-validations.sh
 
 # Run comprehensive pre-push gate (fast checks + targeted container builds)
 echo "🚀 Running pre-push validation..."

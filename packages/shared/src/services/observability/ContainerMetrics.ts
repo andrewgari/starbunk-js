@@ -183,7 +183,9 @@ export abstract class ContainerMetricsBase {
 	constructor(metrics: ProductionMetricsService, containerName: string) {
 		// eslint-disable-line @typescript-eslint/no-unused-vars
 		this.metrics = metrics;
-		this.registry = (metrics as any).registry; // Access protected registry
+		// Be resilient if a mock ProductionMetricsService is provided without a registry
+		const maybeRegistry = (metrics as any).registry as promClient.Registry | undefined;
+		this.registry = maybeRegistry ?? new promClient.Registry();
 		this.containerName = containerName;
 	}
 

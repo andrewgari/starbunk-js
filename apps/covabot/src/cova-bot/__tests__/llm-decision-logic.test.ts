@@ -101,9 +101,9 @@ describe('LLM Decision Logic', () => {
 				},
 			});
 
-			const result = await decisionCondition(mentionMessage);
+			const _result = await decisionCondition(mentionMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(mockLogger.debug).toHaveBeenCalledWith(
 				expect.stringContaining('Direct mention detected, will respond'),
 			);
@@ -117,9 +117,9 @@ describe('LLM Decision Logic', () => {
 				},
 			});
 
-			const result = await decisionCondition(mentionMessage);
+			const _result = await decisionCondition(mentionMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(mentionMessage.mentions.has).toHaveBeenCalledWith(userId.Cova);
 		});
 	});
@@ -134,9 +134,9 @@ describe('LLM Decision Logic', () => {
 				},
 			});
 
-			const result = await decisionCondition(botMessage);
+			const _result = await decisionCondition(botMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(mockLLMManager.createPromptCompletion).not.toHaveBeenCalled();
 		});
 
@@ -152,9 +152,9 @@ describe('LLM Decision Logic', () => {
 				},
 			});
 
-			const result = await decisionCondition(botMessage);
+			const _result = await decisionCondition(botMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 		});
 	});
 
@@ -216,9 +216,9 @@ describe('LLM Decision Logic', () => {
 			const mockRandom = jest.spyOn(Math, 'random');
 			mockRandom.mockReturnValue(0.01); // Very low value to ensure response
 
-			const result = await decisionCondition(userMessage);
+			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/probability.*→.*RESPOND/));
 
 			mockRandom.mockRestore();
@@ -234,9 +234,9 @@ describe('LLM Decision Logic', () => {
 			const mockRandom = jest.spyOn(Math, 'random');
 			mockRandom.mockReturnValue(0.2); // Between adjusted 0.175 and base 0.35
 
-			const result = await decisionCondition(userMessage);
+			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/probability.*→.*DON'T RESPOND/));
 
 			mockRandom.mockRestore();
@@ -254,9 +254,9 @@ describe('LLM Decision Logic', () => {
 			const mockRandom = jest.spyOn(Math, 'random');
 			mockRandom.mockReturnValue(0.13); // Between base 0.1 and adjusted 0.14
 
-			const result = await decisionCondition(userMessage);
+			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 
 			mockRandom.mockRestore();
 		});
@@ -271,9 +271,9 @@ describe('LLM Decision Logic', () => {
 			const mockRandom = jest.spyOn(Math, 'random');
 			mockRandom.mockReturnValue(0.25); // Between adjusted 0.21 and base 0.35
 
-			const result = await decisionCondition(userMessage);
+			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 
 			mockRandom.mockRestore();
 		});
@@ -288,9 +288,9 @@ describe('LLM Decision Logic', () => {
 			const mockRandom = jest.spyOn(Math, 'random');
 			mockRandom.mockReturnValue(0.01); // Very low value to ensure response
 
-			const result = await decisionCondition(userMessage);
+			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 
 			mockRandom.mockRestore();
 		});
@@ -307,9 +307,9 @@ describe('LLM Decision Logic', () => {
 			const mockRandom = jest.spyOn(Math, 'random');
 			mockRandom.mockReturnValue(0.85); // Above 0.8 cap
 
-			const result = await decisionCondition(userMessage);
+			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/probability.*DON'T RESPOND/));
 
 			mockRandom.mockRestore();
@@ -327,9 +327,9 @@ describe('LLM Decision Logic', () => {
 			const mockRandom = jest.spyOn(Math, 'random');
 			mockRandom.mockReturnValue(0.15); // Below 0.2 fallback
 
-			const result = await decisionCondition(userMessage);
+			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Error in decision logic'));
 
 			mockRandom.mockRestore();
@@ -345,9 +345,9 @@ describe('LLM Decision Logic', () => {
 			const mockRandom = jest.spyOn(Math, 'random');
 			mockRandom.mockReturnValue(0.25); // Above 0.2 fallback
 
-			const result = await decisionCondition(userMessage);
+			const _result = await decisionCondition(userMessage);
 
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 
 			mockRandom.mockRestore();
 		});

@@ -1,0 +1,55 @@
+{
+  "title": "Starbunk - DJCova Music & Voice",
+  "uid": "starbunk-djcova-music",
+  "schemaVersion": 38,
+  "version": 1,
+  "editable": true,
+  "panels": [
+    {"type":"stat","title":"Active music sessions","gridPos":{"x":0,"y":0,"w":6,"h":4},
+      "targets":[{"expr":"sum(djcova_active_music_sessions) by (status)","legendFormat":"{{status}}","datasource":"Prometheus"}]
+    },
+    {"type":"timeseries","title":"Session duration p90 (s)","gridPos":{"x":6,"y":0,"w":9,"h":6},
+      "targets":[{"expr":"histogram_quantile(0.90, sum by (le, source_type) (rate(djcova_music_session_duration_seconds_bucket[5m])))","legendFormat":"{{source_type}}","datasource":"Prometheus"}]
+    },
+    {"type":"stat","title":"Session ends rate (5m)","gridPos":{"x":15,"y":0,"w":9,"h":4},
+      "targets":[{"expr":"sum(rate(djcova_music_session_ends_total[5m])) by (end_reason,duration_category)","legendFormat":"{{end_reason}}/{{duration_category}}","datasource":"Prometheus"}]
+    },
+    {"type":"timeseries","title":"Voice state (per guild)","gridPos":{"x":0,"y":4,"w":12,"h":6},
+      "targets":[{"expr":"djcova_voice_connection_state","legendFormat":"{{guild_id}}","datasource":"Prometheus"}]
+    },
+    {"type":"timeseries","title":"Voice latency p90 (ms)","gridPos":{"x":12,"y":4,"w":12,"h":6},
+      "targets":[{"expr":"histogram_quantile(0.90, sum by (le, guild_id) (rate(djcova_voice_connection_latency_ms_bucket[5m])))","legendFormat":"{{guild_id}}","datasource":"Prometheus"}]
+    },
+    {"type":"stat","title":"Voice transitions (5m)","gridPos":{"x":0,"y":10,"w":12,"h":4},
+      "targets":[{"expr":"sum(rate(djcova_voice_connection_transitions_total[5m])) by (from_state,to_state)","legendFormat":"{{from_state}}->{{to_state}}","datasource":"Prometheus"}]
+    },
+    {"type":"timeseries","title":"Audio processing p90 (ms)","gridPos":{"x":12,"y":10,"w":12,"h":6},
+      "targets":[{"expr":"histogram_quantile(0.90, sum by (le, audio_type, success) (rate(djcova_audio_processing_duration_ms_bucket[5m])))","legendFormat":"{{audio_type}}/{{success}}","datasource":"Prometheus"}]
+    },
+    {"type":"stat","title":"Audio ops & buffering (5m)","gridPos":{"x":0,"y":14,"w":12,"h":4},
+      "targets":[
+        {"expr":"sum(rate(djcova_audio_processing_total[5m])) by (audio_type,success)","legendFormat":"proc {{audio_type}}/{{success}}","datasource":"Prometheus"},
+        {"expr":"sum(rate(djcova_audio_buffering_duration_ms_count[5m]))","legendFormat":"buffer events","datasource":"Prometheus"}
+      ]
+    },
+    {"type":"stat","title":"Idle timers & disconnects (5m)","gridPos":{"x":12,"y":16,"w":12,"h":4},
+      "targets":[
+        {"expr":"sum(rate(djcova_idle_timers_started_total[5m]))","legendFormat":"timers","datasource":"Prometheus"},
+        {"expr":"sum(rate(djcova_idle_disconnects_total[5m])) by (idle_duration_category)","legendFormat":"disc {{idle_duration_category}}","datasource":"Prometheus"}
+      ]
+    },
+    {"type":"timeseries","title":"Current volume %","gridPos":{"x":0,"y":18,"w":6,"h":4},
+      "targets":[{"expr":"djcova_current_volume_percent","legendFormat":"{{guild_id}}","datasource":"Prometheus"}]
+    },
+    {"type":"stat","title":"Audio source requests (5m)","gridPos":{"x":6,"y":18,"w":9,"h":4},
+      "targets":[{"expr":"sum(rate(djcova_audio_source_requests_total[5m])) by (source_type,success,cache_hit)","legendFormat":"{{source_type}}/{{success}}/{{cache_hit}}","datasource":"Prometheus"}]
+    },
+    {"type":"timeseries","title":"Source response p90 (ms)","gridPos":{"x":15,"y":18,"w":9,"h":4},
+      "targets":[{"expr":"histogram_quantile(0.90, sum by (le, source_type, success) (rate(djcova_audio_source_response_time_ms_bucket[5m])))","legendFormat":"{{source_type}}/{{success}}","datasource":"Prometheus"}]
+    },
+    {"type":"logs","title":"Logs (djcova)","gridPos":{"x":0,"y":22,"w":24,"h":8},"datasource":"Loki",
+      "targets":[{"expr":"{com_starbunk_service=\"djcova\"}","refId":"A"}]
+    }
+  ]
+}
+

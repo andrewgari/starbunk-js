@@ -85,15 +85,15 @@ const requestCounts = new Map<string, { count: number; resetTime: number }>();
 export const rateLimit = (maxRequests: number = 100, windowMs: number = 60000) => {
 	return (req: Request, res: Response, next: NextFunction) => {
 		const clientId = req.ip || 'unknown';
-		const now = Date.now();
+		const _now = Date.now();
 
 		const clientData = requestCounts.get(clientId);
 
-		if (!clientData || now > clientData.resetTime) {
+		if (!clientData || _now > clientData.resetTime) {
 			// Reset or initialize counter
 			requestCounts.set(clientId, {
 				count: 1,
-				resetTime: now + windowMs,
+				resetTime: _now + windowMs,
 			});
 			return next();
 		}

@@ -92,7 +92,7 @@ describe('QdrantMemoryService', () => {
 				priority: 'high' as const,
 			};
 
-			const result = await memoryService.createNote(request);
+			const _result = await memoryService.createNote(request);
 
 			expect(mockEmbeddingInstance.generateEmbedding).toHaveBeenCalledWith('Test personality note');
 			expect(mockQdrantInstance.storeMemoryItem).toHaveBeenCalledWith(
@@ -105,8 +105,8 @@ describe('QdrantMemoryService', () => {
 					embedding: mockEmbedding,
 				}),
 			);
-			expect(result.type).toBe('personality');
-			expect(result.content).toBe('Test personality note');
+			expect(_result.type).toBe('personality');
+			expect(_result.content).toBe('Test personality note');
 		});
 
 		it.skip('should get personality notes with filtering', async () => {
@@ -127,7 +127,7 @@ describe('QdrantMemoryService', () => {
 			mockQdrantInstance.searchSimilar.mockResolvedValue(mockResults);
 
 			const filters = { category: 'personality' as const, isActive: true };
-			const result = await memoryService.getNotes(filters);
+			const _result = await memoryService.getNotes(filters);
 
 			expect(result).toHaveLength(1);
 			expect(result[0].content).toBe('Test note 1');
@@ -149,7 +149,7 @@ describe('QdrantMemoryService', () => {
 			mockEmbeddingInstance.generateEmbedding.mockResolvedValue(mockEmbedding);
 			mockQdrantInstance.searchSimilar.mockResolvedValue(mockResults);
 
-			const result = await memoryService.getNotes({ search: 'test query' });
+			const _result = await memoryService.getNotes({ search: 'test query' });
 
 			expect(mockEmbeddingInstance.generateEmbedding).toHaveBeenCalledWith('test query');
 			expect(mockQdrantInstance.searchSimilar).toHaveBeenCalledWith(
@@ -183,7 +183,7 @@ describe('QdrantMemoryService', () => {
 				priority: 'high' as const,
 			};
 
-			const result = await memoryService.updateNote('1', updateRequest);
+			const _result = await memoryService.updateNote('1', updateRequest);
 
 			expect(result?.content).toBe('Updated content');
 			expect(result?.priority).toBe('high');
@@ -193,7 +193,7 @@ describe('QdrantMemoryService', () => {
 		it.skip('should delete a personality note', async () => {
 			mockQdrantInstance.deleteMemoryItem.mockResolvedValue(true);
 
-			const result = await memoryService.deleteNote('1');
+			const _result = await memoryService.deleteNote('1');
 
 			expect(result).toBe(true);
 			expect(mockQdrantInstance.deleteMemoryItem).toHaveBeenCalledWith('1', 'personality');
@@ -256,7 +256,7 @@ describe('QdrantMemoryService', () => {
 				messageType: 'user' as const,
 			};
 
-			const result = await memoryService.storeConversation(request);
+			const _result = await memoryService.storeConversation(request);
 
 			expect(mockEmbeddingInstance.generateEmbedding).toHaveBeenCalledWith('Hello, how are you?');
 			expect(mockQdrantInstance.storeMemoryItem).toHaveBeenCalledWith(
@@ -269,7 +269,7 @@ describe('QdrantMemoryService', () => {
 					embedding: mockEmbedding,
 				}),
 			);
-			expect(result.type).toBe('conversation');
+			expect(_result.type).toBe('conversation');
 		});
 
 		it.skip('should get conversation context for LLM', async () => {
@@ -316,13 +316,13 @@ describe('QdrantMemoryService', () => {
 			// Mock conversation context
 			jest.spyOn(memoryService, 'getConversationContext').mockResolvedValue('CONVERSATION: Previous chat');
 
-			const result = await memoryService.generateEnhancedContext('Test message', 'user123', 'channel456');
+			const _result = await memoryService.generateEnhancedContext('Test message', 'user123', 'channel456');
 
-			expect(result.personalityContext).toBe('PERSONALITY: Be helpful');
-			expect(result.conversationContext).toBe('CONVERSATION: Previous chat');
-			expect(result.combinedContext).toContain('PERSONALITY: Be helpful');
-			expect(result.combinedContext).toContain('CONVERSATION: Previous chat');
-			expect(result.metadata.contextLength).toBeGreaterThan(0);
+			expect(_result.personalityContext).toBe('PERSONALITY: Be helpful');
+			expect(_result.conversationContext).toBe('CONVERSATION: Previous chat');
+			expect(_result.combinedContext).toContain('PERSONALITY: Be helpful');
+			expect(_result.combinedContext).toContain('CONVERSATION: Previous chat');
+			expect(_result.metadata.contextLength).toBeGreaterThan(0);
 		});
 	});
 

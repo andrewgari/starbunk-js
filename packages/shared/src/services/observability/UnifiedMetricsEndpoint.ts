@@ -93,10 +93,12 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 		this.envConfig = validateObservabilityEnvironment();
 
 		// Merge configuration with environment defaults
+		const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
 		this.config = {
 			collectorConfig: {
-				port: parseInt(process.env.UNIFIED_METRICS_PORT || '3001'),
-				host: process.env.UNIFIED_METRICS_HOST || '192.168.50.3',
+				// In tests, bind to an ephemeral port and loopback to avoid conflicts across workers
+				port: isTestEnv ? 0 : parseInt(process.env.UNIFIED_METRICS_PORT || '3001'),
+				host: isTestEnv ? '127.0.0.1' : process.env.UNIFIED_METRICS_HOST || '192.168.50.3',
 				enableMetrics: this.envConfig.metricsEnabled,
 				enableHealth: true,
 				enableServiceInfo: true,
@@ -115,8 +117,9 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 			healthCheckInterval: userConfig?.healthCheckInterval || 30000,
 			healthCheckTimeout: userConfig?.healthCheckTimeout || 5000,
 			enableCircuitBreaker: userConfig?.enableCircuitBreaker !== false,
-			enableGracefulShutdown: userConfig?.enableGracefulShutdown !== false,
-			shutdownTimeout: userConfig?.shutdownTimeout || 30000,
+			enableGracefulShutdown: userConfig?.enableGracefulShutdown ?? !isTestEnv,
+			// Shorter shutdown in tests prevents open-handle warnings and speeds up teardown
+			shutdownTimeout: userConfig?.shutdownTimeout ?? (isTestEnv ? 1000 : 30000),
 			enableMetricsLogging: userConfig?.enableMetricsLogging === true,
 			enablePerformanceMonitoring: userConfig?.enablePerformanceMonitoring !== false,
 		};
@@ -218,6 +221,11 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 		try {
 			logger.info(`Registering service: ${serviceName}`);
 
+			// Validate service name before proceeding
+			if (!this.knownServices.includes(serviceName)) {
+				throw new Error(`Unknown service: ${serviceName}. Must be one of: ${this.knownServices.join(', ')}`);
+			}
+
 			// Create or get service-aware metrics instance
 			const serviceMetrics = initializeServiceMetrics(serviceName, {
 				autoRegisterWithUnified: false, // We'll handle registration manually
@@ -244,6 +252,11 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 
 			// Add service-specific health checks to the unified collector
 			this.addServiceHealthChecks(serviceName, serviceMetrics);
+
+			// Initialize Redis metrics export for BunkBot
+			if (serviceName === 'bunkbot') {
+				await this.initializeBunkBotRedisExport(serviceMetrics);
+			}
 
 			logger.info(`Service ${serviceName} registered successfully`, {
 				componentCount: registrationInfo.componentCount,
@@ -314,6 +327,105 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 	}
 
 	/**
+	 * Initialize Redis metrics export for BunkBot
+	 */
+	private async initializeBunkBotRedisExport(serviceMetrics: ServiceAwareMetricsService): Promise<void> {
+		try {
+			// Check if Redis is configured
+			const redisHost = process.env.REDIS_HOST || process.env.BOT_METRICS_REDIS_HOST;
+			const redisPort = process.env.REDIS_PORT || process.env.BOT_METRICS_REDIS_PORT || '6379';
+
+			if (!redisHost) {
+				logger.info('Redis not configured for BunkBot, skipping Redis metrics export');
+				return;
+			}
+
+			logger.info('Initializing Redis metrics export for BunkBot', {
+				redisHost,
+				redisPort,
+			});
+
+			// Attempt to import and initialize Redis components
+			try {
+				const Redis = (await import('ioredis')).default;
+				const { BotTriggerMetricsService } = await import('./BotTriggerMetricsService');
+				const { _BunkBotMetricsCollector } = await import('./BunkBotMetrics');
+
+				// Create Redis connection
+				const redis = new Redis({
+					host: redisHost,
+					port: parseInt(redisPort, 10),
+					password: process.env.REDIS_PASSWORD || process.env.BOT_METRICS_REDIS_PASSWORD,
+					db: parseInt(process.env.REDIS_DB || '0', 10),
+					lazyConnect: true,
+					enableOfflineQueue: false,
+					maxRetriesPerRequest: 1,
+				});
+
+				// Test connection
+				await redis.connect();
+				await redis.ping();
+
+				// Initialize bot trigger metrics service if needed
+				let triggerMetricsService: any;
+				if (process.env.ENABLE_BOT_TRIGGER_METRICS === 'true') {
+					triggerMetricsService = new BotTriggerMetricsService({
+						redis: {
+							host: redisHost,
+							port: parseInt(redisPort, 10),
+							password: process.env.REDIS_PASSWORD,
+							db: parseInt(process.env.REDIS_DB || '0', 10),
+						},
+						enableBatchOperations: true,
+						enableCircuitBreaker: true,
+					});
+					await triggerMetricsService.initialize();
+				}
+
+				// Get BunkBot metrics collector from service metrics
+				// The serviceMetrics might have a reference to the actual collector
+				const registry = (serviceMetrics as any).registry || (this.collector as any).registry;
+
+				// Check if we can get the BunkBot collector instance
+				if (typeof (serviceMetrics as any).getBunkBotCollector === 'function') {
+					const bunkBotCollector = (serviceMetrics as any).getBunkBotCollector();
+					if (bunkBotCollector && typeof bunkBotCollector.initializeRedisExport === 'function') {
+						await bunkBotCollector.initializeRedisExport(redis, triggerMetricsService, {
+							cacheTTL: 15000,
+							enableCircuitBreaker: true,
+							exportTimeout: 5000,
+						});
+						logger.info('Redis metrics export initialized for BunkBot collector');
+					}
+				} else {
+					// Create a standalone Redis exporter and register with the collector
+					const { createRedisBotMetricsExporter } = await import('./RedisBotMetricsExporter');
+					const redisExporter = createRedisBotMetricsExporter(registry, {
+						cacheTTL: 15000,
+						enableCircuitBreaker: true,
+						exportTimeout: 5000,
+					});
+					await redisExporter.initialize(redis, triggerMetricsService);
+
+					// Start periodic export
+					setInterval(() => {
+						redisExporter.exportMetrics().catch((error) => {
+							logger.error('Redis metrics export failed:', error);
+						});
+					}, 15000);
+
+					logger.info('Standalone Redis metrics exporter initialized for BunkBot');
+				}
+			} catch (error) {
+				logger.error('Failed to initialize Redis metrics export for BunkBot:', ensureError(error));
+				// Don't throw - allow service to continue without Redis export
+			}
+		} catch (error) {
+			logger.warn('Redis metrics export initialization skipped:', ensureError(error));
+		}
+	}
+
+	/**
 	 * Add service-specific health checks to the unified collector
 	 */
 	private addServiceHealthChecks(serviceName: string, serviceMetrics: ServiceAwareMetricsService): void {
@@ -348,30 +460,33 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 			});
 		});
 
-		// Add overall service health check
-		this.collector.addHealthCheck(serviceName, 'service', 'overall_health', async () => {
-			try {
-				const healthStatus = serviceMetrics.getServiceHealthStatus() as any;
-				const status =
-					healthStatus.status === 'healthy'
-						? 'pass'
-						: healthStatus.status === 'shutting_down'
-							? 'warn'
-							: 'fail';
+		// Add overall service health check using the first component
+		const firstComponent = serviceMetrics.getComponentTrackers().keys().next().value;
+		if (firstComponent) {
+			this.collector.addHealthCheck(serviceName, firstComponent, 'overall_health', async () => {
+				try {
+					const healthStatus = serviceMetrics.getServiceHealthStatus() as any;
+					const status =
+						healthStatus.status === 'healthy'
+							? 'pass'
+							: healthStatus.status === 'shutting_down'
+								? 'warn'
+								: 'fail';
 
-				return {
-					status,
-					output: `Service ${serviceName}: ${healthStatus.status} (uptime: ${Math.round(healthStatus.uptime)}s)`,
-					timestamp: new Date().toISOString(),
-				};
-			} catch (error) {
-				return {
-					status: 'fail',
-					output: `Service ${serviceName} health check failed: ${ensureError(error).message}`,
-					timestamp: new Date().toISOString(),
-				};
-			}
-		});
+					return {
+						status,
+						output: `Service ${serviceName}: ${healthStatus.status} (uptime: ${Math.round(healthStatus.uptime)}s)`,
+						timestamp: new Date().toISOString(),
+					};
+				} catch (error) {
+					return {
+						status: 'fail',
+						output: `Service ${serviceName} health check failed: ${ensureError(error).message}`,
+						timestamp: new Date().toISOString(),
+					};
+				}
+			});
+		}
 	}
 
 	/**
@@ -642,6 +757,13 @@ export function getUnifiedMetricsEndpoint(): UnifiedMetricsEndpoint {
 		throw new Error('Unified metrics endpoint not initialized. Call initializeUnifiedMetricsEndpoint() first.');
 	}
 	return globalUnifiedEndpoint;
+}
+
+/**
+ * Reset the global unified metrics endpoint - FOR TESTING ONLY
+ */
+export function resetUnifiedMetricsEndpoint(): void {
+	globalUnifiedEndpoint = undefined;
 }
 
 // Convenience function to start the entire unified metrics system

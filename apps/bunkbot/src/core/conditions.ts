@@ -132,9 +132,9 @@ export function withChance(chance: number): Condition {
 		}
 
 		const random = Math.random() * 100;
-		const result = random <= chance;
-		logger.debug(`withChance(${chance}): random=${Math.round(random)}, result=${result}`);
-		return result;
+		const _result = random <= chance;
+		logger.debug(`withChance(${chance}): random=${Math.round(random)}, result=${_result}`);
+		return _result;
 	};
 }
 
@@ -198,7 +198,7 @@ export function isCovaBot(message: Message): boolean {
 			)
 		: false;
 
-	const result = isCovaUsername || isCovaWebhook;
+	const _result = isCovaUsername || isCovaWebhook;
 
 	if (isDebugMode()) {
 		logger.debug(`🤖 CovaBot Detection:`, {
@@ -208,11 +208,11 @@ export function isCovaBot(message: Message): boolean {
 			webhookId: message.webhookId,
 			isCovaUsername,
 			isCovaWebhook,
-			result,
+			result: _result,
 		});
 	}
 
-	return result;
+	return _result;
 }
 
 /**
@@ -356,10 +356,10 @@ export function withinTimeframeOf(
 	};
 	const durationMs = dur * multipliers[unit];
 	return () => {
-		const now = Date.now();
+		const _now = Date.now();
 		const timestamp = timestampFn();
-		const result = now - timestamp <= durationMs;
-		return result;
+		const _result = _now - timestamp <= durationMs;
+		return _result;
 	};
 }
 
@@ -379,9 +379,9 @@ export function contextWithinTimeframeOf(
 	};
 	const durationMs = dur * multipliers[unit];
 	return () => {
-		const now = Date.now();
+		const _now = Date.now();
 		const timestamp = timestampFn();
-		return now - timestamp <= durationMs;
+		return _now - timestamp <= durationMs;
 	};
 }
 
@@ -414,8 +414,8 @@ export function contextLlmDetects(prompt: string): ContextualTriggerCondition {
 export function and(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
 		for (const condition of conditions) {
-			const result = condition(message);
-			const isMatch = result instanceof Promise ? await result : result;
+			const _result = condition(message);
+			const isMatch = _result instanceof Promise ? await _result : _result;
 			if (!isMatch) {
 				return false;
 			}
@@ -429,8 +429,8 @@ export function or(...conditions: TriggerCondition[]): TriggerCondition {
 	return async (message: Message) => {
 		for (const condition of conditions) {
 			try {
-				const result = condition(message);
-				const isMatch = result instanceof Promise ? await result : result;
+				const _result = condition(message);
+				const isMatch = _result instanceof Promise ? await _result : _result;
 				if (isMatch) {
 					return true;
 				}
@@ -480,7 +480,7 @@ export function withDefaultBotBehavior(botName: string, condition: TriggerCondit
 			}
 
 			// Check the condition
-			const result = await condition(message);
+			const _result = await condition(message);
 
 			// Enhanced logging
 			if (isDebugMode()) {
@@ -488,17 +488,17 @@ export function withDefaultBotBehavior(botName: string, condition: TriggerCondit
 					author: message.author.username,
 					isBot: message.author.bot,
 					content: message.content.substring(0, 50) + (message.content.length > 50 ? '...' : ''),
-					result,
+					result: _result,
 				};
 
-				if (result) {
+				if (_result) {
 					logger.debug(`[${botName}] ✅ Condition matched`, messageInfo);
 				} else {
 					logger.debug(`[${botName}] ❌ Condition did not match`, messageInfo);
 				}
 			}
 
-			return result;
+			return _result;
 		} catch (error) {
 			logger.error(
 				`[${botName}] 💥 Error in condition:`,

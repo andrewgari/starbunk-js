@@ -30,30 +30,30 @@ export class BotRegistry {
 
 		try {
 			const discovery = new BotDiscovery();
-			const result = await discovery.discoverBots();
+			const _result = await discovery.discoverBots();
 
 			// Register discovered bots
-			for (const bot of result.bots) {
+			for (const bot of _result.bots) {
 				registry.registerBot(bot);
 			}
 
 			// Log results
-			if (result.bots.length > 0) {
-				logger.info(`[BotRegistry] Successfully loaded ${result.bots.length} reply bots`);
-				result.bots.forEach((bot) => logger.info(`   - ${bot.name}`));
+			if (_result.bots.length > 0) {
+				logger.info(`[BotRegistry] Successfully loaded ${_result.bots.length} reply bots`);
+				_result.bots.forEach((bot) => logger.info(`   - ${bot.name}`));
 			} else {
 				logger.warn('[BotRegistry] No reply bots discovered');
 			}
 
 			// Log any errors
-			if (result.errors.length > 0) {
-				logger.warn(`[BotRegistry] Failed to load ${result.errors.length} bots`);
-				result.errors.forEach(({ directory, error }) => {
+			if (_result.errors.length > 0) {
+				logger.warn(`[BotRegistry] Failed to load ${_result.errors.length} bots`);
+				_result.errors.forEach(({ directory, error }) => {
 					logger.debug(`   - ${directory}: ${error.message}`);
 				});
 			}
 
-			return result.bots;
+			return _result.bots;
 		} catch (error) {
 			logger.error('[BotRegistry] Critical error discovering reply bots:', ensureError(error));
 			return [];

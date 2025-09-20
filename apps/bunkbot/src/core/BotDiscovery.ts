@@ -16,7 +16,7 @@ export class BotDiscovery {
 	}
 
 	async discoverBots(): Promise<BotDiscoveryResult> {
-		const result: BotDiscoveryResult = { bots: [], errors: [] };
+		const _result: BotDiscoveryResult = { bots: [], errors: [] };
 
 		try {
 			const directories = this.getBotDirectories();
@@ -24,13 +24,13 @@ export class BotDiscovery {
 
 			const discoveries = await Promise.allSettled(directories.map((dir) => this.loadBotFromDirectory(dir)));
 
-			this.processDiscoveryResults(discoveries, result);
-			this.logDiscoveryResults(result);
+			this.processDiscoveryResults(discoveries, _result);
+			this.logDiscoveryResults(_result);
 
-			return result;
+			return _result;
 		} catch (error) {
 			logger.error('Critical error during bot discovery:', ensureError(error));
-			return result;
+			return _result;
 		}
 	}
 

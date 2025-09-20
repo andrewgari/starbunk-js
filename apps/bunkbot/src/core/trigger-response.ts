@@ -109,14 +109,14 @@ export class TriggerResponseClass {
 
 		try {
 			if (typeof this.identity === 'function') {
-				const result = await this.identity(message);
-				if (result === null) {
+				const _result = await this.identity(message);
+				if (_result === null) {
 					logger.debug(
 						`[TriggerResponse:${this.name}] Identity resolution returned null - bot will remain silent`,
 					);
 					return null;
 				}
-				return result;
+				return _result;
 			}
 			return this.identity;
 		} catch (error) {

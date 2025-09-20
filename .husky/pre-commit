@@ -5,9 +5,9 @@ echo "🔍 Running pre-commit validation checks..."
 
 # Repository structure validation
 echo "📁 Validating repository structure..."
-tools/scripts/validation/check-root-directory.sh
-tools/scripts/validation/check-naming-conventions.sh
-tools/scripts/validation/check-temporary-files.sh
+bash tools/scripts/validation/check-root-directory.sh
+bash tools/scripts/validation/check-naming-conventions.sh
+bash tools/scripts/validation/check-temporary-files.sh
 
 # Lint staged files and type-check only Shared and BunkBot (path-scoped)
 echo "🧹 Running code quality checks..."

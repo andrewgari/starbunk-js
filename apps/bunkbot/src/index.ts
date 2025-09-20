@@ -16,6 +16,9 @@ import {
 	initializeObservability,
 	createBunkBotMetrics,
 	type BunkBotMetrics,
+	EnhancedBunkBotMetricsCollector,
+	BotTriggerTracker,
+	initializeBotMetricsSystem,
 } from '@starbunk/shared';
 
 // Import DiscordService directly from the service file
@@ -48,6 +51,8 @@ class BunkBotContainer {
 	private replyBots: ReplyBotImpl[] = [];
 	private messageProcessor!: MessageProcessor;
 	private bunkBotMetrics?: BunkBotMetrics;
+	private enhancedMetrics?: EnhancedBunkBotMetricsCollector;
+	private triggerTracker?: BotTriggerTracker;
 
 	async initialize(): Promise<void> {
 		logger.info('🚀 Initializing BunkBot container...');
@@ -61,20 +66,50 @@ class BunkBotContainer {
 			} = initializeObservability('bunkbot');
 			logger.info('✅ Observability initialized with metrics, structured logging, and channel activity tracking');
 
-			// Initialize BunkBot-specific metrics collector
+			// Initialize enhanced BunkBot metrics system with Redis integration
 			try {
+				// Initialize enhanced metrics system with auto-detected configuration
+				const enhancedMetricsSystem = await initializeBotMetricsSystem(metrics, {
+					enableEnhancedTracking: process.env.ENABLE_ENHANCED_BOT_TRACKING === 'true',
+					enableBatchOperations: process.env.NODE_ENV === 'production',
+				});
+
+				this.enhancedMetrics = enhancedMetricsSystem.metricsCollector;
+				this.triggerTracker = enhancedMetricsSystem.tracker;
+
+				// Also initialize legacy metrics for backward compatibility
 				this.bunkBotMetrics = createBunkBotMetrics(metrics, {
 					enableDetailedTracking: true,
 					enablePerformanceMetrics: true,
 					enableErrorTracking: true,
 				});
-				logger.info('✅ BunkBot-specific metrics collector initialized for production monitoring');
+
+				logger.info('✅ Enhanced BunkBot metrics system initialized with Redis integration', {
+					enhancedTracking: enhancedMetricsSystem.config.enableEnhancedTracking,
+					batchOperations: enhancedMetricsSystem.config.enableBatchOperations,
+					redisHost: enhancedMetricsSystem.config.redis?.host,
+				});
 			} catch (error) {
 				logger.warn(
-					'⚠️ BunkBot metrics initialization failed, continuing without container-specific metrics:',
+					'⚠️ Enhanced BunkBot metrics initialization failed, falling back to basic metrics:',
 					ensureError(error),
 				);
-				this.bunkBotMetrics = undefined;
+
+				// Fallback to basic metrics
+				try {
+					this.bunkBotMetrics = createBunkBotMetrics(metrics, {
+						enableDetailedTracking: true,
+						enablePerformanceMetrics: true,
+						enableErrorTracking: true,
+					});
+					logger.info('✅ Basic BunkBot metrics collector initialized (fallback mode)');
+				} catch (fallbackError) {
+					logger.warn(
+						'⚠️ All metrics initialization failed, continuing without container-specific metrics:',
+						ensureError(fallbackError),
+					);
+					this.bunkBotMetrics = undefined;
+				}
 			}
 
 			// Run startup diagnostics
@@ -101,10 +136,21 @@ class BunkBotContainer {
 			// Initialize reply bot system
 			await this.initializeReplyBots();
 
-			// Initialize message processor with observability and BunkBot-specific metrics
-			this.messageProcessor = new MessageProcessor(this.messageFilter, this.replyBots, this.bunkBotMetrics);
-			const metricsStatus = this.bunkBotMetrics ? 'with BunkBot-specific metrics' : 'with base metrics only';
-			logger.info(`✅ Message processor initialized with observability tracking ${metricsStatus}`);
+			// Initialize message processor with enhanced observability and metrics tracking
+			this.messageProcessor = new MessageProcessor(
+				this.messageFilter,
+				this.replyBots,
+				this.bunkBotMetrics,
+				this.enhancedMetrics,
+				this.triggerTracker,
+			);
+
+			const metricsStatus = this.enhancedMetrics
+				? 'with enhanced Redis-based metrics'
+				: this.bunkBotMetrics
+					? 'with basic BunkBot metrics'
+					: 'with base metrics only';
+			logger.info(`✅ Message processor initialized ${metricsStatus}`);
 
 			// Register commands
 			this.registerCommands();
@@ -125,7 +171,19 @@ class BunkBotContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['DATABASE_URL', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV'],
+			optional: [
+				'DATABASE_URL',
+				'DEBUG_MODE',
+				'TESTING_SERVER_IDS',
+				'TESTING_CHANNEL_IDS',
+				'NODE_ENV',
+				// Redis configuration for enhanced metrics
+				'REDIS_HOST',
+				'REDIS_PORT',
+				'REDIS_PASSWORD',
+				'REDIS_DB',
+				'ENABLE_ENHANCED_BOT_TRACKING',
+			],
 		});
 	}
 
@@ -440,13 +498,32 @@ class BunkBotContainer {
 	async stop(): Promise<void> {
 		logger.info('Stopping BunkBot...');
 
-		// Clean up metrics collector first
+		// Clean up enhanced metrics first
+		if (this.triggerTracker) {
+			try {
+				await this.triggerTracker.cleanup();
+				logger.info('✅ Enhanced BunkBot trigger tracker cleaned up successfully');
+			} catch (error) {
+				logger.error('❌ Error cleaning up enhanced trigger tracker:', ensureError(error));
+			}
+		}
+
+		if (this.enhancedMetrics) {
+			try {
+				await this.enhancedMetrics.cleanup();
+				logger.info('✅ Enhanced BunkBot metrics collector cleaned up successfully');
+			} catch (error) {
+				logger.error('❌ Error cleaning up enhanced metrics:', ensureError(error));
+			}
+		}
+
+		// Clean up legacy metrics
 		if (this.bunkBotMetrics) {
 			try {
 				await this.bunkBotMetrics.cleanup();
-				logger.info('✅ BunkBot metrics collector cleaned up successfully');
+				logger.info('✅ Basic BunkBot metrics collector cleaned up successfully');
 			} catch (error) {
-				logger.error('❌ Error cleaning up BunkBot metrics:', ensureError(error));
+				logger.error('❌ Error cleaning up basic BunkBot metrics:', ensureError(error));
 			}
 		}
 
@@ -477,6 +554,26 @@ async function main(): Promise<void> {
 	let bunkBot: BunkBotContainer | null = null;
 
 	try {
+		if (process.env.CI_SMOKE_MODE === 'true') {
+			logger.info('CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
+			const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT) : 3001;
+			const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+				if (req.url === '/health') {
+					res.writeHead(200, { 'Content-Type': 'application/json' });
+					res.end(JSON.stringify({ status: 'healthy', mode: 'smoke', timestamp: new Date().toISOString() }));
+					return;
+				}
+				res.writeHead(404, { 'Content-Type': 'text/plain' });
+				res.end('Not Found');
+			});
+			server.listen(port, () => logger.info(`🏥 [SMOKE] Health server running on port ${port}`));
+			const shutdown = (_signal: string) => {
+				server.close(() => process.exit(0));
+			};
+			process.on('SIGINT', () => shutdown('SIGINT'));
+			process.on('SIGTERM', () => shutdown('SIGTERM'));
+			return;
+		}
 		bunkBot = new BunkBotContainer();
 		await bunkBot.initialize();
 		await bunkBot.start();

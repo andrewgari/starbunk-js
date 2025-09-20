@@ -69,7 +69,7 @@ export class ConfigurationRepository {
 				return null;
 			}
 
-			const result: BotConfigurationData = {
+			const _result: BotConfigurationData = {
 				id: config.id,
 				botName: config.botName,
 				displayName: config.displayName,
@@ -99,8 +99,8 @@ export class ConfigurationRepository {
 				})),
 			};
 
-			this.setCache(cacheKey, result);
-			return result;
+			this.setCache(cacheKey, _result);
+			return _result;
 		} catch (error) {
 			logger.error(
 				`Failed to get bot configuration for ${botName}:`,
@@ -133,7 +133,7 @@ export class ConfigurationRepository {
 				orderBy: { priority: 'desc' },
 			});
 
-			const result = configs.map((config: any) => ({
+			const _result = configs.map((config: any) => ({
 				id: config.id,
 				botName: config.botName,
 				displayName: config.displayName,
@@ -163,8 +163,8 @@ export class ConfigurationRepository {
 				})),
 			}));
 
-			this.setCache(cacheKey, result);
-			return result;
+			this.setCache(cacheKey, _result);
+			return _result;
 		} catch (error) {
 			logger.error(
 				'Failed to get all bot configurations:',
@@ -191,7 +191,7 @@ export class ConfigurationRepository {
 				return null;
 			}
 
-			const result: UserConfigurationData = {
+			const _result: UserConfigurationData = {
 				id: config.id,
 				userId: config.userId,
 				username: config.username,
@@ -200,8 +200,8 @@ export class ConfigurationRepository {
 				metadata: config.metadata,
 			};
 
-			this.setCache(cacheKey, result);
-			return result;
+			this.setCache(cacheKey, _result);
+			return _result;
 		} catch (error) {
 			logger.error(
 				`Failed to get user configuration for ${userId}:`,
@@ -260,7 +260,7 @@ export class ConfigurationRepository {
 				return null;
 			}
 
-			const result: ServerConfigurationData = {
+			const _result: ServerConfigurationData = {
 				id: config.id,
 				serverId: config.serverId,
 				serverName: config.serverName,
@@ -268,8 +268,8 @@ export class ConfigurationRepository {
 				settings: config.settings,
 			};
 
-			this.setCache(cacheKey, result);
-			return result;
+			this.setCache(cacheKey, _result);
+			return _result;
 		} catch (error) {
 			logger.error(
 				`Failed to get server configuration for ${serverId}:`,

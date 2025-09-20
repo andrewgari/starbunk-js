@@ -55,7 +55,7 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 		// Simple timing without PerformanceTimer for now
 		const startTime = Date.now();
 		try {
-			const result = await (async () => {
+			const _result = await (async () => {
 				try {
 					logger.debug(`[CovaBot] Generating response with personality emulation`);
 
@@ -188,7 +188,7 @@ Message: ${message.content}`;
 			})();
 
 			logger.debug(`[CovaBot] LLM emulator took ${Date.now() - startTime}ms`);
-			return result;
+			return _result;
 		} catch (error) {
 			logger.error(
 				`[CovaBot] Error in emulator timing: ${error instanceof Error ? error.message : String(error)}`,
@@ -206,7 +206,7 @@ export const createLLMResponseDecisionCondition = () => {
 		// Simple timing without PerformanceTimer for now
 		const startTime = Date.now();
 		try {
-			const result = await (async () => {
+			const _result = await (async () => {
 				try {
 					// Skip bot messages FIRST - even if they mention Cova
 					if (message.author.bot) {
@@ -328,7 +328,7 @@ Based on the Response Decision System, should Cova respond to this message?`;
 			})();
 
 			logger.debug(`[CovaBot] LLM decision took ${Date.now() - startTime}ms`);
-			return result;
+			return _result;
 		} catch (error) {
 			logger.error(
 				`[CovaBot] Error in decision timing: ${error instanceof Error ? error.message : String(error)}`,
@@ -343,9 +343,9 @@ if (process.env.NODE_ENV !== 'test') {
 	setInterval(
 		() => {
 			// Clean up old entries from last response tracking
-			const now = Date.now();
+			const _now = Date.now();
 			for (const [channelId, time] of lastResponseTime.entries()) {
-				if (now - time > 24 * 60 * 60 * 1000) {
+				if (_now - time > 24 * 60 * 60 * 1000) {
 					// Older than 24 hours
 					lastResponseTime.delete(channelId);
 				}

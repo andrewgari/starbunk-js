@@ -3,7 +3,7 @@ import { ensureError } from '../../utils/errorUtils';
 import { ProductionMetricsService, type MetricsConfiguration } from './ProductionMetricsService';
 import { UnifiedMetricsCollector } from './UnifiedMetricsCollector';
 import * as promClient from 'prom-client';
-import { EventEmitter } from 'events';
+import { EventEmitter as _EventEmitter } from 'events';
 
 // Enhanced service-aware metrics configuration
 interface ServiceMetricsConfiguration extends MetricsConfiguration {
@@ -122,7 +122,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 		// Auto-register with unified collector if enabled
 		if (this.serviceConfig.autoRegisterWithUnified) {
-			this.registerWithUnifiedCollector().catch(error => {
+			this.registerWithUnifiedCollector().catch((error) => {
 				logger.warn(`Failed to auto-register ${service} with unified collector:`, ensureError(error));
 			});
 		}
@@ -172,10 +172,17 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 		return mappings[service] || {};
 	}
 
+	private sanitizeServiceNameForMetrics(serviceName: string): string {
+		// Convert dashes to underscores to make valid Prometheus metric names
+		return serviceName.replace(/-/g, '_');
+	}
+
 	private initializeServiceMetrics(): void {
+		const sanitizedServiceName = this.sanitizeServiceNameForMetrics(this.serviceConfig.serviceName);
+
 		// Service operations counter with component labels
 		this.serviceOperationsCounter = new promClient.Counter({
-			name: `discord_bot_${this.serviceConfig.serviceName}_operations_total`,
+			name: `discord_bot_${sanitizedServiceName}_operations_total`,
 			help: `Total operations for ${this.serviceConfig.serviceName} service`,
 			labelNames: ['service', 'component', 'operation', 'status'],
 			registers: [this.serviceMetricsRegistry],
@@ -183,7 +190,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 		// Service latency histogram with component labels
 		this.serviceLatencyHistogram = new promClient.Histogram({
-			name: `discord_bot_${this.serviceConfig.serviceName}_operation_duration_ms`,
+			name: `discord_bot_${sanitizedServiceName}_operation_duration_ms`,
 			help: `Operation duration for ${this.serviceConfig.serviceName} service`,
 			labelNames: ['service', 'component', 'operation'],
 			buckets: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
@@ -192,7 +199,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 		// Service errors counter
 		this.serviceErrorsCounter = new promClient.Counter({
-			name: `discord_bot_${this.serviceConfig.serviceName}_errors_total`,
+			name: `discord_bot_${sanitizedServiceName}_errors_total`,
 			help: `Total errors for ${this.serviceConfig.serviceName} service`,
 			labelNames: ['service', 'component', 'operation', 'error_type'],
 			registers: [this.serviceMetricsRegistry],
@@ -200,7 +207,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 		// Component health gauge
 		this.componentHealthGauge = new promClient.Gauge({
-			name: `discord_bot_${this.serviceConfig.serviceName}_component_health`,
+			name: `discord_bot_${sanitizedServiceName}_component_health`,
 			help: `Component health status (1=healthy, 0.5=degraded, 0=unhealthy)`,
 			labelNames: ['service', 'component'],
 			registers: [this.serviceMetricsRegistry],
@@ -208,7 +215,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 		// Component activity gauge
 		this.componentActivityGauge = new promClient.Gauge({
-			name: `discord_bot_${this.serviceConfig.serviceName}_component_activity`,
+			name: `discord_bot_${sanitizedServiceName}_component_activity`,
 			help: `Component activity level (operations per minute)`,
 			labelNames: ['service', 'component'],
 			registers: [this.serviceMetricsRegistry],
@@ -217,7 +224,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 	private initializeComponentTrackers(): void {
 		const components = Object.keys(this.serviceConfig.componentMappings || {});
-		components.forEach(component => {
+		components.forEach((component) => {
 			this.componentTrackers.set(component, {
 				component,
 				lastActivity: Date.now(),
@@ -228,10 +235,13 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 			});
 
 			// Initialize component health to healthy
-			this.componentHealthGauge.set({
-				service: this.serviceConfig.serviceName,
-				component,
-			}, 1);
+			this.componentHealthGauge.set(
+				{
+					service: this.serviceConfig.serviceName,
+					component,
+				},
+				1,
+			);
 		});
 
 		logger.debug(`Initialized ${components.length} component trackers for ${this.serviceConfig.serviceName}`);
@@ -258,11 +268,14 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 			});
 
 			if (duration !== undefined) {
-				this.serviceLatencyHistogram.observe({
-					service,
-					component,
-					operation,
-				}, duration);
+				this.serviceLatencyHistogram.observe(
+					{
+						service,
+						component,
+						operation,
+					},
+					duration,
+				);
 			}
 
 			if (!success) {
@@ -270,7 +283,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 					service,
 					component,
 					operation,
-					error_type: context.metadata?.error_type as string || 'unknown',
+					error_type: (context.metadata?.error_type as string) || 'unknown',
 				});
 			}
 
@@ -284,7 +297,6 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 				success,
 				timestamp: Date.now(),
 			});
-
 		} catch (error) {
 			logger.error('Error tracking service operation:', ensureError(error));
 		}
@@ -323,10 +335,13 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 			tracker.healthStatus = status;
 
 			const healthValue = status === 'healthy' ? 1 : status === 'degraded' ? 0.5 : 0;
-			this.componentHealthGauge.set({
-				service: this.serviceConfig.serviceName,
-				component,
-			}, healthValue);
+			this.componentHealthGauge.set(
+				{
+					service: this.serviceConfig.serviceName,
+					component,
+				},
+				healthValue,
+			);
 
 			logger.debug(`Updated component health: ${component} = ${status}`);
 		}
@@ -349,14 +364,17 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 		}
 
 		// Update activity gauge (operations per minute approximation)
-		const now = Date.now();
-		const oneMinuteAgo = now - 60000;
+		const _now = Date.now();
+		const oneMinuteAgo = _now - 60000;
 		const recentActivity = tracker.lastActivity > oneMinuteAgo ? tracker.operationCount : 0;
 
-		this.componentActivityGauge.set({
-			service: this.serviceConfig.serviceName,
-			component,
-		}, recentActivity);
+		this.componentActivityGauge.set(
+			{
+				service: this.serviceConfig.serviceName,
+				component,
+			},
+			recentActivity,
+		);
 
 		// Auto-update health based on error rate and latency
 		this.autoUpdateComponentHealth(tracker);
@@ -368,9 +386,11 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 
 		let newStatus: 'healthy' | 'degraded' | 'unhealthy';
 
-		if (errorRate > 0.1 || highLatency) { // > 10% error rate or high latency
+		if (errorRate > 0.1 || highLatency) {
+			// > 10% error rate or high latency
 			newStatus = 'unhealthy';
-		} else if (errorRate > 0.05 || tracker.averageLatency > 2000) { // > 5% error rate or 2s latency
+		} else if (errorRate > 0.05 || tracker.averageLatency > 2000) {
+			// > 5% error rate or 2s latency
 			newStatus = 'degraded';
 		} else {
 			newStatus = 'healthy';
@@ -402,9 +422,11 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 			this.unifiedCollector = collector;
 
 			logger.info(`Successfully registered ${this.serviceConfig.serviceName} with unified metrics collector`);
-
 		} catch (error) {
-			logger.warn(`Failed to register ${this.serviceConfig.serviceName} with unified collector:`, ensureError(error));
+			logger.warn(
+				`Failed to register ${this.serviceConfig.serviceName} with unified collector:`,
+				ensureError(error),
+			);
 			throw error;
 		}
 	}
@@ -529,9 +551,11 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 			await super.shutdown();
 
 			logger.info(`Service-aware metrics shutdown complete for ${this.serviceConfig.serviceName}`);
-
 		} catch (error) {
-			logger.error(`Error during service-aware metrics shutdown for ${this.serviceConfig.serviceName}:`, ensureError(error));
+			logger.error(
+				`Error during service-aware metrics shutdown for ${this.serviceConfig.serviceName}:`,
+				ensureError(error),
+			);
 			throw error;
 		}
 	}
@@ -540,7 +564,7 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 // Factory function for creating service-aware metrics
 export function createServiceMetrics(
 	service: string,
-	config?: Partial<ServiceMetricsConfiguration>
+	config?: Partial<ServiceMetricsConfiguration>,
 ): ServiceAwareMetricsService {
 	return new ServiceAwareMetricsService(service, config);
 }
@@ -550,7 +574,7 @@ const serviceMetricsInstances = new Map<string, ServiceAwareMetricsService>();
 
 export function initializeServiceMetrics(
 	service: string,
-	config?: Partial<ServiceMetricsConfiguration>
+	config?: Partial<ServiceMetricsConfiguration>,
 ): ServiceAwareMetricsService {
 	if (serviceMetricsInstances.has(service)) {
 		logger.warn(`Service metrics already initialized for ${service}, returning existing instance`);
@@ -577,9 +601,4 @@ export function getAllServiceMetrics(): Map<string, ServiceAwareMetricsService> 
 }
 
 // Export types
-export type {
-	ServiceMetricsConfiguration,
-	ComponentTracker,
-	ServiceMetricContext,
-	ServiceMessageFlowMetrics,
-};
+export type { ServiceMetricsConfiguration, ComponentTracker, ServiceMetricContext, ServiceMessageFlowMetrics };

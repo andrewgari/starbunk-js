@@ -7,9 +7,12 @@ import {
 	MessageFlowMetrics,
 	getChannelActivityTracker,
 	type BunkBotMetrics,
+	EnhancedBunkBotMetricsCollector,
+	BotTriggerTracker,
+	type MessageContext,
 } from '@starbunk/shared';
 import { Message } from 'discord.js';
-import { ReplyBotImpl } from './bot-builder';
+import { ReplyBotImpl, type BotTriggerResult } from './bot-builder';
 import { shouldExcludeFromReplyBots } from './conditions';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -44,13 +47,19 @@ export class MessageProcessor {
 	private readonly resetTimeout = 60000; // 1 minute
 	private readonly halfOpenMaxAttempts = 1;
 	private bunkBotMetrics?: BunkBotMetrics;
+	private enhancedMetrics?: EnhancedBunkBotMetricsCollector;
+	private triggerTracker?: BotTriggerTracker;
 
 	constructor(
 		private messageFilter: MessageFilter,
 		private replyBots: ReplyBotImpl[] = [],
 		bunkBotMetrics?: BunkBotMetrics,
+		enhancedMetrics?: EnhancedBunkBotMetricsCollector,
+		triggerTracker?: BotTriggerTracker,
 	) {
 		this.bunkBotMetrics = bunkBotMetrics;
+		this.enhancedMetrics = enhancedMetrics;
+		this.triggerTracker = triggerTracker;
 	}
 
 	async processMessage(message: Message): Promise<void> {
@@ -164,29 +173,45 @@ export class MessageProcessor {
 	): Promise<BotProcessResult> {
 		const startTime = Date.now();
 
-		// Create message context for BunkBot metrics
-		const messageContext = this.bunkBotMetrics
-			? {
-					messageId: message.id,
-					userId: message.author.id,
-					username: message.author.username,
-					channelId: message.channel.id,
-					channelName: getChannelName(message),
-					guildId: message.guild?.id || 'dm',
-					messageLength: message.content.length,
-					timestamp: Date.now(),
-				}
-			: undefined;
+		// Create message context for enhanced metrics
+		const messageContext: MessageContext = {
+			messageId: message.id,
+			userId: message.author.id,
+			username: message.author.username,
+			channelId: message.channel.id,
+			channelName: getChannelName(message),
+			guildId: message.guild?.id || 'dm',
+			messageLength: message.content.length,
+			timestamp: Date.now(),
+		};
 
 		try {
-			// Check if bot should respond
-			const shouldRespond = await bot.shouldRespond(message);
+			// Check if bot should respond with detailed trigger information
+			let shouldRespond: boolean;
+			let triggerResult: BotTriggerResult | undefined;
+			let conditionName = 'unknown';
+
+			// Use enhanced interface if available for detailed condition tracking
+			if (bot.shouldRespondWithDetails) {
+				triggerResult = await bot.shouldRespondWithDetails(message);
+				shouldRespond = triggerResult.triggered;
+				conditionName = triggerResult.conditionName || 'unknown';
+			} else {
+				// Fallback to standard interface
+				shouldRespond = await bot.shouldRespond(message);
+			}
+
 			const responseLatency = Date.now() - startTime;
 
 			if (shouldRespond) {
-				// Track bot trigger with BunkBot metrics
-				if (this.bunkBotMetrics && messageContext) {
-					this.bunkBotMetrics.trackBotTrigger(bot.name, 'condition_met', messageContext);
+				// Track bot trigger with enhanced metrics (with condition name)
+				if (this.triggerTracker) {
+					this.triggerTracker.trackTrigger(bot.name, conditionName, messageContext);
+				}
+
+				// Track bot trigger with legacy BunkBot metrics (fallback)
+				if (this.bunkBotMetrics) {
+					this.bunkBotMetrics.trackBotTrigger(bot.name, conditionName, messageContext);
 				}
 
 				// Bot triggered - process the message
@@ -195,9 +220,21 @@ export class MessageProcessor {
 
 				this.recordSuccess(bot.name);
 
-				// Track bot response with BunkBot metrics
-				if (this.bunkBotMetrics && messageContext) {
-					this.bunkBotMetrics.trackBotResponse(bot.name, 'condition_met', totalLatency, messageContext);
+				// Track bot response with enhanced metrics
+				if (this.triggerTracker) {
+					this.triggerTracker.trackResponse(
+						bot.name,
+						conditionName,
+						totalLatency,
+						messageContext,
+						true,
+						'message',
+					);
+				}
+
+				// Track bot response with legacy BunkBot metrics (fallback)
+				if (this.bunkBotMetrics) {
+					this.bunkBotMetrics.trackBotResponse(bot.name, conditionName, totalLatency, messageContext);
 				}
 
 				// Track successful bot interaction (existing metrics)
@@ -215,8 +252,13 @@ export class MessageProcessor {
 					responseText: typeof response === 'string' ? response : undefined,
 				};
 			} else {
-				// Track bot skip with BunkBot metrics
-				if (this.bunkBotMetrics && messageContext) {
+				// Track bot skip using legacy BunkBot metrics (enhanced metrics use base for skips)
+				if (this.bunkBotMetrics) {
+					this.bunkBotMetrics.trackBotSkip(bot.name, 'condition_not_met', messageContext);
+				}
+
+				// Track bot skip with legacy BunkBot metrics (fallback)
+				if (this.bunkBotMetrics) {
 					this.bunkBotMetrics.trackBotSkip(bot.name, 'condition_not_met', messageContext);
 				}
 
@@ -243,8 +285,13 @@ export class MessageProcessor {
 
 			this.recordFailure(bot.name);
 
-			// Track bot skip due to error with BunkBot metrics
-			if (this.bunkBotMetrics && messageContext) {
+			// Track bot skip due to error using legacy BunkBot metrics (enhanced metrics use base for skips)
+			if (this.bunkBotMetrics) {
+				this.bunkBotMetrics.trackBotSkip(bot.name, 'processing_error', messageContext);
+			}
+
+			// Track bot skip due to error with legacy BunkBot metrics (fallback)
+			if (this.bunkBotMetrics) {
 				this.bunkBotMetrics.trackBotSkip(bot.name, 'processing_error', messageContext);
 			}
 
@@ -269,16 +316,16 @@ export class MessageProcessor {
 		const triggered = [];
 		const failed = [];
 
-		for (const result of results) {
-			if (result.status === 'fulfilled') {
-				if (result.value.triggered) {
-					triggered.push(result.value.bot);
+		for (const _result of results) {
+			if (_result.status === 'fulfilled') {
+				if (_result.value.triggered) {
+					triggered.push(_result.value.bot);
 				}
-				if (result.value.error) {
-					failed.push(result.value.bot);
+				if (_result.value.error) {
+					failed.push(_result.value.bot);
 				}
 			} else {
-				logger.error('Bot processing promise rejected:', result.reason, { correlationId });
+				logger.error('Bot processing promise rejected:', _result.reason, { correlationId });
 			}
 		}
 
@@ -500,5 +547,15 @@ export class MessageProcessor {
 				logger.debug(`Removed circuit breaker for removed bot: ${breakerName}`);
 			}
 		}
+
+		// Update metrics with new bot count
+		if (this.bunkBotMetrics) {
+			this.bunkBotMetrics.trackBotRegistryUpdate(0, 0, bots.length); // Full update
+		}
+	}
+
+	// Add method to get trigger tracker for external access
+	getTriggerTracker(): BotTriggerTracker | undefined {
+		return this.triggerTracker;
 	}
 }

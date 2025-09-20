@@ -31,8 +31,9 @@ const path = __importStar(require("path"));
  * Environment configuration abstraction that loads and validates environment variables.
  * This is the central place to access all environment variables and ensures type safety.
  */
-// Find the .env file
-const envPath = path.resolve(process.cwd(), '.env');
+// Find the .env file - look in repository root, not current working directory
+const repoRoot = path.resolve(__dirname, '../../../'); // Go up from packages/shared/src to repo root
+const envPath = path.resolve(repoRoot, '.env');
 const envExists = fs.existsSync(envPath);
 // Log whether the .env file exists
 console.log(`[Environment] Looking for .env file at: ${envPath}`);

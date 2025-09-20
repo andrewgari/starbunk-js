@@ -68,10 +68,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
-				expect(result).toBe(false);
+				expect(_result).toBe(false);
 				expect(logger.debug).toHaveBeenCalledWith(
 					expect.stringContaining(`withChance(${chance}): random=7, result=false`),
 				);
@@ -84,10 +84,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
-				expect(result).toBe(true);
+				expect(_result).toBe(true);
 				expect(logger.debug).toHaveBeenCalledWith(
 					expect.stringContaining(`withChance(${chance}): random=3, result=true`),
 				);
@@ -100,10 +100,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
-				expect(result).toBe(true);
+				expect(_result).toBe(true);
 			});
 		});
 
@@ -119,10 +119,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
-				expect(result).toBe(true);
+				expect(_result).toBe(true);
 			});
 
 			it('should work with zero chance in debug mode', async () => {
@@ -132,10 +132,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
-				expect(result).toBe(true);
+				expect(_result).toBe(true);
 			});
 
 			it('should work with 100% chance in debug mode', async () => {
@@ -145,10 +145,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 				// Act
 				const condition = withChance(chance);
-				const result = await condition();
+				const _result = await condition();
 
 				// Assert
-				expect(result).toBe(true);
+				expect(_result).toBe(true);
 			});
 		});
 	});
@@ -268,10 +268,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 			// Act
 			const wrappedCondition = withDefaultBotBehavior(botName, testCondition);
-			const result = await wrappedCondition(humanMessage);
+			const _result = await wrappedCondition(humanMessage);
 
 			// Assert
-			expect(result).toBe(true);
+			expect(_result).toBe(true);
 			expect(logger.debug).toHaveBeenCalledWith(
 				`[${botName}] ✅ Condition matched`,
 				expect.objectContaining({
@@ -295,10 +295,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 			// Act
 			const wrappedCondition = withDefaultBotBehavior(botName, testCondition);
-			const result = await wrappedCondition(humanMessage);
+			const _result = await wrappedCondition(humanMessage);
 
 			// Assert
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(logger.debug).toHaveBeenCalledWith(
 				`[${botName}] ❌ Condition did not match`,
 				expect.objectContaining({
@@ -322,10 +322,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 			// Act
 			const wrappedCondition = withDefaultBotBehavior(botName, testCondition);
-			const result = await wrappedCondition(covaBotMessage);
+			const _result = await wrappedCondition(covaBotMessage);
 
 			// Assert
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(logger.debug).toHaveBeenCalledWith(`[${botName}] 🚫 Message excluded by enhanced bot filtering`);
 		});
 	});
@@ -348,10 +348,10 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 			// Act
 			const wrappedCondition = withDefaultBotBehavior(botName, errorCondition);
-			const result = await wrappedCondition(message);
+			const _result = await wrappedCondition(message);
 
 			// Assert
-			expect(result).toBe(false);
+			expect(_result).toBe(false);
 			expect(logger.error).toHaveBeenCalledWith(`[${botName}] 💥 Error in condition:`, expect.any(Error));
 		});
 	});

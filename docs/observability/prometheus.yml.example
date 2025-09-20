@@ -1,0 +1,57 @@
+# Prometheus example configuration for Unraid (Docker-based discovery)
+# - Discovers containers by Docker labels
+# - Scrapes Starbunk services on their internal metrics port (3000) or published host ports
+#
+# Usage:
+# 1) If Prometheus runs as a Docker container on the same host, docker_sd_configs will work out of the box
+# 2) If Prometheus runs directly on the host (or you prefer host port scraping), use the static_configs section
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+
+scrape_configs:
+  # Prefer Docker Service Discovery by labels
+  - job_name: 'starbunk-docker'
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 30s
+    relabel_configs:
+      # Only scrape containers that opt-in via label
+      - source_labels: [__meta_docker_container_label_prometheus_io_scrape]
+        action: keep
+        regex: true
+      # Set metrics path from label (default to /metrics if not present)
+      - source_labels: [__meta_docker_container_label_prometheus_io_path]
+        target_label: __metrics_path__
+        regex: (.+)
+        replacement: ${1}
+        action: replace
+      # Set port from label (default handled at container env METRICS_PORT=3000)
+      - source_labels: [__address__, __meta_docker_container_label_prometheus_io_port]
+        regex: '([^:]+)(?::\d+)?;(\d+)'
+        replacement: '${1}:$2'
+        target_label: __address__
+        action: replace
+      # Map useful container labels
+      - source_labels: [__meta_docker_container_label_com_starbunk_service]
+        target_label: service
+      - source_labels: [__meta_docker_container_name]
+        target_label: container
+      - source_labels: [__meta_docker_container_image]
+        target_label: image
+
+  # Fallback: scrape via published host ports (useful when Prometheus is not in Docker)
+  - job_name: 'starbunk-host'
+    static_configs:
+      - targets:
+          # Default host port mappings provided in compose (override as needed)
+          - 'localhost:9301'  # bunkbot
+          - 'localhost:9303'  # covabot
+          - 'localhost:9304'  # djcova
+          - 'localhost:9305'  # starbunk-dnd
+        labels:
+          service: starbunk
+
+# Optional: Alerting/recording rules can be added here
+

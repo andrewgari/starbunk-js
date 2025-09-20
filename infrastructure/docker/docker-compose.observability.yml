@@ -15,8 +15,10 @@ services:
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docs/observability/prometheus.yml.example:/etc/prometheus/prometheus.yml:ro
       - ${UNRAID_APPDATA_PATH:-./data}/prometheus:/prometheus
+      - /var/run/docker.sock:/var/run/docker.sock
+
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -63,7 +65,7 @@ services:
       retries: 3
 
   # =============================================================================
-  # GRAFANA DASHBOARDS  
+  # GRAFANA DASHBOARDS
   # =============================================================================
   grafana:
     image: grafana/grafana:10.1.0
@@ -74,7 +76,7 @@ services:
     volumes:
       - ${UNRAID_APPDATA_PATH:-./data}/grafana:/var/lib/grafana
       - ./grafana-dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./docs/observability/grafana-datasources.yml.example:/etc/grafana/provisioning/datasources/datasources.yml:ro
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
@@ -105,11 +107,8 @@ services:
     ports:
       - "${LOKI_PORT:-3100}:3100"
     volumes:
-      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
       - ${UNRAID_APPDATA_PATH:-./data}/loki:/loki
-    command: 
-      - '-config.file=/etc/loki/local-config.yaml'
-      - '-target=all'
+    command: ["-config.file=/etc/loki/local-config.yaml"]
     networks:
       - starbunk-network
     healthcheck:
@@ -127,10 +126,10 @@ services:
     container_name: starbunk-promtail
     restart: unless-stopped
     volumes:
-      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./docs/observability/promtail.yml.example:/etc/promtail/config.yml:ro
       - /var/log:/var/log:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    command: 
+    command:
       - '-config.file=/etc/promtail/config.yml'
     networks:
       - starbunk-network
@@ -147,7 +146,7 @@ services:
     ports:
       - "${ALERTMANAGER_PORT:-9093}:9093"
     volumes:
-      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./docs/observability/alertmanager.yml.example:/etc/alertmanager/alertmanager.yml:ro
       - ${UNRAID_APPDATA_PATH:-./data}/alertmanager:/data
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
@@ -222,14 +221,14 @@ volumes:
       o: bind
       type: none
       device: ${UNRAID_APPDATA_PATH:-./data}/prometheus
-  
+
   grafana-data:
     driver: local
     driver_opts:
       o: bind
       type: none
       device: ${UNRAID_APPDATA_PATH:-./data}/grafana
-  
+
   loki-data:
     driver: local
     driver_opts:

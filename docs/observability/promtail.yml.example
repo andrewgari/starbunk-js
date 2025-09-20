@@ -1,0 +1,54 @@
+# Promtail example configuration for Unraid (collect Docker container logs)
+# - Discovers containers via Docker and forwards logs to Loki
+# - Attaches useful labels including com.starbunk.service for filtering in Grafana
+#
+# Requirements:
+# - Promtail container must have access to /var/lib/docker/containers and /var/run/docker.sock
+# - Loki URL should match your deployment
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker-logs
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 30s
+    relabel_configs:
+      # Only pick Starbunk containers (optional). Comment out to include all containers.
+      - source_labels: [__meta_docker_container_label_com_starbunk_service]
+        action: keep
+        regex: .+
+      # Attach container labels as log labels
+      - source_labels: [__meta_docker_container_label_com_starbunk_service]
+        target_label: service
+      - source_labels: [__meta_docker_container_name]
+        target_label: container
+      - source_labels: [__meta_docker_container_image]
+        target_label: image
+      - source_labels: [__meta_docker_container_label_log_level]
+        target_label: log_level
+    pipeline_stages:
+      - docker: {}
+      # If your apps log structured JSON, decode it for better filtering
+      - json:
+          expressions:
+            level: level
+            msg: message
+            service: service
+            ts: timestamp
+          on_failure: drop
+      - labels:
+          level:
+          service:
+      - timestamp:
+          source: ts
+          format: RFC3339
+

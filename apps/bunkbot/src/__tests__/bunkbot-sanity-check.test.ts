@@ -206,8 +206,8 @@ describe('BunkBot Comprehensive Sanity Check', () => {
 					channel: mockTextChannel({ id: '987654321098765432' }),
 				});
 
-				const result = messageFilter.shouldProcessMessage(message);
-				expect(result).toBe(true);
+				const _result = messageFilter.shouldProcessMessage(message);
+				expect(_result).toBe(true);
 			});
 		});
 	});
