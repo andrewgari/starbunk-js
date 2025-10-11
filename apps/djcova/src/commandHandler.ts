@@ -1,4 +1,5 @@
-import { REST, Routes } from 'discord.js';
+import { REST } from '@discordjs/rest';
+import { Routes } from 'discord-api-types/v10';
 import fs from 'fs';
 // Minimal interaction shape used by this handler (structural typing)
 type InteractionLike = {

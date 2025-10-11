@@ -1,5 +1,6 @@
 import { AudioPlayerStatus } from '@discordjs/voice';
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder } from '@discordjs/builders';
+import { ChatInputCommandInteraction } from 'discord.js';
 
 import { Readable } from 'stream';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
