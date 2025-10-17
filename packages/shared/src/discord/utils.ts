@@ -1,19 +1,30 @@
 // Shared Discord utilities for all containers
-import { Client, CommandInteraction, GuildMember, User, Guild } from 'discord.js';
+import {
+	Client,
+	CommandInteraction,
+	ChatInputCommandInteraction,
+	GuildMember,
+	User,
+	Guild,
+	Interaction,
+} from 'discord.js';
 import { logger } from '../services/logger';
+
+// Type alias for any command interaction type
+type AnyCommandInteraction = CommandInteraction | ChatInputCommandInteraction;
 
 /**
  * Safely get a Discord client from an interaction
  * This replaces container-specific getStarbunkClient functions
  */
-export function getClientFromInteraction(interaction: CommandInteraction): Client {
+export function getClientFromInteraction(interaction: AnyCommandInteraction): Client {
 	return interaction.client;
 }
 
 /**
  * Safely get guild member from interaction
  */
-export function getMemberFromInteraction(interaction: CommandInteraction): GuildMember | null {
+export function getMemberFromInteraction(interaction: AnyCommandInteraction): GuildMember | null {
 	if (!interaction.guild || !interaction.member) {
 		return null;
 	}
@@ -24,14 +35,14 @@ export function getMemberFromInteraction(interaction: CommandInteraction): Guild
 /**
  * Safely get user from interaction
  */
-export function getUserFromInteraction(interaction: CommandInteraction): User {
+export function getUserFromInteraction(interaction: AnyCommandInteraction): User {
 	return interaction.user;
 }
 
 /**
  * Safely get guild from interaction
  */
-export function getGuildFromInteraction(interaction: CommandInteraction): Guild | null {
+export function getGuildFromInteraction(interaction: AnyCommandInteraction): Guild | null {
 	return interaction.guild;
 }
 
@@ -52,7 +63,7 @@ export function getUserVoiceChannel(member: GuildMember) {
 /**
  * Validate that interaction is from a guild (not DM)
  */
-export function validateGuildInteraction(interaction: CommandInteraction): boolean {
+export function validateGuildInteraction(interaction: AnyCommandInteraction): boolean {
 	if (!interaction.guild) {
 		logger.warn('Command attempted in DM, rejecting');
 		return false;
@@ -64,7 +75,7 @@ export function validateGuildInteraction(interaction: CommandInteraction): boole
  * Common error response for interactions
  */
 export async function sendErrorResponse(
-	interaction: CommandInteraction,
+	interaction: AnyCommandInteraction,
 	message: string = 'An error occurred while processing your command.',
 ): Promise<void> {
 	try {
@@ -81,7 +92,7 @@ export async function sendErrorResponse(
 /**
  * Common success response for interactions
  */
-export async function sendSuccessResponse(interaction: CommandInteraction, message: string): Promise<void> {
+export async function sendSuccessResponse(interaction: AnyCommandInteraction, message: string): Promise<void> {
 	try {
 		if (interaction.replied || interaction.deferred) {
 			await interaction.followUp({ content: `✅ ${message}`, ephemeral: false });
@@ -97,7 +108,7 @@ export async function sendSuccessResponse(interaction: CommandInteraction, messa
  * Defer interaction reply for long-running operations
  */
 export async function deferInteractionReply(
-	interaction: CommandInteraction,
+	interaction: AnyCommandInteraction,
 	ephemeral: boolean = false,
 ): Promise<void> {
 	try {
