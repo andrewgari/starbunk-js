@@ -27,23 +27,50 @@ import { logger } from '@starbunk/shared';
 export function createVoiceConnection(channel: VoiceChannelLike, adapterCreator: unknown): VoiceConnectionLike {
 	logger.debug(`Joining voice channel: ${channel.name} (${channel.id})`);
 
+	// Check for existing connection first
+	const existingConnection = getVoiceConnection(channel.guild.id);
+	if (existingConnection) {
+		logger.debug(`Reusing existing voice connection for guild ${channel.guild.id}`);
+		return existingConnection;
+	}
+
 	const connection = joinVoiceChannel({
 		channelId: channel.id,
 		guildId: channel.guild.id,
 		adapterCreator: adapterCreator,
 	});
 
-	// Set up connection event handlers
+	// Set up connection event handlers with improved error handling
 	connection.on(VoiceConnectionStatus.Ready, () => {
-		logger.info(`Voice connection ready in channel: ${channel.name}`);
+		logger.info(`✅ Voice connection ready in channel: ${channel.name}`);
 	});
 
-	connection.on(VoiceConnectionStatus.Disconnected, () => {
-		logger.info(`Voice connection disconnected from channel: ${channel.name}`);
+	connection.on(VoiceConnectionStatus.Disconnected, async () => {
+		logger.warn(`⚠️ Voice connection disconnected from channel: ${channel.name}`);
+		// The library will automatically attempt to reconnect
+		// If it can't reconnect within 5 seconds, it will transition to Destroyed
+	});
+
+	connection.on(VoiceConnectionStatus.Destroyed, () => {
+		logger.info(`🔴 Voice connection destroyed for channel: ${channel.name}`);
+	});
+
+	connection.on(VoiceConnectionStatus.Connecting, () => {
+		logger.debug(`🔄 Voice connection connecting to channel: ${channel.name}`);
+	});
+
+	connection.on(VoiceConnectionStatus.Signalling, () => {
+		logger.debug(`📡 Voice connection signalling for channel: ${channel.name}`);
 	});
 
 	connection.on('error', (error: Error) => {
-		logger.error(`Voice connection error in channel ${channel.name}:`, error);
+		logger.error(`❌ Voice connection error in channel ${channel.name}:`, error);
+	});
+
+	connection.on('stateChange', (oldState: { status: string }, newState: { status: string }) => {
+		logger.debug(
+			`Voice connection state changed: ${oldState.status} -> ${newState.status} for channel: ${channel.name}`,
+		);
 	});
 
 	return connection;

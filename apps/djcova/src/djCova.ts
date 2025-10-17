@@ -1,4 +1,11 @@
-import { createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } from '@discordjs/voice';
+import {
+	createAudioPlayer,
+	createAudioResource,
+	AudioPlayerStatus,
+	StreamType,
+	demuxProbe,
+	NoSubscriberBehavior,
+} from '@discordjs/voice';
 // Local structural types derived from factory return types
 type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 type PlayerSubscriptionLike = { unsubscribe(): void };
@@ -8,6 +15,7 @@ import { logger, type DJCovaMetrics } from '@starbunk/shared';
 import { Readable } from 'stream';
 import { IdleManager, createIdleManager, IdleManagerConfig } from './services/idleManager';
 import { getMusicConfig } from './config/musicConfig';
+import ffmpegPath from 'ffmpeg-static';
 
 export class DJCova {
 	private player: AudioPlayerLike;
@@ -30,11 +38,33 @@ export class DJCova {
 
 	constructor(metrics?: DJCovaMetrics) {
 		logger.debug('🎵 Initializing DJCova audio player');
-		this.player = createAudioPlayer();
+
+		// Set FFMPEG_PATH environment variable for @discordjs/voice
+		if (ffmpegPath && !process.env.FFMPEG_PATH) {
+			process.env.FFMPEG_PATH = ffmpegPath;
+			logger.debug(`Set FFMPEG_PATH to: ${ffmpegPath}`);
+		}
+
+		// Create audio player with proper behavior configuration
+		this.player = createAudioPlayer({
+			behaviors: {
+				// Continue playing even if no subscribers (prevents premature stopping)
+				noSubscriber: NoSubscriberBehavior.Play,
+			},
+		});
 		this.metrics = metrics;
 
 		// Set up audio player event listeners for idle management
 		this.setupIdleManagement();
+
+		// Set up error handler for the audio player
+		this.player.on('error', (error: Error) => {
+			logger.error('Audio player error:', error);
+			// Track error in metrics
+			if (this.metrics && this.currentGuildId) {
+				this.metrics.trackAudioProcessingComplete(this.currentGuildId, 0, false);
+			}
+		});
 	}
 
 	async start(source: string | Readable): Promise<void> {
@@ -71,30 +101,44 @@ export class DJCova {
 			}
 
 			let stream: Readable;
-			let inputType = StreamType.Arbitrary;
 
 			if (typeof source === 'string') {
+				// YouTube URL - use ytdl-core to extract audio
+				logger.debug(`Fetching YouTube audio from: ${source}`);
 				stream = ytdl(source, {
 					filter: 'audioonly',
 					quality: 'highestaudio',
-					highWaterMark: 1 << 25,
-					dlChunkSize: 0,
+					// Reduce memory usage with more conservative settings
+					highWaterMark: 1 << 20, // 1MB instead of 32MB
 					requestOptions: {
 						headers: {
 							'User-Agent':
-								'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+								'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
 							'Accept-Language': 'en-US,en;q=0.9',
 						},
 					},
 				});
-				inputType = StreamType.WebmOpus;
 			} else {
+				// Direct stream (file upload)
 				stream = source;
 			}
 
-			this.resource = createAudioResource(stream, {
-				inputType,
+			// Use demuxProbe to automatically detect the stream type
+			// This is the recommended approach for @discordjs/voice
+			logger.debug('Probing stream to detect format...');
+			const { stream: probedStream, type } = await demuxProbe(stream);
+
+			logger.debug(`Detected stream type: ${StreamType[type]}`);
+
+			// Create audio resource with the probed stream and detected type
+			this.resource = createAudioResource(probedStream, {
+				inputType: type,
 				inlineVolume: true,
+			});
+
+			// Set up error handler for the audio resource
+			this.resource.playStream.on('error', (error: Error) => {
+				logger.error('Audio stream error:', error);
 			});
 
 			if (this.resource.volume) {
@@ -125,6 +169,11 @@ export class DJCova {
 				const sessionDuration = Date.now() - this.currentSessionStart;
 				this.metrics.trackMusicSessionEnd(this.currentGuildId, sessionDuration, 'error');
 			}
+
+			// Clean up resource reference
+			this.resource = undefined;
+			this.currentSessionStart = undefined;
+			this.currentSource = undefined;
 
 			throw error;
 		}

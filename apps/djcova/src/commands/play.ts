@@ -48,6 +48,18 @@ export default {
 			logger.info(`🎵 Attempting to play: ${sourceName}`);
 			await deferInteractionReply(interaction);
 
+			// Validate YouTube URL if provided
+			if (url && !attachment) {
+				const isValidYoutubeUrl =
+					url.includes('youtube.com/watch?v=') ||
+					url.includes('youtu.be/') ||
+					url.includes('youtube.com/shorts/');
+				if (!isValidYoutubeUrl) {
+					await sendErrorResponse(interaction, 'Please provide a valid YouTube URL (youtube.com or youtu.be)');
+					return;
+				}
+			}
+
 			// Create voice connection
 			const connection = createVoiceConnection(voiceChannel!, voiceChannel!.guild.voiceAdapterCreator);
 
@@ -77,9 +89,19 @@ export default {
 				logger.info('⏹️ Audio playback ended');
 			});
 
+			// CRITICAL: Subscribe player to voice connection BEFORE starting playback
+			// This ensures the audio has somewhere to go before we start playing
+			const subscription = subscribePlayerToConnection(connection, musicPlayer.getPlayer());
+			if (!subscription) {
+				await sendErrorResponse(interaction, 'Failed to connect audio player to voice channel.');
+				return;
+			}
+			logger.info('Successfully subscribed to voice connection');
+
 			// Resolve audio source
 			let source: string | Readable;
 			if (attachment) {
+				logger.debug(`Fetching audio file from attachment: ${attachment.name}`);
 				const response = await fetch(attachment.url);
 				if (!response.body) {
 					await sendErrorResponse(interaction, 'Failed to retrieve the provided audio file.');
@@ -90,21 +112,31 @@ export default {
 				source = url!;
 			}
 
-			// Start playing the audio
+			// Start playing the audio (now that we're subscribed)
 			await musicPlayer.start(source);
 
-			// Subscribe player to voice connection
-			const subscription = subscribePlayerToConnection(connection, musicPlayer.getPlayer());
-			if (!subscription) {
-				await sendErrorResponse(interaction, 'Failed to connect audio player to voice channel.');
-				return;
-			}
-
-			logger.info('Successfully subscribed to voice connection');
 			await sendSuccessResponse(interaction, `🎶 Now playing: ${sourceName}`);
 		} catch (error) {
 			logger.error('Error executing play command', error instanceof Error ? error : new Error(String(error)));
-			await sendErrorResponse(interaction, 'An error occurred while trying to play the music.');
+
+			// Provide more specific error messages for common issues
+			let errorMessage = 'An error occurred while trying to play the music.';
+
+			if (error instanceof Error) {
+				if (error.message.includes('Status code: 410')) {
+					errorMessage = 'This YouTube video is unavailable or has been removed.';
+				} else if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
+					errorMessage = 'Network error: Unable to connect to YouTube. Please try again later.';
+				} else if (error.message.includes('Video unavailable')) {
+					errorMessage = 'This YouTube video is unavailable or restricted.';
+				} else if (error.message.includes('Sign in to confirm your age')) {
+					errorMessage = 'This video is age-restricted and cannot be played.';
+				} else if (error.message.includes('ffmpeg')) {
+					errorMessage = 'Audio processing error: FFmpeg is not properly configured.';
+				}
+			}
+
+			await sendErrorResponse(interaction, errorMessage);
 		}
 	},
 };
