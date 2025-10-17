@@ -3,6 +3,10 @@
   "version": "0.0.2",
   "description": "it's bot that says blu, among things...",
   "type": "commonjs",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "prepare": "husky",
     "build": "npm run build:shared && npm run build:containers",
@@ -117,5 +121,8 @@
       "eslint --cache",
       "prettier --write"
     ]
+  },
+  "overrides": {
+    "discord.js": "^14.18.0"
   }
 }
