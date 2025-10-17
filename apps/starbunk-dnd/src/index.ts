@@ -256,7 +256,7 @@ class StarbunkDNDContainer {
 async function main(): Promise<void> {
 	if (process.env.CI_SMOKE_MODE === 'true') {
 		logger.info('CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
-		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT) : 3334;
+		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT) : 3005;
 		const server = createServer((req: IncomingMessage, res: ServerResponse) => {
 			if (req.url === '/health') {
 				res.writeHead(200, { 'Content-Type': 'application/json' });

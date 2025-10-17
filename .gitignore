@@ -176,9 +176,6 @@ scripts/*
 
 *.md
 
-# Claude Code local configuration
-.claude/
-
 # Allow the pre-push gate script to be tracked
 !scripts/
 !scripts/pre-push.sh
