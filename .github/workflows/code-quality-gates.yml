@@ -391,24 +391,27 @@ jobs:
           STARBUNK_DND: ${{ needs.detect-changes.outputs.starbunk-dnd }}
         run: |
           set -e
+          echo "Installing dependencies with npm workspaces..."
+          npm ci --prefer-offline --no-audit
+
           echo "Building shared first (required by containers)..."
-          (cd packages/shared && npm ci && npm run build)
+          (cd packages/shared && npm run build)
 
           if [ "$BUNKBOT" = "true" ]; then
             echo "Building bunkbot..."
-            (cd apps/bunkbot && npm ci && npm run build) || exit 1
+            (cd apps/bunkbot && npm run build) || exit 1
           fi
           if [ "$DJCOVA" = "true" ]; then
             echo "Building djcova..."
-            (cd apps/djcova && npm ci && npm run build) || exit 1
+            (cd apps/djcova && npm run build) || exit 1
           fi
           if [ "$COVABOT" = "true" ]; then
             echo "Building covabot..."
-            (cd apps/covabot && npm ci && npm run build) || exit 1
+            (cd apps/covabot && npm run build) || exit 1
           fi
           if [ "$STARBUNK_DND" = "true" ]; then
             echo "Building starbunk-dnd..."
-            (cd apps/starbunk-dnd && npm ci && npm run build) || exit 1
+            (cd apps/starbunk-dnd && npm run build) || exit 1
           fi
 
       - name: Analyze bundle sizes

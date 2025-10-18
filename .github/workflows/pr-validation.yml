@@ -222,31 +222,9 @@ jobs:
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          echo "🚀 Installing dependencies in parallel..."
-
-          # Install root dependencies
-          npm ci --prefer-offline --no-audit &
-          root_pid=$!
-
-          # Install container dependencies in parallel using absolute paths
-          (cd packages/shared && npm ci --prefer-offline --no-audit) &
-          shared_pid=$!
-
-          (cd apps/bunkbot && npm ci --prefer-offline --no-audit) &
-          bunkbot_pid=$!
-
-          (cd apps/djcova && npm ci --prefer-offline --no-audit) &
-          djcova_pid=$!
-
-          (cd apps/starbunk-dnd && npm ci --prefer-offline --no-audit) &
-          dnd_pid=$!
-
-          (cd apps/covabot && npm ci --prefer-offline --no-audit) &
-          covabot_pid=$!
-
-          # Wait for all installations
-          wait $root_pid $shared_pid $bunkbot_pid $djcova_pid $dnd_pid $covabot_pid
-
+          echo "🚀 Installing dependencies with npm workspaces..."
+          # With npm workspaces, installing at root handles all workspace packages
+          npm ci --prefer-offline --no-audit
           echo "✅ All dependencies installed"
 
       - name: Build shared package
