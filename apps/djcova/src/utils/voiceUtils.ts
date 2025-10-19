@@ -30,8 +30,15 @@ export function createVoiceConnection(channel: VoiceChannelLike, adapterCreator:
 	// Check for existing connection first
 	const existingConnection = getVoiceConnection(channel.guild.id);
 	if (existingConnection) {
-		logger.debug(`Reusing existing voice connection for guild ${channel.guild.id}`);
-		return existingConnection;
+		if (existingConnection.joinConfig.channelId === channel.id) {
+			logger.debug(`Reusing existing voice connection for guild ${channel.guild.id} in channel ${channel.id}`);
+			return existingConnection;
+		} else {
+			logger.debug(
+				`Existing voice connection for guild ${channel.guild.id} is in channel ${existingConnection.joinConfig.channelId}, but requested channel is ${channel.id}. Destroying and rejoining.`
+			);
+			existingConnection.destroy();
+		}
 	}
 
 	const connection = joinVoiceChannel({
