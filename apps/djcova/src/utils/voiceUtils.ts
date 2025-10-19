@@ -34,13 +34,20 @@ export function createVoiceConnection(channel: VoiceChannelLike, adapterCreator:
 			logger.debug(`Reusing existing voice connection for guild ${channel.guild.id} in channel ${channel.id}`);
 			return existingConnection;
 		} else {
-			logger.debug(
-				`Existing voice connection for guild ${channel.guild.id} is in channel ${existingConnection.joinConfig.channelId}, but requested channel is ${channel.id}. Destroying and rejoining.`
-			);
-			existingConnection.destroy();
+	// Check for existing connection first
+	const existingConnection = getVoiceConnection(channel.guild.id);
+	if (existingConnection) {
+		// @ts-expect-error: joinConfig is a runtime property on VoiceConnection
+		const currentChannelId = existingConnection.joinConfig?.channelId;
+		if (currentChannelId === channel.id) {
+			logger.debug(`Reusing existing voice connection for guild ${channel.guild.id}`);
+			return existingConnection;
 		}
+		logger.debug(
+			`Existing connection is in ${currentChannelId}; switching to ${channel.id} for guild ${channel.guild.id}`,
+		);
+		try { existingConnection.destroy(); } catch { /* no-op */ }
 	}
-
 	const connection = joinVoiceChannel({
 		channelId: channel.id,
 		guildId: channel.guild.id,
