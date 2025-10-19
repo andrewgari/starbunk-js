@@ -6,7 +6,6 @@ import {
 	GuildMember,
 	User,
 	Guild,
-	Interaction,
 } from 'discord.js';
 import { logger } from '../services/logger';
 
