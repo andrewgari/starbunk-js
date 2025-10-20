@@ -3,6 +3,10 @@
   "version": "0.0.2",
   "description": "it's bot that says blu, among things...",
   "type": "commonjs",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "prepare": "husky",
     "build": "npm run build:shared && npm run build:containers",
@@ -96,6 +100,7 @@
     "@types/ioredis": "^4.28.10",
     "axios": "^1.11.0",
     "dotenv": "^16.6.1",
+    "esbuild": "^0.25.11",
     "ioredis": "^5.8.0",
     "prisma": "^5.7.1",
     "tsx": "^4.6.2",
@@ -116,5 +121,8 @@
       "eslint --cache",
       "prettier --write"
     ]
+  },
+  "overrides": {
+    "discord.js": "^14.18.0"
   }
 }

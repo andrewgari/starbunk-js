@@ -129,20 +129,8 @@ jobs:
         run: |
           echo "🚀 Installing dependencies..."
 
-          # Parallel installation with error handling
-          (npm ci --prefer-offline --no-audit --silent || exit 1) &
-          root_pid=$!
-
-          (cd packages/shared && npm ci --prefer-offline --no-audit --silent || exit 1) &
-          shared_pid=$!
-
-          (cd apps/${{ inputs.container }} && npm ci --prefer-offline --no-audit --silent || exit 1) &
-          container_pid=$!
-
-          # Wait for all with error propagation
-          wait $root_pid || { echo "❌ Root dependency installation failed"; exit 1; }
-          wait $shared_pid || { echo "❌ Shared dependency installation failed"; exit 1; }
-          wait $container_pid || { echo "❌ Container dependency installation failed"; exit 1; }
+          # Install all dependencies with npm workspaces
+          npm ci --prefer-offline --no-audit || { echo "❌ Dependency installation failed"; exit 1; }
 
           echo "✅ Dependencies installed successfully"
 

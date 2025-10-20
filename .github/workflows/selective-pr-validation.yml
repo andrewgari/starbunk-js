@@ -281,29 +281,9 @@ jobs:
         run: |
           echo "🚀 Installing dependencies in parallel..."
 
-          # Install root dependencies
-          npm ci --prefer-offline --no-audit --silent &
-          root_pid=$!
-
-          # Install container dependencies in parallel (background jobs)
-          (cd packages/shared && npm ci --prefer-offline --no-audit --silent) &
-          shared_pid=$!
-
-          (cd apps/bunkbot && npm ci --prefer-offline --no-audit --silent) &
-          bunkbot_pid=$!
-
-          (cd apps/djcova && npm ci --prefer-offline --no-audit --silent) &
-          djcova_pid=$!
-
-          (cd apps/starbunk-dnd && npm ci --prefer-offline --no-audit --silent) &
-          dnd_pid=$!
-
-          (cd apps/covabot && npm ci --prefer-offline --no-audit --silent) &
-          covabot_pid=$!
-
-          # Wait for all installations with timeout protection
-          echo "⏳ Waiting for dependency installations..."
-          wait $root_pid $shared_pid $bunkbot_pid $djcova_pid $dnd_pid $covabot_pid
+          # Install all dependencies with npm workspaces
+          echo "🚀 Installing dependencies with npm workspaces..."
+          npm ci --prefer-offline --no-audit
 
           echo "✅ All dependencies installed successfully"
 
