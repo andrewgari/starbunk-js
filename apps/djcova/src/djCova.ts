@@ -105,19 +105,26 @@ export class DJCova {
 			if (typeof source === 'string') {
 				// YouTube URL - use ytdl-core to extract audio
 				logger.debug(`Fetching YouTube audio from: ${source}`);
-				stream = ytdl(source, {
-					filter: 'audioonly',
-					quality: 'highestaudio',
-					// Reduce memory usage with more conservative settings
-					highWaterMark: 1 << 20, // 1MB instead of 32MB
-					requestOptions: {
-						headers: {
-							'User-Agent':
-								'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-							'Accept-Language': 'en-US,en;q=0.9',
+				try {
+					stream = ytdl(source, {
+						filter: 'audioonly',
+						quality: 'highestaudio',
+						// Reduce memory usage with more conservative settings
+						highWaterMark: 1 << 20, // 1MB instead of 32MB
+						requestOptions: {
+							headers: {
+								'User-Agent':
+									'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+								'Accept-Language': 'en-US,en;q=0.9',
+							},
 						},
-					},
-				});
+					});
+				} catch (ytdlError) {
+					logger.error('❌ Failed to create ytdl stream:', ytdlError instanceof Error ? ytdlError : new Error(String(ytdlError)));
+					throw new Error(
+						'Failed to fetch YouTube audio. The video may be unavailable, age-restricted, or private.',
+					);
+				}
 			} else {
 				// Direct stream (file upload)
 				stream = source;
