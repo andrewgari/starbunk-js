@@ -10,7 +10,7 @@ import {
 type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 type PlayerSubscriptionLike = { unsubscribe(): void };
 type VoiceConnectionLike = { subscribe: (p: AudioPlayerLike) => PlayerSubscriptionLike | undefined };
-import ytdl from '@distube/ytdl-core';
+import { getYouTubeAudioStream, getVideoInfo } from './utils/ytdlp';
 import { logger, type DJCovaMetrics } from '@starbunk/shared';
 import { Readable } from 'stream';
 import { IdleManager, createIdleManager, IdleManagerConfig } from './services/idleManager';
@@ -103,23 +103,31 @@ export class DJCova {
 			let stream: Readable;
 
 			if (typeof source === 'string') {
-				// YouTube URL - use ytdl-core to extract audio
-				logger.debug(`Fetching YouTube audio from: ${source}`);
-				stream = ytdl(source, {
-					filter: 'audioonly',
-					quality: 'highestaudio',
-					// Reduce memory usage with more conservative settings
-					highWaterMark: 1 << 20, // 1MB instead of 32MB
-					requestOptions: {
-						headers: {
-							'User-Agent':
-								'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-							'Accept-Language': 'en-US,en;q=0.9',
-						},
-					},
-				});
+				// YouTube URL - use yt-dlp to extract audio
+				logger.info(`🎬 Fetching YouTube audio from: ${source}`);
+
+				try {
+					// Get video info first
+					const videoInfo = await getVideoInfo(source);
+					logger.info(`📺 Video: ${videoInfo.title} (${videoInfo.duration}s)`);
+
+					// Create audio stream using yt-dlp
+					stream = getYouTubeAudioStream(source);
+					logger.info('✅ Audio stream created successfully');
+
+					// Add error handler for the stream
+					stream.on('error', (error: Error) => {
+						logger.error('❌ Audio stream error:', error);
+					});
+				} catch (ytdlpError) {
+					logger.error('❌ Failed to create yt-dlp stream:', ytdlpError instanceof Error ? ytdlpError : new Error(String(ytdlpError)));
+					throw new Error(
+						'Failed to fetch YouTube audio. The video may be unavailable, age-restricted, or private.',
+					);
+				}
 			} else {
 				// Direct stream (file upload)
+				logger.info('📁 Using direct stream from file upload');
 				stream = source;
 			}
 
