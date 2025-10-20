@@ -483,6 +483,8 @@ jobs:
           # If no validation needed (docs-only), success
           if [[ "$should_validate" == "false" ]]; then
             echo "✅ Documentation-only changes - validation skipped"
+            echo "overall_success=true" >> $GITHUB_OUTPUT
+            echo "failure_reason=" >> $GITHUB_OUTPUT
             exit 0
           fi
 
