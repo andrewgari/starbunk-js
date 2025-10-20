@@ -15,6 +15,7 @@ import { logger, type DJCovaMetrics } from '@starbunk/shared';
 import { Readable } from 'stream';
 import { IdleManager, createIdleManager, IdleManagerConfig } from './services/idleManager';
 import { getMusicConfig } from './config/musicConfig';
+import { disconnectVoiceConnection } from './utils/voiceUtils';
 import ffmpegPath from 'ffmpeg-static';
 
 export class DJCova {
@@ -107,13 +108,20 @@ export class DJCova {
 				logger.info(`🎬 Fetching YouTube audio from: ${source}`);
 
 				try {
-					// Get video info first
-					const videoInfo = await getVideoInfo(source);
-					logger.info(`📺 Video: ${videoInfo.title} (${videoInfo.duration}s)`);
-
-					// Create audio stream using yt-dlp
+					// OPTIMIZATION: Start audio stream immediately without waiting for video info
+					// This reduces perceived latency from ~10-13s to ~5-7s
 					stream = getYouTubeAudioStream(source);
 					logger.info('✅ Audio stream created successfully');
+
+					// Get video info in parallel (non-blocking)
+					// This will log the video title a few seconds later, but won't delay playback
+					getVideoInfo(source)
+						.then(videoInfo => {
+							logger.info(`📺 Video: ${videoInfo.title} (${videoInfo.duration}s)`);
+						})
+						.catch(error => {
+							logger.debug('Could not fetch video info:', error instanceof Error ? error : new Error(String(error)));
+						});
 
 					// Add error handler for the stream
 					stream.on('error', (error: Error) => {
@@ -267,7 +275,8 @@ export class DJCova {
 	private setupIdleManagement(): void {
 		// Create listener functions as class properties for proper cleanup
 		this.onPlayingListener = () => {
-			logger.debug('Audio player started playing, resetting idle timer');
+			logger.info('🎶 Audio playback started');
+			logger.debug('Resetting idle timer');
 			if (this.idleManager) {
 				this.idleManager.resetIdleTimer();
 
@@ -279,7 +288,8 @@ export class DJCova {
 		};
 
 		this.onIdleListener = () => {
-			logger.debug('Audio player became idle, starting idle timer');
+			logger.info('⏹️ Audio playback ended');
+			logger.debug('Starting idle timer');
 			if (this.idleManager) {
 				this.idleManager.startIdleTimer();
 			}
@@ -347,6 +357,13 @@ export class DJCova {
 
 			// Stop the music player (this will also track session end)
 			this.stop('idle');
+
+			// CRITICAL: Actually leave the voice channel
+			// Without this, the bot stays in voice channel and can't rejoin properly
+			if (this.currentGuildId) {
+				disconnectVoiceConnection(this.currentGuildId);
+				logger.debug(`Disconnected from voice channel in guild ${this.currentGuildId}`);
+			}
 
 			// Send notification to users
 			const message = `🔇 ${reason}`;

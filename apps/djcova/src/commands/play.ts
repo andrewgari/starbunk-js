@@ -25,6 +25,10 @@ const commandBuilder = new SlashCommandBuilder()
 export default {
 	data: commandBuilder.toJSON(),
 	async execute(interaction: ChatInputCommandInteraction) {
+		// CRITICAL: Defer immediately to avoid Discord's 3-second timeout
+		// This must be the first async operation
+		await deferInteractionReply(interaction);
+
 		const attachment = interaction.options.getAttachment('file');
 		const url = interaction.options.getString('song');
 
@@ -46,7 +50,6 @@ export default {
 		try {
 			const sourceName = attachment ? attachment.name : url!;
 			logger.info(`🎵 Attempting to play: ${sourceName}`);
-			await deferInteractionReply(interaction);
 
 			// Validate YouTube URL if provided
 			if (url && !attachment) {
@@ -80,14 +83,8 @@ export default {
 
 			musicPlayer.initializeIdleManagement(interaction.guild!.id, interaction.channelId, notificationCallback);
 
-			// Set up audio player event handlers
-			musicPlayer.on(AudioPlayerStatus.Playing, () => {
-				logger.info('🎶 Audio playback started');
-			});
-
-			musicPlayer.on(AudioPlayerStatus.Idle, () => {
-				logger.info('⏹️ Audio playback ended');
-			});
+			// NOTE: Audio player event handlers are set up in DJCova constructor
+			// Don't register them here to avoid duplicate listeners/memory leaks
 
 			// CRITICAL: Subscribe player to voice connection BEFORE starting playback
 			// This ensures the audio has somewhere to go before we start playing
