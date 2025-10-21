@@ -98,7 +98,7 @@
   "dependencies": {
     "@prisma/client": "^5.7.1",
     "@types/ioredis": "^4.28.10",
-    "axios": "^1.11.0",
+    "axios": "^1.12.2",
     "dotenv": "^16.6.1",
     "esbuild": "^0.25.11",
     "ioredis": "^5.8.0",
