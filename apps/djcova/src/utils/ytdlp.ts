@@ -32,26 +32,46 @@ export function getYouTubeAudioStream(url: string): Readable {
 		stdio: ['ignore', 'pipe', 'pipe'],
 	});
 
-	// Log stderr for debugging
+	// Create a readable stream wrapper that handles early errors
+	const stream = ytdlpProcess.stdout as Readable;
+	let stderrBuffer = '';
+	let hasEmittedData = false;
+
+	// Collect stderr for better error messages
 	ytdlpProcess.stderr.on('data', (data: Buffer) => {
 		const message = data.toString().trim();
+		stderrBuffer += message + '\n';
 		if (message) {
 			logger.debug(`yt-dlp stderr: ${message}`);
 		}
 	});
 
+	// Handle process spawn errors
 	ytdlpProcess.on('error', (error: Error) => {
-		logger.error('yt-dlp process error:', error);
+		logger.error('yt-dlp process spawn error:', error);
+		stream.destroy(error);
 	});
 
+	// Handle early process exits before stream starts
 	ytdlpProcess.on('exit', (code: number | null, signal: string | null) => {
 		if (code !== 0 && code !== null) {
 			logger.warn(`yt-dlp exited with code ${code}, signal: ${signal}`);
+
+			// If the process exits with an error before emitting any data, emit error on stream
+			if (!hasEmittedData) {
+				const errorMessage = stderrBuffer.trim() || `yt-dlp process failed with code ${code}`;
+				stream.destroy(new Error(errorMessage));
+			}
 		}
 	});
 
+	// Track when data starts flowing
+	stream.on('data', () => {
+		hasEmittedData = true;
+	});
+
 	// Return stdout stream
-	return ytdlpProcess.stdout as Readable;
+	return stream;
 }
 
 /**

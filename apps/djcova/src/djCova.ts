@@ -142,9 +142,29 @@ export class DJCova {
 			// Use demuxProbe to automatically detect the stream type
 			// This is the recommended approach for @discordjs/voice
 			logger.debug('Probing stream to detect format...');
-			const { stream: probedStream, type } = await demuxProbe(stream);
 
-			logger.debug(`Detected stream type: ${StreamType[type]}`);
+			// Add timeout to demuxProbe to prevent indefinite hangs
+			const PROBE_TIMEOUT_MS = 15000; // 15 second timeout
+			const probePromise = demuxProbe(stream);
+			const timeoutPromise = new Promise<never>((_, reject) => {
+				setTimeout(() => reject(new Error('Stream probe timeout - yt-dlp may not be responding')), PROBE_TIMEOUT_MS);
+			});
+
+			let probedStream: Readable;
+			let type: number;
+
+			try {
+				const result = await Promise.race([probePromise, timeoutPromise]);
+				probedStream = result.stream;
+				type = result.type;
+				logger.debug(`Detected stream type: ${StreamType[type]}`);
+			} catch (error) {
+				// Clean up the stream on probe failure
+				if (stream && typeof (stream as any).destroy === 'function') {
+					(stream as any).destroy();
+				}
+				throw error;
+			}
 
 			// Create audio resource with the probed stream and detected type
 			this.resource = createAudioResource(probedStream, {
