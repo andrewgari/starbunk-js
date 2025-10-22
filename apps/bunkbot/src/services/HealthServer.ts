@@ -69,7 +69,7 @@ export class HealthServer {
 	private readonly maxResponseTimes = 100; // Keep last 100 response times
 
 	constructor(port?: number) {
-		this.port = port || parseInt(process.env.HEALTH_PORT || '3002');
+		this.port = port || parseInt(process.env.HEALTH_PORT || '3331');
 		this.metrics = {
 			totalRequests: 0,
 			errorCount: 0,
