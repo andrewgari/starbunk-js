@@ -21,7 +21,7 @@ import ffmpegPath from 'ffmpeg-static';
 export class DJCova {
 	private player: AudioPlayerLike;
 	private resource: ReturnType<typeof createAudioResource> | undefined;
-	private volume: number = 50; // Default volume 50%
+	private volume: number = 10; // Default volume 10%
 	private idleManager: IdleManager | null = null;
 	private currentGuildId: string | null = null;
 	private currentChannelId: string | null = null;

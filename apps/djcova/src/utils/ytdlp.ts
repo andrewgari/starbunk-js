@@ -5,6 +5,43 @@
 import { spawn } from 'child_process';
 import { Readable } from 'stream';
 import { logger } from '@starbunk/shared';
+import { existsSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
+
+/**
+ * Find yt-dlp binary path
+ * Checks common installation locations
+ */
+function getYtDlpPath(): string {
+	// Check environment variable first
+	if (process.env.YTDLP_PATH && existsSync(process.env.YTDLP_PATH)) {
+		return process.env.YTDLP_PATH;
+	}
+
+	// Common installation paths to check
+	const paths = [
+		'yt-dlp', // Default - check PATH
+		join(homedir(), '.local', 'bin', 'yt-dlp'), // pip install --user
+		'/usr/local/bin/yt-dlp', // System install
+		'/usr/bin/yt-dlp', // System install
+	];
+
+	for (const path of paths) {
+		// Skip checking existence for the generic 'yt-dlp' - let spawn handle it
+		if (path === 'yt-dlp') {
+			continue;
+		}
+		if (existsSync(path)) {
+			logger.debug(`Found yt-dlp at: ${path}`);
+			return path;
+		}
+	}
+
+	// Default to 'yt-dlp' and let it fail if not found
+	logger.debug('Using default yt-dlp command (relying on PATH)');
+	return 'yt-dlp';
+}
 
 /**
  * Get audio stream from YouTube using yt-dlp
@@ -13,6 +50,7 @@ import { logger } from '@starbunk/shared';
 export function getYouTubeAudioStream(url: string): Readable {
 	logger.debug(`Creating yt-dlp stream for: ${url}`);
 
+	const ytdlpPath = getYtDlpPath();
 	const ytdlpArgs = [
 		url,
 		'-f', 'bestaudio/best', // Get best audio quality
@@ -26,7 +64,7 @@ export function getYouTubeAudioStream(url: string): Readable {
 
 	logger.debug(`Spawning yt-dlp with args: ${ytdlpArgs.join(' ')}`);
 
-	const ytdlpProcess = spawn('yt-dlp', ytdlpArgs, {
+	const ytdlpProcess = spawn(ytdlpPath, ytdlpArgs, {
 		stdio: ['ignore', 'pipe', 'pipe'],
 	});
 
@@ -84,7 +122,8 @@ export async function getVideoInfo(url: string): Promise<{
 	duration: number;
 }> {
 	return new Promise((resolve, reject) => {
-		const ytdlpProcess = spawn('yt-dlp', [
+		const ytdlpPath = getYtDlpPath();
+		const ytdlpProcess = spawn(ytdlpPath, [
 			url,
 			'--dump-json',
 			'--no-playlist',
