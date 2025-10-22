@@ -37,9 +37,12 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 
 # Create user and install runtime dependencies in one layer
-RUN apk add --no-cache ffmpeg openssl dumb-init curl && \
+RUN apk add --no-cache ffmpeg openssl dumb-init curl python3 py3-pip && \
     addgroup -g 1001 -S djcova && \
-    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova && \
+    mkdir -p /tmp/djcova && \
+    chown -R djcova:djcova /tmp/djcova && \
+    pip3 install --no-cache-dir --break-system-packages yt-dlp
 
 # Copy everything from builder stage (production-ready) with correct ownership
 COPY --from=builder --chown=djcova:djcova /app/node_modules ./node_modules
@@ -49,6 +52,10 @@ COPY --from=builder --chown=djcova:djcova /app/package.json ./
 
 # Switch to non-root user
 USER djcova
+
+# Set environment variables for ytdl-core
+ENV YTDL_NO_UPDATE=1
+ENV TMPDIR=/tmp/djcova
 
 # Monitoring labels for Grafana/Prometheus discovery
 LABEL com.starbunk.service="djcova"

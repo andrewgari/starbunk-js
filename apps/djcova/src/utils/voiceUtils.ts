@@ -96,7 +96,12 @@ export function disconnectVoiceConnection(guildId: string): void {
 	const connection = getVoiceConnection(guildId);
 	if (connection) {
 		logger.debug(`Disconnecting from voice channel in guild: ${guildId}`);
-		connection.disconnect();
+		try {
+			connection.destroy();
+			logger.debug(`Voice connection destroyed for guild: ${guildId}`);
+		} catch (error) {
+			logger.error('Error destroying voice connection:', error instanceof Error ? error : new Error(String(error)));
+		}
 	}
 }
 

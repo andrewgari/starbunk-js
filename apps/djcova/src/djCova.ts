@@ -10,17 +10,18 @@ import {
 type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 type PlayerSubscriptionLike = { unsubscribe(): void };
 type VoiceConnectionLike = { subscribe: (p: AudioPlayerLike) => PlayerSubscriptionLike | undefined };
-import ytdl from '@distube/ytdl-core';
+import { getYouTubeAudioStream, getVideoInfo } from './utils/ytdlp';
 import { logger, type DJCovaMetrics } from '@starbunk/shared';
 import { Readable } from 'stream';
 import { IdleManager, createIdleManager, IdleManagerConfig } from './services/idleManager';
 import { getMusicConfig } from './config/musicConfig';
+import { disconnectVoiceConnection } from './utils/voiceUtils';
 import ffmpegPath from 'ffmpeg-static';
 
 export class DJCova {
 	private player: AudioPlayerLike;
 	private resource: ReturnType<typeof createAudioResource> | undefined;
-	private volume: number = 50; // Default volume 50%
+	private volume: number = 10; // Default volume 10%
 	private idleManager: IdleManager | null = null;
 	private currentGuildId: string | null = null;
 	private currentChannelId: string | null = null;
@@ -103,32 +104,67 @@ export class DJCova {
 			let stream: Readable;
 
 			if (typeof source === 'string') {
-				// YouTube URL - use ytdl-core to extract audio
-				logger.debug(`Fetching YouTube audio from: ${source}`);
-				stream = ytdl(source, {
-					filter: 'audioonly',
-					quality: 'highestaudio',
-					// Reduce memory usage with more conservative settings
-					highWaterMark: 1 << 20, // 1MB instead of 32MB
-					requestOptions: {
-						headers: {
-							'User-Agent':
-								'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-							'Accept-Language': 'en-US,en;q=0.9',
-						},
-					},
-				});
+				// YouTube URL - use yt-dlp to extract audio
+				logger.info(`🎬 Fetching YouTube audio from: ${source}`);
+
+				try {
+					// OPTIMIZATION: Start audio stream immediately without waiting for video info
+					// This reduces perceived latency from ~10-13s to ~5-7s
+					stream = getYouTubeAudioStream(source);
+					logger.info('✅ Audio stream created successfully');
+
+					// Get video info in parallel (non-blocking)
+					// This will log the video title a few seconds later, but won't delay playback
+					getVideoInfo(source)
+						.then(videoInfo => {
+							logger.info(`📺 Video: ${videoInfo.title} (${videoInfo.duration}s)`);
+						})
+						.catch(error => {
+							logger.debug('Could not fetch video info:', error instanceof Error ? error : new Error(String(error)));
+						});
+
+					// Add error handler for the stream
+					stream.on('error', (error: Error) => {
+						logger.error('❌ Audio stream error:', error);
+					});
+				} catch (ytdlpError) {
+					logger.error('❌ Failed to create yt-dlp stream:', ytdlpError instanceof Error ? ytdlpError : new Error(String(ytdlpError)));
+					throw new Error(
+						'Failed to fetch YouTube audio. The video may be unavailable, age-restricted, or private.',
+					);
+				}
 			} else {
 				// Direct stream (file upload)
+				logger.info('📁 Using direct stream from file upload');
 				stream = source;
 			}
 
 			// Use demuxProbe to automatically detect the stream type
 			// This is the recommended approach for @discordjs/voice
 			logger.debug('Probing stream to detect format...');
-			const { stream: probedStream, type } = await demuxProbe(stream);
 
-			logger.debug(`Detected stream type: ${StreamType[type]}`);
+			// Add timeout to demuxProbe to prevent indefinite hangs
+			const PROBE_TIMEOUT_MS = 15000; // 15 second timeout
+			const probePromise = demuxProbe(stream);
+			const timeoutPromise = new Promise<never>((_, reject) => {
+				setTimeout(() => reject(new Error('Stream probe timeout - yt-dlp may not be responding')), PROBE_TIMEOUT_MS);
+			});
+
+			let probedStream: Readable;
+			let type: number;
+
+			try {
+				const result = await Promise.race([probePromise, timeoutPromise]);
+				probedStream = result.stream;
+				type = result.type;
+				logger.debug(`Detected stream type: ${StreamType[type]}`);
+			} catch (error) {
+				// Clean up the stream on probe failure
+				if (stream && typeof (stream as any).destroy === 'function') {
+					(stream as any).destroy();
+				}
+				throw error;
+			}
 
 			// Create audio resource with the probed stream and detected type
 			this.resource = createAudioResource(probedStream, {
@@ -259,7 +295,8 @@ export class DJCova {
 	private setupIdleManagement(): void {
 		// Create listener functions as class properties for proper cleanup
 		this.onPlayingListener = () => {
-			logger.debug('Audio player started playing, resetting idle timer');
+			logger.info('🎶 Audio playback started');
+			logger.debug('Resetting idle timer');
 			if (this.idleManager) {
 				this.idleManager.resetIdleTimer();
 
@@ -271,7 +308,8 @@ export class DJCova {
 		};
 
 		this.onIdleListener = () => {
-			logger.debug('Audio player became idle, starting idle timer');
+			logger.info('⏹️ Audio playback ended');
+			logger.debug('Starting idle timer');
 			if (this.idleManager) {
 				this.idleManager.startIdleTimer();
 			}
@@ -339,6 +377,13 @@ export class DJCova {
 
 			// Stop the music player (this will also track session end)
 			this.stop('idle');
+
+			// CRITICAL: Actually leave the voice channel
+			// Without this, the bot stays in voice channel and can't rejoin properly
+			if (this.currentGuildId) {
+				disconnectVoiceConnection(this.currentGuildId);
+				logger.debug(`Disconnected from voice channel in guild ${this.currentGuildId}`);
+			}
 
 			// Send notification to users
 			const message = `🔇 ${reason}`;
