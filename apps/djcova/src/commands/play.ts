@@ -27,7 +27,15 @@ export default {
 	async execute(interaction: ChatInputCommandInteraction) {
 		// CRITICAL: Defer immediately to avoid Discord's 3-second timeout
 		// This must be the first async operation
-		await deferInteractionReply(interaction);
+		try {
+			await deferInteractionReply(interaction);
+		} catch (deferError) {
+			// If defer fails, the interaction is likely expired (>3s)
+			// We cannot respond to this interaction anymore, so just log and return
+			logger.error('Failed to defer interaction - interaction likely expired:',
+				deferError instanceof Error ? deferError : new Error(String(deferError)));
+			return;
+		}
 
 		const attachment = interaction.options.getAttachment('file');
 		const url = interaction.options.getString('song');

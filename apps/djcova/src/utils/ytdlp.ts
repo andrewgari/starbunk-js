@@ -19,11 +19,9 @@ export function getYouTubeAudioStream(url: string): Readable {
 		'-o', '-', // Output to stdout
 		'--no-playlist', // Don't download playlists
 		'--no-warnings', // Suppress warnings
-		'--quiet', // Quiet mode
-		'--no-progress', // No progress bar
-		'--extract-audio', // Extract audio
-		'--audio-format', 'opus', // Prefer opus format for Discord
-		'--audio-quality', '0', // Best quality
+		// NOTE: --extract-audio and --audio-format are incompatible with stdout streaming
+		// These require file output for post-processing. For streaming, we use the raw audio stream.
+		// The @discordjs/voice library handles format conversion via FFmpeg.
 	];
 
 	logger.debug(`Spawning yt-dlp with args: ${ytdlpArgs.join(' ')}`);
@@ -55,11 +53,15 @@ export function getYouTubeAudioStream(url: string): Readable {
 	// Handle early process exits before stream starts
 	ytdlpProcess.on('exit', (code: number | null, signal: string | null) => {
 		if (code !== 0 && code !== null) {
-			logger.warn(`yt-dlp exited with code ${code}, signal: ${signal}`);
+			const stderrOutput = stderrBuffer.trim();
+			logger.error(`yt-dlp exited with code ${code}, signal: ${signal}`);
+			if (stderrOutput) {
+				logger.error(`yt-dlp stderr output: ${stderrOutput}`);
+			}
 
 			// If the process exits with an error before emitting any data, emit error on stream
 			if (!hasEmittedData) {
-				const errorMessage = stderrBuffer.trim() || `yt-dlp process failed with code ${code}`;
+				const errorMessage = stderrOutput || `yt-dlp process failed with code ${code}`;
 				stream.destroy(new Error(errorMessage));
 			}
 		}
