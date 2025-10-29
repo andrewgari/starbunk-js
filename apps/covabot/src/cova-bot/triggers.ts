@@ -1,7 +1,7 @@
 import userId from './simplifiedUserId';
 import { and, fromBot, fromUser, not, type TriggerCondition } from './conditions';
 import { createTriggerResponse } from './triggerResponseFactory';
-import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './simplifiedLlmTriggers';
+import { createUnifiedLLMCondition, createUnifiedLLMResponse } from './unifiedLlmTrigger';
 import { getCovaIdentity } from '../services/identity';
 import { logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
@@ -27,21 +27,21 @@ async function getCovaIdentityWithValidation(message?: Message) {
 	}
 }
 
-// Main trigger for CovaBot - uses LLM to decide if it should respond
+// Main trigger for CovaBot - uses unified LLM to decide AND generate response
 export const covaTrigger = createTriggerResponse({
 	name: 'cova-contextual-response',
 	priority: 3,
 	condition: and(
-		createLLMResponseDecisionCondition(), // Handles probability logic; in DEBUG returns true for all non-bots
+		createUnifiedLLMCondition(), // Single LLM call for decision
 		// In production, ignore Cova (the person). In DEBUG_MODE we allow responding to Cova.
 		DEBUG_MODE ? allowAllCondition : not(fromUser(userId.Cova)),
 		not(fromBot()),
 	),
-	response: createLLMEmulatorResponse(),
+	response: createUnifiedLLMResponse(), // Single LLM call for response
 	identity: async (message) => getCovaIdentityWithValidation(message),
 });
 
-// Direct mention trigger - always respond to direct mentions
+// Direct mention trigger - always respond to direct mentions with unified LLM
 export const covaDirectMentionTrigger = createTriggerResponse({
 	name: 'cova-direct-mention',
 	priority: 5, // Highest priority
@@ -50,7 +50,7 @@ export const covaDirectMentionTrigger = createTriggerResponse({
 		DEBUG_MODE ? allowAllCondition : not(fromUser(userId.Cova)),
 		not(fromBot()),
 	),
-	response: createLLMEmulatorResponse(),
+	response: createUnifiedLLMResponse(), // Use unified LLM for consistent responses
 	identity: async (message) => getCovaIdentityWithValidation(message),
 });
 
