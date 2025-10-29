@@ -1,4 +1,3 @@
-import { AudioPlayerStatus } from '@discordjs/voice';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { ChatInputCommandInteraction } from 'discord.js';
 

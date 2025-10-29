@@ -42,7 +42,7 @@ RUN apk add --no-cache ffmpeg openssl dumb-init curl python3 py3-pip && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova && \
     mkdir -p /tmp/djcova && \
     chown -R djcova:djcova /tmp/djcova && \
-    pip3 install --no-cache-dir --break-system-packages yt-dlp
+    pip3 install --no-cache-dir "yt-dlp==2025.10.10"
 
 # Copy everything from builder stage (production-ready) with correct ownership
 COPY --from=builder --chown=djcova:djcova /app/node_modules ./node_modules
@@ -53,8 +53,7 @@ COPY --from=builder --chown=djcova:djcova /app/package.json ./
 # Switch to non-root user
 USER djcova
 
-# Set environment variables for ytdl-core
-ENV YTDL_NO_UPDATE=1
+# Temp directory for yt-dlp/ffmpeg intermediates
 ENV TMPDIR=/tmp/djcova
 
 # Monitoring labels for Grafana/Prometheus discovery
@@ -67,7 +66,7 @@ LABEL prometheus.io/port="3000"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD sh -c 'PORT="${HEALTH_PORT:-${METRICS_PORT:-3000}}"; curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1'
 
-EXPOSE 3001
+EXPOSE 3000
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]

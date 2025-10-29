@@ -47,7 +47,7 @@ function getYtDlpPath(): string {
  * Get audio stream from YouTube using yt-dlp
  * More reliable than ytdl-core and handles modern YouTube formats
  */
-export function getYouTubeAudioStream(url: string): Readable {
+export function getYouTubeAudioStream(url: string): { stream: Readable, process: ReturnType<typeof spawn> } {
 	logger.debug(`Creating yt-dlp stream for: ${url}`);
 
 	const ytdlpPath = getYtDlpPath();
@@ -90,7 +90,7 @@ export function getYouTubeAudioStream(url: string): Readable {
 
 	// Handle early process exits before stream starts
 	ytdlpProcess.on('exit', (code: number | null, signal: string | null) => {
-		if (code !== 0 && code !== null) {
+		if (code === null || code !== 0) {
 			const stderrOutput = stderrBuffer.trim();
 			logger.error(`yt-dlp exited with code ${code}, signal: ${signal}`);
 			if (stderrOutput) {
@@ -105,13 +105,18 @@ export function getYouTubeAudioStream(url: string): Readable {
 		}
 	});
 
+	// Propagate stdout errors for better diagnostics
+	(ytdlpProcess.stdout as Readable).on('error', (e: Error) => {
+		logger.error('yt-dlp stdout error:', e);
+	});
+
 	// Track when data starts flowing
 	stream.on('data', () => {
 		hasEmittedData = true;
 	});
 
 	// Return stdout stream
-	return stream;
+	return { stream, process: ytdlpProcess };
 }
 
 /**
@@ -122,6 +127,7 @@ export async function getVideoInfo(url: string): Promise<{
 	duration: number;
 }> {
 	return new Promise((resolve, reject) => {
+		const timeoutMs = 20000;
 		const ytdlpPath = getYtDlpPath();
 		const ytdlpProcess = spawn(ytdlpPath, [
 			url,
@@ -130,6 +136,11 @@ export async function getVideoInfo(url: string): Promise<{
 			'--no-warnings',
 			'--quiet',
 		]);
+
+		const timer = setTimeout(() => {
+			try { ytdlpProcess.kill('SIGKILL'); } catch {}
+			reject(new Error(`yt-dlp info timeout after ${timeoutMs}ms`));
+		}, timeoutMs);
 
 		let output = '';
 
@@ -142,12 +153,14 @@ export async function getVideoInfo(url: string): Promise<{
 		});
 
 		ytdlpProcess.on('error', (error: Error) => {
+			clearTimeout(timer);
 			logger.error('Failed to get video info:', error);
 			reject(error);
 		});
 
 		ytdlpProcess.on('close', (code: number | null) => {
-			if (code !== 0) {
+			clearTimeout(timer);
+			if (code === null || code !== 0) {
 				reject(new Error(`yt-dlp exited with code ${code}`));
 				return;
 			}

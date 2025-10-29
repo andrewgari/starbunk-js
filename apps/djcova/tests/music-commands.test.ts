@@ -98,7 +98,9 @@ describe('Music Commands Tests', () => {
 			guild: { id: 'guild-id' },
 			member: mockMember,
 			options: {
-				get: jest.fn(),
+				getString: jest.fn(),
+				getAttachment: jest.fn(),
+				getInteger: jest.fn(),
 			},
 			reply: jest.fn().mockResolvedValue(undefined),
 			followUp: jest.fn().mockResolvedValue(undefined),
@@ -129,7 +131,7 @@ describe('Music Commands Tests', () => {
 	describe('Play Command', () => {
 		it('should successfully play a YouTube URL', async () => {
 			const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-			mockInteraction.options.get = jest.fn().mockReturnValue({ value: testUrl });
+			mockInteraction.options.getString.mockReturnValue(testUrl);
 
 			await playCommand.execute(mockInteraction);
 
@@ -145,17 +147,17 @@ describe('Music Commands Tests', () => {
 		});
 
 		it('should reject play command without URL', async () => {
-			mockInteraction.options.get = jest.fn().mockReturnValue(null);
+			mockInteraction.options.getString.mockReturnValue(null);
 
 			await playCommand.execute(mockInteraction);
 
-			expect(sendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Please provide a valid YouTube link!');
+			expect(sendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Please provide a valid YouTube link or audio file!');
 			expect(mockMusicPlayer.start).not.toHaveBeenCalled();
 		});
 
 		it('should reject play command when user not in voice channel', async () => {
 			const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-			mockInteraction.options.get = jest.fn().mockReturnValue({ value: testUrl });
+			mockInteraction.options.getString.mockReturnValue(testUrl);
 
 			(validateVoiceChannelAccess as jest.Mock).mockReturnValue({
 				isValid: false,
@@ -173,7 +175,7 @@ describe('Music Commands Tests', () => {
 
 		it('should handle music player errors gracefully', async () => {
 			const testUrl = 'https://www.youtube.com/watch?v=invalid';
-			mockInteraction.options.get = jest.fn().mockReturnValue({ value: testUrl });
+			mockInteraction.options.getString.mockReturnValue(testUrl);
 			mockMusicPlayer.start.mockRejectedValue(new Error('Invalid URL'));
 
 			await playCommand.execute(mockInteraction);
@@ -224,7 +226,7 @@ describe('Music Commands Tests', () => {
 	describe('Volume Command', () => {
 		it('should successfully set volume', async () => {
 			const testVolume = 75;
-			mockInteraction.options.get = jest.fn().mockReturnValue({ value: testVolume });
+			mockInteraction.options.getInteger.mockReturnValue(testVolume);
 
 			await volumeCommand.execute(mockInteraction);
 
@@ -234,26 +236,26 @@ describe('Music Commands Tests', () => {
 
 		it('should reject invalid volume values', async () => {
 			const invalidVolume = 150;
-			mockInteraction.options.get = jest.fn().mockReturnValue({ value: invalidVolume });
+			mockInteraction.options.getInteger.mockReturnValue(invalidVolume);
 
 			await volumeCommand.execute(mockInteraction);
 
-			expect(sendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Volume must be between 1 and 100!');
+			expect(sendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Volume must be between 0 and 100!');
 			expect(mockMusicPlayer.changeVolume).not.toHaveBeenCalled();
 		});
 
 		it('should reject volume command without value', async () => {
-			mockInteraction.options.get = jest.fn().mockReturnValue(null);
+			mockInteraction.options.getInteger.mockReturnValue(null);
 
 			await volumeCommand.execute(mockInteraction);
 
-			expect(sendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Volume must be between 1 and 100!');
+			expect(sendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Please provide a volume level.');
 			expect(mockMusicPlayer.changeVolume).not.toHaveBeenCalled();
 		});
 
 		it('should handle volume change errors', async () => {
 			const testVolume = 50;
-			mockInteraction.options.get = jest.fn().mockReturnValue({ value: testVolume });
+			mockInteraction.options.getInteger.mockReturnValue(testVolume);
 			mockMusicPlayer.changeVolume.mockImplementation(() => {
 				throw new Error('Volume change failed');
 			});
