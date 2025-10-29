@@ -42,7 +42,7 @@ RUN apk add --no-cache ffmpeg openssl dumb-init curl python3 py3-pip && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova && \
     mkdir -p /tmp/djcova && \
     chown -R djcova:djcova /tmp/djcova && \
-    pip3 install --no-cache-dir "yt-dlp==2025.10.10"
+    pip3 install --no-cache-dir --break-system-packages "yt-dlp==2024.10.22"
 
 # Copy everything from builder stage (production-ready) with correct ownership
 COPY --from=builder --chown=djcova:djcova /app/node_modules ./node_modules
