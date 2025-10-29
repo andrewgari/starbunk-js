@@ -19,7 +19,7 @@ import { disconnectVoiceConnection } from './utils/voiceUtils';
 import ffmpegPath from 'ffmpeg-static';
 import { spawn } from 'child_process';
 
-const YOUTUBE_URL_REGEX = /^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube(-nocookie)?\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$/;
+const YOUTUBE_URL_REGEX = /^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube(-nocookie)?\.com|youtu.be))(\/(?:[\w-]+\?v=|embed\/|v\/)?)([\w-]+)(\S+)?$/;
 
 export class DJCova {
 	private player: AudioPlayerLike;
@@ -233,9 +233,9 @@ export class DJCova {
 
 							// Clean up the stream on probe failure
 
-							if (stream && typeof (stream as any).destroy === 'function') {
+							if (stream && typeof stream.destroy === 'function') {
 
-								(stream as any).destroy();
+								stream.destroy();
 
 							}
 
