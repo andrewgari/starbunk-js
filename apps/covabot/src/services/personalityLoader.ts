@@ -4,8 +4,8 @@ import { logger } from '@starbunk/shared';
 
 /**
  * Personality Loader Service
- * Loads Cova's personality profile from external file
- * Keeps sensitive personality data out of version control
+ * Loads bot personality profile from external file
+ * Keeps personality data out of version control
  */
 
 let cachedPersonality: string | null = null;
