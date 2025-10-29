@@ -37,9 +37,12 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 
 # Create user and install runtime dependencies in one layer
-RUN apk add --no-cache ffmpeg openssl dumb-init curl && \
+RUN apk add --no-cache ffmpeg openssl dumb-init curl python3 py3-pip && \
     addgroup -g 1001 -S djcova && \
-    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova && \
+    mkdir -p /tmp/djcova && \
+    chown -R djcova:djcova /tmp/djcova && \
+    pip3 install --no-cache-dir --break-system-packages "yt-dlp==2024.10.22"
 
 # Copy everything from builder stage (production-ready) with correct ownership
 COPY --from=builder --chown=djcova:djcova /app/node_modules ./node_modules
@@ -49,6 +52,9 @@ COPY --from=builder --chown=djcova:djcova /app/package.json ./
 
 # Switch to non-root user
 USER djcova
+
+# Temp directory for yt-dlp/ffmpeg intermediates
+ENV TMPDIR=/tmp/djcova
 
 # Monitoring labels for Grafana/Prometheus discovery
 LABEL com.starbunk.service="djcova"
@@ -60,7 +66,7 @@ LABEL prometheus.io/port="3000"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD sh -c 'PORT="${HEALTH_PORT:-${METRICS_PORT:-3000}}"; curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1'
 
-EXPOSE 3001
+EXPOSE 3000
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
