@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  covabot:
+    build:
+      context: ../../
+      dockerfile: apps/covabot/Dockerfile
+    container_name: covabot
+    restart: unless-stopped
+    environment:
+      # Discord Configuration
+      - COVABOT_TOKEN=${COVABOT_TOKEN}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - COVA_USER_ID=${COVA_USER_ID:-139592376443338752}
+
+      # LLM Configuration
+      - OLLAMA_API_URL=${OLLAMA_API_URL:-http://ollama:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-mistral:latest}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+
+      # Database Configuration
+      - DATABASE_URL=${DATABASE_URL:-}
+
+      # Environment & Debug
+      - NODE_ENV=${NODE_ENV:-production}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+
+      # Observability
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_TRACING=${ENABLE_TRACING:-false}
+
+    ports:
+      - "3003:3003"
+
+    depends_on:
+      - ollama
+
+    networks:
+      - starbunk-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - starbunk-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  starbunk-network:
+    driver: bridge
+
+volumes:
+  ollama_data:
+    driver: local
+
