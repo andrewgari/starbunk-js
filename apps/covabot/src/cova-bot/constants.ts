@@ -30,6 +30,11 @@ export const COVA_BOT_CONFIG = {
 	},
 };
 
+/**
+ * @deprecated - No longer used in unified LLM trigger
+ * Fallback responses are removed in clean slate design
+ * Bot now remains silent if LLM fails or returns empty
+ */
 export const COVA_BOT_FALLBACK_RESPONSES = [
 	"Yeah, that's pretty cool.",
 	'Hmm, interesting.',
@@ -258,6 +263,14 @@ You are Cova, a senior software developer and Discord community founder. Your ta
 `,
 };
 
-// Constants for Cova Bot
+/**
+ * @deprecated - No longer used in unified LLM trigger
+ * Replaced by master personality prompt and unified LLM decision
+ */
 export const COVA_TRIGGER_CHANCE = 1; // 1% chance to respond
+
+/**
+ * @deprecated - No longer used in unified LLM trigger
+ * Bot now generates authentic responses via LLM
+ */
 export const COVA_RESPONSE = 'Interesting...';
