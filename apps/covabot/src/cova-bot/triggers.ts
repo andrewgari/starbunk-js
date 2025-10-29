@@ -2,27 +2,28 @@ import userId from './simplifiedUserId';
 import { and, fromBot, fromUser, not, type TriggerCondition } from './conditions';
 import { createTriggerResponse } from './triggerResponseFactory';
 import { createUnifiedLLMCondition, createUnifiedLLMResponse } from './unifiedLlmTrigger';
-import { getCovaIdentity } from '../services/identity';
+import { getFreshCovaIdentity } from '../services/freshIdentityService';
 import { logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
 
 const DEBUG_MODE = process.env.DEBUG_MODE === 'true';
 const allowAllCondition: TriggerCondition = () => true;
 
-// Enhanced identity function with validation and silent failure
+// Enhanced identity function with fresh fetching and validation
 async function getCovaIdentityWithValidation(message?: Message) {
 	try {
-		const identity = await getCovaIdentity(message);
+		// Always fetch fresh identity to ensure current username/avatar
+		const identity = await getFreshCovaIdentity(message);
 
 		if (!identity) {
-			logger.warn(`[CovaBot] Identity validation failed, silently discarding message`);
+			logger.warn(`[CovaBot] Fresh identity fetch failed, silently discarding message`);
 			return null; // This will cause the message to be silently discarded
 		}
 
-		logger.debug(`[CovaBot] Using identity: "${identity.botName}" with avatar ${identity.avatarUrl}`);
+		logger.debug(`[CovaBot] Using fresh identity: "${identity.botName}" with avatar ${identity.avatarUrl}`);
 		return identity;
 	} catch (error) {
-		logger.error(`[CovaBot] Critical error getting identity, silently discarding message:`, error as Error);
+		logger.error(`[CovaBot] Critical error getting fresh identity, silently discarding message:`, error as Error);
 		return null; // Silent discard on any error
 	}
 }
