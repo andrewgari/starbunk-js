@@ -185,6 +185,7 @@ scripts/*
 # Allow personality example file to be tracked (but not the actual personality.txt)
 !apps/covabot/data/
 !apps/covabot/data/personality.example.txt
+apps/covabot/data/personality.txt
 
 # Build artifacts and temporary files
 *.tsbuildinfo
