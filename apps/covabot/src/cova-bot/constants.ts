@@ -48,6 +48,11 @@ export const COVA_BOT_FALLBACK_RESPONSES = [
 	'Yeah, totally.',
 ];
 
+/**
+ * @deprecated - Personality prompts moved to personality.txt file
+ * These are only used by deprecated trigger implementations
+ * New llmTrigger.ts uses personalityLoader instead
+ */
 export const COVA_BOT_PROMPTS = {
 	EmulatorPrompt: `
 # CovaDax (Cova) Comprehensive Personality Profile
