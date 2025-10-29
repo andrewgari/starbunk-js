@@ -2,6 +2,7 @@ import { Message } from 'discord.js';
 import { logger, ensureError } from '@starbunk/shared';
 import { TriggerCondition, ResponseGenerator } from '../types/triggerResponse';
 import { getMasterPersonalityPrompt } from './masterPersonalityPrompt';
+import { getChannelContext, addMessageToMemory } from '../services/channelMemoryService';
 
 /**
  * Unified LLM response that combines decision + generation in a single call
@@ -100,7 +101,7 @@ async function callUnifiedLLM(message: Message): Promise<UnifiedLLMResponse> {
 	const model = process.env.OLLAMA_MODEL || 'mistral:latest';
 
 	try {
-		const prompt = buildUnifiedPrompt(message.content);
+		const prompt = buildUnifiedPrompt(message.content, message);
 
 		logger.debug(`[CovaBot] Calling unified LLM at ${apiUrl}`);
 
@@ -128,6 +129,9 @@ async function callUnifiedLLM(message: Message): Promise<UnifiedLLMResponse> {
 			throw new Error('No response from LLM');
 		}
 
+		// Add current message to channel memory for future context
+		addMessageToMemory(message);
+
 		return parseUnifiedResponse(data.response);
 	} catch (error) {
 		logger.error('[CovaBot] Unified LLM call failed:', ensureError(error));
@@ -143,10 +147,13 @@ async function callUnifiedLLM(message: Message): Promise<UnifiedLLMResponse> {
 /**
  * Build unified prompt that combines decision + response generation
  * Uses master personality prompt as the system context
+ * Includes recent conversation history for context awareness
  */
-function buildUnifiedPrompt(messageContent: string): string {
-	return `${getMasterPersonalityPrompt()}
+function buildUnifiedPrompt(messageContent: string, message: Message): string {
+	const channelContext = getChannelContext(message, 5);
+	const contextSection = channelContext ? `\n## Conversation Context\n${channelContext}\n` : '';
 
+	return `${getMasterPersonalityPrompt()}${contextSection}
 ## Current Task
 Analyze this Discord message and decide if you would respond to it.
 
