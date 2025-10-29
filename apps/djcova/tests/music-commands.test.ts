@@ -240,7 +240,7 @@ describe('Music Commands Tests', () => {
 
 			await volumeCommand.execute(mockInteraction);
 
-			expect(sendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Volume must be between 0 and 100!');
+			expect(sendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Volume must be between 1 and 100!');
 			expect(mockMusicPlayer.changeVolume).not.toHaveBeenCalled();
 		});
 
@@ -249,7 +249,7 @@ describe('Music Commands Tests', () => {
 
 			await volumeCommand.execute(mockInteraction);
 
-			expect(sendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Please provide a volume level.');
+			expect(sendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Volume must be between 1 and 100!');
 			expect(mockMusicPlayer.changeVolume).not.toHaveBeenCalled();
 		});
 
