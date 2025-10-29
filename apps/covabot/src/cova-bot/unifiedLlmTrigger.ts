@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
 import { logger, ensureError } from '@starbunk/shared';
 import { TriggerCondition, ResponseGenerator } from '../types/triggerResponse';
-import { COVA_BOT_PROMPTS } from './constants';
+import { getMasterPersonalityPrompt } from './masterPersonalityPrompt';
 
 /**
  * Unified LLM response that combines decision + generation in a single call
@@ -142,15 +142,21 @@ async function callUnifiedLLM(message: Message): Promise<UnifiedLLMResponse> {
 
 /**
  * Build unified prompt that combines decision + response generation
+ * Uses master personality prompt as the system context
  */
 function buildUnifiedPrompt(messageContent: string): string {
-	return `${COVA_BOT_PROMPTS.UnifiedPrompt}
+	return `${getMasterPersonalityPrompt()}
+
+## Current Task
+Analyze this Discord message and decide if you would respond to it.
 
 Current Discord message: "${messageContent}"
 
-Respond with:
+Respond with EXACTLY this format:
 RESPOND: yes or no
-MESSAGE: <your response if yes, or empty if no>`;
+MESSAGE: <your response if yes, or leave empty if no>
+
+Remember: Only respond if it's relevant to your interests or expertise. Be authentic and specific.`;
 }
 
 export type { UnifiedLLMResponse };
