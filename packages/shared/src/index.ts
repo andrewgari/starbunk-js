@@ -187,3 +187,14 @@ export type {
 
 // Bot trigger integration types
 export type { BotTriggerIntegrationConfig } from './services/observability';
+
+// Testing utilities
+export {
+	FakeDiscordClient,
+	FakeDiscordEnvironment,
+	MessageCapture,
+} from './testing/discord';
+export type {
+	FakeDiscordEnvironmentConfig,
+	CapturedMessage,
+} from './testing/discord';
