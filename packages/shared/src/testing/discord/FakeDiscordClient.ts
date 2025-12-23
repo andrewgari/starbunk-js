@@ -49,9 +49,33 @@ export class FakeDiscordClient extends EventEmitter {
 	/**
 	 * Simulate receiving a message from Discord
 	 * This triggers the MessageCreate event
+	 * Errors thrown in event handlers are caught and emitted as Error events
 	 */
 	simulateMessage(message: Message): void {
-		this.emit(Events.MessageCreate, message);
+		// Get all listeners for MessageCreate
+		const listeners = this.listeners(Events.MessageCreate);
+
+		// Call each listener and catch any errors (both sync and async)
+		for (const listener of listeners) {
+			try {
+				// Call the listener as a function
+				const result = (listener as (...args: unknown[]) => unknown)(message);
+
+				// If the result is a promise, catch async errors
+				if (result && typeof result === 'object' && 'catch' in result) {
+					(result as Promise<unknown>).catch((error) => {
+						setImmediate(() => {
+							this.emit(Events.Error, error);
+						});
+					});
+				}
+			} catch (error) {
+				// Emit error event if listener throws synchronously
+				setImmediate(() => {
+					this.emit(Events.Error, error);
+				});
+			}
+		}
 	}
 
 	/**
@@ -115,13 +139,28 @@ export class FakeDiscordClient extends EventEmitter {
 			name,
 			type: 0, // GUILD_TEXT
 			guild,
-			send: jest.fn().mockResolvedValue(undefined),
-			fetchWebhooks: jest.fn().mockResolvedValue(new Collection()),
-			createWebhook: jest.fn().mockResolvedValue({
-				id: `webhook-${id}`,
-				name: `Webhook for ${name}`,
-				send: jest.fn().mockResolvedValue(undefined),
-			}),
+			// Simple async no-op implementation instead of Jest mock
+			send: async (..._args: unknown[]): Promise<void> => {
+				return;
+			},
+			// Return an empty collection of webhooks
+			fetchWebhooks: async (): Promise<Collection<unknown, unknown>> => {
+				return new Collection();
+			},
+			// Create a basic fake webhook object with an async no-op send
+			createWebhook: async (_options?: unknown): Promise<{
+				id: string;
+				name: string;
+				send: (...args: unknown[]) => Promise<void>;
+			}> => {
+				return {
+					id: `webhook-${id}`,
+					name: `Webhook for ${name}`,
+					send: async (..._args: unknown[]): Promise<void> => {
+						return;
+					},
+				};
+			},
 		} as unknown as TextChannel;
 
 		this.channels.set(id, channel);

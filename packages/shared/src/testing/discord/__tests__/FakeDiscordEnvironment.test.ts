@@ -28,12 +28,16 @@ describe('FakeDiscordEnvironment', () => {
 		it('should emit ClientReady event on login', async () => {
 			const newEnv = new FakeDiscordEnvironment();
 			const readyHandler = jest.fn();
-			newEnv.client.once(Events.ClientReady, readyHandler);
+
+			const readyPromise = new Promise<void>((resolve) => {
+				newEnv.client.once(Events.ClientReady, () => {
+					readyHandler();
+					resolve();
+				});
+			});
 
 			await newEnv.initialize();
-
-			// Wait for event to be emitted
-			await new Promise((resolve) => setTimeout(resolve, 20));
+			await readyPromise;
 
 			expect(readyHandler).toHaveBeenCalled();
 			await newEnv.destroy();
@@ -81,8 +85,8 @@ describe('FakeDiscordEnvironment', () => {
 	describe('message simulation', () => {
 		it('should send user messages and trigger MessageCreate event', async () => {
 			const guild = env.createGuild('Test Server');
-			const channel = env.createChannel('general', guild);
-			const user = env.createUser('Alice');
+			env.createChannel('general', guild);
+			env.createUser('Alice');
 
 			const messageHandler = jest.fn();
 			env.client.on(Events.MessageCreate, messageHandler);
@@ -98,8 +102,8 @@ describe('FakeDiscordEnvironment', () => {
 
 		it('should capture user messages', async () => {
 			const guild = env.createGuild('Test Server');
-			const channel = env.createChannel('general', guild);
-			const user = env.createUser('Alice');
+			env.createChannel('general', guild);
+			env.createUser('Alice');
 
 			await env.sendUserMessage('Alice', 'general', 'Hello world!');
 

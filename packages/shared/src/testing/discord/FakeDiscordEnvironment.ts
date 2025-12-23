@@ -57,9 +57,17 @@ export class FakeDiscordEnvironment {
 	 * Create a fake user
 	 */
 	createUser(username: string, userId?: string): User {
-		const id = userId || `user-${username.toLowerCase().replace(/\s+/g, '-')}`;
+		const normalizedUsername = username.toLowerCase();
+
+		if (this.usersByName.has(normalizedUsername)) {
+			throw new Error(
+				`FakeDiscordEnvironment: User with username "${username}" already exists (case-insensitive).`,
+			);
+		}
+
+		const id = userId || `user-${normalizedUsername.replace(/\s+/g, '-')}`;
 		const user = this.client.createFakeUser(id, username, false);
-		this.usersByName.set(username.toLowerCase(), user);
+		this.usersByName.set(normalizedUsername, user);
 		return user;
 	}
 
@@ -67,9 +75,17 @@ export class FakeDiscordEnvironment {
 	 * Create a fake guild (server)
 	 */
 	createGuild(guildName: string, guildId?: string): Guild {
-		const id = guildId || `guild-${guildName.toLowerCase().replace(/\s+/g, '-')}`;
+		const normalizedName = guildName.toLowerCase();
+
+		if (this.guildsByName.has(normalizedName)) {
+			throw new Error(
+				`FakeDiscordEnvironment: Guild with name '${guildName}' already exists (case-insensitive).`,
+			);
+		}
+
+		const id = guildId || `guild-${normalizedName.replace(/\s+/g, '-')}`;
 		const guild = this.client.createFakeGuild(id, guildName);
-		this.guildsByName.set(guildName.toLowerCase(), guild);
+		this.guildsByName.set(normalizedName, guild);
 		return guild;
 	}
 
@@ -77,9 +93,18 @@ export class FakeDiscordEnvironment {
 	 * Create a fake text channel
 	 */
 	createChannel(channelName: string, guild: Guild, channelId?: string): TextChannel {
-		const id = channelId || `channel-${channelName.toLowerCase().replace(/\s+/g, '-')}`;
+		const normalizedName = channelName.toLowerCase();
+
+		if (this.channelsByName.has(normalizedName)) {
+			throw new Error(
+				`A channel with name "${channelName}" already exists in FakeDiscordEnvironment. ` +
+					'Channel names must be unique (case-insensitive) across the environment.',
+			);
+		}
+
+		const id = channelId || `channel-${normalizedName.replace(/\s+/g, '-')}`;
 		const channel = this.client.createFakeTextChannel(id, channelName, guild);
-		this.channelsByName.set(channelName.toLowerCase(), channel);
+		this.channelsByName.set(normalizedName, channel);
 		return channel;
 	}
 
@@ -123,7 +148,7 @@ export class FakeDiscordEnvironment {
 		const message = this.createFakeMessage(user, channel, content);
 
 		// Capture the message
-		this.captureMessage(message, false);
+		this.captureMessage(message, message.author.bot);
 
 		// Log to console
 		if (this.config.logToConsole) {
@@ -151,7 +176,7 @@ export class FakeDiscordEnvironment {
 			guild: channel.guild,
 			createdTimestamp: Date.now(),
 			mentions: {
-				has: (userId: string) => content.includes(`<@${userId}>`),
+				has: (userId: string) => new RegExp(`<@!?${userId}>`).test(content),
 				users: new Collection<string, User>(),
 			},
 			client: this.client,
