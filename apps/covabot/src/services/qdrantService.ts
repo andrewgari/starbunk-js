@@ -298,7 +298,7 @@ export class QdrantService {
 			for (const collectionName of [this.PERSONALITY_COLLECTION, this.CONVERSATION_COLLECTION]) {
 				try {
 					const info = await this.client.getCollection(collectionName);
-					const vectorCount = info.vectors_count || 0;
+					const vectorCount = info.points_count || 0;
 					const indexedCount = info.indexed_vectors_count || 0;
 
 					stats[collectionName] = {
