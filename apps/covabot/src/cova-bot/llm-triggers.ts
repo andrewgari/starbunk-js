@@ -54,10 +54,13 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 	return async (message: Message): Promise<string> => {
 		// Simple timing without PerformanceTimer for now
 		const startTime = Date.now();
+		// Generate correlationId for tracing LLM response generation
+		const correlationId = `response_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
 		try {
 			const _result = await (async () => {
 				try {
-					logger.debug(`[CovaBot] Generating response with personality emulation`);
+					logger.debug(`[CovaBot][${correlationId}] Generating response with personality emulation`);
 
 					// Get personality embedding
 					const personalityService = getPersonalityService();
@@ -83,7 +86,7 @@ export const createLLMEmulatorResponse = (): ResponseGenerator => {
 							personalityNotes = enhancedContext.combinedContext;
 						} catch (ctxErr) {
 							logger.warn(
-								`[CovaBot] Skipping memory context due to error: ${ctxErr instanceof Error ? ctxErr.message : String(ctxErr)}`,
+								`[CovaBot][${correlationId}] Skipping memory context due to error: ${ctxErr instanceof Error ? ctxErr.message : String(ctxErr)}`,
 							);
 							personalityNotes = '';
 						}
@@ -136,7 +139,9 @@ Message: ${message.content}`;
 					setLastResponseTime(message.channelId);
 
 					if (!response || response.trim() === '') {
-						logger.debug(`[CovaBot] Received empty response from LLM, using fallback`);
+						logger.warn(
+							`[CovaBot][${correlationId}][Fallback] Serving hardcoded response due to empty LLM result`,
+						);
 						return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 					}
 
@@ -180,18 +185,20 @@ Message: ${message.content}`;
 
 					return response;
 				} catch (error) {
+					const errorMsg = error instanceof Error ? error.message : String(error);
 					logger.warn(
-						`[CovaBot] LLM service error: ${error instanceof Error ? error.message : String(error)}`,
+						`[CovaBot][${correlationId}][Fallback] Serving hardcoded response due to LLM service error: ${errorMsg}`,
 					);
 					return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 				}
 			})();
 
-			logger.debug(`[CovaBot] LLM emulator took ${Date.now() - startTime}ms`);
+			logger.debug(`[CovaBot][${correlationId}] LLM emulator took ${Date.now() - startTime}ms`);
 			return _result;
 		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error);
 			logger.error(
-				`[CovaBot] Error in emulator timing: ${error instanceof Error ? error.message : String(error)}`,
+				`[CovaBot][${correlationId}][Fallback] Serving hardcoded response due to emulator timing error: ${errorMsg}`,
 			);
 			return weightedRandomResponse(COVA_BOT_FALLBACK_RESPONSES)(message);
 		}
@@ -205,6 +212,9 @@ export const createLLMResponseDecisionCondition = () => {
 	return async (message: Message): Promise<boolean> => {
 		// Simple timing without PerformanceTimer for now
 		const startTime = Date.now();
+		// Generate correlationId for tracing LLM decision
+		const correlationId = `decision_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
 		try {
 			const _result = await (async () => {
 				try {
@@ -216,7 +226,7 @@ export const createLLMResponseDecisionCondition = () => {
 
 					// Always respond to direct mentions (from non-bots)
 					if (message.mentions.has(userId.Cova)) {
-						logger.debug('[CovaBot] Direct mention detected, will respond');
+						logger.debug(`[CovaBot][${correlationId}] Direct mention detected, will respond`);
 						return true;
 					}
 
@@ -246,6 +256,8 @@ Time since Cova's last message in this channel: ${isRecentConversation ? `${last
 
 Based on the Response Decision System, should Cova respond to this message?`;
 
+					logger.debug(`[CovaBot][${correlationId}] Calling LLM for decision`);
+
 					// Use LLM to decide whether to respond
 					const llmResponse = await getLLMManager().createPromptCompletion(
 						PromptType.COVA_DECISION,
@@ -259,6 +271,11 @@ Based on the Response Decision System, should Cova respond to this message?`;
 					);
 
 					const response = llmResponse.trim().toUpperCase();
+
+					// Log raw LLM decision string with correlationId for tracing
+					logger.info(
+						`[CovaBot][${correlationId}] Raw LLM decision: "${response}" for message: "${message.content.substring(0, 50)}..."`,
+					);
 
 					// Determine probability based on the response with more conversational logic
 					let probability = 0;
@@ -313,8 +330,9 @@ Based on the Response Decision System, should Cova respond to this message?`;
 					const random = Math.random();
 					const shouldRespond = random < probability;
 
-					logger.debug(
-						`[CovaBot] Decision: ${response} → probability ${probability.toFixed(2)} → ${shouldRespond ? 'RESPOND' : "DON'T RESPOND"}`,
+					// Log final calculated probability and decision with correlationId
+					logger.info(
+						`[CovaBot][${correlationId}] Decision: ${response} → probability ${probability.toFixed(2)} (random=${random.toFixed(2)}) → ${shouldRespond ? 'RESPOND' : "DON'T RESPOND"}`,
 					);
 
 					return shouldRespond;

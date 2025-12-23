@@ -7,6 +7,7 @@ import userId from '@starbunk/shared/dist/discord/userId';
 jest.mock('@starbunk/shared', () => ({
 	logger: {
 		debug: jest.fn(),
+		info: jest.fn(),
 		warn: jest.fn(),
 		error: jest.fn(),
 	},
@@ -219,7 +220,7 @@ describe('LLM Decision Logic', () => {
 			const _result = await decisionCondition(userMessage);
 
 			expect(_result).toBe(true);
-			expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/probability.*→.*RESPOND/));
+			expect(mockLogger.info).toHaveBeenCalledWith(expect.stringMatching(/probability.*→.*RESPOND/));
 
 			mockRandom.mockRestore();
 		});
@@ -237,7 +238,7 @@ describe('LLM Decision Logic', () => {
 			const _result = await decisionCondition(userMessage);
 
 			expect(_result).toBe(false);
-			expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/probability.*→.*DON'T RESPOND/));
+			expect(mockLogger.info).toHaveBeenCalledWith(expect.stringMatching(/probability.*→.*DON'T RESPOND/));
 
 			mockRandom.mockRestore();
 		});
@@ -310,7 +311,7 @@ describe('LLM Decision Logic', () => {
 			const _result = await decisionCondition(userMessage);
 
 			expect(_result).toBe(false);
-			expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/probability.*DON'T RESPOND/));
+			expect(mockLogger.info).toHaveBeenCalledWith(expect.stringMatching(/probability.*DON'T RESPOND/));
 
 			mockRandom.mockRestore();
 		});
