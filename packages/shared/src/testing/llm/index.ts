@@ -40,8 +40,10 @@
  * ```
  */
 
-export { LLMCallTracker, LLMCallRecord, LLMCallStats } from './LLMCallTracker';
-export { MockLLMProvider, MockResponseConfig } from './MockLLMProvider';
+export { LLMCallTracker } from './LLMCallTracker';
+export type { LLMCallRecord, LLMCallStats } from './LLMCallTracker';
+export { MockLLMProvider } from './MockLLMProvider';
+export type { MockResponseConfig } from './MockLLMProvider';
 
 import { LLMCallTracker } from './LLMCallTracker';
 import { MockLLMProvider } from './MockLLMProvider';
