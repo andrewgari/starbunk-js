@@ -22,7 +22,7 @@ export interface MockResponseConfig {
 
 /**
  * Mock LLM provider for testing
- * 
+ *
  * This provider integrates with LLMCallTracker to record all calls
  * and allows configuring mock responses for testing.
  */
