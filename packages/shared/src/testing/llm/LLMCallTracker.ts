@@ -65,7 +65,7 @@ export class LLMCallTracker {
 		if (!this.enabled) return;
 
 		const record: LLMCallRecord = {
-			id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+			id: `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
 			timestamp: Date.now(),
 			provider,
 			model,
@@ -90,7 +90,7 @@ export class LLMCallTracker {
 		if (!this.enabled) return;
 
 		const record: LLMCallRecord = {
-			id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+			id: `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
 			timestamp: Date.now(),
 			provider,
 			model,

@@ -147,15 +147,16 @@ export function assertFallbackUsed(tracker: LLMCallTracker): void {
 export const assertActualLLMUsed = assertLLMCalled;
 export function assertEmulatorUsed(tracker: LLMCallTracker): void {
 	// In your setup, there's no "emulator" - just mock or actual Ollama
-	// This function now checks for mock usage
+	// This function now checks for mock usage or fallback
 	if (!tracker.hasCalls()) {
 		throw new Error('No LLM calls were made');
 	}
 
 	const calls = tracker.getCalls();
-	const hasMock = calls.some((call) => call.provider === 'mock' || call.isFallback);
+	const hasMock = calls.some((call) => call.provider === 'mock');
+	const hasFallback = calls.some((call) => call.isFallback);
 
-	if (!hasMock) {
+	if (!hasMock && !hasFallback) {
 		const providers = calls.map((call) => call.provider).join(', ');
 		throw new Error(`Expected mock/fallback but actual LLM was used: ${providers}`);
 	}
