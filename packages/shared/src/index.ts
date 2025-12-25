@@ -198,3 +198,20 @@ export type {
 	FakeDiscordEnvironmentConfig,
 	CapturedMessage,
 } from './testing/discord';
+
+// LLM Testing utilities
+export {
+	LLMCallTracker,
+	MockLLMProvider,
+	createMockLLMProvider,
+	createMockLLMSetup,
+	assertLLMCalled,
+	assertFallbackUsed,
+	assertActualLLMUsed, // Legacy alias
+	assertEmulatorUsed, // Legacy alias
+} from './testing/llm';
+export type {
+	LLMCallRecord,
+	LLMCallStats,
+	MockResponseConfig,
+} from './testing/llm';
