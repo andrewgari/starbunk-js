@@ -30,6 +30,7 @@ env:
   STARBUNK_TOKEN: ${{ secrets.STARBUNK_TOKEN || 'test-token-placeholder-70-chars-long-for-validation-testing-purposes' }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'test-openai-key' }}
   OLLAMA_API_URL: ${{ secrets.OLLAMA_API_URL || 'http://localhost:11434' }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || '' }}
   DEBUG_MODE: 'true'
   TESTING_SERVER_IDS: '753251582719688714'
   TESTING_CHANNEL_IDS: '1234567890123456789'

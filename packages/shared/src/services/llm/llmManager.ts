@@ -120,6 +120,14 @@ export class LLMManager {
 				}
 				return hasOpenAIKey;
 			}
+			case LLMProviderType.GEMINI: {
+				// Gemini requires API key to be explicitly set (opt-in only)
+				const hasGeminiKey = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '';
+				if (!hasGeminiKey) {
+					this.logger.debug('Gemini provider not configured (GEMINI_API_KEY not set) - skipping initialization');
+				}
+				return hasGeminiKey;
+			}
 			case LLMProviderType.OLLAMA:
 				// Ollama can use default localhost URL if not specified
 				return true;

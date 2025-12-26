@@ -1,6 +1,7 @@
 import { LLMFactory, LLMProviderType, LLMProviderError } from '../llmFactory';
 import { OllamaProvider } from '../providers/ollamaProvider';
 import { OpenAIProvider } from '../providers/openaiProvider';
+import { GeminiProvider } from '../providers/geminiProvider';
 import environment from '../../../environment';
 import { Logger } from '../../logger';
 
@@ -11,12 +12,15 @@ jest.mock('../../../environment', () => ({
 		OPENAI_DEFAULT_MODEL: 'test-gpt-model',
 		OLLAMA_API_URL: 'http://test-ollama-url',
 		OLLAMA_DEFAULT_MODEL: 'test-llama-model',
+		GEMINI_API_KEY: 'test-gemini-key',
+		GEMINI_DEFAULT_MODEL: 'test-gemini-model',
 	},
 }));
 
 // Mock the providers
 jest.mock('../providers/ollamaProvider');
 jest.mock('../providers/openaiProvider');
+jest.mock('../providers/geminiProvider');
 
 // Create a proper mock logger that implements the Logger interface
 const mockLogger: jest.Mocked<Logger> = {
@@ -37,6 +41,7 @@ describe('LLMFactory', () => {
 		// Reset constructor mocks
 		(OpenAIProvider as jest.Mock).mockClear();
 		(OllamaProvider as jest.Mock).mockClear();
+		(GeminiProvider as jest.Mock).mockClear();
 	});
 
 	describe('createProvider', () => {
@@ -64,6 +69,19 @@ describe('LLMFactory', () => {
 
 			expect(OllamaProvider).toHaveBeenCalledWith(config);
 			expect(provider).toBeInstanceOf(OllamaProvider);
+		});
+
+		test('should create Gemini provider', () => {
+			const config = {
+				logger: mockLogger,
+				apiKey: 'test-key',
+				defaultModel: 'test-model',
+			};
+
+			const provider = LLMFactory.createProvider(LLMProviderType.GEMINI, config);
+
+			expect(GeminiProvider).toHaveBeenCalledWith(config);
+			expect(provider).toBeInstanceOf(GeminiProvider);
 		});
 
 		test('should throw error for unknown provider type', () => {
@@ -102,6 +120,17 @@ describe('LLMFactory', () => {
 			expect(provider).toBeInstanceOf(OllamaProvider);
 		});
 
+		test('should create Gemini provider from environment variables', () => {
+			const provider = LLMFactory.createProviderFromEnv(LLMProviderType.GEMINI, mockLogger);
+
+			expect(GeminiProvider).toHaveBeenCalledWith({
+				logger: mockLogger,
+				defaultModel: 'test-gemini-model',
+				apiKey: 'test-gemini-key',
+			});
+			expect(provider).toBeInstanceOf(GeminiProvider);
+		});
+
 		test('should use default values when environment variables are missing', () => {
 			// Temporarily override environment mock to simulate missing values
 			const originalEnv = { ...environment };
@@ -110,6 +139,8 @@ describe('LLMFactory', () => {
 				OPENAI_DEFAULT_MODEL: '',
 				OLLAMA_API_URL: '',
 				OLLAMA_DEFAULT_MODEL: '',
+				GEMINI_API_KEY: '',
+				GEMINI_DEFAULT_MODEL: '',
 			};
 
 			const _openaiProvider = LLMFactory.createProviderFromEnv(LLMProviderType.OPENAI, mockLogger);
@@ -127,6 +158,16 @@ describe('LLMFactory', () => {
 				logger: mockLogger,
 				defaultModel: 'llama3:4b',
 				apiUrl: 'http://localhost:11434',
+			});
+
+			// Reset mock calls
+			(OllamaProvider as jest.Mock).mockClear();
+
+			const _geminiProvider = LLMFactory.createProviderFromEnv(LLMProviderType.GEMINI, mockLogger);
+			expect(GeminiProvider).toHaveBeenCalledWith({
+				logger: mockLogger,
+				defaultModel: 'gemini-2.0-flash-exp',
+				apiKey: '',
 			});
 
 			// Restore environment

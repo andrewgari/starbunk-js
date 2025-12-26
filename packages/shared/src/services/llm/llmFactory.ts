@@ -3,6 +3,7 @@ import { Logger } from '../logger';
 import { LLMService, LLMServiceConfig } from './llmService';
 import { OllamaProvider } from './providers/ollamaProvider';
 import { OpenAIProvider } from './providers/openaiProvider';
+import { GeminiProvider } from './providers/geminiProvider';
 
 /**
  * LLM provider type
@@ -10,6 +11,7 @@ import { OpenAIProvider } from './providers/openaiProvider';
 export enum LLMProviderType {
 	OPENAI = 'openai',
 	OLLAMA = 'ollama',
+	GEMINI = 'gemini',
 }
 
 /**
@@ -37,6 +39,8 @@ export class LLMFactory {
 				return new OpenAIProvider(config);
 			case LLMProviderType.OLLAMA:
 				return new OllamaProvider(config);
+			case LLMProviderType.GEMINI:
+				return new GeminiProvider(config);
 			default:
 				throw new LLMProviderError(`Unknown LLM provider type: ${type}`);
 		}
@@ -62,6 +66,14 @@ export class LLMFactory {
 					logger,
 					defaultModel: environment.llm.OLLAMA_DEFAULT_MODEL || 'llama3:4b',
 					apiUrl: environment.llm.OLLAMA_API_URL || 'http://localhost:11434',
+				};
+				return this.createProvider(type, config);
+			}
+			case LLMProviderType.GEMINI: {
+				const config: LLMServiceConfig = {
+					logger,
+					defaultModel: environment.llm.GEMINI_DEFAULT_MODEL || 'gemini-2.0-flash-exp',
+					apiKey: environment.llm.GEMINI_API_KEY || '',
 				};
 				return this.createProvider(type, config);
 			}
