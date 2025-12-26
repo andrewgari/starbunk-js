@@ -14,10 +14,12 @@ import { LLMProviderType } from '../llmProvider';
 import { Logger } from '../../logger';
 import { OllamaProvider } from '../providers/ollamaProvider';
 import { OpenAIProvider } from '../providers/openaiProvider';
+import { GeminiProvider } from '../providers/geminiProvider';
 
 // Mock the providers
 jest.mock('../providers/ollamaProvider');
 jest.mock('../providers/openaiProvider');
+jest.mock('../providers/geminiProvider');
 
 // Create a proper mock logger
 const mockLogger: jest.Mocked<Logger> = {
@@ -224,10 +226,12 @@ describe('LLM Failure Handling', () => {
 			// Save original env
 			const originalKey = process.env.OPENAI_API_KEY;
 			const originalUrl = process.env.OLLAMA_API_URL;
+			const originalGeminiKey = process.env.GEMINI_API_KEY;
 
 			// Clear all LLM configuration
 			delete process.env.OPENAI_API_KEY;
 			delete process.env.OLLAMA_API_URL;
+			delete process.env.GEMINI_API_KEY;
 
 			// Mock all providers to fail
 			const mockFailedProvider = {
@@ -240,6 +244,7 @@ describe('LLM Failure Handling', () => {
 
 			(OllamaProvider as jest.Mock).mockImplementation(() => mockFailedProvider);
 			(OpenAIProvider as jest.Mock).mockImplementation(() => mockFailedProvider);
+			(GeminiProvider as jest.Mock).mockImplementation(() => mockFailedProvider);
 
 			const manager = new LLMManager(mockLogger, LLMProviderType.OLLAMA);
 			await manager.initializeAllProviders();
@@ -256,6 +261,9 @@ describe('LLM Failure Handling', () => {
 			}
 			if (originalUrl) {
 				process.env.OLLAMA_API_URL = originalUrl;
+			}
+			if (originalGeminiKey) {
+				process.env.GEMINI_API_KEY = originalGeminiKey;
 			}
 		});
 
