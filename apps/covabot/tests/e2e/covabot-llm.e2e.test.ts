@@ -20,10 +20,10 @@ import {
 	FakeDiscordEnvironment,
 	LLMCallTracker,
 	assertLLMCalled,
-	getLogger,
 	container,
 	ServiceId,
 	createLLMManagerWithTracker,
+	logger,
 } from '@starbunk/shared';
 import { CovaBot } from '../../src/cova-bot/covaBot';
 import { covaTrigger, covaDirectMentionTrigger } from '../../src/cova-bot/triggers';
@@ -59,9 +59,11 @@ describeIfLLMAvailable('CovaBot E2E - LLM Integration (Ollama)', () => {
 		// Create LLM call tracker
 		tracker = new LLMCallTracker();
 
-		// Create LLM Manager with tracker and register it in the container
-		const logger = getLogger();
+		// Register logger in container
 		logger.setServiceName('CovaBot-E2E');
+		container.register(ServiceId.Logger, logger);
+
+		// Create LLM Manager with tracker and register it in the container
 		const llmManager = await createLLMManagerWithTracker(logger, tracker);
 		container.register(ServiceId.LLMManager, llmManager);
 	});
