@@ -455,10 +455,10 @@ jobs:
 
       - name: 🧪 Test CovaBot
         run: |
-          echo "🧪 Running CovaBot tests..."
+          echo "🧪 Running CovaBot unit tests..."
           cd apps/covabot
-          npm test -- --passWithNoTests --coverage=false --verbose
-          echo "✅ CovaBot tests completed"
+          npm run test:unit -- --passWithNoTests --coverage=false --verbose
+          echo "✅ CovaBot unit tests completed"
 
       - name: 🧹 Lint CovaBot
         run: |
