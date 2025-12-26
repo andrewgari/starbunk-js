@@ -229,7 +229,9 @@ jobs:
           OLLAMA_API_URL: http://localhost:11434
           # Test environment configuration
           STARBUNK_TOKEN: ${{ secrets.STARBUNK_TOKEN }}
-          DEBUG_MODE: 'true'
+          # DEBUG_MODE disabled for E2E tests - tests use TestUser, not Cova
+          # (DEBUG_MODE=true enables calibration mode which only responds to Cova)
+          DEBUG_MODE: 'false'
           TESTING_SERVER_IDS: '753251582719688714'
           TESTING_CHANNEL_IDS: '1234567890123456789'
         run: |
