@@ -80,6 +80,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.any-container == 'true'
+
+    # Add Ollama service container for LLM tests
+    services:
+      ollama:
+        image: ollama/ollama:latest
+        ports:
+          - 11434:11434
+        options: >-
+          --health-cmd "curl -f http://localhost:11434/api/tags || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     strategy:
       matrix:
         container: [bunkbot, covabot, djcova, starbunk-dnd]
@@ -124,6 +137,22 @@ jobs:
           cd ${{ matrix.path }}
           npm ci
 
+      - name: Setup Ollama model for LLM tests
+        if: matrix.container == 'covabot'
+        run: |
+          echo "🤖 Setting up Ollama for CovaBot E2E tests..."
+          # Wait for Ollama service to be ready
+          timeout 60 bash -c 'until curl -f http://localhost:11434/api/tags; do sleep 2; done'
+
+          # Pull a small, fast model for testing (qwen2.5:0.5b is ~400MB)
+          echo "📥 Pulling qwen2.5:0.5b model..."
+          curl -X POST http://localhost:11434/api/pull -d '{"name": "qwen2.5:0.5b"}'
+
+          # Verify model is available
+          echo "✅ Verifying model..."
+          curl http://localhost:11434/api/tags
+          echo "Ollama setup complete!"
+
       - name: Generate Prisma client
         run: |
           # Check for container-specific Prisma schema first
@@ -148,6 +177,17 @@ jobs:
           fi
 
       - name: Run unit tests
+        env:
+          CI: true
+          NODE_ENV: test
+          # Ollama configuration for E2E tests
+          OLLAMA_API_URL: http://localhost:11434
+          OLLAMA_DEFAULT_MODEL: qwen2.5:0.5b
+          # Test environment configuration
+          STARBUNK_TOKEN: ${{ secrets.STARBUNK_TOKEN }}
+          DEBUG_MODE: 'true'
+          TESTING_SERVER_IDS: '753251582719688714'
+          TESTING_CHANNEL_IDS: '1234567890123456789'
         run: |
           cd ${{ matrix.path }}
           npm run ${{ matrix.test-script }}

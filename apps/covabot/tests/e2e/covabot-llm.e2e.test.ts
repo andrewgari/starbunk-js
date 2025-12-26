@@ -20,15 +20,22 @@ import {
 	FakeDiscordEnvironment,
 	LLMCallTracker,
 	assertLLMCalled,
-	createLLMManagerWithTracker,
 	getLogger,
 	container,
 	ServiceId,
+	createLLMManagerWithTracker,
 } from '@starbunk/shared';
 import { CovaBot } from '../../src/cova-bot/covaBot';
 import { covaTrigger, covaDirectMentionTrigger } from '../../src/cova-bot/triggers';
 
-describe('CovaBot E2E - LLM Integration', () => {
+// Skip tests if no LLM provider is available
+// Ollama is now available in CI via service container
+// Locally: can use either OPENAI_API_KEY or OLLAMA_API_URL
+const hasLLMProvider = !!(process.env.OPENAI_API_KEY || process.env.OLLAMA_API_URL);
+
+const describeIfLLMAvailable = hasLLMProvider ? describe : describe.skip;
+
+describeIfLLMAvailable('CovaBot E2E - LLM Integration (Ollama)', () => {
 	let fakeEnv: FakeDiscordEnvironment;
 	let tracker: LLMCallTracker;
 	const TEST_USER = 'TestUser';
