@@ -1,7 +1,7 @@
 import userId from './simplifiedUserId';
 import { and, fromUser, not } from './conditions';
 import { createTriggerResponse } from './triggerResponseFactory';
-import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './simplifiedLlmTriggers';
+import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './llm-triggers';
 import { getCovaIdentity } from '../services/identity';
 import { logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
