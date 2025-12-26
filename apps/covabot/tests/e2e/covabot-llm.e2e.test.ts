@@ -63,6 +63,26 @@ describeIfLLMAvailable('CovaBot E2E - LLM Integration (Ollama)', () => {
 		logger.setServiceName('CovaBot-E2E');
 		container.register(ServiceId.Logger, logger);
 
+		// Register a mock DiscordService that returns valid identity for Cova
+		// This is needed because getCovaIdentity() tries to fetch from Discord
+		const mockDiscordService = {
+			getMemberAsync: async (_guildId: string, userId: string) => {
+				if (userId === '139592376443338752') {
+					return {
+						nickname: 'Cova',
+						user: {
+							globalName: 'Cova',
+							username: 'cova',
+							displayAvatarURL: () => 'https://cdn.discordapp.com/avatars/139592376443338752/avatar.png',
+						},
+						displayAvatarURL: () => 'https://cdn.discordapp.com/avatars/139592376443338752/avatar.png',
+					};
+				}
+				return null;
+			},
+		};
+		container.register(ServiceId.DiscordService, mockDiscordService);
+
 		// Create LLM Manager with tracker and register it in the container
 		const llmManager = await createLLMManagerWithTracker(logger, tracker);
 		container.register(ServiceId.LLMManager, llmManager);
