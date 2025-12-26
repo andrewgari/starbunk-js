@@ -70,6 +70,7 @@ export {
 	getDiscordGMService,
 	getLLMManager,
 	getWebhookService,
+	createLLMManagerWithTracker,
 } from './services/bootstrap';
 
 // Export container and ServiceId from container (uses Symbol values)

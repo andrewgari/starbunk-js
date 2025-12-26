@@ -4,6 +4,7 @@ import { LLMProvider, LLMProviderType } from './llmProvider';
 import { LLMCompletion, LLMCompletionOptions } from './llmService';
 import { PromptType, formatPromptMessages, getPromptDefaultOptions } from './promptManager';
 import { ensureError } from '../../utils/errorUtils';
+import type { LLMCallTracker } from '../../testing/llm/LLMCallTracker';
 
 /**
  * Error thrown when a provider is not available
@@ -55,11 +56,17 @@ export class LLMManager {
 	private readonly defaultProvider: LLMProviderType;
 	private readonly providers: Map<LLMProviderType, LLMProvider>;
 	private readonly logger: Logger;
+	private readonly callTracker?: LLMCallTracker;
 
-	constructor(logger: Logger, defaultProvider: LLMProviderType = LLMProviderType.OLLAMA) {
+	constructor(
+		logger: Logger,
+		defaultProvider: LLMProviderType = LLMProviderType.OLLAMA,
+		callTracker?: LLMCallTracker,
+	) {
 		this.defaultProvider = defaultProvider;
 		this.providers = new Map();
 		this.logger = logger;
+		this.callTracker = callTracker;
 	}
 
 	/**
@@ -100,10 +107,35 @@ export class LLMManager {
 	}
 
 	/**
-	 * Initialize all supported providers
+	 * Check if a provider has the necessary configuration to be initialized
+	 * @param type Provider type
+	 */
+	private hasProviderConfiguration(type: LLMProviderType): boolean {
+		switch (type) {
+			case LLMProviderType.OPENAI: {
+				// OpenAI requires API key to be explicitly set (opt-in only)
+				const hasOpenAIKey = !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '';
+				if (!hasOpenAIKey) {
+					this.logger.debug('OpenAI provider not configured (OPENAI_API_KEY not set) - skipping initialization');
+				}
+				return hasOpenAIKey;
+			}
+			case LLMProviderType.OLLAMA:
+				// Ollama can use default localhost URL if not specified
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * Initialize all supported providers (only those with valid configuration)
+	 *
+	 * NOTE: OpenAI is OPT-IN only. It will only be initialized if OPENAI_API_KEY is explicitly set.
+	 * Ollama is always attempted as it can use localhost as default.
 	 */
 	public async initializeAllProviders(): Promise<void> {
-		this.logger.debug('Initializing all providers...');
+		this.logger.debug('Initializing configured providers...');
 
 		// Always try to initialize the default provider first
 		this.logger.info(`Attempting to initialize default provider: ${this.defaultProvider}`);
@@ -113,11 +145,15 @@ export class LLMManager {
 			this.logger.warn(`Failed to initialize default provider ${this.defaultProvider}, will try other providers`);
 		}
 
-		// Initialize other providers
+		// Initialize other providers ONLY if they have valid configuration
 		for (const type of Object.values(LLMProviderType)) {
 			if (type !== this.defaultProvider) {
-				this.logger.debug(`Attempting to initialize provider: ${type}`);
-				await this.initializeProvider(type as LLMProviderType);
+				if (this.hasProviderConfiguration(type as LLMProviderType)) {
+					this.logger.debug(`Attempting to initialize provider: ${type}`);
+					await this.initializeProvider(type as LLMProviderType);
+				} else {
+					this.logger.debug(`Skipping ${type} provider - no configuration found`);
+				}
 			}
 		}
 
@@ -158,13 +194,16 @@ export class LLMManager {
 	 * Create a completion using a provider
 	 * @param options Completion options
 	 * @param fallbackOptions Additional options for fallback handling
+	 *
+	 * NOTE: OpenAI fallback is OPT-IN only. Set useOpenAiFallback: true explicitly to enable.
+	 * By default, if Ollama fails, the error will be thrown without falling back to OpenAI.
 	 */
 	public async createCompletion(
 		options: LLMCompletionOptions,
 		fallbackOptions?: { useOpenAiFallback?: boolean },
 	): Promise<LLMCompletion> {
-		// Parse the args
-		const useOpenAiFallback = fallbackOptions?.useOpenAiFallback ?? true;
+		// Parse the args - OpenAI fallback is OPT-IN (default: false)
+		const useOpenAiFallback = fallbackOptions?.useOpenAiFallback ?? false;
 		// Parse provider from options or use default
 		const requestedProviderType = options.provider || this.defaultProvider;
 
@@ -176,7 +215,26 @@ export class LLMManager {
 				throw new ProviderNotAvailableError(requestedProviderType);
 			}
 
-			return await provider.createCompletion(options);
+			const result = await provider.createCompletion(options);
+
+			// Track the call if tracker is available
+			if (this.callTracker) {
+				const response = {
+					content: result.content,
+					model: options.model || 'unknown',
+					provider: requestedProviderType,
+					usage: result.usage,
+				};
+				this.callTracker.recordCall(
+					requestedProviderType,
+					options.model || 'unknown',
+					options,
+					response,
+					false, // Not a fallback
+				);
+			}
+
+			return result;
 		} catch (error) {
 			this.logger.error(`Error with provider ${requestedProviderType}:`, ensureError(error));
 
@@ -200,13 +258,55 @@ export class LLMManager {
 					if (!openAiProvider) {
 						throw new ProviderNotAvailableError(LLMProviderType.OPENAI);
 					}
-					return await openAiProvider.createCompletion(openAiOptions);
+					const fallbackResult = await openAiProvider.createCompletion(openAiOptions);
+
+					// Track the fallback call if tracker is available
+					if (this.callTracker) {
+						const response = {
+							content: fallbackResult.content,
+							model: openAiOptions.model || 'gpt-3.5-turbo',
+							provider: LLMProviderType.OPENAI,
+							usage: fallbackResult.usage,
+						};
+						this.callTracker.recordCall(
+							LLMProviderType.OPENAI,
+							openAiOptions.model || 'gpt-3.5-turbo',
+							openAiOptions,
+							response,
+							true, // This is a fallback
+						);
+					}
+
+					return fallbackResult;
 				} catch (fallbackError) {
 					this.logger.error('Error with OpenAI fallback:', ensureError(fallbackError));
+
+					// Track the failure if tracker is available
+					if (this.callTracker) {
+						this.callTracker.recordFailure(
+							LLMProviderType.OPENAI,
+							'gpt-3.5-turbo',
+							openAiOptions,
+							ensureError(fallbackError),
+							true,
+						);
+					}
+
 					throw new Error(
 						`Failed to create completion with primary and fallback providers: ${ensureError(error).message}, ${ensureError(fallbackError).message}`,
 					);
 				}
+			}
+
+			// Track the failure if tracker is available
+			if (this.callTracker) {
+				this.callTracker.recordFailure(
+					requestedProviderType,
+					options.model || 'unknown',
+					options,
+					ensureError(error),
+					false,
+				);
 			}
 
 			throw error;

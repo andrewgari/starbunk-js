@@ -9,6 +9,7 @@ import { DiscordService } from './discordService';
 import { LLMManager, LLMProviderType } from './llm';
 import { registerPrompts } from './llm/prompts';
 import { Logger } from './logger';
+import type { LLMCallTracker } from '../testing/llm/LLMCallTracker';
 
 /**
  * Bootstraps the entire application, registering all services
@@ -137,4 +138,24 @@ export function getLLMManager(): LLMManager {
 
 export function getWebhookService(): any {
 	return container.get(ServiceId.WebhookService);
+}
+
+/**
+ * Create an LLMManager with an optional call tracker for testing
+ * This is useful for E2E tests where you want to verify actual LLM calls
+ *
+ * @param logger Logger instance
+ * @param callTracker Optional LLMCallTracker to record all LLM calls
+ * @param defaultProvider Default provider type (defaults to OLLAMA)
+ * @returns Initialized LLMManager instance
+ */
+export async function createLLMManagerWithTracker(
+	logger: Logger,
+	callTracker?: LLMCallTracker,
+	defaultProvider: LLMProviderType = LLMProviderType.OLLAMA,
+): Promise<LLMManager> {
+	const llmManager = new LLMManager(logger, defaultProvider, callTracker);
+	await llmManager.initializeAllProviders();
+	registerPrompts();
+	return llmManager;
 }

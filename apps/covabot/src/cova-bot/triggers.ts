@@ -1,5 +1,5 @@
 import userId from './simplifiedUserId';
-import { and, fromBot, fromUser, not, type TriggerCondition } from './conditions';
+import { and, fromUser, not } from './conditions';
 import { createTriggerResponse } from './triggerResponseFactory';
 import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './simplifiedLlmTriggers';
 import { getCovaIdentity } from '../services/identity';
@@ -7,7 +7,6 @@ import { logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
 
 const DEBUG_MODE = process.env.DEBUG_MODE === 'true';
-const allowAllCondition: TriggerCondition = () => true;
 
 // Enhanced identity function with validation and silent failure
 async function getCovaIdentityWithValidation(message?: Message) {
@@ -27,32 +26,37 @@ async function getCovaIdentityWithValidation(message?: Message) {
 	}
 }
 
-// Main trigger for CovaBot - uses LLM to decide if it should respond
+/**
+ * Unified CovaBot trigger - handles all messages with single-prompt LLM
+ *
+ * The LLM receives context about whether Cova was mentioned/referenced
+ * and makes both the decision to respond AND generates the response in one call.
+ *
+ * This consolidates the previous two-trigger system (direct mention + contextual)
+ * into a single, simpler flow.
+ *
+ * DEBUG MODE BEHAVIOR:
+ * - In DEBUG_MODE: ONLY responds to Cova (the person) for calibration/testing
+ * - In production: Ignores Cova (the person) to prevent self-responses
+ */
 export const covaTrigger = createTriggerResponse({
-	name: 'cova-contextual-response',
-	priority: 3,
+	name: 'cova-unified-response',
+	priority: 5,
 	condition: and(
-		createLLMResponseDecisionCondition(), // Handles probability logic; in DEBUG returns true for all non-bots
-		// In production, ignore Cova (the person). In DEBUG_MODE we allow responding to Cova.
-		DEBUG_MODE ? allowAllCondition : not(fromUser(userId.Cova)),
-		not(fromBot()),
+		createLLMResponseDecisionCondition(), // Simple filter: non-empty, non-bot messages
+		// In DEBUG_MODE: ONLY respond to Cova (calibration mode)
+		// In production: Ignore Cova (the person) to prevent self-responses
+		DEBUG_MODE ? fromUser(userId.Cova) : not(fromUser(userId.Cova)),
 	),
-	response: createLLMEmulatorResponse(),
+	response: createLLMEmulatorResponse(), // Single LLM call handles decision + response
 	identity: async (message) => getCovaIdentityWithValidation(message),
 });
 
-// Direct mention trigger - always respond to direct mentions
-export const covaDirectMentionTrigger = createTriggerResponse({
-	name: 'cova-direct-mention',
-	priority: 5, // Highest priority
-	condition: and(
-		(message) => message.mentions.has(userId.Cova),
-		DEBUG_MODE ? allowAllCondition : not(fromUser(userId.Cova)),
-		not(fromBot()),
-	),
-	response: createLLMEmulatorResponse(),
-	identity: async (message) => getCovaIdentityWithValidation(message),
-});
+/**
+ * Legacy alias for backward compatibility
+ * Both triggers now use the same unified single-prompt approach
+ */
+export const covaDirectMentionTrigger = covaTrigger;
 
 // Stats command trigger - for debugging performance metrics
 export const covaStatsCommandTrigger = createTriggerResponse({
