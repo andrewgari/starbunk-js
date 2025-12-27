@@ -14,6 +14,8 @@
 		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index-minimal.ts",
 		"dev:web": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index-web.ts",
 		"test": "jest",
+		"test:unit": "jest --testPathIgnorePatterns=e2e",
+		"test:e2e": "jest --testPathPattern=e2e",
 		"type-check": "tsc --noEmit",
 		"lint": "eslint src/**/*.ts",
 		"lint:fix": "eslint src/**/*.ts --fix",

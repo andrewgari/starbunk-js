@@ -295,7 +295,12 @@ jobs:
         run: |
           echo "🧪 Testing ${{ matrix.container }}..."
           cd apps/${{ matrix.container }}
-          npm test -- --passWithNoTests --coverage=false --verbose --testTimeout=30000 --maxWorkers=2
+          # Use test:unit for covabot (E2E tests run separately), test for others
+          if [[ "${{ matrix.container }}" == "covabot" ]]; then
+            npm run test:unit -- --passWithNoTests --coverage=false --verbose --testTimeout=30000 --maxWorkers=2
+          else
+            npm test -- --passWithNoTests --coverage=false --verbose --testTimeout=30000 --maxWorkers=2
+          fi
 
       - name: Build container
         run: |

@@ -27,6 +27,7 @@ console.log(`[Environment] - SNOWBUNK_TOKEN: ${process.env.SNOWBUNK_TOKEN ? 'Set
 console.log(`[Environment] - DISCORD_WEBHOOK_URL: ${process.env.DISCORD_WEBHOOK_URL ? 'Set' : 'Not set'}`);
 console.log(`[Environment] - OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? 'Set' : 'Not set'}`);
 console.log(`[Environment] - OLLAMA_API_URL: ${process.env.OLLAMA_API_URL ? 'Set' : 'Not set'}`);
+console.log(`[Environment] - GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? 'Set' : 'Not set'}`);
 console.log(`[Environment] - DEBUG_MODE: ${process.env.DEBUG_MODE}`);
 console.log(`[Environment] - TESTING_SERVER_IDS: ${process.env.TESTING_SERVER_IDS || 'Not set'}`);
 console.log(`[Environment] - TESTING_CHANNEL_IDS: ${process.env.TESTING_CHANNEL_IDS || 'Not set'}`);
@@ -87,6 +88,8 @@ const environment = {
 		OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 		OLLAMA_DEFAULT_MODEL: process.env.OLLAMA_DEFAULT_MODEL,
 		OLLAMA_API_URL: process.env.OLLAMA_API_URL,
+		GEMINI_DEFAULT_MODEL: process.env.GEMINI_DEFAULT_MODEL,
+		GEMINI_API_KEY: process.env.GEMINI_API_KEY,
 	},
 };
 

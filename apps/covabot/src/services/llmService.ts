@@ -318,24 +318,32 @@ Message to analyze: "${message.content}"`;
 
 /**
  * Factory function to create LLM service based on environment
+ *
+ * Priority order (Ollama is preferred, OpenAI is opt-in only):
+ * 1. Ollama (if OLLAMA_API_URL is set)
+ * 2. OpenAI (if OPENAI_API_KEY is set) - OPT-IN ONLY
+ * 3. Emulator (fallback if neither is configured)
  */
 export function createLLMService(): LLMService {
 	const config: LLMConfig = {
 		provider: 'emulator', // Default to emulator
 	};
 
-	// Check for OpenAI configuration
-	if (process.env.OPENAI_API_KEY) {
-		config.provider = 'openai';
-		config.apiKey = process.env.OPENAI_API_KEY;
-		config.model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
-	}
-
-	// Check for Ollama configuration
-	else if (process.env.OLLAMA_API_URL) {
+	// Check for Ollama configuration FIRST (preferred)
+	if (process.env.OLLAMA_API_URL) {
 		config.provider = 'ollama';
 		config.apiUrl = process.env.OLLAMA_API_URL;
 		config.model = process.env.OLLAMA_MODEL || 'mistral:latest';
+		logger.info('[LLMService] Using Ollama provider (preferred)');
+	}
+	// Check for OpenAI configuration (opt-in only)
+	else if (process.env.OPENAI_API_KEY) {
+		config.provider = 'openai';
+		config.apiKey = process.env.OPENAI_API_KEY;
+		config.model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
+		logger.info('[LLMService] Using OpenAI provider (opt-in)');
+	} else {
+		logger.info('[LLMService] No LLM provider configured, using emulator');
 	}
 
 	logger.info(`[LLMService] Initializing ${config.provider} service`);

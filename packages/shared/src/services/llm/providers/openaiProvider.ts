@@ -17,23 +17,16 @@ export class OpenAIProvider extends GenericProvider {
 	 * Initialize the OpenAI provider
 	 */
 	protected async initializeProvider(): Promise<boolean> {
-		try {
-			if (!this.config.apiKey) {
-				this.logger.error('OpenAI API key not found in configuration');
-				return false;
-			}
-
-			this.client = new OpenAI({
-				apiKey: this.config.apiKey,
-			});
-
-			this.logger.debug('OpenAI client initialized successfully');
-			return true;
-		} catch (error) {
-			this.logger.error('Error initializing OpenAI client', error as Error);
-			this.client = null;
-			return false;
+		if (!this.config.apiKey) {
+			throw new Error('OpenAI API key not found in configuration');
 		}
+
+		this.client = new OpenAI({
+			apiKey: this.config.apiKey,
+		});
+
+		this.logger.debug('OpenAI client initialized successfully');
+		return true;
 	}
 
 	/**
