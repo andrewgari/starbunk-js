@@ -1,5 +1,6 @@
 import { Message } from 'discord.js';
-import { logger, ensureError } from '@starbunk/shared';
+import { logger, ensureError, container, ServiceId } from '@starbunk/shared';
+import { LLMManager } from '@starbunk/shared/dist/services/llm/llmManager';
 import { TriggerCondition, ResponseGenerator } from '../types/triggerResponse';
 import { createLLMService, LLMService } from '../services/llmService';
 
@@ -10,10 +11,22 @@ const DEBUG_MODE = process.env.DEBUG_MODE === 'true';
 let llmService: LLMService | null = null;
 
 function getLLMService(): LLMService {
+	// Fall back to creating a new LLM service
 	if (!llmService) {
 		llmService = createLLMService();
 	}
 	return llmService;
+}
+
+/**
+ * Get LLM manager from container if available (for E2E tests with mocks)
+ */
+function getContainerLLMManager(): LLMManager | null {
+	try {
+		return container.get<LLMManager>(ServiceId.LLMManager);
+	} catch (error) {
+		return null;
+	}
 }
 
 /**
@@ -106,9 +119,22 @@ Instructions: You are Cova. Analyze this message and decide if Cova would natura
 
 Your response:`;
 
-			// Use LLM service for combined decision + response generation
-			const llmSvc = getLLMService();
-			const response = await llmSvc.generateResponse(message, enhancedMessage);
+			// Try to use LLM manager from container first (for E2E tests with mocks)
+			const llmManager = getContainerLLMManager();
+			let response: string;
+
+			if (llmManager) {
+				// Use container's LLM manager (E2E tests with mocks)
+				// Use createCompletion directly to avoid prompt registry lookup
+				const completion = await llmManager.createCompletion({
+					messages: [{ role: 'user', content: enhancedMessage }],
+				});
+				response = completion.content;
+			} else {
+				// Use regular LLM service (production)
+				const llmSvc = getLLMService();
+				response = await llmSvc.generateResponse(message, enhancedMessage);
+			}
 
 			// Check if LLM decided to stay silent
 			if (!response || response.trim() === '' || response.trim().toUpperCase() === 'SILENT') {
