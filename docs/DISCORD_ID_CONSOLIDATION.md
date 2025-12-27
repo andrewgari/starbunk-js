@@ -66,10 +66,11 @@ This document describes the consolidation of hardcoded Discord IDs across the St
 
 **apps/bunkbot/src/reply-bots/e2e-status-bot/constants.ts**
 - Updated to use environment variables for test member IDs
-- No hardcoded defaults - must be set in E2E environment
+- Defaults to empty strings if not set (E2E tests gracefully skip when IDs are missing)
+- Provides `validateE2ETestIds()` function for explicit validation when needed
 
 **apps/bunkbot/src/__tests__/bunkbot-sanity-check.test.ts**
-- Updated test user IDs to use environment variables with fallbacks
+- Updated test user IDs to use environment variables with hardcoded fallbacks (for local/dev usage)
 
 ## Environment Variables Reference
 
