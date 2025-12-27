@@ -1,6 +1,6 @@
 /**
  * Tests for CovaBot debug/calibration mode behavior
- * 
+ *
  * Verifies that:
  * 1. In DEBUG_MODE=true, CovaBot ONLY responds to Cova
  * 2. In DEBUG_MODE=false, CovaBot IGNORES Cova
@@ -26,15 +26,16 @@ describe('CovaBot Debug/Calibration Mode', () => {
 		it('should ONLY respond to Cova when DEBUG_MODE=true', async () => {
 			// Set debug mode
 			process.env.DEBUG_MODE = 'true';
-			process.env.COVA_USER_ID = '139592376443338752';
+			const covaUserId = '139592376443338752';
+			process.env.COVA_USER_ID = covaUserId;
 
 			// Re-import to get new DEBUG_MODE value
 			const { covaTrigger } = await import('../triggers');
 
-			// Mock message from Cova
+			// Mock message from Cova (using the env var value)
 			const covaMessage = {
 				author: {
-					id: '139592376443338752',
+					id: covaUserId,
 					bot: false,
 				},
 				content: 'test message',
@@ -61,15 +62,16 @@ describe('CovaBot Debug/Calibration Mode', () => {
 		it('should IGNORE Cova when DEBUG_MODE=false (production)', async () => {
 			// Set production mode
 			process.env.DEBUG_MODE = 'false';
-			process.env.COVA_USER_ID = '139592376443338752';
+			const covaUserId = '139592376443338752';
+			process.env.COVA_USER_ID = covaUserId;
 
 			// Re-import to get new DEBUG_MODE value
 			const { covaTrigger } = await import('../triggers');
 
-			// Mock message from Cova
+			// Mock message from Cova (using the env var value)
 			const covaMessage = {
 				author: {
-					id: '139592376443338752',
+					id: covaUserId,
 					bot: false,
 				},
 				content: 'test message',
@@ -138,13 +140,13 @@ describe('CovaBot Debug/Calibration Mode', () => {
 		it('should include calibration context in debug mode', () => {
 			// This test verifies the prompt includes calibration context
 			// The actual implementation is in simplifiedLlmTriggers.ts
-			
+
 			process.env.DEBUG_MODE = 'true';
-			
+
 			// Re-import to get new DEBUG_MODE value
 			jest.isolateModules(() => {
 				const { createLLMEmulatorResponse } = require('../simplifiedLlmTriggers');
-				
+
 				// The response generator should include calibration context
 				// This is verified by the prompt construction in the implementation
 				expect(createLLMEmulatorResponse).toBeDefined();
@@ -152,4 +154,3 @@ describe('CovaBot Debug/Calibration Mode', () => {
 		});
 	});
 });
-

@@ -23,26 +23,18 @@ export class GeminiProvider extends GenericProvider {
 	 * Initialize the Gemini provider
 	 */
 	protected async initializeProvider(): Promise<boolean> {
-		try {
-			if (!this.config.apiKey) {
-				this.logger.error('Gemini API key not found in configuration');
-				return false;
-			}
-
-			this.client = new GoogleGenerativeAI(this.config.apiKey);
-			
-			// Initialize the model
-			const modelName = this.config.defaultModel || 'gemini-2.0-flash-exp';
-			this.model = this.client.getGenerativeModel({ model: modelName });
-
-			this.logger.debug(`Gemini client initialized successfully with model: ${modelName}`);
-			return true;
-		} catch (error) {
-			this.logger.error('Error initializing Gemini client', error as Error);
-			this.client = null;
-			this.model = null;
-			return false;
+		if (!this.config.apiKey) {
+			throw new Error('Gemini API key not found in configuration');
 		}
+
+		this.client = new GoogleGenerativeAI(this.config.apiKey);
+
+		// Initialize the model
+		const modelName = this.config.defaultModel || 'gemini-2.0-flash-exp';
+		this.model = this.client.getGenerativeModel({ model: modelName });
+
+		this.logger.debug(`Gemini client initialized successfully with model: ${modelName}`);
+		return true;
 	}
 
 	/**
@@ -95,7 +87,7 @@ export class GeminiProvider extends GenericProvider {
 		// Generate content
 		const result = await this.model.generateContent(prompt);
 		const response = await result.response;
-		
+
 		return {
 			text: response.text(),
 			model: options.model || this.config.defaultModel,

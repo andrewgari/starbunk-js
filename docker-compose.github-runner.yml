@@ -5,45 +5,45 @@ services:
     image: myoung34/github-runner:latest
     container_name: github-actions-runner
     restart: unless-stopped
-    
+
     environment:
       # Repository configuration
       REPO_URL: https://github.com/andrewgari/starbunk-js
-      
-      # Runner token - GET THIS FROM: 
+
+      # Runner token - GET THIS FROM:
       # https://github.com/andrewgari/starbunk-js/settings/actions/runners/new
       RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}
-      
+
       # Runner configuration
       RUNNER_NAME: unraid-ollama-runner
       RUNNER_WORKDIR: /tmp/github-runner
       LABELS: self-hosted,unraid,ollama,linux,x64
-      
+
       # Runner group (optional, defaults to "Default")
       RUNNER_GROUP: default
-      
+
       # Ephemeral runner (set to true if you want runner to be removed after each job)
       EPHEMERAL: false
-      
+
       # Disable auto-update (recommended for stability)
       DISABLE_AUTO_UPDATE: false
-    
+
     # Use host network to access Ollama on localhost:11434
     network_mode: host
-    
+
     volumes:
       # Docker socket access (needed to run Docker commands in workflows)
       - /var/run/docker.sock:/var/run/docker.sock
-      
+
       # Runner work directory (persistent storage)
       - /mnt/user/appdata/github-runner:/tmp/github-runner
-      
+
       # Optional: Share Ollama models if needed
       # - /mnt/user/appdata/ollama:/root/.ollama
-    
+
     # Security options
     privileged: false
-    
+
     # Resource limits (adjust based on your Unraid server)
     deploy:
       resources:
@@ -72,4 +72,3 @@ services:
 #            - driver: nvidia
 #              count: 1
 #              capabilities: [gpu]
-

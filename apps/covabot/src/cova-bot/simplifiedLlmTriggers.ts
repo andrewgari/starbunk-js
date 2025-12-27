@@ -3,6 +3,7 @@ import { logger, ensureError, container, ServiceId } from '@starbunk/shared';
 import { LLMManager } from '@starbunk/shared/dist/services/llm/llmManager';
 import { TriggerCondition, ResponseGenerator } from '../types/triggerResponse';
 import { createLLMService, LLMService } from '../services/llmService';
+import userId from './simplifiedUserId';
 
 // Debug mode flag
 const DEBUG_MODE = process.env.DEBUG_MODE === 'true';
@@ -86,7 +87,7 @@ export function createLLMEmulatorResponse(): ResponseGenerator {
 				// Use default
 			}
 			const isMentioned = message.content.toLowerCase().includes('cova');
-			const isDirectMention = message.mentions?.has?.('139592376443338752') || false;
+			const isDirectMention = message.mentions?.has?.(userId.Cova) || false;
 
 			// Add context to help the LLM make a good decision
 			const contextNote = isDirectMention
