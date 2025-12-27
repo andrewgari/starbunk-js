@@ -262,8 +262,8 @@ describeIfNotCI('Comprehensive Chat Testing Suite', () => {
 			expect(avgResponseTime).toBeLessThan(1000); // Average under 1 second
 			expect(maxResponseTime).toBeLessThan(5000); // Max under 5 seconds
 
-			// Allow higher coefficient of variation for CI environments
-			// CV = stdDev / mean, allowing up to 2.5 for flaky CI environments
+			// Allow higher coefficient of variation for local development
+			// CV = stdDev / mean, allowing up to 2.5 for variable local machine performance
 			const coefficientOfVariation = stdDev / avgResponseTime;
 			expect(coefficientOfVariation).toBeLessThan(2.5);
 
