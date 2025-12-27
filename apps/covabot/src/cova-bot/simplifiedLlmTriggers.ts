@@ -24,7 +24,7 @@ function getLLMService(): LLMService {
 function getContainerLLMManager(): LLMManager | null {
 	try {
 		return container.get<LLMManager>(ServiceId.LLMManager);
-	} catch (error) {
+	} catch (_error) {
 		return null;
 	}
 }
