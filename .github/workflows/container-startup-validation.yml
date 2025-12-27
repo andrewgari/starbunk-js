@@ -158,7 +158,7 @@ jobs:
 
   e2e-tests:
     name: E2E Tests (CovaBot)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.covabot == 'true' || needs.detect-changes.outputs.shared == 'true'
     steps:
@@ -209,17 +209,17 @@ jobs:
             echo "No Prisma schema found, skipping generation"
           fi
 
-      - name: Verify Ollama availability
+      - name: Verify Ollama availability (optional)
+        continue-on-error: true
         run: |
           echo "🔍 Checking Ollama availability..."
-          if ! curl -f http://localhost:11434/api/tags; then
-            echo "❌ Ollama is not available on localhost:11434"
-            echo "Please ensure Ollama is running on the self-hosted runner"
-            exit 1
+          if curl -f http://localhost:11434/api/tags 2>/dev/null; then
+            echo "✅ Ollama is available"
+            echo "Available models:"
+            curl -s http://localhost:11434/api/tags | jq -r '.models[].name' || echo "No models found"
+          else
+            echo "⚠️ Ollama is not available - tests will use mock LLM provider"
           fi
-          echo "✅ Ollama is available"
-          echo "Available models:"
-          curl -s http://localhost:11434/api/tags | jq -r '.models[].name' || echo "No models found"
 
       - name: Run E2E tests
         env:
