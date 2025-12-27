@@ -10,7 +10,7 @@
 //
 // 2. For testing/debug whitelisting:
 //    Set TESTING_SERVER_IDS environment variable (comma-separated list)
-//    Example: TESTING_SERVER_IDS=753251582719688714,987654321098765432
+//    Example: TESTING_SERVER_IDS=123456789012345678,987654321098765432
 //
 // 3. For dynamic guild lookups:
 //    import { ConfigurationService } from '../services/configurationService';

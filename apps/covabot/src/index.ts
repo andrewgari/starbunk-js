@@ -17,6 +17,7 @@ import {
 	DiscordService,
 	createCovaBotMetrics,
 	type CovaBotMetrics,
+	getDiscordToken,
 } from '@starbunk/shared';
 import { CovaBot } from './cova-bot/covaBot';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from './cova-bot/triggers';
@@ -189,10 +190,8 @@ class CovaBotContainer {
 	}
 
 	async start(): Promise<void> {
-		const token = process.env.COVABOT_TOKEN || process.env.STARBUNK_TOKEN;
-		if (!token) {
-			throw new Error('COVABOT_TOKEN or STARBUNK_TOKEN environment variable is required');
-		}
+		// Get Discord token with smart fallback logic
+		const token = getDiscordToken({ containerName: 'COVABOT', logger });
 
 		await this.client.login(token);
 		await this.waitForReady();

@@ -15,6 +15,7 @@ import {
 	initializeObservability,
 	createDJCovaMetrics,
 	type DJCovaMetrics,
+	getDiscordToken,
 } from '@starbunk/shared';
 import { CommandHandler } from './commandHandler';
 import { DJCova } from './djCova';
@@ -181,18 +182,8 @@ class DJCovaContainer {
 	}
 
 	async start(): Promise<void> {
-		// Check for container-specific token first, then fallback to shared token
-		const token = process.env.DJCOVA_TOKEN || process.env.STARBUNK_TOKEN;
-		if (!token) {
-			throw new Error('DJCOVA_TOKEN or STARBUNK_TOKEN environment variable is required');
-		}
-
-		// Log which token variable is being used (without exposing the actual token)
-		if (process.env.DJCOVA_TOKEN) {
-			logger.info('🔑 Using DJCOVA_TOKEN for Discord authentication');
-		} else {
-			logger.info('🔑 Using STARBUNK_TOKEN for Discord authentication (fallback)');
-		}
+		// Get Discord token with smart fallback logic
+		const token = getDiscordToken({ containerName: 'DJCOVA', logger });
 
 		await this.client.login(token);
 		await this.waitForReady();

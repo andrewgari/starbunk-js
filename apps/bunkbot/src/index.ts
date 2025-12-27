@@ -19,6 +19,7 @@ import {
 	EnhancedBunkBotMetricsCollector,
 	BotTriggerTracker,
 	initializeBotMetricsSystem,
+	getDiscordToken,
 } from '@starbunk/shared';
 
 // Import DiscordService directly from the service file
@@ -462,23 +463,8 @@ class BunkBotContainer {
 	}
 
 	async start(): Promise<void> {
-		// Check for container-specific token first, then fallback to legacy tokens
-		const token = process.env.BUNKBOT_TOKEN || process.env.STARBUNK_TOKEN || process.env.TOKEN;
-
-		if (!token) {
-			throw new Error(
-				'No Discord token found. Please set BUNKBOT_TOKEN, STARBUNK_TOKEN, or TOKEN environment variable.',
-			);
-		}
-
-		// Log which token variable is being used (without exposing the actual token)
-		if (process.env.BUNKBOT_TOKEN) {
-			logger.info('🔑 Using BUNKBOT_TOKEN for Discord authentication');
-		} else if (process.env.STARBUNK_TOKEN) {
-			logger.info('🔑 Using STARBUNK_TOKEN for Discord authentication (fallback)');
-		} else {
-			logger.info('🔑 Using TOKEN for Discord authentication (last resort)');
-		}
+		// Get Discord token with smart fallback logic
+		const token = getDiscordToken({ containerName: 'BUNKBOT', logger });
 
 		await this.client.login(token);
 		await this.waitForReady();

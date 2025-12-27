@@ -15,6 +15,7 @@ import {
 	initializeObservability,
 	createStarbunkDNDMetrics,
 	type StarbunkDNDMetrics,
+	getDiscordToken,
 } from '@starbunk/shared';
 
 type ChatInputInteraction = {
@@ -209,18 +210,8 @@ class StarbunkDNDContainer {
 	}
 
 	async start(): Promise<void> {
-		// Check for container-specific token first, then fallback to shared token
-		const token = process.env.STARBUNK_DND_TOKEN || process.env.STARBUNK_TOKEN;
-		if (!token) {
-			throw new Error('STARBUNK_DND_TOKEN or STARBUNK_TOKEN environment variable is required');
-		}
-
-		// Log which token variable is being used (without exposing the actual token)
-		if (process.env.STARBUNK_DND_TOKEN) {
-			logger.info('🔑 Using STARBUNK_DND_TOKEN for Discord authentication');
-		} else {
-			logger.info('🔑 Using STARBUNK_TOKEN for Discord authentication (fallback)');
-		}
+		// Get Discord token with smart fallback logic
+		const token = getDiscordToken({ containerName: 'STARBUNK_DND', logger });
 
 		await this.client.login(token);
 		await this.waitForReady();
