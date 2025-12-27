@@ -209,9 +209,17 @@ class StarbunkDNDContainer {
 	}
 
 	async start(): Promise<void> {
-		const token = process.env.STARBUNK_TOKEN;
+		// Check for container-specific token first, then fallback to shared token
+		const token = process.env.STARBUNK_DND_TOKEN || process.env.STARBUNK_TOKEN;
 		if (!token) {
-			throw new Error('STARBUNK_TOKEN environment variable is required');
+			throw new Error('STARBUNK_DND_TOKEN or STARBUNK_TOKEN environment variable is required');
+		}
+
+		// Log which token variable is being used (without exposing the actual token)
+		if (process.env.STARBUNK_DND_TOKEN) {
+			logger.info('🔑 Using STARBUNK_DND_TOKEN for Discord authentication');
+		} else {
+			logger.info('🔑 Using STARBUNK_TOKEN for Discord authentication (fallback)');
 		}
 
 		await this.client.login(token);
