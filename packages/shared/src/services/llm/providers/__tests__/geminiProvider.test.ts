@@ -24,7 +24,8 @@ describe('GeminiProvider', () => {
 			const result = await provider.initialize();
 			expect(result).toBe(false);
 			expect(mockLogger.error).toHaveBeenCalledWith(
-				'Gemini API key not found in configuration',
+				'Error initializing Gemini provider',
+				expect.any(Error),
 			);
 		});
 
