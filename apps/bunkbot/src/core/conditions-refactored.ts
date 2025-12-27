@@ -4,7 +4,7 @@ import { ContextualTriggerCondition, ResponseContext } from './response-context'
 import { TriggerCondition } from './trigger-response';
 
 const BOT_IDENTIFIERS = {
-	STARBUNK_CLIENT_ID: '836445923105308672',
+	STARBUNK_CLIENT_ID: process.env.STARBUNK_CLIENT_ID || process.env.CLIENT_ID || '836445923105308672',
 	COVABOT_WEBHOOK_NAMES: ['CovaBot', 'Cova', 'CovaBot Webhook'],
 	COVABOT_USERNAMES: ['CovaBot', 'Cova'],
 	BUNKBOT_WEBHOOK_NAMES: ['BunkBot', 'BunkBot Webhook'],

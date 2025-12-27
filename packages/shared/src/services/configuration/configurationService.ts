@@ -10,19 +10,11 @@ import {
 	ConfigurationServiceOptions,
 } from './types';
 
-// Fallback hardcoded configurations
+// Minimal fallback configuration - only essential IDs
+// All other IDs should be stored in the database
 const FALLBACK_USER_IDS = {
-	Cova: '139592376443338752',
-	Venn: '151120340343455744',
-	Bender: '135820819086573568',
-	Sig: '486516247576444928',
-	Guy: '113035990725066752',
-	Guildus: '113776144012148737',
-	Deaf: '115631499344216066',
-	Feli: '120263103366692868',
-	Goose: '163780525859930112',
-	Chad: '85184539906809856',
-	Ian: '146110603835080704',
+	// Only Cova ID for debug mode filtering (from environment variable)
+	Cova: process.env.COVA_USER_ID || '139592376443338752',
 };
 
 export class ConfigurationService {
