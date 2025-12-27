@@ -5,8 +5,8 @@ import { Message } from 'discord.js';
 
 // Bot identification constants
 const BOT_IDENTIFIERS = {
-	// Discord application/client ID used by all containers
-	STARBUNK_CLIENT_ID: '836445923105308672',
+	// Discord application/client ID used by all containers (from environment)
+	STARBUNK_CLIENT_ID: process.env.STARBUNK_CLIENT_ID || process.env.CLIENT_ID || '836445923105308672',
 
 	// CovaBot-specific identifiers (AI personality bot)
 	COVABOT_WEBHOOK_NAMES: ['CovaBot', 'Cova', 'CovaBot Webhook'],

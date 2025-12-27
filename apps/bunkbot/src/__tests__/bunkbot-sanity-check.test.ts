@@ -14,12 +14,12 @@ import { MessageFilter } from '@starbunk/shared';
 import { BotFactory, BotConfig } from '../core/bot-factory';
 import { BotRegistry } from '../botRegistry';
 
-// Define user IDs for testing
-const CHAD_USER_ID = '85184539906809856';
-const VENN_USER_ID = '151120340343455744';
-const GUY_USER_ID = '135820819086573568';
-const COVABOT_USER_ID = '836445923105308672'; // CovaBot's actual user ID
-const REGULAR_USER_ID = '123456789012345678';
+// Define user IDs for testing - use environment variables or test defaults
+const CHAD_USER_ID = process.env.E2E_TEST_MEMBER_ID || '85184539906809856';
+const VENN_USER_ID = process.env.E2E_ID_VENN || '151120340343455744';
+const GUY_USER_ID = process.env.E2E_ID_GUY || '135820819086573568';
+const COVABOT_USER_ID = process.env.STARBUNK_CLIENT_ID || '836445923105308672'; // CovaBot's actual user ID
+const REGULAR_USER_ID = '123456789012345678'; // Generic test user
 
 // Mock the shared library with proper debug mode control
 jest.mock('@starbunk/shared', () => ({

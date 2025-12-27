@@ -15,6 +15,7 @@ import {
 	initializeObservability,
 	createStarbunkDNDMetrics,
 	type StarbunkDNDMetrics,
+	getDiscordToken,
 } from '@starbunk/shared';
 
 type ChatInputInteraction = {
@@ -209,10 +210,8 @@ class StarbunkDNDContainer {
 	}
 
 	async start(): Promise<void> {
-		const token = process.env.STARBUNK_TOKEN;
-		if (!token) {
-			throw new Error('STARBUNK_TOKEN environment variable is required');
-		}
+		// Get Discord token with smart fallback logic
+		const token = getDiscordToken({ containerName: 'STARBUNK_DND', logger });
 
 		await this.client.login(token);
 		await this.waitForReady();

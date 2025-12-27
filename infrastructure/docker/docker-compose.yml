@@ -42,6 +42,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - BUNKBOT_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
@@ -52,7 +53,6 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
-      - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       # Observability Configuration
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
@@ -102,6 +102,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - DJCOVA_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
@@ -158,6 +159,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - STARBUNK_DND_TOKEN=${STARBUNK_DND_TOKEN:-${STARBUNK_TOKEN}}
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
@@ -224,6 +226,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - COVABOT_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}

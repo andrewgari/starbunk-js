@@ -1,30 +1,21 @@
-// ⚠️  DEPRECATED: All user IDs are now stored in the database. Use the UserConfiguration table instead.
+// ⚠️  DEPRECATED: All user IDs should be stored in the database or environment variables.
 //
-// This file is kept for backward compatibility only and will be removed in a future version.
+// This file only exports the essential COVA_USER_ID for debug mode filtering.
+// All other user IDs should be retrieved from the database using ConfigurationService.
 //
-// NEW USAGE:
+// RECOMMENDED USAGE:
 // import { ConfigurationService } from '../services/configurationService';
 // const configService = new ConfigurationService();
 // const userId = await configService.getUserIdByUsername('Chad');
 //
-// For BunkBot containers, use the BotIdentityService:
-// import { BotIdentityService } from '../services/botIdentityService';
-// const identity = await identityService.getChadIdentity();
+// For debug mode filtering, use the COVA_USER_ID environment variable directly:
+// const covaUserId = process.env.COVA_USER_ID;
 
 console.warn(
-	'⚠️  DEPRECATED: containers/shared/src/discord/userId.ts is deprecated. Use ConfigurationService instead.',
+	'⚠️  DEPRECATED: packages/shared/src/discord/userId.ts is deprecated. Use ConfigurationService or environment variables instead.',
 );
 
+// Only export Cova ID for debug mode filtering (from environment variable)
 export default {
-	Cova: '139592376443338752',
-	Venn: '151120340343455744',
-	Bender: '135820819086573568',
-	Sig: '486516247576444928',
-	Guy: '113035990725066752',
-	Guildus: '113776144012148737',
-	Deaf: '115631499344216066',
-	Feli: '120263103366692868',
-	Goose: '163780525859930112',
-	Chad: '85184539906809856',
-	Ian: '146110603835080704',
+	Cova: process.env.COVA_USER_ID || '139592376443338752',
 };

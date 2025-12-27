@@ -1,14 +1,25 @@
-// ⚠️  DEPRECATED: All guild IDs are now stored in the database. Use the Guild table instead.
+// ⚠️  DEPRECATED: Hardcoded guild IDs are no longer used.
 //
-// This file is kept for backward compatibility only and will be removed in a future version.
-// Use ConfigurationService for dynamic guild ID lookups.
+// For guild/server whitelisting in debug/testing mode, use the TESTING_SERVER_IDS environment variable.
+// For the primary guild ID, use the GUILD_ID environment variable.
+// For dynamic guild lookups, use the database via ConfigurationService.
+//
+// RECOMMENDED USAGE:
+// 1. For primary guild ID:
+//    Use GUILD_ID environment variable
+//
+// 2. For testing/debug whitelisting:
+//    Set TESTING_SERVER_IDS environment variable (comma-separated list)
+//    Example: TESTING_SERVER_IDS=123456789012345678,987654321098765432
+//
+// 3. For dynamic guild lookups:
+//    import { ConfigurationService } from '../services/configurationService';
+//    const configService = new ConfigurationService();
+//    const guildId = await configService.getGuildIdByName('Starbunk Crusaders');
 
 console.warn(
-	'⚠️  DEPRECATED: containers/shared/src/discord/guildIds.ts is deprecated. Use ConfigurationService instead.',
+	'⚠️  DEPRECATED: packages/shared/src/discord/guildIds.ts is deprecated. Use GUILD_ID, TESTING_SERVER_IDS environment variables or ConfigurationService instead.',
 );
-export default {
-	StarbunkCrusaders: '753251582719688714',
-	StarbunkStaging: '856617421427441674',
-	Snowfall: '696689954759245915',
-	CovaDaxServer: '798613445301633134',
-};
+
+// Empty export for backward compatibility - all guild IDs should come from environment or database
+export default {};

@@ -1,41 +1,21 @@
-// ⚠️  DEPRECATED: All channel IDs are now stored in the database. Use the Channel table instead.
+// ⚠️  DEPRECATED: Hardcoded channel IDs are no longer used.
 //
-// This file is kept for backward compatibility only and will be removed in a future version.
-// Use ConfigurationService for dynamic channel ID lookups.
+// For channel whitelisting in debug/testing mode, use the TESTING_CHANNEL_IDS environment variable.
+// For dynamic channel lookups, use the database via ConfigurationService.
+//
+// RECOMMENDED USAGE:
+// 1. For testing/debug whitelisting:
+//    Set TESTING_CHANNEL_IDS environment variable (comma-separated list)
+//    Example: TESTING_CHANNEL_IDS=123456789012345678,987654321098765432
+//
+// 2. For dynamic channel lookups:
+//    import { ConfigurationService } from '../services/configurationService';
+//    const configService = new ConfigurationService();
+//    const channelId = await configService.getChannelIdByName('bot-commands');
 
 console.warn(
-	'⚠️  DEPRECATED: containers/shared/src/discord/channelIds.ts is deprecated. Use ConfigurationService instead.',
+	'⚠️  DEPRECATED: packages/shared/src/discord/channelIds.ts is deprecated. Use TESTING_CHANNEL_IDS environment variable or ConfigurationService instead.',
 );
-export default {
-	Starbunk: {
-		WhaleWatchers: '767836161619525652',
-		NebulaAnnouncments: '925956838036475974',
-		NebulaChat: '925956744478343218',
-		NebulaBunker: '925957329843798016',
-		TheLounge: '754401194788520047',
-		NoGuyLounge: '987456522969841824',
-		GuyLounge: '989524799044862022',
-		AFK: '753251583902482637',
-		BotChannel: '753251583084724366',
-		BotChannelAdmin: '1014170827601748048',
-		StarbunkTesting: '1014170827601748048',
-	},
-	StarbunkStaging: {
-		BotCommmands: '856617421942030361',
-		TheLounge: '856617422906851459',
-		NebulaChat: '856617421427441674',
-		NebulaBunker: '856617421427441674',
-	},
-	CovaDaxServer: {
-		General1: '798613445301633137',
-		General2: '842592329651191808',
-	},
-	Snowfall: {
-		Starbunk: '696689954759245915',
-	},
-	// TTRPG Campaigns
-	Campaigns: {
-		MadMage: '1300829674854809692',
-		HotSprings: '869410394089869312',
-	},
-};
+
+// Empty export for backward compatibility - all channel IDs should come from environment or database
+export default {};

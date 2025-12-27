@@ -49,69 +49,69 @@ services:
       - ${COVABOT_LOGS_PATH:-/mnt/user/appdata/covabot/logs}:/app/logs
     environment:
       # Discord Configuration
-      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - COVABOT_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
-      
+
       # Debug and Testing
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - NODE_ENV=${NODE_ENV:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      
+
       # Qdrant Configuration
       - USE_QDRANT=true
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
       - QDRANT_COLLECTION_PERSONALITY=covabot_personality
       - QDRANT_COLLECTION_CONVERSATIONS=covabot_conversations
-      
+
       # Embedding Configuration
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-Xenova/all-MiniLM-L6-v2}
       - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-384}
       - EMBEDDING_BATCH_SIZE=${EMBEDDING_BATCH_SIZE:-32}
       - EMBEDDING_CACHE_SIZE=${EMBEDDING_CACHE_SIZE:-1000}
       - EMBEDDING_TIMEOUT=${EMBEDDING_TIMEOUT:-30000}
-      
+
       # Memory Configuration
       - MAX_CONVERSATION_HISTORY=${MAX_CONVERSATION_HISTORY:-100}
       - MEMORY_RETENTION_DAYS=${MEMORY_RETENTION_DAYS:-30}
       - CONTEXT_SIMILARITY_THRESHOLD=${CONTEXT_SIMILARITY_THRESHOLD:-0.7}
       - CONVERSATION_CONTEXT_LIMIT=${CONVERSATION_CONTEXT_LIMIT:-10}
-      
+
       # LLM Configuration
       - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
-      
+
       # Web Interface Configuration
       - COVABOT_WEB_PORT=7080
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:7080,http://127.0.0.1:7080}
       - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS:-100}
       - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-60000}
-      
+
       # Data Directory
       - COVABOT_DATA_DIR=/app/data
-      
+
       # Performance and Resource Management
       - NODE_OPTIONS=--max-old-space-size=1024
       - UV_THREADPOOL_SIZE=4
-      
+
       # Health Check Configuration
       - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30}
       - HEALTH_CHECK_TIMEOUT=${HEALTH_CHECK_TIMEOUT:-10}
-      
+
       # Backup Configuration
       - AUTO_BACKUP_INTERVAL=${AUTO_BACKUP_INTERVAL:-24}
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
-      
+
       # Timezone
       - TZ=${TZ:-UTC}
-      
+
     depends_on:
       qdrant:
         condition: service_healthy

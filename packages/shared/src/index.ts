@@ -29,6 +29,8 @@ export {
 
 export * from './utils/response';
 export * from './utils/time';
+export { getDiscordToken, getDiscordClientId } from './utils/discord-token';
+export type { DiscordTokenOptions } from './utils/discord-token';
 
 export { WebhookManager } from './services/webhookManager';
 export { MessageFilter, getMessageFilter, resetMessageFilter } from './services/messageFilter';

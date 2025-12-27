@@ -27,6 +27,7 @@ services:
     environment:
       - NODE_ENV=production
       - BUNKBOT_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
