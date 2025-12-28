@@ -20,6 +20,12 @@ export {
 } from './StructuredLogger';
 
 export {
+	BotResponseLogger,
+	getBotResponseLogger,
+	type BotResponseLog,
+} from './BotResponseLogger';
+
+export {
 	ChannelActivityTracker,
 	initializeChannelActivityTracker,
 	getChannelActivityTracker,

@@ -1,4 +1,4 @@
-import { logger, container, ServiceId, WebhookManager, type CovaBotMetrics } from '@starbunk/shared';
+import { logger, container, ServiceId, WebhookManager, type CovaBotMetrics, getBotResponseLogger, type BotResponseLog } from '@starbunk/shared';
 import { Message, TextChannel, Webhook, Client } from 'discord.js';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from '../types/triggerResponse';
@@ -238,11 +238,13 @@ export class CovaBot {
 						continue; // Skip this trigger, bot remains silent
 					}
 
-					// Send message with Cova's identity
-					await this.sendMessage(message, responseText, identity);
+					// Calculate response time before sending
+					const responseTime = Date.now() - startTime;
+
+					// Send message with Cova's identity (includes logging)
+					await this.sendMessage(message, responseText, identity, trigger.name, responseTime);
 
 					// Track successful response
-					const responseTime = Date.now() - startTime;
 					responseGenerated = true;
 
 					if (this.metrics) {
@@ -289,7 +291,7 @@ export class CovaBot {
 	/**
 	 * Send message using webhook with custom identity
 	 */
-	private async sendMessage(message: Message, content: string, identity: BotIdentity): Promise<void> {
+	private async sendMessage(message: Message, content: string, identity: BotIdentity, triggerName?: string, responseLatency?: number): Promise<void> {
 		try {
 			if (!(message.channel instanceof TextChannel)) {
 				// If it's not a TextChannel, remain silent (no fallback)
@@ -313,9 +315,58 @@ export class CovaBot {
 				avatarURL: identity.avatarUrl,
 			});
 			logger.debug(`[CovaBot] Message requested via shared WebhookManager as ${identity.botName}`);
+
+			// Log comprehensive bot response details
+			this.logBotResponse(message, content, identity, triggerName || 'unknown', responseLatency);
 		} catch (error) {
 			// On any send error, remain silent (no fallback)
 			logger.error('[CovaBot] Failed to send message (will remain silent):', error as Error);
+		}
+	}
+
+	/**
+	 * Log comprehensive bot response details to Loki/Grafana
+	 */
+	private logBotResponse(
+		message: Message,
+		responseText: string,
+		identity: BotIdentity,
+		triggerName: string,
+		responseLatency?: number,
+	): void {
+		try {
+			const responseLogger = getBotResponseLogger('covabot');
+
+			// Determine trigger condition type based on trigger name
+			let triggerCondition: BotResponseLog['trigger_condition'] = 'llm_decision';
+			if (triggerName.includes('mention') || triggerName.includes('direct')) {
+				triggerCondition = 'direct_mention';
+			} else if (triggerName.includes('stats') || triggerName.includes('command')) {
+				triggerCondition = 'command';
+			} else if (triggerName.includes('keyword')) {
+				triggerCondition = 'keyword_match';
+			}
+
+			const logEntry: BotResponseLog = {
+				original_message: message.content,
+				bot_response: responseText,
+				timestamp: new Date().toISOString(),
+				bot_name: 'CovaBot',
+				nickname_used: identity.botName,
+				avatar_url_used: identity.avatarUrl,
+				trigger_condition: triggerCondition,
+				trigger_name: triggerName,
+				user_id: message.author.id,
+				channel_id: message.channel.id,
+				guild_id: message.guild?.id || 'dm',
+				response_latency_ms: responseLatency,
+				llm_provider: triggerCondition === 'llm_decision' ? 'openai' : undefined,
+			};
+
+			responseLogger.logBotResponse(logEntry);
+		} catch (error) {
+			// Never let logging failures break bot functionality
+			logger.warn('[CovaBot] Failed to log bot response:', error as Error);
 		}
 	}
 
