@@ -1,4 +1,4 @@
-import { logger, container, ServiceId, WebhookManager, type CovaBotMetrics, getBotResponseLogger, type BotResponseLog } from '@starbunk/shared';
+import { logger, container, ServiceId, WebhookManager, type CovaBotMetrics, getBotResponseLogger, type BotResponseLog, inferTriggerCondition } from '@starbunk/shared';
 import { Message, TextChannel, Webhook, Client } from 'discord.js';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from '../types/triggerResponse';
@@ -337,15 +337,8 @@ export class CovaBot {
 		try {
 			const responseLogger = getBotResponseLogger('covabot');
 
-			// Determine trigger condition type based on trigger name
-			let triggerCondition: BotResponseLog['trigger_condition'] = 'llm_decision';
-			if (triggerName.includes('mention') || triggerName.includes('direct')) {
-				triggerCondition = 'direct_mention';
-			} else if (triggerName.includes('stats') || triggerName.includes('command')) {
-				triggerCondition = 'command';
-			} else if (triggerName.includes('keyword')) {
-				triggerCondition = 'keyword_match';
-			}
+			// Determine trigger condition type using shared utility
+			const triggerCondition = inferTriggerCondition(triggerName, 'llm_decision');
 
 			const logEntry: BotResponseLog = {
 				original_message: message.content,
@@ -360,7 +353,9 @@ export class CovaBot {
 				channel_id: message.channel.id,
 				guild_id: message.guild?.id || 'dm',
 				response_latency_ms: responseLatency,
-				llm_provider: triggerCondition === 'llm_decision' ? 'openai' : undefined,
+				// LLM provider is not accessible in this context, so we leave it undefined
+				// The actual provider (OLLAMA) is determined at the trigger level
+				llm_provider: undefined,
 			};
 
 			responseLogger.logBotResponse(logEntry);

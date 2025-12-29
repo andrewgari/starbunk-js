@@ -1,6 +1,6 @@
 import { logger as baseLogger } from '../logger';
 import { ensureError } from '../../utils/errorUtils';
-import { getStructuredLogger } from './index';
+import { getStructuredLogger } from './StructuredLogger';
 
 /**
  * Comprehensive bot response log entry
@@ -76,29 +76,29 @@ export class BotResponseLogger {
 				);
 			}
 
-			// Send to Loki via StructuredLogger if available
+			// Send to Loki via StructuredLogger
 			const structuredLogger = getStructuredLogger();
-			if (structuredLogger) {
-				// Use the existing logMessageFlow method with extended data
-				structuredLogger.logMessageFlow({
-					event: 'bot_responded',
-					bot_name: log.bot_name,
-					condition_name: log.trigger_name,
-					message_text: log.original_message,
-					user_id: log.user_id,
-					user_name: '', // Not available in this context
-					channel_id: log.channel_id,
-					channel_name: '', // Not available in this context
-					guild_id: log.guild_id,
-					response_text: log.bot_response,
-					response_latency_ms: log.response_latency_ms,
-					timestamp: log.timestamp,
-					// Extended fields for bot response logging
-					nickname_used: log.nickname_used,
-					avatar_url_used: log.avatar_url_used,
-					trigger_condition: log.trigger_condition,
-				} as any);
-			}
+			// Use the existing logMessageFlow method with extended data
+			// Extended fields (nickname_used, avatar_url_used, trigger_condition) are supported
+			// via the MessageFlowLog index signature [key: string]: unknown
+			structuredLogger.logMessageFlow({
+				event: 'bot_responded',
+				bot_name: log.bot_name,
+				condition_name: log.trigger_name,
+				message_text: log.original_message,
+				user_id: log.user_id,
+				user_name: '', // Not available in this context
+				channel_id: log.channel_id,
+				channel_name: '', // Not available in this context
+				guild_id: log.guild_id,
+				response_text: log.bot_response,
+				response_latency_ms: log.response_latency_ms,
+				timestamp: log.timestamp,
+				// Extended fields for bot response logging
+				nickname_used: log.nickname_used,
+				avatar_url_used: log.avatar_url_used,
+				trigger_condition: log.trigger_condition,
+			} as Parameters<typeof structuredLogger.logMessageFlow>[0]);
 		} catch (error) {
 			// Never let logging failures break bot functionality
 			baseLogger.warn('Failed to log bot response:', ensureError(error));

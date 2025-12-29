@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { container, ServiceId, logger, getBotResponseLogger, type BotResponseLog } from '@starbunk/shared';
+import { container, ServiceId, logger, getBotResponseLogger, type BotResponseLog, inferTriggerCondition } from '@starbunk/shared';
 import { DiscordService } from '@starbunk/shared/dist/services/discordService';
 import { BotIdentity } from '../types/botIdentity';
 import { withDefaultBotBehavior } from './conditions';
@@ -187,19 +187,8 @@ export class TriggerResponseClass {
 		try {
 			const responseLogger = getBotResponseLogger('bunkbot');
 
-			// Determine trigger condition type based on trigger name and characteristics
-			let triggerCondition: BotResponseLog['trigger_condition'] = 'pattern_match';
-			if (this.name.includes('mention') || this.name.includes('@')) {
-				triggerCondition = 'direct_mention';
-			} else if (this.name.includes('llm')) {
-				triggerCondition = 'llm_decision';
-			} else if (this.name.includes('random') || this.name.includes('chance')) {
-				triggerCondition = 'random_chance';
-			} else if (this.name.includes('command')) {
-				triggerCondition = 'command';
-			} else if (this.name.includes('keyword')) {
-				triggerCondition = 'keyword_match';
-			}
+			// Determine trigger condition type using shared utility
+			const triggerCondition = inferTriggerCondition(this.name, 'pattern_match');
 
 			const logEntry: BotResponseLog = {
 				original_message: message.content,

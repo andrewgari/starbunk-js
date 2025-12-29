@@ -150,6 +150,7 @@ export {
 	// Bot Response Logger
 	BotResponseLogger,
 	getBotResponseLogger,
+	inferTriggerCondition,
 } from './services/observability';
 export type {
 	MessageFlowMetrics,

@@ -25,6 +25,8 @@ export {
 	type BotResponseLog,
 } from './BotResponseLogger';
 
+export { inferTriggerCondition } from './triggerConditionUtils';
+
 export {
 	ChannelActivityTracker,
 	initializeChannelActivityTracker,
