@@ -1,4 +1,4 @@
-name: 📸 Manual Snapshot Publisher
+name: Ops – Manual Snapshot Publisher
 
 on:
   workflow_dispatch:

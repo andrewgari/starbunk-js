@@ -1,4 +1,4 @@
-name: PR Build and Smoke Test
+name: PR – Containers: Docker Smoke (Legacy)
 
 on:
   pull_request:

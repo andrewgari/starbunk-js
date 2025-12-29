@@ -1,4 +1,4 @@
-name: Automated Label Management
+name: Infra – Automated Label Management
 
 on:
   pull_request:
