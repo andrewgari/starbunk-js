@@ -147,6 +147,10 @@ export {
 	BotTriggerTracker,
 	createEnvironmentConfig,
 	initializeBotMetricsSystem,
+	// Bot Response Logger
+	BotResponseLogger,
+	getBotResponseLogger,
+	inferTriggerCondition,
 } from './services/observability';
 export type {
 	MessageFlowMetrics,
@@ -167,6 +171,7 @@ export type {
 	MessageContext,
 	ContainerMetricsFactory,
 	ContainerMetricsConfig,
+	BotResponseLog,
 } from './services/observability';
 
 // Bot metrics types (MessageContext is re-exported from observability)

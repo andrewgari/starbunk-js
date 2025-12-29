@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { container, ServiceId, logger } from '@starbunk/shared';
+import { container, ServiceId, logger, getBotResponseLogger, type BotResponseLog, inferTriggerCondition } from '@starbunk/shared';
 import { DiscordService } from '@starbunk/shared/dist/services/discordService';
 import { BotIdentity } from '../types/botIdentity';
 import { withDefaultBotBehavior } from './conditions';
@@ -129,6 +129,8 @@ export class TriggerResponseClass {
 
 	// Process the message and send a response if conditions match
 	public async process(message: Message, defaultIdentity: BotIdentity, botName: string): Promise<boolean> {
+		const startTime = Date.now();
+
 		try {
 			const matches = await this.matches(message);
 
@@ -161,10 +163,52 @@ export class TriggerResponseClass {
 
 			logger.debug(`Message sent with bot identity: ${identity.botName} in channel ${channel.id}`);
 
+			// Log comprehensive bot response details
+			const responseLatency = Date.now() - startTime;
+			this.logBotResponse(message, responseText, identity, botName, responseLatency);
+
 			return true;
 		} catch (error) {
 			logger.error(`[TriggerResponse:${this.name}] Error processing:`, error as Error);
 			throw error;
+		}
+	}
+
+	/**
+	 * Log comprehensive bot response details to Loki/Grafana
+	 */
+	private logBotResponse(
+		message: Message,
+		responseText: string,
+		identity: BotIdentity,
+		botName: string,
+		responseLatency: number,
+	): void {
+		try {
+			const responseLogger = getBotResponseLogger('bunkbot');
+
+			// Determine trigger condition type using shared utility
+			const triggerCondition = inferTriggerCondition(this.name, 'pattern_match');
+
+			const logEntry: BotResponseLog = {
+				original_message: message.content,
+				bot_response: responseText,
+				timestamp: new Date().toISOString(),
+				bot_name: botName,
+				nickname_used: identity.botName,
+				avatar_url_used: identity.avatarUrl,
+				trigger_condition: triggerCondition,
+				trigger_name: this.name,
+				user_id: message.author.id,
+				channel_id: message.channel.id,
+				guild_id: message.guild?.id || 'dm',
+				response_latency_ms: responseLatency,
+			};
+
+			responseLogger.logBotResponse(logEntry);
+		} catch (error) {
+			// Never let logging failures break bot functionality
+			logger.warn(`[${botName}] Failed to log bot response:`, error as Error);
 		}
 	}
 }

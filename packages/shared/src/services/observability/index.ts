@@ -20,6 +20,14 @@ export {
 } from './StructuredLogger';
 
 export {
+	BotResponseLogger,
+	getBotResponseLogger,
+	type BotResponseLog,
+} from './BotResponseLogger';
+
+export { inferTriggerCondition } from './triggerConditionUtils';
+
+export {
 	ChannelActivityTracker,
 	initializeChannelActivityTracker,
 	getChannelActivityTracker,
