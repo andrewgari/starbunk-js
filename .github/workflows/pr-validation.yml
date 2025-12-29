@@ -1,4 +1,4 @@
-name: PR Validation & Snapshot Build
+name: PR – Containers: Validation & Snapshots
 
 on:
   pull_request:

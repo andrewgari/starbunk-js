@@ -1,4 +1,4 @@
-name: Claude Code Review - Container-Aware
+name: PR – AI Code Review (Claude)
 
 on:
   pull_request:

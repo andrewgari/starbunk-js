@@ -1,4 +1,4 @@
-name: Selective PR Validation
+name: PR – Containers: Selective Validation (Legacy)
 
 on:
   pull_request:

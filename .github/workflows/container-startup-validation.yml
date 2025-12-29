@@ -1,4 +1,4 @@
-name: Container Startup Validation
+name: PR – Containers: Startup Validation (Legacy)
 
 on:
   pull_request:

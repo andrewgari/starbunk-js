@@ -1,4 +1,4 @@
-name: Path Filter Validation
+name: Infra – Path Filter Validation
 
 on:
   pull_request:

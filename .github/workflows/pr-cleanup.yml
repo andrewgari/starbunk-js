@@ -1,4 +1,4 @@
-name: PR Cleanup
+name: PR – Container Image Cleanup
 
 on:
     pull_request:
