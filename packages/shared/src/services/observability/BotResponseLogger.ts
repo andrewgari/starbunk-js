@@ -60,7 +60,8 @@ export class BotResponseLogger {
 				level: 'info',
 			};
 
-			// Log to console with structured format
+			// Log to console with structured format (console.log is correct for structured logging)
+			// This allows log aggregators to parse JSON directly
 			if (process.env.ENABLE_STRUCTURED_LOGGING === 'true') {
 				console.log(JSON.stringify(structuredLog));
 			} else {

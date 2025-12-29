@@ -353,9 +353,8 @@ export class CovaBot {
 				channel_id: message.channel.id,
 				guild_id: message.guild?.id || 'dm',
 				response_latency_ms: responseLatency,
-				// LLM provider is not accessible in this context, so we leave it undefined
+				// LLM provider is not accessible in this context (omitted since it's optional)
 				// The actual provider (OLLAMA) is determined at the trigger level
-				llm_provider: undefined,
 			};
 
 			responseLogger.logBotResponse(logEntry);
