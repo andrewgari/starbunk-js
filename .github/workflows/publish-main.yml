@@ -75,8 +75,26 @@ jobs:
         uses: dorny/paths-filter@v3
         id: filter
         with:
-          filters: .github/path-filters-optimized.yml
-          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            shared-src:
+              - 'packages/shared/**'
+            bunkbot:
+              - 'apps/bunkbot/**'
+              - 'packages/shared/**'
+            djcova:
+              - 'apps/djcova/**'
+              - 'packages/shared/**'
+            starbunk-dnd:
+              - 'apps/starbunk-dnd/**'
+              - 'packages/shared/**'
+            covabot:
+              - 'apps/covabot/**'
+              - 'packages/shared/**'
+            critical-infrastructure:
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+              - 'docker-compose*.yml'
 
       - name: 🎯 Generate Dynamic Deployment Matrix
         id: generate-matrix
