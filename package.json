@@ -1,6 +1,6 @@
 {
   "name": "bunkbot",
-  "version": "0.0.2",
+  "version": "1.2.0",
   "description": "it's bot that says blu, among things...",
   "type": "commonjs",
   "workspaces": [
@@ -76,7 +76,9 @@
     "validate:temp-files": "tools/scripts/validation/check-temporary-files.sh",
     "validate:docs": "tools/scripts/validation/check-documentation-structure.sh",
     "health-check": "tools/scripts/monitoring/structure-health-check.sh",
-    "health-check:json": "tools/scripts/monitoring/structure-health-check.sh --json"
+    "health-check:json": "tools/scripts/monitoring/structure-health-check.sh --json",
+    "unreleased": "scripts/check-unreleased.sh",
+    "release": "scripts/create-release.sh"
   },
   "engines": {
     "node": ">=16.0.0"
