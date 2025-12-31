@@ -1,4 +1,4 @@
-name: PR – Containers: Validation & Snapshots
+name: PR - Containers Validation and Snapshots
 
 on:
   pull_request:

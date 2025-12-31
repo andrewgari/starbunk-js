@@ -1,4 +1,4 @@
-name: PR – AI Code Review (Claude)
+name: PR - AI Code Review (Claude)
 
 on:
   pull_request:

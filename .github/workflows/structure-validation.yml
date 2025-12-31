@@ -1,4 +1,4 @@
-name: Infra – Repository Structure Validation
+name: Infra - Repository Structure Validation
 
 on:
   pull_request:
