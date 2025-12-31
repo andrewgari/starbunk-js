@@ -345,11 +345,11 @@ jobs:
               workflow_id: 'publish-main.yml',
               ref: 'main',
               inputs: {
-                version: newVersion,
-                force_all: 'true',
-                skip_validation: 'false'
-              }
-            });
+	                version: newVersion,
+	                force_all: 'true',
+	                skip_validation: 'false'
+	              }
+	            });
 
             console.log(`Triggered container builds for version ${newVersion}`);
 
