@@ -10,6 +10,11 @@ on:
       - '.github/PULL_REQUEST_TEMPLATE.md'
   workflow_dispatch:
     inputs:
+      version:
+        description: 'Semantic version (e.g., 1.2.3) to tag images with. Optional.'
+        type: string
+        required: false
+        default: ''
       force_all:
         description: 'Force build all containers'
         type: boolean
@@ -264,6 +269,7 @@ jobs:
           images: ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=v${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' }}
             type=sha,prefix={{date 'YYYYMMDD-HHmmss'}}-,suffix=-{{branch}},format=short
             type=raw,value={{date 'YYYYMMDD-HHmmss'}}-{{sha}}-stable,enable=${{ github.ref == 'refs/heads/main' }}
           labels: |

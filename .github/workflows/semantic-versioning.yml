@@ -345,6 +345,7 @@ jobs:
               workflow_id: 'publish-main.yml',
               ref: 'main',
               inputs: {
+                version: newVersion,
                 force_all: 'true',
                 skip_validation: 'false'
               }
