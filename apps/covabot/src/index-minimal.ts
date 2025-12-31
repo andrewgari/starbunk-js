@@ -11,11 +11,16 @@ import {
 	container,
 	ServiceId,
 	WebhookManager,
+	DiscordService,
 } from '@starbunk/shared';
+import { getCovaIdentity } from './services/identity';
+import { createLLMService, LLMService } from './services/llmService';
+import { COVA_BOT_FALLBACK_RESPONSES } from './cova-bot/constants';
 
 class CovaBotContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
 	private webhookManager!: WebhookManager;
+	private llmService!: LLMService;
 	private hasInitialized = false;
 
 	async initialize(): Promise<void> {
@@ -44,7 +49,7 @@ class CovaBotContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['STARBUNK_TOKEN'],
-			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG', 'NODE_ENV'],
+			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG', 'NODE_ENV', 'COVA_USER_ID'],
 		});
 		logger.info('✅ Environment validation passed for CovaBot');
 	}
@@ -53,22 +58,23 @@ class CovaBotContainer {
 		// Register Discord client
 		container.register(ServiceId.DiscordClient, this.client);
 
+		// Initialize Discord service for identity lookups
+		const discordService = new DiscordService(this.client);
+		container.register(ServiceId.DiscordService, discordService);
+
 		// Initialize webhook manager for AI personality responses
 		this.webhookManager = new WebhookManager(this.client);
 		container.register(ServiceId.WebhookService, this.webhookManager);
+
+		// Initialize LLM service for AI personality responses
+		this.llmService = createLLMService();
+		logger.info('✅ LLM service initialized');
 
 		// Initialize minimal database access for personality data
 		if (process.env.DATABASE_URL) {
 			logger.info('✅ Database connection available for personality data');
 		} else {
 			logger.info('ℹ️  No database URL provided, CovaBot will work without persistence');
-		}
-
-		// Initialize LLM services for AI personality
-		if (process.env.OPENAI_API_KEY || process.env.OLLAMA_API_URL) {
-			logger.info('✅ LLM services available for AI personality');
-		} else {
-			logger.info('ℹ️  No LLM API keys provided, CovaBot will use simple responses');
 		}
 
 		logger.info('✅ CovaBot services initialized');
@@ -98,26 +104,38 @@ class CovaBotContainer {
 		if (message.author.bot) return;
 
 		try {
-			// Demo: AI personality responses
-			const content = message.content.toLowerCase();
-
-			if (content.includes('cova') || content.includes('ai')) {
-				const responses = [
-					"I'm learning from every conversation! 🧠",
-					"That's an interesting perspective! 🤔",
-					'I love chatting with humans! 💬',
-					'Tell me more about that! 🎯',
-					"Fascinating! I'm always curious to learn! ✨",
-				];
-
-				const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-
-				await this.webhookManager.sendMessage(message.channel.id, {
-					content: randomResponse,
-					username: 'Cova',
-					avatarURL: 'https://cdn.discordapp.com/embed/avatars/1.png',
-				});
+			// Check if we should respond using LLM decision
+			const shouldRespond = await this.llmService.shouldRespond(message);
+			if (!shouldRespond) {
+				return;
 			}
+
+			// Generate LLM response
+			let response = await this.llmService.generateResponse(message);
+
+			// If LLM returns empty, use fallback responses
+			if (!response || response.trim().length === 0) {
+				const fallbackResponses = COVA_BOT_FALLBACK_RESPONSES;
+				response = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+				logger.debug('[CovaBot] Using fallback response due to empty LLM response');
+			}
+
+			// Get dynamic identity from Discord (server-specific nickname and avatar)
+			const identity = await getCovaIdentity(message);
+
+			if (!identity) {
+				logger.warn('[CovaBot] Failed to get identity, skipping response');
+				return;
+			}
+
+			// Send response using dynamic identity
+			await this.webhookManager.sendMessage(message.channel.id, {
+				content: response,
+				username: identity.botName,
+				avatarURL: identity.avatarUrl,
+			});
+
+			logger.debug(`[CovaBot] Sent response as "${identity.botName}"`);
 		} catch (error) {
 			logger.error('Error in CovaBot message handling:', ensureError(error));
 		}
