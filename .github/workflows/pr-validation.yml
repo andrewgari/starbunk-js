@@ -18,7 +18,7 @@ env:
   NODE_VERSION: '20'
 
 permissions:
-  contents: read
+  contents: write  # Allow pushing git tags
   packages: write
   pull-requests: write
 
@@ -145,6 +145,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tagging
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -164,8 +166,16 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number || 'main' }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Tag commit with bunkbot-latest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f bunkbot-latest
+          git push origin bunkbot-latest --force
 
   build-djcova:
     name: 🐳 Build djcova
@@ -175,6 +185,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tagging
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -194,8 +206,16 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number || 'main' }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Tag commit with djcova-latest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f djcova-latest
+          git push origin djcova-latest --force
 
   build-starbunk-dnd:
     name: 🐳 Build starbunk-dnd
@@ -205,6 +225,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tagging
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -224,8 +246,16 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number || 'main' }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Tag commit with starbunk-dnd-latest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f starbunk-dnd-latest
+          git push origin starbunk-dnd-latest --force
 
   build-covabot:
     name: 🐳 Build covabot
@@ -235,6 +265,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tagging
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -254,8 +286,16 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number || 'main' }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Tag commit with covabot-latest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f covabot-latest
+          git push origin covabot-latest --force
 
   # =============================================================================
   # SUCCESS GATE - For branch protection
