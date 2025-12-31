@@ -157,7 +157,9 @@ jobs:
             rollback_info=$(echo "$rollback_info" | jq --arg container "$container" --arg sha "$current_sha" '.[$container] = $sha')
           done
 
-          echo "previous-images=$rollback_info" >> $GITHUB_OUTPUT
+          # Compact JSON to single line for GitHub Actions output
+          rollback_info_compact=$(echo "$rollback_info" | jq -c .)
+          echo "previous-images=$rollback_info_compact" >> $GITHUB_OUTPUT
           echo "📋 Rollback info prepared"
 
   # ==============================================================================
