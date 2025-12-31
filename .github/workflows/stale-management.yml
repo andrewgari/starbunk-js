@@ -1,4 +1,4 @@
-name: Maintenance – Stale PR & Issue Management
+name: Maintenance - Stale PR & Issue Management
 
 on:
   schedule:

@@ -1,4 +1,4 @@
-name: Main – Deploy Containers
+name: Main - Deploy Containers
 
 on:
   push:
