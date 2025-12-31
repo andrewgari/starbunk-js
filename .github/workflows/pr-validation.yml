@@ -145,8 +145,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for tagging
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -170,13 +168,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Tag commit with bunkbot-latest
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f bunkbot-latest
-          git push origin bunkbot-latest --force
-
   build-djcova:
     name: 🐳 Build djcova
     runs-on: ubuntu-latest
@@ -185,8 +176,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for tagging
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -210,13 +199,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Tag commit with djcova-latest
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f djcova-latest
-          git push origin djcova-latest --force
-
   build-starbunk-dnd:
     name: 🐳 Build starbunk-dnd
     runs-on: ubuntu-latest
@@ -225,8 +207,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for tagging
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -250,13 +230,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Tag commit with starbunk-dnd-latest
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f starbunk-dnd-latest
-          git push origin starbunk-dnd-latest --force
-
   build-covabot:
     name: 🐳 Build covabot
     runs-on: ubuntu-latest
@@ -265,8 +238,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for tagging
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -289,6 +260,75 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # =============================================================================
+  # GIT TAGGING - Tag commits after successful builds
+  # =============================================================================
+
+  tag-bunkbot:
+    name: 🏷️ Tag bunkbot-latest
+    runs-on: ubuntu-latest
+    needs: [build-bunkbot]
+    if: needs.build-bunkbot.result == 'success'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag commit with bunkbot-latest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f bunkbot-latest
+          git push origin bunkbot-latest --force
+
+  tag-djcova:
+    name: 🏷️ Tag djcova-latest
+    runs-on: ubuntu-latest
+    needs: [build-djcova]
+    if: needs.build-djcova.result == 'success'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag commit with djcova-latest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f djcova-latest
+          git push origin djcova-latest --force
+
+  tag-starbunk-dnd:
+    name: 🏷️ Tag starbunk-dnd-latest
+    runs-on: ubuntu-latest
+    needs: [build-starbunk-dnd]
+    if: needs.build-starbunk-dnd.result == 'success'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag commit with starbunk-dnd-latest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f starbunk-dnd-latest
+          git push origin starbunk-dnd-latest --force
+
+  tag-covabot:
+    name: 🏷️ Tag covabot-latest
+    runs-on: ubuntu-latest
+    needs: [build-covabot]
+    if: needs.build-covabot.result == 'success'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Tag commit with covabot-latest
         run: |
