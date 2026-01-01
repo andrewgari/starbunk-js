@@ -6,7 +6,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  CONTAINERS_JSON: '["bunkbot", "djcova", "starbunk-dnd", "covabot"]'
 
 permissions:
   contents: read
@@ -20,6 +19,7 @@ jobs:
       env-tag: ${{ steps.determine.outputs.env-tag }}
       release-type: ${{ steps.determine.outputs.release-type }}
       env-emoji: ${{ steps.determine.outputs.env-emoji }}
+      containers: ${{ steps.determine.outputs.containers }}
     steps:
       - name: Determine environment tag based on release type
         id: determine
@@ -37,6 +37,9 @@ jobs:
             echo "env-emoji=🚀" >> $GITHUB_OUTPUT
             echo "🏷️ Full release detected - environment is prod"
           fi
+          
+          # Output containers list for matrix strategy
+          echo 'containers=["bunkbot", "djcova", "starbunk-dnd", "covabot"]' >> $GITHUB_OUTPUT
 
   tag-release:
     name: 🏷️ Tag ${{ matrix.container }} for release
@@ -45,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container: ${{ fromJSON(env.CONTAINERS_JSON) }}
+        container: ${{ fromJSON(needs.determine-environment.outputs.containers) }}
     steps:
       - name: Login to Container Registry
         uses: docker/login-action@v3
