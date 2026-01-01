@@ -28,10 +28,12 @@ concurrency:
 
 jobs:
   # =============================================================================
-  # CORE VALIDATION - Always runs on every PR
+  # STAGE 1 - VALIDATION & CHANGE DETECTION
+  # All jobs in this stage run in parallel
   # =============================================================================
-  validate:
-    name: 🧪 Validate
+
+  type-check:
+    name: 🔍 Type Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -52,14 +54,27 @@ jobs:
       - name: TypeScript check
         run: npm run type-check
 
+  lint:
+    name: 🎨 Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Lint
         run: npm run lint
 
-      - name: Run tests
-        run: npm test
-
   # =============================================================================
-  # CHANGE DETECTION - Separate job per container
+  # STAGE 1 - CHANGE DETECTION (per container)
   # =============================================================================
   detect-changes-bunkbot:
     name: 🔍 Detect Changes - bunkbot
@@ -134,14 +149,128 @@ jobs:
               - 'packages/shared/**'
 
   # =============================================================================
-  # DOCKER BUILDS - Only for changed containers
+  # STAGE 2 - TEST & BUILD (per container, conditional)
+  # Only runs if changes detected and stage 1 passes
   # =============================================================================
 
-  build-bunkbot:
-    name: 🐳 Build bunkbot
+  test-build-bunkbot:
+    name: 🧪 Test & Build bunkbot
     runs-on: ubuntu-latest
-    needs: [validate, detect-changes-bunkbot]
+    needs: [type-check, lint, detect-changes-bunkbot]
     if: needs.detect-changes-bunkbot.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: cd packages/shared && npm run build
+
+      - name: Run tests
+        run: npm run test:bunkbot
+
+      - name: Build bunkbot
+        run: npm run build:bunkbot
+
+  test-build-djcova:
+    name: 🧪 Test & Build djcova
+    runs-on: ubuntu-latest
+    needs: [type-check, lint, detect-changes-djcova]
+    if: needs.detect-changes-djcova.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: cd packages/shared && npm run build
+
+      - name: Run tests
+        run: npm run test:djcova
+
+      - name: Build djcova
+        run: npm run build:djcova
+
+  test-build-starbunk-dnd:
+    name: 🧪 Test & Build starbunk-dnd
+    runs-on: ubuntu-latest
+    needs: [type-check, lint, detect-changes-starbunk-dnd]
+    if: needs.detect-changes-starbunk-dnd.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: cd packages/shared && npm run build
+
+      - name: Run tests
+        run: npm run test:starbunk-dnd
+
+      - name: Build starbunk-dnd
+        run: npm run build:starbunk-dnd
+
+  test-build-covabot:
+    name: 🧪 Test & Build covabot
+    runs-on: ubuntu-latest
+    needs: [type-check, lint, detect-changes-covabot]
+    if: needs.detect-changes-covabot.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: cd packages/shared && npm run build
+
+      - name: Run tests
+        run: npm run test:covabot
+
+      - name: Build covabot
+        run: npm run build:covabot
+
+  # =============================================================================
+  # STAGE 3 - DOCKER BUILD & PUSH (per container, conditional)
+  # Only runs if stage 2 passes
+  # =============================================================================
+
+  docker-build-bunkbot:
+    name: 🐳 Docker Build bunkbot
+    runs-on: ubuntu-latest
+    needs: [test-build-bunkbot]
+    if: needs.test-build-bunkbot.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -168,11 +297,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  build-djcova:
-    name: 🐳 Build djcova
+  docker-build-djcova:
+    name: 🐳 Docker Build djcova
     runs-on: ubuntu-latest
-    needs: [validate, detect-changes-djcova]
-    if: needs.detect-changes-djcova.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    needs: [test-build-djcova]
+    if: needs.test-build-djcova.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -199,11 +328,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  build-starbunk-dnd:
-    name: 🐳 Build starbunk-dnd
+  docker-build-starbunk-dnd:
+    name: 🐳 Docker Build starbunk-dnd
     runs-on: ubuntu-latest
-    needs: [validate, detect-changes-starbunk-dnd]
-    if: needs.detect-changes-starbunk-dnd.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    needs: [test-build-starbunk-dnd]
+    if: needs.test-build-starbunk-dnd.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -230,11 +359,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  build-covabot:
-    name: 🐳 Build covabot
+  docker-build-covabot:
+    name: 🐳 Docker Build covabot
     runs-on: ubuntu-latest
-    needs: [validate, detect-changes-covabot]
-    if: needs.detect-changes-covabot.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    needs: [test-build-covabot]
+    if: needs.test-build-covabot.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -262,14 +391,15 @@ jobs:
           cache-to: type=gha,mode=max
 
   # =============================================================================
-  # GIT TAGGING - Tag commits after successful builds
+  # STAGE 4 - GIT TAGGING (per container, conditional)
+  # Only runs if stage 3 Docker build succeeds
   # =============================================================================
 
   tag-bunkbot:
     name: 🏷️ Tag bunkbot-latest
     runs-on: ubuntu-latest
-    needs: [build-bunkbot]
-    if: needs.build-bunkbot.result == 'success'
+    needs: [docker-build-bunkbot]
+    if: needs.docker-build-bunkbot.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -286,8 +416,8 @@ jobs:
   tag-djcova:
     name: 🏷️ Tag djcova-latest
     runs-on: ubuntu-latest
-    needs: [build-djcova]
-    if: needs.build-djcova.result == 'success'
+    needs: [docker-build-djcova]
+    if: needs.docker-build-djcova.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -304,8 +434,8 @@ jobs:
   tag-starbunk-dnd:
     name: 🏷️ Tag starbunk-dnd-latest
     runs-on: ubuntu-latest
-    needs: [build-starbunk-dnd]
-    if: needs.build-starbunk-dnd.result == 'success'
+    needs: [docker-build-starbunk-dnd]
+    if: needs.docker-build-starbunk-dnd.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -322,8 +452,8 @@ jobs:
   tag-covabot:
     name: 🏷️ Tag covabot-latest
     runs-on: ubuntu-latest
-    needs: [build-covabot]
-    if: needs.build-covabot.result == 'success'
+    needs: [docker-build-covabot]
+    if: needs.docker-build-covabot.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -343,12 +473,12 @@ jobs:
   pr-validation-success:
     name: ✅ PR Validation
     runs-on: ubuntu-latest
-    needs: [validate]
+    needs: [type-check, lint]
     if: always()
     steps:
       - name: Check validation result
         run: |
-          if [[ "${{ needs.validate.result }}" == "success" ]]; then
+          if [[ "${{ needs.type-check.result }}" == "success" && "${{ needs.lint.result }}" == "success" ]]; then
             echo "✅ All validation checks passed"
             exit 0
           else
