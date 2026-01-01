@@ -12,9 +12,35 @@ permissions:
   packages: write
 
 jobs:
+  determine-environment:
+    name: 🔍 Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      env-tag: ${{ steps.determine.outputs.env-tag }}
+      release-type: ${{ steps.determine.outputs.release-type }}
+      env-emoji: ${{ steps.determine.outputs.env-emoji }}
+    steps:
+      - name: Determine environment tag based on release type
+        id: determine
+        run: |
+          IS_PRERELEASE="${{ github.event.release.prerelease }}"
+          
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            echo "env-tag=staging" >> $GITHUB_OUTPUT
+            echo "release-type=Pre-Release" >> $GITHUB_OUTPUT
+            echo "env-emoji=🧪" >> $GITHUB_OUTPUT
+            echo "🏷️ Pre-release detected - environment is staging"
+          else
+            echo "env-tag=prod" >> $GITHUB_OUTPUT
+            echo "release-type=Production Release" >> $GITHUB_OUTPUT
+            echo "env-emoji=🚀" >> $GITHUB_OUTPUT
+            echo "🏷️ Full release detected - environment is prod"
+          fi
+
   tag-release:
     name: 🏷️ Tag ${{ matrix.container }} for release
     runs-on: ubuntu-latest
+    needs: determine-environment
     strategy:
       fail-fast: false
       matrix:
@@ -34,16 +60,7 @@ jobs:
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}"
           VERSION="${{ github.event.release.tag_name }}"
-          IS_PRERELEASE="${{ github.event.release.prerelease }}"
-
-          # Determine environment tag based on release type
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            ENV_TAG="staging"
-            echo "🏷️ Pre-release detected - tagging as staging"
-          else
-            ENV_TAG="prod"
-            echo "🏷️ Full release detected - tagging as prod"
-          fi
+          ENV_TAG="${{ needs.determine-environment.outputs.env-tag }}"
 
           echo "🏷️ Tagging $IMAGE:latest as $ENV_TAG and $VERSION"
 
@@ -58,23 +75,14 @@ jobs:
   release-summary:
     name: 📋 Release Summary
     runs-on: ubuntu-latest
-    needs: tag-release
+    needs: [determine-environment, tag-release]
     steps:
       - name: Generate summary
         run: |
           VERSION="${{ github.event.release.tag_name }}"
-          IS_PRERELEASE="${{ github.event.release.prerelease }}"
-
-          # Determine environment tag based on release type
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            ENV_TAG="staging"
-            RELEASE_TYPE="Pre-Release"
-            ENV_EMOJI="🧪"
-          else
-            ENV_TAG="prod"
-            RELEASE_TYPE="Production Release"
-            ENV_EMOJI="🚀"
-          fi
+          ENV_TAG="${{ needs.determine-environment.outputs.env-tag }}"
+          RELEASE_TYPE="${{ needs.determine-environment.outputs.release-type }}"
+          ENV_EMOJI="${{ needs.determine-environment.outputs.env-emoji }}"
 
           echo "## $ENV_EMOJI $RELEASE_TYPE $VERSION Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
