@@ -106,7 +106,6 @@ export class StructuredLogger {
 					// eslint-disable-line @typescript-eslint/no-unused-vars
 					service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
 					environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
-					bot: log.bot_name, // eslint-disable-line @typescript-eslint/no-unused-vars
 					event: log.event, // eslint-disable-line @typescript-eslint/no-unused-vars
 					level: log.event === 'bot_error' ? 'error' : 'info', // eslint-disable-line @typescript-eslint/no-unused-vars
 				},
@@ -133,7 +132,6 @@ export class StructuredLogger {
 					// eslint-disable-line @typescript-eslint/no-unused-vars
 					service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
 					environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
-					channel_id: log.channel_id, // eslint-disable-line @typescript-eslint/no-unused-vars
 					event: 'channel_activity', // eslint-disable-line @typescript-eslint/no-unused-vars
 					level: 'info', // eslint-disable-line @typescript-eslint/no-unused-vars
 				},
@@ -193,7 +191,6 @@ export class StructuredLogger {
 					// eslint-disable-line @typescript-eslint/no-unused-vars
 					service: this.service, // eslint-disable-line @typescript-eslint/no-unused-vars
 					environment: this.environment, // eslint-disable-line @typescript-eslint/no-unused-vars
-					bot: botName, // eslint-disable-line @typescript-eslint/no-unused-vars
 					event,
 					level: 'debug', // eslint-disable-line @typescript-eslint/no-unused-vars
 				},
