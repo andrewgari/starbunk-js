@@ -26,18 +26,16 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  # Analyze commits to determine version bump
-  analyze-commits:
-    name: 📊 Analyze Commits
+  # Check version and prepare release
+  check-version:
+    name: 📊 Check Version
     runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
-      should-release: ${{ steps.analysis.outputs.should-release }}
-      release-type: ${{ steps.analysis.outputs.release-type }}
-      new-version: ${{ steps.analysis.outputs.new-version }}
-      current-version: ${{ steps.analysis.outputs.current-version }}
-      changelog: ${{ steps.analysis.outputs.changelog }}
+      should-release: ${{ steps.check.outputs.should-release }}
+      current-version: ${{ steps.check.outputs.current-version }}
+      changelog: ${{ steps.check.outputs.changelog }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,10 +48,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Analyze commits and determine version
-        id: analysis
+      - name: Check if version needs release
+        id: check
         run: |
-          set -e  # Exit on any error
+          set -e
 
           # Get current version from package.json
           if [ ! -f "package.json" ]; then
@@ -66,19 +64,19 @@ jobs:
           echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $CURRENT_VERSION"
 
-          # Get the last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-
-          if [ -z "$LAST_TAG" ]; then
-            echo "No previous tags found, using initial version"
-            LAST_TAG="v0.0.0"
-            # For first release, check commits from beginning
-            COMMITS=$(git log --oneline --no-merges | head -20)
-          else
-            echo "Last tag: $LAST_TAG"
-            # Get commits since last tag
-            COMMITS=$(git log ${LAST_TAG}..HEAD --oneline --no-merges)
+          # Check if tag already exists for this version
+          if git rev-parse "v${CURRENT_VERSION}" >/dev/null 2>&1; then
+            echo "Tag v${CURRENT_VERSION} already exists, skipping release"
+            echo "should-release=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
+
+          # Get the last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Last tag: $LAST_TAG"
+
+          # Check if there are new commits since last tag
+          COMMITS=$(git log ${LAST_TAG}..HEAD --oneline --no-merges)
 
           if [ -z "$COMMITS" ]; then
             echo "No new commits since last release"
@@ -86,76 +84,8 @@ jobs:
             exit 0
           fi
 
-          echo "Found commits since last release:"
-          echo "$COMMITS"
-
-          # Analyze commit types
-          HAS_BREAKING=false
-          HAS_FEAT=false
-          HAS_FIX=false
-
-          while IFS= read -r commit; do
-            if echo "$commit" | grep -qE "(BREAKING CHANGE|!:)"; then
-              HAS_BREAKING=true
-              echo "Found breaking change: $commit"
-            elif echo "$commit" | grep -qE "^[a-f0-9]+ feat(\(.+\))?:"; then
-              HAS_FEAT=true
-              echo "Found feature: $commit"
-            elif echo "$commit" | grep -qE "^[a-f0-9]+ fix(\(.+\))?:"; then
-              HAS_FIX=true
-              echo "Found fix: $commit"
-            fi
-          done <<< "$COMMITS"
-
-          # Determine release type
-          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
-
-          if [ "$RELEASE_TYPE" = "auto" ] || [ "$RELEASE_TYPE" = "" ]; then
-            if [ "$HAS_BREAKING" = true ]; then
-              RELEASE_TYPE="major"
-            elif [ "$HAS_FEAT" = true ]; then
-              RELEASE_TYPE="minor"
-            elif [ "$HAS_FIX" = true ]; then
-              RELEASE_TYPE="patch"
-            else
-              echo "No significant changes found (no feat:, fix:, or BREAKING CHANGE)"
-              echo "should-release=false" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-          fi
-
-          echo "Determined release type: $RELEASE_TYPE"
-          echo "release-type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
+          echo "Found commits since last release"
           echo "should-release=true" >> $GITHUB_OUTPUT
-
-          # Calculate new version
-          # Normalise version: strip leading "v" and any pre-release / build metadata
-          VERSION_NUMBER="${CURRENT_VERSION#v}"
-          BASE_VERSION="${VERSION_NUMBER%%[-+]*}"   # keep only x.y.z
-          IFS='.' read -r major minor patch <<< "${BASE_VERSION}"
-
-          # Ensure we have valid numbers
-          major=${major:-0}
-          minor=${minor:-0}
-          patch=${patch:-0}
-
-          case $RELEASE_TYPE in
-            major)
-              NEW_VERSION="$((major + 1)).0.0"
-              ;;
-            minor)
-              NEW_VERSION="${major}.$((minor + 1)).0"
-              ;;
-            patch)
-              NEW_VERSION="${major}.${minor}.$((patch + 1))"
-              ;;
-            prerelease)
-              NEW_VERSION="${VERSION_NUMBER}-rc.$(date +%Y%m%d%H%M%S)"
-              ;;
-          esac
-
-          echo "New version: $NEW_VERSION"
-          echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
           # Generate changelog snippet
           CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges | head -20)
@@ -167,8 +97,8 @@ jobs:
   create-release:
     name: 🚀 Create Release
     runs-on: ubuntu-latest
-    needs: analyze-commits
-    if: needs.analyze-commits.outputs.should-release == 'true' && github.event.inputs.dry_run != 'true'
+    needs: check-version
+    if: needs.check-version.outputs.should-release == 'true' && github.event.inputs.dry_run != 'true'
     permissions:
       contents: write
       pull-requests: write
@@ -193,55 +123,35 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Update version in package.json
+      - name: Get version from package.json
+        id: get-version
         run: |
-          NEW_VERSION="${{ needs.analyze-commits.outputs.new-version }}"
-
-          # Update root package.json
-          npm version $NEW_VERSION --no-git-tag-version
-
-          # Update container package.json files
-          for container in bunkbot djcova starbunk-dnd covabot; do
-            if [ -f "apps/$container/package.json" ]; then
-              cd apps/$container
-              npm version $NEW_VERSION --no-git-tag-version
-              cd ../..
-            fi
-          done
-
-          # Update shared package
-          if [ -f "packages/shared/package.json" ]; then
-            cd packages/shared
-            npm version $NEW_VERSION --no-git-tag-version
-            cd ../..
-          fi
+          CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Version to release: $CURRENT_VERSION"
 
       - name: Generate release notes
         id: release-notes
         run: |
-          NEW_VERSION="${{ needs.analyze-commits.outputs.new-version }}"
-          CURRENT_VERSION="${{ needs.analyze-commits.outputs.current-version }}"
-          RELEASE_TYPE="${{ needs.analyze-commits.outputs.release-type }}"
+          CURRENT_VERSION="${{ steps.get-version.outputs.version }}"
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 
           # Generate comprehensive release notes
           cat > release-notes.md << EOF
-          ## 🎉 Release v${NEW_VERSION}
-
-          **Release Type**: ${RELEASE_TYPE}
-          **Previous Version**: v${CURRENT_VERSION}
+          ## 🎉 Release v${CURRENT_VERSION}
 
           ### 📋 What's Changed
 
-          ${{ needs.analyze-commits.outputs.changelog }}
+          ${{ needs.check-version.outputs.changelog }}
 
           ### 🐳 Container Images
 
-          All container images have been updated to version \`${NEW_VERSION}\`:
+          All container images have been updated to version \`${CURRENT_VERSION}\`:
 
-          - \`ghcr.io/andrewgari/bunkbot:${NEW_VERSION}\`
-          - \`ghcr.io/andrewgari/djcova:${NEW_VERSION}\`
-          - \`ghcr.io/andrewgari/starbunk-dnd:${NEW_VERSION}\`
-          - \`ghcr.io/andrewgari/covabot:${NEW_VERSION}\`
+          - \`ghcr.io/andrewgari/bunkbot:${CURRENT_VERSION}\`
+          - \`ghcr.io/andrewgari/djcova:${CURRENT_VERSION}\`
+          - \`ghcr.io/andrewgari/starbunk-dnd:${CURRENT_VERSION}\`
+          - \`ghcr.io/andrewgari/covabot:${CURRENT_VERSION}\`
 
           ### 🚀 Deployment
 
@@ -254,45 +164,30 @@ jobs:
 
           #### Individual Containers
           \`\`\`bash
-          docker pull ghcr.io/andrewgari/bunkbot:${NEW_VERSION}
-          docker pull ghcr.io/andrewgari/djcova:${NEW_VERSION}
-          docker pull ghcr.io/andrewgari/starbunk-dnd:${NEW_VERSION}
-          docker pull ghcr.io/andrewgari/covabot:${NEW_VERSION}
+          docker pull ghcr.io/andrewgari/bunkbot:${CURRENT_VERSION}
+          docker pull ghcr.io/andrewgari/djcova:${CURRENT_VERSION}
+          docker pull ghcr.io/andrewgari/starbunk-dnd:${CURRENT_VERSION}
+          docker pull ghcr.io/andrewgari/covabot:${CURRENT_VERSION}
           \`\`\`
-
-          ### 🔧 Breaking Changes
-
-          $(if [ "$RELEASE_TYPE" = "major" ]; then echo "⚠️ This is a major release and may contain breaking changes. Please review the changelog carefully before upgrading."; else echo "✅ No breaking changes in this release."; fi)
 
           ### 📊 Statistics
 
-          - **Commits**: $(git rev-list --count v${CURRENT_VERSION}..HEAD 2>/dev/null || echo "N/A")
-          - **Contributors**: $(git shortlog -sn v${CURRENT_VERSION}..HEAD 2>/dev/null | wc -l || echo "N/A")
-          - **Files Changed**: $(git diff --name-only v${CURRENT_VERSION}..HEAD 2>/dev/null | wc -l || echo "N/A")
+          - **Commits**: $(git rev-list --count ${LAST_TAG}..HEAD 2>/dev/null || echo "N/A")
+          - **Contributors**: $(git shortlog -sn ${LAST_TAG}..HEAD 2>/dev/null | wc -l || echo "N/A")
+          - **Files Changed**: $(git diff --name-only ${LAST_TAG}..HEAD 2>/dev/null | wc -l || echo "N/A")
 
           ---
 
-          **Full Changelog**: https://github.com/andrewgari/starbunk-js/compare/v${CURRENT_VERSION}...v${NEW_VERSION}
+          **Full Changelog**: https://github.com/andrewgari/starbunk-js/compare/${LAST_TAG}...v${CURRENT_VERSION}
           EOF
 
-          echo "Generated release notes for v${NEW_VERSION}"
-
-      - name: Commit version updates
-        run: |
-          NEW_VERSION="${{ needs.analyze-commits.outputs.new-version }}"
-
-          git add package.json apps/*/package.json
-          git commit -m "chore(release): bump version to v${NEW_VERSION}" \
-                     -m "Updated all package.json files to version ${NEW_VERSION}" \
-                     -m "Automated version bump for ${{ needs.analyze-commits.outputs.release-type }} release" \
-                     -m "Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          echo "Generated release notes for v${CURRENT_VERSION}"
 
       - name: Create Git tag
         run: |
-          NEW_VERSION="${{ needs.analyze-commits.outputs.new-version }}"
-          git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}"
-          git push origin "v${NEW_VERSION}"
-          git push origin main
+          CURRENT_VERSION="${{ steps.get-version.outputs.version }}"
+          git tag -a "v${CURRENT_VERSION}" -m "Release v${CURRENT_VERSION}"
+          git push origin "v${CURRENT_VERSION}"
 
       - name: Create GitHub release
         id: create-release
@@ -300,8 +195,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const newVersion = '${{ needs.analyze-commits.outputs.new-version }}';
-            const releaseType = '${{ needs.analyze-commits.outputs.release-type }}';
+            const newVersion = '${{ steps.get-version.outputs.version }}';
 
             const releaseNotes = fs.readFileSync('release-notes.md', 'utf8');
 
@@ -312,7 +206,7 @@ jobs:
               name: `v${newVersion}`,
               body: releaseNotes,
               draft: false,
-              prerelease: releaseType === 'prerelease',
+              prerelease: false,
               generate_release_notes: false
             });
 
@@ -328,15 +222,26 @@ jobs:
   trigger-container-builds:
     name: 🐳 Trigger Container Builds
     runs-on: ubuntu-latest
-    needs: [analyze-commits, create-release]
-    if: needs.analyze-commits.outputs.should-release == 'true' && github.event.inputs.dry_run != 'true'
+    needs: [check-version, create-release]
+    if: needs.check-version.outputs.should-release == 'true' && github.event.inputs.dry_run != 'true'
     steps:
+      - name: Get version
+        id: get-version
+        run: |
+          # Checkout to get package.json
+          git clone --depth 1 https://github.com/${{ github.repository }}.git temp_repo
+          cd temp_repo
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          cd ..
+          rm -rf temp_repo
+
       - name: Trigger container build workflow
         uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
-            const newVersion = '${{ needs.analyze-commits.outputs.new-version }}';
+            const newVersion = '${{ steps.get-version.outputs.version }}';
 
             // Trigger the main branch deployment workflow
             await github.rest.actions.createWorkflowDispatch({
@@ -357,23 +262,20 @@ jobs:
   dry-run-summary:
     name: 🧪 Dry Run Summary
     runs-on: ubuntu-latest
-    needs: analyze-commits
-    if: github.event.inputs.dry_run == 'true' && needs.analyze-commits.outputs.should-release == 'true'
+    needs: check-version
+    if: github.event.inputs.dry_run == 'true' && needs.check-version.outputs.should-release == 'true'
     steps:
       - name: Display dry run results
         run: |
           echo "## 🧪 Dry Run Results"
           echo ""
-          echo "**Current Version**: ${{ needs.analyze-commits.outputs.current-version }}"
-          echo "**New Version**: ${{ needs.analyze-commits.outputs.new-version }}"
-          echo "**Release Type**: ${{ needs.analyze-commits.outputs.release-type }}"
+          echo "**Current Version**: ${{ needs.check-version.outputs.current-version }}"
           echo ""
           echo "### Changes to be included:"
-          echo "${{ needs.analyze-commits.outputs.changelog }}"
+          echo "${{ needs.check-version.outputs.changelog }}"
           echo ""
           echo "### Actions that would be performed:"
-          echo "- Update package.json files"
-          echo "- Create Git tag v${{ needs.analyze-commits.outputs.new-version }}"
+          echo "- Create Git tag v${{ needs.check-version.outputs.current-version }}"
           echo "- Create GitHub release"
           echo "- Trigger container builds"
           echo ""

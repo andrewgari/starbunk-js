@@ -1,0 +1,171 @@
+name: PR - Auto Version Bump
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  auto-version-bump:
+    name: 🔢 Auto Bump Version
+    runs-on: ubuntu-latest
+    # Only run on PRs from branches in the same repo (not forks)
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Determine version bump
+        id: version
+        run: |
+          set -e
+
+          # Get current version from package.json
+          CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
+          echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+          # Get the base branch (main) latest commit
+          git fetch origin main
+          BASE_SHA=$(git merge-base origin/main HEAD)
+          echo "Base SHA: $BASE_SHA"
+
+          # Get commits in this PR
+          COMMITS=$(git log ${BASE_SHA}..HEAD --oneline --no-merges)
+
+          if [ -z "$COMMITS" ]; then
+            echo "No commits found in PR"
+            echo "should-bump=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Commits in PR:"
+          echo "$COMMITS"
+
+          # Analyze commit types
+          HAS_BREAKING=false
+          HAS_FEAT=false
+          HAS_FIX=false
+
+          while IFS= read -r commit; do
+            if echo "$commit" | grep -qE "(BREAKING CHANGE|!:)"; then
+              HAS_BREAKING=true
+            elif echo "$commit" | grep -qE "^[a-f0-9]+ feat(\(.+\))?:"; then
+              HAS_FEAT=true
+            elif echo "$commit" | grep -qE "^[a-f0-9]+ fix(\(.+\))?:"; then
+              HAS_FIX=true
+            fi
+          done <<< "$COMMITS"
+
+          # Determine bump type
+          if [ "$HAS_BREAKING" = true ]; then
+            BUMP_TYPE="major"
+          elif [ "$HAS_FEAT" = true ]; then
+            BUMP_TYPE="minor"
+          elif [ "$HAS_FIX" = true ]; then
+            BUMP_TYPE="patch"
+          else
+            echo "No conventional commits found (no feat:, fix:, or BREAKING CHANGE)"
+            echo "Defaulting to patch bump"
+            BUMP_TYPE="patch"
+          fi
+
+          echo "bump-type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "should-bump=true" >> $GITHUB_OUTPUT
+          echo "Determined bump type: $BUMP_TYPE"
+
+          # Calculate new version
+          IFS='.' read -r major minor patch <<< "${CURRENT_VERSION}"
+          major=${major:-0}
+          minor=${minor:-0}
+          patch=${patch:-0}
+
+          case $BUMP_TYPE in
+            major)
+              NEW_VERSION="$((major + 1)).0.0"
+              ;;
+            minor)
+              NEW_VERSION="${major}.$((minor + 1)).0"
+              ;;
+            patch)
+              NEW_VERSION="${major}.${minor}.$((patch + 1))"
+              ;;
+          esac
+
+          echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version will be: $NEW_VERSION"
+
+      - name: Check if version already bumped
+        id: check
+        if: steps.version.outputs.should-bump == 'true'
+        run: |
+          # Check if there's already a commit with version bump in this PR
+          if git log --oneline | grep -q "chore(version): bump to"; then
+            echo "Version already bumped in this PR"
+            echo "already-bumped=true" >> $GITHUB_OUTPUT
+          else
+            echo "already-bumped=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version
+        if: steps.version.outputs.should-bump == 'true' && steps.check.outputs.already-bumped == 'false'
+        run: |
+          NEW_VERSION="${{ steps.version.outputs.new-version }}"
+
+          # Update root package.json
+          npm version $NEW_VERSION --no-git-tag-version
+
+          # Sync to all packages
+          bash ./scripts/sync-versions.sh
+
+          # Commit the changes
+          git add package.json apps/*/package.json packages/shared/package.json apps/*/package-lock.json packages/shared/package-lock.json package-lock.json
+          git commit -m "chore(version): bump to v${NEW_VERSION}
+
+Automated version bump based on conventional commits.
+Bump type: ${{ steps.version.outputs.bump-type }}
+
+Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+
+          git push
+
+      - name: Comment on PR
+        if: steps.version.outputs.should-bump == 'true' && steps.check.outputs.already-bumped == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const newVersion = '${{ steps.version.outputs.new-version }}';
+            const bumpType = '${{ steps.version.outputs.bump-type }}';
+            const currentVersion = '${{ steps.version.outputs.current-version }}';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🔢 Version Auto-Bumped
+
+**${currentVersion}** → **${newVersion}** (${bumpType})
+
+The version has been automatically bumped based on your conventional commits. This will be the version used when this PR is merged.`
+            });
+
