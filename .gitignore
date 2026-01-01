@@ -179,8 +179,10 @@ scripts/*
 # Allow the pre-push gate script to be tracked
 !scripts/
 !scripts/pre-push.sh
+!scripts/test-docker-env-precedence.sh
 
 !README.md
+!docs/DOCKER_ENV_VARS.md
 
 # Build artifacts and temporary files
 *.tsbuildinfo
