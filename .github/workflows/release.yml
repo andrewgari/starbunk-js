@@ -89,7 +89,7 @@ jobs:
           ENV_EMOJI="${{ needs.determine-environment.outputs.env-emoji }}"
 
           # Convert containers JSON array to space-separated list
-          CONTAINERS=$(echo '${{ needs.determine-environment.outputs.containers }}' | jq -r '.[]' | tr '\n' ' ')
+          CONTAINERS=$(echo '${{ needs.determine-environment.outputs.containers }}' | jq -r '.[]' | tr '\n' ' ' | sed 's/ $//')
 
           echo "## $ENV_EMOJI $RELEASE_TYPE $VERSION Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
