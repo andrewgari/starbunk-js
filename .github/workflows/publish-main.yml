@@ -46,7 +46,7 @@ jobs:
   # CHANGE DETECTION & VALIDATION PIPELINE
   # ==============================================================================
   detect-changes:
-    name: 🔍 Detect Changes & Generate Matrix
+    name: 🔍 Detect Changes
     runs-on: ubuntu-latest
     outputs:
       # Individual container changes
@@ -157,14 +157,16 @@ jobs:
             rollback_info=$(echo "$rollback_info" | jq --arg container "$container" --arg sha "$current_sha" '.[$container] = $sha')
           done
 
-          echo "previous-images=$rollback_info" >> $GITHUB_OUTPUT
+          # Compact JSON to single line for GitHub Actions output
+          rollback_info_compact=$(echo "$rollback_info" | jq -c .)
+          echo "previous-images=$rollback_info_compact" >> $GITHUB_OUTPUT
           echo "📋 Rollback info prepared"
 
   # ==============================================================================
   # COMPREHENSIVE VALIDATION SUITE
   # ==============================================================================
   validate-codebase:
-    name: ✅ Validation Suite
+    name: ✅ Validate Codebase
     runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.has-deployments == 'true' && github.event.inputs.skip_validation != 'true'
@@ -347,7 +349,7 @@ jobs:
   # POST-DEPLOYMENT VERIFICATION & MONITORING
   # ==============================================================================
   post-deployment-verification:
-    name: ✅ Post-Deployment Verification
+    name: ✅ Verify Deployment
     runs-on: ubuntu-latest
     needs: [detect-changes, deploy-containers]
     if: needs.detect-changes.outputs.has-deployments == 'true'
