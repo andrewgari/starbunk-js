@@ -291,9 +291,7 @@ jobs:
           context: .
           file: apps/bunkbot/Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number || 'main' }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -322,9 +320,7 @@ jobs:
           context: .
           file: apps/djcova/Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number || 'main' }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -353,9 +349,7 @@ jobs:
           context: .
           file: apps/starbunk-dnd/Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number || 'main' }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -384,9 +378,7 @@ jobs:
           context: .
           file: apps/covabot/Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number || 'main' }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
