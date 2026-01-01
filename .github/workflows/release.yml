@@ -101,7 +101,7 @@ jobs:
   release-summary:
     name: 📋 Release Summary
     runs-on: ubuntu-latest
-    needs: [setup, determine-environment, tag-release]
+    needs: [determine-environment, tag-release]
     steps:
       - name: Generate summary
         run: |
