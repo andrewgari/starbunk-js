@@ -164,7 +164,7 @@ export class ProductionLLMService implements LLMService {
 								// Mark as healthy immediately - model will be available soon
 								// Note: Service is marked healthy to allow bot startup, but first few requests
 								// may fail until the model download completes. This is intentional to enable
-								// fast startup. Failed requests will be retried automatically.
+								// fast startup. Failed requests will fall back to emulator or be handled by callers.
 								this.isHealthy = true;
 								logger.info(
 									`[LLMService] ⏳ Bot starting while model '${configuredModel}' downloads in background...`,
@@ -479,6 +479,12 @@ Message to analyze: "${message.content}"`;
 			`[LLMService] Ollama model '${model}' not found (404). [${correlationId}]`,
 		);
 
+		// Check if model is already being pulled
+		if (this.pullingModels.has(model)) {
+			logger.info(`[LLMService] Model '${model}' is already being pulled, waiting for completion...`);
+			return;
+		}
+
 		// Check if auto-pull is enabled
 		const autoPull = process.env.OLLAMA_AUTO_PULL_MODELS !== 'false'; // Default to true
 		if (autoPull) {
@@ -628,7 +634,12 @@ Message to analyze: "${message.content}"`;
 			this.pullingModels.delete(model);
 
 			// Trigger a health check to update available models
-			await this.performHealthCheck();
+			try {
+				await this.performHealthCheck();
+			} catch (healthCheckError) {
+				const err = ensureError(healthCheckError);
+				logger.error(`[LLMService] ⚠️ Health check failed after pulling model '${model}': ${err.message}`);
+			}
 
 			return true;
 		} catch (error) {
