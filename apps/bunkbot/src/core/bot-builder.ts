@@ -3,7 +3,7 @@ import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
-import { shouldExcludeFromReplyBots } from './conditions';
+import { shouldExcludeFromReplyBots, hasInverseBehavior } from './conditions';
 
 /**
  * Type for message filtering function
@@ -33,6 +33,34 @@ export function defaultMessageFilter(message: Message): boolean {
 		logger.debug(`✅ Processing message from: ${message.author.username}`);
 	}
 	return false; // Don't skip
+}
+
+/**
+ * Wraps a message filter with inverse behavior support
+ * If a bot has inverse behavior, it will only respond to bot messages
+ * Otherwise, it uses the provided filter as-is
+ */
+export function withInverseBehaviorSupport(
+	botName: string,
+	baseFilter: MessageFilterFunction,
+): MessageFilterFunction {
+	return async (message: Message): Promise<boolean> => {
+		// Check if this bot has inverse behavior
+		if (hasInverseBehavior(botName)) {
+			// Inverse behavior: only respond to bot messages
+			if (!message.author.bot) {
+				if (isDebugMode()) {
+					logger.debug(`[${botName}] 🚫 Skipping non-bot message (inverse behavior enabled)`);
+				}
+				return true; // Skip non-bot messages
+			}
+			// For bot messages, apply the base filter
+			return await baseFilter(message);
+		}
+
+		// Normal behavior: use the base filter as-is
+		return await baseFilter(message);
+	};
 }
 
 /**
@@ -109,6 +137,7 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 
 	const responseRate = config.responseRate ?? config.defaultResponseRate ?? getBotDefaults().responseRate;
 	const disabled = config.disabled ?? false;
+	const botName = config.name;
 
 	// Use custom messageFilter if provided, otherwise use default behavior
 	let messageFilter: MessageFilterFunction;
@@ -121,6 +150,9 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 		// Default behavior - use default message filter
 		messageFilter = defaultMessageFilter;
 	}
+
+	// Apply inverse behavior support wrapper
+	messageFilter = withInverseBehaviorSupport(botName, messageFilter);
 
 	return {
 		name: createBotReplyName(config.name),

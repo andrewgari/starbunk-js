@@ -17,9 +17,22 @@ export class QdrantService {
 	private isConnected = false;
 	private collections: Map<string, QdrantCollectionConfig> = new Map();
 
-	// Collection names
-	private readonly PERSONALITY_COLLECTION = 'covabot_personality';
-	private readonly CONVERSATION_COLLECTION = 'covabot_conversations';
+	// Collection names from environment or defaults
+	private readonly PERSONALITY_COLLECTION = process.env.PERSONALITY_COLLECTION || 'covabot_personality';
+	private readonly CONVERSATION_COLLECTION = process.env.CONVERSATION_COLLECTION || 'covabot_conversations';
+	private readonly MEMORY_COLLECTION = process.env.MEMORY_COLLECTION || 'covabot_memory';
+
+	/**
+	 * Configuration from environment variables with validation
+	 * - searchLimit: Maximum number of results to return from search (default: 50)
+	 * - similarityThreshold: Minimum similarity score for results, range [0, 1] (default: 0.7)
+	 * - batchSize: Number of items to process in batch operations (default: 100)
+	 */
+	private readonly config = {
+		searchLimit: this.parsePositiveInt(process.env.QDRANT_SEARCH_LIMIT, 50),
+		similarityThreshold: this.parseThreshold(process.env.QDRANT_SIMILARITY_THRESHOLD, 0.7),
+		batchSize: this.parsePositiveInt(process.env.QDRANT_BATCH_SIZE, 100),
+	};
 
 	constructor() {
 		const qdrantUrl = process.env.QDRANT_URL || 'http://localhost:6333';
@@ -31,6 +44,7 @@ export class QdrantService {
 		});
 
 		logger.info(`[QdrantService] Configured for URL: ${qdrantUrl}`);
+		logger.info(`[QdrantService] Search limit: ${this.config.searchLimit}, Similarity threshold: ${this.config.similarityThreshold}, Batch size: ${this.config.batchSize}`);
 	}
 
 	static getInstance(): QdrantService {
@@ -38,6 +52,32 @@ export class QdrantService {
 			QdrantService.instance = new QdrantService();
 		}
 		return QdrantService.instance;
+	}
+
+	/**
+	 * Parse and validate a positive integer from environment variable
+	 * @param envValue - Environment variable value
+	 * @param defaultValue - Default value if parsing fails
+	 * @returns Validated positive integer or default value
+	 */
+	private parsePositiveInt(envValue: string | undefined, defaultValue: number): number {
+		if (!envValue) return defaultValue;
+		const parsed = parseInt(envValue, 10);
+		return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
+	}
+
+	/**
+	 * Parse and validate similarity threshold (0-1 range)
+	 * @param envValue - Environment variable value
+	 * @param defaultValue - Default value if parsing fails
+	 * @returns Validated threshold in range [0, 1] or default value
+	 */
+	private parseThreshold(envValue: string | undefined, defaultValue: number): number {
+		if (!envValue) return defaultValue;
+		const parsed = parseFloat(envValue);
+		if (!Number.isFinite(parsed)) return defaultValue;
+		// Clamp to [0, 1] range
+		return Math.max(0, Math.min(1, parsed));
 	}
 
 	/**
@@ -181,8 +221,8 @@ export class QdrantService {
 	 */
 	async searchSimilar(queryEmbedding: number[], filters: MemorySearchFilters = {}): Promise<MemorySearchResult[]> {
 		const collectionName = filters.type ? this.getCollectionName(filters.type) : null;
-		const limit = filters.limit || 10;
-		const threshold = filters.similarityThreshold || 0.7;
+		const limit = filters.limit || this.config.searchLimit;
+		const threshold = filters.similarityThreshold || this.config.similarityThreshold;
 
 		try {
 			// Build Qdrant filter
