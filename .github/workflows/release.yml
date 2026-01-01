@@ -6,6 +6,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  REGISTRY_PREFIX: ghcr.io/${{ github.repository_owner }}
+  NODE_VERSION: '20'
 
 permissions:
   contents: read
@@ -20,8 +22,11 @@ jobs:
       release-type: ${{ steps.determine.outputs.release-type }}
       env-emoji: ${{ steps.determine.outputs.env-emoji }}
       containers: ${{ steps.determine.outputs.containers }}
+      debug-mode: ${{ steps.determine.outputs.debug-mode }}
+      node-env: ${{ steps.determine.outputs.node-env }}
+      log-level: ${{ steps.determine.outputs.log-level }}
     steps:
-      - name: Determine environment tag based on release type
+      - name: Determine environment and build settings
         id: determine
         run: |
           IS_PRERELEASE="${{ github.event.release.prerelease }}"
@@ -30,19 +35,25 @@ jobs:
             echo "env-tag=staging" >> $GITHUB_OUTPUT
             echo "release-type=Pre-Release" >> $GITHUB_OUTPUT
             echo "env-emoji=🧪" >> $GITHUB_OUTPUT
-            echo "🏷️ Pre-release detected - environment is staging"
+            echo "debug-mode=true" >> $GITHUB_OUTPUT
+            echo "node-env=development" >> $GITHUB_OUTPUT
+            echo "log-level=debug" >> $GITHUB_OUTPUT
+            echo "🏷️ Pre-release detected - environment is staging with DEBUG settings"
           else
             echo "env-tag=prod" >> $GITHUB_OUTPUT
             echo "release-type=Production Release" >> $GITHUB_OUTPUT
             echo "env-emoji=🚀" >> $GITHUB_OUTPUT
-            echo "🏷️ Full release detected - environment is prod"
+            echo "debug-mode=false" >> $GITHUB_OUTPUT
+            echo "node-env=production" >> $GITHUB_OUTPUT
+            echo "log-level=info" >> $GITHUB_OUTPUT
+            echo "🏷️ Full release detected - environment is prod with PRODUCTION settings"
           fi
           
           # Output containers list for matrix strategy
           echo 'containers=["bunkbot", "djcova", "starbunk-dnd", "covabot"]' >> $GITHUB_OUTPUT
 
-  tag-release:
-    name: 🏷️ Tag ${{ matrix.container }} for release
+  build-release:
+    name: 🏗️ Build ${{ matrix.container }} (${{ needs.determine-environment.outputs.env-tag }})
     runs-on: ubuntu-latest
     needs: determine-environment
     strategy:
@@ -50,6 +61,12 @@ jobs:
       matrix:
         container: ${{ fromJSON(needs.determine-environment.outputs.containers) }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to Container Registry
         uses: docker/login-action@v3
         with:
@@ -57,29 +74,49 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Extract Container Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}
+          tags: |
+            type=raw,value=${{ needs.determine-environment.outputs.env-tag }}
+            type=raw,value=${{ github.event.release.tag_name }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.container }}
+            org.opencontainers.image.description=Starbunk Discord Bot - ${{ matrix.container }} container
+            org.opencontainers.image.vendor=Starbunk
+            release.type=${{ needs.determine-environment.outputs.release-type }}
+            release.version=${{ github.event.release.tag_name }}
 
-      - name: Tag latest with environment and version
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}"
-          VERSION="${{ github.event.release.tag_name }}"
-          ENV_TAG="${{ needs.determine-environment.outputs.env-tag }}"
-
-          echo "🏷️ Tagging $IMAGE:latest as $ENV_TAG and $VERSION"
-
-          # Use buildx imagetools to add tags without rebuilding
-          docker buildx imagetools create \
-            --tag "$IMAGE:$ENV_TAG" \
-            --tag "$IMAGE:$VERSION" \
-            "$IMAGE:latest"
-
-          echo "✅ Tagged ${{ matrix.container }}:$ENV_TAG and ${{ matrix.container }}:$VERSION"
+      - name: Build and Push Container Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.container }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: |
+            type=gha,scope=${{ matrix.container }}
+            type=registry,ref=${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:latest
+          cache-to: |
+            type=gha,mode=max,scope=${{ matrix.container }}
+          provenance: false
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BUILD_DATE=${{ github.event.release.created_at }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ github.event.release.tag_name }}
+            DEBUG_MODE=${{ needs.determine-environment.outputs.debug-mode }}
+            NODE_ENV=${{ needs.determine-environment.outputs.node-env }}
+            LOG_LEVEL=${{ needs.determine-environment.outputs.log-level }}
 
   release-summary:
     name: 📋 Release Summary
     runs-on: ubuntu-latest
-    needs: [determine-environment, tag-release]
+    needs: [determine-environment, build-release]
     steps:
       - name: Generate summary
         run: |
@@ -87,11 +124,17 @@ jobs:
           ENV_TAG="${{ needs.determine-environment.outputs.env-tag }}"
           RELEASE_TYPE="${{ needs.determine-environment.outputs.release-type }}"
           ENV_EMOJI="${{ needs.determine-environment.outputs.env-emoji }}"
+          DEBUG_MODE="${{ needs.determine-environment.outputs.debug-mode }}"
+          NODE_ENV="${{ needs.determine-environment.outputs.node-env }}"
 
           # Convert containers JSON array to space-separated list
           CONTAINERS=$(echo '${{ needs.determine-environment.outputs.containers }}' | jq -r '. | join(" ")')
 
           echo "## $ENV_EMOJI $RELEASE_TYPE $VERSION Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⚙️ Build Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **DEBUG_MODE**: \`$DEBUG_MODE\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **NODE_ENV**: \`$NODE_ENV\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Container Images" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

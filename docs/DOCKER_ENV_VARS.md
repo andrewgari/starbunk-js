@@ -142,17 +142,47 @@ The runtime value **always takes precedence** over the baked-in value.
 
 ## Image Tags
 
-Different image tags are created for different purposes:
+Different image tags are created for different purposes and environments:
 
-### PR Images
-- `pr-<number>` - Built from PRs with debug mode enabled
-- Example: `ghcr.io/andrewgari/bunkbot:pr-123`
+### PR Images (Debug/Development)
+- **Tag**: `pr-<number>` (e.g., `pr-123`)
+- **Build Settings**: `DEBUG_MODE=true`, `NODE_ENV=development`, `LOG_LEVEL=debug`
+- **Trigger**: Opening or updating a pull request
+- **Purpose**: Testing and development
+- **Example**: `ghcr.io/andrewgari/bunkbot:pr-123`
 
-### Production Images
-- `latest` - Latest stable production build
-- `<sha>` - Specific commit
-- `<timestamp>-<sha>-stable` - Timestamped stable builds
-- `v<version>` - Semantic versioned releases
+### Staging Images (Pre-Release/Debug)
+- **Tag**: `staging`
+- **Build Settings**: `DEBUG_MODE=true`, `NODE_ENV=development`, `LOG_LEVEL=debug`
+- **Trigger**: Creating a pre-release on GitHub
+- **Purpose**: Staging/pre-production testing with debug enabled
+- **Example**: `ghcr.io/andrewgari/bunkbot:staging`
+- **Also Tagged**: Release version (e.g., `v1.0.0-beta.1`)
+
+### Latest Images (Production)
+- **Tag**: `latest`
+- **Build Settings**: `DEBUG_MODE=false`, `NODE_ENV=production`, `LOG_LEVEL=info`
+- **Trigger**: Merging to main branch
+- **Purpose**: Latest production-ready build
+- **Example**: `ghcr.io/andrewgari/bunkbot:latest`
+- **Also Tagged**: `<sha>`, `<timestamp>-<sha>-stable`
+
+### Production Images (Release)
+- **Tag**: `prod`
+- **Build Settings**: `DEBUG_MODE=false`, `NODE_ENV=production`, `LOG_LEVEL=info`
+- **Trigger**: Creating a full release on GitHub
+- **Purpose**: Stable production releases
+- **Example**: `ghcr.io/andrewgari/bunkbot:prod`
+- **Also Tagged**: Release version (e.g., `v1.0.0`)
+
+## Image Build Matrix Summary
+
+| Trigger | Tag(s) | DEBUG_MODE | NODE_ENV | LOG_LEVEL | Purpose |
+|---------|--------|------------|----------|-----------|---------|
+| PR opened/updated | `pr-<number>` | `true` | `development` | `debug` | Testing & Development |
+| Pre-Release created | `staging`, `v1.x.x-beta` | `true` | `development` | `debug` | Staging Environment |
+| Merge to main | `latest`, `<sha>` | `false` | `production` | `info` | Production (Rolling) |
+| Release created | `prod`, `v1.x.x` | `false` | `production` | `info` | Production (Stable) |
 
 ## Security Best Practices
 
@@ -190,7 +220,7 @@ docker run --rm --entrypoint env ghcr.io/andrewgari/bunkbot:latest | grep DEBUG_
 
 ### Image Build Separation
 
-The CI/CD pipeline uses **two separate workflows** to ensure debug and production images never conflict:
+The CI/CD pipeline uses **four separate workflows** to ensure appropriate settings for each environment:
 
 1. **PR Validation Workflow** (`pr-validation.yml`):
    - **Trigger**: Pull request events only (opened, updated, labeled)
@@ -203,17 +233,46 @@ The CI/CD pipeline uses **two separate workflows** to ensure debug and productio
    - **Trigger**: Pushes to main branch (including PR merges)
    - **Build args**: `DEBUG_MODE=false`, `NODE_ENV=production`, `LOG_LEVEL=info`
    - **Image tags**: `latest`, `<sha>`, `<timestamp>-<sha>-stable`
-   - **Purpose**: Production deployments
+   - **Purpose**: Production deployments (rolling/continuous)
    - **Note**: Always builds fresh images with production settings when code is merged
 
-### What Happens When a PR Merges
+3. **Release Workflow - Pre-Release** (`release.yml`):
+   - **Trigger**: Creating a pre-release on GitHub
+   - **Build args**: `DEBUG_MODE=true`, `NODE_ENV=development`, `LOG_LEVEL=debug`
+   - **Image tags**: `staging`, release version (e.g., `v1.0.0-beta.1`)
+   - **Purpose**: Staging/pre-production environment with debug enabled
+   - **Note**: Builds fresh images (not just tags) with debug settings for staging validation
 
-1. **PR is merged** to main branch
-2. **Only** the production workflow (`publish-main.yml`) runs
-3. New production images are built with `DEBUG_MODE=false`
-4. Images are tagged as `latest`, `<sha>`, etc.
-5. The PR image (with debug mode) remains separate with its `pr-<number>` tag
-6. **Production images never inherit debug settings from PR builds**
+4. **Release Workflow - Production Release** (`release.yml`):
+   - **Trigger**: Creating a full release on GitHub
+   - **Build args**: `DEBUG_MODE=false`, `NODE_ENV=production`, `LOG_LEVEL=info`
+   - **Image tags**: `prod`, release version (e.g., `v1.0.0`)
+### What Happens in Each Scenario
+
+#### When a PR is Opened/Updated
+1. PR validation workflow (`pr-validation.yml`) runs
+2. Images built with `DEBUG_MODE=true`, `NODE_ENV=development`
+3. Tagged as `pr-<number>` for testing
+4. PR image remains isolated from production images
+
+#### When a PR Merges to Main
+1. **Only** the production workflow (`publish-main.yml`) runs
+2. New production images built with `DEBUG_MODE=false`, `NODE_ENV=production`
+3. Images tagged as `latest`, `<sha>`, etc.
+4. PR image (with debug mode) remains separate with its `pr-<number>` tag
+5. **Production images never inherit debug settings from PR builds**
+
+#### When a Pre-Release is Created
+1. Release workflow (`release.yml`) runs with pre-release flag
+2. **New images built** (not just tagged) with `DEBUG_MODE=true`, `NODE_ENV=development`
+3. Tagged as `staging` and version (e.g., `v1.0.0-beta.1`)
+4. Suitable for staging environment testing with debug enabled
+
+#### When a Production Release is Created
+1. Release workflow (`release.yml`) runs for full release
+2. **New images built** (not just tagged) with `DEBUG_MODE=false`, `NODE_ENV=production`
+3. Tagged as `prod` and version (e.g., `v1.0.0`)
+4. Stable production-ready images
 
 ### Manual Builds
 

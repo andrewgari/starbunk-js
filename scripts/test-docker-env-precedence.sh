@@ -121,6 +121,32 @@ else
 fi
 
 echo ""
+echo "Release builds:"
+if grep 'debug-mode=true' .github/workflows/release.yml > /dev/null; then
+    echo "  ✓ Pre-release uses DEBUG_MODE=true (staging)"
+else
+    echo "  ❌ Pre-release debug mode not configured"
+fi
+
+if grep 'debug-mode=false' .github/workflows/release.yml > /dev/null; then
+    echo "  ✓ Production release uses DEBUG_MODE=false (prod)"
+else
+    echo "  ❌ Production release debug mode not configured"
+fi
+
+if grep "env-tag=staging" .github/workflows/release.yml > /dev/null; then
+    echo "  ✓ Pre-release tagged as 'staging'"
+else
+    echo "  ❌ Staging tag not found"
+fi
+
+if grep "env-tag=prod" .github/workflows/release.yml > /dev/null; then
+    echo "  ✓ Production release tagged as 'prod'"
+else
+    echo "  ❌ Prod tag not found"
+fi
+
+echo ""
 echo "Workflow separation (prevents debug images on main):"
 if grep "docker-build-bunkbot:" .github/workflows/pr-validation.yml -A 5 | grep "github.event_name == 'pull_request'" > /dev/null; then
     echo "  ✓ PR validation workflow only builds on pull_request events"
@@ -143,8 +169,10 @@ echo "Summary:"
 echo "  • Runtime .env files override baked-in Dockerfile values"
 echo "  • docker-compose environment precedence chain works correctly"
 echo "  • No secrets are baked into Docker images"
-echo "  • PR builds have DEBUG_MODE=true"
-echo "  • Production builds have DEBUG_MODE=false"
+echo "  • PR builds have DEBUG_MODE=true (pr-<number> tag)"
+echo "  • Pre-release builds have DEBUG_MODE=true (staging tag)"
+echo "  • Main branch builds have DEBUG_MODE=false (latest tag)"
+echo "  • Production release builds have DEBUG_MODE=false (prod tag)"
 echo "  • PR workflow only builds on pull_request events (not on main)"
 echo "  • Production workflow builds on main branch pushes"
 echo ""
@@ -153,5 +181,6 @@ echo "  ✓ Secrets are never baked into images"
 echo "  ✓ Non-secret config can be pre-set for convenience"
 echo "  ✓ All values can be overridden at runtime"
 echo "  ✓ Debug and production images are built by separate workflows"
-echo "  ✓ Merging a PR to main always builds fresh production images"
+echo "  ✓ Pre-release (staging) and production release images are clearly separated"
+echo "  ✓ Each environment gets fresh images with appropriate settings"
 echo ""
