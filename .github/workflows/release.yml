@@ -114,17 +114,6 @@ jobs:
           # Parse container list from JSON env variable
           CONTAINERS=$(echo '${{ env.CONTAINERS_JSON }}' | jq -r 'join(" ")')
 
-          # Determine environment tag based on release type
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            ENV_TAG="staging"
-            RELEASE_TYPE="Pre-Release"
-            ENV_EMOJI="🧪"
-          else
-            ENV_TAG="prod"
-            RELEASE_TYPE="Production Release"
-            ENV_EMOJI="🚀"
-          fi
-
           echo "## $ENV_EMOJI $RELEASE_TYPE $VERSION Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Container Images" >> $GITHUB_STEP_SUMMARY
