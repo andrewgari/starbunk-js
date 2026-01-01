@@ -1,9 +1,14 @@
 import { isDebugMode, logger, getTestingChannelIds } from '@starbunk/shared';
-import { extractWebhookId } from '../utils/webhook';
-
 import { Message } from 'discord.js';
+import { extractWebhookId } from '../utils/webhook';
+import { ContextualTriggerCondition, ResponseContext } from './response-context';
+import { TriggerCondition } from './trigger-response';
 
-// Helper function to parse comma-separated IDs from environment
+/**
+ * Parse comma-separated IDs from environment variable
+ * @param envVar - Environment variable containing comma-separated IDs
+ * @returns Array of trimmed, non-empty IDs
+ */
 function parseIdList(envVar: string | undefined): string[] {
 	if (!envVar) return [];
 	return envVar
@@ -12,7 +17,11 @@ function parseIdList(envVar: string | undefined): string[] {
 		.filter((id) => id.length > 0);
 }
 
-// Helper function to parse comma-separated bot names from environment
+/**
+ * Parse comma-separated bot names from environment variable
+ * @param envVar - Environment variable containing comma-separated bot names
+ * @returns Array of trimmed, non-empty bot names
+ */
 function parseBotNameList(envVar: string | undefined): string[] {
 	if (!envVar) return [];
 	return envVar
@@ -21,7 +30,10 @@ function parseBotNameList(envVar: string | undefined): string[] {
 		.filter((name) => name.length > 0);
 }
 
-// Bot identification constants
+/**
+ * Bot identification constants
+ * Loads whitelisted bot IDs and inverse behavior bots from environment variables
+ */
 const BOT_IDENTIFIERS = {
 	// Discord application/client ID used by all containers (from environment)
 	STARBUNK_CLIENT_ID: process.env.STARBUNK_CLIENT_ID || process.env.CLIENT_ID || '836445923105308672',
@@ -35,11 +47,9 @@ const BOT_IDENTIFIERS = {
 
 	// Other bot identifiers to exclude
 	EXCLUDED_BOT_NAMES: ['CovaBot', 'Cova', 'DJCova', 'Snowbunk'],
-	EXCLUDED_BOT_IDS: parseIdList(process.env.BOT_WHITELIST_IDS), // Bot IDs that can bypass default filtering
+	WHITELISTED_BOT_IDS: parseIdList(process.env.BOT_WHITELIST_IDS), // Bot IDs that can bypass default filtering
 	INVERSE_BEHAVIOR_BOTS: parseBotNameList(process.env.INVERSE_BEHAVIOR_BOTS), // Bots that only respond to bots
 };
-import { ContextualTriggerCondition, ResponseContext } from './response-context';
-import { TriggerCondition } from './trigger-response';
 /**
  * Core condition type - returns boolean based on message
  */
@@ -260,7 +270,7 @@ export function shouldExcludeFromReplyBots(message: Message): boolean {
 
 	// Check if bot is whitelisted (can bypass default filtering)
 	const authorId = message.author.id;
-	if (BOT_IDENTIFIERS.EXCLUDED_BOT_IDS.includes(authorId)) {
+	if (BOT_IDENTIFIERS.WHITELISTED_BOT_IDS.includes(authorId)) {
 		if (isDebugMode()) {
 			logger.debug(`✅ Allowing whitelisted bot message from ID: ${authorId}`);
 		}

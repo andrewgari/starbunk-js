@@ -22,11 +22,16 @@ export class QdrantService {
 	private readonly CONVERSATION_COLLECTION = process.env.CONVERSATION_COLLECTION || 'covabot_conversations';
 	private readonly MEMORY_COLLECTION = process.env.MEMORY_COLLECTION || 'covabot_memory';
 
-	// Configuration from environment
+	/**
+	 * Configuration from environment variables with validation
+	 * - searchLimit: Maximum number of results to return from search (default: 50)
+	 * - similarityThreshold: Minimum similarity score for results, range [0, 1] (default: 0.7)
+	 * - batchSize: Number of items to process in batch operations (default: 100)
+	 */
 	private readonly config = {
-		searchLimit: parseInt(process.env.QDRANT_SEARCH_LIMIT || '50'),
-		similarityThreshold: parseFloat(process.env.QDRANT_SIMILARITY_THRESHOLD || '0.7'),
-		batchSize: parseInt(process.env.QDRANT_BATCH_SIZE || '100'),
+		searchLimit: this.parsePositiveInt(process.env.QDRANT_SEARCH_LIMIT, 50),
+		similarityThreshold: this.parseThreshold(process.env.QDRANT_SIMILARITY_THRESHOLD, 0.7),
+		batchSize: this.parsePositiveInt(process.env.QDRANT_BATCH_SIZE, 100),
 	};
 
 	constructor() {
@@ -47,6 +52,32 @@ export class QdrantService {
 			QdrantService.instance = new QdrantService();
 		}
 		return QdrantService.instance;
+	}
+
+	/**
+	 * Parse and validate a positive integer from environment variable
+	 * @param envValue - Environment variable value
+	 * @param defaultValue - Default value if parsing fails
+	 * @returns Validated positive integer or default value
+	 */
+	private parsePositiveInt(envValue: string | undefined, defaultValue: number): number {
+		if (!envValue) return defaultValue;
+		const parsed = parseInt(envValue, 10);
+		return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
+	}
+
+	/**
+	 * Parse and validate similarity threshold (0-1 range)
+	 * @param envValue - Environment variable value
+	 * @param defaultValue - Default value if parsing fails
+	 * @returns Validated threshold in range [0, 1] or default value
+	 */
+	private parseThreshold(envValue: string | undefined, defaultValue: number): number {
+		if (!envValue) return defaultValue;
+		const parsed = parseFloat(envValue);
+		if (!Number.isFinite(parsed)) return defaultValue;
+		// Clamp to [0, 1] range
+		return Math.max(0, Math.min(1, parsed));
 	}
 
 	/**
