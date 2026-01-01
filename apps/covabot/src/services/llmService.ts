@@ -36,6 +36,9 @@ export class ProductionLLMService implements LLMService {
 	private pulledModels = new Set<string>(); // Track models we've already attempted to pull
 
 	// Metrics
+	// Note: These metrics use the default global registry since ProductionLLMService
+	// is created via factory function and doesn't integrate with the container metrics infrastructure.
+	// This is acceptable for this use case as there's only one instance per process.
 	private modelPullCounter: promClient.Counter<string>;
 	private modelPullDurationHistogram: promClient.Histogram<string>;
 	private modelPullSizeGauge: promClient.Gauge<string>;
@@ -159,9 +162,15 @@ export class ProductionLLMService implements LLMService {
 									});
 
 								// Mark as healthy immediately - model will be available soon
+								// Note: Service is marked healthy to allow bot startup, but first few requests
+								// may fail until the model download completes. This is intentional to enable
+								// fast startup. Failed requests will be retried automatically.
 								this.isHealthy = true;
 								logger.info(
 									`[LLMService] ⏳ Bot starting while model '${configuredModel}' downloads in background...`,
+								);
+								logger.warn(
+									`[LLMService] ⚠️  First few requests may fail until model download completes`,
 								);
 							} else {
 								logger.warn(
@@ -340,28 +349,7 @@ export class ProductionLLMService implements LLMService {
 
 			if (!response.ok) {
 				if (response.status === 404) {
-					logger.error(
-						`[LLMService] Ollama model '${model}' not found (404). [${correlationId}]`,
-					);
-
-					// Check if auto-pull is enabled
-					const autoPull = process.env.OLLAMA_AUTO_PULL_MODELS !== 'false'; // Default to true
-					if (autoPull) {
-						logger.info(`[LLMService] Auto-pull enabled, attempting to download model '${model}'...`);
-
-						// Attempt to pull the model (async, don't wait)
-						this.pullOllamaModel(model, 'generate-404').then((success) => {
-							if (success) {
-								logger.info(`[LLMService] Model '${model}' is now available for future requests`);
-							} else {
-								logger.error(
-									`[LLMService] Failed to auto-pull model '${model}'. Please run manually: ollama pull ${model}`,
-								);
-							}
-						});
-					} else {
-						logger.error(`[LLMService] Auto-pull disabled. Please run: ollama pull ${model}`);
-					}
+					this.handleModelNotFound(model, 'generate-404', correlationId);
 				}
 				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 			}
@@ -452,29 +440,7 @@ Message to analyze: "${message.content}"`;
 
 			if (!response.ok) {
 				if (response.status === 404) {
-					logger.error(
-						`[LLMService] Ollama model '${model}' not found (404). [${correlationId}]`,
-					);
-
-					// Check if auto-pull is enabled
-					const autoPull = process.env.OLLAMA_AUTO_PULL_MODELS !== 'false'; // Default to true
-					if (autoPull) {
-						logger.info(`[LLMService] Auto-pull enabled, attempting to download model '${model}'...`);
-
-						// Attempt to pull the model (async, don't wait)
-						this.pullOllamaModel(model, 'decision-404').then((success) => {
-							if (success) {
-								logger.info(`[LLMService] Model '${model}' is now available for future requests`);
-							} else {
-								logger.error(
-									`[LLMService] Failed to auto-pull model '${model}'. Please run manually: ollama pull ${model}`,
-								);
-							}
-						});
-					} else {
-						logger.error(`[LLMService] Auto-pull disabled. Please run: ollama pull ${model}`);
-					}
-
+					this.handleModelNotFound(model, 'decision-404', correlationId);
 					logger.error(
 						`[LLMService] Or update OLLAMA_MODEL environment variable to an available model [${correlationId}]`,
 					);
@@ -499,6 +465,37 @@ Message to analyze: "${message.content}"`;
 			}
 
 			return 'NO';
+		}
+	}
+
+	/**
+	 * Handle a model not found (404) error by attempting to auto-pull if enabled
+	 * @param model Model name that was not found
+	 * @param trigger What triggered the pull (e.g., 'generate-404', 'decision-404')
+	 * @param correlationId Correlation ID for logging
+	 */
+	private handleModelNotFound(model: string, trigger: string, correlationId: string): void {
+		logger.error(
+			`[LLMService] Ollama model '${model}' not found (404). [${correlationId}]`,
+		);
+
+		// Check if auto-pull is enabled
+		const autoPull = process.env.OLLAMA_AUTO_PULL_MODELS !== 'false'; // Default to true
+		if (autoPull) {
+			logger.info(`[LLMService] Auto-pull enabled, attempting to download model '${model}'...`);
+
+			// Attempt to pull the model (async, don't wait)
+			this.pullOllamaModel(model, trigger).then((success) => {
+				if (success) {
+					logger.info(`[LLMService] Model '${model}' is now available for future requests`);
+				} else {
+					logger.error(
+						`[LLMService] Failed to auto-pull model '${model}'. Please run manually: ollama pull ${model}`,
+					);
+				}
+			});
+		} else {
+			logger.error(`[LLMService] Auto-pull disabled. Please run: ollama pull ${model}`);
 		}
 	}
 
@@ -537,13 +534,17 @@ Message to analyze: "${message.content}"`;
 			logger.info(`[LLMService] 🔄 Attempting to pull Ollama model: ${model} (trigger: ${trigger})`);
 			logger.info(`[LLMService] This may take several minutes depending on model size...`);
 
+			// Configurable timeout for large models (default: 20 minutes)
+			// Large models (70B+) can be 40+ GB and may take longer to download
+			const timeoutMs = parseInt(process.env.OLLAMA_PULL_TIMEOUT_MS || '1200000'); // 20 min default
+
 			const response = await fetch(`${apiUrl}/api/pull`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({ name: model }),
-				signal: AbortSignal.timeout(600000), // 10 minute timeout for large models
+				signal: AbortSignal.timeout(timeoutMs),
 			});
 
 			if (!response.ok) {
@@ -640,7 +641,9 @@ Message to analyze: "${message.content}"`;
 			this.modelPullCounter.inc({ model, status: 'failed', trigger });
 			this.modelPullDurationHistogram.observe({ model, status: 'failed' }, duration);
 
+			// Remove from both sets to allow retry on next attempt
 			this.pullingModels.delete(model);
+			this.pulledModels.delete(model);
 			return false;
 		}
 	}
