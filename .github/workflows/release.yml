@@ -126,6 +126,7 @@ jobs:
           ENV_EMOJI="${{ needs.determine-environment.outputs.env-emoji }}"
           DEBUG_MODE="${{ needs.determine-environment.outputs.debug-mode }}"
           NODE_ENV="${{ needs.determine-environment.outputs.node-env }}"
+          LOG_LEVEL="${{ needs.determine-environment.outputs.log-level }}"
 
           # Convert containers JSON array to space-separated list
           CONTAINERS=$(echo '${{ needs.determine-environment.outputs.containers }}' | jq -r '. | join(" ")')
@@ -135,6 +136,7 @@ jobs:
           echo "### ⚙️ Build Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **DEBUG_MODE**: \`$DEBUG_MODE\`" >> $GITHUB_STEP_SUMMARY
           echo "- **NODE_ENV**: \`$NODE_ENV\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **LOG_LEVEL**: \`$LOG_LEVEL\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Container Images" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
