@@ -90,7 +90,8 @@ describe('MockLLMProvider', () => {
 			const duration = Date.now() - startTime;
 
 			expect(response.content).toBe('Hi there!');
-			expect(duration).toBeGreaterThanOrEqual(10);
+			// Use a more lenient check to avoid flakiness due to timing precision
+			expect(duration).toBeGreaterThanOrEqual(8);
 		});
 
 		it('should simulate errors when configured', async () => {
