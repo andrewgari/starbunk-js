@@ -13,26 +13,6 @@ permissions:
   packages: write
 
 jobs:
-  setup:
-    name: 🔧 Setup
-    runs-on: ubuntu-latest
-    outputs:
-      containers: ${{ steps.define-containers.outputs.containers }}
-      containers-json: ${{ steps.define-containers.outputs.containers-json }}
-    steps:
-      - name: Define container list
-        id: define-containers
-        run: |
-          # Define the container list in one place
-          CONTAINERS="bunkbot djcova starbunk-dnd covabot"
-
-          # Generate JSON array from the space-separated list
-          CONTAINERS_JSON=$(echo "$CONTAINERS" | jq -Rc 'split(" ")')
-
-          echo "containers=$CONTAINERS" >> $GITHUB_OUTPUT
-          echo "containers-json=$CONTAINERS_JSON" >> $GITHUB_OUTPUT
-
-          echo "📦 Container list: $CONTAINERS"
   determine-environment:
     name: 🔍 Determine Environment
     runs-on: ubuntu-latest
@@ -61,11 +41,6 @@ jobs:
   tag-release:
     name: 🏷️ Tag ${{ matrix.container }} for release
     runs-on: ubuntu-latest
-    needs: setup
-    strategy:
-      fail-fast: false
-      matrix:
-        container: ${{ fromJSON(needs.setup.outputs.containers-json) }}
     needs: determine-environment
     strategy:
       fail-fast: false
