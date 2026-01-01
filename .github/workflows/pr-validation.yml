@@ -2,7 +2,7 @@ name: PR - Validation & Build
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
   push:
     branches: [main]
   workflow_dispatch:
@@ -12,6 +12,9 @@ on:
         required: false
         type: boolean
         default: false
+
+# To force build all containers on a PR regardless of change detection,
+# add the 'force-build' label to the PR
 
 env:
   REGISTRY: ghcr.io
@@ -157,7 +160,7 @@ jobs:
     name: 🧪 Test & Build - Bunkbot
     runs-on: ubuntu-latest
     needs: [type-check, lint, detect-changes-bunkbot]
-    if: needs.detect-changes-bunkbot.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    if: needs.detect-changes-bunkbot.outputs.changed == 'true' || github.event.inputs.force_all == 'true' || contains(github.event.pull_request.labels.*.name, 'force-build')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -184,7 +187,7 @@ jobs:
     name: 🧪 Test & Build - DJCova
     runs-on: ubuntu-latest
     needs: [type-check, lint, detect-changes-djcova]
-    if: needs.detect-changes-djcova.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    if: needs.detect-changes-djcova.outputs.changed == 'true' || github.event.inputs.force_all == 'true' || contains(github.event.pull_request.labels.*.name, 'force-build')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -211,7 +214,7 @@ jobs:
     name: 🧪 Test & Build - Starbunk DnD
     runs-on: ubuntu-latest
     needs: [type-check, lint, detect-changes-starbunk-dnd]
-    if: needs.detect-changes-starbunk-dnd.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    if: needs.detect-changes-starbunk-dnd.outputs.changed == 'true' || github.event.inputs.force_all == 'true' || contains(github.event.pull_request.labels.*.name, 'force-build')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -238,7 +241,7 @@ jobs:
     name: 🧪 Test & Build - Covabot
     runs-on: ubuntu-latest
     needs: [type-check, lint, detect-changes-covabot]
-    if: needs.detect-changes-covabot.outputs.changed == 'true' || github.event.inputs.force_all == 'true'
+    if: needs.detect-changes-covabot.outputs.changed == 'true' || github.event.inputs.force_all == 'true' || contains(github.event.pull_request.labels.*.name, 'force-build')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
