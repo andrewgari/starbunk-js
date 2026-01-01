@@ -6,6 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  CONTAINERS_JSON: '["bunkbot", "djcova", "starbunk-dnd", "covabot"]'
 
 permissions:
   contents: read
@@ -18,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container: [bunkbot, djcova, starbunk-dnd, covabot]
+        container: ${{ fromJSON(env.CONTAINERS_JSON) }}
     steps:
       - name: Login to Container Registry
         uses: docker/login-action@v3
@@ -65,6 +66,9 @@ jobs:
           VERSION="${{ github.event.release.tag_name }}"
           IS_PRERELEASE="${{ github.event.release.prerelease }}"
 
+          # Parse container list from JSON env variable
+          CONTAINERS=$(echo '${{ env.CONTAINERS_JSON }}' | jq -r '.[]')
+
           # Determine environment tag based on release type
           if [ "$IS_PRERELEASE" = "true" ]; then
             ENV_TAG="staging"
@@ -82,14 +86,14 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Container | Environment Tag | Version Tag |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-----------------|-------------|" >> $GITHUB_STEP_SUMMARY
-          for container in bunkbot djcova starbunk-dnd covabot; do
+          for container in $CONTAINERS; do
             echo "| $container | \`ghcr.io/${{ github.repository_owner }}/$container:$ENV_TAG\` | \`ghcr.io/${{ github.repository_owner }}/$container:$VERSION\` |" >> $GITHUB_STEP_SUMMARY
           done
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔧 Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "# Pull $ENV_TAG versions" >> $GITHUB_STEP_SUMMARY
-          for container in bunkbot djcova starbunk-dnd covabot; do
+          for container in $CONTAINERS; do
             echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:$ENV_TAG" >> $GITHUB_STEP_SUMMARY
           done
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
