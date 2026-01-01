@@ -34,6 +34,23 @@ RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
 
+# Build-time arguments for non-secret environment variables
+# These can be overridden at runtime via .env file or docker-compose
+ARG DEBUG_MODE=false
+ARG NODE_ENV=production
+ARG LOG_LEVEL=info
+ARG LOG_FORMAT=json
+ARG ENABLE_METRICS=true
+ARG ENABLE_STRUCTURED_LOGGING=true
+ARG ENABLE_RUNTIME_METRICS=true
+ARG METRICS_PUSH_INTERVAL=30000
+ARG METRICS_PORT=3000
+ARG HEALTH_PORT=3000
+ARG OLLAMA_DEFAULT_MODEL=qwen2.5:7b
+ARG OLLAMA_AUTO_PULL_MODELS=true
+ARG OLLAMA_PULL_ON_STARTUP=true
+ARG OLLAMA_PULL_TIMEOUT_MS=1200000
+
 WORKDIR /app
 
 # Create user and install runtime dependencies in one layer
@@ -46,6 +63,23 @@ COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/node_modules ./node_m
 COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/shared ./shared
 COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/dist ./dist
 COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/package.json ./
+
+# Set default environment variables from build args
+# These can be overridden at runtime via .env file or docker-compose environment
+ENV DEBUG_MODE=${DEBUG_MODE} \
+    NODE_ENV=${NODE_ENV} \
+    LOG_LEVEL=${LOG_LEVEL} \
+    LOG_FORMAT=${LOG_FORMAT} \
+    ENABLE_METRICS=${ENABLE_METRICS} \
+    ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING} \
+    ENABLE_RUNTIME_METRICS=${ENABLE_RUNTIME_METRICS} \
+    METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL} \
+    METRICS_PORT=${METRICS_PORT} \
+    HEALTH_PORT=${HEALTH_PORT} \
+    OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL} \
+    OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS} \
+    OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP} \
+    OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS}
 
 # Switch to non-root user
 USER starbunk-dnd

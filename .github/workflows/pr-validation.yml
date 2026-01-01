@@ -297,6 +297,10 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
 
   docker-build-djcova:
     name: 🐳 Docker Build - DJCova
@@ -326,6 +330,10 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
 
   docker-build-starbunk-dnd:
     name: 🐳 Docker Build - Starbunk DnD
@@ -355,6 +363,10 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
 
   docker-build-covabot:
     name: 🐳 Docker Build - Covabot
@@ -384,6 +396,10 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
 
   # =============================================================================
   # STAGE 4 - GIT TAGGING (per container, conditional)
