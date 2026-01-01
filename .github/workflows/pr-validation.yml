@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled]
   push:
-    branches: [main]
+    branches: [main]  # Runs validation (type-check, lint, tests) on main; Docker builds only run for PRs
   workflow_dispatch:
     inputs:
       force_all:
@@ -15,6 +15,10 @@ on:
 
 # To force build all containers on a PR regardless of change detection,
 # add the 'force-validation' label to the PR
+#
+# Note: Docker builds only execute on pull_request events (not on main branch pushes)
+# to prevent debug-enabled images from being created when PRs merge.
+# The publish-main.yml workflow handles production builds on main branch.
 
 env:
   REGISTRY: ghcr.io
