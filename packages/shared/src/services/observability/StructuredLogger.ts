@@ -110,7 +110,7 @@ export class StructuredLogger {
 					event: log.event, // eslint-disable-line @typescript-eslint/no-unused-vars
 					level: log.event === 'bot_error' ? 'error' : 'info', // eslint-disable-line @typescript-eslint/no-unused-vars
 				},
-				values: [[Date.now() * 1000000, JSON.stringify(structuredLog)]], // eslint-disable-line @typescript-eslint/no-unused-vars
+				values: [[(Date.now() * 1000000).toString(), JSON.stringify(structuredLog)]], // eslint-disable-line @typescript-eslint/no-unused-vars
 			});
 		}
 	}
@@ -137,7 +137,7 @@ export class StructuredLogger {
 					event: 'channel_activity', // eslint-disable-line @typescript-eslint/no-unused-vars
 					level: 'info', // eslint-disable-line @typescript-eslint/no-unused-vars
 				},
-				values: [[Date.now() * 1000000, JSON.stringify(log)]], // eslint-disable-line @typescript-eslint/no-unused-vars
+				values: [[(Date.now() * 1000000).toString(), JSON.stringify(log)]], // eslint-disable-line @typescript-eslint/no-unused-vars
 			});
 		}
 	}
@@ -164,7 +164,7 @@ export class StructuredLogger {
 					event: log.event, // eslint-disable-line @typescript-eslint/no-unused-vars
 					level,
 				},
-				values: [[Date.now() * 1000000, JSON.stringify(log)]], // eslint-disable-line @typescript-eslint/no-unused-vars
+				values: [[(Date.now() * 1000000).toString(), JSON.stringify(log)]], // eslint-disable-line @typescript-eslint/no-unused-vars
 			});
 		}
 	}
@@ -197,7 +197,7 @@ export class StructuredLogger {
 					event,
 					level: 'debug', // eslint-disable-line @typescript-eslint/no-unused-vars
 				},
-				values: [[Date.now() * 1000000, JSON.stringify(context)]], // eslint-disable-line @typescript-eslint/no-unused-vars
+				values: [[(Date.now() * 1000000).toString(), JSON.stringify(context)]], // eslint-disable-line @typescript-eslint/no-unused-vars
 			});
 		}
 	}
@@ -233,9 +233,10 @@ export class StructuredLogger {
 }
 
 // Loki client for log shipping
+// Note: Loki API requires timestamp as string in nanoseconds, not number
 interface LokiStream {
 	stream: Record<string, string>; // eslint-disable-line @typescript-eslint/no-unused-vars
-	values: [number, string][]; // eslint-disable-line @typescript-eslint/no-unused-vars
+	values: [string, string][]; // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 
 class LokiClient {
