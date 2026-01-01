@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled]
   push:
-    branches: [main]
+    branches: [main]  # Runs validation (type-check, lint, tests) on main; Docker builds only run for PRs
   workflow_dispatch:
     inputs:
       force_all:
@@ -15,6 +15,10 @@ on:
 
 # To force build all containers on a PR regardless of change detection,
 # add the 'force-validation' label to the PR
+#
+# Note: Docker builds only execute on pull_request events (not on main branch pushes)
+# to prevent debug-enabled images from being created when PRs merge.
+# The publish-main.yml workflow handles production builds on main branch.
 
 env:
   REGISTRY: ghcr.io
@@ -273,7 +277,7 @@ jobs:
     name: 🐳 Docker Build - Bunkbot
     runs-on: ubuntu-latest
     needs: [test-build-bunkbot]
-    if: needs.test-build-bunkbot.result == 'success'
+    if: needs.test-build-bunkbot.result == 'success' && github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -297,12 +301,16 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
 
   docker-build-djcova:
     name: 🐳 Docker Build - DJCova
     runs-on: ubuntu-latest
     needs: [test-build-djcova]
-    if: needs.test-build-djcova.result == 'success'
+    if: needs.test-build-djcova.result == 'success' && github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -326,12 +334,16 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
 
   docker-build-starbunk-dnd:
     name: 🐳 Docker Build - Starbunk DnD
     runs-on: ubuntu-latest
     needs: [test-build-starbunk-dnd]
-    if: needs.test-build-starbunk-dnd.result == 'success'
+    if: needs.test-build-starbunk-dnd.result == 'success' && github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -355,12 +367,16 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
 
   docker-build-covabot:
     name: 🐳 Docker Build - Covabot
     runs-on: ubuntu-latest
     needs: [test-build-covabot]
-    if: needs.test-build-covabot.result == 'success'
+    if: needs.test-build-covabot.result == 'success' && github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -384,6 +400,10 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
 
   # =============================================================================
   # STAGE 4 - GIT TAGGING (per container, conditional)

@@ -64,6 +64,10 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=false
+            NODE_ENV=production
+            LOG_LEVEL=info
 
       - name: Skip notification
         if: steps.check.outputs.should_build == 'false'

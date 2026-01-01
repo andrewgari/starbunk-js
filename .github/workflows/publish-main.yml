@@ -328,6 +328,9 @@ jobs:
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
             VERSION=${{ github.run_id }}
+            DEBUG_MODE=false
+            NODE_ENV=production
+            LOG_LEVEL=info
 
       - name: 🔍 Container Health Verification
         run: |

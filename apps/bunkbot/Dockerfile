@@ -46,6 +46,19 @@ RUN npm prune --omit=dev
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
 
+# Build-time arguments for non-secret environment variables
+# These can be overridden at runtime via .env file or docker-compose
+ARG DEBUG_MODE=false
+ARG NODE_ENV=production
+ARG LOG_LEVEL=info
+ARG LOG_FORMAT=json
+ARG ENABLE_METRICS=true
+ARG ENABLE_STRUCTURED_LOGGING=true
+ARG ENABLE_RUNTIME_METRICS=true
+ARG METRICS_PUSH_INTERVAL=30000
+ARG METRICS_PORT=3000
+ARG HEALTH_PORT=3000
+
 WORKDIR /app
 
 # Create user and install runtime dependencies in one layer
@@ -58,6 +71,19 @@ COPY --from=builder --chown=bunkbot:bunkbot /app/node_modules ./node_modules
 COPY --from=builder --chown=bunkbot:bunkbot /app/shared ./shared
 COPY --from=builder --chown=bunkbot:bunkbot /app/dist ./dist
 COPY --from=builder --chown=bunkbot:bunkbot /app/package.json ./
+
+# Set default environment variables from build args
+# These can be overridden at runtime via .env file or docker-compose environment
+ENV DEBUG_MODE=${DEBUG_MODE} \
+    NODE_ENV=${NODE_ENV} \
+    LOG_LEVEL=${LOG_LEVEL} \
+    LOG_FORMAT=${LOG_FORMAT} \
+    ENABLE_METRICS=${ENABLE_METRICS} \
+    ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING} \
+    ENABLE_RUNTIME_METRICS=${ENABLE_RUNTIME_METRICS} \
+    METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL} \
+    METRICS_PORT=${METRICS_PORT} \
+    HEALTH_PORT=${HEALTH_PORT}
 
 # Switch to non-root user
 USER bunkbot
