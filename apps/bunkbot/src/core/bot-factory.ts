@@ -21,6 +21,8 @@ export interface BotConfig {
 	responseRate?: number;
 	messageFilter?: MessageFilterFunction;
 	skipBotMessages?: boolean; // Deprecated - use messageFilter instead
+	respondsToBots?: boolean; // If true, only responds to bot messages; if false/undefined, only responds to humans
+	responseChance?: number; // 0-100 probability of responding after all other filters pass
 	disabled?: boolean;
 	discordService?: DiscordService; // Discord service for sending messages (optional)
 }
@@ -39,5 +41,5 @@ export class BotFactory {
 	}
 }
 
-// Re-export default message filter for reference in custom filters
-export { defaultMessageFilter } from './bot-builder';
+// Re-export message filter creator for reference in custom filters
+export { createDefaultMessageFilter } from './bot-builder';
