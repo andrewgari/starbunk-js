@@ -188,19 +188,36 @@ docker run --rm --entrypoint env ghcr.io/andrewgari/bunkbot:latest | grep DEBUG_
 
 ## CI/CD Workflow Summary
 
-1. **PR Created**:
-   - Builds image with `DEBUG_MODE=true`
-   - Tags as `pr-<number>`
-   - Suitable for testing and development
+### Image Build Separation
 
-2. **PR Merged to Main**:
-   - Builds new image with `DEBUG_MODE=false`
-   - Tags as `latest` and `<sha>`
-   - Production-ready configuration
+The CI/CD pipeline uses **two separate workflows** to ensure debug and production images never conflict:
 
-3. **Manual Build**:
-   - Uses production settings by default
-   - Can override via workflow inputs
+1. **PR Validation Workflow** (`pr-validation.yml`):
+   - **Trigger**: Pull request events only (opened, updated, labeled)
+   - **Build args**: `DEBUG_MODE=true`, `NODE_ENV=development`, `LOG_LEVEL=debug`
+   - **Image tags**: `pr-<number>` (e.g., `ghcr.io/andrewgari/bunkbot:pr-123`)
+   - **Purpose**: Testing and development
+   - **Note**: This workflow does NOT run on pushes to main, preventing debug images from being created on merge
+
+2. **Production Deployment Workflow** (`publish-main.yml`):
+   - **Trigger**: Pushes to main branch (including PR merges)
+   - **Build args**: `DEBUG_MODE=false`, `NODE_ENV=production`, `LOG_LEVEL=info`
+   - **Image tags**: `latest`, `<sha>`, `<timestamp>-<sha>-stable`
+   - **Purpose**: Production deployments
+   - **Note**: Always builds fresh images with production settings when code is merged
+
+### What Happens When a PR Merges
+
+1. **PR is merged** to main branch
+2. **Only** the production workflow (`publish-main.yml`) runs
+3. New production images are built with `DEBUG_MODE=false`
+4. Images are tagged as `latest`, `<sha>`, etc.
+5. The PR image (with debug mode) remains separate with its `pr-<number>` tag
+6. **Production images never inherit debug settings from PR builds**
+
+### Manual Builds
+
+Manual workflow dispatches use production settings by default, but can be customized via workflow inputs.
 
 ## Additional Resources
 

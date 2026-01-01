@@ -273,7 +273,7 @@ jobs:
     name: 🐳 Docker Build - Bunkbot
     runs-on: ubuntu-latest
     needs: [test-build-bunkbot]
-    if: needs.test-build-bunkbot.result == 'success'
+    if: needs.test-build-bunkbot.result == 'success' && github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -306,7 +306,7 @@ jobs:
     name: 🐳 Docker Build - DJCova
     runs-on: ubuntu-latest
     needs: [test-build-djcova]
-    if: needs.test-build-djcova.result == 'success'
+    if: needs.test-build-djcova.result == 'success' && github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -339,7 +339,7 @@ jobs:
     name: 🐳 Docker Build - Starbunk DnD
     runs-on: ubuntu-latest
     needs: [test-build-starbunk-dnd]
-    if: needs.test-build-starbunk-dnd.result == 'success'
+    if: needs.test-build-starbunk-dnd.result == 'success' && github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -372,7 +372,7 @@ jobs:
     name: 🐳 Docker Build - Covabot
     runs-on: ubuntu-latest
     needs: [test-build-covabot]
-    if: needs.test-build-covabot.result == 'success'
+    if: needs.test-build-covabot.result == 'success' && github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

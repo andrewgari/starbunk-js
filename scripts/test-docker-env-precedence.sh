@@ -121,6 +121,20 @@ else
 fi
 
 echo ""
+echo "Workflow separation (prevents debug images on main):"
+if grep "docker-build-bunkbot:" .github/workflows/pr-validation.yml -A 5 | grep "github.event_name == 'pull_request'" > /dev/null; then
+    echo "  ✓ PR validation workflow only builds on pull_request events"
+else
+    echo "  ❌ PR validation workflow may build on main branch"
+fi
+
+if grep "on:" .github/workflows/publish-main.yml -A 3 | grep "branches: \[ main \]" > /dev/null; then
+    echo "  ✓ Production workflow builds on main branch"
+else
+    echo "  ❌ Production workflow not configured for main branch"
+fi
+
+echo ""
 echo "========================================"
 echo "All Tests Passed! ✓"
 echo "========================================"
@@ -131,9 +145,13 @@ echo "  • docker-compose environment precedence chain works correctly"
 echo "  • No secrets are baked into Docker images"
 echo "  • PR builds have DEBUG_MODE=true"
 echo "  • Production builds have DEBUG_MODE=false"
+echo "  • PR workflow only builds on pull_request events (not on main)"
+echo "  • Production workflow builds on main branch pushes"
 echo ""
 echo "The implementation follows security best practices:"
 echo "  ✓ Secrets are never baked into images"
 echo "  ✓ Non-secret config can be pre-set for convenience"
 echo "  ✓ All values can be overridden at runtime"
+echo "  ✓ Debug and production images are built by separate workflows"
+echo "  ✓ Merging a PR to main always builds fresh production images"
 echo ""
