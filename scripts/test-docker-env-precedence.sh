@@ -67,7 +67,9 @@ echo "Test 4: Security - Secrets NOT in Dockerfiles"
 echo "--------------------------------------------------------"
 echo "Checking Dockerfiles for sensitive patterns..."
 
-cd /home/runner/work/starbunk-js/starbunk-js
+# Get repository root dynamically for portability
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+cd "$REPO_ROOT"
 
 # Check that no token/key ARGs exist in Dockerfiles
 if grep -r "ARG.*TOKEN\|ARG.*KEY\|ARG.*PASSWORD\|ARG.*SECRET" apps/*/Dockerfile; then
@@ -92,13 +94,13 @@ echo "Test 5: Verify CI/CD workflow configurations"
 echo "--------------------------------------------------------"
 
 echo "PR builds (debug mode):"
-if grep -A 3 "build-args:" .github/workflows/pr-validation.yml | grep "DEBUG_MODE=true" > /dev/null; then
+if grep -A 5 "build-args:" .github/workflows/pr-validation.yml | grep "DEBUG_MODE=true" > /dev/null; then
     echo "  ✓ DEBUG_MODE=true"
 else
     echo "  ❌ DEBUG_MODE not set to true"
 fi
 
-if grep -A 3 "build-args:" .github/workflows/pr-validation.yml | grep "NODE_ENV=development" > /dev/null; then
+if grep -A 5 "build-args:" .github/workflows/pr-validation.yml | grep "NODE_ENV=development" > /dev/null; then
     echo "  ✓ NODE_ENV=development"
 else
     echo "  ❌ NODE_ENV not set to development"
