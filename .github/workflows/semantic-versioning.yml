@@ -197,24 +197,11 @@ jobs:
         run: |
           NEW_VERSION="${{ needs.analyze-commits.outputs.new-version }}"
 
-          # Update root package.json
+          # Update root package.json (single source of truth)
           npm version $NEW_VERSION --no-git-tag-version
 
-          # Update container package.json files
-          for container in bunkbot djcova starbunk-dnd covabot; do
-            if [ -f "apps/$container/package.json" ]; then
-              cd apps/$container
-              npm version $NEW_VERSION --no-git-tag-version
-              cd ../..
-            fi
-          done
-
-          # Update shared package
-          if [ -f "packages/shared/package.json" ]; then
-            cd packages/shared
-            npm version $NEW_VERSION --no-git-tag-version
-            cd ../..
-          fi
+          # Sync version to all workspace packages
+          ./scripts/sync-versions.sh
 
       - name: Generate release notes
         id: release-notes
