@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "prepare": "husky",
-    "sync-versions": "./scripts/sync-versions.sh",
+    "sync-versions": "bash ./scripts/sync-versions.sh",
     "build": "npm run build:shared && npm run build:containers",
     "build:shared": "tsc -p packages/shared/tsconfig.json",
     "build:containers": "npm run build:bunkbot && npm run build:djcova && npm run build:starbunk-dnd && npm run build:covabot",

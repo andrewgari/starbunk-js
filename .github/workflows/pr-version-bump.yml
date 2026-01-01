@@ -131,13 +131,12 @@ jobs:
         if: steps.version.outputs.should-bump == 'true' && steps.check.outputs.already-bumped == 'false'
         run: |
           NEW_VERSION="${{ steps.version.outputs.new-version }}"
-          
+
           # Update root package.json
           npm version $NEW_VERSION --no-git-tag-version
 
           # Sync to all packages
-          chmod +x scripts/sync-versions.sh
-          ./scripts/sync-versions.sh
+          bash ./scripts/sync-versions.sh
 
           # Commit the changes
           git add package.json apps/*/package.json packages/shared/package.json apps/*/package-lock.json packages/shared/package-lock.json package-lock.json

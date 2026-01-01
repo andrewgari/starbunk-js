@@ -34,34 +34,50 @@ echo ""
 update_package_version() {
   local package_file=$1
   local package_dir=$(dirname "$package_file")
-  
+
   if [ ! -f "$package_file" ]; then
     echo -e "${YELLOW}⚠️  Skipping: $package_file (not found)${NC}"
     return
   fi
-  
+
   # Get current version
   local current_version=$(node -p "require('./$package_file').version" 2>/dev/null || echo "unknown")
-  
+
   if [ "$current_version" = "$ROOT_VERSION" ]; then
     echo -e "✓ $package_file (already ${ROOT_VERSION})"
     return
   fi
-  
+
   # Update version using npm version (no git tag)
   cd "$package_dir"
-  npm version "$ROOT_VERSION" --no-git-tag-version --allow-same-version > /dev/null 2>&1
+  if ! npm version "$ROOT_VERSION" --no-git-tag-version --allow-same-version > /dev/null; then
+    echo -e "${RED}✗ Failed to update $package_file${NC}"
+    cd "$ROOT_DIR"
+    return 1
+  fi
   cd "$ROOT_DIR"
-  
+
   echo -e "${GREEN}✓ Updated $package_file${NC} (${current_version} → ${ROOT_VERSION})"
 }
 
 # Update all app packages
 echo "Updating app packages..."
 for app in apps/*/package.json; do
-  if [ -f "$app" ]; then
-    update_package_version "$app"
+  # Skip if glob didn't match anything (literal pattern) or file doesn't exist
+  if [ ! -f "$app" ] || [ "$app" = "apps/*/package.json" ]; then
+    continue
   fi
+
+  app_dir="$(dirname "$app")"
+  app_name="$(basename "$app_dir")"
+
+  # Skip hidden app directories (e.g. apps/.cache)
+  if [[ "$app_name" == .* ]]; then
+    echo -e "${YELLOW}⚠️  Skipping hidden app directory: $app_dir${NC}"
+    continue
+  fi
+
+  update_package_version "$app"
 done
 
 echo ""
