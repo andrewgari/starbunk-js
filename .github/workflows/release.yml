@@ -24,7 +24,9 @@ jobs:
         run: |
           # Define the container list in one place
           CONTAINERS="bunkbot djcova starbunk-dnd covabot"
-          CONTAINERS_JSON='["bunkbot","djcova","starbunk-dnd","covabot"]'
+
+          # Generate JSON array from the space-separated list
+          CONTAINERS_JSON=$(echo "$CONTAINERS" | jq -Rc 'split(" ")')
 
           echo "containers=$CONTAINERS" >> $GITHUB_OUTPUT
           echo "containers-json=$CONTAINERS_JSON" >> $GITHUB_OUTPUT
@@ -113,4 +115,3 @@ jobs:
             echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:$ENV_TAG" >> $GITHUB_STEP_SUMMARY
           done
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
