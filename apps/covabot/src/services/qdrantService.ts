@@ -17,9 +17,17 @@ export class QdrantService {
 	private isConnected = false;
 	private collections: Map<string, QdrantCollectionConfig> = new Map();
 
-	// Collection names
-	private readonly PERSONALITY_COLLECTION = 'covabot_personality';
-	private readonly CONVERSATION_COLLECTION = 'covabot_conversations';
+	// Collection names from environment or defaults
+	private readonly PERSONALITY_COLLECTION = process.env.PERSONALITY_COLLECTION || 'covabot_personality';
+	private readonly CONVERSATION_COLLECTION = process.env.CONVERSATION_COLLECTION || 'covabot_conversations';
+	private readonly MEMORY_COLLECTION = process.env.MEMORY_COLLECTION || 'covabot_memory';
+
+	// Configuration from environment
+	private readonly config = {
+		searchLimit: parseInt(process.env.QDRANT_SEARCH_LIMIT || '50'),
+		similarityThreshold: parseFloat(process.env.QDRANT_SIMILARITY_THRESHOLD || '0.7'),
+		batchSize: parseInt(process.env.QDRANT_BATCH_SIZE || '100'),
+	};
 
 	constructor() {
 		const qdrantUrl = process.env.QDRANT_URL || 'http://localhost:6333';
@@ -31,6 +39,7 @@ export class QdrantService {
 		});
 
 		logger.info(`[QdrantService] Configured for URL: ${qdrantUrl}`);
+		logger.info(`[QdrantService] Search limit: ${this.config.searchLimit}, Similarity threshold: ${this.config.similarityThreshold}, Batch size: ${this.config.batchSize}`);
 	}
 
 	static getInstance(): QdrantService {
@@ -181,8 +190,8 @@ export class QdrantService {
 	 */
 	async searchSimilar(queryEmbedding: number[], filters: MemorySearchFilters = {}): Promise<MemorySearchResult[]> {
 		const collectionName = filters.type ? this.getCollectionName(filters.type) : null;
-		const limit = filters.limit || 10;
-		const threshold = filters.similarityThreshold || 0.7;
+		const limit = filters.limit || this.config.searchLimit;
+		const threshold = filters.similarityThreshold || this.config.similarityThreshold;
 
 		try {
 			// Build Qdrant filter

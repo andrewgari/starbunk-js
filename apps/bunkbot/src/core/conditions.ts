@@ -3,6 +3,24 @@ import { extractWebhookId } from '../utils/webhook';
 
 import { Message } from 'discord.js';
 
+// Helper function to parse comma-separated IDs from environment
+function parseIdList(envVar: string | undefined): string[] {
+	if (!envVar) return [];
+	return envVar
+		.split(',')
+		.map((id) => id.trim())
+		.filter((id) => id.length > 0);
+}
+
+// Helper function to parse comma-separated bot names from environment
+function parseBotNameList(envVar: string | undefined): string[] {
+	if (!envVar) return [];
+	return envVar
+		.split(',')
+		.map((name) => name.trim())
+		.filter((name) => name.length > 0);
+}
+
 // Bot identification constants
 const BOT_IDENTIFIERS = {
 	// Discord application/client ID used by all containers (from environment)
@@ -17,7 +35,8 @@ const BOT_IDENTIFIERS = {
 
 	// Other bot identifiers to exclude
 	EXCLUDED_BOT_NAMES: ['CovaBot', 'Cova', 'DJCova', 'Snowbunk'],
-	EXCLUDED_BOT_IDS: [] as string[], // Can be populated with specific bot user IDs
+	EXCLUDED_BOT_IDS: parseIdList(process.env.BOT_WHITELIST_IDS), // Bot IDs that can bypass default filtering
+	INVERSE_BEHAVIOR_BOTS: parseBotNameList(process.env.INVERSE_BEHAVIOR_BOTS), // Bots that only respond to bots
 };
 import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
@@ -239,6 +258,15 @@ export function shouldExcludeFromReplyBots(message: Message): boolean {
 		return false;
 	}
 
+	// Check if bot is whitelisted (can bypass default filtering)
+	const authorId = message.author.id;
+	if (BOT_IDENTIFIERS.EXCLUDED_BOT_IDS.includes(authorId)) {
+		if (isDebugMode()) {
+			logger.debug(`✅ Allowing whitelisted bot message from ID: ${authorId}`);
+		}
+		return false;
+	}
+
 	// Exclude messages from specified bots (CovaBot, DJCova, etc.)
 	const authorName = message.author.username;
 	if (BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.includes(authorName)) {
@@ -308,6 +336,14 @@ export function contextFromBot(includeSelf = true): ContextualTriggerCondition {
 
 		return true;
 	};
+}
+
+/**
+ * Check if a bot has inverse behavior (only responds to bots)
+ * Inverse behavior bots are configured in INVERSE_BEHAVIOR_BOTS environment variable
+ */
+export function hasInverseBehavior(botName: string): boolean {
+	return BOT_IDENTIFIERS.INVERSE_BEHAVIOR_BOTS.includes(botName);
 }
 
 /**
