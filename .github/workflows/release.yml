@@ -85,8 +85,8 @@ jobs:
           RELEASE_TYPE="${{ needs.determine-environment.outputs.release-type }}"
           ENV_EMOJI="${{ needs.determine-environment.outputs.env-emoji }}"
 
-          # Parse container list from JSON env variable
-          CONTAINERS=$(echo '${{ env.CONTAINERS_JSON }}' | jq -r 'join(" ")')
+          # Define container list inline (avoid using workflow env in shell context)
+          CONTAINERS="bunkbot djcova starbunk-dnd covabot"
 
           echo "## $ENV_EMOJI $RELEASE_TYPE $VERSION Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
