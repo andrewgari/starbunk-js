@@ -6,7 +6,7 @@ import {
 	createBotReplyName,
 	createReplyBot,
 	setBotData,
-	defaultMessageFilter,
+	createDefaultMessageFilter,
 } from '../bot-builder';
 
 // Mock the PrismaClient
@@ -667,77 +667,240 @@ describe('Bot builder', () => {
 	});
 });
 
-describe('defaultMessageFilter', () => {
-	it('should skip excluded bot messages', () => {
-		const message = mockMessage({
-			content: 'test',
-			author: mockUser({
-				id: '123456789012345678',
-				username: 'CovaBot',
-				bot: true,
-			}),
+describe('createDefaultMessageFilter', () => {
+	describe('default behavior (respondsToBots not set)', () => {
+		const config = {
+			name: 'TestBot',
+			description: 'A test bot',
+			defaultIdentity: mockBotIdentity(),
+			triggers: [],
+		};
+
+		it('should skip excluded bot messages (CovaBot)', async () => {
+			const filter = createDefaultMessageFilter(config);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({
+					id: '123456789012345678',
+					username: 'CovaBot',
+					bot: true,
+				}),
+			});
+
+			const result = await filter(message);
+			expect(result).toBe(true); // true means skip
 		});
 
-		const result = defaultMessageFilter(message);
-		expect(result).toBe(true); // true means skip
-	});
+		it('should skip non-excluded bot messages by default', async () => {
+			const filter = createDefaultMessageFilter(config);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({
+					id: '123456789012345678',
+					username: 'SomeOtherBot',
+					bot: true,
+				}),
+			});
 
-	it('should allow non-excluded bot messages', () => {
-		const message = mockMessage({
-			content: 'test',
-			author: mockUser({
-				id: '123456789012345678',
-				username: 'SomeOtherBot',
-				bot: true,
-			}),
+			const result = await filter(message);
+			expect(result).toBe(true); // true means skip (default behavior)
 		});
 
-		const result = defaultMessageFilter(message);
-		expect(result).toBe(false); // false means don't skip (allow)
-	});
+		it('should allow human user messages', async () => {
+			const filter = createDefaultMessageFilter(config);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({
+					id: '123456789012345678',
+					username: 'HumanUser',
+					bot: false,
+				}),
+			});
 
-	it('should allow human user messages', () => {
-		const message = mockMessage({
-			content: 'test',
-			author: mockUser({
-				id: '123456789012345678',
-				username: 'HumanUser',
-				bot: false,
-			}),
+			const result = await filter(message);
+			expect(result).toBe(false); // false means don't skip (allow)
 		});
 
-		const result = defaultMessageFilter(message);
-		expect(result).toBe(false); // false means don't skip (allow)
-	});
-
-	it.skip('should prioritize test client detection over exclusion', () => {
-		const testClientId = '123456789012345678';
-		const message = mockMessage({
-			content: 'test',
-			author: mockUser({
-				id: testClientId,
-				username: 'CovaBot', // This would normally be excluded
-				bot: true,
-			}),
-			client: {
-				user: mockUser({ id: testClientId }),
-			},
+		it('should handle null/undefined message gracefully', async () => {
+			const filter = createDefaultMessageFilter(config);
+			const result = await filter(null as any);
+			expect(result).toBe(true); // Skip malformed messages
 		});
 
-		const result = defaultMessageFilter(message);
-		expect(result).toBe(false); // false means don't skip (test client takes priority)
+		it('should handle message without author gracefully', async () => {
+			const filter = createDefaultMessageFilter(config);
+			const message = mockMessage({ content: 'test' });
+			message.author = null as any;
+
+			const result = await filter(message);
+			expect(result).toBe(true); // Skip malformed messages
+		});
 	});
 
-	it('should handle null/undefined message gracefully', () => {
-		const result = defaultMessageFilter(null as any);
-		expect(result).toBe(false); // Default to not skip
+	describe('respondsToBots: true (BotBot behavior)', () => {
+		const config = {
+			name: 'BotBot',
+			description: 'Responds to bots',
+			defaultIdentity: mockBotIdentity(),
+			triggers: [],
+			respondsToBots: true,
+		};
+
+		it('should skip human messages', async () => {
+			const filter = createDefaultMessageFilter(config);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({
+					id: '123456789012345678',
+					username: 'HumanUser',
+					bot: false,
+				}),
+			});
+
+			const result = await filter(message);
+			expect(result).toBe(true); // true means skip
+		});
+
+		it('should allow non-excluded bot messages', async () => {
+			const filter = createDefaultMessageFilter(config);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({
+					id: '987654321098765432',
+					username: 'SomeOtherBot',
+					bot: true,
+				}),
+			});
+
+			const result = await filter(message);
+			expect(result).toBe(false); // false means allow
+		});
+
+		it('should skip excluded bot messages (CovaBot)', async () => {
+			const filter = createDefaultMessageFilter(config);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({
+					id: '123456789012345678',
+					username: 'CovaBot',
+					bot: true,
+				}),
+			});
+
+			const result = await filter(message);
+			expect(result).toBe(true); // true means skip (excluded)
+		});
+
+		it('should skip self messages', async () => {
+			const filter = createDefaultMessageFilter(config);
+			const clientId = '111222333444555666';
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({
+					id: clientId,
+					username: 'BotBot',
+					bot: true,
+				}),
+			});
+			message.client = {
+				user: mockUser({ id: clientId }),
+			} as any;
+
+			const result = await filter(message);
+			expect(result).toBe(true); // true means skip (self-message)
+		});
 	});
 
-	it('should handle message without author gracefully', () => {
-		const message = mockMessage({ content: 'test' });
-		message.author = null as any;
+	describe('responseChance configuration', () => {
+		it('should allow message when random is below responseChance', async () => {
+			jest.spyOn(Math, 'random').mockReturnValue(0.005); // 0.5%
 
-		const result = defaultMessageFilter(message);
-		expect(result).toBe(false); // Default to not skip
+			const config = {
+				name: 'ChanceBot',
+				description: 'Responds with 1% chance',
+				defaultIdentity: mockBotIdentity(),
+				triggers: [],
+				responseChance: 1,
+			};
+
+			const filter = createDefaultMessageFilter(config);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({ bot: false }),
+			});
+
+			const result = await filter(message);
+			expect(result).toBe(false); // false means allow (0.5% < 1%)
+		});
+
+		it('should skip message when random is above responseChance', async () => {
+			jest.spyOn(Math, 'random').mockReturnValue(0.99); // 99%
+
+			const config = {
+				name: 'ChanceBot',
+				description: 'Responds with 1% chance',
+				defaultIdentity: mockBotIdentity(),
+				triggers: [],
+				responseChance: 1,
+			};
+
+			const filter = createDefaultMessageFilter(config);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({ bot: false }),
+			});
+
+			const result = await filter(message);
+			expect(result).toBe(true); // true means skip (99% > 1%)
+		});
+
+		it('should work without responseChance set', async () => {
+			const config = {
+				name: 'NormalBot',
+				description: 'Normal bot',
+				defaultIdentity: mockBotIdentity(),
+				triggers: [],
+			};
+
+			const filter = createDefaultMessageFilter(config);
+			const message = mockMessage({
+				content: 'test',
+				author: mockUser({ bot: false }),
+			});
+
+			const result = await filter(message);
+			expect(result).toBe(false); // false means allow (no chance restriction)
+		});
+	});
+
+	describe('combined respondsToBots and responseChance', () => {
+		it('should apply both filters correctly', async () => {
+			jest.spyOn(Math, 'random').mockReturnValue(0.005); // 0.5%
+
+			const config = {
+				name: 'BotBot',
+				description: 'Responds to bots with 1% chance',
+				defaultIdentity: mockBotIdentity(),
+				triggers: [],
+				respondsToBots: true,
+				responseChance: 1,
+			};
+
+			const filter = createDefaultMessageFilter(config);
+
+			// Human message should be skipped regardless of chance
+			const humanMessage = mockMessage({
+				content: 'test',
+				author: mockUser({ id: '123', username: 'Human', bot: false }),
+			});
+			expect(await filter(humanMessage)).toBe(true); // Skip human
+
+			// Bot message should pass both filters
+			const botMessage = mockMessage({
+				content: 'test',
+				author: mockUser({ id: '456', username: 'OtherBot', bot: true }),
+			});
+			expect(await filter(botMessage)).toBe(false); // Allow bot (within chance)
+		});
 	});
 });
