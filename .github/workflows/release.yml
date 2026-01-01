@@ -6,6 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  CONTAINERS_JSON: '["bunkbot", "djcova", "starbunk-dnd", "covabot"]'
 
 permissions:
   contents: read
@@ -32,6 +33,30 @@ jobs:
           echo "containers-json=$CONTAINERS_JSON" >> $GITHUB_OUTPUT
 
           echo "📦 Container list: $CONTAINERS"
+  determine-environment:
+    name: 🔍 Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      env-tag: ${{ steps.determine.outputs.env-tag }}
+      release-type: ${{ steps.determine.outputs.release-type }}
+      env-emoji: ${{ steps.determine.outputs.env-emoji }}
+    steps:
+      - name: Determine environment tag based on release type
+        id: determine
+        run: |
+          IS_PRERELEASE="${{ github.event.release.prerelease }}"
+          
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            echo "env-tag=staging" >> $GITHUB_OUTPUT
+            echo "release-type=Pre-Release" >> $GITHUB_OUTPUT
+            echo "env-emoji=🧪" >> $GITHUB_OUTPUT
+            echo "🏷️ Pre-release detected - environment is staging"
+          else
+            echo "env-tag=prod" >> $GITHUB_OUTPUT
+            echo "release-type=Production Release" >> $GITHUB_OUTPUT
+            echo "env-emoji=🚀" >> $GITHUB_OUTPUT
+            echo "🏷️ Full release detected - environment is prod"
+          fi
 
   tag-release:
     name: 🏷️ Tag ${{ matrix.container }} for release
@@ -41,6 +66,11 @@ jobs:
       fail-fast: false
       matrix:
         container: ${{ fromJSON(needs.setup.outputs.containers-json) }}
+    needs: determine-environment
+    strategy:
+      fail-fast: false
+      matrix:
+        container: ${{ fromJSON(env.CONTAINERS_JSON) }}
     steps:
       - name: Login to Container Registry
         uses: docker/login-action@v3
@@ -56,16 +86,7 @@ jobs:
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}"
           VERSION="${{ github.event.release.tag_name }}"
-          IS_PRERELEASE="${{ github.event.release.prerelease }}"
-
-          # Determine environment tag based on release type
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            ENV_TAG="staging"
-            echo "🏷️ Pre-release detected - tagging as staging"
-          else
-            ENV_TAG="prod"
-            echo "🏷️ Full release detected - tagging as prod"
-          fi
+          ENV_TAG="${{ needs.determine-environment.outputs.env-tag }}"
 
           echo "🏷️ Tagging $IMAGE:latest as $ENV_TAG and $VERSION"
 
@@ -80,12 +101,18 @@ jobs:
   release-summary:
     name: 📋 Release Summary
     runs-on: ubuntu-latest
-    needs: [setup, tag-release]
+    needs: [setup, determine-environment, tag-release]
     steps:
       - name: Generate summary
         run: |
           VERSION="${{ github.event.release.tag_name }}"
+          ENV_TAG="${{ needs.determine-environment.outputs.env-tag }}"
+          RELEASE_TYPE="${{ needs.determine-environment.outputs.release-type }}"
+          ENV_EMOJI="${{ needs.determine-environment.outputs.env-emoji }}"
           IS_PRERELEASE="${{ github.event.release.prerelease }}"
+
+          # Parse container list from JSON env variable
+          CONTAINERS=$(echo '${{ env.CONTAINERS_JSON }}' | jq -r 'join(" ")')
 
           # Determine environment tag based on release type
           if [ "$IS_PRERELEASE" = "true" ]; then
@@ -104,14 +131,14 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Container | Environment Tag | Version Tag |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-----------------|-------------|" >> $GITHUB_STEP_SUMMARY
-          for container in ${{ needs.setup.outputs.containers }}; do
+          for container in $CONTAINERS; do
             echo "| $container | \`ghcr.io/${{ github.repository_owner }}/$container:$ENV_TAG\` | \`ghcr.io/${{ github.repository_owner }}/$container:$VERSION\` |" >> $GITHUB_STEP_SUMMARY
           done
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔧 Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "# Pull $ENV_TAG versions" >> $GITHUB_STEP_SUMMARY
-          for container in ${{ needs.setup.outputs.containers }}; do
+          for container in $CONTAINERS; do
             echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:$ENV_TAG" >> $GITHUB_STEP_SUMMARY
           done
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
