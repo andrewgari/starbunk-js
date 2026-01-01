@@ -247,6 +247,8 @@ The CI/CD pipeline uses **four separate workflows** to ensure appropriate settin
    - **Trigger**: Creating a full release on GitHub
    - **Build args**: `DEBUG_MODE=false`, `NODE_ENV=production`, `LOG_LEVEL=info`
    - **Image tags**: `prod`, release version (e.g., `v1.0.0`)
+   - **Purpose**: Production release images for tagged versions with full production settings
+   - **Note**: Builds fresh, immutable release images (not just tags) to ensure stable, reproducible production deployments
 ### What Happens in Each Scenario
 
 #### When a PR is Opened/Updated
