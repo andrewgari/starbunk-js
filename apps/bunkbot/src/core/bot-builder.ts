@@ -3,7 +3,7 @@ import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
-import { shouldExcludeFromReplyBots, hasInverseBehavior } from './conditions';
+import { shouldExcludeFromReplyBots } from './conditions';
 
 /**
  * Type for message filtering function
@@ -11,55 +11,69 @@ import { shouldExcludeFromReplyBots, hasInverseBehavior } from './conditions';
 export type MessageFilterFunction = (message: Message) => boolean | Promise<boolean>;
 
 /**
- * Default message filter that bots use unless they provide their own
- * Only skips BunkBot self-messages, allows all other messages through
+ * Create a default message filter based on bot configuration
+ * Handles bot vs human message routing, exclusions, and response chance
  */
-export function defaultMessageFilter(message: Message): boolean {
-	// Handle null/undefined message gracefully
-	if (!message?.author) {
-		return false; // Default to not skip for malformed messages
-	}
-
-	// Only skip if message is from BunkBot itself (self-message)
-	if (shouldExcludeFromReplyBots(message)) {
-		if (isDebugMode()) {
-			logger.debug(`🚫 Skipping BunkBot self-message`);
-		}
-		return true; // Skip this message
-	}
-
-	// Allow all other messages (human, CovaBot, other bots, etc.)
-	if (isDebugMode()) {
-		logger.debug(`✅ Processing message from: ${message.author.username}`);
-	}
-	return false; // Don't skip
-}
-
-/**
- * Wraps a message filter with inverse behavior support
- * If a bot has inverse behavior, it will only respond to bot messages
- * Otherwise, it uses the provided filter as-is
- */
-export function withInverseBehaviorSupport(
-	botName: string,
-	baseFilter: MessageFilterFunction,
-): MessageFilterFunction {
+export function createDefaultMessageFilter(config: ReplyBotConfig): MessageFilterFunction {
 	return async (message: Message): Promise<boolean> => {
-		// Check if this bot has inverse behavior
-		if (hasInverseBehavior(botName)) {
-			// Inverse behavior: only respond to bot messages
-			if (!message.author.bot) {
-				if (isDebugMode()) {
-					logger.debug(`[${botName}] 🚫 Skipping non-bot message (inverse behavior enabled)`);
-				}
-				return true; // Skip non-bot messages
-			}
-			// For bot messages, apply the base filter
-			return await baseFilter(message);
+		// Handle null/undefined message gracefully
+		if (!message?.author) {
+			return true; // Skip malformed messages
 		}
 
-		// Normal behavior: use the base filter as-is
-		return await baseFilter(message);
+		// Self-message protection - always skip messages from BunkBot itself
+		if (message.client?.user && message.author.id === message.client.user.id) {
+			if (isDebugMode()) {
+				logger.debug(`[${config.name}] 🚫 Skipping self-message`);
+			}
+			return true;
+		}
+
+		// Bot message handling based on config
+		if (message.author.bot) {
+			// Check if this bot accepts bot messages
+			if (!config.respondsToBots) {
+				if (isDebugMode()) {
+					logger.debug(`[${config.name}] 🚫 Skipping bot message (respondsToBots not enabled)`);
+				}
+				return true; // Skip bot messages (default behavior)
+			}
+
+			// For bots that DO respond to bots, check exclusions
+			if (shouldExcludeFromReplyBots(message)) {
+				if (isDebugMode()) {
+					logger.debug(`[${config.name}] 🚫 Skipping excluded bot message`);
+				}
+				return true; // Skip excluded bots (CovaBot, DJCova, etc.)
+			}
+		} else {
+			// Human message, but bot only responds to bots
+			if (config.respondsToBots === true) {
+				if (isDebugMode()) {
+					logger.debug(`[${config.name}] 🚫 Skipping human message (respondsToBots enabled)`);
+				}
+				return true; // Skip human messages
+			}
+		}
+
+		// Apply response chance if configured
+		if (config.responseChance !== undefined) {
+			const random = Math.random() * 100;
+			if (random > config.responseChance) {
+				if (isDebugMode()) {
+					logger.debug(
+						`[${config.name}] 🎲 Skipping due to response chance (${random.toFixed(2)} > ${config.responseChance})`,
+					);
+				}
+				return true; // Skip due to probability
+			}
+		}
+
+		// Allow message through
+		if (isDebugMode()) {
+			logger.debug(`[${config.name}] ✅ Processing message from: ${message.author.username}`);
+		}
+		return false;
 	};
 }
 
@@ -99,6 +113,8 @@ export interface ReplyBotConfig {
 	responseRate?: number; // Specific response rate for this bot (overrides defaultResponseRate)
 	messageFilter?: MessageFilterFunction; // Custom message filtering function
 	skipBotMessages?: boolean; // Whether to skip processing messages from other bots (deprecated - use messageFilter)
+	respondsToBots?: boolean; // If true, only responds to bot messages; if false/undefined, only responds to humans
+	responseChance?: number; // 0-100 probability of responding after all other filters pass
 	disabled?: boolean; // Whether the bot is disabled
 	discordService?: DiscordService; // Discord service for sending messages (optional)
 }
@@ -137,22 +153,19 @@ export function validateBotConfig(config: ReplyBotConfig): ValidatedReplyBotConf
 
 	const responseRate = config.responseRate ?? config.defaultResponseRate ?? getBotDefaults().responseRate;
 	const disabled = config.disabled ?? false;
-	const botName = config.name;
 
-	// Use custom messageFilter if provided, otherwise use default behavior
+	// Use custom messageFilter if provided, otherwise create default based on config
 	let messageFilter: MessageFilterFunction;
 	if (config.messageFilter) {
+		// Use custom filter provided by bot configuration
 		messageFilter = config.messageFilter;
 	} else if (config.skipBotMessages === false) {
-		// If explicitly set to false, never skip messages
+		// If explicitly set to false, never skip messages (deprecated legacy behavior)
 		messageFilter = async () => false;
 	} else {
-		// Default behavior - use default message filter
-		messageFilter = defaultMessageFilter;
+		// Create default filter based on respondsToBots and responseChance config
+		messageFilter = createDefaultMessageFilter(config);
 	}
-
-	// Apply inverse behavior support wrapper
-	messageFilter = withInverseBehaviorSupport(botName, messageFilter);
 
 	return {
 		name: createBotReplyName(config.name),

@@ -18,21 +18,8 @@ function parseIdList(envVar: string | undefined): string[] {
 }
 
 /**
- * Parse comma-separated bot names from environment variable
- * @param envVar - Environment variable containing comma-separated bot names
- * @returns Array of trimmed, non-empty bot names
- */
-function parseBotNameList(envVar: string | undefined): string[] {
-	if (!envVar) return [];
-	return envVar
-		.split(',')
-		.map((name) => name.trim())
-		.filter((name) => name.length > 0);
-}
-
-/**
  * Bot identification constants
- * Loads whitelisted bot IDs and inverse behavior bots from environment variables
+ * Loads whitelisted bot IDs from environment variables
  */
 const BOT_IDENTIFIERS = {
 	// Discord application/client ID used by all containers (from environment)
@@ -48,7 +35,6 @@ const BOT_IDENTIFIERS = {
 	// Other bot identifiers to exclude
 	EXCLUDED_BOT_NAMES: ['CovaBot', 'Cova', 'DJCova', 'Snowbunk'],
 	WHITELISTED_BOT_IDS: parseIdList(process.env.BOT_WHITELIST_IDS), // Bot IDs that can bypass default filtering
-	INVERSE_BEHAVIOR_BOTS: parseBotNameList(process.env.INVERSE_BEHAVIOR_BOTS), // Bots that only respond to bots
 };
 /**
  * Core condition type - returns boolean based on message
@@ -346,14 +332,6 @@ export function contextFromBot(includeSelf = true): ContextualTriggerCondition {
 
 		return true;
 	};
-}
-
-/**
- * Check if a bot has inverse behavior (only responds to bots)
- * Inverse behavior bots are configured in INVERSE_BEHAVIOR_BOTS environment variable
- */
-export function hasInverseBehavior(botName: string): boolean {
-	return BOT_IDENTIFIERS.INVERSE_BEHAVIOR_BOTS.includes(botName);
 }
 
 /**

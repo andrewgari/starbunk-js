@@ -110,7 +110,7 @@ describe('BotBot with new messageFilter system', () => {
 		}
 	});
 
-	it.skip('should process CovaBot messages with 1% chance (no longer excluded)', async () => {
+	it('should still exclude CovaBot messages', async () => {
 		// Create a CovaBot message
 		const covaBotMessage = createMockMessage({
 			content: 'Hello from CovaBot!',
@@ -121,16 +121,48 @@ describe('BotBot with new messageFilter system', () => {
 			},
 		});
 
-		// Mock Math.random to ensure we would respond (within 1% chance)
+		// Mock Math.random to ensure we would respond if not excluded
 		const originalRandom = Math.random;
 		Math.random = jest.fn(() => 0.005); // 0.5% - within 1% chance
 
-		try {
-			// Test if the bot should respond - it should return true for CovaBot with favorable chance
-			const shouldRespond = await BotBot.shouldRespond(covaBotMessage as Message);
+		// Spy on channel.send to see if any message was sent
+		const sendSpy = jest.spyOn(covaBotMessage.channel, 'send');
 
-			// Should now respond to CovaBot messages with favorable chance (no longer excluded)
-			expect(shouldRespond).toBe(true);
+		try {
+			// Process the message
+			await BotBot.processMessage(covaBotMessage as Message);
+
+			// Should not send any message because CovaBot is excluded
+			expect(sendSpy).not.toHaveBeenCalled();
+		} finally {
+			Math.random = originalRandom;
+		}
+	});
+
+	it('should exclude DJCova messages', async () => {
+		// Create a DJCova message
+		const djCovaMessage = createMockMessage({
+			content: 'Hello from DJCova!',
+			author: {
+				id: '999888777',
+				username: 'DJCova',
+				bot: true,
+			},
+		});
+
+		// Mock Math.random to ensure we would respond if not excluded
+		const originalRandom = Math.random;
+		Math.random = jest.fn(() => 0.005); // 0.5% - within 1% chance
+
+		// Spy on channel.send to see if any message was sent
+		const sendSpy = jest.spyOn(djCovaMessage.channel, 'send');
+
+		try {
+			// Process the message
+			await BotBot.processMessage(djCovaMessage as Message);
+
+			// Should not send any message because DJCova is excluded
+			expect(sendSpy).not.toHaveBeenCalled();
 		} finally {
 			Math.random = originalRandom;
 		}
