@@ -472,9 +472,9 @@ Message to analyze: "${message.content}"`;
 	 * Handle a model not found (404) error by attempting to auto-pull if enabled
 	 * @param model Model name that was not found
 	 * @param trigger What triggered the pull (e.g., 'generate-404', 'decision-404')
-	 * @param correlationId Correlation ID for logging
+	 * @param correlationId Correlation ID for logging (optional)
 	 */
-	private handleModelNotFound(model: string, trigger: string, correlationId: string): void {
+	private handleModelNotFound(model: string, trigger: string, correlationId?: string): void {
 		logger.error(
 			`[LLMService] Ollama model '${model}' not found (404). [${correlationId}]`,
 		);
