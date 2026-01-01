@@ -604,7 +604,7 @@ Message to analyze: "${message.content}"`;
 							}
 							lastProgress = data.status;
 						}
-					} catch (parseError) {
+					} catch (_parseError) {
 						// Ignore JSON parse errors for partial chunks
 						logger.debug(`[LLMService] Could not parse pull progress: ${line}`);
 					}
