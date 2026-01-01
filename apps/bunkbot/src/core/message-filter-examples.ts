@@ -146,7 +146,7 @@ export function createTimeBasedFilter(options: {
 	allowedHours?: number[]; // 0-23
 	timezone?: string;
 }): MessageFilterFunction {
-	return async (message) => {
+	return async (_message) => {
 		// Apply default filtering first (optional)
 		if (!options.allowedHours) {
 			return false;
