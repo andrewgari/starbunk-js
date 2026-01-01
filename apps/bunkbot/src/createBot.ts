@@ -1,7 +1,6 @@
 import { Message } from 'discord.js';
 import { BotFactory } from './core/bot-factory';
 import { createTriggerResponse } from './core/trigger-response';
-import { defaultMessageFilter } from './core/bot-builder';
 import { ReplyBotImpl, MessageFilterFunction } from './core/bot-builder';
 
 /**
@@ -148,8 +147,12 @@ function createTriggerResponsePairs(patterns: RegExp[], responses: string[]) {
  * Only excludes BunkBot self-messages, allows all other messages
  */
 function createEnhancedMessageFilter(): MessageFilterFunction {
-	return (message: Message) => {
-		// Use simplified message filtering - only excludes BunkBot self-messages
-		return defaultMessageFilter(message);
+	return async (message: Message) => {
+		// Skip if message is from BunkBot itself (self-message)
+		if (!message?.author) return true;
+		if (message.client?.user && message.author.id === message.client.user.id) {
+			return true;
+		}
+		return false;
 	};
 }

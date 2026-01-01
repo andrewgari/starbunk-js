@@ -82,7 +82,6 @@ const environment = {
 		NODE_ENV: process.env.NODE_ENV,
 		LOG_LEVEL: process.env.LOG_LEVEL,
 		BOT_WHITELIST_IDS: process.env.BOT_WHITELIST_IDS,
-		INVERSE_BEHAVIOR_BOTS: process.env.INVERSE_BEHAVIOR_BOTS,
 	},
 	discord: {
 		STARBUNK_TOKEN: process.env.STARBUNK_TOKEN,

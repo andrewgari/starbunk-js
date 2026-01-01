@@ -2,7 +2,7 @@
  * Examples of custom message filtering functions for different bot behaviors
  */
 
-import { MessageFilterFunction, defaultMessageFilter } from './bot-builder';
+import { MessageFilterFunction } from './bot-builder';
 import { ConfigurationService } from '../services/configurationService';
 import { ChannelType } from 'discord.js';
 
@@ -15,11 +15,6 @@ export function createSelfAwareFilter(
 	configService: ConfigurationService,
 ): MessageFilterFunction {
 	return async (message) => {
-		// Apply default filtering first (optional)
-		if (defaultMessageFilter(message)) {
-			return true;
-		}
-
 		// Get the user ID for the bot's identity
 		const botUserId = await configService.getUserIdByUsername(botIdentityUsername);
 
@@ -42,9 +37,6 @@ export function createChannelFilter(options: {
 }): MessageFilterFunction {
 	return async (message) => {
 		// Apply default filtering first (optional)
-		if (defaultMessageFilter(message)) {
-			return true;
-		}
 		// Handle DM filtering
 		if (message.channel.type === ChannelType.DM) {
 			return !options.allowDMs;
@@ -78,9 +70,6 @@ export function createRoleBasedFilter(options: {
 }): MessageFilterFunction {
 	return async (message) => {
 		// Apply default filtering first (optional)
-		if (defaultMessageFilter(message)) {
-			return true;
-		}
 		// Only works in guild channels
 		if (!message.member) {
 			return false;
@@ -119,9 +108,6 @@ export function createContentFilter(options: {
 }): MessageFilterFunction {
 	return async (message) => {
 		// Apply default filtering first (optional)
-		if (defaultMessageFilter(message)) {
-			return true;
-		}
 		const content = message.content;
 
 		// Check length constraints
@@ -160,11 +146,8 @@ export function createTimeBasedFilter(options: {
 	allowedHours?: number[]; // 0-23
 	timezone?: string;
 }): MessageFilterFunction {
-	return async (message) => {
+	return async (_message) => {
 		// Apply default filtering first (optional)
-		if (defaultMessageFilter(message)) {
-			return true;
-		}
 		if (!options.allowedHours) {
 			return false;
 		}
@@ -193,9 +176,6 @@ export function createTimeBasedFilter(options: {
 export function createChadMessageFilter(configService: ConfigurationService): MessageFilterFunction {
 	return async (message) => {
 		// Apply default filtering first (optional)
-		if (defaultMessageFilter(message)) {
-			return true;
-		}
 		// Don't respond to Chad himself
 		const chadUserId = await configService.getUserIdByUsername('Chad');
 		if (chadUserId && message.author.id === chadUserId) {
