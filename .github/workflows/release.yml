@@ -12,13 +12,33 @@ permissions:
   packages: write
 
 jobs:
+  setup:
+    name: 🔧 Setup
+    runs-on: ubuntu-latest
+    outputs:
+      containers: ${{ steps.define-containers.outputs.containers }}
+      containers-json: ${{ steps.define-containers.outputs.containers-json }}
+    steps:
+      - name: Define container list
+        id: define-containers
+        run: |
+          # Define the container list in one place
+          CONTAINERS="bunkbot djcova starbunk-dnd covabot"
+          CONTAINERS_JSON='["bunkbot","djcova","starbunk-dnd","covabot"]'
+
+          echo "containers=$CONTAINERS" >> $GITHUB_OUTPUT
+          echo "containers-json=$CONTAINERS_JSON" >> $GITHUB_OUTPUT
+
+          echo "📦 Container list: $CONTAINERS"
+
   tag-release:
     name: 🏷️ Tag ${{ matrix.container }} for release
     runs-on: ubuntu-latest
+    needs: setup
     strategy:
       fail-fast: false
       matrix:
-        container: [bunkbot, djcova, starbunk-dnd, covabot]
+        container: ${{ fromJSON(needs.setup.outputs.containers-json) }}
     steps:
       - name: Login to Container Registry
         uses: docker/login-action@v3
@@ -58,7 +78,7 @@ jobs:
   release-summary:
     name: 📋 Release Summary
     runs-on: ubuntu-latest
-    needs: tag-release
+    needs: [setup, tag-release]
     steps:
       - name: Generate summary
         run: |
@@ -82,14 +102,14 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Container | Environment Tag | Version Tag |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-----------------|-------------|" >> $GITHUB_STEP_SUMMARY
-          for container in bunkbot djcova starbunk-dnd covabot; do
+          for container in ${{ needs.setup.outputs.containers }}; do
             echo "| $container | \`ghcr.io/${{ github.repository_owner }}/$container:$ENV_TAG\` | \`ghcr.io/${{ github.repository_owner }}/$container:$VERSION\` |" >> $GITHUB_STEP_SUMMARY
           done
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔧 Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "# Pull $ENV_TAG versions" >> $GITHUB_STEP_SUMMARY
-          for container in bunkbot djcova starbunk-dnd covabot; do
+          for container in ${{ needs.setup.outputs.containers }}; do
             echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:$ENV_TAG" >> $GITHUB_STEP_SUMMARY
           done
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
