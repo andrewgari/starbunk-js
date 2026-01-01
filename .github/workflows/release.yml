@@ -61,16 +61,11 @@ jobs:
   tag-release:
     name: 🏷️ Tag ${{ matrix.container }} for release
     runs-on: ubuntu-latest
-    needs: setup
+    needs: [setup, determine-environment]
     strategy:
       fail-fast: false
       matrix:
         container: ${{ fromJSON(needs.setup.outputs.containers-json) }}
-    needs: determine-environment
-    strategy:
-      fail-fast: false
-      matrix:
-        container: ${{ fromJSON(env.CONTAINERS_JSON) }}
     steps:
       - name: Login to Container Registry
         uses: docker/login-action@v3
