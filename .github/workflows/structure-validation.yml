@@ -179,16 +179,21 @@ jobs:
             const structureStatus = '${{ steps.structure-check.outputs.status }}';
 
             // Create comment body
+            const rootStatus = '${{ steps.root-check.outputs.status }}';
+            const namingStatus = '${{ steps.naming-check.outputs.status }}';
+            const tempStatus = '${{ steps.temp-check.outputs.status }}';
+            const docsStatus = '${{ steps.docs-check.outputs.status }}';
+
             let commentBody = `## 🏗️ Repository Structure Validation Report
 
             **Overall Status**: ${structureStatus === 'passed' ? '✅ PASSED' : '❌ FAILED'}
             **Health Score**: ${healthScore}/100
 
             ### Validation Results:
-            - Root Directory Compliance: ${{ steps.root-check.outputs.status === 'passed' ? '✅' : '❌' }}
-            - File Naming Conventions: ${{ steps.naming-check.outputs.status === 'passed' ? '✅' : '❌' }}
-            - Temporary Files Check: ${{ steps.temp-check.outputs.status === 'passed' ? '✅' : '❌' }}
-            - Documentation Structure: ${{ steps.docs-check.outputs.status === 'passed' ? '✅' : steps.docs-check.outputs.status === 'warning' ? '⚠️' : '❌' }}
+            - Root Directory Compliance: ${rootStatus === 'passed' ? '✅' : '❌'}
+            - File Naming Conventions: ${namingStatus === 'passed' ? '✅' : '❌'}
+            - Temporary Files Check: ${tempStatus === 'passed' ? '✅' : '❌'}
+            - Documentation Structure: ${docsStatus === 'passed' ? '✅' : docsStatus === 'warning' ? '⚠️' : '❌'}
 
             <details>
             <summary>📊 Detailed Health Report</summary>

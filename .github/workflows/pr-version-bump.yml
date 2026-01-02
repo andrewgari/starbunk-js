@@ -175,14 +175,18 @@ jobs:
             const bumpType = '${{ steps.version.outputs.bump-type }}';
             const currentVersion = '${{ steps.version.outputs.current-version }}';
 
+            const commentBody = [
+              '## 🔢 Version Auto-Bumped',
+              '',
+              `**${currentVersion}** → **${newVersion}** (${bumpType})`,
+              '',
+              'The version has been automatically bumped based on your conventional commits. This will be the version used when this PR is merged.'
+            ].join('\n');
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `## 🔢 Version Auto-Bumped
-
-**${currentVersion}** → **${newVersion}** (${bumpType})
-
-The version has been automatically bumped based on your conventional commits. This will be the version used when this PR is merged.`
+              body: commentBody
             });
 
