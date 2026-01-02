@@ -92,8 +92,12 @@ runs:
       if: inputs.install-dependencies == 'true'
       shell: bash
       run: |
-        if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
-          echo "📦 Cache hit - verifying dependencies..."
+        # Check if we got an exact cache match or a partial restore-key match
+        CACHE_KEY="${{ steps.generate-cache-key.outputs.cache-key }}"
+        RESTORED_KEY="${{ steps.cache.outputs.cache-matched-key }}"
+
+        if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ] && [ "$CACHE_KEY" = "$RESTORED_KEY" ]; then
+          echo "📦 Exact cache match - verifying dependencies..."
 
           # Verify critical dependencies exist, reinstall if missing
           NEEDS_INSTALL=false
@@ -116,8 +120,12 @@ runs:
           else
             echo "🔄 Reinstalling dependencies due to incomplete cache..."
           fi
+        elif [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
+          echo "📦 Partial cache match (restore-key) - reinstalling to ensure correctness..."
+          echo "   Expected key: $CACHE_KEY"
+          echo "   Restored key: $RESTORED_KEY"
         else
-          echo "📦 Installing dependencies in parallel..."
+          echo "📦 No cache hit - installing dependencies in parallel..."
         fi
 
         # Function to install dependencies for a container
