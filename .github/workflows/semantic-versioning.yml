@@ -248,7 +248,7 @@ jobs:
           cd temp_repo
           VERSION=$(cat VERSION | tr -d '[:space:]')
           # Validate that VERSION matches expected semver format X.Y.Z
-          if [ -z "$VERSION" ] || ! printf '%s\n' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          if [ -z "$VERSION" ] || ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "ERROR: VERSION ('$VERSION') is not a valid semantic version (expected format: X.Y.Z)" >&2
             exit 1
           fi

@@ -453,7 +453,7 @@ jobs:
       - name: 📦 Get version from VERSION file
         id: get-version
         run: |
-          VERSION=$(tr -d '[:space:]' < VERSION)
+          VERSION=$(cat VERSION | tr -d '[:space:]')
           
           if [ -z "$VERSION" ]; then
             echo "❌ ERROR: VERSION file is empty or contains only whitespace."
