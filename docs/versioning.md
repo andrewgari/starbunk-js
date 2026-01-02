@@ -61,11 +61,15 @@ The main branch is **automatically tagged** with:
 The `semantic-versioning.yml` workflow automatically:
 
 1. Checks the version in `package.json` (already bumped by the PR workflow)
-2. Creates a git tag (e.g., `v1.3.1`)
-3. Creates a GitHub release with changelog
-4. Triggers container builds
+2. Checks if a git tag already exists for this version
+3. If no tag exists, creates a git tag (e.g., `v1.3.1`)
+4. Creates a GitHub release with changelog
+5. Triggers container builds
 
-**Note:** This workflow runs in addition to the automatic tagging in `publish-main.yml`. The `publish-main.yml` workflow handles immediate tagging on merge, while `semantic-versioning.yml` creates formal GitHub releases.
+**Note:** Both workflows can create version tags, but they coordinate to avoid conflicts:
+- `publish-main.yml` creates tags immediately on merge (if they don't exist)
+- `semantic-versioning.yml` checks for existing tags and skips if already created
+- This design ensures tags are created quickly while still allowing for formal GitHub releases with changelogs
 
 ## Manual Version Bump
 
