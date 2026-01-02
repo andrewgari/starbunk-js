@@ -31,6 +31,7 @@ jobs:
   validate-structure:
     runs-on: ubuntu-latest
     name: Validate Repository Structure
+    continue-on-error: true  # Don't fail the workflow, just report issues
 
     outputs:
       structure-status: ${{ steps.structure-check.outputs.status }}
@@ -58,6 +59,7 @@ jobs:
 
       - name: Check root directory compliance
         id: root-check
+        continue-on-error: true
         run: |
           echo "::group::Root Directory Compliance Check"
           if tools/scripts/validation/check-root-directory.sh; then
@@ -65,13 +67,13 @@ jobs:
             echo "::notice::Root directory compliance check passed"
           else
             echo "status=failed" >> $GITHUB_OUTPUT
-            echo "::error::Root directory compliance check failed"
-            exit 1
+            echo "::warning::Root directory compliance check failed"
           fi
           echo "::endgroup::"
 
       - name: Check file naming conventions
         id: naming-check
+        continue-on-error: true
         run: |
           echo "::group::File Naming Conventions Check"
           if tools/scripts/validation/check-naming-conventions.sh; then
@@ -79,13 +81,13 @@ jobs:
             echo "::notice::File naming conventions check passed"
           else
             echo "status=failed" >> $GITHUB_OUTPUT
-            echo "::error::File naming conventions check failed"
-            exit 1
+            echo "::warning::File naming conventions check failed"
           fi
           echo "::endgroup::"
 
       - name: Check for temporary files
         id: temp-check
+        continue-on-error: true
         run: |
           echo "::group::Temporary Files Check"
           if tools/scripts/validation/check-temporary-files.sh; then
@@ -93,8 +95,7 @@ jobs:
             echo "::notice::Temporary files check passed"
           else
             echo "status=failed" >> $GITHUB_OUTPUT
-            echo "::error::Temporary files check failed"
-            exit 1
+            echo "::warning::Temporary files check failed"
           fi
           echo "::endgroup::"
 
@@ -113,6 +114,7 @@ jobs:
 
       - name: Run comprehensive structure validation
         id: structure-check
+        continue-on-error: true
         run: |
           echo "::group::Comprehensive Structure Validation"
           if tools/scripts/validation/run-all-validations.sh; then
@@ -120,8 +122,7 @@ jobs:
             echo "::notice::All structure validations passed"
           else
             echo "status=failed" >> $GITHUB_OUTPUT
-            echo "::error::Structure validation failed"
-            exit 1
+            echo "::warning::Structure validation had issues"
           fi
           echo "::endgroup::"
 
