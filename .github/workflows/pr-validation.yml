@@ -93,9 +93,6 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
 
-      - name: Fetch base branch (shallow)
-        run: |
-          git fetch origin "${{ github.base_ref }}" --depth=1
       - name: Validate VERSION and ensure it is ahead of base branch
         run: |
           set -e
@@ -178,13 +175,32 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          git add VERSION package.json apps/*/package.json packages/shared/package.json apps/*/package-lock.json packages/shared/package-lock.json package-lock.json 2>/dev/null || true
+          # Stage version-related files individually, only if they exist.
+          FILES_TO_ADD=(
+            "VERSION"
+            "package.json"
+            "packages/shared/package.json"
+            "package-lock.json"
+            "packages/shared/package-lock.json"
+          )
 
-          COMMIT_MSG="chore(version): auto-bump to v${NEW_VERSION} (PR validation)"
-          COMMIT_MSG="${COMMIT_MSG}\n\nEnsured VERSION is ahead of base branch (${BASE_REF})."
-          COMMIT_MSG="${COMMIT_MSG}\n\nCo-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          for file in "${FILES_TO_ADD[@]}"; do
+            if [ -e "$file" ]; then
+              git add "$file"
+            fi
+          done
 
-          if git commit -m "${COMMIT_MSG}"; then
+          # Stage app-specific package files, guarding against non-matching globs.
+          for file in apps/*/package.json apps/*/package-lock.json; do
+            if [ -e "$file" ]; then
+              git add "$file"
+            fi
+          done
+
+          if git commit \
+            -m "chore(version): auto-bump to v${NEW_VERSION} (PR validation) [skip ci]" \
+            -m "Ensured VERSION is ahead of base branch (${BASE_REF})." \
+            -m "Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"; then
             echo "✅ Committed VERSION bump to $NEW_VERSION"
             git push || {
               echo "❌ ERROR: Failed to push VERSION bump commit back to PR branch."
@@ -781,17 +797,17 @@ jobs:
 
       - name: Tag and publish with latest and version
         run: |
-	          PR_NUMBER="${{ github.event.pull_request.number }}"
-	          VERSION="${{ steps.version.outputs.version }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          VERSION="${{ steps.version.outputs.version }}"
 
-	          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${PR_NUMBER}"
-	          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest"
-	          VERSION_PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:${VERSION}-pr-${PR_NUMBER}"
+          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${PR_NUMBER}"
+          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest"
+          VERSION_PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:${VERSION}-pr-${PR_NUMBER}"
 
-	          echo "🏷️ Tagging image with latest and version-pr tag..."
-	          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_PR_TAG" "$PR_TAG"
-	          echo "✅ Published: $LATEST_TAG"
-	          echo "✅ Published: $VERSION_PR_TAG"
+          echo "🏷️ Tagging image with latest and version-pr tag..."
+          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_PR_TAG" "$PR_TAG"
+          echo "✅ Published: $LATEST_TAG"
+          echo "✅ Published: $VERSION_PR_TAG"
 
       - name: Force tag git commit
         run: |
@@ -836,17 +852,17 @@ jobs:
 
       - name: Tag and publish with latest and version
         run: |
-	          PR_NUMBER="${{ github.event.pull_request.number }}"
-	          VERSION="${{ steps.version.outputs.version }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          VERSION="${{ steps.version.outputs.version }}"
 
-	          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${PR_NUMBER}"
-	          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest"
-	          VERSION_PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:${VERSION}-pr-${PR_NUMBER}"
+          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${PR_NUMBER}"
+          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest"
+          VERSION_PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:${VERSION}-pr-${PR_NUMBER}"
 
-	          echo "🏷️ Tagging image with latest and version-pr tag..."
-	          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_PR_TAG" "$PR_TAG"
-	          echo "✅ Published: $LATEST_TAG"
-	          echo "✅ Published: $VERSION_PR_TAG"
+          echo "🏷️ Tagging image with latest and version-pr tag..."
+          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_PR_TAG" "$PR_TAG"
+          echo "✅ Published: $LATEST_TAG"
+          echo "✅ Published: $VERSION_PR_TAG"
 
       - name: Force tag git commit
         run: |
@@ -891,17 +907,17 @@ jobs:
 
       - name: Tag and publish with latest and version
         run: |
-	          PR_NUMBER="${{ github.event.pull_request.number }}"
-	          VERSION="${{ steps.version.outputs.version }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          VERSION="${{ steps.version.outputs.version }}"
 
-	          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${PR_NUMBER}"
-	          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest"
-	          VERSION_PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:${VERSION}-pr-${PR_NUMBER}"
+          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${PR_NUMBER}"
+          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest"
+          VERSION_PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:${VERSION}-pr-${PR_NUMBER}"
 
-	          echo "🏷️ Tagging image with latest and version-pr tag..."
-	          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_PR_TAG" "$PR_TAG"
-	          echo "✅ Published: $LATEST_TAG"
-	          echo "✅ Published: $VERSION_PR_TAG"
+          echo "🏷️ Tagging image with latest and version-pr tag..."
+          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_PR_TAG" "$PR_TAG"
+          echo "✅ Published: $LATEST_TAG"
+          echo "✅ Published: $VERSION_PR_TAG"
 
       - name: Force tag git commit
         run: |
@@ -946,17 +962,17 @@ jobs:
 
       - name: Tag and publish with latest and version
         run: |
-	          PR_NUMBER="${{ github.event.pull_request.number }}"
-	          VERSION="${{ steps.version.outputs.version }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          VERSION="${{ steps.version.outputs.version }}"
 
-	          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${PR_NUMBER}"
-	          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest"
-	          VERSION_PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:${VERSION}-pr-${PR_NUMBER}"
+          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${PR_NUMBER}"
+          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest"
+          VERSION_PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:${VERSION}-pr-${PR_NUMBER}"
 
-	          echo "🏷️ Tagging image with latest and version-pr tag..."
-	          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_PR_TAG" "$PR_TAG"
-	          echo "✅ Published: $LATEST_TAG"
-	          echo "✅ Published: $VERSION_PR_TAG"
+          echo "🏷️ Tagging image with latest and version-pr tag..."
+          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_PR_TAG" "$PR_TAG"
+          echo "✅ Published: $LATEST_TAG"
+          echo "✅ Published: $VERSION_PR_TAG"
 
       - name: Force tag git commit
         run: |
