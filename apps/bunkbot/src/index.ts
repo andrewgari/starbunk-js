@@ -60,11 +60,12 @@ class BunkBotContainer {
 
 		try {
 			// Initialize observability first
+			// Skip HTTP endpoints since BunkBot has its own health server
 			const {
 				metrics,
 				logger: _structuredLogger,
 				channelTracker: _channelTracker,
-			} = initializeObservability('bunkbot');
+			} = initializeObservability('bunkbot', { skipHttpEndpoints: true });
 			logger.info('✅ Observability initialized with metrics, structured logging, and channel activity tracking');
 
 			// Initialize enhanced BunkBot metrics system with Redis integration
@@ -607,9 +608,21 @@ async function main(): Promise<void> {
 
 // Note: Graceful shutdown is now handled within the main function
 
+// Global error handlers to properly log unhandled errors with structured logging
+process.on('uncaughtException', (error: Error) => {
+	logger.error('Uncaught exception:', error);
+	process.exit(1);
+});
+
+process.on('unhandledRejection', (reason: unknown) => {
+	const error = ensureError(reason);
+	logger.error('Unhandled promise rejection:', error);
+	process.exit(1);
+});
+
 if (require.main === module) {
 	main().catch((error) => {
-		console.error('Fatal error:', ensureError(error));
+		logger.error('Fatal error in main:', ensureError(error));
 		process.exit(1);
 	});
 }
