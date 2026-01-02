@@ -35,12 +35,42 @@ The `pr-version-bump.yml` workflow automatically:
 
 ### 2. When You Merge to Main
 
+When a PR is merged to main, multiple automated processes occur:
+
+#### Git Tagging (`publish-main.yml`)
+
+The main branch is **automatically tagged** with:
+
+1. **Version tag** (e.g., `v1.3.2`):
+   - Based on the version in `package.json`
+   - Created only if the tag doesn't already exist
+   - Follows semantic versioning format
+
+2. **Latest tag** (`latest`):
+   - Always points to the most recent commit on main
+   - Force-updated on every merge
+   - Useful for pulling the latest stable version
+
+**Behavior:**
+- Tags are created on **every merge to main**, regardless of whether container deployments occur
+- If container deployments are triggered, tags are only created after successful deployment
+- If deployments fail, no tags are created (to avoid tagging broken code)
+
+#### Release Creation (`semantic-versioning.yml`)
+
 The `semantic-versioning.yml` workflow automatically:
 
 1. Checks the version in `package.json` (already bumped by the PR workflow)
-2. Creates a git tag (e.g., `v1.3.1`)
-3. Creates a GitHub release with changelog
-4. Triggers container builds
+2. Checks if a git tag already exists for this version
+3. If no tag exists, creates a git tag (e.g., `v1.3.1`)
+4. Creates a GitHub release with changelog
+5. Triggers container builds
+
+**Note:** Both workflows can create version tags, but they coordinate to avoid conflicts:
+- `publish-main.yml` creates tags immediately on merge (if they don't exist)
+- `semantic-versioning.yml` checks for existing tags and skips if already created
+- This design ensures tags are created quickly while still allowing for formal GitHub releases with changelogs
+- **Race condition handling**: In the unlikely event both workflows check for tag existence simultaneously, Git's atomic push operation ensures only one succeeds; the other will fail gracefully without breaking the workflow
 
 ## Manual Version Bump
 
@@ -85,6 +115,35 @@ The `scripts/sync-versions.sh` script:
 3. **Easy Updates**: One command syncs everything
 4. **CI/CD Integration**: Automated in release workflow
 5. **Clear Audit Trail**: Easy to see what version each package is at
+6. **Automatic Tagging**: Every merge to main is tagged for easy reference
+
+## Using Git Tags
+
+The automatic tagging system allows you to easily reference specific versions:
+
+### Pull Latest Code
+```bash
+# Get the latest stable version
+git fetch --tags
+git checkout latest
+
+# Or pull a specific version
+git checkout v1.3.2
+```
+
+### Pull Container Images by Tag
+```bash
+# Pull the latest version
+docker pull ghcr.io/andrewgari/bunkbot:latest
+
+# Pull a specific version
+docker pull ghcr.io/andrewgari/bunkbot:v1.3.2
+```
+
+### List All Version Tags
+```bash
+git tag -l "v*"
+```
 
 ## Files Affected
 

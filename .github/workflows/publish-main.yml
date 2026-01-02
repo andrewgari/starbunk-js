@@ -424,17 +424,24 @@ jobs:
           echo "✅ Cleanup complete"
 
   # ==============================================================================
-  # GIT TAG MANAGEMENT
+  # GIT TAG MANAGEMENT (UNCONDITIONAL - ALWAYS RUN ON MAIN)
   # ==============================================================================
   tag-version:
     name: 🏷️ Tag Version
     runs-on: ubuntu-latest
     needs: [detect-changes, deploy-containers, post-deployment-verification]
+    # Conditional logic for tagging:
+    # 1. always() - Run even if previous jobs failed/skipped
+    # 2. github.ref check - Only on main branch
+    # 3. Deployment check - Two scenarios:
+    #    a) No deployments (has-deployments != 'true') → Tag immediately
+    #    b) Deployments occurred → Only tag if both deploy and verify succeeded
     if: |
+      always() &&
       github.ref == 'refs/heads/main' &&
-      needs.detect-changes.outputs.has-deployments == 'true' &&
-      needs.deploy-containers.result == 'success' &&
-      needs.post-deployment-verification.result == 'success'
+      (needs.detect-changes.outputs.has-deployments != 'true' ||
+       (needs.deploy-containers.result == 'success' &&
+        needs.post-deployment-verification.result == 'success'))
     permissions:
       contents: write
     steps:
@@ -457,7 +464,10 @@ jobs:
 
           VERSION="${{ steps.get-version.outputs.version }}"
 
-          echo "🏷️ Creating git tags for version v${VERSION}"
+          echo "🏷️ Creating git tags for version v${VERSION} and latest"
+          echo "This ensures every merge to main is tagged with:"
+          echo "  1. Version tag: v${VERSION} (from package.json)"
+          echo "  2. Latest tag: points to this commit"
 
           # Create version tag (e.g., v1.2.0)
           if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
