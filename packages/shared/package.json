@@ -1,6 +1,6 @@
 {
 	"name": "@starbunk/shared",
-	"version": "1.4.0",
+	"version": "1.4.1",
 	"description": "Shared services and utilities for Starbunk containers",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
