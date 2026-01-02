@@ -96,8 +96,10 @@ jobs:
             
             # Report invalid containers and fail if any found
             if [ ${#INVALID_CONTAINERS[@]} -gt 0 ]; then
-              echo "❌ ERROR: Invalid container name(s): ${INVALID_CONTAINERS[*]}"
-              echo "✅ Valid options are: ${VALID_CONTAINERS[*]}"
+              INVALID_LIST=$(IFS=','; echo "${INVALID_CONTAINERS[*]}")
+              VALID_LIST=$(IFS=','; echo "${VALID_CONTAINERS[*]}")
+              echo "❌ ERROR: Invalid container name(s): $INVALID_LIST"
+              echo "✅ Valid options are: $VALID_LIST"
               exit 1
             fi
             
