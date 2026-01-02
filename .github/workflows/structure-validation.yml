@@ -25,7 +25,11 @@ on:
           - strict
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '20'
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   validate-structure:
@@ -136,7 +140,7 @@ jobs:
 
           # Extract health score (if available)
           if grep -q "Final Health Score:" structure-health-report.txt; then
-            SCORE=$(grep "Final Health Score:" structure-health-report.txt | grep -o '[0-9]\+')
+            SCORE=$(grep "Final Health Score:" structure-health-report.txt | grep -o '[0-9]\+' | head -n1)
             echo "score=$SCORE" >> $GITHUB_OUTPUT
             echo "::notice::Repository health score: $SCORE/100"
           else
