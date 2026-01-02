@@ -142,7 +142,7 @@ jobs:
           provenance: false
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            BUILD_DATE=${{ github.run_id }}
             VCS_REF=${{ github.sha }}
             VERSION=${{ needs.prepare.outputs.version }}
             NODE_ENV=production
