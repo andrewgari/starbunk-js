@@ -41,8 +41,13 @@ jobs:
         run: |
           set -e
 
-          # Get current version from package.json
-          CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
+          # Get current version from VERSION file
+          if [ ! -f "VERSION" ]; then
+            echo "Error: VERSION file not found"
+            exit 1
+          fi
+          
+          CURRENT_VERSION=$(cat VERSION | tr -d '[:space:]')
           echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $CURRENT_VERSION"
 
@@ -135,11 +140,9 @@ jobs:
           set -e
           NEW_VERSION="${{ steps.version.outputs.new-version }}"
 
-          # Update root package.json
-          npm version $NEW_VERSION --no-git-tag-version || {
-            echo "::warning::Failed to update version with npm"
-            exit 1
-          }
+          # Update VERSION file
+          echo "$NEW_VERSION" > VERSION
+          echo "Updated VERSION file to $NEW_VERSION"
 
           # Sync to all packages
           if [ -f ./scripts/sync-versions.sh ]; then
@@ -149,7 +152,7 @@ jobs:
           fi
 
           # Commit the changes
-          git add package.json apps/*/package.json packages/shared/package.json apps/*/package-lock.json packages/shared/package-lock.json package-lock.json 2>/dev/null || true
+          git add VERSION package.json apps/*/package.json packages/shared/package.json apps/*/package-lock.json packages/shared/package-lock.json package-lock.json 2>/dev/null || true
 
           COMMIT_MSG="chore(version): bump to v${NEW_VERSION}"
           COMMIT_MSG="${COMMIT_MSG}\n\nAutomated version bump based on conventional commits."

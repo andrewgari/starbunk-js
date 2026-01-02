@@ -53,14 +53,14 @@ jobs:
         run: |
           set -e
 
-          # Get current version from package.json
-          if [ ! -f "package.json" ]; then
-            echo "Error: package.json not found"
+          # Get current version from VERSION file
+          if [ ! -f "VERSION" ]; then
+            echo "Error: VERSION file not found"
             echo "should-release=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
+          CURRENT_VERSION=$(cat VERSION | tr -d '[:space:]')
           echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $CURRENT_VERSION"
 
@@ -126,7 +126,7 @@ jobs:
       - name: Get version from package.json
         id: get-version
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
+          CURRENT_VERSION=$(cat VERSION | tr -d '[:space:]')
           echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Version to release: $CURRENT_VERSION"
 
@@ -231,10 +231,10 @@ jobs:
       - name: Get version
         id: get-version
         run: |
-          # Checkout to get package.json
+          # Checkout to get VERSION file
           git clone --depth 1 https://github.com/${{ github.repository }}.git temp_repo
           cd temp_repo
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(cat VERSION | tr -d '[:space:]')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           cd ..
           rm -rf temp_repo

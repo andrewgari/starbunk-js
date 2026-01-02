@@ -453,7 +453,7 @@ jobs:
       - name: 📦 Get version from package.json
         id: get-version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(cat VERSION | tr -d '[:space:]')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 Current version: $VERSION"
 
@@ -466,7 +466,7 @@ jobs:
 
           echo "🏷️ Creating git tags for version v${VERSION} and latest"
           echo "This ensures every merge to main is tagged with:"
-          echo "  1. Version tag: v${VERSION} (from package.json)"
+          echo "  1. Version tag: v${VERSION} (from VERSION file)"
           echo "  2. Latest tag: points to this commit"
 
           # Create version tag (e.g., v1.2.0)
