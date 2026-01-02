@@ -43,7 +43,11 @@ jobs:
             VERSION="${{ github.event.inputs.version_override }}"
             echo "📦 Using override version: $VERSION"
           else
-            VERSION=$(cat VERSION | tr -d '[:space:]')
+            if [ ! -f "VERSION" ]; then
+              echo "❌ ERROR: VERSION file not found"
+              exit 1
+            fi
+            VERSION=$(tr -d '[:space:]' < VERSION)
             echo "📦 Using VERSION file: $VERSION"
           fi
 
