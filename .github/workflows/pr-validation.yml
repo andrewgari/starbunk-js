@@ -472,7 +472,7 @@ jobs:
   hash-compare-bunkbot:
     name: 🔍 Hash Compare - Bunkbot
     runs-on: ubuntu-latest
-    needs: [docker-build-bunkbot, detect-changes-bunkbot]
+    needs: [docker-build-bunkbot]
     if: needs.docker-build-bunkbot.result == 'success'
     outputs:
       hash-changed: ${{ steps.compare.outputs.changed }}
@@ -491,8 +491,11 @@ jobs:
         run: |
           set +e  # Don't fail if latest tag doesn't exist
           
+          # Get the PR image digest
           NEW_DIGEST="${{ needs.docker-build-bunkbot.outputs.image-digest }}"
-          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest 2>/dev/null | jq -r '.config.digest' || echo "none")
+          
+          # Get the latest tag manifest digest (not config digest)
+          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest 2>/dev/null | jq -r '.manifests[0].digest // .digest' || echo "none")
           
           echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
           echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
@@ -511,7 +514,7 @@ jobs:
   hash-compare-djcova:
     name: 🔍 Hash Compare - DJCova
     runs-on: ubuntu-latest
-    needs: [docker-build-djcova, detect-changes-djcova]
+    needs: [docker-build-djcova]
     if: needs.docker-build-djcova.result == 'success'
     outputs:
       hash-changed: ${{ steps.compare.outputs.changed }}
@@ -531,7 +534,7 @@ jobs:
           set +e
           
           NEW_DIGEST="${{ needs.docker-build-djcova.outputs.image-digest }}"
-          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest 2>/dev/null | jq -r '.config.digest' || echo "none")
+          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest 2>/dev/null | jq -r '.manifests[0].digest // .digest' || echo "none")
           
           echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
           echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
@@ -547,7 +550,7 @@ jobs:
   hash-compare-starbunk-dnd:
     name: 🔍 Hash Compare - Starbunk DnD
     runs-on: ubuntu-latest
-    needs: [docker-build-starbunk-dnd, detect-changes-starbunk-dnd]
+    needs: [docker-build-starbunk-dnd]
     if: needs.docker-build-starbunk-dnd.result == 'success'
     outputs:
       hash-changed: ${{ steps.compare.outputs.changed }}
@@ -567,7 +570,7 @@ jobs:
           set +e
           
           NEW_DIGEST="${{ needs.docker-build-starbunk-dnd.outputs.image-digest }}"
-          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest 2>/dev/null | jq -r '.config.digest' || echo "none")
+          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest 2>/dev/null | jq -r '.manifests[0].digest // .digest' || echo "none")
           
           echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
           echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
@@ -583,7 +586,7 @@ jobs:
   hash-compare-covabot:
     name: 🔍 Hash Compare - Covabot
     runs-on: ubuntu-latest
-    needs: [docker-build-covabot, detect-changes-covabot]
+    needs: [docker-build-covabot]
     if: needs.docker-build-covabot.result == 'success'
     outputs:
       hash-changed: ${{ steps.compare.outputs.changed }}
@@ -603,7 +606,7 @@ jobs:
           set +e
           
           NEW_DIGEST="${{ needs.docker-build-covabot.outputs.image-digest }}"
-          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest 2>/dev/null | jq -r '.config.digest' || echo "none")
+          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest 2>/dev/null | jq -r '.manifests[0].digest // .digest' || echo "none")
           
           echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
           echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
@@ -624,12 +627,13 @@ jobs:
   publish-tag-bunkbot:
     name: 🚀 Publish & Tag - Bunkbot
     runs-on: ubuntu-latest
-    needs: [hash-compare-bunkbot, test-build-bunkbot]
+    needs: [hash-compare-bunkbot, test-build-bunkbot, detect-changes-bunkbot]
     if: |
       always() &&
       needs.hash-compare-bunkbot.outputs.hash-changed == 'true' &&
-      (needs.test-build-bunkbot.result == 'success' || needs.test-build-bunkbot.result == 'skipped') &&
-      github.event_name == 'pull_request'
+      github.event_name == 'pull_request' &&
+      (needs.test-build-bunkbot.result == 'success' || 
+       (needs.test-build-bunkbot.result == 'skipped' && needs.detect-changes-bunkbot.outputs.changed != 'true'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -675,12 +679,13 @@ jobs:
   publish-tag-djcova:
     name: 🚀 Publish & Tag - DJCova
     runs-on: ubuntu-latest
-    needs: [hash-compare-djcova, test-build-djcova]
+    needs: [hash-compare-djcova, test-build-djcova, detect-changes-djcova]
     if: |
       always() &&
       needs.hash-compare-djcova.outputs.hash-changed == 'true' &&
-      (needs.test-build-djcova.result == 'success' || needs.test-build-djcova.result == 'skipped') &&
-      github.event_name == 'pull_request'
+      github.event_name == 'pull_request' &&
+      (needs.test-build-djcova.result == 'success' || 
+       (needs.test-build-djcova.result == 'skipped' && needs.detect-changes-djcova.outputs.changed != 'true'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -726,12 +731,13 @@ jobs:
   publish-tag-starbunk-dnd:
     name: 🚀 Publish & Tag - Starbunk DnD
     runs-on: ubuntu-latest
-    needs: [hash-compare-starbunk-dnd, test-build-starbunk-dnd]
+    needs: [hash-compare-starbunk-dnd, test-build-starbunk-dnd, detect-changes-starbunk-dnd]
     if: |
       always() &&
       needs.hash-compare-starbunk-dnd.outputs.hash-changed == 'true' &&
-      (needs.test-build-starbunk-dnd.result == 'success' || needs.test-build-starbunk-dnd.result == 'skipped') &&
-      github.event_name == 'pull_request'
+      github.event_name == 'pull_request' &&
+      (needs.test-build-starbunk-dnd.result == 'success' || 
+       (needs.test-build-starbunk-dnd.result == 'skipped' && needs.detect-changes-starbunk-dnd.outputs.changed != 'true'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -777,12 +783,13 @@ jobs:
   publish-tag-covabot:
     name: 🚀 Publish & Tag - Covabot
     runs-on: ubuntu-latest
-    needs: [hash-compare-covabot, test-build-covabot]
+    needs: [hash-compare-covabot, test-build-covabot, detect-changes-covabot]
     if: |
       always() &&
       needs.hash-compare-covabot.outputs.hash-changed == 'true' &&
-      (needs.test-build-covabot.result == 'success' || needs.test-build-covabot.result == 'skipped') &&
-      github.event_name == 'pull_request'
+      github.event_name == 'pull_request' &&
+      (needs.test-build-covabot.result == 'success' || 
+       (needs.test-build-covabot.result == 'skipped' && needs.detect-changes-covabot.outputs.changed != 'true'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
