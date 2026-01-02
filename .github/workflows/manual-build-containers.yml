@@ -164,38 +164,30 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          BUILD_RESULT='${{ needs.build-containers.result }}'
 
-          echo "## 🎉 Manual Container Build Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 Version: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+      - name: 🏷️ Create and Push Git Tags
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
 
-          if [ "$BUILD_RESULT" = "success" ] && [ -n "$CONTAINERS" ] && echo "$CONTAINERS" | jq empty >/dev/null 2>&1; then
-            echo "### 🐳 Built Containers" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Container | Tags |" >> $GITHUB_STEP_SUMMARY
-            echo "|-----------|------|" >> $GITHUB_STEP_SUMMARY
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-            # Parse containers JSON array
-            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
-              echo "| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
-            done
+          # Create tags
+          echo "🏷️ Creating git tag v$VERSION for commit $(git rev-parse HEAD)"
 
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 🔧 Pull Commands" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
-              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:latest" >> $GITHUB_STEP_SUMMARY
-              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:v$VERSION" >> $GITHUB_STEP_SUMMARY
-            done
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "### ⚠️ Container build details unavailable" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "- Build result: \`$BUILD_RESULT\`" >> $GITHUB_STEP_SUMMARY
-            echo "- Container images and pull commands are not listed because the build did not complete successfully or container metadata is unavailable." >> $GITHUB_STEP_SUMMARY
-          fi
+          # Delete tag if it exists (for re-runs with same version)
+          git tag -d "v$VERSION" 2>/dev/null || true
+          git push origin ":refs/tags/v$VERSION" 2>/dev/null || true
+
+          # Create new tag
+          git tag -a "v$VERSION" -m "Release v$VERSION - Manual build from workflow"
+
+          # Push tag
+          git push origin "v$VERSION"
+
+          echo "✅ Successfully tagged commit $(git rev-parse HEAD) with v$VERSION"
+
   summary:
     name: 📋 Build Summary
     runs-on: ubuntu-latest
@@ -214,7 +206,32 @@ jobs:
           echo "### 📦 Version: \`v$VERSION\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Check build status and display appropriate message
+          # Pre-generate container tables to avoid duplication
+          # Use mapfile to reliably capture output
+          mapfile -t container_array < <(echo "$CONTAINERS" | jq -r '.[]')
+          
+          # Generate container table
+          CONTAINER_TABLE=""
+          CONTAINER_TABLE+="| Container | Tags |\n"
+          CONTAINER_TABLE+="|-----------|------|\n"
+          for container in "${container_array[@]}"; do
+            CONTAINER_TABLE+="| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |\n"
+          done
+          
+          # Generate pull commands
+          PULL_COMMANDS=""
+          for container in "${container_array[@]}"; do
+            PULL_COMMANDS+="docker pull ghcr.io/${{ github.repository_owner }}/$container:latest\n"
+            PULL_COMMANDS+="docker pull ghcr.io/${{ github.repository_owner }}/$container:v$VERSION\n"
+          done
+          
+          # Generate container list
+          CONTAINER_LIST=""
+          for container in "${container_array[@]}"; do
+            CONTAINER_LIST+="- $container\n"
+          done
+
+          # Determine overall status and display appropriate message
           if [[ "$BUILD_RESULT" == "success" && "$TAG_RESULT" == "success" ]]; then
             echo "### ✅ Build Status: Success" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -224,77 +241,78 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 🐳 Built Containers" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Container | Tags |" >> $GITHUB_STEP_SUMMARY
-            echo "|-----------|------|" >> $GITHUB_STEP_SUMMARY
-
-            # Parse containers JSON array
-            while read -r container; do
-              echo "| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
-            done < <(echo "$CONTAINERS" | jq -r '.[]')
-
+            echo -e "$CONTAINER_TABLE" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 🔧 Pull Commands" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            while read -r container; do
-              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:latest" >> $GITHUB_STEP_SUMMARY
-              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:v$VERSION" >> $GITHUB_STEP_SUMMARY
-            done < <(echo "$CONTAINERS" | jq -r '.[]')
+            echo -e "$PULL_COMMANDS" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          elif [[ "$BUILD_RESULT" == "success" && "$TAG_RESULT" != "success" ]]; then
+          elif [[ "$BUILD_RESULT" == "success" ]]; then
+            # Build succeeded but tagging did not complete successfully
             echo "### ⚠️ Build Status: Partial Success" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "🐳 Containers built successfully, but git tagging failed (status: $TAG_RESULT)" >> $GITHUB_STEP_SUMMARY
+            
+            # Provide specific messaging based on tag result
+            case "$TAG_RESULT" in
+              "failure")
+                echo "🐳 Containers built successfully, but git tagging failed." >> $GITHUB_STEP_SUMMARY
+                ;;
+              "cancelled")
+                echo "🐳 Containers built successfully, but git tagging was cancelled." >> $GITHUB_STEP_SUMMARY
+                ;;
+              "skipped")
+                echo "🐳 Containers built successfully, but git tagging was skipped." >> $GITHUB_STEP_SUMMARY
+                ;;
+              *)
+                echo "🐳 Containers built successfully, but git tagging did not complete successfully (status: $TAG_RESULT)." >> $GITHUB_STEP_SUMMARY
+                ;;
+            esac
+            
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 🐳 Built Containers" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Container | Tags |" >> $GITHUB_STEP_SUMMARY
-            echo "|-----------|------|" >> $GITHUB_STEP_SUMMARY
-
-            # Parse containers JSON array
-            while read -r container; do
-              echo "| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
-            done < <(echo "$CONTAINERS" | jq -r '.[]')
-
+            echo -e "$CONTAINER_TABLE" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "⚠️ **Note:** Git tag \`v$VERSION\` was not created. You may need to tag manually." >> $GITHUB_STEP_SUMMARY
           else
-            echo "### ❌ Build Status: Failed" >> $GITHUB_STEP_SUMMARY
+            # Build did not complete successfully
+            echo "### ❌ Build Status: Not Successful" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "❌ Container builds failed (status: $BUILD_RESULT)" >> $GITHUB_STEP_SUMMARY
+            
+            # Provide detailed status information
+            echo "**Job Results:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Build: \`$BUILD_RESULT\`" >> $GITHUB_STEP_SUMMARY
+            echo "- Tag: \`$TAG_RESULT\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "🔍 **Action Required:** Check the build-containers job logs for details" >> $GITHUB_STEP_SUMMARY
+            
+            # Provide specific messaging based on build result
+            case "$BUILD_RESULT" in
+              "failure")
+                echo "❌ Container builds failed." >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "🔍 **Action Required:** Check the build-containers job logs for details" >> $GITHUB_STEP_SUMMARY
+                ;;
+              "cancelled")
+                echo "🚫 Container builds were cancelled." >> $GITHUB_STEP_SUMMARY
+                ;;
+              "skipped")
+                echo "⏭️ Container builds were skipped." >> $GITHUB_STEP_SUMMARY
+                ;;
+              *)
+                echo "⚠️ Workflow did not complete successfully." >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "🔍 **Action Required:** Check the workflow logs for details" >> $GITHUB_STEP_SUMMARY
+                ;;
+            esac
+            
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 📋 Attempted Containers" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            while read -r container; do
-              echo "- $container" >> $GITHUB_STEP_SUMMARY
-            done < <(echo "$CONTAINERS" | jq -r '.[]')
+            echo -e "$CONTAINER_LIST" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "🔄 **Next Steps:**" >> $GITHUB_STEP_SUMMARY
-            echo "1. Review the error logs in the failed build jobs" >> $GITHUB_STEP_SUMMARY
+            echo "1. Review the error logs in the failed/cancelled jobs" >> $GITHUB_STEP_SUMMARY
             echo "2. Fix any issues in the Dockerfiles or build configuration" >> $GITHUB_STEP_SUMMARY
             echo "3. Re-run the workflow" >> $GITHUB_STEP_SUMMARY
           fi
 
-            # Parse containers JSON array
-            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
-              echo "| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |" >> "$GITHUB_STEP_SUMMARY"
-            done
-
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "### 🔧 Pull Commands" >> "$GITHUB_STEP_SUMMARY"
-            echo "\`\`\`bash" >> "$GITHUB_STEP_SUMMARY"
-            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
-              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:latest" >> "$GITHUB_STEP_SUMMARY"
-              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:v$VERSION" >> "$GITHUB_STEP_SUMMARY"
-            done
-            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "One or more jobs failed:" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "- prepare: \`$PREPARE_RESULT\`" >> "$GITHUB_STEP_SUMMARY"
-            echo "- build-containers: \`$BUILD_RESULT\`" >> "$GITHUB_STEP_SUMMARY"
-            echo "- tag-commit: \`$TAG_RESULT\`" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "> Container list and pull commands are omitted because the build/tag process did not fully succeed." >> "$GITHUB_STEP_SUMMARY"
-          fi
