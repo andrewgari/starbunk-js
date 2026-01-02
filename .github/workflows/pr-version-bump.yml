@@ -12,6 +12,7 @@ jobs:
   auto-version-bump:
     name: 🔢 Auto Bump Version
     runs-on: ubuntu-latest
+    continue-on-error: true  # Don't fail PR if version bump fails
     # Only run on PRs from branches in the same repo (not forks)
     if: github.event.pull_request.head.repo.full_name == github.repository
     permissions:
@@ -129,25 +130,41 @@ jobs:
 
       - name: Bump version
         if: steps.version.outputs.should-bump == 'true' && steps.check.outputs.already-bumped == 'false'
+        continue-on-error: true
         run: |
+          set -e
           NEW_VERSION="${{ steps.version.outputs.new-version }}"
 
           # Update root package.json
-          npm version $NEW_VERSION --no-git-tag-version
+          npm version $NEW_VERSION --no-git-tag-version || {
+            echo "::warning::Failed to update version with npm"
+            exit 1
+          }
 
           # Sync to all packages
-          bash ./scripts/sync-versions.sh
+          if [ -f ./scripts/sync-versions.sh ]; then
+            bash ./scripts/sync-versions.sh || echo "::warning::Failed to sync versions"
+          else
+            echo "::warning::sync-versions.sh not found, skipping sync"
+          fi
 
           # Commit the changes
-          git add package.json apps/*/package.json packages/shared/package.json apps/*/package-lock.json packages/shared/package-lock.json package-lock.json
-          git commit -m "chore(version): bump to v${NEW_VERSION}
+          git add package.json apps/*/package.json packages/shared/package.json apps/*/package-lock.json packages/shared/package-lock.json package-lock.json 2>/dev/null || true
 
-Automated version bump based on conventional commits.
-Bump type: ${{ steps.version.outputs.bump-type }}
+          COMMIT_MSG="chore(version): bump to v${NEW_VERSION}"
+          COMMIT_MSG="${COMMIT_MSG}\n\nAutomated version bump based on conventional commits."
+          COMMIT_MSG="${COMMIT_MSG}\nBump type: ${{ steps.version.outputs.bump-type }}"
+          COMMIT_MSG="${COMMIT_MSG}\n\nCo-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
 
-Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          git commit -m "${COMMIT_MSG}" || {
+            echo "::warning::No changes to commit"
+            exit 0
+          }
 
-          git push
+          git push || {
+            echo "::error::Failed to push version bump"
+            exit 1
+          }
 
       - name: Comment on PR
         if: steps.version.outputs.should-bump == 'true' && steps.check.outputs.already-bumped == 'false'

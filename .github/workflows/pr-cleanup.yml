@@ -138,5 +138,7 @@ jobs:
 
                       } catch (error) {
                           console.error(`❌ PR cleanup failed: ${error.message}`);
-                          throw error; // Fail the job on critical errors
+                          console.error(error.stack);
+                          // Don't fail the job - cleanup is best-effort
+                          core.setFailed(`Cleanup completed with errors: ${error.message}`);
                       }
