@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version_override:
-        description: 'Override version (leave empty to use VERSION file)'
+        description: 'Override version (leave empty to use VERSION file). Supports semantic versioning with optional pre-release/build metadata (e.g., 1.0.0, 1.0.0-beta, 1.0.0+build)'
         type: string
         required: false
         default: ''
@@ -164,7 +164,7 @@ jobs:
             build.timestamp=${{ github.run_id }}
 
       - name: 🏗️ Build and Push Container Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/${{ matrix.container }}/Dockerfile
@@ -211,20 +211,38 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Create tags
-          echo "🏷️ Creating git tag v$VERSION for commit $(git rev-parse HEAD)"
+          CURRENT_HEAD="$(git rev-parse HEAD)"
+          echo "🏷️ Preparing git tag v$VERSION for commit ${CURRENT_HEAD}"
 
-          # Delete tag if it exists (for re-runs with same version)
-          git tag -d "v$VERSION" 2>/dev/null || true
-          git push origin ":refs/tags/v$VERSION" 2>/dev/null || true
+          # Check if the tag already exists on the remote
+          REMOTE_TAG_COMMIT="$(git ls-remote --tags origin "refs/tags/v${VERSION}" | awk '{print $1}')"
 
-          # Create new tag
+          if [ -n "${REMOTE_TAG_COMMIT}" ]; then
+            if [ "${REMOTE_TAG_COMMIT}" != "${CURRENT_HEAD}" ]; then
+              echo "❌ Tag v${VERSION} already exists on origin at ${REMOTE_TAG_COMMIT}, which differs from current HEAD ${CURRENT_HEAD}." >&2
+              echo "   Please use a new version number when re-running this workflow." >&2
+              exit 1
+            fi
+
+            echo "✅ Tag v${VERSION} already exists on origin and points to the current commit (${CURRENT_HEAD}); skipping tag creation."
+            exit 0
+          fi
+
+          # Check if a local tag exists and conflicts with the current HEAD
+          LOCAL_TAG_COMMIT="$(git rev-parse "v${VERSION}^{commit}" 2>/dev/null || true)"
+          if [ -n "${LOCAL_TAG_COMMIT}" ] && [ "${LOCAL_TAG_COMMIT}" != "${CURRENT_HEAD}" ]; then
+            echo "❌ Local tag v${VERSION} already exists at ${LOCAL_TAG_COMMIT}, which differs from current HEAD ${CURRENT_HEAD}." >&2
+            echo "   Please use a new version number when re-running this workflow." >&2
+            exit 1
+          fi
+
+          # Create new tag (no need to delete since we've confirmed it doesn't exist or matches)
           git tag -a "v$VERSION" -m "Release v$VERSION - Manual build from workflow"
 
           # Push tag
           git push origin "v$VERSION"
 
-          echo "✅ Successfully tagged commit $(git rev-parse HEAD) with v$VERSION"
+          echo "✅ Successfully tagged commit ${CURRENT_HEAD} with v$VERSION"
 
   summary:
     name: 📋 Build Summary
@@ -247,13 +265,21 @@ jobs:
           # Pre-generate container tables to avoid duplication
           # Use mapfile to reliably capture output
           # Validate JSON before parsing
-          if [ -n "$CONTAINERS" ] && echo "$CONTAINERS" | jq empty >/dev/null 2>&1; then
-            mapfile -t container_array < <(echo "$CONTAINERS" | jq -r '.[]')
-          else
-            container_array=()
+          container_array=()
+          if [ -n "$CONTAINERS" ]; then
+            if command -v jq >/dev/null 2>&1; then
+              if echo "$CONTAINERS" | jq empty >/dev/null 2>&1; then
+                mapfile -t container_array < <(echo "$CONTAINERS" | jq -r '.[]')
+              else
+                echo "::warning::Invalid JSON in containers output; summary will not list containers." >&2
+              fi
+            else
+              echo "::warning::jq is not installed; cannot parse containers JSON. Summary will not list containers." >&2
+            fi
           fi
           
-          # Generate container table
+          # Helper function: Generate container table with tags
+          # Iterates over container_array and outputs markdown table rows
           generate_container_table() {
             echo "| Container | Tags |" >> $GITHUB_STEP_SUMMARY
             echo "|-----------|------|" >> $GITHUB_STEP_SUMMARY
@@ -262,7 +288,8 @@ jobs:
             done
           }
           
-          # Generate pull commands
+          # Helper function: Generate docker pull commands
+          # Iterates over container_array and outputs pull commands for each tag
           generate_pull_commands() {
             for container in "${container_array[@]}"; do
               echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:latest" >> $GITHUB_STEP_SUMMARY
@@ -270,7 +297,8 @@ jobs:
             done
           }
           
-          # Generate container list
+          # Helper function: Generate simple bullet list of containers
+          # Used when build fails to show which containers were attempted
           generate_container_list() {
             for container in "${container_array[@]}"; do
               echo "- $container" >> $GITHUB_STEP_SUMMARY
