@@ -13,8 +13,9 @@ jobs:
     name: 🔢 Auto Bump Version
     runs-on: ubuntu-latest
     continue-on-error: true  # Don't fail PR if version bump fails
-    # Only run on PRs from branches in the same repo (not forks)
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # DISABLED: Version management is now manual via VERSION file with automatic sync via pre-commit hook
+    # Users update VERSION file manually, and it syncs to package.json automatically
+    if: false
     permissions:
       contents: write
       pull-requests: write
