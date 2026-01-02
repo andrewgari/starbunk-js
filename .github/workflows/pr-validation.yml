@@ -496,6 +496,10 @@ jobs:
       - test-build-djcova
       - test-build-starbunk-dnd
       - test-build-covabot
+      - docker-build-bunkbot
+      - docker-build-djcova
+      - docker-build-starbunk-dnd
+      - docker-build-covabot
     if: always()
     steps:
       - name: Check validation result
@@ -507,6 +511,10 @@ jobs:
           echo "test-build-djcova: ${{ needs.test-build-djcova.result }}"
           echo "test-build-starbunk-dnd: ${{ needs.test-build-starbunk-dnd.result }}"
           echo "test-build-covabot: ${{ needs.test-build-covabot.result }}"
+          echo "docker-build-bunkbot: ${{ needs.docker-build-bunkbot.result }}"
+          echo "docker-build-djcova: ${{ needs.docker-build-djcova.result }}"
+          echo "docker-build-starbunk-dnd: ${{ needs.docker-build-starbunk-dnd.result }}"
+          echo "docker-build-covabot: ${{ needs.docker-build-covabot.result }}"
 
           # Required checks must succeed
           if [[ "${{ needs.type-check.result }}" != "success" ]]; then
@@ -519,26 +527,47 @@ jobs:
             exit 1
           fi
 
-          # Container checks can succeed or be skipped, but not fail
-          for job in "test-build-bunkbot" "test-build-djcova" \
-                     "test-build-starbunk-dnd" "test-build-covabot"; do
-            result=""
-            case $job in
-              "test-build-bunkbot")
-                result="${{ needs.test-build-bunkbot.result }}" ;;
-              "test-build-djcova")
-                result="${{ needs.test-build-djcova.result }}" ;;
-              "test-build-starbunk-dnd")
-                result="${{ needs.test-build-starbunk-dnd.result }}" ;;
-              "test-build-covabot")
-                result="${{ needs.test-build-covabot.result }}" ;;
-            esac
+          # Container test-build checks can succeed or be skipped, but not fail
+          if [[ "${{ needs.test-build-bunkbot.result }}" != "success" && "${{ needs.test-build-bunkbot.result }}" != "skipped" ]]; then
+            echo "❌ Container check test-build-bunkbot failed with status: ${{ needs.test-build-bunkbot.result }}"
+            exit 1
+          fi
 
-            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
-              echo "❌ Container check $job failed with status: $result"
-              exit 1
-            fi
-          done
+          if [[ "${{ needs.test-build-djcova.result }}" != "success" && "${{ needs.test-build-djcova.result }}" != "skipped" ]]; then
+            echo "❌ Container check test-build-djcova failed with status: ${{ needs.test-build-djcova.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-build-starbunk-dnd.result }}" != "success" && "${{ needs.test-build-starbunk-dnd.result }}" != "skipped" ]]; then
+            echo "❌ Container check test-build-starbunk-dnd failed with status: ${{ needs.test-build-starbunk-dnd.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-build-covabot.result }}" != "success" && "${{ needs.test-build-covabot.result }}" != "skipped" ]]; then
+            echo "❌ Container check test-build-covabot failed with status: ${{ needs.test-build-covabot.result }}"
+            exit 1
+          fi
+
+          # Docker build checks can succeed or be skipped, but not fail
+          if [[ "${{ needs.docker-build-bunkbot.result }}" != "success" && "${{ needs.docker-build-bunkbot.result }}" != "skipped" ]]; then
+            echo "❌ Docker build check docker-build-bunkbot failed with status: ${{ needs.docker-build-bunkbot.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.docker-build-djcova.result }}" != "success" && "${{ needs.docker-build-djcova.result }}" != "skipped" ]]; then
+            echo "❌ Docker build check docker-build-djcova failed with status: ${{ needs.docker-build-djcova.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.docker-build-starbunk-dnd.result }}" != "success" && "${{ needs.docker-build-starbunk-dnd.result }}" != "skipped" ]]; then
+            echo "❌ Docker build check docker-build-starbunk-dnd failed with status: ${{ needs.docker-build-starbunk-dnd.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.docker-build-covabot.result }}" != "success" && "${{ needs.docker-build-covabot.result }}" != "skipped" ]]; then
+            echo "❌ Docker build check docker-build-covabot failed with status: ${{ needs.docker-build-covabot.result }}"
+            exit 1
+          fi
 
           echo "✅ All validation checks passed or skipped"
           exit 0
