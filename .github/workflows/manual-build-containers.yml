@@ -276,3 +276,25 @@ jobs:
             echo "3. Re-run the workflow" >> $GITHUB_STEP_SUMMARY
           fi
 
+            # Parse containers JSON array
+            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
+              echo "| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |" >> "$GITHUB_STEP_SUMMARY"
+            done
+
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "### 🔧 Pull Commands" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`bash" >> "$GITHUB_STEP_SUMMARY"
+            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
+              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:latest" >> "$GITHUB_STEP_SUMMARY"
+              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:v$VERSION" >> "$GITHUB_STEP_SUMMARY"
+            done
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "One or more jobs failed:" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- prepare: \`$PREPARE_RESULT\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "- build-containers: \`$BUILD_RESULT\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "- tag-commit: \`$TAG_RESULT\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "> Container list and pull commands are omitted because the build/tag process did not fully succeed." >> "$GITHUB_STEP_SUMMARY"
+          fi
