@@ -89,10 +89,36 @@ runs:
           node-${{ inputs.node-version }}-${{ runner.os }}-deps-
 
     - name: Install dependencies
-      if: inputs.install-dependencies == 'true' && steps.cache.outputs.cache-hit != 'true'
+      if: inputs.install-dependencies == 'true'
       shell: bash
       run: |
-        echo "📦 Installing dependencies in parallel..."
+        if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
+          echo "📦 Cache hit - verifying dependencies..."
+
+          # Verify critical dependencies exist, reinstall if missing
+          NEEDS_INSTALL=false
+
+          # Check if @types/node exists in shared package (common failure point)
+          if [ ! -d "packages/shared/node_modules/@types/node" ]; then
+            echo "⚠️  Missing @types/node in shared package - cache may be incomplete"
+            NEEDS_INSTALL=true
+          fi
+
+          # Check if root node_modules exists
+          if [ ! -d "node_modules" ]; then
+            echo "⚠️  Missing root node_modules - cache may be incomplete"
+            NEEDS_INSTALL=true
+          fi
+
+          if [ "$NEEDS_INSTALL" = "true" ]; then
+            echo "🔄 Reinstalling dependencies due to incomplete cache..."
+          else
+            echo "✅ Cache verified - all dependencies present"
+            exit 0
+          fi
+        else
+          echo "📦 Installing dependencies in parallel..."
+        fi
 
         # Function to install dependencies for a container
         install_container_deps() {

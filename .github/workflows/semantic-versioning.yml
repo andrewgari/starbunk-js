@@ -224,6 +224,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [check-version, create-release]
     if: needs.check-version.outputs.should-release == 'true' && github.event.inputs.dry_run != 'true'
+    permissions:
+      actions: write
+      contents: read
     steps:
       - name: Get version
         id: get-version

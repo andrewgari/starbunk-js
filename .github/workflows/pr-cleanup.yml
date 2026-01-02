@@ -30,23 +30,12 @@ jobs:
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   script: |
-                      const fs = require('fs');
-                      const yaml = require('js-yaml');
                       const { owner, repo } = context.repo;
                       const prNumber = context.payload.pull_request.number;
 
                       console.log(`🧹 Cleaning up PR ${prNumber} container images...`);
 
-                      // Load utilities
-                      const ghcrUtils = require('./.github/scripts/ghcr-cleanup-utils.js');
-
-                      // Load configuration
-                      const configYaml = fs.readFileSync('.github/ghcr-cleanup-config.yml', 'utf8');
-                      const config = yaml.load(configYaml);
-
                       try {
-                          // Initialize utilities
-                          await ghcrUtils.initialize(github, context, config);
 
                           const containers = ['bunkbot', 'djcova', 'starbunk-dnd', 'covabot'];
                           let totalDeleted = 0;
