@@ -15,7 +15,7 @@ on:
         default: 'all'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 env:
@@ -150,10 +150,44 @@ jobs:
           echo "📦 Image: ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:latest"
           echo "🏷️ Version: ${{ needs.prepare.outputs.version }}"
 
+  tag-commit:
+    name: 🏷️ Tag Git Commit
+    runs-on: ubuntu-latest
+    needs: [prepare, build-containers]
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: 🏷️ Create and Push Git Tags
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create tags
+          echo "🏷️ Creating git tag v$VERSION for commit $(git rev-parse HEAD)"
+
+          # Delete tag if it exists (for re-runs with same version)
+          git tag -d "v$VERSION" 2>/dev/null || true
+          git push origin ":refs/tags/v$VERSION" 2>/dev/null || true
+
+          # Create new tag
+          git tag -a "v$VERSION" -m "Release v$VERSION - Manual build from workflow"
+
+          # Push tag
+          git push origin "v$VERSION"
+
+          echo "✅ Successfully tagged commit $(git rev-parse HEAD) with v$VERSION"
+
   summary:
     name: 📋 Build Summary
     runs-on: ubuntu-latest
-    needs: [prepare, build-containers]
+    needs: [prepare, build-containers, tag-commit]
     if: always()
     steps:
       - name: 📊 Generate Summary
@@ -163,7 +197,8 @@ jobs:
 
           echo "## 🎉 Manual Container Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 Version: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Version: \`v$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "### 🏷️ Git Tag: \`v$VERSION\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🐳 Built Containers" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
