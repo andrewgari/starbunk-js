@@ -311,7 +311,7 @@ jobs:
         id: deployment
         uses: docker/build-push-action@v6
         with:
-          context: apps/${{ matrix.container }}
+          context: .
           file: apps/${{ matrix.container }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
