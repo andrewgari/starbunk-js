@@ -422,3 +422,38 @@ jobs:
         run: |
           echo "🧹 Deployment artifacts are automatically cleaned up by GitHub Actions"
           echo "✅ Cleanup complete"
+
+  # ==============================================================================
+  # GIT TAG MANAGEMENT
+  # ==============================================================================
+  tag-latest:
+    name: 🏷️ Tag Latest
+    runs-on: ubuntu-latest
+    needs: [detect-changes, deploy-containers, post-deployment-verification]
+    if: |
+      github.ref == 'refs/heads/main' &&
+      needs.detect-changes.outputs.has-deployments == 'true' &&
+      needs.deploy-containers.result == 'success' &&
+      needs.post-deployment-verification.result == 'success'
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏷️ Create/Update Latest Git Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          echo "🏷️ Creating/updating 'latest' git tag to point to ${{ github.sha }}"
+
+          # Create or force-update the tag to point to current HEAD
+          git tag -f latest ${{ github.sha }}
+
+          # Push the tag (force update if it exists)
+          git push origin latest --force
+
+          echo "✅ Successfully tagged commit ${{ github.sha }} with 'latest'"
