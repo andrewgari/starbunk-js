@@ -430,7 +430,12 @@ jobs:
     name: 🏷️ Tag Version
     runs-on: ubuntu-latest
     needs: [detect-changes, deploy-containers, post-deployment-verification]
-    # Always run on main branch, but if deployments happened, only tag on success
+    # Conditional logic for tagging:
+    # 1. always() - Run even if previous jobs failed/skipped
+    # 2. github.ref check - Only on main branch
+    # 3. Deployment check - Two scenarios:
+    #    a) No deployments (has-deployments != 'true') → Tag immediately
+    #    b) Deployments occurred → Only tag if both deploy and verify succeeded
     if: |
       always() &&
       github.ref == 'refs/heads/main' &&

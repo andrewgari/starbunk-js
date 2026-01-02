@@ -70,6 +70,7 @@ The `semantic-versioning.yml` workflow automatically:
 - `publish-main.yml` creates tags immediately on merge (if they don't exist)
 - `semantic-versioning.yml` checks for existing tags and skips if already created
 - This design ensures tags are created quickly while still allowing for formal GitHub releases with changelogs
+- **Race condition handling**: In the unlikely event both workflows check for tag existence simultaneously, Git's atomic push operation ensures only one succeeds; the other will fail gracefully without breaking the workflow
 
 ## Manual Version Bump
 
