@@ -19,7 +19,7 @@ on:
 # Pipeline Phases:
 # Phase 1: Lint + Type Check + Docker builds for all containers + Version check (main target only)
 # Phase 2: If Phase 1 passes, Build and Tests run for each container + Hash comparison
-# Phase 3: If hash differs, tag with latest and version, publish images, force tag main
+# Phase 3: If hash differs, tag with latest and version, publish images, force tag commit with container-latest
 # Phase 4: Success gate - all checks passed
 
 env:
@@ -494,9 +494,24 @@ jobs:
           # Get the PR image digest
           NEW_DIGEST="${{ needs.docker-build-bunkbot.outputs.image-digest }}"
           
-          # Get the latest tag manifest digest - handle both single-arch and multi-arch manifests
-          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest 2>/dev/null | \
-            jq -r 'if .manifests then .manifests[0].digest else .config.digest end' || echo "none")
+          # Try to get manifest list digest first, fallback to manifest/config digest
+          # For multi-arch: get the manifest list digest
+          # For single-arch: get the config digest
+          OLD_MANIFEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest 2>/dev/null || echo "")
+          
+          if [ -z "$OLD_MANIFEST" ]; then
+            OLD_DIGEST="none"
+          else
+            # Check if it's a manifest list (multi-arch) or single manifest
+            if echo "$OLD_MANIFEST" | jq -e '.manifests' >/dev/null 2>&1; then
+              # Multi-arch: use the manifest list digest (the digest of the whole list)
+              OLD_DIGEST=$(docker manifest inspect --verbose ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest 2>/dev/null | \
+                jq -r '.Descriptor.digest // .manifests[0].digest' || echo "none")
+            else
+              # Single-arch: use config digest
+              OLD_DIGEST=$(echo "$OLD_MANIFEST" | jq -r '.config.digest' || echo "none")
+            fi
+          fi
           
           echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
           echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
@@ -535,8 +550,19 @@ jobs:
           set +e
           
           NEW_DIGEST="${{ needs.docker-build-djcova.outputs.image-digest }}"
-          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest 2>/dev/null | \
-            jq -r 'if .manifests then .manifests[0].digest else .config.digest end' || echo "none")
+          
+          OLD_MANIFEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest 2>/dev/null || echo "")
+          
+          if [ -z "$OLD_MANIFEST" ]; then
+            OLD_DIGEST="none"
+          else
+            if echo "$OLD_MANIFEST" | jq -e '.manifests' >/dev/null 2>&1; then
+              OLD_DIGEST=$(docker manifest inspect --verbose ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest 2>/dev/null | \
+                jq -r '.Descriptor.digest // .manifests[0].digest' || echo "none")
+            else
+              OLD_DIGEST=$(echo "$OLD_MANIFEST" | jq -r '.config.digest' || echo "none")
+            fi
+          fi
           
           echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
           echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
@@ -572,8 +598,19 @@ jobs:
           set +e
           
           NEW_DIGEST="${{ needs.docker-build-starbunk-dnd.outputs.image-digest }}"
-          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest 2>/dev/null | \
-            jq -r 'if .manifests then .manifests[0].digest else .config.digest end' || echo "none")
+          
+          OLD_MANIFEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest 2>/dev/null || echo "")
+          
+          if [ -z "$OLD_MANIFEST" ]; then
+            OLD_DIGEST="none"
+          else
+            if echo "$OLD_MANIFEST" | jq -e '.manifests' >/dev/null 2>&1; then
+              OLD_DIGEST=$(docker manifest inspect --verbose ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest 2>/dev/null | \
+                jq -r '.Descriptor.digest // .manifests[0].digest' || echo "none")
+            else
+              OLD_DIGEST=$(echo "$OLD_MANIFEST" | jq -r '.config.digest' || echo "none")
+            fi
+          fi
           
           echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
           echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
@@ -609,8 +646,19 @@ jobs:
           set +e
           
           NEW_DIGEST="${{ needs.docker-build-covabot.outputs.image-digest }}"
-          OLD_DIGEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest 2>/dev/null | \
-            jq -r 'if .manifests then .manifests[0].digest else .config.digest end' || echo "none")
+          
+          OLD_MANIFEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest 2>/dev/null || echo "")
+          
+          if [ -z "$OLD_MANIFEST" ]; then
+            OLD_DIGEST="none"
+          else
+            if echo "$OLD_MANIFEST" | jq -e '.manifests' >/dev/null 2>&1; then
+              OLD_DIGEST=$(docker manifest inspect --verbose ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest 2>/dev/null | \
+                jq -r '.Descriptor.digest // .manifests[0].digest' || echo "none")
+            else
+              OLD_DIGEST=$(echo "$OLD_MANIFEST" | jq -r '.config.digest' || echo "none")
+            fi
+          fi
           
           echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
           echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
