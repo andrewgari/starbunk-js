@@ -77,6 +77,10 @@ jobs:
             # First pass: validate all container names
             for container_input in "${CONTAINER_ARRAY[@]}"; do
               container=$(echo "$container_input" | xargs)
+              # Skip empty container names (e.g., from trailing or consecutive commas)
+              if [ -z "$container" ]; then
+                continue
+              fi
               
               # Validate container name
               valid=false
