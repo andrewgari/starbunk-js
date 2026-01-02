@@ -1,4 +1,7 @@
 name: Main - Deploy Containers
+# This workflow automatically tags container images with :latest when PRs are merged to main.
+# The :latest tag is applied at merge time (push to main), not during PR development,
+# ensuring it always points to the most recent production deployment.
 
 on:
   push:
@@ -288,9 +291,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}
           tags: |
+            # Tag with :latest only when pushing to main (i.e., when PR is merged)
+            # This ensures :latest always points to the most recent production deployment
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=v${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' }}
             type=sha,prefix={{date 'YYYYMMDD-HHmmss'}}-,suffix=-{{branch}},format=short
+            # Also create a stable timestamped tag for main branch deployments
             type=raw,value={{date 'YYYYMMDD-HHmmss'}}-{{sha}}-stable,enable=${{ github.ref == 'refs/heads/main' }}
           labels: |
             org.opencontainers.image.title=${{ matrix.container }}
