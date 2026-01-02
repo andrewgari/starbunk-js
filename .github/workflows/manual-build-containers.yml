@@ -63,22 +63,60 @@ jobs:
         id: determine-containers
         run: |
           INPUT="${{ github.event.inputs.containers }}"
+          VALID_CONTAINERS=("bunkbot" "djcova" "starbunk-dnd" "covabot")
 
           if [ "$INPUT" = "all" ] || [ -z "$INPUT" ]; then
             CONTAINERS='["bunkbot", "djcova", "starbunk-dnd", "covabot"]'
             echo "🚀 Building all containers"
           else
-            # Convert comma-separated list to JSON array
+            # Convert comma-separated list to JSON array with validation
             IFS=',' read -ra CONTAINER_ARRAY <<< "$INPUT"
+            INVALID_CONTAINERS=()
+            VALID_SELECTED=()
+            
+            # First pass: validate all container names
+            for container_input in "${CONTAINER_ARRAY[@]}"; do
+              container=$(echo "$container_input" | xargs)
+              # Skip empty container names (e.g., from trailing or consecutive commas)
+              if [ -z "$container" ]; then
+                continue
+              fi
+              
+              # Validate container name
+              valid=false
+              for valid_container in "${VALID_CONTAINERS[@]}"; do
+                if [ "$container" = "$valid_container" ]; then
+                  valid=true
+                  break
+                fi
+              done
+              
+              if [ "$valid" = false ]; then
+                INVALID_CONTAINERS+=("$container")
+              else
+                VALID_SELECTED+=("$container")
+              fi
+            done
+            
+            # Report invalid containers and fail if any found
+            if [ ${#INVALID_CONTAINERS[@]} -gt 0 ]; then
+              INVALID_LIST=$(IFS=','; echo "${INVALID_CONTAINERS[*]}")
+              VALID_LIST=$(IFS=','; echo "${VALID_CONTAINERS[*]}")
+              echo "❌ ERROR: Invalid container name(s): $INVALID_LIST"
+              echo "✅ Valid options are: $VALID_LIST"
+              exit 1
+            fi
+            
+            # Build JSON array from valid containers
             CONTAINERS="["
-            for i in "${!CONTAINER_ARRAY[@]}"; do
-              container=$(echo "${CONTAINER_ARRAY[$i]}" | xargs)
+            for i in "${!VALID_SELECTED[@]}"; do
               if [ $i -gt 0 ]; then
                 CONTAINERS+=","
               fi
-              CONTAINERS+="\"$container\""
+              CONTAINERS+="\"${VALID_SELECTED[$i]}\""
             done
             CONTAINERS+="]"
+            
             echo "🚀 Building selected containers: $CONTAINERS"
           fi
 
