@@ -43,13 +43,17 @@ jobs:
             VERSION="${{ github.event.inputs.version_override }}"
             echo "📦 Using override version: $VERSION"
           else
-            VERSION=$(cat VERSION | tr -d '[:space:]')
+            if [ ! -f "VERSION" ]; then
+              echo "❌ ERROR: VERSION file not found"
+              exit 1
+            fi
+            VERSION=$(tr -d '[:space:]' < VERSION)
             echo "📦 Using VERSION file: $VERSION"
           fi
 
-          # Validate version format
-          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "❌ ERROR: Invalid version format '$VERSION' (expected X.Y.Z)"
+          # Validate version format (SemVer: X.Y.Z with optional pre-release and build metadata)
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'; then
+            echo "❌ ERROR: Invalid version format '$VERSION' (expected X.Y.Z, optionally with pre-release/build metadata)"
             exit 1
           fi
 
@@ -122,7 +126,7 @@ jobs:
             build.timestamp=${{ github.run_id }}
 
       - name: 🏗️ Build and Push Container Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: apps/${{ matrix.container }}/Dockerfile
@@ -138,7 +142,7 @@ jobs:
           provenance: false
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            BUILD_DATE=${{ github.run_id }}
             VCS_REF=${{ github.sha }}
             VERSION=${{ needs.prepare.outputs.version }}
             NODE_ENV=production
@@ -160,30 +164,38 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          BUILD_RESULT='${{ needs.build-containers.result }}'
 
-      - name: 🏷️ Create and Push Git Tags
-        run: |
-          VERSION="${{ needs.prepare.outputs.version }}"
+          echo "## 🎉 Manual Container Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Version: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Configure git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ "$BUILD_RESULT" = "success" ] && [ -n "$CONTAINERS" ] && echo "$CONTAINERS" | jq empty >/dev/null 2>&1; then
+            echo "### 🐳 Built Containers" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Container | Tags |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|------|" >> $GITHUB_STEP_SUMMARY
 
-          # Create tags
-          echo "🏷️ Creating git tag v$VERSION for commit $(git rev-parse HEAD)"
+            # Parse containers JSON array
+            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
+              echo "| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+            done
 
-          # Delete tag if it exists (for re-runs with same version)
-          git tag -d "v$VERSION" 2>/dev/null || true
-          git push origin ":refs/tags/v$VERSION" 2>/dev/null || true
-
-          # Create new tag
-          git tag -a "v$VERSION" -m "Release v$VERSION - Manual build from workflow"
-
-          # Push tag
-          git push origin "v$VERSION"
-
-          echo "✅ Successfully tagged commit $(git rev-parse HEAD) with v$VERSION"
-
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🔧 Pull Commands" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
+              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:latest" >> $GITHUB_STEP_SUMMARY
+              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:v$VERSION" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ Container build details unavailable" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- Build result: \`$BUILD_RESULT\`" >> $GITHUB_STEP_SUMMARY
+            echo "- Container images and pull commands are not listed because the build did not complete successfully or container metadata is unavailable." >> $GITHUB_STEP_SUMMARY
+          fi
   summary:
     name: 📋 Build Summary
     runs-on: ubuntu-latest
