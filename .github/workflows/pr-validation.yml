@@ -489,7 +489,7 @@ jobs:
   pr-validation-success:
     name: ✅ PR Validation Success
     runs-on: ubuntu-latest
-    needs: 
+    needs:
       - type-check
       - lint
       - test-build-bunkbot
@@ -507,33 +507,38 @@ jobs:
           echo "test-build-djcova: ${{ needs.test-build-djcova.result }}"
           echo "test-build-starbunk-dnd: ${{ needs.test-build-starbunk-dnd.result }}"
           echo "test-build-covabot: ${{ needs.test-build-covabot.result }}"
-          
+
           # Required checks must succeed
           if [[ "${{ needs.type-check.result }}" != "success" ]]; then
             echo "❌ Type check failed"
             exit 1
           fi
-          
+
           if [[ "${{ needs.lint.result }}" != "success" ]]; then
             echo "❌ Lint failed"
             exit 1
           fi
-          
+
           # Container checks can succeed or be skipped, but not fail
-          for job in "test-build-bunkbot" "test-build-djcova" "test-build-starbunk-dnd" "test-build-covabot"; do
+          for job in "test-build-bunkbot" "test-build-djcova" \
+                     "test-build-starbunk-dnd" "test-build-covabot"; do
             result=""
             case $job in
-              "test-build-bunkbot") result="${{ needs.test-build-bunkbot.result }}" ;;
-              "test-build-djcova") result="${{ needs.test-build-djcova.result }}" ;;
-              "test-build-starbunk-dnd") result="${{ needs.test-build-starbunk-dnd.result }}" ;;
-              "test-build-covabot") result="${{ needs.test-build-covabot.result }}" ;;
+              "test-build-bunkbot")
+                result="${{ needs.test-build-bunkbot.result }}" ;;
+              "test-build-djcova")
+                result="${{ needs.test-build-djcova.result }}" ;;
+              "test-build-starbunk-dnd")
+                result="${{ needs.test-build-starbunk-dnd.result }}" ;;
+              "test-build-covabot")
+                result="${{ needs.test-build-covabot.result }}" ;;
             esac
-            
+
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
               echo "❌ Container check $job failed with status: $result"
               exit 1
             fi
           done
-          
+
           echo "✅ All validation checks passed or skipped"
           exit 0
