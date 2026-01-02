@@ -5,11 +5,11 @@ This project uses a **single source of truth** for versioning to avoid duplicati
 ## How It Works
 
 ### Single Source of Truth
-- **Root `package.json`** contains the authoritative version number
-- All workspace packages (apps and shared) sync their versions from the root
+- **`VERSION` file** contains the authoritative version number (e.g., `1.4.1`)
+- All workspace packages (apps, shared, and root package.json) sync their versions from this file
 
 ### Automatic Syncing
-The `scripts/sync-versions.sh` script automatically updates all package.json files to match the root version.
+The `scripts/sync-versions.sh` script automatically updates all package.json files to match the VERSION file.
 
 ### Automatic PR Version Bumps
 When you open a PR to `main`, the version is automatically bumped based on your conventional commits!
@@ -27,8 +27,8 @@ The `pr-version-bump.yml` workflow automatically:
    - No conventional commits → defaults to patch bump
 
 2. **Bumps the version** in your PR branch:
-   - Updates root `package.json`
-   - Runs `sync-versions.sh` to update all packages
+   - Updates `VERSION` file
+   - Runs `sync-versions.sh` to update all package.json files
    - Commits the changes to your PR
 
 3. **Comments on the PR** with the new version
@@ -42,7 +42,7 @@ When a PR is merged to main, multiple automated processes occur:
 The main branch is **automatically tagged** with:
 
 1. **Version tag** (e.g., `v1.3.2`):
-   - Based on the version in `package.json`
+   - Based on the version in the `VERSION` file
    - Created only if the tag doesn't already exist
    - Follows semantic versioning format
 
@@ -60,7 +60,7 @@ The main branch is **automatically tagged** with:
 
 The `semantic-versioning.yml` workflow automatically:
 
-1. Checks the version in `package.json` (already bumped by the PR workflow)
+1. Checks the version in the `VERSION` file (already bumped by the PR workflow)
 2. Checks if a git tag already exists for this version
 3. If no tag exists, creates a git tag (e.g., `v1.3.1`)
 4. Creates a GitHub release with changelog
@@ -77,17 +77,15 @@ The `semantic-versioning.yml` workflow automatically:
 If you need to manually bump the version:
 
 ```bash
-# 1. Update the root package.json version
-npm version patch  # or minor, major
-# or
-npm version 1.3.2 --no-git-tag-version
+# 1. Update the VERSION file
+echo "1.3.2" > VERSION
 
 # 2. Sync to all packages
 npm run sync-versions
 
 # 3. Commit the changes
-git add package.json apps/*/package.json packages/shared/package.json
-git commit -m "chore(version): bump to vX.Y.Z"
+git add VERSION package.json apps/*/package.json packages/shared/package.json
+git commit -m "chore(version): bump to v1.3.2"
 ```
 
 ## Conventional Commits
@@ -102,7 +100,8 @@ Use conventional commit messages to control version bumping:
 ## Version Sync Script
 
 The `scripts/sync-versions.sh` script:
-- ✅ Reads version from root `package.json`
+- ✅ Reads version from the `VERSION` file
+- ✅ Updates root `package.json`
 - ✅ Updates all `apps/*/package.json` files
 - ✅ Updates `packages/shared/package.json`
 - ✅ Shows clear output of what was updated
@@ -147,12 +146,13 @@ git tag -l "v*"
 
 ## Files Affected
 
-- `package.json` (root) - **Source of truth**
-- `apps/bunkbot/package.json`
-- `apps/covabot/package.json`
-- `apps/djcova/package.json`
-- `apps/starbunk-dnd/package.json`
-- `packages/shared/package.json`
+- `VERSION` - **Source of truth** (single version number)
+- `package.json` (root) - Synced from VERSION
+- `apps/bunkbot/package.json` - Synced from VERSION
+- `apps/covabot/package.json` - Synced from VERSION
+- `apps/djcova/package.json` - Synced from VERSION
+- `apps/starbunk-dnd/package.json` - Synced from VERSION
+- `packages/shared/package.json` - Synced from VERSION
 
 ## Troubleshooting
 
@@ -164,7 +164,7 @@ npm run sync-versions
 
 ### CI/CD failing on version bump
 Check that:
-1. The root package.json has the correct version
+1. The VERSION file exists and has the correct version
 2. The sync script is executable: `chmod +x scripts/sync-versions.sh`
 3. All package.json files are valid JSON
 
