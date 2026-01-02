@@ -228,17 +228,17 @@ jobs:
             echo "|-----------|------|" >> $GITHUB_STEP_SUMMARY
 
             # Parse containers JSON array
-            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
+            while read -r container; do
               echo "| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
-            done
+            done < <(echo "$CONTAINERS" | jq -r '.[]')
 
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 🔧 Pull Commands" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
+            while read -r container; do
               echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:latest" >> $GITHUB_STEP_SUMMARY
               echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:v$VERSION" >> $GITHUB_STEP_SUMMARY
-            done
+            done < <(echo "$CONTAINERS" | jq -r '.[]')
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           elif [[ "$BUILD_RESULT" == "success" && "$TAG_RESULT" != "success" ]]; then
             echo "### ⚠️ Build Status: Partial Success" >> $GITHUB_STEP_SUMMARY
@@ -251,9 +251,9 @@ jobs:
             echo "|-----------|------|" >> $GITHUB_STEP_SUMMARY
 
             # Parse containers JSON array
-            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
+            while read -r container; do
               echo "| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
-            done
+            done < <(echo "$CONTAINERS" | jq -r '.[]')
 
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "⚠️ **Note:** Git tag \`v$VERSION\` was not created. You may need to tag manually." >> $GITHUB_STEP_SUMMARY
@@ -266,9 +266,9 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 📋 Attempted Containers" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "$CONTAINERS" | jq -r '.[]' | while read container; do
+            while read -r container; do
               echo "- $container" >> $GITHUB_STEP_SUMMARY
-            done
+            done < <(echo "$CONTAINERS" | jq -r '.[]')
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "🔄 **Next Steps:**" >> $GITHUB_STEP_SUMMARY
             echo "1. Review the error logs in the failed build jobs" >> $GITHUB_STEP_SUMMARY
