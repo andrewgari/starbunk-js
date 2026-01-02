@@ -51,9 +51,9 @@ jobs:
             echo "📦 Using VERSION file: $VERSION"
           fi
 
-          # Validate version format
-          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "❌ ERROR: Invalid version format '$VERSION' (expected X.Y.Z)"
+          # Validate version format (SemVer: X.Y.Z with optional pre-release and build metadata)
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'; then
+            echo "❌ ERROR: Invalid version format '$VERSION' (expected X.Y.Z, optionally with pre-release/build metadata)"
             exit 1
           fi
 
