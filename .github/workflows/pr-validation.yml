@@ -16,9 +16,11 @@ on:
 # To force build all containers on a PR regardless of change detection,
 # add the 'force-validation' label to the PR
 #
-# Note: Docker builds only execute on pull_request events (not on main branch pushes)
-# to prevent debug-enabled images from being created when PRs merge.
-# The publish-main.yml workflow handles production builds on main branch.
+# Pipeline Phases:
+# Phase 1: Lint + Type Check + Docker builds for all containers + Version check (main target only)
+# Phase 2: If Phase 1 passes, Build and Tests run for each container + Hash comparison
+# Phase 3: If hash differs, tag with latest and version, publish images, force tag commit with container-latest
+# Phase 4: Success gate - all checks passed
 
 env:
   REGISTRY: ghcr.io
@@ -35,8 +37,8 @@ concurrency:
 
 jobs:
   # =============================================================================
-  # STAGE 1 - VALIDATION & CHANGE DETECTION
-  # All jobs in this stage run in parallel
+  # PHASE 1 - VALIDATION & DOCKER BUILDS
+  # All jobs in this phase run in parallel
   # =============================================================================
 
   type-check:
@@ -80,8 +82,54 @@ jobs:
       - name: Lint
         run: npm run lint
 
+  version-check:
+    name: 📋 Version Check
+    runs-on: ubuntu-latest
+    if: github.base_ref == 'main'
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Get PR version
+        id: pr-version
+        run: |
+          PR_VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$PR_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 PR VERSION: $PR_VERSION"
+
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Get main version
+        id: main-version
+        run: |
+          MAIN_VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$MAIN_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Main VERSION: $MAIN_VERSION"
+
+      - name: Compare versions
+        run: |
+          PR_VERSION="${{ steps.pr-version.outputs.version }}"
+          MAIN_VERSION="${{ steps.main-version.outputs.version }}"
+          
+          echo "Comparing versions..."
+          echo "PR VERSION: $PR_VERSION"
+          echo "Main VERSION: $MAIN_VERSION"
+          
+          if [ "$PR_VERSION" == "$MAIN_VERSION" ]; then
+            echo "❌ ERROR: PR VERSION ($PR_VERSION) must be different from main VERSION ($MAIN_VERSION)"
+            echo "Please update the VERSION file in your PR to a new version number."
+            exit 1
+          fi
+          
+          echo "✅ Version check passed: $PR_VERSION != $MAIN_VERSION"
+
   # =============================================================================
-  # STAGE 1 - CHANGE DETECTION (per container)
+  # PHASE 1 - CHANGE DETECTION (per container)
   # =============================================================================
   detect-changes-bunkbot:
     name: 🔍 Detect Changes - Bunkbot
@@ -156,8 +204,157 @@ jobs:
               - 'packages/shared/**'
 
   # =============================================================================
-  # STAGE 2 - TEST & BUILD (per container, conditional)
-  # Only runs if changes detected and stage 1 passes
+  # PHASE 1 - DOCKER BUILD (per container, always runs on PRs)
+  # All containers build in parallel regardless of changes
+  # =============================================================================
+
+  docker-build-bunkbot:
+    name: 🐳 Docker Build - Bunkbot
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/bunkbot/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
+          outputs: type=image,push=true
+
+  docker-build-djcova:
+    name: 🐳 Docker Build - DJCova
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/djcova/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
+          outputs: type=image,push=true
+
+  docker-build-starbunk-dnd:
+    name: 🐳 Docker Build - Starbunk DnD
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/starbunk-dnd/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
+          outputs: type=image,push=true
+
+  docker-build-covabot:
+    name: 🐳 Docker Build - Covabot
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/covabot/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DEBUG_MODE=true
+            NODE_ENV=development
+            LOG_LEVEL=debug
+          outputs: type=image,push=true
+
+  # =============================================================================
+  # PHASE 2 - TEST & BUILD (per container, conditional on Phase 1 passing)
+  # Only runs if changes detected and lint/type-check pass
   # =============================================================================
 
   test-build-bunkbot:
@@ -269,221 +466,426 @@ jobs:
         run: npm run build:covabot
 
   # =============================================================================
-  # STAGE 3 - DOCKER BUILD & PUSH (per container, conditional)
-  # Only runs if stage 2 passes
+  # PHASE 2 - IMAGE HASH COMPARISON (per container, conditional on docker build)
   # =============================================================================
 
-  docker-build-bunkbot:
-    name: 🐳 Docker Build - Bunkbot
-    runs-on: ubuntu-latest
-    needs: [test-build-bunkbot]
-    if: needs.test-build-bunkbot.result == 'success' && github.event_name == 'pull_request'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: apps/bunkbot/Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            DEBUG_MODE=true
-            NODE_ENV=development
-            LOG_LEVEL=debug
-
-  docker-build-djcova:
-    name: 🐳 Docker Build - DJCova
-    runs-on: ubuntu-latest
-    needs: [test-build-djcova]
-    if: needs.test-build-djcova.result == 'success' && github.event_name == 'pull_request'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: apps/djcova/Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            DEBUG_MODE=true
-            NODE_ENV=development
-            LOG_LEVEL=debug
-
-  docker-build-starbunk-dnd:
-    name: 🐳 Docker Build - Starbunk DnD
-    runs-on: ubuntu-latest
-    needs: [test-build-starbunk-dnd]
-    if: needs.test-build-starbunk-dnd.result == 'success' && github.event_name == 'pull_request'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: apps/starbunk-dnd/Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            DEBUG_MODE=true
-            NODE_ENV=development
-            LOG_LEVEL=debug
-
-  docker-build-covabot:
-    name: 🐳 Docker Build - Covabot
-    runs-on: ubuntu-latest
-    needs: [test-build-covabot]
-    if: needs.test-build-covabot.result == 'success' && github.event_name == 'pull_request'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: apps/covabot/Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            DEBUG_MODE=true
-            NODE_ENV=development
-            LOG_LEVEL=debug
-
-  # =============================================================================
-  # STAGE 4 - GIT TAGGING (per container, conditional)
-  # Only runs if stage 3 Docker build succeeds
-  # =============================================================================
-
-  tag-bunkbot:
-    name: 🏷️ Git Tag - Bunkbot
+  hash-compare-bunkbot:
+    name: 🔍 Hash Compare - Bunkbot
     runs-on: ubuntu-latest
     needs: [docker-build-bunkbot]
     if: needs.docker-build-bunkbot.result == 'success'
+    outputs:
+      hash-changed: ${{ steps.compare.outputs.changed }}
+      new-digest: ${{ steps.compare.outputs.new-digest }}
+      old-digest: ${{ steps.compare.outputs.old-digest }}
+    steps:
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare image hashes
+        id: compare
+        run: |
+          set +e  # Don't fail if latest tag doesn't exist
+          
+          # Get the PR image digest
+          NEW_DIGEST="${{ needs.docker-build-bunkbot.outputs.image-digest }}"
+          
+          # Try to get manifest list digest first, fallback to manifest/config digest
+          # For multi-arch: get the manifest list digest
+          # For single-arch: get the config digest
+          OLD_MANIFEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest 2>/dev/null || echo "")
+          
+          if [ -z "$OLD_MANIFEST" ]; then
+            OLD_DIGEST="none"
+          else
+            # Check if it's a manifest list (multi-arch) or single manifest
+            if echo "$OLD_MANIFEST" | jq -e '.manifests' >/dev/null 2>&1; then
+              # Multi-arch: use the manifest list digest (the digest of the whole list)
+              OLD_DIGEST=$(docker manifest inspect --verbose ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest 2>/dev/null | \
+                jq -r '.Descriptor.digest // .manifests[0].digest' || echo "none")
+            else
+              # Single-arch: use config digest
+              OLD_DIGEST=$(echo "$OLD_MANIFEST" | jq -r '.config.digest' || echo "none")
+            fi
+          fi
+          
+          echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
+          echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
+          
+          if [ "$OLD_DIGEST" == "none" ] || [ "$NEW_DIGEST" != "$OLD_DIGEST" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Hash changed or new image - will publish"
+            echo "  Old: $OLD_DIGEST"
+            echo "  New: $NEW_DIGEST"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Hash unchanged - skipping publish"
+            echo "  Digest: $NEW_DIGEST"
+          fi
+
+  hash-compare-djcova:
+    name: 🔍 Hash Compare - DJCova
+    runs-on: ubuntu-latest
+    needs: [docker-build-djcova]
+    if: needs.docker-build-djcova.result == 'success'
+    outputs:
+      hash-changed: ${{ steps.compare.outputs.changed }}
+      new-digest: ${{ steps.compare.outputs.new-digest }}
+      old-digest: ${{ steps.compare.outputs.old-digest }}
+    steps:
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare image hashes
+        id: compare
+        run: |
+          set +e
+          
+          NEW_DIGEST="${{ needs.docker-build-djcova.outputs.image-digest }}"
+          
+          OLD_MANIFEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest 2>/dev/null || echo "")
+          
+          if [ -z "$OLD_MANIFEST" ]; then
+            OLD_DIGEST="none"
+          else
+            if echo "$OLD_MANIFEST" | jq -e '.manifests' >/dev/null 2>&1; then
+              OLD_DIGEST=$(docker manifest inspect --verbose ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest 2>/dev/null | \
+                jq -r '.Descriptor.digest // .manifests[0].digest' || echo "none")
+            else
+              OLD_DIGEST=$(echo "$OLD_MANIFEST" | jq -r '.config.digest' || echo "none")
+            fi
+          fi
+          
+          echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
+          echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
+          
+          if [ "$OLD_DIGEST" == "none" ] || [ "$NEW_DIGEST" != "$OLD_DIGEST" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Hash changed or new image - will publish"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Hash unchanged - skipping publish"
+          fi
+
+  hash-compare-starbunk-dnd:
+    name: 🔍 Hash Compare - Starbunk DnD
+    runs-on: ubuntu-latest
+    needs: [docker-build-starbunk-dnd]
+    if: needs.docker-build-starbunk-dnd.result == 'success'
+    outputs:
+      hash-changed: ${{ steps.compare.outputs.changed }}
+      new-digest: ${{ steps.compare.outputs.new-digest }}
+      old-digest: ${{ steps.compare.outputs.old-digest }}
+    steps:
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare image hashes
+        id: compare
+        run: |
+          set +e
+          
+          NEW_DIGEST="${{ needs.docker-build-starbunk-dnd.outputs.image-digest }}"
+          
+          OLD_MANIFEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest 2>/dev/null || echo "")
+          
+          if [ -z "$OLD_MANIFEST" ]; then
+            OLD_DIGEST="none"
+          else
+            if echo "$OLD_MANIFEST" | jq -e '.manifests' >/dev/null 2>&1; then
+              OLD_DIGEST=$(docker manifest inspect --verbose ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest 2>/dev/null | \
+                jq -r '.Descriptor.digest // .manifests[0].digest' || echo "none")
+            else
+              OLD_DIGEST=$(echo "$OLD_MANIFEST" | jq -r '.config.digest' || echo "none")
+            fi
+          fi
+          
+          echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
+          echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
+          
+          if [ "$OLD_DIGEST" == "none" ] || [ "$NEW_DIGEST" != "$OLD_DIGEST" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Hash changed or new image - will publish"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Hash unchanged - skipping publish"
+          fi
+
+  hash-compare-covabot:
+    name: 🔍 Hash Compare - Covabot
+    runs-on: ubuntu-latest
+    needs: [docker-build-covabot]
+    if: needs.docker-build-covabot.result == 'success'
+    outputs:
+      hash-changed: ${{ steps.compare.outputs.changed }}
+      new-digest: ${{ steps.compare.outputs.new-digest }}
+      old-digest: ${{ steps.compare.outputs.old-digest }}
+    steps:
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare image hashes
+        id: compare
+        run: |
+          set +e
+          
+          NEW_DIGEST="${{ needs.docker-build-covabot.outputs.image-digest }}"
+          
+          OLD_MANIFEST=$(docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest 2>/dev/null || echo "")
+          
+          if [ -z "$OLD_MANIFEST" ]; then
+            OLD_DIGEST="none"
+          else
+            if echo "$OLD_MANIFEST" | jq -e '.manifests' >/dev/null 2>&1; then
+              OLD_DIGEST=$(docker manifest inspect --verbose ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest 2>/dev/null | \
+                jq -r '.Descriptor.digest // .manifests[0].digest' || echo "none")
+            else
+              OLD_DIGEST=$(echo "$OLD_MANIFEST" | jq -r '.config.digest' || echo "none")
+            fi
+          fi
+          
+          echo "new-digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
+          echo "old-digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
+          
+          if [ "$OLD_DIGEST" == "none" ] || [ "$NEW_DIGEST" != "$OLD_DIGEST" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Hash changed or new image - will publish"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Hash unchanged - skipping publish"
+          fi
+
+  # =============================================================================
+  # PHASE 3 - DOCKER PUBLISH & GIT TAGGING (conditional on hash change)
+  # Only runs if image hash differs from latest
+  # =============================================================================
+
+  publish-tag-bunkbot:
+    name: 🚀 Publish & Tag - Bunkbot
+    runs-on: ubuntu-latest
+    needs: [hash-compare-bunkbot, test-build-bunkbot, detect-changes-bunkbot]
+    if: |
+      always() &&
+      needs.hash-compare-bunkbot.outputs.hash-changed == 'true' &&
+      github.event_name == 'pull_request' &&
+      (needs.test-build-bunkbot.result == 'success' || 
+       (needs.test-build-bunkbot.result == 'skipped' && needs.detect-changes-bunkbot.outputs.changed != 'true'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Tag commit with bunkbot-latest
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read VERSION file
+        id: version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 VERSION: $VERSION"
+
+      - name: Tag and publish with latest and version
+        run: |
+          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}"
+          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:latest"
+          VERSION_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:v${{ steps.version.outputs.version }}"
+          
+          echo "🏷️ Tagging image with latest and version..."
+          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_TAG" "$PR_TAG"
+          echo "✅ Published: $LATEST_TAG"
+          echo "✅ Published: $VERSION_TAG"
+
+      - name: Force tag git commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -f bunkbot-latest
           git push origin bunkbot-latest --force
+          echo "✅ Force tagged commit with bunkbot-latest"
 
-  tag-djcova:
-    name: 🏷️ Git Tag - DJCova
+  publish-tag-djcova:
+    name: 🚀 Publish & Tag - DJCova
     runs-on: ubuntu-latest
-    needs: [docker-build-djcova]
-    if: needs.docker-build-djcova.result == 'success'
+    needs: [hash-compare-djcova, test-build-djcova, detect-changes-djcova]
+    if: |
+      always() &&
+      needs.hash-compare-djcova.outputs.hash-changed == 'true' &&
+      github.event_name == 'pull_request' &&
+      (needs.test-build-djcova.result == 'success' || 
+       (needs.test-build-djcova.result == 'skipped' && needs.detect-changes-djcova.outputs.changed != 'true'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Tag commit with djcova-latest
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read VERSION file
+        id: version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 VERSION: $VERSION"
+
+      - name: Tag and publish with latest and version
+        run: |
+          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}"
+          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:latest"
+          VERSION_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:v${{ steps.version.outputs.version }}"
+          
+          echo "🏷️ Tagging image with latest and version..."
+          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_TAG" "$PR_TAG"
+          echo "✅ Published: $LATEST_TAG"
+          echo "✅ Published: $VERSION_TAG"
+
+      - name: Force tag git commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -f djcova-latest
           git push origin djcova-latest --force
+          echo "✅ Force tagged commit with djcova-latest"
 
-  tag-starbunk-dnd:
-    name: 🏷️ Git Tag - Starbunk DnD
+  publish-tag-starbunk-dnd:
+    name: 🚀 Publish & Tag - Starbunk DnD
     runs-on: ubuntu-latest
-    needs: [docker-build-starbunk-dnd]
-    if: needs.docker-build-starbunk-dnd.result == 'success'
+    needs: [hash-compare-starbunk-dnd, test-build-starbunk-dnd, detect-changes-starbunk-dnd]
+    if: |
+      always() &&
+      needs.hash-compare-starbunk-dnd.outputs.hash-changed == 'true' &&
+      github.event_name == 'pull_request' &&
+      (needs.test-build-starbunk-dnd.result == 'success' || 
+       (needs.test-build-starbunk-dnd.result == 'skipped' && needs.detect-changes-starbunk-dnd.outputs.changed != 'true'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Tag commit with starbunk-dnd-latest
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read VERSION file
+        id: version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 VERSION: $VERSION"
+
+      - name: Tag and publish with latest and version
+        run: |
+          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}"
+          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:latest"
+          VERSION_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:v${{ steps.version.outputs.version }}"
+          
+          echo "🏷️ Tagging image with latest and version..."
+          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_TAG" "$PR_TAG"
+          echo "✅ Published: $LATEST_TAG"
+          echo "✅ Published: $VERSION_TAG"
+
+      - name: Force tag git commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -f starbunk-dnd-latest
           git push origin starbunk-dnd-latest --force
+          echo "✅ Force tagged commit with starbunk-dnd-latest"
 
-  tag-covabot:
-    name: 🏷️ Git Tag - Covabot
+  publish-tag-covabot:
+    name: 🚀 Publish & Tag - Covabot
     runs-on: ubuntu-latest
-    needs: [docker-build-covabot]
-    if: needs.docker-build-covabot.result == 'success'
+    needs: [hash-compare-covabot, test-build-covabot, detect-changes-covabot]
+    if: |
+      always() &&
+      needs.hash-compare-covabot.outputs.hash-changed == 'true' &&
+      github.event_name == 'pull_request' &&
+      (needs.test-build-covabot.result == 'success' || 
+       (needs.test-build-covabot.result == 'skipped' && needs.detect-changes-covabot.outputs.changed != 'true'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Tag commit with covabot-latest
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read VERSION file
+        id: version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 VERSION: $VERSION"
+
+      - name: Tag and publish with latest and version
+        run: |
+          PR_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}"
+          LATEST_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:latest"
+          VERSION_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:v${{ steps.version.outputs.version }}"
+          
+          echo "🏷️ Tagging image with latest and version..."
+          docker buildx imagetools create -t "$LATEST_TAG" -t "$VERSION_TAG" "$PR_TAG"
+          echo "✅ Published: $LATEST_TAG"
+          echo "✅ Published: $VERSION_TAG"
+
+      - name: Force tag git commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -f covabot-latest
           git push origin covabot-latest --force
+          echo "✅ Force tagged commit with covabot-latest"
 
   # =============================================================================
-  # SUCCESS GATE - For branch protection
+  # PHASE 4 - SUCCESS GATE
   # This job ensures all validation checks pass or are skipped (no failures)
   # =============================================================================
   pr-validation-success:
@@ -492,14 +894,15 @@ jobs:
     needs:
       - type-check
       - lint
-      - test-build-bunkbot
-      - test-build-djcova
-      - test-build-starbunk-dnd
-      - test-build-covabot
+      - version-check
       - docker-build-bunkbot
       - docker-build-djcova
       - docker-build-starbunk-dnd
       - docker-build-covabot
+      - test-build-bunkbot
+      - test-build-djcova
+      - test-build-starbunk-dnd
+      - test-build-covabot
     if: always()
     steps:
       - name: Check validation result
@@ -507,16 +910,17 @@ jobs:
           echo "Checking all validation results..."
           echo "type-check: ${{ needs.type-check.result }}"
           echo "lint: ${{ needs.lint.result }}"
-          echo "test-build-bunkbot: ${{ needs.test-build-bunkbot.result }}"
-          echo "test-build-djcova: ${{ needs.test-build-djcova.result }}"
-          echo "test-build-starbunk-dnd: ${{ needs.test-build-starbunk-dnd.result }}"
-          echo "test-build-covabot: ${{ needs.test-build-covabot.result }}"
+          echo "version-check: ${{ needs.version-check.result }}"
           echo "docker-build-bunkbot: ${{ needs.docker-build-bunkbot.result }}"
           echo "docker-build-djcova: ${{ needs.docker-build-djcova.result }}"
           echo "docker-build-starbunk-dnd: ${{ needs.docker-build-starbunk-dnd.result }}"
           echo "docker-build-covabot: ${{ needs.docker-build-covabot.result }}"
+          echo "test-build-bunkbot: ${{ needs.test-build-bunkbot.result }}"
+          echo "test-build-djcova: ${{ needs.test-build-djcova.result }}"
+          echo "test-build-starbunk-dnd: ${{ needs.test-build-starbunk-dnd.result }}"
+          echo "test-build-covabot: ${{ needs.test-build-covabot.result }}"
 
-          # Required checks must succeed
+          # Phase 1 - Required checks must succeed
           if [[ "${{ needs.type-check.result }}" != "success" ]]; then
             echo "❌ Type check failed"
             exit 1
@@ -527,24 +931,9 @@ jobs:
             exit 1
           fi
 
-          # Container test-build checks can succeed or be skipped, but not fail
-          if [[ "${{ needs.test-build-bunkbot.result }}" != "success" && "${{ needs.test-build-bunkbot.result }}" != "skipped" ]]; then
-            echo "❌ Container check test-build-bunkbot failed with status: ${{ needs.test-build-bunkbot.result }}"
-            exit 1
-          fi
-
-          if [[ "${{ needs.test-build-djcova.result }}" != "success" && "${{ needs.test-build-djcova.result }}" != "skipped" ]]; then
-            echo "❌ Container check test-build-djcova failed with status: ${{ needs.test-build-djcova.result }}"
-            exit 1
-          fi
-
-          if [[ "${{ needs.test-build-starbunk-dnd.result }}" != "success" && "${{ needs.test-build-starbunk-dnd.result }}" != "skipped" ]]; then
-            echo "❌ Container check test-build-starbunk-dnd failed with status: ${{ needs.test-build-starbunk-dnd.result }}"
-            exit 1
-          fi
-
-          if [[ "${{ needs.test-build-covabot.result }}" != "success" && "${{ needs.test-build-covabot.result }}" != "skipped" ]]; then
-            echo "❌ Container check test-build-covabot failed with status: ${{ needs.test-build-covabot.result }}"
+          # Version check can succeed or be skipped (only runs for PRs to main)
+          if [[ "${{ needs.version-check.result }}" == "failure" ]]; then
+            echo "❌ Version check failed"
             exit 1
           fi
 
@@ -566,6 +955,27 @@ jobs:
 
           if [[ "${{ needs.docker-build-covabot.result }}" != "success" && "${{ needs.docker-build-covabot.result }}" != "skipped" ]]; then
             echo "❌ Docker build check docker-build-covabot failed with status: ${{ needs.docker-build-covabot.result }}"
+            exit 1
+          fi
+
+          # Phase 2 - Container test-build checks can succeed or be skipped, but not fail
+          if [[ "${{ needs.test-build-bunkbot.result }}" != "success" && "${{ needs.test-build-bunkbot.result }}" != "skipped" ]]; then
+            echo "❌ Container check test-build-bunkbot failed with status: ${{ needs.test-build-bunkbot.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-build-djcova.result }}" != "success" && "${{ needs.test-build-djcova.result }}" != "skipped" ]]; then
+            echo "❌ Container check test-build-djcova failed with status: ${{ needs.test-build-djcova.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-build-starbunk-dnd.result }}" != "success" && "${{ needs.test-build-starbunk-dnd.result }}" != "skipped" ]]; then
+            echo "❌ Container check test-build-starbunk-dnd failed with status: ${{ needs.test-build-starbunk-dnd.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.test-build-covabot.result }}" != "success" && "${{ needs.test-build-covabot.result }}" != "skipped" ]]; then
+            echo "❌ Container check test-build-covabot failed with status: ${{ needs.test-build-covabot.result }}"
             exit 1
           fi
 
