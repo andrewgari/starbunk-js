@@ -30,7 +30,7 @@ jobs:
         id: determine
         run: |
           IS_PRERELEASE="${{ github.event.release.prerelease }}"
-          
+
           if [ "$IS_PRERELEASE" = "true" ]; then
             echo "env-tag=staging" >> $GITHUB_OUTPUT
             echo "release-type=Pre-Release" >> $GITHUB_OUTPUT
@@ -48,12 +48,12 @@ jobs:
             echo "log-level=info" >> $GITHUB_OUTPUT
             echo "🏷️ Full release detected - environment is prod with PRODUCTION settings"
           fi
-          
+
           # Output containers list for matrix strategy
           echo 'containers=["bunkbot", "djcova", "starbunk-dnd", "covabot"]' >> $GITHUB_OUTPUT
 
-  build-release:
-    name: 🏗️ Build ${{ matrix.container }} (${{ needs.determine-environment.outputs.env-tag }})
+  promote-release:
+    name: 🏷️ Promote ${{ matrix.container }} to ${{ needs.determine-environment.outputs.env-tag }}
     runs-on: ubuntu-latest
     needs: determine-environment
     strategy:
@@ -61,62 +61,67 @@ jobs:
       matrix:
         container: ${{ fromJSON(needs.determine-environment.outputs.containers) }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Container Registry
+      - name: 🔐 Login to Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Container Metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}
-          tags: |
-            type=raw,value=${{ needs.determine-environment.outputs.env-tag }}
-            type=raw,value=${{ github.event.release.tag_name }}
-          labels: |
-            org.opencontainers.image.title=${{ matrix.container }}
-            org.opencontainers.image.description=Starbunk Discord Bot - ${{ matrix.container }} container
-            org.opencontainers.image.vendor=Starbunk
-            release.type=${{ needs.determine-environment.outputs.release-type }}
-            release.version=${{ github.event.release.tag_name }}
+      - name: 📦 Pull Latest Image
+        run: |
+          echo "📥 Pulling latest image for ${{ matrix.container }}..."
+          docker pull ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:latest
+          echo "✅ Successfully pulled latest image"
 
-      - name: Build and Push Container Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/${{ matrix.container }}/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64
-          cache-from: |
-            type=gha,scope=${{ matrix.container }}
-            type=registry,ref=${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:latest
-          cache-to: |
-            type=gha,mode=max,scope=${{ matrix.container }}
-          provenance: false
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-            BUILD_DATE=${{ github.event.release.created_at }}
-            VCS_REF=${{ github.sha }}
-            VERSION=${{ github.event.release.tag_name }}
-            DEBUG_MODE=${{ needs.determine-environment.outputs.debug-mode }}
-            NODE_ENV=${{ needs.determine-environment.outputs.node-env }}
-            LOG_LEVEL=${{ needs.determine-environment.outputs.log-level }}
+      - name: 🏷️ Re-tag Image for Release
+        run: |
+          ENV_TAG="${{ needs.determine-environment.outputs.env-tag }}"
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          IMAGE_BASE="${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}"
+
+          echo "🏷️ Tagging image with environment tag: ${ENV_TAG}"
+          docker tag ${IMAGE_BASE}:latest ${IMAGE_BASE}:${ENV_TAG}
+
+          echo "🏷️ Tagging image with release version: ${RELEASE_TAG}"
+          docker tag ${IMAGE_BASE}:latest ${IMAGE_BASE}:${RELEASE_TAG}
+
+          echo "✅ Image tagged successfully"
+
+      - name: 📤 Push Tagged Images
+        run: |
+          ENV_TAG="${{ needs.determine-environment.outputs.env-tag }}"
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          IMAGE_BASE="${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}"
+
+          echo "📤 Pushing ${IMAGE_BASE}:${ENV_TAG}..."
+          docker push ${IMAGE_BASE}:${ENV_TAG}
+
+          echo "📤 Pushing ${IMAGE_BASE}:${RELEASE_TAG}..."
+          docker push ${IMAGE_BASE}:${RELEASE_TAG}
+
+          echo "✅ All tags pushed successfully"
+
+      - name: 📊 Promotion Summary
+        run: |
+          ENV_TAG="${{ needs.determine-environment.outputs.env-tag }}"
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          ENV_EMOJI="${{ needs.determine-environment.outputs.env-emoji }}"
+          IMAGE_BASE="${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}"
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "$ENV_EMOJI Successfully promoted ${{ matrix.container }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📦 Source: ${IMAGE_BASE}:latest"
+          echo "🏷️  Tags:"
+          echo "   • ${IMAGE_BASE}:${ENV_TAG}"
+          echo "   • ${IMAGE_BASE}:${RELEASE_TAG}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
   release-summary:
     name: 📋 Release Summary
     runs-on: ubuntu-latest
-    needs: [determine-environment, build-release]
+    needs: [determine-environment, promote-release]
     steps:
       - name: Generate summary
         run: |
@@ -124,19 +129,17 @@ jobs:
           ENV_TAG="${{ needs.determine-environment.outputs.env-tag }}"
           RELEASE_TYPE="${{ needs.determine-environment.outputs.release-type }}"
           ENV_EMOJI="${{ needs.determine-environment.outputs.env-emoji }}"
-          DEBUG_MODE="${{ needs.determine-environment.outputs.debug-mode }}"
-          NODE_ENV="${{ needs.determine-environment.outputs.node-env }}"
-          LOG_LEVEL="${{ needs.determine-environment.outputs.log-level }}"
 
           # Convert containers JSON array to space-separated list
           CONTAINERS=$(echo '${{ needs.determine-environment.outputs.containers }}' | jq -r '. | join(" ")')
 
-          echo "## $ENV_EMOJI $RELEASE_TYPE $VERSION Published" >> $GITHUB_STEP_SUMMARY
+          echo "## $ENV_EMOJI $RELEASE_TYPE $VERSION Promoted" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ⚙️ Build Configuration" >> $GITHUB_STEP_SUMMARY
-          echo "- **DEBUG_MODE**: \`$DEBUG_MODE\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **NODE_ENV**: \`$NODE_ENV\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **LOG_LEVEL**: \`$LOG_LEVEL\`" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Promotion Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source**: Images tagged with \`:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: \`$ENV_TAG\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Type**: $RELEASE_TYPE" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Container Images" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -151,5 +154,10 @@ jobs:
           echo "# Pull $ENV_TAG versions" >> $GITHUB_STEP_SUMMARY
           for container in $CONTAINERS; do
             echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:$ENV_TAG" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Or pull specific version" >> $GITHUB_STEP_SUMMARY
+          for container in $CONTAINERS; do
+            echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:$VERSION" >> $GITHUB_STEP_SUMMARY
           done
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

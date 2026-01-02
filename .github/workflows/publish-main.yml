@@ -296,7 +296,6 @@ jobs:
           images: ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=prod,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=v${{ steps.read-version.outputs.version }},enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=v${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' }}
             type=sha,prefix={{date 'YYYYMMDD-HHmmss'}}-,suffix=-{{branch}},format=short
@@ -353,12 +352,13 @@ jobs:
       - name: 📊 Deployment Success Notification
         run: |
           echo "🎉 Successfully deployed ${{ matrix.container }}"
-          echo "📦 Images tagged:"
+          echo "📦 Images tagged for testing:"
           echo "   - ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:latest"
-          echo "   - ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:prod"
           echo "   - ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:v${{ steps.read-version.outputs.version }}"
           echo "🔖 Digest: ${{ steps.deployment.outputs.digest }}"
           echo "⏰ Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "ℹ️  To promote to production, create a GitHub Release"
 
   # ==============================================================================
   # POST-DEPLOYMENT VERIFICATION & MONITORING
@@ -423,7 +423,8 @@ jobs:
           echo ""
           if [[ "${{ needs.deploy-containers.result }}" == "success" && "${{ needs.post-deployment-verification.result }}" == "success" ]]; then
             echo "🎉 Deployment completed successfully!"
-            echo "🚀 All containers are now available with tags: :latest, :prod, and :v[version]"
+            echo "🚀 All containers are now available with tags: :latest and :v[version]"
+            echo "ℹ️  To promote to production/staging, create a GitHub Release"
           else
             echo "⚠️ Deployment completed with issues"
             echo "🔍 Check individual job logs for details"
