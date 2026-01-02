@@ -4,12 +4,14 @@ This repo standardizes container health and metrics endpoints so Grafana (Promet
 
 ## Standard ports and environment
 
-- Internal metrics and health endpoints: `METRICS_PORT=3000`, `HEALTH_PORT=3000` (inside each container)
+- Internal metrics and health endpoints: `METRICS_PORT` (default: 3000), `HEALTH_PORT` (default: 3000) inside each container
+  - These can be configured via environment variables to avoid port conflicts
+  - Example: Set `METRICS_PORT=3001` and `HEALTH_PORT=3001` in your `.env` file
 - Published host ports (defaults; override as needed):
-  - BunkBot: `${BUNKBOT_METRICS_PORT:-9301} -> 3000`
-  - CovaBot: `${COVABOT_METRICS_PORT:-9303} -> 3000`
-  - DJCova: `${DJCOVA_METRICS_PORT:-9304} -> 3000`
-  - Starbunk‑DND: `${STARBUNK_DND_METRICS_PORT:-9305} -> 3000`
+  - BunkBot: `${BUNKBOT_METRICS_PORT:-9301} -> ${METRICS_PORT:-3000}`
+  - CovaBot: `${COVABOT_METRICS_PORT:-9303} -> ${METRICS_PORT:-3000}`
+  - DJCova: `${DJCOVA_METRICS_PORT:-9304} -> ${METRICS_PORT:-3000}`
+  - Starbunk‑DND: `${STARBUNK_DND_METRICS_PORT:-9305} -> ${METRICS_PORT:-3000}`
 
 All services expose:
 - GET /metrics (Prometheus format)
@@ -21,7 +23,7 @@ Each service/container includes labels (in Dockerfiles and docker-compose):
 - `com.starbunk.service=<name>`
 - `prometheus.io/scrape=true`
 - `prometheus.io/path=/metrics`
-- `prometheus.io/port=3000`
+- `prometheus.io/port=3000` (Note: Update this label if you change `METRICS_PORT`)
 
 Prometheus can auto-discover this via docker_sd_configs.
 
@@ -45,5 +47,5 @@ In CI, each container can start in `CI_SMOKE_MODE=true` which:
 - Skips external connections (e.g., Discord login)
 - Serves `GET /health` on `HEALTH_PORT` (CI sets unique ports per container)
 
-For production, the unified HttpEndpointsService serves `/metrics` and `/health` on `METRICS_PORT` (3000 by default) in all services.
+For production, the unified HttpEndpointsService serves `/metrics` and `/health` on `METRICS_PORT` (default: 3000) in all services.
 

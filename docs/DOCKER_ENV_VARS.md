@@ -67,8 +67,15 @@ These configuration values are set at build time with defaults that can be overr
 - `METRICS_PUSH_INTERVAL` (30000)
 
 #### Service Ports
-- `METRICS_PORT` (3000)
-- `HEALTH_PORT` (3000)
+- `METRICS_PORT` (3000) - Port for Prometheus metrics endpoint inside each container. Can be configured to avoid port conflicts.
+- `HEALTH_PORT` (3000) - Port for health check endpoint inside each container. Can be configured to avoid port conflicts.
+
+Note: The internal container ports can be configured via `METRICS_PORT` and `HEALTH_PORT` environment variables. 
+External host ports are mapped separately via:
+- `BUNKBOT_METRICS_PORT` (9301)
+- `COVABOT_METRICS_PORT` (9303)
+- `DJCOVA_METRICS_PORT` (9304)
+- `STARBUNK_DND_METRICS_PORT` (9305)
 
 #### Model Configuration
 - `OLLAMA_DEFAULT_MODEL`

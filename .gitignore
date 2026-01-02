@@ -183,6 +183,7 @@ scripts/*
 
 !README.md
 !docs/DOCKER_ENV_VARS.md
+!docs/branch-protection.md
 
 # Build artifacts and temporary files
 *.tsbuildinfo
