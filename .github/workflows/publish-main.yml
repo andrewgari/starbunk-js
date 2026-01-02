@@ -282,6 +282,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: 📦 Read VERSION file
+        id: read-version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Version from VERSION file: $VERSION"
+
       - name: 📋 Extract Container Metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -289,6 +296,8 @@ jobs:
           images: ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=prod,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=v${{ steps.read-version.outputs.version }},enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=v${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' }}
             type=sha,prefix={{date 'YYYYMMDD-HHmmss'}}-,suffix=-{{branch}},format=short
             type=raw,value={{date 'YYYYMMDD-HHmmss'}}-{{sha}}-stable,enable=${{ github.ref == 'refs/heads/main' }}
@@ -344,7 +353,10 @@ jobs:
       - name: 📊 Deployment Success Notification
         run: |
           echo "🎉 Successfully deployed ${{ matrix.container }}"
-          echo "📦 Image: ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:latest"
+          echo "📦 Images tagged:"
+          echo "   - ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:latest"
+          echo "   - ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:prod"
+          echo "   - ${{ env.REGISTRY_PREFIX }}/${{ matrix.container }}:v${{ steps.read-version.outputs.version }}"
           echo "🔖 Digest: ${{ steps.deployment.outputs.digest }}"
           echo "⏰ Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 
@@ -411,7 +423,7 @@ jobs:
           echo ""
           if [[ "${{ needs.deploy-containers.result }}" == "success" && "${{ needs.post-deployment-verification.result }}" == "success" ]]; then
             echo "🎉 Deployment completed successfully!"
-            echo "🚀 All containers are now available with :latest tags"
+            echo "🚀 All containers are now available with tags: :latest, :prod, and :v[version]"
           else
             echo "⚠️ Deployment completed with issues"
             echo "🔍 Check individual job logs for details"
@@ -454,18 +466,18 @@ jobs:
         id: get-version
         run: |
           VERSION=$(cat VERSION | tr -d '[:space:]')
-          
+
           if [ -z "$VERSION" ]; then
             echo "❌ ERROR: VERSION file is empty or contains only whitespace."
             echo "       Expected a semantic version in the format X.Y.Z (e.g., 1.2.3)."
             exit 1
           fi
-          
+
           if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "❌ ERROR: VERSION '$VERSION' is not a valid semantic version in the format X.Y.Z (e.g., 1.2.3)."
             exit 1
           fi
-          
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 Current version: $VERSION"
 
