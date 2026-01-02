@@ -450,10 +450,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 📦 Get version from package.json
+      - name: 📦 Get version from VERSION file
         id: get-version
         run: |
-          VERSION=$(cat VERSION | tr -d '[:space:]')
+          VERSION=$(tr -d '[:space:]' < VERSION)
+          
+          if [ -z "$VERSION" ]; then
+            echo "❌ ERROR: VERSION file is empty or contains only whitespace."
+            echo "       Expected a semantic version in the format X.Y.Z (e.g., 1.2.3)."
+            exit 1
+          fi
+          
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ ERROR: VERSION '$VERSION' is not a valid semantic version in the format X.Y.Z (e.g., 1.2.3)."
+            exit 1
+          fi
+          
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 Current version: $VERSION"
 

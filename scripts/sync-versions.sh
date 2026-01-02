@@ -27,6 +27,12 @@ if [ -z "$ROOT_VERSION" ]; then
   exit 1
 fi
 
+# Validate version format (basic semver: MAJOR.MINOR.PATCH)
+if [[ ! "$ROOT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo -e "${RED}Error: Invalid version format in VERSION file: ${ROOT_VERSION}${NC}"
+  exit 1
+fi
+
 echo -e "${GREEN}📦 Syncing version ${YELLOW}${ROOT_VERSION}${GREEN} from VERSION file to all packages...${NC}"
 echo ""
 

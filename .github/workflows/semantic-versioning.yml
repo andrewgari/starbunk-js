@@ -61,6 +61,14 @@ jobs:
           fi
 
           CURRENT_VERSION=$(cat VERSION | tr -d '[:space:]')
+          
+          # Validate that CURRENT_VERSION is a proper semver (X.Y.Z)
+          if ! echo "$CURRENT_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Error: Invalid version in VERSION file: '$CURRENT_VERSION'. Expected format: X.Y.Z"
+            echo "should-release=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
           echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $CURRENT_VERSION"
 
@@ -123,10 +131,14 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Get version from package.json
+      - name: Get version from VERSION file
         id: get-version
         run: |
           CURRENT_VERSION=$(cat VERSION | tr -d '[:space:]')
+          if ! echo "$CURRENT_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Error: VERSION '$CURRENT_VERSION' is not a valid semantic version (expected X.Y.Z)." >&2
+            exit 1
+          fi
           echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Version to release: $CURRENT_VERSION"
 
@@ -235,6 +247,11 @@ jobs:
           git clone --depth 1 https://github.com/${{ github.repository }}.git temp_repo
           cd temp_repo
           VERSION=$(cat VERSION | tr -d '[:space:]')
+          # Validate that VERSION matches expected semver format X.Y.Z
+          if [ -z "$VERSION" ] || ! printf '%s\n' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: VERSION ('$VERSION') is not a valid semantic version (expected format: X.Y.Z)" >&2
+            exit 1
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           cd ..
           rm -rf temp_repo
