@@ -1,6 +1,6 @@
 {
   "name": "bunkbot",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "it's bot that says blu, among things...",
   "type": "commonjs",
   "workspaces": [
@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "prepare": "husky",
+    "prepare": "husky && npm run sync-versions",
     "sync-versions": "bash ./scripts/sync-versions.sh",
     "build": "npm run build:shared && npm run build:containers",
     "build:shared": "tsc -p packages/shared/tsconfig.json",

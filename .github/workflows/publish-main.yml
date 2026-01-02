@@ -450,10 +450,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 📦 Get version from package.json
+      - name: 📦 Get version from VERSION file
         id: get-version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          
+          if [ -z "$VERSION" ]; then
+            echo "❌ ERROR: VERSION file is empty or contains only whitespace."
+            echo "       Expected a semantic version in the format X.Y.Z (e.g., 1.2.3)."
+            exit 1
+          fi
+          
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ ERROR: VERSION '$VERSION' is not a valid semantic version in the format X.Y.Z (e.g., 1.2.3)."
+            exit 1
+          fi
+          
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 Current version: $VERSION"
 
@@ -466,7 +478,7 @@ jobs:
 
           echo "🏷️ Creating git tags for version v${VERSION} and latest"
           echo "This ensures every merge to main is tagged with:"
-          echo "  1. Version tag: v${VERSION} (from package.json)"
+          echo "  1. Version tag: v${VERSION} (from VERSION file)"
           echo "  2. Latest tag: points to this commit"
 
           # Create version tag (e.g., v1.2.0)

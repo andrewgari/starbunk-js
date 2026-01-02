@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sync version from root package.json to all workspace packages
+# Sync version from VERSION file to all workspace packages
 # This ensures we have a single source of truth for versioning
 
 set -e
@@ -14,20 +14,26 @@ NC='\033[0m' # No Color
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# Get version from root package.json
-if [ ! -f "package.json" ]; then
-  echo -e "${RED}Error: Root package.json not found${NC}"
+# Get version from VERSION file
+if [ ! -f "VERSION" ]; then
+  echo -e "${RED}Error: VERSION file not found${NC}"
   exit 1
 fi
 
-ROOT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
+ROOT_VERSION=$(cat VERSION | tr -d '[:space:]')
 
 if [ -z "$ROOT_VERSION" ]; then
-  echo -e "${RED}Error: Could not read version from root package.json${NC}"
+  echo -e "${RED}Error: Could not read version from VERSION file${NC}"
   exit 1
 fi
 
-echo -e "${GREEN}📦 Syncing version ${YELLOW}${ROOT_VERSION}${GREEN} from root to all packages...${NC}"
+# Validate version format (basic semver: MAJOR.MINOR.PATCH)
+if [[ ! "$ROOT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo -e "${RED}Error: Invalid version format in VERSION file: ${ROOT_VERSION}${NC}"
+  exit 1
+fi
+
+echo -e "${GREEN}📦 Syncing version ${YELLOW}${ROOT_VERSION}${GREEN} from VERSION file to all packages...${NC}"
 echo ""
 
 # Function to update version in a package.json file
@@ -59,6 +65,14 @@ update_package_version() {
 
   echo -e "${GREEN}✓ Updated $package_file${NC} (${current_version} → ${ROOT_VERSION})"
 }
+
+# Update root package.json
+echo "Updating root package.json..."
+if [ -f "package.json" ]; then
+  update_package_version "package.json"
+fi
+
+echo ""
 
 # Update all app packages
 echo "Updating app packages..."

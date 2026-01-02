@@ -13,8 +13,9 @@ jobs:
     name: 🔢 Auto Bump Version
     runs-on: ubuntu-latest
     continue-on-error: true  # Don't fail PR if version bump fails
-    # Only run on PRs from branches in the same repo (not forks)
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # DISABLED: Version management is now manual via VERSION file with automatic sync via pre-commit hook
+    # Users update VERSION file manually, and it syncs to package.json automatically
+    if: false
     permissions:
       contents: write
       pull-requests: write
@@ -41,8 +42,20 @@ jobs:
         run: |
           set -e
 
-          # Get current version from package.json
-          CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
+          # Get current version from VERSION file
+          if [ ! -f "VERSION" ]; then
+            echo "Error: VERSION file not found"
+            exit 1
+          fi
+          
+          CURRENT_VERSION=$(cat VERSION | tr -d '[:space:]')
+          
+          # Validate version format (simple semver: X.Y.Z)
+          if [[ ! "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Invalid version format in VERSION file: $CURRENT_VERSION"
+            exit 1
+          fi
+          
           echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $CURRENT_VERSION"
 
@@ -135,11 +148,9 @@ jobs:
           set -e
           NEW_VERSION="${{ steps.version.outputs.new-version }}"
 
-          # Update root package.json
-          npm version $NEW_VERSION --no-git-tag-version || {
-            echo "::warning::Failed to update version with npm"
-            exit 1
-          }
+          # Update VERSION file
+          echo "$NEW_VERSION" > VERSION
+          echo "Updated VERSION file to $NEW_VERSION"
 
           # Sync to all packages
           if [ -f ./scripts/sync-versions.sh ]; then
@@ -149,7 +160,7 @@ jobs:
           fi
 
           # Commit the changes
-          git add package.json apps/*/package.json packages/shared/package.json apps/*/package-lock.json packages/shared/package-lock.json package-lock.json 2>/dev/null || true
+          git add VERSION package.json apps/*/package.json packages/shared/package.json apps/*/package-lock.json packages/shared/package-lock.json package-lock.json 2>/dev/null || true
 
           COMMIT_MSG="chore(version): bump to v${NEW_VERSION}"
           COMMIT_MSG="${COMMIT_MSG}\n\nAutomated version bump based on conventional commits."
