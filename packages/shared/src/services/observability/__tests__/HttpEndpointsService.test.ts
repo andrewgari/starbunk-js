@@ -4,6 +4,31 @@
 
 import { HttpEndpointsService } from '../HttpEndpointsService';
 
+// Define interface for server info to avoid type assertions
+interface ServerInfo {
+	service: string;
+	port: number;
+	host: string;
+	running: boolean;
+	shutting_down: boolean;
+	active_requests: number;
+	health_checks: number;
+	available_endpoints: string[];
+	config: {
+		port: number;
+		host: string;
+		basePath: string;
+		enableMetrics: boolean;
+		enableHealth: boolean;
+		enablePprof: boolean;
+		enableReady: boolean;
+		corsEnabled: boolean;
+		authToken?: string;
+		timeout: number;
+		maxRequestSize: number;
+	};
+}
+
 describe('HttpEndpointsService Port Configuration', () => {
 	let originalMetricsPort: string | undefined;
 	let originalHealthPort: string | undefined;
@@ -33,7 +58,7 @@ describe('HttpEndpointsService Port Configuration', () => {
 		delete process.env.HEALTH_PORT;
 
 		const service = new HttpEndpointsService('test-service');
-		const serverInfo = service.getServerInfo() as any;
+		const serverInfo = service.getServerInfo() as ServerInfo;
 
 		expect(serverInfo.port).toBe(3000);
 	});
@@ -43,7 +68,7 @@ describe('HttpEndpointsService Port Configuration', () => {
 		delete process.env.HEALTH_PORT;
 
 		const service = new HttpEndpointsService('test-service');
-		const serverInfo = service.getServerInfo() as any;
+		const serverInfo = service.getServerInfo() as ServerInfo;
 
 		expect(serverInfo.port).toBe(3001);
 	});
@@ -53,7 +78,7 @@ describe('HttpEndpointsService Port Configuration', () => {
 		process.env.HEALTH_PORT = '3002';
 
 		const service = new HttpEndpointsService('test-service');
-		const serverInfo = service.getServerInfo() as any;
+		const serverInfo = service.getServerInfo() as ServerInfo;
 
 		expect(serverInfo.port).toBe(3002);
 	});
@@ -63,7 +88,7 @@ describe('HttpEndpointsService Port Configuration', () => {
 		process.env.HEALTH_PORT = '3004';
 
 		const service = new HttpEndpointsService('test-service');
-		const serverInfo = service.getServerInfo() as any;
+		const serverInfo = service.getServerInfo() as ServerInfo;
 
 		expect(serverInfo.port).toBe(3003);
 	});
@@ -74,7 +99,7 @@ describe('HttpEndpointsService Port Configuration', () => {
 		const service = new HttpEndpointsService('test-service', {
 			port: 3006,
 		});
-		const serverInfo = service.getServerInfo() as any;
+		const serverInfo = service.getServerInfo() as ServerInfo;
 
 		// userConfig should override env vars
 		expect(serverInfo.port).toBe(3006);
@@ -84,7 +109,7 @@ describe('HttpEndpointsService Port Configuration', () => {
 		process.env.METRICS_PORT = 'invalid';
 
 		const service = new HttpEndpointsService('test-service');
-		const serverInfo = service.getServerInfo() as any;
+		const serverInfo = service.getServerInfo() as ServerInfo;
 
 		// parseInt('invalid') returns NaN, but the service should still be created
 		expect(serverInfo.port).toBeNaN();
