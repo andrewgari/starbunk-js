@@ -58,8 +58,8 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - METRICS_PORT=3000
-      - HEALTH_PORT=3000
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
     depends_on:
@@ -68,12 +68,6 @@ services:
     ports:
       # Metrics and health endpoint port
       - "${BUNKBOT_METRICS_PORT:-9301}:3000"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
     networks:
       - starbunk-network
     logging:
@@ -114,8 +108,8 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - METRICS_PORT=3000
-      - HEALTH_PORT=3000
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
     volumes:
@@ -125,12 +119,6 @@ services:
     ports:
       # Metrics and health endpoint port
       - "${DJCOVA_METRICS_PORT:-9304}:3000"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
     networks:
       - starbunk-network
     logging:
@@ -177,8 +165,8 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - METRICS_PORT=3000
-      - HEALTH_PORT=3000
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
     volumes:
@@ -192,12 +180,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
     networks:
       - starbunk-network
     logging:
@@ -249,8 +231,8 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - METRICS_PORT=3000
-      - HEALTH_PORT=3000
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
     volumes:
@@ -263,12 +245,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || curl -f http://localhost:7080/api/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
     networks:
       - starbunk-network
     logging:
