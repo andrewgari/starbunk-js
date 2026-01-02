@@ -42,6 +42,13 @@ The `semantic-versioning.yml` workflow automatically:
 3. Creates a GitHub release with changelog
 4. Triggers container builds
 
+The `publish-main.yml` workflow automatically:
+
+1. Detects which containers need to be built based on file changes
+2. Builds and pushes Docker images to GitHub Container Registry
+3. **Tags images with `:latest`** - This happens at merge time (push to main), ensuring `:latest` always points to the most recent production deployment
+4. Creates timestamped tags for rollback capability
+
 ## Manual Version Bump
 
 If you need to manually bump the version:
@@ -94,6 +101,34 @@ The `scripts/sync-versions.sh` script:
 - `apps/djcova/package.json`
 - `apps/starbunk-dnd/package.json`
 - `packages/shared/package.json`
+
+## Docker Image Tagging
+
+Docker images are automatically tagged when changes are merged to main:
+
+### Tagging Strategy
+
+- **`:latest` tag**: Applied only when code is pushed to main (i.e., when a PR is merged)
+  - This ensures `:latest` always points to the most recent production deployment
+  - Not applied during PR development to avoid confusion
+  - Automatically managed by the `publish-main.yml` workflow
+
+- **Timestamped tags**: Created for every main branch deployment
+  - Format: `YYYYMMDD-HHmmss-{sha}-stable`
+  - Enables rollback to specific deployments
+  - Preserves deployment history
+
+- **Custom version tags**: Can be specified via workflow_dispatch
+  - Format: `v{version}` (e.g., `v1.2.3`)
+  - Useful for manual releases or special deployments
+
+### Why Tag at Merge Time?
+
+The `:latest` tag is applied when merging to main (not during PR development) because:
+1. PRs may have multiple commits added during review
+2. Only the final merged state should be considered "latest"
+3. Prevents intermediate PR commits from incorrectly being tagged as production-ready
+4. Maintains a clear distinction between development and production deployments
 
 ## Troubleshooting
 
