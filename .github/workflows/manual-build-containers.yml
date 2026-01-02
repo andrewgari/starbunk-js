@@ -43,13 +43,17 @@ jobs:
             VERSION="${{ github.event.inputs.version_override }}"
             echo "📦 Using override version: $VERSION"
           else
-            VERSION=$(cat VERSION | tr -d '[:space:]')
+            if [ ! -f "VERSION" ]; then
+              echo "❌ ERROR: VERSION file not found"
+              exit 1
+            fi
+            VERSION=$(tr -d '[:space:]' < VERSION)
             echo "📦 Using VERSION file: $VERSION"
           fi
 
-          # Validate version format
-          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "❌ ERROR: Invalid version format '$VERSION' (expected X.Y.Z)"
+          # Validate version format (SemVer: X.Y.Z with optional pre-release and build metadata)
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'; then
+            echo "❌ ERROR: Invalid version format '$VERSION' (expected X.Y.Z, optionally with pre-release/build metadata)"
             exit 1
           fi
 
@@ -138,7 +142,7 @@ jobs:
           provenance: false
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            BUILD_DATE=${{ github.run_id }}
             VCS_REF=${{ github.sha }}
             VERSION=${{ needs.prepare.outputs.version }}
             NODE_ENV=production
