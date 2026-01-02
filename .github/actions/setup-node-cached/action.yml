@@ -110,11 +110,11 @@ runs:
             NEEDS_INSTALL=true
           fi
 
-          if [ "$NEEDS_INSTALL" = "true" ]; then
-            echo "🔄 Reinstalling dependencies due to incomplete cache..."
-          else
+          if [ "$NEEDS_INSTALL" = "false" ]; then
             echo "✅ Cache verified - all dependencies present"
             exit 0
+          else
+            echo "🔄 Reinstalling dependencies due to incomplete cache..."
           fi
         else
           echo "📦 Installing dependencies in parallel..."
