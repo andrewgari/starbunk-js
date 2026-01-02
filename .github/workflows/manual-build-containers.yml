@@ -208,28 +208,36 @@ jobs:
 
           # Pre-generate container tables to avoid duplication
           # Use mapfile to reliably capture output
-          mapfile -t container_array < <(echo "$CONTAINERS" | jq -r '.[]')
+          # Validate JSON before parsing
+          if [ -n "$CONTAINERS" ] && echo "$CONTAINERS" | jq empty >/dev/null 2>&1; then
+            mapfile -t container_array < <(echo "$CONTAINERS" | jq -r '.[]')
+          else
+            container_array=()
+          fi
           
           # Generate container table
-          CONTAINER_TABLE=""
-          CONTAINER_TABLE+="| Container | Tags |\n"
-          CONTAINER_TABLE+="|-----------|------|\n"
-          for container in "${container_array[@]}"; do
-            CONTAINER_TABLE+="| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |\n"
-          done
+          generate_container_table() {
+            echo "| Container | Tags |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|------|" >> $GITHUB_STEP_SUMMARY
+            for container in "${container_array[@]}"; do
+              echo "| $container | \`latest\`, \`v$VERSION\`, \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+            done
+          }
           
           # Generate pull commands
-          PULL_COMMANDS=""
-          for container in "${container_array[@]}"; do
-            PULL_COMMANDS+="docker pull ghcr.io/${{ github.repository_owner }}/$container:latest\n"
-            PULL_COMMANDS+="docker pull ghcr.io/${{ github.repository_owner }}/$container:v$VERSION\n"
-          done
+          generate_pull_commands() {
+            for container in "${container_array[@]}"; do
+              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:latest" >> $GITHUB_STEP_SUMMARY
+              echo "docker pull ghcr.io/${{ github.repository_owner }}/$container:v$VERSION" >> $GITHUB_STEP_SUMMARY
+            done
+          }
           
           # Generate container list
-          CONTAINER_LIST=""
-          for container in "${container_array[@]}"; do
-            CONTAINER_LIST+="- $container\n"
-          done
+          generate_container_list() {
+            for container in "${container_array[@]}"; do
+              echo "- $container" >> $GITHUB_STEP_SUMMARY
+            done
+          }
 
           # Determine overall status and display appropriate message
           if [[ "$BUILD_RESULT" == "success" && "$TAG_RESULT" == "success" ]]; then
@@ -241,11 +249,11 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 🐳 Built Containers" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo -e "$CONTAINER_TABLE" >> $GITHUB_STEP_SUMMARY
+            generate_container_table
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 🔧 Pull Commands" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            echo -e "$PULL_COMMANDS" >> $GITHUB_STEP_SUMMARY
+            generate_pull_commands
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           elif [[ "$BUILD_RESULT" == "success" ]]; then
             # Build succeeded but tagging did not complete successfully
@@ -271,7 +279,7 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 🐳 Built Containers" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo -e "$CONTAINER_TABLE" >> $GITHUB_STEP_SUMMARY
+            generate_container_table
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "⚠️ **Note:** Git tag \`v$VERSION\` was not created. You may need to tag manually." >> $GITHUB_STEP_SUMMARY
           else
@@ -308,7 +316,7 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 📋 Attempted Containers" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo -e "$CONTAINER_LIST" >> $GITHUB_STEP_SUMMARY
+            generate_container_list
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "🔄 **Next Steps:**" >> $GITHUB_STEP_SUMMARY
             echo "1. Review the error logs in the failed/cancelled jobs" >> $GITHUB_STEP_SUMMARY
