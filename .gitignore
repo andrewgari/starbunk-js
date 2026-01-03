@@ -180,6 +180,9 @@ scripts/*
 !scripts/
 !scripts/pre-push.sh
 !scripts/test-docker-env-precedence.sh
+!scripts/sync-versions.sh
+!scripts/validation/
+!scripts/validation/*.sh
 
 !README.md
 !docs/DOCKER_ENV_VARS.md
