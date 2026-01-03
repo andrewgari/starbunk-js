@@ -23,7 +23,7 @@ if [ ! -f "$VERSION_FILE" ]; then
     exit 1
 fi
 
-NEW_VERSION=$(tr -d '\n' < "$VERSION_FILE")
+NEW_VERSION=$(tr -d '\r\n' < "$VERSION_FILE")
 
 # Read base version from git spec or use default
 if [ -z "$BASE_VERSION_SPEC" ]; then
@@ -32,7 +32,7 @@ if [ -z "$BASE_VERSION_SPEC" ]; then
 else
     # Temporarily disable exit on error to handle git show failure gracefully
     set +e
-    BASE_VERSION=$(git show "$BASE_VERSION_SPEC" 2>/dev/null | tr -d '\n')
+    BASE_VERSION=$(git show "$BASE_VERSION_SPEC" 2>/dev/null | tr -d '\r\n')
     GIT_SHOW_EXIT=$?
     set -e
     
