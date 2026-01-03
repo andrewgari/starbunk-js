@@ -292,7 +292,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name bunkbot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e CI=true             -e NODE_ENV=test             -e HEALTH_PORT=3001             ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          docker run -d --name bunkbot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e CI=true             -e NODE_ENV=test             -e HEALTH_PORT=3000             ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -301,7 +301,7 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec bunkbot-test curl -f http://127.0.0.1:3001/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec bunkbot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -315,7 +315,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:3001/health)
+          RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:3000/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -348,7 +348,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name covabot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e CI=true             -e NODE_ENV=test             -e HEALTH_PORT=3003             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
+          docker run -d --name covabot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e CI=true             -e NODE_ENV=test             -e HEALTH_PORT=3000             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -357,7 +357,7 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec covabot-test curl -f http://127.0.0.1:3003/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec covabot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -371,7 +371,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:3003/health)
+          RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:3000/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -404,7 +404,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name djcova-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e CI=true             -e NODE_ENV=test             -e HEALTH_PORT=3004             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
+          docker run -d --name djcova-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e CI=true             -e NODE_ENV=test             -e HEALTH_PORT=3000             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -413,7 +413,7 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec djcova-test curl -f http://127.0.0.1:3004/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec djcova-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -427,7 +427,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec djcova-test curl -s http://127.0.0.1:3004/health)
+          RESPONSE=$(docker exec djcova-test curl -s http://127.0.0.1:3000/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"

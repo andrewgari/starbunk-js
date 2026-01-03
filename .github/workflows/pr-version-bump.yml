@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: pr-version-bump-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
@@ -70,3 +74,6 @@ jobs:
           git add VERSION package.json apps/*/package.json packages/*/package.json
           git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }}"
           git push
+
+      # Note: We rely on the normal pull_request workflow on this branch
+      # to run PR - Validation & Build after the bump commit is pushed.

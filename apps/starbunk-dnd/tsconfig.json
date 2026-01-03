@@ -16,12 +16,12 @@
 		"isolatedModules": true,
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
-			"baseUrl": "./src",
-			"paths": {
-				"@/*": ["*"],
-				"@starbunk/shared": ["../../../packages/shared/src"],
-				"@starbunk/shared/*": ["../../../packages/shared/src/*"]
-			}
+		"baseUrl": "./src",
+		"paths": {
+			"@/*": ["*"],
+			"@starbunk/shared": ["../../packages/shared/src"],
+			"@starbunk/shared/*": ["../../packages/shared/src/*"]
+		}
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": [
@@ -34,8 +34,8 @@
 		"src/cova-bot/llm-triggers.ts",
 		"src/cova-bot/index.ts",
 		"src/snowbunk/**"
-		],
-		"references": [
-			{ "path": "../../packages/shared" }
-		]
+	],
+	"references": [
+		{ "path": "../../packages/shared" }
+	]
 }

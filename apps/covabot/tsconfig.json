@@ -16,12 +16,12 @@
 		"isolatedModules": true,
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
-			"baseUrl": "./src",
-			"paths": {
-				"@/*": ["*"],
-				"@starbunk/shared": ["../../../packages/shared/src"],
-				"@starbunk/shared/*": ["../../../packages/shared/src/*"]
-			}
+		"baseUrl": "./src",
+		"paths": {
+			"@/*": ["*"],
+			"@starbunk/shared": ["../../packages/shared/src"],
+			"@starbunk/shared/*": ["../../packages/shared/src/*"]
+		}
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": [
@@ -36,8 +36,8 @@
 		"src/commands/**/*.ts",
 		"src/index.ts",
 		"src/commandHandler.ts"
-		],
-		"references": [
-			{ "path": "../../packages/shared" }
-		]
+	],
+	"references": [
+		{ "path": "../../packages/shared" }
+	]
 }

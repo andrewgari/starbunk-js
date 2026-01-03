@@ -16,21 +16,21 @@
 		"isolatedModules": true,
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
-			"baseUrl": "./src",
-			"paths": {
-				"@/*": ["*"],
-				"@starbunk/shared": ["../../../packages/shared/src"],
-				"@starbunk/shared/*": ["../../../packages/shared/src/*"]
-			}
+		"baseUrl": "./src",
+		"paths": {
+			"@/*": ["*"],
+			"@starbunk/shared": ["../../packages/shared/src"],
+			"@starbunk/shared/*": ["../../packages/shared/src/*"]
+		}
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": [
 		"node_modules",
 		"dist",
 		"tests",
-			"src/**/__tests__/**"
-		],
-		"references": [
-			{ "path": "../../packages/shared" }
-		]
+		"src/**/__tests__/**"
+	],
+	"references": [
+		{ "path": "../../packages/shared" }
+	]
 }

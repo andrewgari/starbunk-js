@@ -47,7 +47,7 @@
     "lint": "eslint apps/*/src/**/*.ts packages/*/src/**/*.ts",
     "lint:fix": "eslint apps/*/src/**/*.ts packages/*/src/**/*.ts --fix",
     "format": "prettier --write \"apps/*/src/**/*.ts\" \"packages/*/src/**/*.ts\"",
-	    "type-check": "npm run build:shared && npm run type-check:shared && npm run type-check:containers",
+    "type-check": "npm run build:shared && npm run type-check:shared && npm run type-check:containers",
     "type-check:shared": "cd packages/shared && npm run type-check",
     "type-check:containers": "npm run type-check:bunkbot && npm run type-check:djcova && npm run type-check:starbunk-dnd && npm run type-check:covabot",
     "type-check:bunkbot": "cd apps/bunkbot && npm run type-check",

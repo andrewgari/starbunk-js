@@ -82,7 +82,7 @@ services:
       - djcova_latest_cache:/app/cache
       - djcova_latest_temp:/tmp
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3004/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -110,6 +110,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
@@ -204,6 +205,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}

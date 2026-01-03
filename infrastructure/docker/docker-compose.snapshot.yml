@@ -138,6 +138,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
@@ -187,6 +188,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
