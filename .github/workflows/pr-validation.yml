@@ -299,6 +299,7 @@ jobs:
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
             -e CI_SMOKE_MODE=true \
+            -e HEALTH_PORT=${{ secrets.HEALTH_PORT }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
@@ -364,6 +365,7 @@ jobs:
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
             -e CI_SMOKE_MODE=true \
+            -e HEALTH_PORT=${{ secrets.HEALTH_PORT }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
@@ -429,6 +431,7 @@ jobs:
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
             -e CI_SMOKE_MODE=true \
+            -e HEALTH_PORT=${{ secrets.HEALTH_PORT }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
