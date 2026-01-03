@@ -16,6 +16,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -40,7 +41,7 @@ jobs:
           # Get the base commit SHA from main
           git fetch origin main
           BASE_SHA=$(git merge-base origin/main HEAD)
-          
+
           # Check if there's a version bump commit in this PR (since base)
           if git log ${BASE_SHA}..HEAD --oneline | grep -q "chore(version): bump to"; then
             echo "Version already bumped in this PR"
@@ -60,15 +61,15 @@ jobs:
             echo "Error: VERSION file not found"
             exit 1
           fi
-          
+
           CURRENT_VERSION=$(cat VERSION | tr -d '[:space:]')
-          
+
           # Validate version format (simple semver: X.Y.Z)
           if [[ ! "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Error: Invalid version format in VERSION file: $CURRENT_VERSION"
             exit 1
           fi
-          
+
           echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $CURRENT_VERSION"
 
@@ -113,6 +114,23 @@ jobs:
             echo "::error::Failed to push version bump"
             exit 1
           }
+
+      - name: Trigger PR Validation workflow for bumped commit
+        if: steps.check.outputs.already-bumped == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'pr-validation.yml',
+              ref: branch,
+              inputs: {
+                force_all: false
+              }
+            });
+            core.info(`Triggered PR - Validation & Build for branch ${branch}`);
 
       - name: Comment on PR
         if: steps.check.outputs.already-bumped == 'false'
