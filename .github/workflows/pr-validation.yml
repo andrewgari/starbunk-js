@@ -241,20 +241,20 @@ jobs:
           git fetch origin main
           MAIN_VERSION=$(git show origin/main:VERSION | tr -d '\n')
           PR_VERSION=$(cat VERSION | tr -d '\n')
-          
+
           echo "Main version: $MAIN_VERSION"
           echo "PR version: $PR_VERSION"
-          
+
           # Compare versions
           if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
             echo "❌ ERROR: Version must be incremented from main branch"
             exit 1
           fi
-          
+
           # Simple version comparison (assumes semantic versioning)
           IFS='.' read -r main_major main_minor main_patch <<< "$MAIN_VERSION"
           IFS='.' read -r pr_major pr_minor pr_patch <<< "$PR_VERSION"
-          
+
           if [ "$pr_major" -lt "$main_major" ]; then
             echo "❌ ERROR: Version cannot decrease"
             exit 1
@@ -269,7 +269,7 @@ jobs:
               fi
             fi
           fi
-          
+
           echo "✅ Version properly incremented from $MAIN_VERSION to $PR_VERSION"
 
   # =============================================================================
@@ -292,7 +292,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name bunkbot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          docker run -d --name bunkbot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e HEALTH_PORT=3001             ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -348,7 +348,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name covabot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
+          docker run -d --name covabot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e HEALTH_PORT=3003             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -404,7 +404,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name djcova-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
+          docker run -d --name djcova-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e HEALTH_PORT=3004             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -413,7 +413,7 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec djcova-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec djcova-test curl -f http://127.0.0.1:3004/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -427,7 +427,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec djcova-test curl -s http://127.0.0.1:3000/health)
+          RESPONSE=$(docker exec djcova-test curl -s http://127.0.0.1:3004/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -460,7 +460,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name starbunk-dnd-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
+          docker run -d --name starbunk-dnd-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e HEALTH_PORT=3005             ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -469,7 +469,7 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec starbunk-dnd-test curl -f http://127.0.0.1:3001/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec starbunk-dnd-test curl -f http://127.0.0.1:3005/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -483,7 +483,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec starbunk-dnd-test curl -s http://127.0.0.1:3001/health)
+          RESPONSE=$(docker exec starbunk-dnd-test curl -s http://127.0.0.1:3005/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -607,7 +607,7 @@ jobs:
   validation-complete:
     name: Validation Complete
     runs-on: ubuntu-latest
-    needs: 
+    needs:
       - lint-and-format
       - type-check
       - build
