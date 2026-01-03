@@ -1,9 +1,6 @@
-name: PR - Validation & Build
+name: Main - Deploy & Release
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
@@ -13,13 +10,8 @@ env:
   NODE_VERSION: '20'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
-  pull-requests: read
-
-concurrency:
-  group: pr-validation-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 
 jobs:
   # =============================================================================
@@ -98,39 +90,47 @@ jobs:
 
       - name: Validate version increment
         run: |
-          git fetch origin main
-          MAIN_VERSION=$(git show origin/main:VERSION | tr -d '\n')
-          PR_VERSION=$(cat VERSION | tr -d '\n')
+          CURRENT_VERSION=$(cat VERSION | tr -d '\n')
+          PREVIOUS_VERSION=$(git show HEAD~1:VERSION 2>/dev/null | tr -d '\n' || echo "0.0.0")
           
-          echo "Main version: $MAIN_VERSION"
-          echo "PR version: $PR_VERSION"
+          echo "Previous version: $PREVIOUS_VERSION"
+          echo "Current version: $CURRENT_VERSION"
           
           # Compare versions
-          if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
-            echo "❌ ERROR: Version must be incremented from main branch"
-            exit 1
-          fi
-          
-          # Simple version comparison (assumes semantic versioning)
-          IFS='.' read -r main_major main_minor main_patch <<< "$MAIN_VERSION"
-          IFS='.' read -r pr_major pr_minor pr_patch <<< "$PR_VERSION"
-          
-          if [ "$pr_major" -lt "$main_major" ]; then
-            echo "❌ ERROR: Version cannot decrease"
-            exit 1
-          elif [ "$pr_major" -eq "$main_major" ]; then
-            if [ "$pr_minor" -lt "$main_minor" ]; then
+          if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
+            echo "⚠️  WARNING: Version not incremented (this might be expected for non-version commits)"
+          else
+            # Simple version comparison
+            IFS='.' read -r prev_major prev_minor prev_patch <<< "$PREVIOUS_VERSION"
+            IFS='.' read -r curr_major curr_minor curr_patch <<< "$CURRENT_VERSION"
+            
+            if [ "$curr_major" -lt "$prev_major" ]; then
               echo "❌ ERROR: Version cannot decrease"
               exit 1
-            elif [ "$pr_minor" -eq "$main_minor" ]; then
-              if [ "$pr_patch" -le "$main_patch" ]; then
-                echo "❌ ERROR: Version must be greater than main branch"
+            elif [ "$curr_major" -eq "$prev_major" ]; then
+              if [ "$curr_minor" -lt "$prev_minor" ]; then
+                echo "❌ ERROR: Version cannot decrease"
                 exit 1
+              elif [ "$curr_minor" -eq "$prev_minor" ]; then
+                if [ "$curr_patch" -lt "$prev_patch" ]; then
+                  echo "❌ ERROR: Version cannot decrease"
+                  exit 1
+                fi
               fi
             fi
+            
+            echo "✅ Version properly incremented from $PREVIOUS_VERSION to $CURRENT_VERSION"
           fi
-          
-          echo "✅ Version properly incremented from $MAIN_VERSION to $PR_VERSION"
+
+      - name: Store version
+        run: |
+          VERSION=$(cat VERSION | tr -d '\n')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        id: version
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
   # =============================================================================
   # GROUP 3: DOCKER BUILDS (runs in parallel with Groups 1 & 2)
@@ -152,7 +152,7 @@ jobs:
           context: .
           file: ./apps/bunkbot/Dockerfile
           push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number || 'main' }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/bunkbot.tar
@@ -180,7 +180,7 @@ jobs:
           context: .
           file: ./apps/covabot/Dockerfile
           push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number || 'main' }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/covabot.tar
@@ -208,7 +208,7 @@ jobs:
           context: .
           file: ./apps/djcova/Dockerfile
           push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number || 'main' }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/djcova.tar
@@ -236,7 +236,7 @@ jobs:
           context: .
           file: ./apps/starbunk-dnd/Dockerfile
           push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number || 'main' }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:main
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/starbunk-dnd.tar
@@ -367,7 +367,7 @@ jobs:
           docker run -d --name bunkbot-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number || 'main' }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
 
       - name: Wait for container to start
         run: sleep 10
@@ -426,7 +426,7 @@ jobs:
           docker run -d --name covabot-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number || 'main' }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
 
       - name: Wait for container to start
         run: sleep 10
@@ -485,7 +485,7 @@ jobs:
           docker run -d --name djcova-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number || 'main' }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
 
       - name: Wait for container to start
         run: sleep 10
@@ -544,7 +544,7 @@ jobs:
           docker run -d --name starbunk-dnd-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number || 'main' }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:main
 
       - name: Wait for container to start
         run: sleep 10
@@ -585,14 +585,13 @@ jobs:
         run: docker rm -f starbunk-dnd-test || true
 
   # =============================================================================
-  # GROUP 6: IMAGE PUBLISHING (depends on Group 5 passing, only for PRs)
+  # GROUP 6: PRODUCTION IMAGE PUBLISHING (depends on Group 5 passing)
   # =============================================================================
 
   publish-bunkbot:
     name: 📦 Publish bunkbot
     runs-on: ubuntu-latest
-    needs: [validate-bunkbot]
-    if: github.event_name == 'pull_request'
+    needs: [validate-bunkbot, version-check]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -610,15 +609,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push images
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          VERSION="v${{ needs.version-check.outputs.version }}"
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot"
+          
+          # Tag with version and latest
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+          
+          # Push all tags
+          docker push ${IMAGE_NAME}:${VERSION}
+          docker push ${IMAGE_NAME}:latest
 
   publish-covabot:
     name: 📦 Publish covabot
     runs-on: ubuntu-latest
-    needs: [validate-covabot]
-    if: github.event_name == 'pull_request'
+    needs: [validate-covabot, version-check]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -636,15 +643,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push images
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
+          VERSION="v${{ needs.version-check.outputs.version }}"
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot"
+          
+          # Tag with version and latest
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+          
+          # Push all tags
+          docker push ${IMAGE_NAME}:${VERSION}
+          docker push ${IMAGE_NAME}:latest
 
   publish-djcova:
     name: 📦 Publish djcova
     runs-on: ubuntu-latest
-    needs: [validate-djcova]
-    if: github.event_name == 'pull_request'
+    needs: [validate-djcova, version-check]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -662,15 +677,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push images
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
+          VERSION="v${{ needs.version-check.outputs.version }}"
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova"
+          
+          # Tag with version and latest
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+          
+          # Push all tags
+          docker push ${IMAGE_NAME}:${VERSION}
+          docker push ${IMAGE_NAME}:latest
 
   publish-starbunk-dnd:
     name: 📦 Publish starbunk-dnd
     runs-on: ubuntu-latest
-    needs: [validate-starbunk-dnd]
-    if: github.event_name == 'pull_request'
+    needs: [validate-starbunk-dnd, version-check]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -688,6 +711,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push images
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
+          VERSION="v${{ needs.version-check.outputs.version }}"
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd"
+          
+          # Tag with version and latest
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+          
+          # Push all tags
+          docker push ${IMAGE_NAME}:${VERSION}
+          docker push ${IMAGE_NAME}:latest
+
+  # =============================================================================
+  # GROUP 7: RELEASE TAGGING (depends on Group 4 passing)
+  # =============================================================================
+
+  create-release-tag:
+    name: 🏷️  Create Release Tag
+    runs-on: ubuntu-latest
+    needs: [test-bunkbot, test-covabot, test-djcova, test-starbunk-dnd, version-check]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create and push tag
+        run: |
+          VERSION="v${{ needs.version-check.outputs.version }}"
+          
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Create annotated tag
+          git tag -a "$VERSION" -m "Release $VERSION"
+          
+          # Push the tag
+          git push origin "$VERSION"
+          
+          echo "✅ Created and pushed tag: $VERSION"
