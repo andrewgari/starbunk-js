@@ -393,6 +393,10 @@ jobs:
       - name: Health check
         run: |
           HEALTH_PORT=$(docker exec bunkbot-test sh -c 'echo $HEALTH_PORT')
+          if [ -z "$HEALTH_PORT" ]; then
+            echo "Error: HEALTH_PORT not set in container"
+            exit 1
+          fi
           echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
@@ -456,6 +460,10 @@ jobs:
       - name: Health check
         run: |
           HEALTH_PORT=$(docker exec covabot-test sh -c 'echo $HEALTH_PORT')
+          if [ -z "$HEALTH_PORT" ]; then
+            echo "Error: HEALTH_PORT not set in container"
+            exit 1
+          fi
           echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
@@ -519,6 +527,10 @@ jobs:
       - name: Health check
         run: |
           HEALTH_PORT=$(docker exec djcova-test sh -c 'echo $HEALTH_PORT')
+          if [ -z "$HEALTH_PORT" ]; then
+            echo "Error: HEALTH_PORT not set in container"
+            exit 1
+          fi
           echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
@@ -582,6 +594,10 @@ jobs:
       - name: Health check
         run: |
           HEALTH_PORT=$(docker exec starbunk-dnd-test sh -c 'echo $HEALTH_PORT')
+          if [ -z "$HEALTH_PORT" ]; then
+            echo "Error: HEALTH_PORT not set in container"
+            exit 1
+          fi
           echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
