@@ -252,7 +252,14 @@ jobs:
 
           # Check if version needs to be bumped
           # version_is_greater returns 0 if PR_VERSION > MAIN_VERSION
-          if version_is_greater "$MAIN_VERSION" "$PR_VERSION"; then
+          version_compare_result=0
+          version_is_greater "$MAIN_VERSION" "$PR_VERSION" || version_compare_result=$?
+          
+          if [ $version_compare_result -eq 2 ]; then
+            # Invalid version format detected
+            echo "❌ ERROR: Invalid version format detected. Cannot proceed with version check."
+            exit 1
+          elif [ $version_compare_result -eq 0 ]; then
             echo "✅ Version is already properly incremented from $MAIN_VERSION to $PR_VERSION"
             echo "needs_bump=false" >> $GITHUB_ENV
           else
