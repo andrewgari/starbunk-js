@@ -391,12 +391,9 @@ jobs:
         run: sleep 10
 
       - name: Health check
+        env:
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
         run: |
-          HEALTH_PORT=$(docker exec bunkbot-test sh -c 'echo $HEALTH_PORT')
-          if [ -z "$HEALTH_PORT" ]; then
-            echo "Error: HEALTH_PORT not set in container"
-            exit 1
-          fi
           echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
@@ -413,8 +410,9 @@ jobs:
           echo "Health check passed"
 
       - name: Smoke test
+        env:
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
         run: |
-          HEALTH_PORT=$(docker exec bunkbot-test sh -c 'echo $HEALTH_PORT')
           RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:${HEALTH_PORT}/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
@@ -458,12 +456,9 @@ jobs:
         run: sleep 10
 
       - name: Health check
+        env:
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
         run: |
-          HEALTH_PORT=$(docker exec covabot-test sh -c 'echo $HEALTH_PORT')
-          if [ -z "$HEALTH_PORT" ]; then
-            echo "Error: HEALTH_PORT not set in container"
-            exit 1
-          fi
           echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
@@ -480,8 +475,9 @@ jobs:
           echo "Health check passed"
 
       - name: Smoke test
+        env:
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
         run: |
-          HEALTH_PORT=$(docker exec covabot-test sh -c 'echo $HEALTH_PORT')
           RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:${HEALTH_PORT}/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
@@ -525,12 +521,9 @@ jobs:
         run: sleep 10
 
       - name: Health check
+        env:
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
         run: |
-          HEALTH_PORT=$(docker exec djcova-test sh -c 'echo $HEALTH_PORT')
-          if [ -z "$HEALTH_PORT" ]; then
-            echo "Error: HEALTH_PORT not set in container"
-            exit 1
-          fi
           echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
@@ -547,8 +540,9 @@ jobs:
           echo "Health check passed"
 
       - name: Smoke test
+        env:
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
         run: |
-          HEALTH_PORT=$(docker exec djcova-test sh -c 'echo $HEALTH_PORT')
           RESPONSE=$(docker exec djcova-test curl -s http://127.0.0.1:${HEALTH_PORT}/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
