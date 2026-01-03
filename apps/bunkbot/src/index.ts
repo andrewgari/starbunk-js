@@ -15,15 +15,16 @@ import {
 	runStartupDiagnostics,
 	initializeObservability,
 	createBunkBotMetrics,
-	type BunkBotMetrics,
+		type BunkBotMetrics,
+		type DiagnosticResult,
 	EnhancedBunkBotMetricsCollector,
 	BotTriggerTracker,
 	initializeBotMetricsSystem,
 	getDiscordToken,
 } from '@starbunk/shared';
 
-// Import DiscordService directly from the service file
-import { DiscordService } from '@starbunk/shared/dist/services/discordService';
+// Import DiscordService from the shared package exports
+import { DiscordService } from '@starbunk/shared';
 
 // Import commands
 import pingCommand from './commands/ping';
@@ -114,9 +115,9 @@ class BunkBotContainer {
 				}
 			}
 
-			// Run startup diagnostics
-			const diagnostics = await runStartupDiagnostics();
-			const failures = diagnostics.filter((d) => d.status === 'fail');
+				// Run startup diagnostics
+				const diagnostics = await runStartupDiagnostics();
+				const failures = diagnostics.filter((d: DiagnosticResult) => d.status === 'fail');
 
 			if (failures.length > 0) {
 				logger.error('❌ Critical startup issues detected:');
