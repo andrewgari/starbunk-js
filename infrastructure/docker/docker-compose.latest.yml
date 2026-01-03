@@ -82,7 +82,7 @@ services:
       - djcova_latest_cache:/app/cache
       - djcova_latest_temp:/tmp
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -130,7 +130,7 @@ services:
       - dnd_latest_campaigns:/app/data/campaigns
       - dnd_latest_context:/app/data/llm_context
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -229,7 +229,7 @@ services:
       # Expose web interface for personality management (production)
       - "${COVABOT_WEB_PORT:-7080}:7080"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:7080/api/health --max-time 5 || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 15s
       retries: 5

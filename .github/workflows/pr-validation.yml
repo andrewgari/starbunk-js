@@ -37,9 +37,34 @@ concurrency:
 
 jobs:
   # =============================================================================
-  # PHASE 1 - VALIDATION & DOCKER BUILDS
-  # All jobs in this phase run in parallel
+  # GROUP 1 - CORE CODE QUALITY (runs unconditionally)
+  #   - validate-linting: ESLint + Prettier
+  #   - type-check: TypeScript type checking
+  # These jobs do NOT gate each other; failures are aggregated in the
+  # final pr-validation-complete job.
   # =============================================================================
+
+  validate-linting:
+    name: 🎨 Validate Linting (ESLint & Prettier)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier (check mode)
+        run: npx prettier --check "apps/*/src/**/*.ts" "packages/*/src/**/*.ts"
 
   type-check:
     name: 🔍 Type Check
@@ -63,29 +88,13 @@ jobs:
       - name: TypeScript check
         run: npm run type-check
 
-  lint:
-    name: 🎨 Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
+  # =============================================================================
+  # GROUP 4 - VERSION CHECK (independent of Groups 1–3)
+  # =============================================================================
 
   version-check:
     name: 📋 Version Validation
     runs-on: ubuntu-latest
-    needs: [type-check, lint]
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
     steps:
       - name: Checkout PR branch
@@ -233,7 +242,7 @@ jobs:
             core.info(`Triggered PR - Validation & Build for branch ${branch} after VERSION bump`);
 
   # =============================================================================
-  # PHASE 1 - CHANGE DETECTION (per container)
+  # CHANGE DETECTION (per container)
   # =============================================================================
   detect-changes-bunkbot:
     name: 🔍 Detect Changes - Bunkbot
@@ -308,14 +317,15 @@ jobs:
               - 'packages/shared/**'
 
   # =============================================================================
-  # PHASE 1 - DOCKER BUILD (per container, always runs on PRs)
-  # All containers build in parallel regardless of changes
+  # GROUP 3 - DOCKER BUILDS (per container, always runs on PRs)
+  #   - docker-build-* jobs build images
+  #   - docker-smoke-* jobs run CI_SMOKE_MODE containers and hit /health
   # =============================================================================
 
   docker-build-bunkbot:
     name: 🐳 Docker Build - Bunkbot
     runs-on: ubuntu-latest
-    needs: [type-check, lint]
+    needs: []
     if: github.event_name == 'pull_request'
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
@@ -352,7 +362,7 @@ jobs:
   docker-build-djcova:
     name: 🐳 Docker Build - DJCova
     runs-on: ubuntu-latest
-    needs: [type-check, lint]
+    needs: []
     if: github.event_name == 'pull_request'
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
@@ -389,7 +399,7 @@ jobs:
   docker-build-starbunk-dnd:
     name: 🐳 Docker Build - Starbunk DnD
     runs-on: ubuntu-latest
-    needs: [type-check, lint]
+    needs: []
     if: github.event_name == 'pull_request'
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
@@ -426,7 +436,7 @@ jobs:
   docker-build-covabot:
     name: 🐳 Docker Build - Covabot
     runs-on: ubuntu-latest
-    needs: [type-check, lint]
+    needs: []
     if: github.event_name == 'pull_request'
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
@@ -460,15 +470,184 @@ jobs:
             LOG_LEVEL=debug
           outputs: type=image,push=true
 
+  docker-smoke-bunkbot:
+    name: 🩺 Docker Smoke Test - Bunkbot
+    runs-on: ubuntu-latest
+    needs: [docker-build-bunkbot]
+    if: github.event_name == 'pull_request' && needs.docker-build-bunkbot.result == 'success'
+    steps:
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run CI smoke container and verify /health
+        run: |
+          set -e
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}"
+
+          echo "Running smoke container: $IMAGE"
+          docker rm -f bunkbot-smoke 2>/dev/null || true
+          docker run -d --name bunkbot-smoke -e CI_SMOKE_MODE=true "$IMAGE"
+
+          echo "Waiting for health endpoint..."
+          for i in $(seq 1 30); do
+            if docker exec bunkbot-smoke curl -fsS http://127.0.0.1:3001/health >/dev/null 2>&1; then
+              echo "✅ /health responded successfully"
+              break
+            fi
+            sleep 2
+          done
+
+          if ! docker exec bunkbot-smoke curl -fsS http://127.0.0.1:3001/health >/dev/null 2>&1; then
+            echo "❌ /health did not become healthy in time"
+            docker logs bunkbot-smoke || true
+            docker stop bunkbot-smoke || true
+            docker rm bunkbot-smoke || true
+            exit 1
+          fi
+
+          docker stop bunkbot-smoke || true
+          docker rm bunkbot-smoke || true
+
+  docker-smoke-djcova:
+    name: 🩺 Docker Smoke Test - DJCova
+    runs-on: ubuntu-latest
+    needs: [docker-build-djcova]
+    if: github.event_name == 'pull_request' && needs.docker-build-djcova.result == 'success'
+    steps:
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run CI smoke container and verify /health
+        run: |
+          set -e
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}"
+
+          echo "Running smoke container: $IMAGE"
+          docker rm -f djcova-smoke 2>/dev/null || true
+          docker run -d --name djcova-smoke -e CI_SMOKE_MODE=true "$IMAGE"
+
+          echo "Waiting for health endpoint..."
+          for i in $(seq 1 30); do
+            if docker exec djcova-smoke curl -fsS http://127.0.0.1:3004/health >/dev/null 2>&1; then
+              echo "✅ /health responded successfully"
+              break
+            fi
+            sleep 2
+          done
+
+          if ! docker exec djcova-smoke curl -fsS http://127.0.0.1:3004/health >/dev/null 2>&1; then
+            echo "❌ /health did not become healthy in time"
+            docker logs djcova-smoke || true
+            docker stop djcova-smoke || true
+            docker rm djcova-smoke || true
+            exit 1
+          fi
+
+          docker stop djcova-smoke || true
+          docker rm djcova-smoke || true
+
+  docker-smoke-starbunk-dnd:
+    name: 🩺 Docker Smoke Test - Starbunk DnD
+    runs-on: ubuntu-latest
+    needs: [docker-build-starbunk-dnd]
+    if: github.event_name == 'pull_request' && needs.docker-build-starbunk-dnd.result == 'success'
+    steps:
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run CI smoke container and verify /health
+        run: |
+          set -e
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}"
+
+          echo "Running smoke container: $IMAGE"
+          docker rm -f starbunk-dnd-smoke 2>/dev/null || true
+          docker run -d --name starbunk-dnd-smoke -e CI_SMOKE_MODE=true "$IMAGE"
+
+          echo "Waiting for health endpoint..."
+          for i in $(seq 1 30); do
+            if docker exec starbunk-dnd-smoke curl -fsS http://127.0.0.1:3005/health >/dev/null 2>&1; then
+              echo "✅ /health responded successfully"
+              break
+            fi
+            sleep 2
+          done
+
+          if ! docker exec starbunk-dnd-smoke curl -fsS http://127.0.0.1:3005/health >/dev/null 2>&1; then
+            echo "❌ /health did not become healthy in time"
+            docker logs starbunk-dnd-smoke || true
+            docker stop starbunk-dnd-smoke || true
+            docker rm starbunk-dnd-smoke || true
+            exit 1
+          fi
+
+          docker stop starbunk-dnd-smoke || true
+          docker rm starbunk-dnd-smoke || true
+
+  docker-smoke-covabot:
+    name: 🩺 Docker Smoke Test - Covabot
+    runs-on: ubuntu-latest
+    needs: [docker-build-covabot]
+    if: github.event_name == 'pull_request' && needs.docker-build-covabot.result == 'success'
+    steps:
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run CI smoke container and verify /health
+        run: |
+          set -e
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}"
+
+          echo "Running smoke container: $IMAGE"
+          docker rm -f covabot-smoke 2>/dev/null || true
+          docker run -d --name covabot-smoke -e CI_SMOKE_MODE=true "$IMAGE"
+
+          echo "Waiting for health endpoint..."
+          for i in $(seq 1 30); do
+            if docker exec covabot-smoke curl -fsS http://127.0.0.1:3003/health >/dev/null 2>&1; then
+              echo "✅ /health responded successfully"
+              break
+            fi
+            sleep 2
+          done
+
+          if ! docker exec covabot-smoke curl -fsS http://127.0.0.1:3003/health >/dev/null 2>&1; then
+            echo "❌ /health did not become healthy in time"
+            docker logs covabot-smoke || true
+            docker stop covabot-smoke || true
+            docker rm covabot-smoke || true
+            exit 1
+          fi
+
+          docker stop covabot-smoke || true
+          docker rm covabot-smoke || true
+
   # =============================================================================
-  # PHASE 2 - TEST & BUILD (per container, conditional on Phase 1 passing)
-  # Only runs if changes detected and lint/type-check pass
+  # GROUP 2 - BUILD & UNIT TESTS (per container)
+  #   - test-build-* jobs depend only on change detection and run
+  #     independently of Group 1 (lint & type-check).
   # =============================================================================
 
   test-build-bunkbot:
     name: 🧪 Test & Build - Bunkbot
     runs-on: ubuntu-latest
-    needs: [type-check, lint, detect-changes-bunkbot]
+    needs: [detect-changes-bunkbot]
     if: needs.detect-changes-bunkbot.outputs.changed == 'true' || github.event.inputs.force_all == 'true' || (github.event.pull_request && contains(github.event.pull_request.labels.*.name, 'force-validation'))
     steps:
       - name: Checkout
@@ -495,7 +674,7 @@ jobs:
   test-build-djcova:
     name: 🧪 Test & Build - DJCova
     runs-on: ubuntu-latest
-    needs: [type-check, lint, detect-changes-djcova]
+    needs: [detect-changes-djcova]
     if: needs.detect-changes-djcova.outputs.changed == 'true' || github.event.inputs.force_all == 'true' || (github.event.pull_request && contains(github.event.pull_request.labels.*.name, 'force-validation'))
     steps:
       - name: Checkout
@@ -522,7 +701,7 @@ jobs:
   test-build-starbunk-dnd:
     name: 🧪 Test & Build - Starbunk DnD
     runs-on: ubuntu-latest
-    needs: [type-check, lint, detect-changes-starbunk-dnd]
+    needs: [detect-changes-starbunk-dnd]
     if: needs.detect-changes-starbunk-dnd.outputs.changed == 'true' || github.event.inputs.force_all == 'true' || (github.event.pull_request && contains(github.event.pull_request.labels.*.name, 'force-validation'))
     steps:
       - name: Checkout
@@ -549,7 +728,7 @@ jobs:
   test-build-covabot:
     name: 🧪 Test & Build - Covabot
     runs-on: ubuntu-latest
-    needs: [type-check, lint, detect-changes-covabot]
+    needs: [detect-changes-covabot]
     if: needs.detect-changes-covabot.outputs.changed == 'true' || github.event.inputs.force_all == 'true' || (github.event.pull_request && contains(github.event.pull_request.labels.*.name, 'force-validation'))
     steps:
       - name: Checkout
@@ -1012,42 +1191,50 @@ jobs:
     name: ✅ PR Validation Success
     runs-on: ubuntu-latest
     needs:
+      - validate-linting
       - type-check
-      - lint
       - version-check
-      - docker-build-bunkbot
-      - docker-build-djcova
-      - docker-build-starbunk-dnd
-      - docker-build-covabot
       - test-build-bunkbot
       - test-build-djcova
       - test-build-starbunk-dnd
       - test-build-covabot
+      - docker-smoke-bunkbot
+      - docker-smoke-djcova
+      - docker-smoke-starbunk-dnd
+      - docker-smoke-covabot
+      - publish-tag-bunkbot
+      - publish-tag-djcova
+      - publish-tag-starbunk-dnd
+      - publish-tag-covabot
     if: always()
     steps:
       - name: Check validation result
         run: |
           echo "Checking all validation results..."
           echo "type-check: ${{ needs.type-check.result }}"
-          echo "lint: ${{ needs.lint.result }}"
+          echo "validate-linting: ${{ needs.validate-linting.result }}"
           echo "version-check: ${{ needs.version-check.result }}"
-          echo "docker-build-bunkbot: ${{ needs.docker-build-bunkbot.result }}"
-          echo "docker-build-djcova: ${{ needs.docker-build-djcova.result }}"
-          echo "docker-build-starbunk-dnd: ${{ needs.docker-build-starbunk-dnd.result }}"
-          echo "docker-build-covabot: ${{ needs.docker-build-covabot.result }}"
           echo "test-build-bunkbot: ${{ needs.test-build-bunkbot.result }}"
           echo "test-build-djcova: ${{ needs.test-build-djcova.result }}"
           echo "test-build-starbunk-dnd: ${{ needs.test-build-starbunk-dnd.result }}"
           echo "test-build-covabot: ${{ needs.test-build-covabot.result }}"
+          echo "docker-smoke-bunkbot: ${{ needs.docker-smoke-bunkbot.result }}"
+          echo "docker-smoke-djcova: ${{ needs.docker-smoke-djcova.result }}"
+          echo "docker-smoke-starbunk-dnd: ${{ needs.docker-smoke-starbunk-dnd.result }}"
+          echo "docker-smoke-covabot: ${{ needs.docker-smoke-covabot.result }}"
+          echo "publish-tag-bunkbot: ${{ needs.publish-tag-bunkbot.result }}"
+          echo "publish-tag-djcova: ${{ needs.publish-tag-djcova.result }}"
+          echo "publish-tag-starbunk-dnd: ${{ needs.publish-tag-starbunk-dnd.result }}"
+          echo "publish-tag-covabot: ${{ needs.publish-tag-covabot.result }}"
 
-          # Phase 1 - Required checks must succeed
+          # Group 1 - Core code quality must succeed
           if [[ "${{ needs.type-check.result }}" != "success" ]]; then
             echo "❌ Type check failed"
             exit 1
           fi
 
-          if [[ "${{ needs.lint.result }}" != "success" ]]; then
-            echo "❌ Lint failed"
+          if [[ "${{ needs.validate-linting.result }}" != "success" ]]; then
+            echo "❌ Linting (ESLint/Prettier) failed"
             exit 1
           fi
 
@@ -1057,28 +1244,7 @@ jobs:
             exit 1
           fi
 
-          # Docker build checks can succeed or be skipped, but not fail
-          if [[ "${{ needs.docker-build-bunkbot.result }}" != "success" && "${{ needs.docker-build-bunkbot.result }}" != "skipped" ]]; then
-            echo "❌ Docker build check docker-build-bunkbot failed with status: ${{ needs.docker-build-bunkbot.result }}"
-            exit 1
-          fi
-
-          if [[ "${{ needs.docker-build-djcova.result }}" != "success" && "${{ needs.docker-build-djcova.result }}" != "skipped" ]]; then
-            echo "❌ Docker build check docker-build-djcova failed with status: ${{ needs.docker-build-djcova.result }}"
-            exit 1
-          fi
-
-          if [[ "${{ needs.docker-build-starbunk-dnd.result }}" != "success" && "${{ needs.docker-build-starbunk-dnd.result }}" != "skipped" ]]; then
-            echo "❌ Docker build check docker-build-starbunk-dnd failed with status: ${{ needs.docker-build-starbunk-dnd.result }}"
-            exit 1
-          fi
-
-          if [[ "${{ needs.docker-build-covabot.result }}" != "success" && "${{ needs.docker-build-covabot.result }}" != "skipped" ]]; then
-            echo "❌ Docker build check docker-build-covabot failed with status: ${{ needs.docker-build-covabot.result }}"
-            exit 1
-          fi
-
-          # Phase 2 - Container test-build checks can succeed or be skipped, but not fail
+          # Group 2 - Container test-build checks can succeed or be skipped, but not fail
           if [[ "${{ needs.test-build-bunkbot.result }}" != "success" && "${{ needs.test-build-bunkbot.result }}" != "skipped" ]]; then
             echo "❌ Container check test-build-bunkbot failed with status: ${{ needs.test-build-bunkbot.result }}"
             exit 1
@@ -1096,6 +1262,48 @@ jobs:
 
           if [[ "${{ needs.test-build-covabot.result }}" != "success" && "${{ needs.test-build-covabot.result }}" != "skipped" ]]; then
             echo "❌ Container check test-build-covabot failed with status: ${{ needs.test-build-covabot.result }}"
+            exit 1
+          fi
+
+          # Group 3 - Docker smoke tests must succeed or be skipped (if not applicable)
+          if [[ "${{ needs.docker-smoke-bunkbot.result }}" != "success" && "${{ needs.docker-smoke-bunkbot.result }}" != "skipped" ]]; then
+            echo "❌ Docker smoke test docker-smoke-bunkbot failed with status: ${{ needs.docker-smoke-bunkbot.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.docker-smoke-djcova.result }}" != "success" && "${{ needs.docker-smoke-djcova.result }}" != "skipped" ]]; then
+            echo "❌ Docker smoke test docker-smoke-djcova failed with status: ${{ needs.docker-smoke-djcova.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.docker-smoke-starbunk-dnd.result }}" != "success" && "${{ needs.docker-smoke-starbunk-dnd.result }}" != "skipped" ]]; then
+            echo "❌ Docker smoke test docker-smoke-starbunk-dnd failed with status: ${{ needs.docker-smoke-starbunk-dnd.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.docker-smoke-covabot.result }}" != "success" && "${{ needs.docker-smoke-covabot.result }}" != "skipped" ]]; then
+            echo "❌ Docker smoke test docker-smoke-covabot failed with status: ${{ needs.docker-smoke-covabot.result }}"
+            exit 1
+          fi
+
+          # Group 4 - Publish checks can succeed or be skipped, but not fail
+          if [[ "${{ needs.publish-tag-bunkbot.result }}" != "success" && "${{ needs.publish-tag-bunkbot.result }}" != "skipped" ]]; then
+            echo "❌ Publish job publish-tag-bunkbot failed with status: ${{ needs.publish-tag-bunkbot.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.publish-tag-djcova.result }}" != "success" && "${{ needs.publish-tag-djcova.result }}" != "skipped" ]]; then
+            echo "❌ Publish job publish-tag-djcova failed with status: ${{ needs.publish-tag-djcova.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.publish-tag-starbunk-dnd.result }}" != "success" && "${{ needs.publish-tag-starbunk-dnd.result }}" != "skipped" ]]; then
+            echo "❌ Publish job publish-tag-starbunk-dnd failed with status: ${{ needs.publish-tag-starbunk-dnd.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.publish-tag-covabot.result }}" != "success" && "${{ needs.publish-tag-covabot.result }}" != "skipped" ]]; then
+            echo "❌ Publish job publish-tag-covabot failed with status: ${{ needs.publish-tag-covabot.result }}"
             exit 1
           fi
 
