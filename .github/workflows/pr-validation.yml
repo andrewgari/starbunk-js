@@ -225,6 +225,14 @@ jobs:
             local base_ver=$1
             local compare_ver=$2
             
+            # Validate version format (major.minor.patch with numeric components only)
+            if ! [[ "$base_ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || ! [[ "$compare_ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "❌ ERROR: Invalid version format. Expected format: major.minor.patch (numeric only)"
+              echo "   Base version: $base_ver"
+              echo "   Compare version: $compare_ver"
+              return 2
+            fi
+            
             IFS='.' read -r base_major base_minor base_patch <<< "$base_ver"
             IFS='.' read -r cmp_major cmp_minor cmp_patch <<< "$compare_ver"
             
@@ -248,15 +256,19 @@ jobs:
             echo "✅ Version is already properly incremented from $MAIN_VERSION to $PR_VERSION"
             echo "needs_bump=false" >> $GITHUB_ENV
           else
-            # Version needs to be bumped
-            echo "⚠️  Version needs to be bumped (current: $PR_VERSION, main: $MAIN_VERSION)"
+            # Version needs to be bumped - distinguish between equal and less than
+            if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
+              echo "⚠️  Version matches main (current: $PR_VERSION, main: $MAIN_VERSION). Auto-bumping..."
+            else
+              echo "⚠️  Version is behind main (current: $PR_VERSION, main: $MAIN_VERSION). Auto-bumping..."
+            fi
             
             # Bump patch version
             IFS='.' read -r major minor patch <<< "$MAIN_VERSION"
             NEW_PATCH=$((patch + 1))
             NEW_VERSION="$major.$minor.$NEW_PATCH"
             echo "$NEW_VERSION" > VERSION
-            echo "📝 Bumped version from $MAIN_VERSION to $NEW_VERSION"
+            echo "📝 Bumped version from $PR_VERSION to $NEW_VERSION"
             echo "needs_bump=true" >> $GITHUB_ENV
             echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
           fi
@@ -294,8 +306,24 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: bump version to ${{ env.new_version }}"
-            git push origin ${{ github.event.pull_request.head.ref }}
-            echo "✅ Version bumped and committed to ${{ env.new_version }}"
+            
+            # Push with retry logic to handle concurrent updates
+            echo "Pushing changes to origin ${{ github.event.pull_request.head.ref }} with retry and --force-with-lease..."
+            max_attempts=3
+            attempt=1
+            while [ $attempt -le $max_attempts ]; do
+              if git push --force-with-lease origin ${{ github.event.pull_request.head.ref }}; then
+                echo "✅ Version bumped and committed to ${{ env.new_version }}"
+                break
+              fi
+              if [ $attempt -eq $max_attempts ]; then
+                echo "❌ Failed to push changes after $max_attempts attempts"
+                exit 1
+              fi
+              echo "Push failed (attempt $attempt/$max_attempts). Retrying in 5 seconds..."
+              attempt=$((attempt + 1))
+              sleep 5
+            done
           fi
 
   # =============================================================================

@@ -12,7 +12,7 @@ on:
         required: false
 
 concurrency:
-  group: pr-version-bump-${{ github.event.pull_request.number || github.ref }}
+  group: pr-version-bump-workflow_dispatch-${{ github.run_id }}
   cancel-in-progress: true
 
 permissions:
