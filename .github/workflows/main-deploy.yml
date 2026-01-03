@@ -381,7 +381,7 @@ jobs:
 
       - name: Start container
         env:
-          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT || '3001' }}
         run: |
           docker run -d --name bunkbot-test \
             -e DISCORD_TOKEN=test \
@@ -395,7 +395,7 @@ jobs:
 
       - name: Health check
         env:
-          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT || '3001' }}
         run: |
           echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
@@ -414,7 +414,7 @@ jobs:
 
       - name: Smoke test
         env:
-          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT || '3001' }}
         run: |
           RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:${HEALTH_PORT}/health)
           echo "Response: $RESPONSE"
@@ -449,7 +449,7 @@ jobs:
 
       - name: Start container
         env:
-          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT || '3001' }}
         run: |
           docker run -d --name covabot-test \
             -e DISCORD_TOKEN=test \
@@ -463,7 +463,7 @@ jobs:
 
       - name: Health check
         env:
-          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT || '3001' }}
         run: |
           echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
@@ -482,7 +482,7 @@ jobs:
 
       - name: Smoke test
         env:
-          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT || '3001' }}
         run: |
           RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:${HEALTH_PORT}/health)
           echo "Response: $RESPONSE"
@@ -517,7 +517,7 @@ jobs:
 
       - name: Start container
         env:
-          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT || '3001' }}
         run: |
           docker run -d --name djcova-test \
             -e DISCORD_TOKEN=test \
@@ -531,7 +531,7 @@ jobs:
 
       - name: Health check
         env:
-          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT || '3001' }}
         run: |
           echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
@@ -550,7 +550,7 @@ jobs:
 
       - name: Smoke test
         env:
-          HEALTH_PORT: ${{ secrets.HEALTH_PORT }}
+          HEALTH_PORT: ${{ secrets.HEALTH_PORT || '3001' }}
         run: |
           RESPONSE=$(docker exec djcova-test curl -s http://127.0.0.1:${HEALTH_PORT}/health)
           echo "Response: $RESPONSE"
