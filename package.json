@@ -1,13 +1,13 @@
 {
   "name": "bunkbot",
-  "version": "1.4.8",
+  "version": "1.4.9",
   "description": "it's bot that says blu, among things...",
   "type": "commonjs",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
-	  "scripts": {
+  "scripts": {
     "prepare": "husky && npm run sync-versions",
     "sync-versions": "bash ./scripts/sync-versions.sh",
     "build": "npm run build:shared && npm run build:containers",
