@@ -392,9 +392,11 @@ jobs:
 
       - name: Health check
         run: |
+          HEALTH_PORT=$(docker exec bunkbot-test sh -c 'echo $HEALTH_PORT')
+          echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec bunkbot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec bunkbot-test curl -f http://127.0.0.1:${HEALTH_PORT}/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -408,7 +410,8 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:3000/health)
+          HEALTH_PORT=$(docker exec bunkbot-test sh -c 'echo $HEALTH_PORT')
+          RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:${HEALTH_PORT}/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -452,9 +455,11 @@ jobs:
 
       - name: Health check
         run: |
+          HEALTH_PORT=$(docker exec covabot-test sh -c 'echo $HEALTH_PORT')
+          echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec covabot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec covabot-test curl -f http://127.0.0.1:${HEALTH_PORT}/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -468,7 +473,8 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:3000/health)
+          HEALTH_PORT=$(docker exec covabot-test sh -c 'echo $HEALTH_PORT')
+          RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:${HEALTH_PORT}/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -512,9 +518,11 @@ jobs:
 
       - name: Health check
         run: |
+          HEALTH_PORT=$(docker exec djcova-test sh -c 'echo $HEALTH_PORT')
+          echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec djcova-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec djcova-test curl -f http://127.0.0.1:${HEALTH_PORT}/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -528,7 +536,8 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec djcova-test curl -s http://127.0.0.1:3000/health)
+          HEALTH_PORT=$(docker exec djcova-test sh -c 'echo $HEALTH_PORT')
+          RESPONSE=$(docker exec djcova-test curl -s http://127.0.0.1:${HEALTH_PORT}/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -572,9 +581,11 @@ jobs:
 
       - name: Health check
         run: |
+          HEALTH_PORT=$(docker exec starbunk-dnd-test sh -c 'echo $HEALTH_PORT')
+          echo "Using health port: $HEALTH_PORT"
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec starbunk-dnd-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec starbunk-dnd-test curl -f http://127.0.0.1:${HEALTH_PORT}/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -588,7 +599,8 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec starbunk-dnd-test curl -s http://127.0.0.1:3000/health)
+          HEALTH_PORT=$(docker exec starbunk-dnd-test sh -c 'echo $HEALTH_PORT')
+          RESPONSE=$(docker exec starbunk-dnd-test curl -s http://127.0.0.1:${HEALTH_PORT}/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
