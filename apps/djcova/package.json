@@ -1,6 +1,6 @@
 {
 	"name": "@starbunk/djcova",
-	"version": "1.4.6",
+	"version": "1.4.7",
 	"description": "DJCova - Music service container",
 	"main": "dist/index.js",
 	"scripts": {
