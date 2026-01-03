@@ -1,6 +1,6 @@
 {
 	"name": "@starbunk/bunkbot",
-	"version": "1.4.8",
+	"version": "1.4.9",
 	"description": "BunkBot - Reply bots and admin commands container",
 	"main": "dist/index.js",
 	"scripts": {
