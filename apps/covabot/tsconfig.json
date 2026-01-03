@@ -36,8 +36,8 @@
 		"src/commands/**/*.ts",
 		"src/index.ts",
 		"src/commandHandler.ts"
-	],
-	"references": [
-		{ "path": "../../packages/shared" }
-	]
+		],
+		"references": [
+			{ "path": "../../packages/shared" }
+		]
 }

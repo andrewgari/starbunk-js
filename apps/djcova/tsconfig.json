@@ -28,9 +28,9 @@
 		"node_modules",
 		"dist",
 		"tests",
-		"src/**/__tests__/**"
-	],
-	"references": [
-		{ "path": "../../packages/shared" }
-	]
+			"src/**/__tests__/**"
+		],
+		"references": [
+			{ "path": "../../packages/shared" }
+		]
 }

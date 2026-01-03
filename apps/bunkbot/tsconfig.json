@@ -32,9 +32,9 @@
 		"src/services/personalityNotesServiceDb.ts",
 		"src/cova-bot/enhancedLlmTriggers.ts",
 		"src/cova-bot/llm-triggers.ts",
-		"src/cova-bot/index.ts"
-	],
-	"references": [
-		{ "path": "../../packages/shared" }
-	]
+			"src/cova-bot/index.ts"
+		],
+		"references": [
+			{ "path": "../../packages/shared" }
+		]
 }

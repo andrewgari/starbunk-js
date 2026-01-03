@@ -11,6 +11,7 @@ import {
 	validateEnvironment,
 	ensureError,
 	DiscordService,
+	type DiagnosticResult,
 } from '@starbunk/shared';
 import { Client } from 'discord.js';
 import { validateAndParseConfig, getSanitizedConfig, BunkBotConfig } from '../config/validation';
@@ -63,25 +64,25 @@ export class ServiceManager {
 	private async runDiagnostics(): Promise<void> {
 		try {
 			const diagnostics = await runStartupDiagnostics();
-			const failures = diagnostics.filter((d) => d.status === 'fail');
-			const warnings = diagnostics.filter((d) => d.status === 'warn');
+			const failures = diagnostics.filter((d: DiagnosticResult) => d.status === 'fail');
+			const warnings = diagnostics.filter((d: DiagnosticResult) => d.status === 'warn');
 
 			if (warnings.length > 0) {
 				logger.warn('⚠️ Non-critical startup issues detected:');
-				warnings.forEach((warning) => {
+				warnings.forEach((warning: DiagnosticResult) => {
 					logger.warn(`  - ${warning.check}: ${warning.message}`);
 				});
 			}
 
 			if (failures.length > 0) {
 				logger.error('❌ Critical startup issues detected:');
-				failures.forEach((failure) => {
+				failures.forEach((failure: DiagnosticResult) => {
 					logger.error(`  - ${failure.check}: ${failure.message}`);
 				});
 
 				// Check if failures are truly critical or can be handled gracefully
-				const criticalFailures = failures.filter((f) => {
-					const crit = (f as { critical?: boolean }).critical;
+				const criticalFailures = failures.filter((f: DiagnosticResult & { critical?: boolean }) => {
+					const crit = f.critical;
 					return crit !== false && !this.canGracefullyHandle(f.check);
 				});
 

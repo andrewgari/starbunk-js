@@ -34,8 +34,8 @@
 		"src/cova-bot/llm-triggers.ts",
 		"src/cova-bot/index.ts",
 		"src/snowbunk/**"
-	],
-	"references": [
-		{ "path": "../../packages/shared" }
-	]
+		],
+		"references": [
+			{ "path": "../../packages/shared" }
+		]
 }
