@@ -67,18 +67,18 @@ jobs:
           bash ./scripts/sync-versions.sh
           echo "✅ Synced VERSION to all package.json files"
 
-	  - name: Commit version bump
-	    run: |
-	      git config --local user.email "github-actions[bot]@users.noreply.github.com"
-	      git config --local user.name "github-actions[bot]"
-	      git add VERSION package.json apps/*/package.json packages/*/package.json
-	      # If there are no staged changes, the PR is already at the desired version.
-	      if git diff --cached --quiet; then
-	        echo "No version changes to commit; PR is already one patch ahead of main."
-	        exit 0
-	      fi
-	      git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }}"
-	      git push
+      - name: Commit version bump
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add VERSION package.json apps/*/package.json packages/*/package.json
+          # If there are no staged changes, the PR is already at the desired version.
+          if git diff --cached --quiet; then
+            echo "No version changes to commit; PR is already one patch ahead of main."
+            exit 0
+          fi
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }}"
+          git push
 
-      # Note: We rely on the normal pull_request workflow on this branch
-      # to run PR - Validation & Build after the bump commit is pushed.
+# Note: We rely on the normal pull_request workflow on this branch
+# to run PR - Validation & Build after the bump commit is pushed.
