@@ -1,7 +1,7 @@
 {
 	"name": "@starbunk/djcova",
-	"version": "1.4.5",
-	"description": "DJCova - Music service container",
+	"version": "1.4.7",
+		"description": "DJCova - Music service container",
 	"main": "dist/index.js",
 	"scripts": {
 		"build": "tsc && tsc-alias",

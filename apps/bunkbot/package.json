@@ -1,7 +1,7 @@
 {
 	"name": "@starbunk/bunkbot",
-	"version": "1.4.5",
-	"description": "BunkBot - Reply bots and admin commands container",
+	"version": "1.4.7",
+		"description": "BunkBot - Reply bots and admin commands container",
 	"main": "dist/index.js",
 	"scripts": {
 		"build": "tsc && tsc-alias",
