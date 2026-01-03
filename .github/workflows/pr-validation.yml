@@ -168,7 +168,7 @@ jobs:
           retention-days: 1
 
   docker-build-djcova:
-    name: �� Build djcova
+    name: Validate Docker Build - djcova
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
