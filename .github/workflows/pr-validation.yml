@@ -246,85 +246,56 @@ jobs:
           # Check if version needs to be bumped
           if version_is_greater "$MAIN_VERSION" "$PR_VERSION"; then
             echo "✅ Version is already properly incremented from $MAIN_VERSION to $PR_VERSION"
-            exit 0
+            echo "needs_bump=false" >> $GITHUB_ENV
+          else
+            # Version needs to be bumped
+            echo "⚠️  Version needs to be bumped (current: $PR_VERSION, main: $MAIN_VERSION)"
+            
+            # Bump patch version
+            IFS='.' read -r major minor patch <<< "$MAIN_VERSION"
+            NEW_PATCH=$((patch + 1))
+            NEW_VERSION="$major.$minor.$NEW_PATCH"
+            echo "$NEW_VERSION" > VERSION
+            echo "📝 Bumped version from $MAIN_VERSION to $NEW_VERSION"
+            echo "needs_bump=true" >> $GITHUB_ENV
+            echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
           fi
 
-          # Version needs to be bumped
-          echo "⚠️  Version needs to be bumped (current: $PR_VERSION, main: $MAIN_VERSION)"
-          
-          # Bump patch version
-          IFS='.' read -r major minor patch <<< "$MAIN_VERSION"
-          NEW_PATCH=$((patch + 1))
-          NEW_VERSION="$major.$minor.$NEW_PATCH"
-          echo "$NEW_VERSION" > VERSION
-          echo "📝 Bumped version from $MAIN_VERSION to $NEW_VERSION"
-
-          # Setup Node for sync-versions script
-          echo "Setting up Node.js..."
-
       - name: Setup Node
+        if: env.needs_bump == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
+        if: env.needs_bump == 'true'
         run: npm ci
 
       - name: Sync versions and commit if changed
+        if: env.needs_bump == 'true'
         run: |
-          git fetch origin main
-          MAIN_VERSION=$(git show origin/main:VERSION | tr -d '\n')
-          PR_VERSION=$(cat VERSION | tr -d '\n')
+          echo "Running sync-versions script..."
+          if [ ! -f "./scripts/sync-versions.sh" ]; then
+            echo "❌ Error: sync-versions.sh script not found"
+            exit 1
+          fi
+          if [ ! -x "./scripts/sync-versions.sh" ]; then
+            chmod +x ./scripts/sync-versions.sh
+          fi
+          bash ./scripts/sync-versions.sh
           
-          # Function to compare semantic versions
-          version_is_greater() {
-            local main_ver=$1
-            local pr_ver=$2
-            
-            IFS='.' read -r main_major main_minor main_patch <<< "$main_ver"
-            IFS='.' read -r pr_major pr_minor pr_patch <<< "$pr_ver"
-            
-            if [ "$pr_major" -gt "$main_major" ]; then
-              return 0
-            elif [ "$pr_major" -eq "$main_major" ]; then
-              if [ "$pr_minor" -gt "$main_minor" ]; then
-                return 0
-              elif [ "$pr_minor" -eq "$main_minor" ]; then
-                if [ "$pr_patch" -gt "$main_patch" ]; then
-                  return 0
-                fi
-              fi
-            fi
-            return 1
-          }
+          # Commit changes
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add VERSION package.json apps/*/package.json packages/*/package.json
           
-          # Only proceed if version was bumped
-          if ! version_is_greater "$MAIN_VERSION" "$PR_VERSION"; then
-            echo "Running sync-versions script..."
-            if [ ! -f "./scripts/sync-versions.sh" ]; then
-              echo "❌ Error: sync-versions.sh script not found"
-              exit 1
-            fi
-            if [ ! -x "./scripts/sync-versions.sh" ]; then
-              chmod +x ./scripts/sync-versions.sh
-            fi
-            bash ./scripts/sync-versions.sh
-            
-            # Commit changes
-            git config --local user.email "github-actions[bot]@users.noreply.github.com"
-            git config --local user.name "github-actions[bot]"
-            git add VERSION package.json apps/*/package.json packages/*/package.json
-            
-            if git diff --staged --quiet; then
-              echo "No changes to commit"
-            else
-              git commit -m "chore: bump version to $PR_VERSION"
-              git push
-              echo "✅ Version bumped and committed"
-            fi
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
           else
-            echo "✅ Version already correct, no changes needed"
+            git commit -m "chore: bump version to ${{ env.new_version }}"
+            git push
+            echo "✅ Version bumped and committed to ${{ env.new_version }}"
           fi
 
   # =============================================================================
