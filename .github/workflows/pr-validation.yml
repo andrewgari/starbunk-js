@@ -304,7 +304,7 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec bunkbot-test curl -f http://127.0.0.1:3001/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec bunkbot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -318,7 +318,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:3001/health)
+          RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:3000/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -360,7 +360,7 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec covabot-test curl -f http://127.0.0.1:3003/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec covabot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -374,7 +374,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:3003/health)
+          RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:3000/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -472,7 +472,7 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec starbunk-dnd-test curl -f http://127.0.0.1:3001/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec starbunk-dnd-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -486,7 +486,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec starbunk-dnd-test curl -s http://127.0.0.1:3001/health)
+          RESPONSE=$(docker exec starbunk-dnd-test curl -s http://127.0.0.1:3000/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
