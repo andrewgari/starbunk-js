@@ -11,7 +11,7 @@ env:
   NODE_VERSION: '20'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   pull-requests: read
 
@@ -201,13 +201,17 @@ jobs:
   version-check:
     name: Validate Version
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout
+      - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Validate version increment
+      - name: Check and bump version if needed
         run: |
           git fetch origin main
           MAIN_VERSION=$(git show origin/main:VERSION | tr -d '\n')
@@ -216,32 +220,112 @@ jobs:
           echo "Main version: $MAIN_VERSION"
           echo "PR version: $PR_VERSION"
 
-          # Compare versions
-          if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
-            echo "❌ ERROR: Version must be incremented from main branch"
-            exit 1
-          fi
-
-          # Simple version comparison (assumes semantic versioning)
-          IFS='.' read -r main_major main_minor main_patch <<< "$MAIN_VERSION"
-          IFS='.' read -r pr_major pr_minor pr_patch <<< "$PR_VERSION"
-
-          if [ "$pr_major" -lt "$main_major" ]; then
-            echo "❌ ERROR: Version cannot decrease"
-            exit 1
-          elif [ "$pr_major" -eq "$main_major" ]; then
-            if [ "$pr_minor" -lt "$main_minor" ]; then
-              echo "❌ ERROR: Version cannot decrease"
-              exit 1
-            elif [ "$pr_minor" -eq "$main_minor" ]; then
-              if [ "$pr_patch" -le "$main_patch" ]; then
-                echo "❌ ERROR: Version must be greater than main branch"
-                exit 1
+          # Function to compare semantic versions
+          # Returns 0 if PR_VERSION > MAIN_VERSION, 1 otherwise
+          version_is_greater() {
+            local main_ver=$1
+            local pr_ver=$2
+            
+            IFS='.' read -r main_major main_minor main_patch <<< "$main_ver"
+            IFS='.' read -r pr_major pr_minor pr_patch <<< "$pr_ver"
+            
+            if [ "$pr_major" -gt "$main_major" ]; then
+              return 0
+            elif [ "$pr_major" -eq "$main_major" ]; then
+              if [ "$pr_minor" -gt "$main_minor" ]; then
+                return 0
+              elif [ "$pr_minor" -eq "$main_minor" ]; then
+                if [ "$pr_patch" -gt "$main_patch" ]; then
+                  return 0
+                fi
               fi
             fi
+            return 1
+          }
+
+          # Check if version needs to be bumped
+          if version_is_greater "$MAIN_VERSION" "$PR_VERSION"; then
+            echo "✅ Version is already properly incremented from $MAIN_VERSION to $PR_VERSION"
+            exit 0
           fi
 
-          echo "✅ Version properly incremented from $MAIN_VERSION to $PR_VERSION"
+          # Version needs to be bumped
+          echo "⚠️  Version needs to be bumped (current: $PR_VERSION, main: $MAIN_VERSION)"
+          
+          # Bump patch version
+          IFS='.' read -r major minor patch <<< "$MAIN_VERSION"
+          NEW_PATCH=$((patch + 1))
+          NEW_VERSION="$major.$minor.$NEW_PATCH"
+          echo "$NEW_VERSION" > VERSION
+          echo "📝 Bumped version from $MAIN_VERSION to $NEW_VERSION"
+
+          # Setup Node for sync-versions script
+          echo "Setting up Node.js..."
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync versions and commit if changed
+        run: |
+          git fetch origin main
+          MAIN_VERSION=$(git show origin/main:VERSION | tr -d '\n')
+          PR_VERSION=$(cat VERSION | tr -d '\n')
+          
+          # Function to compare semantic versions
+          version_is_greater() {
+            local main_ver=$1
+            local pr_ver=$2
+            
+            IFS='.' read -r main_major main_minor main_patch <<< "$main_ver"
+            IFS='.' read -r pr_major pr_minor pr_patch <<< "$pr_ver"
+            
+            if [ "$pr_major" -gt "$main_major" ]; then
+              return 0
+            elif [ "$pr_major" -eq "$main_major" ]; then
+              if [ "$pr_minor" -gt "$main_minor" ]; then
+                return 0
+              elif [ "$pr_minor" -eq "$main_minor" ]; then
+                if [ "$pr_patch" -gt "$main_patch" ]; then
+                  return 0
+                fi
+              fi
+            fi
+            return 1
+          }
+          
+          # Only proceed if version was bumped
+          if ! version_is_greater "$MAIN_VERSION" "$PR_VERSION"; then
+            echo "Running sync-versions script..."
+            if [ ! -f "./scripts/sync-versions.sh" ]; then
+              echo "❌ Error: sync-versions.sh script not found"
+              exit 1
+            fi
+            if [ ! -x "./scripts/sync-versions.sh" ]; then
+              chmod +x ./scripts/sync-versions.sh
+            fi
+            bash ./scripts/sync-versions.sh
+            
+            # Commit changes
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            git add VERSION package.json apps/*/package.json packages/*/package.json
+            
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "chore: bump version to $PR_VERSION"
+              git push
+              echo "✅ Version bumped and committed"
+            fi
+          else
+            echo "✅ Version already correct, no changes needed"
+          fi
 
   # =============================================================================
   # CONTAINER VALIDATION & PUBLISHING (depends on docker builds)
