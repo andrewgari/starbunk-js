@@ -175,10 +175,17 @@ jobs:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 📦 Setup Node.js with Caching
-        uses: ./.github/actions/setup-node-cached
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔧 Build shared package
+        run: cd packages/shared && npm run build
 
       - name: 🔍 TypeScript Type Checking
         run: |
