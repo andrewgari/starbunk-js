@@ -23,14 +23,23 @@ if [ ! -f "$VERSION_FILE" ]; then
     exit 1
 fi
 
-NEW_VERSION=$(cat "$VERSION_FILE" | tr -d '\n')
+NEW_VERSION=$(tr -d '\n' < "$VERSION_FILE")
 
 # Read base version from git spec or use default
 if [ -z "$BASE_VERSION_SPEC" ]; then
     BASE_VERSION="0.0.0"
     echo "Using default base version: $BASE_VERSION"
 else
-    BASE_VERSION=$(git show "$BASE_VERSION_SPEC" 2>/dev/null | tr -d '\n' || echo "0.0.0")
+    # Temporarily disable exit on error to handle git show failure gracefully
+    set +e
+    BASE_VERSION=$(git show "$BASE_VERSION_SPEC" 2>/dev/null | tr -d '\n')
+    GIT_SHOW_EXIT=$?
+    set -e
+    
+    # If git show failed or returned empty content, use default
+    if [ $GIT_SHOW_EXIT -ne 0 ] || [ -z "$BASE_VERSION" ]; then
+        BASE_VERSION="0.0.0"
+    fi
     echo "Base version from $BASE_VERSION_SPEC: $BASE_VERSION"
 fi
 
