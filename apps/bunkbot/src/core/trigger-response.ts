@@ -1,6 +1,13 @@
 import { Message } from 'discord.js';
-import { container, ServiceId, logger, getBotResponseLogger, type BotResponseLog, inferTriggerCondition } from '@starbunk/shared';
-import { DiscordService } from '@starbunk/shared/dist/services/discordService';
+import {
+	container,
+	ServiceId,
+	logger,
+	getBotResponseLogger,
+	type BotResponseLog,
+	inferTriggerCondition,
+	DiscordService,
+} from '@starbunk/shared';
 import { BotIdentity } from '../types/botIdentity';
 import { withDefaultBotBehavior } from './conditions';
 

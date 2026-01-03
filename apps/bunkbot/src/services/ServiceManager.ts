@@ -10,8 +10,8 @@ import {
 	runStartupDiagnostics,
 	validateEnvironment,
 	ensureError,
+	DiscordService,
 } from '@starbunk/shared';
-import { DiscordService } from '@starbunk/shared/dist/services/discordService';
 import { Client } from 'discord.js';
 import { validateAndParseConfig, getSanitizedConfig, BunkBotConfig } from '../config/validation';
 

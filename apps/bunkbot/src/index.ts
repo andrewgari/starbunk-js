@@ -22,8 +22,8 @@ import {
 	getDiscordToken,
 } from '@starbunk/shared';
 
-// Import DiscordService directly from the service file
-import { DiscordService } from '@starbunk/shared/dist/services/discordService';
+// Import DiscordService from the shared package exports
+import { DiscordService } from '@starbunk/shared';
 
 // Import commands
 import pingCommand from './commands/ping';
