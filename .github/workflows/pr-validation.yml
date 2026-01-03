@@ -210,38 +210,7 @@ jobs:
       - name: Validate version increment
         run: |
           git fetch origin main
-          MAIN_VERSION=$(git show origin/main:VERSION | tr -d '\n')
-          PR_VERSION=$(cat VERSION | tr -d '\n')
-
-          echo "Main version: $MAIN_VERSION"
-          echo "PR version: $PR_VERSION"
-
-          # Compare versions
-          if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
-            echo "❌ ERROR: Version must be incremented from main branch"
-            exit 1
-          fi
-
-          # Simple version comparison (assumes semantic versioning)
-          IFS='.' read -r main_major main_minor main_patch <<< "$MAIN_VERSION"
-          IFS='.' read -r pr_major pr_minor pr_patch <<< "$PR_VERSION"
-
-          if [ "$pr_major" -lt "$main_major" ]; then
-            echo "❌ ERROR: Version cannot decrease"
-            exit 1
-          elif [ "$pr_major" -eq "$main_major" ]; then
-            if [ "$pr_minor" -lt "$main_minor" ]; then
-              echo "❌ ERROR: Version cannot decrease"
-              exit 1
-            elif [ "$pr_minor" -eq "$main_minor" ]; then
-              if [ "$pr_patch" -le "$main_patch" ]; then
-                echo "❌ ERROR: Version must be greater than main branch"
-                exit 1
-              fi
-            fi
-          fi
-
-          echo "✅ Version properly incremented from $MAIN_VERSION to $PR_VERSION"
+          ./scripts/validation/validate-version.sh origin/main:VERSION
 
   # =============================================================================
   # CONTAINER VALIDATION & PUBLISHING (depends on docker builds)

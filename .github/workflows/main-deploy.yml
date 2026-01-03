@@ -100,38 +100,7 @@ jobs:
 
       - name: Validate version increment
         run: |
-          CURRENT_VERSION=$(cat VERSION | tr -d '\n')
-          PREVIOUS_VERSION=$(git show HEAD~1:VERSION 2>/dev/null | tr -d '\n' || echo "0.0.0")
-
-          echo "Previous version: $PREVIOUS_VERSION"
-          echo "Current version: $CURRENT_VERSION"
-
-            # Compare versions - require a strict increment over previous main commit
-            if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
-              echo '❌ ERROR: Version must be incremented from previous main commit'
-              exit 1
-            fi
-
-            # Simple semantic version comparison (major.minor.patch)
-            IFS='.' read -r prev_major prev_minor prev_patch <<< "$PREVIOUS_VERSION"
-            IFS='.' read -r curr_major curr_minor curr_patch <<< "$CURRENT_VERSION"
-
-            if [ "$curr_major" -lt "$prev_major" ]; then
-              echo '❌ ERROR: Version cannot decrease (major version)'
-              exit 1
-            elif [ "$curr_major" -eq "$prev_major" ]; then
-              if [ "$curr_minor" -lt "$prev_minor" ]; then
-                echo '❌ ERROR: Version cannot decrease (minor version)'
-                exit 1
-              elif [ "$curr_minor" -eq "$prev_minor" ]; then
-                if [ "$curr_patch" -le "$prev_patch" ]; then
-                  echo '❌ ERROR: Version must be greater than previous main commit (patch version)'
-                  exit 1
-                fi
-              fi
-            fi
-
-            echo "✅ Version properly incremented from $PREVIOUS_VERSION to $CURRENT_VERSION"
+          ./scripts/validation/validate-version.sh HEAD~1:VERSION
 
       - name: Store version
         run: |
