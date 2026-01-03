@@ -201,8 +201,6 @@ jobs:
   version-check:
     name: Validate Version
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -221,21 +219,22 @@ jobs:
           echo "PR version: $PR_VERSION"
 
           # Function to compare semantic versions
-          # Returns 0 if PR_VERSION > MAIN_VERSION, 1 otherwise
+          # Returns 0 (success) if second parameter > first parameter, 1 (failure) otherwise
+          # Usage: version_is_greater "1.0.0" "1.0.1" returns 0 (true, 1.0.1 > 1.0.0)
           version_is_greater() {
-            local main_ver=$1
-            local pr_ver=$2
+            local base_ver=$1
+            local compare_ver=$2
             
-            IFS='.' read -r main_major main_minor main_patch <<< "$main_ver"
-            IFS='.' read -r pr_major pr_minor pr_patch <<< "$pr_ver"
+            IFS='.' read -r base_major base_minor base_patch <<< "$base_ver"
+            IFS='.' read -r cmp_major cmp_minor cmp_patch <<< "$compare_ver"
             
-            if [ "$pr_major" -gt "$main_major" ]; then
+            if [ "$cmp_major" -gt "$base_major" ]; then
               return 0
-            elif [ "$pr_major" -eq "$main_major" ]; then
-              if [ "$pr_minor" -gt "$main_minor" ]; then
+            elif [ "$cmp_major" -eq "$base_major" ]; then
+              if [ "$cmp_minor" -gt "$base_minor" ]; then
                 return 0
-              elif [ "$pr_minor" -eq "$main_minor" ]; then
-                if [ "$pr_patch" -gt "$main_patch" ]; then
+              elif [ "$cmp_minor" -eq "$base_minor" ]; then
+                if [ "$cmp_patch" -gt "$base_patch" ]; then
                   return 0
                 fi
               fi
@@ -244,6 +243,7 @@ jobs:
           }
 
           # Check if version needs to be bumped
+          # version_is_greater returns 0 if PR_VERSION > MAIN_VERSION
           if version_is_greater "$MAIN_VERSION" "$PR_VERSION"; then
             echo "✅ Version is already properly incremented from $MAIN_VERSION to $PR_VERSION"
             echo "needs_bump=false" >> $GITHUB_ENV
@@ -294,7 +294,7 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: bump version to ${{ env.new_version }}"
-            git push
+            git push origin ${{ github.event.pull_request.head.ref }}
             echo "✅ Version bumped and committed to ${{ env.new_version }}"
           fi
 
