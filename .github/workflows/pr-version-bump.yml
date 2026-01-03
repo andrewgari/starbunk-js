@@ -53,6 +53,13 @@ jobs:
 
       - name: Sync versions to package.json files
         run: |
+          if [ ! -f "./scripts/sync-versions.sh" ]; then
+            echo "❌ Error: sync-versions.sh script not found"
+            exit 1
+          fi
+          if [ ! -x "./scripts/sync-versions.sh" ]; then
+            chmod +x ./scripts/sync-versions.sh
+          fi
           bash ./scripts/sync-versions.sh
           echo "✅ Synced VERSION to all package.json files"
 
