@@ -384,6 +384,7 @@ jobs:
           docker run -d --name bunkbot-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
 
       - name: Wait for container to start
@@ -443,6 +444,7 @@ jobs:
           docker run -d --name covabot-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
 
       - name: Wait for container to start
@@ -502,6 +504,7 @@ jobs:
           docker run -d --name djcova-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
 
       - name: Wait for container to start
@@ -561,6 +564,7 @@ jobs:
           docker run -d --name starbunk-dnd-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:main
 
       - name: Wait for container to start

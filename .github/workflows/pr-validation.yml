@@ -171,7 +171,7 @@ jobs:
           retention-days: 1
 
   docker-build-djcova:
-    name: �� Build djcova
+    name: Validate Docker Build - djcova
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -295,7 +295,11 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name bunkbot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          docker run -d --name bunkbot-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -351,7 +355,11 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name covabot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
+          docker run -d --name covabot-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -407,7 +415,11 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name djcova-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
+          docker run -d --name djcova-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -463,7 +475,11 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name starbunk-dnd-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
+          docker run -d --name starbunk-dnd-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
