@@ -1,32 +1,34 @@
-name: PR - Validation & Build
+name: Main - Deploy & Release
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      skip_validation:
+        description: 'Skip code quality checks (use with caution)'
+        required: false
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
   NODE_VERSION: '20'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
-  pull-requests: read
-
-concurrency:
-  group: pr-validation-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 
 jobs:
   # =============================================================================
-  # GROUP 1: CODE QUALITY (no dependencies)
+  # GROUP 1: CODE QUALITY (runs in parallel)
   # =============================================================================
 
-  lint-and-format:
+  lint:
     name: Validate Lint
     runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_validation }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,15 +42,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint
+      - name: Run lint
         run: npm run lint
 
-      - name: Run Prettier
+  prettier:
+    name: Validate Format
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_validation }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run prettier
         run: npm run format -- --check
 
   type-check:
     name: Validate Types
     runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_validation }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,49 +86,64 @@ jobs:
         run: npm run type-check
 
   # =============================================================================
-  # GROUP 2: BUILD & TESTS (no dependencies)
+  # GROUP 2: VERSION VALIDATION (runs in parallel with Group 1)
   # =============================================================================
 
-  build:
-    name: Validate Build
+  version-check:
+    name: Validate Version
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          fetch-depth: 0
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Validate version increment
+        run: |
+          CURRENT_VERSION=$(cat VERSION | tr -d '\n')
+          PREVIOUS_VERSION=$(git show HEAD~1:VERSION 2>/dev/null | tr -d '\n' || echo "0.0.0")
+          
+          echo "Previous version: $PREVIOUS_VERSION"
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Compare versions
+          if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
+            echo "⚠️  WARNING: Version not incremented (this might be expected for non-version commits)"
+          else
+            # Simple version comparison
+            IFS='.' read -r prev_major prev_minor prev_patch <<< "$PREVIOUS_VERSION"
+            IFS='.' read -r curr_major curr_minor curr_patch <<< "$CURRENT_VERSION"
+            
+            if [ "$curr_major" -lt "$prev_major" ]; then
+              echo "❌ ERROR: Version cannot decrease"
+              exit 1
+            elif [ "$curr_major" -eq "$prev_major" ]; then
+              if [ "$curr_minor" -lt "$prev_minor" ]; then
+                echo "❌ ERROR: Version cannot decrease"
+                exit 1
+              elif [ "$curr_minor" -eq "$prev_minor" ]; then
+                if [ "$curr_patch" -lt "$prev_patch" ]; then
+                  echo "❌ ERROR: Version cannot decrease"
+                  exit 1
+                fi
+              fi
+            fi
+            
+            echo "✅ Version properly incremented from $PREVIOUS_VERSION to $CURRENT_VERSION"
+          fi
 
-      - name: Build all applications
-        run: npm run build
+      - name: Store version
+        run: |
+          VERSION=$(cat VERSION | tr -d '\n')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        id: version
 
-  unit-tests:
-    name: Validate Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run unit tests
-        run: npm run test
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
   # =============================================================================
-  # GROUP 3: DOCKER BUILDS (no dependencies)
+  # GROUP 3: DOCKER BUILDS (runs in parallel with Groups 1 & 2)
   # =============================================================================
 
   docker-build-bunkbot:
@@ -127,7 +162,7 @@ jobs:
           context: .
           file: ./apps/bunkbot/Dockerfile
           push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/bunkbot.tar
@@ -155,7 +190,7 @@ jobs:
           context: .
           file: ./apps/covabot/Dockerfile
           push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/covabot.tar
@@ -168,7 +203,7 @@ jobs:
           retention-days: 1
 
   docker-build-djcova:
-    name: �� Build djcova
+    name: Validate Docker Build - djcova
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -183,7 +218,7 @@ jobs:
           context: .
           file: ./apps/djcova/Dockerfile
           push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/djcova.tar
@@ -211,7 +246,7 @@ jobs:
           context: .
           file: ./apps/starbunk-dnd/Dockerfile
           push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:main
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/starbunk-dnd.tar
@@ -224,56 +259,107 @@ jobs:
           retention-days: 1
 
   # =============================================================================
-  # GROUP 4: VERSION VALIDATION (no dependencies)
+  # GROUP 4: TESTING (depends on Group 1 passing)
   # =============================================================================
 
-  version-check:
-    name: Validate Version
+  test-bunkbot:
+    name: Validate Tests - bunkbot
     runs-on: ubuntu-latest
+    needs: [lint, prettier, type-check]
+    if: ${{ !cancelled() && (success() || inputs.skip_validation) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Validate version increment
-        run: |
-          git fetch origin main
-          MAIN_VERSION=$(git show origin/main:VERSION | tr -d '\n')
-          PR_VERSION=$(cat VERSION | tr -d '\n')
-          
-          echo "Main version: $MAIN_VERSION"
-          echo "PR version: $PR_VERSION"
-          
-          # Compare versions
-          if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
-            echo "❌ ERROR: Version must be incremented from main branch"
-            exit 1
-          fi
-          
-          # Simple version comparison (assumes semantic versioning)
-          IFS='.' read -r main_major main_minor main_patch <<< "$MAIN_VERSION"
-          IFS='.' read -r pr_major pr_minor pr_patch <<< "$PR_VERSION"
-          
-          if [ "$pr_major" -lt "$main_major" ]; then
-            echo "❌ ERROR: Version cannot decrease"
-            exit 1
-          elif [ "$pr_major" -eq "$main_major" ]; then
-            if [ "$pr_minor" -lt "$main_minor" ]; then
-              echo "❌ ERROR: Version cannot decrease"
-              exit 1
-            elif [ "$pr_minor" -eq "$main_minor" ]; then
-              if [ "$pr_patch" -le "$main_patch" ]; then
-                echo "❌ ERROR: Version must be greater than main branch"
-                exit 1
-              fi
-            fi
-          fi
-          
-          echo "✅ Version properly incremented from $MAIN_VERSION to $PR_VERSION"
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:bunkbot
+
+      - name: Run build
+        run: npm run build:bunkbot
+
+  test-covabot:
+    name: Validate Tests - covabot
+    runs-on: ubuntu-latest
+    needs: [lint, prettier, type-check]
+    if: ${{ !cancelled() && (success() || inputs.skip_validation) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:covabot
+
+      - name: Run build
+        run: npm run build:covabot
+
+  test-djcova:
+    name: Validate Tests - djcova
+    runs-on: ubuntu-latest
+    needs: [lint, prettier, type-check]
+    if: ${{ !cancelled() && (success() || inputs.skip_validation) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:djcova
+
+      - name: Run build
+        run: npm run build:djcova
+
+  test-starbunk-dnd:
+    name: Validate Tests - starbunk-dnd
+    runs-on: ubuntu-latest
+    needs: [lint, prettier, type-check]
+    if: ${{ !cancelled() && (success() || inputs.skip_validation) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:starbunk-dnd
+
+      - name: Run build
+        run: npm run build:starbunk-dnd
 
   # =============================================================================
-  # CONTAINER VALIDATION & PUBLISHING (depends on docker builds)
+  # GROUP 5: CONTAINER VALIDATION (depends on Group 3 passing)
   # =============================================================================
 
   validate-bunkbot:
@@ -292,7 +378,10 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name bunkbot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          docker run -d --name bunkbot-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
 
       - name: Wait for container to start
         run: sleep 10
@@ -348,7 +437,10 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name covabot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
+          docker run -d --name covabot-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
 
       - name: Wait for container to start
         run: sleep 10
@@ -404,7 +496,10 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name djcova-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
+          docker run -d --name djcova-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
 
       - name: Wait for container to start
         run: sleep 10
@@ -460,7 +555,10 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name starbunk-dnd-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
+          docker run -d --name starbunk-dnd-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:main
 
       - name: Wait for container to start
         run: sleep 10
@@ -500,10 +598,14 @@ jobs:
         if: always()
         run: docker rm -f starbunk-dnd-test || true
 
+  # =============================================================================
+  # GROUP 6: PRODUCTION IMAGE PUBLISHING (depends on Group 5 passing)
+  # =============================================================================
+
   publish-bunkbot:
     name: Publish Image - bunkbot
     runs-on: ubuntu-latest
-    needs: [validate-bunkbot]
+    needs: [validate-bunkbot, version-check]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -521,14 +623,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push images
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          VERSION="v${{ needs.version-check.outputs.version }}"
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot"
+          
+          # Tag with version and latest
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+          
+          # Push all tags
+          docker push ${IMAGE_NAME}:${VERSION}
+          docker push ${IMAGE_NAME}:latest
 
   publish-covabot:
     name: Publish Image - covabot
     runs-on: ubuntu-latest
-    needs: [validate-covabot]
+    needs: [validate-covabot, version-check]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -546,14 +657,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push images
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
+          VERSION="v${{ needs.version-check.outputs.version }}"
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot"
+          
+          # Tag with version and latest
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+          
+          # Push all tags
+          docker push ${IMAGE_NAME}:${VERSION}
+          docker push ${IMAGE_NAME}:latest
 
   publish-djcova:
     name: Publish Image - djcova
     runs-on: ubuntu-latest
-    needs: [validate-djcova]
+    needs: [validate-djcova, version-check]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -571,14 +691,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push images
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
+          VERSION="v${{ needs.version-check.outputs.version }}"
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova"
+          
+          # Tag with version and latest
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+          
+          # Push all tags
+          docker push ${IMAGE_NAME}:${VERSION}
+          docker push ${IMAGE_NAME}:latest
 
   publish-starbunk-dnd:
     name: Publish Image - starbunk-dnd
     runs-on: ubuntu-latest
-    needs: [validate-starbunk-dnd]
+    needs: [validate-starbunk-dnd, version-check]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -596,39 +725,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push images
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd:pr-${{ github.event.pull_request.number }}
+          VERSION="v${{ needs.version-check.outputs.version }}"
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/starbunk-dnd"
+          
+          # Tag with version and latest
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+          
+          # Push all tags
+          docker push ${IMAGE_NAME}:${VERSION}
+          docker push ${IMAGE_NAME}:latest
 
   # =============================================================================
-  # VALIDATION COMPLETE (final gate)
+  # GROUP 7: RELEASE TAGGING (depends on Group 4 passing)
   # =============================================================================
 
-  validation-complete:
-    name: Validation Complete
+  create-release-tag:
+    name: Create Release Tag
     runs-on: ubuntu-latest
-    needs: 
-      - lint-and-format
-      - type-check
-      - build
-      - unit-tests
-      - version-check
-      - publish-bunkbot
-      - publish-covabot
-      - publish-djcova
-      - publish-starbunk-dnd
+    needs: [test-bunkbot, test-covabot, test-djcova, test-starbunk-dnd, version-check]
     steps:
-      - name: All checks passed
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create and push tag
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✅ All validation checks passed!"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✓ Lint & Format"
-          echo "✓ Type Check"
-          echo "✓ Build"
-          echo "✓ Unit Tests"
-          echo "✓ Version Check"
-          echo "✓ Docker Builds (4 apps)"
-          echo "✓ Container Validation (4 apps)"
-          echo "✓ Image Publishing (4 apps)"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          VERSION="v${{ needs.version-check.outputs.version }}"
+          
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Create annotated tag
+          git tag -a "$VERSION" -m "Release $VERSION"
+          
+          # Push the tag
+          git push origin "$VERSION"
+          
+          echo "✅ Created and pushed tag: $VERSION"

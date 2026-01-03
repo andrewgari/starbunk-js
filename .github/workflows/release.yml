@@ -1,4 +1,4 @@
-name: Release
+name: Release - Promote Images
 
 on:
   release:
@@ -7,7 +7,6 @@ on:
 env:
   REGISTRY: ghcr.io
   REGISTRY_PREFIX: ghcr.io/${{ github.repository_owner }}
-  NODE_VERSION: '20'
 
 permissions:
   contents: read
@@ -22,9 +21,6 @@ jobs:
       release-type: ${{ steps.determine.outputs.release-type }}
       env-emoji: ${{ steps.determine.outputs.env-emoji }}
       containers: ${{ steps.determine.outputs.containers }}
-      debug-mode: ${{ steps.determine.outputs.debug-mode }}
-      node-env: ${{ steps.determine.outputs.node-env }}
-      log-level: ${{ steps.determine.outputs.log-level }}
     steps:
       - name: Determine environment and build settings
         id: determine
@@ -35,18 +31,12 @@ jobs:
             echo "env-tag=staging" >> $GITHUB_OUTPUT
             echo "release-type=Pre-Release" >> $GITHUB_OUTPUT
             echo "env-emoji=🧪" >> $GITHUB_OUTPUT
-            echo "debug-mode=true" >> $GITHUB_OUTPUT
-            echo "node-env=development" >> $GITHUB_OUTPUT
-            echo "log-level=debug" >> $GITHUB_OUTPUT
-            echo "🏷️ Pre-release detected - environment is staging with DEBUG settings"
+            echo "🏷️ Pre-release detected - environment is staging"
           else
             echo "env-tag=prod" >> $GITHUB_OUTPUT
             echo "release-type=Production Release" >> $GITHUB_OUTPUT
             echo "env-emoji=🚀" >> $GITHUB_OUTPUT
-            echo "debug-mode=false" >> $GITHUB_OUTPUT
-            echo "node-env=production" >> $GITHUB_OUTPUT
-            echo "log-level=info" >> $GITHUB_OUTPUT
-            echo "🏷️ Full release detected - environment is prod with PRODUCTION settings"
+            echo "🏷️ Full release detected - environment is prod"
           fi
 
           # Output containers list for matrix strategy
