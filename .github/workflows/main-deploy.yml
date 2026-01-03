@@ -106,31 +106,32 @@ jobs:
           echo "Previous version: $PREVIOUS_VERSION"
           echo "Current version: $CURRENT_VERSION"
 
-          # Compare versions
-          if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
-            echo "⚠️  WARNING: Version not incremented (this might be expected for non-version commits)"
-          else
-            # Simple version comparison
+            # Compare versions - require a strict increment over previous main commit
+            if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
+              echo '❌ ERROR: Version must be incremented from previous main commit'
+              exit 1
+            fi
+
+            # Simple semantic version comparison (major.minor.patch)
             IFS='.' read -r prev_major prev_minor prev_patch <<< "$PREVIOUS_VERSION"
             IFS='.' read -r curr_major curr_minor curr_patch <<< "$CURRENT_VERSION"
 
             if [ "$curr_major" -lt "$prev_major" ]; then
-              echo "❌ ERROR: Version cannot decrease"
+              echo '❌ ERROR: Version cannot decrease (major version)'
               exit 1
             elif [ "$curr_major" -eq "$prev_major" ]; then
               if [ "$curr_minor" -lt "$prev_minor" ]; then
-                echo "❌ ERROR: Version cannot decrease"
+                echo '❌ ERROR: Version cannot decrease (minor version)'
                 exit 1
               elif [ "$curr_minor" -eq "$prev_minor" ]; then
-                if [ "$curr_patch" -lt "$prev_patch" ]; then
-                  echo "❌ ERROR: Version cannot decrease"
+                if [ "$curr_patch" -le "$prev_patch" ]; then
+                  echo '❌ ERROR: Version must be greater than previous main commit (patch version)'
                   exit 1
                 fi
               fi
             fi
 
             echo "✅ Version properly incremented from $PREVIOUS_VERSION to $CURRENT_VERSION"
-          fi
 
       - name: Store version
         run: |
@@ -326,10 +327,14 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name bunkbot-test \
-            -e DISCORD_TOKEN=test \
-            -e DEBUG_MODE=true \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
+            docker run -d --name bunkbot-test \
+              -e DISCORD_TOKEN=test \
+              -e DEBUG_MODE=true \
+              -e CI_SMOKE_MODE=true \
+              -e CI=true \
+              -e NODE_ENV=test \
+              -e HEALTH_PORT=3000 \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
 
       - name: Wait for container to start
         run: sleep 10
@@ -338,7 +343,7 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec bunkbot-test curl -f http://127.0.0.1:3001/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec bunkbot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -352,7 +357,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:3001/health)
+          RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:3000/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -388,6 +393,10 @@ jobs:
           docker run -d --name covabot-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e HEALTH_PORT=3000 \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
 
       - name: Wait for container to start
@@ -397,7 +406,7 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec covabot-test curl -f http://127.0.0.1:3003/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec covabot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
@@ -411,7 +420,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:3003/health)
+          RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:3000/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -447,6 +456,10 @@ jobs:
           docker run -d --name djcova-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e HEALTH_PORT=3000 \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
 
       - name: Wait for container to start
@@ -600,7 +613,7 @@ jobs:
   create-release-tag:
     name: Create Release Tag
     runs-on: ubuntu-latest
-	    needs: [test-bunkbot, test-covabot, test-djcova, version-check]
+    needs: [test-bunkbot, test-covabot, test-djcova, version-check]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -621,3 +634,37 @@ jobs:
           git push origin "$VERSION"
 
           echo "✅ Created and pushed tag: $VERSION"
+
+  # =============================================================================
+  # GROUP 8: DEPLOYMENT SUMMARY (final gate)
+  # =============================================================================
+
+  validation-complete:
+    name: Deployment & Release Summary
+    runs-on: ubuntu-latest
+    needs:
+      - version-check
+      - test-bunkbot
+      - test-covabot
+      - test-djcova
+      - validate-bunkbot
+      - validate-covabot
+      - validate-djcova
+      - publish-bunkbot
+      - publish-covabot
+      - publish-djcova
+      - create-release-tag
+    steps:
+      - name: All deployment stages completed
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Main deployment workflow completed successfully!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✓ Code Quality (lint, format, type-check - may be skipped via input)"
+          echo "✓ Version Check (monotonic semantic version on main)"
+          echo "✓ Docker Builds (3 apps)"
+          echo "✓ Unit Tests & Builds (3 apps)"
+          echo "✓ Container Validation (3 apps)"
+          echo "✓ Image Publishing (version + latest tags)"
+          echo "✓ Release Tag Created"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
