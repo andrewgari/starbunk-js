@@ -208,6 +208,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       - name: Check and bump version if needed
         run: |
@@ -319,7 +320,7 @@ jobs:
             max_attempts=3
             attempt=1
             while [ $attempt -le $max_attempts ]; do
-              if git push --force-with-lease origin ${{ github.event.pull_request.head.ref }}; then
+              if git push --force-with-lease origin HEAD:${{ github.event.pull_request.head.ref }}; then
                 echo "✅ Version bumped and committed to ${{ env.new_version }}"
                 break
               fi
@@ -330,6 +331,8 @@ jobs:
               echo "Push failed (attempt $attempt/$max_attempts). Retrying in 5 seconds..."
               attempt=$((attempt + 1))
               sleep 5
+              # Fetch latest changes before retry
+              git fetch origin ${{ github.event.pull_request.head.ref }}
             done
           fi
 
