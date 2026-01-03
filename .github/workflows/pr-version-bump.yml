@@ -68,6 +68,8 @@ jobs:
           echo "✅ Synced VERSION to all package.json files"
 
       - name: Commit version bump
+        env:
+          HUSKY: 0
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
