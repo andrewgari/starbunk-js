@@ -21,185 +21,11 @@ concurrency:
 
 jobs:
   # =============================================================================
-  # GROUP 1: CODE QUALITY (no dependencies)
-  # =============================================================================
-
-  lint-and-format:
-    name: Validate Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Run Prettier
-        run: npm run format -- --check
-
-  type-check:
-    name: Validate Types
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run type check
-        run: npm run type-check
-
-  # =============================================================================
-  # GROUP 2: BUILD & TESTS (no dependencies)
-  # =============================================================================
-
-  build:
-    name: Validate Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build all applications
-        run: npm run build
-
-  unit-tests:
-    name: Validate Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run unit tests
-        run: npm run test
-
-  # =============================================================================
-  # GROUP 3: DOCKER BUILDS (no dependencies)
-  # =============================================================================
-
-  docker-build-bunkbot:
-    name: Validate Docker Build - bunkbot
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./apps/bunkbot/Dockerfile
-          push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/bunkbot.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bunkbot-image
-          path: /tmp/bunkbot.tar
-          retention-days: 1
-
-  docker-build-covabot:
-    name: Validate Docker Build - covabot
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./apps/covabot/Dockerfile
-          push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/covabot.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: covabot-image
-          path: /tmp/covabot.tar
-          retention-days: 1
-
-  docker-build-djcova:
-    name: Validate Docker Build - djcova
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./apps/djcova/Dockerfile
-          push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/djcova.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: djcova-image
-          path: /tmp/djcova.tar
-          retention-days: 1
-  # =============================================================================
-  # GROUP 4: VERSION VALIDATION (no dependencies)
+  # VERSION CHECK - Must run first before all other jobs
   # =============================================================================
 
   version-check:
-    name: Validate Version
+    name: Version Check & Bump
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR branch
@@ -224,26 +50,28 @@ jobs:
           # Usage: version_is_greater "1.0.0" "1.0.1" returns 0 (true, 1.0.1 > 1.0.0)
           version_is_greater() {
             local base_ver=$1
-            local compare_ver=$2
+            local comp_ver=$2
             
-            # Validate version format (major.minor.patch with numeric components only)
-            if ! [[ "$base_ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || ! [[ "$compare_ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "❌ ERROR: Invalid version format. Expected format: major.minor.patch (numeric only)"
-              echo "   Base version: $base_ver"
-              echo "   Compare version: $compare_ver"
+            # Validate semantic version format (major.minor.patch with numeric components)
+            if ! echo "$base_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "ERROR: Base version '$base_ver' is not a valid semantic version (expected format: major.minor.patch)"
+              return 2
+            fi
+            if ! echo "$comp_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "ERROR: Comparison version '$comp_ver' is not a valid semantic version (expected format: major.minor.patch)"
               return 2
             fi
             
             IFS='.' read -r base_major base_minor base_patch <<< "$base_ver"
-            IFS='.' read -r cmp_major cmp_minor cmp_patch <<< "$compare_ver"
+            IFS='.' read -r comp_major comp_minor comp_patch <<< "$comp_ver"
             
-            if [ "$cmp_major" -gt "$base_major" ]; then
+            if [ "$comp_major" -gt "$base_major" ]; then
               return 0
-            elif [ "$cmp_major" -eq "$base_major" ]; then
-              if [ "$cmp_minor" -gt "$base_minor" ]; then
+            elif [ "$comp_major" -eq "$base_major" ]; then
+              if [ "$comp_minor" -gt "$base_minor" ]; then
                 return 0
-              elif [ "$cmp_minor" -eq "$base_minor" ]; then
-                if [ "$cmp_patch" -gt "$base_patch" ]; then
+              elif [ "$comp_minor" -eq "$base_minor" ]; then
+                if [ "$comp_patch" -gt "$base_patch" ]; then
                   return 0
                 fi
               fi
@@ -335,6 +163,188 @@ jobs:
               git fetch origin ${{ github.event.pull_request.head.ref }}
             done
           fi
+
+  # =============================================================================
+  # GROUP 1: CODE QUALITY (depends on version-check)
+  # =============================================================================
+
+  lint-and-format:
+    name: Validate Lint
+    runs-on: ubuntu-latest
+    needs: [version-check]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Prettier
+        run: npm run format -- --check
+
+  type-check:
+    name: Validate Types
+    runs-on: ubuntu-latest
+    needs: [version-check]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type check
+        run: npm run type-check
+
+  # =============================================================================
+  # GROUP 2: BUILD & TESTS (depends on version-check)
+  # =============================================================================
+
+  build:
+    name: Validate Build
+    runs-on: ubuntu-latest
+    needs: [version-check]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all applications
+        run: npm run build
+
+  unit-tests:
+    name: Validate Tests
+    runs-on: ubuntu-latest
+    needs: [version-check]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test
+
+  # =============================================================================
+  # GROUP 3: DOCKER BUILDS (depends on version-check)
+  # =============================================================================
+
+  docker-build-bunkbot:
+    name: Validate Docker Build - bunkbot
+    runs-on: ubuntu-latest
+    needs: [version-check]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/bunkbot/Dockerfile
+          push: false
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/bunkbot.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bunkbot-image
+          path: /tmp/bunkbot.tar
+          retention-days: 1
+
+  docker-build-covabot:
+    name: Validate Docker Build - covabot
+    runs-on: ubuntu-latest
+    needs: [version-check]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/covabot/Dockerfile
+          push: false
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/covabot.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: covabot-image
+          path: /tmp/covabot.tar
+          retention-days: 1
+
+  docker-build-djcova:
+    name: Validate Docker Build - djcova
+    runs-on: ubuntu-latest
+    needs: [version-check]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/djcova/Dockerfile
+          push: false
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/djcova.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: djcova-image
+          path: /tmp/djcova.tar
+          retention-days: 1
 
   # =============================================================================
   # CONTAINER VALIDATION & PUBLISHING (depends on docker builds)
