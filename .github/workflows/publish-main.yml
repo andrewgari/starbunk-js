@@ -112,8 +112,12 @@ jobs:
             done
           elif [[ "${{ github.event.inputs.force_all }}" == "true" ]]; then
             containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            # On push to main, always deploy bunkbot, covabot, and djcova
+            echo "🚀 Push to main detected - deploying all required containers"
+            containers=("bunkbot" "djcova" "covabot")
           else
-            # Automatic detection based on changes
+            # Automatic detection based on changes (for other scenarios)
             if [[ "${{ steps.filter.outputs.shared-src }}" == "true" ]]; then
               echo "📦 Shared package changed - deploying all containers"
               containers=("bunkbot" "djcova" "starbunk-dnd" "covabot")
