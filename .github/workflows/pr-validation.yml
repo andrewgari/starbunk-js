@@ -94,8 +94,12 @@ jobs:
           ref: ${{ github.head_ref }}
 
       - name: Validate VERSION and ensure it is ahead of base branch
+        id: version_check
         run: |
           set -e
+
+          # Default: assume we did not bump VERSION; will be flipped to true only on successful commit & push
+          echo "bumped=false" >> $GITHUB_OUTPUT
 
           BASE_REF="${{ github.base_ref }}"
 
@@ -202,6 +206,7 @@ jobs:
             -m "Ensured VERSION is ahead of base branch (${BASE_REF})." \
             -m "Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"; then
             echo "✅ Committed VERSION bump to $NEW_VERSION"
+            echo "bumped=true" >> $GITHUB_OUTPUT
             git push || {
               echo "❌ ERROR: Failed to push VERSION bump commit back to PR branch."
               exit 1
@@ -209,6 +214,23 @@ jobs:
           else
             echo "ℹ️ No changes to commit after attempted VERSION bump."
           fi
+
+      - name: Trigger PR Validation workflow for bumped VERSION
+        if: steps.version_check.outputs.bumped == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'pr-validation.yml',
+              ref: branch,
+              inputs: {
+                force_all: false
+              }
+            });
+            core.info(`Triggered PR - Validation & Build for branch ${branch} after VERSION bump`);
 
   # =============================================================================
   # PHASE 1 - CHANGE DETECTION (per container)

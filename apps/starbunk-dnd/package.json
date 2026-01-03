@@ -1,6 +1,6 @@
 {
 	"name": "@starbunk/starbunk-dnd",
-	"version": "1.4.4",
+	"version": "1.4.5",
 	"description": "Starbunk-DND - D&D features and Snowbunk bridge container",
 	"main": "dist/index-minimal.js",
 	"scripts": {
