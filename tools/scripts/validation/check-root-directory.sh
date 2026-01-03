@@ -35,6 +35,7 @@ ALLOWED_FILES=(
   "docker-compose*.yml"
   "podman-compose*.yml"
   ".env"
+  "VERSION"
 )
 
 echo "🔍 Checking root directory compliance..."
