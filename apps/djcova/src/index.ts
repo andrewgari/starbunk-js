@@ -51,6 +51,11 @@ class DJCovaContainer {
 				logger: _structuredLogger,
 				channelTracker: _channelTracker,
 			} = initializeObservability('djcova');
+				// Ensure the base logger uses the correct service name so Promtail/Grafana
+				// can label logs properly (service="djcova" instead of "unknown_service").
+				// This complements the Docker label com.starbunk.service="djcova".
+				logger.setServiceName('djcova');
+				logger.enableStructuredLogging(true);
 			logger.info('✅ Observability initialized for DJCova');
 
 			// Initialize DJCova-specific metrics collector
