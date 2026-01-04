@@ -474,7 +474,8 @@ jobs:
           # Tag with latest
           docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
 
-          # Push latest tag
+          # Push branch and latest tags
+          docker push ${IMAGE_NAME}:main
           docker push ${IMAGE_NAME}:latest
 
   publish-covabot:
@@ -505,7 +506,8 @@ jobs:
           # Tag with latest
           docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
 
-          # Push latest tag
+          # Push branch and latest tags
+          docker push ${IMAGE_NAME}:main
           docker push ${IMAGE_NAME}:latest
 
   publish-djcova:
@@ -536,7 +538,8 @@ jobs:
           # Tag with latest
           docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
 
-          # Push latest tag
+          # Push branch and latest tags
+          docker push ${IMAGE_NAME}:main
           docker push ${IMAGE_NAME}:latest
 
   # =============================================================================

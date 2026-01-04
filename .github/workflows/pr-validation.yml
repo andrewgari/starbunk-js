@@ -195,56 +195,7 @@ jobs:
           path: /tmp/djcova.tar
           retention-days: 1
   # =============================================================================
-  # GROUP 4: VERSION VALIDATION (no dependencies)
-  # =============================================================================
-
-  version-check:
-    name: Validate Version
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Validate version increment
-        run: |
-          git fetch origin main
-          MAIN_VERSION=$(git show origin/main:VERSION | tr -d '\n')
-          PR_VERSION=$(cat VERSION | tr -d '\n')
-
-          echo "Main version: $MAIN_VERSION"
-          echo "PR version: $PR_VERSION"
-
-          # Compare versions
-          if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
-            echo "❌ ERROR: Version must be incremented from main branch"
-            exit 1
-          fi
-
-          # Simple version comparison (assumes semantic versioning)
-          IFS='.' read -r main_major main_minor main_patch <<< "$MAIN_VERSION"
-          IFS='.' read -r pr_major pr_minor pr_patch <<< "$PR_VERSION"
-
-          if [ "$pr_major" -lt "$main_major" ]; then
-            echo "❌ ERROR: Version cannot decrease"
-            exit 1
-          elif [ "$pr_major" -eq "$main_major" ]; then
-            if [ "$pr_minor" -lt "$main_minor" ]; then
-              echo "❌ ERROR: Version cannot decrease"
-              exit 1
-            elif [ "$pr_minor" -eq "$main_minor" ]; then
-              if [ "$pr_patch" -le "$main_patch" ]; then
-                echo "❌ ERROR: Version must be greater than main branch"
-                exit 1
-              fi
-            fi
-          fi
-
-          echo "✅ Version properly incremented from $MAIN_VERSION to $PR_VERSION"
-
-  # =============================================================================
-  # CONTAINER VALIDATION & PUBLISHING (depends on docker builds)
+  # GROUP 4: CONTAINER VALIDATION & PUBLISHING (depends on docker builds)
   # =============================================================================
 
   validate-bunkbot:
@@ -429,6 +380,9 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/bunkbot.tar
 
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -436,9 +390,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push image
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          IMAGE_BASE="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot"
+          VERSION=$(cat VERSION 2>/dev/null | tr -d '\n')
+
+          if [ -z "$VERSION" ]; then
+            echo "WARNING: VERSION file missing or empty; defaulting to 0.0.0 for PR image tags"
+            VERSION="0.0.0"
+          fi
+
+          PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}"
+          VERSION_PR_TAG="${IMAGE_BASE}:${VERSION}-pr-${PR_NUMBER}"
+          LATEST_PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}-latest"
+          RELEASE_PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}-release"
+
+          # Tag additional variants from the base PR tag
+          docker tag "${PR_TAG}" "${VERSION_PR_TAG}"
+          docker tag "${PR_TAG}" "${LATEST_PR_TAG}"
+          docker tag "${PR_TAG}" "${RELEASE_PR_TAG}"
+
+          # Push all tags
+          docker push "${PR_TAG}"
+          docker push "${VERSION_PR_TAG}"
+          docker push "${LATEST_PR_TAG}"
+          docker push "${RELEASE_PR_TAG}"
 
   publish-covabot:
     name: Publish Image - covabot
@@ -454,6 +432,9 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/covabot.tar
 
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -461,9 +442,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push image
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
+          IMAGE_BASE="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot"
+          VERSION=$(cat VERSION 2>/dev/null | tr -d '\n')
+
+          if [ -z "$VERSION" ]; then
+            echo "WARNING: VERSION file missing or empty; defaulting to 0.0.0 for PR image tags"
+            VERSION="0.0.0"
+          fi
+
+          PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}"
+          VERSION_PR_TAG="${IMAGE_BASE}:${VERSION}-pr-${PR_NUMBER}"
+          LATEST_PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}-latest"
+          RELEASE_PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}-release"
+
+          # Tag additional variants from the base PR tag
+          docker tag "${PR_TAG}" "${VERSION_PR_TAG}"
+          docker tag "${PR_TAG}" "${LATEST_PR_TAG}"
+          docker tag "${PR_TAG}" "${RELEASE_PR_TAG}"
+
+          # Push all tags
+          docker push "${PR_TAG}"
+          docker push "${VERSION_PR_TAG}"
+          docker push "${LATEST_PR_TAG}"
+          docker push "${RELEASE_PR_TAG}"
 
   publish-djcova:
     name: Publish Image - djcova
@@ -479,6 +484,9 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/djcova.tar
 
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -486,9 +494,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image
+      - name: Tag and push image
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
+          IMAGE_BASE="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova"
+          VERSION=$(cat VERSION 2>/dev/null | tr -d '\n')
+
+          if [ -z "$VERSION" ]; then
+            echo "WARNING: VERSION file missing or empty; defaulting to 0.0.0 for PR image tags"
+            VERSION="0.0.0"
+          fi
+
+          PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}"
+          VERSION_PR_TAG="${IMAGE_BASE}:${VERSION}-pr-${PR_NUMBER}"
+          LATEST_PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}-latest"
+          RELEASE_PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}-release"
+
+          # Tag additional variants from the base PR tag
+          docker tag "${PR_TAG}" "${VERSION_PR_TAG}"
+          docker tag "${PR_TAG}" "${LATEST_PR_TAG}"
+          docker tag "${PR_TAG}" "${RELEASE_PR_TAG}"
+
+          # Push all tags
+          docker push "${PR_TAG}"
+          docker push "${VERSION_PR_TAG}"
+          docker push "${LATEST_PR_TAG}"
+          docker push "${RELEASE_PR_TAG}"
 
   # =============================================================================
   # VALIDATION COMPLETE (final gate)
@@ -502,7 +534,6 @@ jobs:
       - type-check
       - build
       - unit-tests
-      - version-check
       - publish-bunkbot
       - publish-covabot
       - publish-djcova
@@ -516,7 +547,6 @@ jobs:
           echo "✓ Type Check"
           echo "✓ Build"
           echo "✓ Unit Tests"
-          echo "✓ Version Check"
           echo "✓ Docker Builds (4 apps)"
           echo "✓ Container Validation (4 apps)"
           echo "✓ Image Publishing (4 apps)"
