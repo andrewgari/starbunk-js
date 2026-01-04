@@ -40,6 +40,7 @@ import { shouldExcludeFromReplyBots as _shouldExcludeFromReplyBots } from './cor
 import { ConfigurationService } from './services/configurationService';
 import { BotIdentityService } from './services/botIdentityService';
 import { MessageProcessor } from './core/MessageProcessor';
+import { HealthServer } from './services/HealthServer';
 
 class BunkBotContainer {
 	private client!: Client;
@@ -49,7 +50,7 @@ class BunkBotContainer {
 	private botIdentityService!: BotIdentityService;
 	private hasInitialized = false;
 	private commands = new Map();
-	private healthServer: import('http').Server | null = null;
+	private healthServer: HealthServer | null = null;
 	private replyBots: ReplyBotImpl[] = [];
 	private messageProcessor!: MessageProcessor;
 	private bunkBotMetrics?: BunkBotMetrics;
@@ -299,29 +300,64 @@ class BunkBotContainer {
 	}
 
 	private startHealthServer(): void {
-		this.healthServer = createServer((req: IncomingMessage, res: ServerResponse) => {
-			if (req.url === '/health') {
-				const healthStatus = {
-					status: 'healthy',
-					timestamp: new Date().toISOString(),
+		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT) : undefined;
+
+		this.healthServer = new HealthServer(port);
+		this.healthServer.start(() => {
+			const memory = process.memoryUsage();
+			const connected = this.client?.isReady() || false;
+			const initialized = this.hasInitialized;
+
+			return {
+				status: connected ? 'healthy' : 'degraded',
+				timestamp: new Date().toISOString(),
+				discord: {
+					connected,
+					initialized,
+					latency: 0,
+					guildCount: this.client?.guilds?.cache?.size,
+					lastHeartbeat: Date.now(),
+				},
+				uptime: process.uptime(),
+				memory: {
+					used: memory.rss,
+					total: memory.rss + memory.external,
+					heapUsed: memory.heapUsed,
+					heapTotal: memory.heapTotal,
+					external: memory.external,
+				},
+				metrics: {
+					totalRequests: 0,
+					errorCount: 0,
+					errorRate: 0,
+					avgResponseTime: 0,
+					activeConnections: 0,
+				},
+				bots: {
+					loaded: this.replyBots.length,
+					active: this.replyBots.filter((bot) => !bot.metadata?.disabled).length,
+					circuitBreakersOpen: 0,
+					storageSize: 0,
+				},
+				dependencies: {
 					discord: {
-						connected: this.client?.isReady() || false,
-						initialized: this.hasInitialized,
+						status: connected ? 'healthy' : 'unhealthy',
+						latency: 0,
+						lastCheck: Date.now(),
 					},
-					uptime: process.uptime(),
-				};
-
-				res.writeHead(200, { 'Content-Type': 'application/json' });
-				res.end(JSON.stringify(healthStatus, null, 2));
-			} else {
-				res.writeHead(404, { 'Content-Type': 'text/plain' });
-				res.end('Not Found');
-			}
-		});
-
-		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT) : 3002;
-		this.healthServer.listen(port, () => {
-			logger.info(`🏥 Health check server running on port ${port}`);
+					storage: {
+						status: 'healthy',
+						size: 0,
+						oldestItem: Date.now(),
+					},
+				},
+				configuration: {
+					nodeEnv: process.env.NODE_ENV || 'unknown',
+					debugMode: process.env.DEBUG_MODE === 'true',
+					maxBotInstances: parseInt(process.env.MAX_BOT_INSTANCES || '50'),
+					circuitBreakerEnabled: process.env.ENABLE_CIRCUIT_BREAKER !== 'false',
+				},
+			};
 		});
 	}
 
@@ -517,9 +553,7 @@ class BunkBotContainer {
 
 		// Stop health server
 		if (this.healthServer) {
-			this.healthServer.close(() => {
-				logger.info('Health server stopped');
-			});
+			await this.healthServer.stop();
 		}
 
 		// Disconnect configuration services - temporarily disabled

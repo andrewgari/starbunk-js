@@ -1,0 +1,171 @@
+services:
+  # BunkBot - Reply bots and admin commands (Latest Stable)
+  bunkbot:
+    image: ghcr.io/andrewgari/bunkbot:main
+    container_name: bunkbot
+    restart: unless-stopped
+    ports:
+      - "5331:3000"
+    env_file:
+      - .env
+    environment:
+      # Core runtime
+      - NODE_ENV=production
+      - SERVICE_NAME=bunkbot
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Discord / Starbunk configuration
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      # Debug / testing
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      # Observability & logging
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-latest-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # DJCova - Music service (Latest Stable)
+  djcova:
+    image: ghcr.io/andrewgari/djcova:main
+    container_name: djcova
+    restart: unless-stopped
+    ports:
+      - "5332:3000"
+    env_file:
+      - .env
+    environment:
+      # Core runtime
+      - NODE_ENV=production
+      - SERVICE_NAME=djcova
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Discord / Starbunk configuration
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      # Debug / testing
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      # Observability & logging
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+    volumes:
+      - djcova_latest_cache:/app/cache
+      - djcova_latest_temp:/tmp
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-latest-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # CovaBot - AI personality bot (Latest Stable)
+  covabot:
+    image: ghcr.io/andrewgari/covabot:main
+    container_name: covabot
+    restart: unless-stopped
+    ports:
+      - "5333:3000"
+    env_file:
+      - .env
+    environment:
+      # Core runtime
+      - NODE_ENV=production
+      - SERVICE_NAME=covabot
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Discord / Starbunk configuration
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      # Data & AI configuration
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      # Debug / testing
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      # Observability & logging
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - starbunk-latest-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+# Named volumes for persistent data (latest/production)
+volumes:
+  djcova_latest_cache:
+    driver: local
+  djcova_latest_temp:
+    driver: local
+  dnd_latest_data:
+    driver: local
+  dnd_latest_campaigns:
+    driver: local
+  dnd_latest_context:
+    driver: local
+
+# Custom network for service communication (latest/production)
+networks:
+  starbunk-latest-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.35.0.0/16
