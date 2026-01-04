@@ -33,6 +33,7 @@ ALLOWED_FILES=(
 	"README.md"
 	"CLAUDE.md"
 	"REPOSITORY_MIGRATION_PLAN.md"
+	"release.config.cjs"
 	"docker-compose*.yml"
 	"podman-compose*.yml"
 	".env"
