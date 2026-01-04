@@ -193,3 +193,4 @@ logs/
 data/logs/
 *.tsbuildinfo
 *.tsbuildinfo
+prometheus.yml
