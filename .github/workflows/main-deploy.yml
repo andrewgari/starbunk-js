@@ -86,65 +86,7 @@ jobs:
         run: npm run type-check
 
   # =============================================================================
-  # GROUP 2: VERSION VALIDATION (runs in parallel with Group 1)
-  # =============================================================================
-
-  version-check:
-    name: Validate Version
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Validate version increment
-        run: |
-          CURRENT_VERSION=$(cat VERSION | tr -d '\n')
-          PREVIOUS_VERSION=$(git show HEAD~1:VERSION 2>/dev/null | tr -d '\n' || echo "0.0.0")
-
-          echo "Previous version: $PREVIOUS_VERSION"
-          echo "Current version: $CURRENT_VERSION"
-
-            # Compare versions - require a strict increment over previous main commit
-            if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
-              echo '❌ ERROR: Version must be incremented from previous main commit'
-              exit 1
-            fi
-
-            # Simple semantic version comparison (major.minor.patch)
-            IFS='.' read -r prev_major prev_minor prev_patch <<< "$PREVIOUS_VERSION"
-            IFS='.' read -r curr_major curr_minor curr_patch <<< "$CURRENT_VERSION"
-
-            if [ "$curr_major" -lt "$prev_major" ]; then
-              echo '❌ ERROR: Version cannot decrease (major version)'
-              exit 1
-            elif [ "$curr_major" -eq "$prev_major" ]; then
-              if [ "$curr_minor" -lt "$prev_minor" ]; then
-                echo '❌ ERROR: Version cannot decrease (minor version)'
-                exit 1
-              elif [ "$curr_minor" -eq "$prev_minor" ]; then
-                if [ "$curr_patch" -le "$prev_patch" ]; then
-                  echo '❌ ERROR: Version must be greater than previous main commit (patch version)'
-                  exit 1
-                fi
-              fi
-            fi
-
-            echo "✅ Version properly incremented from $PREVIOUS_VERSION to $CURRENT_VERSION"
-
-      - name: Store version
-        run: |
-          VERSION=$(cat VERSION | tr -d '\n')
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-        id: version
-
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-
-  # =============================================================================
-  # GROUP 3: DOCKER BUILDS (runs in parallel with Groups 1 & 2)
+  # GROUP 2: DOCKER BUILDS (runs in parallel with Group 1)
   # =============================================================================
 
   docker-build-bunkbot:
@@ -501,13 +443,13 @@ jobs:
         run: docker rm -f djcova-test || true
 
   # =============================================================================
-  # GROUP 6: PRODUCTION IMAGE PUBLISHING (depends on Group 5 passing)
+  # GROUP 5: PRODUCTION IMAGE PUBLISHING (depends on Group 4 passing)
   # =============================================================================
 
   publish-bunkbot:
     name: Publish Image - bunkbot
     runs-on: ubuntu-latest
-    needs: [validate-bunkbot, version-check]
+    needs: [validate-bunkbot]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -527,21 +469,19 @@ jobs:
 
       - name: Tag and push images
         run: |
-          VERSION="v${{ needs.version-check.outputs.version }}"
           IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot"
 
-          # Tag with version and latest
-          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          # Tag with latest
           docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
 
-          # Push all tags
-          docker push ${IMAGE_NAME}:${VERSION}
+          # Push branch and latest tags
+          docker push ${IMAGE_NAME}:main
           docker push ${IMAGE_NAME}:latest
 
   publish-covabot:
     name: Publish Image - covabot
     runs-on: ubuntu-latest
-    needs: [validate-covabot, version-check]
+    needs: [validate-covabot]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -561,21 +501,19 @@ jobs:
 
       - name: Tag and push images
         run: |
-          VERSION="v${{ needs.version-check.outputs.version }}"
           IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot"
 
-          # Tag with version and latest
-          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          # Tag with latest
           docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
 
-          # Push all tags
-          docker push ${IMAGE_NAME}:${VERSION}
+          # Push branch and latest tags
+          docker push ${IMAGE_NAME}:main
           docker push ${IMAGE_NAME}:latest
 
   publish-djcova:
     name: Publish Image - djcova
     runs-on: ubuntu-latest
-    needs: [validate-djcova, version-check]
+    needs: [validate-djcova]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -595,55 +533,23 @@ jobs:
 
       - name: Tag and push images
         run: |
-          VERSION="v${{ needs.version-check.outputs.version }}"
           IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova"
 
-          # Tag with version and latest
-          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:${VERSION}
+          # Tag with latest
           docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
 
-          # Push all tags
-          docker push ${IMAGE_NAME}:${VERSION}
+          # Push branch and latest tags
+          docker push ${IMAGE_NAME}:main
           docker push ${IMAGE_NAME}:latest
 
   # =============================================================================
-  # GROUP 7: RELEASE TAGGING (depends on Group 4 passing)
-  # =============================================================================
-
-  create-release-tag:
-    name: Create Release Tag
-    runs-on: ubuntu-latest
-    needs: [test-bunkbot, test-covabot, test-djcova, version-check]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Create and push tag
-        run: |
-          VERSION="v${{ needs.version-check.outputs.version }}"
-
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-
-          # Create annotated tag
-          git tag -a "$VERSION" -m "Release $VERSION"
-
-          # Push the tag
-          git push origin "$VERSION"
-
-          echo "✅ Created and pushed tag: $VERSION"
-
-  # =============================================================================
-  # GROUP 8: DEPLOYMENT SUMMARY (final gate)
+  # GROUP 6: DEPLOYMENT SUMMARY (final gate)
   # =============================================================================
 
   validation-complete:
     name: Deployment & Release Summary
     runs-on: ubuntu-latest
     needs:
-      - version-check
       - test-bunkbot
       - test-covabot
       - test-djcova
@@ -653,7 +559,6 @@ jobs:
       - publish-bunkbot
       - publish-covabot
       - publish-djcova
-      - create-release-tag
     steps:
       - name: All deployment stages completed
         run: |
@@ -661,10 +566,8 @@ jobs:
           echo "✅ Main deployment workflow completed successfully!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✓ Code Quality (lint, format, type-check - may be skipped via input)"
-          echo "✓ Version Check (monotonic semantic version on main)"
           echo "✓ Docker Builds (3 apps)"
           echo "✓ Unit Tests & Builds (3 apps)"
           echo "✓ Container Validation (3 apps)"
-          echo "✓ Image Publishing (version + latest tags)"
-          echo "✓ Release Tag Created"
+          echo "✓ Image Publishing (latest tags)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

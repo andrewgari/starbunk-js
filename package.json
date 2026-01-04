@@ -79,7 +79,7 @@
     "health-check": "tools/scripts/monitoring/structure-health-check.sh",
     "health-check:json": "tools/scripts/monitoring/structure-health-check.sh --json",
     "unreleased": "scripts/check-unreleased.sh",
-    "release": "scripts/create-release.sh"
+    "release": "semantic-release"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -110,6 +110,10 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/exec": "^7.1.0",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.2",
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
     "eslint": "^8.56.0",
@@ -117,6 +121,7 @@
     "lint-staged": "^16.1.5",
     "prettier": "^3.2.5",
     "rimraf": "^5.0.1",
+    "semantic-release": "^25.0.2",
     "typescript": "~5.3.0"
   },
   "lint-staged": {
