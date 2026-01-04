@@ -18,7 +18,8 @@ module.exports = {
     [
       "@semantic-release/changelog",
       {
-        changelogFile: "CHANGELOG.md",
+	        // Write changelog into docs/ so it doesn't violate root-directory cleanliness checks
+	        changelogFile: "docs/CHANGELOG.md",
       },
     ],
     [
@@ -32,7 +33,8 @@ module.exports = {
     [
       "@semantic-release/git",
       {
-        assets: ["package.json", "VERSION", "CHANGELOG.md"],
+	        // Commit the synced version files and the docs changelog
+	        assets: ["package.json", "VERSION", "docs/CHANGELOG.md"],
         message:
           "chore(release): v${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
       },
