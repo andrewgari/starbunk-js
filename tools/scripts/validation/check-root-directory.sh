@@ -31,7 +31,6 @@ ALLOWED_FILES=(
 	".dockerignore"
 	".editorconfig"
 	"README.md"
-	"CHANGELOG.md"
 	"CLAUDE.md"
 	"REPOSITORY_MIGRATION_PLAN.md"
 	"release.config.cjs"
