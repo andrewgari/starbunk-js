@@ -11,7 +11,7 @@ env:
   NODE_VERSION: '20'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   pull-requests: read
 
@@ -21,12 +21,169 @@ concurrency:
 
 jobs:
   # =============================================================================
-  # GROUP 1: CODE QUALITY (no dependencies)
+  # VERSION CHECK - Must run first before all other jobs
+  # =============================================================================
+
+  version-check:
+    name: Version Check & Bump
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Check and bump version if needed
+        run: |
+          git fetch origin main
+          MAIN_VERSION=$(git show origin/main:VERSION | tr -d '\n')
+          PR_VERSION=$(cat VERSION | tr -d '\n')
+
+          echo "Main version: $MAIN_VERSION"
+          echo "PR version: $PR_VERSION"
+
+          # Function to compare semantic versions
+          # Returns 0 (success) if second parameter > first parameter, 1 (failure) otherwise
+          # Usage: version_is_greater "1.0.0" "1.0.1" returns 0 (true, 1.0.1 > 1.0.0)
+          version_is_greater() {
+            local base_ver=$1
+            local comp_ver=$2
+            
+            # Validate semantic version format (major.minor.patch with numeric components)
+            if ! echo "$base_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "ERROR: Base version '$base_ver' is not a valid semantic version (expected format: major.minor.patch)"
+              return 2
+            fi
+            if ! echo "$comp_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "ERROR: Comparison version '$comp_ver' is not a valid semantic version (expected format: major.minor.patch)"
+              return 2
+            fi
+            
+            IFS='.' read -r base_major base_minor base_patch <<< "$base_ver"
+            IFS='.' read -r comp_major comp_minor comp_patch <<< "$comp_ver"
+            
+            if [ "$comp_major" -gt "$base_major" ]; then
+              return 0
+            elif [ "$comp_major" -eq "$base_major" ]; then
+              if [ "$comp_minor" -gt "$base_minor" ]; then
+                return 0
+              elif [ "$comp_minor" -eq "$base_minor" ]; then
+                if [ "$comp_patch" -gt "$base_patch" ]; then
+                  return 0
+                fi
+              fi
+            fi
+            return 1
+          }
+
+          # Check if version needs to be bumped
+          # version_is_greater returns 0 if PR_VERSION > MAIN_VERSION
+          version_compare_result=0
+          version_is_greater "$MAIN_VERSION" "$PR_VERSION" || version_compare_result=$?
+          
+          if [ $version_compare_result -eq 2 ]; then
+            # Invalid version format detected
+            echo "❌ ERROR: Invalid version format detected. Cannot proceed with version check."
+            exit 1
+          elif [ $version_compare_result -eq 0 ]; then
+            echo "✅ Version is already properly incremented from $MAIN_VERSION to $PR_VERSION"
+            echo "needs_bump=false" >> $GITHUB_ENV
+          else
+            # Version needs to be bumped - distinguish between equal and less than
+            if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
+              echo "⚠️  Version matches main (current: $PR_VERSION, main: $MAIN_VERSION). Auto-bumping..."
+            else
+              echo "⚠️  Version is behind main (current: $PR_VERSION, main: $MAIN_VERSION). Auto-bumping..."
+            fi
+            
+            # Bump patch version
+            IFS='.' read -r major minor patch <<< "$MAIN_VERSION"
+            NEW_PATCH=$((patch + 1))
+            NEW_VERSION="$major.$minor.$NEW_PATCH"
+            echo "$NEW_VERSION" > VERSION
+            echo "📝 Bumped version from $PR_VERSION to $NEW_VERSION"
+            echo "needs_bump=true" >> $GITHUB_ENV
+            echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
+          fi
+
+      - name: Setup Node
+        if: env.needs_bump == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: env.needs_bump == 'true'
+        run: npm ci
+      
+      - name: Build shared package
+        if: env.needs_bump == 'true'
+        run: npm run build --workspace=packages/shared
+
+      - name: Sync versions and commit if changed
+        if: env.needs_bump == 'true'
+        continue-on-error: true
+        id: version_bump
+        run: |
+          echo "Running sync-versions script..."
+          if [ ! -f "./scripts/sync-versions.sh" ]; then
+            echo "❌ Error: sync-versions.sh script not found"
+            exit 1
+          fi
+          if [ ! -x "./scripts/sync-versions.sh" ]; then
+            chmod +x ./scripts/sync-versions.sh
+          fi
+          bash ./scripts/sync-versions.sh
+          
+          # Commit changes
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add VERSION package.json apps/*/package.json packages/*/package.json
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "push_needed=false" >> $GITHUB_OUTPUT
+          else
+            git commit -m "chore: bump version to ${{ env.new_version }}"
+            echo "push_needed=true" >> $GITHUB_OUTPUT
+            
+            # Try to push - if it fails, that's okay, we'll note it
+            echo "Attempting to push changes..."
+            if git push origin HEAD:${{ github.event.pull_request.head.ref }}; then
+              echo "✅ Version bumped and pushed successfully to ${{ env.new_version }}"
+              echo "push_success=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️  Could not push version bump automatically."
+              echo "📝 Please manually update VERSION to ${{ env.new_version }}"
+              echo "push_success=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          fi
+      
+      - name: Version bump summary
+        if: always() && env.needs_bump == 'true'
+        run: |
+          if [ "${{ steps.version_bump.outputs.push_success }}" = "true" ]; then
+            echo "✅ Version successfully bumped to ${{ env.new_version }} and pushed"
+          elif [ "${{ steps.version_bump.outputs.push_needed }}" = "true" ]; then
+            echo "⚠️  Version needs to be bumped to ${{ env.new_version }}"
+            echo "::warning::Please update VERSION file to ${{ env.new_version }} and sync all package.json files"
+          else
+            echo "✅ Version check complete - no changes needed"
+          fi
+
+  # =============================================================================
+  # GROUP 1: CODE QUALITY (depends on version-check)
   # =============================================================================
 
   lint-and-format:
     name: Validate Lint
     runs-on: ubuntu-latest
+    needs: [version-check]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,6 +206,7 @@ jobs:
   type-check:
     name: Validate Types
     runs-on: ubuntu-latest
+    needs: [version-check]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,12 +224,13 @@ jobs:
         run: npm run type-check
 
   # =============================================================================
-  # GROUP 2: BUILD & TESTS (no dependencies)
+  # GROUP 2: BUILD & TESTS (depends on version-check)
   # =============================================================================
 
   build:
     name: Validate Build
     runs-on: ubuntu-latest
+    needs: [version-check]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,6 +250,7 @@ jobs:
   unit-tests:
     name: Validate Tests
     runs-on: ubuntu-latest
+    needs: [version-check]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -108,12 +268,13 @@ jobs:
         run: npm run test
 
   # =============================================================================
-  # GROUP 3: DOCKER BUILDS (no dependencies)
+  # GROUP 3: DOCKER BUILDS (depends on version-check)
   # =============================================================================
 
   docker-build-bunkbot:
     name: Validate Docker Build - bunkbot
     runs-on: ubuntu-latest
+    needs: [version-check]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -142,6 +303,7 @@ jobs:
   docker-build-covabot:
     name: Validate Docker Build - covabot
     runs-on: ubuntu-latest
+    needs: [version-check]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -170,6 +332,7 @@ jobs:
   docker-build-djcova:
     name: Validate Docker Build - djcova
     runs-on: ubuntu-latest
+    needs: [version-check]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -194,54 +357,6 @@ jobs:
           name: djcova-image
           path: /tmp/djcova.tar
           retention-days: 1
-  # =============================================================================
-  # GROUP 4: VERSION VALIDATION (no dependencies)
-  # =============================================================================
-
-  version-check:
-    name: Validate Version
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Validate version increment
-        run: |
-          git fetch origin main
-          MAIN_VERSION=$(git show origin/main:VERSION | tr -d '\n')
-          PR_VERSION=$(cat VERSION | tr -d '\n')
-
-          echo "Main version: $MAIN_VERSION"
-          echo "PR version: $PR_VERSION"
-
-          # Compare versions
-          if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
-            echo "❌ ERROR: Version must be incremented from main branch"
-            exit 1
-          fi
-
-          # Simple version comparison (assumes semantic versioning)
-          IFS='.' read -r main_major main_minor main_patch <<< "$MAIN_VERSION"
-          IFS='.' read -r pr_major pr_minor pr_patch <<< "$PR_VERSION"
-
-          if [ "$pr_major" -lt "$main_major" ]; then
-            echo "❌ ERROR: Version cannot decrease"
-            exit 1
-          elif [ "$pr_major" -eq "$main_major" ]; then
-            if [ "$pr_minor" -lt "$main_minor" ]; then
-              echo "❌ ERROR: Version cannot decrease"
-              exit 1
-            elif [ "$pr_minor" -eq "$main_minor" ]; then
-              if [ "$pr_patch" -le "$main_patch" ]; then
-                echo "❌ ERROR: Version must be greater than main branch"
-                exit 1
-              fi
-            fi
-          fi
-
-          echo "✅ Version properly incremented from $MAIN_VERSION to $PR_VERSION"
 
   # =============================================================================
   # CONTAINER VALIDATION & PUBLISHING (depends on docker builds)

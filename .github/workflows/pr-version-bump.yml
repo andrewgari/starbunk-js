@@ -1,13 +1,18 @@
-name: PR - Auto Version Bump
+name: PR - Auto Version Bump (DEPRECATED)
+# DEPRECATED: This workflow is no longer used. Version bumping is now handled
+# automatically by the version-check job in pr-validation.yml.
+# This file is kept for reference and can be removed in a future cleanup.
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches:
-      - main
+  # Disabled - remove the trigger to prevent this workflow from running
+  workflow_dispatch:
+    inputs:
+      deprecated_notice:
+        description: 'This workflow is deprecated and should not be run manually'
+        required: false
 
 concurrency:
-  group: pr-version-bump-${{ github.event.pull_request.number || github.ref }}
+  group: pr-version-bump-workflow_dispatch-${{ github.run_id }}
   cancel-in-progress: true
 
 permissions:
