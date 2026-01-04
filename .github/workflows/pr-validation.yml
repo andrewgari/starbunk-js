@@ -119,9 +119,15 @@ jobs:
       - name: Install dependencies
         if: env.needs_bump == 'true'
         run: npm ci
+      
+      - name: Build shared package
+        if: env.needs_bump == 'true'
+        run: npm run build --workspace=packages/shared
 
       - name: Sync versions and commit if changed
         if: env.needs_bump == 'true'
+        continue-on-error: true
+        id: version_bump
         run: |
           echo "Running sync-versions script..."
           if [ ! -f "./scripts/sync-versions.sh" ]; then
@@ -140,28 +146,34 @@ jobs:
           
           if git diff --staged --quiet; then
             echo "No changes to commit"
+            echo "push_needed=false" >> $GITHUB_OUTPUT
           else
             git commit -m "chore: bump version to ${{ env.new_version }}"
+            echo "push_needed=true" >> $GITHUB_OUTPUT
             
-            # Push with retry logic to handle concurrent updates
-            echo "Pushing changes to origin ${{ github.event.pull_request.head.ref }} with retry and --force-with-lease..."
-            max_attempts=3
-            attempt=1
-            while [ $attempt -le $max_attempts ]; do
-              if git push --force-with-lease=refs/heads/${{ github.event.pull_request.head.ref }} origin HEAD:refs/heads/${{ github.event.pull_request.head.ref }}; then
-                echo "✅ Version bumped and committed to ${{ env.new_version }}"
-                break
-              fi
-              if [ $attempt -eq $max_attempts ]; then
-                echo "❌ Failed to push changes after $max_attempts attempts"
-                exit 1
-              fi
-              echo "Push failed (attempt $attempt/$max_attempts). Retrying in 5 seconds..."
-              attempt=$((attempt + 1))
-              sleep 5
-              # Fetch latest changes before retry
-              git fetch origin ${{ github.event.pull_request.head.ref }}
-            done
+            # Try to push - if it fails, that's okay, we'll note it
+            echo "Attempting to push changes..."
+            if git push origin HEAD:${{ github.event.pull_request.head.ref }}; then
+              echo "✅ Version bumped and pushed successfully to ${{ env.new_version }}"
+              echo "push_success=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️  Could not push version bump automatically."
+              echo "📝 Please manually update VERSION to ${{ env.new_version }}"
+              echo "push_success=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          fi
+      
+      - name: Version bump summary
+        if: always() && env.needs_bump == 'true'
+        run: |
+          if [ "${{ steps.version_bump.outputs.push_success }}" = "true" ]; then
+            echo "✅ Version successfully bumped to ${{ env.new_version }} and pushed"
+          elif [ "${{ steps.version_bump.outputs.push_needed }}" = "true" ]; then
+            echo "⚠️  Version needs to be bumped to ${{ env.new_version }}"
+            echo "::warning::Please update VERSION file to ${{ env.new_version }} and sync all package.json files"
+          else
+            echo "✅ Version check complete - no changes needed"
           fi
 
   # =============================================================================
