@@ -108,15 +108,51 @@ jobs:
         run: npm run test
 
   # =============================================================================
-  # GROUP 3: DOCKER BUILDS (no dependencies)
+  # GROUP 3: APP CONTAINER PIPELINES (per-app docker build, health check, publish)
   # =============================================================================
 
-  docker-build-bunkbot:
-    name: Validate Docker Build - bunkbot
+  app-containers:
+    name: App container pipeline (${{ matrix.app }})
     runs-on: ubuntu-latest
+    needs:
+      - lint-and-format
+      - type-check
+      - build
+      - unit-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: bunkbot
+            dockerfile: ./apps/bunkbot/Dockerfile
+          - app: covabot
+            dockerfile: ./apps/covabot/Dockerfile
+          - app: djcova
+            dockerfile: ./apps/djcova/Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint app sources
+        run: npx eslint "apps/${{ matrix.app }}/src/**/*.ts"
+
+      - name: Build shared package (for TS project references)
+        run: npm run build:shared
+
+      - name: Type check app
+        run: npm run type-check:${{ matrix.app }}
+
+      - name: Build app
+        run: npm run build:${{ matrix.app }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -125,96 +161,23 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./apps/bunkbot/Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          load: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.app }}:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/bunkbot.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bunkbot-image
-          path: /tmp/bunkbot.tar
-          retention-days: 1
-
-  docker-build-covabot:
-    name: Validate Docker Build - covabot
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./apps/covabot/Dockerfile
-          push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/covabot.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: covabot-image
-          path: /tmp/covabot.tar
-          retention-days: 1
-
-  docker-build-djcova:
-    name: Validate Docker Build - djcova
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./apps/djcova/Dockerfile
-          push: false
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/djcova.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: djcova-image
-          path: /tmp/djcova.tar
-          retention-days: 1
-  # =============================================================================
-  # GROUP 4: CONTAINER VALIDATION & PUBLISHING (depends on docker builds)
-  # =============================================================================
-
-  validate-bunkbot:
-    name: Validate Container - bunkbot
-    runs-on: ubuntu-latest
-    needs: [docker-build-bunkbot]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: bunkbot-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/bunkbot.tar
 
       - name: Start container
         run: |
-          docker run -d --name bunkbot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e CI=true             -e NODE_ENV=test             -e HEALTH_PORT=3000             ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:pr-${{ github.event.pull_request.number }}
+          docker run -d --name ${{ matrix.app }}-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e HEALTH_PORT=3000 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.app }}:pr-${{ github.event.pull_request.number }}
 
       - name: Wait for container to start
         run: sleep 10
@@ -223,21 +186,21 @@ jobs:
         run: |
           MAX_RETRIES=30
           RETRY_COUNT=0
-          until docker exec bunkbot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+          until docker exec ${{ matrix.app }}-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
             echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
             RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
           done
           if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
             echo "Health check failed"
-            docker logs bunkbot-test
+            docker logs ${{ matrix.app }}-test
             exit 1
           fi
           echo "Health check passed"
 
       - name: Smoke test
         run: |
-          RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:3000/health)
+          RESPONSE=$(docker exec ${{ matrix.app }}-test curl -s http://127.0.0.1:3000/health)
           echo "Response: $RESPONSE"
           if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
             echo "Smoke test passed"
@@ -248,140 +211,11 @@ jobs:
 
       - name: Show logs on failure
         if: failure()
-        run: docker logs bunkbot-test
+        run: docker logs ${{ matrix.app }}-test
 
       - name: Cleanup
         if: always()
-        run: docker rm -f bunkbot-test || true
-
-  validate-covabot:
-    name: Validate Container - covabot
-    runs-on: ubuntu-latest
-    needs: [docker-build-covabot]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: covabot-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/covabot.tar
-
-      - name: Start container
-        run: |
-          docker run -d --name covabot-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e CI=true             -e NODE_ENV=test             -e HEALTH_PORT=3000             ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:pr-${{ github.event.pull_request.number }}
-
-      - name: Wait for container to start
-        run: sleep 10
-
-      - name: Health check
-        run: |
-          MAX_RETRIES=30
-          RETRY_COUNT=0
-          until docker exec covabot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
-            echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            sleep 2
-          done
-          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-            echo "Health check failed"
-            docker logs covabot-test
-            exit 1
-          fi
-          echo "Health check passed"
-
-      - name: Smoke test
-        run: |
-          RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:3000/health)
-          echo "Response: $RESPONSE"
-          if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
-            echo "Smoke test passed"
-          else
-            echo "Smoke test failed"
-            exit 1
-          fi
-
-      - name: Show logs on failure
-        if: failure()
-        run: docker logs covabot-test
-
-      - name: Cleanup
-        if: always()
-        run: docker rm -f covabot-test || true
-
-  validate-djcova:
-    name: Validate Container - djcova
-    runs-on: ubuntu-latest
-    needs: [docker-build-djcova]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: djcova-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/djcova.tar
-
-      - name: Start container
-        run: |
-          docker run -d --name djcova-test             -e DISCORD_TOKEN=test             -e DEBUG_MODE=true             -e CI_SMOKE_MODE=true             -e CI=true             -e NODE_ENV=test             -e HEALTH_PORT=3000             ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:pr-${{ github.event.pull_request.number }}
-
-      - name: Wait for container to start
-        run: sleep 10
-
-      - name: Health check
-        run: |
-          MAX_RETRIES=30
-          RETRY_COUNT=0
-          until docker exec djcova-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
-            echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            sleep 2
-          done
-          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-            echo "Health check failed"
-            docker logs djcova-test
-            exit 1
-          fi
-          echo "Health check passed"
-
-      - name: Smoke test
-        run: |
-          RESPONSE=$(docker exec djcova-test curl -s http://127.0.0.1:3000/health)
-          echo "Response: $RESPONSE"
-          if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
-            echo "Smoke test passed"
-          else
-            echo "Smoke test failed"
-            exit 1
-          fi
-
-      - name: Show logs on failure
-        if: failure()
-        run: docker logs djcova-test
-
-      - name: Cleanup
-        if: always()
-        run: docker rm -f djcova-test || true
-
-  publish-bunkbot:
-    name: Publish Image - bunkbot
-    runs-on: ubuntu-latest
-    needs: [validate-bunkbot]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: bunkbot-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/bunkbot.tar
-
-      - name: Checkout
-        uses: actions/checkout@v4
+        run: docker rm -f ${{ matrix.app }}-test || true
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -394,111 +228,7 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          IMAGE_BASE="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot"
-          VERSION=$(cat VERSION 2>/dev/null | tr -d '\n')
-
-          if [ -z "$VERSION" ]; then
-            echo "WARNING: VERSION file missing or empty; defaulting to 0.0.0 for PR image tags"
-            VERSION="0.0.0"
-          fi
-
-          PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}"
-          VERSION_PR_TAG="${IMAGE_BASE}:${VERSION}-pr-${PR_NUMBER}"
-          LATEST_PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}-latest"
-          RELEASE_PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}-release"
-
-          # Tag additional variants from the base PR tag
-          docker tag "${PR_TAG}" "${VERSION_PR_TAG}"
-          docker tag "${PR_TAG}" "${LATEST_PR_TAG}"
-          docker tag "${PR_TAG}" "${RELEASE_PR_TAG}"
-
-          # Push all tags
-          docker push "${PR_TAG}"
-          docker push "${VERSION_PR_TAG}"
-          docker push "${LATEST_PR_TAG}"
-          docker push "${RELEASE_PR_TAG}"
-
-  publish-covabot:
-    name: Publish Image - covabot
-    runs-on: ubuntu-latest
-    needs: [validate-covabot]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: covabot-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/covabot.tar
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Tag and push image
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          IMAGE_BASE="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot"
-          VERSION=$(cat VERSION 2>/dev/null | tr -d '\n')
-
-          if [ -z "$VERSION" ]; then
-            echo "WARNING: VERSION file missing or empty; defaulting to 0.0.0 for PR image tags"
-            VERSION="0.0.0"
-          fi
-
-          PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}"
-          VERSION_PR_TAG="${IMAGE_BASE}:${VERSION}-pr-${PR_NUMBER}"
-          LATEST_PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}-latest"
-          RELEASE_PR_TAG="${IMAGE_BASE}:pr-${PR_NUMBER}-release"
-
-          # Tag additional variants from the base PR tag
-          docker tag "${PR_TAG}" "${VERSION_PR_TAG}"
-          docker tag "${PR_TAG}" "${LATEST_PR_TAG}"
-          docker tag "${PR_TAG}" "${RELEASE_PR_TAG}"
-
-          # Push all tags
-          docker push "${PR_TAG}"
-          docker push "${VERSION_PR_TAG}"
-          docker push "${LATEST_PR_TAG}"
-          docker push "${RELEASE_PR_TAG}"
-
-  publish-djcova:
-    name: Publish Image - djcova
-    runs-on: ubuntu-latest
-    needs: [validate-djcova]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: djcova-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/djcova.tar
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Tag and push image
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          IMAGE_BASE="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova"
+          IMAGE_BASE="${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.app }}"
           VERSION=$(cat VERSION 2>/dev/null | tr -d '\n')
 
           if [ -z "$VERSION" ]; then
@@ -534,9 +264,7 @@ jobs:
       - type-check
       - build
       - unit-tests
-      - publish-bunkbot
-      - publish-covabot
-      - publish-djcova
+      - app-containers
     steps:
       - name: All checks passed
         run: |
@@ -547,7 +275,5 @@ jobs:
           echo "✓ Type Check"
           echo "✓ Build"
           echo "✓ Unit Tests"
-          echo "✓ Docker Builds (4 apps)"
-          echo "✓ Container Validation (4 apps)"
-          echo "✓ Image Publishing (4 apps)"
+          echo "✓ Docker Builds / Health Checks / Image Publishing (3 apps)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
