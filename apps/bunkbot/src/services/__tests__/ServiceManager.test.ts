@@ -1,7 +1,7 @@
 import { ServiceManager } from '../ServiceManager';
 import { logger } from '@starbunk/shared';
 
-// Mock external dependencies
+// Mock external dependencies (including DiscordService from the shared barrel)
 jest.mock('@starbunk/shared', () => ({
 	logger: {
 		info: jest.fn(),
@@ -27,9 +27,7 @@ jest.mock('@starbunk/shared', () => ({
 	runStartupDiagnostics: jest.fn(() => Promise.resolve([])),
 	validateEnvironment: jest.fn(),
 	ensureError: jest.fn((error) => (error instanceof Error ? error : new Error(String(error)))),
-}));
-
-jest.mock('@starbunk/shared/dist/services/discordService', () => ({
+	// Provide a mock DiscordService constructor so ServiceManager can instantiate it
 	DiscordService: jest.fn().mockImplementation(() => ({})),
 }));
 
