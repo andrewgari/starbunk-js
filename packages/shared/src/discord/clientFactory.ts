@@ -98,4 +98,15 @@ export const ClientConfigs = {
 		],
 		enableWebhooks: true,
 	},
+
+	// BlueBot: Blue detection and response
+	BlueBot: {
+		intents: [
+			GatewayIntentBits.Guilds,
+			GatewayIntentBits.GuildMessages,
+			GatewayIntentBits.MessageContent,
+			GatewayIntentBits.GuildMembers,
+		],
+		enableWebhooks: true,
+	},
 } as const;
