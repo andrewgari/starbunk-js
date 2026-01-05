@@ -1,21 +1,21 @@
 // BlueBot - Blue detection and response bot container
 import { Events, Client, Message } from 'discord.js';
 import { createServer } from 'http';
-	import {
-		logger,
-		container,
-		ServiceId,
-		ensureError,
-		validateEnvironment,
-		createDiscordClient,
-		ClientConfigs,
-		WebhookManager,
-		getMessageFilter,
-		MessageFilter,
-		StartupDiagnostics,
-		initializeUnifiedObservability,
-		shutdownObservability,
-	} from '@starbunk/shared';
+import {
+	logger,
+	container,
+	ServiceId,
+	ensureError,
+	validateEnvironment,
+	createDiscordClient,
+	ClientConfigs,
+	WebhookManager,
+	getMessageFilter,
+	MessageFilter,
+	StartupDiagnostics,
+	initializeUnifiedObservability,
+	shutdownObservability,
+} from '@starbunk/shared';
 
 import { BlueBotTriggers } from './triggers';
 import { BLUE_BOT_NAME } from './constants';
@@ -26,33 +26,33 @@ class BlueBotContainer {
 	private messageFilter!: MessageFilter;
 	private triggers!: BlueBotTriggers;
 	private healthServer?: ReturnType<typeof createServer>;
-		private observability?: ReturnType<typeof initializeUnifiedObservability>;
+	private observability?: ReturnType<typeof initializeUnifiedObservability>;
 
 	async initialize(): Promise<void> {
 		try {
 			logger.info('[BlueBot] Starting initialization...');
 
-				// Initialize observability using the unified setup (service-only)
-				try {
-					this.observability = initializeUnifiedObservability('bluebot', {
-						enableUnified: false,
-						enableStructuredLogging: true,
-						skipHttpEndpoints: true,
-					});
-					logger.info('[BlueBot] Observability initialized with unified configuration (service-only)');
-				} catch (error) {
-					logger.warn(
-						'[BlueBot] Failed to initialize unified observability; continuing with basic logging only:',
-						ensureError(error),
-					);
-				}
+			// Initialize observability using the unified setup (service-only)
+			try {
+				this.observability = initializeUnifiedObservability('bluebot', {
+					enableUnified: false,
+					enableStructuredLogging: true,
+					skipHttpEndpoints: true,
+				});
+				logger.info('[BlueBot] Observability initialized with unified configuration (service-only)');
+			} catch (error) {
+				logger.warn(
+					'[BlueBot] Failed to initialize unified observability; continuing with basic logging only:',
+					ensureError(error),
+				);
+			}
 
-				// Ensure base logger and environment reflect this service as "bluebot"
-				logger.setServiceName('bluebot');
-				process.env.SERVICE_NAME = 'bluebot';
-				if (!process.env.CONTAINER_NAME) {
-					process.env.CONTAINER_NAME = 'bluebot';
-				}
+			// Ensure base logger and environment reflect this service as "bluebot"
+			logger.setServiceName('bluebot');
+			process.env.SERVICE_NAME = 'bluebot';
+			if (!process.env.CONTAINER_NAME) {
+				process.env.CONTAINER_NAME = 'bluebot';
+			}
 
 			// Validate environment
 			validateEnvironment({
@@ -172,17 +172,17 @@ class BlueBotContainer {
 					}),
 				);
 			} else if (req.url === '/metrics') {
-					const metricsService = this.observability?.metrics;
-					if (metricsService) {
-						const metrics = metricsService.getPrometheusMetrics();
-						res.writeHead(200, {
-							'Content-Type': 'text/plain; version=0.0.4; charset=utf-8',
-						});
-						res.end(metrics);
-					} else {
-						res.writeHead(503, { 'Content-Type': 'text/plain' });
-						res.end('# BlueBot metrics service not available\n');
-					}
+				const metricsService = this.observability?.metrics;
+				if (metricsService) {
+					const metrics = metricsService.getPrometheusMetrics();
+					res.writeHead(200, {
+						'Content-Type': 'text/plain; version=0.0.4; charset=utf-8',
+					});
+					res.end(metrics);
+				} else {
+					res.writeHead(503, { 'Content-Type': 'text/plain' });
+					res.end('# BlueBot metrics service not available\n');
+				}
 			} else {
 				res.writeHead(404);
 				res.end();
@@ -205,85 +205,85 @@ class BlueBotContainer {
 			await this.client.destroy();
 		}
 
-			// Gracefully shut down observability stack (if initialized)
-			try {
-				await shutdownObservability();
-			} catch (error) {
-				logger.warn('[BlueBot] Error during observability shutdown:', ensureError(error as Error));
-			}
+		// Gracefully shut down observability stack (if initialized)
+		try {
+			await shutdownObservability();
+		} catch (error) {
+			logger.warn('[BlueBot] Error during observability shutdown:', ensureError(error as Error));
+		}
 
-			logger.info('[BlueBot] Shutdown complete');
+		logger.info('[BlueBot] Shutdown complete');
 	}
 }
 
 // Main execution
 async function main(): Promise<void> {
-		// In CI smoke mode, start a minimal health server and skip Discord login
-		if (process.env.CI_SMOKE_MODE === 'true') {
-			logger.info('[BlueBot] CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
-			const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT, 10) : 3000;
+	// In CI smoke mode, start a minimal health server and skip Discord login
+	if (process.env.CI_SMOKE_MODE === 'true') {
+		logger.info('[BlueBot] CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
+		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT, 10) : 3000;
 
-			const server = createServer((req, res) => {
-				if (req.url === '/health') {
-					res.writeHead(200, { 'Content-Type': 'application/json' });
-					res.end(
-						JSON.stringify({
-							status: 'healthy',
-							service: 'bluebot',
-							mode: 'smoke',
-							timestamp: new Date().toISOString(),
-						}),
-					);
-					return;
-				}
+		const server = createServer((req, res) => {
+			if (req.url === '/health') {
+				res.writeHead(200, { 'Content-Type': 'application/json' });
+				res.end(
+					JSON.stringify({
+						status: 'healthy',
+						service: 'bluebot',
+						mode: 'smoke',
+						timestamp: new Date().toISOString(),
+					}),
+				);
+				return;
+			}
 
-				res.writeHead(404, { 'Content-Type': 'text/plain' });
-				res.end('Not Found');
-			});
-
-			server.listen(port, () => {
-				logger.info(`[BlueBot] [SMOKE] Health server listening on port ${port}`);
-			});
-
-			const shutdown = (signal: string) => {
-				logger.info(`[BlueBot] [SMOKE] Received ${signal}, shutting down health server...`);
-				server.close(() => process.exit(0));
-			};
-
-			process.on('SIGINT', () => shutdown('SIGINT'));
-			process.on('SIGTERM', () => shutdown('SIGTERM'));
-
-			return;
-		}
-
-		const blueBot = new BlueBotContainer();
-
-		// Handle graceful shutdown
-		process.on('SIGTERM', async () => {
-			logger.info('[BlueBot] Received SIGTERM signal');
-			await blueBot.shutdown();
-			process.exit(0);
+			res.writeHead(404, { 'Content-Type': 'text/plain' });
+			res.end('Not Found');
 		});
 
-		process.on('SIGINT', async () => {
-			logger.info('[BlueBot] Received SIGINT signal');
-			await blueBot.shutdown();
-			process.exit(0);
+		server.listen(port, () => {
+			logger.info(`[BlueBot] [SMOKE] Health server listening on port ${port}`);
 		});
 
-		// Handle uncaught errors
-		process.on('uncaughtException', (error) => {
-			logger.error('[BlueBot] Uncaught exception:', error);
-			process.exit(1);
-		});
+		const shutdown = (signal: string) => {
+			logger.info(`[BlueBot] [SMOKE] Received ${signal}, shutting down health server...`);
+			server.close(() => process.exit(0));
+		};
 
-		process.on('unhandledRejection', (reason) => {
-			logger.error('[BlueBot] Unhandled rejection, reason:', ensureError(reason as Error));
-			process.exit(1);
-		});
+		process.on('SIGINT', () => shutdown('SIGINT'));
+		process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-		// Initialize the bot
-		await blueBot.initialize();
+		return;
+	}
+
+	const blueBot = new BlueBotContainer();
+
+	// Handle graceful shutdown
+	process.on('SIGTERM', async () => {
+		logger.info('[BlueBot] Received SIGTERM signal');
+		await blueBot.shutdown();
+		process.exit(0);
+	});
+
+	process.on('SIGINT', async () => {
+		logger.info('[BlueBot] Received SIGINT signal');
+		await blueBot.shutdown();
+		process.exit(0);
+	});
+
+	// Handle uncaught errors
+	process.on('uncaughtException', (error) => {
+		logger.error('[BlueBot] Uncaught exception:', error);
+		process.exit(1);
+	});
+
+	process.on('unhandledRejection', (reason) => {
+		logger.error('[BlueBot] Unhandled rejection, reason:', ensureError(reason as Error));
+		process.exit(1);
+	});
+
+	// Initialize the bot
+	await blueBot.initialize();
 }
 
 // Run if this is the main module

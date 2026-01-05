@@ -34,7 +34,7 @@ export class ProductionLLMService implements LLMService {
 	private isHealthy = false;
 	private pullingModels = new Set<string>(); // Track models currently being pulled
 	private pulledModels = new Set<string>(); // Track models we've already attempted to pull
-		private channelActivity = new Map<string, number[]>(); // Recent message activity by channel
+	private channelActivity = new Map<string, number[]>(); // Recent message activity by channel
 
 	// Metrics
 	// Note: These metrics use the default global registry since ProductionLLMService
@@ -270,129 +270,129 @@ export class ProductionLLMService implements LLMService {
 
 	async shouldRespond(message: Message): Promise<boolean> {
 		try {
-				// --- Heuristic-based decision: no external LLM calls ---
-				const rawContent = message.content ?? '';
-				const content = rawContent.trim();
-				if (!content) {
-					logger.debug('[LLMService] Heuristic decision: empty message, not responding');
-					return false;
+			// --- Heuristic-based decision: no external LLM calls ---
+			const rawContent = message.content ?? '';
+			const content = rawContent.trim();
+			if (!content) {
+				logger.debug('[LLMService] Heuristic decision: empty message, not responding');
+				return false;
+			}
+
+			// Never respond to other bots
+			if (message.author?.bot) {
+				logger.debug('[LLMService] Heuristic decision: author is a bot, not responding');
+				return false;
+			}
+
+			const lowerContent = content.toLowerCase();
+
+			// Best-effort detection of direct mentions of this bot
+			const isDirectMention = this.isDirectMention(message);
+
+			// Explicit text mention of the bot
+			const mentionsCovabot = lowerContent.includes('covabot');
+			const mentionsCovaOnly = !mentionsCovabot && lowerContent.includes('cova');
+
+			// Deterministic responses: direct mentions or explicit "covabot" text
+			if (isDirectMention || mentionsCovabot) {
+				logger.debug('[LLMService] Heuristic decision: direct mention / "covabot" detected, responding');
+				return true;
+			}
+
+			// Probabilistic temperature-based behavior for everything else
+			const isQuestion = content.includes('?');
+			const keywordList = ['bot', 'dev', 'code', 'starbunk', 'ai'];
+			let keywordHits = 0;
+			for (const kw of keywordList) {
+				if (lowerContent.includes(kw)) {
+					keywordHits += 1;
 				}
+			}
 
-				// Never respond to other bots
-				if (message.author?.bot) {
-					logger.debug('[LLMService] Heuristic decision: author is a bot, not responding');
-					return false;
-				}
+			// Activity-based temperature: more active channels raise the base probability
+			const activityScore = this.getChannelActivityScore(message); // 0..1
 
-				const lowerContent = content.toLowerCase();
+			let p = 0.01; // base probability (1%)
+			if (mentionsCovaOnly) {
+				// Talking to/about the real Cova (but not explicitly "covabot") boosts temperature
+				p += 0.1;
+			}
 
-				// Best-effort detection of direct mentions of this bot
-				const isDirectMention = this.isDirectMention(message);
+			const keywordP = Math.min(0.15, keywordHits * 0.05);
+			p += keywordP;
 
-				// Explicit text mention of the bot
-				const mentionsCovabot = lowerContent.includes('covabot');
-				const mentionsCovaOnly = !mentionsCovabot && lowerContent.includes('cova');
+			if (isQuestion) {
+				p += 0.05;
+			}
 
-				// Deterministic responses: direct mentions or explicit "covabot" text
-				if (isDirectMention || mentionsCovabot) {
-					logger.debug('[LLMService] Heuristic decision: direct mention / "covabot" detected, responding');
-					return true;
-				}
+			p += 0.2 * activityScore;
 
-				// Probabilistic temperature-based behavior for everything else
-				const isQuestion = content.includes('?');
-				const keywordList = ['bot', 'dev', 'code', 'starbunk', 'ai'];
-				let keywordHits = 0;
-				for (const kw of keywordList) {
-					if (lowerContent.includes(kw)) {
-						keywordHits += 1;
-					}
-				}
+			// Clamp between 0 and 0.5 so we never get overly chatty
+			p = Math.max(0, Math.min(0.5, p));
 
-				// Activity-based temperature: more active channels raise the base probability
-				const activityScore = this.getChannelActivityScore(message); // 0..1
+			const roll = Math.random();
+			const decision = roll < p;
 
-				let p = 0.01; // base probability (1%)
-				if (mentionsCovaOnly) {
-					// Talking to/about the real Cova (but not explicitly "covabot") boosts temperature
-					p += 0.1;
-				}
+			logger.debug(
+				`[LLMService] Heuristic decision: probabilistic gating p=${p.toFixed(3)} roll=${roll.toFixed(3)} ` +
+					`activity=${activityScore.toFixed(3)} keywords=${keywordHits} mentionsCovaOnly=${mentionsCovaOnly}`,
+			);
 
-				const keywordP = Math.min(0.15, keywordHits * 0.05);
-				p += keywordP;
-
-				if (isQuestion) {
-					p += 0.05;
-				}
-
-				p += 0.2 * activityScore;
-
-				// Clamp between 0 and 0.5 so we never get overly chatty
-				p = Math.max(0, Math.min(0.5, p));
-
-				const roll = Math.random();
-				const decision = roll < p;
-
-				logger.debug(
-					`[LLMService] Heuristic decision: probabilistic gating p=${p.toFixed(3)} roll=${roll.toFixed(3)} ` +
-						`activity=${activityScore.toFixed(3)} keywords=${keywordHits} mentionsCovaOnly=${mentionsCovaOnly}`,
-				);
-
-				return decision;
+			return decision;
 		} catch (error) {
 			logger.error('[LLMService] Error in heuristic shouldRespond decision:', ensureError(error));
 			return false;
 		}
 	}
 
-		/**
-		 * Compute an activity score for the channel the message came from.
-		 * The score is in [0, 1] based on the number of messages seen in the
-		 * last few minutes, used to slightly raise the response probability
-		 * in more active channels.
-		 */
-		private getChannelActivityScore(message: Message): number {
-			try {
-				const channel: any = (message as any).channel;
-				const channelId: string = channel?.id ?? 'unknown';
-				const now = Date.now();
-				const windowMs = 2 * 60 * 1000; // 2 minutes
-				const maxWindowCount = 20; // Saturate activity after ~20 messages in window
+	/**
+	 * Compute an activity score for the channel the message came from.
+	 * The score is in [0, 1] based on the number of messages seen in the
+	 * last few minutes, used to slightly raise the response probability
+	 * in more active channels.
+	 */
+	private getChannelActivityScore(message: Message): number {
+		try {
+			const channel: any = (message as any).channel;
+			const channelId: string = channel?.id ?? 'unknown';
+			const now = Date.now();
+			const windowMs = 2 * 60 * 1000; // 2 minutes
+			const maxWindowCount = 20; // Saturate activity after ~20 messages in window
 
-				const existing = this.channelActivity.get(channelId) ?? [];
-				existing.push(now);
+			const existing = this.channelActivity.get(channelId) ?? [];
+			existing.push(now);
 
-				const cutoff = now - windowMs;
-				const pruned = existing.filter((ts) => ts >= cutoff);
-				this.channelActivity.set(channelId, pruned);
+			const cutoff = now - windowMs;
+			const pruned = existing.filter((ts) => ts >= cutoff);
+			this.channelActivity.set(channelId, pruned);
 
-				const count = pruned.length;
-				return Math.min(1, count / maxWindowCount);
-			} catch {
-				// If anything goes wrong, fall back to neutral activity
-				return 0;
-			}
+			const count = pruned.length;
+			return Math.min(1, count / maxWindowCount);
+		} catch {
+			// If anything goes wrong, fall back to neutral activity
+			return 0;
 		}
+	}
 
-		/**
-		 * Determine whether this message directly mentions the bot user.
-		 *
-		 * This is intentionally factored into a helper so we can evolve how
-		 * we treat direct mentions (IDs vs. users, role mentions, etc.)
-		 * without touching the core heuristic logic.
-		 */
-		private isDirectMention(message: Message): boolean {
-			try {
-				const clientUser = (message as any).client?.user;
-				if (clientUser && (message as any).mentions?.has) {
-					// Discord.js MessageMentions.has accepts a UserResolvable (user or ID)
-					return (message as any).mentions.has(clientUser);
-				}
-			} catch {
-				// Fall through to false on any inspection error
+	/**
+	 * Determine whether this message directly mentions the bot user.
+	 *
+	 * This is intentionally factored into a helper so we can evolve how
+	 * we treat direct mentions (IDs vs. users, role mentions, etc.)
+	 * without touching the core heuristic logic.
+	 */
+	private isDirectMention(message: Message): boolean {
+		try {
+			const clientUser = (message as any).client?.user;
+			if (clientUser && (message as any).mentions?.has) {
+				// Discord.js MessageMentions.has accepts a UserResolvable (user or ID)
+				return (message as any).mentions.has(clientUser);
 			}
-			return false;
+		} catch {
+			// Fall through to false on any inspection error
 		}
+		return false;
+	}
 
 	private async generateOpenAIResponse(message: Message, context?: string, correlationId?: string): Promise<string> {
 		// TODO: Implement OpenAI integration with proper error handling
