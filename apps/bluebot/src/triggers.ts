@@ -5,16 +5,22 @@ import { ConfigurationService } from './services/configurationService';
 import { LLMService } from './services/llmService';
 
 // State to track when blue was mentioned or murder was triggered
-let blueTimestamp = new Date(Number.MIN_SAFE_INTEGER);
-let blueMurderTimestamp = new Date(Number.MIN_SAFE_INTEGER);
+const blueTimestamp = new Date(Number.MIN_SAFE_INTEGER);
+const blueMurderTimestamp = new Date(Number.MIN_SAFE_INTEGER);
 
-// Lazily create configuration service to avoid Prisma init at import time
+// Lazily create and cache configuration service to avoid Prisma init at import time
+let cachedConfigService: ConfigurationService | null = null;
+
 function getConfigService(): ConfigurationService | null {
-	try {
-		return new ConfigurationService();
-	} catch {
-		return null;
+	if (cachedConfigService) {
+		return cachedConfigService;
 	}
+	try {
+		cachedConfigService = new ConfigurationService();
+	} catch {
+		cachedConfigService = null;
+	}
+	return cachedConfigService;
 }
 
 // Get target user ID based on debug mode with safe fallbacks
