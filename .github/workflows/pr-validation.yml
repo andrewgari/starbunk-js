@@ -129,6 +129,8 @@ jobs:
             dockerfile: ./apps/covabot/Dockerfile
           - app: djcova
             dockerfile: ./apps/djcova/Dockerfile
+          - app: bluebot
+            dockerfile: ./apps/bluebot/Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -275,5 +277,5 @@ jobs:
           echo "✓ Type Check"
           echo "✓ Build"
           echo "✓ Unit Tests"
-          echo "✓ Docker Builds / Health Checks / Image Publishing (3 apps)"
+          echo "✓ Docker Builds / Health Checks / Image Publishing (4 apps)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

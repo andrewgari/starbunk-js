@@ -173,6 +173,34 @@ jobs:
           path: /tmp/djcova.tar
           retention-days: 1
 
+  docker-build-bluebot:
+    name: Validate Docker Build - bluebot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/bluebot/Dockerfile
+          push: false
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/bluebot.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluebot-image
+          path: /tmp/bluebot.tar
+          retention-days: 1
+
   # =============================================================================
   # GROUP 4: TESTING (depends on Group 1 passing)
   # =============================================================================
@@ -248,6 +276,30 @@ jobs:
 
       - name: Run build
         run: npm run build:djcova
+
+  test-bluebot:
+    name: Validate Tests - bluebot
+    runs-on: ubuntu-latest
+    needs: [lint, prettier, type-check]
+    if: ${{ !cancelled() && (success() || inputs.skip_validation) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:bluebot
+
+      - name: Run build
+        run: npm run build:bluebot
 
   # =============================================================================
   # GROUP 5: CONTAINER VALIDATION (depends on Group 3 passing)
@@ -442,6 +494,69 @@ jobs:
         if: always()
         run: docker rm -f djcova-test || true
 
+  validate-bluebot:
+    name: Validate Container - bluebot
+    runs-on: ubuntu-latest
+    needs: [docker-build-bluebot]
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bluebot-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: docker load --input /tmp/bluebot.tar
+
+      - name: Start container
+        run: |
+          docker run -d --name bluebot-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e HEALTH_PORT=3000 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
+
+      - name: Wait for container to start
+        run: sleep 10
+
+      - name: Health check
+        run: |
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          until docker exec bluebot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+            echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            sleep 2
+          done
+          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+            echo "Health check failed"
+            docker logs bluebot-test
+            exit 1
+          fi
+          echo "Health check passed"
+
+      - name: Smoke test
+        run: |
+          RESPONSE=$(docker exec bluebot-test curl -s http://127.0.0.1:3000/health)
+          echo "Response: $RESPONSE"
+          if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
+            echo "Smoke test passed"
+          else
+            echo "Smoke test failed"
+            exit 1
+          fi
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker logs bluebot-test
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f bluebot-test || true
+
   # =============================================================================
   # GROUP 5: PRODUCTION IMAGE PUBLISHING (depends on Group 4 passing)
   # =============================================================================
@@ -542,6 +657,38 @@ jobs:
           docker push ${IMAGE_NAME}:main
           docker push ${IMAGE_NAME}:latest
 
+  publish-bluebot:
+    name: Publish Image - bluebot
+    runs-on: ubuntu-latest
+    needs: [validate-bluebot]
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bluebot-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: docker load --input /tmp/bluebot.tar
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and push images
+        run: |
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot"
+
+          # Tag with latest
+          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+
+          # Push branch and latest tags
+          docker push ${IMAGE_NAME}:main
+          docker push ${IMAGE_NAME}:latest
+
   # =============================================================================
   # GROUP 6: DEPLOYMENT SUMMARY (final gate)
   # =============================================================================
@@ -553,12 +700,15 @@ jobs:
       - test-bunkbot
       - test-covabot
       - test-djcova
+      - test-bluebot
       - validate-bunkbot
       - validate-covabot
       - validate-djcova
+      - validate-bluebot
       - publish-bunkbot
       - publish-covabot
       - publish-djcova
+      - publish-bluebot
     steps:
       - name: All deployment stages completed
         run: |
@@ -566,8 +716,8 @@ jobs:
           echo "✅ Main deployment workflow completed successfully!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✓ Code Quality (lint, format, type-check - may be skipped via input)"
-          echo "✓ Docker Builds (3 apps)"
-          echo "✓ Unit Tests & Builds (3 apps)"
-          echo "✓ Container Validation (3 apps)"
+          echo "✓ Docker Builds (4 apps)"
+          echo "✓ Unit Tests & Builds (4 apps)"
+          echo "✓ Container Validation (4 apps)"
           echo "✓ Image Publishing (latest tags)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
