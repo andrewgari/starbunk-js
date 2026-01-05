@@ -5,8 +5,8 @@ import { ConfigurationService } from './services/configurationService';
 import { LLMService } from './services/llmService';
 
 // State to track when blue was mentioned or murder was triggered
-let blueTimestamp = new Date(Number.MIN_SAFE_INTEGER);
-let blueMurderTimestamp = new Date(Number.MIN_SAFE_INTEGER);
+const blueTimestamp = new Date(Number.MIN_SAFE_INTEGER);
+const blueMurderTimestamp = new Date(Number.MIN_SAFE_INTEGER);
 
 // Lazily create and cache configuration service to avoid Prisma init at import time
 let cachedConfigService: ConfigurationService | null = null;
