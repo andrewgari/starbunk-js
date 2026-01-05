@@ -114,12 +114,12 @@ export function createLLMEmulatorResponse(): ResponseGenerator {
 					: '';
 
 				const enhancedMessage = `Channel: ${channelName}
-		User: ${message.author.username}
-		Message: "${message.content}"${contextNote}${calibrationNote}
+User: ${message.author.username}
+Message: "${message.content}"${contextNote}${calibrationNote}
 
-		Instructions: You are Cova. The decision about whether to respond has already been made.
-		Respond exactly as Cova would to this message, taking into account the notes above.
-		Keep the reply conversational and reasonably concise.`;
+Instructions: You are Cova. The decision about whether to respond has already been made.
+Respond exactly as Cova would to this message, taking into account the notes above.
+Keep the reply conversational and reasonably concise.`;
 
 				// Try to use LLM manager from container first (for E2E tests with mocks)
 				const llmManager = getContainerLLMManager();
