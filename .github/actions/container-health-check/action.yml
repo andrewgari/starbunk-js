@@ -1,0 +1,91 @@
+name: 'Container health and smoke check'
+description: 'Waits for a container, performs a health check and simple smoke test, shows logs on failure, and cleans up the container.'
+
+inputs:
+  container-name:
+    description: 'Docker container name to check (and clean up)'
+    required: true
+
+  port:
+    description: 'Port that the container exposes the health endpoint on'
+    required: false
+    default: '3000'
+
+  health-path:
+    description: 'Path to the health endpoint inside the container'
+    required: false
+    default: '/health'
+
+  max-retries:
+    description: 'Maximum number of health check retries'
+    required: false
+    default: '30'
+
+  retry-delay-seconds:
+    description: 'Delay in seconds between health check retries'
+    required: false
+    default: '2'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Wait for container to start
+      shell: bash
+      run: |
+        echo "Waiting 10 seconds for container '${{ inputs.container-name }}' to start..."
+        sleep 10
+
+    - name: Health check
+      shell: bash
+      run: |
+        HEALTH_URL="http://127.0.0.1:${{ inputs.port }}${{ inputs.health-path }}"
+        MAX_RETRIES=${{ inputs.max-retries }}
+        RETRY_DELAY=${{ inputs.retry-delay-seconds }}
+
+        echo "Checking health of container '${{ inputs.container-name }}' at ${HEALTH_URL}..."
+
+        RETRY_COUNT=0
+        until docker exec "${{ inputs.container-name }}" curl -f "$HEALTH_URL" || [ "$RETRY_COUNT" -eq "$MAX_RETRIES" ]; do
+          echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
+          RETRY_COUNT=$((RETRY_COUNT + 1))
+          sleep "$RETRY_DELAY"
+        done
+
+        if [ "$RETRY_COUNT" -eq "$MAX_RETRIES" ]; then
+          echo "Health check failed for container '${{ inputs.container-name }}'"
+          docker logs "${{ inputs.container-name }}" || true
+          exit 1
+        fi
+
+        echo "Health check passed for container '${{ inputs.container-name }}'"
+
+    - name: Smoke test
+      shell: bash
+      run: |
+        HEALTH_URL="http://127.0.0.1:${{ inputs.port }}${{ inputs.health-path }}"
+        echo "Running smoke test against ${HEALTH_URL} for container '${{ inputs.container-name }}'..."
+
+        RESPONSE=$(docker exec "${{ inputs.container-name }}" curl -s "$HEALTH_URL")
+        echo "Response: $RESPONSE"
+
+        if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
+          echo "Smoke test passed for container '${{ inputs.container-name }}'"
+        else
+          echo "Smoke test failed for container '${{ inputs.container-name }}'"
+          exit 1
+        fi
+
+    - name: Show logs on failure
+      if: failure()
+      shell: bash
+      run: |
+        echo "Showing logs for failed container '${{ inputs.container-name }}'..."
+        docker logs "${{ inputs.container-name }}" || true
+
+    - name: Cleanup container
+      if: always()
+      shell: bash
+      run: |
+        echo "Cleaning up container '${{ inputs.container-name }}'..."
+        docker rm -f "${{ inputs.container-name }}" || true
+

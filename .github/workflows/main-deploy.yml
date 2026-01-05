@@ -22,71 +22,7 @@ permissions:
 
 jobs:
   # =============================================================================
-  # GROUP 1: CODE QUALITY (runs in parallel)
-  # =============================================================================
-
-  lint:
-    name: Validate Lint
-    runs-on: ubuntu-latest
-    if: ${{ !inputs.skip_validation }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run lint
-        run: npm run lint
-
-  prettier:
-    name: Validate Format
-    runs-on: ubuntu-latest
-    if: ${{ !inputs.skip_validation }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run prettier
-        run: npm run format -- --check
-
-  type-check:
-    name: Validate Types
-    runs-on: ubuntu-latest
-    if: ${{ !inputs.skip_validation }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run type check
-        run: npm run type-check
-
-  # =============================================================================
-  # GROUP 2: DOCKER BUILDS (runs in parallel with Group 1)
+  # GROUP 1: DOCKER BUILDS (runs in parallel)
   # =============================================================================
 
   docker-build-bunkbot:
@@ -202,107 +138,7 @@ jobs:
           retention-days: 1
 
   # =============================================================================
-  # GROUP 4: TESTING (depends on Group 1 passing)
-  # =============================================================================
-
-  test-bunkbot:
-    name: Validate Tests - bunkbot
-    runs-on: ubuntu-latest
-    needs: [lint, prettier, type-check]
-    if: ${{ !cancelled() && (success() || inputs.skip_validation) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm run test:bunkbot
-
-      - name: Run build
-        run: npm run build:bunkbot
-
-  test-covabot:
-    name: Validate Tests - covabot
-    runs-on: ubuntu-latest
-    needs: [lint, prettier, type-check]
-    if: ${{ !cancelled() && (success() || inputs.skip_validation) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm run test:covabot
-
-      - name: Run build
-        run: npm run build:covabot
-
-  test-djcova:
-    name: Validate Tests - djcova
-    runs-on: ubuntu-latest
-    needs: [lint, prettier, type-check]
-    if: ${{ !cancelled() && (success() || inputs.skip_validation) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm run test:djcova
-
-      - name: Run build
-        run: npm run build:djcova
-
-  test-bluebot:
-    name: Validate Tests - bluebot
-    runs-on: ubuntu-latest
-    needs: [lint, prettier, type-check]
-    if: ${{ !cancelled() && (success() || inputs.skip_validation) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm run test:bluebot
-
-      - name: Run build
-        run: npm run build:bluebot
-
-  # =============================================================================
-  # GROUP 5: CONTAINER VALIDATION (depends on Group 3 passing)
+  # GROUP 2: CONTAINER VALIDATION (depends on Docker builds)
   # =============================================================================
 
   validate-bunkbot:
@@ -319,54 +155,21 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/bunkbot.tar
 
-      - name: Start container
-        run: |
-            docker run -d --name bunkbot-test \
-              -e DISCORD_TOKEN=test \
-              -e DEBUG_MODE=true \
-              -e CI_SMOKE_MODE=true \
-              -e CI=true \
-              -e NODE_ENV=test \
-              -e HEALTH_PORT=3000 \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
+	      - name: Start container
+	        run: |
+	          docker run -d --name bunkbot-test \
+	            -e DISCORD_TOKEN=test \
+	            -e DEBUG_MODE=true \
+	            -e CI_SMOKE_MODE=true \
+	            -e CI=true \
+	            -e NODE_ENV=test \
+	            -e HEALTH_PORT=3000 \
+	            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
 
-      - name: Wait for container to start
-        run: sleep 10
-
-      - name: Health check
-        run: |
-          MAX_RETRIES=30
-          RETRY_COUNT=0
-          until docker exec bunkbot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
-            echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            sleep 2
-          done
-          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-            echo "Health check failed"
-            docker logs bunkbot-test
-            exit 1
-          fi
-          echo "Health check passed"
-
-      - name: Smoke test
-        run: |
-          RESPONSE=$(docker exec bunkbot-test curl -s http://127.0.0.1:3000/health)
-          echo "Response: $RESPONSE"
-          if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
-            echo "Smoke test passed"
-          else
-            echo "Smoke test failed"
-            exit 1
-          fi
-
-      - name: Show logs on failure
-        if: failure()
-        run: docker logs bunkbot-test
-
-      - name: Cleanup
-        if: always()
-        run: docker rm -f bunkbot-test || true
+	      - name: Run container health & smoke checks
+	        uses: ./.github/actions/container-health-check
+	        with:
+	          container-name: bunkbot-test
 
   validate-covabot:
     name: Validate Container - covabot
@@ -382,54 +185,21 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/covabot.tar
 
-      - name: Start container
-        run: |
-          docker run -d --name covabot-test \
-            -e DISCORD_TOKEN=test \
-            -e DEBUG_MODE=true \
-            -e CI_SMOKE_MODE=true \
-            -e CI=true \
-            -e NODE_ENV=test \
-            -e HEALTH_PORT=3000 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
+	      - name: Start container
+	        run: |
+	          docker run -d --name covabot-test \
+	            -e DISCORD_TOKEN=test \
+	            -e DEBUG_MODE=true \
+	            -e CI_SMOKE_MODE=true \
+	            -e CI=true \
+	            -e NODE_ENV=test \
+	            -e HEALTH_PORT=3000 \
+	            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
 
-      - name: Wait for container to start
-        run: sleep 10
-
-      - name: Health check
-        run: |
-          MAX_RETRIES=30
-          RETRY_COUNT=0
-          until docker exec covabot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
-            echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            sleep 2
-          done
-          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-            echo "Health check failed"
-            docker logs covabot-test
-            exit 1
-          fi
-          echo "Health check passed"
-
-      - name: Smoke test
-        run: |
-          RESPONSE=$(docker exec covabot-test curl -s http://127.0.0.1:3000/health)
-          echo "Response: $RESPONSE"
-          if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
-            echo "Smoke test passed"
-          else
-            echo "Smoke test failed"
-            exit 1
-          fi
-
-      - name: Show logs on failure
-        if: failure()
-        run: docker logs covabot-test
-
-      - name: Cleanup
-        if: always()
-        run: docker rm -f covabot-test || true
+	      - name: Run container health & smoke checks
+	        uses: ./.github/actions/container-health-check
+	        with:
+	          container-name: covabot-test
 
   validate-djcova:
     name: Validate Container - djcova
@@ -445,54 +215,21 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/djcova.tar
 
-      - name: Start container
-        run: |
-          docker run -d --name djcova-test \
-            -e DISCORD_TOKEN=test \
-            -e DEBUG_MODE=true \
-            -e CI_SMOKE_MODE=true \
-            -e CI=true \
-            -e NODE_ENV=test \
-            -e HEALTH_PORT=3000 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
+	      - name: Start container
+	        run: |
+	          docker run -d --name djcova-test \
+	            -e DISCORD_TOKEN=test \
+	            -e DEBUG_MODE=true \
+	            -e CI_SMOKE_MODE=true \
+	            -e CI=true \
+	            -e NODE_ENV=test \
+	            -e HEALTH_PORT=3000 \
+	            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
 
-      - name: Wait for container to start
-        run: sleep 10
-
-      - name: Health check
-        run: |
-          MAX_RETRIES=30
-          RETRY_COUNT=0
-          until docker exec djcova-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
-            echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            sleep 2
-          done
-          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-            echo "Health check failed"
-            docker logs djcova-test
-            exit 1
-          fi
-          echo "Health check passed"
-
-      - name: Smoke test
-        run: |
-          RESPONSE=$(docker exec djcova-test curl -s http://127.0.0.1:3000/health)
-          echo "Response: $RESPONSE"
-          if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
-            echo "Smoke test passed"
-          else
-            echo "Smoke test failed"
-            exit 1
-          fi
-
-      - name: Show logs on failure
-        if: failure()
-        run: docker logs djcova-test
-
-      - name: Cleanup
-        if: always()
-        run: docker rm -f djcova-test || true
+	      - name: Run container health & smoke checks
+	        uses: ./.github/actions/container-health-check
+	        with:
+	          container-name: djcova-test
 
   validate-bluebot:
     name: Validate Container - bluebot
@@ -508,57 +245,24 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/bluebot.tar
 
-      - name: Start container
-        run: |
-          docker run -d --name bluebot-test \
-            -e DISCORD_TOKEN=test \
-            -e DEBUG_MODE=true \
-            -e CI_SMOKE_MODE=true \
-            -e CI=true \
-            -e NODE_ENV=test \
-            -e HEALTH_PORT=3000 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
+	      - name: Start container
+	        run: |
+	          docker run -d --name bluebot-test \
+	            -e DISCORD_TOKEN=test \
+	            -e DEBUG_MODE=true \
+	            -e CI_SMOKE_MODE=true \
+	            -e CI=true \
+	            -e NODE_ENV=test \
+	            -e HEALTH_PORT=3000 \
+	            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
 
-      - name: Wait for container to start
-        run: sleep 10
-
-      - name: Health check
-        run: |
-          MAX_RETRIES=30
-          RETRY_COUNT=0
-          until docker exec bluebot-test curl -f http://127.0.0.1:3000/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
-            echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            sleep 2
-          done
-          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-            echo "Health check failed"
-            docker logs bluebot-test
-            exit 1
-          fi
-          echo "Health check passed"
-
-      - name: Smoke test
-        run: |
-          RESPONSE=$(docker exec bluebot-test curl -s http://127.0.0.1:3000/health)
-          echo "Response: $RESPONSE"
-          if echo "$RESPONSE" | grep -q "ok\|healthy\|UP"; then
-            echo "Smoke test passed"
-          else
-            echo "Smoke test failed"
-            exit 1
-          fi
-
-      - name: Show logs on failure
-        if: failure()
-        run: docker logs bluebot-test
-
-      - name: Cleanup
-        if: always()
-        run: docker rm -f bluebot-test || true
+	      - name: Run container health & smoke checks
+	        uses: ./.github/actions/container-health-check
+	        with:
+	          container-name: bluebot-test
 
   # =============================================================================
-  # GROUP 5: PRODUCTION IMAGE PUBLISHING (depends on Group 4 passing)
+  # GROUP 3: PRODUCTION IMAGE PUBLISHING (depends on container validation)
   # =============================================================================
 
   publish-bunkbot:
@@ -690,17 +394,13 @@ jobs:
           docker push ${IMAGE_NAME}:latest
 
   # =============================================================================
-  # GROUP 6: DEPLOYMENT SUMMARY (final gate)
+  # GROUP 4: DEPLOYMENT SUMMARY (final gate)
   # =============================================================================
 
   validation-complete:
     name: Deployment & Release Summary
     runs-on: ubuntu-latest
     needs:
-      - test-bunkbot
-      - test-covabot
-      - test-djcova
-      - test-bluebot
       - validate-bunkbot
       - validate-covabot
       - validate-djcova
@@ -715,9 +415,7 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✅ Main deployment workflow completed successfully!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✓ Code Quality (lint, format, type-check - may be skipped via input)"
-          echo "✓ Docker Builds (4 apps)"
-          echo "✓ Unit Tests & Builds (4 apps)"
-          echo "✓ Container Validation (4 apps)"
-          echo "✓ Image Publishing (latest tags)"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	        echo "✓ Docker Builds (4 apps)"
+	        echo "✓ Container Validation (4 apps)"
+	        echo "✓ Image Publishing (latest tags)"
+	        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
