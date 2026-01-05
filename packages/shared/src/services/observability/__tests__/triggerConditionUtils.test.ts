@@ -69,4 +69,3 @@ describe('inferTriggerCondition', () => {
 		expect(inferTriggerCondition('llm-keyword')).toBe('llm_decision');
 	});
 });
-

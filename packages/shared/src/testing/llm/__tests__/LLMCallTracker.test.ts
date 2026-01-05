@@ -252,12 +252,11 @@ describe('LLMCallTracker', () => {
 				],
 			};
 
-			tracker.recordCall(
-				'openai',
-				'gpt-4',
-				options,
-				{ content: 'I am good', model: 'gpt-4', provider: 'openai' },
-			);
+			tracker.recordCall('openai', 'gpt-4', options, {
+				content: 'I am good',
+				model: 'gpt-4',
+				provider: 'openai',
+			});
 
 			const calls = tracker.getCallsWithPromptText('How are you?');
 			expect(calls).toHaveLength(1);
@@ -283,4 +282,3 @@ describe('LLMCallTracker', () => {
 		});
 	});
 });
-

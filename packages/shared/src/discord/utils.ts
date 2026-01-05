@@ -1,12 +1,5 @@
 // Shared Discord utilities for all containers
-import {
-	Client,
-	CommandInteraction,
-	ChatInputCommandInteraction,
-	GuildMember,
-	User,
-	Guild,
-} from 'discord.js';
+import { Client, CommandInteraction, ChatInputCommandInteraction, GuildMember, User, Guild } from 'discord.js';
 import { logger } from '../services/logger';
 
 // Type alias for any command interaction type

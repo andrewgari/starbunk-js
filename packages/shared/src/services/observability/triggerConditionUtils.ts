@@ -3,7 +3,7 @@ import type { BotResponseLog } from './BotResponseLogger';
 /**
  * Infer trigger condition type from trigger name
  * Uses string matching on trigger names to determine the condition type
- * 
+ *
  * @param triggerName - The name of the trigger
  * @param defaultCondition - Default condition if no match is found (default: 'pattern_match')
  * @returns The inferred trigger condition type
@@ -36,4 +36,3 @@ export function inferTriggerCondition(
 
 	return defaultCondition;
 }
-

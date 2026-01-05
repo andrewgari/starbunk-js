@@ -111,16 +111,12 @@ export function assertLLMCalled(tracker: LLMCallTracker, expectedProvider: strin
 
 	// Check if mock was used (mock means no actual LLM call)
 	if (actualProviders.has('mock')) {
-		throw new Error(
-			`Expected actual LLM provider '${expectedProvider}' but mock was used`,
-		);
+		throw new Error(`Expected actual LLM provider '${expectedProvider}' but mock was used`);
 	}
 
 	// Verify the expected provider was used
 	if (!tracker.wasProviderUsed(expectedProvider)) {
-		throw new Error(
-			`Expected provider '${expectedProvider}' but got: ${Array.from(actualProviders).join(', ')}`,
-		);
+		throw new Error(`Expected provider '${expectedProvider}' but got: ${Array.from(actualProviders).join(', ')}`);
 	}
 
 	// Check if fallback was triggered (indicates primary LLM failed)
@@ -163,4 +159,3 @@ export function assertEmulatorUsed(tracker: LLMCallTracker): void {
 		throw new Error(`Expected mock/fallback but actual LLM was used: ${providers}`);
 	}
 }
-

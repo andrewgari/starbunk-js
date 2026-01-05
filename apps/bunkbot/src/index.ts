@@ -15,8 +15,8 @@ import {
 	runStartupDiagnostics,
 	initializeObservability,
 	createBunkBotMetrics,
-		type BunkBotMetrics,
-		type DiagnosticResult,
+	type BunkBotMetrics,
+	type DiagnosticResult,
 	EnhancedBunkBotMetricsCollector,
 	BotTriggerTracker,
 	initializeBotMetricsSystem,
@@ -116,9 +116,9 @@ class BunkBotContainer {
 				}
 			}
 
-				// Run startup diagnostics
-				const diagnostics = await runStartupDiagnostics();
-				const failures = diagnostics.filter((d: DiagnosticResult) => d.status === 'fail');
+			// Run startup diagnostics
+			const diagnostics = await runStartupDiagnostics();
+			const failures = diagnostics.filter((d: DiagnosticResult) => d.status === 'fail');
 
 			if (failures.length > 0) {
 				logger.error('❌ Critical startup issues detected:');

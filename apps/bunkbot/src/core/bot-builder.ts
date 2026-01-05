@@ -290,7 +290,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 							// Return the specific condition that triggered
 							return {
 								triggered: true,
-								conditionName: trigger.name
+								conditionName: trigger.name,
 							};
 						}
 					} catch (error) {
@@ -305,7 +305,7 @@ export function createReplyBot(config: ReplyBotConfig): ReplyBotImpl {
 				return {
 					triggered: false,
 					conditionName: 'processing_error',
-					error: error as Error
+					error: error as Error,
 				};
 			}
 		},

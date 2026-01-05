@@ -1,4 +1,13 @@
-import { logger, container, ServiceId, WebhookManager, type CovaBotMetrics, getBotResponseLogger, type BotResponseLog, inferTriggerCondition } from '@starbunk/shared';
+import {
+	logger,
+	container,
+	ServiceId,
+	WebhookManager,
+	type CovaBotMetrics,
+	getBotResponseLogger,
+	type BotResponseLog,
+	inferTriggerCondition,
+} from '@starbunk/shared';
 import { Message, TextChannel, Webhook, Client } from 'discord.js';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from '../types/triggerResponse';
@@ -291,7 +300,13 @@ export class CovaBot {
 	/**
 	 * Send message using webhook with custom identity
 	 */
-	private async sendMessage(message: Message, content: string, identity: BotIdentity, triggerName?: string, responseLatency?: number): Promise<void> {
+	private async sendMessage(
+		message: Message,
+		content: string,
+		identity: BotIdentity,
+		triggerName?: string,
+		responseLatency?: number,
+	): Promise<void> {
 		try {
 			if (!(message.channel instanceof TextChannel)) {
 				// If it's not a TextChannel, remain silent (no fallback)

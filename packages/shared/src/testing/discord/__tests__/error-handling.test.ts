@@ -27,9 +27,9 @@ describe('FakeDiscordEnvironment - Error Handling', () => {
 
 		console.log('\n=== Testing Non-Existent User Error ===\n');
 
-		await expect(
-			env.sendUserMessage('NonExistentUser', 'general', 'Hello')
-		).rejects.toThrow('User "NonExistentUser" not found');
+		await expect(env.sendUserMessage('NonExistentUser', 'general', 'Hello')).rejects.toThrow(
+			'User "NonExistentUser" not found',
+		);
 
 		console.log('✓ Got expected error for non-existent user\n');
 	});
@@ -41,9 +41,9 @@ describe('FakeDiscordEnvironment - Error Handling', () => {
 
 		console.log('\n=== Testing Non-Existent Channel Error ===\n');
 
-		await expect(
-			env.sendUserMessage('Alice', 'non-existent-channel', 'Hello')
-		).rejects.toThrow('Channel "non-existent-channel" not found');
+		await expect(env.sendUserMessage('Alice', 'non-existent-channel', 'Hello')).rejects.toThrow(
+			'Channel "non-existent-channel" not found',
+		);
 
 		console.log('✓ Got expected error for non-existent channel\n');
 	});
@@ -75,7 +75,7 @@ describe('FakeDiscordEnvironment - Error Handling', () => {
 		await env.sendUserMessage('Alice', 'general', 'Hello');
 
 		// Wait for async error handling
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		// Verify error was captured
 		expect(errorMessages.length).toBeGreaterThan(0);
@@ -99,7 +99,7 @@ describe('FakeDiscordEnvironment - Error Handling', () => {
 		});
 
 		await env.sendUserMessage('Alice', 'general', 'Hello bot!');
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		// This should fail with a clear message
 		const botMessages = env.getBotResponses('general');
@@ -131,7 +131,7 @@ describe('FakeDiscordEnvironment - Error Handling', () => {
 		});
 
 		await env.sendUserMessage('Alice', 'general', 'Hello bot!');
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		const botMessages = env.getBotResponses('general');
 		console.log(`Bot response: "${botMessages[0].content}"`);
@@ -164,7 +164,7 @@ describe('FakeDiscordEnvironment - Error Handling', () => {
 		await env.sendUserMessage('Alice', 'general', 'First');
 		await env.sendUserMessage('Bob', 'general', 'Second');
 		await env.sendUserMessage('Alice', 'general', 'Third');
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		const allMessages = env.messageCapture.getMessagesChronological();
 
@@ -184,4 +184,3 @@ describe('FakeDiscordEnvironment - Error Handling', () => {
 		console.log('\n✓ Message order is clear and debuggable\n');
 	});
 });
-

@@ -11,6 +11,7 @@ RUN apk add --no-cache python3 make g++ openssl curl dumb-init
 
 # Copy package files for better caching (skip package-lock.json due to Alpine compatibility issues)
 COPY packages/shared/package.json ./shared/
+COPY prisma ./prisma
 COPY apps/bluebot/package.json ./
 
 # Install shared dependencies first

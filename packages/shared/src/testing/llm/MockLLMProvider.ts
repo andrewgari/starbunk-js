@@ -1,9 +1,5 @@
 import { BaseLLMProvider } from '../../services/llm/baseLlmProvider';
-import {
-	LLMCompletionOptions,
-	LLMCompletionResponse,
-	LLMServiceConfig,
-} from '../../services/llm/llmService';
+import { LLMCompletionOptions, LLMCompletionResponse, LLMServiceConfig } from '../../services/llm/llmService';
 import { LLMCallTracker } from './LLMCallTracker';
 
 /**
@@ -103,12 +99,7 @@ export class MockLLMProvider extends BaseLLMProvider {
 		};
 
 		// Record the call
-		this.tracker.recordCall(
-			this.getProviderName(),
-			options.model || this.config.defaultModel,
-			options,
-			response,
-		);
+		this.tracker.recordCall(this.getProviderName(), options.model || this.config.defaultModel, options, response);
 
 		return response;
 	}
@@ -117,8 +108,7 @@ export class MockLLMProvider extends BaseLLMProvider {
 	 * Set a mock response for a specific prompt
 	 */
 	setMockResponse(promptText: string, config: MockResponseConfig | string): void {
-		const responseConfig: MockResponseConfig =
-			typeof config === 'string' ? { content: config } : config;
+		const responseConfig: MockResponseConfig = typeof config === 'string' ? { content: config } : config;
 		this.mockResponses.set(promptText, responseConfig);
 	}
 
@@ -159,4 +149,3 @@ export class MockLLMProvider extends BaseLLMProvider {
 		this.defaultResponse = 'Mock LLM response';
 	}
 }
-

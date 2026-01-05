@@ -317,6 +317,7 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+
 # Note: Using host path mounts for Unraid compatibility
 # Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
 # Default fallback to ./data/ for non-Unraid environments

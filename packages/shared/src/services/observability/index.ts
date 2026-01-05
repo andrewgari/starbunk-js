@@ -19,11 +19,7 @@ export {
 	type SystemLog,
 } from './StructuredLogger';
 
-export {
-	BotResponseLogger,
-	getBotResponseLogger,
-	type BotResponseLog,
-} from './BotResponseLogger';
+export { BotResponseLogger, getBotResponseLogger, type BotResponseLog } from './BotResponseLogger';
 
 export { inferTriggerCondition } from './triggerConditionUtils';
 

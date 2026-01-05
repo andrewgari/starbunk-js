@@ -119,14 +119,19 @@ export class ProductionLLMService implements LLMService {
 						const models = data.models || [];
 						const modelNames = models.map((m) => m.name);
 
-						logger.debug(`[LLMService] Ollama health check passed. Available models: ${modelNames.join(', ')}`);
+						logger.debug(
+							`[LLMService] Ollama health check passed. Available models: ${modelNames.join(', ')}`,
+						);
 
 						// Check if the configured model exists
 						const configuredModel = this.config.model || 'mistral:latest';
 						const modelExists = modelNames.includes(configuredModel);
 
 						// Update model availability metric
-						this.modelAvailabilityGauge.set({ model: configuredModel, provider: 'ollama' }, modelExists ? 1 : 0);
+						this.modelAvailabilityGauge.set(
+							{ model: configuredModel, provider: 'ollama' },
+							modelExists ? 1 : 0,
+						);
 
 						if (!modelExists) {
 							logger.warn(
@@ -147,9 +152,14 @@ export class ProductionLLMService implements LLMService {
 								this.pullOllamaModel(configuredModel, 'startup')
 									.then((pullSuccess) => {
 										if (pullSuccess) {
-											logger.info(`[LLMService] ✅ Model '${configuredModel}' is now ready for use`);
+											logger.info(
+												`[LLMService] ✅ Model '${configuredModel}' is now ready for use`,
+											);
 											// Update availability metric
-											this.modelAvailabilityGauge.set({ model: configuredModel, provider: 'ollama' }, 1);
+											this.modelAvailabilityGauge.set(
+												{ model: configuredModel, provider: 'ollama' },
+												1,
+											);
 										} else {
 											logger.error(
 												`[LLMService] ❌ Failed to pull model '${configuredModel}' on startup. Bot will retry on first use.`,
@@ -558,9 +568,7 @@ Message to analyze: "${message.content}"`;
 	 * @param correlationId Correlation ID for logging (optional)
 	 */
 	private handleModelNotFound(model: string, trigger: string, correlationId?: string): void {
-		logger.error(
-			`[LLMService] Ollama model '${model}' not found (404). [${correlationId}]`,
-		);
+		logger.error(`[LLMService] Ollama model '${model}' not found (404). [${correlationId}]`);
 
 		// Check if model is already being pulled
 		if (this.pullingModels.has(model)) {
@@ -729,7 +737,9 @@ Message to analyze: "${message.content}"`;
 			const duration = (Date.now() - startTime) / 1000;
 			const err = ensureError(error);
 
-			logger.error(`[LLMService] ❌ Failed to pull model '${model}' after ${duration.toFixed(1)}s: ${err.message}`);
+			logger.error(
+				`[LLMService] ❌ Failed to pull model '${model}' after ${duration.toFixed(1)}s: ${err.message}`,
+			);
 
 			// Track failure metrics
 			this.modelPullCounter.inc({ model, status: 'failed', trigger });

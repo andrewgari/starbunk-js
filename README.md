@@ -1,10 +1,10 @@
 # StarBunk Discord Bot - Container Architecture
 
-A sophisticated Discord bot built with TypeScript using a **4-container modular architecture** that provides scalable, isolated services for different bot functionalities.
+A sophisticated Discord bot built with TypeScript using a **5-container modular architecture** that provides scalable, isolated services for different bot functionalities.
 
 ## 🏗️ Container Architecture
 
-StarBunk is built as **4 independent containers**, each handling specific functionality:
+StarBunk is built as **5 independent containers**, each handling specific functionality:
 
 ### 🤖 **BunkBot** - Reply Bots & Admin Commands
 - **Purpose**: Handles reply bots and administrative commands
@@ -29,6 +29,12 @@ StarBunk is built as **4 independent containers**, each handling specific functi
 - **Dependencies**: LLM services, Minimal database
 - **Features**: Personality-driven responses, user behavior mimicking
 - **Scaling**: LLM-optimized for AI processing
+
+### 💙 **BlueBot** - Blue Detection Bot
+- **Purpose**: Detects and responds to mentions of "blue" or Blue Mage references
+- **Dependencies**: Discord.js, OpenAI (optional), Database
+- **Features**: Pattern matching, LLM-enhanced detection, contextual responses
+- **Scaling**: Lightweight, optimized for message processing
 
 ## 🌟 Key Benefits
 
@@ -87,6 +93,7 @@ npm run dev:bunkbot      # Reply bots + admin
 npm run dev:djcova       # Music service
 npm run dev:starbunk-dnd # D&D + bridge
 npm run dev:covabot      # AI personality
+npm run dev:bluebot      # Blue detection
 ```
 
 ## 📋 Environment Configuration
@@ -136,6 +143,7 @@ npm run logs:bunkbot
 npm run logs:djcova
 npm run logs:starbunk-dnd
 npm run logs:covabot
+npm run logs:bluebot
 ```
 
 ### Individual Container Development
@@ -270,6 +278,7 @@ npm run test:bunkbot
 npm run test:djcova
 npm run test:starbunk-dnd
 npm run test:covabot
+npm run test:bluebot
 
 # Test individual container
 cd containers/bunkbot && npm test
@@ -303,6 +312,7 @@ The project includes GitHub Actions workflows for:
 | **DJCova** | 1-2 cores | 1GB | Moderate (cache) | High (voice) |
 | **Starbunk-DND** | 1-2 cores | 1GB | High (vectors) | Moderate |
 | **CovaBot** | 0.5-1 cores | 512MB | Low | Moderate |
+| **BlueBot** | 0.25-0.5 cores | 256MB | Minimal | Low |
 | **PostgreSQL** | 0.5 cores | 512MB | High | Low |
 
 ## 🔧 Troubleshooting

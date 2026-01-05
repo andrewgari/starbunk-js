@@ -225,15 +225,8 @@ export type {
 export type { BotTriggerIntegrationConfig } from './services/observability';
 
 // Testing utilities
-export {
-	FakeDiscordClient,
-	FakeDiscordEnvironment,
-	MessageCapture,
-} from './testing/discord';
-export type {
-	FakeDiscordEnvironmentConfig,
-	CapturedMessage,
-} from './testing/discord';
+export { FakeDiscordClient, FakeDiscordEnvironment, MessageCapture } from './testing/discord';
+export type { FakeDiscordEnvironmentConfig, CapturedMessage } from './testing/discord';
 
 // LLM Testing utilities
 export {
@@ -246,8 +239,4 @@ export {
 	assertActualLLMUsed, // Legacy alias
 	assertEmulatorUsed, // Legacy alias
 } from './testing/llm';
-export type {
-	LLMCallRecord,
-	LLMCallStats,
-	MockResponseConfig,
-} from './testing/llm';
+export type { LLMCallRecord, LLMCallStats, MockResponseConfig } from './testing/llm';

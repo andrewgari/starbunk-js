@@ -77,4 +77,3 @@ main().catch((error) => {
 	console.error('Error running example:', error);
 	process.exit(1);
 });
-
