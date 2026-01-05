@@ -65,17 +65,15 @@ function getContainerLLMManager(): LLMManager | null {
 		};
 	}
 
-/**
- * Single-prompt LLM response generator
- * The LLM decides whether to respond AND generates the response in one call
- *
- * The prompt instructs the LLM to:
- * 1. Analyze if Cova would naturally respond to this message
- * 2. If yes, generate an appropriate response as Cova
- * 3. If no, return empty/silent
- *
- * IMPORTANT: On any error or LLM failure, return empty string so CovaBot remains silent
- */
+	/**
+	 * LLM response generator for Cova.
+	 *
+	 * The decision about whether to respond is made by the heuristic condition
+	 * (createLLMResponseDecisionCondition). This generator only handles response
+	 * generation, constructing an enhanced prompt with context and calibration notes.
+	 *
+	 * IMPORTANT: On any error or LLM failure, return empty string so CovaBot remains silent
+	 */
 export function createLLMEmulatorResponse(): ResponseGenerator {
 	return async (message: Message): Promise<string> => {
 		const startTime = Date.now();
@@ -93,7 +91,16 @@ export function createLLMEmulatorResponse(): ResponseGenerator {
 					// Use default
 				}
 				const isMentioned = message.content.toLowerCase().includes('cova');
-				const isDirectMention = message.mentions?.has?.(userId.Cova) || false;
+				let isDirectMention = false;
+				try {
+					const clientUser = (message as any).client?.user;
+					if (clientUser && (message as any).mentions?.has) {
+						// Discord.js MessageMentions.has accepts a UserResolvable (user or ID)
+						isDirectMention = (message as any).mentions.has(clientUser);
+					}
+				} catch {
+					// If mention inspection fails, fall back to name-based mention heuristic only
+				}
 
 				// Add context to help the LLM generate an in-character response
 				const contextNote = isDirectMention
@@ -114,12 +121,12 @@ export function createLLMEmulatorResponse(): ResponseGenerator {
 					: '';
 
 				const enhancedMessage = `Channel: ${channelName}
-		User: ${message.author.username}
-		Message: "${message.content}"${contextNote}${calibrationNote}
+User: ${message.author.username}
+Message: "${message.content}"${contextNote}${calibrationNote}
 
-		Instructions: You are Cova. The decision about whether to respond has already been made.
-		Respond exactly as Cova would to this message, taking into account the notes above.
-		Keep the reply conversational and reasonably concise.`;
+Instructions: You are Cova. The decision about whether to respond has already been made.
+Respond exactly as Cova would to this message, taking into account the notes above.
+Keep the reply conversational and reasonably concise.`;
 
 				// Try to use LLM manager from container first (for E2E tests with mocks)
 				const llmManager = getContainerLLMManager();
