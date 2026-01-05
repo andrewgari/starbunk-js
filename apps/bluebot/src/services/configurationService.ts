@@ -1,11 +1,17 @@
 import { PrismaClient } from '@prisma/client';
 import { logger, ensureError } from '@starbunk/shared';
 
+const prismaClientSingleton = new PrismaClient();
+
+process.on('beforeExit', async () => {
+	await prismaClientSingleton.$disconnect();
+});
+
 export class ConfigurationService {
 	private prisma: PrismaClient;
 
 	constructor() {
-		this.prisma = new PrismaClient();
+		this.prisma = prismaClientSingleton;
 	}
 
 	async getUserIdByUsername(username: string): Promise<string | null> {
