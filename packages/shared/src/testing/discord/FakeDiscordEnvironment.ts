@@ -257,9 +257,7 @@ export class FakeDiscordEnvironment {
 		if (!channel) {
 			return [];
 		}
-		return this.messageCapture
-			.getMessagesInChannel(channel.id)
-			.filter((msg) => !msg.isBot);
+		return this.messageCapture.getMessagesInChannel(channel.id).filter((msg) => !msg.isBot);
 	}
 
 	/**
@@ -280,4 +278,3 @@ export class FakeDiscordEnvironment {
 		this.guildsByName.clear();
 	}
 }
-

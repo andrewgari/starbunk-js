@@ -109,4 +109,3 @@ export class GeminiProvider extends GenericProvider {
 		};
 	}
 }
-

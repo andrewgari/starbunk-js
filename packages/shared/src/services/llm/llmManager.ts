@@ -116,7 +116,9 @@ export class LLMManager {
 				// OpenAI requires API key to be explicitly set (opt-in only)
 				const hasOpenAIKey = !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '';
 				if (!hasOpenAIKey) {
-					this.logger.debug('OpenAI provider not configured (OPENAI_API_KEY not set) - skipping initialization');
+					this.logger.debug(
+						'OpenAI provider not configured (OPENAI_API_KEY not set) - skipping initialization',
+					);
 				}
 				return hasOpenAIKey;
 			}
@@ -124,7 +126,9 @@ export class LLMManager {
 				// Gemini requires API key to be explicitly set (opt-in only)
 				const hasGeminiKey = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '';
 				if (!hasGeminiKey) {
-					this.logger.debug('Gemini provider not configured (GEMINI_API_KEY not set) - skipping initialization');
+					this.logger.debug(
+						'Gemini provider not configured (GEMINI_API_KEY not set) - skipping initialization',
+					);
 				}
 				return hasGeminiKey;
 			}

@@ -19,7 +19,8 @@ import { disconnectVoiceConnection } from './utils/voiceUtils';
 import ffmpegPath from 'ffmpeg-static';
 import { spawn } from 'child_process';
 
-const YOUTUBE_URL_REGEX = /^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube(-nocookie)?\.com|youtu.be))(\/(?:[\w-]+\?v=|embed\/|v\/)?)([\w-]+)(\S+)?$/;
+const YOUTUBE_URL_REGEX =
+	/^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube(-nocookie)?\.com|youtu.be))(\/(?:[\w-]+\?v=|embed\/|v\/)?)([\w-]+)(\S+)?$/;
 
 export class DJCova {
 	private player: AudioPlayerLike;
@@ -105,734 +106,489 @@ export class DJCova {
 				this.metrics.trackAudioProcessingStart(this.currentGuildId, audioType);
 			}
 
-						let stream: Readable;
+			let stream: Readable;
 
-			
+			if (typeof source === 'string') {
+				if (!YOUTUBE_URL_REGEX.test(source)) {
+					throw new Error('Invalid YouTube URL provided.');
+				}
 
-						if (typeof source === 'string') {
+				// YouTube URL - use yt-dlp to extract audio
 
-							if (!YOUTUBE_URL_REGEX.test(source)) {
+				logger.info(`🎬 Fetching YouTube audio from: ${source}`);
 
-								throw new Error('Invalid YouTube URL provided.');
+				try {
+					// OPTIMIZATION: Start audio stream immediately without waiting for video info
 
-							}
+					// This reduces perceived latency from ~10-13s to ~5-7s
 
-							// YouTube URL - use yt-dlp to extract audio
+					const { stream: ytdlpStream, process: ytdlpProc } = getYouTubeAudioStream(source);
 
-							logger.info(`🎬 Fetching YouTube audio from: ${source}`);
+					this.ytdlpProcess = ytdlpProc;
 
-			
+					stream = ytdlpStream;
 
-							try {
+					logger.info('✅ Audio stream created successfully');
 
-								// OPTIMIZATION: Start audio stream immediately without waiting for video info
+					// Get video info in parallel (non-blocking)
 
-								// This reduces perceived latency from ~10-13s to ~5-7s
+					// This will log the video title a few seconds later, but won't delay playback
 
-								const { stream: ytdlpStream, process: ytdlpProc } = getYouTubeAudioStream(source);
+					getVideoInfo(source)
+						.then((videoInfo) => {
+							logger.info(`📺 Video: ${videoInfo.title} (${videoInfo.duration}s)`);
+						})
 
-								this.ytdlpProcess = ytdlpProc;
-
-								stream = ytdlpStream;
-
-								logger.info('✅ Audio stream created successfully');
-
-			
-
-								// Get video info in parallel (non-blocking)
-
-								// This will log the video title a few seconds later, but won't delay playback
-
-								getVideoInfo(source)
-
-									.then(videoInfo => {
-
-										logger.info(`📺 Video: ${videoInfo.title} (${videoInfo.duration}s)`);
-
-									})
-
-									.catch(error => {
-
-										logger.debug('Could not fetch video info:', error instanceof Error ? error : new Error(String(error)));
-
-									});
-
-			
-
-								// Add error handler for the stream
-
-								stream.on('error', (error: Error) => {
-
-									logger.error('❌ Audio stream error:', error);
-
-								});
-
-							} catch (ytdlpError) {
-
-								logger.error('❌ Failed to create yt-dlp stream:', ytdlpError instanceof Error ? ytdlpError : new Error(String(ytdlpError)));
-
-								throw new Error(
-
-									'Failed to fetch YouTube audio. The video may be unavailable, age-restricted, or private.',
-
-								);
-
-							}
-
-						} else {
-
-							// Direct stream (file upload)
-
-							logger.info('📁 Using direct stream from file upload');
-
-							stream = source;
-
-						}
-
-			
-
-						// Use demuxProbe to automatically detect the stream type
-
-						// This is the recommended approach for @discordjs/voice
-
-						logger.debug('Probing stream to detect format...');
-
-			
-
-						// Add timeout to demuxProbe to prevent indefinite hangs
-
-						const PROBE_TIMEOUT_MS = 15000; // 15 second timeout
-
-						const probePromise = demuxProbe(stream);
-
-						const timeoutPromise = new Promise<never>((_, reject) => {
-
-							setTimeout(() => reject(new Error('Stream probe timeout - yt-dlp may not be responding')), PROBE_TIMEOUT_MS);
-
+						.catch((error) => {
+							logger.debug(
+								'Could not fetch video info:',
+								error instanceof Error ? error : new Error(String(error)),
+							);
 						});
 
-			
+					// Add error handler for the stream
 
-						let probedStream: Readable;
+					stream.on('error', (error: Error) => {
+						logger.error('❌ Audio stream error:', error);
+					});
+				} catch (ytdlpError) {
+					logger.error(
+						'❌ Failed to create yt-dlp stream:',
+						ytdlpError instanceof Error ? ytdlpError : new Error(String(ytdlpError)),
+					);
 
-						let type: number;
+					throw new Error(
+						'Failed to fetch YouTube audio. The video may be unavailable, age-restricted, or private.',
+					);
+				}
+			} else {
+				// Direct stream (file upload)
 
-			
+				logger.info('📁 Using direct stream from file upload');
 
-						try {
+				stream = source;
+			}
 
-							const result = await Promise.race([probePromise, timeoutPromise]);
+			// Use demuxProbe to automatically detect the stream type
 
-							probedStream = result.stream;
+			// This is the recommended approach for @discordjs/voice
 
-							type = result.type;
+			logger.debug('Probing stream to detect format...');
 
-							logger.debug(`Detected stream type: ${StreamType[type]}`);
+			// Add timeout to demuxProbe to prevent indefinite hangs
 
-						} catch (error) {
+			const PROBE_TIMEOUT_MS = 15000; // 15 second timeout
 
-							// Clean up the stream on probe failure
+			const probePromise = demuxProbe(stream);
 
-							if (stream && typeof stream.destroy === 'function') {
+			const timeoutPromise = new Promise<never>((_, reject) => {
+				setTimeout(
+					() => reject(new Error('Stream probe timeout - yt-dlp may not be responding')),
+					PROBE_TIMEOUT_MS,
+				);
+			});
 
-								stream.destroy();
+			let probedStream: Readable;
 
-							}
+			let type: number;
 
-							throw error;
+			try {
+				const result = await Promise.race([probePromise, timeoutPromise]);
 
-						}
+				probedStream = result.stream;
 
-			
+				type = result.type;
 
-						// Create audio resource with the probed stream and detected type
+				logger.debug(`Detected stream type: ${StreamType[type]}`);
+			} catch (error) {
+				// Clean up the stream on probe failure
 
-						this.resource = createAudioResource(probedStream, {
-
-							inputType: type,
-
-							inlineVolume: true,
-
-						});
-
-			
-
-						// Set up error handler for the audio resource
-
-						this.resource.playStream.on('error', (error: Error) => {
-
-							logger.error('Audio stream error:', error);
-
-						});
-
-			
-
-						if (this.resource.volume) {
-
-							this.resource.volume.setVolume(this.volume / 100);
-
-						}
-
-			
-
-						logger.debug('▶️ Playing resource...');
-
-						this.player.play(this.resource);
-
-			
-
-						// Track successful audio processing
-
-						const processingTime = Date.now() - startTime;
-
-						if (this.metrics && this.currentGuildId) {
-
-							this.metrics.trackAudioProcessingComplete(this.currentGuildId, processingTime, true);
-
-						}
-
-			
-
-						logger.success('🎵 Audio resource created and playback started');
-
-					} catch (error) {
-
-						// Track failed audio processing
-
-						const processingTime = Date.now() - startTime;
-
-						if (this.metrics && this.currentGuildId) {
-
-							this.metrics.trackAudioProcessingComplete(this.currentGuildId, processingTime, false);
-
-						}
-
-			
-
-						logger.error('Failed to start audio playback', error as Error);
-
-			
-
-						// End the session due to error
-
-						if (this.currentSessionStart && this.metrics && this.currentGuildId) {
-
-							const sessionDuration = Date.now() - this.currentSessionStart;
-
-							this.metrics.trackMusicSessionEnd(this.currentGuildId, sessionDuration, 'error');
-
-						}
-
-			
-
-						// Clean up resource reference
-
-						this.resource = undefined;
-
-						this.currentSessionStart = undefined;
-
-						this.currentSource = undefined;
-
-			
-
-						throw error;
-
-					}
-
+				if (stream && typeof stream.destroy === 'function') {
+					stream.destroy();
 				}
 
-			
+				throw error;
+			}
 
-				play(): void {
+			// Create audio resource with the probed stream and detected type
 
-					if (!this.resource) {
+			this.resource = createAudioResource(probedStream, {
+				inputType: type,
 
-						logger.warn('Attempted to play without an active audio resource');
+				inlineVolume: true,
+			});
 
-						return;
+			// Set up error handler for the audio resource
 
-					}
+			this.resource.playStream.on('error', (error: Error) => {
+				logger.error('Audio stream error:', error);
+			});
 
-			
+			if (this.resource.volume) {
+				this.resource.volume.setVolume(this.volume / 100);
+			}
 
-					logger.debug('▶️ Playing audio resource');
+			logger.debug('▶️ Playing resource...');
 
-					this.player.play(this.resource);
+			this.player.play(this.resource);
 
-				}
+			// Track successful audio processing
 
-			
+			const processingTime = Date.now() - startTime;
 
-				stop(reason: 'stopped' | 'completed' | 'error' | 'idle' = 'stopped'): void {
+			if (this.metrics && this.currentGuildId) {
+				this.metrics.trackAudioProcessingComplete(this.currentGuildId, processingTime, true);
+			}
 
-					logger.info('⏹️ Stopping audio playback');
+			logger.success('🎵 Audio resource created and playback started');
+		} catch (error) {
+			// Track failed audio processing
 
-			
+			const processingTime = Date.now() - startTime;
 
-					if (this.ytdlpProcess) {
+			if (this.metrics && this.currentGuildId) {
+				this.metrics.trackAudioProcessingComplete(this.currentGuildId, processingTime, false);
+			}
 
-						try {
+			logger.error('Failed to start audio playback', error as Error);
 
-							this.ytdlpProcess.kill('SIGKILL');
+			// End the session due to error
 
-						} catch {}
+			if (this.currentSessionStart && this.metrics && this.currentGuildId) {
+				const sessionDuration = Date.now() - this.currentSessionStart;
 
-						this.ytdlpProcess = null;
+				this.metrics.trackMusicSessionEnd(this.currentGuildId, sessionDuration, 'error');
+			}
 
-					}
+			// Clean up resource reference
 
-			
+			this.resource = undefined;
 
-					// Track session end if there was an active session
+			this.currentSessionStart = undefined;
 
-						if (this.currentSessionStart && this.metrics && this.currentGuildId) {
+			this.currentSource = undefined;
 
-							const sessionDuration = Date.now() - this.currentSessionStart;
+			throw error;
+		}
+	}
 
-							this.metrics.trackMusicSessionEnd(this.currentGuildId, sessionDuration, reason);
+	play(): void {
+		if (!this.resource) {
+			logger.warn('Attempted to play without an active audio resource');
 
-						}
+			return;
+		}
 
-			
+		logger.debug('▶️ Playing audio resource');
 
-					this.player.stop();
+		this.player.play(this.resource);
+	}
 
-					this.resource = undefined;
+	stop(reason: 'stopped' | 'completed' | 'error' | 'idle' = 'stopped'): void {
+		logger.info('⏹️ Stopping audio playback');
 
-					this.currentSessionStart = undefined;
+		if (this.ytdlpProcess) {
+			try {
+				this.ytdlpProcess.kill('SIGKILL');
+			} catch {}
 
-					this.currentSource = undefined;
+			this.ytdlpProcess = null;
+		}
 
-				}
+		// Track session end if there was an active session
 
-			
+		if (this.currentSessionStart && this.metrics && this.currentGuildId) {
+			const sessionDuration = Date.now() - this.currentSessionStart;
 
-				pause(): void {
+			this.metrics.trackMusicSessionEnd(this.currentGuildId, sessionDuration, reason);
+		}
 
-					logger.info('⏸️ Pausing audio playback');
+		this.player.stop();
 
-					this.player.pause();
+		this.resource = undefined;
 
-				}
+		this.currentSessionStart = undefined;
 
-			
+		this.currentSource = undefined;
+	}
 
-				changeVolume(vol: number): void {
+	pause(): void {
+		logger.info('⏸️ Pausing audio playback');
 
-					const oldVolume = this.volume;
+		this.player.pause();
+	}
 
-					logger.info(`🔊 Adjusting volume to ${vol}%`);
+	changeVolume(vol: number): void {
+		const oldVolume = this.volume;
 
-					this.volume = Math.max(0, Math.min(vol, 100));
+		logger.info(`🔊 Adjusting volume to ${vol}%`);
 
-			
+		this.volume = Math.max(0, Math.min(vol, 100));
 
-					// Track volume change
+		// Track volume change
 
-					if (this.metrics && this.currentGuildId) {
+		if (this.metrics && this.currentGuildId) {
+			this.metrics.trackVolumeChange(this.currentGuildId, oldVolume, this.volume);
+		}
 
-						this.metrics.trackVolumeChange(this.currentGuildId, oldVolume, this.volume);
+		if (this.resource?.volume) {
+			this.resource.volume.setVolume(this.volume / 100);
+		} else {
+			logger.warn('Attempted to change volume without active resource');
+		}
+	}
 
-					}
+	getVolume(): number {
+		return this.volume;
+	}
 
-			
+	getPlayer(): AudioPlayerLike {
+		return this.player;
+	}
 
-					if (this.resource?.volume) {
+	subscribe(channel: VoiceConnectionLike): PlayerSubscriptionLike | undefined {
+		logger.debug(`🎧 Subscribing to voice channel`);
 
-						this.resource.volume.setVolume(this.volume / 100);
+		try {
+			const subscription = channel.subscribe(this.player);
 
-					} else {
+			if (subscription) {
+				logger.success('Player successfully subscribed to connection.');
+			}
 
-						logger.warn('Attempted to change volume without active resource');
+			return subscription;
+		} catch (_error) {
+			logger.error('Failed to subscribe player to the connection.');
 
-					}
+			return undefined;
+		}
+	}
 
-				}
+	on(status: Parameters<AudioPlayerLike['on']>[0], callback: () => void): void {
+		logger.debug(`📡 Registering listener for ${status} status`);
 
-			
+		this.player.on(status, callback);
+	}
 
-				getVolume(): number {
-
-					return this.volume;
-
-				}
-
-			
-
-				getPlayer(): AudioPlayerLike {
-
-					return this.player;
-
-				}
-
-			
-
-				subscribe(channel: VoiceConnectionLike): PlayerSubscriptionLike | undefined {
-
-					logger.debug(`🎧 Subscribing to voice channel`);
-
-					try {
-
-						const subscription = channel.subscribe(this.player);
-
-						if (subscription) {
-
-							logger.success('Player successfully subscribed to connection.');
-
-						}
-
-						return subscription;
-
-					} catch (_error) {
-
-						logger.error('Failed to subscribe player to the connection.');
-
-						return undefined;
-
-					}
-
-				}
-
-			
-
-				on(status: Parameters<AudioPlayerLike['on']>[0], callback: () => void): void {
-
-					logger.debug(`📡 Registering listener for ${status} status`);
-
-					this.player.on(status, callback);
-
-				}
-
-			
-
-				/**
+	/**
 
 				 * Set up idle management for auto-disconnect functionality
 
 				 */
 
-				private setupIdleManagement(): void {
+	private setupIdleManagement(): void {
+		// Create listener functions as class properties for proper cleanup
 
-					// Create listener functions as class properties for proper cleanup
+		this.onPlayingListener = () => {
+			logger.info('🎶 Audio playback started');
 
-					this.onPlayingListener = () => {
+			logger.debug('Resetting idle timer');
 
-						logger.info('🎶 Audio playback started');
+			if (this.idleManager) {
+				this.idleManager.resetIdleTimer();
 
-						logger.debug('Resetting idle timer');
+				// Track idle timer reset
 
-						if (this.idleManager) {
-
-							this.idleManager.resetIdleTimer();
-
-			
-
-							// Track idle timer reset
-
-							if (this.metrics && this.currentGuildId) {
-
-								this.metrics.trackIdleTimerReset(this.currentGuildId);
-
-							}
-
-						}
-
-					};
-
-			
-
-					this.onIdleListener = () => {
-
-						logger.info('⏹️ Audio playback ended');
-
-						logger.debug('Starting idle timer');
-
-						if (this.idleManager) {
-
-							this.idleManager.startIdleTimer();
-
-						}
-
-					};
-
-			
-
-					this.onErrorListener = (error: Error) => {
-
-						logger.error('Audio player error:', error);
-
-						if (this.idleManager) {
-
-							this.idleManager.startIdleTimer();
-
-						}
-
-					};
-
-			
-
-					// Register the event listeners
-
-					this.player.on(AudioPlayerStatus.Playing, this.onPlayingListener);
-
-					this.player.on(AudioPlayerStatus.Idle, this.onIdleListener);
-
-					this.player.on('error', this.onErrorListener);
-
+				if (this.metrics && this.currentGuildId) {
+					this.metrics.trackIdleTimerReset(this.currentGuildId);
 				}
+			}
+		};
 
-			
+		this.onIdleListener = () => {
+			logger.info('⏹️ Audio playback ended');
 
-				/**
+			logger.debug('Starting idle timer');
+
+			if (this.idleManager) {
+				this.idleManager.startIdleTimer();
+			}
+		};
+
+		this.onErrorListener = (error: Error) => {
+			logger.error('Audio player error:', error);
+
+			if (this.idleManager) {
+				this.idleManager.startIdleTimer();
+			}
+		};
+
+		// Register the event listeners
+
+		this.player.on(AudioPlayerStatus.Playing, this.onPlayingListener);
+
+		this.player.on(AudioPlayerStatus.Idle, this.onIdleListener);
+
+		this.player.on('error', this.onErrorListener);
+	}
+
+	/**
 
 				 * Initialize idle management for a specific guild and channel
 
 				 */
 
-				initializeIdleManagement(
+	initializeIdleManagement(
+		guildId: string,
 
-					guildId: string,
+		channelId?: string,
 
-					channelId?: string,
+		notificationCallback?: (message: string) => Promise<void>,
+	): void {
+		// Clean up existing idle manager
 
-					notificationCallback?: (message: string) => Promise<void>,
+		if (this.idleManager) {
+			this.idleManager.destroy();
+		}
 
-				): void {
+		this.currentGuildId = guildId;
 
-					// Clean up existing idle manager
+		this.currentChannelId = channelId || null;
 
-					if (this.idleManager) {
+		this.notificationCallback = notificationCallback || null;
 
-						this.idleManager.destroy();
+		const config = getMusicConfig();
 
-					}
+		const idleConfig: IdleManagerConfig = {
+			timeoutSeconds: config.idleTimeoutSeconds,
 
-			
+			guildId,
 
-					this.currentGuildId = guildId;
+			channelId,
 
-					this.currentChannelId = channelId || null;
+			onDisconnect: async (reason: string) => {
+				await this.handleAutoDisconnect(reason);
+			},
+		};
 
-					this.notificationCallback = notificationCallback || null;
+		// Track idle timer start
 
-			
+		if (this.metrics) {
+			this.metrics.trackIdleTimerStart(guildId, config.idleTimeoutSeconds);
+		}
 
-					const config = getMusicConfig();
+		this.idleManager = createIdleManager(idleConfig);
 
-					const idleConfig: IdleManagerConfig = {
+		logger.info(`Idle management initialized for guild ${guildId} with ${config.idleTimeoutSeconds}s timeout`);
+	}
 
-						timeoutSeconds: config.idleTimeoutSeconds,
-
-						guildId,
-
-						channelId,
-
-						onDisconnect: async (reason: string) => {
-
-							await this.handleAutoDisconnect(reason);
-
-						},
-
-					};
-
-			
-
-					// Track idle timer start
-
-					if (this.metrics) {
-
-						this.metrics.trackIdleTimerStart(guildId, config.idleTimeoutSeconds);
-
-					}
-
-			
-
-					this.idleManager = createIdleManager(idleConfig);
-
-					logger.info(`Idle management initialized for guild ${guildId} with ${config.idleTimeoutSeconds}s timeout`);
-
-				}
-
-			
-
-				/**
+	/**
 
 				 * Handle auto-disconnect due to inactivity
 
 				 */
 
-				private async handleAutoDisconnect(reason: string): Promise<void> {
+	private async handleAutoDisconnect(reason: string): Promise<void> {
+		try {
+			// Track idle disconnect
 
-					try {
+			if (this.metrics && this.currentGuildId && this.currentSessionStart) {
+				const idleDuration = Date.now() - this.currentSessionStart;
 
-						// Track idle disconnect
+				this.metrics.trackIdleDisconnect(this.currentGuildId, idleDuration);
+			}
 
-						if (this.metrics && this.currentGuildId && this.currentSessionStart) {
+			// Stop the music player (this will also track session end)
 
-							const idleDuration = Date.now() - this.currentSessionStart;
+			this.stop('idle');
 
-							this.metrics.trackIdleDisconnect(this.currentGuildId, idleDuration);
+			// CRITICAL: Actually leave the voice channel
 
-						}
+			// Without this, the bot stays in voice channel and can't rejoin properly
 
-			
+			if (this.currentGuildId) {
+				disconnectVoiceConnection(this.currentGuildId);
 
-						// Stop the music player (this will also track session end)
+				logger.debug(`Disconnected from voice channel in guild ${this.currentGuildId}`);
+			}
 
-						this.stop('idle');
+			// Send notification to users
 
-			
+			const message = `🔇 ${reason}`;
 
-						// CRITICAL: Actually leave the voice channel
+			if (this.notificationCallback) {
+				await this.notificationCallback(message);
+			}
 
-						// Without this, the bot stays in voice channel and can't rejoin properly
+			logger.info(`Auto-disconnect completed for guild ${this.currentGuildId}: ${reason}`);
+		} catch (error) {
+			logger.error('Error during auto-disconnect:', error instanceof Error ? error : new Error(String(error)));
+		}
+	}
 
-						if (this.currentGuildId) {
-
-							disconnectVoiceConnection(this.currentGuildId);
-
-							logger.debug(`Disconnected from voice channel in guild ${this.currentGuildId}`);
-
-						}
-
-			
-
-						// Send notification to users
-
-						const message = `🔇 ${reason}`;
-
-						if (this.notificationCallback) {
-
-							await this.notificationCallback(message);
-
-						}
-
-			
-
-						logger.info(`Auto-disconnect completed for guild ${this.currentGuildId}: ${reason}`);
-
-					} catch (error) {
-
-						logger.error('Error during auto-disconnect:', error instanceof Error ? error : new Error(String(error)));
-
-					}
-
-				}
-
-			
-
-				/**
+	/**
 
 				 * Manually disconnect and cleanup idle management
 
 				 */
 
-				disconnect(): void {
+	disconnect(): void {
+		if (this.idleManager) {
+			this.idleManager.cancelIdleTimer();
+		}
 
-					if (this.idleManager) {
+		this.stop();
 
-						this.idleManager.cancelIdleTimer();
+		logger.debug('Manual disconnect completed');
+	}
 
-					}
-
-					this.stop();
-
-					logger.debug('Manual disconnect completed');
-
-				}
-
-			
-
-				/**
+	/**
 
 				 * Get idle management status
 
 				 */
 
-				getIdleStatus(): { isActive: boolean; timeoutSeconds: number } | null {
+	getIdleStatus(): { isActive: boolean; timeoutSeconds: number } | null {
+		if (!this.idleManager) {
+			return null;
+		}
 
-					if (!this.idleManager) {
+		return {
+			isActive: this.idleManager.isIdleTimerActive(),
 
-						return null;
+			timeoutSeconds: this.idleManager.getTimeoutSeconds(),
+		};
+	}
 
-					}
-
-			
-
-					return {
-
-						isActive: this.idleManager.isIdleTimerActive(),
-
-						timeoutSeconds: this.idleManager.getTimeoutSeconds(),
-
-					};
-
-				}
-
-			
-
-				/**
+	/**
 
 				 * Cleanup resources when destroying the music player
 
 				 */
 
-				destroy(): void {
+	destroy(): void {
+		// Remove event listeners to prevent memory leaks
 
-					// Remove event listeners to prevent memory leaks
+		if (this.onPlayingListener) {
+			this.player.off(AudioPlayerStatus.Playing, this.onPlayingListener);
 
-					if (this.onPlayingListener) {
+			this.onPlayingListener = null;
+		}
 
-						this.player.off(AudioPlayerStatus.Playing, this.onPlayingListener);
+		if (this.onIdleListener) {
+			this.player.off(AudioPlayerStatus.Idle, this.onIdleListener);
 
-						this.onPlayingListener = null;
+			this.onIdleListener = null;
+		}
 
-					}
+		if (this.onErrorListener) {
+			this.player.off('error', this.onErrorListener);
 
-			
+			this.onErrorListener = null;
+		}
 
-					if (this.onIdleListener) {
+		// Cleanup idle manager
 
-						this.player.off(AudioPlayerStatus.Idle, this.onIdleListener);
+		if (this.idleManager) {
+			this.idleManager.destroy();
 
-						this.onIdleListener = null;
+			this.idleManager = null;
+		}
 
-					}
+		// Stop the music player
 
-			
+		this.stop();
 
-					if (this.onErrorListener) {
-
-						this.player.off('error', this.onErrorListener);
-
-						this.onErrorListener = null;
-
-					}
-
-			
-
-					// Cleanup idle manager
-
-					if (this.idleManager) {
-
-						this.idleManager.destroy();
-
-						this.idleManager = null;
-
-					}
-
-			
-
-					// Stop the music player
-
-					this.stop();
-
-			
-
-					logger.debug('DJCova music player destroyed with proper cleanup');
-
-				}
-
-			}
-
-			
+		logger.debug('DJCova music player destroyed with proper cleanup');
+	}
+}

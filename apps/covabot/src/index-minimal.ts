@@ -28,18 +28,18 @@ class CovaBotContainer {
 		logger.info('🤖 Initializing CovaBot container...');
 
 		try {
-				// Initialize observability (metrics + health/ready endpoints)
-				try {
-					initializeObservability('covabot');
-					logger.info('✅ Observability initialized for CovaBot (minimal)');
-				} catch (error) {
-					logger.warn(
-						'⚠️ Failed to initialize observability for CovaBot (minimal), continuing without HTTP metrics/health:',
-						ensureError(error),
-					);
-				}
-				// Validate environment
-				this.validateEnvironment();
+			// Initialize observability (metrics + health/ready endpoints)
+			try {
+				initializeObservability('covabot');
+				logger.info('✅ Observability initialized for CovaBot (minimal)');
+			} catch (error) {
+				logger.warn(
+					'⚠️ Failed to initialize observability for CovaBot (minimal), continuing without HTTP metrics/health:',
+					ensureError(error),
+				);
+			}
+			// Validate environment
+			this.validateEnvironment();
 
 			// Create Discord client
 			this.client = createDiscordClient(ClientConfigs.CovaBot);

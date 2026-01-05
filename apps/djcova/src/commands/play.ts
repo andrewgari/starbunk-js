@@ -31,8 +31,10 @@ export default {
 		} catch (deferError) {
 			// If defer fails, the interaction is likely expired (>3s)
 			// We cannot respond to this interaction anymore, so just log and return
-			logger.error('Failed to defer interaction - interaction likely expired:',
-				deferError instanceof Error ? deferError : new Error(String(deferError)));
+			logger.error(
+				'Failed to defer interaction - interaction likely expired:',
+				deferError instanceof Error ? deferError : new Error(String(deferError)),
+			);
 			return;
 		}
 
@@ -65,7 +67,10 @@ export default {
 					url.includes('youtu.be/') ||
 					url.includes('youtube.com/shorts/');
 				if (!isValidYoutubeUrl) {
-					await sendErrorResponse(interaction, 'Please provide a valid YouTube URL (youtube.com or youtu.be)');
+					await sendErrorResponse(
+						interaction,
+						'Please provide a valid YouTube URL (youtube.com or youtu.be)',
+					);
 					return;
 				}
 			}

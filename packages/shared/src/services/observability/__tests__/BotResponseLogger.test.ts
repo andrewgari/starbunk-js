@@ -143,4 +143,3 @@ describe('BotResponseLogger', () => {
 		});
 	});
 });
-

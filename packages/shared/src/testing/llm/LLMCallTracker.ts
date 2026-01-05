@@ -245,9 +245,7 @@ export class LLMCallTracker {
 	 * Get calls containing specific text in the prompt
 	 */
 	getCallsWithPromptText(text: string): LLMCallRecord[] {
-		return this.calls.filter((call) =>
-			call.options.messages.some((msg) => msg.content.includes(text)),
-		);
+		return this.calls.filter((call) => call.options.messages.some((msg) => msg.content.includes(text)));
 	}
 
 	/**
@@ -257,4 +255,3 @@ export class LLMCallTracker {
 		return this.calls.filter((call) => call.response.content.includes(text));
 	}
 }
-

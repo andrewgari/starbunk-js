@@ -357,14 +357,12 @@ export function createMockMemoryService(): MockMemoryService {
 			),
 		healthCheck: jest.fn().mockImplementation(() => mockService.healthCheck()),
 		// Main service methods (for WebServer compatibility)
-		createNote: jest
-			.fn()
-			.mockImplementation((request: any) =>
-				mockService.createPersonalityNote(request.content, {
-					category: request.category,
-					priority: request.priority,
-				}),
-			),
+		createNote: jest.fn().mockImplementation((request: any) =>
+			mockService.createPersonalityNote(request.content, {
+				category: request.category,
+				priority: request.priority,
+			}),
+		),
 		getNotes: jest.fn().mockImplementation((filters?: any) => {
 			// Simple implementation for testing
 			return Promise.resolve(

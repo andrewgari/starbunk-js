@@ -44,7 +44,9 @@ export class QdrantService {
 		});
 
 		logger.info(`[QdrantService] Configured for URL: ${qdrantUrl}`);
-		logger.info(`[QdrantService] Search limit: ${this.config.searchLimit}, Similarity threshold: ${this.config.similarityThreshold}, Batch size: ${this.config.batchSize}`);
+		logger.info(
+			`[QdrantService] Search limit: ${this.config.searchLimit}, Similarity threshold: ${this.config.similarityThreshold}, Batch size: ${this.config.batchSize}`,
+		);
 	}
 
 	static getInstance(): QdrantService {

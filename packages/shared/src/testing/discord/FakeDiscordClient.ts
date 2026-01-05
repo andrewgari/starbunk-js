@@ -148,7 +148,9 @@ export class FakeDiscordClient extends EventEmitter {
 				return new Collection();
 			},
 			// Create a basic fake webhook object with an async no-op send
-			createWebhook: async (_options?: unknown): Promise<{
+			createWebhook: async (
+				_options?: unknown,
+			): Promise<{
 				id: string;
 				name: string;
 				send: (...args: unknown[]) => Promise<void>;
@@ -178,4 +180,3 @@ export class FakeDiscordClient extends EventEmitter {
 		this.channels.clear();
 	}
 }
-

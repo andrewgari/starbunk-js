@@ -155,4 +155,3 @@ export class MessageCapture {
 		return [...this.messages].sort((a, b) => b.timestamp - a.timestamp);
 	}
 }
-

@@ -59,9 +59,7 @@ export interface DiscordTokenOptions {
  *   enableLogging: true
  * });
  */
-export function getDiscordToken(
-	options: string | DiscordTokenOptions,
-): string {
+export function getDiscordToken(options: string | DiscordTokenOptions): string {
 	// Normalize options
 	const config: Required<DiscordTokenOptions> =
 		typeof options === 'string'
@@ -155,4 +153,3 @@ export function getDiscordClientId(containerName: string): string {
 		);
 	}
 }
-

@@ -8,4 +8,3 @@ export { FakeDiscordEnvironment } from './FakeDiscordEnvironment';
 export type { FakeDiscordEnvironmentConfig } from './FakeDiscordEnvironment';
 export { MessageCapture } from './MessageCapture';
 export type { CapturedMessage } from './MessageCapture';
-

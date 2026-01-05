@@ -18,7 +18,13 @@ export interface BotResponseLog {
 	avatar_url_used: string;
 
 	// Trigger information
-	trigger_condition: 'direct_mention' | 'keyword_match' | 'llm_decision' | 'random_chance' | 'pattern_match' | 'command';
+	trigger_condition:
+		| 'direct_mention'
+		| 'keyword_match'
+		| 'llm_decision'
+		| 'random_chance'
+		| 'pattern_match'
+		| 'command';
 	trigger_name: string;
 
 	// Discord context
@@ -145,4 +151,3 @@ export function getBotResponseLogger(service: string = 'starbunk'): BotResponseL
 	}
 	return botResponseLoggers.get(service)!;
 }
-

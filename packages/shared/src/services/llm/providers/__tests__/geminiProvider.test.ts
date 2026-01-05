@@ -23,10 +23,7 @@ describe('GeminiProvider', () => {
 
 			const result = await provider.initialize();
 			expect(result).toBe(false);
-			expect(mockLogger.error).toHaveBeenCalledWith(
-				'Error initializing Gemini provider',
-				expect.any(Error),
-			);
+			expect(mockLogger.error).toHaveBeenCalledWith('Error initializing Gemini provider', expect.any(Error));
 		});
 
 		it('should initialize successfully with API key', async () => {
@@ -66,4 +63,3 @@ describe('GeminiProvider', () => {
 		});
 	});
 });
-

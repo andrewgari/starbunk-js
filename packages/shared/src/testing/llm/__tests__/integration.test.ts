@@ -1,10 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import {
-	createMockLLMProvider,
-	createMockLLMSetup,
-	assertActualLLMUsed,
-	assertEmulatorUsed,
-} from '../index';
+import { createMockLLMProvider, createMockLLMSetup, assertActualLLMUsed, assertEmulatorUsed } from '../index';
 
 describe('LLM Testing Integration', () => {
 	describe('createMockLLMProvider', () => {
@@ -89,9 +84,7 @@ describe('LLM Testing Integration', () => {
 				{ content: 'Hi', model: 'gpt-4', provider: 'openai' },
 			);
 
-			expect(() => assertActualLLMUsed(tracker, 'ollama')).toThrow(
-				"Expected provider 'ollama' but got: openai",
-			);
+			expect(() => assertActualLLMUsed(tracker, 'ollama')).toThrow("Expected provider 'ollama' but got: openai");
 		});
 
 		it('should throw when mock was used', async () => {
@@ -117,9 +110,7 @@ describe('LLM Testing Integration', () => {
 				true, // isFallback
 			);
 
-			expect(() => assertActualLLMUsed(tracker, 'ollama')).toThrow(
-				'Fallback mechanism was triggered',
-			);
+			expect(() => assertActualLLMUsed(tracker, 'ollama')).toThrow('Fallback mechanism was triggered');
 		});
 	});
 
@@ -158,9 +149,7 @@ describe('LLM Testing Integration', () => {
 				{ content: 'Hi', model: 'llama3', provider: 'ollama' },
 			);
 
-			expect(() => assertEmulatorUsed(tracker)).toThrow(
-				'Expected mock/fallback but actual LLM was used',
-			);
+			expect(() => assertEmulatorUsed(tracker)).toThrow('Expected mock/fallback but actual LLM was used');
 		});
 
 		it('should throw when no calls were made', async () => {
@@ -170,4 +159,3 @@ describe('LLM Testing Integration', () => {
 		});
 	});
 });
-

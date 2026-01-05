@@ -38,7 +38,11 @@ export function createVoiceConnection(channel: VoiceChannelLike, adapterCreator:
 		logger.debug(
 			`Existing connection is in ${currentChannelId}; switching to ${channel.id} for guild ${channel.guild.id}`,
 		);
-		try { existingConnection.destroy(); } catch { /* no-op */ }
+		try {
+			existingConnection.destroy();
+		} catch {
+			/* no-op */
+		}
 	}
 	const connection = joinVoiceChannel({
 		channelId: channel.id,
@@ -100,7 +104,10 @@ export function disconnectVoiceConnection(guildId: string): void {
 			connection.destroy();
 			logger.debug(`Voice connection destroyed for guild: ${guildId}`);
 		} catch (error) {
-			logger.error('Error destroying voice connection:', error instanceof Error ? error : new Error(String(error)));
+			logger.error(
+				'Error destroying voice connection:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
 		}
 	}
 }

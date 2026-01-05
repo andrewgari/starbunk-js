@@ -50,11 +50,7 @@ describe('FakeDiscordEnvironment - Integration Test', () => {
 			console.log(`[Bot Event Handler] Sending response: "${response}"`);
 
 			// Simulate bot sending a message via webhook
-			env.captureBotMessage(
-				(message.channel as any).name,
-				response,
-				'TestBot'
-			);
+			env.captureBotMessage((message.channel as any).name, response, 'TestBot');
 		});
 
 		// Act: User sends a message
@@ -62,7 +58,7 @@ describe('FakeDiscordEnvironment - Integration Test', () => {
 		await env.sendUserMessage('Alice', 'general', 'Hello bot!');
 
 		// Wait a bit for async event handlers
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		console.log('\n--- Checking results ---');
 
@@ -118,7 +114,7 @@ describe('FakeDiscordEnvironment - Integration Test', () => {
 		await env.sendUserMessage('Bob', 'general', 'Second message');
 		await env.sendUserMessage('Alice', 'general', 'Third message');
 
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		// Verify
 		const userMessages = env.getUserMessages('general');
@@ -157,7 +153,7 @@ describe('FakeDiscordEnvironment - Integration Test', () => {
 		await env.sendUserMessage('Alice', 'general', 'goodbye');
 		await env.sendUserMessage('Alice', 'general', 'Hello again!');
 
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		const userMessages = env.getUserMessages('general');
 		expect(userMessages).toHaveLength(3);
@@ -171,4 +167,3 @@ describe('FakeDiscordEnvironment - Integration Test', () => {
 		console.log('\n=== Selective Response Test Complete ===\n');
 	});
 });
-

@@ -47,14 +47,16 @@ function getYtDlpPath(): string {
  * Get audio stream from YouTube using yt-dlp
  * More reliable than ytdl-core and handles modern YouTube formats
  */
-export function getYouTubeAudioStream(url: string): { stream: Readable, process: ReturnType<typeof spawn> } {
+export function getYouTubeAudioStream(url: string): { stream: Readable; process: ReturnType<typeof spawn> } {
 	logger.debug(`Creating yt-dlp stream for: ${url}`);
 
 	const ytdlpPath = getYtDlpPath();
 	const ytdlpArgs = [
 		url,
-		'-f', 'bestaudio/best', // Get best audio quality
-		'-o', '-', // Output to stdout
+		'-f',
+		'bestaudio/best', // Get best audio quality
+		'-o',
+		'-', // Output to stdout
 		'--no-playlist', // Don't download playlists
 		'--no-warnings', // Suppress warnings
 		// NOTE: --extract-audio and --audio-format are incompatible with stdout streaming
@@ -129,16 +131,12 @@ export async function getVideoInfo(url: string): Promise<{
 	return new Promise((resolve, reject) => {
 		const timeoutMs = 20000;
 		const ytdlpPath = getYtDlpPath();
-		const ytdlpProcess = spawn(ytdlpPath, [
-			url,
-			'--dump-json',
-			'--no-playlist',
-			'--no-warnings',
-			'--quiet',
-		]);
+		const ytdlpProcess = spawn(ytdlpPath, [url, '--dump-json', '--no-playlist', '--no-warnings', '--quiet']);
 
 		const timer = setTimeout(() => {
-			try { ytdlpProcess.kill('SIGKILL'); } catch {}
+			try {
+				ytdlpProcess.kill('SIGKILL');
+			} catch {}
 			reject(new Error(`yt-dlp info timeout after ${timeoutMs}ms`));
 		}, timeoutMs);
 
