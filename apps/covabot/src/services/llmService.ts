@@ -259,44 +259,73 @@ export class ProductionLLMService implements LLMService {
 
 	async shouldRespond(message: Message): Promise<boolean> {
 		try {
-			// Fast-path: when using emulator (no real LLM), respond to non-empty messages
-			if (this.config.provider === 'emulator') {
-				const content = message.content?.trim();
-				if (!content) {
-					logger.debug('[LLMService] Emulator decision: empty message, not responding');
-					return false;
-				}
-				logger.debug('[LLMService] Emulator decision: responding to non-empty message');
-				return true;
-			}
-
-			// If real provider is unhealthy, do not respond
-			if (!this.isHealthy) {
-				logger.debug('[LLMService] LLM unhealthy for decision making, not responding');
+			// --- Heuristic-based decision: no external LLM calls ---
+			const rawContent = message.content ?? '';
+			const content = rawContent.trim();
+			if (!content) {
+				logger.debug('[LLMService] Heuristic decision: empty message, not responding');
 				return false;
 			}
 
-			const correlationId = `decision_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-			logger.debug(`[LLMService] Making LLM decision [${correlationId}]`);
+			// Basic context
+			const isDM = !message.guild; // Direct messages have no guild
+			const lowerContent = content.toLowerCase();
+			const isQuestion = content.includes('?');
+			const isVeryShort = content.length < 4; // e.g., "ok", "+1"
 
-			let decision: string;
-			switch (this.config.provider) {
-				case 'openai':
-					decision = await this.getOpenAIDecision(message, correlationId);
-					break;
-				case 'ollama':
-					decision = await this.getOllamaDecision(message, correlationId);
-					break;
-				default:
-					logger.debug('[LLMService] No LLM provider configured for decision making');
-					return false;
+			// Best-effort detection of direct mentions of this bot
+			let isDirectMention = false;
+			try {
+				const clientUser = (message as any).client?.user;
+				if (clientUser && (message as any).mentions?.has) {
+					// Discord.js MessageMentions.has accepts a UserResolvable (user or ID)
+					isDirectMention = (message as any).mentions.has(clientUser);
+				}
+			} catch {
+				// If mention inspection fails, fall back to other heuristics
 			}
 
-			const shouldRespond = decision.toUpperCase().includes('YES') || decision.toUpperCase().includes('LIKELY');
-			logger.debug(`[LLMService] LLM decision: ${decision} -> ${shouldRespond} [${correlationId}]`);
-			return shouldRespond;
+			// Name-based mention for Cova in guild channels
+			const isNameMention = lowerContent.includes('cova');
+
+			// 1) Direct messages: respond to most non-trivial messages
+			if (isDM) {
+				if (isVeryShort && !isQuestion) {
+					logger.debug('[LLMService] Heuristic decision: short DM without question, not responding');
+					return false;
+				}
+				logger.debug('[LLMService] Heuristic decision: DM message, responding');
+				return true;
+			}
+
+			// 2) Guild channels
+
+			// Always respond to direct mentions
+			if (isDirectMention) {
+				logger.debug('[LLMService] Heuristic decision: direct mention detected, responding');
+				return true;
+			}
+
+			// Respond when "cova" is mentioned with some substance or as a question
+			if (isNameMention && (!isVeryShort || isQuestion)) {
+				logger.debug('[LLMService] Heuristic decision: name mention detected, responding');
+				return true;
+			}
+
+			// Respond to relevant questions even without explicit name/mention
+			if (isQuestion) {
+				const relevantKeywords = ['cova', 'bot', 'dev', 'code', 'starbunk', 'ai'];
+				if (relevantKeywords.some((kw) => lowerContent.includes(kw))) {
+					logger.debug('[LLMService] Heuristic decision: relevant question detected, responding');
+					return true;
+				}
+			}
+
+			// Default: stay quiet to avoid being too chatty
+			logger.debug('[LLMService] Heuristic decision: conditions not met, not responding');
+			return false;
 		} catch (error) {
-			logger.error('[LLMService] Error in shouldRespond decision:', ensureError(error));
+			logger.error('[LLMService] Error in heuristic shouldRespond decision:', ensureError(error));
 			return false;
 		}
 	}
