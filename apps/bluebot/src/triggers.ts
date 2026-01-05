@@ -4,10 +4,6 @@ import { BLUE_BOT_PATTERNS, BLUE_BOT_RESPONSES, BLUE_BOT_AVATARS, BLUE_BOT_NAME,
 import { ConfigurationService } from './services/configurationService';
 import { LLMService } from './services/llmService';
 
-// State to track when blue was mentioned or murder was triggered
-const blueTimestamp = new Date(Number.MIN_SAFE_INTEGER);
-const blueMurderTimestamp = new Date(Number.MIN_SAFE_INTEGER);
-
 // Lazily create and cache configuration service to avoid Prisma init at import time
 let cachedConfigService: ConfigurationService | null = null;
 
@@ -60,9 +56,15 @@ export interface TriggerResponse {
 
 export class BlueBotTriggers {
 	private llmService: LLMService;
+	// State to track when blue was mentioned or murder was triggered.
+	// These are instance properties so each container instance owns its own timeline.
+	private blueTimestamp: Date;
+	private blueMurderTimestamp: Date;
 
 	constructor() {
 		this.llmService = new LLMService();
+		this.blueTimestamp = new Date(Number.MIN_SAFE_INTEGER);
+		this.blueMurderTimestamp = new Date(Number.MIN_SAFE_INTEGER);
 	}
 
 	async checkAllTriggers(message: Message): Promise<TriggerResponse> {
@@ -139,13 +141,13 @@ export class BlueBotTriggers {
 			return { shouldRespond: false };
 		}
 
-		if (!withinTimeframeOf(() => blueTimestamp.getTime(), 2, 'm')(message)) {
+			if (!withinTimeframeOf(() => this.blueTimestamp.getTime(), 2, 'm')(message)) {
 			return { shouldRespond: false };
 		}
 
-		const isMurderMode = withinTimeframeOf(() => blueMurderTimestamp.getTime(), 1, 'm')(message);
+			const isMurderMode = withinTimeframeOf(() => this.blueMurderTimestamp.getTime(), 1, 'm')(message);
 		if (isMurderMode) {
-			blueMurderTimestamp = new Date();
+				this.blueMurderTimestamp = new Date();
 			return {
 				shouldRespond: true,
 				response: BLUE_BOT_RESPONSES.Murder,
@@ -177,11 +179,11 @@ export class BlueBotTriggers {
 			return { shouldRespond: false };
 		}
 
-		if (!withinTimeframeOf(() => blueTimestamp.getTime(), 2, 'm')(message)) {
+			if (!withinTimeframeOf(() => this.blueTimestamp.getTime(), 2, 'm')(message)) {
 			return { shouldRespond: false };
 		}
 
-		blueMurderTimestamp = new Date();
+			this.blueMurderTimestamp = new Date();
 		const isTargetUser = targetUserId ? message.author.id === targetUserId : false;
 
 		return {
@@ -197,7 +199,7 @@ export class BlueBotTriggers {
 			return { shouldRespond: false };
 		}
 
-		blueTimestamp = new Date();
+			this.blueTimestamp = new Date();
 		return {
 			shouldRespond: true,
 			response: BLUE_BOT_RESPONSES.Default,
