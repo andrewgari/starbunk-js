@@ -258,13 +258,65 @@ services:
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
 
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
+	    deploy:
+	      resources:
+	        limits:
+	          memory: 512M
+	        reservations:
+	          memory: 256M
 
+	  # BlueBot - Blue detection and response bot
+	  bluebot:
+	    image: ghcr.io/andrewgari/bluebot:latest
+	    container_name: starbunk-bluebot
+	    restart: unless-stopped
+	    env_file:
+	      - .env
+	    environment:
+	      - NODE_ENV=production
+	      - BLUEBOT_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
+	      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+	      - CLIENT_ID=${CLIENT_ID}
+	      - GUILD_ID=${GUILD_ID}
+	      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
+	      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+	      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+	      - DEBUG_MODE=${DEBUG_MODE:-false}
+	      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+	      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+	      - LOG_LEVEL=${LOG_LEVEL:-info}
+	      # Observability Configuration
+	      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+	      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+	      - LOG_FORMAT=${LOG_FORMAT:-json}
+	      - METRICS_PORT=${METRICS_PORT:-3000}
+	      - HEALTH_PORT=${HEALTH_PORT:-3000}
+	      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+	      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+	    ports:
+	      # Metrics and health endpoint port
+	      - "${BLUEBOT_METRICS_PORT:-9302}:3000"
+	    depends_on:
+	      postgres:
+	        condition: service_healthy
+	    networks:
+	      - starbunk-network
+	    logging:
+	      driver: "json-file"
+	      options:
+	        max-size: "10m"
+	        max-file: "3"
+	    labels:
+	      - com.starbunk.service=bluebot
+	      - prometheus.io/scrape=true
+	      - prometheus.io/path=/metrics
+	      - prometheus.io/port=3000
+	    deploy:
+	      resources:
+	        limits:
+	          memory: 512M
+	        reservations:
+	          memory: 256M
 # Note: Using host path mounts for Unraid compatibility
 # Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
 # Default fallback to ./data/ for non-Unraid environments
