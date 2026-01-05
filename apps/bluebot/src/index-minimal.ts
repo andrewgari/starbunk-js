@@ -181,34 +181,72 @@ class BlueBotContainer {
 
 // Main execution
 async function main(): Promise<void> {
-	const blueBot = new BlueBotContainer();
+		// In CI smoke mode, start a minimal health server and skip Discord login
+		if (process.env.CI_SMOKE_MODE === 'true') {
+			logger.info('[BlueBot] CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
+			const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT, 10) : 3000;
 
-	// Handle graceful shutdown
-	process.on('SIGTERM', async () => {
-		logger.info('[BlueBot] Received SIGTERM signal');
-		await blueBot.shutdown();
-		process.exit(0);
-	});
+			const server = createServer((req, res) => {
+				if (req.url === '/health') {
+					res.writeHead(200, { 'Content-Type': 'application/json' });
+					res.end(
+						JSON.stringify({
+							status: 'healthy',
+							service: 'bluebot',
+							mode: 'smoke',
+							timestamp: new Date().toISOString(),
+						}),
+					);
+					return;
+				}
 
-	process.on('SIGINT', async () => {
-		logger.info('[BlueBot] Received SIGINT signal');
-		await blueBot.shutdown();
-		process.exit(0);
-	});
+				res.writeHead(404, { 'Content-Type': 'text/plain' });
+				res.end('Not Found');
+			});
 
-	// Handle uncaught errors
-	process.on('uncaughtException', (error) => {
-		logger.error('[BlueBot] Uncaught exception:', error);
-		process.exit(1);
-	});
+			server.listen(port, () => {
+				logger.info(`[BlueBot] [SMOKE] Health server listening on port ${port}`);
+			});
 
-	process.on('unhandledRejection', (reason) => {
-		logger.error('[BlueBot] Unhandled rejection, reason:', ensureError(reason as Error));
-		process.exit(1);
-	});
+			const shutdown = (signal: string) => {
+				logger.info(`[BlueBot] [SMOKE] Received ${signal}, shutting down health server...`);
+				server.close(() => process.exit(0));
+			};
 
-	// Initialize the bot
-	await blueBot.initialize();
+			process.on('SIGINT', () => shutdown('SIGINT'));
+			process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+			return;
+		}
+
+		const blueBot = new BlueBotContainer();
+
+		// Handle graceful shutdown
+		process.on('SIGTERM', async () => {
+			logger.info('[BlueBot] Received SIGTERM signal');
+			await blueBot.shutdown();
+			process.exit(0);
+		});
+
+		process.on('SIGINT', async () => {
+			logger.info('[BlueBot] Received SIGINT signal');
+			await blueBot.shutdown();
+			process.exit(0);
+		});
+
+		// Handle uncaught errors
+		process.on('uncaughtException', (error) => {
+			logger.error('[BlueBot] Uncaught exception:', error);
+			process.exit(1);
+		});
+
+		process.on('unhandledRejection', (reason) => {
+			logger.error('[BlueBot] Unhandled rejection, reason:', ensureError(reason as Error));
+			process.exit(1);
+		});
+
+		// Initialize the bot
+		await blueBot.initialize();
 }
 
 // Run if this is the main module
