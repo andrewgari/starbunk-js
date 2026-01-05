@@ -155,21 +155,21 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/bunkbot.tar
 
-	      - name: Start container
-	        run: |
-	          docker run -d --name bunkbot-test \
-	            -e DISCORD_TOKEN=test \
-	            -e DEBUG_MODE=true \
-	            -e CI_SMOKE_MODE=true \
-	            -e CI=true \
-	            -e NODE_ENV=test \
-	            -e HEALTH_PORT=3000 \
-	            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
+      - name: Start container
+        run: |
+          docker run -d --name bunkbot-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e HEALTH_PORT=3000 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
 
-	      - name: Run container health & smoke checks
-	        uses: ./.github/actions/container-health-check
-	        with:
-	          container-name: bunkbot-test
+      - name: Run container health & smoke checks
+        uses: ./.github/actions/container-health-check
+        with:
+          container-name: bunkbot-test
 
   validate-covabot:
     name: Validate Container - covabot
@@ -185,21 +185,21 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/covabot.tar
 
-	      - name: Start container
-	        run: |
-	          docker run -d --name covabot-test \
-	            -e DISCORD_TOKEN=test \
-	            -e DEBUG_MODE=true \
-	            -e CI_SMOKE_MODE=true \
-	            -e CI=true \
-	            -e NODE_ENV=test \
-	            -e HEALTH_PORT=3000 \
-	            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
+      - name: Start container
+        run: |
+          docker run -d --name covabot-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e HEALTH_PORT=3000 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
 
-	      - name: Run container health & smoke checks
-	        uses: ./.github/actions/container-health-check
-	        with:
-	          container-name: covabot-test
+      - name: Run container health & smoke checks
+        uses: ./.github/actions/container-health-check
+        with:
+          container-name: covabot-test
 
   validate-djcova:
     name: Validate Container - djcova
@@ -215,21 +215,21 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/djcova.tar
 
-	      - name: Start container
-	        run: |
-	          docker run -d --name djcova-test \
-	            -e DISCORD_TOKEN=test \
-	            -e DEBUG_MODE=true \
-	            -e CI_SMOKE_MODE=true \
-	            -e CI=true \
-	            -e NODE_ENV=test \
-	            -e HEALTH_PORT=3000 \
-	            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
+      - name: Start container
+        run: |
+          docker run -d --name djcova-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e HEALTH_PORT=3000 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
 
-	      - name: Run container health & smoke checks
-	        uses: ./.github/actions/container-health-check
-	        with:
-	          container-name: djcova-test
+      - name: Run container health & smoke checks
+        uses: ./.github/actions/container-health-check
+        with:
+          container-name: djcova-test
 
   validate-bluebot:
     name: Validate Container - bluebot
@@ -245,21 +245,21 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/bluebot.tar
 
-	      - name: Start container
-	        run: |
-	          docker run -d --name bluebot-test \
-	            -e DISCORD_TOKEN=test \
-	            -e DEBUG_MODE=true \
-	            -e CI_SMOKE_MODE=true \
-	            -e CI=true \
-	            -e NODE_ENV=test \
-	            -e HEALTH_PORT=3000 \
-	            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
+      - name: Start container
+        run: |
+          docker run -d --name bluebot-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e HEALTH_PORT=3000 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
 
-	      - name: Run container health & smoke checks
-	        uses: ./.github/actions/container-health-check
-	        with:
-	          container-name: bluebot-test
+      - name: Run container health & smoke checks
+        uses: ./.github/actions/container-health-check
+        with:
+          container-name: bluebot-test
 
   # =============================================================================
   # GROUP 3: PRODUCTION IMAGE PUBLISHING (depends on container validation)
@@ -412,10 +412,10 @@ jobs:
     steps:
       - name: All deployment stages completed
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "[35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\e[0m"
           echo "✅ Main deployment workflow completed successfully!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	        echo "✓ Docker Builds (4 apps)"
-	        echo "✓ Container Validation (4 apps)"
-	        echo "✓ Image Publishing (latest tags)"
-	        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✓ Docker Builds (4 apps)"
+          echo "✓ Container Validation (4 apps)"
+          echo "✓ Image Publishing (latest tags)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

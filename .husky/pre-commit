@@ -17,4 +17,7 @@ bash tools/scripts/validation/check-root-directory.sh
 bash tools/scripts/validation/check-naming-conventions.sh
 bash tools/scripts/validation/check-temporary-files.sh
 
+echo "🧹 Running lint-staged (ESLint + Prettier on staged files)..."
+npx lint-staged
+
 echo "✅ Pre-commit checks completed successfully!"

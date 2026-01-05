@@ -141,13 +141,13 @@ export class BlueBotTriggers {
 			return { shouldRespond: false };
 		}
 
-			if (!withinTimeframeOf(() => this.blueTimestamp.getTime(), 2, 'm')(message)) {
+		if (!withinTimeframeOf(() => this.blueTimestamp.getTime(), 2, 'm')(message)) {
 			return { shouldRespond: false };
 		}
 
-			const isMurderMode = withinTimeframeOf(() => this.blueMurderTimestamp.getTime(), 1, 'm')(message);
+		const isMurderMode = withinTimeframeOf(() => this.blueMurderTimestamp.getTime(), 1, 'm')(message);
 		if (isMurderMode) {
-				this.blueMurderTimestamp = new Date();
+			this.blueMurderTimestamp = new Date();
 			return {
 				shouldRespond: true,
 				response: BLUE_BOT_RESPONSES.Murder,
@@ -179,11 +179,11 @@ export class BlueBotTriggers {
 			return { shouldRespond: false };
 		}
 
-			if (!withinTimeframeOf(() => this.blueTimestamp.getTime(), 2, 'm')(message)) {
+		if (!withinTimeframeOf(() => this.blueTimestamp.getTime(), 2, 'm')(message)) {
 			return { shouldRespond: false };
 		}
 
-			this.blueMurderTimestamp = new Date();
+		this.blueMurderTimestamp = new Date();
 		const isTargetUser = targetUserId ? message.author.id === targetUserId : false;
 
 		return {
@@ -199,7 +199,7 @@ export class BlueBotTriggers {
 			return { shouldRespond: false };
 		}
 
-			this.blueTimestamp = new Date();
+		this.blueTimestamp = new Date();
 		return {
 			shouldRespond: true,
 			response: BLUE_BOT_RESPONSES.Default,

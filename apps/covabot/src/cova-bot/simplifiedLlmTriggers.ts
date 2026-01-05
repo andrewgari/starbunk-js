@@ -29,97 +29,95 @@ function getContainerLLMManager(): LLMManager | null {
 	}
 }
 
-	/**
-	 * Heuristic-based condition that delegates to LLMService.shouldRespond
-	 *
-	 * This removes any LLM-based gating from the decision path – the LLM is
-	 * only used for generating the actual response, not for deciding whether
-	 * to respond.
-	 */
-	export function createLLMResponseDecisionCondition(): TriggerCondition {
-		return async (message: Message): Promise<boolean> => {
-			try {
-				const content = message.content?.trim() ?? '';
-				if (!content) {
-					logger.debug('[CovaBot] Skipping empty message');
-					return false;
-				}
-
-				// Never respond to other bots
-				if (message.author.bot) {
-					logger.debug('[CovaBot] Skipping bot message');
-					return false;
-				}
-
-				const svc = getLLMService();
-				const shouldRespond = await svc.shouldRespond(message);
-				logger.debug(
-					`[CovaBot] Heuristic shouldRespond decision: ${shouldRespond ? 'RESPOND' : 'SKIP'}`,
-				);
-				return shouldRespond;
-			} catch (error) {
-				logger.error('[CovaBot] Error in heuristic decision condition:', ensureError(error));
+/**
+ * Heuristic-based condition that delegates to LLMService.shouldRespond
+ *
+ * This removes any LLM-based gating from the decision path – the LLM is
+ * only used for generating the actual response, not for deciding whether
+ * to respond.
+ */
+export function createLLMResponseDecisionCondition(): TriggerCondition {
+	return async (message: Message): Promise<boolean> => {
+		try {
+			const content = message.content?.trim() ?? '';
+			if (!content) {
+				logger.debug('[CovaBot] Skipping empty message');
 				return false;
 			}
-		};
-	}
 
-	/**
-	 * LLM response generator for Cova.
-	 *
-	 * The decision about whether to respond is made by the heuristic condition
-	 * (createLLMResponseDecisionCondition). This generator only handles response
-	 * generation, constructing an enhanced prompt with context and calibration notes.
-	 *
-	 * IMPORTANT: On any error or LLM failure, return empty string so CovaBot remains silent
-	 */
+			// Never respond to other bots
+			if (message.author.bot) {
+				logger.debug('[CovaBot] Skipping bot message');
+				return false;
+			}
+
+			const svc = getLLMService();
+			const shouldRespond = await svc.shouldRespond(message);
+			logger.debug(`[CovaBot] Heuristic shouldRespond decision: ${shouldRespond ? 'RESPOND' : 'SKIP'}`);
+			return shouldRespond;
+		} catch (error) {
+			logger.error('[CovaBot] Error in heuristic decision condition:', ensureError(error));
+			return false;
+		}
+	};
+}
+
+/**
+ * LLM response generator for Cova.
+ *
+ * The decision about whether to respond is made by the heuristic condition
+ * (createLLMResponseDecisionCondition). This generator only handles response
+ * generation, constructing an enhanced prompt with context and calibration notes.
+ *
+ * IMPORTANT: On any error or LLM failure, return empty string so CovaBot remains silent
+ */
 export function createLLMEmulatorResponse(): ResponseGenerator {
 	return async (message: Message): Promise<string> => {
 		const startTime = Date.now();
 
+		try {
+			logger.debug('[CovaBot] Generating single-prompt LLM response (response only, no LLM gating)');
+
+			// Build context about the message
+			let channelName = 'DM';
 			try {
-				logger.debug('[CovaBot] Generating single-prompt LLM response (response only, no LLM gating)');
-
-				// Build context about the message
-				let channelName = 'DM';
-				try {
-					if ('name' in message.channel && typeof message.channel.name === 'string') {
-						channelName = message.channel.name;
-					}
-				} catch {
-					// Use default
+				if ('name' in message.channel && typeof message.channel.name === 'string') {
+					channelName = message.channel.name;
 				}
-					const isMentioned = message.content.toLowerCase().includes('cova');
-					let isDirectMention = false;
-					try {
-						const clientUser = message.client?.user;
-						if (clientUser && message.mentions?.has) {
-							// Discord.js MessageMentions.has accepts a UserResolvable (user or ID)
-							isDirectMention = message.mentions.has(clientUser);
-						}
-					} catch {
-						// If mention inspection fails, fall back to name-based mention heuristic only
-					}
+			} catch {
+				// Use default
+			}
+			const isMentioned = message.content.toLowerCase().includes('cova');
+			let isDirectMention = false;
+			try {
+				const clientUser = message.client?.user;
+				if (clientUser && message.mentions?.has) {
+					// Discord.js MessageMentions.has accepts a UserResolvable (user or ID)
+					isDirectMention = message.mentions.has(clientUser);
+				}
+			} catch {
+				// If mention inspection fails, fall back to name-based mention heuristic only
+			}
 
-				// Add context to help the LLM generate an in-character response
-				const contextNote = isDirectMention
-					? '\n(Note: Cova was directly mentioned, so they should probably respond)'
-					: isMentioned
-						? '\n(Note: Cova was referenced in the message)'
-						: '';
+			// Add context to help the LLM generate an in-character response
+			const contextNote = isDirectMention
+				? '\n(Note: Cova was directly mentioned, so they should probably respond)'
+				: isMentioned
+					? '\n(Note: Cova was referenced in the message)'
+					: '';
 
-				// In debug mode, add calibration context
-				const calibrationNote = DEBUG_MODE
-					? `
+			// In debug mode, add calibration context
+			const calibrationNote = DEBUG_MODE
+				? `
 
 			🔧 CALIBRATION MODE ACTIVE 🔧
 			You are in self-testing/calibration mode. Cova (the person) is talking to you (Cova the bot) to test and calibrate your responses.
 			This is a controlled testing environment - respond naturally as Cova would, understanding that this is for quality assurance and model testing.
 			You should be helpful, conversational, and demonstrate your capabilities while maintaining Cova's personality.
 			`
-					: '';
+				: '';
 
-				const enhancedMessage = `Channel: ${channelName}
+			const enhancedMessage = `Channel: ${channelName}
 User: ${message.author.username}
 Message: "${message.content}"${contextNote}${calibrationNote}
 
@@ -127,34 +125,34 @@ Instructions: You are Cova. The decision about whether to respond has already be
 Respond exactly as Cova would to this message, taking into account the notes above.
 Keep the reply conversational and reasonably concise.`;
 
-				// Try to use LLM manager from container first (for E2E tests with mocks)
-				const llmManager = getContainerLLMManager();
-				let response: string;
+			// Try to use LLM manager from container first (for E2E tests with mocks)
+			const llmManager = getContainerLLMManager();
+			let response: string;
 
-				if (llmManager) {
-					// Use container's LLM manager (E2E tests with mocks)
-					// Use createCompletion directly to avoid prompt registry lookup
-					const completion = await llmManager.createCompletion({
-						messages: [{ role: 'user', content: enhancedMessage }],
-					});
-					response = completion.content;
-				} else {
-					// Use regular LLM service (production)
-					const llmSvc = getLLMService();
-					response = await llmSvc.generateResponse(message, enhancedMessage);
-				}
+			if (llmManager) {
+				// Use container's LLM manager (E2E tests with mocks)
+				// Use createCompletion directly to avoid prompt registry lookup
+				const completion = await llmManager.createCompletion({
+					messages: [{ role: 'user', content: enhancedMessage }],
+				});
+				response = completion.content;
+			} else {
+				// Use regular LLM service (production)
+				const llmSvc = getLLMService();
+				response = await llmSvc.generateResponse(message, enhancedMessage);
+			}
 
-				// Guard against empty responses
-				if (!response || response.trim() === '') {
-					const duration = Date.now() - startTime;
-					logger.debug(`[CovaBot] LLM returned empty response after ${duration}ms`);
-					return '';
-				}
-
-				// Return the generated response
+			// Guard against empty responses
+			if (!response || response.trim() === '') {
 				const duration = Date.now() - startTime;
-				logger.debug(`[CovaBot] LLM response generated in ${duration}ms`);
-				return response.trim();
+				logger.debug(`[CovaBot] LLM returned empty response after ${duration}ms`);
+				return '';
+			}
+
+			// Return the generated response
+			const duration = Date.now() - startTime;
+			logger.debug(`[CovaBot] LLM response generated in ${duration}ms`);
+			return response.trim();
 		} catch (error) {
 			const duration = Date.now() - startTime;
 			logger.error(
