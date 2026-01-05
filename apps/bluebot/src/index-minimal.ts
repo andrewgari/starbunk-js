@@ -1,20 +1,21 @@
 // BlueBot - Blue detection and response bot container
 import { Events, Client, Message } from 'discord.js';
 import { createServer } from 'http';
-import {
-	logger,
-	container,
-	ServiceId,
-	ensureError,
-	validateEnvironment,
-	createDiscordClient,
-	ClientConfigs,
-	WebhookManager,
-	getMessageFilter,
-	MessageFilter,
-	StartupDiagnostics,
-	initializeObservability,
-} from '@starbunk/shared';
+	import {
+		logger,
+		container,
+		ServiceId,
+		ensureError,
+		validateEnvironment,
+		createDiscordClient,
+		ClientConfigs,
+		WebhookManager,
+		getMessageFilter,
+		MessageFilter,
+		StartupDiagnostics,
+		initializeUnifiedObservability,
+		shutdownObservability,
+	} from '@starbunk/shared';
 
 import { BlueBotTriggers } from './triggers';
 import { BLUE_BOT_NAME } from './constants';
@@ -25,13 +26,33 @@ class BlueBotContainer {
 	private messageFilter!: MessageFilter;
 	private triggers!: BlueBotTriggers;
 	private healthServer?: ReturnType<typeof createServer>;
+		private observability?: ReturnType<typeof initializeUnifiedObservability>;
 
 	async initialize(): Promise<void> {
 		try {
 			logger.info('[BlueBot] Starting initialization...');
 
-			// Initialize observability
-			initializeObservability('bluebot');
+				// Initialize observability using the unified setup (service-only)
+				try {
+					this.observability = initializeUnifiedObservability('bluebot', {
+						enableUnified: false,
+						enableStructuredLogging: true,
+						skipHttpEndpoints: true,
+					});
+					logger.info('[BlueBot] Observability initialized with unified configuration (service-only)');
+				} catch (error) {
+					logger.warn(
+						'[BlueBot] Failed to initialize unified observability; continuing with basic logging only:',
+						ensureError(error),
+					);
+				}
+
+				// Ensure base logger and environment reflect this service as "bluebot"
+				logger.setServiceName('bluebot');
+				process.env.SERVICE_NAME = 'bluebot';
+				if (!process.env.CONTAINER_NAME) {
+					process.env.CONTAINER_NAME = 'bluebot';
+				}
 
 			// Validate environment
 			validateEnvironment({
@@ -151,8 +172,17 @@ class BlueBotContainer {
 					}),
 				);
 			} else if (req.url === '/metrics') {
-				res.writeHead(200, { 'Content-Type': 'text/plain' });
-				res.end('# BlueBot metrics placeholder\n');
+					const metricsService = this.observability?.metrics;
+					if (metricsService) {
+						const metrics = metricsService.getPrometheusMetrics();
+						res.writeHead(200, {
+							'Content-Type': 'text/plain; version=0.0.4; charset=utf-8',
+						});
+						res.end(metrics);
+					} else {
+						res.writeHead(503, { 'Content-Type': 'text/plain' });
+						res.end('# BlueBot metrics service not available\n');
+					}
 			} else {
 				res.writeHead(404);
 				res.end();
@@ -175,7 +205,14 @@ class BlueBotContainer {
 			await this.client.destroy();
 		}
 
-		logger.info('[BlueBot] Shutdown complete');
+			// Gracefully shut down observability stack (if initialized)
+			try {
+				await shutdownObservability();
+			} catch (error) {
+				logger.warn('[BlueBot] Error during observability shutdown:', ensureError(error as Error));
+			}
+
+			logger.info('[BlueBot] Shutdown complete');
 	}
 }
 
