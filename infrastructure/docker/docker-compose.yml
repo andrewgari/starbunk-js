@@ -295,7 +295,7 @@ services:
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
     ports:
       # Metrics and health endpoint port
-      - "${BLUEBOT_METRICS_PORT:-9304}:3000"
+      - "${BLUEBOT_METRICS_PORT:-9302}:3000"
     depends_on:
       postgres:
         condition: service_healthy
