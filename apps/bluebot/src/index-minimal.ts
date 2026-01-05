@@ -12,10 +12,8 @@ import {
 	WebhookManager,
 	getMessageFilter,
 	MessageFilter,
-	runStartupDiagnostics,
+	StartupDiagnostics,
 	initializeObservability,
-	type DiagnosticResult,
-	getDiscordToken,
 } from '@starbunk/shared';
 
 import { BlueBotTriggers } from './triggers';
@@ -36,21 +34,25 @@ class BlueBotContainer {
 			initializeObservability('bluebot');
 
 			// Validate environment
-			const validation = validateEnvironment(['BLUEBOT', 'STARBUNK']);
-			if (!validation.valid) {
-				throw new Error(`Environment validation failed: ${validation.missingVars.join(', ')}`);
-			}
+			validateEnvironment({
+				required: ['STARBUNK_TOKEN'],
+				optional: ['BLUEBOT_TOKEN', 'DATABASE_URL', 'OPENAI_API_KEY', 'DEBUG_MODE', 'NODE_ENV'],
+			});
 
 			// Create Discord client
-			const token = getDiscordToken(['BLUEBOT', 'STARBUNK']);
+			const token = process.env.BLUEBOT_TOKEN || process.env.STARBUNK_TOKEN;
+			if (!token) {
+				throw new Error('BLUEBOT_TOKEN or STARBUNK_TOKEN environment variable is required');
+			}
+
 			this.client = createDiscordClient(ClientConfigs.BlueBot);
-			
+
 			// Initialize webhook manager
 			this.webhookManager = new WebhookManager(this.client);
-			container.register(ServiceId.WebhookManager, this.webhookManager);
+			container.register(ServiceId.WebhookService, this.webhookManager);
 
 			// Initialize message filter
-			this.messageFilter = getMessageFilter(this.client);
+			this.messageFilter = getMessageFilter();
 
 			// Initialize triggers
 			this.triggers = new BlueBotTriggers();
@@ -77,14 +79,14 @@ class BlueBotContainer {
 			logger.info(`[BlueBot] Ready! Logged in as ${client.user.tag}`);
 
 			// Run startup diagnostics
-			const diagnostics: DiagnosticResult = await runStartupDiagnostics(
-				this.client,
-				'bluebot',
-				'1.5.1',
-			);
+			const diagnostics = new StartupDiagnostics();
+			const results = await diagnostics.runAllChecks();
 
-			if (!diagnostics.success) {
-				logger.warn('[BlueBot] Startup diagnostics failed:', diagnostics);
+			const hasFailures = results.some((r: { status: string }) => r.status !== 'success');
+			if (hasFailures) {
+				logger.warn('[BlueBot] Startup diagnostics had some failures:', results);
+			} else {
+				logger.info('[BlueBot] All startup diagnostics passed');
 			}
 		});
 
@@ -103,7 +105,16 @@ class BlueBotContainer {
 
 	private async handleMessage(message: Message): Promise<void> {
 		// Apply message filtering
-		if (!this.messageFilter(message)) {
+		const messageContext = {
+			serverId: message.guildId || undefined,
+			channelId: message.channel.id,
+			userId: message.author.id,
+			username: message.author.username,
+			content: message.content,
+		};
+
+		const filterResult = this.messageFilter.shouldProcessMessage(messageContext);
+		if (!filterResult.allowed) {
 			return;
 		}
 
@@ -112,7 +123,7 @@ class BlueBotContainer {
 
 		if (triggerResult.shouldRespond && triggerResult.response) {
 			// Send response via webhook
-			await this.webhookManager.sendMessage(message.channel, {
+			await this.webhookManager.sendMessage(message.channel.id, {
 				content: triggerResult.response,
 				username: triggerResult.botName || BLUE_BOT_NAME,
 				avatarURL: triggerResult.avatarUrl,
@@ -131,12 +142,14 @@ class BlueBotContainer {
 		this.healthServer = createServer((req, res) => {
 			if (req.url === '/health') {
 				res.writeHead(200, { 'Content-Type': 'application/json' });
-				res.end(JSON.stringify({
-					status: 'healthy',
-					service: 'bluebot',
-					uptime: process.uptime(),
-					timestamp: new Date().toISOString(),
-				}));
+				res.end(
+					JSON.stringify({
+						status: 'healthy',
+						service: 'bluebot',
+						uptime: process.uptime(),
+						timestamp: new Date().toISOString(),
+					}),
+				);
 			} else if (req.url === '/metrics') {
 				res.writeHead(200, { 'Content-Type': 'text/plain' });
 				res.end('# BlueBot metrics placeholder\n');
@@ -189,8 +202,8 @@ async function main(): Promise<void> {
 		process.exit(1);
 	});
 
-	process.on('unhandledRejection', (reason, promise) => {
-		logger.error('[BlueBot] Unhandled rejection at:', promise, 'reason:', reason);
+	process.on('unhandledRejection', (reason) => {
+		logger.error('[BlueBot] Unhandled rejection, reason:', ensureError(reason as Error));
 		process.exit(1);
 	});
 

@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai';
-import { logger } from '@starbunk/shared';
+import { logger, ensureError } from '@starbunk/shared';
 
 export class LLMService {
 	private openai: OpenAI | null = null;
@@ -33,7 +33,7 @@ export class LLMService {
 			const result = response.choices[0]?.message?.content?.toLowerCase().trim();
 			return result === 'yes';
 		} catch (error) {
-			logger.error('[LLMService] LLM detection error:', error);
+			logger.error('[LLMService] LLM detection error:', ensureError(error));
 			return false;
 		}
 	}
