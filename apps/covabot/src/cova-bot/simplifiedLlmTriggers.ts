@@ -3,7 +3,6 @@ import { logger, ensureError, container, ServiceId } from '@starbunk/shared';
 import { LLMManager } from '@starbunk/shared/dist/services/llm/llmManager';
 import { TriggerCondition, ResponseGenerator } from '../types/triggerResponse';
 import { createLLMService, LLMService } from '../services/llmService';
-import userId from './simplifiedUserId';
 
 // Debug mode flag
 const DEBUG_MODE = process.env.DEBUG_MODE === 'true';
@@ -90,17 +89,17 @@ export function createLLMEmulatorResponse(): ResponseGenerator {
 				} catch {
 					// Use default
 				}
-				const isMentioned = message.content.toLowerCase().includes('cova');
-				let isDirectMention = false;
-				try {
-					const clientUser = (message as any).client?.user;
-					if (clientUser && (message as any).mentions?.has) {
-						// Discord.js MessageMentions.has accepts a UserResolvable (user or ID)
-						isDirectMention = (message as any).mentions.has(clientUser);
+					const isMentioned = message.content.toLowerCase().includes('cova');
+					let isDirectMention = false;
+					try {
+						const clientUser = message.client?.user;
+						if (clientUser && message.mentions?.has) {
+							// Discord.js MessageMentions.has accepts a UserResolvable (user or ID)
+							isDirectMention = message.mentions.has(clientUser);
+						}
+					} catch {
+						// If mention inspection fails, fall back to name-based mention heuristic only
 					}
-				} catch {
-					// If mention inspection fails, fall back to name-based mention heuristic only
-				}
 
 				// Add context to help the LLM generate an in-character response
 				const contextNote = isDirectMention
