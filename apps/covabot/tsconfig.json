@@ -29,13 +29,7 @@
 		"dist",
 		"tests",
 		"src/**/__tests__/**",
-		"src/services/personalityNotesServiceDb.ts",
-		"src/cova-bot/enhancedLlmTriggers.ts",
-		"src/cova-bot/llm-triggers.ts",
-		"src/cova-bot/index.ts",
-		"src/commands/**/*.ts",
-		"src/index.ts",
-		"src/commandHandler.ts"
+		"src/services/personalityNotesServiceDb.ts"
 	],
 	"references": [
 		{ "path": "../../packages/shared" }
