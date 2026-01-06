@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "prepare": "husky && npm run sync-versions",
+    "postinstall": "npm run db:generate",
     "sync-versions": "bash ./scripts/sync-versions.sh",
     "build": "npm run build:shared && npm run build:containers",
     "build:shared": "tsc -p packages/shared/tsconfig.json",
@@ -38,8 +39,8 @@
     "test:shared": "cd packages/shared && npm test",
     "test:containers": "npm run test:bunkbot && npm run test:djcova && npm run test:starbunk-dnd && npm run test:covabot && npm run test:bluebot",
     "db:seed": "npx tsx infrastructure/database/prisma/seed.ts",
-    "db:generate": "npx prisma generate",
-    "db:push": "npx prisma db push",
+    "db:generate": "npx prisma generate --schema=infrastructure/database/prisma/schema.prisma",
+    "db:push": "npx prisma db push --schema=infrastructure/database/prisma/schema.prisma",
     "redis:seed": "npx tsx scripts/seed-redis-users.ts",
     "test:bunkbot": "cd apps/bunkbot && npm test",
     "e2e:bunkbot:live": "cd apps/bunkbot && npm run e2e:live",
