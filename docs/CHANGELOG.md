@@ -1,3 +1,9 @@
+## [1.9.3](https://github.com/andrewgari/starbunk-js/compare/v1.9.2...v1.9.3) (2026-01-06)
+
+### Bug Fixes
+
+* Add checkout step to validation jobs for local action access ([#409](https://github.com/andrewgari/starbunk-js/issues/409)) ([5adc40a](https://github.com/andrewgari/starbunk-js/commit/5adc40a6b5cc20468d59d0aa375eb390fdb24d06))
+
 ## [1.9.2](https://github.com/andrewgari/starbunk-js/compare/v1.9.1...v1.9.2) (2026-01-06)
 
 ### Bug Fixes
