@@ -55,7 +55,7 @@ class CovaBotContainer {
 
 	private validateEnvironment(): void {
 		validateEnvironment({
-			required: ['STARBUNK_TOKEN'],
+			required: ['COVABOT_TOKEN'],
 			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG', 'NODE_ENV', 'COVA_USER_ID'],
 		});
 		logger.info('✅ Environment validation passed for CovaBot');

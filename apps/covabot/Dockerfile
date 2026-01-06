@@ -63,7 +63,8 @@ ARG USE_DATABASE=false
 WORKDIR /app
 
 # Create user and install runtime dependencies in one layer
-RUN apk add --no-cache openssl dumb-init curl && \
+# Note: glibc-compat is needed for onnxruntime-node (used by @xenova/transformers)
+RUN apk add --no-cache openssl dumb-init curl gcompat && \
     addgroup -g 1001 -S covabot && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G covabot covabot
 

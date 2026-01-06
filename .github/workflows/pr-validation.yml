@@ -154,8 +154,15 @@ jobs:
 
       - name: Start container
         run: |
+          # Set app-specific token environment variable
+          if [ "${{ matrix.app }}" = "covabot" ]; then
+            TOKEN_VAR="COVABOT_TOKEN"
+          else
+            TOKEN_VAR="DISCORD_TOKEN"
+          fi
+
           docker run -d --name ${{ matrix.app }}-test \
-            -e DISCORD_TOKEN=test \
+            -e ${TOKEN_VAR}=test \
             -e DEBUG_MODE=true \
             -e CI_SMOKE_MODE=true \
             -e CI=true \
