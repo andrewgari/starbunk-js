@@ -1,4 +1,5 @@
-// CovaBot - AI personality bot container (Minimal Bootstrap Demo)
+// CovaBot - AI personality bot container
+import 'dotenv/config';
 import { Events, Message, TextChannel } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 
@@ -11,6 +12,8 @@ import {
 	initializeObservability,
 } from '@starbunk/shared';
 import { createLLMService, LLMService } from './services/llmService';
+import { WebServer } from './web/server';
+import { QdrantMemoryService } from './services/qdrantMemoryService';
 
 class CovaBotContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
@@ -163,10 +166,46 @@ async function main(): Promise<void> {
 		process.on('SIGTERM', () => shutdown('SIGTERM'));
 		return;
 	}
+
 	try {
-		const covaBot = new CovaBotContainer();
-		await covaBot.initialize();
-		await covaBot.start();
+		// Check if web interface should be enabled (if COVABOT_WEB_PORT is set)
+		const webPort = process.env.COVABOT_WEB_PORT;
+		const enableWebInterface = webPort !== undefined && webPort !== '';
+
+		if (enableWebInterface) {
+			// Web interface mode - start with Qdrant and web server
+			const useQdrant = process.env.USE_QDRANT !== 'false'; // Default to true
+			const storageType = useQdrant ? 'Qdrant Vector Database' : 'Legacy';
+
+			logger.info(`🤖 Starting CovaBot with Web Interface (${storageType} storage)...`);
+
+			// Initialize Qdrant memory service
+			if (useQdrant) {
+				const memoryService = QdrantMemoryService.getInstance();
+				await memoryService.initialize();
+				logger.info('✅ Qdrant memory service initialized');
+			}
+
+			// Start web server
+			const port = parseInt(webPort || '7080', 10);
+			const webServer = new WebServer(port, useQdrant);
+			await webServer.start();
+			logger.info(`✅ Web interface started on http://localhost:${port}`);
+
+			// Start the main CovaBot
+			const covaBot = new CovaBotContainer();
+			await covaBot.initialize();
+			await covaBot.start();
+
+			logger.info('🚀 CovaBot with Web Interface started successfully!');
+			logger.info(`📝 Manage personality at: http://localhost:${port}`);
+			logger.info(`🧠 Memory system: ${storageType}`);
+		} else {
+			// Standard mode - just start CovaBot
+			const covaBot = new CovaBotContainer();
+			await covaBot.initialize();
+			await covaBot.start();
+		}
 	} catch (error) {
 		logger.error('Failed to start CovaBot:', ensureError(error));
 		process.exit(1);
@@ -174,15 +213,25 @@ async function main(): Promise<void> {
 }
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
-	logger.info('Received SIGINT signal, shutting down CovaBot...');
-	process.exit(0);
-});
+const shutdown = async () => {
+	logger.info('🛑 Shutting down CovaBot...');
 
-process.on('SIGTERM', async () => {
-	logger.info('Received SIGTERM signal, shutting down CovaBot...');
+	try {
+		const useQdrant = process.env.USE_QDRANT !== 'false';
+		if (useQdrant && process.env.COVABOT_WEB_PORT) {
+			const memoryService = QdrantMemoryService.getInstance();
+			await memoryService.cleanup();
+			logger.info('✅ Memory service cleanup completed');
+		}
+	} catch (error) {
+		logger.error('❌ Error during cleanup:', ensureError(error));
+	}
+
 	process.exit(0);
-});
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 if (require.main === module) {
 	main().catch((error) => {
