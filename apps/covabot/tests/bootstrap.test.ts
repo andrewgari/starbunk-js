@@ -93,6 +93,6 @@ describe('CovaBot Message Handling - No Hardcoded Values', () => {
 
 	it('should use channel.send for posting responses', () => {
 		// Verify that channel-based sending is used for posting
-		expect(sourceCode).toContain('message.channel.send');
+		expect(sourceCode).toContain('textChannel.send(response)');
 	});
 });
