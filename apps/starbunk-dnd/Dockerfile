@@ -67,6 +67,7 @@ RUN apk add --no-cache openssl dumb-init curl && \
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/node_modules ./node_modules
 COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/apps/starbunk-dnd/dist ./apps/starbunk-dnd/dist
 COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/package.json ./
 COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/apps/starbunk-dnd/package.json ./apps/starbunk-dnd/

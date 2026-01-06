@@ -65,6 +65,7 @@ RUN apk add --no-cache openssl dumb-init curl && \
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=bluebot:bluebot /app/node_modules ./node_modules
 COPY --from=builder --chown=bluebot:bluebot /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=bluebot:bluebot /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder --chown=bluebot:bluebot /app/apps/bluebot/dist ./apps/bluebot/dist
 COPY --from=builder --chown=bluebot:bluebot /app/package.json ./
 COPY --from=builder --chown=bluebot:bluebot /app/apps/bluebot/package.json ./apps/bluebot/
