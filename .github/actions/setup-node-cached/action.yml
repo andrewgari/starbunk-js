@@ -138,18 +138,26 @@ runs:
             cd "$container_path"
             # Use --ignore-scripts to prevent prepare scripts from running during parallel installs
             # This avoids race conditions with scripts that modify package.json files
-            npm ci --prefer-offline --no-audit --ignore-scripts --silent
+            npm ci --prefer-offline --no-audit --ignore-scripts 2>&1 | sed "s/^/[$container_name] /"
+            local exit_code=${PIPESTATUS[0]}
             cd - > /dev/null
-            echo "✅ $container_name dependencies installed"
+            if [ $exit_code -eq 0 ]; then
+              echo "✅ $container_name dependencies installed"
+              return 0
+            else
+              echo "❌ $container_name dependencies failed with exit code $exit_code"
+              return 1
+            fi
           else
             echo "⚠️  No package.json found for $container_name"
+            return 1
           fi
         }
 
         # Install root dependencies first (needed for scripts and tooling)
         # Use --ignore-scripts to prevent prepare scripts from running during parallel installs
         echo "📦 Installing root dependencies..."
-        npm ci --prefer-offline --no-audit --ignore-scripts --silent &
+        npm ci --prefer-offline --no-audit --ignore-scripts 2>&1 | sed 's/^/[root] /' &
         root_pid=$!
 
         # Install container dependencies in parallel
