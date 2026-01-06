@@ -104,8 +104,8 @@ class CovaBotContainer {
 				return;
 			}
 
-      const textChannel = message.channel as TextChannel;
-      textChannel.send(response);
+			const textChannel = message.channel as TextChannel;
+			textChannel.send(response);
 		} catch (error) {
 			logger.error('Error in CovaBot message handling:', ensureError(error));
 		}
