@@ -39,9 +39,6 @@ COPY apps/covabot/jest.config.js apps/covabot/tsconfig*.json apps/covabot/.docke
 # Build the application
 RUN cd apps/covabot && npm run build:docker
 
-# Clean up development dependencies
-RUN npm prune --omit=dev
-
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
 
@@ -114,4 +111,4 @@ EXPOSE 3003
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "apps/covabot/dist/index.js"]

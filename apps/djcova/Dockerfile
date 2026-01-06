@@ -39,9 +39,6 @@ COPY apps/djcova/jest.config.js apps/djcova/tsconfig*.json apps/djcova/.dockerig
 # Build the application
 RUN cd apps/djcova && npm run build:docker
 
-# Clean up development dependencies
-RUN npm prune --omit=dev
-
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
 
