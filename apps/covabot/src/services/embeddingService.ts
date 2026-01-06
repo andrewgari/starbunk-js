@@ -1,6 +1,9 @@
-import { pipeline, Pipeline } from '@xenova/transformers';
 import { logger } from '@starbunk/shared';
 import { EmbeddingConfig } from '../types/memoryTypes';
+
+// Lazy import to avoid loading onnxruntime-node until actually needed
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Pipeline = any;
 
 /**
  * Local embedding service using sentence-transformers
@@ -52,6 +55,9 @@ export class EmbeddingService {
 	private async _initialize(): Promise<void> {
 		try {
 			logger.info(`[EmbeddingService] Loading embedding model: ${this.config.model}`);
+
+			// Lazy load @xenova/transformers to avoid loading onnxruntime-node until needed
+			const { pipeline } = await import('@xenova/transformers');
 
 			const startTime = Date.now();
 			this.pipeline = (await pipeline('feature-extraction', this.config.model, {
@@ -212,7 +218,9 @@ export class EmbeddingService {
 		if (this.cache.size >= this.config.cacheSize) {
 			// Remove least recently used entry (first in Map)
 			const firstKey = this.cache.keys().next().value;
-			this.cache.delete(firstKey);
+			if (firstKey !== undefined) {
+				this.cache.delete(firstKey);
+			}
 		}
 
 		this.cache.set(key, embedding);
