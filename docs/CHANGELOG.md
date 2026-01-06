@@ -1,3 +1,9 @@
+## [1.8.0](https://github.com/andrewgari/starbunk-js/compare/v1.7.0...v1.8.0) (2026-01-06)
+
+### Features
+
+* **covabot:** improve logging and loosen response heuristics ([#406](https://github.com/andrewgari/starbunk-js/issues/406)) ([f86f114](https://github.com/andrewgari/starbunk-js/commit/f86f11440d44db99c60abc0bb9afdc3655518ce8))
+
 ## [1.7.0](https://github.com/andrewgari/starbunk-js/compare/v1.6.0...v1.7.0) (2026-01-05)
 
 ### Features
