@@ -178,7 +178,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           IMAGE_BASE="${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.app }}"
-          VERSION=$(cat VERSION 2>/dev/null | tr -d '\n')
+          VERSION=$(cat config/VERSION 2>/dev/null | tr -d '\n')
 
           if [ -z "$VERSION" ]; then
             echo "WARNING: VERSION file missing or empty; defaulting to 0.0.0 for PR image tags"

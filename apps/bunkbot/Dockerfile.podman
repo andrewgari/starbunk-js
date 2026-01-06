@@ -40,7 +40,7 @@ RUN npm ci && npm cache clean --force
 # Copy source code
 COPY packages/shared ./shared
 COPY apps/bunkbot ./
-COPY prisma ./prisma
+COPY infrastructure/database/prisma ./prisma
 
 # Build shared package and container
 RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \

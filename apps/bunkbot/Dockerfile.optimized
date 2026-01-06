@@ -37,7 +37,7 @@ COPY --from=dependencies /app/shared/node_modules ./shared/node_modules
 # Copy source code and configuration
 COPY packages/shared ./shared
 COPY apps/bunkbot ./
-COPY prisma ./prisma
+COPY infrastructure/database/prisma ./prisma
 COPY tsconfig.json ./
 
 # Build shared package first (dependency for containers)
