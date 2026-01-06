@@ -93,7 +93,7 @@ runs:
       shell: bash
       run: |
         # Check if we got an exact cache match or a partial restore-key match
-        CACHE_KEY="${{ steps.generate-cache-key.outputs.cache-key }}"
+        CACHE_KEY="${{ steps.cache-key.outputs.cache-key }}"
         RESTORED_KEY="${{ steps.cache.outputs.cache-matched-key }}"
 
         if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ] && [ "$CACHE_KEY" = "$RESTORED_KEY" ]; then
