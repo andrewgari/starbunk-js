@@ -10,12 +10,13 @@
 		"resolveJsonModule": true
 	},
 	"include": [],
-	"exclude": ["node_modules", "dist", "archive"],
+	"exclude": ["node_modules", "dist"],
 	"references": [
-		{ "path": "./packages/shared" },
-		{ "path": "./apps/bunkbot" },
-		{ "path": "./apps/djcova" },
-		{ "path": "./apps/starbunk-dnd" },
-		{ "path": "./apps/covabot" }
+		{ "path": "../packages/shared" },
+		{ "path": "../apps/bunkbot" },
+		{ "path": "../apps/djcova" },
+		{ "path": "../apps/starbunk-dnd" },
+		{ "path": "../apps/covabot" },
+		{ "path": "../apps/bluebot" }
 	]
 }

@@ -2,20 +2,26 @@
 // Individual containers have their own Jest configs
 module.exports = {
 	projects: [
-		'<rootDir>/containers/shared',
-		'<rootDir>/containers/bunkbot',
-		'<rootDir>/containers/djcova',
-		'<rootDir>/containers/starbunk-dnd',
-		'<rootDir>/containers/covabot'
+		'<rootDir>/packages/shared',
+		'<rootDir>/apps/bunkbot',
+		'<rootDir>/apps/djcova',
+		'<rootDir>/apps/starbunk-dnd',
+		'<rootDir>/apps/covabot',
+		'<rootDir>/apps/bluebot'
 	],
 	coverageDirectory: 'coverage',
 	coverageReporters: ['text', 'lcov', 'clover', 'html'],
 	collectCoverageFrom: [
-		'containers/*/src/**/*.ts',
-		'!containers/*/src/**/*.d.ts',
-		'!containers/*/src/**/index*.ts',
-		'!containers/*/src/**/__tests__/**',
-		'!containers/*/src/**/__mocks__/**',
+		'apps/*/src/**/*.ts',
+		'packages/*/src/**/*.ts',
+		'!apps/*/src/**/*.d.ts',
+		'!packages/*/src/**/*.d.ts',
+		'!apps/*/src/**/index*.ts',
+		'!packages/*/src/**/index*.ts',
+		'!apps/*/src/**/__tests__/**',
+		'!packages/*/src/**/__tests__/**',
+		'!apps/*/src/**/__mocks__/**',
+		'!packages/*/src/**/__mocks__/**',
 	],
 	coverageThreshold: {
 		global: {
