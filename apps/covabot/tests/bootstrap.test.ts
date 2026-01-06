@@ -91,9 +91,8 @@ describe('CovaBot Message Handling - No Hardcoded Values', () => {
 		expect(sourceCode).toContain('avatarURL: identity.avatarUrl');
 	});
 
-	it('should use webhook manager for posting responses', () => {
-		// Verify that webhook manager is used for posting
-		expect(sourceCode).toContain('WebhookManager');
-		expect(sourceCode).toContain('this.webhookManager.sendMessage');
+	it('should use channel.send for posting responses', () => {
+		// Verify that channel-based sending is used for posting
+		expect(sourceCode).toContain('message.channel.send');
 	});
 });
