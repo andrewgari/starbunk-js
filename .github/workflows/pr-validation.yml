@@ -147,8 +147,10 @@ jobs:
           push: false
           load: true
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.app }}:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha,scope=shared-deps
+            type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
       - name: Start container
         run: |
