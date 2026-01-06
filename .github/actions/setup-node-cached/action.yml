@@ -136,7 +136,9 @@ runs:
           if [ -f "$container_path/package.json" ]; then
             echo "📦 Installing $container_name dependencies..."
             cd "$container_path"
-            npm ci --prefer-offline --no-audit --silent
+            # Use --ignore-scripts to prevent prepare scripts from running during parallel installs
+            # This avoids race conditions with scripts that modify package.json files
+            npm ci --prefer-offline --no-audit --ignore-scripts --silent
             cd - > /dev/null
             echo "✅ $container_name dependencies installed"
           else
@@ -145,8 +147,9 @@ runs:
         }
 
         # Install root dependencies first (needed for scripts and tooling)
+        # Use --ignore-scripts to prevent prepare scripts from running during parallel installs
         echo "📦 Installing root dependencies..."
-        npm ci --prefer-offline --no-audit --silent &
+        npm ci --prefer-offline --no-audit --ignore-scripts --silent &
         root_pid=$!
 
         # Install container dependencies in parallel
@@ -167,12 +170,21 @@ runs:
 
         # Wait for all installations to complete
         echo "⏳ Waiting for all dependency installations to complete..."
-        wait $root_pid && echo "✅ Root dependencies installed" || echo "❌ Root dependencies failed"
-        wait $shared_pid && echo "✅ Shared dependencies installed" || echo "❌ Shared dependencies failed"
-        wait $bunkbot_pid && echo "✅ BunkBot dependencies installed" || echo "❌ BunkBot dependencies failed"
-        wait $djcova_pid && echo "✅ DJCova dependencies installed" || echo "❌ DJCova dependencies failed"
-        wait $dnd_pid && echo "✅ Starbunk-DND dependencies installed" || echo "❌ Starbunk-DND dependencies failed"
-        wait $covabot_pid && echo "✅ CovaBot dependencies installed" || echo "❌ CovaBot dependencies failed"
+
+        # Track failures
+        INSTALL_FAILED=false
+
+        wait $root_pid && echo "✅ Root dependencies installed" || { echo "❌ Root dependencies failed"; INSTALL_FAILED=true; }
+        wait $shared_pid && echo "✅ Shared dependencies installed" || { echo "❌ Shared dependencies failed"; INSTALL_FAILED=true; }
+        wait $bunkbot_pid && echo "✅ BunkBot dependencies installed" || { echo "❌ BunkBot dependencies failed"; INSTALL_FAILED=true; }
+        wait $djcova_pid && echo "✅ DJCova dependencies installed" || { echo "❌ DJCova dependencies failed"; INSTALL_FAILED=true; }
+        wait $dnd_pid && echo "✅ Starbunk-DND dependencies installed" || { echo "❌ Starbunk-DND dependencies failed"; INSTALL_FAILED=true; }
+        wait $covabot_pid && echo "✅ CovaBot dependencies installed" || { echo "❌ CovaBot dependencies failed"; INSTALL_FAILED=true; }
+
+        if [ "$INSTALL_FAILED" = "true" ]; then
+          echo "❌ Some dependency installations failed"
+          exit 1
+        fi
 
         echo "🎉 All dependencies installed successfully"
 
