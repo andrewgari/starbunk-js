@@ -3,7 +3,7 @@ describe('BunkBot Container', () => {
 	it('should have minimal bootstrap functionality', () => {
 		// Test that the container can be imported without errors
 		expect(() => {
-			require('../src/index-minimal');
+			require('../src/index');
 		}).not.toThrow();
 	});
 

@@ -22,6 +22,8 @@ console.log(`[Environment] .env file loaded successfully: ${_result.parsed ? 'Ye
 
 // Log available environment variables for debugging
 console.log('[Environment] Environment variables loaded:');
+console.log(`[Environment] - DISCORD_TOKEN: ${process.env.DISCORD_TOKEN ? 'Set' : 'Not set'}`);
+console.log(`[Environment] - COVABOT_TOKEN: ${process.env.COVABOT_TOKEN ? 'Set' : 'Not set'}`);
 console.log(`[Environment] - STARBUNK_TOKEN: ${process.env.STARBUNK_TOKEN ? 'Set' : 'Not set'}`);
 console.log(`[Environment] - SNOWBUNK_TOKEN: ${process.env.SNOWBUNK_TOKEN ? 'Set' : 'Not set'}`);
 console.log(`[Environment] - DISCORD_WEBHOOK_URL: ${process.env.DISCORD_WEBHOOK_URL ? 'Set' : 'Not set'}`);
@@ -50,13 +52,24 @@ console.log(
 );
 
 // --- Start Validation ---
-if (!process.env.STARBUNK_TOKEN) {
+// Check for any Discord token (app-specific tokens take precedence)
+const hasAnyToken = !!(
+	process.env.DISCORD_TOKEN ||
+	process.env.COVABOT_TOKEN ||
+	process.env.STARBUNK_TOKEN ||
+	process.env.SNOWBUNK_TOKEN
+);
+
+if (!hasAnyToken) {
 	// Allow missing token in test-like, CI, or any non-production context
 	if (isTestLike || process.env.NODE_ENV !== 'production') {
-		console.warn('[Environment] TEST/DEV MODE: STARBUNK_TOKEN not set; using dummy token');
-		process.env.STARBUNK_TOKEN = 'test-token';
+		console.warn('[Environment] TEST/DEV MODE: No Discord token set; using dummy token');
+		// Set a generic fallback for tests
+		if (!process.env.DISCORD_TOKEN) process.env.DISCORD_TOKEN = 'test-token';
 	} else {
-		console.error('[Environment] FATAL: Required environment variable STARBUNK_TOKEN is not set.');
+		console.error(
+			'[Environment] FATAL: No Discord token found. Set one of: DISCORD_TOKEN, COVABOT_TOKEN, STARBUNK_TOKEN, SNOWBUNK_TOKEN',
+		);
 		process.exit(1);
 	}
 }
@@ -84,6 +97,8 @@ const environment = {
 		BOT_WHITELIST_IDS: process.env.BOT_WHITELIST_IDS,
 	},
 	discord: {
+		DISCORD_TOKEN: process.env.DISCORD_TOKEN,
+		COVABOT_TOKEN: process.env.COVABOT_TOKEN,
 		STARBUNK_TOKEN: process.env.STARBUNK_TOKEN,
 		SNOWBUNK_TOKEN: process.env.SNOWBUNK_TOKEN,
 		WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL,

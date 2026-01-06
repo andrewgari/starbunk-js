@@ -102,4 +102,4 @@ EXPOSE 3000
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "apps/bluebot/dist/index-minimal.js"]
+CMD ["node", "apps/bluebot/dist/index.js"]

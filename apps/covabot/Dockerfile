@@ -63,7 +63,8 @@ ARG USE_DATABASE=false
 WORKDIR /app
 
 # Create user and install runtime dependencies in one layer
-RUN apk add --no-cache openssl dumb-init curl && \
+# Note: glibc-compat is needed for onnxruntime-node (used by @xenova/transformers)
+RUN apk add --no-cache openssl dumb-init curl gcompat && \
     addgroup -g 1001 -S covabot && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G covabot covabot
 
@@ -103,9 +104,8 @@ LABEL prometheus.io/path="/metrics"
 LABEL prometheus.io/port="3000"
 
 # Health check (prefers HEALTH_PORT, then METRICS_PORT, else defaults)
-# Using /ready endpoint instead of /health to avoid false positives from memory thresholds
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD sh -c 'PORT="${HEALTH_PORT:-${METRICS_PORT:-3000}}"; curl -fsS "http://127.0.0.1:${PORT}/ready" || exit 1'
+    CMD sh -c 'PORT="${HEALTH_PORT:-${METRICS_PORT:-3000}}"; curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1'
 
 EXPOSE 3003
 

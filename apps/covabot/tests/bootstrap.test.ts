@@ -18,7 +18,7 @@ describe('CovaBot Container', () => {
 		expect(() => {
 			const { validateEnvironment } = require('@starbunk/shared');
 			validateEnvironment({
-				required: ['STARBUNK_TOKEN'],
+				required: ['COVABOT_TOKEN'],
 				optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL'],
 			});
 		}).not.toThrow();
@@ -54,7 +54,7 @@ describe('CovaBot Message Handling - No Hardcoded Values', () => {
 
 	it('should NOT contain hardcoded avatar URL in handleMessage', () => {
 		// The old code had: avatarURL: 'https://cdn.discordapp.com/embed/avatars/1.png'
-		expect(sourceCode).not.toContain('cdn.discordapp.com/embed/avatars/1.png');
+		expect(sourceCode).not.toContain('cdn.discordapp.com/embed/avatars/');
 	});
 
 	it('should NOT use any default Discord avatar URLs', () => {

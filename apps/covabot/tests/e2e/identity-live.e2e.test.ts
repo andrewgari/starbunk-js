@@ -7,7 +7,7 @@
  * 3. No default Discord avatars (cdn.discordapp.com/embed/avatars) are ever used
  *
  * Prerequisites:
- * - .env file in project root with STARBUNK_TOKEN
+ * - .env file in project root with COVABOT_TOKEN
  * - Bot must have access to the Starbunk Crusaders server
  * - Set RUN_LIVE_DISCORD_TESTS=true to run these tests
  *
@@ -36,7 +36,7 @@ const COVA_USER_ID = process.env.COVA_USER_ID;
 const STARBUNK_GUILD_ID = process.env.GUILD_ID;
 
 // Only run live tests when explicitly requested and all required env vars are set
-const hasRealToken = process.env.STARBUNK_TOKEN && process.env.STARBUNK_TOKEN !== 'test_token';
+const hasRealToken = process.env.COVABOT_TOKEN && process.env.COVABOT_TOKEN !== 'test_token';
 const hasRequiredEnvVars = hasRealToken && COVA_USER_ID && STARBUNK_GUILD_ID;
 const RUN_LIVE_TESTS = process.env.RUN_LIVE_DISCORD_TESTS === 'true' && hasRequiredEnvVars;
 
@@ -56,7 +56,7 @@ describeOrSkip('Identity Service - Live Discord API Integration', () => {
 
 		try {
 			// Connect to Discord
-			await client.login(process.env.STARBUNK_TOKEN);
+			await client.login(process.env.COVABOT_TOKEN);
 
 			// Wait for client to be ready
 			await new Promise<void>((resolve, reject) => {
