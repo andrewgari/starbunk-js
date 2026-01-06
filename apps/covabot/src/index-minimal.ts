@@ -114,7 +114,7 @@ class CovaBotContainer {
 	async start(): Promise<void> {
 		const token = process.env.COVABOT_TOKEN;
 		if (!token) {
-			throw new Error('STARBUNK_TOKEN environment variable is required');
+			throw new Error('COVABOT_TOKEN environment variable is required');
 		}
 
 		await this.client.login(token);
