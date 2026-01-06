@@ -42,8 +42,10 @@ jobs:
           file: ./apps/bunkbot/Dockerfile
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha,scope=shared-deps
+            type=gha,scope=bunkbot
+          cache-to: type=gha,mode=max,scope=bunkbot
           outputs: type=docker,dest=/tmp/bunkbot.tar
 
       - name: Upload artifact
@@ -70,8 +72,10 @@ jobs:
           file: ./apps/covabot/Dockerfile
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha,scope=shared-deps
+            type=gha,scope=covabot
+          cache-to: type=gha,mode=max,scope=covabot
           outputs: type=docker,dest=/tmp/covabot.tar
 
       - name: Upload artifact
@@ -98,8 +102,10 @@ jobs:
           file: ./apps/djcova/Dockerfile
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha,scope=shared-deps
+            type=gha,scope=djcova
+          cache-to: type=gha,mode=max,scope=djcova
           outputs: type=docker,dest=/tmp/djcova.tar
 
       - name: Upload artifact
@@ -126,8 +132,10 @@ jobs:
           file: ./apps/bluebot/Dockerfile
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha,scope=shared-deps
+            type=gha,scope=bluebot
+          cache-to: type=gha,mode=max,scope=bluebot
           outputs: type=docker,dest=/tmp/bluebot.tar
 
       - name: Upload artifact
