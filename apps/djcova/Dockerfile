@@ -9,27 +9,33 @@ WORKDIR /app
 # Install all system dependencies in one layer
 RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 
-# Copy package files for better caching (skip package-lock.json due to Alpine compatibility issues)
-COPY packages/shared/package.json ./shared/
-COPY apps/djcova/package.json ./
+# Copy package files for better caching
+COPY package.json package-lock.json* ./
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/djcova/package.json ./apps/djcova/
 
-# Install shared dependencies first
-RUN cd shared && npm install
+# Install all dependencies using workspace (more efficient)
+# Using cache mount to speed up npm install across builds
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --ignore-scripts
 
-# Install container dependencies
-RUN npm install
+# Copy shared package source
+COPY packages/shared/src ./packages/shared/src
+COPY packages/shared/tsconfig*.json ./packages/shared/
 
-# Copy source code (skip package files that are already copied)
-COPY packages/shared ./shared
-COPY apps/djcova/src ./src
-COPY apps/djcova/tests ./tests
-COPY apps/djcova/jest.config.js apps/djcova/tsconfig*.json apps/djcova/.dockerignore ./
+# Build shared package
+RUN cd packages/shared && npm run build
 
-# Build shared package and container in one step
-RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
-    cd .. && npm install "./shared/${SHARED_TGZ}" && \
-    npm run build:docker && \
-    npm prune --omit=dev
+# Copy app source code
+COPY apps/djcova/src ./apps/djcova/src
+COPY apps/djcova/tests ./apps/djcova/tests
+COPY apps/djcova/jest.config.js apps/djcova/tsconfig*.json apps/djcova/.dockerignore ./apps/djcova/
+
+# Build the application
+RUN cd apps/djcova && npm run build:docker
+
+# Clean up development dependencies
+RUN npm prune --omit=dev
 
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
@@ -57,11 +63,12 @@ RUN apk add --no-cache ffmpeg openssl dumb-init curl python3 py3-pip && \
     chown -R djcova:djcova /tmp/djcova && \
     pip3 install --no-cache-dir --break-system-packages "yt-dlp==2024.10.22"
 
-# Copy everything from builder stage (production-ready) with correct ownership
+# Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=djcova:djcova /app/node_modules ./node_modules
-COPY --from=builder --chown=djcova:djcova /app/shared ./shared
-COPY --from=builder --chown=djcova:djcova /app/dist ./dist
+COPY --from=builder --chown=djcova:djcova /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=djcova:djcova /app/apps/djcova/dist ./apps/djcova/dist
 COPY --from=builder --chown=djcova:djcova /app/package.json ./
+COPY --from=builder --chown=djcova:djcova /app/apps/djcova/package.json ./apps/djcova/
 
 # Set default environment variables from build args
 # These can be overridden at runtime via .env file or docker-compose environment
@@ -96,4 +103,4 @@ EXPOSE 3000
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "apps/djcova/dist/index.js"]

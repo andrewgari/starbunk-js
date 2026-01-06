@@ -9,27 +9,33 @@ WORKDIR /app
 # Install all system dependencies in one layer
 RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 
-# Copy package files for better caching (skip package-lock.json due to Alpine compatibility issues)
-COPY packages/shared/package.json ./shared/
-COPY apps/starbunk-dnd/package.json ./
+# Copy package files for better caching
+COPY package.json package-lock.json* ./
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/starbunk-dnd/package.json ./apps/starbunk-dnd/
 
-# Install shared dependencies first
-RUN cd shared && npm install
+# Install all dependencies using workspace (more efficient)
+# Using cache mount to speed up npm install across builds
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --ignore-scripts
 
-# Install container dependencies
-RUN npm install
+# Copy shared package source
+COPY packages/shared/src ./packages/shared/src
+COPY packages/shared/tsconfig*.json ./packages/shared/
 
-# Copy source code (skip package files that are already copied)
-COPY packages/shared ./shared
-COPY apps/starbunk-dnd/src ./src
-COPY apps/starbunk-dnd/tests ./tests
-COPY apps/starbunk-dnd/jest.config.js apps/starbunk-dnd/tsconfig*.json apps/starbunk-dnd/.dockerignore ./
+# Build shared package
+RUN cd packages/shared && npm run build
 
-# Build shared package and container in one step
-RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
-    cd .. && npm install "./shared/${SHARED_TGZ}" && \
-    npm run build:docker && \
-    npm prune --omit=dev
+# Copy app source code
+COPY apps/starbunk-dnd/src ./apps/starbunk-dnd/src
+COPY apps/starbunk-dnd/tests ./apps/starbunk-dnd/tests
+COPY apps/starbunk-dnd/jest.config.js apps/starbunk-dnd/tsconfig*.json apps/starbunk-dnd/.dockerignore ./apps/starbunk-dnd/
+
+# Build the application
+RUN cd apps/starbunk-dnd && npm run build:docker
+
+# Clean up development dependencies
+RUN npm prune --omit=dev
 
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
@@ -58,11 +64,12 @@ RUN apk add --no-cache openssl dumb-init curl && \
     addgroup -g 1001 -S starbunk-dnd && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G starbunk-dnd starbunk-dnd
 
-# Copy everything from builder stage (production-ready) with correct ownership
+# Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/node_modules ./node_modules
-COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/shared ./shared
-COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/dist ./dist
+COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/apps/starbunk-dnd/dist ./apps/starbunk-dnd/dist
 COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/package.json ./
+COPY --from=builder --chown=starbunk-dnd:starbunk-dnd /app/apps/starbunk-dnd/package.json ./apps/starbunk-dnd/
 
 # Set default environment variables from build args
 # These can be overridden at runtime via .env file or docker-compose environment
@@ -98,4 +105,4 @@ EXPOSE 3001
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "apps/starbunk-dnd/dist/index.js"]
