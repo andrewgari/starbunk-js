@@ -412,7 +412,7 @@ jobs:
     steps:
       - name: All deployment stages completed
         run: |
-          echo "[35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\e[0m"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\e[0m"
           echo "✅ Main deployment workflow completed successfully!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✓ Docker Builds (4 apps)"
