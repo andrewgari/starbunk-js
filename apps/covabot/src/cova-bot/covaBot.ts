@@ -226,6 +226,12 @@ export class CovaBot {
 
 					if (!matches) continue;
 
+					// Log that message was accepted for processing
+					logger.info(
+						`[CovaBot] ✅ Message accepted | User: ${message.author.username} | Channel: ${message.channel.id} | Trigger: ${trigger.name}`,
+					);
+					logger.info(`[CovaBot] 📨 Original message: "${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}"`);
+
 					// Track personality trigger
 					if (this.metrics && messageContext) {
 						this.metrics.trackPersonalityTrigger(triggerType, messageContext);
@@ -237,6 +243,11 @@ export class CovaBot {
 						logger.debug('[CovaBot] Empty response from trigger');
 						continue;
 					}
+
+					// Log the response that will be sent
+					logger.info(
+						`[CovaBot] 🤖 Generated response: "${responseText.substring(0, 150)}${responseText.length > 150 ? '...' : ''}"`,
+					);
 
 					// Get Cova's Discord identity with server context
 					const identity = await this.getCovaIdentity(message);
@@ -252,6 +263,9 @@ export class CovaBot {
 
 					// Send message with Cova's identity (includes logging)
 					await this.sendMessage(message, responseText, identity, trigger.name, responseTime);
+
+					// Confirm response was sent
+					logger.info(`[CovaBot] ✉️ Response sent successfully as ${identity.botName}`);
 
 					// Track successful response
 					responseGenerated = true;

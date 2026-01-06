@@ -93,7 +93,7 @@ runs:
       shell: bash
       run: |
         # Check if we got an exact cache match or a partial restore-key match
-        CACHE_KEY="${{ steps.generate-cache-key.outputs.cache-key }}"
+        CACHE_KEY="${{ steps.cache-key.outputs.cache-key }}"
         RESTORED_KEY="${{ steps.cache.outputs.cache-matched-key }}"
 
         if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ] && [ "$CACHE_KEY" = "$RESTORED_KEY" ]; then
@@ -128,53 +128,26 @@ runs:
           echo "📦 No cache hit - installing dependencies in parallel..."
         fi
 
-        # Function to install dependencies for a container
-        install_container_deps() {
-          local container_path="$1"
-          local container_name="$2"
+        # This is an npm workspaces monorepo, so we only need to install at the root level
+        # npm will handle installing all workspace dependencies automatically
+        echo "📦 Installing dependencies for all workspaces..."
 
-          if [ -f "$container_path/package.json" ]; then
-            echo "📦 Installing $container_name dependencies..."
-            cd "$container_path"
-            npm ci --prefer-offline --no-audit --silent
-            cd - > /dev/null
-            echo "✅ $container_name dependencies installed"
-          else
-            echo "⚠️  No package.json found for $container_name"
-          fi
-        }
+        # Use --ignore-scripts to prevent prepare scripts from running
+        # The prepare script will be run later if needed
+        if npm ci --prefer-offline --no-audit --ignore-scripts; then
+          echo "✅ All workspace dependencies installed successfully"
+        else
+          echo "❌ Dependency installation failed"
+          exit 1
+        fi
 
-        # Install root dependencies first (needed for scripts and tooling)
-        echo "📦 Installing root dependencies..."
-        npm ci --prefer-offline --no-audit --silent &
-        root_pid=$!
-
-        # Install container dependencies in parallel
-        install_container_deps "packages/shared" "shared" &
-        shared_pid=$!
-
-        install_container_deps "apps/bunkbot" "bunkbot" &
-        bunkbot_pid=$!
-
-        install_container_deps "apps/djcova" "djcova" &
-        djcova_pid=$!
-
-        install_container_deps "apps/starbunk-dnd" "starbunk-dnd" &
-        dnd_pid=$!
-
-        install_container_deps "apps/covabot" "covabot" &
-        covabot_pid=$!
-
-        # Wait for all installations to complete
-        echo "⏳ Waiting for all dependency installations to complete..."
-        wait $root_pid && echo "✅ Root dependencies installed" || echo "❌ Root dependencies failed"
-        wait $shared_pid && echo "✅ Shared dependencies installed" || echo "❌ Shared dependencies failed"
-        wait $bunkbot_pid && echo "✅ BunkBot dependencies installed" || echo "❌ BunkBot dependencies failed"
-        wait $djcova_pid && echo "✅ DJCova dependencies installed" || echo "❌ DJCova dependencies failed"
-        wait $dnd_pid && echo "✅ Starbunk-DND dependencies installed" || echo "❌ Starbunk-DND dependencies failed"
-        wait $covabot_pid && echo "✅ CovaBot dependencies installed" || echo "❌ CovaBot dependencies failed"
-
-        echo "🎉 All dependencies installed successfully"
+        # Generate Prisma client (required for TypeScript compilation)
+        echo "🔧 Generating Prisma client..."
+        if npx prisma generate; then
+          echo "✅ Prisma client generated successfully"
+        else
+          echo "⚠️  Prisma client generation failed (may not be needed for this project)"
+        fi
 
     - name: Build shared package
       if: inputs.build-shared == 'true' && steps.cache.outputs.cache-hit != 'true'
