@@ -3,7 +3,7 @@ describe('CovaBot Container', () => {
 	it('should have minimal bootstrap functionality', () => {
 		// Test that the container can be imported without errors
 		expect(() => {
-			require('../src/index-minimal');
+			require('../src/index');
 		}).not.toThrow();
 	});
 
@@ -34,7 +34,7 @@ describe('CovaBot Message Handling - No Hardcoded Values', () => {
 	const path = require('path');
 
 	// Read the source file for static analysis
-	const sourceFilePath = path.join(__dirname, '../src/index-minimal.ts');
+	const sourceFilePath = path.join(__dirname, '../src/index.ts');
 	const sourceCode = fs.readFileSync(sourceFilePath, 'utf-8');
 
 	it('should NOT contain hardcoded response arrays in handleMessage', () => {

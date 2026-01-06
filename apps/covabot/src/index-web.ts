@@ -25,7 +25,7 @@ async function startCovaBot() {
 
 		// Import and start the main CovaBot after web server is ready
 		// Defer starting the minimal bot until web is ready
-		await import('./index-minimal');
+		await import('./index');
 
 		logger.info('🚀 CovaBot with Web Interface started successfully!');
 		logger.info(`📝 Manage personality at: http://localhost:${port}`);
