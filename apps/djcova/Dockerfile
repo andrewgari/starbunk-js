@@ -16,6 +16,7 @@ COPY apps/djcova/package.json ./apps/djcova/
 
 # Install all dependencies using workspace (more efficient)
 # Using cache mount to speed up npm install across builds
+# Note: --ignore-scripts skips prepare/postinstall scripts; they run later if needed
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --prefer-offline --no-audit --ignore-scripts
 

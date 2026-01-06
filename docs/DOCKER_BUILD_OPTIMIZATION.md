@@ -123,9 +123,9 @@ jobs:
 - **Improvement:** ~60-70% reduction in build time
 
 ### Cache Hit Rate
-- **npm install:** ~90% cache hit rate (unless dependencies change)
-- **Docker layers:** ~80% cache hit rate (unless source code changes)
-- **Overall:** ~3-5x faster builds on average
+- **npm install:** ~90% cache hit rate (unless dependencies change) - *Estimated based on typical development patterns*
+- **Docker layers:** ~80% cache hit rate (unless source code changes) - *Estimated based on layer structure*
+- **Overall:** ~3-5x faster builds on average - *Expected improvement with warm cache*
 
 ## Best Practices
 
@@ -170,9 +170,20 @@ jobs:
 Potential areas for further improvement:
 
 1. **Registry cache**: In addition to GHA cache, use registry cache for public layers
+   - Could reduce cache misses when GHA cache is evicted
+   - Requires configuring Docker registry with cache support
+   
 2. **Base image**: Create a shared base image with common dependencies pre-installed
+   - Build once, reuse for all apps
+   - Would require maintaining a separate base image
+   
 3. **Build matrices**: Further parallelize by building multiple apps in a single job
+   - Could reduce total runner time
+   - May increase complexity of workflow configuration
+   
 4. **Dependency pre-caching**: Pre-warm cache with common dependencies before builds
+   - Add a pre-build step that runs `npm ci` and saves cache
+   - All subsequent builds could use this warm cache
 
 ## References
 
