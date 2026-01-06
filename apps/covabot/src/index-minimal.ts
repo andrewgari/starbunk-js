@@ -1,5 +1,5 @@
 // CovaBot - AI personality bot container (Minimal Bootstrap Demo)
-import { Events, Message } from 'discord.js';
+import { Events, Message, TextChannel } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 
 import {
@@ -8,19 +8,12 @@ import {
 	validateEnvironment,
 	createDiscordClient,
 	ClientConfigs,
-	container,
-	ServiceId,
-	WebhookManager,
-	DiscordService,
 	initializeObservability,
 } from '@starbunk/shared';
-import { getCovaIdentity } from './services/identity';
 import { createLLMService, LLMService } from './services/llmService';
-import { COVA_BOT_FALLBACK_RESPONSES } from './cova-bot/constants';
 
 class CovaBotContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
-	private webhookManager!: WebhookManager;
 	private llmService!: LLMService;
 	private hasInitialized = false;
 
@@ -66,27 +59,9 @@ class CovaBotContainer {
 	}
 
 	private async initializeServices(): Promise<void> {
-		// Register Discord client
-		container.register(ServiceId.DiscordClient, this.client);
-
-		// Initialize Discord service for identity lookups
-		const discordService = new DiscordService(this.client);
-		container.register(ServiceId.DiscordService, discordService);
-
-		// Initialize webhook manager for AI personality responses
-		this.webhookManager = new WebhookManager(this.client);
-		container.register(ServiceId.WebhookService, this.webhookManager);
-
-		// Initialize LLM service for AI personality responses
+		// Initialize LLM service
 		this.llmService = createLLMService();
 		logger.info('✅ LLM service initialized');
-
-		// Initialize minimal database access for personality data
-		if (process.env.DATABASE_URL) {
-			logger.info('✅ Database connection available for personality data');
-		} else {
-			logger.info('ℹ️  No database URL provided, CovaBot will work without persistence');
-		}
 
 		logger.info('✅ CovaBot services initialized');
 	}
@@ -122,38 +97,22 @@ class CovaBotContainer {
 			}
 
 			// Generate LLM response
-			let response = await this.llmService.generateResponse(message);
-
+			const response = await this.llmService.generateResponse(message);
 			// If LLM returns empty, use fallback responses
 			if (!response || response.trim().length === 0) {
-				const fallbackResponses = COVA_BOT_FALLBACK_RESPONSES;
-				response = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-				logger.debug('[CovaBot] Using fallback response due to empty LLM response');
-			}
-
-			// Get dynamic identity from Discord (server-specific nickname and avatar)
-			const identity = await getCovaIdentity(message);
-
-			if (!identity) {
-				logger.warn('[CovaBot] Failed to get identity, skipping response');
+				logger.warn('[CovaBot] LLM returned empty response');
 				return;
 			}
 
-			// Send response using dynamic identity
-			await this.webhookManager.sendMessage(message.channel.id, {
-				content: response,
-				username: identity.botName,
-				avatarURL: identity.avatarUrl,
-			});
-
-			logger.debug(`[CovaBot] Sent response as "${identity.botName}"`);
+      const textChannel = message.channel as TextChannel;
+      textChannel.send(response);
 		} catch (error) {
 			logger.error('Error in CovaBot message handling:', ensureError(error));
 		}
 	}
 
 	async start(): Promise<void> {
-		const token = process.env.STARBUNK_TOKEN;
+		const token = process.env.COVABOT_TOKEN;
 		if (!token) {
 			throw new Error('STARBUNK_TOKEN environment variable is required');
 		}

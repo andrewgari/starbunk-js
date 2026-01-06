@@ -91,10 +91,9 @@ describe('CovaBot Message Handling - No Hardcoded Values', () => {
 		expect(sourceCode).toContain('avatarURL: identity.avatarUrl');
 	});
 
-	it('should use fallback responses only when LLM returns empty', () => {
-		// Verify that fallback is only used when LLM fails, not as primary responses
-		expect(sourceCode).toContain("import { COVA_BOT_FALLBACK_RESPONSES } from './cova-bot/constants'");
-		expect(sourceCode).toContain('!response || response.trim().length === 0');
-		expect(sourceCode).toContain('COVA_BOT_FALLBACK_RESPONSES');
+	it('should use webhook manager for posting responses', () => {
+		// Verify that webhook manager is used for posting
+		expect(sourceCode).toContain('WebhookManager');
+		expect(sourceCode).toContain('this.webhookManager.sendMessage');
 	});
 });

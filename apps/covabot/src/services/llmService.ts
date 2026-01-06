@@ -291,7 +291,6 @@ export class ProductionLLMService implements LLMService {
 
 			// Explicit text mention of the bot
 			const mentionsCovabot = lowerContent.includes('covabot');
-			const mentionsCovaOnly = !mentionsCovabot && lowerContent.includes('cova');
 
 			// Deterministic responses: direct mentions or explicit "covabot" text
 			if (isDirectMention || mentionsCovabot) {
@@ -300,8 +299,7 @@ export class ProductionLLMService implements LLMService {
 			}
 
 			// Probabilistic temperature-based behavior for everything else
-			const isQuestion = content.includes('?');
-			const keywordList = ['bot', 'cova', 'pugs', 'kyra', 'games', 'honkai', 'final fantasy', 'kingdom hearts'];
+			const keywordList = ['bot', 'cova', 'pugs', 'kyra', 'taco bell', 'honkai', 'final fantasy', 'kingdom hearts'];
 			let keywordHits = 0;
 			for (const kw of keywordList) {
 				if (lowerContent.includes(kw)) {
@@ -313,19 +311,10 @@ export class ProductionLLMService implements LLMService {
 			const activityScore = this.getChannelActivityScore(message); // 0..1
 
 			let p = 0.01; // base probability (1%)
-			if (mentionsCovaOnly) {
-				// Talking to/about the real Cova (but not explicitly "covabot") boosts temperature
-				p += 0.1;
-			}
-
 			const keywordP = Math.min(0.15, keywordHits * 0.05);
 			p += keywordP;
 
-			if (isQuestion) {
-				p += 0.05;
-			}
-
-			p += 0.2 * activityScore;
+			p += 0.4 * activityScore;
 
 			// Clamp between 0 and 0.5 so we never get overly chatty
 			p = Math.max(0, Math.min(0.5, p));
@@ -335,7 +324,7 @@ export class ProductionLLMService implements LLMService {
 
 			logger.debug(
 				`[LLMService] Heuristic decision: probabilistic gating p=${p.toFixed(3)} roll=${roll.toFixed(3)} ` +
-					`activity=${activityScore.toFixed(3)} keywords=${keywordHits} mentionsCovaOnly=${mentionsCovaOnly}`,
+					`activity=${activityScore.toFixed(3)} keywords=${keywordHits}`,
 			);
 
 			return decision;
