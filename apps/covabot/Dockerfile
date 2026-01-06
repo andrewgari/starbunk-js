@@ -113,4 +113,4 @@ EXPOSE 3003
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "apps/covabot/dist/index-minimal.js"]
+CMD ["node", "dist/index.js"]
