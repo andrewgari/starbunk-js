@@ -1,3 +1,9 @@
+## [1.9.0](https://github.com/andrewgari/starbunk-js/compare/v1.8.0...v1.9.0) (2026-01-06)
+
+### Features
+
+* **bluebot:** Migrate from PostgreSQL to Redis for user configuration ([#407](https://github.com/andrewgari/starbunk-js/issues/407)) ([9f5affb](https://github.com/andrewgari/starbunk-js/commit/9f5affba74e59416ca31f4bc88d2b8d2e1e2870f))
+
 ## [1.8.0](https://github.com/andrewgari/starbunk-js/compare/v1.7.0...v1.8.0) (2026-01-06)
 
 ### Features
