@@ -12,6 +12,7 @@ RUN apk add --no-cache python3 make g++ openssl curl dumb-init
 # Copy package files for better caching
 COPY package.json package-lock.json* ./
 COPY packages/shared/package.json ./packages/shared/
+COPY infrastructure/database/prisma ./infrastructure/database/prisma
 COPY apps/covabot/package.json ./apps/covabot/
 
 # Install all dependencies using workspace (more efficient)
