@@ -1,3 +1,9 @@
+## [1.9.1](https://github.com/andrewgari/starbunk-js/compare/v1.9.0...v1.9.1) (2026-01-06)
+
+### Bug Fixes
+
+* remove ANSI escape sequence from GitHub Actions workflow ([8098c57](https://github.com/andrewgari/starbunk-js/commit/8098c5765b79ae7e2cb3eb2de0212c3c0330b1cd))
+
 ## [1.9.0](https://github.com/andrewgari/starbunk-js/compare/v1.8.0...v1.9.0) (2026-01-06)
 
 ### Features
