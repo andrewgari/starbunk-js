@@ -2,16 +2,16 @@
 	"name": "@starbunk/covabot",
 	"version": "1.9.3",
 	"description": "CovaBot - AI personality bot container",
-	"main": "dist/index-minimal.js",
+	"main": "dist/index.js",
 	"engines": {
 		"node": ">=18"
 	},
 	"scripts": {
 		"build": "tsc && tsc-alias",
 		"build:docker": "tsc -p tsconfig.docker.json && tsc-alias -p tsconfig.docker.json",
-		"start": "node dist/index-minimal.js",
+		"start": "node dist/index.js",
 		"start:web": "node dist/index-web.js",
-		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index-minimal.ts",
+		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
 		"dev:web": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index-web.ts",
 		"test": "jest",
 		"test:unit": "jest --testPathIgnorePatterns=e2e",
