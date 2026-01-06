@@ -15,12 +15,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 # Get version from VERSION file
-if [ ! -f "VERSION" ]; then
-  echo -e "${RED}Error: VERSION file not found${NC}"
+if [ ! -f "config/VERSION" ]; then
+  echo -e "${RED}Error: config/VERSION file not found${NC}"
   exit 1
 fi
 
-ROOT_VERSION=$(cat VERSION | tr -d '[:space:]')
+ROOT_VERSION=$(cat config/VERSION | tr -d '[:space:]')
 
 if [ -z "$ROOT_VERSION" ]; then
   echo -e "${RED}Error: Could not read version from VERSION file${NC}"

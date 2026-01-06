@@ -46,7 +46,7 @@ services:
     volumes:
       # Unraid-compatible host path mount
       - ${UNRAID_APPDATA_PATH:-./data}/postgres:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d:ro
+      - ../../infrastructure/database/init-db:/docker-entrypoint-initdb.d:ro
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:

@@ -143,7 +143,7 @@ runs:
 
         # Generate Prisma client (required for TypeScript compilation)
         echo "🔧 Generating Prisma client..."
-        if npx prisma generate; then
+        if npx prisma generate --schema=infrastructure/database/prisma/schema.prisma; then
           echo "✅ Prisma client generated successfully"
         else
           echo "⚠️  Prisma client generation failed (may not be needed for this project)"
