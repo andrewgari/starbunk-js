@@ -67,6 +67,7 @@ RUN apk add --no-cache ffmpeg openssl dumb-init curl python3 py3-pip && \
 
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=djcova:djcova /app/node_modules ./node_modules
+COPY --from=builder --chown=djcova:djcova /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY --from=builder --chown=djcova:djcova /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder --chown=djcova:djcova /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder --chown=djcova:djcova /app/apps/djcova/dist ./apps/djcova/dist
