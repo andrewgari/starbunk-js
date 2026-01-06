@@ -57,7 +57,16 @@ class BlueBotContainer {
 			// Validate environment
 			validateEnvironment({
 				required: ['STARBUNK_TOKEN'],
-				optional: ['BLUEBOT_TOKEN', 'DATABASE_URL', 'OPENAI_API_KEY', 'DEBUG_MODE', 'NODE_ENV'],
+				optional: [
+					'BLUEBOT_TOKEN',
+					'REDIS_HOST',
+					'REDIS_PORT',
+					'REDIS_PASSWORD',
+					'REDIS_DB',
+					'OPENAI_API_KEY',
+					'DEBUG_MODE',
+					'NODE_ENV',
+				],
 			});
 
 			// Create Discord client

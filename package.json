@@ -40,6 +40,7 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",
+    "redis:seed": "npx tsx scripts/seed-redis-users.ts",
     "test:bots": "node scripts/test-reply-bots.js",
     "test:bunkbot": "cd apps/bunkbot && npm test",
     "e2e:bunkbot:live": "cd apps/bunkbot && npm run e2e:live",
