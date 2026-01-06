@@ -20,6 +20,9 @@ COPY apps/starbunk-dnd/package.json ./apps/starbunk-dnd/
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --prefer-offline --no-audit --ignore-scripts
 
+# Generate Prisma client (normally done in postinstall)
+RUN npm run db:generate || true
+
 # Copy shared package source
 COPY packages/shared/src ./packages/shared/src
 COPY packages/shared/tsconfig*.json ./packages/shared/
