@@ -238,6 +238,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=384
       - COVABOT_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
       - STARBUNK_TOKEN=${STARBUNK_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
