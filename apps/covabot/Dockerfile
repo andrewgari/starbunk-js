@@ -9,27 +9,35 @@ WORKDIR /app
 # Install all system dependencies in one layer
 RUN apk add --no-cache python3 make g++ openssl curl dumb-init
 
-# Copy package files for better caching (skip package-lock.json due to Alpine compatibility issues)
-COPY packages/shared/package.json ./shared/
-COPY apps/covabot/package.json ./
+# Copy package files for better caching
+COPY package.json package-lock.json* ./
+COPY packages/shared/package.json ./packages/shared/
+COPY infrastructure/database/prisma ./infrastructure/database/prisma
+COPY apps/covabot/package.json ./apps/covabot/
 
-# Install shared dependencies first
-RUN cd shared && npm install
+# Install all dependencies using workspace (more efficient)
+# Using cache mount to speed up npm install across builds
+# Note: --ignore-scripts skips prepare/postinstall scripts; they run later if needed
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --ignore-scripts
 
-# Install container dependencies
-RUN npm install
+# Generate Prisma client (normally done in postinstall)
+RUN npm run db:generate || true
 
-# Copy source code (skip package files that are already copied)
-COPY packages/shared ./shared
-COPY apps/covabot/src ./src
-COPY apps/covabot/tests ./tests
-COPY apps/covabot/jest.config.js apps/covabot/tsconfig*.json apps/covabot/.dockerignore ./
+# Copy shared package source
+COPY packages/shared/src ./packages/shared/src
+COPY packages/shared/tsconfig*.json ./packages/shared/
 
-# Build shared package and container in one step
-RUN cd shared && npm run build && SHARED_TGZ=$(npm pack | tail -n1) && \
-    cd .. && npm install "./shared/${SHARED_TGZ}" && \
-    npm run build:docker && \
-    npm prune --omit=dev
+# Build shared package
+RUN cd packages/shared && npm run build
+
+# Copy app source code
+COPY apps/covabot/src ./apps/covabot/src
+COPY apps/covabot/tests ./apps/covabot/tests
+COPY apps/covabot/jest.config.js apps/covabot/tsconfig*.json apps/covabot/.dockerignore ./apps/covabot/
+
+# Build the application
+RUN cd apps/covabot && npm run build:docker
 
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
@@ -59,11 +67,13 @@ RUN apk add --no-cache openssl dumb-init curl && \
     addgroup -g 1001 -S covabot && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G covabot covabot
 
-# Copy everything from builder stage (production-ready) with correct ownership
+# Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=covabot:covabot /app/node_modules ./node_modules
-COPY --from=builder --chown=covabot:covabot /app/shared ./shared
-COPY --from=builder --chown=covabot:covabot /app/dist ./dist
+COPY --from=builder --chown=covabot:covabot /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=covabot:covabot /app/packages/shared/package.json ./packages/shared/
+COPY --from=builder --chown=covabot:covabot /app/apps/covabot/dist ./apps/covabot/dist
 COPY --from=builder --chown=covabot:covabot /app/package.json ./
+COPY --from=builder --chown=covabot:covabot /app/apps/covabot/package.json ./apps/covabot/
 
 # Set default environment variables from build args
 # These can be overridden at runtime via .env file or docker-compose environment
@@ -101,4 +111,4 @@ EXPOSE 3003
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "apps/covabot/dist/index.js"]
