@@ -141,6 +141,14 @@ runs:
           exit 1
         fi
 
+        # Generate Prisma client (required for TypeScript compilation)
+        echo "🔧 Generating Prisma client..."
+        if npx prisma generate; then
+          echo "✅ Prisma client generated successfully"
+        else
+          echo "⚠️  Prisma client generation failed (may not be needed for this project)"
+        fi
+
     - name: Build shared package
       if: inputs.build-shared == 'true' && steps.cache.outputs.cache-hit != 'true'
       shell: bash
