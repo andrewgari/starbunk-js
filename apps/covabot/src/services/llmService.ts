@@ -301,7 +301,7 @@ export class ProductionLLMService implements LLMService {
 
 			// Probabilistic temperature-based behavior for everything else
 			const isQuestion = content.includes('?');
-			const keywordList = ['bot', 'dev', 'code', 'starbunk', 'ai'];
+			const keywordList = ['bot', 'cova', 'pugs', 'kyra', 'games', 'honkai', 'final fantasy', 'kingdom hearts'];
 			let keywordHits = 0;
 			for (const kw of keywordList) {
 				if (lowerContent.includes(kw)) {
