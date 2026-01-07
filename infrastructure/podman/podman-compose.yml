@@ -23,7 +23,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - DISCORD_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
@@ -69,7 +69,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -162,7 +162,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - DATABASE_URL=${DATABASE_URL}

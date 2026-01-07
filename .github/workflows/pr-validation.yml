@@ -162,6 +162,8 @@ jobs:
           fi
 
           docker run -d --name ${{ matrix.app }}-test \
+            -e DISCORD_TOKEN=test \
+            -e CLIENT_ID=test \
             -e ${TOKEN_VAR}=test \
             -e DEBUG_MODE=true \
             -e CI_SMOKE_MODE=true \

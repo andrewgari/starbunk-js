@@ -72,8 +72,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - BUNKBOT_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
-      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - DISCORD_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
@@ -126,8 +125,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - DJCOVA_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
-      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -239,8 +237,7 @@ services:
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=384
-      - COVABOT_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
-      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
@@ -305,8 +302,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - BLUEBOT_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
-      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       # Redis Configuration (replaces PostgreSQL for user lookups)

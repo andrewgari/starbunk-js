@@ -20,7 +20,6 @@ import {
 	EnhancedBunkBotMetricsCollector,
 	BotTriggerTracker,
 	initializeBotMetricsSystem,
-	getDiscordToken,
 } from '@starbunk/shared';
 
 // Import DiscordService from the shared package exports
@@ -174,7 +173,7 @@ class BunkBotContainer {
 
 	private validateEnvironment(): void {
 		validateEnvironment({
-			required: ['STARBUNK_TOKEN'],
+			required: ['DISCORD_TOKEN'],
 			optional: [
 				'DATABASE_URL',
 				'DEBUG_MODE',
@@ -501,8 +500,10 @@ class BunkBotContainer {
 	}
 
 	async start(): Promise<void> {
-		// Get Discord token with smart fallback logic
-		const token = getDiscordToken({ containerName: 'BUNKBOT', logger });
+		const token = process.env.DISCORD_TOKEN;
+		if (!token) {
+			throw new Error('DISCORD_TOKEN environment variable is required');
+		}
 
 		await this.client.login(token);
 		await this.waitForReady();
