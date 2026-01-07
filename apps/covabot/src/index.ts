@@ -19,6 +19,9 @@ class CovaBotContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
 	private llmService!: LLMService;
 	private hasInitialized = false;
+	private httpEndpoints?: ReturnType<typeof initializeObservability>['httpEndpoints'];
+	private discordConnected = false;
+	private lastDiscordError?: Error;
 
 	async initialize(): Promise<void> {
 		logger.info('🤖 Initializing CovaBot container...');
@@ -26,14 +29,55 @@ class CovaBotContainer {
 		try {
 			// Initialize observability (metrics + health/ready endpoints)
 			try {
-				initializeObservability('covabot');
-				logger.info('✅ Observability initialized for CovaBot (minimal)');
+				const observability = initializeObservability('covabot');
+				this.httpEndpoints = observability.httpEndpoints;
+
+				// Add Discord connection health check
+				this.httpEndpoints.addHealthCheck('discord_connection', async () => {
+					if (!this.discordConnected) {
+						return {
+							name: 'discord_connection',
+							status: 'fail',
+							output: this.lastDiscordError
+								? `Discord not connected: ${this.lastDiscordError.message}`
+								: 'Discord not connected',
+						};
+					}
+
+					// Check if client is still responsive
+					try {
+						const ping = this.client?.ws?.ping ?? -1;
+						if (ping < 0) {
+							return {
+								name: 'discord_connection',
+								status: 'warn',
+								output: 'Discord connected but ping unavailable',
+							};
+						}
+
+						return {
+							name: 'discord_connection',
+							status: ping > 500 ? 'warn' : 'pass',
+							output: `Discord connected, ping: ${ping}ms`,
+							duration_ms: ping,
+						};
+					} catch (error) {
+						return {
+							name: 'discord_connection',
+							status: 'fail',
+							output: `Discord health check failed: ${ensureError(error).message}`,
+						};
+					}
+				});
+
+				logger.info('✅ Observability initialized for CovaBot with Discord health check');
 			} catch (error) {
 				logger.warn(
-					'⚠️ Failed to initialize observability for CovaBot (minimal), continuing without HTTP metrics/health:',
+					'⚠️ Failed to initialize observability for CovaBot, continuing without HTTP metrics/health:',
 					ensureError(error),
 				);
 			}
+
 			// Validate environment
 			this.validateEnvironment();
 
@@ -49,14 +93,15 @@ class CovaBotContainer {
 			logger.info('✅ CovaBot container initialized successfully');
 		} catch (error) {
 			logger.error('❌ Failed to initialize CovaBot container:', ensureError(error));
+			this.lastDiscordError = ensureError(error);
 			throw error;
 		}
 	}
 
 	private validateEnvironment(): void {
 		validateEnvironment({
-			required: ['COVABOT_TOKEN'],
-			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG', 'NODE_ENV', 'COVA_USER_ID'],
+			required: ['DISCORD_TOKEN'],
+			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG', 'NODE_ENV', 'COVA_USER_ID', 'CLIENT_ID'],
 		});
 		logger.info('✅ Environment validation passed for CovaBot');
 	}
@@ -72,10 +117,28 @@ class CovaBotContainer {
 	private setupEventHandlers(): void {
 		this.client.on(Events.Error, (error: Error) => {
 			logger.error('Discord client error:', error);
+			this.lastDiscordError = error;
+			this.discordConnected = false;
 		});
 
 		this.client.on(Events.Warn, (warning: string) => {
 			logger.warn('Discord client warning:', warning);
+		});
+
+		// Monitor WebSocket status for connection state
+		this.client.on(Events.ShardDisconnect, () => {
+			logger.warn('Discord WebSocket disconnected');
+			this.discordConnected = false;
+		});
+
+		this.client.on(Events.ShardReconnecting, () => {
+			logger.info('Discord WebSocket reconnecting...');
+			this.discordConnected = false;
+		});
+
+		this.client.on(Events.ShardResume, () => {
+			logger.info('Discord WebSocket resumed');
+			this.discordConnected = true;
 		});
 
 		this.client.on(Events.MessageCreate, async (message: Message) => {
@@ -85,6 +148,8 @@ class CovaBotContainer {
 		this.client.once(Events.ClientReady, () => {
 			logger.info('🤖 CovaBot is ready and connected to Discord');
 			this.hasInitialized = true;
+			this.discordConnected = true;
+			this.lastDiscordError = undefined;
 		});
 	}
 
@@ -117,12 +182,51 @@ class CovaBotContainer {
 	async start(): Promise<void> {
 		const token = process.env.DISCORD_TOKEN;
 		if (!token) {
-			throw new Error('DISCORD_TOKEN environment variable is required');
+			const error = new Error('DISCORD_TOKEN environment variable is required');
+			this.lastDiscordError = error;
+			throw error;
 		}
 
-		await this.client.login(token);
-		await this.waitForReady();
-		logger.info('🎉 CovaBot started successfully');
+		// Validate token format (basic check)
+		if (!token.match(/^[\w-]+\.[\w-]+\.[\w-]+$/)) {
+			const error = new Error('DISCORD_TOKEN appears to be invalid (incorrect format)');
+			this.lastDiscordError = error;
+			logger.error('❌ Invalid Discord token format');
+			throw error;
+		}
+
+		// Attempt login with retry logic
+		const maxRetries = 3;
+		let lastError: Error | undefined;
+
+		for (let attempt = 1; attempt <= maxRetries; attempt++) {
+			try {
+				logger.info(`Attempting Discord login (attempt ${attempt}/${maxRetries})...`);
+				await this.client.login(token);
+				await this.waitForReady();
+				logger.info('🎉 CovaBot started successfully');
+				return;
+			} catch (error) {
+				lastError = ensureError(error);
+				this.lastDiscordError = lastError;
+
+				logger.error(`❌ Discord login attempt ${attempt}/${maxRetries} failed:`, lastError);
+
+				// Check for specific error types
+				if (lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login')) {
+					logger.error('❌ Discord token is invalid - cannot retry');
+					throw new Error(`Invalid Discord token: ${lastError.message}`);
+				}
+
+				if (attempt < maxRetries) {
+					const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Exponential backoff, max 10s
+					logger.info(`Retrying in ${delay}ms...`);
+					await new Promise(resolve => setTimeout(resolve, delay));
+				}
+			}
+		}
+
+		throw new Error(`Failed to connect to Discord after ${maxRetries} attempts: ${lastError?.message}`);
 	}
 
 	private waitForReady(): Promise<void> {
@@ -167,6 +271,9 @@ async function main(): Promise<void> {
 		return;
 	}
 
+	let covaBot: CovaBotContainer | undefined;
+	let webServer: WebServer | undefined;
+
 	try {
 		// Check if web interface should be enabled (if COVABOT_WEB_PORT is set)
 		const webPort = process.env.COVABOT_WEB_PORT;
@@ -181,33 +288,59 @@ async function main(): Promise<void> {
 
 			// Initialize Qdrant memory service
 			if (useQdrant) {
-				const memoryService = QdrantMemoryService.getInstance();
-				await memoryService.initialize();
-				logger.info('✅ Qdrant memory service initialized');
+				try {
+					const memoryService = QdrantMemoryService.getInstance();
+					await memoryService.initialize();
+					logger.info('✅ Qdrant memory service initialized');
+				} catch (error) {
+					logger.error('❌ Failed to initialize Qdrant memory service:', ensureError(error));
+					logger.warn('⚠️ Continuing without Qdrant - some features may be limited');
+				}
 			}
 
 			// Start web server
-			const port = parseInt(webPort || '7080', 10);
-			const webServer = new WebServer(port, useQdrant);
-			await webServer.start();
-			logger.info(`✅ Web interface started on http://localhost:${port}`);
+			try {
+				const port = parseInt(webPort || '7080', 10);
+				webServer = new WebServer(port, useQdrant);
+				await webServer.start();
+				logger.info(`✅ Web interface started on http://localhost:${port}`);
+			} catch (error) {
+				logger.error('❌ Failed to start web server:', ensureError(error));
+				logger.warn('⚠️ Continuing without web interface');
+			}
 
 			// Start the main CovaBot
-			const covaBot = new CovaBotContainer();
+			covaBot = new CovaBotContainer();
 			await covaBot.initialize();
 			await covaBot.start();
 
 			logger.info('🚀 CovaBot with Web Interface started successfully!');
-			logger.info(`📝 Manage personality at: http://localhost:${port}`);
+			if (webServer) {
+				logger.info(`📝 Manage personality at: http://localhost:${webPort}`);
+			}
 			logger.info(`🧠 Memory system: ${storageType}`);
 		} else {
 			// Standard mode - just start CovaBot
-			const covaBot = new CovaBotContainer();
+			covaBot = new CovaBotContainer();
 			await covaBot.initialize();
 			await covaBot.start();
 		}
 	} catch (error) {
-		logger.error('Failed to start CovaBot:', ensureError(error));
+		const err = ensureError(error);
+		logger.error('❌ Failed to start CovaBot:', err);
+
+		// Cleanup any partially initialized services
+		if (covaBot) {
+			try {
+				await covaBot.stop();
+			} catch (cleanupError) {
+				logger.error('Error during cleanup:', ensureError(cleanupError));
+			}
+		}
+
+		// Give observability time to flush logs/metrics before exiting
+		await new Promise(resolve => setTimeout(resolve, 2000));
+
 		process.exit(1);
 	}
 }
