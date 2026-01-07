@@ -1,3 +1,9 @@
+## [1.9.4](https://github.com/andrewgari/starbunk-js/compare/v1.9.3...v1.9.4) (2026-01-07)
+
+### Bug Fixes
+
+* Resolve CovaBot and DJCova container boot loops ([#419](https://github.com/andrewgari/starbunk-js/issues/419)) ([fde30bd](https://github.com/andrewgari/starbunk-js/commit/fde30bd617f9a33539a49f88919a6fefeebf933a))
+
 ## [1.9.3](https://github.com/andrewgari/starbunk-js/compare/v1.9.2...v1.9.3) (2026-01-06)
 
 ### Bug Fixes
