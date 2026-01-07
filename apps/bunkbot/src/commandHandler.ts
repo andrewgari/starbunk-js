@@ -56,10 +56,11 @@ export class CommandHandler {
 			// Determine the file extension to use based on environment
 			const fileExtension = isDev || isTsNode ? devExtension : prodExtension;
 
-			// When running in development or using ts-node, we use the src directory path
-			// In production, use the dist directory
-			const baseDir = isDev || isTsNode ? process.cwd() + '/src' : process.cwd() + '/dist';
-			const commandDir = path.resolve(baseDir, 'starbunk/commands');
+			// Use __dirname to get the directory where this code is running from
+			// In development with ts-node: __dirname = /path/to/apps/bunkbot/src
+			// In production: __dirname = /app/apps/bunkbot/dist
+			// Both cases: commands are in __dirname/starbunk/commands
+			const commandDir = path.resolve(__dirname, 'starbunk/commands');
 
 			logger.debug(`Looking for commands in: ${commandDir}`);
 			logger.info(`Running in ${isDev ? 'development' : 'production'} mode, looking for ${fileExtension} files`);
