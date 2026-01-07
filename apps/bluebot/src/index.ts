@@ -56,9 +56,8 @@ class BlueBotContainer {
 
 			// Validate environment
 			validateEnvironment({
-				required: ['STARBUNK_TOKEN'],
+				required: ['DISCORD_TOKEN'],
 				optional: [
-					'BLUEBOT_TOKEN',
 					'REDIS_HOST',
 					'REDIS_PORT',
 					'REDIS_PASSWORD',
@@ -69,12 +68,13 @@ class BlueBotContainer {
 				],
 			});
 
-			// Create Discord client
-			const token = process.env.BLUEBOT_TOKEN || process.env.STARBUNK_TOKEN;
+			// Get Discord token
+			const token = process.env.DISCORD_TOKEN;
 			if (!token) {
-				throw new Error('BLUEBOT_TOKEN or STARBUNK_TOKEN environment variable is required');
+				throw new Error('DISCORD_TOKEN environment variable is required');
 			}
 
+			// Create Discord client
 			this.client = createDiscordClient(ClientConfigs.BlueBot);
 
 			// Initialize webhook manager

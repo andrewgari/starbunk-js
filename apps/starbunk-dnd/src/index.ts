@@ -15,7 +15,6 @@ import {
 	initializeObservability,
 	createStarbunkDNDMetrics,
 	type StarbunkDNDMetrics,
-	getDiscordToken,
 } from '@starbunk/shared';
 
 type ChatInputInteraction = {
@@ -93,7 +92,7 @@ class StarbunkDNDContainer {
 
 	private validateEnvironment(): void {
 		validateEnvironment({
-			required: ['STARBUNK_TOKEN'],
+			required: ['DISCORD_TOKEN'],
 			optional: [
 				'SNOWBUNK_TOKEN',
 				'DATABASE_URL',
@@ -210,8 +209,10 @@ class StarbunkDNDContainer {
 	}
 
 	async start(): Promise<void> {
-		// Get Discord token with smart fallback logic
-		const token = getDiscordToken({ containerName: 'STARBUNK_DND', logger });
+		const token = process.env.DISCORD_TOKEN;
+		if (!token) {
+			throw new Error('DISCORD_TOKEN environment variable is required');
+		}
 
 		await this.client.login(token);
 		await this.waitForReady();

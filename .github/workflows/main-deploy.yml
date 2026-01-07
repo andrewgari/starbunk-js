@@ -236,6 +236,7 @@ jobs:
         run: |
           docker run -d --name djcova-test \
             -e DISCORD_TOKEN=test \
+            -e CLIENT_ID=test \
             -e DEBUG_MODE=true \
             -e CI_SMOKE_MODE=true \
             -e CI=true \
