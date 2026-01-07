@@ -68,10 +68,6 @@ export class CommandHandler {
 			// Determine the file extension to use based on environment
 			const fileExtension = isDev || isTsNode ? devExtension : prodExtension;
 
-			// Use __dirname to get the directory where this code is running from
-			// In development with ts-node: __dirname = /path/to/apps/djcova/src
-			// In production: __dirname = /app/apps/djcova/dist
-			// Both cases: commands are in __dirname/commands
 			const commandDir = path.resolve(__dirname, 'commands');
 
 			logger.debug(`Looking for commands in: ${commandDir}`);
