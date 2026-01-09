@@ -1,1 +1,362 @@
-infrastructure/docker/docker-compose.yml
+version: '3.8'
+
+services:
+  # Redis - Lightweight key-value store for configuration and caching
+  redis:
+    image: redis:7-alpine
+    container_name: starbunk-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - ${UNRAID_APPDATA_PATH:-./data}/redis:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # PostgreSQL Database - Shared by services that need persistence
+  postgres:
+    image: postgres:15-alpine
+    container_name: starbunk-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-starbunk}
+      POSTGRES_USER: ${POSTGRES_USER:-starbunk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      # Unraid-compatible host path mount
+      - ${UNRAID_APPDATA_PATH:-./data}/postgres:/var/lib/postgresql/data
+      - ../../infrastructure/database/init-db:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-starbunk} -d ${POSTGRES_DB:-starbunk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # BunkBot - Reply bots and admin commands
+  bunkbot:
+    image: ghcr.io/andrewgari/bunkbot:latest
+    container_name: starbunk-bunkbot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DISCORD_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Observability Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # Metrics and health endpoint port
+      - "${BUNKBOT_METRICS_PORT:-9301}:3000"
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=bunkbot
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=3000
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # DJCova - Music service
+  djcova:
+    image: ghcr.io/andrewgari/djcova:latest
+    container_name: starbunk-djcova
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Observability Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+    volumes:
+      # Unraid-compatible host path mounts
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
+    ports:
+      # Metrics and health endpoint port
+      - "${DJCOVA_METRICS_PORT:-9304}:3000"
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=djcova
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=3000
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Starbunk-DND - D&D features and bridge
+  starbunk-dnd:
+    image: ghcr.io/andrewgari/starbunk-dnd:latest
+    container_name: starbunk-dnd
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - STARBUNK_DND_TOKEN=${STARBUNK_DND_TOKEN:-${STARBUNK_TOKEN}}
+      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - OLLAMA_API_URL=${OLLAMA_API_URL:-}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Observability Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+    volumes:
+      # Unraid-compatible host path mounts
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/data:/app/data
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/campaigns:/app/data/campaigns
+      - ${UNRAID_APPDATA_PATH:-./data}/starbunk-dnd/context:/app/data/llm_context
+    ports:
+      # Metrics and health endpoint port
+      - "${STARBUNK_DND_METRICS_PORT:-9305}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=starbunk-dnd
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=3000
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # CovaBot - AI personality bot
+  covabot:
+    image: ghcr.io/andrewgari/covabot:latest
+    container_name: starbunk-covabot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=384
+      - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - OLLAMA_API_URL=${OLLAMA_API_URL:-}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-mistral:latest}
+      - OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS:-true}
+      - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
+      - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - USE_DATABASE=${USE_DATABASE:-false}
+      - COVABOT_DATA_DIR=/app/data
+      - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+      # Observability Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+    volumes:
+      # Unraid-compatible host path mount for CovaBot personality notes
+      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
+    ports:
+      - "${COVABOT_WEB_PORT:-7080}:7080"
+      # Metrics and health endpoint port
+      - "${COVABOT_METRICS_PORT:-9303}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=covabot
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=3000
+
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # BlueBot - Blue detection and response bot
+  bluebot:
+    image: ghcr.io/andrewgari/bluebot:latest
+    container_name: starbunk-bluebot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      # Redis Configuration (replaces PostgreSQL for user lookups)
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-0}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Observability Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
+      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
+      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+    ports:
+      # Metrics and health endpoint port
+      - "${BLUEBOT_METRICS_PORT:-9302}:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=bluebot
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=3000
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+# Note: Using host path mounts for Unraid compatibility
+# Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
+# Default fallback to ./data/ for non-Unraid environments
+
+# Custom network for service communication
+networks:
+  starbunk-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
