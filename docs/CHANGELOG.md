@@ -1,3 +1,9 @@
+## [1.9.5](https://github.com/andrewgari/starbunk-js/compare/v1.9.4...v1.9.5) (2026-01-07)
+
+### Bug Fixes
+
+* Resolve command loading path issue in Docker containers ([#420](https://github.com/andrewgari/starbunk-js/issues/420)) ([e590a1f](https://github.com/andrewgari/starbunk-js/commit/e590a1facc6e5295664f452a683716642b3d9ac7))
+
 ## [1.9.4](https://github.com/andrewgari/starbunk-js/compare/v1.9.3...v1.9.4) (2026-01-07)
 
 ### Bug Fixes
