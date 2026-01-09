@@ -255,6 +255,7 @@ services:
       - USE_DATABASE=${USE_DATABASE:-false}
       - COVABOT_DATA_DIR=/app/data
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+      - USE_QDRANT=false
       # Observability Configuration
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
