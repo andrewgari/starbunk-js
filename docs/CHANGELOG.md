@@ -1,3 +1,12 @@
+## [1.9.7](https://github.com/andrewgari/starbunk-js/compare/v1.9.6...v1.9.7) (2026-01-09)
+
+### Bug Fixes
+
+* **ci:** convert docker-compose.yml from symlink to regular file ([e750d07](https://github.com/andrewgari/starbunk-js/commit/e750d079686070dcc0079e5d577d0299cf4a9716))
+* increase memory limits and Node.js options for improved performance ([9eb606c](https://github.com/andrewgari/starbunk-js/commit/9eb606cddbe6049711718d4fc48f148661b81164))
+* remove obsolete docker-compose.yml file ([f820b36](https://github.com/andrewgari/starbunk-js/commit/f820b360caca40d9da206538e6334fc1288635c4))
+* replace broken symlink with physical file ([384be4e](https://github.com/andrewgari/starbunk-js/commit/384be4e29219b631dd7d70b6cfe76ebb81d081bc))
+
 ## [1.9.6](https://github.com/andrewgari/starbunk-js/compare/v1.9.5...v1.9.6) (2026-01-09)
 
 ### Bug Fixes
