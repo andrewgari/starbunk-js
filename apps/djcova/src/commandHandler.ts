@@ -184,14 +184,15 @@ export class CommandHandler {
 					throw new Error('CLIENT_ID environment variable is required');
 				}
 
-				const debugMode = process.env.DEBUG_MODE === 'true';
-				const guildIds = (process.env.TESTING_SERVER_IDS || '')
+				// Get guild IDs from environment
+				const guildIds = (process.env.TESTING_SERVER_IDS || process.env.GUILD_ID || '')
 					.split(',')
 					.map((s: string) => s.trim())
 					.filter(Boolean);
 
-				if (debugMode && guildIds.length > 0) {
+				if (guildIds.length > 0) {
 					// Register commands to guilds in parallel for better performance
+					// Guild commands update instantly, unlike global commands which take up to 1 hour
 					const registrationPromises = guildIds.map(async (gid: string) => {
 						try {
 							await rest.put(Routes.applicationGuildCommands(clientId, gid), { body: commandData });
@@ -207,8 +208,10 @@ export class CommandHandler {
 
 					await Promise.all(registrationPromises);
 				} else {
+					// Fallback to global registration (takes up to 1 hour to propagate)
+					logger.warn('No TESTING_SERVER_IDS or GUILD_ID set - registering commands globally (may take up to 1 hour to appear)');
 					await rest.put(Routes.applicationCommands(clientId), { body: commandData });
-					logger.info('Successfully registered application commands with Discord');
+					logger.info('Successfully registered application commands globally');
 				}
 			} else {
 				logger.warn('No commands to register with Discord');
