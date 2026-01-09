@@ -1,3 +1,9 @@
+## [1.9.6](https://github.com/andrewgari/starbunk-js/compare/v1.9.5...v1.9.6) (2026-01-09)
+
+### Bug Fixes
+
+* **djcova:** register commands to guilds instead of globally ([#421](https://github.com/andrewgari/starbunk-js/issues/421)) ([8286e90](https://github.com/andrewgari/starbunk-js/commit/8286e905c814304123e68cf467543e135259c620))
+
 ## [1.9.5](https://github.com/andrewgari/starbunk-js/compare/v1.9.4...v1.9.5) (2026-01-07)
 
 ### Bug Fixes
