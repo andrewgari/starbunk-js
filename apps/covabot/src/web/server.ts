@@ -2,34 +2,22 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { logger } from '@starbunk/shared';
-import { QdrantMemoryService } from '../services/qdrantMemoryService';
 import { BotConfigurationService } from '../services/botConfigurationService';
 import { rateLimit, requestLogger } from './middleware/auth';
 import { CovaBot } from '../cova-bot/covaBot';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from '../cova-bot/triggers';
-import { createHealthRouter } from './routers/health';
-import { createNotesRouter } from './routers/notes';
-import { createContextRouter } from './routers/context';
 import { createConfigurationRouter } from './routers/configuration';
-import { createDataRouter } from './routers/data';
 import { createChatRouter } from './routers/chat';
-import { createPersonalityNotesRouter } from './routers/personalityNotes';
 
 export class WebServer {
 	protected app: express.Application;
 	private port: number;
-	private memoryService: QdrantMemoryService;
 	private configService: BotConfigurationService;
-	private useQdrant: boolean;
 	private covaBot: CovaBot;
 
-	constructor(port: number = 7080, useQdrant: boolean = true) {
+	constructor(port: number = 7080) {
 		this.app = express();
 		this.port = port;
-		this.useQdrant = useQdrant;
-
-		// Use unified Qdrant memory service
-		this.memoryService = QdrantMemoryService.getInstance();
 
 		// Initialize configuration service
 		this.configService = BotConfigurationService.getInstance();
@@ -80,26 +68,11 @@ export class WebServer {
 			res.sendFile(path.join(__dirname, '..', 'web', 'static', 'index.html'));
 		});
 
-		// API Router mount points, preserving existing paths
+		// API Router mount points
 		const apiRouter = express.Router();
-
-		// Mount personality notes FIRST to preserve route precedence
-		apiRouter.use('/memory/personality-notes', createPersonalityNotesRouter(this.memoryService));
-
-		// Mount health
-		apiRouter.use(createHealthRouter(this.memoryService));
-
-		// Notes
-		apiRouter.use(createNotesRouter(this.memoryService));
-
-		// Context + search
-		apiRouter.use(createContextRouter(this.memoryService));
 
 		// Configuration
 		apiRouter.use(createConfigurationRouter(this.configService));
-
-		// Export/Import/Stats summary
-		apiRouter.use(createDataRouter(this.memoryService, this.configService));
 
 		// Chat
 		apiRouter.use(createChatRouter(this.covaBot));
@@ -128,10 +101,6 @@ export class WebServer {
 
 	async start(): Promise<void> {
 		try {
-			// Initialize the memory service
-			await this.memoryService.initialize();
-			logger.info('[WebServer] Qdrant memory service initialized');
-
 			// Initialize the configuration service
 			await this.configService.loadConfiguration();
 			logger.info('[WebServer] Configuration service initialized');
@@ -140,7 +109,7 @@ export class WebServer {
 			return new Promise((resolve) => {
 				this.app.listen(this.port, () => {
 					logger.info(
-						`[WebServer] CovaBot memory management interface (Qdrant) running on http://localhost:${this.port}`,
+						`[WebServer] CovaBot web interface running on http://localhost:${this.port}`,
 					);
 					resolve();
 				});

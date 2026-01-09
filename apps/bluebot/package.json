@@ -1,6 +1,6 @@
 {
 	"name": "@starbunk/bluebot",
-	"version": "1.9.3",
+	"version": "1.9.7",
 	"description": "BlueBot - Blue detection and response bot container",
 	"main": "dist/index.js",
 	"engines": {

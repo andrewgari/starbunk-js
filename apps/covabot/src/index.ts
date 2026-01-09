@@ -13,7 +13,6 @@ import {
 } from '@starbunk/shared';
 import { createLLMService, LLMService } from './services/llmService';
 import { WebServer } from './web/server';
-import { QdrantMemoryService } from './services/qdrantMemoryService';
 
 class CovaBotContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
@@ -280,28 +279,13 @@ async function main(): Promise<void> {
 		const enableWebInterface = webPort !== undefined && webPort !== '';
 
 		if (enableWebInterface) {
-			// Web interface mode - start with Qdrant and web server
-			const useQdrant = process.env.USE_QDRANT !== 'false'; // Default to true
-			const storageType = useQdrant ? 'Qdrant Vector Database' : 'Legacy';
-
-			logger.info(`🤖 Starting CovaBot with Web Interface (${storageType} storage)...`);
-
-			// Initialize Qdrant memory service
-			if (useQdrant) {
-				try {
-					const memoryService = QdrantMemoryService.getInstance();
-					await memoryService.initialize();
-					logger.info('✅ Qdrant memory service initialized');
-				} catch (error) {
-					logger.error('❌ Failed to initialize Qdrant memory service:', ensureError(error));
-					logger.warn('⚠️ Continuing without Qdrant - some features may be limited');
-				}
-			}
+			// Web interface mode - start with web server
+			logger.info(`🤖 Starting CovaBot with Web Interface...`);
 
 			// Start web server
 			try {
 				const port = parseInt(webPort || '7080', 10);
-				webServer = new WebServer(port, useQdrant);
+				webServer = new WebServer(port);
 				await webServer.start();
 				logger.info(`✅ Web interface started on http://localhost:${port}`);
 			} catch (error) {
@@ -318,7 +302,6 @@ async function main(): Promise<void> {
 			if (webServer) {
 				logger.info(`📝 Manage personality at: http://localhost:${webPort}`);
 			}
-			logger.info(`🧠 Memory system: ${storageType}`);
 		} else {
 			// Standard mode - just start CovaBot
 			covaBot = new CovaBotContainer();
@@ -348,18 +331,6 @@ async function main(): Promise<void> {
 // Graceful shutdown
 const shutdown = async () => {
 	logger.info('🛑 Shutting down CovaBot...');
-
-	try {
-		const useQdrant = process.env.USE_QDRANT !== 'false';
-		if (useQdrant && process.env.COVABOT_WEB_PORT) {
-			const memoryService = QdrantMemoryService.getInstance();
-			await memoryService.cleanup();
-			logger.info('✅ Memory service cleanup completed');
-		}
-	} catch (error) {
-		logger.error('❌ Error during cleanup:', ensureError(error));
-	}
-
 	process.exit(0);
 };
 
