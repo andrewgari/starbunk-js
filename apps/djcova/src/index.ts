@@ -53,7 +53,7 @@ class DJCovaContainer {
 				logger: _structuredLogger,
 				channelTracker: _channelTracker,
 				httpEndpoints,
-			} = initializeObservability('djcova');
+			} = await initializeObservability('djcova');
 
 			this.httpEndpoints = httpEndpoints;
 

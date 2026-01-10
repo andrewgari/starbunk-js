@@ -66,7 +66,7 @@ class BunkBotContainer {
 				metrics,
 				logger: _structuredLogger,
 				channelTracker: _channelTracker,
-			} = initializeObservability('bunkbot', { skipHttpEndpoints: true });
+			} = await initializeObservability('bunkbot', { skipHttpEndpoints: true });
 			logger.info('✅ Observability initialized with metrics, structured logging, and channel activity tracking');
 
 			// Initialize enhanced BunkBot metrics system with Redis integration

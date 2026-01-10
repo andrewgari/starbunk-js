@@ -28,7 +28,7 @@ class CovaBotContainer {
 		try {
 			// Initialize observability (metrics + health/ready endpoints)
 			try {
-				const observability = initializeObservability('covabot');
+				const observability = await initializeObservability('covabot');
 				this.httpEndpoints = observability.httpEndpoints;
 
 				// Add Discord connection health check

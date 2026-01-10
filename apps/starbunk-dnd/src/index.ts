@@ -47,7 +47,10 @@ class StarbunkDNDContainer {
 				metrics,
 				logger: _structuredLogger,
 				channelTracker: _channelTracker,
-			} = initializeObservability('starbunk-dnd');
+				httpEndpoints,
+			} = await initializeObservability('starbunk-dnd');
+
+			this.httpEndpoints = httpEndpoints;
 			logger.info('✅ Observability initialized for Starbunk-DND');
 
 			// Initialize Starbunk-DND-specific metrics collector

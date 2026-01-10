@@ -20,8 +20,8 @@ describe('Metrics Infrastructure Integration', () => {
 		await shutdownObservability();
 	});
 
-	test('should initialize observability stack successfully', () => {
-		observability = initializeObservability('test-service', {
+	test('should initialize observability stack successfully', async () => {
+		observability = await initializeObservability('test-service', {
 			skipHttpEndpoints: true, // eslint-disable-line @typescript-eslint/no-unused-vars
 		});
 
@@ -199,26 +199,26 @@ describe('Metrics Infrastructure Integration', () => {
 });
 
 describe('Error Handling and Edge Cases', () => {
-	test('should handle initialization without environment variables', () => {
+	test('should handle initialization without environment variables', async () => {
 		// Clear environment variables
 		delete process.env.ENABLE_METRICS;
 		delete process.env.PROMETHEUS_PUSHGATEWAY_URL;
 		delete process.env.LOKI_URL;
 
-		expect(() => {
-			const obs = initializeObservability('test-edge-case', {
+		await expect(async () => {
+			const obs = await initializeObservability('test-edge-case', {
 				skipHttpEndpoints: true, // eslint-disable-line @typescript-eslint/no-unused-vars
 			});
 			obs.metrics.trackBotInstances(1);
 		}).not.toThrow();
 	});
 
-	test('should handle invalid configuration gracefully', () => {
+	test('should handle invalid configuration gracefully', async () => {
 		process.env.METRICS_PUSH_INTERVAL = '0'; // Invalid value
 		process.env.METRICS_CIRCUIT_BREAKER_THRESHOLD = '-1'; // Invalid value
 
-		expect(() => {
-			initializeObservability('test-invalid-config', {
+		await expect(async () => {
+			await initializeObservability('test-invalid-config', {
 				skipHttpEndpoints: true, // eslint-disable-line @typescript-eslint/no-unused-vars
 			});
 		}).not.toThrow();

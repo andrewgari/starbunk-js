@@ -34,12 +34,12 @@ class BlueBotContainer {
 
 			// Initialize observability using the unified setup (service-only)
 			try {
-				this.observability = initializeUnifiedObservability('bluebot', {
+				this.observability = await initializeUnifiedObservability('bluebot', {
 					enableUnified: false,
 					enableStructuredLogging: true,
-					skipHttpEndpoints: true,
+					skipHttpEndpoints: false,
 				});
-				logger.info('[BlueBot] Observability initialized with unified configuration (service-only)');
+				logger.info('[BlueBot] Observability initialized with unified configuration');
 			} catch (error) {
 				logger.warn(
 					'[BlueBot] Failed to initialize unified observability; continuing with basic logging only:',
