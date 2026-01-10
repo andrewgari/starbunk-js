@@ -185,7 +185,7 @@ git tag -l "v*"
 - `apps/bunkbot/package.json` - Synced from VERSION
 - `apps/covabot/package.json` - Synced from VERSION
 - `apps/djcova/package.json` - Synced from VERSION
-- `apps/starbunk-dnd/package.json` - Synced from VERSION
+- `apps/bluebot/package.json` - Synced from VERSION
 - `packages/shared/package.json` - Synced from VERSION
 
 ## Troubleshooting
