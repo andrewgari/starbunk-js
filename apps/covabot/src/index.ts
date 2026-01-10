@@ -18,7 +18,7 @@ class CovaBotContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
 	private llmService!: LLMService;
 	private hasInitialized = false;
-	private httpEndpoints?: ReturnType<typeof initializeObservability>['httpEndpoints'];
+	private httpEndpoints?: Awaited<ReturnType<typeof initializeObservability>>['httpEndpoints'];
 	private discordConnected = false;
 	private lastDiscordError?: Error;
 
@@ -28,7 +28,7 @@ class CovaBotContainer {
 		try {
 			// Initialize observability (metrics + health/ready endpoints)
 			try {
-				const observability = initializeObservability('covabot');
+				const observability = await initializeObservability('covabot');
 				this.httpEndpoints = observability.httpEndpoints;
 
 				// Add Discord connection health check

@@ -137,14 +137,14 @@ interface ObservabilityComponents {
 }
 
 // Enhanced initialization with full production-ready observability stack
-export function initializeObservability(
+export async function initializeObservability(
 	service: string,
 	options?: {
 		metricsConfig?: Partial<MetricsConfiguration>;
 		endpointsConfig?: Partial<EndpointsConfig>;
 		skipHttpEndpoints?: boolean;
 	},
-): ObservabilityComponents {
+): Promise<ObservabilityComponents> {
 	// Validate environment configuration
 	const envConfig = validateObservabilityEnvironment();
 
@@ -184,10 +184,13 @@ export function initializeObservability(
 
 		// Start HTTP endpoints server in production mode
 		if (envConfig.metricsEnabled || process.env.ENABLE_HTTP_ENDPOINTS !== 'false') {
-			httpEndpoints.start().catch((error) => {
+			try {
+				await httpEndpoints.start();
+				console.log(`HTTP endpoints server started successfully for ${service}`);
+			} catch (error) {
 				// Log error but don't fail initialization
 				console.error('Failed to start HTTP endpoints server::', error); // eslint-disable-line @typescript-eslint/no-unused-vars
-			});
+			}
 		}
 	} else {
 		// Create a minimal stub if HTTP endpoints are skipped
@@ -204,8 +207,8 @@ export function initializeObservability(
 }
 
 // Legacy initialization for backward compatibility
-export function initializeObservabilityLegacy(service: string) {
-	const result = initializeObservability(service, { skipHttpEndpoints: true });
+export async function initializeObservabilityLegacy(service: string) {
+	const result = await initializeObservability(service, { skipHttpEndpoints: true });
 	return {
 		metrics: result.metrics,
 		logger: result.logger,
@@ -219,7 +222,7 @@ interface UnifiedObservabilityComponents extends ObservabilityComponents {
 	serviceMetrics?: import('./ServiceMetricsRegistry').ServiceAwareMetricsService;
 }
 
-export function initializeUnifiedObservability(
+export async function initializeUnifiedObservability(
 	service: string,
 	options?: {
 		metricsConfig?: Partial<MetricsConfiguration>;
@@ -229,9 +232,9 @@ export function initializeUnifiedObservability(
 		enableStructuredLogging?: boolean;
 		skipHttpEndpoints?: boolean;
 	},
-): UnifiedObservabilityComponents {
+): Promise<UnifiedObservabilityComponents> {
 	// Start with standard observability
-	const standardComponents = initializeObservability(service, {
+	const standardComponents = await initializeObservability(service, {
 		metricsConfig: options?.metricsConfig,
 		endpointsConfig: options?.endpointsConfig,
 		skipHttpEndpoints: options?.skipHttpEndpoints,

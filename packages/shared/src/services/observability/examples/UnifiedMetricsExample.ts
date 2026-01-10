@@ -21,7 +21,7 @@ export class BunkBotWithUnifiedMetrics {
 			logger.info(`Initializing ${serviceName} with unified metrics...`);
 
 			// Option 1: Use the enhanced initialization (recommended)
-			this.observability = initializeUnifiedObservability(serviceName, {
+			this.observability = await initializeUnifiedObservability(serviceName, {
 				enableUnified: true,
 				unifiedConfig: {
 					// Optional: customize unified metrics configuration
@@ -414,7 +414,7 @@ import { initializeUnifiedObservability } from '@starbunk/shared';
 
 async function main() {
   // Initialize with unified metrics
-  const observability = initializeUnifiedObservability('bunkbot');
+  const observability = await initializeUnifiedObservability('bunkbot');
 
   // The unified endpoint is automatically available at:
   // http://192.168.50.3:3001/metrics
