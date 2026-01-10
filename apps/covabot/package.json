@@ -1,6 +1,6 @@
 {
 	"name": "@starbunk/covabot",
-	"version": "1.9.3",
+	"version": "1.9.7",
 	"description": "CovaBot - AI personality bot container",
 	"main": "dist/index.js",
 	"engines": {
@@ -21,11 +21,7 @@
 		"lint:fix": "eslint src/**/*.ts --fix",
 		"check:all": "npm run type-check && npm run lint && npm run test",
 		"clean": "rimraf dist",
-		"migrate-to-qdrant": "ts-node -r tsconfig-paths/register src/scripts/migrate-to-qdrant.ts",
-		"start:qdrant": "cross-env USE_QDRANT=true COVABOT_WEB_PORT=7080 node dist/index.js",
-		"dev:qdrant": "cross-env NODE_ENV=development DEBUG=true USE_QDRANT=true COVABOT_WEB_PORT=7080 ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
 		"demo": "ts-node -r tsconfig-paths/register src/scripts/demo-personality-system.ts",
-		"demo:qdrant": "cross-env USE_QDRANT=true ts-node -r tsconfig-paths/register src/scripts/demo-personality-system.ts",
 		"test:persistence": "ts-node -r tsconfig-paths/register src/scripts/test-persistence.ts",
 		"test:unraid": "ts-node -r tsconfig-paths/register src/scripts/test-unraid-deployment.ts",
 		"test:unraid:simple": "ts-node -r tsconfig-paths/register src/scripts/test-unraid-simple.ts",
@@ -36,9 +32,7 @@
 	"dependencies": {
 		"@discordjs/builders": "^1.6.5",
 		"@discordjs/rest": "^2.5.0",
-		"@qdrant/js-client-rest": "^1.14.1",
 		"@starbunk/shared": "file:../../packages/shared",
-		"@xenova/transformers": "^2.17.2",
 		"chalk": "^4.1.2",
 		"cors": "^2.8.5",
 		"discord.js": "^14.18.0",

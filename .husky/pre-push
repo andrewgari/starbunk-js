@@ -1,7 +1,7 @@
 
 # Run comprehensive structure validation first
 echo "🔍 Running comprehensive repository structure validation..."
-bash tools/scripts/validation/run-all-validations.sh
+bash scripts/validation/run-all-validations.sh
 
 # Run comprehensive pre-push gate (fast checks + targeted container builds)
 echo "🚀 Running pre-push validation..."
