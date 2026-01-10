@@ -1,10 +1,10 @@
 # StarBunk Discord Bot - Container Architecture
 
-A sophisticated Discord bot built with TypeScript using a **5-container modular architecture** that provides scalable, isolated services for different bot functionalities.
+A sophisticated Discord bot built with TypeScript using a **4-container modular architecture** that provides scalable, isolated services for different bot functionalities.
 
 ## 🏗️ Container Architecture
 
-StarBunk is built as **5 independent containers**, each handling specific functionality:
+StarBunk is built as **4 independent containers**, each handling specific functionality:
 
 ### 🤖 **BunkBot** - Reply Bots & Admin Commands
 - **Purpose**: Handles reply bots and administrative commands
@@ -17,12 +17,6 @@ StarBunk is built as **5 independent containers**, each handling specific functi
 - **Dependencies**: Discord.js Voice, ffmpeg, audio libraries
 - **Features**: YouTube playback, voice channel management, audio streaming
 - **Scaling**: CPU-optimized for audio processing
-
-### 🐉 **Starbunk-DND** - D&D Features & Bridge
-- **Purpose**: D&D campaign management and cross-server bridging
-- **Dependencies**: Full LLM stack, Database, File processing, Snowbunk bridge
-- **Features**: Campaign management, vector embeddings, cross-server messaging
-- **Scaling**: Memory-optimized for LLM and data processing
 
 ### 🧠 **CovaBot** - AI Personality
 - **Purpose**: AI-powered personality simulation and responses
@@ -91,7 +85,6 @@ npm run start:dev
 # Work on specific containers
 npm run dev:bunkbot      # Reply bots + admin
 npm run dev:djcova       # Music service
-npm run dev:starbunk-dnd # D&D + bridge
 npm run dev:covabot      # AI personality
 npm run dev:bluebot      # Blue detection
 ```
@@ -105,16 +98,12 @@ STARBUNK_TOKEN=your_discord_bot_token
 
 ### Container-Specific Variables
 ```env
-# Database-dependent containers (BunkBot, Starbunk-DND, CovaBot)
+# Database-dependent containers (BunkBot, CovaBot)
 DATABASE_URL=postgresql://user:pass@postgres:5432/starbunk
 
-# LLM-dependent containers (Starbunk-DND, CovaBot)
+# LLM-dependent containers (CovaBot)
 OPENAI_API_KEY=your_openai_key
 OLLAMA_API_URL=http://ollama:11434
-
-# Starbunk-DND specific
-SNOWBUNK_TOKEN=your_snowbunk_token
-VECTOR_CONTEXT_DIR=/app/data/vectors
 
 # Development
 DEBUG=true
@@ -141,7 +130,6 @@ npm run start:dev
 npm run logs
 npm run logs:bunkbot
 npm run logs:djcova
-npm run logs:starbunk-dnd
 npm run logs:covabot
 npm run logs:bluebot
 ```
@@ -151,7 +139,6 @@ npm run logs:bluebot
 # Work on specific containers
 cd containers/bunkbot && npm run dev
 cd containers/djcova && npm run dev
-cd containers/starbunk-dnd && npm run dev
 cd containers/covabot && npm run dev
 ```
 
@@ -178,12 +165,6 @@ containers/
 │   │   └── tests/           # Container-specific tests
 │   ├── Dockerfile
 │   └── package.json
-├── starbunk-dnd/            # D&D features + Snowbunk bridge
-│   ├── src/
-│   │   ├── index-minimal.ts # Container entry point
-│   │   └── tests/           # Container-specific tests
-│   ├── Dockerfile
-│   └── package.json
 └── covabot/                 # AI personality bot
     ├── src/
     │   ├── index-minimal.ts # Container entry point
@@ -201,29 +182,25 @@ graph TD
     subgraph "Container Stack"
         Discord <-->|Bot API| BunkBot[🤖 BunkBot<br/>Reply Bots + Admin]
         Discord <-->|Voice API| DJCova[🎵 DJCova<br/>Music Service]
-        Discord <-->|Bot API| StarbunkDND[🐉 Starbunk-DND<br/>D&D + Bridge]
         Discord <-->|Bot API| CovaBot[🧠 CovaBot<br/>AI Personality]
-
-        StarbunkDND <-->|Bridge| Snowbunk[Snowbunk Server]
+        Discord <-->|Bot API| BlueBot[💙 BlueBot<br/>Blue Detection]
     end
 
     subgraph "Shared Infrastructure"
         BunkBot --> SharedDB[(PostgreSQL)]
-        StarbunkDND --> SharedDB
         CovaBot --> SharedDB
+        BlueBot --> SharedDB
 
-        StarbunkDND --> LLM[LLM Services<br/>OpenAI/Ollama]
-        CovaBot --> LLM
+        CovaBot --> LLM[LLM Services<br/>OpenAI/Ollama]
 
         BunkBot --> Webhooks[Webhook Manager]
         CovaBot --> Webhooks
-        StarbunkDND --> Webhooks
     end
 
     style BunkBot fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     style DJCova fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    style StarbunkDND fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
     style CovaBot fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style BlueBot fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     style LLM fill:#bfb,stroke:#333,stroke-width:1px
 ```
 
@@ -235,8 +212,8 @@ sequenceDiagram
     participant Shared as Shared Package
     participant BunkBot as BunkBot Container
     participant DJCova as DJCova Container
-    participant StarbunkDND as Starbunk-DND Container
     participant CovaBot as CovaBot Container
+    participant BlueBot as BlueBot Container
 
     Docker->>Shared: Build shared package
     Shared-->>Docker: ✅ Built
@@ -252,15 +229,15 @@ sequenceDiagram
         DJCova->>DJCova: Initialize voice services
         DJCova-->>Docker: ✅ Ready
     and
-        Docker->>StarbunkDND: Start container
-        StarbunkDND->>StarbunkDND: Validate tokens + DB + LLM
-        StarbunkDND->>StarbunkDND: Initialize full services
-        StarbunkDND-->>Docker: ✅ Ready
-    and
         Docker->>CovaBot: Start container
         CovaBot->>CovaBot: Validate STARBUNK_TOKEN + LLM
         CovaBot->>CovaBot: Initialize AI services
         CovaBot-->>Docker: ✅ Ready
+    and
+        Docker->>BlueBot: Start container
+        BlueBot->>BlueBot: Validate STARBUNK_TOKEN
+        BlueBot->>BlueBot: Initialize detection services
+        BlueBot-->>Docker: ✅ Ready
     end
 ```
 
@@ -276,7 +253,6 @@ npm test
 npm run test:shared
 npm run test:bunkbot
 npm run test:djcova
-npm run test:starbunk-dnd
 npm run test:covabot
 npm run test:bluebot
 
@@ -310,7 +286,6 @@ The project includes GitHub Actions workflows for:
 |-----------|-----|--------|---------|---------|
 | **BunkBot** | 0.5 cores | 512MB | Minimal | High (webhooks) |
 | **DJCova** | 1-2 cores | 1GB | Moderate (cache) | High (voice) |
-| **Starbunk-DND** | 1-2 cores | 1GB | High (vectors) | Moderate |
 | **CovaBot** | 0.5-1 cores | 512MB | Low | Moderate |
 | **BlueBot** | 0.25-0.5 cores | 256MB | Minimal | Low |
 | **PostgreSQL** | 0.5 cores | 512MB | High | Low |
