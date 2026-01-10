@@ -26,7 +26,7 @@ class BlueBotContainer {
 	private messageFilter!: MessageFilter;
 	private triggers!: BlueBotTriggers;
 	private healthServer?: ReturnType<typeof createServer>;
-	private observability?: ReturnType<typeof initializeUnifiedObservability>;
+	private observability?: Awaited<ReturnType<typeof initializeUnifiedObservability>>;
 
 	async initialize(): Promise<void> {
 		try {

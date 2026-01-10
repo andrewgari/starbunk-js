@@ -37,7 +37,7 @@ class StarbunkDNDContainer {
 	private starbunkDNDMetrics?: StarbunkDNDMetrics;
 	private snowbunkClient: Destroyable | null = null;
 	private hasInitialized = false;
-	private httpEndpoints?: ReturnType<typeof initializeObservability> extends Promise<infer T> ? T['httpEndpoints'] : never;
+	private httpEndpoints?: Awaited<ReturnType<typeof initializeObservability>>['httpEndpoints'];
 	private discordConnected = false;
 	private lastDiscordError?: Error;
 

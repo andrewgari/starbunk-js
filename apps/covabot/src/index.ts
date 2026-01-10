@@ -18,7 +18,7 @@ class CovaBotContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
 	private llmService!: LLMService;
 	private hasInitialized = false;
-	private httpEndpoints?: ReturnType<typeof initializeObservability>['httpEndpoints'];
+	private httpEndpoints?: Awaited<ReturnType<typeof initializeObservability>>['httpEndpoints'];
 	private discordConnected = false;
 	private lastDiscordError?: Error;
 

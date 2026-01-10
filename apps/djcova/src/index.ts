@@ -39,7 +39,7 @@ class DJCovaContainer {
 	private djCovaMetrics?: DJCovaMetrics;
 	public activeSubscription: { unsubscribe(): void } | null = null;
 	private hasInitialized = false;
-	private httpEndpoints?: ReturnType<typeof initializeObservability>['httpEndpoints'];
+	private httpEndpoints?: Awaited<ReturnType<typeof initializeObservability>>['httpEndpoints'];
 	private discordConnected = false;
 	private lastDiscordError?: Error;
 
