@@ -1,3 +1,9 @@
+## [1.10.0](https://github.com/andrewgari/starbunk-js/compare/v1.9.9...v1.10.0) (2026-01-10)
+
+### Features
+
+* remove starbunk-dnd app and all references ([#427](https://github.com/andrewgari/starbunk-js/issues/427)) ([1d690bc](https://github.com/andrewgari/starbunk-js/commit/1d690bceedf02f2fc089a7cad224c9304beb5cb4))
+
 ## [1.9.9](https://github.com/andrewgari/starbunk-js/compare/v1.9.8...v1.9.9) (2026-01-10)
 
 ### Bug Fixes
