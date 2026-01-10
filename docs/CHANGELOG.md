@@ -1,3 +1,9 @@
+## [1.9.8](https://github.com/andrewgari/starbunk-js/compare/v1.9.7...v1.9.8) (2026-01-10)
+
+### Bug Fixes
+
+* update pre-commit script to reference correct VERSION file path and simplify djcova image reference in docker-compose.yml ([#425](https://github.com/andrewgari/starbunk-js/issues/425)) ([57fcb28](https://github.com/andrewgari/starbunk-js/commit/57fcb28cff07559ed33286b791eaf5a780f3b0ad))
+
 ## [1.9.7](https://github.com/andrewgari/starbunk-js/compare/v1.9.6...v1.9.7) (2026-01-09)
 
 ### Bug Fixes
