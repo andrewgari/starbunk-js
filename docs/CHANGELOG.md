@@ -1,3 +1,9 @@
+## [1.9.9](https://github.com/andrewgari/starbunk-js/compare/v1.9.8...v1.9.9) (2026-01-10)
+
+### Bug Fixes
+
+* Docker health checks and async observability initialization ([#426](https://github.com/andrewgari/starbunk-js/issues/426)) ([e158954](https://github.com/andrewgari/starbunk-js/commit/e15895400010f48f82250cd03ae0f177d13438b6))
+
 ## [1.9.8](https://github.com/andrewgari/starbunk-js/compare/v1.9.7...v1.9.8) (2026-01-10)
 
 ### Bug Fixes
