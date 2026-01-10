@@ -33,13 +33,14 @@ class BlueBotContainer {
 			logger.info('[BlueBot] Starting initialization...');
 
 			// Initialize observability using the unified setup (service-only)
+			// Skip HTTP endpoints since BlueBot has its own custom health server
 			try {
 				this.observability = await initializeUnifiedObservability('bluebot', {
 					enableUnified: false,
 					enableStructuredLogging: true,
-					skipHttpEndpoints: false,
+					skipHttpEndpoints: true,
 				});
-				logger.info('[BlueBot] Observability initialized with unified configuration');
+				logger.info('[BlueBot] Observability initialized with unified configuration (service-only)');
 			} catch (error) {
 				logger.warn(
 					'[BlueBot] Failed to initialize unified observability; continuing with basic logging only:',
@@ -170,7 +171,16 @@ class BlueBotContainer {
 		const port = parseInt(process.env.HEALTH_PORT || process.env.METRICS_PORT || '3000', 10);
 
 		this.healthServer = createServer((req, res) => {
-			if (req.url === '/health') {
+			if (req.url === '/live') {
+				// Simple liveness check - just verify the process is responsive
+				res.writeHead(200, { 'Content-Type': 'application/json' });
+				res.end(
+					JSON.stringify({
+						status: 'ok',
+						service: 'bluebot',
+					}),
+				);
+			} else if (req.url === '/health') {
 				res.writeHead(200, { 'Content-Type': 'application/json' });
 				res.end(
 					JSON.stringify({

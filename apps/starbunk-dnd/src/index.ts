@@ -37,6 +37,9 @@ class StarbunkDNDContainer {
 	private starbunkDNDMetrics?: StarbunkDNDMetrics;
 	private snowbunkClient: Destroyable | null = null;
 	private hasInitialized = false;
+	private httpEndpoints?: ReturnType<typeof initializeObservability> extends Promise<infer T> ? T['httpEndpoints'] : never;
+	private discordConnected = false;
+	private lastDiscordError?: Error;
 
 	async initialize(): Promise<void> {
 		logger.info('🐉 Initializing Starbunk-DND container...');
@@ -51,7 +54,46 @@ class StarbunkDNDContainer {
 			} = await initializeObservability('starbunk-dnd');
 
 			this.httpEndpoints = httpEndpoints;
-			logger.info('✅ Observability initialized for Starbunk-DND');
+
+			// Add Discord connection health check
+			this.httpEndpoints.addHealthCheck('discord_connection', async () => {
+				if (!this.discordConnected) {
+					return {
+						name: 'discord_connection',
+						status: 'fail',
+						output: this.lastDiscordError
+							? `Discord not connected: ${this.lastDiscordError.message}`
+							: 'Discord not connected',
+					};
+				}
+
+				// Check if client is still responsive
+				try {
+					const ping = this.client?.ws?.ping ?? -1;
+					if (ping < 0) {
+						return {
+							name: 'discord_connection',
+							status: 'warn',
+							output: 'Discord connected but ping unavailable',
+						};
+					}
+
+					return {
+						name: 'discord_connection',
+						status: ping > 500 ? 'warn' : 'pass',
+						output: `Discord connected, ping: ${ping}ms`,
+						duration_ms: ping,
+					};
+				} catch (error) {
+					return {
+						name: 'discord_connection',
+						status: 'fail',
+						output: `Discord health check failed: ${ensureError(error).message}`,
+					};
+				}
+			});
+
+			logger.info('✅ Observability initialized for Starbunk-DND with Discord health check');
 
 			// Initialize Starbunk-DND-specific metrics collector
 			try {
@@ -153,6 +195,8 @@ class StarbunkDNDContainer {
 	private setupEventHandlers(): void {
 		this.client.on(Events.Error, (error: Error) => {
 			logger.error('Discord client error:', error);
+			this.lastDiscordError = error;
+			this.discordConnected = false;
 		});
 
 		this.client.on(Events.Warn, (warning: string) => {
@@ -167,6 +211,24 @@ class StarbunkDNDContainer {
 		this.client.once(Events.ClientReady, () => {
 			logger.info('🐉 Starbunk-DND is ready and connected to Discord');
 			this.hasInitialized = true;
+			this.discordConnected = true;
+			this.lastDiscordError = undefined;
+		});
+
+		this.client.on(Events.ShardDisconnect, () => {
+			logger.warn('Discord shard disconnected');
+			this.discordConnected = false;
+		});
+
+		this.client.on(Events.ShardReconnecting, () => {
+			logger.info('Discord shard reconnecting...');
+			this.discordConnected = false;
+		});
+
+		this.client.on(Events.ShardResume, () => {
+			logger.info('Discord shard resumed');
+			this.discordConnected = true;
+			this.lastDiscordError = undefined;
 		});
 	}
 
