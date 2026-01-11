@@ -2,12 +2,11 @@ import {
 	logger,
 	container,
 	ServiceId,
-	WebhookManager,
-	runStartupDiagnostics,
 	validateEnvironment,
 	ensureError,
-	type DiagnosticResult,
 } from '@starbunk/shared';
+import { WebhookManager } from './webhook-manager';
+import { runStartupDiagnostics, type DiagnosticResult } from '../utils/diagnostics';
 import { DiscordService } from './discord-service';
 import { getMessageFilter, MessageFilter } from './message-filter';
 import { Client, GatewayIntentBits } from 'discord.js';

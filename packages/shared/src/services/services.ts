@@ -7,7 +7,6 @@
 
 import { Client, TextChannel, WebhookClient } from 'discord.js';
 import { MessageInfo } from '../webhooks/types';
-import { DiscordService } from './discord-service';
 // import { LLMManager } from './llm/llm-manager'; // TODO: Missing - commented out to fix build
 
 // Define a basic ReplyBot interface since the actual implementation is not available in shared
@@ -40,7 +39,6 @@ export const ServiceId = {
 	Logger: 'Logger',
 	WebhookService: 'WebhookService',
 	DiscordClient: 'DiscordClient',
-	DiscordService: 'DiscordService',
 	// LLMManager: 'LLMManager', // TODO: Missing - commented out to fix build
 	BlueBot: 'BlueBot',
 	BananaBot: 'BananaBot',
@@ -65,7 +63,6 @@ interface ServiceMap {
 	[ServiceId.Logger]: Logger;
 	[ServiceId.WebhookService]: WebhookService;
 	[ServiceId.DiscordClient]: Client;
-	[ServiceId.DiscordService]: DiscordService;
 	// [ServiceId.LLMManager]: LLMManager; // TODO: Missing - commented out to fix build
 	[ServiceId.BlueBot]: ReplyBot;
 	[ServiceId.BananaBot]: ReplyBot;

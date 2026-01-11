@@ -1,5 +1,5 @@
 // Startup diagnostics and troubleshooting utilities
-import { logger } from '../services/logger';
+import { logger } from '@starbunk/shared';
 
 export interface DiagnosticResult {
 	check: string;

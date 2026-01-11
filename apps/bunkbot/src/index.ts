@@ -7,16 +7,15 @@ import {
 	ServiceId,
 	ensureError,
 	validateEnvironment,
-	WebhookManager,
-	runStartupDiagnostics,
 	initializeObservability,
 	createBunkBotMetrics,
 	type BunkBotMetrics,
-	type DiagnosticResult,
 	EnhancedBunkBotMetricsCollector,
 	BotTriggerTracker,
 	initializeBotMetricsSystem,
 } from '@starbunk/shared';
+import { WebhookManager } from './services/webhook-manager';
+import { runStartupDiagnostics, type DiagnosticResult } from './utils/diagnostics';
 
 // Import local services
 import { DiscordService } from './services/discord-service';

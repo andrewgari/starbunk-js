@@ -1,7 +1,6 @@
 // Webhook management service
 import { Client, TextChannel, WebhookClient } from 'discord.js';
-import { logger } from './logger';
-import { ensureError } from '../utils/error-utils';
+import { logger, ensureError } from '@starbunk/shared';
 
 export interface WebhookMessage {
 	content: string;

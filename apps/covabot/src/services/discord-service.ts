@@ -14,7 +14,7 @@ import {
 } from 'discord.js';
 import schedule from 'node-schedule';
 
-import { BotIdentity } from '../types';
+import { BotIdentity } from '../types/bot-identity';
 import {
 	ChannelNotFoundError,
 	DiscordServiceError,
@@ -23,8 +23,7 @@ import {
 	UserNotFoundError,
 	WebhookError,
 } from './errors/discord-errors';
-import { logger } from './logger';
-import { ensureError } from '../utils/error-utils';
+import { logger, ensureError } from '@starbunk/shared';
 
 export interface BulkMessageOptions {
 	channelIds: string[];

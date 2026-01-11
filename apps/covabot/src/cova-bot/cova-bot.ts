@@ -2,12 +2,12 @@ import {
 	logger,
 	container,
 	ServiceId,
-	WebhookManager,
 	type CovaBotMetrics,
 	getBotResponseLogger,
 	type BotResponseLog,
 	inferTriggerCondition,
 } from '@starbunk/shared';
+import { WebhookManager } from '../services/webhook-manager';
 import { Message, TextChannel, Webhook, Client } from 'discord.js';
 import { BotIdentity } from '../types/bot-identity';
 import { TriggerResponse } from '../types/trigger-response';
@@ -338,11 +338,13 @@ export class CovaBot {
 				}
 			}
 
-			await this.webhookManager.sendMessage(message.channel.id, {
-				content,
-				username: identity.botName,
-				avatarURL: identity.avatarUrl,
-			});
+			if (this.webhookManager) {
+				await this.webhookManager.sendMessage(message.channel.id, {
+					content,
+					username: identity.botName,
+					avatarURL: identity.avatarUrl,
+				});
+			}
 			logger.debug(`[CovaBot] Message requested via shared WebhookManager as ${identity.botName}`);
 
 			// Log comprehensive bot response details

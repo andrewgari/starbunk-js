@@ -10,8 +10,7 @@ export {
 	getObservabilityEnvVars,
 	type ObservabilityConfig,
 } from './utils/env-validation';
-export { runStartupDiagnostics, StartupDiagnostics } from './utils/diagnostics';
-export type { DiagnosticResult } from './utils/diagnostics';
+
 export { isDebugMode, setDebugMode } from './environment';
 export {
 	getClientFromInteraction,
@@ -21,8 +20,6 @@ export {
 	isUserInVoiceChannel,
 	getUserVoiceChannel,
 	validateGuildInteraction,
-	sendErrorResponse,
-	sendSuccessResponse,
 	deferInteractionReply,
 } from './discord/utils';
 
@@ -31,11 +28,7 @@ export * from './utils/time';
 export { getDiscordToken, getDiscordClientId } from './utils/discord-token';
 export type { DiscordTokenOptions } from './utils/discord-token';
 
-export { WebhookManager } from './services/webhook-manager';
-// NOTE: MessageFilter and DiscordService still used by BlueBot, CovaBot and other apps - kept in shared
-export { MessageFilter, getMessageFilter, resetMessageFilter } from './services/message-filter';
-export type { FilterResult } from './services/message-filter';
-export { DiscordService } from './services/discord-service';
+
 
 // Export container and ServiceId from container (uses Symbol values)
 export { container, ServiceId } from './services/container';

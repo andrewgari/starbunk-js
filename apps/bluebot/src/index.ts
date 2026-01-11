@@ -7,14 +7,13 @@ import {
 	ServiceId,
 	ensureError,
 	validateEnvironment,
-	WebhookManager,
-	getMessageFilter,
-	MessageFilter,
-	StartupDiagnostics,
 	initializeUnifiedObservability,
 	shutdownObservability,
 } from '@starbunk/shared';
 
+import { WebhookManager } from './services/webhook-manager';
+import { getMessageFilter, MessageFilter } from './services/message-filter';
+import { StartupDiagnostics } from './utils/diagnostics';
 import { BlueBotTriggers } from './triggers';
 import { BLUE_BOT_NAME } from './constants';
 

@@ -1,4 +1,6 @@
-import { logger, getDiscordService, DiscordService, container, ServiceId } from '@starbunk/shared';
+import { logger, container, ServiceId } from '@starbunk/shared';
+import { getDiscordService } from '../../services/bootstrap';
+import { DiscordService } from '../../services/discord-service';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/test-utils';
 import { createPriority, createTriggerName, createTriggerResponse, TriggerResponseClass } from '../trigger-response';
 
