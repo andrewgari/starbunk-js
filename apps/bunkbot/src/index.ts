@@ -198,9 +198,10 @@ class BunkBotContainer {
 		this.webhookManager = new WebhookManager(this.client);
 		container.register(ServiceId.WebhookService, this.webhookManager);
 
-		// Initialize message filter (only for MessageProcessor, not for interactions)
+		// Initialize message filter for MessageProcessor
+		// Note: Stored locally and passed to MessageProcessor via constructor injection.
+		// Not registered in DI container as no code retrieves it from there.
 		this.messageFilterForProcessor = getMessageFilter();
-		container.register(ServiceId.MessageFilter, this.messageFilterForProcessor);
 
 		// Initialize configuration services - temporarily disabled due to Prisma issues
 		// this.configurationService = new ConfigurationService();
