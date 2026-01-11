@@ -10,7 +10,6 @@ import {
 	createDiscordClient,
 	ClientConfigs,
 	WebhookManager,
-	getMessageFilter,
 	runStartupDiagnostics,
 	initializeObservability,
 	createBunkBotMetrics,
@@ -21,8 +20,9 @@ import {
 	initializeBotMetricsSystem,
 } from '@starbunk/shared';
 
-// Import DiscordService from the shared package exports
-import { DiscordService } from '@starbunk/shared';
+// Import local services
+import { DiscordService } from './services/discord-service';
+import { getMessageFilter } from './services/message-filter';
 
 // Import commands
 import pingCommand from './commands/ping';

@@ -1,6 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
-import { getDiscordService } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
+import { getDiscordService } from '../services/bootstrap';
 import { BotIdentity } from '../types/bot-identity';
 import { ContextualResponseGenerator, ResponseContext, asResponseGenerator } from './response-context';
 

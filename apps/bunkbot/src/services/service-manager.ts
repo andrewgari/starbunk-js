@@ -5,14 +5,13 @@ import {
 	createDiscordClient,
 	ClientConfigs,
 	WebhookManager,
-	getMessageFilter,
-	MessageFilter,
 	runStartupDiagnostics,
 	validateEnvironment,
 	ensureError,
-	DiscordService,
 	type DiagnosticResult,
 } from '@starbunk/shared';
+import { DiscordService } from './discord-service';
+import { getMessageFilter, MessageFilter } from './message-filter';
 import { Client } from 'discord.js';
 import { validateAndParseConfig, getSanitizedConfig, BunkBotConfig } from '../config/validation';
 

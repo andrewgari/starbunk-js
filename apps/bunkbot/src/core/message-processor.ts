@@ -1,7 +1,6 @@
 import {
 	logger,
 	ensureError,
-	MessageFilter,
 	getMetrics,
 	getStructuredLogger,
 	MessageFlowMetrics,
@@ -11,6 +10,7 @@ import {
 	BotTriggerTracker,
 	type MessageContext,
 } from '@starbunk/shared';
+import { MessageFilter } from '../services/message-filter';
 import { Message } from 'discord.js';
 import { ReplyBotImpl, type BotTriggerResult } from './bot-builder';
 import { v4 as uuidv4 } from 'uuid';

@@ -1,4 +1,5 @@
-import { logger, isDebugMode, DiscordService } from '@starbunk/shared';
+import { logger, isDebugMode } from '@starbunk/shared';
+import { DiscordService } from '../services/discord-service';
 import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/bot-defaults';
 import { BotIdentity } from '../types/bot-identity';

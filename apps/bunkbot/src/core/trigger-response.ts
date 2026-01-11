@@ -6,8 +6,8 @@ import {
 	getBotResponseLogger,
 	type BotResponseLog,
 	inferTriggerCondition,
-	DiscordService,
 } from '@starbunk/shared';
+import { DiscordService } from '../services/discord-service';
 import { BotIdentity } from '../types/bot-identity';
 import { withDefaultBotBehavior } from './conditions';
 

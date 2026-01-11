@@ -33,47 +33,48 @@ export { getDiscordToken, getDiscordClientId } from './utils/discord-token';
 export type { DiscordTokenOptions } from './utils/discord-token';
 
 export { WebhookManager } from './services/webhook-manager';
-export { MessageFilter, getMessageFilter, resetMessageFilter } from './services/message-filter';
-export type { FilterResult } from './services/message-filter';
-export { DiscordService } from './services/discord-service';
-export { DatabaseService, getDatabaseService } from './services/database/database-service';
-export { ConfigurationRepository } from './services/database/configuration-registry';
-export { ConfigurationService, getConfigurationService } from './services/configuration/configuration-service';
-export {
-	UserService,
-	getUserService,
-	getUserId,
-	getUsername,
-	getUserConfig,
-	createUserIdsObject,
-} from './services/user-service';
-export type {
-	BotConfigurationData,
-	BotPatternData,
-	BotResponseData,
-	UserConfigurationData,
-	ServerConfigurationData,
-} from './services/database/types';
-export type {
-	BotConfig,
-	BotTriggerConfig,
-	BotResponseConfig,
-	UserConfig,
-	ServerConfig,
-} from './services/configuration/types';
+// NOTE: These services were moved to bunkbot app - keeping exports for other apps that still use them
+// export { MessageFilter, getMessageFilter, resetMessageFilter } from './services/message-filter';
+// export type { FilterResult } from './services/message-filter';
+// export { DiscordService } from './services/discord-service';
+// export { DatabaseService, getDatabaseService } from './services/database/database-service';
+// export { ConfigurationRepository } from './services/database/configuration-registry';
+// export { ConfigurationService, getConfigurationService } from './services/configuration/configuration-service';
+// export {
+// 	UserService,
+// 	getUserService,
+// 	getUserId,
+// 	getUsername,
+// 	getUserConfig,
+// 	createUserIdsObject,
+// } from './services/user-service';
+// export type {
+// 	BotConfigurationData,
+// 	BotPatternData,
+// 	BotResponseData,
+// 	UserConfigurationData,
+// 	ServerConfigurationData,
+// } from './services/database/types';
+// export type {
+// 	BotConfig,
+// 	BotTriggerConfig,
+// 	BotResponseConfig,
+// 	UserConfig,
+// 	ServerConfig,
+// } from './services/configuration/types';
 
-// Bootstrap functions and service getters
-export {
-	bootstrapApplication,
-	bootstrapSnowbunkApplication,
-	getLogger,
-	getDiscordClient,
-	getDiscordService,
-	getDiscordGMService,
-	// getLLMManager, // TODO: Missing - commented out to fix build
-	getWebhookService,
-	// createLLMManagerWithTracker, // TODO: Missing - commented out to fix build
-} from './services/bootstrap';
+// Bootstrap functions and service getters - moved to bunkbot
+// export {
+// 	bootstrapApplication,
+// 	bootstrapSnowbunkApplication,
+// 	getLogger,
+// 	getDiscordClient,
+// 	getDiscordService,
+// 	getDiscordGMService,
+// 	// getLLMManager, // TODO: Missing - commented out to fix build
+// 	getWebhookService,
+// 	// createLLMManagerWithTracker, // TODO: Missing - commented out to fix build
+// } from './services/bootstrap';
 
 // Export container and ServiceId from container (uses Symbol values)
 export { container, ServiceId } from './services/container';

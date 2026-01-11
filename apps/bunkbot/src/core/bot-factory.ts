@@ -1,7 +1,7 @@
 import { BotIdentity } from '../types/bot-identity';
 import { TriggerResponse } from './trigger-response';
 import { createReplyBot, ReplyBotImpl } from './bot-builder';
-import { DiscordService } from '@starbunk/shared';
+import { DiscordService } from '../services/discord-service';
 import { Message } from 'discord.js';
 
 /**
