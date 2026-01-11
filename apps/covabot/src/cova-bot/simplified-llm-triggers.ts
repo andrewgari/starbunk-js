@@ -1,6 +1,5 @@
 import { Message } from 'discord.js';
-import { logger, ensureError, container, ServiceId } from '@starbunk/shared';
-import { LLMManager } from '@starbunk/shared/dist/services/llm/llmManager';
+import { logger, ensureError } from '@starbunk/shared';
 import { TriggerCondition, ResponseGenerator } from '../types/trigger-response';
 import { createLLMService, LLMService } from '../services/llm-service';
 
@@ -18,16 +17,7 @@ function getLLMService(): LLMService {
 	return llmService;
 }
 
-/**
- * Get LLM manager from container if available (for E2E tests with mocks)
- */
-function getContainerLLMManager(): LLMManager | null {
-	try {
-		return container.get<LLMManager>(ServiceId.LLMManager);
-	} catch (_error) {
-		return null;
-	}
-}
+
 
 /**
  * Heuristic-based condition that delegates to LLMService.shouldRespond
@@ -125,22 +115,9 @@ Instructions: You are Cova. The decision about whether to respond has already be
 Respond exactly as Cova would to this message, taking into account the notes above.
 Keep the reply conversational and reasonably concise.`;
 
-			// Try to use LLM manager from container first (for E2E tests with mocks)
-			const llmManager = getContainerLLMManager();
-			let response: string;
-
-			if (llmManager) {
-				// Use container's LLM manager (E2E tests with mocks)
-				// Use createCompletion directly to avoid prompt registry lookup
-				const completion = await llmManager.createCompletion({
-					messages: [{ role: 'user', content: enhancedMessage }],
-				});
-				response = completion.content;
-			} else {
-				// Use regular LLM service (production)
-				const llmSvc = getLLMService();
-				response = await llmSvc.generateResponse(message, enhancedMessage);
-			}
+			// Use LLM service to generate response
+			const llmSvc = getLLMService();
+			const response = await llmSvc.generateResponse(message, enhancedMessage);
 
 			// Guard against empty responses
 			if (!response || response.trim() === '') {

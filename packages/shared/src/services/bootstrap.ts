@@ -7,7 +7,6 @@ import { ServiceId, container } from './container';
 import { DiscordGMService } from './discord-gm-service';
 import { DiscordService } from './discord-service';
 import { Logger } from './logger';
-import type { LLMCallTracker } from '../testing/llm/llm-call-tracker';
 
 /**
  * Bootstraps the entire application, registering all services
@@ -121,10 +120,6 @@ export function getDiscordService(): DiscordService {
 
 export function getDiscordGMService(): DiscordGMService {
 	return container.get<DiscordGMService>(ServiceId.DiscordGMService);
-}
-
-export function getLLMManager(): LLMManager {
-	return container.get<LLMManager>(ServiceId.LLMManager);
 }
 
 export function getWebhookService(): any {

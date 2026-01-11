@@ -62,8 +62,8 @@ export class Enhanced_BunkBotMetricsCollector {
 	private isEnhancedTrackingEnabled = false;
 
 	constructor(
-		metrics: import('./ProductionMetricsService').ProductionMetricsService,
-		config: import('./ContainerMetrics').ContainerMetricsConfig = {},
+		metrics: import('./production-metrics-service').ProductionMetricsService,
+		config: import('./container-metrics').ContainerMetricsConfig = {},
 		integrationConfig: BotTriggerIntegrationConfig = {},
 	) {
 		this.base = new _BunkBotMetricsCollector(metrics, config);
@@ -353,8 +353,8 @@ export class Enhanced_BunkBotMetricsCollector {
  * Create enhanced BunkBot metrics collector with Redis integration
  */
 export function createEnhancedBunkBotMetrics(
-	metrics: import('./ProductionMetricsService').ProductionMetricsService,
-	config: import('./ContainerMetrics').ContainerMetricsConfig = {},
+	metrics: import('./production-metrics-service').ProductionMetricsService,
+	config: import('./container-metrics').ContainerMetricsConfig = {},
 	integrationConfig: BotTriggerIntegrationConfig = {},
 ): Enhanced_BunkBotMetricsCollector {
 	return new Enhanced_BunkBotMetricsCollector(metrics, config, integrationConfig);
@@ -515,7 +515,7 @@ function createEnvironmentConfig(): BotTriggerIntegrationConfig {
  * Initialize complete bot metrics system with auto-detected configuration
  */
 async function initializeBotMetricsSystem(
-	metricsService: import('./ProductionMetricsService').ProductionMetricsService,
+	metricsService: import('./production-metrics-service').ProductionMetricsService,
 	customConfig?: BotTriggerIntegrationConfig,
 ): Promise<{
 	metricsCollector: Enhanced_BunkBotMetricsCollector;

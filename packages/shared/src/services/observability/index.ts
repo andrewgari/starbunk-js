@@ -130,9 +130,9 @@ import { initializeHttpEndpoints, type EndpointsConfig } from './http-endpoints-
 
 interface ObservabilityComponents {
 	metrics: ProductionMetricsService;
-	logger: import('./StructuredLogger').StructuredLogger;
-	channelTracker: import('./ChannelActivityTracker').ChannelActivityTracker;
-	httpEndpoints: import('./HttpEndpointsService').HttpEndpointsService;
+	logger: import('./structured-logger').StructuredLogger;
+	channelTracker: import('./channel-activity-tracker').ChannelActivityTracker;
+	httpEndpoints: import('./http-endpoints-service').HttpEndpointsService;
 	config: ObservabilityConfig;
 }
 
@@ -168,7 +168,7 @@ export async function initializeObservability(
 	const channelTracker = initializeChannelActivityTracker();
 
 	// Initialize HTTP endpoints service (if not skipped)
-	let httpEndpoints: import('./HttpEndpointsService').HttpEndpointsService;
+	let httpEndpoints: import('./http-endpoints-service').HttpEndpointsService;
 
 	if (!options?.skipHttpEndpoints) {
 		const endpointsConfig: Partial<EndpointsConfig> = {
@@ -218,8 +218,8 @@ export async function initializeObservabilityLegacy(service: string) {
 
 // Enhanced initialization with unified metrics support
 interface UnifiedObservabilityComponents extends ObservabilityComponents {
-	unifiedEndpoint?: import('./UnifiedMetricsEndpoint').UnifiedMetricsEndpoint;
-	serviceMetrics?: import('./ServiceMetricsRegistry').ServiceAwareMetricsService;
+	unifiedEndpoint?: import('./unified-metrics-endpoint').UnifiedMetricsEndpoint;
+	serviceMetrics?: import('./service-metrics-registry').ServiceAwareMetricsService;
 }
 
 export async function initializeUnifiedObservability(
@@ -227,7 +227,7 @@ export async function initializeUnifiedObservability(
 	options?: {
 		metricsConfig?: Partial<MetricsConfiguration>;
 		endpointsConfig?: Partial<EndpointsConfig>;
-		unifiedConfig?: Partial<import('./UnifiedMetricsEndpoint').UnifiedEndpointConfig>;
+		unifiedConfig?: Partial<import('./unified-metrics-endpoint').UnifiedEndpointConfig>;
 		enableUnified?: boolean;
 		enableStructuredLogging?: boolean;
 		skipHttpEndpoints?: boolean;
@@ -255,8 +255,8 @@ export async function initializeUnifiedObservability(
 		console.warn('Failed to configure structured logging:', error);
 	}
 
-	let unifiedEndpoint: import('./UnifiedMetricsEndpoint').UnifiedMetricsEndpoint | undefined;
-	let serviceMetrics: import('./ServiceMetricsRegistry').ServiceAwareMetricsService | undefined;
+	let unifiedEndpoint: import('./unified-metrics-endpoint').UnifiedMetricsEndpoint | undefined;
+	let serviceMetrics: import('./service-metrics-registry').ServiceAwareMetricsService | undefined;
 
 	if (enableUnified) {
 		try {
@@ -308,7 +308,7 @@ export async function shutdownObservability(): Promise<void> {
 
 		// Shutdown unified metrics first
 		try {
-			const { getUnifiedMetricsEndpoint } = await import('./UnifiedMetricsEndpoint');
+			const { getUnifiedMetricsEndpoint } = await import('./unified-metrics-endpoint');
 			const unifiedEndpoint = getUnifiedMetricsEndpoint();
 			promises.push(unifiedEndpoint.shutdown());
 		} catch (_error) {
@@ -317,7 +317,7 @@ export async function shutdownObservability(): Promise<void> {
 
 		// Shutdown service metrics
 		try {
-			const { getAllServiceMetrics } = await import('./ServiceMetricsRegistry');
+			const { getAllServiceMetrics } = await import('./service-metrics-registry');
 			const serviceMetrics = getAllServiceMetrics();
 			for (const [service, metrics] of serviceMetrics) {
 				promises.push(
@@ -332,7 +332,7 @@ export async function shutdownObservability(): Promise<void> {
 
 		// Shutdown metrics service
 		try {
-			const metrics = await import('./ProductionMetricsService').then((m) => m.getMetrics());
+			const metrics = await import('./production-metrics-service').then((m) => m.getMetrics());
 			promises.push(metrics.shutdown());
 		} catch (_error) {
 			// Service not initialized, ignore
@@ -340,7 +340,7 @@ export async function shutdownObservability(): Promise<void> {
 
 		// Shutdown HTTP endpoints
 		try {
-			const httpEndpoints = await import('./HttpEndpointsService').then((m) => m.getHttpEndpoints());
+			const httpEndpoints = await import('./http-endpoints-service').then((m) => m.getHttpEndpoints());
 			promises.push(httpEndpoints.stop());
 		} catch (_error) {
 			// Service not initialized, ignore
@@ -348,7 +348,7 @@ export async function shutdownObservability(): Promise<void> {
 
 		// Shutdown structured logger
 		try {
-			const structuredLogger = await import('./StructuredLogger').then((m) => m.getStructuredLogger());
+			const structuredLogger = await import('./structured-logger').then((m) => m.getStructuredLogger());
 			if (structuredLogger && typeof (structuredLogger as any).shutdown === 'function') {
 				promises.push((structuredLogger as any).shutdown());
 			}

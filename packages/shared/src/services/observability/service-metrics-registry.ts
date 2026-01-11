@@ -409,11 +409,11 @@ export class ServiceAwareMetricsService extends ProductionMetricsService {
 			// Try to get existing unified collector instance
 			let collector: UnifiedMetricsCollector;
 			try {
-				const { getUnifiedMetricsCollector } = await import('./UnifiedMetricsCollector');
+				const { getUnifiedMetricsCollector } = await import('./unified-metrics-collector');
 				collector = getUnifiedMetricsCollector();
 			} catch {
 				// If no global instance, try to create one
-				const { initializeUnifiedMetricsCollector } = await import('./UnifiedMetricsCollector');
+				const { initializeUnifiedMetricsCollector } = await import('./unified-metrics-collector');
 				collector = initializeUnifiedMetricsCollector();
 			}
 

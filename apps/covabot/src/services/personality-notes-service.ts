@@ -249,7 +249,7 @@ export class PersonalityNotesService {
 	async getActiveNotesForLLM(): Promise<string> {
 		// Get configuration service for core personality
 		try {
-			const { BotConfigurationService } = await import('./botConfigurationService');
+			const { BotConfigurationService } = await import('./bot-configuration-service');
 			const configService = BotConfigurationService.getInstance();
 			const config = await configService.getConfiguration();
 

@@ -1,8 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 import { CampaignRepository, FileRepository, MessageRepository } from '../../domain/repositories';
-import { LocalFileRepository } from './files/localFileRepository';
-import { SQLiteCampaignRepository } from './sqlite/repositories/campaignRepository';
+import { LocalFileRepository } from './files/local-file-repository';
+import { SQLiteCampaignRepository } from './sqlite/repositories/campaign-repository';
 import { SQLiteMessageRepository } from './sqlite/repositories/message-repository';
 
 export class RepositoryFactory {

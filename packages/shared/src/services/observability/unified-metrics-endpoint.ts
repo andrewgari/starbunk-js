@@ -348,8 +348,8 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 			// Attempt to import and initialize Redis components
 			try {
 				const Redis = (await import('ioredis')).default;
-				const { BotTriggerMetricsService } = await import('./BotTriggerMetricsService');
-				const { _BunkBotMetricsCollector } = await import('./BunkBotMetrics');
+				const { BotTriggerMetricsService } = await import('./bot-trigger-metrics-service');
+				const { _BunkBotMetricsCollector } = await import('./bunk-bot-metrics');
 
 				// Create Redis connection
 				const redis = new Redis({
@@ -399,7 +399,7 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 					}
 				} else {
 					// Create a standalone Redis exporter and register with the collector
-					const { createRedisBotMetricsExporter } = await import('./RedisBotMetricsExporter');
+					const { createRedisBotMetricsExporter } = await import('./redis-bot-metrics-exporter');
 					const redisExporter = createRedisBotMetricsExporter(registry, {
 						cacheTTL: 15000,
 						enableCircuitBreaker: true,

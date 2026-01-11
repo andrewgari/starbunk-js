@@ -16,7 +16,7 @@ export const vennTrigger = createTriggerResponse({
 	name: 'venn-trigger',
 	condition: matchesPattern(MACARONI_BOT_PATTERNS.Venn),
 	response: async () => {
-		const configService = new (await import('../../services/configurationService')).ConfigurationService();
+		const configService = new (await import('../../services/configuration-service')).ConfigurationService();
 		const vennUserId = await configService.getUserIdByUsername('Venn');
 		return MACARONI_BOT_RESPONSES.VennBase.replace('{VENN_USER_ID}', vennUserId || '@Venn');
 	},
