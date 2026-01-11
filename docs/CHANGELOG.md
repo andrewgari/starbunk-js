@@ -1,3 +1,9 @@
+## [1.10.1](https://github.com/andrewgari/starbunk-js/compare/v1.10.0...v1.10.1) (2026-01-11)
+
+### Bug Fixes
+
+* disable command deployment for BunkBot and update CLIENT_ID environment variable references in Docker configurations ([6fc2fc0](https://github.com/andrewgari/starbunk-js/commit/6fc2fc02badf223fb04b3d325a79c6df867bcd78))
+
 ## [1.10.0](https://github.com/andrewgari/starbunk-js/compare/v1.9.9...v1.10.0) (2026-01-10)
 
 ### Features
