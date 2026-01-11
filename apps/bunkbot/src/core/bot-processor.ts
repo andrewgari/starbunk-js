@@ -1,4 +1,5 @@
-import { logger, ensureError, DiscordService } from '@starbunk/shared';
+import { logger, ensureError } from '@starbunk/shared';
+import { DiscordService } from '../services/discord-service';
 import { Message } from 'discord.js';
 import { BotIdentity } from '../types/bot-identity';
 import { TriggerResponse } from './trigger-response';

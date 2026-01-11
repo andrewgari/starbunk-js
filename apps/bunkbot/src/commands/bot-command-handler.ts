@@ -5,7 +5,8 @@ import {
 	SlashCommandBuilder,
 	TextChannel,
 } from 'discord.js';
-import { logger, getUserId } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { getUserId } from '../services/user-service';
 import { BotRegistry } from '../bot-registry';
 import { getBotDefaults } from '../config/bot-defaults';
 

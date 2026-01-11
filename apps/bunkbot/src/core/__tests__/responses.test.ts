@@ -1,4 +1,6 @@
-import { logger, getDiscordService, DiscordService } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { getDiscordService } from '../../services/bootstrap';
+import { DiscordService } from '../../services/discord-service';
 import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/test-utils';
 import {
 	createStaticMessage,

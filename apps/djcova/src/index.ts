@@ -1,13 +1,11 @@
 // DJCova - Music service container
-import { Events } from 'discord.js';
+import { Events, Client, GatewayIntentBits } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 
 import {
 	logger,
 	ensureError,
 	validateEnvironment,
-	createDiscordClient,
-	ClientConfigs,
 	container,
 	ServiceId,
 	initializeObservability,
@@ -30,7 +28,7 @@ type ChatInputInteraction = {
 };
 
 class DJCovaContainer {
-	private client!: ReturnType<typeof createDiscordClient>;
+	private client!: Client;
 	private commandHandler!: CommandHandler;
 	private musicPlayer!: DJCova;
 	private djCovaMetrics?: DJCovaMetrics;
@@ -119,7 +117,18 @@ class DJCovaContainer {
 			this.validateEnvironment();
 
 			// Create Discord client with voice capabilities
-			this.client = createDiscordClient(ClientConfigs.DJCova);
+			this.client = new Client({
+				intents: [
+					GatewayIntentBits.Guilds,
+					GatewayIntentBits.GuildMessages,
+					GatewayIntentBits.MessageContent,
+					GatewayIntentBits.GuildVoiceStates, // Required for voice
+				],
+			});
+
+			// Set up error handling
+			this.client.on('error', (error) => logger.error('Discord client error:', error));
+			this.client.on('warn', (warning) => logger.warn('Discord client warning:', warning));
 
 			// Initialize services
 			await this.initializeServices();
@@ -151,8 +160,6 @@ class DJCovaContainer {
 	private async initializeServices(): Promise<void> {
 		// Register Discord client
 		container.register(ServiceId.DiscordClient, this.client);
-
-		// Initialize message filter
 
 		// Initialize music player with metrics
 		this.musicPlayer = new DJCova(this.djCovaMetrics);
@@ -209,7 +216,6 @@ class DJCovaContainer {
 	private async handleInteraction(interaction: ChatInputInteraction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
-
 				// Handle music commands using the command handler
 				await this.commandHandler.handleInteraction(interaction);
 			} catch (error) {
@@ -243,7 +249,7 @@ class DJCovaContainer {
 
 		// Attempt login with retry logic
 		const maxRetries = 3;
-		let lastError: Error | undefined;
+		let lastError: Error | undefined = undefined;
 
 		for (let attempt = 1; attempt <= maxRetries; attempt++) {
 			try {
@@ -259,7 +265,10 @@ class DJCovaContainer {
 				logger.error(`❌ Discord login attempt ${attempt}/${maxRetries} failed:`, lastError);
 
 				// Check for specific error types
-				if (lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login')) {
+				if (
+					lastError &&
+					(lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login'))
+				) {
 					logger.error('❌ Discord token is invalid - cannot retry');
 					throw new Error(`Invalid Discord token: ${lastError.message}`);
 				}
@@ -267,7 +276,7 @@ class DJCovaContainer {
 				if (attempt < maxRetries) {
 					const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Exponential backoff, max 10s
 					logger.info(`Retrying in ${delay}ms...`);
-					await new Promise(resolve => setTimeout(resolve, delay));
+					await new Promise((resolve) => setTimeout(resolve, delay));
 				}
 			}
 		}
@@ -351,7 +360,7 @@ async function main(): Promise<void> {
 		}
 
 		// Give observability time to flush logs/metrics before exiting
-		await new Promise(resolve => setTimeout(resolve, 2000));
+		await new Promise((resolve) => setTimeout(resolve, 2000));
 
 		process.exit(1);
 	}

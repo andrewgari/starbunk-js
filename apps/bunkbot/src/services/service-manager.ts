@@ -1,19 +1,9 @@
-import {
-	logger,
-	container,
-	ServiceId,
-	createDiscordClient,
-	ClientConfigs,
-	WebhookManager,
-	getMessageFilter,
-	MessageFilter,
-	runStartupDiagnostics,
-	validateEnvironment,
-	ensureError,
-	DiscordService,
-	type DiagnosticResult,
-} from '@starbunk/shared';
-import { Client } from 'discord.js';
+import { logger, container, ServiceId, validateEnvironment, ensureError } from '@starbunk/shared';
+import { WebhookManager } from './webhook-manager';
+import { runStartupDiagnostics, type DiagnosticResult } from '../utils/diagnostics';
+import { DiscordService } from './discord-service';
+import { getMessageFilter, MessageFilter } from './message-filter';
+import { Client, GatewayIntentBits } from 'discord.js';
 import { validateAndParseConfig, getSanitizedConfig, BunkBotConfig } from '../config/validation';
 
 export class ServiceManager {
@@ -116,9 +106,7 @@ export class ServiceManager {
 		const hasValidToken = process.env.DISCORD_TOKEN;
 
 		if (!hasValidToken) {
-			throw new Error(
-				'Missing required Discord token. Please set DISCORD_TOKEN environment variable.',
-			);
+			throw new Error('Missing required Discord token. Please set DISCORD_TOKEN environment variable.');
 		}
 
 		validateEnvironment({
@@ -128,7 +116,21 @@ export class ServiceManager {
 	}
 
 	private async initializeServices(): Promise<void> {
-		this.client = createDiscordClient(ClientConfigs.BunkBot);
+		// Create Discord client with required intents
+		this.client = new Client({
+			intents: [
+				GatewayIntentBits.Guilds,
+				GatewayIntentBits.GuildMessages,
+				GatewayIntentBits.MessageContent,
+				GatewayIntentBits.GuildMembers,
+				GatewayIntentBits.GuildIntegrations, // Required for slash commands
+				GatewayIntentBits.GuildWebhooks,
+			],
+		});
+
+		// Set up error handling
+		this.client.on('error', (error) => logger.error('Discord client error:', error));
+		this.client.on('warn', (warning) => logger.warn('Discord client warning:', warning));
 
 		this.registerDiscordServices();
 		this.initializeWebhookManager();

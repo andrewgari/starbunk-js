@@ -1,4 +1,5 @@
-import { container, ServiceId, logger, DiscordService } from '@starbunk/shared';
+import { container, ServiceId, logger } from '@starbunk/shared';
+import { DiscordService } from '../services/discord-service';
 import { BotIdentity } from '../types/bot-identity';
 import { Message } from 'discord.js';
 

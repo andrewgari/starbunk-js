@@ -2,16 +2,15 @@ import {
 	logger,
 	container,
 	ServiceId,
-	WebhookManager,
 	type CovaBotMetrics,
 	getBotResponseLogger,
 	type BotResponseLog,
 	inferTriggerCondition,
 } from '@starbunk/shared';
-import { Message, TextChannel, Webhook, Client } from 'discord.js';
+import { DiscordService } from '../services/discord-service';
+import { Message, TextChannel } from 'discord.js';
 import { BotIdentity } from '../types/bot-identity';
 import { TriggerResponse } from '../types/trigger-response';
-import { getCovaIdentity } from '../services/identity';
 
 /**
  * Mock Message class for web testing (non-Discord usage)
@@ -58,8 +57,7 @@ export interface CovaBotConfig {
  */
 export class CovaBot {
 	private readonly config: CovaBotConfig;
-	private readonly webhookCache = new Map<string, Webhook>();
-	private webhookManager: WebhookManager | null = null;
+	private discordService: DiscordService | null = null;
 	private metrics?: CovaBotMetrics;
 
 	constructor(config: CovaBotConfig, metrics?: CovaBotMetrics) {
@@ -70,8 +68,8 @@ export class CovaBot {
 			...config,
 		};
 		this.metrics = metrics;
-		// Defer resolving WebhookManager until first use to avoid requiring tests to register it
-		this.webhookManager = null;
+		// Defer resolving DiscordService until first use to avoid requiring tests to register it
+		this.discordService = null;
 	}
 
 	get name(): string {
@@ -230,7 +228,9 @@ export class CovaBot {
 					logger.info(
 						`[CovaBot] ✅ Message accepted | User: ${message.author.username} | Channel: ${message.channel.id} | Trigger: ${trigger.name}`,
 					);
-					logger.info(`[CovaBot] 📨 Original message: "${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}"`);
+					logger.info(
+						`[CovaBot] 📨 Original message: "${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}"`,
+					);
 
 					// Track personality trigger
 					if (this.metrics && messageContext) {
@@ -249,14 +249,8 @@ export class CovaBot {
 						`[CovaBot] 🤖 Generated response: "${responseText.substring(0, 150)}${responseText.length > 150 ? '...' : ''}"`,
 					);
 
-					// Get Cova's Discord identity with server context
-					const identity = await this.getCovaIdentity(message);
-					if (!identity) {
-						logger.debug(
-							`[CovaBot] Identity resolution failed for trigger "${trigger.name}" - bot will remain silent`,
-						);
-						continue; // Skip this trigger, bot remains silent
-					}
+					// Use default identity
+					const identity = this.config.defaultIdentity;
 
 					// Calculate response time before sending
 					const responseTime = Date.now() - startTime;
@@ -300,19 +294,7 @@ export class CovaBot {
 	}
 
 	/**
-	 * Get Cova's Discord identity with server-specific information
-	 */
-	private async getCovaIdentity(message: Message): Promise<BotIdentity | null> {
-		try {
-			return await getCovaIdentity(message);
-		} catch (error) {
-			logger.error('[CovaBot] Failed to get Cova identity:', error as Error);
-			return null; // Bot will remain silent
-		}
-	}
-
-	/**
-	 * Send message using webhook with custom identity
+	 * Send message using webhook with custom identity via DiscordService
 	 */
 	private async sendMessage(
 		message: Message,
@@ -328,22 +310,20 @@ export class CovaBot {
 				return;
 			}
 
-			// Lazy‑resolve WebhookManager; keep tests simple if container not set up
-			if (!this.webhookManager) {
-				if (container.has(ServiceId.WebhookService)) {
-					this.webhookManager = container.get<WebhookManager>(ServiceId.WebhookService);
+			// Lazy‑resolve DiscordService; keep tests simple if container not set up
+			if (!this.discordService) {
+				if (container.has(ServiceId.DiscordService)) {
+					this.discordService = container.get<DiscordService>(ServiceId.DiscordService);
 				} else {
-					logger.warn('[CovaBot] WebhookService not registered; skipping send (silent)');
+					logger.warn('[CovaBot] DiscordService not registered; skipping send (silent)');
 					return;
 				}
 			}
 
-			await this.webhookManager.sendMessage(message.channel.id, {
-				content,
-				username: identity.botName,
-				avatarURL: identity.avatarUrl,
-			});
-			logger.debug(`[CovaBot] Message requested via shared WebhookManager as ${identity.botName}`);
+			if (this.discordService) {
+				await this.discordService.sendMessageWithBotIdentity(message.channel.id, identity, content);
+			}
+			logger.debug(`[CovaBot] Message sent via DiscordService as ${identity.botName}`);
 
 			// Log comprehensive bot response details
 			this.logBotResponse(message, content, identity, triggerName || 'unknown', responseLatency);
@@ -393,10 +373,4 @@ export class CovaBot {
 		}
 	}
 
-	/**
-	 * Deprecated: direct webhook management replaced by shared WebhookManager
-	 */
-	private async getOrCreateWebhook(_channel: TextChannel, _client: Client): Promise<Webhook> {
-		throw new Error('Direct webhook usage is deprecated in CovaBot; use WebhookManager via shared services');
-	}
 }

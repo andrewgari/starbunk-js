@@ -1,4 +1,6 @@
-import { logger, getConfigurationService, BotConfig, BotTriggerConfig, BotResponseConfig } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { getConfigurationService } from '../services/configuration-shared/configuration-service';
+import type { BotConfig, BotTriggerConfig, BotResponseConfig } from '../services/configuration-shared/types';
 import { BotFactory } from './bot-factory';
 import { createTriggerResponse, TriggerResponse } from './trigger-response';
 import { matchesPattern } from './conditions';

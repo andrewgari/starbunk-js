@@ -135,7 +135,6 @@ export function fromBot(includeSelf = true): TriggerCondition {
 	};
 }
 
-
 // Contextual version of fromBot
 export function contextFromBot(includeSelf = true): ContextualTriggerCondition {
 	return (context: ResponseContext): boolean => {

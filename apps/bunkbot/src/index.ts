@@ -1,5 +1,5 @@
 // BunkBot - Reply bots and admin commands container
-import { Events, Client, Message, Interaction } from 'discord.js';
+import { Events, Client, Message, Interaction, GatewayIntentBits } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import {
 	logger,
@@ -7,22 +7,19 @@ import {
 	ServiceId,
 	ensureError,
 	validateEnvironment,
-	createDiscordClient,
-	ClientConfigs,
-	WebhookManager,
-	getMessageFilter,
-	runStartupDiagnostics,
 	initializeObservability,
 	createBunkBotMetrics,
 	type BunkBotMetrics,
-	type DiagnosticResult,
 	EnhancedBunkBotMetricsCollector,
 	BotTriggerTracker,
 	initializeBotMetricsSystem,
 } from '@starbunk/shared';
+import { WebhookManager } from './services/webhook-manager';
+import { runStartupDiagnostics, type DiagnosticResult } from './utils/diagnostics';
 
-// Import DiscordService from the shared package exports
-import { DiscordService } from '@starbunk/shared';
+// Import local services
+import { DiscordService } from './services/discord-service';
+import { getMessageFilter } from './services/message-filter';
 
 // Import commands
 import pingCommand from './commands/ping';
@@ -124,8 +121,21 @@ class BunkBotContainer {
 			// Validate environment
 			this.validateEnvironment();
 
-			// Create Discord client
-			this.client = createDiscordClient(ClientConfigs.BunkBot);
+			// Create Discord client with required intents
+			this.client = new Client({
+				intents: [
+					GatewayIntentBits.Guilds,
+					GatewayIntentBits.GuildMessages,
+					GatewayIntentBits.MessageContent,
+					GatewayIntentBits.GuildMembers,
+					GatewayIntentBits.GuildIntegrations, // Required for integration and webhook events
+					GatewayIntentBits.GuildWebhooks,
+				],
+			});
+
+			// Set up error handling
+			this.client.on('error', (error) => logger.error('Discord client error:', error));
+			this.client.on('warn', (warning) => logger.warn('Discord client warning:', warning));
 
 			// Initialize services
 			await this.initializeServices();

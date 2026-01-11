@@ -1,6 +1,6 @@
 import { Message, User, Guild, GuildMember, TextChannel, VoiceChannel, Client, Collection } from 'discord.js';
 import { BotIdentity } from '../types/bot-identity';
-import { DiscordService } from '@starbunk/shared';
+import { DiscordService } from '../services/discord-service';
 
 /**
  * Mock Discord User for testing

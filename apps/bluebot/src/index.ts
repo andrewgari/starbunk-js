@@ -1,5 +1,5 @@
 // BlueBot - Blue detection and response bot container
-import { Events, Client, Message } from 'discord.js';
+import { Events, Client, Message, GatewayIntentBits } from 'discord.js';
 import { createServer } from 'http';
 import {
 	logger,
@@ -7,16 +7,13 @@ import {
 	ServiceId,
 	ensureError,
 	validateEnvironment,
-	createDiscordClient,
-	ClientConfigs,
-	WebhookManager,
-	getMessageFilter,
-	MessageFilter,
-	StartupDiagnostics,
 	initializeUnifiedObservability,
 	shutdownObservability,
 } from '@starbunk/shared';
 
+import { WebhookManager } from './services/webhook-manager';
+import { getMessageFilter, MessageFilter } from './services/message-filter';
+import { StartupDiagnostics } from './utils/diagnostics';
 import { BlueBotTriggers } from './triggers';
 import { BLUE_BOT_NAME } from './constants';
 
@@ -75,8 +72,20 @@ class BlueBotContainer {
 				throw new Error('DISCORD_TOKEN environment variable is required');
 			}
 
-			// Create Discord client
-			this.client = createDiscordClient(ClientConfigs.BlueBot);
+			// Create Discord client with required intents
+			this.client = new Client({
+				intents: [
+					GatewayIntentBits.Guilds,
+					GatewayIntentBits.GuildMessages,
+					GatewayIntentBits.MessageContent,
+					GatewayIntentBits.GuildMembers,
+					GatewayIntentBits.GuildWebhooks,
+				],
+			});
+
+			// Set up error handling
+			this.client.on('error', (error) => logger.error('Discord client error:', error));
+			this.client.on('warn', (warning) => logger.warn('Discord client warning:', warning));
 
 			// Initialize webhook manager
 			this.webhookManager = new WebhookManager(this.client);

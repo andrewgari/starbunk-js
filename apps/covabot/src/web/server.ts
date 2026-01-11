@@ -108,9 +108,7 @@ export class WebServer {
 			// Start the server
 			return new Promise((resolve) => {
 				this.app.listen(this.port, () => {
-					logger.info(
-						`[WebServer] CovaBot web interface running on http://localhost:${this.port}`,
-					);
+					logger.info(`[WebServer] CovaBot web interface running on http://localhost:${this.port}`);
 					resolve();
 				});
 			});

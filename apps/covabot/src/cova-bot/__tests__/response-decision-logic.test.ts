@@ -1,5 +1,4 @@
 import { CovaBot, CovaBotConfig } from '../cova-bot';
-import { getCovaIdentity } from '../../services/identity';
 import { BotIdentity } from '../../types/bot-identity';
 import { TriggerResponse } from '../../types/trigger-response';
 import { logger } from '@starbunk/shared';
@@ -12,7 +11,6 @@ import {
 } from '../../__tests__/mocks/discord-mocks';
 
 // Mock dependencies
-jest.mock('../../services/identity');
 jest.mock('@starbunk/shared', () => ({
 	logger: {
 		debug: jest.fn(),
@@ -22,7 +20,6 @@ jest.mock('@starbunk/shared', () => ({
 	},
 }));
 
-const mockGetCovaIdentity = getCovaIdentity as jest.MockedFunction<typeof getCovaIdentity>;
 const mockLogger = logger as jest.Mocked<typeof logger>;
 
 describe('CovaBot - Response Decision Logic Tests', () => {
@@ -81,7 +78,6 @@ describe('CovaBot - Response Decision Logic Tests', () => {
 		};
 
 		covaBot = new CovaBot(config);
-		mockGetCovaIdentity.mockResolvedValue(mockIdentity);
 	});
 
 	describe('Direct Mention Detection', () => {
@@ -280,33 +276,5 @@ describe('CovaBot - Response Decision Logic Tests', () => {
 		});
 	});
 
-	describe('Identity Resolution Failure Handling', () => {
-		it('should remain silent when identity resolution fails', async () => {
-			mockGetCovaIdentity.mockResolvedValue(null); // Identity resolution fails
 
-			const message = createCovaDirectMentionMessage('Hey @CovaBot!');
-			await covaBot.processMessage(message as any);
-
-			expect(directMentionTrigger.condition).toHaveBeenCalled();
-			expect(directMentionTrigger.response).toHaveBeenCalled();
-			expect(mockGetCovaIdentity).toHaveBeenCalled();
-
-			// Bot should remain silent (no webhook send should be attempted)
-			// This is verified by the fact that no error is thrown and the process completes
-		});
-
-		it.skip('should continue processing other triggers if identity fails for one', async () => {
-			// Mock identity to fail for first trigger but succeed for others
-			mockGetCovaIdentity
-				.mockResolvedValueOnce(null) // First call fails
-				.mockResolvedValueOnce(mockIdentity); // Second call succeeds
-
-			const message = createCovaNameMentionMessage('What does Cova think?');
-			await covaBot.processMessage(message as any);
-
-			expect(nameMentionTrigger.condition).toHaveBeenCalled();
-			expect(nameMentionTrigger.response).toHaveBeenCalled();
-			expect(mockGetCovaIdentity).toHaveBeenCalledTimes(1);
-		});
-	});
 });

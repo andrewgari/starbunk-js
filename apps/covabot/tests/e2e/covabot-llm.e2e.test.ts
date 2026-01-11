@@ -59,8 +59,7 @@ describe('CovaBot E2E - LLM Integration (Mock)', () => {
 		logger.setServiceName('CovaBot-E2E');
 		container.register(ServiceId.Logger, logger);
 
-		// Register a mock DiscordService that returns valid identity for Cova
-		// This is needed because getCovaIdentity() tries to fetch from Discord
+		// Register a mock DiscordService for webhook sending
 		const mockDiscordService = {
 			getMemberAsync: async (_guildId: string, userId: string) => {
 				if (userId === '139592376443338752') {

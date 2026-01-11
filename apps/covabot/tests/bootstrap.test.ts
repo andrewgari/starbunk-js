@@ -79,16 +79,10 @@ describe('CovaBot Message Handling - No Hardcoded Values', () => {
 		expect(sourceCode).toContain('this.llmService.shouldRespond');
 	});
 
-	it('should use dynamic identity service', () => {
-		// Verify that the code imports and uses getCovaIdentity
-		expect(sourceCode).toContain("import { getCovaIdentity } from './services/identity'");
-		expect(sourceCode).toContain('getCovaIdentity(message)');
-	});
-
 	it('should use identity for username and avatar', () => {
 		// Verify that username and avatarURL come from identity object
-		expect(sourceCode).toContain('username: identity.botName');
-		expect(sourceCode).toContain('avatarURL: identity.avatarUrl');
+		expect(sourceCode).toContain('identity.botName');
+		expect(sourceCode).toContain('identity.avatarUrl');
 	});
 
 	it('should use channel.send for posting responses', () => {

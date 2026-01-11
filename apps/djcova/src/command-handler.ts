@@ -208,7 +208,9 @@ export class CommandHandler {
 					await Promise.all(registrationPromises);
 				} else {
 					// Fallback to global registration (takes up to 1 hour to propagate)
-					logger.warn('No TESTING_SERVER_IDS or GUILD_ID set - registering commands globally (may take up to 1 hour to appear)');
+					logger.warn(
+						'No TESTING_SERVER_IDS or GUILD_ID set - registering commands globally (may take up to 1 hour to appear)',
+					);
 					await rest.put(Routes.applicationCommands(clientId), { body: commandData });
 					logger.info('Successfully registered application commands globally');
 				}
