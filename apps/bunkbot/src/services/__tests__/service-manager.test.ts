@@ -1,6 +1,22 @@
 import { ServiceManager } from '../service-manager';
 import { logger } from '@starbunk/shared';
 
+// Mock Discord.js Client
+jest.mock('discord.js', () => ({
+	Client: jest.fn().mockImplementation(() => ({
+		isReady: jest.fn(() => true),
+		on: jest.fn(),
+	})),
+	GatewayIntentBits: {
+		Guilds: 1,
+		GuildMessages: 2,
+		MessageContent: 4,
+		GuildMembers: 8,
+		GuildIntegrations: 16,
+		GuildWebhooks: 32,
+	},
+}));
+
 // Mock external dependencies (including DiscordService from the shared barrel)
 jest.mock('@starbunk/shared', () => ({
 	logger: {
@@ -18,10 +34,7 @@ jest.mock('@starbunk/shared', () => ({
 		WebhookService: 'WebhookService',
 		MessageFilter: 'MessageFilter',
 	},
-	createDiscordClient: jest.fn(() => mockClient),
-	ClientConfigs: {
-		BunkBot: 'BunkBot',
-	},
+
 	WebhookManager: jest.fn().mockImplementation(() => ({})),
 	getMessageFilter: jest.fn(() => ({})),
 	runStartupDiagnostics: jest.fn(() => Promise.resolve([])),
@@ -30,10 +43,6 @@ jest.mock('@starbunk/shared', () => ({
 	// Provide a mock DiscordService constructor so ServiceManager can instantiate it
 	DiscordService: jest.fn().mockImplementation(() => ({})),
 }));
-
-const mockClient = {
-	isReady: jest.fn(() => true),
-};
 
 describe('ServiceManager', () => {
 	beforeEach(() => {

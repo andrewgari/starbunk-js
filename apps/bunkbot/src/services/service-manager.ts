@@ -2,8 +2,6 @@ import {
 	logger,
 	container,
 	ServiceId,
-	createDiscordClient,
-	ClientConfigs,
 	WebhookManager,
 	runStartupDiagnostics,
 	validateEnvironment,
@@ -12,7 +10,7 @@ import {
 } from '@starbunk/shared';
 import { DiscordService } from './discord-service';
 import { getMessageFilter, MessageFilter } from './message-filter';
-import { Client } from 'discord.js';
+import { Client, GatewayIntentBits } from 'discord.js';
 import { validateAndParseConfig, getSanitizedConfig, BunkBotConfig } from '../config/validation';
 
 export class ServiceManager {
@@ -127,7 +125,21 @@ export class ServiceManager {
 	}
 
 	private async initializeServices(): Promise<void> {
-		this.client = createDiscordClient(ClientConfigs.BunkBot);
+		// Create Discord client with required intents
+		this.client = new Client({
+			intents: [
+				GatewayIntentBits.Guilds,
+				GatewayIntentBits.GuildMessages,
+				GatewayIntentBits.MessageContent,
+				GatewayIntentBits.GuildMembers,
+				GatewayIntentBits.GuildIntegrations, // Required for slash commands
+				GatewayIntentBits.GuildWebhooks,
+			],
+		});
+
+		// Set up error handling
+		this.client.on('error', (error) => logger.error('Discord client error:', error));
+		this.client.on('warn', (warning) => logger.warn('Discord client warning:', warning));
 
 		this.registerDiscordServices();
 		this.initializeWebhookManager();

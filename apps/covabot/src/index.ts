@@ -1,21 +1,19 @@
 // CovaBot - AI personality bot container
 import 'dotenv/config';
-import { Events, Message, TextChannel } from 'discord.js';
+import { Events, Message, TextChannel, Client, GatewayIntentBits } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 
 import {
 	logger,
 	ensureError,
 	validateEnvironment,
-	createDiscordClient,
-	ClientConfigs,
 	initializeObservability,
 } from '@starbunk/shared';
 import { createLLMService, LLMService } from './services/llm-service';
 import { WebServer } from './web/server';
 
 class CovaBotContainer {
-	private client!: ReturnType<typeof createDiscordClient>;
+	private client!: Client;
 	private llmService!: LLMService;
 	private hasInitialized = false;
 	private httpEndpoints?: Awaited<ReturnType<typeof initializeObservability>>['httpEndpoints'];
@@ -80,8 +78,16 @@ class CovaBotContainer {
 			// Validate environment
 			this.validateEnvironment();
 
-			// Create Discord client
-			this.client = createDiscordClient(ClientConfigs.CovaBot);
+			// Create Discord client with required intents
+			this.client = new Client({
+				intents: [
+					GatewayIntentBits.Guilds,
+					GatewayIntentBits.GuildMessages,
+					GatewayIntentBits.MessageContent,
+					GatewayIntentBits.GuildMembers,
+					GatewayIntentBits.GuildWebhooks,
+				],
+			});
 
 			// Initialize services
 			await this.initializeServices();
@@ -196,7 +202,7 @@ class CovaBotContainer {
 
 		// Attempt login with retry logic
 		const maxRetries = 3;
-		let lastError: Error | undefined;
+		let lastError: Error | undefined = undefined;
 
 		for (let attempt = 1; attempt <= maxRetries; attempt++) {
 			try {
@@ -212,7 +218,7 @@ class CovaBotContainer {
 				logger.error(`❌ Discord login attempt ${attempt}/${maxRetries} failed:`, lastError);
 
 				// Check for specific error types
-				if (lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login')) {
+				if (lastError && (lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login'))) {
 					logger.error('❌ Discord token is invalid - cannot retry');
 					throw new Error(`Invalid Discord token: ${lastError.message}`);
 				}

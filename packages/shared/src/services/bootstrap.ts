@@ -4,7 +4,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { WebhookService } from '../webhooks/webhook-service';
 import { ServiceId, container } from './container';
-import { DiscordGMService } from './discord-gm-service';
+// import { DiscordGMService } from './discord-gm-service'; // File doesn't exist
 import { DiscordService } from './discord-service';
 import { Logger } from './logger';
 
@@ -64,7 +64,7 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 		container.register(ServiceId.DiscordService, discordService);
 
 		// Initialize and register DiscordGMService
-		container.register(ServiceId.DiscordGMService, DiscordGMService.initialize(client, discordService));
+		// container.register(ServiceId.DiscordGMService, DiscordGMService.initialize(client, discordService)); // DiscordGMService doesn't exist
 
 		// Register WebhookService
 		container.register(ServiceId.WebhookService, new WebhookService(logger));
@@ -118,9 +118,9 @@ export function getDiscordService(): DiscordService {
 	return container.get<DiscordService>(ServiceId.DiscordService);
 }
 
-export function getDiscordGMService(): DiscordGMService {
-	return container.get<DiscordGMService>(ServiceId.DiscordGMService);
-}
+// export function getDiscordGMService(): DiscordGMService {
+// 	return container.get<DiscordGMService>(ServiceId.DiscordGMService);
+// }
 
 export function getWebhookService(): any {
 	return container.get(ServiceId.WebhookService);
