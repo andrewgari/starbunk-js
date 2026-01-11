@@ -230,7 +230,9 @@ export class CovaBot {
 					logger.info(
 						`[CovaBot] ✅ Message accepted | User: ${message.author.username} | Channel: ${message.channel.id} | Trigger: ${trigger.name}`,
 					);
-					logger.info(`[CovaBot] 📨 Original message: "${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}"`);
+					logger.info(
+						`[CovaBot] 📨 Original message: "${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}"`,
+					);
 
 					// Track personality trigger
 					if (this.metrics && messageContext) {

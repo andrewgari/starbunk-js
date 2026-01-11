@@ -64,9 +64,7 @@ export class RedisConfigurationService {
 			await this.redis.connect();
 			await this.redis.ping();
 
-			logger.info(
-				`[RedisConfig] Successfully connected to Redis at ${redisHost}:${redisPort} (db: ${redisDb})`,
-			);
+			logger.info(`[RedisConfig] Successfully connected to Redis at ${redisHost}:${redisPort} (db: ${redisDb})`);
 		} catch (error) {
 			logger.error('[RedisConfig] Failed to connect to Redis:', ensureError(error));
 			this.redis = null;
@@ -151,4 +149,3 @@ export class RedisConfigurationService {
 		}
 	}
 }
-

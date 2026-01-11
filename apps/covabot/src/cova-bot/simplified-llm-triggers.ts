@@ -17,8 +17,6 @@ function getLLMService(): LLMService {
 	return llmService;
 }
 
-
-
 /**
  * Heuristic-based condition that delegates to LLMService.shouldRespond
  *

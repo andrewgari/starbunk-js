@@ -1,10 +1,4 @@
-import {
-	logger,
-	container,
-	ServiceId,
-	validateEnvironment,
-	ensureError,
-} from '@starbunk/shared';
+import { logger, container, ServiceId, validateEnvironment, ensureError } from '@starbunk/shared';
 import { WebhookManager } from './webhook-manager';
 import { runStartupDiagnostics, type DiagnosticResult } from '../utils/diagnostics';
 import { DiscordService } from './discord-service';
@@ -112,9 +106,7 @@ export class ServiceManager {
 		const hasValidToken = process.env.DISCORD_TOKEN;
 
 		if (!hasValidToken) {
-			throw new Error(
-				'Missing required Discord token. Please set DISCORD_TOKEN environment variable.',
-			);
+			throw new Error('Missing required Discord token. Please set DISCORD_TOKEN environment variable.');
 		}
 
 		validateEnvironment({

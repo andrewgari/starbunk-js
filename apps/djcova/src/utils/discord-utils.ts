@@ -37,4 +37,3 @@ export async function sendSuccessResponse(interaction: AnyCommandInteraction, me
 		logger.error('Failed to send success response:', error instanceof Error ? error : new Error(String(error)));
 	}
 }
-

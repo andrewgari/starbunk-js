@@ -28,8 +28,6 @@ export * from './utils/time';
 export { getDiscordToken, getDiscordClientId } from './utils/discord-token';
 export type { DiscordTokenOptions } from './utils/discord-token';
 
-
-
 // Export container and ServiceId from container (uses Symbol values)
 export { container, ServiceId } from './services/container';
 

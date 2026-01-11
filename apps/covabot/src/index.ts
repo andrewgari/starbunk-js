@@ -3,12 +3,7 @@ import 'dotenv/config';
 import { Events, Message, TextChannel, Client, GatewayIntentBits } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 
-import {
-	logger,
-	ensureError,
-	validateEnvironment,
-	initializeObservability,
-} from '@starbunk/shared';
+import { logger, ensureError, validateEnvironment, initializeObservability } from '@starbunk/shared';
 import { createLLMService, LLMService } from './services/llm-service';
 import { WebServer } from './web/server';
 
@@ -106,7 +101,15 @@ class CovaBotContainer {
 	private validateEnvironment(): void {
 		validateEnvironment({
 			required: ['DISCORD_TOKEN'],
-			optional: ['DATABASE_URL', 'OPENAI_API_KEY', 'OLLAMA_API_URL', 'DEBUG', 'NODE_ENV', 'COVA_USER_ID', 'CLIENT_ID'],
+			optional: [
+				'DATABASE_URL',
+				'OPENAI_API_KEY',
+				'OLLAMA_API_URL',
+				'DEBUG',
+				'NODE_ENV',
+				'COVA_USER_ID',
+				'CLIENT_ID',
+			],
 		});
 		logger.info('✅ Environment validation passed for CovaBot');
 	}
@@ -218,7 +221,10 @@ class CovaBotContainer {
 				logger.error(`❌ Discord login attempt ${attempt}/${maxRetries} failed:`, lastError);
 
 				// Check for specific error types
-				if (lastError && (lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login'))) {
+				if (
+					lastError &&
+					(lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login'))
+				) {
 					logger.error('❌ Discord token is invalid - cannot retry');
 					throw new Error(`Invalid Discord token: ${lastError.message}`);
 				}
@@ -226,7 +232,7 @@ class CovaBotContainer {
 				if (attempt < maxRetries) {
 					const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Exponential backoff, max 10s
 					logger.info(`Retrying in ${delay}ms...`);
-					await new Promise(resolve => setTimeout(resolve, delay));
+					await new Promise((resolve) => setTimeout(resolve, delay));
 				}
 			}
 		}
@@ -328,7 +334,7 @@ async function main(): Promise<void> {
 		}
 
 		// Give observability time to flush logs/metrics before exiting
-		await new Promise(resolve => setTimeout(resolve, 2000));
+		await new Promise((resolve) => setTimeout(resolve, 2000));
 
 		process.exit(1);
 	}

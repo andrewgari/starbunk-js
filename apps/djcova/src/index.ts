@@ -216,7 +216,6 @@ class DJCovaContainer {
 	private async handleInteraction(interaction: ChatInputInteraction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
-
 				// Handle music commands using the command handler
 				await this.commandHandler.handleInteraction(interaction);
 			} catch (error) {
@@ -266,7 +265,10 @@ class DJCovaContainer {
 				logger.error(`❌ Discord login attempt ${attempt}/${maxRetries} failed:`, lastError);
 
 				// Check for specific error types
-				if (lastError && (lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login'))) {
+				if (
+					lastError &&
+					(lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login'))
+				) {
 					logger.error('❌ Discord token is invalid - cannot retry');
 					throw new Error(`Invalid Discord token: ${lastError.message}`);
 				}
@@ -274,7 +276,7 @@ class DJCovaContainer {
 				if (attempt < maxRetries) {
 					const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Exponential backoff, max 10s
 					logger.info(`Retrying in ${delay}ms...`);
-					await new Promise(resolve => setTimeout(resolve, delay));
+					await new Promise((resolve) => setTimeout(resolve, delay));
 				}
 			}
 		}
@@ -358,7 +360,7 @@ async function main(): Promise<void> {
 		}
 
 		// Give observability time to flush logs/metrics before exiting
-		await new Promise(resolve => setTimeout(resolve, 2000));
+		await new Promise((resolve) => setTimeout(resolve, 2000));
 
 		process.exit(1);
 	}
