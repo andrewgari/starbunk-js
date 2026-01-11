@@ -71,7 +71,7 @@ export class WebhookManager {
 
 			// Try to find existing webhook
 			const webhooks = await channel.fetchWebhooks();
-			let webhook = webhooks.find((wh) => wh.name === 'Starbunk Bot');
+			let webhook = webhooks.find((wh) => wh.name === 'Starbunk Bot' && wh.token);
 
 			// Create webhook if it doesn't exist
 			if (!webhook) {
@@ -82,8 +82,14 @@ export class WebhookManager {
 				logger.info(`Created webhook for channel ${channelId}`);
 			}
 
+			// Validate webhook token before creating client
+			if (!webhook.token) {
+				logger.error(`Webhook for channel ${channelId} has no token`);
+				return null;
+			}
+
 			// Create webhook client and cache it
-			const webhookClient = new WebhookClient({ id: webhook.id, token: webhook.token! });
+			const webhookClient = new WebhookClient({ id: webhook.id, token: webhook.token });
 			this.webhookCache.set(channelId, webhookClient);
 
 			return webhookClient;

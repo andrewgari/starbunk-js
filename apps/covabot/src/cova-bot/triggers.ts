@@ -2,27 +2,7 @@ import userId from './simplified-user-id';
 import { and } from './conditions';
 import { createTriggerResponse } from './trigger-response-factory';
 import { createLLMEmulatorResponse, createLLMResponseDecisionCondition } from './simplified-llm-triggers';
-import { getCovaIdentity } from '../services/identity';
-import { logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
-
-// Enhanced identity function with validation and silent failure
-async function getCovaIdentityWithValidation(message?: Message) {
-	try {
-		const identity = await getCovaIdentity(message);
-
-		if (!identity) {
-			logger.warn(`[CovaBot] Identity validation failed, silently discarding message`);
-			return null; // This will cause the message to be silently discarded
-		}
-
-		logger.debug(`[CovaBot] Using identity: "${identity.botName}" with avatar ${identity.avatarUrl}`);
-		return identity;
-	} catch (error) {
-		logger.error(`[CovaBot] Critical error getting identity, silently discarding message:`, error as Error);
-		return null; // Silent discard on any error
-	}
-}
 
 /**
  * User filter condition that checks DEBUG_MODE at runtime
@@ -62,7 +42,6 @@ export const covaTrigger = createTriggerResponse({
 		createUserFilterCondition(), // Filter based on DEBUG_MODE
 	),
 	response: createLLMEmulatorResponse(), // Single LLM call handles decision + response
-	identity: async (message) => getCovaIdentityWithValidation(message),
 });
 
 /**
@@ -85,5 +64,4 @@ export const covaStatsCommandTrigger = createTriggerResponse({
 		const stats = `Uptime: ${Math.floor(uptime)}s\nMemory: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`;
 		return `**CovaBot Performance Stats**\n\`\`\`\n${stats}\n\`\`\``;
 	},
-	identity: async (message) => getCovaIdentityWithValidation(message),
 });
