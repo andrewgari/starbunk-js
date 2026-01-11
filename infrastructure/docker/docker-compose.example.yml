@@ -65,7 +65,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       # Discord / Starbunk configuration
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${CLIENT_ID}
+      - CLIENT_ID=${DJCOVA_CLIENT_ID:-${CLIENT_ID}}
       - GUILD_ID=${GUILD_ID}
       # Debug / testing
       - DEBUG_MODE=${DEBUG_MODE:-false}

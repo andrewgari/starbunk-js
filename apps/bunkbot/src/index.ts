@@ -415,11 +415,13 @@ class BunkBotContainer {
 			}
 
 			// Deploy commands to Discord now that client is ready
-			try {
-				await this.deployCommands();
-			} catch (error) {
-				logger.error('Failed to deploy commands, but continuing...', ensureError(error));
-			}
+			// NOTE: Command deployment is disabled for bunkbot to prevent showing slash commands
+			// Bunkbot is a reply bot and doesn't need slash commands visible in Discord
+			// try {
+			// 	await this.deployCommands();
+			// } catch (error) {
+			// 	logger.error('Failed to deploy commands, but continuing...', ensureError(error));
+			// }
 
 			this.hasInitialized = true;
 		});
