@@ -270,29 +270,30 @@ class BunkBotContainer {
 
 	private async deployCommands(): Promise<void> {
 		try {
-			logger.info('🚀 Deploying slash commands to Discord...');
+			logger.info('🚀 Clearing slash commands from Discord...');
 			logger.info(`🔍 Bot Application ID: ${this.client.application?.id || 'Unknown'}`);
 			logger.info(`🔍 Bot User ID: ${this.client.user?.id || 'Unknown'}`);
 
-			// Collect command data
-			const commandData = Array.from(this.commands.values()).map((command) => command.data);
-			logger.info(`📋 Commands to deploy: ${commandData.map((cmd) => cmd.name).join(', ')}`);
+			// Deploy empty array to clear all commands
+			// BunkBot is a reply bot and doesn't need slash commands
+			const commandData: never[] = [];
+			logger.info('📋 Deploying empty command array to clear all commands');
 
-			// Deploy commands to specific guild for faster updates during development
+			// Clear commands from specific guild for faster updates during development
 			const guildId = process.env.GUILD_ID;
 			if (guildId && process.env.DEBUG_MODE === 'true') {
-				logger.info(`🎯 Deploying commands to guild ${guildId} (debug mode)`);
+				logger.info(`🎯 Clearing commands from guild ${guildId} (debug mode)`);
 				const guild = await this.client.guilds.fetch(guildId);
 				await guild.commands.set(commandData);
 			} else {
-				// Deploy commands globally (available in all servers)
-				logger.info('🌍 Deploying commands globally');
+				// Clear commands globally (from all servers)
+				logger.info('🌍 Clearing commands globally');
 				await this.client.application!.commands.set(commandData);
 			}
 
-			logger.info(`✅ Successfully deployed ${commandData.length} slash commands to Discord`);
+			logger.info(`✅ Successfully cleared all slash commands from Discord`);
 		} catch (error) {
-			logger.error('❌ Failed to deploy commands to Discord:', ensureError(error));
+			logger.error('❌ Failed to clear commands from Discord:', ensureError(error));
 			throw error;
 		}
 	}
@@ -414,14 +415,13 @@ class BunkBotContainer {
 				}
 			}
 
-			// Deploy commands to Discord now that client is ready
-			// NOTE: Command deployment is disabled for bunkbot to prevent showing slash commands
-			// Bunkbot is a reply bot and doesn't need slash commands visible in Discord
-			// try {
-			// 	await this.deployCommands();
-			// } catch (error) {
-			// 	logger.error('Failed to deploy commands, but continuing...', ensureError(error));
-			// }
+			// Clear any existing commands from Discord
+			// BunkBot is a reply bot and doesn't need slash commands
+			try {
+				await this.deployCommands();
+			} catch (error) {
+				logger.error('Failed to clear commands, but continuing...', ensureError(error));
+			}
 
 			this.hasInitialized = true;
 		});
