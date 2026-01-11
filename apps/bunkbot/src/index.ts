@@ -33,7 +33,6 @@ import debugCommand from './commands/debug';
 import { BotRegistry } from './botRegistry';
 // import { DatabaseBotFactory } from './core/database-bot-factory'; // Temporarily disabled
 import { ReplyBotImpl } from './core/bot-builder';
-import { shouldExcludeFromReplyBots as _shouldExcludeFromReplyBots } from './core/conditions';
 
 // Import configuration services
 import { ConfigurationService } from './services/configurationService';

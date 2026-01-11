@@ -315,10 +315,10 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 		// or attempt to connect to service-specific health endpoints
 
 		const serviceEnvVars: Record<string, string[]> = {
-			bunkbot: ['STARBUNK_TOKEN'],
-			djcova: ['STARBUNK_TOKEN'],
-			covabot: ['STARBUNK_TOKEN', 'OPENAI_API_KEY'],
-			'starbunk-dnd': ['STARBUNK_TOKEN', 'OPENAI_API_KEY'],
+			bunkbot: ['DISCORD_TOKEN'],
+			djcova: ['DISCORD_TOKEN'],
+			covabot: ['DISCORD_TOKEN', 'OPENAI_API_KEY'],
+			'starbunk-dnd': ['DISCORD_TOKEN', 'OPENAI_API_KEY'],
 			shared: [], // Always available
 		};
 

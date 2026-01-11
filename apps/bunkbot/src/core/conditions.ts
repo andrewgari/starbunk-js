@@ -1,41 +1,8 @@
-import { isDebugMode, logger, getTestingChannelIds } from '@starbunk/shared';
+import { isDebugMode, logger } from '@starbunk/shared';
 import { Message } from 'discord.js';
-import { extractWebhookId } from '../utils/webhook';
 import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
 
-/**
- * Parse comma-separated IDs from environment variable
- * @param envVar - Environment variable containing comma-separated IDs
- * @returns Array of trimmed, non-empty IDs
- */
-function parseIdList(envVar: string | undefined): string[] {
-	if (!envVar) return [];
-	return envVar
-		.split(',')
-		.map((id) => id.trim())
-		.filter((id) => id.length > 0);
-}
-
-/**
- * Bot identification constants
- * Loads whitelisted bot IDs from environment variables
- */
-const BOT_IDENTIFIERS = {
-	// Discord application/client ID used by all containers (from environment)
-	STARBUNK_CLIENT_ID: process.env.STARBUNK_CLIENT_ID || process.env.CLIENT_ID || '836445923105308672',
-
-	// CovaBot-specific identifiers (AI personality bot)
-	COVABOT_WEBHOOK_NAMES: ['CovaBot', 'Cova', 'CovaBot Webhook'],
-	COVABOT_USERNAMES: ['CovaBot', 'Cova'],
-
-	// BunkBot-specific identifiers (reply bots)
-	BUNKBOT_WEBHOOK_NAMES: ['BunkBot', 'BunkBot Webhook'],
-
-	// Other bot identifiers to exclude
-	EXCLUDED_BOT_NAMES: ['CovaBot', 'Cova', 'DJCova', 'Snowbunk'],
-	WHITELISTED_BOT_IDS: parseIdList(process.env.BOT_WHITELIST_IDS), // Bot IDs that can bypass default filtering
-};
 /**
  * Core condition type - returns boolean based on message
  */
@@ -168,157 +135,6 @@ export function fromBot(includeSelf = true): TriggerCondition {
 	};
 }
 
-/**
- * Enhanced bot detection that identifies specific bot types
- * This is more robust than the generic fromBot() function
- */
-export function isCovaBot(message: Message): boolean {
-	// Handle null/undefined author gracefully
-	if (!message?.author) return false;
-
-	// Check if message is from a bot first
-	if (!message.author.bot) return false;
-
-	// Handle null/undefined username gracefully with logging
-	let username: string;
-	if (message.author.username == null) {
-		logger.warn(`[isCovaBot] message.author.username is ${message.author.username} for message ID: ${message.id}`, {
-			author: message.author,
-		});
-		username = '';
-	} else {
-		username = message.author.username.toLowerCase();
-	}
-
-	let displayName: string;
-	if (message.author.displayName == null) {
-		logger.warn(
-			`[isCovaBot] message.author.displayName is ${message.author.displayName} for message ID: ${message.id}`,
-			{ author: message.author },
-		);
-		displayName = '';
-	} else {
-		displayName = message.author.displayName.toLowerCase();
-	}
-
-	// Check for CovaBot-specific identifiers (exact match, not substring)
-	const isCovaUsername = BOT_IDENTIFIERS.COVABOT_USERNAMES.some(
-		(name) => username === name.toLowerCase() || displayName === name.toLowerCase(),
-	);
-
-	// Check webhook names if available (for webhook-sent messages)
-	const isCovaWebhook = message.webhookId
-		? BOT_IDENTIFIERS.COVABOT_WEBHOOK_NAMES.some(
-				(name) => username === name.toLowerCase() || displayName === name.toLowerCase(),
-			)
-		: false;
-
-	const _result = isCovaUsername || isCovaWebhook;
-
-	if (isDebugMode()) {
-		logger.debug(`🤖 CovaBot Detection:`, {
-			username: message.author.username,
-			displayName: message.author.displayName,
-			isBot: message.author.bot,
-			webhookId: message.webhookId,
-			isCovaUsername,
-			isCovaWebhook,
-			result: _result,
-		});
-	}
-
-	return _result;
-}
-
-/**
- * Check if message should be excluded from reply bot processing
- * Excludes: BunkBot self-messages, CovaBot, DJCova, and other specified bots
- */
-export function shouldExcludeFromReplyBots(message: Message): boolean {
-	// Handle null/undefined message or author gracefully
-	if (!message?.author) return true; // Exclude malformed messages
-
-	// Exclude if the message is from BunkBot itself (same client)
-	if (message.client?.user && message.author.id === message.client.user.id) {
-		if (isDebugMode()) {
-			logger.debug(`❌ Excluding BunkBot self-message from reply bot processing`);
-		}
-		return true;
-	}
-
-	// Fast-path allow for non-bot messages after self-check
-	if (!message.author.bot) {
-		if (isDebugMode()) {
-			logger.debug(`✅ Allowing human message for reply bot processing from: ${message.author.username}`);
-		}
-		return false;
-	}
-
-	// Check if bot is whitelisted (can bypass default filtering)
-	const authorId = message.author.id;
-	if (BOT_IDENTIFIERS.WHITELISTED_BOT_IDS.includes(authorId)) {
-		if (isDebugMode()) {
-			logger.debug(`✅ Allowing whitelisted bot message from ID: ${authorId}`);
-		}
-		return false;
-	}
-
-	// Exclude messages from specified bots (CovaBot, DJCova, etc.)
-	const authorName = message.author.username;
-	if (BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.includes(authorName)) {
-		if (isDebugMode()) {
-			logger.debug(`❌ Excluding message from excluded bot: ${authorName}`);
-		}
-		return true;
-	}
-
-	// Exclude webhook messages from BunkBot reply bots to prevent self-triggering loops
-	if (message.webhookId && message.author.bot) {
-		// Allow explicit E2E webhook test messages when enabled, channel is whitelisted,
-		// and the message originated from the configured E2E webhook
-		const allowWebhookTests = process.env.E2E_ALLOW_WEBHOOK_TESTS === 'true';
-		if (allowWebhookTests) {
-			const allowedChannels = getTestingChannelIds();
-			const e2eWebhookUrl = process.env.E2E_TEST_WEBHOOK_URL || '';
-			const e2eWebhookId = extractWebhookId(e2eWebhookUrl);
-
-			if (
-				allowedChannels.length > 0 &&
-				allowedChannels.includes(message.channel.id) &&
-				e2eWebhookId &&
-				message.webhookId === e2eWebhookId
-			) {
-				if (isDebugMode()) {
-					logger.debug(
-						`✅ Allowing E2E webhook test message in channel ${message.channel.id} from webhook ${e2eWebhookId}`,
-					);
-				}
-				return false; // do not exclude; let bots process this specific E2E webhook message
-			}
-		}
-
-		// Check if this is a webhook message from a BunkBot reply bot
-		// Reply bots use custom webhook names like "HoldBot", "TestBot", etc.
-
-		// If it's NOT from an excluded bot (like CovaBot), it's likely a BunkBot webhook
-		if (!BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.includes(authorName)) {
-			// This is likely a BunkBot reply bot webhook - exclude it to prevent loops
-			if (isDebugMode()) {
-				logger.debug(
-					`❌ Excluding BunkBot reply bot webhook message from: ${authorName} (webhook ID: ${message.webhookId})`,
-				);
-			}
-			return true;
-		}
-	}
-
-	// Allow all other messages (human, whitelisted bots, etc.)
-	if (isDebugMode()) {
-		logger.debug(`✅ Allowing message for reply bot processing from: ${message.author.username}`);
-	}
-
-	return false;
-}
 
 // Contextual version of fromBot
 export function contextFromBot(includeSelf = true): ContextualTriggerCondition {
@@ -331,36 +147,6 @@ export function contextFromBot(includeSelf = true): ContextualTriggerCondition {
 		}
 
 		return true;
-	};
-}
-
-/**
- * Enhanced bot condition that excludes CovaBot and other specified bots
- * This should be used instead of fromBot() for reply bots that need to interact with bots
- * but should exclude CovaBot specifically
- */
-export function fromBotExcludingCovaBot(): TriggerCondition {
-	return (message: Message): boolean => {
-		// Handle null/undefined message or author gracefully
-		if (!message || !message.author) return false;
-
-		// Must be from a bot
-		if (!message.author.bot) return false;
-
-		// But exclude CovaBot and other excluded bots
-		if (shouldExcludeFromReplyBots(message)) return false;
-
-		// Allow other bot messages
-		return true;
-	};
-}
-
-/**
- * Condition that only matches CovaBot messages (for debugging/testing)
- */
-export function fromCovaBot(): TriggerCondition {
-	return (message: Message): boolean => {
-		return isCovaBot(message);
 	};
 }
 
@@ -478,29 +264,17 @@ function escapeRegExp(string: string): string {
 
 /**
  * Wraps a condition with the default bot behavior:
- * - By default, ignores all bot messages using enhanced filtering
- * - Only processes bot messages if the condition explicitly includes fromBot() or fromBotExcludingCovaBot()
- * - Always excludes CovaBot messages for production safety
+ * - Ignores all bot messages (simple check on message.author.bot)
  */
 export function withDefaultBotBehavior(botName: string, condition: TriggerCondition): TriggerCondition {
 	return async (message: Message): Promise<boolean> => {
 		try {
-			// Enhanced bot message filtering - excludes CovaBot and other specified bots
-			if (message.author.bot && shouldExcludeFromReplyBots(message)) {
-				if (isDebugMode()) {
-					logger.debug(`[${botName}] 🚫 Message excluded by enhanced bot filtering`);
-				}
-				return false;
-			}
-
-			// For non-excluded bot messages, still apply the original logic
+			// Simple bot filtering - skip all bot messages
 			if (message.author.bot) {
 				if (isDebugMode()) {
-					logger.debug(
-						`[${botName}] ⚠️ Bot message detected but not excluded - condition must explicitly handle bots`,
-					);
+					logger.debug(`[${botName}] 🚫 Skipping bot message`);
 				}
-				// Let the condition decide if it wants to handle bot messages
+				return false;
 			}
 
 			// Check the condition
@@ -510,7 +284,6 @@ export function withDefaultBotBehavior(botName: string, condition: TriggerCondit
 			if (isDebugMode()) {
 				const messageInfo = {
 					author: message.author.username,
-					isBot: message.author.bot,
 					content: message.content.substring(0, 50) + (message.content.length > 50 ? '...' : ''),
 					result: _result,
 				};

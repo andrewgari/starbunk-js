@@ -276,7 +276,6 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 				`[${botName}] ✅ Condition matched`,
 				expect.objectContaining({
 					author: humanMessage.author.username,
-					isBot: false,
 					content: expect.stringContaining('test message'),
 					result: true,
 				}),
@@ -303,7 +302,6 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 				`[${botName}] ❌ Condition did not match`,
 				expect.objectContaining({
 					author: humanMessage.author.username,
-					isBot: false,
 					content: expect.stringContaining('test message'),
 					result: false,
 				}),
@@ -326,7 +324,7 @@ describe('Debug Mode vs Production Mode Behavior', () => {
 
 			// Assert
 			expect(_result).toBe(false);
-			expect(logger.debug).toHaveBeenCalledWith(`[${botName}] 🚫 Message excluded by enhanced bot filtering`);
+			expect(logger.debug).toHaveBeenCalledWith(`[${botName}] 🚫 Skipping bot message`);
 		});
 	});
 

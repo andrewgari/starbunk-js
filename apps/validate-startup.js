@@ -22,7 +22,7 @@ function log(level, message, details = null) {
     const timestamp = new Date().toISOString();
     const icons = { info: '✅', warn: '⚠️', error: '❌', debug: '🔍' };
     const colorMap = { info: colors.green, warn: colors.yellow, error: colors.red, debug: colors.blue };
-    
+
     console.log(`${colorMap[level]}${icons[level]} ${message}${colors.reset}`);
     if (details) {
         console.log(`   ${JSON.stringify(details, null, 2)}`);
@@ -31,10 +31,10 @@ function log(level, message, details = null) {
 
 async function validateEnvironment() {
     log('info', 'Checking environment variables...');
-    
-    const requiredVars = ['STARBUNK_TOKEN'];
+
+    const requiredVars = ['DISCORD_TOKEN'];
     const optionalVars = ['DATABASE_URL', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS', 'NODE_ENV'];
-    
+
     // Load .env file if it exists
     const envPath = path.join(process.cwd(), '.env');
     if (fs.existsSync(envPath)) {
@@ -56,64 +56,64 @@ async function validateEnvironment() {
     } else {
         log('warn', 'No .env file found');
     }
-    
+
     // Check required variables
     const missing = requiredVars.filter(varName => !process.env[varName]);
     if (missing.length > 0) {
         log('error', `Missing required environment variables: ${missing.join(', ')}`);
         return false;
     }
-    
+
     // Check optional variables
     const missingOptional = optionalVars.filter(varName => !process.env[varName]);
     if (missingOptional.length > 0) {
         log('warn', `Optional variables not set: ${missingOptional.join(', ')}`);
     }
-    
+
     log('info', 'Environment variables check passed');
     return true;
 }
 
 async function validateDiscordToken() {
     log('info', 'Validating Discord token format...');
-    
-    const token = process.env.STARBUNK_TOKEN;
+
+    const token = process.env.DISCORD_TOKEN;
     if (!token) {
-        log('error', 'STARBUNK_TOKEN is not set');
+        log('error', 'DISCORD_TOKEN is not set');
         return false;
     }
-    
+
     // Basic format validation
     if (token.length < 24) {
         log('error', `Discord token too short (${token.length} chars, should be 24+)`);
         return false;
     }
-    
+
     if (token === 'dummy_token' || token.includes('your_token_here') || token.includes('placeholder')) {
         log('error', 'Discord token appears to be a placeholder value');
         return false;
     }
-    
+
     // Check for common token format (3 parts separated by dots)
     const parts = token.split('.');
     if (parts.length !== 3) {
         log('warn', 'Discord token format unusual (expected 3 parts separated by dots)');
     }
-    
+
     log('info', `Discord token format appears valid (${token.length} chars)`);
     return true;
 }
 
 async function validateNetworkConnectivity() {
     log('info', 'Checking network connectivity to Discord...');
-    
+
     try {
         await dns.resolve('discord.com');
         log('info', 'Can resolve discord.com');
-        
+
         await dns.resolve('gateway.discord.gg');
         log('info', 'Can resolve Discord gateway');
-        
+
         return true;
     } catch (error) {
         log('error', 'Cannot resolve Discord endpoints', { error: error.message });
@@ -123,49 +123,49 @@ async function validateNetworkConnectivity() {
 
 function validateNodeVersion() {
     log('info', 'Checking Node.js version...');
-    
+
     const nodeVersion = process.version;
     const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
-    
+
     if (majorVersion < 18) {
         log('error', `Node.js version ${nodeVersion} is too old (requires 18+)`);
         return false;
     }
-    
+
     log('info', `Node.js version ${nodeVersion} is compatible`);
     return true;
 }
 
 function validateMemoryUsage() {
     log('info', 'Checking memory usage...');
-    
+
     const memUsage = process.memoryUsage();
     const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
     const heapTotalMB = Math.round(memUsage.heapTotal / 1024 / 1024);
-    
+
     log('info', `Memory usage: ${heapUsedMB}MB used / ${heapTotalMB}MB allocated`);
     return true;
 }
 
 function validateContainerStructure() {
     log('info', 'Checking container structure...');
-    
+
     const requiredFiles = ['package.json', 'dist/index.js'];
     const missingFiles = requiredFiles.filter(file => !fs.existsSync(file));
-    
+
     if (missingFiles.length > 0) {
         log('error', `Missing required files: ${missingFiles.join(', ')}`);
         log('info', 'Try running: npm run build');
         return false;
     }
-    
+
     log('info', 'Container structure is valid');
     return true;
 }
 
 async function runAllValidations() {
     console.log(`${colors.bold}${colors.blue}🔍 Discord Bot Startup Validation${colors.reset}\n`);
-    
+
     const checks = [
         { name: 'Node.js Version', fn: validateNodeVersion },
         { name: 'Container Structure', fn: validateContainerStructure },
@@ -174,10 +174,10 @@ async function runAllValidations() {
         { name: 'Network Connectivity', fn: validateNetworkConnectivity },
         { name: 'Memory Usage', fn: validateMemoryUsage }
     ];
-    
+
     let passCount = 0;
     let failCount = 0;
-    
+
     for (const check of checks) {
         console.log(`\n${colors.bold}--- ${check.name} ---${colors.reset}`);
         try {
@@ -192,10 +192,10 @@ async function runAllValidations() {
             failCount++;
         }
     }
-    
+
     console.log(`\n${colors.bold}=== Validation Summary ===${colors.reset}`);
     log('info', `${passCount} checks passed`);
-    
+
     if (failCount > 0) {
         log('error', `${failCount} checks failed`);
         console.log(`\n${colors.yellow}🔧 See TROUBLESHOOTING.md for solutions${colors.reset}`);

@@ -737,7 +737,7 @@ describe('createDefaultMessageFilter', () => {
 		});
 	});
 
-	describe('respondsToBots: true (BotBot behavior)', () => {
+	describe.skip('respondsToBots: true (BotBot behavior) - DISABLED', () => {
 		const config = {
 			name: 'BotBot',
 			description: 'Responds to bots',

@@ -72,8 +72,8 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - DISCORD_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${CLIENT_ID}
+      - DISCORD_TOKEN=${BUNKBOT_TOKEN}
+      - CLIENT_ID=${BUNKBOT_CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
       - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
@@ -125,8 +125,8 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${CLIENT_ID}
+      - DISCORD_TOKEN=${DJCOVA_TOKEN}
+      - CLIENT_ID=${DJCOVA_CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
@@ -176,8 +176,8 @@ services:
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=768
-      - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${CLIENT_ID}
+      - DISCORD_TOKEN=${COVABOT_TOKEN}
+      - CLIENT_ID=${COVABOT_CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -241,8 +241,8 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${CLIENT_ID}
+      - DISCORD_TOKEN=${BLUEBOT_TOKEN}
+      - CLIENT_ID=${BLUEBOT_CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       # Redis Configuration (replaces PostgreSQL for user lookups)
       - REDIS_HOST=${REDIS_HOST:-redis}

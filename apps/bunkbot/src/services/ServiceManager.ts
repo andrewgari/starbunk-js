@@ -112,12 +112,12 @@ export class ServiceManager {
 	}
 
 	private validateEnvironment(): void {
-		// Check for any valid token (BUNKBOT_TOKEN, STARBUNK_TOKEN, or DISCORD_TOKEN)
-		const hasValidToken = process.env.BUNKBOT_TOKEN || process.env.STARBUNK_TOKEN || process.env.DISCORD_TOKEN;
+		// Check for Discord token (mapped from container-specific token in docker-compose)
+		const hasValidToken = process.env.DISCORD_TOKEN;
 
 		if (!hasValidToken) {
 			throw new Error(
-				'Missing required Discord token. Please set BUNKBOT_TOKEN, STARBUNK_TOKEN, or DISCORD_TOKEN environment variable.',
+				'Missing required Discord token. Please set DISCORD_TOKEN environment variable.',
 			);
 		}
 

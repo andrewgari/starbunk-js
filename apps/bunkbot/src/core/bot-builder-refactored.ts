@@ -3,7 +3,6 @@ import { Message } from 'discord.js';
 import { getBotDefaults } from '../config/botDefaults';
 import { BotIdentity } from '../types/botIdentity';
 import { TriggerResponse } from './trigger-response';
-import { shouldExcludeFromReplyBots } from './conditions-refactored';
 import { BotProcessor } from './BotProcessor';
 
 export type MessageFilterFunction = (message: Message) => boolean | Promise<boolean>;
@@ -11,9 +10,10 @@ export type MessageFilterFunction = (message: Message) => boolean | Promise<bool
 export function defaultMessageFilter(message: Message): boolean {
 	if (!message?.author) return false;
 
-	if (shouldExcludeFromReplyBots(message)) {
+	// Simple bot filtering - skip all bot messages
+	if (message.author.bot) {
 		if (isDebugMode()) {
-			logger.debug('🚫 Skipping BunkBot self-message');
+			logger.debug('🚫 Skipping bot message');
 		}
 		return true;
 	}

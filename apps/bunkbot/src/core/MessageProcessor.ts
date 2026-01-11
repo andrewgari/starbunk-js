@@ -13,7 +13,6 @@ import {
 } from '@starbunk/shared';
 import { Message } from 'discord.js';
 import { ReplyBotImpl, type BotTriggerResult } from './bot-builder';
-import { shouldExcludeFromReplyBots } from './conditions';
 import { v4 as uuidv4 } from 'uuid';
 
 // Helper function to safely get channel name
@@ -129,12 +128,10 @@ export class MessageProcessor {
 	private shouldProcessMessage(message: Message): boolean {
 		if (!message?.author) return false;
 
+		// Simple bot filtering - skip all bot messages
 		if (message.author.bot) {
-			const shouldExclude = shouldExcludeFromReplyBots(message);
-			if (shouldExclude) {
-				logger.debug(`Bot message excluded: ${message.author.username}`);
-				return false;
-			}
+			logger.debug(`Bot message excluded: ${message.author.username}`);
+			return false;
 		}
 
 		return true;

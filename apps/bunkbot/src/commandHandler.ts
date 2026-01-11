@@ -141,8 +141,11 @@ export class CommandHandler {
 				throw new Error('GUILD_ID not set in environment variables');
 			}
 
-			// Use STARBUNK_TOKEN instead of TOKEN
-			const token = process.env.STARBUNK_TOKEN || process.env.TOKEN || '';
+			// Use DISCORD_TOKEN (mapped from container-specific token in docker-compose)
+			const token = process.env.DISCORD_TOKEN;
+			if (!token) {
+				throw new Error('DISCORD_TOKEN not set in environment variables');
+			}
 			const rest = new REST({ version: '9' }).setToken(token);
 			const commandData: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 

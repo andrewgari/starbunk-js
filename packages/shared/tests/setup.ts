@@ -1,6 +1,7 @@
 // Test setup for shared package
 // Set required environment variables for testing
-process.env.STARBUNK_TOKEN = 'test_token';
+process.env.DISCORD_TOKEN = 'test_token';
+process.env.CLIENT_ID = 'test_client_id';
 process.env.NODE_ENV = 'test';
 process.env.DEBUG = 'false';
 

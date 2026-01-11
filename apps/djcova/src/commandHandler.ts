@@ -145,15 +145,19 @@ export class CommandHandler {
 
 	private async registerDiscordCommands(): Promise<void> {
 		try {
-			if (!process.env.CLIENT_ID) {
+			// Get token and client ID from environment (mapped in docker-compose.yml)
+			const token = process.env.DISCORD_TOKEN;
+			if (!token) {
+				throw new Error('DISCORD_TOKEN not set in environment variables');
+			}
+
+			const clientId = process.env.CLIENT_ID;
+			if (!clientId) {
 				throw new Error('CLIENT_ID not set in environment variables');
 			}
 
-			// Use STARBUNK_TOKEN for authentication
-			const token = process.env.STARBUNK_TOKEN;
-			if (!token) {
-				throw new Error('STARBUNK_TOKEN not set in environment variables');
-			}
+			logger.info(`🎵 Registering DJCova commands with client ID: ${clientId}`);
+
 			const rest = new REST({ version: '10' }).setToken(token);
 			const commandData: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 
@@ -179,11 +183,6 @@ export class CommandHandler {
 
 			// Only register commands if we have some
 			if (commandData.length > 0) {
-				const clientId = process.env.CLIENT_ID;
-				if (!clientId) {
-					throw new Error('CLIENT_ID environment variable is required');
-				}
-
 				// Get guild IDs from environment
 				const guildIds = (process.env.TESTING_SERVER_IDS || process.env.GUILD_ID || '')
 					.split(',')
