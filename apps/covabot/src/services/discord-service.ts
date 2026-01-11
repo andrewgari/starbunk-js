@@ -339,6 +339,7 @@ export class DiscordService {
 	protected async retryBotProfileRefresh(attempts: number = 3): Promise<void> {
 		logger.info(`[DiscordService] Starting profile refresh with ${attempts} max attempts`);
 
+		let lastError: Error | undefined;
 		for (let i = 0; i < attempts; i++) {
 			const attemptStartTime = Date.now();
 			try {
@@ -349,7 +350,8 @@ export class DiscordService {
 				return;
 			} catch (error) {
 				const duration = Date.now() - attemptStartTime;
-				logger.error(`[DiscordService] Attempt ${i + 1} failed after ${duration}ms:`, ensureError(error));
+				lastError = ensureError(error);
+				logger.error(`[DiscordService] Attempt ${i + 1} failed after ${duration}ms:`, lastError);
 
 				if (i === attempts - 1) {
 					logger.error(
@@ -360,6 +362,11 @@ export class DiscordService {
 					await new Promise((resolve) => setTimeout(resolve, 5000));
 				}
 			}
+		}
+
+		// If we get here, all attempts failed - rethrow the last error
+		if (lastError) {
+			throw lastError;
 		}
 	}
 
