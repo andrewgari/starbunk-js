@@ -44,7 +44,6 @@ describe('ServiceManager', () => {
 		// Set required environment variables for validation
 		// Using clearly fake test tokens
 		process.env.DISCORD_TOKEN = 'test-discord-token-for-unit-tests-only';
-		process.env.STARBUNK_TOKEN = 'test-starbunk-token-for-unit-tests-only';
 	});
 
 	describe('getInstance', () => {

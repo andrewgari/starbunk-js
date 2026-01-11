@@ -2,14 +2,6 @@ import { Client, Message } from 'discord.js';
 import { DiscordGMService } from '../discord-gm-service';
 import { DiscordService } from '../discord-service';
 
-// Mock dependencies before importing service
-jest.mock('../../discord/channel-ids', () => ({
-	Starbunk: {
-		BotChannelAdmin: '1014170827601748048',
-		BotChannel: '753251583084724366',
-	},
-}));
-
 // Define test constants
 const GM_CHANNEL_ID = '1014170827601748048'; // BotChannelAdmin ID from Starbunk
 const BOT_CHANNEL_ID = '753251583084724366'; // Regular bot channel

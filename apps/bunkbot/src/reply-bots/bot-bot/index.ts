@@ -10,8 +10,7 @@ export default BotFactory.createBot({
 		botName: BOT_BOT_NAME,
 		avatarUrl: BOT_BOT_AVATAR_URL,
 	},
-	disabled: true, // DISABLED
-	respondsToBots: true, // Only respond to bot messages, not humans
-	responseChance: BOT_BOT_RESPONSE_RATE, // 1% chance to respond
+	disabled: true, // DISABLED - Bot-to-bot interactions are disabled
+	respondsToBots: false, // Bot-to-bot interactions are disabled
 	triggers: [botTrigger],
 });

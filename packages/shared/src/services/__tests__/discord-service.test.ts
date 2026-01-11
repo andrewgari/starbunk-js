@@ -2,12 +2,6 @@ import { Client, ClientEvents, GatewayIntentBits } from 'discord.js';
 import { DiscordService } from '../discord-service'; // Use standard import
 import { UserNotFoundError } from '../errors/discord-errors';
 
-// Mock guild IDs
-jest.mock('../../discord/guild-ids', () => ({
-	DefaultGuildId: 'guild123',
-	AnotherGuild: 'guild456',
-}));
-
 // Mock node-schedule to prevent scheduling issues in tests
 jest.mock('node-schedule', () => ({
 	scheduleJob: jest.fn(),
