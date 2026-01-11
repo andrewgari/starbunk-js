@@ -1,15 +1,15 @@
 // Tests for message filtering service
-import { MessageFilter, getMessageFilter, resetMessageFilter } from '../messageFilter';
-import type { MessageContext } from '../messageFilter';
+import { MessageFilter, getMessageFilter, resetMessageFilter } from '../message-filter';
+import type { MessageContext } from '../message-filter';
 
 // Mock the environment validation utilities
-jest.mock('../../utils/envValidation', () => ({
+jest.mock('../../utils/env-validation', () => ({
 	getTestingServerIds: jest.fn(),
 	getTestingChannelIds: jest.fn(),
 	getDebugMode: jest.fn(),
 }));
 
-import { getTestingServerIds, getTestingChannelIds, getDebugMode } from '../../utils/envValidation';
+import { getTestingServerIds, getTestingChannelIds, getDebugMode } from '../../utils/env-validation';
 
 describe('MessageFilter', () => {
 	const mockGetTestingServerIds = getTestingServerIds as jest.MockedFunction<typeof getTestingServerIds>;

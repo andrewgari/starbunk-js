@@ -233,3 +233,14 @@ model ServerConfiguration {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model PersonalityNote {
+  id          String   @id @default(uuid())
+  content     String
+  category    String   // 'instruction' | 'personality' | 'behavior' | 'knowledge' | 'context'
+  priority    String   @default("medium") // 'high' | 'medium' | 'low'
+  isActive    Boolean  @default(true)
+  tokens      Json?    // Array of tokenized content for LLM processing
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

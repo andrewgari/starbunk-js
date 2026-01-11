@@ -23,7 +23,7 @@ import {
 	UnifiedMetricsCollector,
 	resetUnifiedMetricsCollector,
 } from '../unified-metrics-collector';
-import { validateObservabilityEnvironment } from '../../../utils/envValidation';
+import { validateObservabilityEnvironment } from '../../../utils/env-validation';
 import fetch from 'node-fetch';
 
 // Test configuration

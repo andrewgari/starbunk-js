@@ -1,10 +1,10 @@
 // Integration tests for debug mode functionality across shared services
-import { MessageFilter, resetMessageFilter } from '../src/services/messageFilter';
+import { MessageFilter, resetMessageFilter } from '../src/services/message-filter';
 import { WebhookManager } from '../src/services/webhook-manager';
-import { getDebugMode, getTestingServerIds, getTestingChannelIds } from '../src/utils/envValidation';
+import { getDebugMode, getTestingServerIds, getTestingChannelIds } from '../src/utils/env-validation';
 
 // Mock environment validation utilities
-jest.mock('../src/utils/envValidation', () => ({
+jest.mock('../src/utils/env-validation', () => ({
 	getTestingServerIds: jest.fn(),
 	getTestingChannelIds: jest.fn(),
 	getDebugMode: jest.fn(),

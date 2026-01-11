@@ -5,7 +5,7 @@ import {
 	getTestingServerIds,
 	getTestingChannelIds,
 	getDebugMode,
-} from '../envValidation';
+} from '../env-validation';
 
 describe('Environment Validation Utilities', () => {
 	// Store original environment variables

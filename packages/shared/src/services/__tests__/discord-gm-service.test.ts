@@ -1,9 +1,9 @@
 import { Client, Message } from 'discord.js';
-import { DiscordGMService } from '../discordGMService';
-import { DiscordService } from '../discordService';
+import { DiscordGMService } from '../discord-gm-service';
+import { DiscordService } from '../discord-service';
 
 // Mock dependencies before importing service
-jest.mock('../../discord/channelIds', () => ({
+jest.mock('../../discord/channel-ids', () => ({
 	Starbunk: {
 		BotChannelAdmin: '1014170827601748048',
 		BotChannel: '753251583084724366',

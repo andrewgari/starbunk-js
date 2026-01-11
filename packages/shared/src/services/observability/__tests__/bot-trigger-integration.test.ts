@@ -15,8 +15,8 @@ import type { MessageContext } from '../container-metrics';
 import type { ProductionMetricsService } from '../production-metrics-service';
 
 // Mock initializeBotTriggerMetricsService function
-jest.mock('../BotTriggerMetricsService', () => {
-	const actual = jest.requireActual('../BotTriggerMetricsService');
+jest.mock('../bot-trigger-metrics-service', () => {
+	const actual = jest.requireActual('../bot-trigger-metrics-service');
 
 	// Create mock service inside the factory to avoid hoisting issues
 	const internalMockService = {
@@ -109,7 +109,7 @@ const mock_BunkBotMetricsCollector = {
 	getBotTriggerService: jest.fn(() => mockBotTriggerService),
 };
 
-jest.mock('../BunkBotMetrics', () => ({
+jest.mock('../bunk-bot-metrics', () => ({
 	_BunkBotMetricsCollector: jest.fn(() => mock_BunkBotMetricsCollector),
 }));
 

@@ -1,5 +1,5 @@
 import { Events } from 'discord.js';
-import { FakeDiscordEnvironment } from '../FakeDiscordEnvironment';
+import { FakeDiscordEnvironment } from '../fake-discord-environments';
 
 describe('FakeDiscordEnvironment', () => {
 	let env: FakeDiscordEnvironment;

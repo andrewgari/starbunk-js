@@ -1,5 +1,5 @@
 import { Events, Message } from 'discord.js';
-import { FakeDiscordEnvironment } from '../FakeDiscordEnvironment';
+import { FakeDiscordEnvironment } from '../fake-discord-environments';
 
 /**
  * Integration test: Simulates a realistic bot scenario

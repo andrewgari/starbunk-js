@@ -15,6 +15,11 @@ module.exports = {
 		'<rootDir>/src/**/*.test.ts',        // Co-located unit tests
 		'<rootDir>/src/**/__tests__/**/*.test.ts' // Co-located unit tests in __tests__ dirs
 	],
+	testPathIgnorePatterns: [
+		'/node_modules/',
+		'/dist/',
+		'/src/testing/llm/',                 // Exclude LLM testing utilities (LLM services removed)
+	],
 	setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
 	collectCoverageFrom: [
 		'src/**/*.ts',

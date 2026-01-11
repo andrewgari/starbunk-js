@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { logger } from '@starbunk/shared';
+import { logger, ensureError } from '@starbunk/shared';
 import { PersonalityNote, CreateNoteRequest, UpdateNoteRequest, NoteSearchFilters } from '../types/personality-note';
 
 /**
@@ -97,7 +97,7 @@ export class PersonalityNotesServiceDb {
 				updatedAt: note.updatedAt,
 			}));
 		} catch (error) {
-			logger.error('[PersonalityNotesDb] Failed to get notes:', error);
+			logger.error('[PersonalityNotesDb] Failed to get notes:', ensureError(error));
 			throw error;
 		}
 	}
@@ -126,7 +126,7 @@ export class PersonalityNotesServiceDb {
 				updatedAt: note.updatedAt,
 			};
 		} catch (error) {
-			logger.error('[PersonalityNotesDb] Failed to get note by ID:', error);
+			logger.error('[PersonalityNotesDb] Failed to get note by ID:', ensureError(error));
 			throw error;
 		}
 	}
@@ -161,7 +161,7 @@ export class PersonalityNotesServiceDb {
 				updatedAt: note.updatedAt,
 			};
 		} catch (error) {
-			logger.error('[PersonalityNotesDb] Failed to create note:', error);
+			logger.error('[PersonalityNotesDb] Failed to create note:', ensureError(error));
 			throw error;
 		}
 	}
@@ -209,7 +209,7 @@ export class PersonalityNotesServiceDb {
 				// Record not found
 				return null;
 			}
-			logger.error('[PersonalityNotesDb] Failed to update note:', error);
+			logger.error('[PersonalityNotesDb] Failed to update note:', ensureError(error));
 			throw error;
 		}
 	}
@@ -230,7 +230,7 @@ export class PersonalityNotesServiceDb {
 				// Record not found
 				return false;
 			}
-			logger.error('[PersonalityNotesDb] Failed to delete note:', error);
+			logger.error('[PersonalityNotesDb] Failed to delete note:', ensureError(error));
 			throw error;
 		}
 	}
@@ -276,7 +276,7 @@ export class PersonalityNotesServiceDb {
 
 			return contextString.trim();
 		} catch (error) {
-			logger.error('[PersonalityNotesDb] Failed to get active notes for LLM:', error);
+			logger.error('[PersonalityNotesDb] Failed to get active notes for LLM:', ensureError(error));
 			return '';
 		}
 	}
@@ -327,7 +327,7 @@ export class PersonalityNotesServiceDb {
 				byPriority,
 			};
 		} catch (error) {
-			logger.error('[PersonalityNotesDb] Failed to get stats:', error);
+			logger.error('[PersonalityNotesDb] Failed to get stats:', ensureError(error));
 			throw error;
 		}
 	}
