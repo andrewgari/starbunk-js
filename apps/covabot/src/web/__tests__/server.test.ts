@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { WebServer } from '../server';
 import { QdrantMemoryService } from '../../services/qdrantMemoryService';
-import { BotConfigurationService } from '../../services/botConfigurationService';
+import { BotConfigurationService } from '../../services/bot-configuration-service';
 
 // Mock the services
 jest.mock('../../services/qdrantMemoryService');

@@ -1,6 +1,6 @@
 import { getDiscordService, DiscordService, logger, container, ServiceId } from '@starbunk/shared';
 import { Message, TextChannel, Webhook } from 'discord.js';
-import { mockBotIdentity, mockDiscordService, mockMessage, mockUser, mockGuild } from '../../test-utils/testUtils';
+import { mockBotIdentity, mockDiscordService, mockMessage, mockUser, mockGuild } from '../../test-utils/test-utils';
 import {
 	createBotDescription,
 	createBotReplyName,

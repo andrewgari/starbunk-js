@@ -1,4 +1,4 @@
-import { mockMessage, mockUser } from '../../src/test-utils/testUtils';
+import { mockMessage, mockUser } from '../../src/test-utils/test-utils';
 import botBot from '../../src/reply-bots/bot-bot';
 import { botTrigger } from '../../src/reply-bots/bot-bot/triggers';
 import {

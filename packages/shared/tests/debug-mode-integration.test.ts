@@ -1,6 +1,6 @@
 // Integration tests for debug mode functionality across shared services
 import { MessageFilter, resetMessageFilter } from '../src/services/messageFilter';
-import { WebhookManager } from '../src/services/webhookManager';
+import { WebhookManager } from '../src/services/webhook-manager';
 import { getDebugMode, getTestingServerIds, getTestingChannelIds } from '../src/utils/envValidation';
 
 // Mock environment validation utilities

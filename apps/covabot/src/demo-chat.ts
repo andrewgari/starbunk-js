@@ -4,7 +4,7 @@
  * Simple demo script to test the CovaBot chat functionality
  */
 
-import { CovaBot } from './cova-bot/covaBot';
+import { CovaBot } from './cova-bot/cova-bot';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from './cova-bot/triggers';
 // import { logger } from '@starbunk/shared';
 

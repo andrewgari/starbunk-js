@@ -1,7 +1,7 @@
 import { logger, isDebugMode, DiscordService } from '@starbunk/shared';
 import { Message } from 'discord.js';
-import { getBotDefaults } from '../config/botDefaults';
-import { BotIdentity } from '../types/botIdentity';
+import { getBotDefaults } from '../config/bot-defaults';
+import { BotIdentity } from '../types/bot-identity';
 import { TriggerResponse } from './trigger-response';
 
 /**

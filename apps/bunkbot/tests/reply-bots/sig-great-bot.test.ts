@@ -1,4 +1,4 @@
-import { mockMessage, mockUser } from '../../src/test-utils/testUtils';
+import { mockMessage, mockUser } from '../../src/test-utils/test-utils';
 import sigGreatBot from '../../src/reply-bots/sig-great-bot';
 import { sigGreatTrigger } from '../../src/reply-bots/sig-great-bot/triggers';
 import {

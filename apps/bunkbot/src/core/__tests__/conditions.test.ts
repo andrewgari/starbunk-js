@@ -1,4 +1,4 @@
-import { mockMessage, mockUser } from '../../test-utils/testUtils';
+import { mockMessage, mockUser } from '../../test-utils/test-utils';
 import {
 	and,
 	containsPhrase,

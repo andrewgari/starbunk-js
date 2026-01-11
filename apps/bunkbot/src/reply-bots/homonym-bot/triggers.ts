@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import type { BotIdentity as _BotIdentity } from '../../types/botIdentity';
+import type { BotIdentity as _BotIdentity } from '../../types/bot-identity';
 import { withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
 import {

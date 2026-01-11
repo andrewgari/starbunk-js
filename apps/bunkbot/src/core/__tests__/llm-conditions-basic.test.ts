@@ -1,7 +1,7 @@
 import { LLMManager } from '@starbunk/shared';
 import { PromptType } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
-import { mockMessage } from '../../test-utils/testUtils';
+import { mockMessage } from '../../test-utils/test-utils';
 import { createLLMCondition } from '../llm-conditions';
 
 // Mock the dependencies

@@ -1,4 +1,4 @@
-import { createBot } from '../../createBot';
+import { createBot } from '../../create-bot';
 import { NICE_BOT_AVATAR_URL, NICE_BOT_NAME, NICE_BOT_PATTERNS, NICE_BOT_RESPONSES } from './constants';
 
 // Create the Nice Bot using the simplified API

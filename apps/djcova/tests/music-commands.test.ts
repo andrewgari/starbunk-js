@@ -6,10 +6,10 @@
 import { CommandInteraction, GuildMember, VoiceBasedChannel } from 'discord.js';
 import { AudioPlayer, VoiceConnection } from '@discordjs/voice';
 import { container, ServiceId } from '@starbunk/shared';
-import { DJCova } from '../src/djCova';
+import { DJCova } from '../src/dj-cova';
 import playCommand from '../src/commands/play';
 import stopCommand from '../src/commands/stop';
-import volumeCommand from '../src/commands/setVolume';
+import volumeCommand from '../src/commands/set-volume';
 
 // Mock dependencies
 jest.mock('@starbunk/shared', () => ({
@@ -34,7 +34,7 @@ import {
 	createVoiceConnection,
 	subscribePlayerToConnection,
 	disconnectVoiceConnection,
-} from '../src/utils/voiceUtils';
+} from '../src/utils/voice-utils';
 import { sendErrorResponse, sendSuccessResponse, deferInteractionReply } from '@starbunk/shared';
 
 describe('Music Commands Tests', () => {

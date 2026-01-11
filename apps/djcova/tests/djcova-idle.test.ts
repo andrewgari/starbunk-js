@@ -3,7 +3,7 @@
  */
 
 import { AudioPlayerStatus } from '@discordjs/voice';
-import { DJCova } from '../src/djCova';
+import { DJCova } from '../src/dj-cova';
 
 // Mock dependencies
 jest.mock('@starbunk/shared', () => ({
@@ -37,8 +37,8 @@ jest.mock('@distube/ytdl-core', () => {
 	});
 });
 
-import { disconnectVoiceConnection } from '../src/utils/voiceUtils';
-import { getMusicConfig } from '../src/config/musicConfig';
+import { disconnectVoiceConnection } from '../src/utils/voice-utils';
+import { getMusicConfig } from '../src/config/music-config';
 
 describe('DJCova Idle Management Integration', () => {
 	let djCova: DJCova;

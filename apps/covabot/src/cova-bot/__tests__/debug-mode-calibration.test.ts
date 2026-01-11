@@ -145,7 +145,7 @@ describe('CovaBot Debug/Calibration Mode', () => {
 
 			// Re-import to get new DEBUG_MODE value
 			jest.isolateModules(() => {
-				const { createLLMEmulatorResponse } = require('../simplifiedLlmTriggers');
+				const { createLLMEmulatorResponse } = require('../simplified-llm-triggers');
 
 				// The response generator should include calibration context
 				// This is verified by the prompt construction in the implementation

@@ -28,9 +28,9 @@ import {
 	ServiceId,
 	logger,
 } from '@starbunk/shared';
-import { CovaBot } from '../../src/cova-bot/covaBot';
+import { CovaBot } from '../../src/cova-bot/cova-bot';
 import { covaTrigger, covaDirectMentionTrigger } from '../../src/cova-bot/triggers';
-import { createMockLLMManagerForE2E, ResponseScenario } from './helpers/mockLLMSetup';
+import { createMockLLMManagerForE2E, ResponseScenario } from './helpers/mock-llm-setup';
 
 describe('CovaBot E2E - LLM Integration (Mock)', () => {
 	let fakeEnv: FakeDiscordEnvironment;

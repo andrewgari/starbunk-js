@@ -1,11 +1,11 @@
 import type { Message } from 'discord.js';
 
-import { BotIdentity } from '../../types/botIdentity';
+import { BotIdentity } from '../../types/bot-identity';
 import { and, fromUser, matchesPattern, or, withChance } from '../../core/conditions';
 import { weightedRandomResponse } from '../../core/responses';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { ConfigurationService } from '../../services/configurationService';
-import { BotIdentityService } from '../../services/botIdentityService';
+import { ConfigurationService } from '../../services/configuration-service';
+import { BotIdentityService } from '../../services/bot-identity-service';
 import { VENN_BOT_NAME, VENN_PATTERNS, VENN_RESPONSES, VENN_TRIGGER_CHANCE } from './constants';
 import { isDebugMode } from '@starbunk/shared';
 import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';

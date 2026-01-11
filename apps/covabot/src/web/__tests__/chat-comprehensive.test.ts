@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { TestWebServer } from './test-server';
-import { CovaBot, MockMessage } from '../../cova-bot/covaBot';
+import { CovaBot, MockMessage } from '../../cova-bot/cova-bot';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from '../../cova-bot/triggers';
 
 /**

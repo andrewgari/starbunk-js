@@ -8,7 +8,7 @@ import {
 	inferTriggerCondition,
 	DiscordService,
 } from '@starbunk/shared';
-import { BotIdentity } from '../types/botIdentity';
+import { BotIdentity } from '../types/bot-identity';
 import { withDefaultBotBehavior } from './conditions';
 
 /**

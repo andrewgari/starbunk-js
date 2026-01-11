@@ -1,5 +1,5 @@
 import { container, ServiceId, logger, DiscordService } from '@starbunk/shared';
-import { BotIdentity } from '../types/botIdentity';
+import { BotIdentity } from '../types/bot-identity';
 import { Message } from 'discord.js';
 
 interface GetBotIdentityOptions {

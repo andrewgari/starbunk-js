@@ -17,7 +17,7 @@ import {
 	or,
 	not,
 } from '../core/conditions';
-import { mockMessage, mockHumanUser, mockCovaBotUser, mockGenericBotUser, mockClient } from '../test-utils/testUtils';
+import { mockMessage, mockHumanUser, mockCovaBotUser, mockGenericBotUser, mockClient } from '../test-utils/test-utils';
 import { isDebugMode } from '@starbunk/shared';
 // import { logger } from '@starbunk/shared';
 

@@ -14,8 +14,8 @@
 
 import { jest } from '@jest/globals';
 import type { Message, TextChannel, Guild, GuildMember } from 'discord.js';
-import { MessageProcessor } from '../core/MessageProcessor';
-import { BotRegistry } from '../core/BotRegistry';
+import { MessageProcessor } from '../core/message-processor';
+import { BotRegistry } from '../core/bot-registry';
 import { Enhanced_BunkBotMetricsCollector, BotTriggerTracker, initializeBotMetricsSystem } from '@starbunk/shared';
 import type { ProductionMetricsService } from '@starbunk/shared';
 

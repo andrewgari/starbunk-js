@@ -1,6 +1,6 @@
 import { VoiceState } from 'discord.js';
 import { logger } from '@starbunk/shared';
-import { BotIdentity } from '../types/botIdentity';
+import { BotIdentity } from '../types/bot-identity';
 
 export interface VoiceTriggerResponse {
 	name: string;

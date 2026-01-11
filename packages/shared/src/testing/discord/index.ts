@@ -3,8 +3,8 @@
  * Provides a complete fake Discord environment for e2e testing without connecting to Discord
  */
 
-export { FakeDiscordClient } from './FakeDiscordClient';
-export { FakeDiscordEnvironment } from './FakeDiscordEnvironment';
-export type { FakeDiscordEnvironmentConfig } from './FakeDiscordEnvironment';
-export { MessageCapture } from './MessageCapture';
-export type { CapturedMessage } from './MessageCapture';
+export { FakeDiscordClient } from './fake-discord-client';
+export { FakeDiscordEnvironment } from './fake-discord-environments';
+export type { FakeDiscordEnvironmentConfig } from './fake-discord-environments';
+export { MessageCapture } from './message-capture';
+export type { CapturedMessage } from './message-capture';

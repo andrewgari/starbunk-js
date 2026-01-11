@@ -1,4 +1,4 @@
-import { mockMessage } from '../../src/test-utils/testUtils';
+import { mockMessage } from '../../src/test-utils/test-utils';
 import babyBot from '../../src/reply-bots/baby-bot';
 import { babyTrigger } from '../../src/reply-bots/baby-bot/triggers';
 import { BABY_BOT_RESPONSES, BABY_BOT_NAME, BABY_BOT_AVATAR_URL } from '../../src/reply-bots/baby-bot/constants';

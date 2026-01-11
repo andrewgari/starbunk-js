@@ -1,4 +1,4 @@
-import { mockMessage } from '../../src/test-utils/testUtils';
+import { mockMessage } from '../../src/test-utils/test-utils';
 import pickleBot from '../../src/reply-bots/pickle-bot';
 import { pickleTrigger } from '../../src/reply-bots/pickle-bot/triggers';
 import {

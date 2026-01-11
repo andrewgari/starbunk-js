@@ -5,7 +5,7 @@ import {
 	mockCovaBotUser,
 	mockTestingChannel,
 	mockProductionChannel,
-} from '../test-utils/testUtils';
+} from '../test-utils/test-utils';
 import { isDebugMode, setDebugMode } from '@starbunk/shared';
 import { logger } from '@starbunk/shared';
 

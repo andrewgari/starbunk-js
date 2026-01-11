@@ -1,6 +1,6 @@
 // Minimal shared exports for containers
 export { logger } from './services/logger';
-export { ensureError } from './utils/errorUtils';
+export { ensureError } from './utils/error-utils';
 
 // Simple container for dependency injection
 export const container = new Map<string, unknown>();

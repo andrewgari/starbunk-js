@@ -5,8 +5,8 @@
  * Tests that bots remain silent when identity resolution fails
  */
 
-import { ConfigurationService } from '../src/services/configurationService';
-import { BotIdentityService } from '../src/services/botIdentityService';
+import { ConfigurationService } from '../src/services/configuration-service';
+import { BotIdentityService } from '../src/services/bot-identity-service';
 
 // Mock Discord Message object for testing
 const createMockMessage = (guildId: string, authorId: string = 'test-user') => ({

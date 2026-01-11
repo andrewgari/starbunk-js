@@ -1,4 +1,4 @@
-import { mockMessage } from '../../src/test-utils/testUtils';
+import { mockMessage } from '../../src/test-utils/test-utils';
 import clankerBot from '../../src/reply-bots/clanker-bot';
 import { clankerTrigger } from '../../src/reply-bots/clanker-bot/triggers';
 import {

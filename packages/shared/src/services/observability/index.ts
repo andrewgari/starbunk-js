@@ -1,5 +1,5 @@
 // Legacy MetricsService (maintain backward compatibility)
-export { MetricsService, type MessageFlowMetrics, type ChannelActivity } from './MetricsService';
+export { MetricsService, type MessageFlowMetrics, type ChannelActivity } from './metrics-service';
 
 // Production-ready metrics service
 export {
@@ -7,7 +7,7 @@ export {
 	initializeMetrics,
 	getMetrics,
 	type MetricsConfiguration,
-} from './ProductionMetricsService';
+} from './production-metrics-service';
 
 export {
 	StructuredLogger,
@@ -17,17 +17,17 @@ export {
 	type MessageFlowLog,
 	type ChannelActivityLog,
 	type SystemLog,
-} from './StructuredLogger';
+} from './structured-logger';
 
-export { BotResponseLogger, getBotResponseLogger, type BotResponseLog } from './BotResponseLogger';
+export { BotResponseLogger, getBotResponseLogger, type BotResponseLog } from './bot-response-logger';
 
-export { inferTriggerCondition } from './triggerConditionUtils';
+export { inferTriggerCondition } from './trigger-condition-utils';
 
 export {
 	ChannelActivityTracker,
 	initializeChannelActivityTracker,
 	getChannelActivityTracker,
-} from './ChannelActivityTracker';
+} from './channel-activity-tracker';
 
 export {
 	HttpEndpointsService,
@@ -36,7 +36,7 @@ export {
 	type EndpointsConfig,
 	type HealthCheckFunction,
 	type HealthCheckResult,
-} from './HttpEndpointsService';
+} from './http-endpoints-service';
 
 // Container-specific metrics exports
 export {
@@ -48,15 +48,15 @@ export {
 	ContainerMetricsBase,
 	type ContainerMetricsFactory,
 	type ContainerMetricsConfig,
-} from './ContainerMetrics';
+} from './container-metrics';
 
-export { _BunkBotMetricsCollector as BunkBotMetricsCollector, createBunkBotMetrics } from './BunkBotMetrics';
+export { _BunkBotMetricsCollector as BunkBotMetricsCollector, createBunkBotMetrics } from './bunk-bot-metrics';
 
-export { DJCovaMetricsCollector, createDJCovaMetrics } from './DJCovaMetrics';
+export { DJCovaMetricsCollector, createDJCovaMetrics } from './dj-cova-metrics';
 
-export { StarbunkDNDMetricsCollector, createStarbunkDNDMetrics } from './StarbunkDNDMetrics';
+export { StarbunkDNDMetricsCollector, createStarbunkDNDMetrics } from './starbunk-dnd-metrics';
 
-export { CovaBotMetricsCollector, createCovaBotMetrics } from './CovaBotMetrics';
+export { CovaBotMetricsCollector, createCovaBotMetrics } from './cova-bot-metrics';
 
 // Unified metrics system exports
 export {
@@ -68,7 +68,7 @@ export {
 	type ServiceComponent,
 	type HealthCheckResult as UnifiedHealthCheckResult,
 	type ServiceHealthStatus,
-} from './UnifiedMetricsCollector';
+} from './unified-metrics-collector';
 
 export {
 	ServiceAwareMetricsService,
@@ -80,7 +80,7 @@ export {
 	type ComponentTracker,
 	type ServiceMetricContext,
 	type ServiceMessageFlowMetrics,
-} from './ServiceMetricsRegistry';
+} from './service-metrics-registry';
 
 export {
 	UnifiedMetricsEndpoint,
@@ -91,7 +91,7 @@ export {
 	type UnifiedEndpointConfig,
 	type ServiceRegistrationInfo,
 	type ServiceHealthResult,
-} from './UnifiedMetricsEndpoint';
+} from './unified-metrics-endpoint';
 
 // Bot Trigger Metrics Service
 export {
@@ -100,7 +100,7 @@ export {
 	initializeBotTriggerMetricsService,
 	getBotTriggerMetricsService,
 	createProductionConfig,
-} from './BotTriggerMetricsService';
+} from './bot-trigger-metrics-service';
 
 // Bot Trigger Integration
 export {
@@ -110,23 +110,23 @@ export {
 	createEnvironmentConfig,
 	initializeBotMetricsSystem,
 	type BotTriggerIntegrationConfig,
-} from './BotTriggerIntegration';
+} from './bot-trigger-integration';
 
 // Redis Bot Metrics Exporter
 export {
 	RedisBotMetricsExporter,
 	createRedisBotMetricsExporter,
 	type RedisMetricsExporterConfig,
-} from './RedisBotMetricsExporter';
+} from './redis-bot-metrics-exporter';
 
 // Import validation utilities
-import { validateObservabilityEnvironment, type ObservabilityConfig } from '../../utils/envValidation';
+import { validateObservabilityEnvironment, type ObservabilityConfig } from '../../utils/env-validation';
 
 // Import for internal use
-import { initializeMetrics, ProductionMetricsService, type MetricsConfiguration } from './ProductionMetricsService';
-import { initializeStructuredLogger } from './StructuredLogger';
-import { initializeChannelActivityTracker } from './ChannelActivityTracker';
-import { initializeHttpEndpoints, type EndpointsConfig } from './HttpEndpointsService';
+import { initializeMetrics, ProductionMetricsService, type MetricsConfiguration } from './production-metrics-service';
+import { initializeStructuredLogger } from './structured-logger';
+import { initializeChannelActivityTracker } from './channel-activity-tracker';
+import { initializeHttpEndpoints, type EndpointsConfig } from './http-endpoints-service';
 
 interface ObservabilityComponents {
 	metrics: ProductionMetricsService;
@@ -261,11 +261,11 @@ export async function initializeUnifiedObservability(
 	if (enableUnified) {
 		try {
 			// Initialize unified metrics endpoint (this will create the collector)
-			const { initializeUnifiedMetricsEndpoint } = require('./UnifiedMetricsEndpoint');
+			const { initializeUnifiedMetricsEndpoint } = require('./unified-metrics-endpoint');
 			unifiedEndpoint = initializeUnifiedMetricsEndpoint(options?.unifiedConfig);
 
 			// Create service-aware metrics instance
-			const { initializeServiceMetrics } = require('./ServiceMetricsRegistry');
+			const { initializeServiceMetrics } = require('./service-metrics-registry');
 			serviceMetrics = initializeServiceMetrics(service, {
 				enableServiceLabels: true,
 				enableComponentTracking: true,

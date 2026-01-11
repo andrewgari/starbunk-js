@@ -1,11 +1,11 @@
 // Comprehensive debug mode tests for BunkBot container
-import { MessageFilter, resetMessageFilter } from '@starbunk/shared/dist/services/messageFilter';
+import { MessageFilter, resetMessageFilter } from '@starbunk/shared/dist/services/message-filter';
 import { withChance } from '../src/core/conditions';
-import { WebhookManager } from '@starbunk/shared/dist/services/webhookManager';
-import { BotRegistry } from '../src/botRegistry';
+import { WebhookManager } from '@starbunk/shared/dist/services/webhook-manager';
+import { BotRegistry } from '../src/bot-registry';
 
 // Mock environment validation utilities
-jest.mock('@starbunk/shared/dist/utils/envValidation', () => ({
+jest.mock('@starbunk/shared/dist/utils/env-validation', () => ({
 	getTestingServerIds: jest.fn(),
 	getTestingChannelIds: jest.fn(),
 	getDebugMode: jest.fn(),
@@ -13,7 +13,7 @@ jest.mock('@starbunk/shared/dist/utils/envValidation', () => ({
 }));
 
 // Mock shared services
-jest.mock('@starbunk/shared/dist/services/webhookManager');
+jest.mock('@starbunk/shared/dist/services/webhook-manager');
 jest.mock('@starbunk/shared/dist/services/logger', () => ({
 	logger: {
 		info: jest.fn(),

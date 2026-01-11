@@ -1,5 +1,5 @@
 import { logger, getDiscordService, DiscordService } from '@starbunk/shared';
-import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/testUtils';
+import { mockBotIdentity, mockDiscordService, mockMessage } from '../../test-utils/test-utils';
 import {
 	createStaticMessage,
 	regexCaptureResponse,
