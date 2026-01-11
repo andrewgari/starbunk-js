@@ -100,7 +100,7 @@ export class DatabaseService {
 	}
 
 	public async withRetry<T>(operation: () => Promise<T>, maxRetries?: number): Promise<T> {
-		const retries = maxRetries || this.connectionOptions.retryAttempts || 3;
+		const retries = Math.max(1, maxRetries ?? this.connectionOptions.retryAttempts ?? 3);
 		const delay = this.connectionOptions.retryDelay || 1000;
 
 		for (let attempt = 1; attempt <= retries; attempt++) {

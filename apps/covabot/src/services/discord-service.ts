@@ -129,11 +129,20 @@ export class DiscordService {
 			setInterval(
 				() => {
 					const beforeSize = guild.members.cache.size;
-					guild.members.cache.sweep((member: GuildMember) => {
-						// Keep members we've seen in the last hour
-						const oneHourAgo = Date.now() - 60 * 60 * 1000;
-						return member.joinedTimestamp ? member.joinedTimestamp < oneHourAgo : false;
-					});
+					const maxCacheSize = 500; // Limit cache to 500 members
+
+					if (beforeSize <= maxCacheSize) {
+						logger.debug('[DiscordService] Cache size within limits, skipping sweep');
+						return;
+					}
+
+					// Keep only the most recently joined members up to maxCacheSize
+					const sortedMembers = [...guild.members.cache.values()].sort(
+						(a, b) => (b.joinedTimestamp ?? 0) - (a.joinedTimestamp ?? 0),
+					);
+					const idsToKeep = new Set(sortedMembers.slice(0, maxCacheSize).map((m) => m.id));
+					guild.members.cache.sweep((member: GuildMember) => !idsToKeep.has(member.id));
+
 					const afterSize = guild.members.cache.size;
 					logger.debug(`[DiscordService] Cache sweep completed: ${beforeSize - afterSize} members removed`);
 				},

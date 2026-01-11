@@ -24,20 +24,17 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 		// Initialize Prisma and ensure database exists
 		const prisma = new PrismaClient();
 		try {
-			// Test database connection and create if not exists
+			// Validate DATABASE_URL is present
+			if (!process.env.DATABASE_URL) {
+				logger.error('DATABASE_URL environment variable is required for PostgreSQL connection');
+				throw new Error('DATABASE_URL is not configured');
+			}
+
+			// Test database connection
 			await prisma.$connect();
 			logger.info('Database connection established');
-		} catch (error) {
-			logger.error(
-				'Database connection failed, attempting to create:',
-				error instanceof Error ? error : new Error(String(error)),
-			);
-			// Ensure the database file exists
-			const dbPath = path.join(dataDir, 'starbunk.db');
-			await fs.writeFile(dbPath, '');
-			logger.info('Created empty database file');
 
-			// Run migrations
+			// Run migrations to ensure schema is up to date
 			try {
 				execSync('npx prisma migrate deploy', {
 					stdio: 'inherit',
@@ -51,6 +48,12 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 				);
 				throw migrationError;
 			}
+		} catch (error) {
+			logger.error(
+				'Database initialization failed:',
+				error instanceof Error ? error : new Error(String(error)),
+			);
+			throw error;
 		} finally {
 			await prisma.$disconnect();
 		}
