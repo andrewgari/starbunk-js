@@ -10,8 +10,6 @@ import {
 	ClientConfigs,
 	container,
 	ServiceId,
-	getMessageFilter,
-	MessageFilter,
 	initializeObservability,
 	createDJCovaMetrics,
 	type DJCovaMetrics,
@@ -33,7 +31,6 @@ type ChatInputInteraction = {
 
 class DJCovaContainer {
 	private client!: ReturnType<typeof createDiscordClient>;
-	private messageFilter!: MessageFilter;
 	private commandHandler!: CommandHandler;
 	private musicPlayer!: DJCova;
 	private djCovaMetrics?: DJCovaMetrics;
@@ -156,8 +153,6 @@ class DJCovaContainer {
 		container.register(ServiceId.DiscordClient, this.client);
 
 		// Initialize message filter
-		this.messageFilter = getMessageFilter();
-		container.register(ServiceId.MessageFilter, this.messageFilter);
 
 		// Initialize music player with metrics
 		this.musicPlayer = new DJCova(this.djCovaMetrics);
@@ -214,27 +209,6 @@ class DJCovaContainer {
 	private async handleInteraction(interaction: ChatInputInteraction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
-				// Create interaction context for filtering
-				const context = MessageFilter.createContextFromInteraction(interaction);
-
-				// Check if interaction should be processed
-				const filterResult = this.messageFilter.shouldProcessMessage(context);
-				if (!filterResult.allowed) {
-					// Interaction was filtered out - send ephemeral response
-					if (this.messageFilter.isDebugMode()) {
-						await interaction.reply({
-							content: `🚫 Music command filtered: ${filterResult.reason}`,
-							ephemeral: true,
-						});
-					} else {
-						// Silently ignore in production mode
-						await interaction.reply({
-							content: '🚫 Music commands are not available in this server/channel.',
-							ephemeral: true,
-						});
-					}
-					return;
-				}
 
 				// Handle music commands using the command handler
 				await this.commandHandler.handleInteraction(interaction);

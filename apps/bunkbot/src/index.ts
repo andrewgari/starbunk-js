@@ -11,7 +11,6 @@ import {
 	ClientConfigs,
 	WebhookManager,
 	getMessageFilter,
-	MessageFilter,
 	runStartupDiagnostics,
 	initializeObservability,
 	createBunkBotMetrics,
@@ -34,20 +33,16 @@ import { BotRegistry } from './bot-registry';
 // import { DatabaseBotFactory } from './core/database-bot-factory'; // Temporarily disabled
 import { ReplyBotImpl } from './core/bot-builder';
 
-// Import configuration services
-import { ConfigurationService } from './services/configuration-service';
-import { BotIdentityService } from './services/bot-identity-service';
+// Import services
 import { MessageProcessor } from './core/message-processor';
 import { HealthServer } from './services/health-server';
 
 class BunkBotContainer {
 	private client!: Client;
 	private webhookManager!: WebhookManager;
-	private messageFilter!: MessageFilter;
-	private configurationService!: ConfigurationService;
-	private botIdentityService!: BotIdentityService;
 	private hasInitialized = false;
 	private commands = new Map();
+	private messageFilterForProcessor: ReturnType<typeof getMessageFilter> | null = null;
 	private healthServer: HealthServer | null = null;
 	private replyBots: ReplyBotImpl[] = [];
 	private messageProcessor!: MessageProcessor;
@@ -140,7 +135,7 @@ class BunkBotContainer {
 
 			// Initialize message processor with enhanced observability and metrics tracking
 			this.messageProcessor = new MessageProcessor(
-				this.messageFilter,
+				this.messageFilterForProcessor!,
 				this.replyBots,
 				this.bunkBotMetrics,
 				this.enhancedMetrics,
@@ -203,9 +198,10 @@ class BunkBotContainer {
 		this.webhookManager = new WebhookManager(this.client);
 		container.register(ServiceId.WebhookService, this.webhookManager);
 
-		// Initialize message filter
-		this.messageFilter = getMessageFilter();
-		container.register(ServiceId.MessageFilter, this.messageFilter);
+		// Initialize message filter for MessageProcessor
+		// Note: Stored locally and passed to MessageProcessor via constructor injection.
+		// Not registered in DI container as no code retrieves it from there.
+		this.messageFilterForProcessor = getMessageFilter();
 
 		// Initialize configuration services - temporarily disabled due to Prisma issues
 		// this.configurationService = new ConfigurationService();
@@ -439,28 +435,6 @@ class BunkBotContainer {
 	private async handleInteraction(interaction: Interaction): Promise<void> {
 		if (interaction.isChatInputCommand()) {
 			try {
-				// Create interaction context for filtering
-				const context = MessageFilter.createContextFromInteraction(interaction);
-
-				// Check if interaction should be processed
-				const filterResult = this.messageFilter.shouldProcessMessage(context);
-				if (!filterResult.allowed) {
-					// Interaction was filtered out - send ephemeral response
-					if (this.messageFilter.isDebugMode()) {
-						await interaction.reply({
-							content: `🚫 Command filtered: ${filterResult.reason}`,
-							ephemeral: true,
-						});
-					} else {
-						// Silently ignore in production mode
-						await interaction.reply({
-							content: '🚫 This command is not available in this server/channel.',
-							ephemeral: true,
-						});
-					}
-					return;
-				}
-
 				const commandName = interaction.commandName;
 				logger.debug(`Processing command: ${commandName} from ${interaction.user.username}`);
 

@@ -152,8 +152,10 @@ export class ServiceManager {
 	}
 
 	private initializeMessageFilter(): void {
+		// Initialize message filter for local use via getMessageFilter() getter
+		// Note: Not registered in DI container as no production code retrieves it from there.
+		// ServiceManager is primarily used in tests; production uses BunkBotContainer.
 		this.messageFilter = getMessageFilter();
-		container.register(ServiceId.MessageFilter, this.messageFilter);
 	}
 
 	getClient(): Client {
