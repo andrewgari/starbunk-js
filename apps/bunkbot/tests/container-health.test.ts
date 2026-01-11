@@ -228,9 +228,9 @@ describe.skip('BunkBot Container Health Check - DISABLED: Flaky in CI (requires 
 			expect(logs).not.toContain('Authentication failed');
 			expect(logs).not.toContain('Login failed');
 
-			// Verify slash commands deployed
-			expect(logs).toContain('✅ Successfully deployed');
-			expect(logs).toContain('slash commands to Discord');
+			// Verify slash commands cleared (BunkBot doesn't need visible commands)
+			expect(logs).toContain('✅ Successfully cleared');
+			expect(logs).toContain('slash commands from Discord');
 
 			console.log('✅ Discord authentication validation passed');
 		},

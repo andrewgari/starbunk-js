@@ -65,10 +65,7 @@ services:
 
   # BunkBot - Reply bots and admin commands
   bunkbot:
-    # image: ghcr.io/andrewgari/bunkbot:latest  # Temporarily using local build
-    build:
-      context: .
-      dockerfile: apps/bunkbot/Dockerfile
+    image: ghcr.io/andrewgari/bunkbot:latest
     container_name: starbunk-bunkbot
     restart: unless-stopped
     env_file:

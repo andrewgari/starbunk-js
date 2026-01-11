@@ -410,8 +410,7 @@ class BunkBotContainer {
 					);
 				} catch (error) {
 					logger.error(`❌ Bot is NOT in guild ${guildId}:`, ensureError(error));
-					logger.error('🚨 This explains why slash commands are not working!');
-					logger.error('🔧 You need to invite the bot to your Discord server first!');
+					logger.error(' You need to invite the bot to your Discord server first!');
 				}
 			}
 
