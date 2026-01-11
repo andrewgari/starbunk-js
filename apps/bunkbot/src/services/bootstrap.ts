@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { Client } from 'discord.js';
+import { execSync } from 'child_process';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { logger } from '@starbunk/shared';
@@ -37,9 +38,11 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 			logger.info('Created empty database file');
 
 			// Run migrations
-			const { execSync } = require('child_process');
 			try {
-				execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+				execSync('npx prisma migrate deploy', {
+					stdio: 'inherit',
+					timeout: 60000, // 60 second timeout
+				});
 				logger.info('Database migrations applied successfully');
 			} catch (migrationError) {
 				logger.error(
@@ -67,7 +70,7 @@ export async function bootstrapApplication(client: Client): Promise<void> {
 
 		logger.info('🚀 Core services bootstrapped successfully');
 	} catch (error) {
-		console.error('Failed to bootstrap services', error);
+		logger.error('Failed to bootstrap services:', error instanceof Error ? error : new Error(String(error)));
 		throw error;
 	}
 }

@@ -397,9 +397,9 @@ export class DiscordService {
 			logger.debug('[DiscordService] Falling back to chunked member fetching');
 			await this.fetchMembersInChunks(guild);
 		} catch (error) {
-			const errorMessage = ensureError(error);
-			logger.error(`[DiscordService] Critical failure in bot profile refresh: ${errorMessage}`);
-			throw new DiscordServiceError(`Failed to refresh bot profiles: ${errorMessage}`);
+			const err = ensureError(error);
+			logger.error(`[DiscordService] Critical failure in bot profile refresh: ${err.message}`);
+			throw new DiscordServiceError(`Failed to refresh bot profiles: ${err.message}`);
 		}
 	}
 
@@ -478,8 +478,8 @@ export class DiscordService {
 				});
 				validMembers++;
 			} catch (error) {
-				const errorMessage = ensureError(error);
-				logger.error(`[DiscordService] Failed to process member ${member.id}: ${errorMessage}`);
+				const err = ensureError(error);
+				logger.error(`[DiscordService] Failed to process member ${member.id}: ${err.message}`);
 				invalidMembers++;
 			}
 		});

@@ -35,6 +35,8 @@ export class ConfigurationService {
 	public static getInstance(options?: ConfigurationServiceOptions): ConfigurationService {
 		if (!ConfigurationService.instance) {
 			ConfigurationService.instance = new ConfigurationService(options);
+		} else if (options) {
+			logger.warn('[ConfigurationService] Instance already initialized, ignoring provided options');
 		}
 		return ConfigurationService.instance;
 	}
@@ -258,6 +260,43 @@ export class ConfigurationService {
 		}
 	}
 
+	/**
+	 * Safely creates a RegExp from a pattern string, with validation to prevent ReDoS attacks
+	 * @param pattern The regex pattern string
+	 * @param flags The regex flags
+	 * @returns A RegExp object, or a never-matching regex if the pattern is invalid
+	 */
+	private safeCreateRegex(pattern: string, flags: string): RegExp {
+		try {
+			// Basic validation: reject patterns that are too long or contain suspicious constructs
+			const MAX_PATTERN_LENGTH = 500;
+			if (pattern.length > MAX_PATTERN_LENGTH) {
+				logger.warn(`[ConfigurationService] Regex pattern too long (${pattern.length} chars), using fallback`);
+				return /(?!)/; // Never-matching regex as fallback
+			}
+
+			// Reject patterns with excessive nesting or repetition that could cause catastrophic backtracking
+			const suspiciousPatterns = [
+				/(\(.*\)){10,}/, // Excessive nested groups
+				/(\*.*\*){5,}/, // Multiple consecutive stars
+				/(\+.*\+){5,}/, // Multiple consecutive pluses
+			];
+
+			for (const suspicious of suspiciousPatterns) {
+				if (suspicious.test(pattern)) {
+					logger.warn(`[ConfigurationService] Suspicious regex pattern detected, using fallback: ${pattern}`);
+					return /(?!)/; // Never-matching regex as fallback
+				}
+			}
+
+			// Try to create the regex
+			return new RegExp(pattern, flags);
+		} catch (error) {
+			logger.warn(`[ConfigurationService] Invalid regex pattern: ${pattern}`, ensureError(error));
+			return /(?!)/; // Never-matching regex as fallback
+		}
+	}
+
 	private transformBotConfiguration(config: any): BotConfig {
 		return {
 			botName: config.botName,
@@ -269,7 +308,7 @@ export class ConfigurationService {
 			triggers: config.patterns.map(
 				(pattern: any): BotTriggerConfig => ({
 					name: pattern.name,
-					pattern: new RegExp(pattern.pattern, pattern.patternFlags || ''),
+					pattern: this.safeCreateRegex(pattern.pattern, pattern.patternFlags || ''),
 					priority: pattern.priority,
 					isEnabled: pattern.isEnabled,
 					description: pattern.description,

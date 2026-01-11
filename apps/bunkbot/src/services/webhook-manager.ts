@@ -63,9 +63,15 @@ export class WebhookManager {
 		}
 
 		try {
-			const channel = (await this.client.channels.fetch(channelId)) as TextChannel;
+			const channel = await this.client.channels.fetch(channelId);
 			if (!channel || !channel.isTextBased()) {
 				logger.error(`Channel ${channelId} is not a text channel`);
+				return null;
+			}
+
+			// Check if channel supports webhooks (has fetchWebhooks and createWebhook methods)
+			if (!('fetchWebhooks' in channel) || !('createWebhook' in channel)) {
+				logger.error(`Channel ${channelId} does not support webhooks`);
 				return null;
 			}
 
