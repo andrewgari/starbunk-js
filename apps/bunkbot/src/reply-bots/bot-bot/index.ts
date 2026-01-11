@@ -1,5 +1,5 @@
 import { BotFactory } from '../../core/bot-factory';
-import { BOT_BOT_AVATAR_URL, BOT_BOT_NAME, BOT_BOT_RESPONSE_RATE } from './constants';
+import { BOT_BOT_AVATAR_URL, BOT_BOT_NAME } from './constants';
 import { botTrigger } from './triggers';
 
 // BotBot is DISABLED - simplified bot detection no longer supports bot-to-bot interactions
