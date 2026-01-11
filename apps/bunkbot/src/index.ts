@@ -128,7 +128,7 @@ class BunkBotContainer {
 					GatewayIntentBits.GuildMessages,
 					GatewayIntentBits.MessageContent,
 					GatewayIntentBits.GuildMembers,
-					GatewayIntentBits.GuildIntegrations, // Required for slash commands
+					GatewayIntentBits.GuildIntegrations, // Required for integration and webhook events
 					GatewayIntentBits.GuildWebhooks,
 				],
 			});

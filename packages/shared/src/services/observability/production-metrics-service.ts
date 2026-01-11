@@ -749,8 +749,12 @@ export class ProductionMetricsService extends EventEmitter {
 
 			logger.debug(`Flushed ${buffer.length} metric entries to push gateway`);
 		} catch (error) {
-			// Put failed metrics back in buffer for retry
-			this.metricsBuffer.unshift(...buffer);
+			// Retain up to maxBatchSize entries on failure to prevent unbounded growth
+			const retainCount = Math.min(buffer.length, this.config.maxBatchSize);
+			this.metricsBuffer.unshift(...buffer.slice(0, retainCount));
+			if (buffer.length > retainCount) {
+				logger.warn(`Dropped ${buffer.length - retainCount} metric entries due to buffer overflow`);
+			}
 			throw error;
 		}
 	}

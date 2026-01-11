@@ -1,4 +1,4 @@
-import { logger } from '@starbunk/shared';
+import { logger, ensureError } from '@starbunk/shared';
 import { getDatabaseService } from '../database';
 import { ConfigurationRepository } from '../database/configuration-registry';
 import {

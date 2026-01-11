@@ -82,7 +82,9 @@ export class DiscordService {
 
 		// Setup event listeners
 		this.client.once('ready', () => {
-			this.setupGuildCaching();
+			void this.setupGuildCaching().catch((err) =>
+				logger.error('[DiscordService] setupGuildCaching failed during ready()', ensureError(err)),
+			);
 			this.startBotProfileRefresh();
 		});
 
