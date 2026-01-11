@@ -1,7 +1,6 @@
 import { BotFactory } from '../../core/bot-factory';
 import { createTriggerResponse } from '../../core/trigger-response';
 import { Message } from 'discord.js';
-import { shouldExcludeFromReplyBots } from '../../core/conditions';
 
 // Define spam words once for better performance
 const SPAM_WORDS = ['spam', 'advertisement', 'buy now'];
@@ -40,9 +39,9 @@ export default BotFactory.createBot({
 			return true;
 		}
 
-		// Skip messages from bots (except non-excluded ones)
-		if (message.author.bot && shouldExcludeFromReplyBots(message)) {
-			return true; // Skip excluded bots
+		// Simple bot filtering - skip all bot messages
+		if (message.author.bot) {
+			return true;
 		}
 
 		// Skip messages that contain spam keywords

@@ -3,14 +3,7 @@ import { Message } from 'discord.js';
 import { ContextualTriggerCondition, ResponseContext } from './response-context';
 import { TriggerCondition } from './trigger-response';
 
-const BOT_IDENTIFIERS = {
-	STARBUNK_CLIENT_ID: process.env.STARBUNK_CLIENT_ID || process.env.CLIENT_ID || '836445923105308672',
-	COVABOT_WEBHOOK_NAMES: ['CovaBot', 'Cova', 'CovaBot Webhook'],
-	COVABOT_USERNAMES: ['CovaBot', 'Cova'],
-	BUNKBOT_WEBHOOK_NAMES: ['BunkBot', 'BunkBot Webhook'],
-	EXCLUDED_BOT_NAMES: ['CovaBot', 'Cova', 'DJCova', 'Snowbunk'],
-	EXCLUDED_BOT_IDS: [] as string[],
-};
+// Removed BOT_IDENTIFIERS - simplified bot detection
 
 export type Condition = (message: Message) => boolean | Promise<boolean>;
 export type ConditionTrue = () => true;
@@ -125,82 +118,9 @@ export function contextWithinTimeframeOf(
 	return () => standardCondition({} as Message);
 }
 
-// Bot detection utilities
-class BotDetector {
-	static isCovaBot(message: Message): boolean {
-		if (!message?.author?.bot) return false;
+// Removed complex bot detection - using simple message.author.bot check only
 
-		const username = message.author.username?.toLowerCase() || '';
-		const displayName = message.author.displayName?.toLowerCase() || '';
-
-		const isCovaUsername = BOT_IDENTIFIERS.COVABOT_USERNAMES.some(
-			(name) => username === name.toLowerCase() || displayName === name.toLowerCase(),
-		);
-
-		const isCovaWebhook =
-			!!message.webhookId &&
-			BOT_IDENTIFIERS.COVABOT_WEBHOOK_NAMES.some(
-				(name) => username === name.toLowerCase() || displayName === name.toLowerCase(),
-			);
-
-		const _result = isCovaUsername || isCovaWebhook;
-
-		if (isDebugMode()) {
-			logger.debug('🤖 CovaBot Detection:', {
-				username: message.author.username,
-				displayName: message.author.displayName,
-				isBot: message.author.bot,
-				webhookId: message.webhookId,
-				result: _result,
-			});
-		}
-
-		return _result;
-	}
-
-	static shouldExcludeFromReplyBots(message: Message): boolean {
-		if (!message?.author) return true;
-
-		// Exclude BunkBot self-messages
-		if (message.client?.user && message.author.id === message.client.user.id) {
-			if (isDebugMode()) {
-				logger.debug('❌ Excluding BunkBot self-message');
-			}
-			return true;
-		}
-
-		// Exclude specified bots
-		const authorName = message.author.username;
-		if (BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.includes(authorName)) {
-			if (isDebugMode()) {
-				logger.debug(`❌ Excluding message from excluded bot: ${authorName}`);
-			}
-			return true;
-		}
-
-		// Exclude BunkBot webhook messages to prevent loops
-		if (message.webhookId && message.author.bot) {
-			if (!BOT_IDENTIFIERS.EXCLUDED_BOT_NAMES.includes(authorName)) {
-				if (isDebugMode()) {
-					logger.debug(`❌ Excluding BunkBot webhook message from: ${authorName}`);
-				}
-				return true;
-			}
-		}
-
-		if (isDebugMode()) {
-			logger.debug(`✅ Allowing message from: ${message.author.username}`);
-		}
-
-		return false;
-	}
-}
-
-// Export bot detection functions
-export const isCovaBot = BotDetector.isCovaBot;
-export const shouldExcludeFromReplyBots = BotDetector.shouldExcludeFromReplyBots;
-
-// Bot condition factories
+// Simplified bot condition - just checks message.author.bot
 export function fromBot(includeSelf = true): TriggerCondition {
 	return (message: Message): boolean => {
 		if (!message?.author?.bot) return false;
@@ -219,18 +139,6 @@ export function contextFromBot(includeSelf = true): ContextualTriggerCondition {
 		}
 		return true;
 	};
-}
-
-export function fromBotExcludingCovaBot(): TriggerCondition {
-	return (message: Message): boolean => {
-		if (!message?.author?.bot) return false;
-		if (shouldExcludeFromReplyBots(message)) return false;
-		return true;
-	};
-}
-
-export function fromCovaBot(): TriggerCondition {
-	return (message: Message): boolean => isCovaBot(message);
 }
 
 // LLM conditions
@@ -284,13 +192,14 @@ export function not(condition: TriggerCondition): TriggerCondition {
 	return async (message: Message) => !(await condition(message));
 }
 
-// Enhanced wrapper with better error handling
+// Simplified wrapper - just checks message.author.bot
 export function withDefaultBotBehavior(botName: string, condition: TriggerCondition): TriggerCondition {
 	return async (message: Message): Promise<boolean> => {
 		try {
-			if (message.author.bot && shouldExcludeFromReplyBots(message)) {
+			// Simple bot filtering - skip all bot messages
+			if (message.author.bot) {
 				if (isDebugMode()) {
-					logger.debug(`[${botName}] 🚫 Message excluded by bot filtering`);
+					logger.debug(`[${botName}] 🚫 Skipping bot message`);
 				}
 				return false;
 			}
@@ -300,7 +209,6 @@ export function withDefaultBotBehavior(botName: string, condition: TriggerCondit
 			if (isDebugMode()) {
 				const messageInfo = {
 					author: message.author.username,
-					isBot: message.author.bot,
 					content: message.content.substring(0, 50) + (message.content.length > 50 ? '...' : ''),
 					result: _result,
 				};

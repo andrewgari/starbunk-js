@@ -1,6 +1,7 @@
 // Pre-env setup for shared package tests
 // This runs before modules are loaded so env is in place for imports
-process.env.STARBUNK_TOKEN = 'test_token';
+process.env.DISCORD_TOKEN = 'test_token';
+process.env.CLIENT_ID = 'test_client_id';
 process.env.NODE_ENV = 'test';
 process.env.DEBUG = 'false';
 

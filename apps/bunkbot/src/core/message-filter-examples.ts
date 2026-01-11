@@ -3,7 +3,7 @@
  */
 
 import { MessageFilterFunction } from './bot-builder';
-import { ConfigurationService } from '../services/configurationService';
+import { ConfigurationService } from '../services/configuration-service';
 import { ChannelType } from 'discord.js';
 
 /**

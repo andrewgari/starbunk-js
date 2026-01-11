@@ -1,4 +1,4 @@
-import { mockMessage } from '../../src/test-utils/testUtils';
+import { mockMessage } from '../../src/test-utils/test-utils';
 import interruptBot from '../../src/reply-bots/interrupt-bot';
 import { interruptTrigger } from '../../src/reply-bots/interrupt-bot/triggers';
 import {

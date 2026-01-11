@@ -1,5 +1,6 @@
 // Test setup for BunkBot container
-process.env.STARBUNK_TOKEN = 'test_token';
+process.env.DISCORD_TOKEN = 'test_token';
+process.env.CLIENT_ID = 'test_client_id';
 process.env.NODE_ENV = 'test';
 process.env.DEBUG = 'false';
 process.env.DEBUG_MODE = 'false'; // Ensure debug mode is disabled for tests

@@ -1,4 +1,4 @@
-import { mockMessage } from '../../src/test-utils/testUtils';
+import { mockMessage } from '../../src/test-utils/test-utils';
 import niceBot from '../../src/reply-bots/nice-bot';
 import { niceTrigger } from '../../src/reply-bots/nice-bot/triggers';
 import { NICE_BOT_RESPONSES, NICE_BOT_NAME, NICE_BOT_AVATAR_URL } from '../../src/reply-bots/nice-bot/constants';

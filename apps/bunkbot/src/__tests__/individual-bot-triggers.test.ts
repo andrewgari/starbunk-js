@@ -1,5 +1,5 @@
-import { BotRegistry } from '../botRegistry';
-import { mockMessage, mockHumanUser, mockCovaBotUser, mockGenericBotUser } from '../test-utils/testUtils';
+import { BotRegistry } from '../bot-registry';
+import { mockMessage, mockHumanUser, mockCovaBotUser, mockGenericBotUser } from '../test-utils/test-utils';
 import { isDebugMode } from '@starbunk/shared';
 
 // Mock the shared library

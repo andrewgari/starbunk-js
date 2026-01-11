@@ -12,8 +12,8 @@ import {
 	container,
 	ServiceId,
 } from '@starbunk/shared';
-import { validateVoiceChannelAccess, createVoiceConnection, subscribePlayerToConnection } from '../utils/voiceUtils';
-import { DJCova } from '../djCova';
+import { validateVoiceChannelAccess, createVoiceConnection, subscribePlayerToConnection } from '../utils/voice-utils';
+import { DJCova } from '../dj-cova';
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('play')

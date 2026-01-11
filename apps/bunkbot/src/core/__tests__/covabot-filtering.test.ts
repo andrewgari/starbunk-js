@@ -1,5 +1,10 @@
+/**
+ * DISABLED: This test file tests complex bot detection logic that has been removed.
+ * Bot detection is now simplified to only check message.author.bot
+ */
+
 import { Message, Client, User } from 'discord.js';
-import { isCovaBot, shouldExcludeFromReplyBots, fromBotExcludingCovaBot } from '../conditions';
+// import { isCovaBot, shouldExcludeFromReplyBots, fromBotExcludingCovaBot } from '../conditions';
 
 // Mock the shared library
 jest.mock('@starbunk/shared', () => ({
@@ -12,7 +17,7 @@ jest.mock('@starbunk/shared', () => ({
 	isDebugMode: jest.fn(() => true),
 }));
 
-describe('CovaBot Filtering Logic', () => {
+describe.skip('CovaBot Filtering Logic - DISABLED', () => {
 	let mockMessage: Partial<Message>;
 	let mockClient: Partial<Client>;
 	let mockUser: Partial<User>;

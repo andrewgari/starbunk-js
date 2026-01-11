@@ -7,7 +7,7 @@
 
 // Use the root Prisma client since BunkBot container doesn't have its own schema
 import { PrismaClient } from '@prisma/client';
-import { ConfigurationService } from '../src/services/configurationService';
+import { ConfigurationService } from '../src/services/configuration-service';
 
 const prisma = new PrismaClient();
 

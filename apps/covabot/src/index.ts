@@ -11,7 +11,7 @@ import {
 	ClientConfigs,
 	initializeObservability,
 } from '@starbunk/shared';
-import { createLLMService, LLMService } from './services/llmService';
+import { createLLMService, LLMService } from './services/llm-service';
 import { WebServer } from './web/server';
 
 class CovaBotContainer {

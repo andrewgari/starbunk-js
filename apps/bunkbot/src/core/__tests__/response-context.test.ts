@@ -1,5 +1,5 @@
 import { createResponseContext, asCondition, asResponseGenerator } from '../response-context';
-import { mockMessage } from '../../test-utils/testUtils';
+import { mockMessage } from '../../test-utils/test-utils';
 import { Message, User } from 'discord.js';
 
 describe('ResponseContext', () => {

@@ -10,20 +10,20 @@ import {
 	UnifiedMetricsEndpoint,
 	resetUnifiedMetricsEndpoint,
 	startUnifiedMetricsSystem,
-} from '../UnifiedMetricsEndpoint';
+} from '../unified-metrics-endpoint';
 import {
 	initializeServiceMetrics,
 	getServiceMetrics,
 	ServiceAwareMetricsService,
 	type ServiceMetricContext,
-} from '../ServiceMetricsRegistry';
+} from '../service-metrics-registry';
 import {
 	initializeUnifiedMetricsCollector,
 	getUnifiedMetricsCollector,
 	UnifiedMetricsCollector,
 	resetUnifiedMetricsCollector,
-} from '../UnifiedMetricsCollector';
-import { validateObservabilityEnvironment } from '../../../utils/envValidation';
+} from '../unified-metrics-collector';
+import { validateObservabilityEnvironment } from '../../../utils/env-validation';
 import fetch from 'node-fetch';
 
 // Test configuration

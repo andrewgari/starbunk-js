@@ -1,5 +1,5 @@
 import { createVoiceBot } from '../voice-bot-builder';
-import { mockBotIdentity } from '../../test-utils/testUtils';
+import { mockBotIdentity } from '../../test-utils/test-utils';
 import { logger } from '@starbunk/shared';
 import { VoiceState } from 'discord.js';
 

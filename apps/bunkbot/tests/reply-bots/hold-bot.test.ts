@@ -1,4 +1,4 @@
-import { mockMessage } from '../../src/test-utils/testUtils';
+import { mockMessage } from '../../src/test-utils/test-utils';
 import holdBot from '../../src/reply-bots/hold-bot';
 import { holdTrigger } from '../../src/reply-bots/hold-bot/triggers';
 import { HOLD_RESPONSE, HOLD_BOT_NAME, HOLD_AVATAR_URL } from '../../src/reply-bots/hold-bot/constants';

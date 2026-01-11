@@ -1,7 +1,7 @@
 import { isDebugMode } from '@starbunk/shared';
 import { and, fromUser, matchesPattern, withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { ConfigurationService } from '../../services/configurationService';
+import { ConfigurationService } from '../../services/configuration-service';
 import { BANANA_BOT_PATTERNS, getRandomBananaResponse } from './constants';
 
 // Lazily create configuration service to avoid Prisma init at import time

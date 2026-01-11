@@ -1,4 +1,4 @@
-import { mockMessage } from '../../src/test-utils/testUtils';
+import { mockMessage } from '../../src/test-utils/test-utils';
 import guyBot from '../../src/reply-bots/guy-bot';
 import { guyTrigger } from '../../src/reply-bots/guy-bot/triggers';
 import {

@@ -1,7 +1,7 @@
-import { CovaBot, CovaBotConfig } from '../covaBot';
+import { CovaBot, CovaBotConfig } from '../cova-bot';
 import { getCovaIdentity } from '../../services/identity';
-import { BotIdentity } from '../../types/botIdentity';
-import { TriggerResponse } from '../../types/triggerResponse';
+import { BotIdentity } from '../../types/bot-identity';
+import { TriggerResponse } from '../../types/trigger-response';
 import { logger } from '@starbunk/shared';
 import {
 	MockDiscordMessage,

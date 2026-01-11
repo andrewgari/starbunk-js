@@ -1,5 +1,5 @@
 import e2eStatusBot from '../../src/reply-bots/e2e-status-bot';
-import { mockMessage } from '../../src/test-utils/testUtils';
+import { mockMessage } from '../../src/test-utils/test-utils';
 import { E2E_LOADED_PREFIX, E2E_IDENT_PREFIX } from '../../src/reply-bots/e2e-status-bot/constants';
 
 // Mock shared to control debug/whitelist and DiscordService
@@ -22,7 +22,7 @@ jest.mock('@starbunk/shared', () => {
 });
 
 // Mock BotRegistry to control loaded bot names
-jest.mock('../../src/botRegistry', () => ({
+jest.mock('../../src/bot-registry', () => ({
 	BotRegistry: class {
 		static getInstance() {
 			return new this();

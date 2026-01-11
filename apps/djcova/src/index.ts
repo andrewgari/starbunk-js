@@ -16,8 +16,8 @@ import {
 	createDJCovaMetrics,
 	type DJCovaMetrics,
 } from '@starbunk/shared';
-import { CommandHandler } from './commandHandler';
-import { DJCova } from './djCova';
+import { CommandHandler } from './command-handler';
+import { DJCova } from './dj-cova';
 
 type ChatInputInteraction = {
 	isChatInputCommand(): boolean;

@@ -76,8 +76,8 @@ export type BunkBotConfig = z.infer<typeof ConfigSchema>;
 export function validateAndParseConfig(): BunkBotConfig {
 	const rawConfig = {
 		discord: {
-			token: process.env.BUNKBOT_TOKEN || process.env.STARBUNK_TOKEN || process.env.DISCORD_TOKEN,
-			clientId: process.env.DISCORD_CLIENT_ID,
+			token: process.env.DISCORD_TOKEN,
+			clientId: process.env.CLIENT_ID,
 			guildId: process.env.GUILD_ID,
 		},
 		server: {

@@ -1,5 +1,5 @@
 // Legacy MetricsService (maintain backward compatibility)
-export { MetricsService, type MessageFlowMetrics, type ChannelActivity } from './MetricsService';
+export { MetricsService, type MessageFlowMetrics, type ChannelActivity } from './metrics-service';
 
 // Production-ready metrics service
 export {
@@ -7,7 +7,7 @@ export {
 	initializeMetrics,
 	getMetrics,
 	type MetricsConfiguration,
-} from './ProductionMetricsService';
+} from './production-metrics-service';
 
 export {
 	StructuredLogger,
@@ -17,17 +17,17 @@ export {
 	type MessageFlowLog,
 	type ChannelActivityLog,
 	type SystemLog,
-} from './StructuredLogger';
+} from './structured-logger';
 
-export { BotResponseLogger, getBotResponseLogger, type BotResponseLog } from './BotResponseLogger';
+export { BotResponseLogger, getBotResponseLogger, type BotResponseLog } from './bot-response-logger';
 
-export { inferTriggerCondition } from './triggerConditionUtils';
+export { inferTriggerCondition } from './trigger-condition-utils';
 
 export {
 	ChannelActivityTracker,
 	initializeChannelActivityTracker,
 	getChannelActivityTracker,
-} from './ChannelActivityTracker';
+} from './channel-activity-tracker';
 
 export {
 	HttpEndpointsService,
@@ -36,7 +36,7 @@ export {
 	type EndpointsConfig,
 	type HealthCheckFunction,
 	type HealthCheckResult,
-} from './HttpEndpointsService';
+} from './http-endpoints-service';
 
 // Container-specific metrics exports
 export {
@@ -48,15 +48,15 @@ export {
 	ContainerMetricsBase,
 	type ContainerMetricsFactory,
 	type ContainerMetricsConfig,
-} from './ContainerMetrics';
+} from './container-metrics';
 
-export { _BunkBotMetricsCollector as BunkBotMetricsCollector, createBunkBotMetrics } from './BunkBotMetrics';
+export { _BunkBotMetricsCollector as BunkBotMetricsCollector, createBunkBotMetrics } from './bunk-bot-metrics';
 
-export { DJCovaMetricsCollector, createDJCovaMetrics } from './DJCovaMetrics';
+export { DJCovaMetricsCollector, createDJCovaMetrics } from './dj-cova-metrics';
 
-export { StarbunkDNDMetricsCollector, createStarbunkDNDMetrics } from './StarbunkDNDMetrics';
+export { StarbunkDNDMetricsCollector, createStarbunkDNDMetrics } from './starbunk-dnd-metrics';
 
-export { CovaBotMetricsCollector, createCovaBotMetrics } from './CovaBotMetrics';
+export { CovaBotMetricsCollector, createCovaBotMetrics } from './cova-bot-metrics';
 
 // Unified metrics system exports
 export {
@@ -68,7 +68,7 @@ export {
 	type ServiceComponent,
 	type HealthCheckResult as UnifiedHealthCheckResult,
 	type ServiceHealthStatus,
-} from './UnifiedMetricsCollector';
+} from './unified-metrics-collector';
 
 export {
 	ServiceAwareMetricsService,
@@ -80,7 +80,7 @@ export {
 	type ComponentTracker,
 	type ServiceMetricContext,
 	type ServiceMessageFlowMetrics,
-} from './ServiceMetricsRegistry';
+} from './service-metrics-registry';
 
 export {
 	UnifiedMetricsEndpoint,
@@ -91,7 +91,7 @@ export {
 	type UnifiedEndpointConfig,
 	type ServiceRegistrationInfo,
 	type ServiceHealthResult,
-} from './UnifiedMetricsEndpoint';
+} from './unified-metrics-endpoint';
 
 // Bot Trigger Metrics Service
 export {
@@ -100,7 +100,7 @@ export {
 	initializeBotTriggerMetricsService,
 	getBotTriggerMetricsService,
 	createProductionConfig,
-} from './BotTriggerMetricsService';
+} from './bot-trigger-metrics-service';
 
 // Bot Trigger Integration
 export {
@@ -110,29 +110,29 @@ export {
 	createEnvironmentConfig,
 	initializeBotMetricsSystem,
 	type BotTriggerIntegrationConfig,
-} from './BotTriggerIntegration';
+} from './bot-trigger-integration';
 
 // Redis Bot Metrics Exporter
 export {
 	RedisBotMetricsExporter,
 	createRedisBotMetricsExporter,
 	type RedisMetricsExporterConfig,
-} from './RedisBotMetricsExporter';
+} from './redis-bot-metrics-exporter';
 
 // Import validation utilities
-import { validateObservabilityEnvironment, type ObservabilityConfig } from '../../utils/envValidation';
+import { validateObservabilityEnvironment, type ObservabilityConfig } from '../../utils/env-validation';
 
 // Import for internal use
-import { initializeMetrics, ProductionMetricsService, type MetricsConfiguration } from './ProductionMetricsService';
-import { initializeStructuredLogger } from './StructuredLogger';
-import { initializeChannelActivityTracker } from './ChannelActivityTracker';
-import { initializeHttpEndpoints, type EndpointsConfig } from './HttpEndpointsService';
+import { initializeMetrics, ProductionMetricsService, type MetricsConfiguration } from './production-metrics-service';
+import { initializeStructuredLogger } from './structured-logger';
+import { initializeChannelActivityTracker } from './channel-activity-tracker';
+import { initializeHttpEndpoints, type EndpointsConfig } from './http-endpoints-service';
 
 interface ObservabilityComponents {
 	metrics: ProductionMetricsService;
-	logger: import('./StructuredLogger').StructuredLogger;
-	channelTracker: import('./ChannelActivityTracker').ChannelActivityTracker;
-	httpEndpoints: import('./HttpEndpointsService').HttpEndpointsService;
+	logger: import('./structured-logger').StructuredLogger;
+	channelTracker: import('./channel-activity-tracker').ChannelActivityTracker;
+	httpEndpoints: import('./http-endpoints-service').HttpEndpointsService;
 	config: ObservabilityConfig;
 }
 
@@ -168,7 +168,7 @@ export async function initializeObservability(
 	const channelTracker = initializeChannelActivityTracker();
 
 	// Initialize HTTP endpoints service (if not skipped)
-	let httpEndpoints: import('./HttpEndpointsService').HttpEndpointsService;
+	let httpEndpoints: import('./http-endpoints-service').HttpEndpointsService;
 
 	if (!options?.skipHttpEndpoints) {
 		const endpointsConfig: Partial<EndpointsConfig> = {
@@ -218,8 +218,8 @@ export async function initializeObservabilityLegacy(service: string) {
 
 // Enhanced initialization with unified metrics support
 interface UnifiedObservabilityComponents extends ObservabilityComponents {
-	unifiedEndpoint?: import('./UnifiedMetricsEndpoint').UnifiedMetricsEndpoint;
-	serviceMetrics?: import('./ServiceMetricsRegistry').ServiceAwareMetricsService;
+	unifiedEndpoint?: import('./unified-metrics-endpoint').UnifiedMetricsEndpoint;
+	serviceMetrics?: import('./service-metrics-registry').ServiceAwareMetricsService;
 }
 
 export async function initializeUnifiedObservability(
@@ -227,7 +227,7 @@ export async function initializeUnifiedObservability(
 	options?: {
 		metricsConfig?: Partial<MetricsConfiguration>;
 		endpointsConfig?: Partial<EndpointsConfig>;
-		unifiedConfig?: Partial<import('./UnifiedMetricsEndpoint').UnifiedEndpointConfig>;
+		unifiedConfig?: Partial<import('./unified-metrics-endpoint').UnifiedEndpointConfig>;
 		enableUnified?: boolean;
 		enableStructuredLogging?: boolean;
 		skipHttpEndpoints?: boolean;
@@ -255,17 +255,17 @@ export async function initializeUnifiedObservability(
 		console.warn('Failed to configure structured logging:', error);
 	}
 
-	let unifiedEndpoint: import('./UnifiedMetricsEndpoint').UnifiedMetricsEndpoint | undefined;
-	let serviceMetrics: import('./ServiceMetricsRegistry').ServiceAwareMetricsService | undefined;
+	let unifiedEndpoint: import('./unified-metrics-endpoint').UnifiedMetricsEndpoint | undefined;
+	let serviceMetrics: import('./service-metrics-registry').ServiceAwareMetricsService | undefined;
 
 	if (enableUnified) {
 		try {
 			// Initialize unified metrics endpoint (this will create the collector)
-			const { initializeUnifiedMetricsEndpoint } = require('./UnifiedMetricsEndpoint');
+			const { initializeUnifiedMetricsEndpoint } = require('./unified-metrics-endpoint');
 			unifiedEndpoint = initializeUnifiedMetricsEndpoint(options?.unifiedConfig);
 
 			// Create service-aware metrics instance
-			const { initializeServiceMetrics } = require('./ServiceMetricsRegistry');
+			const { initializeServiceMetrics } = require('./service-metrics-registry');
 			serviceMetrics = initializeServiceMetrics(service, {
 				enableServiceLabels: true,
 				enableComponentTracking: true,
@@ -308,7 +308,7 @@ export async function shutdownObservability(): Promise<void> {
 
 		// Shutdown unified metrics first
 		try {
-			const { getUnifiedMetricsEndpoint } = await import('./UnifiedMetricsEndpoint');
+			const { getUnifiedMetricsEndpoint } = await import('./unified-metrics-endpoint');
 			const unifiedEndpoint = getUnifiedMetricsEndpoint();
 			promises.push(unifiedEndpoint.shutdown());
 		} catch (_error) {
@@ -317,7 +317,7 @@ export async function shutdownObservability(): Promise<void> {
 
 		// Shutdown service metrics
 		try {
-			const { getAllServiceMetrics } = await import('./ServiceMetricsRegistry');
+			const { getAllServiceMetrics } = await import('./service-metrics-registry');
 			const serviceMetrics = getAllServiceMetrics();
 			for (const [service, metrics] of serviceMetrics) {
 				promises.push(
@@ -332,7 +332,7 @@ export async function shutdownObservability(): Promise<void> {
 
 		// Shutdown metrics service
 		try {
-			const metrics = await import('./ProductionMetricsService').then((m) => m.getMetrics());
+			const metrics = await import('./production-metrics-service').then((m) => m.getMetrics());
 			promises.push(metrics.shutdown());
 		} catch (_error) {
 			// Service not initialized, ignore
@@ -340,7 +340,7 @@ export async function shutdownObservability(): Promise<void> {
 
 		// Shutdown HTTP endpoints
 		try {
-			const httpEndpoints = await import('./HttpEndpointsService').then((m) => m.getHttpEndpoints());
+			const httpEndpoints = await import('./http-endpoints-service').then((m) => m.getHttpEndpoints());
 			promises.push(httpEndpoints.stop());
 		} catch (_error) {
 			// Service not initialized, ignore
@@ -348,7 +348,7 @@ export async function shutdownObservability(): Promise<void> {
 
 		// Shutdown structured logger
 		try {
-			const structuredLogger = await import('./StructuredLogger').then((m) => m.getStructuredLogger());
+			const structuredLogger = await import('./structured-logger').then((m) => m.getStructuredLogger());
 			if (structuredLogger && typeof (structuredLogger as any).shutdown === 'function') {
 				promises.push((structuredLogger as any).shutdown());
 			}

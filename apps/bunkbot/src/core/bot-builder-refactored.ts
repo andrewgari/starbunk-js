@@ -1,19 +1,19 @@
 import { logger, isDebugMode, DiscordService } from '@starbunk/shared';
 import { Message } from 'discord.js';
-import { getBotDefaults } from '../config/botDefaults';
-import { BotIdentity } from '../types/botIdentity';
+import { getBotDefaults } from '../config/bot-defaults';
+import { BotIdentity } from '../types/bot-identity';
 import { TriggerResponse } from './trigger-response';
-import { shouldExcludeFromReplyBots } from './conditions-refactored';
-import { BotProcessor } from './BotProcessor';
+import { BotProcessor } from './bot-processor';
 
 export type MessageFilterFunction = (message: Message) => boolean | Promise<boolean>;
 
 export function defaultMessageFilter(message: Message): boolean {
 	if (!message?.author) return false;
 
-	if (shouldExcludeFromReplyBots(message)) {
+	// Simple bot filtering - skip all bot messages
+	if (message.author.bot) {
 		if (isDebugMode()) {
-			logger.debug('🚫 Skipping BunkBot self-message');
+			logger.debug('🚫 Skipping bot message');
 		}
 		return true;
 	}

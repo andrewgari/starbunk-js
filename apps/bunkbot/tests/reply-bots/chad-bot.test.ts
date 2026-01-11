@@ -1,4 +1,4 @@
-import { mockMessage, mockUser } from '../../src/test-utils/testUtils';
+import { mockMessage, mockUser } from '../../src/test-utils/test-utils';
 import {
 	CHAD_RESPONSE,
 	CHAD_RESPONSE_CHANCE,
@@ -16,7 +16,7 @@ jest.mock('@starbunk/shared', () => ({
 }));
 
 // Mock the ConfigurationService to return Chad's user ID
-jest.mock('../../src/services/configurationService', () => ({
+jest.mock('../../src/services/configuration-service', () => ({
 	ConfigurationService: jest.fn().mockImplementation(() => ({
 		getUserIdByUsername: jest.fn().mockImplementation((username: string) => {
 			if (username === 'Chad') {

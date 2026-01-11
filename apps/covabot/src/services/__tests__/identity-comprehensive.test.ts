@@ -6,7 +6,7 @@ import {
 	preWarmIdentityCache,
 } from '../identity';
 import { container, ServiceId } from '@starbunk/shared';
-import { BotIdentity } from '../../types/botIdentity';
+import { BotIdentity } from '../../types/bot-identity';
 import { MockDiscordMessage, createMockGuildMember, createMockUser } from '../../__tests__/mocks/discord-mocks';
 
 // Mock dependencies

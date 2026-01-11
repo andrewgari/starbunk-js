@@ -1,7 +1,7 @@
 import express, { Request } from 'express';
 import { logger } from '@starbunk/shared';
-import { BotConfigurationService } from '../../services/botConfigurationService';
-import { CreateConfigurationRequest, UpdateConfigurationRequest } from '../../types/botConfiguration';
+import { BotConfigurationService } from '../../services/bot-configuration-service';
+import { CreateConfigurationRequest, UpdateConfigurationRequest } from '../../types/bot-configuration';
 
 export function createConfigurationRouter(configService: BotConfigurationService): express.Router {
 	const router = express.Router();

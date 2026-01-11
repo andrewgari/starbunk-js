@@ -3,7 +3,7 @@
  */
 
 import { AudioPlayerStatus } from '@discordjs/voice';
-import { DJCova } from '../src/djCova';
+import { DJCova } from '../src/dj-cova';
 
 // Mock dependencies
 jest.mock('@starbunk/shared', () => ({

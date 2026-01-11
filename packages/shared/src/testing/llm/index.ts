@@ -40,13 +40,13 @@
  * ```
  */
 
-export { LLMCallTracker } from './LLMCallTracker';
-export type { LLMCallRecord, LLMCallStats } from './LLMCallTracker';
-export { MockLLMProvider } from './MockLLMProvider';
-export type { MockResponseConfig } from './MockLLMProvider';
+export { LLMCallTracker } from './llm-call-tracker';
+export type { LLMCallRecord, LLMCallStats } from './llm-call-tracker';
+export { MockLLMProvider } from './mock-llm-provider';
+export type { MockResponseConfig } from './mock-llm-provider';
 
-import { LLMCallTracker } from './LLMCallTracker';
-import { MockLLMProvider } from './MockLLMProvider';
+import { LLMCallTracker } from './llm-call-tracker';
+import { MockLLMProvider } from './mock-llm-provider';
 import { Logger } from '../../services/logger';
 
 /**

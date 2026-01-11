@@ -1,10 +1,10 @@
 import type { Message } from 'discord.js';
 
-import { BotIdentity } from '../../types/botIdentity';
+import { BotIdentity } from '../../types/bot-identity';
 import { and, fromUser, not, withChance } from '../../core/conditions';
 import { createTriggerResponse } from '../../core/trigger-response';
-import { ConfigurationService } from '../../services/configurationService';
-import { BotIdentityService } from '../../services/botIdentityService';
+import { ConfigurationService } from '../../services/configuration-service';
+import { BotIdentityService } from '../../services/bot-identity-service';
 import { CHAD_RESPONSE, CHAD_RESPONSE_CHANCE } from './constants';
 import { isDebugMode } from '@starbunk/shared';
 import { getBotIdentityFromDiscord } from '../../core/get-bot-identity';

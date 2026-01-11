@@ -11,7 +11,7 @@
  *
  * Example:
  * ```typescript
- * import { createBot } from '../../createBot';
+ * import { createBot } from '../../create-bot';
  *
  * export default createBot({
  *   name: 'MyBot',

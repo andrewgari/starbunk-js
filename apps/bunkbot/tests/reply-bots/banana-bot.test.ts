@@ -1,4 +1,4 @@
-import { mockMessage, mockUser } from '../../src/test-utils/testUtils';
+import { mockMessage, mockUser } from '../../src/test-utils/test-utils';
 import {
 	BANANA_BOT_RESPONSES,
 	getRandomBananaResponse,
@@ -17,7 +17,7 @@ jest.mock('@starbunk/shared', () => ({
 }));
 
 // Mock the ConfigurationService to return Venn's user ID
-jest.mock('../../src/services/configurationService', () => ({
+jest.mock('../../src/services/configuration-service', () => ({
 	ConfigurationService: jest.fn().mockImplementation(() => ({
 		getUserIdByUsername: jest.fn().mockImplementation((username: string) => {
 			if (username === 'Venn') {

@@ -1,8 +1,10 @@
+/**
+ * DISABLED: BotBot is now disabled due to simplified bot detection.
+ * Bot detection now only checks message.author.bot and skips all bot messages.
+ */
+
 import { Message } from 'discord.js';
 import BotBot from '../../src/reply-bots/bot-bot';
-
-// Mock message creation helper
-import { Message } from 'discord.js';
 
 // Mock message creation helper
 const createMockMessage = (overrides: Partial<Message> = {}): Partial<Message> => ({
@@ -22,7 +24,7 @@ const createMockMessage = (overrides: Partial<Message> = {}): Partial<Message> =
 	...overrides,
 });
 
-describe('BotBot with new messageFilter system', () => {
+describe.skip('BotBot with new messageFilter system - DISABLED', () => {
 	it('should skip non-bot messages (inverted logic)', async () => {
 		// Create a human message
 		const humanMessage = createMockMessage({

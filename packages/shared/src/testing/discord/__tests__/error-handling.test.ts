@@ -1,5 +1,5 @@
 import { Events, Message } from 'discord.js';
-import { FakeDiscordEnvironment } from '../FakeDiscordEnvironment';
+import { FakeDiscordEnvironment } from '../fake-discord-environments';
 
 /**
  * Error Handling Tests: Verify that errors are properly reported

@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { ChatInputCommandInteraction } from 'discord.js';
 import { logger, sendErrorResponse, sendSuccessResponse, container, ServiceId } from '@starbunk/shared';
-import { disconnectVoiceConnection } from '../utils/voiceUtils';
-import { DJCova } from '../djCova';
+import { disconnectVoiceConnection } from '../utils/voice-utils';
+import { DJCova } from '../dj-cova';
 
 const commandBuilder = new SlashCommandBuilder().setName('stop').setDescription('Stop playing and leave channel');
 

@@ -74,7 +74,7 @@ describe('CovaBot Message Handling - No Hardcoded Values', () => {
 
 	it('should use LLM service for response generation', () => {
 		// Verify that the code imports and uses LLMService
-		expect(sourceCode).toContain("import { createLLMService, LLMService } from './services/llmService'");
+		expect(sourceCode).toContain("import { createLLMService, LLMService } from './services/llm-service'");
 		expect(sourceCode).toContain('this.llmService.generateResponse');
 		expect(sourceCode).toContain('this.llmService.shouldRespond');
 	});

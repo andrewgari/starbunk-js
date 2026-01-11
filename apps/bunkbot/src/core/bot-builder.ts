@@ -1,9 +1,8 @@
 import { logger, isDebugMode, DiscordService } from '@starbunk/shared';
 import { Message } from 'discord.js';
-import { getBotDefaults } from '../config/botDefaults';
-import { BotIdentity } from '../types/botIdentity';
+import { getBotDefaults } from '../config/bot-defaults';
+import { BotIdentity } from '../types/bot-identity';
 import { TriggerResponse } from './trigger-response';
-import { shouldExcludeFromReplyBots } from './conditions';
 
 /**
  * Type for message filtering function
@@ -12,7 +11,7 @@ export type MessageFilterFunction = (message: Message) => boolean | Promise<bool
 
 /**
  * Create a default message filter based on bot configuration
- * Handles bot vs human message routing, exclusions, and response chance
+ * Simplified to only check message.author.bot and response chance
  */
 export function createDefaultMessageFilter(config: ReplyBotConfig): MessageFilterFunction {
 	return async (message: Message): Promise<boolean> => {
@@ -29,7 +28,7 @@ export function createDefaultMessageFilter(config: ReplyBotConfig): MessageFilte
 			return true;
 		}
 
-		// Bot message handling based on config
+		// Simple bot message handling
 		if (message.author.bot) {
 			// Check if this bot accepts bot messages
 			if (!config.respondsToBots) {
@@ -37,14 +36,6 @@ export function createDefaultMessageFilter(config: ReplyBotConfig): MessageFilte
 					logger.debug(`[${config.name}] 🚫 Skipping bot message (respondsToBots not enabled)`);
 				}
 				return true; // Skip bot messages (default behavior)
-			}
-
-			// For bots that DO respond to bots, check exclusions
-			if (shouldExcludeFromReplyBots(message)) {
-				if (isDebugMode()) {
-					logger.debug(`[${config.name}] 🚫 Skipping excluded bot message`);
-				}
-				return true; // Skip excluded bots (CovaBot, DJCova, etc.)
 			}
 		} else {
 			// Human message, but bot only responds to bots

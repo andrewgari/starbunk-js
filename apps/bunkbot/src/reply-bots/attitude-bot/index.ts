@@ -1,4 +1,4 @@
-import { createBot } from '../../createBot';
+import { createBot } from '../../create-bot';
 import { ATTITUDE_BOT_AVATAR_URL, ATTITUDE_BOT_NAME, ATTITUDE_BOT_PATTERNS, ATTITUDE_BOT_RESPONSES } from './constants';
 
 // Create the Attitude Bot using the simplified API

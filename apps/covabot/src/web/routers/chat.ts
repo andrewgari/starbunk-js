@@ -1,6 +1,6 @@
 import express, { type RequestHandler } from 'express';
 import { logger } from '@starbunk/shared';
-import { CovaBot } from '../../cova-bot/covaBot';
+import { CovaBot } from '../../cova-bot/cova-bot';
 
 interface ChatRequestBody {
 	message?: string;

@@ -1,4 +1,4 @@
-import { mockMessage } from '../../src/test-utils/testUtils';
+import { mockMessage } from '../../src/test-utils/test-utils';
 import sheeshBot from '../../src/reply-bots/sheesh-bot';
 import { sheeshTrigger } from '../../src/reply-bots/sheesh-bot/triggers';
 import {

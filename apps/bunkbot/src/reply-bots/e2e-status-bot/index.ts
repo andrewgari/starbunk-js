@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { BotRegistry } from '../../botRegistry';
+import { BotRegistry } from '../../bot-registry';
 import { getDiscordService, getMessageFilter, logger } from '@starbunk/shared';
 import { ReplyBotImpl } from '../../core/bot-builder';
 import { E2E_STATUS_PATTERN, E2E_LOADED_PREFIX, E2E_IDENT_PREFIX, DEFAULT_VENN_ID, DEFAULT_GUY_ID } from './constants';

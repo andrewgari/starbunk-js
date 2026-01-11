@@ -1,8 +1,8 @@
 import { Message } from 'discord.js';
 import { isDebugMode } from '@starbunk/shared';
 import { BLUE_BOT_PATTERNS, BLUE_BOT_RESPONSES, BLUE_BOT_AVATARS, BLUE_BOT_NAME, BLUE_BOT_PROMPTS } from './constants';
-import { RedisConfigurationService } from './services/redisConfigurationService';
-import { LLMService } from './services/llmService';
+import { RedisConfigurationService } from './services/redis-configuration-service';
+import { LLMService } from './services/llm-service';
 
 // Lazily create and cache configuration service to avoid Redis init at import time
 let cachedConfigService: RedisConfigurationService | null = null;

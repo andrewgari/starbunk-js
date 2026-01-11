@@ -5,7 +5,7 @@ import {
 	getTestingChannelIds,
 	parseDiscordIdList,
 	isValidDiscordId,
-} from '../src/utils/envValidation';
+} from '../src/utils/env-validation';
 
 // Mock process.env
 const mockEnv = (envVars: Record<string, string | undefined>) => {

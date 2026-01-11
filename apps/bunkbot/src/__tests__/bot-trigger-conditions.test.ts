@@ -1,9 +1,14 @@
+/**
+ * PARTIALLY DISABLED: Some tests use complex bot detection that has been removed.
+ * Bot detection is now simplified to only check message.author.bot
+ */
+
 import {
 	fromBot,
-	fromBotExcludingCovaBot,
-	fromCovaBot,
-	isCovaBot,
-	shouldExcludeFromReplyBots,
+	// fromBotExcludingCovaBot, // REMOVED
+	// fromCovaBot, // REMOVED
+	// isCovaBot, // REMOVED
+	// shouldExcludeFromReplyBots, // REMOVED
 	withChance,
 	containsWord,
 	containsPhrase,
@@ -12,7 +17,7 @@ import {
 	or,
 	not,
 } from '../core/conditions';
-import { mockMessage, mockHumanUser, mockCovaBotUser, mockGenericBotUser, mockClient } from '../test-utils/testUtils';
+import { mockMessage, mockHumanUser, mockCovaBotUser, mockGenericBotUser, mockClient } from '../test-utils/test-utils';
 import { isDebugMode } from '@starbunk/shared';
 // import { logger } from '@starbunk/shared';
 
@@ -92,7 +97,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 			});
 		});
 
-		describe('isCovaBot()', () => {
+		describe.skip('isCovaBot() - DISABLED', () => {
 			it('should correctly identify CovaBot messages', () => {
 				// Arrange
 				const covaBotMessage = mockMessage({
@@ -138,7 +143,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 			});
 		});
 
-		describe('shouldExcludeFromReplyBots()', () => {
+		describe.skip('shouldExcludeFromReplyBots() - DISABLED', () => {
 			it('should exclude CovaBot messages', () => {
 				// Arrange
 				const covaBotMessage = mockMessage({
@@ -182,7 +187,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 			});
 		});
 
-		describe('fromBotExcludingCovaBot()', () => {
+		describe.skip('fromBotExcludingCovaBot() - DISABLED', () => {
 			it('should allow generic bot messages', async () => {
 				// Arrange
 				const genericBotMessage = mockMessage({
@@ -226,7 +231,7 @@ describe('Bot Trigger Conditions Unit Tests', () => {
 			});
 		});
 
-		describe('fromCovaBot()', () => {
+		describe.skip('fromCovaBot() - DISABLED', () => {
 			it('should only match CovaBot messages', async () => {
 				// Arrange
 				const condition = fromCovaBot(); // Move condition creation outside test iterations

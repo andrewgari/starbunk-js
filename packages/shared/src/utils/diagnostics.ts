@@ -25,7 +25,7 @@ export class StartupDiagnostics {
 	}
 
 	private checkEnvironmentVariables(): void {
-		const requiredVars = ['STARBUNK_TOKEN'];
+		const requiredVars = ['DISCORD_TOKEN'];
 		const optionalVars = ['DATABASE_URL', 'DEBUG_MODE', 'TESTING_SERVER_IDS', 'TESTING_CHANNEL_IDS'];
 
 		// Check required variables
@@ -58,12 +58,12 @@ export class StartupDiagnostics {
 	}
 
 	private checkDiscordTokenFormat(): void {
-		const token = process.env.STARBUNK_TOKEN;
+		const token = process.env.DISCORD_TOKEN;
 		if (!token) {
 			this.addResult({
 				check: 'Discord Token Format',
 				status: 'fail',
-				message: 'STARBUNK_TOKEN is not set',
+				message: 'DISCORD_TOKEN is not set',
 			});
 			return;
 		}

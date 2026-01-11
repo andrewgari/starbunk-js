@@ -30,16 +30,15 @@ import pingCommand from './commands/ping';
 import debugCommand from './commands/debug';
 
 // Import reply bot system
-import { BotRegistry } from './botRegistry';
+import { BotRegistry } from './bot-registry';
 // import { DatabaseBotFactory } from './core/database-bot-factory'; // Temporarily disabled
 import { ReplyBotImpl } from './core/bot-builder';
-import { shouldExcludeFromReplyBots as _shouldExcludeFromReplyBots } from './core/conditions';
 
 // Import configuration services
-import { ConfigurationService } from './services/configurationService';
-import { BotIdentityService } from './services/botIdentityService';
-import { MessageProcessor } from './core/MessageProcessor';
-import { HealthServer } from './services/HealthServer';
+import { ConfigurationService } from './services/configuration-service';
+import { BotIdentityService } from './services/bot-identity-service';
+import { MessageProcessor } from './core/message-processor';
+import { HealthServer } from './services/health-server';
 
 class BunkBotContainer {
 	private client!: Client;

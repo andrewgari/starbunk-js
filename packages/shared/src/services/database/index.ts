@@ -1,3 +1,3 @@
-export * from './databaseService';
-export * from './configurationRepository';
+export * from './database-service';
+export * from './configuration-registry';
 export * from './types';
