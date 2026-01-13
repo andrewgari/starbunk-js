@@ -19,7 +19,9 @@ export const identitySchema = z.discriminatedUnion('type', [
 
 export const triggerSchema = z.object({
   name: z.string().optional().describe('An internal name for this specific rule.'),
-  conditions: z.any().describe('The logic gate (e.g., contains_word, with_chance) for this trigger.'),
+  conditions: z.any().refine((val) => val !== undefined && val !== null, {
+    message: 'Conditions are required for each trigger',
+  }).describe('The logic gate (e.g., contains_word, with_chance) for this trigger.'),
   responses: z.union([z.string(), z.array(z.string())]).optional()
     .describe('What the bot says when this trigger fires. If empty, it uses the bot-level responses.'),
 });
@@ -29,13 +31,13 @@ export const botSchema = z.object({
   identity: identitySchema,
   responses: z.union([z.string(), z.array(z.string())]).optional()
     .describe('A master pool of phrases. Use {start} to repeat the beginning of the user message.'),
-  triggers: z.array(triggerSchema).describe('A list of independent rules for the bot to follow.'),
+  triggers: z.array(triggerSchema).min(1, 'At least one trigger is required').describe('A list of independent rules for the bot to follow.'),
   ignore_bots: z.boolean().default(true).describe('If true, the bot will not respond to other bots.'),
   ignore_humans: z.boolean().default(false).describe('If true, the bot will only respond to other bots.'),
 });
 
 export const yamlSchema = z.object({
-  'reply-bots': z.array(botSchema),
+  'reply-bots': z.array(botSchema).min(1, 'At least one bot is required'),
 });
 
 export function parseYamlBots(yamlContent: string) {
