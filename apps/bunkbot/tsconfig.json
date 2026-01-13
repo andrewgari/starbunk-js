@@ -14,7 +14,7 @@
 			"experimentalDecorators": true,
 			"emitDecoratorMetadata": true,
 			"isolatedModules": true,
-		"ignoreDeprecations": "5.0",
+		"ignoreDeprecations": "6.0",
 			"moduleResolution": "node",
 			"allowSyntheticDefaultImports": true,
 			"baseUrl": "./",

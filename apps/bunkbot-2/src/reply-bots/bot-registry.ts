@@ -1,4 +1,4 @@
-import { ReplyBot } from "./reply-bot";
+import { ReplyBot } from "./models/reply-bot";
 import { Message } from 'discord.js';
 export class BotRegistry {
   private bots: Map<string, ReplyBot> = new Map();

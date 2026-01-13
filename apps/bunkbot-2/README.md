@@ -28,12 +28,25 @@ npm run type-check
 npm run clean
 ```
 
-### Build Scripts
+### Available Scripts
+
+#### Running the Application
+
+- `npm run dev` - Run in development mode with hot reload (recommended for development)
+- `npm run dev:watch` - Same as dev (alias for consistency)
+- `npm run start` - Run the pre-built application from dist/
+- `npm run start:prod` - Build and then run the application
+
+#### Building
 
 - `npm run build` - Build for production with source maps and declarations
 - `npm run build:docker` - Build for Docker (optimized, no source maps)
-- `npm run start` - Run the built application
-- `npm run dev` - Run in development mode with hot reload
+- `npm run rebuild` - Clean and rebuild from scratch
+
+#### Utilities
+
+- `npm run type-check` - Type check without building
+- `npm run clean` - Remove build artifacts
 
 ### Project Structure
 

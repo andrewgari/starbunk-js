@@ -1,5 +1,5 @@
 import { TextChannel, Message, WebhookClient, Webhook, Client } from 'discord.js';
-import { BotIdentity } from '@/reply-bots/bot-identity';
+import { BotIdentity } from '@/reply-bots/models/bot-identity';
 
 const WEBHOOK_NAME = 'BunkBot';
 
@@ -16,10 +16,6 @@ export class WebhookService {
 	}
 
 	public async send(message: Message, identity: BotIdentity, responseText: string): Promise<Webhook> {
-		if (!this.webhookClient) {
-			throw new Error('Webhook client not initialized');
-		}
-
 		// Get Channel
 		const channel = await this.getTextChannel(message.channelId);
 
@@ -63,13 +59,19 @@ export class WebhookService {
 			throw new Error(`Channel ${channelId} does not support webhooks`);
 		}
 
-		// Get any webhook on this channel with the name matching WEBHOOK_NAME or "WEBHOOK_NAME n"
+		// Try to find existing webhook
 		const webhooks = await channel.fetchWebhooks();
-		const webhook = webhooks.find((wh) => wh.name === WEBHOOK_NAME || wh.name.startsWith(WEBHOOK_NAME + ' '));
+		let webhook = webhooks.find((wh) => wh.name === WEBHOOK_NAME || wh.name.startsWith(WEBHOOK_NAME + ' '));
 		console.debug(`Found webhook: ${webhook ? webhook.name : 'none'}`);
 
+		// Create webhook if it doesn't exist
 		if (!webhook) {
-			throw new Error(`No webhook found matching "${WEBHOOK_NAME}"`);
+			console.log(`Creating webhook "${WEBHOOK_NAME}" for channel ${channelId}`);
+			webhook = await channel.createWebhook({
+				name: WEBHOOK_NAME,
+				reason: 'BunkBot message delivery',
+			});
+			console.log(`Created webhook "${WEBHOOK_NAME}" for channel ${channelId}`);
 		}
 
 		return webhook;

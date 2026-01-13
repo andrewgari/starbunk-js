@@ -1,9 +1,9 @@
-import { ResponseResolver } from "@/core/response-resolver";
+import { ResponseResolver } from "@/reply-bots/responses/response-resolver";
 import { ReplyBot} from "./reply-bot";
 import { Message } from 'discord.js';
 import { DiscordService } from "@/discord/discord-service";
 import { BotIdentity } from "./bot-identity";
-import { Trigger } from "@/core/trigger";
+import { Trigger } from "@/reply-bots/conditions/trigger";
 
 export class StandardReplyBot implements ReplyBot {
   constructor(

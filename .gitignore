@@ -199,3 +199,4 @@ data/logs/
 *.tsbuildinfo
 *.tsbuildinfo
 prometheus.yml
+config/bots/bots.yml

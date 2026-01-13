@@ -1,9 +1,10 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { BotDiscoveryService } from './reply-bots/bot-discovery-service';
+import { BotDiscoveryService } from './reply-bots/services/bot-discovery-service';
 import { YamlBotFactory } from './serialization/yaml-bot-factory';
 import { BotRegistry } from './reply-bots/bot-registry';
 import { Client, GatewayIntentBits, Message } from 'discord.js';
+import { DiscordService } from './discord/discord-service';
 
 // Load environment variables from root .env file
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
@@ -16,18 +17,27 @@ const intents = [
 	GatewayIntentBits.GuildWebhooks,
 ];
 async function main() {
-    const registry = new BotRegistry();
-    const factory = new YamlBotFactory();
-    const discovery = new BotDiscoveryService(factory, registry);
-    discovery.discover('../../../config/bots');
-
+    // Create and login Discord client first
     const client = new Client({ intents });
-    // Use BUNKBOT_TOKEN from root .env, fallback to DISCORD_TOKEN
     const token = process.env.BUNKBOT_TOKEN || process.env.DISCORD_TOKEN;
     if (!token) {
         throw new Error('BUNKBOT_TOKEN or DISCORD_TOKEN environment variable is required');
     }
     await client.login(token);
+    console.log(`[BunkBot] Connected to Discord as ${client.user?.tag}`);
+
+    // Initialize Discord service with the client
+    const discordService = DiscordService.getInstance();
+    discordService.setClient(client);
+
+    // Now load bots (they can use the Discord service)
+    const botsDir = process.env.BUNKBOT_BOTS_DIR || path.join(__dirname, '../../../config/bots');
+    console.log(`[BunkBot] Loading bots from: ${botsDir}`);
+
+    const registry = new BotRegistry();
+    const factory = new YamlBotFactory();
+    const discovery = new BotDiscoveryService(factory, registry);
+    discovery.discover(botsDir);
 
     client.on('messageCreate', async (message: Message) => {
       await registry.processmessage(message);

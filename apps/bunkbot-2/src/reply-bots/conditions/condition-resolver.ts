@@ -11,6 +11,7 @@ export type Logic = {
   contains_word?: string;
   contains_phrase?: string;
   matches_pattern?: string;
+  matches_regex?: string; // Alias for matches_pattern
   from_user?: string;
   with_chance?: number;
   always?: boolean;
@@ -38,6 +39,8 @@ export class ConditionResolver {
         return Conditions.containsPhrase(l.contains_phrase!);
       case 'matches_pattern':
         return l.matches_pattern ? Conditions.matchesPattern(l.matches_pattern) : () => false;
+      case 'matches_regex':
+        return l.matches_regex ? Conditions.matchesPattern(l.matches_regex) : () => false;
       case 'from_user':
         return Conditions.fromUser(l.from_user!);
       case 'with_chance':

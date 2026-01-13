@@ -1,4 +1,4 @@
-import { getBotIdentityFromDiscord } from "@/core/get-bot-identity";
+import { getBotIdentityFromDiscord } from "@/reply-bots/identity/get-bot-identity";
 import { botSchema } from "@/serialization/yaml-bot-parser";
 import { Message } from "discord.js";
 import { z } from "zod";
