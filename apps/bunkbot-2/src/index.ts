@@ -3,11 +3,16 @@ import * as path from 'path';
 import { BotDiscoveryService } from './reply-bots/services/bot-discovery-service';
 import { YamlBotFactory } from './serialization/yaml-bot-factory';
 import { BotRegistry } from './reply-bots/bot-registry';
-import { Client, GatewayIntentBits, Message } from 'discord.js';
+import { Client, GatewayIntentBits, Message, Interaction, AutocompleteInteraction, ChatInputCommandInteraction, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js';
 import { DiscordService } from './discord/discord-service';
 import { getHealthServer } from './observability/health-server';
 import { getMetricsService } from './observability/metrics-service';
 import { logger } from './observability/logger';
+
+// Import commands
+import pingCommand from './commands/ping';
+import clearwebhooksCommand from './commands/clearwebhooks';
+import botCommand from './commands/bot';
 
 // Load environment variables from root .env file
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
@@ -20,6 +25,13 @@ const intents = [
 	GatewayIntentBits.GuildWebhooks,
 ];
 
+// Command interface
+interface Command {
+	data: RESTPostAPIChatInputApplicationCommandsJSONBody;
+	execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+	autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
+}
+
 async function main() {
 	// Initialize observability
 	logger.info('Starting BunkBot-2...', {
@@ -28,6 +40,13 @@ async function main() {
 		env: process.env.NODE_ENV || 'production',
 	});
 	const metricsService = getMetricsService();
+
+	// Register commands
+	const commands = new Map<string, Command>();
+	commands.set('ping', pingCommand);
+	commands.set('clearwebhooks', clearwebhooksCommand);
+	commands.set('bot', botCommand);
+	logger.info(`Registered ${commands.size} commands: ${Array.from(commands.keys()).join(', ')}`);
 
 	// Start health/metrics server
 	const metricsPort = parseInt(process.env.METRICS_PORT || '3000', 10);
@@ -67,6 +86,7 @@ async function main() {
 	logger.info('Starting bot discovery', { directory: botsDir });
 
 	const registry = new BotRegistry();
+	BotRegistry.setInstance(registry); // Make registry accessible globally
 	const factory = new YamlBotFactory();
 	const discovery = new BotDiscoveryService(factory, registry);
 	await discovery.discover(botsDir);
@@ -79,6 +99,21 @@ async function main() {
 		bot_names: registry.getBots().map(b => b.name).join(', '),
 	});
 
+	// Deploy commands to Discord
+	logger.info('Deploying slash commands to Discord...');
+	const commandData = Array.from(commands.values()).map((cmd) => cmd.data);
+	const guildId = process.env.GUILD_ID;
+
+	if (guildId) {
+		logger.info(`Deploying commands to guild ${guildId}`);
+		const guild = await client.guilds.fetch(guildId);
+		await guild.commands.set(commandData);
+	} else {
+		logger.info('Deploying commands globally');
+		await client.application!.commands.set(commandData);
+	}
+	logger.info(`Successfully deployed ${commandData.length} slash commands`);
+
 	// Set up message handler
 	logger.info('Registering Discord event handlers');
 	client.on('messageCreate', async (message: Message) => {
@@ -88,6 +123,50 @@ async function main() {
 		}
 
 		await registry.processmessage(message);
+	});
+
+	// Set up interaction handler for commands
+	client.on('interactionCreate', async (interaction: Interaction) => {
+		if (interaction.isChatInputCommand()) {
+			try {
+				const command = commands.get(interaction.commandName);
+				if (command) {
+					logger.info('Executing command', {
+						command_name: interaction.commandName,
+						user_id: interaction.user.id,
+						guild_id: interaction.guildId,
+					});
+					await command.execute(interaction);
+				} else {
+					logger.warn('Unknown command', { command_name: interaction.commandName });
+					await interaction.reply({
+						content: `Unknown command: ${interaction.commandName}`,
+						ephemeral: true,
+					});
+				}
+			} catch (error) {
+				logger.error('Error executing command', error, {
+					command_name: interaction.commandName,
+				});
+				if (!interaction.replied && !interaction.deferred) {
+					await interaction.reply({
+						content: 'An error occurred while executing the command.',
+						ephemeral: true,
+					});
+				}
+			}
+		} else if (interaction.isAutocomplete()) {
+			try {
+				const command = commands.get(interaction.commandName);
+				if (command?.autocomplete) {
+					await command.autocomplete(interaction);
+				}
+			} catch (error) {
+				logger.error('Error in autocomplete', error, {
+					command_name: interaction.commandName,
+				});
+			}
+		}
 	});
 
 	// Log when bot joins/leaves guilds

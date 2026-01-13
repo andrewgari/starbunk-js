@@ -2,9 +2,22 @@ import { ReplyBot } from "./models/reply-bot";
 import { Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 import { getMetricsService } from '@/observability/metrics-service';
+import { BotStateManager } from '@/services/bot-state-manager';
 
 export class BotRegistry {
+  private static instance: BotRegistry | null = null;
   private bots: Map<string, ReplyBot> = new Map();
+
+  static getInstance(): BotRegistry {
+    if (!BotRegistry.instance) {
+      BotRegistry.instance = new BotRegistry();
+    }
+    return BotRegistry.instance;
+  }
+
+  static setInstance(instance: BotRegistry): void {
+    BotRegistry.instance = instance;
+  }
 
   public register(bot: ReplyBot) {
     if (this.bots.has(bot.name)) {
@@ -28,9 +41,14 @@ export class BotRegistry {
     return Array.from(this.bots.values());
   }
 
+  public getBotNames(): string[] {
+    return Array.from(this.bots.keys());
+  }
+
   public async processmessage(message: Message) {
     const startTime = Date.now();
     const metrics = getMetricsService();
+    const stateManager = BotStateManager.getInstance();
 
     logger.debug('Processing message', {
       message_id: message.id,
@@ -47,6 +65,15 @@ export class BotRegistry {
     let botsSkipped = 0;
 
     for (const bot of this.bots.values()) {
+      // Check if bot is enabled
+      if (!stateManager.isBotEnabled(bot.name)) {
+        logger.debug(`Bot ${bot.name} skipped message (disabled)`, {
+          bot_name: bot.name,
+        });
+        botsSkipped++;
+        continue;
+      }
+
       if (bot.ignore_bots && message.author.bot) {
         logger.debug(`Bot ${bot.name} skipped message (ignore_bots=true)`, {
           bot_name: bot.name,
