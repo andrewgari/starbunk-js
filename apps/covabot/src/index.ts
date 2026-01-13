@@ -73,14 +73,15 @@ class CovaBotContainer {
 			// Validate environment
 			this.validateEnvironment();
 
-			// Create Discord client with required intents
+			// Create Discord client with minimal required intents
+			// Only needs: Guilds (basic functionality), GuildMessages + MessageContent (to read/respond to messages)
+			// Removed: GuildMembers (was causing 20GB+ memory usage by caching all members)
+			// Removed: GuildWebhooks (not needed for message-based bot)
 			this.client = new Client({
 				intents: [
 					GatewayIntentBits.Guilds,
 					GatewayIntentBits.GuildMessages,
 					GatewayIntentBits.MessageContent,
-					GatewayIntentBits.GuildMembers,
-					GatewayIntentBits.GuildWebhooks,
 				],
 			});
 

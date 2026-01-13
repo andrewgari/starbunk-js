@@ -116,12 +116,12 @@ class DJCovaContainer {
 			// Validate environment
 			this.validateEnvironment();
 
-			// Create Discord client with voice capabilities
+			// Create Discord client with minimal required intents for music bot
+			// Only needs: Guilds (basic functionality), GuildVoiceStates (voice connections)
+			// Removed: GuildMessages, MessageContent (uses slash commands via InteractionCreate, not message-based)
 			this.client = new Client({
 				intents: [
 					GatewayIntentBits.Guilds,
-					GatewayIntentBits.GuildMessages,
-					GatewayIntentBits.MessageContent,
 					GatewayIntentBits.GuildVoiceStates, // Required for voice
 				],
 			});

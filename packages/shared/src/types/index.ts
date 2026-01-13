@@ -1,5 +1,16 @@
+import type { Stream } from 'node:stream';
+import type {
+	APIEmbed,
+	AttachmentBuilder,
+	AttachmentPayload,
+	BufferResolvable,
+	JSONEncodable,
+	APIAttachment,
+	Attachment,
+} from 'discord.js';
+
 // Shared types for all containers
-export type ContainerName = 'bunkbot' | 'djcova' | 'starbunk-dnd' | 'covabot';
+export type ContainerName = 'bunkbot' | 'djcova' | 'starbunk-dnd' | 'covabot' | 'bluebot';
 
 export interface MessageContext {
 	guildId: string;
@@ -20,8 +31,8 @@ export interface WebhookMessage {
 	content: string;
 	identity: BotIdentity;
 	channelId: string;
-	embeds?: unknown[];
-	files?: unknown[];
+	embeds?: APIEmbed[];
+	files?: (BufferResolvable | Stream | JSONEncodable<APIAttachment> | Attachment | AttachmentBuilder | AttachmentPayload)[];
 }
 
 // Re-export existing types with explicit naming to avoid conflicts

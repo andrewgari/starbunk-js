@@ -14,6 +14,7 @@
 	"references": [
 		{ "path": "../packages/shared" },
 		{ "path": "../apps/bunkbot" },
+		{ "path": "../apps/bunkbot-2" },
 		{ "path": "../apps/djcova" },
 		{ "path": "../apps/starbunk-dnd" },
 		{ "path": "../apps/covabot" },
