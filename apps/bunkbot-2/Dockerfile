@@ -2,7 +2,7 @@
 # Optimized 2-stage build with Alpine Linux (Docker & Podman compatible)
 
 # Stage 1: Builder - Build the application
-FROM node:20-alpine AS builder
+FROM node:20-alpine3.20 AS builder
 
 WORKDIR /app
 

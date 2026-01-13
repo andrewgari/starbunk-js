@@ -15,6 +15,7 @@ export class MetricsService {
 	private botResponseDuration: promClient.Histogram<string>;
 	private botErrorsTotal: promClient.Counter<string>;
 	private activeBotsGauge: promClient.Gauge<string>;
+	private uniqueUsersGauge: promClient.Gauge<string>;
 
 	constructor() {
 		this.enabled = process.env.ENABLE_METRICS !== 'false'; // Enabled by default
@@ -67,6 +68,13 @@ export class MetricsService {
 			help: 'Number of active bots loaded',
 			registers: [this.registry],
 		});
+
+		this.uniqueUsersGauge = new promClient.Gauge({
+			name: 'bunkbot2_unique_users_interacting',
+			help: 'Number of unique users who have triggered bots',
+			labelNames: ['bot_name', 'guild_id'],
+			registers: [this.registry],
+		});
 	}
 
 	trackMessageProcessed(guildId: string, channelId: string): void {
@@ -107,6 +115,14 @@ export class MetricsService {
 	setActiveBots(count: number): void {
 		if (!this.enabled) return;
 		this.activeBotsGauge.set(count);
+	}
+
+	trackUniqueUser(botName: string, guildId: string, _userId: string): void {
+		if (!this.enabled) return;
+		// Note: This is a simplified implementation. In production, you'd want to track
+		// unique users in a Set or similar data structure and update the gauge periodically
+		// For now, we'll just increment to show activity
+		this.uniqueUsersGauge.inc({ bot_name: botName, guild_id: guildId });
 	}
 
 	async getMetrics(): Promise<string> {

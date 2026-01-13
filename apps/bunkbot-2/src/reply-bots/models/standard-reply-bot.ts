@@ -25,13 +25,20 @@ export class StandardReplyBot implements ReplyBot {
     const startTime = Date.now();
     const metrics = getMetricsService();
 
+    // Truncate message content for logging (max 200 chars)
+    const truncatedContent = message.content.length > 200
+      ? message.content.substring(0, 200) + '...'
+      : message.content;
+
     logger.debug(`Bot evaluating message`, {
       bot_name: this.name,
       message_id: message.id,
       author_id: message.author.id,
+      author_username: message.author.username,
       channel_id: message.channelId,
       guild_id: message.guildId,
       triggers_count: this.triggers.length,
+      message_content: truncatedContent,
     });
 
     // Implementation to handle the message
@@ -45,13 +52,16 @@ export class StandardReplyBot implements ReplyBot {
             trigger_name: trigger.name,
             message_id: message.id,
             author_id: message.author.id,
+            author_username: message.author.username,
             channel_id: message.channelId,
             guild_id: message.guildId,
+            trigger_message: truncatedContent,
           });
 
           // Track trigger metric
           if (message.guildId && message.channelId) {
             metrics.trackBotTrigger(this.name, trigger.name || 'unnamed', message.guildId, message.channelId);
+            metrics.trackUniqueUser(this.name, message.guildId, message.author.id);
           }
 
           // Resolve identity
@@ -69,10 +79,16 @@ export class StandardReplyBot implements ReplyBot {
           let response = trigger.responseGenerator(message);
           response = await ResponseResolver.resolve(response, message);
 
+          // Truncate response for logging (max 200 chars)
+          const truncatedResponse = response.length > 200
+            ? response.substring(0, 200) + '...'
+            : response;
+
           logger.debug(`Response generated`, {
             bot_name: this.name,
             trigger_name: trigger.name,
             response_length: response.length,
+            response_content: truncatedResponse,
           });
 
           // Send message
@@ -91,8 +107,12 @@ export class StandardReplyBot implements ReplyBot {
             trigger_name: trigger.name,
             identity_name: identity.botName,
             message_id: message.id,
+            author_id: message.author.id,
+            author_username: message.author.username,
             channel_id: message.channelId,
             guild_id: message.guildId,
+            trigger_message: truncatedContent,
+            response_content: truncatedResponse,
             response_length: response.length,
             total_duration_ms: totalDuration,
             send_duration_ms: sendDuration,
