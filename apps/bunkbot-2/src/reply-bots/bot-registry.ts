@@ -12,6 +12,10 @@ export class BotRegistry {
     console.log(`[Registry] ${bot.name} is now online.`);
   }
 
+  public getBots(): ReplyBot[] {
+    return Array.from(this.bots.values());
+  }
+
   public async processmessage(message: Message) {
     for (const bot of this.bots.values()) {
       if (bot.ignore_bots && message.author.bot) continue;

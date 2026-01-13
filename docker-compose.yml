@@ -116,6 +116,55 @@ services:
         reservations:
           memory: 256M
 
+  # BunkBot-2 - Next generation YAML-based reply bot system
+  bunkbot-2:
+    build:
+      context: .
+      dockerfile: apps/bunkbot-2/Dockerfile
+    image: ghcr.io/andrewgari/bunkbot-2:latest
+    container_name: starbunk-bunkbot-2
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DISCORD_TOKEN=${BUNKBOT_TOKEN}
+      - BUNKBOT_TOKEN=${BUNKBOT_TOKEN}
+      - CLIENT_ID=${BUNKBOT_CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - BUNKBOT_BOTS_DIR=/app/config/bots
+      # Observability Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - LOKI_URL=${LOKI_URL:-}
+    volumes:
+      # Mount the bot configuration directory
+      - ./config/bots:/app/config/bots:ro
+    ports:
+      # Metrics and health endpoint port
+      - "${BUNKBOT2_METRICS_PORT:-9305}:3000"
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=bunkbot-2
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=3000
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
   # DJCova - Music service
   djcova:
     image: ghcr.io/andrewgari/djcova:latest

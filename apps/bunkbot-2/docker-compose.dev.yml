@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  bunkbot-2:
+    build:
+      context: ../..
+      dockerfile: apps/bunkbot-2/Dockerfile
+      args:
+        NODE_ENV: development
+        DEBUG_MODE: "true"
+        LOG_LEVEL: debug
+        ENABLE_METRICS: "true"
+        ENABLE_STRUCTURED_LOGGING: "true"
+    container_name: bunkbot-2-dev
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=development
+      - DEBUG_MODE=true
+      - LOG_LEVEL=debug
+      - DISCORD_TOKEN=${BUNKBOT_TOKEN}
+      - BUNKBOT_TOKEN=${BUNKBOT_TOKEN}
+      - CLIENT_ID=${BUNKBOT_CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - BUNKBOT_BOTS_DIR=/app/config/bots
+      # Observability
+      - ENABLE_METRICS=true
+      - ENABLE_STRUCTURED_LOGGING=true
+      - METRICS_PORT=3000
+    volumes:
+      # Mount the bot configuration directory for live editing
+      - ../../config/bots:/app/config/bots:ro
+      # Optional: Mount source for development (requires dev image with ts-node)
+      # - ./src:/app/src:ro
+    ports:
+      - "3000:3000"  # Metrics and health endpoint
+    networks:
+      - bunkbot-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=bunkbot-2-dev
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=3000
+
+networks:
+  bunkbot-network:
+    driver: bridge
+
