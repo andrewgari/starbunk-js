@@ -23,15 +23,15 @@ export class ConditionResolver {
 
     if (l.all_of) {
       logger.debug('Resolving all_of condition', { conditions_count: l.all_of.length });
-      return Conditions.and(...l.all_of.map(this.resolve));
+      return Conditions.and(...l.all_of.map((subLogic) => ConditionResolver.resolve(subLogic)));
     }
     if (l.any_of) {
       logger.debug('Resolving any_of condition', { conditions_count: l.any_of.length });
-      return Conditions.or(...l.any_of.map(this.resolve));
+      return Conditions.or(...l.any_of.map((subLogic) => ConditionResolver.resolve(subLogic)));
     }
     if (l.none_of) {
       logger.debug('Resolving none_of condition', { conditions_count: l.none_of.length });
-      return Conditions.not(Conditions.or(...l.none_of.map(this.resolve)));
+      return Conditions.not(Conditions.or(...l.none_of.map((subLogic) => ConditionResolver.resolve(subLogic))));
     }
 
     const [key] = Object.keys(l);

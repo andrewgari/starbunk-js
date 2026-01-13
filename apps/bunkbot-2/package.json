@@ -15,7 +15,10 @@
 		"dev:watch": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
 		"type-check": "tsc --noEmit",
 		"clean": "rimraf dist",
-		"rebuild": "npm run clean && npm run build"
+		"rebuild": "npm run clean && npm run build",
+		"test": "vitest",
+		"test:ui": "vitest --ui",
+		"test:run": "vitest run"
 	},
 	"dependencies": {
 		"discord.js": "^14.18.0",
