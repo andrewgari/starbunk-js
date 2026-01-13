@@ -40,7 +40,7 @@ jobs:
           fi
 
           # Output containers list for matrix strategy
-          echo 'containers=["bunkbot", "djcova", "covabot", "bluebot"]' >> $GITHUB_OUTPUT
+          echo 'containers=["bunkbot", "bunkbot-2", "djcova", "covabot", "bluebot"]' >> $GITHUB_OUTPUT
 
   promote-release:
     name: 🏷️ Promote ${{ matrix.container }} to ${{ needs.determine-environment.outputs.env-tag }}
