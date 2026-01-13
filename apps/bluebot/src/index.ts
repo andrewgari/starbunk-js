@@ -144,6 +144,11 @@ class BlueBotContainer {
 	}
 
 	private async handleMessage(message: Message): Promise<void> {
+		// Skip bot messages to prevent responding to other bots (including self)
+		if (message.author.bot) {
+			return;
+		}
+
 		// Apply message filtering
 		const messageContext = {
 			serverId: message.guildId || undefined,
