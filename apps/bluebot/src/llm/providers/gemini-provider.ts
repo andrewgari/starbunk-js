@@ -81,10 +81,10 @@ export class GeminiProvider extends GenericProvider {
 			? model.startChat({ history, generationConfig: generationConfig as Record<string, unknown> })
 			: model.startChat({ history });
 		const response = await chat.sendMessage(lastMessage.content);
-		return this.parseProvierResponse(response, options);
+		return this.parseProviderResponse(response, options);
 	}
 
-	protected parseProvierResponse(response: unknown, options: LLMCompletionOptions): LLMCompletionResponse {
+	protected parseProviderResponse(response: unknown, options: LLMCompletionOptions): LLMCompletionResponse {
 		const geminiResponse = response as { response: { text: () => string } };
 		return {
 			content: geminiResponse.response.text(),

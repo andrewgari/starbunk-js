@@ -31,7 +31,7 @@ export class OllamaProvider extends GenericProvider {
 			}
 
 			const ollamaResponse = (await response.json()) as OllamaGenerateResponse;
-			return this.parseProvierResponse(ollamaResponse, options);
+			return this.parseProviderResponse(ollamaResponse, options);
 		} catch (error: unknown) {
 			const modelName = options.model || this.defaultModel;
 			throw new Error(
@@ -55,7 +55,7 @@ export class OllamaProvider extends GenericProvider {
 		return true;
 	}
 
-	protected parseProvierResponse(response: unknown, options: LLMCompletionOptions): LLMCompletionResponse {
+	protected parseProviderResponse(response: unknown, options: LLMCompletionOptions): LLMCompletionResponse {
 		const ollamaResponse = response as OllamaGenerateResponse;
 		return {
 			content: ollamaResponse.response || '', // Extracts generated text
