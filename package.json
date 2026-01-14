@@ -102,6 +102,7 @@
   },
   "homepage": "https://github.com/andrewgari/starbunk-js#readme",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.22.0",
     "@types/ioredis": "^4.28.10",
     "axios": "^1.11.0",
