@@ -1,41 +1,33 @@
 import 'dotenv/config';
-import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
+import { Client, GatewayIntentBits, Message } from 'discord.js';
 import { createServer } from 'http';
-
-import { getHealthServer } from './observability/health-server';
 import { logger } from './observability/logger';
-import { BLUE_BOT_NAME, BLUE_BOT_AVATARS } from './constants';
-import { BlueBotTriggers } from './triggers';
-import { WebhookService } from './services/webhook-manager';
-import { BotIdentity } from './types/bot-identity';
+import { BlueBotService } from './services/bluebot-service';
+import { BlueBotLLMService } from './llm/blubot-llm-service';
+import { GeminiProvider } from './llm/providers/gemini-provider';
 
 const intents = [
 	GatewayIntentBits.Guilds,
 	GatewayIntentBits.GuildMessages,
 	GatewayIntentBits.MessageContent,
-	GatewayIntentBits.GuildMembers,
-	GatewayIntentBits.GuildWebhooks,
+	// GatewayIntentBits.GuildWebhooks,
 ];
 
 class BlueBotContainer {
 	private client: Client;
-	private triggers: BlueBotTriggers;
-	private webhookService: WebhookService;
+  private blueBotService: BlueBotService;
 
 	constructor() {
 		this.client = new Client({ intents });
-		this.triggers = new BlueBotTriggers();
-		this.webhookService = new WebhookService(this.client);
+    const provider = new GeminiProvider();
+    const llmService = BlueBotLLMService.getInstance(provider);
+    this.blueBotService = BlueBotService.getInstance(llmService);
 	}
 
 	async start(): Promise<void> {
 		logger.info('Starting BlueBot container...');
 
-		this.registerEventHandlers();
-		await this.startHealthServer();
-
-		const token =
-			process.env.BLUEBOT_TOKEN || process.env.DISCORD_TOKEN || process.env.STARBUNK_TOKEN;
+		const token = process.env.DISCORD_TOKEN;
 
 		if (!token) {
 			logger.error('Discord token not found in environment variables');
@@ -47,16 +39,12 @@ class BlueBotContainer {
 		logger.info('Logging in to Discord...');
 		await this.client.login(token);
 		logger.info('BlueBot connected to Discord');
-	}
 
-	private registerEventHandlers(): void {
-		this.client.once(Events.ClientReady, (readyClient) => {
-			logger.info(`BlueBot ready as ${readyClient.user.tag}`, {
-				bot_id: readyClient.user.id,
-			});
-		});
 
-		this.client.on(Events.MessageCreate, async (message: Message) => {
+    await this.blueBotService.initialize();
+    logger.info('BlueBot service initialized');
+
+    this.client.on('messageCreate', async (message: Message) => {
 			// Basic bot-loop safety: never respond to other bots or self
 			if (message.author.bot) return;
 
@@ -69,25 +57,7 @@ class BlueBotContainer {
 	}
 
 	private async handleMessage(message: Message): Promise<void> {
-		const result = await this.triggers.checkAllTriggers(message);
-		if (!result.shouldRespond || !result.response) return;
-
-		const identity: BotIdentity = {
-			botName: result.botName ?? BLUE_BOT_NAME,
-			avatarUrl: result.avatarUrl ?? BLUE_BOT_AVATARS.Default,
-		};
-
-		await this.webhookService.send(message, identity, result.response);
-	}
-
-	private async startHealthServer(): Promise<void> {
-		const port = parseInt(
-			process.env.HEALTH_PORT || process.env.METRICS_PORT || '3000',
-			10,
-		);
-		const healthServer = getHealthServer(port);
-		await healthServer.start();
-		logger.info('BlueBot health server started', { port });
+    await this.blueBotService.processMessage(message);
 	}
 }
 

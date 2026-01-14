@@ -1,6 +1,6 @@
-import { LLMService } from '../llm/llm-service';
-import { LLMCompletionOptions } from '../llm/types/llm-completion-options';
-import { LLMCompletionResponse } from '../llm/types/llm-completion-response';
+import { LLMService } from './llm-service';
+import { LLMCompletionOptions } from './types/llm-completion-options';
+import { LLMCompletionResponse } from './types/llm-completion-response';
 
 
 export class BlueBotLLMService implements LLMService {

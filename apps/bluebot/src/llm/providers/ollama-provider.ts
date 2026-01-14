@@ -5,8 +5,9 @@ import { OllamaGenerateResponse } from "../types/llm-generate-options";
 
 
 export class OllamaProvider extends GenericProvider {
-  private baseUrl: string = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-  private defaultModel: string = process.env.OLLAMA_DEFAULT_MODEL || 'llama3';
+	  // Prefer OLLAMA_API_URL to align with other services; fall back to OLLAMA_BASE_URL and then localhost
+	  private baseUrl: string = process.env.OLLAMA_API_URL || process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+	  private defaultModel: string = process.env.OLLAMA_DEFAULT_MODEL || 'llama3';
 
   // Communicates with local endpoint via fetch
     protected async callProviderAPI(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
