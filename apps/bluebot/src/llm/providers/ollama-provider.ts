@@ -10,18 +10,24 @@ export class OllamaProvider extends GenericProvider {
 	  private defaultModel: string = process.env.OLLAMA_DEFAULT_MODEL || 'llama3';
 
   // Communicates with local endpoint via fetch
-    protected async callProviderAPI(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
-        const response = await fetch(`${this.baseUrl}/api/generate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: options.model || this.defaultModel,
-                prompt: this.formatPrompt(options.messages), // Merges messages for 'generate' endpoint
-                stream: false
-            })
-        });
+	    protected async callProviderAPI(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
+	        const response = await fetch(`${this.baseUrl}/api/generate`, {
+	            method: 'POST',
+	            headers: {
+	                'Content-Type': 'application/json',
+	            },
+	            body: JSON.stringify({
+	                model: options.model || this.defaultModel,
+	                prompt: this.formatPrompt(options.messages), // Merges messages for 'generate' endpoint
+	                stream: false,
+	                ...(typeof options.temperature === 'number'
+	                    ? { temperature: options.temperature }
+	                    : {}),
+	                ...(typeof options.maxTokens === 'number'
+	                    ? { num_predict: options.maxTokens }
+	                    : {}),
+	            })
+	        });
         const ollamaResponse = await response.json() as OllamaGenerateResponse;
         return this.parseProvierResponse(ollamaResponse, options);
     }

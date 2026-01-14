@@ -1,7 +1,8 @@
 import { LLMService } from '../llm/llm-service';
 import { Message } from 'discord.js';
 import { BLUE_BOT_RESPONSES } from '../constants';
-import { BLUE_BOT_DECEPTIVE_CHECK_PROMPT } from '../llm/prompts';
+import { buildBlueBotPrompt, PromptType } from '../llm/prompts';
+import { LLMMessage } from '../llm/types/llm-message';
 export class BlueBotService {
 	private static instance: BlueBotService;
 	private llmService: LLMService;
@@ -26,12 +27,21 @@ export class BlueBotService {
 		}
 
 			public async processMessage(message: Message): Promise<void> {
-				// First, ask the LLM (using the DeceptiveCheck system prompt) whether the
-				// incoming message is about blue / Blue Mage, including deceptive cases.
-				const detection = await this.llmService.createSimpleCompletion(
-					BLUE_BOT_DECEPTIVE_CHECK_PROMPT.formatUserMessage(message.content),
-					BLUE_BOT_DECEPTIVE_CHECK_PROMPT.systemContent,
+				// 1) Detection pass: master prompt + detector prompt.
+				const detectionPrompt = buildBlueBotPrompt(
+					PromptType.BlueDetector,
+					message.content,
 				);
+				const detectionMessages: LLMMessage[] = [
+					{ role: 'system', content: detectionPrompt.systemPrompt },
+					{ role: 'user', content: detectionPrompt.userPrompt },
+				];
+				const detectionResponse = await this.llmService.createCompletion({
+					messages: detectionMessages,
+					temperature: detectionPrompt.temperature,
+					maxTokens: detectionPrompt.maxTokens,
+				});
+				const detection = detectionResponse.content;
 
 				const normalized = detection.trim().toLowerCase();
 				if (normalized !== 'yes') {
@@ -39,9 +49,29 @@ export class BlueBotService {
 					return;
 				}
 
-				// For now, keep the response simple and deterministic: when the LLM
-				// detects a blue reference, respond with the default Blu line.
-				await this.respond(message, BLUE_BOT_RESPONSES.Default);
+				// 2) Strategy pass: master prompt + strategy prompt.
+				const strategyPrompt = buildBlueBotPrompt(
+					PromptType.BlueStrategy,
+					message.content,
+				);
+				const strategyMessages: LLMMessage[] = [
+					{ role: 'system', content: strategyPrompt.systemPrompt },
+					{ role: 'user', content: strategyPrompt.userPrompt },
+				];
+				let reply: string;
+				try {
+					const strategyResponse = await this.llmService.createCompletion({
+						messages: strategyMessages,
+						temperature: strategyPrompt.temperature,
+						maxTokens: strategyPrompt.maxTokens,
+					});
+					reply = strategyResponse.content;
+				} catch {
+					// Fallback to a simple canned response if the strategy call fails.
+					reply = BLUE_BOT_RESPONSES.Default;
+				}
+
+				await this.respond(message, reply);
 			}
 
 		public async respond(message: Message, response: string): Promise<void> {

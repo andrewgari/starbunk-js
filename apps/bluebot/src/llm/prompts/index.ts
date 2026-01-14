@@ -1,3 +1,4 @@
-export { PromptType } from './promptManager';
-export { masterBlueBotPrompt } from './masterBlueBotPrompt';
-export { BLUE_BOT_DECEPTIVE_CHECK_PROMPT } from './bluebot-prompts';
+export { PromptType, buildBlueBotPrompt } from './prompt-manager';
+export { masterBlueBotPrompt } from './master-blue-prompt';
+export { blueBotDeceptiveCheckPrompt } from './deceptive-check-prompt';
+export { blueBotStrategyPrompt } from './strategy-prompt';

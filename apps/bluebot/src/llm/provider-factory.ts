@@ -2,6 +2,8 @@ import { logger } from '../observability/logger';
 import type { LLMService } from './llm-service';
 import { GeminiProvider } from './providers/gemini-provider';
 import { OllamaProvider } from './providers/ollama-provider';
+import { GenericProvider } from './providers/generic-provider';
+import { LLMManager } from './llm-manager';
 
 // Supported provider identifiers for BlueBot
 export type BlueBotProviderName = 'gemini' | 'ollama';
@@ -31,19 +33,35 @@ function getProviderOrderFromEnv(): BlueBotProviderName[] {
 	return preferred === 'ollama' ? ['ollama', 'gemini'] : ['gemini', 'ollama'];
 }
 
-function createProviderInstance(name: BlueBotProviderName): LLMService {
-	switch (name) {
-		case 'gemini':
-			return new GeminiProvider();
-		case 'ollama':
-			return new OllamaProvider();
-		default: {
-			// Typescript exhaustiveness guard
-			const exhaustiveCheck: never = name;
-			throw new Error(`Unsupported BlueBot LLM provider: ${exhaustiveCheck}`);
+	function createProviderInstance(
+		name: BlueBotProviderName,
+		manager?: LLMManager,
+	): GenericProvider {
+		let provider: GenericProvider;
+		switch (name) {
+			case 'gemini': {
+				provider = new GeminiProvider();
+				break;
+			}
+			case 'ollama': {
+				provider = new OllamaProvider();
+				break;
+			}
+			default: {
+				// Typescript exhaustiveness guard
+				const exhaustiveCheck: never = name;
+				throw new Error(`Unsupported BlueBot LLM provider: ${exhaustiveCheck}`);
+			}
 		}
+
+		// If a manager is provided, register this instance under its own
+		// provider name so LLMManager can later route requests correctly.
+		if (manager) {
+			manager.registerProviderInstance(provider);
+		}
+
+		return provider;
 	}
-}
 
 /**
  * Create and initialize an LLM provider for BlueBot based on environment.
@@ -55,14 +73,16 @@ function createProviderInstance(name: BlueBotProviderName): LLMService {
  *   to the other provider.
  * - If both fail, we throw and let startup fail fast with a clear error.
  */
-export async function createConfiguredLLMProvider(): Promise<LLMService> {
+	export async function createConfiguredLLMProvider(
+		manager?: LLMManager,
+	): Promise<LLMService> {
 	const providerOrder = getProviderOrderFromEnv();
 	let lastError: unknown = null;
 
-	for (const name of providerOrder) {
+		for (const name of providerOrder) {
 		try {
 			logger.info(`[BlueBot] Attempting to initialize LLM provider "${name}"...`);
-			const provider = createProviderInstance(name);
+				const provider = createProviderInstance(name, manager);
 				await provider.initialize();
 
 				// Log a concise health summary including the default model we expect

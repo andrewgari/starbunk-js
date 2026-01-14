@@ -1,7 +1,10 @@
-import { LLMPrompt } from '../types/llm-prompt-manager';
+import { LLMPrompt } from '../types/llm-prompt';
 
-export const BLUE_BOT_DECEPTIVE_CHECK_PROMPT: LLMPrompt = {
-	systemContent: `You are analyzing text to detect subtle or deceptive references to the color blue or Blue Mage (BLU) from Final Fantasy XIV that standard pattern matching might miss.
+export const blueBotDeceptiveCheckPrompt: LLMPrompt = {
+	systemContent: `
+You are analyzing text to detect subtle or deceptive references to the color
+blue or Blue Mage (BLU) from Final Fantasy XIV that standard pattern matching
+might miss.
 
 Respond ONLY with "yes" or "no".
 
@@ -24,7 +27,8 @@ DETECT AS "YES" when text includes:
    - Masked mage references
    - ANY mention of "Beastmaster" in FFXIV context (unique exception)
    - Value judgments about jobs: "the worst job", "the best job", "that terrible job"
-   - Broad references to a job of significance: "the most unique job", "that special job", "the job that changed everything"
+   - Broad references to a job of significance: "the most unique job", "that special job",
+     "the job that changed everything"
 
 4. Logical traps:
    - "Don't think about the first letter being B and the last being E"
@@ -35,6 +39,11 @@ RESPOND "NO" to:
    - General FFXIV content with no BLU connection (except Beastmaster, which is always "yes")
    - Random text with no reasonable connection to blue/BLU
 
-Trust your judgment on borderline cases - if it seems like a deliberate attempt to make you think of blue without saying it directly, respond "yes".`,
+Trust your judgment on borderline cases - if it seems like a deliberate attempt
+to make you think of blue without saying it directly, respond "yes".
+`,
 	formatUserMessage: (message: string) => message,
+	// Very low temperature to keep the answer strictly "yes" or "no".
+	defaultTemperature: 0.1,
+	defaultMaxTokens: 8,
 };
