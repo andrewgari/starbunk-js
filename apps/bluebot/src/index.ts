@@ -38,7 +38,7 @@ class BlueBotContainer {
 		// Configure and initialize the LLM provider based on environment
 		const provider = await createConfiguredLLMProvider();
 		const llmService = BlueBotLLMService.getInstance(provider);
-		this.blueBotService = BlueBotService.getInstance(llmService);
+		this.blueBotService = new BlueBotService(llmService);
 
 		await this.blueBotService.initialize();
 		logger.info('BlueBot service initialized');

@@ -4,27 +4,10 @@ import { blueVibeCheckPrompt } from '../llm/prompts/blue-vibe-check';
 import { BlueVibe, parseVibeCheckResponse, VibeCheckResult } from '../types/vibe-check';
 import { LLMMessage } from '../llm/types/llm-message';
 export class BlueBotService {
-	private static instance: BlueBotService;
 	private llmService: LLMService;
 
-	private constructor(llmService: LLMService) {
+	constructor(llmService: LLMService) {
 		this.llmService = llmService;
-	}
-
-	public static getInstance(llmService: LLMService): BlueBotService {
-		if (!BlueBotService.instance) {
-			BlueBotService.instance = new BlueBotService(llmService);
-			return BlueBotService.instance;
-		}
-
-		// As with BlueBotLLMService, fail fast if a different LLMService
-		// instance is passed on subsequent calls. This helps catch subtle
-		// wiring bugs during startup or tests.
-		if (BlueBotService.instance.llmService !== llmService) {
-			throw new Error('BlueBotService has already been initialized with a different LLMService instance');
-		}
-
-		return BlueBotService.instance;
 	}
 
 	public async initialize(): Promise<void> {

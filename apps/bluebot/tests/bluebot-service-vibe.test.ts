@@ -47,14 +47,13 @@ describe('BlueBotService with vibe-based responses', () => {
 
 	beforeEach(() => {
 		mockLLM = new MockLLMService();
-		// Reset the singleton instance for each test
-		(BlueBotService as any).instance = null;
-		service = BlueBotService.getInstance(mockLLM);
+		// Create a fresh instance for each test
+		service = new BlueBotService(mockLLM);
 	});
 
 	test('responds to blueGeneral vibe with high intensity', async () => {
 		const reply = vi.fn();
-		
+
 		mockLLM.completions.mockResolvedValueOnce({
 			content: '{"vibe": "blueGeneral", "intensity": 9, "response": "Did somebody say BLUE?! 💙"}',
 			model: 'mock-model',
@@ -73,7 +72,7 @@ describe('BlueBotService with vibe-based responses', () => {
 
 	test('responds to blueSneaky vibe', async () => {
 		const reply = vi.fn();
-		
+
 		mockLLM.completions.mockResolvedValueOnce({
 			content: '{"vibe": "blueSneaky", "intensity": 7, "response": "I see what you did there... 👀💙"}',
 			model: 'mock-model',
@@ -91,7 +90,7 @@ describe('BlueBotService with vibe-based responses', () => {
 
 	test('responds to blueMention vibe with moderate intensity', async () => {
 		const reply = vi.fn();
-		
+
 		mockLLM.completions.mockResolvedValueOnce({
 			content: '{"vibe": "blueMention", "intensity": 5, "response": "Blue? 👀"}',
 			model: 'mock-model',
@@ -111,7 +110,7 @@ describe('BlueBotService with vibe-based responses', () => {
 
 	test('does not respond to notBlue vibe with low intensity', async () => {
 		const reply = vi.fn();
-		
+
 		mockLLM.completions.mockResolvedValueOnce({
 			content: '{"vibe": "notBlue", "intensity": 1, "response": ""}',
 			model: 'mock-model',
@@ -132,7 +131,7 @@ describe('BlueBotService with vibe-based responses', () => {
 
 	test('does not respond when response is empty', async () => {
 		const reply = vi.fn();
-		
+
 		mockLLM.completions.mockResolvedValueOnce({
 			content: '{"vibe": "blueGeneral", "intensity": 10, "response": ""}',
 			model: 'mock-model',
@@ -150,7 +149,7 @@ describe('BlueBotService with vibe-based responses', () => {
 
 	test('handles LLM failure gracefully', async () => {
 		const reply = vi.fn();
-		
+
 		mockLLM.completions.mockRejectedValueOnce(new Error('LLM service unavailable'));
 
 		await service.processMessage({
