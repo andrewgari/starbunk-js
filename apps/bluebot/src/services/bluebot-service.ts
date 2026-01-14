@@ -14,7 +14,18 @@ export class BlueBotService {
 		public static getInstance(llmService: LLMService): BlueBotService {
 			if (!BlueBotService.instance) {
 				BlueBotService.instance = new BlueBotService(llmService);
+				return BlueBotService.instance;
 			}
+
+			// As with BlueBotLLMService, fail fast if a different LLMService
+			// instance is passed on subsequent calls. This helps catch subtle
+			// wiring bugs during startup or tests.
+			if (BlueBotService.instance.llmService !== llmService) {
+				throw new Error(
+					'BlueBotService has already been initialized with a different LLMService instance',
+				);
+			}
+
 			return BlueBotService.instance;
 		}
 

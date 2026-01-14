@@ -1,4 +1,4 @@
-// packages/shared/src/services/llm/providers/geminiProvider.ts
+// BlueBot Gemini provider implementation
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GenericProvider } from './generic-provider';
 import { LLMCompletionOptions } from '../types/llm-completion-options';
@@ -25,50 +25,66 @@ export class GeminiProvider extends GenericProvider {
 		return ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'];
 	}
 
-		protected async callProviderAPI(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
-			// Extract any system messages so we can pass them as Gemini system instructions
-			const systemMessages = options.messages.filter((m) => m.role === 'system');
-			const nonSystemMessages = options.messages.filter((m) => m.role !== 'system');
+			protected async callProviderAPI(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
+				// Ensure initialize() has successfully run before use.
+				const client = this.client;
+				if (!client) {
+					throw new Error('GeminiProvider used before initialize() was called');
+				}
 
-			// Gemini expects history roles to be either 'user' or 'model'.
-			// Map prior user/assistant turns into the expected format, excluding the
-			// most recent non-system message which will be sent via chat.sendMessage.
-			const history = nonSystemMessages.slice(0, -1).map((m) => ({
-				role: m.role === 'assistant' ? 'model' : 'user',
-				parts: [{ text: m.content }],
-			}));
+				if (!options.messages || options.messages.length === 0) {
+					throw new Error('GeminiProvider requires at least one message to generate a response');
+				}
 
-			// Convert system messages into a single systemInstruction for Gemini so
-			// they are not incorrectly treated as regular user turns.
-			const systemInstruction = systemMessages.length
-				? {
-						role: 'model' as const,
-						parts: systemMessages.map((m) => ({ text: m.content })),
-					}
-				: undefined;
+				// Extract any system messages so we can pass them as Gemini system instructions
+				const systemMessages = options.messages.filter((m) => m.role === 'system');
+				const nonSystemMessages = options.messages.filter((m) => m.role !== 'system');
 
-			const model = this.client!.getGenerativeModel({
-				model: options.model || this.defaultModel,
-				...(systemInstruction ? { systemInstruction } : {}),
-			});
+				if (nonSystemMessages.length === 0) {
+					throw new Error(
+						'GeminiProvider requires at least one non-system message to use as the chat prompt',
+					);
+				}
 
-			// Map generic options.temperature / maxTokens into Gemini generationConfig.
-			const generationConfig: Record<string, unknown> = {};
-			if (typeof options.temperature === 'number') {
-				generationConfig.temperature = options.temperature;
+				// Gemini expects history roles to be either 'user' or 'model'.
+				// Map prior user/assistant turns into the expected format, excluding the
+				// most recent non-system message which will be sent via chat.sendMessage.
+				const history = nonSystemMessages.slice(0, -1).map((m) => ({
+					role: m.role === 'assistant' ? 'model' : 'user',
+					parts: [{ text: m.content }],
+				}));
+
+				// Convert system messages into a single systemInstruction for Gemini so
+				// they are not incorrectly treated as regular user turns.
+				const systemInstruction = systemMessages.length
+					? {
+							role: 'model' as const,
+							parts: systemMessages.map((m) => ({ text: m.content })),
+						}
+					: undefined;
+
+				const model = client.getGenerativeModel({
+					model: options.model || this.defaultModel,
+					...(systemInstruction ? { systemInstruction } : {}),
+				});
+
+				// Map generic options.temperature / maxTokens into Gemini generationConfig.
+				const generationConfig: Record<string, unknown> = {};
+				if (typeof options.temperature === 'number') {
+					generationConfig.temperature = options.temperature;
+				}
+				if (typeof options.maxTokens === 'number') {
+					// Gemini uses maxOutputTokens for the token limit.
+					generationConfig.maxOutputTokens = options.maxTokens;
+				}
+
+				const lastMessage = nonSystemMessages[nonSystemMessages.length - 1];
+				const chat = Object.keys(generationConfig).length
+					? model.startChat({ history, generationConfig: generationConfig as any })
+					: model.startChat({ history });
+				const response = await chat.sendMessage(lastMessage.content);
+				return this.parseProvierResponse(response, options);
 			}
-			if (typeof options.maxTokens === 'number') {
-				// Gemini uses maxOutputTokens for the token limit.
-				(generationConfig as any).maxOutputTokens = options.maxTokens;
-			}
-
-			const lastMessage = nonSystemMessages[nonSystemMessages.length - 1];
-			const chat = Object.keys(generationConfig).length
-				? model.startChat({ history, generationConfig: generationConfig as any })
-				: model.startChat({ history });
-			const response = await chat.sendMessage(lastMessage.content);
-			return this.parseProvierResponse(response, options);
-		}
 
 	protected parseProvierResponse(response: unknown, options: LLMCompletionOptions): LLMCompletionResponse {
 		const geminiResponse = response as { response: { text: () => string } };
