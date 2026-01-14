@@ -3,7 +3,7 @@ import { VibeCheckResult } from '../interfaces/vibe-check-result';
 
 /**
  * Parse a vibe check response from the LLM
- * Expected format: {"vibe": "blueGeneral", "intensity": 8}
+ * Expected format: {"vibe": "blueGeneral", "intensity": 8, "response": "Oh wow, blue! 💙"}
  */
 export function parseVibeCheckResponse(response: string): VibeCheckResult {
 	try {
@@ -21,7 +21,14 @@ export function parseVibeCheckResponse(response: string): VibeCheckResult {
 			throw new Error(`Invalid intensity: ${parsed.intensity}`);
 		}
 
-		return { vibe, intensity };
+		// Extract response if present (optional field)
+		const suggestedResponse = parsed.response ? String(parsed.response).trim() : undefined;
+
+		return {
+			vibe,
+			intensity,
+			response: suggestedResponse,
+		};
 	} catch {
 		// Fallback to notBlue with minimal intensity if parsing fails
 		return {
