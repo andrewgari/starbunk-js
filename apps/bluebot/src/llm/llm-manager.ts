@@ -39,12 +39,14 @@ export class LLMManager {
 
 		try {
 			return await provider.createCompletion(options);
-		} catch (error: Error | unknown) {
+		} catch (error) {
 			logger.error(`LLM failed on provider "${primaryName}", attempting fallback "gemini"...`, error);
 			const fallback = this.providers.get('gemini');
+
 			if (!fallback || fallback === provider) {
 				throw error;
 			}
+
 			return fallback.createCompletion(options);
 		}
 	}
