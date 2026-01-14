@@ -53,6 +53,16 @@ class BlueBotContainer {
 				logger.error('Error handling message', error);
 			}
 		});
+
+		// Set up graceful shutdown handlers
+		const shutdown = (signal: string) => {
+			logger.info(`Received ${signal}, shutting down gracefully...`);
+			this.client.destroy();
+			process.exit(0);
+		};
+
+		process.on('SIGINT', () => shutdown('SIGINT'));
+		process.on('SIGTERM', () => shutdown('SIGTERM'));
 	}
 
 	private async handleMessage(message: Message): Promise<void> {
@@ -97,8 +107,8 @@ async function main(): Promise<void> {
 			server.close(() => process.exit(0));
 		};
 
-		process.on('SIGINT', () => shutdown('SIGINT'));
-		process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
 		return;
 	}
 
