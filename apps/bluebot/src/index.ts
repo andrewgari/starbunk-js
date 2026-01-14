@@ -3,8 +3,7 @@ import { Client, GatewayIntentBits, Message } from 'discord.js';
 import { createServer } from 'http';
 import { logger } from './observability/logger';
 import { BlueBotService } from './services/bluebot-service';
-import { BlueBotLLMService } from './llm/blubot-llm-service';
-import { createConfiguredLLMProvider } from './llm/provider-factory';
+import { createBlueBotService } from './services/bluebot-factory';
 
 const intents = [
 	GatewayIntentBits.Guilds,
@@ -35,11 +34,8 @@ class BlueBotContainer {
 		await this.client.login(token);
 		logger.info('BlueBot connected to Discord');
 
-		// Configure and initialize the LLM provider based on environment
-		const provider = await createConfiguredLLMProvider();
-		const llmService = new BlueBotLLMService(provider);
-		this.blueBotService = new BlueBotService(llmService);
-
+		// Create and initialize the BlueBotService with all dependencies
+		this.blueBotService = await createBlueBotService();
 		await this.blueBotService.initialize();
 		logger.info('BlueBot service initialized');
 
