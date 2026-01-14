@@ -80,7 +80,7 @@ export class GeminiProvider extends GenericProvider {
 
 				const lastMessage = nonSystemMessages[nonSystemMessages.length - 1];
 				const chat = Object.keys(generationConfig).length
-					? model.startChat({ history, generationConfig: generationConfig as any })
+					? model.startChat({ history, generationConfig: generationConfig as Record<string, unknown> })
 					: model.startChat({ history });
 				const response = await chat.sendMessage(lastMessage.content);
 				return this.parseProvierResponse(response, options);
