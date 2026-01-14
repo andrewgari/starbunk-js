@@ -121,4 +121,3 @@ export function getHealthServer(port?: number): HealthServer {
 	}
 	return healthServerInstance;
 }
-

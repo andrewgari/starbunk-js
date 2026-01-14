@@ -37,4 +37,3 @@ export function parseVibeCheckResponse(response: string): VibeCheckResult {
 		};
 	}
 }
-

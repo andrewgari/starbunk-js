@@ -15,7 +15,7 @@ const intents = [
 
 class BlueBotContainer {
 	private client: Client;
-		private blueBotService: BlueBotService | null = null;
+	private blueBotService: BlueBotService | null = null;
 
 	constructor() {
 		this.client = new Client({ intents });
@@ -28,24 +28,22 @@ class BlueBotContainer {
 
 		if (!token) {
 			logger.error('Discord token not found in environment variables');
-			throw new Error(
-				'BLUEBOT_TOKEN, DISCORD_TOKEN or STARBUNK_TOKEN environment variable is required',
-			);
+			throw new Error('BLUEBOT_TOKEN, DISCORD_TOKEN or STARBUNK_TOKEN environment variable is required');
 		}
 
-			logger.info('Logging in to Discord...');
-			await this.client.login(token);
-			logger.info('BlueBot connected to Discord');
+		logger.info('Logging in to Discord...');
+		await this.client.login(token);
+		logger.info('BlueBot connected to Discord');
 
-			// Configure and initialize the LLM provider based on environment
-			const provider = await createConfiguredLLMProvider();
-			const llmService = BlueBotLLMService.getInstance(provider);
-			this.blueBotService = BlueBotService.getInstance(llmService);
+		// Configure and initialize the LLM provider based on environment
+		const provider = await createConfiguredLLMProvider();
+		const llmService = BlueBotLLMService.getInstance(provider);
+		this.blueBotService = BlueBotService.getInstance(llmService);
 
-			await this.blueBotService.initialize();
-			logger.info('BlueBot service initialized');
+		await this.blueBotService.initialize();
+		logger.info('BlueBot service initialized');
 
-    this.client.on('messageCreate', async (message: Message) => {
+		this.client.on('messageCreate', async (message: Message) => {
 			// Basic bot-loop safety: never respond to other bots or self
 			if (message.author.bot) return;
 
@@ -58,12 +56,12 @@ class BlueBotContainer {
 	}
 
 	private async handleMessage(message: Message): Promise<void> {
-			if (!this.blueBotService) {
-				logger.warn('BlueBotService is not initialized; ignoring message');
-				return;
-			}
+		if (!this.blueBotService) {
+			logger.warn('BlueBotService is not initialized; ignoring message');
+			return;
+		}
 
-			await this.blueBotService.processMessage(message);
+		await this.blueBotService.processMessage(message);
 	}
 }
 
@@ -114,4 +112,3 @@ if (require.main === module) {
 		process.exit(1);
 	});
 }
-

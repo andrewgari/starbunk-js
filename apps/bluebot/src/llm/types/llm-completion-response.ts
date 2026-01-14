@@ -1,5 +1,5 @@
 export interface LLMCompletionResponse {
-  content: string;
-  model: string;
-  provider: string;
+	content: string;
+	model: string;
+	provider: string;
 }

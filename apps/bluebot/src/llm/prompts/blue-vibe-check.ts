@@ -87,8 +87,7 @@ Example responses:
 
 export const blueVibeCheckPrompt: LLMPrompt = {
 	systemContent,
-	formatUserMessage: (message: string) =>
-		`User message to classify for blue vibes:\n\n${message}`,
+	formatUserMessage: (message: string) => `User message to classify for blue vibes:\n\n${message}`,
 	// Low temperature to keep the classification deterministic.
 	defaultTemperature: 0.3,
 	// Increased tokens to accommodate response generation

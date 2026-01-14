@@ -13,4 +13,3 @@ export enum BlueVibe {
 	/** User is not talking about blue/BLU at all */
 	NotBlue = 'notBlue',
 }
-

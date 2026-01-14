@@ -84,4 +84,3 @@ export function getLogger(): Logger {
 }
 
 export const logger = getLogger();
-

@@ -11,4 +11,3 @@ export interface VibeCheckResult {
 	/** Suggested response from the LLM (optional, may be empty for notBlue) */
 	response?: string;
 }
-

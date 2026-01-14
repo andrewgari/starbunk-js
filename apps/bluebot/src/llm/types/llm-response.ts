@@ -1,7 +1,7 @@
 export interface LLMResponse {
-  text: string;
-  usage?: {
-    promptTokens: number;
-    completionTokens: number;
-  }
+	text: string;
+	usage?: {
+		promptTokens: number;
+		completionTokens: number;
+	};
 }
