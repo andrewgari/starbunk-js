@@ -17,7 +17,7 @@ export abstract class GenericProvider extends BaseLLMProvider {
       logger.debug(`Response from ${this.constructor.name}:`, { response });
 			return this.parseProviderResponse(response, options);
 		} catch (error: Error | unknown) {
-			console.error(`Error in ${this.constructor.name}:`, error);
+			logger.error(`Error in ${this.constructor.name}:`, error);
 			throw error;
 		}
 	}
