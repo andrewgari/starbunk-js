@@ -71,9 +71,9 @@ export class YamlBotFactory {
 
       logger.error('Unknown identity type', undefined, {
         bot_name: config.name,
-        identity_type: (id as any).type,
+        identity_type: 'type' in id ? id.type : 'unknown',
       });
-      throw new Error(`Unknown identity type: ${(id as any).type}`);
+      throw new Error(`Unknown identity type: ${'type' in id ? id.type : 'unknown'}`);
     }
 
     const triggers = config.triggers.map((trigger) => {

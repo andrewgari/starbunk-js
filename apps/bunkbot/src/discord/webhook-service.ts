@@ -92,7 +92,7 @@ export class WebhookService {
 		if (!('fetchWebhooks' in channel) || !('createWebhook' in channel)) {
 			logger.error('Channel does not support webhooks', undefined, {
 				channel_id: channelId,
-				channel_type: (channel as any).type,
+				channel_type: 'type' in channel ? channel.type : 'unknown',
 			});
 			throw new Error(`Channel ${channelId} does not support webhooks`);
 		}
