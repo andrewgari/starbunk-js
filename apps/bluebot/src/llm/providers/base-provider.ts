@@ -10,10 +10,11 @@ export abstract class BaseLLMProvider implements LLMService {
     if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
     messages.push({ role: 'user', content: prompt });
 
-    const response = await this.createCompletion({
-      model: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite',
-      messages,
-    });
+		// Let concrete providers decide which default model to use when one is
+		// not specified, rather than hard-coding a Gemini-specific default here.
+		const response = await this.createCompletion({
+			messages,
+		});
     return response.content;
   }
 

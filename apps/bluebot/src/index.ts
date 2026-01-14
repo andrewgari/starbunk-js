@@ -4,7 +4,7 @@ import { createServer } from 'http';
 import { logger } from './observability/logger';
 import { BlueBotService } from './services/bluebot-service';
 import { BlueBotLLMService } from './llm/blubot-llm-service';
-import { GeminiProvider } from './llm/providers/gemini-provider';
+import { createConfiguredLLMProvider } from './llm/provider-factory';
 
 const intents = [
 	GatewayIntentBits.Guilds,
@@ -15,13 +15,10 @@ const intents = [
 
 class BlueBotContainer {
 	private client: Client;
-  private blueBotService: BlueBotService;
+		private blueBotService: BlueBotService | null = null;
 
 	constructor() {
 		this.client = new Client({ intents });
-    const provider = new GeminiProvider();
-    const llmService = BlueBotLLMService.getInstance(provider);
-    this.blueBotService = BlueBotService.getInstance(llmService);
 	}
 
 	async start(): Promise<void> {
@@ -36,13 +33,17 @@ class BlueBotContainer {
 			);
 		}
 
-		logger.info('Logging in to Discord...');
-		await this.client.login(token);
-		logger.info('BlueBot connected to Discord');
+			logger.info('Logging in to Discord...');
+			await this.client.login(token);
+			logger.info('BlueBot connected to Discord');
 
+			// Configure and initialize the LLM provider based on environment
+			const provider = await createConfiguredLLMProvider();
+			const llmService = BlueBotLLMService.getInstance(provider);
+			this.blueBotService = BlueBotService.getInstance(llmService);
 
-    await this.blueBotService.initialize();
-    logger.info('BlueBot service initialized');
+			await this.blueBotService.initialize();
+			logger.info('BlueBot service initialized');
 
     this.client.on('messageCreate', async (message: Message) => {
 			// Basic bot-loop safety: never respond to other bots or self
@@ -57,7 +58,12 @@ class BlueBotContainer {
 	}
 
 	private async handleMessage(message: Message): Promise<void> {
-    await this.blueBotService.processMessage(message);
+			if (!this.blueBotService) {
+				logger.warn('BlueBotService is not initialized; ignoring message');
+				return;
+			}
+
+			await this.blueBotService.processMessage(message);
 	}
 }
 
