@@ -10,34 +10,24 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ openssl curl dumb-init
 
 # Copy package files for better caching
-COPY package.json package-lock.json* ./
-COPY packages/shared/package.json ./packages/shared/
+COPY apps/bluebot/package.json apps/bluebot/package-lock.json* ./
 COPY infrastructure/database/prisma ./infrastructure/database/prisma
-COPY apps/bluebot/package.json ./apps/bluebot/
 
-# Install all dependencies using workspace (more efficient)
+# Install dependencies
 # Using cache mount to speed up npm install across builds
-# Note: --ignore-scripts skips prepare/postinstall scripts; they run later if needed
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --prefer-offline --no-audit --ignore-scripts
 
 # Generate Prisma client (normally done in postinstall)
-RUN npm run db:generate || true
-
-# Copy shared package source
-COPY packages/shared/src ./packages/shared/src
-COPY packages/shared/tsconfig*.json ./packages/shared/
-
-# Build shared package
-RUN cd packages/shared && npm run build
+RUN npx prisma generate --schema=infrastructure/database/prisma/schema.prisma || true
 
 # Copy app source code
-COPY apps/bluebot/src ./apps/bluebot/src
-COPY apps/bluebot/tests ./apps/bluebot/tests
-COPY apps/bluebot/jest.config.js apps/bluebot/tsconfig*.json apps/bluebot/.dockerignore ./apps/bluebot/
+COPY apps/bluebot/src ./src
+COPY apps/bluebot/tests ./tests
+COPY apps/bluebot/jest.config.js apps/bluebot/tsconfig*.json apps/bluebot/.dockerignore ./
 
 # Build the application
-RUN cd apps/bluebot && npm run build:docker
+RUN npm run build:docker
 
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
@@ -65,11 +55,8 @@ RUN apk add --no-cache openssl dumb-init curl && \
 
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=bluebot:bluebot /app/node_modules ./node_modules
-COPY --from=builder --chown=bluebot:bluebot /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder --chown=bluebot:bluebot /app/packages/shared/package.json ./packages/shared/
-COPY --from=builder --chown=bluebot:bluebot /app/apps/bluebot/dist ./apps/bluebot/dist
-COPY --from=builder --chown=bluebot:bluebot /app/package.json ./
-COPY --from=builder --chown=bluebot:bluebot /app/apps/bluebot/package.json ./apps/bluebot/
+COPY --from=builder --chown=bluebot:bluebot /app/dist ./dist
+COPY --from=builder --chown=bluebot:bluebot /app/package.json ./package.json
 
 # Set default environment variables from build args
 # These can be overridden at runtime via .env file or docker-compose environment
@@ -103,4 +90,4 @@ EXPOSE 3000
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "apps/bluebot/dist/index.js"]
+CMD ["node", "dist/index.js"]
