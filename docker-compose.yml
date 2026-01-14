@@ -84,7 +84,7 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
-      - HEALTH_PORT=3000
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
     volumes:
       # Unraid-compatible host path mounts
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
