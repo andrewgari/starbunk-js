@@ -87,12 +87,13 @@ export class WebhookService {
 
 	private async getOrCreateWebhook(channel: TextChannel): Promise<Webhook> {
 		const channelId = channel.id;
+		const channelType = channel.type;
 
 		// Check if channel supports webhooks (has fetchWebhooks and createWebhook methods)
 		if (!('fetchWebhooks' in channel) || !('createWebhook' in channel)) {
 			logger.error('Channel does not support webhooks', undefined, {
 				channel_id: channelId,
-				channel_type: 'type' in channel ? channel.type : 'unknown',
+				channel_type: channelType,
 			});
 			throw new Error(`Channel ${channelId} does not support webhooks`);
 		}

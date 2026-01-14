@@ -69,11 +69,13 @@ export class YamlBotFactory {
         return identity;
       }
 
+      // This should never happen due to Zod validation, but TypeScript doesn't know that
+      const unknownId = id as { type?: string };
       logger.error('Unknown identity type', undefined, {
         bot_name: config.name,
-        identity_type: 'type' in id ? id.type : 'unknown',
+        identity_type: unknownId.type ?? 'unknown',
       });
-      throw new Error(`Unknown identity type: ${'type' in id ? id.type : 'unknown'}`);
+      throw new Error(`Unknown identity type: ${unknownId.type ?? 'unknown'}`);
     }
 
     const triggers = config.triggers.map((trigger) => {
