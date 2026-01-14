@@ -1,5 +1,6 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as http from 'http';
 import { BotDiscoveryService } from './reply-bots/services/bot-discovery-service';
 import { YamlBotFactory } from './serialization/yaml-bot-factory';
 import { BotRegistry } from './reply-bots/bot-registry';
@@ -33,6 +34,44 @@ interface Command {
 }
 
 async function main() {
+	// CI Smoke Mode: Start minimal health server and skip Discord login
+	// This allows CI to verify the Docker container builds and starts correctly
+	if (process.env.CI_SMOKE_MODE === 'true') {
+		logger.info('CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
+		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT, 10) : 3000;
+
+		const server = http.createServer((req, res) => {
+			if (req.url === '/health') {
+				res.writeHead(200, { 'Content-Type': 'application/json' });
+				res.end(
+					JSON.stringify({
+						status: 'healthy',
+						service: 'bunkbot',
+						mode: 'smoke',
+						timestamp: new Date().toISOString(),
+					}),
+				);
+				return;
+			}
+
+			res.writeHead(404, { 'Content-Type': 'text/plain' });
+			res.end('Not Found');
+		});
+
+		server.listen(port, () => {
+			logger.info(`[SMOKE] BunkBot health server running on port ${port}`);
+		});
+
+		const shutdown = (signal: string) => {
+			logger.info(`Received ${signal}, shutting down smoke mode server...`);
+			server.close(() => process.exit(0));
+		};
+
+		process.on('SIGINT', () => shutdown('SIGINT'));
+		process.on('SIGTERM', () => shutdown('SIGTERM'));
+		return;
+	}
+
 	// Initialize observability
 	logger.info('Starting BunkBot...', {
 		node_version: process.version,
