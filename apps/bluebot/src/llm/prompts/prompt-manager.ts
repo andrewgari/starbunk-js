@@ -2,12 +2,18 @@ import { LLMPrompt } from '../types/llm-prompt';
 import { masterBlueBotPrompt } from './master-blue-prompt';
 import { blueBotDeceptiveCheckPrompt } from './deceptive-check-prompt';
 import { blueBotStrategyPrompt } from './strategy-prompt';
+import { blueBotEnemyPrompt } from './enemy-comment-prompt';
+import { blueBotPleasedPrompt } from './pleased-prompt';
+import { blueBotNiceCommentPrompt } from './nice-comment-prompt';
 
 export enum PromptType {
 	BlueDetector = 'BlueDetector',
 	BlueAcknowledge = 'BlueAcknowledge',
 	BlueSentiment = 'BlueSentiment',
 	BlueStrategy = 'BlueStrategy',
+	BlueEnemy = 'BlueEnemy',
+	BluePleased = 'BluePleased',
+	BlueNiceComment = 'BlueNiceComment',
 }
 
 export interface BuiltPrompt {
@@ -20,14 +26,20 @@ export interface BuiltPrompt {
 function resolvePrompt(type: PromptType): LLMPrompt {
 	switch (type) {
 		case PromptType.BlueDetector:
-				return blueBotDeceptiveCheckPrompt;
+			return blueBotDeceptiveCheckPrompt;
 		case PromptType.BlueStrategy:
-				return blueBotStrategyPrompt;
+			return blueBotStrategyPrompt;
+		case PromptType.BlueEnemy:
+			return blueBotEnemyPrompt;
+		case PromptType.BluePleased:
+			return blueBotPleasedPrompt;
+		case PromptType.BlueNiceComment:
+			return blueBotNiceCommentPrompt;
 		// The other prompt types are reserved for future use.
-			case PromptType.BlueAcknowledge:
-			case PromptType.BlueSentiment:
-			default:
-				return blueBotStrategyPrompt;
+		case PromptType.BlueAcknowledge:
+		case PromptType.BlueSentiment:
+		default:
+			return blueBotStrategyPrompt;
 	}
 }
 
