@@ -1,8 +1,10 @@
 import { LLMService } from '../llm/llm-service';
 import { Message } from 'discord.js';
-import { blueVibeCheckPrompt } from '../llm/prompts/blue-vibe-check';
+import { createBlueVibeCheckPrompt } from '../llm/prompts/blue-vibe-check';
 import { BlueVibe, parseVibeCheckResponse, VibeCheckResult } from '../types/vibe-check';
 import { LLMMessage } from '../llm/types/llm-message';
+import { isEnemyUserCached } from '../utils/enemy-users';
+import { logger } from '../observability/logger';
 export class BlueBotService {
 	private llmService: LLMService;
 
@@ -52,7 +54,16 @@ export class BlueBotService {
 	 * Check the vibe of a message using the LLM
 	 */
 	private async checkVibe(message: Message): Promise<VibeCheckResult> {
-		const prompt = blueVibeCheckPrompt;
+		// Determine if the message author is on BlueBot's enemy list
+		const userId = message.author.id;
+		const isEnemy = isEnemyUserCached(userId);
+
+		if (isEnemy) {
+			logger.debug(`Processing message from enemy user: ${userId}`);
+		}
+
+		// Create the appropriate prompt based on enemy status
+		const prompt = createBlueVibeCheckPrompt(isEnemy);
 		const messages: LLMMessage[] = [
 			{ role: 'system', content: prompt.systemContent },
 			{ role: 'user', content: prompt.formatUserMessage(message.content) },

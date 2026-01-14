@@ -1,9 +1,10 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BlueBotService } from '../src/services/bluebot-service';
 import { LLMService } from '../src/llm/llm-service';
 import { LLMCompletionOptions } from '../src/llm/types/llm-completion-options';
 import { LLMCompletionResponse } from '../src/llm/types/llm-completion-response';
 import { BlueVibe } from '../src/types/enums/blue-vibe';
+import { refreshEnemyCache } from '../src/utils/enemy-users';
 
 class MockLLMService implements LLMService {
 	public initialized = true;
@@ -160,6 +161,179 @@ describe('BlueBotService with vibe-based responses', () => {
 
 		// Should fall back to notBlue with intensity 1 and not respond
 		expect(reply).not.toHaveBeenCalled();
+	});
+});
+
+describe('BlueBotService with enemy users', () => {
+	let mockLLM: MockLLMService;
+	let service: BlueBotService;
+	const originalEnv = process.env.BLUEBOT_ENEMY_USER_IDS;
+
+	beforeEach(() => {
+		mockLLM = new MockLLMService();
+		service = new BlueBotService(mockLLM);
+	});
+
+	afterEach(() => {
+		// Restore original environment
+		if (originalEnv !== undefined) {
+			process.env.BLUEBOT_ENEMY_USER_IDS = originalEnv;
+		} else {
+			delete process.env.BLUEBOT_ENEMY_USER_IDS;
+		}
+		refreshEnemyCache();
+	});
+
+	test('uses enemy prompt for users on the naughty list', async () => {
+		const enemyUserId = '999888777666555444';
+		process.env.BLUEBOT_ENEMY_USER_IDS = enemyUserId;
+		refreshEnemyCache();
+
+		const reply = vi.fn();
+
+		mockLLM.completions.mockResolvedValueOnce({
+			content: '{"vibe": "blueGeneral", "intensity": 8, "response": "Oh, YOU again... talking about blue 🙄"}',
+			model: 'mock-model',
+			provider: 'mock-llm',
+		});
+
+		await service.processMessage({
+			content: 'I love blue!',
+			author: { id: enemyUserId, bot: false, username: 'Enemy' },
+			reply,
+		} as any);
+
+		expect(mockLLM.completions).toHaveBeenCalledTimes(1);
+
+		// Verify the system prompt contains enemy personality traits
+		const callArgs = mockLLM.completions.mock.calls[0][0];
+		const systemMessage = callArgs.messages.find((m: any) => m.role === 'system');
+		expect(systemMessage).toBeDefined();
+		expect(systemMessage.content.toLowerCase()).toContain('naughty list');
+		expect(systemMessage.content.toLowerCase()).toContain('cold');
+		expect(systemMessage.content.toLowerCase()).toContain('contemptuous');
+
+		expect(reply).toHaveBeenCalledWith("Oh, YOU again... talking about blue 🙄");
+	});
+
+	test('uses friendly prompt for users not on the naughty list', async () => {
+		const friendlyUserId = '111222333444555666';
+		process.env.BLUEBOT_ENEMY_USER_IDS = '999888777666555444';
+		refreshEnemyCache();
+
+		const reply = vi.fn();
+
+		mockLLM.completions.mockResolvedValueOnce({
+			content: '{"vibe": "blueGeneral", "intensity": 9, "response": "Did somebody say BLUE?! 💙"}',
+			model: 'mock-model',
+			provider: 'mock-llm',
+		});
+
+		await service.processMessage({
+			content: 'I love blue!',
+			author: { id: friendlyUserId, bot: false, username: 'Friend' },
+			reply,
+		} as any);
+
+		expect(mockLLM.completions).toHaveBeenCalledTimes(1);
+
+		// Verify the system prompt contains friendly personality traits
+		const callArgs = mockLLM.completions.mock.calls[0][0];
+		const systemMessage = callArgs.messages.find((m: any) => m.role === 'system');
+		expect(systemMessage).toBeDefined();
+		expect(systemMessage.content.toLowerCase()).toContain('nice');
+		expect(systemMessage.content.toLowerCase()).toContain('friendly');
+		expect(systemMessage.content.toLowerCase()).toContain('excited');
+
+		// Should NOT contain enemy traits
+		expect(systemMessage.content.toLowerCase()).not.toContain('naughty list');
+
+		expect(reply).toHaveBeenCalledWith("Did somebody say BLUE?! 💙");
+	});
+
+	test('handles multiple enemy users correctly', async () => {
+		const enemy1 = '111111111111111111';
+		const enemy2 = '222222222222222222';
+		const friend = '333333333333333333';
+
+		process.env.BLUEBOT_ENEMY_USER_IDS = `${enemy1},${enemy2}`;
+		refreshEnemyCache();
+
+		const reply = vi.fn();
+
+		// Test enemy 1
+		mockLLM.completions.mockResolvedValueOnce({
+			content: '{"vibe": "blueGeneral", "intensity": 8, "response": "Blue is too good for you"}',
+			model: 'mock-model',
+			provider: 'mock-llm',
+		});
+
+		await service.processMessage({
+			content: 'blue!',
+			author: { id: enemy1, bot: false, username: 'Enemy1' },
+			reply,
+		} as any);
+
+		let callArgs = mockLLM.completions.mock.calls[0][0];
+		let systemMessage = callArgs.messages.find((m: any) => m.role === 'system');
+		expect(systemMessage.content.toLowerCase()).toContain('naughty list');
+
+		// Test enemy 2
+		mockLLM.completions.mockResolvedValueOnce({
+			content: '{"vibe": "blueGeneral", "intensity": 8, "response": "As if YOU understand blue"}',
+			model: 'mock-model',
+			provider: 'mock-llm',
+		});
+
+		await service.processMessage({
+			content: 'blue!',
+			author: { id: enemy2, bot: false, username: 'Enemy2' },
+			reply,
+		} as any);
+
+		callArgs = mockLLM.completions.mock.calls[1][0];
+		systemMessage = callArgs.messages.find((m: any) => m.role === 'system');
+		expect(systemMessage.content.toLowerCase()).toContain('naughty list');
+
+		// Test friend
+		mockLLM.completions.mockResolvedValueOnce({
+			content: '{"vibe": "blueGeneral", "intensity": 9, "response": "BLUE! 💙"}',
+			model: 'mock-model',
+			provider: 'mock-llm',
+		});
+
+		await service.processMessage({
+			content: 'blue!',
+			author: { id: friend, bot: false, username: 'Friend' },
+			reply,
+		} as any);
+
+		callArgs = mockLLM.completions.mock.calls[2][0];
+		systemMessage = callArgs.messages.find((m: any) => m.role === 'system');
+		expect(systemMessage.content.toLowerCase()).not.toContain('naughty list');
+		expect(systemMessage.content.toLowerCase()).toContain('friendly');
+	});
+
+	test('enemy receives contemptuous response for blueRequest', async () => {
+		const enemyUserId = '999888777666555444';
+		process.env.BLUEBOT_ENEMY_USER_IDS = enemyUserId;
+		refreshEnemyCache();
+
+		const reply = vi.fn();
+
+		mockLLM.completions.mockResolvedValueOnce({
+			content: '{"vibe": "blueRequest", "intensity": 9, "response": "As if I\'d do anything YOU ask 🙄"}',
+			model: 'mock-model',
+			provider: 'mock-llm',
+		});
+
+		await service.processMessage({
+			content: 'BlueBot, say something nice about me!',
+			author: { id: enemyUserId, bot: false, username: 'Enemy' },
+			reply,
+		} as any);
+
+		expect(reply).toHaveBeenCalledWith("As if I'd do anything YOU ask 🙄");
 	});
 });
 
