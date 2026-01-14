@@ -13,7 +13,7 @@ interface LogEntry {
 	[key: string]: unknown;
 }
 
-class Logger {
+export class Logger {
 	private serviceName: string;
 	private structuredLogging: boolean;
 
@@ -73,14 +73,16 @@ class Logger {
 	}
 }
 
-// Singleton instance
-let loggerInstance: Logger | undefined;
-
-export function getLogger(): Logger {
-	if (!loggerInstance) {
-		loggerInstance = new Logger();
-	}
-	return loggerInstance;
+/**
+ * Factory function to create a new Logger instance.
+ * Use this in tests to create isolated logger instances.
+ */
+export function createLogger(serviceName: string = 'bluebot'): Logger {
+	return new Logger(serviceName);
 }
 
-export const logger = getLogger();
+/**
+ * Default logger instance for production use.
+ * Tests should create their own instances using createLogger().
+ */
+export const logger = createLogger();

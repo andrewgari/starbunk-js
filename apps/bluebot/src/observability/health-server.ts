@@ -1,5 +1,5 @@
 import * as http from 'http';
-import { getMetricsService } from './metrics-service';
+import { metricsService } from './metrics-service';
 
 /**
  * Health and metrics HTTP server for BunkBot
@@ -68,7 +68,7 @@ export class HealthServer {
 
 	private async handleMetrics(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
 		try {
-			const metrics = await getMetricsService().getMetrics();
+			const metrics = await metricsService.getMetrics();
 			res.writeHead(200, {
 				'Content-Type': 'text/plain; version=0.0.4; charset=utf-8',
 				'Cache-Control': 'no-cache, no-store, must-revalidate',

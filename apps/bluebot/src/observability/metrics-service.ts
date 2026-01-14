@@ -134,12 +134,16 @@ export class MetricsService {
 	}
 }
 
-// Singleton instance
-let metricsInstance: MetricsService | undefined;
-
-export function getMetricsService(): MetricsService {
-	if (!metricsInstance) {
-		metricsInstance = new MetricsService();
-	}
-	return metricsInstance;
+/**
+ * Factory function to create a new MetricsService instance.
+ * Use this in tests to create isolated metrics instances.
+ */
+export function createMetricsService(): MetricsService {
+	return new MetricsService();
 }
+
+/**
+ * Default metrics service instance for production use.
+ * Tests should create their own instances using createMetricsService().
+ */
+export const metricsService = createMetricsService();

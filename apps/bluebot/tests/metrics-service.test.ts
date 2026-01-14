@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { MetricsService, getMetricsService } from '../src/observability/metrics-service';
+import { MetricsService, createMetricsService } from '../src/observability/metrics-service';
 
 // Mock prom-client to avoid global registry conflicts in unit tests
 vi.mock('prom-client', () => {
@@ -31,7 +31,7 @@ vi.mock('prom-client', () => {
 });
 
 describe('MetricsService', () => {
-	let originalEnv;
+	let originalEnv: NodeJS.ProcessEnv;
 
 	beforeEach(() => {
 		// Save original env
@@ -69,11 +69,11 @@ describe('MetricsService', () => {
 	});
 
 	describe('Tracking methods when enabled', () => {
-		let service;
+		let service: MetricsService;
 
 		beforeEach(() => {
 			process.env.ENABLE_METRICS = 'true';
-			service = new MetricsService();
+			service = createMetricsService();
 		});
 
 		it('should track message processed', () => {
@@ -126,11 +126,11 @@ describe('MetricsService', () => {
 	});
 
 	describe('Tracking methods when disabled', () => {
-		let service;
+		let service: MetricsService;
 
 		beforeEach(() => {
 			process.env.ENABLE_METRICS = 'false';
-			service = new MetricsService();
+			service = createMetricsService();
 		});
 
 		it('should not throw when tracking message processed', () => {
@@ -159,11 +159,11 @@ describe('MetricsService', () => {
 	});
 
 	describe('getMetrics', () => {
-		let service;
+		let service: MetricsService;
 
 		beforeEach(() => {
 			process.env.ENABLE_METRICS = 'true';
-			service = new MetricsService();
+			service = createMetricsService();
 		});
 
 		it('should return metrics as a string', async () => {
@@ -181,11 +181,11 @@ describe('MetricsService', () => {
 	});
 
 	describe('getRegistry', () => {
-		let service;
+		let service: MetricsService;
 
 		beforeEach(() => {
 			process.env.ENABLE_METRICS = 'true';
-			service = new MetricsService();
+			service = createMetricsService();
 		});
 
 		it('should return the registry instance', () => {
@@ -195,12 +195,12 @@ describe('MetricsService', () => {
 		});
 	});
 
-	describe('Singleton pattern', () => {
-		it('should return the same instance on multiple calls', () => {
-			const instance1 = getMetricsService();
-			const instance2 = getMetricsService();
+	describe('Factory pattern', () => {
+		it('should create independent instances', () => {
+			const instance1 = createMetricsService();
+			const instance2 = createMetricsService();
 
-			expect(instance1).toBe(instance2);
+			expect(instance1).not.toBe(instance2);
 		});
 	});
 });
