@@ -2,6 +2,8 @@ import { LLMService } from '../llm/llm-service';
 import { Message } from 'discord.js';
 import { buildBlueBotPrompt, PromptType } from '../llm/prompts';
 import { LLMMessage } from '../llm/types/llm-message';
+import { blueVibeCheckPrompt } from '../llm/prompts/blue-vibe-check';
+import { BlueVibe, parseVibeCheckResponse, VibeCheckResult } from '../types/vibe-check';
 
 const BLUE_TRIGGER_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -62,18 +64,122 @@ export class BlueBotService {
 	}
 
 	public async processMessage(message: Message): Promise<void> {
-		// Ordered strategy pipeline:
-		// 1) Explicit "say something nice/blue about X" command (with enemy override).
-		if (await this.handleNiceCommand(message)) return;
+		// Step 1: Run the vibe check to determine if we should respond
+		const vibeResult = await this.checkVibe(message);
 
-		// 2) Enemy user speaking about Blue/BlueBot (LLM-powered hostile response).
-		if (await this.handleEnemyMessage(message)) return;
+		// Step 2: Determine if we should respond based on intensity
+		// Intensity is 1-10, we use it as a percentage (intensity * 10)
+		const responseChance = vibeResult.intensity * 10;
+		const shouldRespond = Math.random() * 100 < responseChance;
 
-		// 3) Simple blue keyword mention with 5-minute pleased window.
-		if (await this.handleBlueMention(message)) return;
+		// If vibe is notBlue and we randomly decided not to respond, skip
+		if (vibeResult.vibe === BlueVibe.NotBlue && !shouldRespond) {
+			return;
+		}
 
-		// 4) Fallback: LLM deceptive detection + strategy response.
-		await this.handleLLMStrategy(message);
+		// For non-notBlue vibes with low intensity, still use probability
+		if (vibeResult.intensity < 5 && !shouldRespond) {
+			return;
+		}
+
+		// Step 3: Route to appropriate handler based on vibe type
+		switch (vibeResult.vibe) {
+			case BlueVibe.BlueRequest: {
+				// Handle direct requests (e.g., "say something nice about X")
+				const handled = await this.handleNiceCommand(message);
+				if (handled) return;
+				// If not a nice command, fall through to general handling
+				await this.handleBlueResponse(message, vibeResult);
+				break;
+			}
+
+			case BlueVibe.BlueGeneral:
+			case BlueVibe.BlueSneaky:
+				// Handle explicit blue mentions with LLM strategy
+				await this.handleBlueResponse(message, vibeResult);
+				break;
+
+			case BlueVibe.BlueMention:
+				// Handle incidental mentions more subtly
+				await this.handleBlueMention(message);
+				break;
+
+			case BlueVibe.NotBlue:
+				// Very rarely respond to non-blue messages (only if we got here via probability)
+				// This creates occasional "random" blue responses
+				if (vibeResult.intensity >= 2) {
+					await this.respond(message, BLUE_BOT_DEFAULT_RESPONSE);
+				}
+				break;
+		}
+	}
+
+	/**
+	 * Check the vibe of a message using the LLM
+	 */
+	private async checkVibe(message: Message): Promise<VibeCheckResult> {
+		const prompt = blueVibeCheckPrompt;
+		const messages: LLMMessage[] = [
+			{ role: 'system', content: prompt.systemContent },
+			{ role: 'user', content: prompt.formatUserMessage(message.content) },
+		];
+
+		try {
+			const response = await this.llmService.createCompletion({
+				messages,
+				temperature: prompt.defaultTemperature,
+				maxTokens: prompt.defaultMaxTokens,
+			});
+
+			return parseVibeCheckResponse(response.content);
+		} catch {
+			// If vibe check fails, default to notBlue with minimal intensity
+			return {
+				vibe: BlueVibe.NotBlue,
+				intensity: 1,
+			};
+		}
+	}
+
+	/**
+	 * Handle blue-related messages with appropriate LLM response
+	 */
+	private async handleBlueResponse(message: Message, _vibeResult: VibeCheckResult): Promise<void> {
+		// Check if this is from the enemy user first
+		const enemyHandled = await this.handleEnemyMessage(message);
+		if (enemyHandled) return;
+
+		// Check for recent triggers to use "pleased" response
+		const now = Date.now();
+		const hadRecentTrigger =
+			this.lastBlueTriggerAt !== null &&
+			now - this.lastBlueTriggerAt <= BLUE_TRIGGER_WINDOW_MS;
+		this.lastBlueTriggerAt = now;
+
+		// Use pleased prompt if recently triggered, otherwise use strategy prompt
+		const promptType = hadRecentTrigger ? PromptType.BluePleased : PromptType.BlueStrategy;
+		const prompt = buildBlueBotPrompt(promptType, message.content);
+
+		const messages: LLMMessage[] = [
+			{ role: 'system', content: prompt.systemPrompt },
+			{ role: 'user', content: prompt.userPrompt },
+		];
+
+		try {
+			const response = await this.llmService.createCompletion({
+				messages,
+				temperature: prompt.temperature,
+				maxTokens: prompt.maxTokens,
+			});
+			await this.respond(message, response.content);
+		} catch {
+			// Fallback to default response if LLM fails
+			if (hadRecentTrigger) {
+				await this.respond(message, 'Oh, somebody definitely said blue!');
+			} else {
+				await this.respond(message, BLUE_BOT_DEFAULT_RESPONSE);
+			}
+		}
 	}
 
 	private async handleNiceCommand(message: Message): Promise<boolean> {
@@ -174,53 +280,7 @@ export class BlueBotService {
 		return true;
 	}
 
-	private async handleLLMStrategy(message: Message): Promise<void> {
-		// 1) Detection pass: master prompt + detector prompt.
-		const detectionPrompt = buildBlueBotPrompt(
-			PromptType.BlueDetector,
-			message.content,
-		);
-		const detectionMessages: LLMMessage[] = [
-			{ role: 'system', content: detectionPrompt.systemPrompt },
-			{ role: 'user', content: detectionPrompt.userPrompt },
-		];
-		const detectionResponse = await this.llmService.createCompletion({
-			messages: detectionMessages,
-			temperature: detectionPrompt.temperature,
-			maxTokens: detectionPrompt.maxTokens,
-		});
-		const detection = detectionResponse.content;
 
-		const normalized = detection.trim().toLowerCase();
-		if (normalized !== 'yes') {
-			// Not a blue-related message (or the model was unsure) – do nothing.
-			return;
-		}
-
-		// 2) Strategy pass: master prompt + strategy prompt.
-		const strategyPrompt = buildBlueBotPrompt(
-			PromptType.BlueStrategy,
-			message.content,
-		);
-		const strategyMessages: LLMMessage[] = [
-			{ role: 'system', content: strategyPrompt.systemPrompt },
-			{ role: 'user', content: strategyPrompt.userPrompt },
-		];
-		let reply: string;
-		try {
-			const strategyResponse = await this.llmService.createCompletion({
-				messages: strategyMessages,
-				temperature: strategyPrompt.temperature,
-				maxTokens: strategyPrompt.maxTokens,
-			});
-			reply = strategyResponse.content;
-		} catch {
-			// Fallback to a simple canned response if the strategy call fails.
-			reply = BLUE_BOT_DEFAULT_RESPONSE;
-		}
-
-		await this.respond(message, reply);
-	}
 
 	public async respond(message: Message, response: string): Promise<void> {
 		await message.reply(response);
