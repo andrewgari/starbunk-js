@@ -25,7 +25,7 @@ export class GeminiProvider extends GenericProvider {
 		return ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'];
 	}
 
-	protected async callProviderAPI(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
+	protected async callProviderAPI(options: LLMCompletionOptions): Promise<unknown> {
 		// Ensure initialize() has successfully run before use.
 		const client = this.client;
 		if (!client) {
@@ -80,8 +80,7 @@ export class GeminiProvider extends GenericProvider {
 		const chat = Object.keys(generationConfig).length
 			? model.startChat({ history, generationConfig: generationConfig as Record<string, unknown> })
 			: model.startChat({ history });
-		const response = await chat.sendMessage(lastMessage.content);
-		return this.parseProviderResponse(response, options);
+		return await chat.sendMessage(lastMessage.content);
 	}
 
 	protected parseProviderResponse(response: unknown, options: LLMCompletionOptions): LLMCompletionResponse {

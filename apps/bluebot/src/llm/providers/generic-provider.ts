@@ -4,7 +4,7 @@ import { LLMCompletionResponse } from '../types/llm-completion-response';
 import { logger } from '@/observability/logger';
 
 export abstract class GenericProvider extends BaseLLMProvider {
-	protected abstract callProviderAPI(options: LLMCompletionOptions): Promise<LLMCompletionResponse>;
+	protected abstract callProviderAPI(options: LLMCompletionOptions): Promise<unknown>;
 	protected abstract parseProviderResponse(response: unknown, options: LLMCompletionOptions): LLMCompletionResponse;
 
 	public async createCompletion(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
@@ -13,9 +13,9 @@ export abstract class GenericProvider extends BaseLLMProvider {
 		}
 
 		try {
-			const response = await this.callProviderAPI(options);
-      logger.debug(`Response from ${this.constructor.name}:`, { response });
-			return this.parseProviderResponse(response, options);
+			const rawResponse = await this.callProviderAPI(options);
+			logger.debug(`Raw response from ${this.constructor.name}:`, { rawResponse });
+			return this.parseProviderResponse(rawResponse, options);
 		} catch (error: Error | unknown) {
 			logger.error(`Error in ${this.constructor.name}:`, error);
 			throw error;

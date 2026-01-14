@@ -9,7 +9,7 @@ export class OllamaProvider extends GenericProvider {
 	private defaultModel: string = process.env.OLLAMA_DEFAULT_MODEL || 'llama3';
 
 	// Communicates with local endpoint via fetch
-	protected async callProviderAPI(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
+	protected async callProviderAPI(options: LLMCompletionOptions): Promise<unknown> {
 		try {
 			const response = await fetch(`${this.baseUrl}/api/generate`, {
 				method: 'POST',
@@ -30,8 +30,7 @@ export class OllamaProvider extends GenericProvider {
 				throw new Error(`OllamaProvider HTTP ${response.status} ${response.statusText}: ${bodyText}`);
 			}
 
-			const ollamaResponse = (await response.json()) as OllamaGenerateResponse;
-			return this.parseProviderResponse(ollamaResponse, options);
+			return (await response.json()) as OllamaGenerateResponse;
 		} catch (error: unknown) {
 			const modelName = options.model || this.defaultModel;
 			throw new Error(
