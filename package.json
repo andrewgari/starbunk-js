@@ -30,7 +30,7 @@
     "dev:djcova": "cd apps/djcova && npm run dev",
     "dev:covabot": "cd apps/covabot && npm run dev",
     "dev:bluebot": "cd apps/bluebot && npm run dev",
-    "test": "npm run test:shared",
+    "test": "npm run test:shared && npm run test:bunkbot",
     "test:full": "npm run test:shared && npm run test:containers",
     "test:containers:note": "Container tests temporarily disabled due to import path issues from monolithic structure transition",
     "test:shared": "cd packages/shared && npm test",
@@ -47,6 +47,7 @@
     "test:coverage": "npm run test -- --coverage",
     "lint": "eslint apps/*/src/**/*.ts packages/*/src/**/*.ts",
     "lint:fix": "eslint apps/*/src/**/*.ts packages/*/src/**/*.ts --fix",
+    "lint:bunkbot": "cd apps/bunkbot && npm run lint",
     "format": "prettier --write \"apps/*/src/**/*.ts\" \"packages/*/src/**/*.ts\"",
     "type-check": "npm run build:shared && npm run type-check:shared && npm run type-check:containers",
     "type-check:shared": "cd packages/shared && npm run type-check",
@@ -65,6 +66,7 @@
     "docker:rebuild": "docker compose build --no-cache",
     "check:all": "npm run type-check && npm run lint && npm run test && npm run docker:build",
     "check:ci": "npm run type-check && npm run lint && npm run test",
+    "pipeline:bunkbot": "npm run lint:bunkbot && npm run type-check:bunkbot && npm run build:bunkbot && npm run test:bunkbot",
     "setup:dirs": "./scripts/ensure-directories.sh",
     "setup:containers": "npm run setup:shared && npm run setup:bunkbot && npm run setup:djcova && npm run setup:covabot && npm run setup:bluebot",
     "setup:shared": "cd packages/shared && npm install",
@@ -124,7 +126,8 @@
     "prettier": "^3.2.5",
     "rimraf": "^5.0.1",
     "semantic-release": "^25.0.2",
-    "typescript": "~5.3.0"
+    "typescript": "~5.3.0",
+    "zod-to-json-schema": "^3.25.1"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

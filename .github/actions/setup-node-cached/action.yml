@@ -79,6 +79,7 @@ runs:
           node_modules
           packages/shared/node_modules
           apps/bunkbot/node_modules
+          apps/bunkbot/node_modules
           apps/djcova/node_modules
           apps/starbunk-dnd/node_modules
           apps/covabot/node_modules

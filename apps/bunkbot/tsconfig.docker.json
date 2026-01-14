@@ -1,8 +1,10 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "paths": {}
-  },
-  "references": []
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"sourceMap": false,
+		"declaration": false,
+		"declarationMap": false,
+		"removeComments": true
+	}
 }
 
