@@ -1,41 +1,33 @@
 {
-		"compilerOptions": {
-			"composite": true,
-			"target": "ES2022",
-			"module": "commonjs",
-			"lib": ["ES2022"],
-			"outDir": "./dist",
-			"rootDir": "./src",
-			"strict": true,
-			"esModuleInterop": true,
-			"skipLibCheck": true,
-			"forceConsistentCasingInFileNames": true,
-			"resolveJsonModule": true,
-			"experimentalDecorators": true,
-			"emitDecoratorMetadata": true,
-			"isolatedModules": true,
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "commonjs",
+		"lib": ["ES2022"],
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
 		"ignoreDeprecations": "6.0",
-			"moduleResolution": "node",
-			"allowSyntheticDefaultImports": true,
-			"baseUrl": "./",
-			"paths": {
-				"@/*": ["src/*"],
-				"@starbunk/shared": ["../../packages/shared/src"],
-				"@starbunk/shared/*": ["../../packages/shared/src/*"]
-			}
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"baseUrl": "./src",
+		"paths": {
+			"@/*": ["./*"]
 		},
+		"declaration": true,
+		"declarationMap": true,
+		"sourceMap": true
+	},
 	"include": ["src/**/*.ts"],
 	"exclude": [
 		"node_modules",
 		"dist",
 		"tests",
-		"src/**/__tests__/**",
-		"src/services/personalityNotesServiceDb.ts",
-		"src/cova-bot/enhancedLlmTriggers.ts",
-		"src/cova-bot/llm-triggers.ts",
-		"src/cova-bot/index.ts"
-	],
-	"references": [
-		{ "path": "../../packages/shared" }
+		"src/**/__tests__/**"
 	]
 }
+

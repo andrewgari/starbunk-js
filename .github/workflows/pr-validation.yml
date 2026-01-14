@@ -109,8 +109,6 @@ jobs:
         include:
           - app: bunkbot
             dockerfile: ./apps/bunkbot/Dockerfile
-          - app: bunkbot-2
-            dockerfile: ./apps/bunkbot-2/Dockerfile
           - app: covabot
             dockerfile: ./apps/covabot/Dockerfile
           - app: djcova

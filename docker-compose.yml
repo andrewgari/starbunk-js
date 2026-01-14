@@ -63,66 +63,13 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # BunkBot - Reply bots and admin commands
+  # BunkBot - Next generation YAML-based reply bot system
   bunkbot:
-    image: ghcr.io/andrewgari/bunkbot:latest
-    container_name: starbunk-bunkbot
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=production
-      - DISCORD_TOKEN=${BUNKBOT_TOKEN}
-      - CLIENT_ID=${BUNKBOT_CLIENT_ID}
-      - GUILD_ID=${GUILD_ID}
-      - WEBHOOK_URL=${WEBHOOK_URL:-}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
-      - DEBUG_MODE=${DEBUG_MODE:-false}
-      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
-      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      # Observability Configuration
-      - ENABLE_METRICS=${ENABLE_METRICS:-true}
-      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
-      - LOG_FORMAT=${LOG_FORMAT:-json}
-      - METRICS_PORT=${METRICS_PORT:-3000}
-      - HEALTH_PORT=${HEALTH_PORT:-3000}
-      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
-      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      # Metrics and health endpoint port
-      - "${BUNKBOT_METRICS_PORT:-9301}:3000"
-    networks:
-      - starbunk-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    labels:
-      - com.starbunk.service=bunkbot
-      - prometheus.io/scrape=true
-      - prometheus.io/path=/metrics
-      - prometheus.io/port=3000
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
-
-  # BunkBot-2 - Next generation YAML-based reply bot system
-  bunkbot-2:
     build:
       context: .
-      dockerfile: apps/bunkbot-2/Dockerfile
-    image: ghcr.io/andrewgari/bunkbot-2:latest
-    container_name: starbunk-bunkbot-2
+      dockerfile: apps/bunkbot/Dockerfile
+    image: ghcr.io/andrewgari/bunkbot:latest
+    container_name: starbunk-bunkbot
     restart: unless-stopped
     env_file:
       - .env
@@ -145,7 +92,7 @@ services:
       - ./config/bots:/app/config/bots:ro
     ports:
       # Metrics and health endpoint port
-      - "${BUNKBOT2_METRICS_PORT:-9305}:3000"
+      - "${BUNKBOT_METRICS_PORT:-9301}:3000"
     networks:
       - starbunk-network
     logging:
@@ -154,7 +101,7 @@ services:
         max-size: "10m"
         max-file: "3"
     labels:
-      - com.starbunk.service=bunkbot-2
+      - com.starbunk.service=bunkbot
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
