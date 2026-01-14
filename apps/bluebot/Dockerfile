@@ -1,30 +1,24 @@
 # BlueBot Container - Blue detection and response bot
 # Optimized 2-stage build with Alpine Linux (Docker & Podman compatible)
 
-# Stage 1: Builder - Build everything in one stage for speed
-FROM node:20-alpine AS builder
+# Stage 1: Builder - Build the application
+FROM node:20-alpine3.20 AS builder
 
 WORKDIR /app
 
-# Install all system dependencies in one layer
-RUN apk add --no-cache python3 make g++ openssl curl dumb-init
+# Install build dependencies
+RUN apk add --no-cache python3 make g++ curl dumb-init
 
 # Copy package files for better caching
 COPY apps/bluebot/package.json apps/bluebot/package-lock.json* ./
-COPY infrastructure/database/prisma ./infrastructure/database/prisma
 
-# Install dependencies
-# Using cache mount to speed up npm install across builds
+# Install dependencies using cache mount to speed up builds
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --prefer-offline --no-audit --ignore-scripts
+    npm ci --prefer-offline --no-audit
 
-# Generate Prisma client (normally done in postinstall)
-RUN npx prisma generate --schema=infrastructure/database/prisma/schema.prisma || true
-
-# Copy app source code
+# Copy source code
 COPY apps/bluebot/src ./src
-COPY apps/bluebot/tests ./tests
-COPY apps/bluebot/jest.config.js apps/bluebot/tsconfig*.json apps/bluebot/.dockerignore ./
+COPY apps/bluebot/tsconfig*.json ./
 
 # Build the application
 RUN npm run build:docker
@@ -33,18 +27,12 @@ RUN npm run build:docker
 FROM node:20-alpine AS runtime
 
 # Build-time arguments for non-secret environment variables
-# These can be overridden at runtime via .env file or docker-compose
-ARG DEBUG_MODE=false
 ARG NODE_ENV=production
 ARG LOG_LEVEL=info
-ARG LOG_FORMAT=json
+ARG DEBUG_MODE=false
 ARG ENABLE_METRICS=true
 ARG ENABLE_STRUCTURED_LOGGING=true
-ARG ENABLE_RUNTIME_METRICS=true
-ARG METRICS_PUSH_INTERVAL=30000
 ARG METRICS_PORT=3000
-ARG HEALTH_PORT=3000
-ARG OPENAI_DEFAULT_MODEL=gpt-4o-mini
 
 WORKDIR /app
 
@@ -59,33 +47,28 @@ COPY --from=builder --chown=bluebot:bluebot /app/dist ./dist
 COPY --from=builder --chown=bluebot:bluebot /app/package.json ./package.json
 
 # Set default environment variables from build args
-# These can be overridden at runtime via .env file or docker-compose environment
-ENV DEBUG_MODE=${DEBUG_MODE} \
-    NODE_ENV=${NODE_ENV} \
+ENV NODE_ENV=${NODE_ENV} \
     LOG_LEVEL=${LOG_LEVEL} \
-    LOG_FORMAT=${LOG_FORMAT} \
+    DEBUG_MODE=${DEBUG_MODE} \
     ENABLE_METRICS=${ENABLE_METRICS} \
     ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING} \
-    ENABLE_RUNTIME_METRICS=${ENABLE_RUNTIME_METRICS} \
-    METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL} \
-    METRICS_PORT=${METRICS_PORT} \
-    HEALTH_PORT=${HEALTH_PORT} \
-    OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL}
+    METRICS_PORT=${METRICS_PORT}
 
 # Switch to non-root user
 USER bluebot
 
 # Monitoring labels for Grafana/Prometheus discovery
 LABEL com.starbunk.service="bluebot"
+LABEL com.starbunk.description="Blue detection and response bot"
 LABEL prometheus.io/scrape="true"
 LABEL prometheus.io/path="/metrics"
 LABEL prometheus.io/port="3000"
 
-# Health check (prefers HEALTH_PORT, then METRICS_PORT, else defaults)
-# Using /live endpoint for liveness check (simpler, doesn't fail on Discord connection issues)
+# Health check using HTTP endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD sh -c 'PORT="${HEALTH_PORT:-${METRICS_PORT:-3000}}"; curl -fsS "http://127.0.0.1:${PORT}/live" || exit 1'
+    CMD sh -c 'PORT="${METRICS_PORT:-3000}"; curl -fsS "http://127.0.0.1:${PORT}/live" || exit 1'
 
+# Expose metrics port
 EXPOSE 3000
 
 # Use dumb-init for proper signal handling
