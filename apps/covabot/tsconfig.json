@@ -14,7 +14,6 @@
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
 		"isolatedModules": true,
-		"ignoreDeprecations": "6.0",
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
 		"baseUrl": "./src",
@@ -30,7 +29,7 @@
 		"dist",
 		"tests",
 		"src/**/__tests__/**",
-		"src/services/personalityNotesServiceDb.ts"
+		"src/services/personality-notes-service-db.ts"
 	],
 	"references": [
 		{ "path": "../../packages/shared" }
