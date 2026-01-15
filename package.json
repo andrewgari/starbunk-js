@@ -8,11 +8,9 @@
     "packages/*"
   ],
   "scripts": {
-    "prepare": "husky && npm run sync-versions",
-    "postinstall": "npm run db:generate",
     "sync-versions": "bash ./scripts/sync-versions.sh",
     "build": "npm run build:shared && npm run build:containers",
-    "build:shared": "tsc -p packages/shared/tsconfig.json",
+    "build:shared": "cd packages/shared && npm run build",
     "build:containers": "npm run build:bunkbot && npm run build:djcova && npm run build:covabot && npm run build:bluebot",
     "build:bunkbot": "cd apps/bunkbot && npm run build",
     "build:djcova": "cd apps/djcova && npm run build",
@@ -32,19 +30,13 @@
     "dev:bluebot": "cd apps/bluebot && npm run dev",
     "test": "npm run test:shared && npm run test:bunkbot",
     "test:full": "npm run test:shared && npm run test:containers",
-    "test:containers:note": "Container tests temporarily disabled due to import path issues from monolithic structure transition",
     "test:shared": "cd packages/shared && npm test",
     "test:containers": "npm run test:bunkbot && npm run test:djcova && npm run test:covabot && npm run test:bluebot",
-    "db:seed": "npx tsx infrastructure/database/prisma/seed.ts",
-    "db:generate": "npx prisma generate --schema=infrastructure/database/prisma/schema.prisma",
-    "db:push": "npx prisma db push --schema=infrastructure/database/prisma/schema.prisma",
-    "redis:seed": "npx tsx scripts/seed-redis-users.ts",
     "test:bunkbot": "cd apps/bunkbot && npm test",
     "e2e:bunkbot:live": "cd apps/bunkbot && npm run e2e:live",
     "test:djcova": "cd apps/djcova && npm test",
     "test:covabot": "cd apps/covabot && npm test",
     "test:bluebot": "cd apps/bluebot && npm test",
-    "test:coverage": "npm run test -- --coverage",
     "lint": "eslint apps/*/src/**/*.ts packages/*/src/**/*.ts",
     "lint:fix": "eslint apps/*/src/**/*.ts packages/*/src/**/*.ts --fix",
     "lint:bunkbot": "cd apps/bunkbot && npm run lint",
@@ -57,23 +49,13 @@
     "type-check:covabot": "cd apps/covabot && npm run type-check",
     "type-check:bluebot": "cd apps/bluebot && npm run type-check",
     "clean": "rimraf apps/*/dist && rimraf packages/*/dist",
-    "build:clean": "npm run clean && npm run build",
     "docker:build": "docker compose build",
     "docker:build:bunkbot": "docker compose build bunkbot",
     "docker:build:djcova": "docker compose build djcova",
     "docker:build:covabot": "docker compose build covabot",
     "docker:build:bluebot": "docker compose build bluebot",
-    "docker:rebuild": "docker compose build --no-cache",
     "check:all": "npm run type-check && npm run lint && npm run test && npm run docker:build",
     "check:ci": "npm run type-check && npm run lint && npm run test",
-    "pipeline:bunkbot": "npm run lint:bunkbot && npm run type-check:bunkbot && npm run build:bunkbot && npm run test:bunkbot",
-    "setup:dirs": "./scripts/ensure-directories.sh",
-    "setup:containers": "npm run setup:shared && npm run setup:bunkbot && npm run setup:djcova && npm run setup:covabot && npm run setup:bluebot",
-    "setup:shared": "cd packages/shared && npm install",
-    "setup:bunkbot": "cd apps/bunkbot && npm install",
-    "setup:djcova": "cd apps/djcova && npm install",
-    "setup:covabot": "cd apps/covabot && npm install",
-    "setup:bluebot": "cd apps/bluebot && npm install",
     "validate:structure": "scripts/validation/run-all-validations.sh",
     "validate:root": "scripts/validation/check-root-directory.sh",
     "validate:naming": "scripts/validation/check-naming-conventions.sh",
@@ -81,7 +63,6 @@
     "validate:docs": "scripts/validation/check-documentation-structure.sh",
     "health-check": "scripts/monitoring/structure-health-check.sh",
     "health-check:json": "scripts/monitoring/structure-health-check.sh --json",
-    "unreleased": "scripts/check-unreleased.sh",
     "release": "semantic-release"
   },
   "engines": {
@@ -103,13 +84,11 @@
   "homepage": "https://github.com/andrewgari/starbunk-js#readme",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@prisma/client": "^5.22.0",
     "@types/ioredis": "^4.28.10",
     "axios": "^1.11.0",
     "dotenv": "^16.6.1",
     "esbuild": "^0.25.11",
     "ioredis": "^5.8.0",
-    "prisma": "^5.7.1",
     "tsx": "^4.6.2",
     "uuid": "^11.1.0"
   },
@@ -137,6 +116,8 @@
     ]
   },
   "overrides": {
-    "discord.js": "^14.18.0"
+    "discord.js": "^14.18.0",
+    "inflight": "npm:@aashutoshrathi/inflight@^1.0.0",
+    "glob": "^10.0.0"
   }
 }

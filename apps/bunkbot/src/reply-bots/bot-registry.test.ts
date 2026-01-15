@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BotRegistry } from './bot-registry';
-import { ReplyBot } from './models/reply-bot';
+import { BotRegistry } from '@/reply-bots/bot-registry';
+import { ReplyBot } from '@/reply-bots/models/reply-bot';
 import { Message } from 'discord.js';
 
 // Mock the logger and metrics

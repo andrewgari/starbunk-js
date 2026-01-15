@@ -1,5 +1,5 @@
 import * as http from 'http';
-import { getMetricsService } from './metrics-service';
+import { getMetricsService } from '@/observability/metrics-service';
 
 /**
  * Health and metrics HTTP server for BunkBot

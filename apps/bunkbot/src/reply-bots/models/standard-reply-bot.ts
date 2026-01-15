@@ -1,8 +1,8 @@
 import { ResponseResolver } from "@/reply-bots/responses/response-resolver";
-import { ReplyBot} from "./reply-bot";
+import { ReplyBot} from "@/reply-bots/models/reply-bot";
 import { Message } from 'discord.js';
 import { DiscordService } from "@/discord/discord-service";
-import { BotIdentity } from "./bot-identity";
+import { BotIdentity } from "@/reply-bots/models/bot-identity";
 import { Trigger } from "@/reply-bots/conditions/trigger";
 import { logger } from "@/observability/logger";
 import { getMetricsService } from "@/observability/metrics-service";

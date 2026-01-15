@@ -14,15 +14,17 @@
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
 		"isolatedModules": true,
-		"ignoreDeprecations": "5.0",
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
-		"baseUrl": "./src",
-		"paths": {
-			"@/*": ["*"],
-			"@starbunk/shared": ["../../packages/shared/src"],
-			"@starbunk/shared/*": ["../../packages/shared/src/*"]
-		}
+			"baseUrl": "./src",
+			"paths": {
+				"@/*": ["*"],
+				// Resolve the shared package to its source TS files. Paths are
+				// resolved relative to baseUrl (apps/djcova/src), so we need to
+				// walk back to the repo root before going into packages/shared.
+				"@starbunk/shared": ["../../../packages/shared/src"],
+				"@starbunk/shared/*": ["../../../packages/shared/src/*"]
+			}
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": [

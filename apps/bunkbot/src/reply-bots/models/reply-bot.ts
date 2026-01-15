@@ -1,6 +1,6 @@
 import { Message } from 'discord.js';
-import { Trigger } from '../conditions/trigger';
-import { BotIdentity } from './bot-identity';
+import { Trigger } from '@/reply-bots/conditions/trigger';
+import { BotIdentity } from '@/reply-bots/models/bot-identity';
 
 export interface ReplyBot {
   name: string;

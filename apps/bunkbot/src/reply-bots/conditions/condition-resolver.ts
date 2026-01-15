@@ -1,4 +1,4 @@
-import * as Conditions from './conditions';
+import * as Conditions from '@/reply-bots/conditions/conditions';
 import { Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 

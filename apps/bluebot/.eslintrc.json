@@ -1,0 +1,26 @@
+{
+  "extends": ["../../config/eslint/.eslintrc.json"],
+  "overrides": [
+    {
+      "files": ["src/**/*.{ts,tsx,js,jsx}"],
+      "excludedFiles": [
+        "src/**/*.test.*",
+        "src/**/*.spec.*",
+        "src/**/__tests__/**/*"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["./*", "../*"],
+                "message": "Use @/ path alias for internal imports in Bluebot instead of relative ./ or ../ imports."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

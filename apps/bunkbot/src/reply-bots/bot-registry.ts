@@ -1,4 +1,4 @@
-import { ReplyBot } from "./models/reply-bot";
+import { ReplyBot } from "@/reply-bots/models/reply-bot";
 import { Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 import { getMetricsService } from '@/observability/metrics-service';
