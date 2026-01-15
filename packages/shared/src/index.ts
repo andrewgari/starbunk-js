@@ -34,15 +34,6 @@ export { container, ServiceId } from './services/container';
 // Add utility for closing resources
 export async function closeAllConnections() {
 	try {
-		// Close database connections if using Prisma
-		const { PrismaClient } = require('@prisma/client');
-		const prisma = new PrismaClient();
-		await prisma.$disconnect();
-	} catch (error) {
-		console.warn('[Shared] Could not close Prisma connection:', error);
-	}
-
-	try {
 		// Close Discord client connections if applicable
 		const { getDiscordClient } = require('./discord/client-factory');
 		const client = getDiscordClient();
