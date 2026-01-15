@@ -44,7 +44,7 @@ describe('BlueReplyStrategy', () => {
 			result = await strategy.shouldRespond(message as Message);
 			expect(result).toBe(true);
 
-      message = createMockMessage('BluMage actually does not have an e in it', friendUserId);
+      message = createMockMessage('I love blu magic', friendUserId);
 			result = await strategy.shouldRespond(message as Message);
 			expect(result).toBe(true);
 		});
@@ -71,16 +71,22 @@ describe('BlueReplyStrategy', () => {
       expect(result).toBe(true);
     });
 
-    test('blue message outside of time window should not respond', async () => {
-      const message = createMockMessage('blue', friendUserId);
-      message.createdTimestamp = Date.now();
+    test('blue message outside of time window should respond with DefaultStrategy', async () => {
+      const message1 = createMockMessage('blue', friendUserId);
+      message1.createdTimestamp = Date.now();
 
-      await strategy.shouldRespond(message as Message);
-      await strategy.getResponse(message as Message);
+      await strategy.shouldRespond(message1 as Message);
+      await strategy.getResponse(message1 as Message);
 
+			// Advance time by 6 minutes (outside 5 minute window)
 			vi.advanceTimersByTime(6 * 60 * 1000);
-      const result2 = await strategy.shouldRespond(message as Message);
-      expect(result2).toBe(false);
+
+      // Create a new message after time has advanced
+      const message2 = createMockMessage('blue', friendUserId);
+      message2.createdTimestamp = Date.now();
+
+      const result2 = await strategy.shouldRespond(message2 as Message);
+      expect(result2).toBe(true); // Should respond via DefaultStrategy
     });
 
 

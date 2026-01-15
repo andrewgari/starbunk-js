@@ -16,12 +16,14 @@ export class BlueReplyStrategy implements Strategy {
 
   private isWithinReplyWindow(message: Message): boolean {
     const timestamp = new Date(message.createdTimestamp);
-    return timestamp.getTime() < this.lastBlueResponse.getTime() + this.replyWindow;
+    const timeSinceLastResponse = timestamp.getTime() - this.lastBlueResponse.getTime();
+    return timeSinceLastResponse < this.replyWindow;
   }
 
   private isWithinMurderWindow(message: Message): boolean {
     const timestamp = new Date(message.createdTimestamp);
-    return timestamp.getTime() < this.lastMurderResponse.getTime() + this.murderWindow;
+    const timeSinceLastMurder = timestamp.getTime() - this.lastMurderResponse.getTime();
+    return timeSinceLastMurder < this.murderWindow;
   }
 
   private shouldMurder(message: Message): boolean {
