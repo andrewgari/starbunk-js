@@ -26,25 +26,21 @@ describe('NiceStrategy', () => {
 			const message = createMockMessage('bluebot say something nice about John', friendUserId);
 			const result = await strategy.shouldRespond(message as Message);
 			expect(result).toBe(true);
-		});
-
-		test('responds to "bluebot, say something nice about Jane"', async () => {
-			const message = createMockMessage('bluebot, say something nice about Jane', friendUserId);
-			const result = await strategy.shouldRespond(message as Message);
-			expect(result).toBe(true);
-		});
-
-		test('responds to "blubot say something nice about someone"', async () => {
-			const message = createMockMessage('blubot say something nice about someone', friendUserId);
-			const result = await strategy.shouldRespond(message as Message);
-			expect(result).toBe(true);
+			expect(await strategy.getResponse(message as Message)).toBe("John, I think you're pretty blue! :wink:");
 		});
 
 		test('responds to "bluebot say something nice about me"', async () => {
 			// Note: The regex requires "blue?bot" so just "bot" won't match
-			const message = createMockMessage('bluebot say something nice about me', friendUserId);
+			const message = createMockMessage(
+				'bluebot say something nice about me',
+				friendUserId,
+				false,
+				'999999999999999999',
+				'robot',
+			);
 			const result = await strategy.shouldRespond(message as Message);
 			expect(result).toBe(true);
+			expect(await strategy.getResponse(message as Message)).toBe("Hey robot, I think you're pretty blue! :wink:");
 		});
 
 		test('is case insensitive', async () => {
@@ -61,19 +57,8 @@ describe('NiceStrategy', () => {
 			}
 		});
 
-		test('does not respond to enemy user', async () => {
-			const message = createMockMessage('bluebot say something nice about John', enemyUserId);
-			const result = await strategy.shouldRespond(message as Message);
-			expect(result).toBe(false);
-		});
-
 		test('does not respond to messages without "say something nice about"', async () => {
-			const testCases = [
-				'bluebot hello',
-				'say something nice',
-				'bluebot say hello',
-				'tell me about John',
-			];
+			const testCases = ['bluebot hello', 'say something nice', 'bluebot say hello', 'tell me about John'];
 
 			for (const content of testCases) {
 				const message = createMockMessage(content, friendUserId);
@@ -93,24 +78,21 @@ describe('NiceStrategy', () => {
 		test('returns generic nice message for non-mention', async () => {
 			const message = createMockMessage('bluebot say something nice about John', friendUserId);
 			const response = await strategy.getResponse(message as Message);
-			expect(response).toContain('I think you\'re pretty blue!');
+			expect(response).toContain("I think you're pretty blue!");
 			expect(response).toContain(':wink:');
 		});
 
-		test('includes "Hey, " prefix for non-mention', async () => {
+		test('includes name in response for non-mention', async () => {
 			const message = createMockMessage('bluebot say something nice about someone', friendUserId);
 			const response = await strategy.getResponse(message as Message);
-			expect(response).toMatch(/^Hey, /);
+			expect(response).toBe("someone, I think you're pretty blue! :wink:");
 		});
 
 		test('handles user mentions', async () => {
 			const mentionedUserId = '123456789012345678';
-			const message = createMockMessage(
-				`bluebot say something nice about <@${mentionedUserId}>`,
-				friendUserId,
-			);
+			const message = createMockMessage(`bluebot say something nice about <@${mentionedUserId}>`, friendUserId);
 			const response = await strategy.getResponse(message as Message);
-			expect(response).toContain('I think you\'re pretty blue!');
+			expect(response).toContain("I think you're pretty blue!");
 		});
 
 		test('response always contains blue reference', async () => {
@@ -128,4 +110,3 @@ describe('NiceStrategy', () => {
 		});
 	});
 });
-

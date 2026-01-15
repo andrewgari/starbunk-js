@@ -4,7 +4,7 @@ import { ConfirmStrategy } from '@/strategy/confirm-strategy';
 export class ConfirmEnemyStrategy extends ConfirmStrategy {
 	private meanRegex = /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i;
 
-	shouldRespond(message: Message): Promise<boolean> {
+	async shouldRespond(message: Message): Promise<boolean> {
 		if (message.author.id !== process.env.BLUEBOT_ENEMY_USER_ID) {
 			return Promise.resolve(false);
 		}
@@ -13,7 +13,7 @@ export class ConfirmEnemyStrategy extends ConfirmStrategy {
 			return Promise.resolve(true);
 		}
 
-		return super.shouldRespond(message);
+		return Promise.resolve(false);
 	}
 
 	getResponse(): Promise<string> {

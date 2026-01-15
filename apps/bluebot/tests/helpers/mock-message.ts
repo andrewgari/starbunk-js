@@ -8,6 +8,7 @@ export function createMockMessage(
 	authorId: string = '123456789012345678',
 	isBot: boolean = false,
 	guildId: string = '999999999999999999',
+	nickname?: string,
 ): Partial<Message> {
 	const mockUser: Partial<User> = {
 		id: authorId,
@@ -18,7 +19,7 @@ export function createMockMessage(
 
 	const mockGuildMember: Partial<GuildMember> = {
 		id: authorId,
-		nickname: 'TestNickname',
+		nickname: nickname ?? 'TestNickname',
 		user: mockUser as User,
 	};
 
@@ -51,6 +52,7 @@ export function createMockMessage(
 		guild: mockGuild as Guild,
 		channel: mockChannel as TextChannel,
 		client: mockClient as Client,
+		member: mockGuildMember as GuildMember,
 	} as Partial<Message>;
 }
 
