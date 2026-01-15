@@ -4,7 +4,7 @@ import { Strategy } from '@/strategy/strategy';
 export class ConfirmStrategy implements Strategy {
 	private confirmRegex = /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|nope|nah|(i did)|(i did not)|(you got it)|(sure did)\b/i;
 
-	shouldRespond(message: Message): Promise<boolean> {
+	async shouldRespond(message: Message): Promise<boolean> {
 		if (message.author.id === process.env.BLUEBOT_ENEMY_USER_ID) {
 			return Promise.resolve(false);
 		}
@@ -16,8 +16,8 @@ export class ConfirmStrategy implements Strategy {
 		return Promise.resolve(false);
 	}
 
-	getResponse(): Promise<string> {
-		return Promise.resolve('Yes');
+	async getResponse(): Promise<string> {
+		return Promise.resolve('Somebody definitely said Blu!');
 	}
 }
 

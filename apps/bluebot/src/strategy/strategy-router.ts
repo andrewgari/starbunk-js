@@ -1,16 +1,10 @@
 import { Message, TextChannel } from 'discord.js';
-import { DefaultStrategy } from '@/strategy/default-strategy';
-import { ConfirmStrategy } from '@/strategy/confirm-strategy';
-import { ConfirmEnemyStrategy } from '@/strategy/confirm-enemy-strategy';
-import { NiceStrategy } from '@/strategy/nice-strategy';
-import { NiceEnemyStrategy } from '@/strategy/nice-enemy-strategy';
+import { BlueReplyStrategy } from '@/strategy/blue-reply-strategy';
+import { BlueRequestStrategy } from '@/strategy/blue-request-strategy';
 
 const strategies = [
-	new DefaultStrategy(),
-	new ConfirmStrategy(),
-	new ConfirmEnemyStrategy(),
-	new NiceStrategy(),
-	new NiceEnemyStrategy(),
+	new BlueRequestStrategy(),
+	new BlueReplyStrategy(),
 ];
 
 export async function processMessageByStrategy(message: Message): Promise<void> {
