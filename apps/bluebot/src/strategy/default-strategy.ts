@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { Strategy } from './strategy';
+import { Strategy } from '@/strategy/strategy';
 
 export class DefaultStrategy implements Strategy {
 	private blueRegex = /\b(blu|blue|bl(o+)|azul|blau|bl(u+)|blew)\b/i;

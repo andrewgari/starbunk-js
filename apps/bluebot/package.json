@@ -18,7 +18,10 @@
 		"lint": "eslint src/**/*.ts",
 		"lint:fix": "eslint src/**/*.ts --fix",
 		"check:all": "npm run type-check && npm run lint && npm run test",
-		"clean": "rimraf dist"
+		"clean": "rimraf dist",
+		"deps:check": "node scripts/check-unused-deps.js",
+		"deps:check-full": "npx --yes depcheck --ignores='@types/*,vitest,typescript,eslint,rimraf,cross-env'",
+		"deps:list": "npm list --depth=0"
 	},
 	"dependencies": {
 		"@google/generative-ai": "^0.24.1",

@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { Strategy } from './strategy';
+import { Strategy } from '@/strategy/strategy';
 
 export class ConfirmStrategy implements Strategy {
 	private confirmRegex = /\b(blue?(bot)?)|(bot)|yes|no|yep|yeah|nope|nah|(i did)|(i did not)|(you got it)|(sure did)\b/i;

@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { Strategy } from './strategy';
+import { Strategy } from '@/strategy/strategy';
 
 export class NiceStrategy implements Strategy {
 	private niceRegex = /blue?bot,? say something nice about (?<n>.+$)/i;

@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { ConfirmStrategy } from './confirm-strategy';
+import { ConfirmStrategy } from '@/strategy/confirm-strategy';
 
 export class ConfirmEnemyStrategy extends ConfirmStrategy {
 	private meanRegex = /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i;

@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { NiceStrategy } from './nice-strategy';
+import { NiceStrategy } from '@/strategy/nice-strategy';
 
 export class NiceEnemyStrategy extends NiceStrategy {
 	getResponse(message: Message): Promise<string> {

@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits } from 'discord.js';
-import { logger } from './observability/logger';
-import { BlueBot } from './blue-bot';
-import { runSmokeTest } from './utils/smoke-test';
+import { logger } from '@/observability/logger';
+import { BlueBot } from '@/blue-bot';
+import { runSmokeTest } from '@/utils/smoke-test';
 
 const intents = [
 	GatewayIntentBits.Guilds,

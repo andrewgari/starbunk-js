@@ -1,9 +1,9 @@
 import { Message, TextChannel } from 'discord.js';
-import { DefaultStrategy } from './default-strategy';
-import { ConfirmStrategy } from './confirm-strategy';
-import { ConfirmEnemyStrategy } from './confirm-enemy-strategy';
-import { NiceStrategy } from './nice-strategy';
-import { NiceEnemyStrategy } from './nice-enemy-strategy';
+import { DefaultStrategy } from '@/strategy/default-strategy';
+import { ConfirmStrategy } from '@/strategy/confirm-strategy';
+import { ConfirmEnemyStrategy } from '@/strategy/confirm-enemy-strategy';
+import { NiceStrategy } from '@/strategy/nice-strategy';
+import { NiceEnemyStrategy } from '@/strategy/nice-enemy-strategy';
 
 const strategies = [
 	new DefaultStrategy(),

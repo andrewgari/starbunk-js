@@ -1,4 +1,4 @@
-import { logger } from '../observability/logger';
+import { logger } from '@/observability/logger';
 
 export function getEnemyUserIds(): Set<string> {
 	const envValue = process.env.BLUEBOT_ENEMY_USER_IDS;

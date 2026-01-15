@@ -1,5 +1,5 @@
 import { createServer, Server } from 'http';
-import { logger } from '../observability/logger';
+import { logger } from '@/observability/logger';
 
 /**
  * Runs a lightweight health endpoint server for CI smoke testing

@@ -1,6 +1,6 @@
 import { Client, Message } from 'discord.js';
-import { logger } from './observability/logger';
-import { processMessageByStrategy } from './strategy/strategy-router';
+import { logger } from '@/observability/logger';
+import { processMessageByStrategy } from '@/strategy/strategy-router';
 
 export class BlueBot {
   constructor(private readonly client: Client) {}
