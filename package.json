@@ -116,6 +116,8 @@
     ]
   },
   "overrides": {
-    "discord.js": "^14.18.0"
+    "discord.js": "^14.18.0",
+    "inflight": "npm:@aashutoshrathi/inflight@^1.0.0",
+    "glob": "^10.0.0"
   }
 }
