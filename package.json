@@ -8,11 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "prepare": "husky && npm run sync-versions",
-    "postinstall": "npm run db:generate",
     "sync-versions": "bash ./scripts/sync-versions.sh",
     "build": "npm run build:shared && npm run build:containers",
-    "build:shared": "tsc -p packages/shared/tsconfig.json",
     "build:containers": "npm run build:bunkbot && npm run build:djcova && npm run build:covabot && npm run build:bluebot",
     "build:bunkbot": "cd apps/bunkbot && npm run build",
     "build:djcova": "cd apps/djcova && npm run build",
@@ -35,10 +32,6 @@
     "test:containers:note": "Container tests temporarily disabled due to import path issues from monolithic structure transition",
     "test:shared": "cd packages/shared && npm test",
     "test:containers": "npm run test:bunkbot && npm run test:djcova && npm run test:covabot && npm run test:bluebot",
-    "db:seed": "npx tsx infrastructure/database/prisma/seed.ts",
-    "db:generate": "npx prisma generate --schema=infrastructure/database/prisma/schema.prisma",
-    "db:push": "npx prisma db push --schema=infrastructure/database/prisma/schema.prisma",
-    "redis:seed": "npx tsx scripts/seed-redis-users.ts",
     "test:bunkbot": "cd apps/bunkbot && npm test",
     "e2e:bunkbot:live": "cd apps/bunkbot && npm run e2e:live",
     "test:djcova": "cd apps/djcova && npm test",
@@ -103,13 +96,11 @@
   "homepage": "https://github.com/andrewgari/starbunk-js#readme",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@prisma/client": "^5.22.0",
     "@types/ioredis": "^4.28.10",
     "axios": "^1.11.0",
     "dotenv": "^16.6.1",
     "esbuild": "^0.25.11",
     "ioredis": "^5.8.0",
-    "prisma": "^5.7.1",
     "tsx": "^4.6.2",
     "uuid": "^11.1.0"
   },
