@@ -1,3 +1,9 @@
+## [1.11.0](https://github.com/andrewgari/starbunk-js/compare/v1.10.1...v1.11.0) (2026-01-15)
+
+### Features
+
+* **bunkbot:** implement core bot functionality and command handling ([#440](https://github.com/andrewgari/starbunk-js/issues/440)) ([06f0b0b](https://github.com/andrewgari/starbunk-js/commit/06f0b0b0c958214bd102219f9b88cfc7ca8ea03e))
+
 ## [1.10.1](https://github.com/andrewgari/starbunk-js/compare/v1.10.0...v1.10.1) (2026-01-11)
 
 ### Bug Fixes
