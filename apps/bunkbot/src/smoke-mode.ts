@@ -1,5 +1,5 @@
 import * as http from 'http';
-import { logger } from './observability/logger';
+import { logger } from '@/observability/logger';
 
 /**
  * Runs the application in smoke test mode for CI/CD validation.

@@ -1,5 +1,5 @@
-import { getHealthServer } from '../observability/health-server';
-import { logger } from '../observability/logger';
+import { getHealthServer } from '@/observability/health-server';
+import { logger } from '@/observability/logger';
 
 /**
  * Initializes and starts the health and metrics server.

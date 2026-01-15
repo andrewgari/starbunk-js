@@ -1,11 +1,11 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { Client, GatewayIntentBits } from 'discord.js';
-import { getMetricsService } from './observability/metrics-service';
-import { logger } from './observability/logger';
-import { runSmokeMode } from './smoke-mode';
-import { initializeHealthServer } from './startup/health-server-init';
-import { BunkBot } from './bunkbot';
+import { getMetricsService } from '@/observability/metrics-service';
+import { logger } from '@/observability/logger';
+import { runSmokeMode } from '@/smoke-mode';
+import { initializeHealthServer } from '@/startup/health-server-init';
+import { BunkBot } from '@/bunkbot';
 
 // Load environment variables from root .env file
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });

@@ -1,5 +1,5 @@
 import { BotIdentity } from '@/reply-bots/models/bot-identity';
-import { GetBotIdentityOptions } from './get-identity-options';
+import { GetBotIdentityOptions } from '@/reply-bots/identity/get-identity-options';
 import { GuildMember } from 'discord.js';
 import { DiscordService } from '@/discord/discord-service';
 

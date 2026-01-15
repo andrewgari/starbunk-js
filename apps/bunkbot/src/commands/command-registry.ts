@@ -1,10 +1,10 @@
 import { Client, Interaction, AutocompleteInteraction, ChatInputCommandInteraction, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js';
-import { logger } from '../observability/logger';
+import { logger } from '@/observability/logger';
 
 // Import commands
-import pingCommand from './ping';
-import clearwebhooksCommand from './clearwebhooks';
-import botCommand from './bot';
+import pingCommand from '@/commands/ping';
+import clearwebhooksCommand from '@/commands/clearwebhooks';
+import botCommand from '@/commands/bot';
 
 // Command interface
 export interface Command {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { containsWord, containsPhrase, fromUser, withChance, matchesPattern, and, or, not } from './conditions';
+import { containsWord, containsPhrase, fromUser, withChance, matchesPattern, and, or, not } from '@/reply-bots/conditions/conditions';
 import { Message } from 'discord.js';
 
 // Helper to create a mock message

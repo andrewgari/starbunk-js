@@ -1,5 +1,5 @@
 import { Client, GuildMember, Message, TextChannel } from 'discord.js';
-import { WebhookService } from './webhook-service';
+import { WebhookService } from '@/discord/webhook-service';
 import { BotIdentity } from '@/reply-bots/models/bot-identity';
 import { logger } from '@/observability/logger';
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseYamlBots } from './yaml-bot-parser';
+import { parseYamlBots } from '@/serialization/yaml-bot-parser';
 
 describe('YAML Bot Parser', () => {
   describe('Valid YAML', () => {
