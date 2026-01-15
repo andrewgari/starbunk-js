@@ -12,7 +12,6 @@ RUN apk add --no-cache python3 make g++ openssl curl dumb-init
 # Copy package files for better caching
 COPY package.json package-lock.json* ./
 COPY packages/shared/package.json ./packages/shared/
-COPY infrastructure/database/prisma ./infrastructure/database/prisma
 COPY apps/covabot/package.json ./apps/covabot/
 
 # Install all dependencies using workspace (more efficient)
@@ -20,9 +19,6 @@ COPY apps/covabot/package.json ./apps/covabot/
 # Note: --ignore-scripts skips prepare/postinstall scripts; they run later if needed
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --prefer-offline --no-audit --ignore-scripts
-
-# Generate Prisma client (normally done in postinstall)
-RUN npm run db:generate || true
 
 # Copy shared package source
 COPY packages/shared/src ./packages/shared/src
