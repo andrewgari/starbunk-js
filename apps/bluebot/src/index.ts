@@ -1,9 +1,8 @@
 import 'dotenv/config';
-import { Client, GatewayIntentBits, Message } from 'discord.js';
-import { createServer } from 'http';
+import { Client, GatewayIntentBits } from 'discord.js';
 import { logger } from './observability/logger';
-import { BlueBotService } from './services/bluebot-service';
-import { createBlueBotService } from './services/bluebot-factory';
+import { BlueBot } from './blue-bot';
+import { runSmokeTest } from './utils/smoke-test';
 
 const intents = [
 	GatewayIntentBits.Guilds,
@@ -12,104 +11,38 @@ const intents = [
 	// GatewayIntentBits.GuildWebhooks,
 ];
 
-class BlueBotContainer {
-	private client: Client;
-	private blueBotService: BlueBotService | null = null;
-
-	constructor() {
-		this.client = new Client({ intents });
-	}
-
-	async start(): Promise<void> {
-		logger.info('Starting BlueBot container...');
-
-		const token = process.env.DISCORD_TOKEN;
-
-		if (!token) {
-			logger.error('Discord token not found in environment variables');
-			throw new Error('BLUEBOT_TOKEN, DISCORD_TOKEN or STARBUNK_TOKEN environment variable is required');
-		}
-
-		logger.info('Logging in to Discord...');
-		await this.client.login(token);
-		logger.info('BlueBot connected to Discord');
-
-		// Create and initialize the BlueBotService with all dependencies
-		this.blueBotService = await createBlueBotService();
-		await this.blueBotService.initialize();
-		logger.info('BlueBot service initialized');
-
-		this.client.on('messageCreate', async (message: Message) => {
-			// Basic bot-loop safety: never respond to other bots or self
-			if (message.author.bot) return;
-
-			try {
-				await this.handleMessage(message);
-			} catch (error) {
-				logger.error('Error handling message', error);
-			}
-		});
-
-		// Set up graceful shutdown handlers
-		const shutdown = (signal: string) => {
-			logger.info(`Received ${signal}, shutting down gracefully...`);
-			this.client.destroy();
-			process.exit(0);
-		};
-
-		process.on('SIGINT', () => shutdown('SIGINT'));
-		process.on('SIGTERM', () => shutdown('SIGTERM'));
-	}
-
-	private async handleMessage(message: Message): Promise<void> {
-		if (!this.blueBotService) {
-			logger.warn('BlueBotService is not initialized; ignoring message');
-			return;
-		}
-
-		await this.blueBotService.processMessage(message);
-	}
-}
-
 async function main(): Promise<void> {
 	// CI smoke mode: lightweight health endpoint without Discord login
 	if (process.env.CI_SMOKE_MODE === 'true') {
-		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT, 10) : 3000;
-
-		const server = createServer((req, res) => {
-			if (req.url === '/health') {
-				res.writeHead(200, { 'Content-Type': 'application/json' });
-				res.end(
-					JSON.stringify({
-						status: 'healthy',
-						service: 'bluebot',
-						mode: 'smoke',
-						timestamp: new Date().toISOString(),
-					}),
-				);
-				return;
-			}
-
-			res.writeHead(404, { 'Content-Type': 'text/plain' });
-			res.end('Not Found');
-		});
-
-		server.listen(port, () => {
-			logger.info(`[SMOKE] BlueBot health server listening on port ${port}`);
-		});
-
-		const shutdown = (signal: string) => {
-			logger.info(`[SMOKE] Received ${signal}, shutting down health server...`);
-			server.close(() => process.exit(0));
-		};
-
-    process.on('SIGINT', () => shutdown('SIGINT'));
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
+		runSmokeTest();
 		return;
 	}
 
-	const bot = new BlueBotContainer();
+	const token = process.env.DISCORD_TOKEN;
+
+	if (!token) {
+		logger.error('Discord token not found in environment variables');
+		throw new Error('BLUEBOT_TOKEN, DISCORD_TOKEN or STARBUNK_TOKEN environment variable is required');
+	}
+
+	const client = new Client({ intents });
+
+	logger.info('Logging in to Discord...');
+	await client.login(token);
+	logger.info('BlueBot connected to Discord');
+
+	const bot = new BlueBot(client);
 	await bot.start();
+
+	// Set up graceful shutdown handlers
+	const shutdown = (signal: string) => {
+		logger.info(`Received ${signal}, shutting down gracefully...`);
+		client.destroy();
+		process.exit(0);
+	};
+
+	process.on('SIGINT', () => shutdown('SIGINT'));
+	process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
 if (require.main === module) {
