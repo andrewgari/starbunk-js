@@ -6,7 +6,7 @@ import { ConfirmStrategy } from '@/strategy/confirm-strategy';
 const defaultStrategy = new DefaultStrategy();
 const confirmStrategy = new ConfirmStrategy();
 export class BlueReplyStrategy implements Strategy {
-	private lastBlueResponse = new Date();
+	private lastBlueResponse = new Date(0);
 	private readonly replyWindow = 300000; // 5 minutes in ms
 
 	shouldRespond(message: Message): Promise<boolean> {

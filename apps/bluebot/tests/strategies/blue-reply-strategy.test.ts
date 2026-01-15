@@ -15,7 +15,7 @@ describe('BlueReplyStrategy', () => {
 			// Set lastBlueResponse to 6 minutes ago
 			const sixMinutesAgo = Date.now() - 6 * 60 * 1000;
 			const message = createMockMessage('I love blue');
-			(message as any).createdTimestamp = sixMinutesAgo + 6 * 60 * 1000; // current time
+			(message as any).createdTimestamp = Date.now();
 
 			// Manually set lastBlueResponse to 6 minutes ago
 			(strategy as any).lastBlueResponse = new Date(sixMinutesAgo);
@@ -28,7 +28,7 @@ describe('BlueReplyStrategy', () => {
 			// Set lastBlueResponse to 2 minutes ago
 			const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
 			const message = createMockMessage('yes');
-			(message as any).createdTimestamp = twoMinutesAgo + 2 * 60 * 1000; // current time
+			(message as any).createdTimestamp = Date.now();
 
 			// Manually set lastBlueResponse to 2 minutes ago
 			(strategy as any).lastBlueResponse = new Date(twoMinutesAgo);
@@ -41,7 +41,7 @@ describe('BlueReplyStrategy', () => {
 			// Set lastBlueResponse to 2 minutes ago
 			const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
 			const message = createMockMessage('hello world');
-			(message as any).createdTimestamp = twoMinutesAgo + 2 * 60 * 1000; // current time
+			(message as any).createdTimestamp = Date.now();
 
 			// Manually set lastBlueResponse to 2 minutes ago
 			(strategy as any).lastBlueResponse = new Date(twoMinutesAgo);
@@ -54,7 +54,7 @@ describe('BlueReplyStrategy', () => {
 			// Set lastBlueResponse to exactly 5 minutes ago
 			const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
 			const message = createMockMessage('blue');
-			(message as any).createdTimestamp = fiveMinutesAgo + 5 * 60 * 1000; // current time
+			(message as any).createdTimestamp = Date.now();
 
 			// Manually set lastBlueResponse to 5 minutes ago
 			(strategy as any).lastBlueResponse = new Date(fiveMinutesAgo);
@@ -67,7 +67,7 @@ describe('BlueReplyStrategy', () => {
 			// Set lastBlueResponse to 4 minutes ago
 			const fourMinutesAgo = Date.now() - 4 * 60 * 1000;
 			const message = createMockMessage('blue');
-			(message as any).createdTimestamp = fourMinutesAgo + 4 * 60 * 1000; // current time
+			(message as any).createdTimestamp = Date.now();
 
 			// Manually set lastBlueResponse to 4 minutes ago
 			(strategy as any).lastBlueResponse = new Date(fourMinutesAgo);
