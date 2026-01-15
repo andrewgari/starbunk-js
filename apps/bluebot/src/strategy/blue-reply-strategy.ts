@@ -6,21 +6,22 @@ import { ConfirmStrategy } from '@/strategy/confirm-strategy';
 const defaultStrategy = new DefaultStrategy();
 const confirmStrategy = new ConfirmStrategy();
 export class BlueReplyStrategy implements Strategy {
-  private lastBlueResponse = new Date();
-  private readonly replyWindow = 60000; // 1 minute in ms
+	private lastBlueResponse = new Date();
+	private readonly replyWindow = 300000; // 5 minutes in ms
 
-  shouldRespond(message: Message): Promise<boolean> {
-    const timestamp = new Date(message.createdTimestamp);
+	shouldRespond(message: Message): Promise<boolean> {
+		const timestamp = new Date(message.createdTimestamp);
+		const timeSinceLastResponse = timestamp.getTime() - this.lastBlueResponse.getTime();
 
-    if (timestamp > this.lastBlueResponse) {
-      return defaultStrategy.shouldRespond(message);
-    }
+		if (timeSinceLastResponse >= this.replyWindow) {
+			return defaultStrategy.shouldRespond(message);
+		}
 
-    return defaultStrategy.shouldRespond(message);
-  }
+		return confirmStrategy.shouldRespond(message);
+	}
 
-  getResponse(_message: Message): Promise<string> {
-    this.lastBlueResponse = new Date();
-    return Promise.resolve('Yes');
-  }
+	getResponse(_message: Message): Promise<string> {
+		this.lastBlueResponse = new Date();
+		return Promise.resolve('Yes');
+	}
 }
