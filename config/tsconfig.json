@@ -12,12 +12,12 @@
 	"include": [],
 	"exclude": ["node_modules", "dist"],
 	"references": [
-		{ "path": "../packages/shared" },
-		{ "path": "../apps/bunkbot" },
-		{ "path": "../apps/bunkbot" },
-		{ "path": "../apps/djcova" },
-		{ "path": "../apps/starbunk-dnd" },
-		{ "path": "../apps/covabot" },
-		{ "path": "../apps/bluebot" }
+		{ "path": "../src/shared" },
+		{ "path": "../src/bunkbot" },
+		{ "path": "../src/bunkbot" },
+		{ "path": "../src/djcova" },
+		{ "path": "../src/starbunk-dnd" },
+		{ "path": "../src/covabot" },
+		{ "path": "../src/bluebot" }
 	]
 }

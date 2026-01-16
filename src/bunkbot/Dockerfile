@@ -10,15 +10,15 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ curl dumb-init
 
 # Copy package files for better caching
-COPY apps/bunkbot/package.json apps/bunkbot/package-lock.json* ./
+COPY src/bunkbot/package.json src/bunkbot/package-lock.json* ./
 
 # Install dependencies using cache mount to speed up builds
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --prefer-offline --no-audit
 
 # Copy source code
-COPY apps/bunkbot/src ./src
-COPY apps/bunkbot/tsconfig*.json ./
+COPY src/bunkbot/src ./src
+COPY src/bunkbot/tsconfig*.json ./
 
 # Build the application
 RUN npm run build:docker

@@ -80,7 +80,7 @@ LOG_LEVEL=info
 
 ```bash
 # From the repository root
-docker build -f apps/bunkbot/Dockerfile -t bunkbot:latest .
+docker build -f src/bunkbot/Dockerfile -t bunkbot:latest .
 ```
 
 ### Running with Docker Compose
@@ -96,7 +96,7 @@ docker compose up bunkbot -d
 
 ```bash
 # From the bunkbot directory
-cd apps/bunkbot
+cd src/bunkbot
 docker compose -f docker-compose.dev.yml up
 ```
 

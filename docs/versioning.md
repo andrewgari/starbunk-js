@@ -133,8 +133,8 @@ The `scripts/sync-versions.sh` script:
 - ✅ Reads version from the `VERSION` file
 - ✅ Validates version format (X.Y.Z)
 - ✅ Updates root `package.json`
-- ✅ Updates all `apps/*/package.json` files
-- ✅ Updates `packages/shared/package.json`
+- ✅ Updates all `src/*/package.json` files
+- ✅ Updates `src/shared/package.json`
 - ✅ Shows clear output of what was updated
 - ✅ Skips packages that are already at the correct version
 - ✅ Runs automatically via pre-commit hook
@@ -182,11 +182,11 @@ git tag -l "v*"
 
 - `VERSION` - **Source of truth** (single version number)
 - `package.json` (root) - Synced from VERSION
-- `apps/bunkbot/package.json` - Synced from VERSION
-- `apps/covabot/package.json` - Synced from VERSION
-- `apps/djcova/package.json` - Synced from VERSION
-- `apps/bluebot/package.json` - Synced from VERSION
-- `packages/shared/package.json` - Synced from VERSION
+- `src/bunkbot/package.json` - Synced from VERSION
+- `src/covabot/package.json` - Synced from VERSION
+- `src/djcova/package.json` - Synced from VERSION
+- `src/bluebot/package.json` - Synced from VERSION
+- `src/shared/package.json` - Synced from VERSION
 
 ## Troubleshooting
 

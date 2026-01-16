@@ -11,8 +11,8 @@ RUN apk add --no-cache python3 make g++ openssl curl dumb-init
 
 # Copy package files for better caching
 COPY package.json package-lock.json* ./
-COPY packages/shared/package.json ./packages/shared/
-COPY apps/covabot/package.json ./apps/covabot/
+COPY src/shared/package.json ./src/shared/
+COPY src/covabot/package.json ./src/covabot/
 
 # Install all dependencies using workspace (more efficient)
 # Using cache mount to speed up npm install across builds
@@ -21,16 +21,16 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci --prefer-offline --no-audit --ignore-scripts
 
 # Copy shared package source
-COPY packages/shared/src ./packages/shared/src
-COPY packages/shared/tsconfig*.json ./packages/shared/
+COPY src/shared/src ./src/shared/src
+COPY src/shared/tsconfig*.json ./src/shared/
 
 # Copy app source code
-COPY apps/covabot/src ./apps/covabot/src
-COPY apps/covabot/tests ./apps/covabot/tests
-COPY apps/covabot/jest.config.js apps/covabot/tsconfig*.json apps/covabot/.dockerignore ./apps/covabot/
+COPY src/covabot/src ./src/covabot/src
+COPY src/covabot/tests ./src/covabot/tests
+COPY src/covabot/jest.config.js src/covabot/tsconfig*.json src/covabot/.dockerignore ./src/covabot/
 
 # Build the application (TypeScript will automatically build shared package first)
-RUN cd apps/covabot && npm run build:docker
+RUN cd src/covabot && npm run build:docker
 
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
@@ -63,11 +63,11 @@ RUN apk add --no-cache openssl dumb-init curl gcompat && \
 
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=covabot:covabot /app/node_modules ./node_modules
-COPY --from=builder --chown=covabot:covabot /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder --chown=covabot:covabot /app/packages/shared/package.json ./packages/shared/
-COPY --from=builder --chown=covabot:covabot /app/apps/covabot/dist ./apps/covabot/dist
+COPY --from=builder --chown=covabot:covabot /app/src/shared/dist ./src/shared/dist
+COPY --from=builder --chown=covabot:covabot /app/src/shared/package.json ./src/shared/
+COPY --from=builder --chown=covabot:covabot /app/src/covabot/dist ./src/covabot/dist
 COPY --from=builder --chown=covabot:covabot /app/package.json ./
-COPY --from=builder --chown=covabot:covabot /app/apps/covabot/package.json ./apps/covabot/
+COPY --from=builder --chown=covabot:covabot /app/src/covabot/package.json ./src/covabot/
 
 # Set default environment variables from build args
 # These can be overridden at runtime via .env file or docker-compose environment
@@ -105,4 +105,4 @@ EXPOSE 3003
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "apps/covabot/dist/index.js"]
+CMD ["node", "src/covabot/dist/index.js"]

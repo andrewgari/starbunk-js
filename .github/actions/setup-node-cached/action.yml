@@ -50,14 +50,14 @@ runs:
 
         # Include shared package source in cache key since it affects builds
         SHARED_HASH=""
-        if [ -d "packages/shared/src" ]; then
-          SHARED_HASH=$(find packages/shared/src -name "*.ts" -o -name "*.js" -exec cat {} \; 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "no-shared")
+        if [ -d "src/shared/src" ]; then
+          SHARED_HASH=$(find src/shared/src -name "*.ts" -o -name "*.js" -exec cat {} \; 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "no-shared")
         fi
 
         # Include shared package config files
         SHARED_CONFIG_HASH=""
-        if [ -f "packages/shared/package.json" ]; then
-          SHARED_CONFIG_HASH=$(cat packages/shared/package.json packages/shared/tsconfig.json 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "no-config")
+        if [ -f "src/shared/package.json" ]; then
+          SHARED_CONFIG_HASH=$(cat src/shared/package.json src/shared/tsconfig.json 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "no-config")
         fi
 
         CACHE_KEY="node-${{ inputs.node-version }}-${{ runner.os }}-deps-${LOCKFILE_HASH}-shared-${SHARED_HASH}-config-${SHARED_CONFIG_HASH}"
@@ -72,14 +72,14 @@ runs:
         path: |
           ~/.npm
           node_modules
-          packages/shared/node_modules
-          apps/bunkbot/node_modules
-          apps/bunkbot/node_modules
-          apps/djcova/node_modules
-          apps/starbunk-dnd/node_modules
-          apps/covabot/node_modules
-          packages/shared/dist
-          packages/shared/lib
+          src/shared/node_modules
+          src/bunkbot/node_modules
+          src/bunkbot/node_modules
+          src/djcova/node_modules
+          src/starbunk-dnd/node_modules
+          src/covabot/node_modules
+          src/shared/dist
+          src/shared/lib
         key: ${{ steps.cache-key.outputs.cache-key }}
         restore-keys: |
           node-${{ inputs.node-version }}-${{ runner.os }}-deps-
