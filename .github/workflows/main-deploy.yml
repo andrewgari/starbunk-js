@@ -39,7 +39,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./apps/bunkbot/Dockerfile
+          file: ./src/bunkbot/Dockerfile
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
           cache-from: |
@@ -69,7 +69,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./apps/covabot/Dockerfile
+          file: ./src/covabot/Dockerfile
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
           cache-from: |
@@ -99,7 +99,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./apps/djcova/Dockerfile
+          file: ./src/djcova/Dockerfile
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
           cache-from: |
@@ -129,7 +129,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./apps/bluebot/Dockerfile
+          file: ./src/bluebot/Dockerfile
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
           cache-from: |

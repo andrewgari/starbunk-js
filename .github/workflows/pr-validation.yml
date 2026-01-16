@@ -108,13 +108,13 @@ jobs:
       matrix:
         include:
           - app: bunkbot
-            dockerfile: ./apps/bunkbot/Dockerfile
+            dockerfile: ./src/bunkbot/Dockerfile
           - app: covabot
-            dockerfile: ./apps/covabot/Dockerfile
+            dockerfile: ./src/covabot/Dockerfile
           - app: djcova
-            dockerfile: ./apps/djcova/Dockerfile
+            dockerfile: ./src/djcova/Dockerfile
           - app: bluebot
-            dockerfile: ./apps/bluebot/Dockerfile
+            dockerfile: ./src/bluebot/Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -125,10 +125,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Lint app sources
-        run: npx eslint "apps/${{ matrix.app }}/src/**/*.ts"
-
-      - name: Build shared package (for TS project references)
-        run: npm run build:shared
+        run: npx eslint "src/${{ matrix.app }}/src/**/*.ts"
 
       - name: Type check app
         run: npm run type-check:${{ matrix.app }}

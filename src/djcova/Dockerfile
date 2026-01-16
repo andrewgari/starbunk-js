@@ -11,8 +11,8 @@ RUN apk add --no-cache python3 make g++ openssl ffmpeg curl dumb-init
 
 # Copy package files for better caching
 COPY package.json package-lock.json* ./
-COPY packages/shared/package.json ./packages/shared/
-COPY apps/djcova/package.json ./apps/djcova/
+COPY src/shared/package.json ./src/shared/
+COPY src/djcova/package.json ./src/djcova/
 
 # Install all dependencies using workspace (more efficient)
 # Using cache mount to speed up npm install across builds
@@ -21,19 +21,19 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci --prefer-offline --no-audit --ignore-scripts
 
 # Copy shared package source
-COPY packages/shared/src ./packages/shared/src
-COPY packages/shared/tsconfig*.json ./packages/shared/
+COPY src/shared/src ./src/shared/src
+COPY src/shared/tsconfig*.json ./src/shared/
 
-# Build shared package
-RUN cd packages/shared && npm run build
+# Build the shared package first
+RUN cd src/shared && npm run build
 
 # Copy app source code
-COPY apps/djcova/src ./apps/djcova/src
-COPY apps/djcova/tests ./apps/djcova/tests
-COPY apps/djcova/jest.config.js apps/djcova/tsconfig*.json apps/djcova/.dockerignore ./apps/djcova/
+COPY src/djcova/src ./src/djcova/src
+COPY src/djcova/tests ./src/djcova/tests
+COPY src/djcova/jest.config.js src/djcova/tsconfig*.json src/djcova/.dockerignore ./src/djcova/
 
 # Build the application
-RUN cd apps/djcova && npm run build:docker
+RUN cd src/djcova && npm run build:docker
 
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
@@ -63,12 +63,12 @@ RUN apk add --no-cache ffmpeg openssl dumb-init curl python3 py3-pip && \
 
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=djcova:djcova /app/node_modules ./node_modules
-COPY --from=builder --chown=djcova:djcova /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=builder --chown=djcova:djcova /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder --chown=djcova:djcova /app/packages/shared/package.json ./packages/shared/
-COPY --from=builder --chown=djcova:djcova /app/apps/djcova/dist ./apps/djcova/dist
+COPY --from=builder --chown=djcova:djcova /app/src/shared/node_modules ./src/shared/node_modules
+COPY --from=builder --chown=djcova:djcova /app/src/shared/dist ./src/shared/dist
+COPY --from=builder --chown=djcova:djcova /app/src/shared/package.json ./src/shared/
+COPY --from=builder --chown=djcova:djcova /app/src/djcova/dist ./src/djcova/dist
 COPY --from=builder --chown=djcova:djcova /app/package.json ./
-COPY --from=builder --chown=djcova:djcova /app/apps/djcova/package.json ./apps/djcova/
+COPY --from=builder --chown=djcova:djcova /app/src/djcova/package.json ./src/djcova/
 
 # Set default environment variables from build args
 # These can be overridden at runtime via .env file or docker-compose environment
@@ -104,4 +104,4 @@ EXPOSE 3000
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "apps/djcova/dist/index.js"]
+CMD ["node", "src/djcova/dist/index.js"]

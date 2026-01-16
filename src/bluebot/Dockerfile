@@ -10,16 +10,16 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ openssl curl dumb-init
 
 # Copy package files for bluebot only
-COPY apps/bluebot/package.json ./
+COPY src/bluebot/package.json ./
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.npm \
     npm install --prefer-offline --no-audit --production=false
 
 # Copy app source code
-COPY apps/bluebot/src ./src
-COPY apps/bluebot/tests ./tests
-COPY apps/bluebot/vitest.config.ts apps/bluebot/tsconfig*.json apps/bluebot/.dockerignore ./
+COPY src/bluebot/src ./src
+COPY src/bluebot/tests ./tests
+COPY src/bluebot/vitest.config.ts src/bluebot/tsconfig*.json src/bluebot/.dockerignore ./
 
 # Build the application
 RUN npm run build:docker

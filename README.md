@@ -137,15 +137,15 @@ npm run logs:bluebot
 ### Individual Container Development
 ```bash
 # Work on specific containers
-cd containers/bunkbot && npm run dev
-cd containers/djcova && npm run dev
-cd containers/covabot && npm run dev
+cd src/bunkbot && npm run dev
+cd src/djcova && npm run dev
+cd src/covabot && npm run dev
 ```
 
 ## 📁 Container Structure
 
 ```
-containers/
+src/
 ├── shared/                   # Shared services and utilities
 │   ├── src/
 │   │   ├── services/        # Logger, webhook manager, etc.

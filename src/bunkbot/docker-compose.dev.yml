@@ -4,7 +4,7 @@ services:
   bunkbot:
     build:
       context: ../..
-      dockerfile: apps/bunkbot/Dockerfile
+      dockerfile: src/bunkbot/Dockerfile
       args:
         NODE_ENV: development
         DEBUG_MODE: "true"

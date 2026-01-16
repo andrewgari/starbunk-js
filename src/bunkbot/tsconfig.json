@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"composite": true,
 		"target": "ES2022",
 		"module": "commonjs",
 		"lib": ["ES2022"],
@@ -15,7 +16,9 @@
 		"allowSyntheticDefaultImports": true,
 		"baseUrl": "./src",
 		"paths": {
-			"@/*": ["./*"]
+			"@/*": ["./*"],
+			"@starbunk/shared": ["../../shared/src"],
+			"@starbunk/shared/*": ["../../shared/src/*"]
 		},
 		"declaration": true,
 		"declarationMap": true,
@@ -26,6 +29,11 @@
 		"node_modules",
 		"dist",
 		"tests",
-		"src/**/__tests__/**"
+		"src/**/__tests__/**",
+		"src/**/*.test.ts"
+	],
+	"references": [
+		{ "path": "../shared" }
 	]
 }
+
