@@ -2,6 +2,7 @@
  * Unit test for HttpEndpointsService port configuration
  */
 
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { HttpEndpointsService } from '../http-endpoints-service';
 
 // Define interface for server info to avoid type assertions

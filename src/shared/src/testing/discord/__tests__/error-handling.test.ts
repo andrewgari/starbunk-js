@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Events, Message } from 'discord.js';
 import { FakeDiscordEnvironment } from '../fake-discord-environments';
 

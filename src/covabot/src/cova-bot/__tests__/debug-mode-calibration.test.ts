@@ -7,6 +7,7 @@
  * 3. Calibration context is added in debug mode
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Message } from 'discord.js';
 
 // Mock environment before imports
@@ -14,7 +15,7 @@ const originalEnv = process.env;
 
 describe('CovaBot Debug/Calibration Mode', () => {
 	beforeEach(() => {
-		jest.resetModules();
+		vi.resetModules();
 		process.env = { ...originalEnv };
 	});
 
@@ -137,15 +138,15 @@ describe('CovaBot Debug/Calibration Mode', () => {
 	});
 
 	describe('Calibration Context', () => {
-		it('should include calibration context in debug mode', () => {
+		it('should include calibration context in debug mode', async () => {
 			// This test verifies the prompt includes calibration context
 			// The actual implementation is in simplifiedLlmTriggers.ts
 
 			process.env.DEBUG_MODE = 'true';
 
 			// Re-import to get new DEBUG_MODE value
-			jest.isolateModules(() => {
-				const { createLLMEmulatorResponse } = require('../simplified-llm-triggers');
+			await vi.isolateModules(async () => {
+				const { createLLMEmulatorResponse } = await import('../simplified-llm-triggers');
 
 				// The response generator should include calibration context
 				// This is verified by the prompt construction in the implementation

@@ -2,6 +2,7 @@
  * Integration test for production-ready metrics infrastructure
  */
 
+import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import { initializeObservability, shutdownObservability, type MessageFlowMetrics } from '../index';
 
 describe('Metrics Infrastructure Integration', () => {

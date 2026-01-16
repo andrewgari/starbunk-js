@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { MockLLMProvider } from '../mock-llm-provider';
 import { LLMCallTracker } from '../llm-call-tracker';
 import { Logger } from '../../../services/logger';

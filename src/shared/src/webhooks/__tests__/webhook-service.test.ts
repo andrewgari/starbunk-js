@@ -1,10 +1,11 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TextChannel, WebhookClient } from 'discord.js';
 import { WebhookService } from '../webhook-service';
 import { logger } from '../../services/logger';
 import { MessageInfo } from '../types';
 
 // Mock environment module
-jest.mock('../../environment', () => ({
+vi.mock('../../environment', () => ({
 	discord: {
 		WEBHOOK_URL: 'https://discord.com/api/webhooks/mock-webhook',
 	},
@@ -21,19 +22,19 @@ describe('WebhookService', () => {
 	beforeEach(() => {
 		// Mock webhook client
 		mockWebhookClient = {
-			send: jest.fn().mockResolvedValue(undefined),
+			send: vi.fn().mockResolvedValue(undefined),
 		};
 
 		// Mock webhook for channel
 		mockWebhook = {
 			name: 'test-bot-webhook',
-			send: jest.fn().mockResolvedValue({}),
+			send: vi.fn().mockResolvedValue({}),
 		};
 
 		// Mock collection wrapper
 		const mockCollection = {
-			first: jest.fn().mockReturnValue(mockWebhook),
-			find: jest.fn().mockImplementation((finder) => {
+			first: vi.fn().mockReturnValue(mockWebhook),
+			find: vi.fn().mockImplementation((finder) => {
 				if (typeof finder === 'function') {
 					return finder(mockWebhook) ? mockWebhook : undefined;
 				}
@@ -46,8 +47,8 @@ describe('WebhookService', () => {
 			name: 'test-channel',
 			id: 'channel123',
 			toString: () => `<#channel123>`,
-			fetchWebhooks: jest.fn().mockResolvedValue(mockCollection),
-			createWebhook: jest.fn().mockResolvedValue(mockWebhook),
+			fetchWebhooks: vi.fn().mockResolvedValue(mockCollection),
+			createWebhook: vi.fn().mockResolvedValue(mockWebhook),
 			// Fill in required properties to satisfy TypeScript
 			guild: {} as any,
 			client: {} as any,

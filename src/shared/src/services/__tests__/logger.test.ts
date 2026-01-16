@@ -1,13 +1,14 @@
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { isDebugMode } from '../../environment';
 import { logger, LogLevel } from '../logger';
 
 // Mock the environment module
-jest.mock('../../environment', () => ({
-	isDebugMode: jest.fn(),
+vi.mock('../../environment', () => ({
+	isDebugMode: vi.fn(),
 }));
 
 // Mock the logger module
-jest.mock('../logger', () => {
+vi.mock('../logger', () => {
 	const LogLevel = {
 		NONE: 0,
 		ERROR: 1,
@@ -18,33 +19,33 @@ jest.mock('../logger', () => {
 
 	const mockLogger = {
 		currentLogLevel: LogLevel.INFO,
-		setLogLevel: jest.fn((level) => {
+		setLogLevel: vi.fn((level) => {
 			mockLogger.currentLogLevel = level;
 		}),
 		shouldLog: function (level: number) {
 			return level <= this.currentLogLevel;
 		},
-		debug: jest.fn(function (message: string) {
+		debug: vi.fn(function (message: string) {
 			if (isDebugMode() && this.shouldLog(LogLevel.DEBUG)) {
 				console.debug(message);
 			}
 		}),
-		info: jest.fn(function (message: string) {
+		info: vi.fn(function (message: string) {
 			if (this.shouldLog(LogLevel.INFO)) {
 				console.info(message);
 			}
 		}),
-		warn: jest.fn(function (message: string) {
+		warn: vi.fn(function (message: string) {
 			if (this.shouldLog(LogLevel.WARN)) {
 				console.warn(message);
 			}
 		}),
-		error: jest.fn(function (message: string) {
+		error: vi.fn(function (message: string) {
 			if (this.shouldLog(LogLevel.ERROR)) {
 				console.error(message);
 			}
 		}),
-		success: jest.fn(function (message: string) {
+		success: vi.fn(function (message: string) {
 			if (this.shouldLog(LogLevel.INFO)) {
 				console.log(message);
 			}
@@ -72,14 +73,14 @@ describe('Logger', () => {
 		};
 
 		// Reset isDebugMode mock
-		(isDebugMode as jest.Mock).mockReset();
+		(isDebugMode as any).mockReset();
 
 		// Mock console methods
-		console.debug = jest.fn((message) => consoleOutput.debug.push(message));
-		console.info = jest.fn((message) => consoleOutput.info.push(message));
-		console.warn = jest.fn((message) => consoleOutput.warn.push(message));
-		console.error = jest.fn((message) => consoleOutput.error.push(message));
-		console.log = jest.fn((message) => consoleOutput.log.push(message));
+		console.debug = vi.fn((message) => consoleOutput.debug.push(message));
+		console.info = vi.fn((message) => consoleOutput.info.push(message));
+		console.warn = vi.fn((message) => consoleOutput.warn.push(message));
+		console.error = vi.fn((message) => consoleOutput.error.push(message));
+		console.log = vi.fn((message) => consoleOutput.log.push(message));
 	});
 
 	afterEach(() => {
@@ -96,7 +97,7 @@ describe('Logger', () => {
 
 	it('should only show ERROR messages when log level is ERROR', () => {
 		logger.setLogLevel(LogLevel.ERROR);
-		(isDebugMode as jest.Mock).mockReturnValue(false);
+		(isDebugMode as any).mockReturnValue(false);
 
 		logger.debug('Debug message');
 		logger.info('Info message');
@@ -114,7 +115,7 @@ describe('Logger', () => {
 
 	it('should show WARN and ERROR messages when log level is WARN', () => {
 		logger.setLogLevel(LogLevel.WARN);
-		(isDebugMode as jest.Mock).mockReturnValue(false);
+		(isDebugMode as any).mockReturnValue(false);
 
 		logger.debug('Debug message');
 		logger.info('Info message');
@@ -133,7 +134,7 @@ describe('Logger', () => {
 
 	it('should show INFO, SUCCESS, WARN, and ERROR messages when log level is INFO (default)', () => {
 		logger.setLogLevel(LogLevel.INFO);
-		(isDebugMode as jest.Mock).mockReturnValue(false);
+		(isDebugMode as any).mockReturnValue(false);
 
 		logger.debug('Debug message');
 		logger.info('Info message');
@@ -154,7 +155,7 @@ describe('Logger', () => {
 
 	it('should show all messages when log level is DEBUG and debug mode is enabled', () => {
 		logger.setLogLevel(LogLevel.DEBUG);
-		(isDebugMode as jest.Mock).mockReturnValue(true);
+		(isDebugMode as any).mockReturnValue(true);
 
 		logger.debug('Debug message');
 		logger.info('Info message');
@@ -176,7 +177,7 @@ describe('Logger', () => {
 
 	it('should not show debug messages when in DEBUG level but debug mode is disabled', () => {
 		logger.setLogLevel(LogLevel.DEBUG);
-		(isDebugMode as jest.Mock).mockReturnValue(false);
+		(isDebugMode as any).mockReturnValue(false);
 
 		logger.debug('Debug message');
 		logger.info('Info message');
@@ -197,7 +198,7 @@ describe('Logger', () => {
 
 	it('should show no messages when log level is NONE', () => {
 		logger.setLogLevel(LogLevel.NONE);
-		(isDebugMode as jest.Mock).mockReturnValue(false);
+		(isDebugMode as any).mockReturnValue(false);
 
 		logger.debug('Debug message');
 		logger.info('Info message');

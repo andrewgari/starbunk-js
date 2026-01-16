@@ -19,7 +19,7 @@
  * on external LLM services and making tests deterministic.
  */
 
-import { describe, it, expect, beforeAll, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Message } from 'discord.js';
 import {
 	FakeDiscordEnvironment,

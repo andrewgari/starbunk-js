@@ -1,19 +1,20 @@
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { container, ServiceId } from '../container';
 
 describe('SimpleContainer', () => {
 	// Mock service for testing
 	const mockService = {
 		test: 'test-value',
-		method: jest.fn(),
+		method: vi.fn(),
 	};
 
 	const mockLogger = {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
-		success: jest.fn(),
-		formatMessage: jest.fn(),
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		success: vi.fn(),
+		formatMessage: vi.fn(),
 	};
 
 	// Test symbol

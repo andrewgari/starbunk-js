@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { LLMCallTracker } from '../llm-call-tracker';
 import { LLMCompletionOptions, LLMCompletionResponse } from '../../../services/llm/llm-service';
 

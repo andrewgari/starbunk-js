@@ -1,4 +1,5 @@
 // Tests for environment validation utilities
+import { describe, test, expect, beforeEach, afterAll, vi } from 'vitest';
 import {
 	isValidDiscordId,
 	parseDiscordIdList,
@@ -13,7 +14,7 @@ describe('Environment Validation Utilities', () => {
 
 	beforeEach(() => {
 		// Reset environment variables before each test
-		jest.resetModules();
+		vi.resetModules();
 		process.env = { ...originalEnv };
 	});
 

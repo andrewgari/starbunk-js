@@ -1,20 +1,21 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BotResponseLogger, getBotResponseLogger, type BotResponseLog } from '../bot-response-logger';
 import { logger as baseLogger } from '../../logger';
 
 // Mock the logger
-jest.mock('../../logger', () => ({
+vi.mock('../../logger', () => ({
 	logger: {
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
-		debug: jest.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn(),
 	},
 }));
 
 // Mock getStructuredLogger
-jest.mock('../index', () => ({
-	getStructuredLogger: jest.fn(() => ({
-		logMessageFlow: jest.fn(),
+vi.mock('../index', () => ({
+	getStructuredLogger: vi.fn(() => ({
+		logMessageFlow: vi.fn(),
 	})),
 }));
 
@@ -22,7 +23,7 @@ describe('BotResponseLogger', () => {
 	let responseLogger: BotResponseLogger;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		responseLogger = new BotResponseLogger('test-service');
 	});
 
@@ -82,7 +83,7 @@ describe('BotResponseLogger', () => {
 
 		it('should not throw on logging errors', () => {
 			// Mock logger to throw an error
-			(baseLogger.info as jest.Mock).mockImplementationOnce(() => {
+			(baseLogger.info as any).mockImplementationOnce(() => {
 				throw new Error('Logging failed');
 			});
 

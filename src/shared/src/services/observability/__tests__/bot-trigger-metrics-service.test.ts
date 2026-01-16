@@ -13,7 +13,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type Redis from 'ioredis';
 import { BotTriggerMetricsService, createProductionConfig } from '../bot-trigger-metrics-service';
 import type {
@@ -26,47 +26,47 @@ import * as promClient from 'prom-client';
 
 // Mock ioredis
 const mockRedisInstance = {
-	on: jest.fn(),
-	connect: jest.fn().mockResolvedValue(undefined),
-	ping: jest.fn().mockResolvedValue('PONG'),
-	script: jest.fn().mockResolvedValue('script_hash'),
-	eval: jest.fn().mockResolvedValue('OK'),
-	pipeline: jest.fn(),
-	quit: jest.fn().mockResolvedValue('OK'),
-	hset: jest.fn().mockResolvedValue(1),
-	hincrby: jest.fn().mockResolvedValue(1),
-	expire: jest.fn().mockResolvedValue(1),
-	zadd: jest.fn().mockResolvedValue(1),
-	hmget: jest.fn().mockResolvedValue([]),
-	hgetall: jest.fn().mockResolvedValue({}),
-	zrangebyscore: jest.fn().mockResolvedValue([]),
-	scan: jest.fn().mockResolvedValue(['0', []]),
-	dbsize: jest.fn().mockResolvedValue(0),
-	info: jest.fn().mockResolvedValue(''),
+	on: vi.fn(),
+	connect: vi.fn().mockResolvedValue(undefined),
+	ping: vi.fn().mockResolvedValue('PONG'),
+	script: vi.fn().mockResolvedValue('script_hash'),
+	eval: vi.fn().mockResolvedValue('OK'),
+	pipeline: vi.fn(),
+	quit: vi.fn().mockResolvedValue('OK'),
+	hset: vi.fn().mockResolvedValue(1),
+	hincrby: vi.fn().mockResolvedValue(1),
+	expire: vi.fn().mockResolvedValue(1),
+	zadd: vi.fn().mockResolvedValue(1),
+	hmget: vi.fn().mockResolvedValue([]),
+	hgetall: vi.fn().mockResolvedValue({}),
+	zrangebyscore: vi.fn().mockResolvedValue([]),
+	scan: vi.fn().mockResolvedValue(['0', []]),
+	dbsize: vi.fn().mockResolvedValue(0),
+	info: vi.fn().mockResolvedValue(''),
 };
 
-jest.mock('ioredis', () => {
-	return jest.fn(() => mockRedisInstance);
+vi.mock('ioredis', () => {
+	return { default: vi.fn(() => mockRedisInstance) };
 });
 
 // Use the shared mock instance
 const mockRedis = mockRedisInstance;
 
 const mockPipeline = {
-	hset: jest.fn().mockReturnThis() as any,
-	hincrby: jest.fn().mockReturnThis() as any,
-	expire: jest.fn().mockReturnThis() as any,
-	zadd: jest.fn().mockReturnThis() as any,
-	exec: jest.fn() as any,
+	hset: vi.fn().mockReturnThis() as any,
+	hincrby: vi.fn().mockReturnThis() as any,
+	expire: vi.fn().mockReturnThis() as any,
+	zadd: vi.fn().mockReturnThis() as any,
+	exec: vi.fn() as any,
 };
 
 // Mock logger
-jest.mock('../../logger', () => ({
+vi.mock('../../logger', () => ({
 	logger: {
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
-		debug: jest.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn(),
 	},
 }));
 
@@ -76,18 +76,18 @@ describe('BotTriggerMetricsService', () => {
 	let activeTimeouts: NodeJS.Timeout[] = [];
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Reset all mock implementations
-		(mockRedis.connect as jest.Mock).mockResolvedValue(undefined);
-		(mockRedis.ping as jest.Mock).mockResolvedValue('PONG');
-		(mockRedis.script as jest.Mock).mockResolvedValue('script_hash');
-		(mockRedis.eval as jest.Mock).mockResolvedValue('OK');
-		(mockRedis.quit as jest.Mock).mockResolvedValue('OK');
+		(mockRedis.connect as any).mockResolvedValue(undefined);
+		(mockRedis.ping as any).mockResolvedValue('PONG');
+		(mockRedis.script as any).mockResolvedValue('script_hash');
+		(mockRedis.eval as any).mockResolvedValue('OK');
+		(mockRedis.quit as any).mockResolvedValue('OK');
 
 		// Setup pipeline mock
-		(mockRedis.pipeline as jest.Mock).mockReturnValue(mockPipeline);
-		(mockPipeline.exec as jest.Mock).mockResolvedValue([]);
+		(mockRedis.pipeline as any).mockReturnValue(mockPipeline);
+		(mockPipeline.exec as any).mockResolvedValue([]);
 
 		config = createProductionConfig('localhost', 6379);
 		service = new BotTriggerMetricsService(config);

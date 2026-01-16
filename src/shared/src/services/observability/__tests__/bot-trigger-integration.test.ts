@@ -10,25 +10,25 @@
  * - Health monitoring and status reporting
  */
 
-import { jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { MessageContext } from '../container-metrics';
 import type { ProductionMetricsService } from '../production-metrics-service';
 
 // Mock initializeBotTriggerMetricsService function
-jest.mock('../bot-trigger-metrics-service', () => {
-	const actual = jest.requireActual('../bot-trigger-metrics-service');
+vi.mock('../bot-trigger-metrics-service', () => {
+	const actual = vi.importActual('../bot-trigger-metrics-service');
 
 	// Create mock service inside the factory to avoid hoisting issues
 	const internalMockService = {
-		initialize: jest.fn(),
-		trackBotTrigger: jest.fn(),
-		getBotMetrics: jest.fn(),
-		getHealthStatus: jest.fn(),
-		cleanup: jest.fn(),
+		initialize: vi.fn(),
+		trackBotTrigger: vi.fn(),
+		getBotMetrics: vi.fn(),
+		getHealthStatus: vi.fn(),
+		cleanup: vi.fn(),
 	};
 
 	// Mock initializeBotTriggerMetricsService to simulate real behavior
-	const mockInitialize = jest.fn().mockImplementation(async (config) => {
+	const mockInitialize = vi.fn().mockImplementation(async (config) => {
 		// Simulate the real function behavior: create instance and call initialize
 		if (internalMockService.initialize) {
 			await internalMockService.initialize();
@@ -38,7 +38,7 @@ jest.mock('../bot-trigger-metrics-service', () => {
 
 	return {
 		...actual,
-		BotTriggerMetricsService: jest.fn(() => internalMockService),
+		BotTriggerMetricsService: vi.fn(() => internalMockService),
 		initializeBotTriggerMetricsService: mockInitialize,
 		// Export the mock service for test access
 		__mockService: internalMockService,
@@ -46,7 +46,7 @@ jest.mock('../bot-trigger-metrics-service', () => {
 });
 
 // Get the mock service from the mocked module
-const { __mockService: mockBotTriggerService } = require('../bot-trigger-metrics-service');
+const { __mockService: mockBotTriggerService } = await import('../bot-trigger-metrics-service');
 
 // Import modules after mocks are set up
 const {
@@ -55,38 +55,38 @@ const {
 	createEnhancedBunkBotMetrics,
 	createEnvironmentConfig,
 	initializeBotMetricsSystem,
-} = require('../bot-trigger-integration');
-const { BotTriggerMetricsService, initializeBotTriggerMetricsService } = require('../bot-trigger-metrics-service');
+} = await import('../bot-trigger-integration');
+const { BotTriggerMetricsService, initializeBotTriggerMetricsService } = await import('../bot-trigger-metrics-service');
 
 // Mock dependencies
-jest.mock('../../logger', () => ({
+vi.mock('../../logger', () => ({
 	logger: {
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
-		debug: jest.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn(),
 	},
 }));
 
 // Mock ProductionMetricsService
 const mockMetricsService = {
-	getRegistry: jest.fn(),
-	incrementCounter: jest.fn(),
-	observeHistogram: jest.fn(),
+	getRegistry: vi.fn(),
+	incrementCounter: vi.fn(),
+	observeHistogram: vi.fn(),
 } as unknown as ProductionMetricsService;
 
 // Mock _BunkBotMetricsCollector with enhanced methods
 const mock_BunkBotMetricsCollector = {
 	// Base class methods
-	trackBotTrigger: jest.fn(),
-	trackBotResponse: jest.fn(),
-	sanitizeLabel: jest.fn((label: string) => label),
-	getHealthStatus: jest.fn(() => ({ status: 'healthy' })),
-	cleanup: jest.fn(),
+	trackBotTrigger: vi.fn(),
+	trackBotResponse: vi.fn(),
+	sanitizeLabel: vi.fn((label: string) => label),
+	getHealthStatus: vi.fn(() => ({ status: 'healthy' })),
+	cleanup: vi.fn(),
 
 	// Enhanced methods added by Enhanced_BunkBotMetricsCollector
-	initializeEnhancedTracking: jest.fn().mockResolvedValue(undefined),
-	getEnhancedHealthStatus: jest.fn().mockResolvedValue({
+	initializeEnhancedTracking: vi.fn().mockResolvedValue(undefined),
+	getEnhancedHealthStatus: vi.fn().mockResolvedValue({
 		enhancedTracking: {
 			enabled: true,
 			redisHealth: {
@@ -106,11 +106,11 @@ const mock_BunkBotMetricsCollector = {
 			},
 		},
 	}),
-	getBotTriggerService: jest.fn(() => mockBotTriggerService),
+	getBotTriggerService: vi.fn(() => mockBotTriggerService),
 };
 
-jest.mock('../bunk-bot-metrics', () => ({
-	_BunkBotMetricsCollector: jest.fn(() => mock_BunkBotMetricsCollector),
+vi.mock('../bunk-bot-metrics', () => ({
+	_BunkBotMetricsCollector: vi.fn(() => mock_BunkBotMetricsCollector),
 }));
 
 // Reference to the mocked initializeBotTriggerMetricsService function for test expectations
@@ -119,16 +119,16 @@ describe('BotTriggerIntegration', () => {
 	let originalEnv: NodeJS.ProcessEnv;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Save original environment
 		originalEnv = { ...process.env };
 
-		// Setup mock behavior (mocks are already configured in the jest.mock call)
+		// Setup mock behavior (mocks are already configured in the vi.mock call)
 
 		// Mock successful operations by default
 		mockBotTriggerService.initialize.mockResolvedValue(undefined);
-		(initializeBotTriggerMetricsService as jest.Mock).mockResolvedValue(mockBotTriggerService);
+		(initializeBotTriggerMetricsService as any).mockResolvedValue(mockBotTriggerService);
 		mockBotTriggerService.trackBotTrigger.mockResolvedValue({ success: true });
 		mockBotTriggerService.getBotMetrics.mockResolvedValue({
 			success: true,
@@ -204,7 +204,7 @@ describe('BotTriggerIntegration', () => {
 
 			it('should handle Redis connection failure gracefully', async () => {
 				// Mock the function to reject
-				(initializeBotTriggerMetricsService as jest.Mock).mockRejectedValueOnce(
+				(initializeBotTriggerMetricsService as any).mockRejectedValueOnce(
 					new Error('Redis connection failed'),
 				);
 

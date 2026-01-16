@@ -3,7 +3,7 @@
  * Tests the complete metrics collection pipeline from service registration to endpoint aggregation
  */
 
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import {
 	initializeUnifiedMetricsEndpoint,
 	getUnifiedMetricsEndpoint,

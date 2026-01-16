@@ -13,7 +13,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { RedisBotMetricsExporter, createRedisBotMetricsExporter } from '../redis-bot-metrics-exporter';
 import * as promClient from 'prom-client';
 import type Redis from 'ioredis';
@@ -21,30 +21,30 @@ import type { BotTriggerMetricsService } from '../bot-trigger-metrics-service';
 
 // Mock Redis interface
 const mockRedis = {
-	ping: jest.fn().mockResolvedValue('PONG'),
-	connect: jest.fn().mockResolvedValue(undefined),
-	pipeline: jest.fn(),
-	scan: jest.fn().mockResolvedValue(['0', []]),
-	hgetall: jest.fn().mockResolvedValue({}),
-	dbsize: jest.fn().mockResolvedValue(0),
-	info: jest.fn().mockResolvedValue(''),
-	on: jest.fn(),
-	quit: jest.fn().mockResolvedValue('OK'),
+	ping: vi.fn().mockResolvedValue('PONG'),
+	connect: vi.fn().mockResolvedValue(undefined),
+	pipeline: vi.fn(),
+	scan: vi.fn().mockResolvedValue(['0', []]),
+	hgetall: vi.fn().mockResolvedValue({}),
+	dbsize: vi.fn().mockResolvedValue(0),
+	info: vi.fn().mockResolvedValue(''),
+	on: vi.fn(),
+	quit: vi.fn().mockResolvedValue('OK'),
 } as unknown as Redis;
 
 // Mock pipeline interface
 const mockPipeline = {
-	hgetall: jest.fn().mockReturnThis(),
-	dbsize: jest.fn().mockReturnThis(),
-	info: jest.fn().mockReturnThis(),
-	exec: jest.fn(),
+	hgetall: vi.fn().mockReturnThis(),
+	dbsize: vi.fn().mockReturnThis(),
+	info: vi.fn().mockReturnThis(),
+	exec: vi.fn(),
 };
 
 // Mock BotTriggerMetricsService
 const mockBotTriggerMetricsService = {
-	getHealthStatus: jest.fn(),
-	getBotMetrics: jest.fn(),
-	cleanup: jest.fn(),
+	getHealthStatus: vi.fn(),
+	getBotMetrics: vi.fn(),
+	cleanup: vi.fn(),
 } as unknown as BotTriggerMetricsService;
 
 // Mock logger

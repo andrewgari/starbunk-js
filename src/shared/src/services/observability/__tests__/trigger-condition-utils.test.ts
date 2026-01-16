@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { inferTriggerCondition } from '../trigger-condition-utils';
 
 describe('inferTriggerCondition', () => {

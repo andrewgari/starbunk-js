@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CovaBot, CovaBotConfig } from '../cova-bot';
 import { BotIdentity } from '../../types/bot-identity';
 import { TriggerResponse } from '../../types/trigger-response';
@@ -11,16 +12,16 @@ import {
 } from '../../__tests__/mocks/discord-mocks';
 
 // Mock dependencies
-jest.mock('@starbunk/shared', () => ({
+vi.mock('@starbunk/shared', () => ({
 	logger: {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
 	},
 }));
 
-const mockLogger = logger as jest.Mocked<typeof logger>;
+const mockLogger = logger as any;
 
 describe('CovaBot - Response Decision Logic Tests', () => {
 	let covaBot: CovaBot;
@@ -30,7 +31,7 @@ describe('CovaBot - Response Decision Logic Tests', () => {
 	let generalTrigger: TriggerResponse;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		mockIdentity = {
 			botName: 'Cova',
@@ -41,30 +42,30 @@ describe('CovaBot - Response Decision Logic Tests', () => {
 		directMentionTrigger = {
 			name: 'direct-mention-trigger',
 			priority: 100,
-			condition: jest.fn().mockImplementation((message: MockDiscordMessage) => {
+			condition: vi.fn().mockImplementation((message: MockDiscordMessage) => {
 				return message.mentions.has('bot-client-123'); // CovaBot's client ID
 			}),
-			response: jest.fn().mockResolvedValue('Direct mention response'),
+			response: vi.fn().mockResolvedValue('Direct mention response'),
 		};
 
 		// Mock trigger that responds to name mentions ("Cova")
 		nameMentionTrigger = {
 			name: 'name-mention-trigger',
 			priority: 50,
-			condition: jest.fn().mockImplementation((message: MockDiscordMessage) => {
+			condition: vi.fn().mockImplementation((message: MockDiscordMessage) => {
 				return message.content.toLowerCase().includes('cova');
 			}),
-			response: jest.fn().mockResolvedValue('Name mention response'),
+			response: vi.fn().mockResolvedValue('Name mention response'),
 		};
 
 		// Mock general trigger with lower priority
 		generalTrigger = {
 			name: 'general-trigger',
 			priority: 10,
-			condition: jest.fn().mockImplementation((message: MockDiscordMessage) => {
+			condition: vi.fn().mockImplementation((message: MockDiscordMessage) => {
 				return message.content.length > 0; // Responds to any non-empty message
 			}),
-			response: jest.fn().mockResolvedValue('General response'),
+			response: vi.fn().mockResolvedValue('General response'),
 		};
 
 		const config: CovaBotConfig = {

@@ -1,13 +1,14 @@
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TimeUnit, formatRelativeTime, getTimeDifference, isNewerThan, isOlderThan, isWithinTimeframe } from '../time';
 
 describe('Time Utils', () => {
 	beforeEach(() => {
-		jest.useFakeTimers();
-		jest.setSystemTime(new Date('2023-01-01T12:00:00Z'));
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2023-01-01T12:00:00Z'));
 	});
 
 	afterEach(() => {
-		jest.useRealTimers();
+		vi.useRealTimers();
 	});
 
 	describe('isOlderThan', () => {

@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Events } from 'discord.js';
 import { FakeDiscordEnvironment } from '../fake-discord-environments';
 
@@ -27,7 +28,7 @@ describe('FakeDiscordEnvironment', () => {
 
 		it('should emit ClientReady event on login', async () => {
 			const newEnv = new FakeDiscordEnvironment();
-			const readyHandler = jest.fn();
+			const readyHandler = vi.fn();
 
 			const readyPromise = new Promise<void>((resolve) => {
 				newEnv.client.once(Events.ClientReady, () => {

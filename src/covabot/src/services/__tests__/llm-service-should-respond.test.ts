@@ -1,28 +1,29 @@
+import { describe, it, expect, vi } from 'vitest';
 import { Message } from 'discord.js';
 
 // Lightweight mock for shared logger to keep test output clean
-jest.mock('@starbunk/shared', () => ({
+vi.mock('@starbunk/shared', () => ({
 	logger: {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
 	},
 	ensureError: (err: unknown) => (err instanceof Error ? err : new Error(String(err))),
 }));
 
 // Mock prom-client to avoid global registry conflicts in unit tests
-jest.mock('prom-client', () => {
+vi.mock('prom-client', () => {
 	class MockCounter {
-		inc = jest.fn();
+		inc = vi.fn();
 	}
 
 	class MockHistogram {
-		observe = jest.fn();
+		observe = vi.fn();
 	}
 
 	class MockGauge {
-		set = jest.fn();
+		set = vi.fn();
 	}
 
 	return {
@@ -30,9 +31,9 @@ jest.mock('prom-client', () => {
 		Histogram: MockHistogram,
 		Gauge: MockGauge,
 		register: {
-			clear: jest.fn(),
+			clear: vi.fn(),
 		},
-		collectDefaultMetrics: jest.fn(),
+		collectDefaultMetrics: vi.fn(),
 	};
 });
 
@@ -54,7 +55,7 @@ const createMockMessage = (options: {
 }): Message => {
 	const { content, isDM = false, isDirectMention = false, isBotAuthor = false, channelId = 'test-channel' } = options;
 	const botUser = { id: 'bot-id', username: 'CovaBot' } as any;
-	const mentionsHas = jest.fn().mockReturnValue(isDirectMention);
+	const mentionsHas = vi.fn().mockReturnValue(isDirectMention);
 	const channel = { id: channelId } as any;
 
 	const message: Partial<Message> = {
