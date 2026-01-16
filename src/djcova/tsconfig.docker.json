@@ -3,7 +3,8 @@
   "compilerOptions": {
     "sourceMap": false,
     "removeComments": true,
-    "composite": false
+    "composite": false,
+    "rootDir": undefined
   },
   "references": []
 }
