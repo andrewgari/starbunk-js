@@ -46,7 +46,13 @@ const mockRedisInstance = {
 };
 
 vi.mock('ioredis', () => {
-	return { default: vi.fn(() => mockRedisInstance) };
+	return {
+		default: class MockRedis {
+			constructor() {
+				return mockRedisInstance;
+			}
+		},
+	};
 });
 
 // Use the shared mock instance
@@ -114,7 +120,7 @@ describe('BotTriggerMetricsService', () => {
 		});
 
 		it('should handle Redis connection failures during initialization', async () => {
-			(mockRedis.connect as jest.Mock).mockRejectedValue(new Error('Connection failed'));
+			(mockRedis.connect as vi.Mock).mockRejectedValue(new Error('Connection failed'));
 
 			await expect(service.initialize()).rejects.toThrow('Connection failed');
 		});
@@ -154,7 +160,7 @@ describe('BotTriggerMetricsService', () => {
 			const event: BotTriggerEvent = createTestEvent();
 
 			// Mock Redis operations to fail
-			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Redis error'));
+			(mockRedis.eval as vi.Mock).mockRejectedValue(new Error('Redis error'));
 			mockPipeline.exec.mockRejectedValue(new Error('Pipeline error'));
 
 			// Since we're mocking failures, we expect the service to handle them gracefully
@@ -187,7 +193,7 @@ describe('BotTriggerMetricsService', () => {
 			await testService.initialize();
 
 			// Trigger failures to open circuit
-			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Redis error'));
+			(mockRedis.eval as vi.Mock).mockRejectedValue(new Error('Redis error'));
 			mockPipeline.exec.mockRejectedValue(new Error('Pipeline error'));
 
 			await testService.trackBotTrigger(event);
@@ -200,7 +206,7 @@ describe('BotTriggerMetricsService', () => {
 			});
 
 			// Next operation should attempt execution (half-open state)
-			(mockRedis.eval as jest.Mock).mockResolvedValueOnce('OK');
+			(mockRedis.eval as vi.Mock).mockResolvedValueOnce('OK');
 			const _result = await testService.trackBotTrigger(event);
 			expect(_result.success).toBe(true);
 
@@ -257,7 +263,7 @@ describe('BotTriggerMetricsService', () => {
 			const events = [createTestEvent('event1'), createTestEvent('event2')];
 
 			// Mock batch processing failure
-			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Batch processing failed'));
+			(mockRedis.eval as vi.Mock).mockRejectedValue(new Error('Batch processing failed'));
 			mockPipeline.exec.mockRejectedValue(new Error('Batch processing failed'));
 
 			// Track events
@@ -311,7 +317,7 @@ describe('BotTriggerMetricsService', () => {
 			const event = createTestEvent();
 
 			// Mock Lua script failure
-			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Script execution failed'));
+			(mockRedis.eval as vi.Mock).mockRejectedValue(new Error('Script execution failed'));
 
 			const _result = await service.trackBotTrigger(event);
 
@@ -343,7 +349,7 @@ describe('BotTriggerMetricsService', () => {
 		it('should handle batch processing failures', async () => {
 			const events = [createTestEvent('batch1')];
 
-			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Batch processing failed'));
+			(mockRedis.eval as vi.Mock).mockRejectedValue(new Error('Batch processing failed'));
 			mockPipeline.exec.mockRejectedValue(new Error('Batch processing failed'));
 
 			const _result = await service.trackBatchTriggers(events);
@@ -367,9 +373,9 @@ describe('BotTriggerMetricsService', () => {
 			};
 
 			// Mock Redis responses
-			(mockRedis.hmget as jest.Mock).mockResolvedValue(['100', '95', '5', '5000']); // Basic stats
-			(mockRedis.zrangebyscore as jest.Mock).mockResolvedValue(['100', '150', '200']); // Response times
-			(mockRedis.hgetall as jest.Mock).mockResolvedValue({
+			(mockRedis.hmget as vi.Mock).mockResolvedValue(['100', '95', '5', '5000']); // Basic stats
+			(mockRedis.zrangebyscore as vi.Mock).mockResolvedValue(['100', '150', '200']); // Response times
+			(mockRedis.hgetall as vi.Mock).mockResolvedValue({
 				condition1: '50',
 				condition2: '45',
 			});
@@ -401,7 +407,7 @@ describe('BotTriggerMetricsService', () => {
 				period: 'hour',
 			};
 
-			(mockRedis.hgetall as jest.Mock).mockResolvedValue({
+			(mockRedis.hgetall as vi.Mock).mockResolvedValue({
 				bot_triggers: '25',
 				last_trigger: Date.now().toString(),
 			});
@@ -422,7 +428,7 @@ describe('BotTriggerMetricsService', () => {
 				period: 'day',
 			};
 
-			(mockRedis.hgetall as jest.Mock).mockResolvedValue({
+			(mockRedis.hgetall as vi.Mock).mockResolvedValue({
 				bot_triggers: '15',
 				last_trigger: Date.now().toString(),
 			});
@@ -450,7 +456,7 @@ describe('BotTriggerMetricsService', () => {
 			};
 
 			// Mock aggregation data
-			(mockRedis.hgetall as jest.Mock).mockResolvedValue({
+			(mockRedis.hgetall as vi.Mock).mockResolvedValue({
 				triggers: '50',
 				responses: '48',
 				failures: '2',
@@ -478,7 +484,7 @@ describe('BotTriggerMetricsService', () => {
 				period: 'hour',
 			};
 
-			(mockRedis.hgetall as jest.Mock).mockResolvedValue({});
+			(mockRedis.hgetall as vi.Mock).mockResolvedValue({});
 			await service.getAggregatedMetrics(filter, hourlyRange);
 
 			// Test daily aggregation
@@ -501,7 +507,7 @@ describe('BotTriggerMetricsService', () => {
 		});
 
 		it('should return healthy status when Redis is connected', async () => {
-			(mockRedis.ping as jest.Mock).mockResolvedValue('PONG');
+			(mockRedis.ping as vi.Mock).mockResolvedValue('PONG');
 
 			const health = await service.getHealthStatus();
 
@@ -513,7 +519,7 @@ describe('BotTriggerMetricsService', () => {
 		});
 
 		it('should return unhealthy status when Redis is disconnected', async () => {
-			(mockRedis.ping as jest.Mock).mockRejectedValue(new Error('Connection lost'));
+			(mockRedis.ping as vi.Mock).mockRejectedValue(new Error('Connection lost'));
 
 			const health = await service.getHealthStatus();
 
@@ -526,7 +532,7 @@ describe('BotTriggerMetricsService', () => {
 			// In our simple mock approach, the circuit breaker may not open as expected
 			// Since the service has fallback mechanisms that may succeed
 			const event = createTestEvent();
-			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Redis error'));
+			(mockRedis.eval as vi.Mock).mockRejectedValue(new Error('Redis error'));
 			mockPipeline.exec.mockRejectedValue(new Error('Redis error'));
 
 			// Attempt operations that might trigger circuit breaker
@@ -587,7 +593,7 @@ describe('BotTriggerMetricsService', () => {
 		it('should handle Redis timeout errors', async () => {
 			const event = createTestEvent();
 
-			(mockRedis.eval as jest.Mock).mockRejectedValue(new Error('Command timed out'));
+			(mockRedis.eval as vi.Mock).mockRejectedValue(new Error('Command timed out'));
 			mockPipeline.exec.mockRejectedValue(new Error('Command timed out'));
 
 			const _result = await service.trackBotTrigger(event);
@@ -625,7 +631,7 @@ describe('BotTriggerMetricsService', () => {
 		});
 
 		it('should handle cleanup failures gracefully', async () => {
-			(mockRedis.quit as jest.Mock).mockRejectedValue(new Error('Quit failed'));
+			(mockRedis.quit as vi.Mock).mockRejectedValue(new Error('Quit failed'));
 
 			const _result = await service.cleanup();
 

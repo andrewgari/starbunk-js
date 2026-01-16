@@ -6,10 +6,12 @@ import { MessageInfo } from '../types';
 
 // Mock environment module
 vi.mock('../../environment', () => ({
-	discord: {
-		WEBHOOK_URL: 'https://discord.com/api/webhooks/mock-webhook',
+	default: {
+		discord: {
+			WEBHOOK_URL: 'https://discord.com/api/webhooks/mock-webhook',
+		},
+		isProduction: false,
 	},
-	isProduction: false,
 	isDebugMode: () => false,
 }));
 
@@ -64,7 +66,7 @@ describe('WebhookService', () => {
 	});
 
 	afterEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	describe('writeMessage', () => {
@@ -104,9 +106,9 @@ describe('WebhookService', () => {
 			// Mock channel without existing webhook
 			const channelWithoutWebhook = {
 				...mockChannel,
-				fetchWebhooks: jest.fn().mockResolvedValue({
-					first: jest.fn().mockReturnValue(null),
-					find: jest.fn().mockReturnValue(null),
+				fetchWebhooks: vi.fn().mockResolvedValue({
+					first: vi.fn().mockReturnValue(null),
+					find: vi.fn().mockReturnValue(null),
 				}),
 			} as unknown as TextChannel;
 
@@ -121,7 +123,7 @@ describe('WebhookService', () => {
 			// Check that createWebhook was called with the expected parameters
 			expect(channelWithoutWebhook.createWebhook).toHaveBeenCalled();
 			// The webhook name should contain some form of the bot name
-			const createWebhookCallArgs = (channelWithoutWebhook.createWebhook as jest.Mock).mock.calls[0][0];
+			const createWebhookCallArgs = (channelWithoutWebhook.createWebhook as vi.Mock).mock.calls[0][0];
 			expect(createWebhookCallArgs.name).toContain('Very-Long-Bot-Name-With-Spaces-webhook'.substring(0, 32));
 			expect(createWebhookCallArgs.avatar).toBe('https://example.com/avatar.jpg');
 		});
@@ -155,7 +157,7 @@ describe('WebhookService', () => {
 			const mockWebhooks = new Map();
 
 			// Mock function to either return an existing webhook or undefined
-			const mockFindWebhook = jest.fn().mockImplementation((finder) => {
+			const mockFindWebhook = vi.fn().mockImplementation((finder) => {
 				if (typeof finder === 'function') {
 					// Check each webhook
 					for (const webhook of mockWebhooks.values()) {
@@ -170,14 +172,14 @@ describe('WebhookService', () => {
 			// Mock channel that creates unique webhooks for each bot
 			const multiWebhookChannel = {
 				...mockChannel,
-				fetchWebhooks: jest.fn().mockResolvedValue({
-					first: jest.fn().mockReturnValue(null),
+				fetchWebhooks: vi.fn().mockResolvedValue({
+					first: vi.fn().mockReturnValue(null),
 					find: mockFindWebhook,
 				}),
-				createWebhook: jest.fn().mockImplementation((opts) => {
+				createWebhook: vi.fn().mockImplementation((opts) => {
 					const newWebhook = {
 						name: opts.name,
-						send: jest.fn().mockResolvedValue(undefined),
+						send: vi.fn().mockResolvedValue(undefined),
 					};
 					mockWebhooks.set(opts.name, newWebhook);
 					return Promise.resolve(newWebhook);
@@ -249,9 +251,9 @@ describe('WebhookService', () => {
 			// Custom mock implementation that simulates persisting webhooks
 			const persistentWebhookChannel = {
 				...mockChannel,
-				fetchWebhooks: jest.fn().mockImplementation(() => {
+				fetchWebhooks: vi.fn().mockImplementation(() => {
 					return Promise.resolve({
-						first: jest.fn().mockReturnValue(null),
+						first: vi.fn().mockReturnValue(null),
 						find: (finder: any) => {
 							if (typeof finder === 'function') {
 								// Check each webhook
@@ -265,11 +267,11 @@ describe('WebhookService', () => {
 						},
 					});
 				}),
-				createWebhook: jest.fn().mockImplementation((opts) => {
+				createWebhook: vi.fn().mockImplementation((opts) => {
 					createWebhookCount++;
 					const newWebhook = {
 						name: opts.name,
-						send: jest.fn().mockResolvedValue(undefined),
+						send: vi.fn().mockResolvedValue(undefined),
 					};
 					mockWebhooks.set(opts.name, newWebhook);
 					return Promise.resolve(newWebhook);

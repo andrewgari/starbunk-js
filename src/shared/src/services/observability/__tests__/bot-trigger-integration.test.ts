@@ -14,39 +14,39 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { MessageContext } from '../container-metrics';
 import type { ProductionMetricsService } from '../production-metrics-service';
 
-// Mock initializeBotTriggerMetricsService function
-vi.mock('../bot-trigger-metrics-service', () => {
-	const actual = vi.importActual('../bot-trigger-metrics-service');
+// Create mock service outside the factory
+const mockBotTriggerService = {
+	initialize: vi.fn().mockResolvedValue(undefined),
+	trackBotTrigger: vi.fn().mockResolvedValue(undefined),
+	getBotMetrics: vi.fn().mockResolvedValue({
+		totalTriggers: 100,
+		totalResponses: 95,
+		avgResponseTime: 150,
+	}),
+	getHealthStatus: vi.fn().mockResolvedValue({
+		healthy: true,
+		redis: { connected: true },
+	}),
+	cleanup: vi.fn().mockResolvedValue(undefined),
+};
 
-	// Create mock service inside the factory to avoid hoisting issues
-	const internalMockService = {
-		initialize: vi.fn(),
-		trackBotTrigger: vi.fn(),
-		getBotMetrics: vi.fn(),
-		getHealthStatus: vi.fn(),
-		cleanup: vi.fn(),
-	};
+// Mock initializeBotTriggerMetricsService function
+vi.mock('../bot-trigger-metrics-service', async () => {
+	const actual = await vi.importActual('../bot-trigger-metrics-service');
 
 	// Mock initializeBotTriggerMetricsService to simulate real behavior
-	const mockInitialize = vi.fn().mockImplementation(async (config) => {
+	const mockInitialize = vi.fn().mockImplementation(async (_config) => {
 		// Simulate the real function behavior: create instance and call initialize
-		if (internalMockService.initialize) {
-			await internalMockService.initialize();
-		}
-		return internalMockService;
+		await mockBotTriggerService.initialize();
+		return mockBotTriggerService;
 	});
 
 	return {
 		...actual,
-		BotTriggerMetricsService: vi.fn(() => internalMockService),
+		BotTriggerMetricsService: vi.fn(() => mockBotTriggerService),
 		initializeBotTriggerMetricsService: mockInitialize,
-		// Export the mock service for test access
-		__mockService: internalMockService,
 	};
 });
-
-// Get the mock service from the mocked module
-const { __mockService: mockBotTriggerService } = await import('../bot-trigger-metrics-service');
 
 // Import modules after mocks are set up
 const {
@@ -110,7 +110,11 @@ const mock_BunkBotMetricsCollector = {
 };
 
 vi.mock('../bunk-bot-metrics', () => ({
-	_BunkBotMetricsCollector: vi.fn(() => mock_BunkBotMetricsCollector),
+	_BunkBotMetricsCollector: class Mock_BunkBotMetricsCollector {
+		constructor() {
+			return mock_BunkBotMetricsCollector;
+		}
+	},
 }));
 
 // Reference to the mocked initializeBotTriggerMetricsService function for test expectations

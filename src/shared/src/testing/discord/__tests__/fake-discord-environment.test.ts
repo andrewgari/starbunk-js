@@ -89,7 +89,7 @@ describe('FakeDiscordEnvironment', () => {
 			env.createChannel('general', guild);
 			env.createUser('Alice');
 
-			const messageHandler = jest.fn();
+			const messageHandler = vi.fn();
 			env.client.on(Events.MessageCreate, messageHandler);
 
 			await env.sendUserMessage('Alice', 'general', 'Hello world!');

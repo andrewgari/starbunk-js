@@ -48,12 +48,12 @@ const mockBotTriggerMetricsService = {
 } as unknown as BotTriggerMetricsService;
 
 // Mock logger
-jest.mock('../../logger', () => ({
+vi.mock('../../logger', () => ({
 	logger: {
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
-		debug: jest.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn(),
 	},
 }));
 
@@ -64,8 +64,8 @@ describe('RedisBotMetricsExporter', () => {
 	let activeTimeouts: NodeJS.Timeout[] = [];
 
 	beforeEach(() => {
-		jest.clearAllMocks();
-		jest.clearAllTimers();
+		vi.clearAllMocks();
+		vi.clearAllTimers();
 
 		// Create fresh registry for each test
 		registry = new promClient.Registry();
@@ -74,7 +74,7 @@ describe('RedisBotMetricsExporter', () => {
 		registry.clear();
 
 		// Setup default mocks
-		(mockRedis.pipeline as jest.Mock).mockReturnValue(mockPipeline);
+		(mockRedis.pipeline as vi.Mock).mockReturnValue(mockPipeline);
 		mockPipeline.exec.mockResolvedValue([]);
 
 		// Create exporter with test configuration
@@ -114,7 +114,7 @@ describe('RedisBotMetricsExporter', () => {
 		}
 
 		// Reset all mock functions
-		jest.resetAllMocks();
+		vi.resetAllMocks();
 	});
 
 	describe('Initialization', () => {
@@ -129,7 +129,7 @@ describe('RedisBotMetricsExporter', () => {
 		it('should handle Redis connection failure gracefully', async () => {
 			const failingRedis = {
 				...mockRedis,
-				ping: jest.fn().mockRejectedValue(new Error('Connection failed')),
+				ping: vi.fn().mockRejectedValue(new Error('Connection failed')),
 			} as unknown as Redis;
 
 			await exporter.initialize(failingRedis);
@@ -152,17 +152,17 @@ describe('RedisBotMetricsExporter', () => {
 		});
 
 		it('should start cache cleanup interval on initialization', async () => {
-			jest.useFakeTimers();
+			vi.useFakeTimers();
 
 			await exporter.initialize(mockRedis);
 
 			// Fast-forward time to trigger cache cleanup
-			jest.advanceTimersByTime(60000);
+			vi.advanceTimersByTime(60000);
 
 			// Should not throw
 			expect(exporter.getStats().initialized).toBe(true);
 
-			jest.useRealTimers();
+			vi.useRealTimers();
 		});
 	});
 
@@ -182,7 +182,7 @@ describe('RedisBotMetricsExporter', () => {
 		});
 
 		it('should handle empty Redis data gracefully', async () => {
-			(mockRedis.scan as jest.Mock).mockResolvedValue(['0', []]);
+			(mockRedis.scan as vi.Mock).mockResolvedValue(['0', []]);
 			mockPipeline.exec.mockResolvedValue([]);
 
 			await exporter.exportMetrics();
@@ -195,11 +195,11 @@ describe('RedisBotMetricsExporter', () => {
 
 			// First export
 			await exporter.exportMetrics();
-			const firstScanCount = (mockRedis.scan as jest.Mock).mock.calls.length;
+			const firstScanCount = (mockRedis.scan as vi.Mock).mock.calls.length;
 
 			// Reset mocks
-			jest.clearAllMocks();
-			(mockRedis.pipeline as jest.Mock).mockReturnValue(mockPipeline);
+			vi.clearAllMocks();
+			(mockRedis.pipeline as vi.Mock).mockReturnValue(mockPipeline);
 
 			// Second export (should use cache)
 			await exporter.exportMetrics();
@@ -210,18 +210,18 @@ describe('RedisBotMetricsExporter', () => {
 		});
 
 		it('should refresh cache after TTL expires', async () => {
-			jest.useFakeTimers();
+			vi.useFakeTimers();
 			setupMockRedisData();
 
 			// First export
 			await exporter.exportMetrics();
 
 			// Fast-forward past cache TTL
-			jest.advanceTimersByTime(2000);
+			vi.advanceTimersByTime(2000);
 
 			// Reset mocks to verify new Redis calls
-			jest.clearAllMocks();
-			(mockRedis.pipeline as jest.Mock).mockReturnValue(mockPipeline);
+			vi.clearAllMocks();
+			(mockRedis.pipeline as vi.Mock).mockReturnValue(mockPipeline);
 			setupMockRedisData();
 
 			// Second export (should refresh cache)
@@ -229,14 +229,14 @@ describe('RedisBotMetricsExporter', () => {
 
 			expect(mockRedis.scan).toHaveBeenCalled();
 
-			jest.useRealTimers();
+			vi.useRealTimers();
 		});
 
 		it('should prevent concurrent exports', async () => {
 			let exportCount = 0;
 			const trackingRedis = {
 				...mockRedis,
-				scan: jest.fn().mockImplementation(async (...args: any[]) => {
+				scan: vi.fn().mockImplementation(async (...args: any[]) => {
 					exportCount++;
 					await new Promise((resolve) => {
 						const timeout = setTimeout(resolve, 100);
@@ -260,7 +260,7 @@ describe('RedisBotMetricsExporter', () => {
 		it('should handle large number of Redis keys efficiently', async () => {
 			const manyKeys = Array.from({ length: 500 }, (_, i) => `bot:bot${i}:stats`);
 
-			(mockRedis.scan as jest.Mock).mockImplementation((cursor: string, ...args: any[]) => {
+			(mockRedis.scan as vi.Mock).mockImplementation((cursor: string, ...args: any[]) => {
 				if (cursor === '0') {
 					return Promise.resolve(['123', manyKeys.slice(0, 100)]);
 				} else if (cursor === '123') {
@@ -309,7 +309,7 @@ describe('RedisBotMetricsExporter', () => {
 		it('should open circuit breaker after threshold failures', async () => {
 			const failingRedis = {
 				...mockRedis,
-				scan: jest.fn().mockRejectedValue(new Error('Redis scan error')),
+				scan: vi.fn().mockRejectedValue(new Error('Redis scan error')),
 			} as unknown as Redis;
 
 			await circuitBreakerExporter.initialize(failingRedis);
@@ -329,7 +329,7 @@ describe('RedisBotMetricsExporter', () => {
 			// Setup failing Redis to trigger circuit breaker
 			const failingRedis = {
 				...mockRedis,
-				scan: jest.fn().mockRejectedValue(new Error('Redis error')),
+				scan: vi.fn().mockRejectedValue(new Error('Redis error')),
 			} as unknown as Redis;
 
 			await circuitBreakerExporter.initialize(failingRedis);
@@ -352,11 +352,11 @@ describe('RedisBotMetricsExporter', () => {
 		});
 
 		it.skip('should transition to half-open and reset after timeout', async () => {
-			jest.useFakeTimers();
+			vi.useFakeTimers();
 
 			const intermittentRedis = {
 				...mockRedis,
-				scan: jest
+				scan: vi
 					.fn()
 					.mockRejectedValueOnce(new Error('Error 1'))
 					.mockRejectedValueOnce(new Error('Error 2'))
@@ -372,11 +372,11 @@ describe('RedisBotMetricsExporter', () => {
 			expect(circuitBreakerExporter.getStats().circuitBreaker.state).toBe('OPEN');
 
 			// Reset the mock to work correctly after timer advances
-			(intermittentRedis.scan as jest.Mock).mockResolvedValue(['0', []]);
+			(intermittentRedis.scan as vi.Mock).mockResolvedValue(['0', []]);
 			mockPipeline.exec.mockResolvedValue([]);
 
 			// Fast-forward past reset timeout
-			jest.advanceTimersByTime(150);
+			vi.advanceTimersByTime(150);
 
 			// Allow promises to resolve
 			await Promise.resolve();
@@ -387,7 +387,7 @@ describe('RedisBotMetricsExporter', () => {
 			const stats = circuitBreakerExporter.getStats();
 			expect(stats.circuitBreaker.state).toBe('CLOSED');
 
-			jest.useRealTimers();
+			vi.useRealTimers();
 		});
 
 		it('should track circuit breaker statistics', async () => {
@@ -468,7 +468,7 @@ describe('RedisBotMetricsExporter', () => {
 
 		it('should handle missing data gracefully in metrics', async () => {
 			// Setup incomplete data
-			(mockRedis.scan as jest.Mock)
+			(mockRedis.scan as vi.Mock)
 				.mockResolvedValueOnce(['0', ['bot:emptybot:stats']])
 				.mockResolvedValueOnce(['0', ['channel:emptychannel:activity']]);
 
@@ -514,7 +514,7 @@ describe('RedisBotMetricsExporter', () => {
 		});
 
 		it('should parse bot metrics correctly', async () => {
-			(mockRedis.scan as jest.Mock).mockResolvedValueOnce(['0', ['bot:parsebot:stats']]);
+			(mockRedis.scan as vi.Mock).mockResolvedValueOnce(['0', ['bot:parsebot:stats']]);
 
 			mockPipeline.exec.mockResolvedValue([
 				[
@@ -548,7 +548,7 @@ describe('RedisBotMetricsExporter', () => {
 		});
 
 		it('should parse channel metrics correctly', async () => {
-			(mockRedis.scan as jest.Mock)
+			(mockRedis.scan as vi.Mock)
 				.mockResolvedValueOnce(['0', []])
 				.mockResolvedValueOnce(['0', ['channel:parsechannel:activity']]);
 
@@ -576,7 +576,7 @@ describe('RedisBotMetricsExporter', () => {
 		});
 
 		it('should handle malformed Redis data gracefully', async () => {
-			(mockRedis.scan as jest.Mock).mockResolvedValueOnce(['0', ['bot:malformed:stats']]);
+			(mockRedis.scan as vi.Mock).mockResolvedValueOnce(['0', ['bot:malformed:stats']]);
 
 			mockPipeline.exec.mockResolvedValue([
 				[null, null], // null data
@@ -618,8 +618,8 @@ describe('RedisBotMetricsExporter', () => {
 			expect(stats.cacheHitRate).toBe(0);
 
 			// Reset mocks but keep cache
-			jest.clearAllMocks();
-			(mockRedis.pipeline as jest.Mock).mockReturnValue(mockPipeline);
+			vi.clearAllMocks();
+			(mockRedis.pipeline as vi.Mock).mockReturnValue(mockPipeline);
 
 			// Second export (cache hit)
 			await exporter.exportMetrics();
@@ -628,7 +628,7 @@ describe('RedisBotMetricsExporter', () => {
 		});
 
 		it.skip('should cleanup expired cache entries', async () => {
-			jest.useFakeTimers();
+			vi.useFakeTimers();
 
 			// Create cache entry
 			setupMockRedisData();
@@ -640,10 +640,10 @@ describe('RedisBotMetricsExporter', () => {
 
 			// Fast-forward past cache TTL and cleanup interval
 			// Cache TTL is 1000ms, cleanup runs every 60000ms
-			jest.advanceTimersByTime(61000); // Just past cleanup interval
+			vi.advanceTimersByTime(61000); // Just past cleanup interval
 
 			// Run all pending timers
-			jest.runOnlyPendingTimers();
+			vi.runOnlyPendingTimers();
 
 			// Allow any promises to resolve
 			await new Promise((resolve) => setImmediate(resolve));
@@ -653,11 +653,11 @@ describe('RedisBotMetricsExporter', () => {
 			// Cache should be cleaned since entries are expired (TTL=1000ms)
 			expect(stats.cacheSize).toBe(0);
 
-			jest.useRealTimers();
+			vi.useRealTimers();
 		});
 
 		it('should respect cache TTL configuration', async () => {
-			jest.useFakeTimers();
+			vi.useFakeTimers();
 
 			// Create a separate registry for this test
 			const shortCacheRegistry = new promClient.Registry();
@@ -674,12 +674,12 @@ describe('RedisBotMetricsExporter', () => {
 			await shortCacheExporter.exportMetrics();
 
 			// Clear mocks to track new calls
-			jest.clearAllMocks();
-			(mockRedis.pipeline as jest.Mock).mockReturnValue(mockPipeline);
+			vi.clearAllMocks();
+			(mockRedis.pipeline as vi.Mock).mockReturnValue(mockPipeline);
 			setupMockRedisData();
 
 			// Advance time past cache TTL
-			jest.advanceTimersByTime(150);
+			vi.advanceTimersByTime(150);
 
 			// Second export (should refresh cache since TTL expired)
 			await shortCacheExporter.exportMetrics();
@@ -689,7 +689,7 @@ describe('RedisBotMetricsExporter', () => {
 			await shortCacheExporter.shutdown();
 			shortCacheRegistry.clear();
 
-			jest.useRealTimers();
+			vi.useRealTimers();
 		});
 	});
 
@@ -734,7 +734,7 @@ describe('RedisBotMetricsExporter', () => {
 			await limitedExporter.initialize(mockRedis);
 
 			// Mock many keys
-			(mockRedis.scan as jest.Mock).mockResolvedValue([
+			(mockRedis.scan as vi.Mock).mockResolvedValue([
 				'0',
 				Array.from({ length: 15000 }, (_, i) => `bot:bot${i}:stats`),
 			]);
@@ -775,7 +775,7 @@ describe('RedisBotMetricsExporter', () => {
 		});
 
 		it('should handle Redis scan errors gracefully', async () => {
-			(mockRedis.scan as jest.Mock).mockRejectedValue(new Error('SCAN command failed'));
+			(mockRedis.scan as vi.Mock).mockRejectedValue(new Error('SCAN command failed'));
 
 			await expect(exporter.exportMetrics()).resolves.not.toThrow();
 
@@ -784,7 +784,7 @@ describe('RedisBotMetricsExporter', () => {
 		});
 
 		it('should handle pipeline execution errors', async () => {
-			(mockRedis.scan as jest.Mock).mockResolvedValue(['0', ['bot:test:stats']]);
+			(mockRedis.scan as vi.Mock).mockResolvedValue(['0', ['bot:test:stats']]);
 			mockPipeline.exec.mockRejectedValue(new Error('Pipeline execution failed'));
 
 			await expect(exporter.exportMetrics()).resolves.not.toThrow();
@@ -796,7 +796,7 @@ describe('RedisBotMetricsExporter', () => {
 			const exportPromise = exporter.exportMetrics();
 
 			// Simulate disconnection
-			(mockRedis.scan as jest.Mock).mockRejectedValue(new Error('Connection lost'));
+			(mockRedis.scan as vi.Mock).mockRejectedValue(new Error('Connection lost'));
 
 			await expect(exportPromise).resolves.not.toThrow();
 		});
@@ -922,7 +922,7 @@ describe('RedisBotMetricsExporter', () => {
 
 	// Helper function to setup mock Redis data
 	function setupMockRedisData() {
-		(mockRedis.scan as jest.Mock)
+		(mockRedis.scan as vi.Mock)
 			.mockResolvedValueOnce(['0', ['bot:testbot:stats']])
 			.mockResolvedValueOnce(['0', ['channel:test-channel:activity']]);
 
