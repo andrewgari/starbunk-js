@@ -17,11 +17,6 @@ inputs:
     required: false
     default: 'true'
 
-  build-shared:
-    description: 'Whether to build the shared package automatically'
-    required: false
-    default: 'true'
-
 outputs:
   cache-hit:
     description: 'Whether dependencies were loaded from cache'
@@ -142,32 +137,7 @@ runs:
           exit 1
         fi
 
-        # Generate Prisma client (required for TypeScript compilation)
-        echo "🔧 Generating Prisma client..."
-        if npx prisma generate --schema=infrastructure/database/prisma/schema.prisma; then
-          echo "✅ Prisma client generated successfully"
-        else
-          echo "⚠️  Prisma client generation failed (may not be needed for this project)"
-        fi
 
-    - name: Build shared package
-      if: inputs.build-shared == 'true' && steps.cache.outputs.cache-hit != 'true'
-      shell: bash
-      run: |
-        if [ -d "packages/shared" ] && [ -f "packages/shared/package.json" ]; then
-          echo "🔨 Building shared package..."
-          cd packages/shared
-
-          # Check if build script exists
-          if npm run --silent build --dry-run 2>/dev/null; then
-            npm run build
-            echo "✅ Shared package built successfully"
-          else
-            echo "⚠️  No build script found for shared package"
-          fi
-        else
-          echo "⚠️  No shared package found to build"
-        fi
 
     - name: Verify installation
       shell: bash

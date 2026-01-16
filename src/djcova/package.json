@@ -4,13 +4,13 @@
 	"description": "DJCova - Music service container",
 	"main": "dist/index.js",
 	"scripts": {
-		"build": "tsc && tsc-alias",
-		"build:docker": "tsc -p tsconfig.docker.json && tsc-alias -p tsconfig.docker.json",
+		"build": "tsc --build && tsc-alias",
+		"build:docker": "tsc --build -p tsconfig.docker.json && tsc-alias -p tsconfig.docker.json",
 		"start": "node dist/index.js",
 		"dev": "cross-env NODE_ENV=development DEBUG=true ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
 		"test": "jest",
-		"type-check": "tsc --noEmit",
-		"clean": "rimraf dist"
+		"type-check": "tsc --build --dry",
+		"clean": "tsc --build --clean"
 	},
 	"dependencies": {
 		"@discordjs/builders": "^1.6.5",

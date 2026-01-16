@@ -24,15 +24,12 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY packages/shared/src ./packages/shared/src
 COPY packages/shared/tsconfig*.json ./packages/shared/
 
-# Build shared package
-RUN cd packages/shared && npm run build
-
 # Copy app source code
 COPY apps/djcova/src ./apps/djcova/src
 COPY apps/djcova/tests ./apps/djcova/tests
 COPY apps/djcova/jest.config.js apps/djcova/tsconfig*.json apps/djcova/.dockerignore ./apps/djcova/
 
-# Build the application
+# Build the application (TypeScript will automatically build shared package first)
 RUN cd apps/djcova && npm run build:docker
 
 # Stage 2: Runtime - Minimal production image

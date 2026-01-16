@@ -16,24 +16,22 @@
 		"isolatedModules": true,
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
-			"baseUrl": "./src",
-			"paths": {
-				"@/*": ["*"],
-				// Resolve the shared package to its source TS files. Paths are
-				// resolved relative to baseUrl (apps/djcova/src), so we need to
-				// walk back to the repo root before going into packages/shared.
-				"@starbunk/shared": ["../../../packages/shared/src"],
-				"@starbunk/shared/*": ["../../../packages/shared/src/*"]
-			}
+		"baseUrl": "./src",
+		"paths": {
+			"@/*": ["*"],
+			"@starbunk/shared": ["../../shared/src"],
+			"@starbunk/shared/*": ["../../shared/src/*"]
+		}
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": [
 		"node_modules",
 		"dist",
 		"tests",
-		"src/**/__tests__/**"
+		"src/**/__tests__/**",
+		"src/services/personality-notes-service-db.ts"
 	],
 	"references": [
-		{ "path": "../../packages/shared" }
+		{ "path": "../shared" }
 	]
 }

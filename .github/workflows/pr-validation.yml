@@ -127,9 +127,6 @@ jobs:
       - name: Lint app sources
         run: npx eslint "apps/${{ matrix.app }}/src/**/*.ts"
 
-      - name: Build shared package (for TS project references)
-        run: npm run build:shared
-
       - name: Type check app
         run: npm run type-check:${{ matrix.app }}
 
