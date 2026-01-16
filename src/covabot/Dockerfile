@@ -24,12 +24,15 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY src/shared/src ./src/shared/src
 COPY src/shared/tsconfig*.json ./src/shared/
 
+# Build the shared package first
+RUN cd src/shared && npm run build
+
 # Copy app source code
 COPY src/covabot/src ./src/covabot/src
 COPY src/covabot/tests ./src/covabot/tests
 COPY src/covabot/jest.config.js src/covabot/tsconfig*.json src/covabot/.dockerignore ./src/covabot/
 
-# Build the application (TypeScript will automatically build shared package first)
+# Build the application
 RUN cd src/covabot && npm run build:docker
 
 # Stage 2: Runtime - Minimal production image
