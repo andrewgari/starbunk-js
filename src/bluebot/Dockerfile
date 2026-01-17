@@ -9,20 +9,29 @@ WORKDIR /app
 # Install all system dependencies in one layer
 RUN apk add --no-cache python3 make g++ openssl curl dumb-init
 
-# Copy package files for bluebot only
-COPY src/bluebot/package.json ./
+# Copy package files for better caching
+COPY package.json package-lock.json* ./
+COPY src/shared/package.json ./src/shared/
+COPY src/bluebot/package.json ./src/bluebot/
 
-# Install dependencies
+# Install all dependencies using workspace (more efficient)
 RUN --mount=type=cache,target=/root/.npm \
-    npm install --prefer-offline --no-audit --production=false
+    npm ci --prefer-offline --no-audit --ignore-scripts
+
+# Copy shared package source
+COPY src/shared/src ./src/shared/src
+COPY src/shared/tsconfig*.json ./src/shared/
+
+# Build the shared package first
+RUN cd src/shared && npm run build
 
 # Copy app source code
-COPY src/bluebot/src ./src
-COPY src/bluebot/tests ./tests
-COPY src/bluebot/vitest.config.ts src/bluebot/tsconfig*.json src/bluebot/.dockerignore ./
+COPY src/bluebot/src ./src/bluebot/src
+COPY src/bluebot/tests ./src/bluebot/tests
+COPY src/bluebot/vitest.config.ts src/bluebot/tsconfig*.json src/bluebot/.dockerignore ./src/bluebot/
 
 # Build the application
-RUN npm run build:docker
+RUN cd src/bluebot && npm run build:docker
 
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
@@ -49,7 +58,8 @@ RUN apk add --no-cache openssl dumb-init curl && \
 
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=bluebot:bluebot /app/node_modules ./node_modules
-COPY --from=builder --chown=bluebot:bluebot /app/dist ./dist
+COPY --from=builder --chown=bluebot:bluebot /app/src/shared/dist ./node_modules/@starbunk/shared
+COPY --from=builder --chown=bluebot:bluebot /app/src/bluebot/dist ./dist
 COPY --from=builder --chown=bluebot:bluebot /app/package.json ./package.json
 
 # Set default environment variables from build args
