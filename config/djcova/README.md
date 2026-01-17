@@ -6,10 +6,6 @@ This directory contains configuration files for DJCova (music service).
 
 Place any DJCova configuration files here (e.g., music settings, playlist configurations).
 
-## Environment Variables
-
-- `DJCOVA_CONFIG_DIR` - Points to `/app/config` (this directory in the container)
-
 ## Volume Mounts
 
 In docker-compose.yml:

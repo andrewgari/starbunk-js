@@ -24,7 +24,6 @@ services:
       - CLIENT_ID=${BUNKBOT_CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - BUNKBOT_BOTS_DIR=/app/config
-      - BUNKBOT_CONFIG_DIR=/app/config
       # Observability
       - ENABLE_METRICS=true
       - ENABLE_STRUCTURED_LOGGING=true

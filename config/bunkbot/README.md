@@ -8,7 +8,6 @@ This directory contains configuration files for BunkBot.
 
 ## Environment Variables
 
-- `BUNKBOT_CONFIG_DIR` - Points to `/app/config` (this directory in the container)
 - `BUNKBOT_BOTS_DIR` - Points to `/app/config` (where bot YAML files are loaded from)
 
 ## Volume Mount

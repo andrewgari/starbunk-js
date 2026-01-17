@@ -15,7 +15,6 @@ services:
       - DISCORD_TOKEN=${BUNKBOT_TOKEN}
       - GUILD_ID=${GUILD_ID}
       - BUNKBOT_BOTS_DIR=/app/config
-      - BUNKBOT_CONFIG_DIR=/app/config
       - METRICS_PORT=${METRICS_PORT:-3000}
     volumes:
       # Mount the bot configuration directory
@@ -56,7 +55,6 @@ services:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${DJCOVA_CLIENT_ID}
-      - DJCOVA_CONFIG_DIR=/app/config
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
@@ -112,7 +110,6 @@ services:
       - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
       - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
       # Storage Configuration
-      - COVABOT_CONFIG_DIR=/app/config
       - COVABOT_DATA_DIR=/app/data
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
       # Debug/Testing
@@ -160,7 +157,6 @@ services:
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
-      - BLUEBOT_CONFIG_DIR=/app/config
       - HEALTH_PORT=3000
     volumes:
       # Configuration directory (read-only)

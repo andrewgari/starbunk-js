@@ -8,7 +8,6 @@ Place any CovaBot configuration files here (e.g., personality settings, response
 
 ## Environment Variables
 
-- `COVABOT_CONFIG_DIR` - Points to `/app/config` (this directory in the container)
 - `COVABOT_DATA_DIR` - Points to `/app/data` (separate writable data directory)
 
 ## Volume Mounts
