@@ -131,7 +131,8 @@ export class DJCovaService {
 
 			// Standard watch URLs: https://www.youtube.com/watch?v=<id>
 			if (pathname.startsWith('/watch')) {
-				return parsed.searchParams.has('v');
+				const videoId = parsed.searchParams.get('v');
+				return videoId !== null && videoId.length > 0;
 			}
 
 			// Shorts URLs: https://www.youtube.com/shorts/<id>
