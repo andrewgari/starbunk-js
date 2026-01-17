@@ -144,7 +144,7 @@ let metricsInstance: MetricsService | undefined;
  * @param serviceName - The name of the service (e.g., 'bunkbot', 'djcova', 'bluebot')
  * @returns The MetricsService singleton instance
  */
-export function getMetricsService(serviceName: string = 'djcova'): MetricsService {
+export function getMetricsService(serviceName: string = 'bunkbot'): MetricsService {
 	if (!metricsInstance) {
 		metricsInstance = new MetricsService(serviceName);
 	}
@@ -156,7 +156,7 @@ export function getMetricsService(serviceName: string = 'djcova'): MetricsServic
  * Use this in tests to create isolated metrics instances.
  * @param serviceName - The name of the service (e.g., 'bunkbot', 'djcova', 'bluebot')
  */
-export function createMetricsService(serviceName: string = 'djcova'): MetricsService {
+export function createMetricsService(serviceName: string = 'bunkbot'): MetricsService {
 	return new MetricsService(serviceName);
 }
 

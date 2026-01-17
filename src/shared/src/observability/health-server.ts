@@ -1,5 +1,6 @@
 import * as http from 'http';
 import { getMetricsService } from './metrics-service';
+import { logger } from './logger';
 
 /**
  * Health and metrics HTTP server for BunkBot
@@ -51,7 +52,7 @@ export class HealthServer {
 
 		// Log request
 		if (process.env.DEBUG_MODE === 'true') {
-			console.log(`[HealthServer] ${req.method} ${url}`);
+			logger.info(`[HealthServer] ${req.method} ${url}`);
 		}
 
 		// Route handling
@@ -75,7 +76,7 @@ export class HealthServer {
 			});
 			res.end(metrics);
 		} catch (error) {
-			console.error('[HealthServer] Error getting metrics:', error);
+      logger.error('[HealthServer] Error getting metrics:', error);
 			res.writeHead(500, { 'Content-Type': 'application/json' });
 			res.end(JSON.stringify({ error: 'Failed to get metrics' }));
 		}

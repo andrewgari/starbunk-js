@@ -1,12 +1,13 @@
 import * as promClient from 'prom-client';
 
 /**
- * Metrics service for bluebot
+ * Metrics service for Discord bots
  * Tracks bot triggers, responses, and system metrics
  */
 export class MetricsService {
 	private registry: promClient.Registry;
 	private enabled: boolean;
+	private serviceName: string;
 
 	// Metrics
 	private messagesProcessed: promClient.Counter<string>;
@@ -17,9 +18,10 @@ export class MetricsService {
 	private activeBotsGauge: promClient.Gauge<string>;
 	private uniqueUsersGauge: promClient.Gauge<string>;
 
-	constructor() {
+	constructor(serviceName: string) {
 		this.enabled = process.env.ENABLE_METRICS !== 'false'; // Enabled by default
 		this.registry = new promClient.Registry();
+		this.serviceName = serviceName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
 		// Add default metrics (CPU, memory, etc.)
 		if (this.enabled) {
@@ -28,28 +30,28 @@ export class MetricsService {
 
 		// Initialize custom metrics
 		this.messagesProcessed = new promClient.Counter({
-			name: 'bluebot_messages_processed_total',
+			name: `${this.serviceName}_messages_processed_total`,
 			help: 'Total number of Discord messages processed',
 			labelNames: ['guild_id', 'channel_id'],
 			registers: [this.registry],
 		});
 
 		this.botTriggersTotal = new promClient.Counter({
-			name: 'bluebot_bot_triggers_total',
+			name: `${this.serviceName}_bot_triggers_total`,
 			help: 'Total number of bot triggers',
 			labelNames: ['bot_name', 'trigger_name', 'guild_id', 'channel_id'],
 			registers: [this.registry],
 		});
 
 		this.botResponsesTotal = new promClient.Counter({
-			name: 'bluebot_bot_responses_total',
+			name: `${this.serviceName}_bot_responses_total`,
 			help: 'Total number of bot responses sent',
 			labelNames: ['bot_name', 'guild_id', 'channel_id', 'status'],
 			registers: [this.registry],
 		});
 
 		this.botResponseDuration = new promClient.Histogram({
-			name: 'bluebot_bot_response_duration_ms',
+			name: `${this.serviceName}_bot_response_duration_ms`,
 			help: 'Bot response latency in milliseconds',
 			labelNames: ['bot_name', 'guild_id'],
 			buckets: [10, 50, 100, 250, 500, 1000, 2500, 5000],
@@ -57,20 +59,20 @@ export class MetricsService {
 		});
 
 		this.botErrorsTotal = new promClient.Counter({
-			name: 'bluebot_bot_errors_total',
+			name: `${this.serviceName}_bot_errors_total`,
 			help: 'Total number of bot errors',
 			labelNames: ['bot_name', 'error_type', 'guild_id'],
 			registers: [this.registry],
 		});
 
 		this.activeBotsGauge = new promClient.Gauge({
-			name: 'bluebot_active_bots',
+			name: `${this.serviceName}_active_bots`,
 			help: 'Number of active bots loaded',
 			registers: [this.registry],
 		});
 
 		this.uniqueUsersGauge = new promClient.Gauge({
-			name: 'bluebot_unique_users_interacting',
+			name: `${this.serviceName}_unique_users_interacting`,
 			help: 'Number of unique users who have triggered bots',
 			labelNames: ['bot_name', 'guild_id'],
 			registers: [this.registry],
@@ -137,9 +139,10 @@ export class MetricsService {
 /**
  * Factory function to create a new MetricsService instance.
  * Use this in tests to create isolated metrics instances.
+ * @param serviceName - The name of the service (e.g., 'bunkbot', 'djcova', 'bluebot')
  */
-export function createMetricsService(): MetricsService {
-	return new MetricsService();
+export function createMetricsService(serviceName: string = 'bluebot'): MetricsService {
+	return new MetricsService(serviceName);
 }
 
 /**

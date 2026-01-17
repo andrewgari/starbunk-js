@@ -1,11 +1,11 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { Client, GatewayIntentBits } from 'discord.js';
-import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { logger } from '@starbunk/shared/observability/logger';
-import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
-import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 import { BunkBot } from '@/bunkbot';
+import { runSmokeTest } from '@starbunk/shared/health/smoke-test';
+import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
+import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 
 // Load environment variables from root .env file
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
@@ -20,7 +20,7 @@ const intents = [
 
 async function main() {
 	// Check if running in CI smoke mode
-	if (runSmokeMode()) {
+	if (runSmokeTest('bunkbot')) {
 		return; // Smoke mode handles its own lifecycle
 	}
 
@@ -30,7 +30,7 @@ async function main() {
 		platform: process.platform,
 		env: process.env.NODE_ENV || 'production',
 	});
-	const metricsService = getMetricsService();
+	const metricsService = getMetricsService('bunkbot');
 
 	// Start health/metrics server
 	const healthServer = await initializeHealthServer();

@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits } from 'discord.js';
-import { logger } from '@/observability/logger';
+import { logger } from '@starbunk/shared';
 import { BlueBot } from '@/blue-bot';
-import { runSmokeTest } from '@/utils/smoke-test';
+import { runSmokeTest } from '@starbunk/shared/health/smoke-test';
 
 const intents = [
 	GatewayIntentBits.Guilds,
@@ -14,7 +14,7 @@ const intents = [
 async function main(): Promise<void> {
 	// CI smoke mode: lightweight health endpoint without Discord login
 	if (process.env.CI_SMOKE_MODE === 'true') {
-		runSmokeTest();
+		runSmokeTest('bluebot');
 		return;
 	}
 
