@@ -1,5 +1,4 @@
 import { ChatInputCommandInteraction } from 'discord.js';
-import { logger } from '@starbunk/shared';
 import { DJCova } from '../core/dj-cova';
 import {
 	validateVoiceChannelAccess,
@@ -7,6 +6,7 @@ import {
 	subscribePlayerToConnection,
 	disconnectVoiceConnection,
 } from '../utils/voice-utils';
+import { logger } from '../observability/logger';
 
 /**
  * DJCovaService - Business logic layer
@@ -58,7 +58,8 @@ export class DJCovaService {
 			try {
 				await interaction.followUp({ content: message, ephemeral: false });
 			} catch (error) {
-				logger.error('Failed to send auto-disconnect notification:', error);
+				logger.withError(error instanceof Error ? error : new Error(String(error)))
+					.error('Failed to send auto-disconnect notification');
 			}
 		};
 

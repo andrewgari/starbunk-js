@@ -11,8 +11,8 @@ type InteractionLike = {
 };
 
 import path from 'path';
-import { logger } from '@starbunk/shared';
 import { isDebugMode } from './utils';
+import { logger } from './observability/logger';
 
 // Command interface for DJCova music commands
 
@@ -116,16 +116,12 @@ export class CommandHandler {
 							);
 						}
 					} catch (error) {
-						logger.error(
-							`❌ Failed to load command: ${commandFile}`,
-							error instanceof Error ? error : new Error(String(error)),
-						);
+						logger.withError(error instanceof Error ? error : new Error(String(error)))
+							.error(`❌ Failed to load command: ${commandFile}`);
 					}
 				} catch (error) {
-					logger.error(
-						`❌ Failed to process command file: ${commandFile}`,
-						error instanceof Error ? error : new Error(String(error)),
-					);
+					logger.withError(error instanceof Error ? error : new Error(String(error)))
+						.error(`❌ Failed to process command file: ${commandFile}`);
 				}
 			}
 
@@ -139,7 +135,8 @@ export class CommandHandler {
 				logger.warn('No commands were loaded, skipping Discord API registration');
 			}
 		} catch (error) {
-			logger.error('Error loading commands:', error instanceof Error ? error : new Error(String(error)));
+			logger.withError(error instanceof Error ? error : new Error(String(error)))
+				.error('Error loading commands');
 			throw error;
 		}
 	}
@@ -198,10 +195,8 @@ export class CommandHandler {
 							await rest.put(Routes.applicationGuildCommands(clientId, gid), { body: commandData });
 							logger.info(`Registered ${commandData.length} commands to guild ${gid}`);
 						} catch (error) {
-							logger.error(
-								`Failed to register commands to guild ${gid}:`,
-								error instanceof Error ? error : new Error(String(error)),
-							);
+							logger.withError(error instanceof Error ? error : new Error(String(error)))
+								.error(`Failed to register commands to guild ${gid}`);
 							throw error;
 						}
 					});
@@ -219,10 +214,8 @@ export class CommandHandler {
 				logger.warn('No commands to register with Discord');
 			}
 		} catch (error) {
-			logger.error(
-				'Error registering commands with Discord:',
-				error instanceof Error ? error : new Error(String(error)),
-			);
+			logger.withError(error instanceof Error ? error : new Error(String(error)))
+				.error('Error registering commands with Discord');
 			throw error;
 		}
 	}
@@ -247,10 +240,8 @@ export class CommandHandler {
 			await command.execute(interaction);
 			logger.debug(`Command ${commandName} executed successfully`);
 		} catch (error) {
-			logger.error(
-				`Error executing command ${commandName}:`,
-				error instanceof Error ? error : new Error(String(error)),
-			);
+			logger.withError(error instanceof Error ? error : new Error(String(error)))
+				.error(`Error executing command ${commandName}`);
 
 			// Respond to the user with an error message
 			const errorMessage = 'There was an error executing this command.';

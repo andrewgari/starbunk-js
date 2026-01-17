@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { logger } from '@starbunk/shared';
 import { container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
 import { DJCovaService } from '../services/dj-cova-service';
+import { logger } from '../observability/logger';
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('play')
@@ -19,7 +19,8 @@ export default {
 				await interaction.deferReply();
 			}
 		} catch (deferError) {
-			logger.error('Failed to defer interaction:', deferError);
+			logger.withError(deferError instanceof Error ? deferError : new Error(String(deferError)))
+				.error('Failed to defer interaction');
 			return;
 		}
 
@@ -42,7 +43,8 @@ export default {
 
 			await sendSuccessResponse(interaction, `🎶 Now playing!`);
 		} catch (error) {
-			logger.error('Error executing play command:', error);
+			logger.withError(error instanceof Error ? error : new Error(String(error)))
+				.error('Error executing play command');
 
 			const errorMessage =
 				error instanceof Error ? error.message : 'An error occurred while trying to play the music.';
