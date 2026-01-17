@@ -4,6 +4,11 @@
 	"description": "Shared services and utilities for Starbunk containers",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./*": "./dist/*.js",
+		"./*/": "./dist/*/"
+	},
 	"files": [
 		"dist/**/*",
 		"package.json",

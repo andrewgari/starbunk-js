@@ -24,6 +24,7 @@
 		"pipeline": "npm run lint && npm run type-check && npm run build && npm run test:run"
 	},
 	"dependencies": {
+		"@starbunk/shared": "*",
 		"discord.js": "^14.25.1",
 		"dotenv": "^17.2.3",
 		"js-yaml": "^4.1.1",
