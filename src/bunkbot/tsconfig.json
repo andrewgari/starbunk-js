@@ -24,13 +24,10 @@
 		"declarationMap": true,
 		"sourceMap": true
 	},
-	"include": ["src/**/*.ts"],
+	"include": ["src/**/*.ts", "../shared/src/health/smoke-mode.ts", "../shared/src/health/health-server-init.ts"],
 	"exclude": [
 		"node_modules",
-		"dist",
-		"tests",
-		"src/**/__tests__/**",
-		"src/**/*.test.ts"
+		"dist"
 	],
 	"references": [
 		{ "path": "../shared" }

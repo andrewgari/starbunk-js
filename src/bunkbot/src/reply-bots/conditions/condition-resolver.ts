@@ -1,6 +1,6 @@
 import * as Conditions from '@/reply-bots/conditions/conditions';
 import { Message } from 'discord.js';
-import { logger } from '@/observability/logger';
+import { logger } from '@starbunk/shared/observability/logger';
 
 export type Logic = {
   // Logical Operators (Recursive)

@@ -1,7 +1,7 @@
 import { Client, GuildMember, Message, TextChannel } from 'discord.js';
-import { WebhookService } from '@/discord/webhook-service';
-import { BotIdentity } from '@/reply-bots/models/bot-identity';
-import { logger } from '@/observability/logger';
+import { WebhookService } from './webhook-service';
+import { BotIdentity } from '../types/bot-identity';
+import { logger } from '../observability/logger';
 
 export class DiscordService implements DiscordService {
   private static instance: DiscordService | null = null;

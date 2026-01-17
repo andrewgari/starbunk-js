@@ -4,7 +4,7 @@ import { botSchema } from "@/serialization/yaml-bot-parser";
 import { z } from "zod";
 import { getBotIdentityFromDiscord } from "@/reply-bots/identity/get-bot-identity";
 import { ConditionResolver } from "@/reply-bots/conditions/condition-resolver";
-import { logger } from "@/observability/logger";
+import { logger } from "@starbunk/shared/observability/logger";
 
 export class YamlBotFactory {
   public createLiveBot(config: z.infer<typeof botSchema>): StandardReplyBot {

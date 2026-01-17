@@ -1,4 +1,4 @@
-import { logger } from '@/observability/logger';
+import { logger } from '@starbunk/shared/observability/logger';
 
 /**
  * Simple in-memory state manager for bot enable/disable functionality

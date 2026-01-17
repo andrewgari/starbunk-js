@@ -1,7 +1,7 @@
 import { ReplyBot } from "@/reply-bots/models/reply-bot";
 import { Message } from 'discord.js';
-import { logger } from '@/observability/logger';
-import { getMetricsService } from '@/observability/metrics-service';
+import { logger } from '@starbunk/shared/observability/logger';
+import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { BotStateManager } from '@/services/bot-state-manager';
 
 export class BotRegistry {

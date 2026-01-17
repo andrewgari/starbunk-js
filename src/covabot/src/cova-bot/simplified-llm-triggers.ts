@@ -1,5 +1,6 @@
 import { Message } from 'discord.js';
-import { logger, ensureError } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { ensureError } from '../utils';
 import { TriggerCondition, ResponseGenerator } from '../types/trigger-response';
 import { createLLMService, LLMService } from '../services/llm-service';
 

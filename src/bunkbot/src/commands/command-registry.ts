@@ -1,5 +1,5 @@
 import { Client, Interaction, AutocompleteInteraction, ChatInputCommandInteraction, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js';
-import { logger } from '@/observability/logger';
+import { logger } from '@starbunk/shared/observability/logger';
 
 // Import commands
 import pingCommand from '@/commands/ping';
@@ -31,7 +31,7 @@ class CommandRegistry {
 		this.commands.set('ping', pingCommand);
 		this.commands.set('clearwebhooks', clearwebhooksCommand);
 		this.commands.set('bot', botCommand);
-		
+
 		logger.info(`Registered ${this.commands.size} commands: ${Array.from(this.commands.keys()).join(', ')}`);
 	}
 
@@ -73,7 +73,7 @@ export async function deployCommands(client: Client, registry: CommandRegistry):
 		logger.info('Deploying commands globally');
 		await client.application!.commands.set(commandData);
 	}
-	
+
 	logger.info(`Successfully deployed ${commandData.length} slash commands`);
 }
 
@@ -82,7 +82,7 @@ export async function deployCommands(client: Client, registry: CommandRegistry):
  */
 export function setupCommandHandlers(client: Client, registry: CommandRegistry): void {
 	logger.info('Registering command interaction handlers');
-	
+
 	client.on('interactionCreate', async (interaction: Interaction) => {
 		if (interaction.isChatInputCommand()) {
 			try {

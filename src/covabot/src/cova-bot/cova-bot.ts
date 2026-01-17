@@ -1,12 +1,12 @@
+import { logger } from '@starbunk/shared';
 import {
-	logger,
 	container,
 	ServiceId,
 	type CovaBotMetrics,
 	getBotResponseLogger,
 	type BotResponseLog,
 	inferTriggerCondition,
-} from '@starbunk/shared';
+} from '../utils';
 import { DiscordService } from '../services/discord-service';
 import { Message, TextChannel } from 'discord.js';
 import { BotIdentity } from '../types/bot-identity';

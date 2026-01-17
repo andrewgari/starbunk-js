@@ -23,7 +23,8 @@ import {
 	UserNotFoundError,
 	WebhookError,
 } from './errors/discord-errors';
-import { logger, ensureError } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { ensureError } from '../utils';
 
 export interface BulkMessageOptions {
 	channelIds: string[];

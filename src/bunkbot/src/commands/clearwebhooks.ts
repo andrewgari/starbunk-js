@@ -1,5 +1,5 @@
 import { CommandInteraction, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
-import { logger } from '@/observability/logger';
+import { logger } from '@starbunk/shared/observability/logger';
 
 const commandBuilder = new SlashCommandBuilder()
   .setName('clearwebhooks')

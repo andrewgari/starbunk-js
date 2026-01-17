@@ -1,6 +1,6 @@
 import { TextChannel, Message, WebhookClient, Webhook, Client } from 'discord.js';
-import { BotIdentity } from '@/reply-bots/models/bot-identity';
-import { logger } from '@/observability/logger';
+import { BotIdentity } from '../types/bot-identity';
+import { logger } from '../observability/logger';
 
 const WEBHOOK_NAME = 'BunkBot';
 

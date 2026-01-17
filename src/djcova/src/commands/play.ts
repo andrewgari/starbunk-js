@@ -4,7 +4,8 @@ import { ChatInputCommandInteraction } from 'discord.js';
 import { Readable } from 'stream';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 
-import { logger, deferInteractionReply, container, ServiceId } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { deferInteractionReply, container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
 import { validateVoiceChannelAccess, createVoiceConnection, subscribePlayerToConnection } from '../utils/voice-utils';
 import { DJCova } from '../dj-cova';

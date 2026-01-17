@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { ChatInputCommandInteraction } from 'discord.js';
-import { logger, container, ServiceId } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
 import { DJCova } from '../dj-cova';
 

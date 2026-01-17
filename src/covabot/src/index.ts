@@ -3,7 +3,8 @@ import 'dotenv/config';
 import { Events, Message, TextChannel, Client, GatewayIntentBits } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 
-import { logger, ensureError, validateEnvironment, initializeObservability } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { ensureError, validateEnvironment, initializeObservability } from './utils';
 import { createLLMService, LLMService } from './services/llm-service';
 import { WebServer } from './web/server';
 

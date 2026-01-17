@@ -3,7 +3,7 @@ import * as path from 'path';
 import { BotRegistry } from '@/reply-bots/bot-registry';
 import { parseYamlBots } from '@/serialization/yaml-bot-parser';
 import { YamlBotFactory } from '@/serialization/yaml-bot-factory';
-import { logger } from '@/observability/logger';
+import { logger } from '@starbunk/shared/observability/logger';
 
 export class BotDiscoveryService {
   constructor(
