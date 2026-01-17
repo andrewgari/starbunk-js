@@ -14,11 +14,11 @@ services:
     environment:
       - DISCORD_TOKEN=${BUNKBOT_TOKEN}
       - GUILD_ID=${GUILD_ID}
-      - BUNKBOT_BOTS_DIR=/app/config/bots
+      - BUNKBOT_BOTS_DIR=/app/config
       - METRICS_PORT=${METRICS_PORT:-3000}
     volumes:
       # Mount the bot configuration directory
-      - ./config/bots:/app/config/bots:ro
+      - ./config/bunkbot:/app/config:ro
     ports:
       # Metrics and health endpoint port
       - "${BUNKBOT_METRICS_PORT:-9301}:3000"
@@ -60,7 +60,9 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - HEALTH_PORT=${HEALTH_PORT:-3000}
     volumes:
-      # Unraid-compatible host path mounts
+      # Configuration directory (read-only)
+      - ./config/djcova:/app/config:ro
+      # Data directories (read-write)
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
     ports:
@@ -107,14 +109,16 @@ services:
       - OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS:-true}
       - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
       - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
-      # Storage Configuration (file-based by default)
+      # Storage Configuration
       - COVABOT_DATA_DIR=/app/data
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
       # Debug/Testing
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - HEALTH_PORT=3000
     volumes:
-      # Unraid-compatible host path mount for CovaBot personality notes
+      # Configuration directory (read-only)
+      - ./config/covabot:/app/config:ro
+      # Data directory for personality notes (read-write)
       - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
     ports:
       - "${COVABOT_WEB_PORT:-7080}:7080"
@@ -154,6 +158,9 @@ services:
       - NODE_ENV=production
       - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
       - HEALTH_PORT=3000
+    volumes:
+      # Configuration directory (read-only)
+      - ./config/bluebot:/app/config:ro
     ports:
       # Metrics and health endpoint port
       - "${BLUEBOT_METRICS_PORT:-9302}:3000"
