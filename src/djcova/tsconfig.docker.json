@@ -4,7 +4,11 @@
     "sourceMap": false,
     "removeComments": true,
     "composite": false,
-    "paths": {}
+    "paths": {
+      "@/*": ["*"],
+      "@starbunk/shared": ["../../shared/dist"],
+      "@starbunk/shared/*": ["../../shared/dist/*"]
+    }
   },
   "references": []
 }
