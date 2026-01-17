@@ -1,4 +1,4 @@
-import { logger } from '@starbunk/shared/observability/logger';
+import { logger } from '@/observability/logger';
 
 /**
  * Simple in-memory state manager for bot enable/disable functionality
@@ -23,7 +23,7 @@ export class BotStateManager {
    */
   enableBot(botName: string): boolean {
     this.botStates.set(botName, true);
-    logger.info('Bot enabled', { bot_name: botName });
+    logger.withMetadata({ bot_name: botName }).info('Bot enabled');
     return true;
   }
 
@@ -32,7 +32,7 @@ export class BotStateManager {
    */
   disableBot(botName: string): boolean {
     this.botStates.set(botName, false);
-    logger.info('Bot disabled', { bot_name: botName });
+    logger.withMetadata({ bot_name: botName }).info('Bot disabled');
     return true;
   }
 

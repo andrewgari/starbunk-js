@@ -1,5 +1,5 @@
 import { Client, Interaction, AutocompleteInteraction, ChatInputCommandInteraction, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js';
-import { logger } from '@starbunk/shared/observability/logger';
+import { logger } from '@/observability/logger';
 
 // Import commands
 import pingCommand from '@/commands/ping';
@@ -88,23 +88,23 @@ export function setupCommandHandlers(client: Client, registry: CommandRegistry):
 			try {
 				const command = registry.getCommand(interaction.commandName);
 				if (command) {
-					logger.info('Executing command', {
+					logger.withMetadata({
 						command_name: interaction.commandName,
 						user_id: interaction.user.id,
 						guild_id: interaction.guildId,
-					});
+					}).info('Executing command');
 					await command.execute(interaction);
 				} else {
-					logger.warn('Unknown command', { command_name: interaction.commandName });
+					logger.withMetadata({ command_name: interaction.commandName }).warn('Unknown command');
 					await interaction.reply({
 						content: `Unknown command: ${interaction.commandName}`,
 						ephemeral: true,
 					});
 				}
 			} catch (error) {
-				logger.error('Error executing command', error, {
+				logger.withError(error).withMetadata({
 					command_name: interaction.commandName,
-				});
+				}).error('Error executing command');
 				if (!interaction.replied && !interaction.deferred) {
 					await interaction.reply({
 						content: 'An error occurred while executing the command.',
@@ -119,9 +119,9 @@ export function setupCommandHandlers(client: Client, registry: CommandRegistry):
 					await command.autocomplete(interaction);
 				}
 			} catch (error) {
-				logger.error('Error in autocomplete', error, {
+				logger.withError(error).withMetadata({
 					command_name: interaction.commandName,
-				});
+				}).error('Error in autocomplete');
 			}
 		}
 	});

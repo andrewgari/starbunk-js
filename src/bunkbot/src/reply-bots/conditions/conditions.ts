@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { logger } from '@starbunk/shared/observability/logger';
+import { logger } from '@/observability/logger';
 
 /**
  * Basic Logical Building Blocks
@@ -44,11 +44,11 @@ export const containsWord = (word: string) => (message: Message) => {
   const regex = new RegExp(`\\b${word}\\b`, 'i');
   const matches = regex.test(message.content);
   if (matches) {
-    logger.debug('Condition matched: contains_word', {
+    logger.withMetadata({
       word,
       message_id: message.id,
       message_content: message.content.substring(0, 100),
-    });
+    }).debug('Condition matched: contains_word');
   }
   return matches;
 };
@@ -57,11 +57,11 @@ export const containsWord = (word: string) => (message: Message) => {
 export const containsPhrase = (phrase: string) => (message: Message) => {
   const matches = message.content.toLowerCase().includes(phrase.toLowerCase());
   if (matches) {
-    logger.debug('Condition matched: contains_phrase', {
+    logger.withMetadata({
       phrase,
       message_id: message.id,
       message_content: message.content.substring(0, 100),
-    });
+    }).debug('Condition matched: contains_phrase');
   }
   return matches;
 };
@@ -70,11 +70,11 @@ export const containsPhrase = (phrase: string) => (message: Message) => {
 export const fromUser = (userId: string) => (message: Message) => {
   const matches = message.author.id === userId;
   if (matches) {
-    logger.debug('Condition matched: from_user', {
+    logger.withMetadata({
       user_id: userId,
       author_username: message.author.username,
       message_id: message.id,
-    });
+    }).debug('Condition matched: from_user');
   }
   return matches;
 };
@@ -84,10 +84,10 @@ export const withChance = (percent: number) => () => {
   const roll = Math.random() * 100;
   const matches = roll <= percent;
   if (matches) {
-    logger.debug('Condition matched: with_chance', {
+    logger.withMetadata({
       percent,
       roll: roll.toFixed(2),
-    });
+    }).debug('Condition matched: with_chance');
   }
   return matches;
 };
@@ -97,11 +97,11 @@ export const matchesPattern = (pattern: string) => (message: Message) => {
   const regex = new RegExp(pattern, 'i');
   const matches = regex.test(message.content);
   if (matches) {
-    logger.debug('Condition matched: matches_pattern', {
+    logger.withMetadata({
       pattern,
       message_id: message.id,
       message_content: message.content.substring(0, 100),
-    });
+    }).debug('Condition matched: matches_pattern');
   }
   return matches;
 };
