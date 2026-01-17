@@ -17,10 +17,6 @@ import type Redis from 'ioredis';
 import { logger } from '../logger';
 import { ensureError } from '../../utils/error-utils';
 import type { BotTriggerMetricsService } from './bot-trigger-metrics-service';
-import type {} from // 	BotPerformanceAnalytics,
-// 	ChannelActivityAnalytics,
-// 	UserInteractionAnalytics
-'../../types/bot-metrics';
 
 // Export configuration
 export interface RedisMetricsExporterConfig {

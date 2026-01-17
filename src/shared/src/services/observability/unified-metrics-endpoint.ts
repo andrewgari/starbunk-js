@@ -409,8 +409,8 @@ export class UnifiedMetricsEndpoint extends EventEmitter {
 
 					// Start periodic export
 					setInterval(() => {
-						redisExporter.exportMetrics().catch((error) => {
-							logger.error('Redis metrics export failed:', error);
+						redisExporter.exportMetrics().catch((error: unknown) => {
+							logger.error('Redis metrics export failed:', ensureError(error));
 						});
 					}, 15000);
 
