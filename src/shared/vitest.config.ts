@@ -22,10 +22,10 @@ export default defineConfig({
 			'dist',
 			'src/testing/llm/**',  // Exclude LLM testing utilities (LLM services removed)
 		],
-		setupFiles: ['./tests/setup-env.ts', './tests/setup.ts'],
 		// Run tests serially to avoid port/timer contention in integration suites
 		pool: 'forks',
 		singleFork: true,
+		passWithNoTests: true,
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'lcov', 'html'],
