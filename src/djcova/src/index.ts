@@ -46,14 +46,29 @@ async function main(): Promise<void> {
 	client.commands = new Collection();
 
 	const foldersPath = path.join(__dirname, 'commands');
-	const commandEntries = fs.readdirSync(foldersPath);
 
-	// Handle both flat structure (commands/*.ts) and nested structure (commands/folder/*.ts)
+	// Validate commands directory exists and is a directory
+	let commandEntries: string[] = [];
+	if (fs.existsSync(foldersPath)) {
+		const folderStats = fs.statSync(foldersPath);
+		if (folderStats.isDirectory()) {
+			commandEntries = fs.readdirSync(foldersPath);
+		} else {
+			logger.warn(`[WARNING] The commands path ${foldersPath} exists but is not a directory. No commands will be loaded from it.`);
+		}
+	} else {
+		logger.warn(`[WARNING] The commands directory ${foldersPath} does not exist. No commands will be loaded.`);
+	}
+
+	// Determine file extension based on environment (development uses .ts, production uses .js)
+	const commandExtension = __filename.endsWith('.ts') ? '.ts' : '.js';
+
+	// Handle both flat structure (commands/*.ext) and nested structure (commands/folder/*.ext)
 	for (const entry of commandEntries) {
 		const entryPath = path.join(foldersPath, entry);
 		const stats = fs.statSync(entryPath);
 
-		if (stats.isFile() && entry.endsWith('.ts')) {
+		if (stats.isFile() && entry.endsWith(commandExtension)) {
 			// Direct file in commands directory
 			const command = require(entryPath);
 			if ('data' in command && 'execute' in command) {
@@ -63,7 +78,7 @@ async function main(): Promise<void> {
 			}
 		} else if (stats.isDirectory()) {
 			// Subdirectory with command files
-			const commandFiles = fs.readdirSync(entryPath).filter((file: string) => file.endsWith('.ts'));
+			const commandFiles = fs.readdirSync(entryPath).filter((file: string) => file.endsWith(commandExtension));
 			for (const file of commandFiles) {
 				const filePath = path.join(entryPath, file);
 				const command = require(filePath);

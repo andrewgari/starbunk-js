@@ -99,8 +99,9 @@ export class DJCovaService {
 
 	/**
 	 * Validate YouTube URL
+	 * Protected to allow testing
 	 */
-	private isValidYouTubeUrl(url: string): boolean {
+	protected isValidYouTubeUrl(url: string): boolean {
 		try {
 			const parsed = new URL(url);
 			const hostname = parsed.hostname.toLowerCase();
