@@ -65,7 +65,7 @@ describe('DJCova Idle Management Integration', () => {
 		});
 
 		it('should work without notification callback', () => {
-		djCova.initializeIdleManagement('test-guild-id', 'test-channel-id');
+			djCova.initializeIdleManagement('test-guild-id', 'test-channel-id');
 			// Access private property to verify idle manager was created
 			const djCovaAny = djCova as any;
 			expect(djCovaAny.idleManager).not.toBeNull();

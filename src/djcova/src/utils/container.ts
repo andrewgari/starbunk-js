@@ -21,6 +21,5 @@ export const ServiceId = {
 	DiscordClient: Symbol('DiscordClient'),
 	MusicPlayer: Symbol('MusicPlayer'),
 	DJCovaService: Symbol('DJCovaService'),
-	DiscordService: Symbol('DiscordService'),
 };
 

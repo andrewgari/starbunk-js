@@ -14,11 +14,8 @@ export default {
 	data: commandBuilder.toJSON(),
 	async execute(interaction: ChatInputCommandInteraction) {
 		try {
-			const vol = interaction.options.getInteger('level');
-			if (!vol) {
-				await sendErrorResponse(interaction, 'Please provide a volume level!');
-				return;
-			}
+			// Since 'level' is required, getInteger with true will never return null
+			const vol = interaction.options.getInteger('level', true);
 
 			// Get service from container
 			const service = container.get<DJCovaService>(ServiceId.DJCovaService);
