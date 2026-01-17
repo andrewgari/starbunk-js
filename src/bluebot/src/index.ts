@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits } from 'discord.js';
-import { logger } from '@starbunk/shared';
+import { logger } from '@/observability/logger';
 import { BlueBot } from '@/blue-bot';
 import { runSmokeTest } from '@starbunk/shared/health/smoke-test';
 
@@ -47,7 +47,7 @@ async function main(): Promise<void> {
 
 if (require.main === module) {
 	main().catch((error) => {
-		logger.error('Fatal error during BlueBot startup', error);
+		logger.withError(error).error('Fatal error during BlueBot startup');
 		process.exit(1);
 	});
 }

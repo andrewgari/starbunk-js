@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import { logger } from '@starbunk/shared';
+import { logger } from '@/observability/logger';
 import { BotConfigurationService } from '../services/bot-configuration-service';
 import { rateLimit, requestLogger } from './middleware/auth';
 import { CovaBot } from '../cova-bot/cova-bot';

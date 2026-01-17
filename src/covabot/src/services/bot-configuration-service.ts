@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from '@starbunk/shared';
+import { logger } from '@/observability/logger';
 import { BotConfiguration, CreateConfigurationRequest, UpdateConfigurationRequest } from '../types/bot-configuration';
 
 export class BotConfigurationService {

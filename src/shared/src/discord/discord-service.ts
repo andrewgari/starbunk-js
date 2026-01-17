@@ -1,7 +1,9 @@
 import { Client, GuildMember, Message, TextChannel } from 'discord.js';
 import { WebhookService } from './webhook-service';
 import { BotIdentity } from '../types/bot-identity';
-import { logger } from '../observability/logger';
+import { logLayer } from '../observability/log-layer';
+
+const logger = logLayer.withPrefix('DiscordService');
 
 export class DiscordService implements DiscordService {
   private static instance: DiscordService | null = null;
@@ -24,10 +26,12 @@ export class DiscordService implements DiscordService {
   public setClient(client: Client): void {
     this.client = client;
     this.webhookService = new WebhookService(this.client);
-    logger.info('Discord client set in DiscordService', {
-      user_id: client.user?.id,
-      user_tag: client.user?.tag,
-    });
+    logger
+      .withMetadata({
+        user_id: client.user?.id,
+        user_tag: client.user?.tag,
+      })
+      .info('Discord client set in DiscordService');
   }
 
   getClient(): Client {
@@ -52,20 +56,24 @@ export class DiscordService implements DiscordService {
       throw new Error('Discord client not initialized. Call setClient first.');
     }
 
-    logger.debug('Fetching guild member', {
-      guild_id: guildId,
-      member_id: memberId,
-    });
+    logger
+      .withMetadata({
+        guild_id: guildId,
+        member_id: memberId,
+      })
+      .debug('Fetching guild member');
 
     const guild = await this.client.guilds.fetch(guildId);
     const member = await guild.members.fetch(memberId);
 
-    logger.debug('Guild member fetched', {
-      guild_id: guildId,
-      member_id: memberId,
-      member_name: member.user.username,
-      member_nickname: member.nickname,
-    });
+    logger
+      .withMetadata({
+        guild_id: guildId,
+        member_id: memberId,
+        member_name: member.user.username,
+        member_nickname: member.nickname,
+      })
+      .debug('Guild member fetched');
 
     return member;
   }
@@ -76,30 +84,38 @@ export class DiscordService implements DiscordService {
       throw new Error('Discord client not initialized. Call setClient first.');
     }
 
-    logger.debug('Fetching channel', { channel_id: channelId });
+    logger
+      .withMetadata({ channel_id: channelId })
+      .debug('Fetching channel');
 
     const channel = await this.client.channels.fetch(channelId);
     if (!(channel instanceof TextChannel)) {
-      logger.error('Channel is not a text channel', undefined, {
-        channel_id: channelId,
-        channel_type: channel?.type,
-      });
+      logger
+        .withMetadata({
+          channel_id: channelId,
+          channel_type: channel?.type,
+        })
+        .error('Channel is not a text channel');
       throw new Error(`Channel is not a text channel: ${channelId}`);
     }
 
-    logger.debug('Channel fetched', {
-      channel_id: channelId,
-      channel_name: channel.name,
-    });
+    logger
+      .withMetadata({
+        channel_id: channelId,
+        channel_name: channel.name,
+      })
+      .debug('Channel fetched');
 
     return channel;
   }
 
   public async getBotIdentityFromDiscord(guildId: string, memberId: string): Promise<BotIdentity> {
-    logger.debug('Resolving bot identity from Discord', {
-      guild_id: guildId,
-      member_id: memberId,
-    });
+    logger
+      .withMetadata({
+        guild_id: guildId,
+        member_id: memberId,
+      })
+      .debug('Resolving bot identity from Discord');
 
     const member = await this.getMemberById(guildId, memberId);
     const identity = {
@@ -108,11 +124,13 @@ export class DiscordService implements DiscordService {
         member.user.displayAvatarURL({ size: 256, extension: 'png' }),
     };
 
-    logger.debug('Bot identity resolved', {
-      guild_id: guildId,
-      member_id: memberId,
-      bot_name: identity.botName,
-    });
+    logger
+      .withMetadata({
+        guild_id: guildId,
+        member_id: memberId,
+        bot_name: identity.botName,
+      })
+      .debug('Bot identity resolved');
 
     return identity;
   }
@@ -127,18 +145,22 @@ export class DiscordService implements DiscordService {
       throw new Error('Webhook service not initialized. Call setClient first.');
     }
 
-    logger.debug('Sending message with bot identity', {
-      channel_id: message.channelId,
-      guild_id: message.guildId,
-      bot_name: botIdentity.botName,
-      response_length: responseText.length,
-    });
+    logger
+      .withMetadata({
+        channel_id: message.channelId,
+        guild_id: message.guildId,
+        bot_name: botIdentity.botName,
+        response_length: responseText.length,
+      })
+      .debug('Sending message with bot identity');
 
     await this.webhookService.send(message, botIdentity, responseText);
 
-    logger.debug('Message sent with bot identity', {
-      channel_id: message.channelId,
-      bot_name: botIdentity.botName,
-    });
+    logger
+      .withMetadata({
+        channel_id: message.channelId,
+        bot_name: botIdentity.botName,
+      })
+      .debug('Message sent with bot identity');
   }
 }

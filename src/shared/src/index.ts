@@ -1,7 +1,6 @@
 // Shared utilities and services for all containers
 
 // Core logger
-export { logger } from './observability/logger';
 export { logLayer } from './observability/log-layer';
 
 // LogLayer mixins for structured logging

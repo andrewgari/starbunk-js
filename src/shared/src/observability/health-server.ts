@@ -1,6 +1,8 @@
 import * as http from 'http';
 import { getMetricsService } from './metrics-service';
-import { logger } from './logger';
+import { logLayer } from './log-layer';
+
+const logger = logLayer.withPrefix('HealthServer');
 
 /**
  * Health and metrics HTTP server for BunkBot
@@ -76,7 +78,7 @@ export class HealthServer {
 			});
 			res.end(metrics);
 		} catch (error) {
-      logger.error('[HealthServer] Error getting metrics:', error);
+			logger.withError(error).error('[HealthServer] Error getting metrics');
 			res.writeHead(500, { 'Content-Type': 'application/json' });
 			res.end(JSON.stringify({ error: 'Failed to get metrics' }));
 		}

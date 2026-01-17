@@ -6,7 +6,7 @@
 
 import { CovaBot } from './cova-bot/cova-bot';
 import { covaTrigger, covaDirectMentionTrigger, covaStatsCommandTrigger } from './cova-bot/triggers';
-// import { logger } from '@starbunk/shared';
+// import { logger } from '@/observability/logger';
 
 async function demoChat() {
 	console.log('🤖 CovaBot Chat Demo');

@@ -1,5 +1,7 @@
 import { getHealthServer } from '../observability/health-server';
-import { logger } from '../observability/logger';
+import { logLayer } from '../observability/log-layer';
+
+const logger = logLayer.withPrefix('HealthServer');
 
 /**
  * Initializes and starts the health and metrics server.
@@ -9,14 +11,18 @@ import { logger } from '../observability/logger';
 export async function initializeHealthServer() {
 	const metricsPort = parseInt(process.env.METRICS_PORT || '3000', 10);
 
-	logger.info('Starting health and metrics server', { port: metricsPort });
+	logger
+		.withMetadata({ port: metricsPort })
+		.info('Starting health and metrics server');
 	const healthServer = getHealthServer(metricsPort);
 	await healthServer.start();
 
-	logger.info('Health and metrics server started successfully', {
-		port: metricsPort,
-		endpoints: ['/health', '/ready', '/live', '/metrics'],
-	});
+	logger
+		.withMetadata({
+			port: metricsPort,
+			endpoints: ['/health', '/ready', '/live', '/metrics'],
+		})
+		.info('Health and metrics server started successfully');
 
 	return healthServer;
 }

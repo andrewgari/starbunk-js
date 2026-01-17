@@ -18,9 +18,9 @@
 		"lint:fix": "eslint \"src/**/*.ts\" --fix",
 		"clean": "tsc --build --clean",
 		"rebuild": "npm run clean && npm run build",
-		"test": "vitest",
+		"test": "vitest run",
 		"test:ui": "vitest --ui",
-		"test:run": "vitest run",
+		"test:watch": "vitest",
 		"pipeline": "npm run lint && npm run type-check && npm run build && npm run test:run"
 	},
 	"dependencies": {
