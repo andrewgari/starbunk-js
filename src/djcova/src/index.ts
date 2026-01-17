@@ -33,10 +33,9 @@ class DJCovaContainer {
 	private musicPlayer!: DJCova;
 	public activeSubscription: { unsubscribe(): void } | null = null;
 	private hasInitialized = false;
+	private djCovaMetrics?: Awaited<ReturnType<typeof createDJCovaMetrics>>;
 	private discordConnected = false;
 	private lastDiscordError?: Error;
-	private httpEndpoints?: Awaited<ReturnType<typeof initializeObservability>>['httpEndpoints'];
-	private djCovaMetrics?: Awaited<ReturnType<typeof createDJCovaMetrics>>;
 
 	async initialize(): Promise<void> {
 		logger.info('🎵 Initializing DJCova container...');
@@ -47,10 +46,7 @@ class DJCovaContainer {
 				metrics,
 				logger: _structuredLogger,
 				channelTracker: _channelTracker,
-				httpEndpoints,
 			} = await initializeObservability('djcova');
-
-			this.httpEndpoints = httpEndpoints;
 
 			// Ensure the base logger uses the correct service name so Promtail/Grafana
 			// can label logs properly (service="djcova" instead of "unknown_service").
@@ -58,44 +54,6 @@ class DJCovaContainer {
 			logger.setServiceName('djcova');
 			logger.enableStructuredLogging(true);
 			logger.info('✅ Observability initialized for DJCova');
-
-			// Add Discord connection health check
-			this.httpEndpoints.addHealthCheck('discord_connection', async () => {
-				if (!this.discordConnected) {
-					return {
-						name: 'discord_connection',
-						status: 'fail',
-						output: this.lastDiscordError
-							? `Discord not connected: ${this.lastDiscordError.message}`
-							: 'Discord not connected',
-					};
-				}
-
-				// Check if client is still responsive
-				try {
-					const ping = this.client?.ws?.ping ?? -1;
-					if (ping < 0) {
-						return {
-							name: 'discord_connection',
-							status: 'warn',
-							output: 'Discord connected but ping unavailable',
-						};
-					}
-
-					return {
-						name: 'discord_connection',
-						status: ping > 500 ? 'warn' : 'pass',
-						output: `Discord connected, ping: ${ping}ms`,
-						duration_ms: ping,
-					};
-				} catch (error) {
-					return {
-						name: 'discord_connection',
-						status: 'fail',
-						output: `Discord health check failed: ${ensureError(error).message}`,
-					};
-				}
-			});
 
 			// Initialize DJCova-specific metrics collector
 			try {
@@ -140,7 +98,6 @@ class DJCovaContainer {
 			logger.info('✅ DJCova container initialized successfully');
 		} catch (error) {
 			logger.error('❌ Failed to initialize DJCova container:', ensureError(error));
-			this.lastDiscordError = ensureError(error);
 			throw error;
 		}
 	}
