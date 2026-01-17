@@ -43,6 +43,9 @@ services:
 
   # DJCova - Music service
   djcova:
+    build:
+      context: .
+      dockerfile: src/djcova/Dockerfile
     image: ghcr.io/andrewgari/djcova:latest
     container_name: starbunk-djcova
     restart: unless-stopped
@@ -84,6 +87,9 @@ services:
 
   # CovaBot - AI personality bot
   covabot:
+    build:
+      context: .
+      dockerfile: src/covabot/Dockerfile
     image: ghcr.io/andrewgari/covabot:latest
     container_name: starbunk-covabot
     restart: unless-stopped
@@ -136,6 +142,9 @@ services:
 
   # BlueBot - Blue detection and response bot
   bluebot:
+    build:
+      context: .
+      dockerfile: src/bluebot/Dockerfile
     image: ghcr.io/andrewgari/bluebot:latest
     container_name: bluebot
     restart: unless-stopped

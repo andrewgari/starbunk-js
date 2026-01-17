@@ -1,9 +1,16 @@
 {
 	"extends": "./tsconfig.json",
 	"compilerOptions": {
+		"composite": false,
 		"sourceMap": false,
 		"declaration": false,
 		"declarationMap": false,
-		"removeComments": true
-	}
+		"removeComments": true,
+		"paths": {
+			"@/*": ["./*"],
+			"@starbunk/shared": ["../../shared/dist"],
+			"@starbunk/shared/*": ["../../shared/dist/*"]
+		}
+	},
+	"references": []
 }
