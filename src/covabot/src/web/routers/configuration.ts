@@ -1,5 +1,5 @@
 import express, { Request } from 'express';
-import { logger } from '@starbunk/shared';
+import { logger } from '@/observability/logger';
 import { BotConfigurationService } from '../../services/bot-configuration-service';
 import { CreateConfigurationRequest, UpdateConfigurationRequest } from '../../types/bot-configuration';
 

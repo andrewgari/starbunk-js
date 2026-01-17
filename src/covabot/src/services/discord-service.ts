@@ -23,7 +23,7 @@ import {
 	UserNotFoundError,
 	WebhookError,
 } from './errors/discord-errors';
-import { logger } from '@starbunk/shared';
+import { logger } from '@/observability/logger';
 import { ensureError } from '../utils';
 
 export interface BulkMessageOptions {

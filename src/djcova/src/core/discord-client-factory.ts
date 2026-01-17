@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits } from 'discord.js';
-import { logger } from '@starbunk/shared';
+import { logger } from '../observability/logger';
 
 /**
  * Create a Discord client configured for music bot functionality
@@ -14,8 +14,8 @@ export function createDiscordClient(): Client {
 	});
 
 	// Set up basic error handling
-	client.on('error', (error) => logger.error('Discord client error:', error));
-	client.on('warn', (warning) => logger.warn('Discord client warning:', { warning }));
+	client.on('error', (error) => logger.withError(error).error('Discord client error'));
+	client.on('warn', (warning) => logger.withMetadata({ warning }).warn('Discord client warning'));
 
 	return client;
 }
@@ -41,7 +41,7 @@ export async function loginToDiscord(client: Client, token: string): Promise<voi
 			return;
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));
-			logger.error(`❌ Discord login attempt ${attempt}/${maxRetries} failed:`, lastError);
+			logger.withError(lastError).error(`❌ Discord login attempt ${attempt}/${maxRetries} failed`);
 
 			// Check for invalid token (no point retrying)
 			if (lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login')) {

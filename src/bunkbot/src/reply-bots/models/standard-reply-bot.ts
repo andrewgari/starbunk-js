@@ -4,7 +4,7 @@ import { Message } from 'discord.js';
 import { DiscordService } from "@starbunk/shared/discord/discord-service";
 import { BotIdentity } from "@/reply-bots/models/bot-identity";
 import { Trigger } from "@/reply-bots/conditions/trigger";
-import { logger } from "@starbunk/shared/observability/logger";
+import { logger } from "@/observability/logger";
 import { getMetricsService } from "@starbunk/shared/observability/metrics-service";
 
 export class StandardReplyBot implements ReplyBot {
@@ -30,7 +30,7 @@ export class StandardReplyBot implements ReplyBot {
       ? message.content.substring(0, 200) + '...'
       : message.content;
 
-    logger.debug(`Bot evaluating message`, {
+    logger.withMetadata({
       bot_name: this.name,
       message_id: message.id,
       author_id: message.author.id,
@@ -39,7 +39,7 @@ export class StandardReplyBot implements ReplyBot {
       guild_id: message.guildId,
       triggers_count: this.triggers.length,
       message_content: truncatedContent,
-    });
+    }).debug(`Bot evaluating message`);
 
     // Implementation to handle the message
     for (const trigger of this.triggers) {
@@ -47,7 +47,7 @@ export class StandardReplyBot implements ReplyBot {
         const conditionMet = await trigger.condition(message);
 
         if (conditionMet) {
-          logger.info(`Trigger condition met`, {
+          logger.withMetadata({
             bot_name: this.name,
             trigger_name: trigger.name,
             message_id: message.id,
@@ -56,7 +56,7 @@ export class StandardReplyBot implements ReplyBot {
             channel_id: message.channelId,
             guild_id: message.guildId,
             trigger_message: truncatedContent,
-          });
+          }).info(`Trigger condition met`);
 
           // Track trigger metric
           if (message.guildId && message.channelId) {
@@ -69,11 +69,11 @@ export class StandardReplyBot implements ReplyBot {
           const identity = await this.identity(message);
           const identityDuration = Date.now() - identityStartTime;
 
-          logger.debug(`Identity resolved`, {
+          logger.withMetadata({
             bot_name: this.name,
             resolved_name: identity.botName,
             duration_ms: identityDuration,
-          });
+          }).debug(`Identity resolved`);
 
           // Generate response
           let response = trigger.responseGenerator(message);
@@ -84,12 +84,12 @@ export class StandardReplyBot implements ReplyBot {
             ? response.substring(0, 200) + '...'
             : response;
 
-          logger.debug(`Response generated`, {
+          logger.withMetadata({
             bot_name: this.name,
             trigger_name: trigger.name,
             response_length: response.length,
             response_content: truncatedResponse,
-          });
+          }).debug(`Response generated`);
 
           // Send message
           const sendStartTime = Date.now();
@@ -102,7 +102,7 @@ export class StandardReplyBot implements ReplyBot {
 
           const totalDuration = Date.now() - startTime;
 
-          logger.info(`Bot response sent successfully`, {
+          logger.withMetadata({
             bot_name: this.name,
             trigger_name: trigger.name,
             identity_name: identity.botName,
@@ -116,7 +116,7 @@ export class StandardReplyBot implements ReplyBot {
             response_length: response.length,
             total_duration_ms: totalDuration,
             send_duration_ms: sendDuration,
-          });
+          }).info(`Bot response sent successfully`);
 
           // Track metrics
           if (message.guildId && message.channelId) {
@@ -126,19 +126,19 @@ export class StandardReplyBot implements ReplyBot {
 
           return;
         } else {
-          logger.debug(`Trigger condition not met`, {
+          logger.withMetadata({
             bot_name: this.name,
             trigger_name: trigger.name,
             message_id: message.id,
-          });
+          }).debug(`Trigger condition not met`);
         }
       } catch (error) {
-        logger.error(`Error evaluating trigger`, error, {
+        logger.withError(error).withMetadata({
           bot_name: this.name,
           trigger_name: trigger.name,
           message_id: message.id,
           guild_id: message.guildId,
-        });
+        }).error(`Error evaluating trigger`);
 
         // Track error metric
         if (message.guildId && message.channelId) {
@@ -148,10 +148,10 @@ export class StandardReplyBot implements ReplyBot {
       }
     }
 
-    logger.debug(`No triggers matched`, {
+    logger.withMetadata({
       bot_name: this.name,
       message_id: message.id,
       triggers_evaluated: this.triggers.length,
-    });
+    }).debug(`No triggers matched`);
   }
 }

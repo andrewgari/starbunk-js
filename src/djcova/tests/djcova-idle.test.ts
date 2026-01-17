@@ -7,12 +7,13 @@ import { AudioPlayerStatus } from '@discordjs/voice';
 import { DJCova } from '../src/core/dj-cova';
 
 // Mock dependencies
-vi.mock('@starbunk/shared', () => ({
+vi.mock('../src/observability/logger', () => ({
 	logger: {
 		debug: vi.fn(),
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
+		withError: vi.fn().mockReturnThis(),
 	},
 }));
 

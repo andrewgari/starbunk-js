@@ -1,5 +1,5 @@
 import { Client, Message } from 'discord.js';
-import { logger } from '@starbunk/shared/observability/logger';
+import { logger } from '@/observability/logger';
 import { processMessageByStrategy } from '@/strategy/strategy-router';
 
 export class BlueBot {
@@ -13,7 +13,7 @@ export class BlueBot {
       try {
         await processMessageByStrategy(message);
       } catch (error) {
-        logger.error('Error handling message', error);
+        logger.withError(error).error('Error handling message');
       }
     });
   }

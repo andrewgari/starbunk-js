@@ -1,4 +1,4 @@
-import { logger } from '@starbunk/shared';
+import { logger } from '@/observability/logger';
 import {
 	type CovaBotMetrics,
 } from '../utils';

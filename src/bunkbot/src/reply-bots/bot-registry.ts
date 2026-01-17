@@ -1,6 +1,6 @@
 import { ReplyBot } from "@/reply-bots/models/reply-bot";
 import { Message } from 'discord.js';
-import { logger } from '@starbunk/shared/observability/logger';
+import { logger } from '@/observability/logger';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { BotStateManager } from '@/reply-bots/services/bot-state-manager';
 
@@ -21,20 +21,20 @@ export class BotRegistry {
 
   public register(bot: ReplyBot) {
     if (this.bots.has(bot.name)) {
-      logger.warn(`Bot with name ${bot.name} already exists, skipping registration`, {
+      logger.withMetadata({
         bot_name: bot.name,
         existing_bots: this.bots.size,
-      });
+      }).warn(`Bot with name ${bot.name} already exists, skipping registration`);
       return;
     }
 
     this.bots.set(bot.name, bot);
-    logger.info(`Bot registered successfully`, {
+    logger.withMetadata({
       bot_name: bot.name,
       total_bots: this.bots.size,
       ignore_bots: bot.ignore_bots,
       ignore_humans: bot.ignore_humans,
-    });
+    }).info(`Bot registered successfully`);
   }
 
   public getBots(): ReplyBot[] {
@@ -50,7 +50,7 @@ export class BotRegistry {
     const metrics = getMetricsService();
     const stateManager = BotStateManager.getInstance();
 
-    logger.debug('Processing message', {
+    logger.withMetadata({
       message_id: message.id,
       author_id: message.author.id,
       author_name: message.author.username,
@@ -59,7 +59,7 @@ export class BotRegistry {
       guild_id: message.guildId,
       content_length: message.content.length,
       total_bots: this.bots.size,
-    });
+    }).debug('Processing message');
 
     let botsProcessed = 0;
     let botsSkipped = 0;
@@ -67,27 +67,27 @@ export class BotRegistry {
     for (const bot of this.bots.values()) {
       // Check if bot is enabled
       if (!stateManager.isBotEnabled(bot.name)) {
-        logger.debug(`Bot ${bot.name} skipped message (disabled)`, {
+        logger.withMetadata({
           bot_name: bot.name,
-        });
+        }).debug(`Bot ${bot.name} skipped message (disabled)`);
         botsSkipped++;
         continue;
       }
 
       if (bot.ignore_bots && message.author.bot) {
-        logger.debug(`Bot ${bot.name} skipped message (ignore_bots=true)`, {
+        logger.withMetadata({
           bot_name: bot.name,
           author_is_bot: true,
-        });
+        }).debug(`Bot ${bot.name} skipped message (ignore_bots=true)`);
         botsSkipped++;
         continue;
       }
 
       if (bot.ignore_humans && !message.author.bot) {
-        logger.debug(`Bot ${bot.name} skipped message (ignore_humans=true)`, {
+        logger.withMetadata({
           bot_name: bot.name,
           author_is_bot: false,
-        });
+        }).debug(`Bot ${bot.name} skipped message (ignore_humans=true)`);
         botsSkipped++;
         continue;
       }
@@ -96,12 +96,12 @@ export class BotRegistry {
         await bot.handleMessage(message);
         botsProcessed++;
       } catch (error) {
-        logger.error(`Bot ${bot.name} failed to handle message`, error, {
+        logger.withError(error).withMetadata({
           bot_name: bot.name,
           message_id: message.id,
           guild_id: message.guildId,
           channel_id: message.channelId,
-        });
+        }).error(`Bot ${bot.name} failed to handle message`);
 
         if (message.guildId) {
           metrics.trackBotError(bot.name, 'message_handling_error', message.guildId);
@@ -110,11 +110,11 @@ export class BotRegistry {
     }
 
     const duration = Date.now() - startTime;
-    logger.debug('Message processing complete', {
+    logger.withMetadata({
       message_id: message.id,
       bots_processed: botsProcessed,
       bots_skipped: botsSkipped,
       duration_ms: duration,
-    });
+    }).debug('Message processing complete');
   }
 }

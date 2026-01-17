@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { ChatInputCommandInteraction } from 'discord.js';
-import { logger } from '@starbunk/shared';
 import { container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
 import { DJCovaService } from '../services/dj-cova-service';
+import { logger } from '../observability/logger';
 
 const commandBuilder = new SlashCommandBuilder().setName('stop').setDescription('Stop playing and leave channel');
 
@@ -24,7 +24,8 @@ export default {
 			await sendSuccessResponse(interaction, 'Music stopped and disconnected!');
 			logger.info('Music stopped via stop command');
 		} catch (error) {
-			logger.error('Error executing stop command:', error);
+			logger.withError(error instanceof Error ? error : new Error(String(error)))
+				.error('Error executing stop command');
 			await sendErrorResponse(interaction, 'An error occurred while stopping the music.');
 		}
 	},

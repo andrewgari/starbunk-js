@@ -1,5 +1,5 @@
 // Message filtering service for testing and debug configurations
-import { logger } from '@starbunk/shared';
+import { logger } from '@/observability/logger';
 import { getTestingServerIds, getTestingChannelIds, getDebugMode } from '../utils';
 
 export interface MessageContext {

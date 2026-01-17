@@ -1,3 +1,9 @@
+## [1.13.0](https://github.com/andrewgari/starbunk-js/compare/v1.12.0...v1.13.0) (2026-01-17)
+
+### Features
+
+* **logging:** integrate LogLayer with BlueBot and shared observabili… ([#445](https://github.com/andrewgari/starbunk-js/issues/445)) ([902fff1](https://github.com/andrewgari/starbunk-js/commit/902fff11f8b1821ef84ba14b444246e055870a53))
+
 ## [1.12.0](https://github.com/andrewgari/starbunk-js/compare/v1.11.0...v1.12.0) (2026-01-17)
 
 ### Features

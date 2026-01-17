@@ -1,5 +1,7 @@
 import * as http from 'http';
-import { logger } from '../observability/logger';
+import { logLayer } from '../observability/log-layer';
+
+const logger = logLayer.withPrefix('SmokeTest');
 
 /**
  * Runs the application in smoke test mode for CI/CD validation.
