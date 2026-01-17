@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { MetricsService, createMetricsService } from '../src/observability/metrics-service';
+import { MetricsService, createMetricsService } from '@starbunk/shared/observability/metrics-service';
 
 // Mock prom-client to avoid global registry conflicts in unit tests
 vi.mock('prom-client', () => {

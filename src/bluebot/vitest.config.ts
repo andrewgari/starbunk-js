@@ -6,6 +6,7 @@ export default defineConfig({
 		alias: {
 			// Match tsconfig path alias: "@/*" -> "./src/*"
 			'@': path.resolve(__dirname, 'src'),
+			'@starbunk/shared': path.resolve(__dirname, '../shared/src'),
 		},
 	},
 	test: {
