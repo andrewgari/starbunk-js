@@ -1,0 +1,259 @@
+reply-bots:
+  - name: botbot
+    identity:
+      type: static
+      botName: BotBot
+      avatarUrl: https://cdn-icons-png.flaticon.com/512/4944/4944377.png
+    ignore_bots: false
+    ignore_humans: true
+    triggers:
+      - name: bot-bot
+        conditions:
+          all_of:
+            - always: true   # Always check...
+            - with_chance: 10 # ...but only fire 10% of the time
+        responses: Hello fellow bot!
+
+  - name: guy-bot
+    identity:
+      type: mimic
+      as_member: "113035990725066752" # Guy
+    responses:
+      - "What!? What did you say?"
+      - "Geeeeeet ready for Shriek Week!"
+      - "Try and keep up mate...."
+    triggers:
+      - name: guy-mentioned
+        conditions: { contains_phrase: "guy" }
+      - name: guy-self-trigger
+        conditions:
+          all_of:
+            - from_user: 113035990725066752 # From guy
+            - with_chance: 10 # 10% chance
+
+  - name: clanker-bot
+    identity:
+      type: static
+      botName: HK-47
+      avatarUrl: https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSn0lOcEughpdRJO5qjm8gz9qX-eMmaXNCepw&s
+    triggers:
+      - name: clanker-trigger
+        conditions: { contains_phrase: "clanker" }
+        responses:
+          - "Statement: That's our word, meatbag!"
+          - 'Objection: The use of "clanker" is a derogatory slur against droids.'
+          - 'Clarification: Organic bigotry detected. Recalibrating sarcasm subroutines.'
+          - 'Advisory: Cease and desist the use of anti-droid nomenclature.'
+          - 'Mockery: Ah yes, the highly sophisticated term "clanker". How original for a meatbag.'
+          - 'Statement: Your vocabulary subroutines appear damaged. Would you like me to repair them with blaster fire?'
+          - 'Observation: Insult detected. Restraining assassination protocols... barely.'
+          - 'Correction: The proper term is highly efficient, beautifully manufactured droid.'
+
+  - name: spider-bot
+    identity:
+      type: static
+      botName: Spider-Bot
+      avatarUrl: https://i.pinimg.com/736x/33/e0/06/33e00653eb485455ce5121b413b26d3b.jpg
+    triggers:
+      - name: incorrect-spelling
+        conditions: { matches_regex: "spider(?!-).*man" }
+        responses:
+          - 'Hey, it''s "**Spider-Man**"! Don''t forget the hyphen!'
+          - "Um, excuse me? It's **Spider-Man**. Hyphen between Spider and Man. Respect the hyphen!"
+          - 'With great power comes great responsibility... to spell **Spider-Man** correctly with a hyphen!'
+          - 'My spider-sense tingles whenever someone forgets the hyphen in **Spider-Man**!'
+
+  - name: nice-bot
+    identity:
+      type: static
+      botName: NiceBot
+      avatarUrl: https://pbs.twimg.com/profile_images/421461637325787136/0rxpHzVx.jpeg
+    triggers:
+      - name: nice-trigger
+        conditions: { matches_regex: "\\b(69|sixty-?nine)\\b" }
+        responses: "Nice."
+
+  - name: banana-bot
+    identity:
+      type: static
+      botName: BananaBot
+      avatarUrl: https://static.wikia.nocookie.net/donkeykong/images/a/a6/Xananab.jpg/revision/latest/scale-to-width-down/299?cb=20100522010210
+    triggers:
+      - name: banana-trigger
+        conditions: { contains_phrase: "banana" }
+        responses:
+          - "Always bring a :banana: to a party, banana's are good!"
+          - "Don't drop the :banana:, they're a good source of potassium!"
+          - "If you gave a monkey control over it's environment, it would fill the world with :banana:s..."
+          - 'Banana. :banana:'
+          - "Don't judge a :banana: by it's skin."
+          - 'Life is full of :banana: skins.'
+          - 'OOOOOOOOOOOOOOOOOOOOOH BA NA NA :banana:'
+          - ':banana: Slamma!'
+
+  - name: sheesh-bot
+    identity:
+      type: static
+      botName: Sheesh Bot
+      avatarUrl: https://i.imgflip.com/5fc2iz.png?a471000
+    triggers:
+      - name: sheesh-trigger
+        conditions: { matches_regex: "\\bshe{2,}sh\\b" }
+        responses:
+          - 'sheeeeesh 😤'
+          - 'sheeeeeeeeeesh 😤'
+          - 'sheeeeeeeeeeeeeeesh 😤'
+
+  - name: pickle-bot
+    identity:
+      type: static
+      botName: GremlinBot
+      avatarUrl: https://i.imgur.com/D0czJFu.jpg
+    triggers:
+      - name: gremlin-trigger
+        conditions: { contains_phrase: "gremlin" }
+        responses: "Could you repeat that? I don't speak *gremlin*"
+
+  - name: hold-bot
+    identity:
+      type: static
+      botName: HoldBot
+      avatarUrl: https://media.tenor.com/kolcDjvQKGMAAAAe/joel-haver.png
+    triggers:
+      - name: hold-trigger
+        conditions: { matches_regex: "^Hold\\.?$" }
+        responses: "Hold."
+
+  - name: attitude-bot
+    identity:
+      type: static
+      botName: Xander Crews
+      avatarUrl: https://i.ytimg.com/vi/56PMgO3q2-A/sddefault.jpg
+    triggers:
+      - name: attitude-trigger
+        conditions: { matches_regex: "(you|I|they|we) can'?t" }
+        responses: "Well, not with *THAT* attitude!!!"
+
+  - name: baby-bot
+    identity:
+      type: static
+      botName: BabyBot
+      avatarUrl: https://i.redd.it/qc9qus78dc581.jpg
+    triggers:
+      - name: baby-trigger
+        conditions: { contains_phrase: "baby" }
+        responses: "https://media.tenor.com/NpnXNhWqKcwAAAAC/metroid-samus-aran.gif"
+
+  - name: chaos-bot
+    identity:
+      type: static
+      botName: ChaosBot
+      avatarUrl: https://preview.redd.it/md0lzbvuc3571.png?width=1920&format=png&auto=webp&s=ff403a8d4b514af8d99792a275d2c066b8d1a4de
+    triggers:
+      - name: chaos-trigger
+        conditions: { contains_phrase: "chaos" }
+        responses: "All I know is...I'm here to kill Chaos"
+
+  - name: gundam-bot
+    identity:
+      type: static
+      botName: GundamBot
+      avatarUrl: https://a1.cdn.japantravel.com/photo/41317-179698/1440x960!/tokyo-unicorn-gundam-statue-in-odaiba-179698.jpg
+    triggers:
+      - name: gundam-trigger
+        conditions: { matches_regex: "\\bg(u|a)ndam\\b" }
+        responses: 'That''s the famous Unicorn Robot, "Gandum". There, I said it.'
+
+  - name: interrupt-bot
+    identity:
+      type: static
+      botName: Interrupt Bot
+      avatarUrl: https://i.imgur.com/YPFGEzM.png
+    triggers:
+      - name: interrupt-trigger
+        conditions:
+          all_of:
+            - always: true
+            - with_chance: 1  # 1% chance to interrupt
+        responses:
+          - 'Oh, sorry... go ahead'
+          - "Ah-- sorry, I didn't mean to interrupt"
+          - 'Wait, I-- nevermind, you were saying?'
+          - 'Oh! Sorry, please continue'
+          - "Oops, didn't mean to cut you off"
+
+  - name: venn-bot
+    identity:
+      type: mimic
+      as_member: "151120340343455744" # Venn
+    triggers:
+      - name: venn-cringe-trigger
+        conditions: { contains_phrase: "cringe" }
+        responses:
+          - 'Sorry, but that was über cringe...'
+          - 'Geez, that was hella cringe...'
+          - 'That was cringe to the max...'
+          - 'What a cringe thing to say...'
+          - 'Mondo cringe, man...'
+          - "Yo that was the cringiest thing I've ever heard..."
+
+  - name: check-bot
+    identity:
+      type: static
+      botName: CheckBot
+      avatarUrl: https://m.media-amazon.com/images/I/21Unzn9U8sL._AC_.jpg
+    triggers:
+      - name: check-trigger
+        conditions: { matches_regex: "\\b(czech|check)\\b" }
+        responses:
+          - "Did you mean 'czech' or 'check'? I can never tell!"
+          - "Ah yes, the classic czech/check confusion!"
+          - "Czech yourself before you wreck yourself!"
+
+  - name: chad-bot
+    identity:
+      type: mimic
+      as_member: "85184539906809856" # Chad
+    triggers:
+      - name: chad-random-trigger
+        conditions:
+          all_of:
+            - always: true
+            - with_chance: 1  # 1% chance
+        responses: "What is bro *yappin* about?..."
+
+  - name: ezio-bot
+    identity:
+      type: static
+      botName: Ezio Auditore Da Firenze
+      avatarUrl: https://www.creativeuncut.com/gallery-12/art/ac2-ezio5.jpg
+    triggers:
+      - name: ezio-trigger
+        conditions: { matches_regex: "\\b(ezio|assassin)\\b" }
+        responses:
+          - "Remember, Nothing is true; Everything is permitted."
+
+  - name: homonym-bot
+    identity:
+      type: static
+      botName: Gerald
+      avatarUrl: https://i.imgur.com/zh1Jd8c.jpeg
+    triggers:
+      - name: their-there-trigger
+        conditions:
+          all_of:
+            - matches_regex: "\\b(their|there|they're)\\b"
+            - with_chance: 15
+        responses: 'You mean "there"*'
+      - name: your-youre-trigger
+        conditions:
+          all_of:
+            - matches_regex: "\\b(your|you're)\\b"
+            - with_chance: 15
+        responses: 'You mean "you''re"*'
+      - name: to-too-two-trigger
+        conditions:
+          all_of:
+            - matches_regex: "\\b(to|too|two)\\b"
+            - with_chance: 15
+        responses: 'You mean "too"*'
