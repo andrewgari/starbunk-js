@@ -2,36 +2,41 @@
  * Unit tests for IdleManager auto-disconnect functionality
  */
 
+import { vi } from 'vitest';
 import { IdleManager, createIdleManager, IdleManagerConfig } from '../src/services/idle-manager';
 
 // Mock the voice utils
-jest.mock('../src/utils/voiceUtils', () => ({
-	disconnectVoiceConnection: jest.fn(),
+vi.mock('../src/utils/voice-utils', () => ({
+	disconnectVoiceConnection: vi.fn(),
 }));
 
 // Mock the shared logger
-jest.mock('@starbunk/shared', () => ({
+vi.mock('@starbunk/shared', () => ({
 	logger: {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
 	},
 }));
 
 import { disconnectVoiceConnection } from '../src/utils/voice-utils';
 import { logger } from '@starbunk/shared';
 
+// Get mocked versions
+const mockedDisconnectVoiceConnection = vi.mocked(disconnectVoiceConnection);
+const mockedLogger = vi.mocked(logger);
+
 describe('IdleManager', () => {
 	let idleManager: IdleManager;
-	let mockOnDisconnect: jest.Mock;
+	let mockOnDisconnect: ReturnType<typeof vi.fn>;
 	let config: IdleManagerConfig;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
-		jest.useFakeTimers();
+		vi.clearAllMocks();
+		vi.useFakeTimers();
 
-		mockOnDisconnect = jest.fn().mockResolvedValue(undefined);
+		mockOnDisconnect = vi.fn().mockResolvedValue(undefined);
 
 		config = {
 			timeoutSeconds: 2, // Short timeout for testing
@@ -45,7 +50,7 @@ describe('IdleManager', () => {
 
 	afterEach(() => {
 		idleManager.destroy();
-		jest.useRealTimers();
+		vi.useRealTimers();
 	});
 
 	describe('Timer Management', () => {
@@ -90,12 +95,12 @@ describe('IdleManager', () => {
 			idleManager.startIdleTimer();
 
 			// Fast-forward time to trigger timeout
-			jest.advanceTimersByTime(2000);
+			vi.advanceTimersByTime(2000);
 
 			// Wait for async operations to complete
 			await Promise.resolve();
 
-			expect(disconnectVoiceConnection).toHaveBeenCalledWith('test-guild-id');
+			expect(mockedDisconnectVoiceConnection).toHaveBeenCalledWith('test-guild-id');
 			expect(mockOnDisconnect).toHaveBeenCalledWith(
 				'Disconnected from voice channel due to 2 seconds of inactivity',
 			);
@@ -106,14 +111,14 @@ describe('IdleManager', () => {
 			idleManager.startIdleTimer();
 
 			// Reset timer before timeout
-			jest.advanceTimersByTime(1000);
+			vi.advanceTimersByTime(1000);
 			idleManager.resetIdleTimer();
 
 			// Advance past original timeout
-			jest.advanceTimersByTime(2000);
+			vi.advanceTimersByTime(2000);
 			await Promise.resolve();
 
-			expect(disconnectVoiceConnection).not.toHaveBeenCalled();
+			expect(mockedDisconnectVoiceConnection).not.toHaveBeenCalled();
 			expect(mockOnDisconnect).not.toHaveBeenCalled();
 		});
 
@@ -121,25 +126,25 @@ describe('IdleManager', () => {
 			idleManager.startIdleTimer();
 
 			// Cancel timer before timeout
-			jest.advanceTimersByTime(1000);
+			vi.advanceTimersByTime(1000);
 			idleManager.cancelIdleTimer();
 
 			// Advance past original timeout
-			jest.advanceTimersByTime(2000);
+			vi.advanceTimersByTime(2000);
 			await Promise.resolve();
 
-			expect(disconnectVoiceConnection).not.toHaveBeenCalled();
+			expect(mockedDisconnectVoiceConnection).not.toHaveBeenCalled();
 			expect(mockOnDisconnect).not.toHaveBeenCalled();
 		});
 
 		it('should handle errors during auto-disconnect gracefully', async () => {
 			const error = new Error('Disconnect failed');
-			(disconnectVoiceConnection as jest.Mock).mockImplementation(() => {
+			(mockedDisconnectVoiceConnection).mockImplementation(() => {
 				throw error;
 			});
 
 			idleManager.startIdleTimer();
-			jest.advanceTimersByTime(2000);
+			vi.advanceTimersByTime(2000);
 			await Promise.resolve();
 
 			expect(logger.error).toHaveBeenCalledWith('Error handling idle timeout:', error);
@@ -166,10 +171,10 @@ describe('IdleManager', () => {
 			const managerWithoutCallback = new IdleManager(configWithoutCallback);
 			managerWithoutCallback.startIdleTimer();
 
-			jest.advanceTimersByTime(1000);
+			vi.advanceTimersByTime(1000);
 			await Promise.resolve();
 
-			expect(disconnectVoiceConnection).toHaveBeenCalledWith('test-guild-id');
+			expect(mockedDisconnectVoiceConnection).toHaveBeenCalledWith('test-guild-id');
 
 			managerWithoutCallback.destroy();
 		});

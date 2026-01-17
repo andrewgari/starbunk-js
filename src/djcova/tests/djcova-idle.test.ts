@@ -2,32 +2,33 @@
  * Integration tests for DJCova idle management functionality
  */
 
+import { vi } from 'vitest';
 import { AudioPlayerStatus } from '@discordjs/voice';
 import { DJCova } from '../src/dj-cova';
 
 // Mock dependencies
-jest.mock('@starbunk/shared', () => ({
+vi.mock('@starbunk/shared', () => ({
 	logger: {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
 	},
 }));
 
-jest.mock('../src/utils/voiceUtils', () => ({
-	disconnectVoiceConnection: jest.fn(),
+vi.mock('../src/utils/voice-utils', () => ({
+	disconnectVoiceConnection: vi.fn(),
 }));
 
-jest.mock('../src/config/musicConfig', () => ({
-	getMusicConfig: jest.fn().mockReturnValue({
+vi.mock('../src/config/music-config', () => ({
+	getMusicConfig: vi.fn().mockReturnValue({
 		idleTimeoutSeconds: 2, // Short timeout for testing
 	}),
 }));
 
 // Mock ytdl-core
-jest.mock('@distube/ytdl-core', () => {
-	return jest.fn().mockImplementation(() => {
+vi.mock('@distube/ytdl-core', () => {
+	return vi.fn().mockImplementation(() => {
 		const { Readable } = require('stream');
 		return new Readable({
 			read() {
@@ -40,21 +41,25 @@ jest.mock('@distube/ytdl-core', () => {
 import { disconnectVoiceConnection } from '../src/utils/voice-utils';
 import { getMusicConfig } from '../src/config/music-config';
 
+// Get mocked versions
+const mockedDisconnectVoiceConnection = vi.mocked(disconnectVoiceConnection);
+const mockedGetMusicConfig = vi.mocked(getMusicConfig);
+
 describe('DJCova Idle Management Integration', () => {
 	let djCova: DJCova;
-	let mockNotificationCallback: jest.Mock;
+	let mockNotificationCallback: ReturnType<typeof vi.fn>;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
-		jest.useFakeTimers();
+		vi.clearAllMocks();
+		vi.useFakeTimers();
 
 		djCova = new DJCova();
-		mockNotificationCallback = jest.fn().mockResolvedValue(undefined);
+		mockNotificationCallback = vi.fn().mockResolvedValue(undefined);
 	});
 
 	afterEach(() => {
 		djCova.destroy();
-		jest.useRealTimers();
+		vi.useRealTimers();
 	});
 
 	describe('Idle Management Initialization', () => {
@@ -133,10 +138,10 @@ describe('DJCova Idle Management Integration', () => {
 			player.emit(AudioPlayerStatus.Idle);
 
 			// Fast-forward past timeout
-			jest.advanceTimersByTime(2000);
+			vi.advanceTimersByTime(2000);
 			await Promise.resolve();
 
-			expect(disconnectVoiceConnection).toHaveBeenCalledWith('test-guild-id');
+			expect(mockedDisconnectVoiceConnection).toHaveBeenCalledWith('test-guild-id');
 			expect(mockNotificationCallback).toHaveBeenCalledWith(
 				'🔇 Disconnected from voice channel due to 2 seconds of inactivity',
 			);
@@ -148,14 +153,14 @@ describe('DJCova Idle Management Integration', () => {
 			player.emit(AudioPlayerStatus.Idle);
 
 			// Start playing before timeout
-			jest.advanceTimersByTime(1000);
+			vi.advanceTimersByTime(1000);
 			player.emit(AudioPlayerStatus.Playing);
 
 			// Advance past original timeout
-			jest.advanceTimersByTime(2000);
+			vi.advanceTimersByTime(2000);
 			await Promise.resolve();
 
-			expect(disconnectVoiceConnection).not.toHaveBeenCalled();
+			expect(mockedDisconnectVoiceConnection).not.toHaveBeenCalled();
 			expect(mockNotificationCallback).not.toHaveBeenCalled();
 		});
 
@@ -166,10 +171,10 @@ describe('DJCova Idle Management Integration', () => {
 			// Trigger idle state and timeout
 			const player = djCova.getPlayer();
 			player.emit(AudioPlayerStatus.Idle);
-			jest.advanceTimersByTime(2000);
+			vi.advanceTimersByTime(2000);
 			await Promise.resolve();
 
-			expect(disconnectVoiceConnection).toHaveBeenCalledWith('test-guild-id');
+			expect(mockedDisconnectVoiceConnection).toHaveBeenCalledWith('test-guild-id');
 			expect(mockNotificationCallback).toHaveBeenCalled();
 		});
 	});
@@ -197,14 +202,14 @@ describe('DJCova Idle Management Integration', () => {
 			player.emit(AudioPlayerStatus.Idle);
 
 			// Manual disconnect before timeout
-			jest.advanceTimersByTime(1000);
+			vi.advanceTimersByTime(1000);
 			djCova.disconnect();
 
 			// Advance past original timeout
-			jest.advanceTimersByTime(2000);
+			vi.advanceTimersByTime(2000);
 			await Promise.resolve();
 
-			expect(disconnectVoiceConnection).not.toHaveBeenCalled();
+			expect(mockedDisconnectVoiceConnection).not.toHaveBeenCalled();
 			expect(mockNotificationCallback).not.toHaveBeenCalled();
 		});
 	});

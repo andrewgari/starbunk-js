@@ -6,9 +6,8 @@ export default defineConfig({
 		alias: {
 			// Match tsconfig path alias: "@/*" -> "./src/*"
 			'@': path.resolve(__dirname, 'src'),
-			// Map @starbunk/shared to the source files for testing
-			'@starbunk/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
-			'@starbunk/shared/dist': path.resolve(__dirname, '../../packages/shared/src'),
+			// Map @starbunk/shared to the built dist files for testing
+			'@starbunk/shared': path.resolve(__dirname, '../shared/dist/index.js'),
 		},
 	},
 	test: {

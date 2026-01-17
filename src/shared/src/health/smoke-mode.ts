@@ -1,10 +1,10 @@
 import * as http from 'http';
-import { logger } from '@/observability/logger';
+import { logger } from '../observability/logger';
 
 /**
  * Runs the application in smoke test mode for CI/CD validation.
  * Creates a minimal health server without connecting to Discord.
- * 
+ *
  * @returns true if smoke mode was activated, false otherwise
  */
 export function runSmokeMode(): boolean {

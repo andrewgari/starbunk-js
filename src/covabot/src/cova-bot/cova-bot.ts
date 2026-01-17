@@ -3,7 +3,7 @@ import {
 	type CovaBotMetrics,
 } from '../utils';
 import { DiscordService } from '../services/discord-service';
-import { Message, TextChannel } from 'discord.js';
+import { Message } from 'discord.js';
 import { BotIdentity } from '../types/bot-identity';
 import { TriggerResponse } from '../types/trigger-response';
 
@@ -161,7 +161,7 @@ export class CovaBot {
 	 * Process incoming Discord message
 	 */
 	async processMessage(message: Message): Promise<void> {
-		let triggerType: 'mention' | 'keyword' | 'probability' | 'stats' = 'probability';
+		let _triggerType: 'mention' | 'keyword' | 'probability' | 'stats' = 'probability';
 
 		try {
 			// Check if bot is disabled
@@ -190,11 +190,11 @@ export class CovaBot {
 				try {
 					// Determine trigger type based on name
 					if (trigger.name.includes('mention')) {
-						triggerType = 'mention';
+						_triggerType = 'mention';
 					} else if (trigger.name.includes('stats')) {
-						triggerType = 'stats';
+						_triggerType = 'stats';
 					} else if (trigger.name.includes('keyword')) {
-						triggerType = 'keyword';
+						_triggerType = 'keyword';
 					}
 
 					// Check if trigger condition matches
