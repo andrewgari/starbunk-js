@@ -163,7 +163,7 @@ class DJCovaContainer {
 		container.register(ServiceId.DiscordClient, this.client);
 
 		// Initialize music player with metrics
-		this.musicPlayer = new DJCova(this.djCovaMetrics);
+		this.musicPlayer = new DJCova();
 		container.register(ServiceId.MusicPlayer, this.musicPlayer);
 
 		// Initialize command handler

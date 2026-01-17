@@ -25,6 +25,11 @@ export default {
 			// Get music player from container
 			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);
 
+			if (!musicPlayer) {
+				await sendErrorResponse(interaction, 'Music player is not available.');
+				return;
+			}
+
 			// Set the volume (no need to divide by 10, DJCova handles percentage internally)
 			musicPlayer.changeVolume(vol);
 

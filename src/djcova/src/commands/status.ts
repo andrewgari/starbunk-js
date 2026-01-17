@@ -16,6 +16,11 @@ export default {
 			// Get music player from container
 			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);
 
+			if (!musicPlayer) {
+				await sendErrorResponse(interaction, 'Music player service is not available.');
+				return;
+			}
+
 			// Get current volume
 			const volume = musicPlayer.getVolume();
 

@@ -266,14 +266,6 @@ export class DiscordService {
 	private startBotProfileRefresh(): void {
 		logger.info('[DiscordService] Starting bot profile refresh setup...');
 
-		// Prevent multiple job setups
-		if (this.botProfileRefreshJob) {
-			logger.info('[DiscordService] Bot profile refresh job already exists');
-			const nextRun = this.botProfileRefreshJob.nextInvocation();
-			logger.info('[DiscordService] Next scheduled refresh:', nextRun);
-			return;
-		}
-
 		// Run immediately on startup with increased retries
 		logger.info('[DiscordService] Initiating immediate bot profile refresh on startup');
 		this.retryBotProfileRefresh(5).catch((error) => {
@@ -334,16 +326,7 @@ export class DiscordService {
 					`[DiscordService] Failed to refresh after ${maxAttempts} attempts. Will try again next scheduled run.`,
 				);
 			}
-
-			if (this.botProfileRefreshJob) {
-				const nextRun = this.botProfileRefreshJob.nextInvocation();
-				logger.debug('[DiscordService] Next refresh scheduled for:', nextRun);
-			}
 		});
-
-		const initialNextRun = this.botProfileRefreshJob.nextInvocation();
-		logger.info('[DiscordService] Bot profile refresh setup complete');
-		logger.info('[DiscordService] Next refresh scheduled for:', initialNextRun);
 	}
 
 	protected async retryBotProfileRefresh(attempts: number = 3): Promise<void> {
@@ -408,7 +391,7 @@ export class DiscordService {
 					this.updateCachesFromGuild(guild);
 					return;
 				} catch (error) {
-					logger.warn('[DiscordService] WebSocket fetch failed:', ensureError(error));
+					logger.error('[DiscordService] WebSocket fetch failed:', ensureError(error));
 				}
 			}
 

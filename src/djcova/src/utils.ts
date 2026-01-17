@@ -37,15 +37,16 @@ export const ServiceId = {
 	DiscordService: Symbol('DiscordService'),
 };
 
-// Placeholder observability functions
-export const initializeObservability = async (_serviceName: string) => {
+export const initializeObservability = async (_service: string) => {
+	// Placeholder - returns minimal structure for type compatibility
 	return {
-		metrics: {},
-		logger: (await import('@starbunk/shared')).logger,
-		channelTracker: {},
+		metrics: {} as any,
+		logger: {} as any,
+		channelTracker: {} as any,
 		httpEndpoints: {
-			addHealthCheck: (_name: string, _fn: () => Promise<unknown>) => {},
-		},
+			addHealthCheck: (_name: string, _check: () => Promise<any>) => {},
+		} as any,
+		config: {} as any,
 	};
 };
 
@@ -63,12 +64,8 @@ export const isDebugMode = (): boolean => {
 	return process.env.DEBUG_MODE === 'true';
 };
 
-export const deferInteractionReply = async (interaction: any) => {
+export const deferInteractionReply = async (interaction: { deferred: boolean; replied: boolean; deferReply(): Promise<void> }) => {
 	if (!interaction.deferred && !interaction.replied) {
 		await interaction.deferReply();
 	}
 };
-
-// Placeholder type
-export type DJCovaMetrics = any;
-

@@ -161,23 +161,7 @@ export class CovaBot {
 	 * Process incoming Discord message
 	 */
 	async processMessage(message: Message): Promise<void> {
-		const startTime = Date.now();
-		let responseGenerated = false;
 		let triggerType: 'mention' | 'keyword' | 'probability' | 'stats' = 'probability';
-
-		// Create message context for metrics
-		const messageContext = this.metrics
-			? {
-					messageId: message.id,
-					userId: message.author.id,
-					username: message.author.username,
-					channelId: message.channel.id,
-					channelName: message.channel instanceof TextChannel ? message.channel.name : 'unknown',
-					guildId: message.guild?.id || 'dm',
-					messageLength: message.content.length,
-					timestamp: Date.now(),
-				}
-			: undefined;
 
 		try {
 			// Check if bot is disabled
@@ -227,11 +211,6 @@ export class CovaBot {
 						`[CovaBot] 📨 Original message: "${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}"`,
 					);
 
-					// Track personality trigger
-					if (this.metrics && messageContext) {
-						this.metrics.trackPersonalityTrigger(triggerType, messageContext);
-					}
-
 					// Get response text
 					const responseText = await trigger.response(message);
 					if (!responseText) {
@@ -247,43 +226,20 @@ export class CovaBot {
 					// Use default identity
 					const identity = this.config.defaultIdentity;
 
-					// Calculate response time before sending
-					const responseTime = Date.now() - startTime;
-
 					// Send message with Cova's identity (includes logging)
 
 					// Confirm response was sent
 					logger.info(`[CovaBot] ✉️ Response sent successfully as ${identity.botName}`);
 
-					// Track successful response
-					responseGenerated = true;
-
-					if (this.metrics) {
-						const responseType = responseText.length > 100 ? 'complex' : 'simple';
-						this.metrics.trackPersonalityResponse(responseTime, responseText.length, responseType);
-					}
-
 					return; // Exit after first successful response
 				} catch (error) {
 					logger.error(`[CovaBot] Error in trigger "${trigger.name}":`, error as Error);
-
-					// Track error response
-					if (this.metrics && !responseGenerated) {
-						const responseTime = Date.now() - startTime;
-						this.metrics.trackPersonalityResponse(responseTime, 0, 'error');
-					}
 
 					continue; // Try next trigger
 				}
 			}
 		} catch (error) {
 			logger.error('[CovaBot] Error processing message:', error as Error);
-
-			// Track error response if no response was generated
-			if (this.metrics && !responseGenerated) {
-				const responseTime = Date.now() - startTime;
-				this.metrics.trackPersonalityResponse(responseTime, 0, 'error');
-			}
 		}
 	}
 
@@ -294,5 +250,4 @@ export class CovaBot {
 	): Promise<void> {
 
 	}
-
 }

@@ -201,10 +201,7 @@ export class ProductionLLMService implements LLMService {
 						this.isHealthy = false;
 					}
 				} catch (error) {
-					logger.warn(
-						`[LLMService] Ollama health check failed - service may be unreachable at ${this.config.apiUrl}:`,
-						ensureError(error),
-					);
+					logger.error('[LLMService] Ollama health check failed:', error as Error);
 					this.isHealthy = false;
 				}
 			} else if (this.config.provider === 'openai') {
