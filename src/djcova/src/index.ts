@@ -3,12 +3,10 @@ import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
 
 import { logger } from '@starbunk/shared';
 import { ensureError } from './utils';
-import { DJCovaContainer } from './core/dj-cova-container';
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
-const { token } = require('./config.json');
+const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 
 export type ChatInputInteraction = {
 	isChatInputCommand(): boolean;

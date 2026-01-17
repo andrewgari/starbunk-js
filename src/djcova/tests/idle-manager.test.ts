@@ -29,14 +29,14 @@ const mockedLogger = vi.mocked(logger);
 
 describe('IdleManager', () => {
 	let idleManager: IdleManager;
-	let mockOnDisconnect: ReturnType<typeof vi.fn>;
+	let mockOnDisconnect: ReturnType<typeof vi.fn<[string], Promise<void>>>;
 	let config: IdleManagerConfig;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.useFakeTimers();
 
-		mockOnDisconnect = vi.fn().mockResolvedValue(undefined);
+		mockOnDisconnect = vi.fn<[string], Promise<void>>().mockResolvedValue(undefined);
 
 		config = {
 			timeoutSeconds: 2, // Short timeout for testing
