@@ -12,7 +12,7 @@ services:
     env_file:
       - .env
     environment:
-      - BUNKBOT_TOKEN=${BUNKBOT_TOKEN}
+      - DISCORD_TOKEN=${BUNKBOT_TOKEN}
       - GUILD_ID=${GUILD_ID}
       - BUNKBOT_BOTS_DIR=/app/config/bots
       - METRICS_PORT=${METRICS_PORT:-3000}
@@ -50,7 +50,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - DISCORD_TOKEN=${DJCOVA_TOKEN}
+      - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${DJCOVA_CLIENT_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
@@ -92,7 +92,7 @@ services:
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=768
-      - DISCORD_TOKEN=${COVABOT_TOKEN}
+      - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
       # LLM Configuration
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
@@ -143,14 +143,11 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - DISCORD_TOKEN=${BLUEBOT_TOKEN}
+      - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
       - HEALTH_PORT=3000
     ports:
       # Metrics and health endpoint port
       - "${BLUEBOT_METRICS_PORT:-9302}:3000"
-    depends_on:
-      redis:
-        condition: service_healthy
     networks:
       - starbunk-network
     logging:

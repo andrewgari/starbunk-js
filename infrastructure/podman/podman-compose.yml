@@ -103,56 +103,6 @@ services:
         reservations:
           memory: 512M
 
-  # Starbunk-DND - D&D features and bridge
-  starbunk-dnd:
-    image: ghcr.io/andrewgari/starbunk-dnd:latest
-    container_name: starbunk-dnd
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=production
-      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
-      - SNOWBUNK_TOKEN=${SNOWBUNK_TOKEN}
-      - CLIENT_ID=${CLIENT_ID}
-      - GUILD_ID=${GUILD_ID}
-      - DATABASE_URL=${DATABASE_URL}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
-      - OLLAMA_API_URL=${OLLAMA_API_URL:-}
-      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
-      - DEBUG_MODE=${DEBUG_MODE:-false}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - STARBUNK_DND_HEALTH_PORT=${STARBUNK_DND_HEALTH_PORT:-3005}
-      - ENABLE_METRICS=${ENABLE_METRICS:-true}
-      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
-      - LOG_FORMAT=${LOG_FORMAT:-json}
-      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
-      - LOKI_URL=${LOKI_URL:-}
-    volumes:
-      - dnd_data:/app/data
-      - dnd_campaigns:/app/data/campaigns
-      - dnd_context:/app/data/llm_context
-    healthcheck:
-      test: ["CMD", "/bin/sh", "-c", "curl -f http://localhost:3005/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    networks:
-      - starbunk-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
-
   # CovaBot - AI personality bot
   covabot:
     image: ghcr.io/andrewgari/covabot:latest

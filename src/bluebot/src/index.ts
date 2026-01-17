@@ -22,7 +22,7 @@ async function main(): Promise<void> {
 
 	if (!token) {
 		logger.error('Discord token not found in environment variables');
-		throw new Error('BLUEBOT_TOKEN, DISCORD_TOKEN or STARBUNK_TOKEN environment variable is required');
+		throw new Error('DISCORD_TOKEN environment variable is required');
 	}
 
 	const client = new Client({ intents });
