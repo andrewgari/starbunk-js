@@ -91,9 +91,9 @@ export class WebhookService {
 				})
 				.info(`Cleared webhooks from guild`);
 			return starbunkWebhooks.size;
-		} catch (error: Error | unknown) {
+		} catch (error: unknown) {
 			logger
-				.withError(error)
+				.withError(error instanceof Error ? error : new Error(String(error)))
 				.withMetadata({
 					guild_id: guildId,
 				})

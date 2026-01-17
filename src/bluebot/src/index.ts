@@ -1,8 +1,12 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits } from 'discord.js';
+import { setupBlueBotLogging } from '@/observability/setup-logging';
 import { logger } from '@/observability/logger';
 import { BlueBot } from '@/blue-bot';
 import { runSmokeTest } from '@starbunk/shared/health/smoke-test';
+
+// Setup logging mixins before creating any logger instances
+setupBlueBotLogging();
 
 const intents = [
 	GatewayIntentBits.Guilds,

@@ -50,11 +50,11 @@ function extractMessageContext(message: Message): DiscordMessageContext {
     message_id: message.id,
     guild_id: message.guildId || undefined,
     channel_id: message.channelId,
-    user_id: message.author.id,
-    username: message.author.username,
-    content_length: message.content.length,
-    has_attachments: message.attachments.size > 0,
-    has_embeds: message.embeds.length > 0,
+    user_id: message.author?.id,
+    username: message.author?.username,
+    content_length: message.content?.length ?? 0,
+    has_attachments: message.attachments?.size > 0,
+    has_embeds: message.embeds?.length > 0,
   };
 }
 

@@ -25,9 +25,7 @@
 		}
 	},
 	"include": [
-		"src/**/*",
-    "./node_modules/@loglayer/mixin-hot-shots",
-    "../shared/src/observability/metrics-service.ts"
-],
+		"src/**/*"
+	],
 	"exclude": ["node_modules", "dist", "tests", "**/__tests__/**", "**/*.test.ts", "src/testing/llm/**/*"]
 }
