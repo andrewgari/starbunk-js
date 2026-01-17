@@ -1,3 +1,9 @@
+## [1.12.0](https://github.com/andrewgari/starbunk-js/compare/v1.11.0...v1.12.0) (2026-01-17)
+
+### Features
+
+* Refactor music command tests to use service-based architecture ([#443](https://github.com/andrewgari/starbunk-js/issues/443)) ([40721b1](https://github.com/andrewgari/starbunk-js/commit/40721b11d90588348f968ef3db43078ad45f3c31))
+
 ## [1.11.0](https://github.com/andrewgari/starbunk-js/compare/v1.10.1...v1.11.0) (2026-01-15)
 
 ### Features

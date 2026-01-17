@@ -22,7 +22,6 @@ type Command = {
 	data: { name: string };
 	execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 };
-
 // Main execution
 async function main(): Promise<void> {
 	if (process.env.CI_SMOKE_MODE === 'true') {
