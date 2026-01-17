@@ -70,7 +70,8 @@ async function main(): Promise<void> {
 
 		if (stats.isFile() && entry.endsWith(commandExtension)) {
 			// Direct file in commands directory
-			const command = require(entryPath);
+			const commandModule = require(entryPath);
+			const command = commandModule.default ?? commandModule;
 			if ('data' in command && 'execute' in command) {
 				client.commands.set(command.data.name, command);
 			} else {
@@ -81,7 +82,8 @@ async function main(): Promise<void> {
 			const commandFiles = fs.readdirSync(entryPath).filter((file: string) => file.endsWith(commandExtension));
 			for (const file of commandFiles) {
 				const filePath = path.join(entryPath, file);
-				const command = require(filePath);
+				const commandModule = require(filePath);
+				const command = commandModule.default ?? commandModule;
 				if ('data' in command && 'execute' in command) {
 					client.commands.set(command.data.name, command);
 				} else {
