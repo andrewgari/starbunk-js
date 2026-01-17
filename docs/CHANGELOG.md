@@ -1,3 +1,9 @@
+## [1.14.0](https://github.com/andrewgari/starbunk-js/compare/v1.13.0...v1.14.0) (2026-01-17)
+
+### Features
+
+* standardize config directories for all containers ([#446](https://github.com/andrewgari/starbunk-js/issues/446)) ([e69f9a8](https://github.com/andrewgari/starbunk-js/commit/e69f9a8ecd56bc20d2f2049a3c3b0c2c53e28923))
+
 ## [1.13.0](https://github.com/andrewgari/starbunk-js/compare/v1.12.0...v1.13.0) (2026-01-17)
 
 ### Features
