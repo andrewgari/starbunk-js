@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { Events,Client, } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 
-import { logger } from '@starbunk/shared';
+import { logger } from '@/observability/logger';
 import { ensureError, } from './utils';
 import { WebServer } from './web/server';
 

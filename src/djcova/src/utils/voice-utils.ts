@@ -18,8 +18,7 @@ type VoiceChannelLike = {
 type InteractionLike = { member?: unknown; guild?: { id: string } | null; channelId: string };
 
 import { getVoiceConnection, VoiceConnectionStatus } from '@discordjs/voice';
-
-import { logger } from '@starbunk/shared';
+import { logger } from '../observability/logger';
 
 /**
  * Join a voice channel and return the connection
@@ -74,7 +73,8 @@ export function createVoiceConnection(channel: VoiceChannelLike, adapterCreator:
 	});
 
 	connection.on('error', (error: Error) => {
-		logger.error(`❌ Voice connection error in channel ${channel.name}:`, error);
+		logger.withError(error).withMetadata({ channel_name: channel.name })
+			.error('❌ Voice connection error in channel');
 	});
 
 	connection.on('stateChange', (oldState: { status: string }, newState: { status: string }) => {
@@ -104,10 +104,8 @@ export function disconnectVoiceConnection(guildId: string): void {
 			connection.destroy();
 			logger.debug(`Voice connection destroyed for guild: ${guildId}`);
 		} catch (error) {
-			logger.error(
-				'Error destroying voice connection:',
-				error instanceof Error ? error : new Error(String(error)),
-			);
+			logger.withError(error instanceof Error ? error : new Error(String(error)))
+				.error('Error destroying voice connection');
 		}
 	}
 }
@@ -128,10 +126,8 @@ export function subscribePlayerToConnection(
 		}
 		return subscription;
 	} catch (error) {
-		logger.error(
-			'Error subscribing player to connection:',
-			error instanceof Error ? error : new Error(String(error)),
-		);
+		logger.withError(error instanceof Error ? error : new Error(String(error)))
+			.error('Error subscribing player to connection');
 		return undefined;
 	}
 }

@@ -1,13 +1,13 @@
 // apps/bunkbot/src/core/response-resolver.ts
 import { Message } from 'discord.js';
-import { logger } from '@starbunk/shared/observability/logger';
+import { logger } from '@/observability/logger';
 
 export class ResponseResolver {
   static async resolve(template: string, message: Message): Promise<string> {
-    logger.debug('Resolving response template', {
+    logger.withMetadata({
       template_length: template.length,
       has_placeholders: template.includes('{'),
-    });
+    }).debug('Resolving response template');
 
     let response = template;
 
@@ -18,16 +18,16 @@ export class ResponseResolver {
       const startText = words.slice(0, 3).join(' ').substring(0, 15);
       response = response.replace('{start}', `***${startText}...***`);
 
-      logger.debug('Replaced {start} placeholder', {
+      logger.withMetadata({
         original_text: message.content.substring(0, 50),
         start_text: startText,
-      });
+      }).debug('Replaced {start} placeholder');
     }
 
-    logger.debug('Response template resolved', {
+    logger.withMetadata({
       original_length: template.length,
       resolved_length: response.length,
-    });
+    }).debug('Response template resolved');
 
     return response;
   }

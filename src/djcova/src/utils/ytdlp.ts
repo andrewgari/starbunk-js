@@ -4,10 +4,10 @@
  */
 import { spawn } from 'child_process';
 import { Readable } from 'stream';
-import { logger } from '@starbunk/shared';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
+import { logger } from '../observability/logger';
 
 /**
  * Find yt-dlp binary path
@@ -86,7 +86,7 @@ export function getYouTubeAudioStream(url: string): { stream: Readable; process:
 
 	// Handle process spawn errors
 	ytdlpProcess.on('error', (error: Error) => {
-		logger.error('yt-dlp process spawn error:', error);
+		logger.withError(error).error('yt-dlp process spawn error');
 		stream.destroy(error);
 	});
 
@@ -109,7 +109,7 @@ export function getYouTubeAudioStream(url: string): { stream: Readable; process:
 
 	// Propagate stdout errors for better diagnostics
 	(ytdlpProcess.stdout as Readable).on('error', (e: Error) => {
-		logger.error('yt-dlp stdout error:', e);
+		logger.withError(e).error('yt-dlp stdout error');
 	});
 
 	// Track when data starts flowing
@@ -152,7 +152,7 @@ export async function getVideoInfo(url: string): Promise<{
 
 		ytdlpProcess.on('error', (error: Error) => {
 			clearTimeout(timer);
-			logger.error('Failed to get video info:', error);
+			logger.withError(error).error('Failed to get video info');
 			reject(error);
 		});
 
@@ -171,7 +171,7 @@ export async function getVideoInfo(url: string): Promise<{
 				});
 			} catch (error) {
 				const parseError = error instanceof Error ? error : new Error(String(error));
-				logger.error('Failed to parse yt-dlp JSON output:', parseError);
+				logger.withError(parseError).error('Failed to parse yt-dlp JSON output');
 				reject(parseError);
 			}
 		});

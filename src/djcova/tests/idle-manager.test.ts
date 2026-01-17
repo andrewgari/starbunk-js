@@ -10,18 +10,19 @@ vi.mock('../src/utils/voice-utils', () => ({
 	disconnectVoiceConnection: vi.fn(),
 }));
 
-// Mock the shared logger
-vi.mock('@starbunk/shared', () => ({
+// Mock the logger
+vi.mock('../src/observability/logger', () => ({
 	logger: {
 		debug: vi.fn(),
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
+		withError: vi.fn().mockReturnThis(),
 	},
 }));
 
 import { disconnectVoiceConnection } from '../src/utils/voice-utils';
-import { logger } from '@starbunk/shared';
+import { logger } from '../src/observability/logger';
 
 // Get mocked versions
 const mockedDisconnectVoiceConnection = vi.mocked(disconnectVoiceConnection);
@@ -147,7 +148,8 @@ describe('IdleManager', () => {
 			vi.advanceTimersByTime(2000);
 			await Promise.resolve();
 
-			expect(logger.error).toHaveBeenCalledWith('Error handling idle timeout:', error);
+			expect(logger.withError).toHaveBeenCalledWith(error);
+			expect(logger.error).toHaveBeenCalledWith('Error handling idle timeout');
 			expect(idleManager.isIdleTimerActive()).toBe(false); // Should still clean up
 		});
 	});

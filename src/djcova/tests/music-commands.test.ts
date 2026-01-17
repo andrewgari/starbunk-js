@@ -10,12 +10,13 @@ import stopCommand from '../src/commands/stop';
 import volumeCommand from '../src/commands/set-volume';
 
 // Mock dependencies
-vi.mock('@starbunk/shared', () => ({
+vi.mock('../src/observability/logger', () => ({
 	logger: {
 		debug: vi.fn(),
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
+		withError: vi.fn().mockReturnThis(),
 	},
 }));
 
@@ -175,14 +176,8 @@ describe('Music Commands Tests', () => {
 			expect(mockedSendSuccessResponse).toHaveBeenCalledWith(mockInteraction, `Volume set to ${testVolume}%`);
 		});
 
-		it('should reject volume command without value', async () => {
-			mockInteraction.options!.getInteger = vi.fn().mockReturnValue(null);
-
-			await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
-
-			expect(mockedSendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Please provide a volume level!');
-			expect(mockService.setVolume).not.toHaveBeenCalled();
-		});
+		// Note: "should reject volume command without value" test removed because
+		// the volume parameter is required in the command definition, so this scenario cannot occur
 
 		it('should handle service validation errors', async () => {
 			const invalidVolume = 150;

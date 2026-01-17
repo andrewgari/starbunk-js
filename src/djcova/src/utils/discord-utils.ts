@@ -1,6 +1,6 @@
 // Discord utilities for DJCova
 import { CommandInteraction, ChatInputCommandInteraction } from 'discord.js';
-import { logger } from '@starbunk/shared/observability/logger';
+import { logger } from '../observability/logger';
 
 // Type alias for any command interaction type
 type AnyCommandInteraction = CommandInteraction | ChatInputCommandInteraction;
@@ -19,7 +19,8 @@ export async function sendErrorResponse(
 			await interaction.reply({ content: `❌ ${message}`, ephemeral: true });
 		}
 	} catch (error) {
-		logger.error('Failed to send error response:', error instanceof Error ? error : new Error(String(error)));
+		logger.withError(error instanceof Error ? error : new Error(String(error)))
+			.error('Failed to send error response');
 	}
 }
 
@@ -34,6 +35,7 @@ export async function sendSuccessResponse(interaction: AnyCommandInteraction, me
 			await interaction.reply({ content: `✅ ${message}`, ephemeral: false });
 		}
 	} catch (error) {
-		logger.error('Failed to send success response:', error instanceof Error ? error : new Error(String(error)));
+		logger.withError(error instanceof Error ? error : new Error(String(error)))
+			.error('Failed to send success response');
 	}
 }

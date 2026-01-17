@@ -1,10 +1,14 @@
 // DJCova - Music service container
 import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
-import { logger } from '@starbunk/shared';
+import { setupDJCovaLogging } from './observability/setup-logging';
+import { logger } from './observability/logger';
 import { ensureError } from './utils';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Client, Collection, Events, GatewayIntentBits, ChatInputCommandInteraction } from 'discord.js';
+
+// Setup logging mixins before creating any logger instances
+setupDJCovaLogging();
 
 export type ChatInputInteraction = {
 	isChatInputCommand(): boolean;
@@ -106,7 +110,7 @@ async function main(): Promise<void> {
 		try {
 			await command.execute(interaction);
 		} catch (error) {
-			logger.error('Error executing command:', ensureError(error));
+			logger.withError(ensureError(error)).error('Error executing command');
 			const reply = { content: 'There was an error executing this command!', ephemeral: true };
 			if (interaction.replied || interaction.deferred) {
 				await interaction.followUp(reply);
@@ -133,19 +137,25 @@ process.on('SIGTERM', async () => {
 
 // Global error handlers to properly log unhandled errors with structured logging
 process.on('uncaughtException', (error: Error) => {
-	logger.error('Uncaught exception:', error);
+	logger.withError(error).withMetadata({
+		stack: error.stack,
+	}).error('Uncaught exception - process will exit');
 	process.exit(1);
 });
 
 process.on('unhandledRejection', (reason: unknown) => {
 	const error = ensureError(reason);
-	logger.error('Unhandled promise rejection:', error);
+	logger.withError(error).withMetadata({
+		reason: String(reason),
+	}).error('Unhandled promise rejection - process will exit');
 	process.exit(1);
 });
 
 if (require.main === module) {
 	main().catch((error) => {
-		logger.error('Fatal error in main:', ensureError(error));
+		logger.withError(ensureError(error)).withMetadata({
+			stack: error.stack,
+		}).error('Fatal error in main - process will exit');
 		process.exit(1);
 	});
 }

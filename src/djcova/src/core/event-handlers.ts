@@ -1,8 +1,8 @@
 import { Client, Events } from 'discord.js';
-import { logger } from '@starbunk/shared';
 import { ChatInputInteraction } from '../index';
 import { CommandHandler } from '../command-handler';
 import { ensureError } from '../utils';
+import { logger } from '../observability/logger';
 
 /**
  * Setup all Discord event handlers for the client
@@ -14,11 +14,11 @@ export function setupDiscordEventHandlers(
 ): void {
 	// Error and warning handlers
 	client.on(Events.Error, (error: Error) => {
-		logger.error('Discord client error:', error);
+		logger.withError(error).error('Discord client error');
 	});
 
 	client.on(Events.Warn, (warning: string) => {
-		logger.warn('Discord client warning:', { warning });
+		logger.withMetadata({ warning }).warn('Discord client warning');
 	});
 
 	// Connection state handlers
@@ -41,7 +41,7 @@ export function setupDiscordEventHandlers(
 		try {
 			await commandHandler.handleInteraction(interaction);
 		} catch (error) {
-			logger.error('Error processing interaction:', ensureError(error));
+			logger.withError(ensureError(error)).error('Error processing interaction');
 		}
 	});
 

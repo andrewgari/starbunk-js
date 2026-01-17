@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { logger } from '@starbunk/shared';
+import { logger } from '@/observability/logger';
 import { ensureError } from '../utils';
 import { COVA_BOT_PROMPTS } from '../cova-bot/constants';
 import * as promClient from 'prom-client';

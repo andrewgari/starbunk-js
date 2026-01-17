@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { ChatInputCommandInteraction } from 'discord.js';
-import { logger } from '@starbunk/shared';
 import { container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
 import { DJCovaService } from '../services/dj-cova-service';
+import { logger } from '../observability/logger';
 
 const commandBuilder = new SlashCommandBuilder()
 .setName('volume')
@@ -30,7 +30,8 @@ service.setVolume(vol);
 await sendSuccessResponse(interaction, `Volume set to ${vol}%`);
 logger.info(`Volume changed to ${vol}%`);
 } catch (error) {
-logger.error('Error executing volume command:', error);
+logger.withError(error instanceof Error ? error : new Error(String(error)))
+	.error('Error executing volume command');
 
 const errorMessage = error instanceof Error ? error.message : 'An error occurred while changing the volume.';
 

@@ -1,5 +1,5 @@
 // Music configuration for DJCova
-import { logger } from '@starbunk/shared';
+import { logger } from '../observability/logger';
 
 export interface MusicConfig {
 	idleTimeoutSeconds: number;

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { logger } from '@starbunk/shared';
+import { logger } from '@/observability/logger';
 
 export interface AuthenticatedRequest extends Request {
 	user?: {

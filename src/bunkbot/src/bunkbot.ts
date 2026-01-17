@@ -6,7 +6,7 @@ import { BotRegistry } from '@/reply-bots/bot-registry';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
 import { MetricsService } from '@starbunk/shared/observability/metrics-service';
 import { HealthServer } from '@starbunk/shared/observability/health-server';
-import { logger } from '@starbunk/shared/observability/logger';
+import { logger } from '@/observability/logger';
 import { initializeCommands } from '@/commands/command-registry';
 
 /**
@@ -47,10 +47,10 @@ export class BunkBot {
 		this.setupErrorHandlers();
 
 		const botCount = this.botRegistry.getBots().length;
-		logger.info('BunkBot is now running and listening for Discord events', {
+		logger.withMetadata({
 			guilds: this.client.guilds.cache.size,
 			active_bots: botCount,
-		});
+		}).info('BunkBot is now running and listening for Discord events');
 	}
 
 	/**
@@ -58,7 +58,7 @@ export class BunkBot {
 	 */
 	private async discoverBots(): Promise<void> {
 		const botsDir = process.env.BUNKBOT_BOTS_DIR || path.join(__dirname, '../../config/bots');
-		logger.info('Starting bot discovery', { directory: botsDir });
+		logger.withMetadata({ directory: botsDir }).info('Starting bot discovery');
 
 		BotRegistry.setInstance(this.botRegistry); // Make registry accessible globally
 		const factory = new YamlBotFactory();
@@ -68,10 +68,10 @@ export class BunkBot {
 		// Update active bots metric
 		const botCount = this.botRegistry.getBots().length;
 		this.metricsService.setActiveBots(botCount);
-		logger.info('Bot discovery complete', {
+		logger.withMetadata({
 			total_bots: botCount,
 			bot_names: this.botRegistry.getBots().map(b => b.name).join(', '),
-		});
+		}).info('Bot discovery complete');
 	}
 
 	/**
@@ -94,18 +94,18 @@ export class BunkBot {
 	 */
 	private setupGuildEventHandlers(): void {
 		this.client.on('guildCreate', (guild) => {
-			logger.info('Bot added to new guild', {
+			logger.withMetadata({
 				guild_id: guild.id,
 				guild_name: guild.name,
 				member_count: guild.memberCount,
-			});
+			}).info('Bot added to new guild');
 		});
 
 		this.client.on('guildDelete', (guild) => {
-			logger.info('Bot removed from guild', {
+			logger.withMetadata({
 				guild_id: guild.id,
 				guild_name: guild.name,
-			});
+			}).info('Bot removed from guild');
 		});
 	}
 
@@ -114,11 +114,11 @@ export class BunkBot {
 	 */
 	private setupErrorHandlers(): void {
 		this.client.on('error', (error) => {
-			logger.error('Discord client error', error);
+			logger.withError(error).error('Discord client error');
 		});
 
 		this.client.on('warn', (warning) => {
-			logger.warn('Discord client warning', { warning });
+			logger.withMetadata({ warning }).warn('Discord client warning');
 		});
 	}
 
@@ -126,7 +126,7 @@ export class BunkBot {
 	 * Gracefully shutdown the bot
 	 */
 	async shutdown(signal: string): Promise<void> {
-		logger.info(`Received ${signal}, shutting down gracefully...`, { signal });
+		logger.withMetadata({ signal }).info(`Received ${signal}, shutting down gracefully...`);
 
 		try {
 			logger.info('Stopping health server...');
@@ -139,7 +139,7 @@ export class BunkBot {
 
 			logger.info('Shutdown complete');
 		} catch (error) {
-			logger.error('Error during shutdown', error);
+			logger.withError(error).error('Error during shutdown');
 			throw error;
 		}
 	}

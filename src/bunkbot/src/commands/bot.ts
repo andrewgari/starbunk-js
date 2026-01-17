@@ -4,7 +4,7 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
-import { logger } from '@starbunk/shared/observability/logger';
+import { logger } from '@/observability/logger';
 import { BotStateManager } from '@/reply-bots/services/bot-state-manager';
 import { BotRegistry } from '@/reply-bots/bot-registry';
 
@@ -112,7 +112,7 @@ export default {
         }
       }
     } catch (error) {
-      logger.error('Error executing bot command', error);
+      logger.withError(error).error('Error executing bot command');
       await interaction.reply({
         content: 'An error occurred while executing the command',
         ephemeral: true,
@@ -129,7 +129,7 @@ export default {
       const filtered = choices.filter((choice) => choice.toLowerCase().includes(focusedValue));
       await interaction.respond(filtered.map((choice) => ({ name: choice, value: choice })));
     } catch (error) {
-      logger.error('Error in bot command autocomplete', error);
+      logger.withError(error).error('Error in bot command autocomplete');
       await interaction.respond([]);
     }
   },

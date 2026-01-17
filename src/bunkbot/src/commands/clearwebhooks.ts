@@ -1,5 +1,5 @@
 import { CommandInteraction, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
-import { logger } from '@starbunk/shared/observability/logger';
+import { logger } from '@/observability/logger';
 
 const commandBuilder = new SlashCommandBuilder()
   .setName('clearwebhooks')
@@ -29,11 +29,11 @@ export default {
         if (webhook.name === 'Starbunk Bot') {
           await webhook.delete();
           deletedCount++;
-          logger.info('Webhook deleted', {
+          logger.withMetadata({
             webhook_id: webhook.id,
             webhook_name: webhook.name,
             guild_id: interaction.guildId,
-          });
+          }).info('Webhook deleted');
         }
       }
 
@@ -42,7 +42,7 @@ export default {
         ephemeral: true,
       });
     } catch (error) {
-      logger.error('Failed to clear webhooks', error);
+      logger.withError(error).error('Failed to clear webhooks');
       await interaction.followUp({
         content: 'Failed to clear webhooks.',
         ephemeral: true,

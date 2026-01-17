@@ -1,18 +1,3 @@
-/**
- * Structured logger for BunkBot
- * Supports JSON logging for Promtail/Loki integration
- */
-
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-interface LogEntry {
-	level: LogLevel;
-	message: string;
-	timestamp: string;
-	service: string;
-	[key: string]: unknown;
-}
-
 class Logger {
 	private serviceName: string;
 	private structuredLogging: boolean;
@@ -53,7 +38,7 @@ class Logger {
 		this.structuredLogging = enabled;
 	}
 
-	private log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
+	private log(level: string, message: string, context?: Record<string, unknown>): void {
 		if (this.structuredLogging) {
 			this.logStructured(level, message, context);
 		} else {
@@ -61,39 +46,23 @@ class Logger {
 		}
 	}
 
-	private logStructured(level: LogLevel, message: string, context?: Record<string, unknown>): void {
-		const logEntry: LogEntry = {
-			level,
-			message,
+	private logStructured(level: string, message: string, context?: Record<string, unknown>): void {
+		const logEntry = {
 			timestamp: new Date().toISOString(),
+			level: level.toUpperCase(),
 			service: this.serviceName,
+			message,
 			...context,
 		};
 		console.log(JSON.stringify(logEntry));
 	}
 
-	private logFormatted(level: LogLevel, message: string, context?: Record<string, unknown>): void {
+	private logFormatted(level: string, message: string, context?: Record<string, unknown>): void {
 		const timestamp = new Date().toISOString();
 		const levelUpper = level.toUpperCase().padEnd(5);
-		const prefix = `[${timestamp}] [${levelUpper}] [${this.serviceName}]`;
-
-		if (context && Object.keys(context).length > 0) {
-			console.log(`${prefix} ${message}`, context);
-		} else {
-			console.log(`${prefix} ${message}`);
-		}
+		const contextStr = context ? ` ${JSON.stringify(context)}` : '';
+		console.log(`[${timestamp}] [${levelUpper}] [${this.serviceName}] ${message}${contextStr}`);
 	}
 }
 
-// Singleton instance
-let loggerInstance: Logger | undefined;
-
-export function getLogger(): Logger {
-	if (!loggerInstance) {
-		loggerInstance = new Logger();
-	}
-	return loggerInstance;
-}
-
-export const logger = getLogger();
-
+export const logger = new Logger('covabot');

@@ -5,12 +5,12 @@ import {
 	demuxProbe,
 	NoSubscriberBehavior,
 } from '@discordjs/voice';
-import { logger } from '@starbunk/shared';
 import { ChildProcess } from 'child_process';
 import { getYouTubeAudioStream } from '../utils/ytdlp';
 import { IdleManager, createIdleManager, IdleManagerConfig } from '../services/idle-manager';
 import { getMusicConfig } from '../config/music-config';
 import ffmpegPath from 'ffmpeg-static';
+import { logger } from '../observability/logger';
 
 type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 
@@ -54,7 +54,7 @@ export class DJCova {
 		});
 
 		this.player.on('error', (error: Error) => {
-			logger.error('Audio player error:', error);
+			logger.withError(error).error('Audio player error');
 			this.cleanup();
 		});
 	}
@@ -83,7 +83,8 @@ export class DJCova {
 
 			this.player.play(this.resource);
 		} catch (error) {
-			logger.error('Failed to play audio:', error);
+			logger.withError(error instanceof Error ? error : new Error(String(error)))
+				.error('Failed to play audio');
 			this.cleanup();
 			throw error;
 		}
