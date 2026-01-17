@@ -4,7 +4,7 @@
 
 import { vi } from 'vitest';
 import { AudioPlayerStatus } from '@discordjs/voice';
-import { DJCova } from '../src/dj-cova';
+import { DJCova } from '../src/core/dj-cova';
 
 // Mock dependencies
 vi.mock('@starbunk/shared', () => ({
@@ -26,17 +26,9 @@ vi.mock('../src/config/music-config', () => ({
 	}),
 }));
 
-// Mock ytdl-core
-vi.mock('@distube/ytdl-core', () => {
-	return vi.fn().mockImplementation(() => {
-		const { Readable } = require('stream');
-		return new Readable({
-			read() {
-				this.push(Buffer.alloc(1024));
-			},
-		});
-	});
-});
+vi.mock('../src/utils/ytdlp', () => ({
+	getYouTubeAudioStream: vi.fn(),
+}));
 
 describe('DJCova Memory Leak Prevention', () => {
 	let djCova: DJCova;
@@ -51,15 +43,11 @@ describe('DJCova Memory Leak Prevention', () => {
 	});
 
 	describe('Event Listener Cleanup', () => {
-		it('should properly remove event listeners on destroy', () => {
-			// Initialize idle management to set up event listeners
-			djCova.initializeIdleManagement('test-guild-id', 'test-channel-id');
-
-			// Get the audio player to spy on its methods
+		it('should properly remove all event listeners on destroy', () => {
+			// Get the audio player
 			const audioPlayer = djCova.getPlayer();
-			const offSpy = vi.spyOn(audioPlayer, 'off');
 
-			// Verify that event listeners are registered (by triggering them)
+			// Verify that event listeners are registered
 			const initialListenerCount =
 				audioPlayer.listenerCount(AudioPlayerStatus.Playing) +
 				audioPlayer.listenerCount(AudioPlayerStatus.Idle) +
@@ -67,83 +55,70 @@ describe('DJCova Memory Leak Prevention', () => {
 
 			expect(initialListenerCount).toBeGreaterThan(0);
 
+			// Spy on removeAllListeners
+			const removeAllListenersSpy = vi.spyOn(audioPlayer, 'removeAllListeners');
+
 			// Destroy the DJCova instance
 			djCova.destroy();
 
-			// Verify that off() was called for each event type
-			expect(offSpy).toHaveBeenCalledWith(AudioPlayerStatus.Playing, expect.any(Function));
-			expect(offSpy).toHaveBeenCalledWith(AudioPlayerStatus.Idle, expect.any(Function));
-			expect(offSpy).toHaveBeenCalledWith('error', expect.any(Function));
+			// Verify that removeAllListeners was called
+			expect(removeAllListenersSpy).toHaveBeenCalled();
 
-			// Verify that off() was called exactly 3 times (once for each listener)
-			expect(offSpy).toHaveBeenCalledTimes(3);
+			// Verify all listeners are removed
+			const finalListenerCount =
+				audioPlayer.listenerCount(AudioPlayerStatus.Playing) +
+				audioPlayer.listenerCount(AudioPlayerStatus.Idle) +
+				audioPlayer.listenerCount('error');
+
+			expect(finalListenerCount).toBe(0);
 		});
 
-		it('should handle destroy() when no listeners are registered', () => {
-			// Don't initialize idle management, so no listeners are registered
-			const audioPlayer = djCova.getPlayer();
-			const offSpy = vi.spyOn(audioPlayer, 'off');
-
-			// Destroy should not throw an error
+		it('should handle destroy() when no idle manager is initialized', () => {
+			// Destroy should not throw an error even without idle manager
 			expect(() => djCova.destroy()).not.toThrow();
-
-			// off() should still be called but with null listeners
-			expect(offSpy).toHaveBeenCalledTimes(3);
 		});
 
 		it('should handle multiple destroy() calls gracefully', () => {
 			// Initialize idle management
 			djCova.initializeIdleManagement('test-guild-id', 'test-channel-id');
 
-			const audioPlayer = djCova.getPlayer();
-			const offSpy = vi.spyOn(audioPlayer, 'off');
-
 			// First destroy
-			djCova.destroy();
-			const firstCallCount = offSpy.mock.calls.length;
+			expect(() => djCova.destroy()).not.toThrow();
 
-			// Second destroy should not add more calls
-			djCova.destroy();
-			const secondCallCount = offSpy.mock.calls.length;
-
-			expect(secondCallCount).toBe(firstCallCount);
-		});
-
-		it('should set listener properties to null after cleanup', () => {
-			// Initialize idle management
-			djCova.initializeIdleManagement('test-guild-id', 'test-channel-id');
-
-			// Access private properties through type assertion for testing
-			const djCovaAny = djCova as any;
-
-			// Verify listeners are initially set
-			expect(djCovaAny.onPlayingListener).not.toBeNull();
-			expect(djCovaAny.onIdleListener).not.toBeNull();
-			expect(djCovaAny.onErrorListener).not.toBeNull();
-
-			// Destroy the instance
-			djCova.destroy();
-
-			// Verify listeners are set to null
-			expect(djCovaAny.onPlayingListener).toBeNull();
-			expect(djCovaAny.onIdleListener).toBeNull();
-			expect(djCovaAny.onErrorListener).toBeNull();
+			// Second destroy should also not throw
+			expect(() => djCova.destroy()).not.toThrow();
 		});
 
 		it('should cleanup idle manager on destroy', () => {
 			// Initialize idle management
 			djCova.initializeIdleManagement('test-guild-id', 'test-channel-id');
 
-			// Get the idle manager and spy on its destroy method
-			const idleStatus = djCova.getIdleStatus();
-			expect(idleStatus).not.toBeNull();
+			// Access private property to verify idle manager exists
+			const djCovaAny = djCova as any;
+			expect(djCovaAny.idleManager).not.toBeNull();
 
 			// Destroy the DJCova instance
 			djCova.destroy();
 
 			// Verify idle manager is cleaned up
-			const statusAfterDestroy = djCova.getIdleStatus();
-			expect(statusAfterDestroy).toBeNull();
+			expect(djCovaAny.idleManager).toBeNull();
+		});
+
+		it('should cleanup ytdlp process on destroy', () => {
+			// Access private property
+			const djCovaAny = djCova as any;
+
+			// Mock a ytdlp process
+			const mockProcess = {
+				kill: vi.fn(),
+			};
+			djCovaAny.ytdlpProcess = mockProcess;
+
+			// Destroy should cleanup the process
+			djCova.destroy();
+
+			expect(mockProcess.kill).toHaveBeenCalledWith('SIGKILL');
+			expect(djCovaAny.ytdlpProcess).toBeNull();
 		});
 	});
 
@@ -155,28 +130,33 @@ describe('DJCova Memory Leak Prevention', () => {
 
 			const audioPlayer = djCova.getPlayer();
 
-			// Trigger an event before destroy
-			audioPlayer.emit(AudioPlayerStatus.Idle);
-
-			// Should have idle status active
-			let idleStatus = djCova.getIdleStatus();
-			expect(idleStatus?.isActive).toBe(true);
-
 			// Destroy the instance
 			djCova.destroy();
 
-			// Trigger non-error events after destroy - should not cause side effects
+			// Trigger events after destroy - should not cause side effects
 			expect(() => {
 				audioPlayer.emit(AudioPlayerStatus.Playing);
 				audioPlayer.emit(AudioPlayerStatus.Idle);
 			}).not.toThrow();
 
-			// Idle status should be null after destroy
-			idleStatus = djCova.getIdleStatus();
-			expect(idleStatus).toBeNull();
+			// Callback should not have been called
+			expect(mockCallback).not.toHaveBeenCalled();
+		});
 
-			// Note: We don't test error events after destroy because they become
-			// unhandled events when the listener is removed, which is expected behavior
+		it('should not have active idle manager after destroy', () => {
+			// Initialize idle management
+			djCova.initializeIdleManagement('test-guild-id', 'test-channel-id');
+
+			// Trigger idle state
+			const audioPlayer = djCova.getPlayer();
+			audioPlayer.emit(AudioPlayerStatus.Idle);
+
+			// Destroy the instance
+			djCova.destroy();
+
+			// Access private property to verify idle manager is null
+			const djCovaAny = djCova as any;
+			expect(djCovaAny.idleManager).toBeNull();
 		});
 	});
 });

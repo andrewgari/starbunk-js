@@ -1,6 +1,6 @@
 // Discord utilities for DJCova
 import { CommandInteraction, ChatInputCommandInteraction } from 'discord.js';
-import { logger } from '@starbunk/shared';
+import { logger } from '@starbunk/shared/observability/logger';
 
 // Type alias for any command interaction type
 type AnyCommandInteraction = CommandInteraction | ChatInputCommandInteraction;

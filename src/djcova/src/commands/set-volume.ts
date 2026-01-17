@@ -3,41 +3,41 @@ import { ChatInputCommandInteraction } from 'discord.js';
 import { logger } from '@starbunk/shared';
 import { container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
-import { DJCova } from '../dj-cova';
+import { DJCovaService } from '../services/dj-cova-service';
 
 const commandBuilder = new SlashCommandBuilder()
 	.setName('volume')
-	.setDescription('It makes the noises go up and down')
-	.addIntegerOption((option) => option.setName('noise').setDescription('set player volume %').setRequired(true));
+	.setDescription('Set playback volume')
+	.addIntegerOption((option) => option.setName('level').setDescription('Volume level (1-100)').setRequired(true));
 
 export default {
 	data: commandBuilder.toJSON(),
 	async execute(interaction: ChatInputCommandInteraction) {
 		try {
-			// Get volume from the 'noise' option (as defined in the command builder)
-			const vol = interaction.options.getInteger('noise');
-
-			if (!vol || vol < 1 || vol > 100) {
-				await sendErrorResponse(interaction, 'Volume must be between 1 and 100!');
+			const vol = interaction.options.getInteger('level');
+			if (!vol) {
+				await sendErrorResponse(interaction, 'Please provide a volume level!');
 				return;
 			}
 
-			// Get music player from container
-			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);
-
-			if (!musicPlayer) {
-				await sendErrorResponse(interaction, 'Music player is not available.');
+			// Get service from container
+			const service = container.get<DJCovaService>(ServiceId.DJCovaService);
+			if (!service) {
+				await sendErrorResponse(interaction, 'Music service is not available.');
 				return;
 			}
 
-			// Set the volume (no need to divide by 10, DJCova handles percentage internally)
-			musicPlayer.changeVolume(vol);
+			// Service handles validation and logic
+			service.setVolume(vol);
 
-			await sendSuccessResponse(interaction, `🔊 Volume set to ${vol}%!`);
-			logger.info(`Volume changed to ${vol}% via volume command`);
+			await sendSuccessResponse(interaction, `Volume set to ${vol}%`);
+			logger.info(`Volume changed to ${vol}%`);
 		} catch (error) {
-			logger.error('Error executing volume command:', error instanceof Error ? error : new Error(String(error)));
-			await sendErrorResponse(interaction, 'An error occurred while changing the volume.');
+			logger.error('Error executing volume command:', error);
+
+			const errorMessage = error instanceof Error ? error.message : 'An error occurred while changing the volume.';
+
+			await sendErrorResponse(interaction, errorMessage);
 		}
 	},
 };
