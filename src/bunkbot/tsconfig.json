@@ -27,10 +27,7 @@
 	"include": ["src/**/*.ts"],
 	"exclude": [
 		"node_modules",
-		"dist",
-		"tests",
-		"src/**/__tests__/**",
-		"src/**/*.test.ts"
+		"dist"
 	],
 	"references": [
 		{ "path": "../shared" }

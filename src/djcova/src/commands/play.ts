@@ -1,10 +1,11 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { ChatInputCommandInteraction } from 'discord.js';
+import type { ChatInputCommandInteraction } from 'discord.js';
 
 import { Readable } from 'stream';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 
-import { logger, deferInteractionReply, container, ServiceId } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
 import { validateVoiceChannelAccess, createVoiceConnection, subscribePlayerToConnection } from '../utils/voice-utils';
 import { DJCova } from '../dj-cova';
@@ -14,6 +15,14 @@ const commandBuilder = new SlashCommandBuilder()
 	.setDescription('Play a YouTube link or audio file in voice chat')
 	.addStringOption((option) => option.setName('song').setDescription('YouTube video URL').setRequired(false))
 	.addAttachmentOption((option) => option.setName('file').setDescription('Audio file (.mp3, .wav, etc.)'));
+
+export const deferInteractionReply = async (
+    interaction: Pick<ChatInputCommandInteraction, 'deferred' | 'replied' | 'deferReply'>
+) => {
+    if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply();
+    }
+};
 
 export default {
 	data: commandBuilder.toJSON(),
@@ -74,6 +83,11 @@ export default {
 
 			// Get music player from container
 			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);
+
+			if (!musicPlayer) {
+				await sendErrorResponse(interaction, 'Music player is not available.');
+				return;
+			}
 
 			// Initialize idle management with notification callback
 			const notificationCallback = async (message: string) => {

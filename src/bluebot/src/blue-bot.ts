@@ -1,5 +1,5 @@
 import { Client, Message } from 'discord.js';
-import { logger } from '@/observability/logger';
+import { logger } from '@starbunk/shared/observability/logger';
 import { processMessageByStrategy } from '@/strategy/strategy-router';
 
 export class BlueBot {

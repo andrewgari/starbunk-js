@@ -30,7 +30,7 @@ RUN cd src/shared && npm run build
 # Copy app source code
 COPY src/djcova/src ./src/djcova/src
 COPY src/djcova/tests ./src/djcova/tests
-COPY src/djcova/jest.config.js src/djcova/tsconfig*.json src/djcova/.dockerignore ./src/djcova/
+COPY src/djcova/tsconfig*.json src/djcova/.dockerignore ./src/djcova/
 
 # Build the application
 RUN cd src/djcova && npm run build:docker

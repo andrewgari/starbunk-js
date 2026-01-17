@@ -3,10 +3,10 @@ import { Client, Message } from 'discord.js';
 import { BotDiscoveryService } from '@/reply-bots/services/bot-discovery-service';
 import { YamlBotFactory } from '@/serialization/yaml-bot-factory';
 import { BotRegistry } from '@/reply-bots/bot-registry';
-import { DiscordService } from '@/discord/discord-service';
-import { MetricsService } from '@/observability/metrics-service';
-import { HealthServer } from '@/observability/health-server';
-import { logger } from '@/observability/logger';
+import { DiscordService } from '@starbunk/shared/discord/discord-service';
+import { MetricsService } from '@starbunk/shared/observability/metrics-service';
+import { HealthServer } from '@starbunk/shared/observability/health-server';
+import { logger } from '@starbunk/shared/observability/logger';
 import { initializeCommands } from '@/commands/command-registry';
 
 /**

@@ -2,18 +2,18 @@
 import { Events, Client, GatewayIntentBits } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 
+import { CommandHandler } from './command-handler';
+import { DJCova } from './dj-cova';
+import { logger } from '@starbunk/shared';
 import {
-	logger,
 	ensureError,
-	validateEnvironment,
 	container,
 	ServiceId,
 	initializeObservability,
+	shutdownObservability,
 	createDJCovaMetrics,
-	type DJCovaMetrics,
-} from '@starbunk/shared';
-import { CommandHandler } from './command-handler';
-import { DJCova } from './dj-cova';
+	validateEnvironment,
+} from './utils';
 
 type ChatInputInteraction = {
 	isChatInputCommand(): boolean;
@@ -31,10 +31,9 @@ class DJCovaContainer {
 	private client!: Client;
 	private commandHandler!: CommandHandler;
 	private musicPlayer!: DJCova;
-	private djCovaMetrics?: DJCovaMetrics;
 	public activeSubscription: { unsubscribe(): void } | null = null;
 	private hasInitialized = false;
-	private httpEndpoints?: Awaited<ReturnType<typeof initializeObservability>>['httpEndpoints'];
+	private djCovaMetrics?: Awaited<ReturnType<typeof createDJCovaMetrics>>;
 	private discordConnected = false;
 	private lastDiscordError?: Error;
 
@@ -47,10 +46,7 @@ class DJCovaContainer {
 				metrics,
 				logger: _structuredLogger,
 				channelTracker: _channelTracker,
-				httpEndpoints,
 			} = await initializeObservability('djcova');
-
-			this.httpEndpoints = httpEndpoints;
 
 			// Ensure the base logger uses the correct service name so Promtail/Grafana
 			// can label logs properly (service="djcova" instead of "unknown_service").
@@ -58,44 +54,6 @@ class DJCovaContainer {
 			logger.setServiceName('djcova');
 			logger.enableStructuredLogging(true);
 			logger.info('✅ Observability initialized for DJCova');
-
-			// Add Discord connection health check
-			this.httpEndpoints.addHealthCheck('discord_connection', async () => {
-				if (!this.discordConnected) {
-					return {
-						name: 'discord_connection',
-						status: 'fail',
-						output: this.lastDiscordError
-							? `Discord not connected: ${this.lastDiscordError.message}`
-							: 'Discord not connected',
-					};
-				}
-
-				// Check if client is still responsive
-				try {
-					const ping = this.client?.ws?.ping ?? -1;
-					if (ping < 0) {
-						return {
-							name: 'discord_connection',
-							status: 'warn',
-							output: 'Discord connected but ping unavailable',
-						};
-					}
-
-					return {
-						name: 'discord_connection',
-						status: ping > 500 ? 'warn' : 'pass',
-						output: `Discord connected, ping: ${ping}ms`,
-						duration_ms: ping,
-					};
-				} catch (error) {
-					return {
-						name: 'discord_connection',
-						status: 'fail',
-						output: `Discord health check failed: ${ensureError(error).message}`,
-					};
-				}
-			});
 
 			// Initialize DJCova-specific metrics collector
 			try {
@@ -106,9 +64,10 @@ class DJCovaContainer {
 				});
 				logger.info('✅ DJCova-specific metrics collector initialized for music service monitoring');
 			} catch (error) {
+				const err = ensureError(error);
 				logger.warn(
 					'⚠️ DJCova metrics initialization failed, continuing without container-specific metrics:',
-					ensureError(error),
+					{ error: err.message, stack: err.stack },
 				);
 				this.djCovaMetrics = undefined;
 			}
@@ -128,7 +87,7 @@ class DJCovaContainer {
 
 			// Set up error handling
 			this.client.on('error', (error) => logger.error('Discord client error:', error));
-			this.client.on('warn', (warning) => logger.warn('Discord client warning:', warning));
+			this.client.on('warn', (warning) => logger.warn('Discord client warning:', { warning }));
 
 			// Initialize services
 			await this.initializeServices();
@@ -139,7 +98,6 @@ class DJCovaContainer {
 			logger.info('✅ DJCova container initialized successfully');
 		} catch (error) {
 			logger.error('❌ Failed to initialize DJCova container:', ensureError(error));
-			this.lastDiscordError = ensureError(error);
 			throw error;
 		}
 	}
@@ -162,7 +120,7 @@ class DJCovaContainer {
 		container.register(ServiceId.DiscordClient, this.client);
 
 		// Initialize music player with metrics
-		this.musicPlayer = new DJCova(this.djCovaMetrics);
+		this.musicPlayer = new DJCova();
 		container.register(ServiceId.MusicPlayer, this.musicPlayer);
 
 		// Initialize command handler
@@ -181,7 +139,7 @@ class DJCovaContainer {
 		});
 
 		this.client.on(Events.Warn, (warning: string) => {
-			logger.warn('Discord client warning:', warning);
+			logger.warn('Discord client warning:', { warning });
 		});
 
 		// Monitor WebSocket status for connection state
@@ -371,11 +329,11 @@ process.on('SIGINT', async () => {
 	logger.info('Received SIGINT signal, shutting down DJCova...');
 
 	try {
-		const { shutdownObservability } = await import('@starbunk/shared');
 		await shutdownObservability();
 		logger.info('Observability stack shutdown completed');
 	} catch (error) {
-		logger.error('Error during observability shutdown:', ensureError(error));
+		const err = ensureError(error);
+		logger.error('Error during observability shutdown:', { error: err.message, stack: err.stack });
 	}
 
 	process.exit(0);
@@ -385,11 +343,11 @@ process.on('SIGTERM', async () => {
 	logger.info('Received SIGTERM signal, shutting down DJCova...');
 
 	try {
-		const { shutdownObservability } = await import('@starbunk/shared');
 		await shutdownObservability();
 		logger.info('Observability stack shutdown completed');
 	} catch (error) {
-		logger.error('Error during observability shutdown:', ensureError(error));
+		const err = ensureError(error);
+		logger.error('Error during observability shutdown:', { error: err.message, stack: err.stack });
 	}
 
 	process.exit(0);

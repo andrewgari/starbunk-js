@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { logger } from '@/observability/logger';
+import { logger } from '@starbunk/shared/observability/logger';
 
 /**
  * Basic Logical Building Blocks

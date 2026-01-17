@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { ChatInputCommandInteraction } from 'discord.js';
-import { logger, container, ServiceId } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
 import { DJCova } from '../dj-cova';
 
@@ -23,6 +24,11 @@ export default {
 
 			// Get music player from container
 			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);
+
+			if (!musicPlayer) {
+				await sendErrorResponse(interaction, 'Music player is not available.');
+				return;
+			}
 
 			// Set the volume (no need to divide by 10, DJCova handles percentage internally)
 			musicPlayer.changeVolume(vol);

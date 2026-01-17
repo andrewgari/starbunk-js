@@ -1,6 +1,6 @@
 // apps/bunkbot/src/core/response-resolver.ts
 import { Message } from 'discord.js';
-import { logger } from '@/observability/logger';
+import { logger } from '@starbunk/shared/observability/logger';
 
 export class ResponseResolver {
   static async resolve(template: string, message: Message): Promise<string> {

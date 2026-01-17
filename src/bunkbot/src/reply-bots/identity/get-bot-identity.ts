@@ -1,7 +1,7 @@
 import { BotIdentity } from '@/reply-bots/models/bot-identity';
 import { GetBotIdentityOptions } from '@/reply-bots/identity/get-identity-options';
 import { GuildMember } from 'discord.js';
-import { DiscordService } from '@/discord/discord-service';
+import { DiscordService } from '@starbunk/shared/discord/discord-service';
 
 export async function getBotIdentityFromDiscord(options: GetBotIdentityOptions): Promise<BotIdentity> {
   const { userId, message, useRandomMember, fallbackName = 'BunkBot' } = options;

@@ -11,7 +11,8 @@ type InteractionLike = {
 };
 
 import path from 'path';
-import { logger, isDebugMode } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { isDebugMode } from './utils';
 
 // Command interface for DJCova music commands
 

@@ -2,32 +2,33 @@
  * Memory leak prevention tests for DJCova event listener cleanup
  */
 
+import { vi } from 'vitest';
 import { AudioPlayerStatus } from '@discordjs/voice';
 import { DJCova } from '../src/dj-cova';
 
 // Mock dependencies
-jest.mock('@starbunk/shared', () => ({
+vi.mock('@starbunk/shared', () => ({
 	logger: {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
 	},
 }));
 
-jest.mock('../src/utils/voiceUtils', () => ({
-	disconnectVoiceConnection: jest.fn(),
+vi.mock('../src/utils/voice-utils', () => ({
+	disconnectVoiceConnection: vi.fn(),
 }));
 
-jest.mock('../src/config/musicConfig', () => ({
-	getMusicConfig: jest.fn().mockReturnValue({
+vi.mock('../src/config/music-config', () => ({
+	getMusicConfig: vi.fn().mockReturnValue({
 		idleTimeoutSeconds: 2,
 	}),
 }));
 
 // Mock ytdl-core
-jest.mock('@distube/ytdl-core', () => {
-	return jest.fn().mockImplementation(() => {
+vi.mock('@distube/ytdl-core', () => {
+	return vi.fn().mockImplementation(() => {
 		const { Readable } = require('stream');
 		return new Readable({
 			read() {
@@ -41,7 +42,7 @@ describe('DJCova Memory Leak Prevention', () => {
 	let djCova: DJCova;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		djCova = new DJCova();
 	});
 
@@ -56,7 +57,7 @@ describe('DJCova Memory Leak Prevention', () => {
 
 			// Get the audio player to spy on its methods
 			const audioPlayer = djCova.getPlayer();
-			const offSpy = jest.spyOn(audioPlayer, 'off');
+			const offSpy = vi.spyOn(audioPlayer, 'off');
 
 			// Verify that event listeners are registered (by triggering them)
 			const initialListenerCount =
@@ -81,7 +82,7 @@ describe('DJCova Memory Leak Prevention', () => {
 		it('should handle destroy() when no listeners are registered', () => {
 			// Don't initialize idle management, so no listeners are registered
 			const audioPlayer = djCova.getPlayer();
-			const offSpy = jest.spyOn(audioPlayer, 'off');
+			const offSpy = vi.spyOn(audioPlayer, 'off');
 
 			// Destroy should not throw an error
 			expect(() => djCova.destroy()).not.toThrow();
@@ -95,7 +96,7 @@ describe('DJCova Memory Leak Prevention', () => {
 			djCova.initializeIdleManagement('test-guild-id', 'test-channel-id');
 
 			const audioPlayer = djCova.getPlayer();
-			const offSpy = jest.spyOn(audioPlayer, 'off');
+			const offSpy = vi.spyOn(audioPlayer, 'off');
 
 			// First destroy
 			djCova.destroy();
@@ -149,7 +150,7 @@ describe('DJCova Memory Leak Prevention', () => {
 	describe('Event Listener Functionality After Cleanup', () => {
 		it('should not respond to events after destroy', () => {
 			// Initialize idle management
-			const mockCallback = jest.fn();
+			const mockCallback = vi.fn();
 			djCova.initializeIdleManagement('test-guild-id', 'test-channel-id', mockCallback);
 
 			const audioPlayer = djCova.getPlayer();

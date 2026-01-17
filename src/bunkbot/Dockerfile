@@ -10,18 +10,28 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ curl dumb-init
 
 # Copy package files for better caching
-COPY src/bunkbot/package.json src/bunkbot/package-lock.json* ./
+COPY package.json package-lock.json* ./
+COPY src/shared/package.json ./src/shared/
+COPY src/bunkbot/package.json ./src/bunkbot/
 
-# Install dependencies using cache mount to speed up builds
+# Install all dependencies using workspace (more efficient)
+# Using cache mount to speed up npm install across builds
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --prefer-offline --no-audit
+    npm ci --prefer-offline --no-audit --ignore-scripts
 
-# Copy source code
-COPY src/bunkbot/src ./src
-COPY src/bunkbot/tsconfig*.json ./
+# Copy shared package source
+COPY src/shared/src ./src/shared/src
+COPY src/shared/tsconfig*.json ./src/shared/
+
+# Build the shared package first
+RUN cd src/shared && npm run build
+
+# Copy app source code
+COPY src/bunkbot/src ./src/bunkbot/src
+COPY src/bunkbot/tsconfig*.json ./src/bunkbot/
 
 # Build the application
-RUN npm run build:docker
+RUN cd src/bunkbot && npm run build:docker
 
 # Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
@@ -43,8 +53,12 @@ RUN apk add --no-cache openssl dumb-init curl && \
 
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=bunkbot:bunkbot /app/node_modules ./node_modules
-COPY --from=builder --chown=bunkbot:bunkbot /app/dist ./dist
+COPY --from=builder --chown=bunkbot:bunkbot /app/src/shared/node_modules ./src/shared/node_modules
+COPY --from=builder --chown=bunkbot:bunkbot /app/src/shared/dist ./src/shared/dist
+COPY --from=builder --chown=bunkbot:bunkbot /app/src/shared/package.json ./src/shared/
+COPY --from=builder --chown=bunkbot:bunkbot /app/src/bunkbot/dist ./src/bunkbot/dist
 COPY --from=builder --chown=bunkbot:bunkbot /app/package.json ./
+COPY --from=builder --chown=bunkbot:bunkbot /app/src/bunkbot/package.json ./src/bunkbot/
 
 # Set default environment variables from build args
 ENV NODE_ENV=${NODE_ENV} \
@@ -73,5 +87,5 @@ EXPOSE 3000
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "src/bunkbot/dist/index.js"]
 

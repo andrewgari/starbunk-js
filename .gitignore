@@ -200,4 +200,7 @@ data/logs/
 *.tsbuildinfo
 prometheus.yml
 config/bots/bots.yml
-apps/bunkbot/src/serialization/CreateDocker.php
+
+src/**/src/**/*.js
+src/**/src/**/*.d.ts
+src/**/src/**/*.map

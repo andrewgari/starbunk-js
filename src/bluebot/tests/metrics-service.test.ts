@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { MetricsService, createMetricsService } from '../src/observability/metrics-service';
+import { MetricsService, createMetricsService } from '@starbunk/shared/observability/metrics-service';
 
 // Mock prom-client to avoid global registry conflicts in unit tests
 vi.mock('prom-client', () => {
@@ -47,7 +47,7 @@ describe('MetricsService', () => {
 	describe('Constructor', () => {
 		it('should initialize with metrics enabled by default', () => {
 			delete process.env.ENABLE_METRICS;
-			const service = new MetricsService();
+			const service = new MetricsService('bluebot');
 
 			expect(service).toBeDefined();
 			expect(service.getRegistry()).toBeDefined();
@@ -55,14 +55,14 @@ describe('MetricsService', () => {
 
 		it('should respect ENABLE_METRICS=false environment variable', () => {
 			process.env.ENABLE_METRICS = 'false';
-			const service = new MetricsService();
+			const service = new MetricsService('bluebot');
 
 			expect(service).toBeDefined();
 		});
 
 		it('should enable metrics when ENABLE_METRICS is not false', () => {
 			process.env.ENABLE_METRICS = 'true';
-			const service = new MetricsService();
+			const service = new MetricsService('bluebot');
 
 			expect(service).toBeDefined();
 		});

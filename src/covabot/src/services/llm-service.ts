@@ -1,5 +1,6 @@
 import { Message } from 'discord.js';
-import { logger, ensureError } from '@starbunk/shared';
+import { logger } from '@starbunk/shared';
+import { ensureError } from '../utils';
 import { COVA_BOT_PROMPTS } from '../cova-bot/constants';
 import * as promClient from 'prom-client';
 
@@ -200,10 +201,7 @@ export class ProductionLLMService implements LLMService {
 						this.isHealthy = false;
 					}
 				} catch (error) {
-					logger.warn(
-						`[LLMService] Ollama health check failed - service may be unreachable at ${this.config.apiUrl}:`,
-						ensureError(error),
-					);
+					logger.error('[LLMService] Ollama health check failed:', error as Error);
 					this.isHealthy = false;
 				}
 			} else if (this.config.provider === 'openai') {

@@ -3,6 +3,7 @@
  * Tests all music commands with the new simplified architecture
  */
 
+import { vi } from 'vitest';
 import { CommandInteraction, GuildMember, VoiceBasedChannel } from 'discord.js';
 import { AudioPlayer, VoiceConnection } from '@discordjs/voice';
 import { container, ServiceId } from '@starbunk/shared';
@@ -12,21 +13,21 @@ import stopCommand from '../src/commands/stop';
 import volumeCommand from '../src/commands/set-volume';
 
 // Mock dependencies
-jest.mock('@starbunk/shared', () => ({
-	...jest.requireActual('@starbunk/shared'),
+vi.mock('@starbunk/shared', async () => ({
+	...await vi.importActual('@starbunk/shared'),
 	container: {
-		get: jest.fn(),
+		get: vi.fn(),
 	},
-	sendErrorResponse: jest.fn(),
-	sendSuccessResponse: jest.fn(),
-	deferInteractionReply: jest.fn(),
+	sendErrorResponse: vi.fn(),
+	sendSuccessResponse: vi.fn(),
+	deferInteractionReply: vi.fn(),
 }));
 
-jest.mock('../src/utils/voiceUtils', () => ({
-	validateVoiceChannelAccess: jest.fn(),
-	createVoiceConnection: jest.fn(),
-	subscribePlayerToConnection: jest.fn(),
-	disconnectVoiceConnection: jest.fn(),
+vi.mock('../src/utils/voice-utils', () => ({
+	validateVoiceChannelAccess: vi.fn(),
+	createVoiceConnection: vi.fn(),
+	subscribePlayerToConnection: vi.fn(),
+	disconnectVoiceConnection: vi.fn(),
 }));
 
 import {
@@ -37,37 +38,47 @@ import {
 } from '../src/utils/voice-utils';
 import { sendErrorResponse, sendSuccessResponse, deferInteractionReply } from '@starbunk/shared';
 
+// Get mocked versions
+const mockedValidateVoiceChannelAccess = vi.mocked(validateVoiceChannelAccess);
+const mockedCreateVoiceConnection = vi.mocked(createVoiceConnection);
+const mockedSubscribePlayerToConnection = vi.mocked(subscribePlayerToConnection);
+const mockedDisconnectVoiceConnection = vi.mocked(disconnectVoiceConnection);
+const mockedSendErrorResponse = vi.mocked(sendErrorResponse);
+const mockedSendSuccessResponse = vi.mocked(sendSuccessResponse);
+const mockedDeferInteractionReply = vi.mocked(deferInteractionReply);
+const mockedContainer = vi.mocked(container);
+
 describe('Music Commands Tests', () => {
-	let mockInteraction: jest.Mocked<CommandInteraction>;
-	let mockMusicPlayer: jest.Mocked<DJCova>;
-	let mockMember: jest.Mocked<GuildMember>;
-	let mockVoiceChannel: jest.Mocked<VoiceBasedChannel>;
-	let mockVoiceConnection: jest.Mocked<VoiceConnection>;
-	let mockAudioPlayer: jest.Mocked<AudioPlayer>;
+	let mockInteraction: vi.Mocked<CommandInteraction>;
+	let mockMusicPlayer: vi.Mocked<DJCova>;
+	let mockMember: vi.Mocked<GuildMember>;
+	let mockVoiceChannel: vi.Mocked<VoiceBasedChannel>;
+	let mockVoiceConnection: vi.Mocked<VoiceConnection>;
+	let mockAudioPlayer: vi.Mocked<AudioPlayer>;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Mock audio player
 		mockAudioPlayer = {
-			play: jest.fn(),
-			stop: jest.fn(),
-			pause: jest.fn(),
+			play: vi.fn(),
+			stop: vi.fn(),
+			pause: vi.fn(),
 		} as any;
 
 		// Mock music player
 		mockMusicPlayer = {
-			start: jest.fn().mockResolvedValue(undefined),
-			stop: jest.fn(),
-			changeVolume: jest.fn(),
-			getVolume: jest.fn().mockReturnValue(50),
-			getPlayer: jest.fn().mockReturnValue(mockAudioPlayer),
-			on: jest.fn(),
-			subscribe: jest.fn(),
-			initializeIdleManagement: jest.fn(),
-			disconnect: jest.fn(),
-			getIdleStatus: jest.fn().mockReturnValue({ isActive: false, timeoutSeconds: 30 }),
-			destroy: jest.fn(),
+			start: vi.fn().mockResolvedValue(undefined),
+			stop: vi.fn(),
+			changeVolume: vi.fn(),
+			getVolume: vi.fn().mockReturnValue(50),
+			getPlayer: vi.fn().mockReturnValue(mockAudioPlayer),
+			on: vi.fn(),
+			subscribe: vi.fn(),
+			initializeIdleManagement: vi.fn(),
+			disconnect: vi.fn(),
+			getIdleStatus: vi.fn().mockReturnValue({ isActive: false, timeoutSeconds: 30 }),
+			destroy: vi.fn(),
 		} as any;
 
 		// Mock voice channel
@@ -76,7 +87,7 @@ describe('Music Commands Tests', () => {
 			name: 'Test Voice Channel',
 			guild: {
 				id: 'guild-id',
-				voiceAdapterCreator: jest.fn(),
+				voiceAdapterCreator: vi.fn(),
 			},
 		} as any;
 
@@ -89,8 +100,8 @@ describe('Music Commands Tests', () => {
 
 		// Mock voice connection
 		mockVoiceConnection = {
-			subscribe: jest.fn(),
-			disconnect: jest.fn(),
+			subscribe: vi.fn(),
+			disconnect: vi.fn(),
 		} as any;
 
 		// Mock interaction
@@ -98,19 +109,19 @@ describe('Music Commands Tests', () => {
 			guild: { id: 'guild-id' },
 			member: mockMember,
 			options: {
-				getString: jest.fn(),
-				getAttachment: jest.fn(),
-				getInteger: jest.fn(),
+				getString: vi.fn(),
+				getAttachment: vi.fn(),
+				getInteger: vi.fn(),
 			},
-			reply: jest.fn().mockResolvedValue(undefined),
-			followUp: jest.fn().mockResolvedValue(undefined),
-			deferReply: jest.fn().mockResolvedValue(undefined),
+			reply: vi.fn().mockResolvedValue(undefined),
+			followUp: vi.fn().mockResolvedValue(undefined),
+			deferReply: vi.fn().mockResolvedValue(undefined),
 			replied: false,
 			deferred: false,
 		} as any;
 
 		// Setup container mock
-		(container.get as jest.Mock).mockImplementation((serviceId) => {
+		(mockedContainer.get).mockImplementation((serviceId) => {
 			if (serviceId === ServiceId.MusicPlayer) {
 				return mockMusicPlayer;
 			}
@@ -118,14 +129,14 @@ describe('Music Commands Tests', () => {
 		});
 
 		// Setup voice utils mocks
-		(validateVoiceChannelAccess as jest.Mock).mockReturnValue({
+		(mockedValidateVoiceChannelAccess).mockReturnValue({
 			isValid: true,
 			member: mockMember,
 			voiceChannel: mockVoiceChannel,
 		});
 
-		(createVoiceConnection as jest.Mock).mockReturnValue(mockVoiceConnection);
-		(subscribePlayerToConnection as jest.Mock).mockReturnValue({});
+		(mockedCreateVoiceConnection).mockReturnValue(mockVoiceConnection);
+		(mockedSubscribePlayerToConnection).mockReturnValue({});
 	});
 
 	describe('Play Command', () => {
@@ -159,7 +170,7 @@ describe('Music Commands Tests', () => {
 			const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 			mockInteraction.options.getString.mockReturnValue(testUrl);
 
-			(validateVoiceChannelAccess as jest.Mock).mockReturnValue({
+			(mockedValidateVoiceChannelAccess).mockReturnValue({
 				isValid: false,
 				errorMessage: 'You need to be in a voice channel to use this command.',
 			});
