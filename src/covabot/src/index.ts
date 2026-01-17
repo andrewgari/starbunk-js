@@ -1,206 +1,33 @@
 // CovaBot - AI personality bot container
 import 'dotenv/config';
-import { Events, Message, TextChannel, Client, GatewayIntentBits } from 'discord.js';
+import { Events,Client, } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 
 import { logger } from '@starbunk/shared';
-import { ensureError, validateEnvironment, initializeObservability } from './utils';
-import { createLLMService, LLMService } from './services/llm-service';
+import { ensureError, } from './utils';
 import { WebServer } from './web/server';
 
 class CovaBotContainer {
 	private client!: Client;
-	private llmService!: LLMService;
 	private hasInitialized = false;
-	private httpEndpoints?: Awaited<ReturnType<typeof initializeObservability>>['httpEndpoints'];
-	private discordConnected = false;
-	private lastDiscordError?: Error;
+
 
 	async initialize(): Promise<void> {
-		logger.info('🤖 Initializing CovaBot container...');
 
-		try {
-			// Initialize observability (metrics + health/ready endpoints)
-			try {
-				const observability = await initializeObservability('covabot');
-				this.httpEndpoints = observability.httpEndpoints;
-
-				// Add Discord connection health check
-				this.httpEndpoints.addHealthCheck('discord_connection', async () => {
-					if (!this.discordConnected) {
-						return {
-							name: 'discord_connection',
-							status: 'fail',
-							output: this.lastDiscordError
-								? `Discord not connected: ${this.lastDiscordError.message}`
-								: 'Discord not connected',
-						};
-					}
-
-					// Check if client is still responsive
-					try {
-						const ping = this.client?.ws?.ping ?? -1;
-						if (ping < 0) {
-							return {
-								name: 'discord_connection',
-								status: 'warn',
-								output: 'Discord connected but ping unavailable',
-							};
-						}
-
-						return {
-							name: 'discord_connection',
-							status: ping > 500 ? 'warn' : 'pass',
-							output: `Discord connected, ping: ${ping}ms`,
-							duration_ms: ping,
-						};
-					} catch (error) {
-						return {
-							name: 'discord_connection',
-							status: 'fail',
-							output: `Discord health check failed: ${ensureError(error).message}`,
-						};
-					}
-				});
-
-				logger.info('✅ Observability initialized for CovaBot with Discord health check');
-			} catch (error) {
-				logger.warn(
-					'⚠️ Failed to initialize observability for CovaBot, continuing without HTTP metrics/health:',
-					ensureError(error),
-				);
-			}
-
-			// Validate environment
-			this.validateEnvironment();
-
-			// Create Discord client with minimal required intents
-			// Only needs: Guilds (basic functionality), GuildMessages + MessageContent (to read/respond to messages)
-			// Removed: GuildMembers (was causing 20GB+ memory usage by caching all members)
-			// Removed: GuildWebhooks (not needed for message-based bot)
-			this.client = new Client({
-				intents: [
-					GatewayIntentBits.Guilds,
-					GatewayIntentBits.GuildMessages,
-					GatewayIntentBits.MessageContent,
-				],
-			});
-
-			// Initialize services
-			await this.initializeServices();
-
-			// Set up event handlers
-			this.setupEventHandlers();
-
-			logger.info('✅ CovaBot container initialized successfully');
-		} catch (error) {
-			logger.error('❌ Failed to initialize CovaBot container:', ensureError(error));
-			this.lastDiscordError = ensureError(error);
-			throw error;
-		}
 	}
 
-	private validateEnvironment(): void {
-		validateEnvironment({
-			required: ['DISCORD_TOKEN'],
-			optional: [
-				'DATABASE_URL',
-				'OPENAI_API_KEY',
-				'OLLAMA_API_URL',
-				'DEBUG',
-				'NODE_ENV',
-				'COVA_USER_ID',
-				'CLIENT_ID',
-			],
-		});
-		logger.info('✅ Environment validation passed for CovaBot');
-	}
 
-	private async initializeServices(): Promise<void> {
-		// Initialize LLM service
-		this.llmService = createLLMService();
-		logger.info('✅ LLM service initialized');
-
-		logger.info('✅ CovaBot services initialized');
-	}
-
-	private setupEventHandlers(): void {
-		this.client.on(Events.Error, (error: Error) => {
-			logger.error('Discord client error:', error);
-			this.lastDiscordError = error;
-			this.discordConnected = false;
-		});
-
-		this.client.on(Events.Warn, (warning: string) => {
-			logger.warn('Discord client warning:', warning);
-		});
-
-		// Monitor WebSocket status for connection state
-		this.client.on(Events.ShardDisconnect, () => {
-			logger.warn('Discord WebSocket disconnected');
-			this.discordConnected = false;
-		});
-
-		this.client.on(Events.ShardReconnecting, () => {
-			logger.info('Discord WebSocket reconnecting...');
-			this.discordConnected = false;
-		});
-
-		this.client.on(Events.ShardResume, () => {
-			logger.info('Discord WebSocket resumed');
-			this.discordConnected = true;
-		});
-
-		this.client.on(Events.MessageCreate, async (message: Message) => {
-			await this.handleMessage(message);
-		});
-
-		this.client.once(Events.ClientReady, () => {
-			logger.info('🤖 CovaBot is ready and connected to Discord');
-			this.hasInitialized = true;
-			this.discordConnected = true;
-			this.lastDiscordError = undefined;
-		});
-	}
-
-	private async handleMessage(message: Message): Promise<void> {
-		// Skip bot messages
-		if (message.author.bot) return;
-
-		try {
-			// Check if we should respond using LLM decision
-			const shouldRespond = await this.llmService.shouldRespond(message);
-			if (!shouldRespond) {
-				return;
-			}
-
-			// Generate LLM response
-			const response = await this.llmService.generateResponse(message);
-			// If LLM returns empty, use fallback responses
-			if (!response || response.trim().length === 0) {
-				logger.warn('[CovaBot] LLM returned empty response');
-				return;
-			}
-
-			const textChannel = message.channel as TextChannel;
-			await textChannel.send(response);
-		} catch (error) {
-			logger.error('Error in CovaBot message handling:', ensureError(error));
-		}
-	}
 
 	async start(): Promise<void> {
 		const token = process.env.DISCORD_TOKEN;
 		if (!token) {
 			const error = new Error('DISCORD_TOKEN environment variable is required');
-			this.lastDiscordError = error;
 			throw error;
 		}
 
 		// Validate token format (basic check)
 		if (!token.match(/^[\w-]+\.[\w-]+\.[\w-]+$/)) {
 			const error = new Error('DISCORD_TOKEN appears to be invalid (incorrect format)');
-			this.lastDiscordError = error;
 			logger.error('❌ Invalid Discord token format');
 			throw error;
 		}
@@ -218,7 +45,6 @@ class CovaBotContainer {
 				return;
 			} catch (error) {
 				lastError = ensureError(error);
-				this.lastDiscordError = lastError;
 
 				logger.error(`❌ Discord login attempt ${attempt}/${maxRetries} failed:`, lastError);
 

@@ -50,18 +50,6 @@ export const ServiceId = {
 	DiscordService: Symbol('DiscordService'),
 };
 
-// Placeholder observability functions
-export const initializeObservability = async (_serviceName: string) => {
-	return {
-		metrics: {},
-		logger: (await import('@starbunk/shared')).logger,
-		channelTracker: {},
-		httpEndpoints: {
-			addHealthCheck: (_name: string, _fn: () => Promise<unknown>) => {},
-		},
-	};
-};
-
 export const shutdownObservability = async () => {
 	// Placeholder
 };
@@ -73,14 +61,6 @@ export const createCovaBotMetrics = (_metrics: unknown, _config: unknown) => {
 };
 
 // Placeholder types
-export type CovaBotMetrics = any;
-export type BotResponseLog = any;
-
-export const getBotResponseLogger = () => ({
-	logBotResponse: (_log: any) => {},
-});
-
-export const inferTriggerCondition = (_message: any): string => {
-	return 'unknown';
-};
+export type CovaBotMetrics = Record<string, unknown>;
+export type BotResponseLog = Record<string, unknown>;
 
