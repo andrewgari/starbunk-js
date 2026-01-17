@@ -3,8 +3,7 @@ import { ChatInputCommandInteraction } from 'discord.js';
 import { logger } from '@starbunk/shared';
 import { container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
-import { disconnectVoiceConnection } from '../utils/voice-utils';
-import { DJCova } from '../dj-cova';
+import { DJCovaService } from '../services/dj-cova-service';
 
 const commandBuilder = new SlashCommandBuilder().setName('stop').setDescription('Stop playing and leave channel');
 
@@ -12,26 +11,20 @@ export default {
 	data: commandBuilder.toJSON(),
 	async execute(interaction: ChatInputCommandInteraction) {
 		try {
-			// Get music player from container
-			const musicPlayer = container.get<DJCova>(ServiceId.MusicPlayer);
-
-			if (!musicPlayer) {
-				await sendErrorResponse(interaction, 'Music player is not available.');
+			// Get service from container
+			const service = container.get<DJCovaService>(ServiceId.DJCovaService);
+			if (!service) {
+				await sendErrorResponse(interaction, 'Music service is not available.');
 				return;
 			}
 
-			// Manually disconnect (this will cancel idle timer and stop music)
-			musicPlayer.disconnect();
+			// Service handles the logic
+			service.stop(interaction);
 
-			// Disconnect from voice channel
-			if (interaction.guild?.id) {
-				disconnectVoiceConnection(interaction.guild.id);
-			}
-
-			await sendSuccessResponse(interaction, 'Music stopped and disconnected from voice channel!');
+			await sendSuccessResponse(interaction, 'Music stopped and disconnected!');
 			logger.info('Music stopped via stop command');
 		} catch (error) {
-			logger.error('Error executing stop command:', error instanceof Error ? error : new Error(String(error)));
+			logger.error('Error executing stop command:', error);
 			await sendErrorResponse(interaction, 'An error occurred while stopping the music.');
 		}
 	},

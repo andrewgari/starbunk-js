@@ -10,9 +10,9 @@ describe('DJCova Container', () => {
 	it('should not require database dependencies', () => {
 		// DJCova should work without database
 		const originalDb = process.env.DATABASE_URL;
-		const originalToken = process.env.STARBUNK_TOKEN;
+		const originalToken = process.env.DISCORD_TOKEN;
 		delete process.env.DATABASE_URL;
-		process.env.STARBUNK_TOKEN = 'test-token';
+		process.env.DISCORD_TOKEN = 'test-token';
 
 		expect(() => {
 			validateEnvironment({
@@ -26,9 +26,9 @@ describe('DJCova Container', () => {
 			process.env.DATABASE_URL = originalDb;
 		}
 		if (originalToken) {
-			process.env.STARBUNK_TOKEN = originalToken;
+			process.env.DISCORD_TOKEN = originalToken;
 		} else {
-			delete process.env.STARBUNK_TOKEN;
+			delete process.env.DISCORD_TOKEN;
 		}
 	});
 });
