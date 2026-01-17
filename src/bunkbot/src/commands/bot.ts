@@ -5,7 +5,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js';
 import { logger } from '@starbunk/shared/observability/logger';
-import { BotStateManager } from '@/services/bot-state-manager';
+import { BotStateManager } from '@/reply-bots/services/bot-state-manager';
 import { BotRegistry } from '@/reply-bots/bot-registry';
 
 const commandBuilder = new SlashCommandBuilder()

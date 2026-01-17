@@ -40,13 +40,13 @@ export const ServiceId = {
 export const initializeObservability = async (_service: string) => {
 	// Placeholder - returns minimal structure for type compatibility
 	return {
-		metrics: {} as any,
-		logger: {} as any,
-		channelTracker: {} as any,
+		metrics: {} as unknown,
+		logger: {} as unknown,
+		channelTracker: {} as unknown,
 		httpEndpoints: {
-			addHealthCheck: (_name: string, _check: () => Promise<any>) => {},
-		} as any,
-		config: {} as any,
+			addHealthCheck: (_name: string, _check: () => Promise<unknown>) => {},
+		} as unknown,
+		config: {} as unknown,
 	};
 };
 
