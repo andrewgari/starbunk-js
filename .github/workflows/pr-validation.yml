@@ -67,7 +67,7 @@ jobs:
   # =============================================================================
 
   lint-and-format:
-    name: Validate Lint
+    name: PR Validation - Lint & Format
     runs-on: ubuntu-latest
     needs: [detect-changes]
     if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
@@ -87,7 +87,7 @@ jobs:
         run: npm run format -- --check
 
   type-check:
-    name: Validate Types
+    name: PR Validation - Type Check
     runs-on: ubuntu-latest
     needs: [detect-changes]
     if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
@@ -108,7 +108,7 @@ jobs:
   # =============================================================================
 
   build:
-    name: Validate Build
+    name: PR Validation - Build
     runs-on: ubuntu-latest
     needs: [detect-changes]
     if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
@@ -125,7 +125,7 @@ jobs:
         run: npm run build
 
   unit-tests:
-    name: Validate Tests
+    name: PR Validation - Tests
     runs-on: ubuntu-latest
     needs: [detect-changes]
     if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
@@ -147,7 +147,7 @@ jobs:
   # =============================================================================
 
   app-containers:
-    name: App container pipeline (${{ matrix.app }})
+    name: PR Container Validation (${{ matrix.app }})
     runs-on: ubuntu-latest
     needs:
       - detect-changes
