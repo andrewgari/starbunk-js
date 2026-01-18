@@ -198,16 +198,16 @@ jobs:
             matrix:
                 include:
                     - app: bunkbot
-                      dockerfile: ./src/bunkbot/Dockerfile
+                      dockerfile: ./src/bunkbot/Dockerfile.ci
                       changed: ${{ needs.detect-changes.outputs.bunkbot_changed }}
                     - app: covabot
-                      dockerfile: ./src/covabot/Dockerfile
+                      dockerfile: ./src/covabot/Dockerfile.ci
                       changed: ${{ needs.detect-changes.outputs.covabot_changed }}
                     - app: djcova
-                      dockerfile: ./src/djcova/Dockerfile
+                      dockerfile: ./src/djcova/Dockerfile.ci
                       changed: ${{ needs.detect-changes.outputs.djcova_changed }}
                     - app: bluebot
-                      dockerfile: ./src/bluebot/Dockerfile
+                      dockerfile: ./src/bluebot/Dockerfile.ci
                       changed: ${{ needs.detect-changes.outputs.bluebot_changed }}
         steps:
             - name: Check if app changed
@@ -296,7 +296,7 @@ jobs:
               uses: docker/build-push-action@v6
               with:
                   context: .
-                  file: ./src/${{ matrix.app }}/Dockerfile.ci
+                  file: ${{ matrix.dockerfile }}
                   push: false
                   load: true
                   tags: |

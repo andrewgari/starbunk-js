@@ -153,7 +153,7 @@ services:
       context: .
       dockerfile: src/bluebot/Dockerfile
     image: ghcr.io/andrewgari/bluebot:latest
-    container_name: bluebot
+    container_name: starbunk-bluebot
     restart: unless-stopped
     env_file:
       - .env

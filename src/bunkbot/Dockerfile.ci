@@ -30,7 +30,6 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # Copy pre-built artifacts from CI
 COPY --chown=bunkbot:bunkbot src/shared/dist ./src/shared/dist
-COPY --chown=bunkbot:bunkbot src/shared/node_modules ./src/shared/node_modules
 COPY --chown=bunkbot:bunkbot src/bunkbot/dist ./src/bunkbot/dist
 
 # Set default environment variables from build args
