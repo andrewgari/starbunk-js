@@ -22,12 +22,57 @@ permissions:
 
 jobs:
   # =============================================================================
+  # GROUP 0: CHECK IF RELEASE IS NEEDED
+  # =============================================================================
+
+  check-release-needed:
+    name: Check if Release is Needed
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check changed files
+        id: check
+        run: |
+          # Get the list of changed files between the previous commit and current
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          else
+            # For initial commit, consider all files changed
+            CHANGED_FILES=$(git ls-files)
+          fi
+          
+          echo "Changed files:"
+          echo "${CHANGED_FILES}"
+          
+          # Check if any files outside of .github/ or CI config were changed
+          # These are files that affect the application itself
+          APP_FILES_CHANGED=$(echo "$CHANGED_FILES" | grep -v '^\.github/' | grep -v '^\.eslintrc' | grep -v '^\.prettier' | grep -v '^\.editorconfig' || true)
+          
+          if [ -z "$APP_FILES_CHANGED" ]; then
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "⏭️  Only CI/build configuration changed - skipping release"
+          else
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "✅ Application files changed - release needed"
+            echo "Changed application files:"
+            echo "${APP_FILES_CHANGED}"
+          fi
+
+  # =============================================================================
   # GROUP 1: DOCKER BUILDS (runs in parallel)
   # =============================================================================
 
   docker-build-bunkbot:
     name: Validate Docker Build - bunkbot
     runs-on: ubuntu-latest
+    needs: [check-release-needed]
+    if: needs.check-release-needed.outputs.should_release == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,6 +103,8 @@ jobs:
   docker-build-covabot:
     name: Validate Docker Build - covabot
     runs-on: ubuntu-latest
+    needs: [check-release-needed]
+    if: needs.check-release-needed.outputs.should_release == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -88,6 +135,8 @@ jobs:
   docker-build-djcova:
     name: Validate Docker Build - djcova
     runs-on: ubuntu-latest
+    needs: [check-release-needed]
+    if: needs.check-release-needed.outputs.should_release == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -118,6 +167,8 @@ jobs:
   docker-build-bluebot:
     name: Validate Docker Build - bluebot
     runs-on: ubuntu-latest
+    needs: [check-release-needed]
+    if: needs.check-release-needed.outputs.should_release == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -422,6 +473,7 @@ jobs:
     name: Deployment & Release Summary
     runs-on: ubuntu-latest
     needs:
+      - check-release-needed
       - validate-bunkbot
       - validate-covabot
       - validate-djcova
@@ -430,10 +482,22 @@ jobs:
       - publish-covabot
       - publish-djcova
       - publish-bluebot
+    if: always()
     steps:
-      - name: All deployment stages completed
+      - name: Check if release was skipped
+        if: needs.check-release-needed.outputs.should_release != 'true'
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\e[0m"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "⏭️  Release skipped - only CI/build config changed"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "ℹ️  No application code changes detected"
+          echo "ℹ️  Docker builds and publishing skipped"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: All deployment stages completed
+        if: needs.check-release-needed.outputs.should_release == 'true'
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✅ Main deployment workflow completed successfully!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✓ Docker Builds (4 apps)"

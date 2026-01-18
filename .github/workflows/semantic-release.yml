@@ -15,9 +15,50 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-release-needed:
+    name: Check if Release is Needed
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check changed files
+        id: check
+        run: |
+          # Get the list of changed files between the previous commit and current
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          else
+            # For initial commit, consider all files changed
+            CHANGED_FILES=$(git ls-files)
+          fi
+          
+          echo "Changed files:"
+          echo "${CHANGED_FILES}"
+          
+          # Check if any files outside of .github/ or CI config were changed
+          # These are files that affect the application itself
+          APP_FILES_CHANGED=$(echo "$CHANGED_FILES" | grep -v '^\.github/' | grep -v '^\.eslintrc' | grep -v '^\.prettier' | grep -v '^\.editorconfig' || true)
+          
+          if [ -z "$APP_FILES_CHANGED" ]; then
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "⏭️  Only CI/build configuration changed - skipping release"
+          else
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "✅ Application files changed - release needed"
+            echo "Changed application files:"
+            echo "${APP_FILES_CHANGED}"
+          fi
+
   release:
     name: Semantic Release
     runs-on: ubuntu-latest
+    needs: [check-release-needed]
+    if: needs.check-release-needed.outputs.should_release == 'true'
 
     steps:
       - name: Checkout
@@ -42,4 +83,27 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
           HUSKY: 0
         run: npx semantic-release
+
+  release-summary:
+    name: Release Summary
+    runs-on: ubuntu-latest
+    needs: [check-release-needed, release]
+    if: always()
+    steps:
+      - name: Release skipped
+        if: needs.check-release-needed.outputs.should_release != 'true'
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "⏭️  Semantic release skipped"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "ℹ️  Only CI/build configuration changed"
+          echo "ℹ️  No application code changes detected"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Release completed
+        if: needs.check-release-needed.outputs.should_release == 'true' && needs.release.result == 'success'
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Semantic release completed successfully"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
