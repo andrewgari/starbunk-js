@@ -204,3 +204,4 @@ config/bots/bots.yml
 src/**/src/**/*.js
 src/**/src/**/*.d.ts
 src/**/src/**/*.map
+actionlint
