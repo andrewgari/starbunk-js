@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"composite": true,
 		"incremental": true,
-		"tsBuildInfoFile": "./.tsbuildinfo",
+		"tsBuildInfoFile": "./dist/.tsbuildinfo",
 		"target": "ES2022",
 		"module": "commonjs",
 		"lib": ["ES2022"],

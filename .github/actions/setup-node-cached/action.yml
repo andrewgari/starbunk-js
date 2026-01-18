@@ -80,8 +80,8 @@ runs:
           src/covabot/node_modules
           src/shared/dist
           src/shared/lib
-          src/**/.tsbuildinfo
-          .tsbuildinfo
+          src/*/dist/.tsbuildinfo
+          src/*/dist-test/.tsbuildinfo
         key: ${{ steps.cache-key.outputs.cache-key }}
         restore-keys: |
           node-${{ inputs.node-version }}-${{ runner.os }}-deps-

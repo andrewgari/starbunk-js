@@ -3,6 +3,7 @@
 	"compilerOptions": {
 		"types": ["vitest/globals"],
 		"composite": true,
+		"tsBuildInfoFile": "./dist-test/.tsbuildinfo",
 		"rootDir": ".",
 		"outDir": "./dist-test"
 	},
