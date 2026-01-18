@@ -94,6 +94,74 @@ describe('ResponseResolver', () => {
       // Should always be exactly 5 o's
       expect(result).toBe('wooooow');
     });
+
+    it('should handle inverted range (min > max) by swapping', async () => {
+      const message = createMockMessage('test');
+      const template = 'a{random:10-5:h}a';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      // Should swap to 5-10 range
+      expect(result).toMatch(/^a[h]+a$/);
+      const hCount = (result.match(/h/g) || []).length;
+      expect(hCount).toBeGreaterThanOrEqual(5);
+      expect(hCount).toBeLessThanOrEqual(10);
+    });
+
+    it('should handle zero minimum', async () => {
+      const message = createMockMessage('test');
+      const template = 'x{random:0-3:y}x';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      // Should allow 0-3 y's (could be empty)
+      expect(result).toMatch(/^x[y]{0,3}x$/);
+    });
+
+    it('should cap extremely large ranges at MAX_RANDOM_REPEAT', async () => {
+      const message = createMockMessage('test');
+      const template = 'a{random:1-999999:b}c';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      // Should be capped at 1000 (MAX_RANDOM_REPEAT)
+      const bCount = (result.match(/b/g) || []).length;
+      expect(bCount).toBeGreaterThanOrEqual(1);
+      expect(bCount).toBeLessThanOrEqual(1000);
+    });
+
+    it('should handle invalid placeholder with non-numeric values gracefully', async () => {
+      const message = createMockMessage('test');
+      // This won't match the pattern due to \d+ requirement, so it stays unchanged
+      const template = 'test {random:abc-def:x} test';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      // Should leave invalid placeholder unchanged
+      expect(result).toBe('test {random:abc-def:x} test');
+    });
+
+    it('should limit character string to 32 characters', async () => {
+      const message = createMockMessage('test');
+      // This should match because it's within 32 chars
+      const template = 'a{random:2-3:verylongstring}b';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      // Should repeat the string 2-3 times
+      expect(result).toMatch(/^a(verylongstring){2,3}b$/);
+    });
+
+    it('should not match placeholder with char segment containing }', async () => {
+      const message = createMockMessage('test');
+      // The regex won't match because char can't contain }
+      const template = 'test {random:1-5:a}b} test';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      // Should only match up to the first }
+      expect(result).toMatch(/^test [a]+b\} test$/);
+    });
   });
 
   describe('Combined placeholders', () => {

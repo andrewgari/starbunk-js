@@ -26,17 +26,40 @@ export class ResponseResolver {
 
     // Logic for the {random:min-max:char} placeholder
     // Example: {random:2-20:e} repeats 'e' between 2-20 times
-    const randomPattern = /\{random:(\d+)-(\d+):(.+?)\}/g;
+    // The "char" segment is limited to 1-32 characters and cannot contain "}"
+    const MAX_RANDOM_REPEAT = 1000;
+    const randomPattern = /\{random:(\d+)-(\d+):([^}]{1,32})\}/g;
     response = response.replace(randomPattern, (match, minStr, maxStr, char) => {
-      const min = parseInt(minStr, 10);
-      const max = parseInt(maxStr, 10);
-      const count = Math.floor(Math.random() * (max - min + 1)) + min;
+      const rawMin = parseInt(minStr, 10);
+      const rawMax = parseInt(maxStr, 10);
+
+      // Validate parsed numbers
+      if (Number.isNaN(rawMin) || Number.isNaN(rawMax)) {
+        logger.withMetadata({
+          placeholder: match,
+          raw_min: minStr,
+          raw_max: maxStr,
+        }).warn('Invalid {random} placeholder bounds; leaving placeholder unchanged');
+        return match;
+      }
+
+      // Normalize range (swap if inverted) and ensure non-negative
+      const rangeMin = Math.max(0, Math.min(rawMin, rawMax));
+      const rangeMax = Math.max(0, Math.max(rawMin, rawMax));
+
+      // Cap the maximum to prevent performance issues
+      const cappedMax = Math.min(rangeMax, MAX_RANDOM_REPEAT);
+      const cappedMin = Math.min(rangeMin, cappedMax);
+
+      const count = Math.floor(Math.random() * (cappedMax - cappedMin + 1)) + cappedMin;
       const repeated = char.repeat(count);
 
       logger.withMetadata({
         placeholder: match,
-        min,
-        max,
+        original_min: rawMin,
+        original_max: rawMax,
+        effective_min: cappedMin,
+        effective_max: cappedMax,
         count,
         char,
       }).debug('Replaced {random} placeholder');
