@@ -99,10 +99,7 @@ reply-bots:
     triggers:
       - name: sheesh-trigger
         conditions: { matches_regex: "\\bshe{2,}sh\\b" }
-        responses:
-          - 'sheeeeesh 😤'
-          - 'sheeeeeeeeeesh 😤'
-          - 'sheeeeeeeeeeeeeeesh 😤'
+        responses: 'sh{random:2-20:e}sh 😤'
 
   - name: pickle-bot
     identity:

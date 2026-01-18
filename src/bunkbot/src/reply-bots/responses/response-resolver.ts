@@ -24,6 +24,26 @@ export class ResponseResolver {
       }).debug('Replaced {start} placeholder');
     }
 
+    // Logic for the {random:min-max:char} placeholder
+    // Example: {random:2-20:e} repeats 'e' between 2-20 times
+    const randomPattern = /\{random:(\d+)-(\d+):(.+?)\}/g;
+    response = response.replace(randomPattern, (match, minStr, maxStr, char) => {
+      const min = parseInt(minStr, 10);
+      const max = parseInt(maxStr, 10);
+      const count = Math.floor(Math.random() * (max - min + 1)) + min;
+      const repeated = char.repeat(count);
+
+      logger.withMetadata({
+        placeholder: match,
+        min,
+        max,
+        count,
+        char,
+      }).debug('Replaced {random} placeholder');
+
+      return repeated;
+    });
+
     logger.withMetadata({
       original_length: template.length,
       resolved_length: response.length,
