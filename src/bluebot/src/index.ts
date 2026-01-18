@@ -8,6 +8,7 @@ import { initializeHealthServer } from '@starbunk/shared/health/health-server-in
 
 // Setup logging mixins before creating any logger instances
 setupBlueBotLogging();
+// Trigger CI build to verify deployment process
 
 const intents = [
 	GatewayIntentBits.Guilds,
