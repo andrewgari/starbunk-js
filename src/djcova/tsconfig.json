@@ -33,7 +33,6 @@
 		"src/**/__tests__/**"
 	],
 	"references": [
-		{ "path": "../shared" },
-		{ "path": "./tsconfig.test.json" }
+		{ "path": "../shared" }
 	]
 }
