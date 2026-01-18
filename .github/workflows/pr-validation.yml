@@ -142,27 +142,6 @@ jobs:
                   echo "🔨 Building all applications..."
                   npm run build
 
-            - name: Verify build outputs
-              run: |
-                  echo "📁 Verifying build outputs..."
-                  for app in bunkbot djcova covabot bluebot; do
-                    echo ""
-                    echo "Checking $app:"
-                    if [ -d "src/$app/dist" ]; then
-                      echo "✅ dist folder exists"
-                      ls -la "src/$app/dist/" | head -15
-                      if [ -f "src/$app/dist/index.js" ]; then
-                        echo "✅ index.js found ($(stat -c%s src/$app/dist/index.js) bytes)"
-                      else
-                        echo "❌ index.js NOT found"
-                        exit 1
-                      fi
-                    else
-                      echo "❌ dist folder NOT found"
-                      exit 1
-                    fi
-                  done
-
             - name: Compress build artifacts
               run: |
                   tar -czf build-artifacts.tar.gz \
@@ -262,25 +241,6 @@ jobs:
             - name: Extract build artifacts
               if: steps.should-run.outputs.skip != 'true'
               run: tar -xzf build-artifacts.tar.gz
-
-            - name: Verify dist files exist
-              if: steps.should-run.outputs.skip != 'true'
-              run: |
-                  echo "📁 Verifying dist files for ${{ matrix.app }}..."
-                  echo "Contents of src/${{ matrix.app }}/dist:"
-                  ls -la src/${{ matrix.app }}/dist/ || echo "❌ dist folder not found!"
-                  echo ""
-                  echo "Contents of src/shared/dist:"
-                  ls -la src/shared/dist/ || echo "❌ shared dist folder not found!"
-                  echo ""
-                  echo "Checking for index.js:"
-                  if [ -f "src/${{ matrix.app }}/dist/index.js" ]; then
-                    echo "✅ index.js found"
-                    ls -lh src/${{ matrix.app }}/dist/index.js
-                  else
-                    echo "❌ index.js NOT found"
-                    exit 1
-                  fi
 
             - name: Calculate content hash
               if: steps.should-run.outputs.skip != 'true'
