@@ -97,13 +97,14 @@ export class BotFrequencyService {
     botId: string,
     profile: SimulacrumProfile
   ): Promise<SocialBatteryResult> {
-    await this.ensureConnected();
-
     const countKey = REDIS_KEYS.batteryCount(channelId, botId);
     const cooldownKey = REDIS_KEYS.lastMessage(channelId, botId);
     const { maxMessages, windowMinutes, cooldownSeconds } = profile.socialBattery;
 
     try {
+      // Ensure connection inside try block so connection errors trigger fail-open
+      await this.ensureConnected();
+
       // Check cooldown first (forced gap between messages)
       const lastMessageTime = await this.redis!.get(cooldownKey);
       if (lastMessageTime) {

@@ -29,7 +29,8 @@ export class SaliencyService {
   private config: SaliencyServiceConfig;
   private client: QdrantClient;
   private embeddingService: EmbeddingService;
-  private isInitialized = false;
+  private initializedCollections = new Set<string>();
+  private embeddingInitialized = false;
 
   constructor(config: Partial<SaliencyServiceConfig> = {}) {
     this.config = { ...DEFAULT_SALIENCY_CONFIG, ...config };
@@ -43,15 +44,31 @@ export class SaliencyService {
   }
 
   /**
-   * Initialize the service and ensure collections exist
+   * Check if a collection has been initialized
+   */
+  isCollectionInitialized(collectionName: string): boolean {
+    return this.initializedCollections.has(collectionName);
+  }
+
+  /**
+   * Initialize the service and ensure collections exist for a profile
+   * Can be called multiple times for different profiles
    */
   async initialize(profile: SimulacrumProfile): Promise<void> {
-    if (this.isInitialized) return;
+    const collectionName = profile.saliency.qdrantCollection;
+
+    // Skip if this collection already initialized
+    if (this.initializedCollections.has(collectionName)) return;
 
     try {
-      await this.embeddingService.initialize();
+      // Initialize embedding service once
+      if (!this.embeddingInitialized) {
+        await this.embeddingService.initialize();
+        this.embeddingInitialized = true;
+      }
+
       await this.ensureCollection(profile);
-      this.isInitialized = true;
+      this.initializedCollections.add(collectionName);
       logger.info(`[SaliencyService] Initialized for profile: ${profile.id}`);
     } catch (error) {
       logger.error('[SaliencyService] Initialization failed:', error as Error);
@@ -124,12 +141,19 @@ export class SaliencyService {
    * @param profile - The bot's simulacrum profile
    * @param isDirectMention - Whether the bot was directly mentioned
    * @returns SaliencyResult with decision and score
+   * @throws Error if service not initialized for the profile's collection
    */
   async checkSaliency(
     message: string,
     profile: SimulacrumProfile,
     isDirectMention = false
   ): Promise<SaliencyResult> {
+    // Initialization guard
+    const collectionName = profile.saliency.qdrantCollection;
+    if (!this.initializedCollections.has(collectionName)) {
+      throw new Error(`[SaliencyService] Service not initialized for collection: ${collectionName}. Call initialize() first.`);
+    }
+
     // Direct mentions always pass
     if (isDirectMention) {
       return {

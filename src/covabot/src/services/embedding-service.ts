@@ -61,17 +61,38 @@ export class EmbeddingService {
 
       logger.info(`[EmbeddingService] Model loaded successfully`);
     } catch (error) {
+      // Reset state to allow retry on next call
+      this.initPromise = null;
+      this.pipeline = null;
       logger.error('[EmbeddingService] Failed to load model:', error as Error);
       throw error;
     }
   }
 
+  // Maximum text length for embedding (MiniLM-L6-v2 has 256 token limit)
+  private static readonly MAX_TEXT_LENGTH = 8192;
+
   /**
    * Generate embedding for a single text
    * @param text - Text to embed
    * @returns Float array of embedding values (typically 384 dimensions)
+   * @throws Error if text is empty or too long
    */
   async embed(text: string): Promise<number[]> {
+    // Input validation
+    if (!text || text.trim().length === 0) {
+      throw new Error('[EmbeddingService] Cannot embed empty text');
+    }
+
+    // Truncate very long inputs to prevent model issues
+    const truncatedText = text.length > EmbeddingService.MAX_TEXT_LENGTH
+      ? text.substring(0, EmbeddingService.MAX_TEXT_LENGTH)
+      : text;
+
+    if (text.length > EmbeddingService.MAX_TEXT_LENGTH) {
+      logger.warn(`[EmbeddingService] Text truncated from ${text.length} to ${EmbeddingService.MAX_TEXT_LENGTH} chars`);
+    }
+
     await this.initialize();
 
     if (!this.pipeline) {
@@ -79,7 +100,7 @@ export class EmbeddingService {
     }
 
     try {
-      const output: Tensor = await this.pipeline(text, {
+      const output: Tensor = await this.pipeline(truncatedText, {
         pooling: 'mean',
         normalize: true,
       });

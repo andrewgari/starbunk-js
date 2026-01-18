@@ -54,15 +54,15 @@ export class SimulacrumService {
 
     try {
       logger.info(`[SimulacrumService] Initializing for profile: ${this.profile.id}`);
-      
+
       if (this.config.enableSaliency) {
         await this.saliencyService.initialize(this.profile);
       }
-      
+
       if (this.config.enableSocialBattery) {
         await this.frequencyService.connect();
       }
-      
+
       this.isInitialized = true;
       logger.info(`[SimulacrumService] Initialization complete`);
     } catch (error) {
@@ -74,11 +74,17 @@ export class SimulacrumService {
   /**
    * Evaluate whether the simulacrum should respond to a message
    * This is the main "Selective Observer" decision logic
+   * @throws Error if service not initialized
    */
   async evaluateMessage(
     message: Message,
     isDirectMention: boolean = false
   ): Promise<SimulacrumDecision> {
+    // Initialization guard
+    if (!this.isInitialized) {
+      throw new Error('[SimulacrumService] Service not initialized. Call initialize() first.');
+    }
+
     // Direct mentions bypass all filters
     if (isDirectMention) {
       return {
@@ -160,10 +166,15 @@ export class SimulacrumService {
 
   /**
    * Record that a message was sent (consumes social battery)
+   * Fails silently to avoid disrupting message flow if Redis is unavailable
    */
   async recordMessageSent(channelId: string): Promise<void> {
     if (this.config.enableSocialBattery) {
-      await this.frequencyService.recordMessage(channelId, this.profile.id, this.profile);
+      try {
+        await this.frequencyService.recordMessage(channelId, this.profile.id, this.profile);
+      } catch (error) {
+        logger.error('[SimulacrumService] Failed to record message, continuing anyway:', error as Error);
+      }
     }
   }
 
@@ -194,13 +205,18 @@ export class SimulacrumService {
 let simulacrumServiceInstance: SimulacrumService | null = null;
 
 /**
- * Get or create the singleton simulacrum service instance
+ * Get or create the singleton simulacrum service instance.
+ *
+ * Note: Configuration is only applied on first initialization.
+ * Subsequent calls with a config will be ignored and the existing instance will be reused.
  */
 export function getSimulacrumService(
   config?: SimulacrumServiceConfig
 ): SimulacrumService {
   if (!simulacrumServiceInstance) {
     simulacrumServiceInstance = new SimulacrumService(config);
+  } else if (config) {
+    logger.warn('[SimulacrumService] getSimulacrumService called with config after instance was created; config will be ignored');
   }
   return simulacrumServiceInstance;
 }
