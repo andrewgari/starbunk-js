@@ -126,6 +126,11 @@ async function main(): Promise<void> {
 				res.end(JSON.stringify({ status: 'healthy', mode: 'smoke', timestamp: new Date().toISOString() }));
 				return;
 			}
+			if (req.url === '/live') {
+				res.writeHead(200, { 'Content-Type': 'application/json' });
+				res.end(JSON.stringify({ status: 'alive', mode: 'smoke' }));
+				return;
+			}
 			res.writeHead(404, { 'Content-Type': 'text/plain' });
 			res.end('Not Found');
 		});
