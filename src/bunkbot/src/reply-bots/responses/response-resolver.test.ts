@@ -176,6 +176,100 @@ describe('ResponseResolver', () => {
     });
   });
 
+  describe('{swap_message:word1:word2} placeholder', () => {
+    it('should swap check with czech', async () => {
+      const message = createMockMessage('Let me check the fridge');
+      const template = 'I think you meant: {swap_message:check:czech}';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      expect(result).toBe('I think you meant: Let me czech the fridge');
+    });
+
+    it('should swap czech with check', async () => {
+      const message = createMockMessage('I am from the Czech Republic');
+      const template = 'I think you meant: {swap_message:check:czech}';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      expect(result).toBe('I think you meant: I am from the Check Republic');
+    });
+
+    it('should swap both directions in the same message', async () => {
+      const message = createMockMessage('Czech your check');
+      const template = 'I think you meant: {swap_message:check:czech}';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      expect(result).toBe('I think you meant: Check your czech');
+    });
+
+    it('should preserve uppercase case', async () => {
+      const message = createMockMessage('CHECK the CZECH');
+      const template = '{swap_message:check:czech}';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      expect(result).toBe('CZECH the CHECK');
+    });
+
+    it('should preserve lowercase case', async () => {
+      const message = createMockMessage('check the czech');
+      const template = '{swap_message:check:czech}';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      expect(result).toBe('czech the check');
+    });
+
+    it('should preserve title case', async () => {
+      const message = createMockMessage('Check the Czech');
+      const template = '{swap_message:check:czech}';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      expect(result).toBe('Czech the Check');
+    });
+
+    it('should handle multiple occurrences of the same word', async () => {
+      const message = createMockMessage('check check check');
+      const template = '{swap_message:check:czech}';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      expect(result).toBe('czech czech czech');
+    });
+
+    it('should only match whole words (word boundaries)', async () => {
+      const message = createMockMessage('checking and rechecked');
+      const template = '{swap_message:check:czech}';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      // Should not change "checking" or "rechecked" - only whole word "check"
+      expect(result).toBe('checking and rechecked');
+    });
+
+    it('should handle message with no matches', async () => {
+      const message = createMockMessage('Hello world');
+      const template = 'I think you meant: {swap_message:check:czech}';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      expect(result).toBe('I think you meant: Hello world');
+    });
+
+    it('should leave invalid placeholder unchanged', async () => {
+      const message = createMockMessage('test');
+      const template = 'test {swap_message:} test';
+
+      const result = await ResponseResolver.resolve(template, message as Message);
+
+      // Invalid placeholder (empty word1) - the regex won't match
+      expect(result).toBe('test {swap_message:} test');
+    });
+  });
+
   describe('No placeholders', () => {
     it('should return template unchanged if no placeholders', async () => {
       const message = createMockMessage('test');
