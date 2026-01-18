@@ -1,6 +1,6 @@
 {
 	"name": "bunkbot",
-	"version": "1.15.0",
+	"version": "1.15.2",
 	"description": "it's bot that says blu, among things...",
 	"type": "commonjs",
 	"workspaces": [

@@ -1,3 +1,9 @@
+## [1.15.2](https://github.com/andrewgari/starbunk-js/compare/v1.15.1...v1.15.2) (2026-01-18)
+
+### Bug Fixes
+
+* Allow dist/ folders in Docker build context for CI builds ([#454](https://github.com/andrewgari/starbunk-js/issues/454)) ([0946fe2](https://github.com/andrewgari/starbunk-js/commit/0946fe28025e46f3b87d3fc65b4d32fb794e2748))
+
 ## [1.15.0](https://github.com/andrewgari/starbunk-js/compare/v1.14.0...v1.15.0) (2026-01-18)
 
 ### Features
