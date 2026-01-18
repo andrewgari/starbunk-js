@@ -1,5 +1,11 @@
 name: PR - Validation & Build
 
+# This workflow is optimized to run only necessary jobs based on changed files:
+# - Source validation (lint, type-check, build, test) runs when src/ or workflow files change
+# - Container builds run only for apps whose src/{app}/ directory or Dockerfile changed
+# - Shared code changes trigger all app container builds
+# - Workflow changes trigger full validation to test the workflow itself
+
 on:
   pull_request:
     branches:
@@ -29,12 +35,42 @@ concurrency:
 
 jobs:
   # =============================================================================
-  # GROUP 1: CODE QUALITY (no dependencies)
+  # GROUP 0: DETECT CHANGES (determines what needs to run)
+  # =============================================================================
+
+  detect-changes:
+    name: Detect Changed Files
+    runs-on: ubuntu-latest
+    outputs:
+      source_changed: ${{ steps.changes.outputs.source_changed }}
+      workflow_changed: ${{ steps.changes.outputs.workflow_changed }}
+      container_config_changed: ${{ steps.changes.outputs.container_config_changed }}
+      shared_changed: ${{ steps.changes.outputs.shared_changed }}
+      bunkbot_changed: ${{ steps.changes.outputs.bunkbot_changed }}
+      covabot_changed: ${{ steps.changes.outputs.covabot_changed }}
+      djcova_changed: ${{ steps.changes.outputs.djcova_changed }}
+      bluebot_changed: ${{ steps.changes.outputs.bluebot_changed }}
+      any_app_changed: ${{ steps.changes.outputs.any_app_changed }}
+      changed_apps: ${{ steps.changes.outputs.changed_apps }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: changes
+        uses: ./.github/actions/detect-changes
+
+  # =============================================================================
+  # GROUP 1: CODE QUALITY (runs when source or workflow files change)
   # =============================================================================
 
   lint-and-format:
     name: Validate Lint
     runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,6 +89,8 @@ jobs:
   type-check:
     name: Validate Types
     runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,12 +104,14 @@ jobs:
         run: npm run type-check
 
   # =============================================================================
-  # GROUP 2: BUILD & TESTS (no dependencies)
+  # GROUP 2: BUILD & TESTS (runs when source or workflow files change)
   # =============================================================================
 
   build:
     name: Validate Build
     runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -87,6 +127,8 @@ jobs:
   unit-tests:
     name: Validate Tests
     runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,50 +143,78 @@ jobs:
 
   # =============================================================================
   # GROUP 3: APP CONTAINER PIPELINES (per-app docker build, health check, publish)
+  # Only runs for apps that have changed
   # =============================================================================
 
   app-containers:
     name: App container pipeline (${{ matrix.app }})
     runs-on: ubuntu-latest
     needs:
+      - detect-changes
       - lint-and-format
       - type-check
       - build
       - unit-tests
+    # Run if any app changed AND (source validation passed OR was skipped)
+    if: |
+      needs.detect-changes.outputs.any_app_changed == 'true' &&
+      (always() && !cancelled() && !contains(needs.*.result, 'failure'))
     strategy:
       fail-fast: false
       matrix:
         include:
           - app: bunkbot
             dockerfile: ./src/bunkbot/Dockerfile
+            changed: ${{ needs.detect-changes.outputs.bunkbot_changed }}
           - app: covabot
             dockerfile: ./src/covabot/Dockerfile
+            changed: ${{ needs.detect-changes.outputs.covabot_changed }}
           - app: djcova
             dockerfile: ./src/djcova/Dockerfile
+            changed: ${{ needs.detect-changes.outputs.djcova_changed }}
           - app: bluebot
             dockerfile: ./src/bluebot/Dockerfile
+            changed: ${{ needs.detect-changes.outputs.bluebot_changed }}
     steps:
+      - name: Check if app changed
+        id: should-run
+        run: |
+          if [ "${{ matrix.changed }}" != "true" ]; then
+            echo "⏭️  Skipping ${{ matrix.app }} - no changes detected"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Running pipeline for ${{ matrix.app }}"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout
+        if: steps.should-run.outputs.skip != 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node & dependencies (cached)
+        if: steps.should-run.outputs.skip != 'true'
         uses: ./.github/actions/setup-node-cached
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Lint app sources
+        if: steps.should-run.outputs.skip != 'true'
         run: npx eslint "src/${{ matrix.app }}/src/**/*.ts"
 
       - name: Type check app
+        if: steps.should-run.outputs.skip != 'true'
         run: npm run type-check:${{ matrix.app }}
 
       - name: Build app
+        if: steps.should-run.outputs.skip != 'true'
         run: npm run build:${{ matrix.app }}
 
       - name: Set up Docker Buildx
+        if: steps.should-run.outputs.skip != 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
+        if: steps.should-run.outputs.skip != 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -158,6 +228,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
       - name: Start container
+        if: steps.should-run.outputs.skip != 'true'
         run: |
           # Set app-specific token environment variable
           if [ "${{ matrix.app }}" = "covabot" ]; then
@@ -178,11 +249,13 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.app }}:pr-${{ github.event.pull_request.number }}
 
       - name: Run container health & smoke checks
+        if: steps.should-run.outputs.skip != 'true'
         uses: ./.github/actions/container-health-check
         with:
           container-name: ${{ matrix.app }}-test
 
       - name: Log in to GitHub Container Registry
+        if: steps.should-run.outputs.skip != 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -190,6 +263,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag and push image
+        if: steps.should-run.outputs.skip != 'true'
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -225,20 +299,45 @@ jobs:
     name: Validation Complete
     runs-on: ubuntu-latest
     needs:
+      - detect-changes
       - lint-and-format
       - type-check
       - build
       - unit-tests
       - app-containers
+    if: always() && !cancelled()
     steps:
-      - name: All checks passed
+      - name: Check for failures
+        run: |
+          # Check if any required job failed
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
+            echo "❌ One or more validation checks failed"
+            exit 1
+          fi
+
+      - name: Validation summary
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✅ All validation checks passed!"
+          echo "✅ PR Validation Complete!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✓ Lint & Format"
-          echo "✓ Type Check"
-          echo "✓ Build"
-          echo "✓ Unit Tests"
-          echo "✓ Docker Builds / Health Checks / Image Publishing (4 apps)"
+
+          # Show what was checked
+          if [ "${{ needs.detect-changes.outputs.source_changed }}" = "true" ] || \
+             [ "${{ needs.detect-changes.outputs.workflow_changed }}" = "true" ]; then
+            echo "✓ Lint & Format"
+            echo "✓ Type Check"
+            echo "✓ Build"
+            echo "✓ Unit Tests"
+          else
+            echo "⏭️  Source validation skipped (no source/workflow changes)"
+          fi
+
+          if [ "${{ needs.detect-changes.outputs.any_app_changed }}" = "true" ]; then
+            echo "✓ App Container Pipelines:"
+            APPS='${{ needs.detect-changes.outputs.changed_apps }}'
+            echo "  Changed apps: $APPS"
+          else
+            echo "⏭️  Container builds skipped (no app changes)"
+          fi
+
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
