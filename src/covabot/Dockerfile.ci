@@ -32,6 +32,7 @@ RUN apk add --no-cache openssl dumb-init curl gcompat && \
 # Copy package files for dependency installation
 COPY package.json package-lock.json* ./
 COPY src/shared/package.json ./src/shared/
+COPY src/shared/node_modules ./src/shared/node_modules
 COPY src/covabot/package.json ./src/covabot/
 
 # Install only production dependencies

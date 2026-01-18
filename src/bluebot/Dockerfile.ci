@@ -26,6 +26,7 @@ RUN apk add --no-cache openssl dumb-init curl && \
 # Copy package files for dependency installation
 COPY package.json package-lock.json* ./
 COPY src/shared/package.json ./src/shared/
+COPY src/shared/node_modules ./src/shared/node_modules
 COPY src/bluebot/package.json ./src/bluebot/
 
 # Install only production dependencies
@@ -33,8 +34,8 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci --prefer-offline --no-audit --omit=dev --ignore-scripts
 
 # Copy pre-built artifacts from CI
-COPY --chown=bluebot:bluebot src/shared/dist ./node_modules/@starbunk/shared
-COPY --chown=bluebot:bluebot src/bluebot/dist ./dist
+COPY --chown=bluebot:bluebot src/shared/dist ./src/shared/dist
+COPY --chown=bluebot:bluebot src/bluebot/dist ./src/bluebot/dist
 
 # Set default environment variables from build args
 ENV NODE_ENV=${NODE_ENV} \
@@ -66,5 +67,5 @@ EXPOSE 3000
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "src/bluebot/dist/index.js"]
 

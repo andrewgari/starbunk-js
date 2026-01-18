@@ -7,752 +7,788 @@ name: Main - Deploy & Release
 # - Skips all builds if only CI/workflow config changed
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-    inputs:
-      skip_validation:
-        description: 'Skip code quality checks (use with caution)'
-        required: false
-        type: boolean
-        default: false
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+        inputs:
+            skip_validation:
+                description: 'Skip code quality checks (use with caution)'
+                required: false
+                type: boolean
+                default: false
 
 env:
-  REGISTRY: ghcr.io
-  NODE_VERSION: '20'
+    REGISTRY: ghcr.io
+    NODE_VERSION: '20'
 
 permissions:
-  contents: write
-  packages: write
+    contents: write
+    packages: write
 
 jobs:
-  # =============================================================================
-  # GROUP 0: DETECT CHANGES (determines what needs to be built/deployed)
-  # =============================================================================
-
-  detect-changes:
-    name: Detect Changed Files
-    runs-on: ubuntu-latest
-    outputs:
-      source_changed: ${{ steps.changes.outputs.source_changed }}
-      workflow_changed: ${{ steps.changes.outputs.workflow_changed }}
-      container_config_changed: ${{ steps.changes.outputs.container_config_changed }}
-      shared_changed: ${{ steps.changes.outputs.shared_changed }}
-      bunkbot_changed: ${{ steps.changes.outputs.bunkbot_changed }}
-      covabot_changed: ${{ steps.changes.outputs.covabot_changed }}
-      djcova_changed: ${{ steps.changes.outputs.djcova_changed }}
-      bluebot_changed: ${{ steps.changes.outputs.bluebot_changed }}
-      any_app_changed: ${{ steps.changes.outputs.any_app_changed }}
-      changed_apps: ${{ steps.changes.outputs.changed_apps }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Detect changes
-        id: changes
-        uses: ./.github/actions/detect-changes
-
-  # =============================================================================
-  # GROUP 1: BUILD (compile TypeScript once, reuse for all containers)
-  # =============================================================================
-
-  build:
-    name: Build Applications
-    runs-on: ubuntu-latest
-    needs: [detect-changes]
-    if: needs.detect-changes.outputs.any_app_changed == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node & dependencies (cached)
-        uses: ./.github/actions/setup-node-cached
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Build all applications
-        run: npm run build
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            src/*/dist/
-            src/*/package.json
-            package.json
-            package-lock.json
-          retention-days: 1
-          if-no-files-found: error
-
-  # =============================================================================
-  # GROUP 2: DOCKER BUILDS (runs in parallel, only for changed apps)
-  # =============================================================================
-
-  docker-build-bunkbot:
-    name: Build Container - bunkbot
-    runs-on: ubuntu-latest
-    needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.bunkbot_changed == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: .
-
-      - name: Calculate content hash
-        id: content-hash
-        run: |
-          HASH=$(git rev-parse HEAD:src/bunkbot 2>/dev/null || echo "no-hash")
-          SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
-          DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
-          CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
-          echo "hash=${CONTENT_HASH}" >> $GITHUB_OUTPUT
-          echo "📦 Content hash: ${CONTENT_HASH}"
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check if image exists
-        id: image-exists
-        continue-on-error: true
-        run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:sha-${{ steps.content-hash.outputs.hash }}"
-          if docker manifest inspect "${IMAGE_TAG}" > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Image already exists: ${IMAGE_TAG}"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "🔨 Image needs to be built"
-          fi
-
-      - name: Pull and save existing image
-        if: steps.image-exists.outputs.exists == 'true'
-        run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:sha-${{ steps.content-hash.outputs.hash }}"
-          docker pull "${IMAGE_TAG}"
-          docker tag "${IMAGE_TAG}" "${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main"
-          docker save "${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main" -o /tmp/bunkbot.tar
-
-      - name: Set up Docker Buildx
-        if: steps.image-exists.outputs.exists != 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        if: steps.image-exists.outputs.exists != 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./src/bunkbot/Dockerfile.ci
-          push: false
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:sha-${{ steps.content-hash.outputs.hash }}
-          cache-from: |
-            type=gha,scope=shared-deps
-            type=gha,scope=bunkbot
-          cache-to: type=gha,mode=max,scope=bunkbot
-          outputs: type=docker,dest=/tmp/bunkbot.tar
-
-      - name: Push SHA-tagged image
-        if: steps.image-exists.outputs.exists != 'true'
-        run: |
-          # Load the image from tar
-          docker load --input /tmp/bunkbot.tar
-          # Push the SHA-tagged image for future reuse
-          docker push "${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:sha-${{ steps.content-hash.outputs.hash }}"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bunkbot-image
-          path: /tmp/bunkbot.tar
-          retention-days: 1
-
-  docker-build-covabot:
-    name: Build Container - covabot
-    runs-on: ubuntu-latest
-    needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.covabot_changed == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: .
-
-      - name: Calculate content hash
-        id: content-hash
-        run: |
-          HASH=$(git rev-parse HEAD:src/covabot 2>/dev/null || echo "no-hash")
-          SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
-          DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
-          CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
-          echo "hash=${CONTENT_HASH}" >> $GITHUB_OUTPUT
-          echo "📦 Content hash: ${CONTENT_HASH}"
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check if image exists
-        id: image-exists
-        continue-on-error: true
-        run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:sha-${{ steps.content-hash.outputs.hash }}"
-          if docker manifest inspect "${IMAGE_TAG}" > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Image already exists: ${IMAGE_TAG}"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "🔨 Image needs to be built"
-          fi
-
-      - name: Pull and save existing image
-        if: steps.image-exists.outputs.exists == 'true'
-        run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:sha-${{ steps.content-hash.outputs.hash }}"
-          docker pull "${IMAGE_TAG}"
-          docker tag "${IMAGE_TAG}" "${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main"
-          docker save "${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main" -o /tmp/covabot.tar
-
-      - name: Set up Docker Buildx
-        if: steps.image-exists.outputs.exists != 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        if: steps.image-exists.outputs.exists != 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./src/covabot/Dockerfile.ci
-          push: false
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:sha-${{ steps.content-hash.outputs.hash }}
-          cache-from: |
-            type=gha,scope=shared-deps
-            type=gha,scope=covabot
-          cache-to: type=gha,mode=max,scope=covabot
-          outputs: type=docker,dest=/tmp/covabot.tar
-
-      - name: Push SHA-tagged image
-        if: steps.image-exists.outputs.exists != 'true'
-        run: |
-          docker load --input /tmp/covabot.tar
-          docker push "${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:sha-${{ steps.content-hash.outputs.hash }}"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: covabot-image
-          path: /tmp/covabot.tar
-          retention-days: 1
-
-  docker-build-djcova:
-    name: Build Container - djcova
-    runs-on: ubuntu-latest
-    needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.djcova_changed == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: .
-
-      - name: Calculate content hash
-        id: content-hash
-        run: |
-          HASH=$(git rev-parse HEAD:src/djcova 2>/dev/null || echo "no-hash")
-          SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
-          DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
-          CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
-          echo "hash=${CONTENT_HASH}" >> $GITHUB_OUTPUT
-          echo "📦 Content hash: ${CONTENT_HASH}"
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check if image exists
-        id: image-exists
-        continue-on-error: true
-        run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:sha-${{ steps.content-hash.outputs.hash }}"
-          if docker manifest inspect "${IMAGE_TAG}" > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Image already exists: ${IMAGE_TAG}"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "🔨 Image needs to be built"
-          fi
-
-      - name: Pull and save existing image
-        if: steps.image-exists.outputs.exists == 'true'
-        run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:sha-${{ steps.content-hash.outputs.hash }}"
-          docker pull "${IMAGE_TAG}"
-          docker tag "${IMAGE_TAG}" "${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main"
-          docker save "${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main" -o /tmp/djcova.tar
-
-      - name: Set up Docker Buildx
-        if: steps.image-exists.outputs.exists != 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        if: steps.image-exists.outputs.exists != 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./src/djcova/Dockerfile.ci
-          push: false
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:sha-${{ steps.content-hash.outputs.hash }}
-          cache-from: |
-            type=gha,scope=shared-deps
-            type=gha,scope=djcova
-          cache-to: type=gha,mode=max,scope=djcova
-          outputs: type=docker,dest=/tmp/djcova.tar
-
-      - name: Push SHA-tagged image
-        if: steps.image-exists.outputs.exists != 'true'
-        run: |
-          docker load --input /tmp/djcova.tar
-          docker push "${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:sha-${{ steps.content-hash.outputs.hash }}"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: djcova-image
-          path: /tmp/djcova.tar
-          retention-days: 1
-
-  docker-build-bluebot:
-    name: Build Container - bluebot
-    runs-on: ubuntu-latest
-    needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.bluebot_changed == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: .
-
-      - name: Calculate content hash
-        id: content-hash
-        run: |
-          HASH=$(git rev-parse HEAD:src/bluebot 2>/dev/null || echo "no-hash")
-          SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
-          DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
-          CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
-          echo "hash=${CONTENT_HASH}" >> $GITHUB_OUTPUT
-          echo "📦 Content hash: ${CONTENT_HASH}"
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check if image exists
-        id: image-exists
-        continue-on-error: true
-        run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:sha-${{ steps.content-hash.outputs.hash }}"
-          if docker manifest inspect "${IMAGE_TAG}" > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Image already exists: ${IMAGE_TAG}"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "🔨 Image needs to be built"
-          fi
-
-      - name: Pull and save existing image
-        if: steps.image-exists.outputs.exists == 'true'
-        run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:sha-${{ steps.content-hash.outputs.hash }}"
-          docker pull "${IMAGE_TAG}"
-          docker tag "${IMAGE_TAG}" "${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main"
-          docker save "${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main" -o /tmp/bluebot.tar
-
-      - name: Set up Docker Buildx
-        if: steps.image-exists.outputs.exists != 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        if: steps.image-exists.outputs.exists != 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./src/bluebot/Dockerfile.ci
-          push: false
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:sha-${{ steps.content-hash.outputs.hash }}
-          cache-from: |
-            type=gha,scope=shared-deps
-            type=gha,scope=bluebot
-          cache-to: type=gha,mode=max,scope=bluebot
-          outputs: type=docker,dest=/tmp/bluebot.tar
-
-      - name: Push SHA-tagged image
-        if: steps.image-exists.outputs.exists != 'true'
-        run: |
-          docker load --input /tmp/bluebot.tar
-          docker push "${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:sha-${{ steps.content-hash.outputs.hash }}"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bluebot-image
-          path: /tmp/bluebot.tar
-          retention-days: 1
-
-  # =============================================================================
-  # GROUP 3: CONTAINER VALIDATION (depends on Docker builds)
-  # =============================================================================
-
-  validate-bunkbot:
-    name: Validate Container - bunkbot
-    runs-on: ubuntu-latest
-    needs: [docker-build-bunkbot]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: bunkbot-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/bunkbot.tar
-
-      - name: Start container
-        run: |
-          docker run -d --name bunkbot-test \
-            -e DISCORD_TOKEN=test \
-            -e DEBUG_MODE=true \
-            -e CI_SMOKE_MODE=true \
-            -e CI=true \
-            -e NODE_ENV=test \
-            -e HEALTH_PORT=3000 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
-
-      - name: Run container health & smoke checks
-        uses: ./.github/actions/container-health-check
-        with:
-          container-name: bunkbot-test
-
-  validate-covabot:
-    name: Validate Container - covabot
-    runs-on: ubuntu-latest
-    needs: [docker-build-covabot]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: covabot-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/covabot.tar
-
-      - name: Start container
-        run: |
-          docker run -d --name covabot-test \
-            -e DISCORD_TOKEN=test \
-            -e DEBUG_MODE=true \
-            -e CI_SMOKE_MODE=true \
-            -e CI=true \
-            -e NODE_ENV=test \
-            -e HEALTH_PORT=3000 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
-
-      - name: Run container health & smoke checks
-        uses: ./.github/actions/container-health-check
-        with:
-          container-name: covabot-test
-
-  validate-djcova:
-    name: Validate Container - djcova
-    runs-on: ubuntu-latest
-    needs: [docker-build-djcova]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: djcova-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/djcova.tar
-
-      - name: Start container
-        run: |
-          docker run -d --name djcova-test \
-            -e DISCORD_TOKEN=test \
-            -e CLIENT_ID=test \
-            -e DEBUG_MODE=true \
-            -e CI_SMOKE_MODE=true \
-            -e CI=true \
-            -e NODE_ENV=test \
-            -e HEALTH_PORT=3000 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
-
-      - name: Run container health & smoke checks
-        uses: ./.github/actions/container-health-check
-        with:
-          container-name: djcova-test
-
-  validate-bluebot:
-    name: Validate Container - bluebot
-    runs-on: ubuntu-latest
-    needs: [docker-build-bluebot]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: bluebot-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/bluebot.tar
-
-      - name: Start container
-        run: |
-          docker run -d --name bluebot-test \
-            -e DISCORD_TOKEN=test \
-            -e DEBUG_MODE=true \
-            -e CI_SMOKE_MODE=true \
-            -e CI=true \
-            -e NODE_ENV=test \
-            -e HEALTH_PORT=3000 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
-
-      - name: Run container health & smoke checks
-        uses: ./.github/actions/container-health-check
-        with:
-          container-name: bluebot-test
-
-  # =============================================================================
-  # GROUP 4: PRODUCTION IMAGE PUBLISHING (depends on container validation)
-  # =============================================================================
-
-  publish-bunkbot:
-    name: Publish Image - bunkbot
-    runs-on: ubuntu-latest
-    needs: [validate-bunkbot]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: bunkbot-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/bunkbot.tar
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Tag and push images
-        run: |
-          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot"
-
-          # Tag with latest
-          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
-
-          # Push branch and latest tags
-          docker push ${IMAGE_NAME}:main
-          docker push ${IMAGE_NAME}:latest
-
-  publish-covabot:
-    name: Publish Image - covabot
-    runs-on: ubuntu-latest
-    needs: [validate-covabot]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: covabot-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/covabot.tar
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Tag and push images
-        run: |
-          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot"
-
-          # Tag with latest
-          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
-
-          # Push branch and latest tags
-          docker push ${IMAGE_NAME}:main
-          docker push ${IMAGE_NAME}:latest
-
-  publish-djcova:
-    name: Publish Image - djcova
-    runs-on: ubuntu-latest
-    needs: [validate-djcova]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: djcova-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/djcova.tar
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Tag and push images
-        run: |
-          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova"
-
-          # Tag with latest
-          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
-
-          # Push branch and latest tags
-          docker push ${IMAGE_NAME}:main
-          docker push ${IMAGE_NAME}:latest
-
-  publish-bluebot:
-    name: Publish Image - bluebot
-    runs-on: ubuntu-latest
-    needs: [validate-bluebot]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: bluebot-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/bluebot.tar
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Tag and push images
-        run: |
-          IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot"
-
-          # Tag with latest
-          docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
-
-          # Push branch and latest tags
-          docker push ${IMAGE_NAME}:main
-          docker push ${IMAGE_NAME}:latest
-
-  # =============================================================================
-  # GROUP 4: DEPLOYMENT SUMMARY (final gate)
-  # =============================================================================
-
-  validation-complete:
-    name: Deployment & Release Summary
-    runs-on: ubuntu-latest
-    needs:
-      - detect-changes
-      - validate-bunkbot
-      - validate-covabot
-      - validate-djcova
-      - validate-bluebot
-      - publish-bunkbot
-      - publish-covabot
-      - publish-djcova
-      - publish-bluebot
-    if: always() && !cancelled()
-    steps:
-      - name: Check for failures
-        run: |
-          # Check if any job that ran actually failed
-          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
-            echo "❌ One or more deployment jobs failed"
-            exit 1
-          fi
-
-      - name: Check if no apps changed
-        if: needs.detect-changes.outputs.any_app_changed != 'true'
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "⏭️  Deployment skipped - no app changes detected"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "ℹ️  No application code changes detected"
-          echo "ℹ️  Docker builds and publishing skipped"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-      - name: Deployment summary
+    # =============================================================================
+    # GROUP 0: DETECT CHANGES (determines what needs to be built/deployed)
+    # =============================================================================
+
+    detect-changes:
+        name: Detect Changed Files
+        runs-on: ubuntu-latest
+        outputs:
+            source_changed: ${{ steps.changes.outputs.source_changed }}
+            workflow_changed: ${{ steps.changes.outputs.workflow_changed }}
+            container_config_changed: ${{ steps.changes.outputs.container_config_changed }}
+            shared_changed: ${{ steps.changes.outputs.shared_changed }}
+            bunkbot_changed: ${{ steps.changes.outputs.bunkbot_changed }}
+            covabot_changed: ${{ steps.changes.outputs.covabot_changed }}
+            djcova_changed: ${{ steps.changes.outputs.djcova_changed }}
+            bluebot_changed: ${{ steps.changes.outputs.bluebot_changed }}
+            any_app_changed: ${{ steps.changes.outputs.any_app_changed }}
+            changed_apps: ${{ steps.changes.outputs.changed_apps }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Detect changes
+              id: changes
+              uses: ./.github/actions/detect-changes
+
+    # =============================================================================
+    # GROUP 1: BUILD (compile TypeScript once, reuse for all containers)
+    # =============================================================================
+
+    build:
+        name: Build Applications
+        runs-on: ubuntu-latest
+        needs: [detect-changes]
         if: needs.detect-changes.outputs.any_app_changed == 'true'
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✅ Main deployment workflow completed successfully!"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
 
-          APPS='${{ needs.detect-changes.outputs.changed_apps }}'
-          echo "✓ Built and deployed apps: $APPS"
-          echo "✓ Container Validation"
-          echo "✓ Image Publishing (main + latest tags)"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            - name: Setup Node & dependencies (cached)
+              uses: ./.github/actions/setup-node-cached
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+
+            - name: Build all applications
+              run: npm run build
+
+            - name: Compress build artifacts
+              run: |
+                  tar -czf build-artifacts.tar.gz \
+                      src/*/dist/ \
+                      src/*/package.json \
+                      src/shared/node_modules/ \
+                      package.json \
+                      package-lock.json
+
+            - name: Upload build artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: build-artifacts.tar.gz
+                  retention-days: 1
+                  if-no-files-found: error
+                  compression-level: 0
+
+    # =============================================================================
+    # GROUP 2: DOCKER BUILDS (runs in parallel, only for changed apps)
+    # =============================================================================
+
+    docker-build-bunkbot:
+        name: Build Container - bunkbot
+        runs-on: ubuntu-latest
+        needs: [detect-changes, build]
+        if: needs.detect-changes.outputs.bunkbot_changed == 'true'
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            - name: Download build artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: .
+
+            - name: Extract build artifacts
+              run: tar -xzf build-artifacts.tar.gz
+
+            - name: Calculate content hash
+              id: content-hash
+              run: |
+                  HASH=$(git rev-parse HEAD:src/bunkbot 2>/dev/null || echo "no-hash")
+                  SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+                  DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+                  CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+                  echo "hash=${CONTENT_HASH}" >> $GITHUB_OUTPUT
+                  echo "📦 Content hash: ${CONTENT_HASH}"
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Check if image exists
+              id: image-exists
+              continue-on-error: true
+              run: |
+                  IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:sha-${{ steps.content-hash.outputs.hash }}"
+                  if docker manifest inspect "${IMAGE_TAG}" > /dev/null 2>&1; then
+                    echo "exists=true" >> $GITHUB_OUTPUT
+                    echo "✅ Image already exists: ${IMAGE_TAG}"
+                  else
+                    echo "exists=false" >> $GITHUB_OUTPUT
+                    echo "🔨 Image needs to be built"
+                  fi
+
+            - name: Pull and save existing image
+              if: steps.image-exists.outputs.exists == 'true'
+              run: |
+                  IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:sha-${{ steps.content-hash.outputs.hash }}"
+                  docker pull "${IMAGE_TAG}"
+                  docker tag "${IMAGE_TAG}" "${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main"
+                  docker save "${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main" -o /tmp/bunkbot.tar
+
+            - name: Set up Docker Buildx
+              if: steps.image-exists.outputs.exists != 'true'
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build Docker image
+              if: steps.image-exists.outputs.exists != 'true'
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: ./src/bunkbot/Dockerfile.ci
+                  push: false
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
+                      ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:sha-${{ steps.content-hash.outputs.hash }}
+                  cache-from: |
+                      type=gha,scope=shared-deps
+                      type=gha,scope=bunkbot
+                  cache-to: type=gha,mode=max,scope=bunkbot
+                  outputs: type=docker,dest=/tmp/bunkbot.tar
+
+            - name: Push SHA-tagged image
+              if: steps.image-exists.outputs.exists != 'true'
+              run: |
+                  # Load the image from tar
+                  docker load --input /tmp/bunkbot.tar
+                  # Push the SHA-tagged image for future reuse
+                  docker push "${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:sha-${{ steps.content-hash.outputs.hash }}"
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: bunkbot-image
+                  path: /tmp/bunkbot.tar
+                  retention-days: 1
+
+    docker-build-covabot:
+        name: Build Container - covabot
+        runs-on: ubuntu-latest
+        needs: [detect-changes, build]
+        if: needs.detect-changes.outputs.covabot_changed == 'true'
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            - name: Download build artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: .
+
+            - name: Extract build artifacts
+              run: tar -xzf build-artifacts.tar.gz
+
+            - name: Calculate content hash
+              id: content-hash
+              run: |
+                  HASH=$(git rev-parse HEAD:src/covabot 2>/dev/null || echo "no-hash")
+                  SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+                  DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+                  CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+                  echo "hash=${CONTENT_HASH}" >> $GITHUB_OUTPUT
+                  echo "📦 Content hash: ${CONTENT_HASH}"
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Check if image exists
+              id: image-exists
+              continue-on-error: true
+              run: |
+                  IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:sha-${{ steps.content-hash.outputs.hash }}"
+                  if docker manifest inspect "${IMAGE_TAG}" > /dev/null 2>&1; then
+                    echo "exists=true" >> $GITHUB_OUTPUT
+                    echo "✅ Image already exists: ${IMAGE_TAG}"
+                  else
+                    echo "exists=false" >> $GITHUB_OUTPUT
+                    echo "🔨 Image needs to be built"
+                  fi
+
+            - name: Pull and save existing image
+              if: steps.image-exists.outputs.exists == 'true'
+              run: |
+                  IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:sha-${{ steps.content-hash.outputs.hash }}"
+                  docker pull "${IMAGE_TAG}"
+                  docker tag "${IMAGE_TAG}" "${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main"
+                  docker save "${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main" -o /tmp/covabot.tar
+
+            - name: Set up Docker Buildx
+              if: steps.image-exists.outputs.exists != 'true'
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build Docker image
+              if: steps.image-exists.outputs.exists != 'true'
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: ./src/covabot/Dockerfile.ci
+                  push: false
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
+                      ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:sha-${{ steps.content-hash.outputs.hash }}
+                  cache-from: |
+                      type=gha,scope=shared-deps
+                      type=gha,scope=covabot
+                  cache-to: type=gha,mode=max,scope=covabot
+                  outputs: type=docker,dest=/tmp/covabot.tar
+
+            - name: Push SHA-tagged image
+              if: steps.image-exists.outputs.exists != 'true'
+              run: |
+                  docker load --input /tmp/covabot.tar
+                  docker push "${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:sha-${{ steps.content-hash.outputs.hash }}"
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: covabot-image
+                  path: /tmp/covabot.tar
+                  retention-days: 1
+
+    docker-build-djcova:
+        name: Build Container - djcova
+        runs-on: ubuntu-latest
+        needs: [detect-changes, build]
+        if: needs.detect-changes.outputs.djcova_changed == 'true'
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            - name: Download build artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: .
+
+            - name: Extract build artifacts
+              run: tar -xzf build-artifacts.tar.gz
+
+            - name: Calculate content hash
+              id: content-hash
+              run: |
+                  HASH=$(git rev-parse HEAD:src/djcova 2>/dev/null || echo "no-hash")
+                  SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+                  DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+                  CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+                  echo "hash=${CONTENT_HASH}" >> $GITHUB_OUTPUT
+                  echo "📦 Content hash: ${CONTENT_HASH}"
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Check if image exists
+              id: image-exists
+              continue-on-error: true
+              run: |
+                  IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:sha-${{ steps.content-hash.outputs.hash }}"
+                  if docker manifest inspect "${IMAGE_TAG}" > /dev/null 2>&1; then
+                    echo "exists=true" >> $GITHUB_OUTPUT
+                    echo "✅ Image already exists: ${IMAGE_TAG}"
+                  else
+                    echo "exists=false" >> $GITHUB_OUTPUT
+                    echo "🔨 Image needs to be built"
+                  fi
+
+            - name: Pull and save existing image
+              if: steps.image-exists.outputs.exists == 'true'
+              run: |
+                  IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:sha-${{ steps.content-hash.outputs.hash }}"
+                  docker pull "${IMAGE_TAG}"
+                  docker tag "${IMAGE_TAG}" "${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main"
+                  docker save "${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main" -o /tmp/djcova.tar
+
+            - name: Set up Docker Buildx
+              if: steps.image-exists.outputs.exists != 'true'
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build Docker image
+              if: steps.image-exists.outputs.exists != 'true'
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: ./src/djcova/Dockerfile.ci
+                  push: false
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
+                      ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:sha-${{ steps.content-hash.outputs.hash }}
+                  cache-from: |
+                      type=gha,scope=shared-deps
+                      type=gha,scope=djcova
+                  cache-to: type=gha,mode=max,scope=djcova
+                  outputs: type=docker,dest=/tmp/djcova.tar
+
+            - name: Push SHA-tagged image
+              if: steps.image-exists.outputs.exists != 'true'
+              run: |
+                  docker load --input /tmp/djcova.tar
+                  docker push "${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:sha-${{ steps.content-hash.outputs.hash }}"
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: djcova-image
+                  path: /tmp/djcova.tar
+                  retention-days: 1
+
+    docker-build-bluebot:
+        name: Build Container - bluebot
+        runs-on: ubuntu-latest
+        needs: [detect-changes, build]
+        if: needs.detect-changes.outputs.bluebot_changed == 'true'
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            - name: Download build artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-artifacts
+                  path: .
+
+            - name: Extract build artifacts
+              run: tar -xzf build-artifacts.tar.gz
+
+            - name: Calculate content hash
+              id: content-hash
+              run: |
+                  HASH=$(git rev-parse HEAD:src/bluebot 2>/dev/null || echo "no-hash")
+                  SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+                  DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+                  CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+                  echo "hash=${CONTENT_HASH}" >> $GITHUB_OUTPUT
+                  echo "📦 Content hash: ${CONTENT_HASH}"
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Check if image exists
+              id: image-exists
+              continue-on-error: true
+              run: |
+                  IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:sha-${{ steps.content-hash.outputs.hash }}"
+                  if docker manifest inspect "${IMAGE_TAG}" > /dev/null 2>&1; then
+                    echo "exists=true" >> $GITHUB_OUTPUT
+                    echo "✅ Image already exists: ${IMAGE_TAG}"
+                  else
+                    echo "exists=false" >> $GITHUB_OUTPUT
+                    echo "🔨 Image needs to be built"
+                  fi
+
+            - name: Pull and save existing image
+              if: steps.image-exists.outputs.exists == 'true'
+              run: |
+                  IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:sha-${{ steps.content-hash.outputs.hash }}"
+                  docker pull "${IMAGE_TAG}"
+                  docker tag "${IMAGE_TAG}" "${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main"
+                  docker save "${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main" -o /tmp/bluebot.tar
+
+            - name: Set up Docker Buildx
+              if: steps.image-exists.outputs.exists != 'true'
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build Docker image
+              if: steps.image-exists.outputs.exists != 'true'
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: ./src/bluebot/Dockerfile.ci
+                  push: false
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
+                      ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:sha-${{ steps.content-hash.outputs.hash }}
+                  cache-from: |
+                      type=gha,scope=shared-deps
+                      type=gha,scope=bluebot
+                  cache-to: type=gha,mode=max,scope=bluebot
+                  outputs: type=docker,dest=/tmp/bluebot.tar
+
+            - name: Push SHA-tagged image
+              if: steps.image-exists.outputs.exists != 'true'
+              run: |
+                  docker load --input /tmp/bluebot.tar
+                  docker push "${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:sha-${{ steps.content-hash.outputs.hash }}"
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: bluebot-image
+                  path: /tmp/bluebot.tar
+                  retention-days: 1
+
+    # =============================================================================
+    # GROUP 3: CONTAINER VALIDATION (depends on Docker builds)
+    # =============================================================================
+
+    validate-bunkbot:
+        name: Validate Container - bunkbot
+        runs-on: ubuntu-latest
+        needs: [docker-build-bunkbot]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            - name: Download artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: bunkbot-image
+                  path: /tmp
+
+            - name: Load Docker image
+              run: docker load --input /tmp/bunkbot.tar
+
+            - name: Start container
+              run: |
+                  docker run -d --name bunkbot-test \
+                    -e DISCORD_TOKEN=test \
+                    -e DEBUG_MODE=true \
+                    -e CI_SMOKE_MODE=true \
+                    -e CI=true \
+                    -e NODE_ENV=test \
+                    -e HEALTH_PORT=3000 \
+                    ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
+
+            - name: Run container health & smoke checks
+              uses: ./.github/actions/container-health-check
+              with:
+                  container-name: bunkbot-test
+
+    validate-covabot:
+        name: Validate Container - covabot
+        runs-on: ubuntu-latest
+        needs: [docker-build-covabot]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            - name: Download artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: covabot-image
+                  path: /tmp
+
+            - name: Load Docker image
+              run: docker load --input /tmp/covabot.tar
+
+            - name: Start container
+              run: |
+                  docker run -d --name covabot-test \
+                    -e DISCORD_TOKEN=test \
+                    -e DEBUG_MODE=true \
+                    -e CI_SMOKE_MODE=true \
+                    -e CI=true \
+                    -e NODE_ENV=test \
+                    -e HEALTH_PORT=3000 \
+                    ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
+
+            - name: Run container health & smoke checks
+              uses: ./.github/actions/container-health-check
+              with:
+                  container-name: covabot-test
+
+    validate-djcova:
+        name: Validate Container - djcova
+        runs-on: ubuntu-latest
+        needs: [docker-build-djcova]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            - name: Download artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: djcova-image
+                  path: /tmp
+
+            - name: Load Docker image
+              run: docker load --input /tmp/djcova.tar
+
+            - name: Start container
+              run: |
+                  docker run -d --name djcova-test \
+                    -e DISCORD_TOKEN=test \
+                    -e CLIENT_ID=test \
+                    -e DEBUG_MODE=true \
+                    -e CI_SMOKE_MODE=true \
+                    -e CI=true \
+                    -e NODE_ENV=test \
+                    -e HEALTH_PORT=3000 \
+                    ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
+
+            - name: Run container health & smoke checks
+              uses: ./.github/actions/container-health-check
+              with:
+                  container-name: djcova-test
+
+    validate-bluebot:
+        name: Validate Container - bluebot
+        runs-on: ubuntu-latest
+        needs: [docker-build-bluebot]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            - name: Download artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: bluebot-image
+                  path: /tmp
+
+            - name: Load Docker image
+              run: docker load --input /tmp/bluebot.tar
+
+            - name: Start container
+              run: |
+                  docker run -d --name bluebot-test \
+                    -e DISCORD_TOKEN=test \
+                    -e DEBUG_MODE=true \
+                    -e CI_SMOKE_MODE=true \
+                    -e CI=true \
+                    -e NODE_ENV=test \
+                    -e HEALTH_PORT=3000 \
+                    ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
+
+            - name: Run container health & smoke checks
+              uses: ./.github/actions/container-health-check
+              with:
+                  container-name: bluebot-test
+
+    # =============================================================================
+    # GROUP 4: PRODUCTION IMAGE PUBLISHING (depends on container validation)
+    # =============================================================================
+
+    publish-bunkbot:
+        name: Publish Image - bunkbot
+        runs-on: ubuntu-latest
+        needs: [validate-bunkbot]
+        steps:
+            - name: Download artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: bunkbot-image
+                  path: /tmp
+
+            - name: Load Docker image
+              run: docker load --input /tmp/bunkbot.tar
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Tag and push images
+              run: |
+                  IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot"
+
+                  # Tag with latest
+                  docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+
+                  # Push branch and latest tags
+                  docker push ${IMAGE_NAME}:main
+                  docker push ${IMAGE_NAME}:latest
+
+    publish-covabot:
+        name: Publish Image - covabot
+        runs-on: ubuntu-latest
+        needs: [validate-covabot]
+        steps:
+            - name: Download artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: covabot-image
+                  path: /tmp
+
+            - name: Load Docker image
+              run: docker load --input /tmp/covabot.tar
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Tag and push images
+              run: |
+                  IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot"
+
+                  # Tag with latest
+                  docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+
+                  # Push branch and latest tags
+                  docker push ${IMAGE_NAME}:main
+                  docker push ${IMAGE_NAME}:latest
+
+    publish-djcova:
+        name: Publish Image - djcova
+        runs-on: ubuntu-latest
+        needs: [validate-djcova]
+        steps:
+            - name: Download artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: djcova-image
+                  path: /tmp
+
+            - name: Load Docker image
+              run: docker load --input /tmp/djcova.tar
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Tag and push images
+              run: |
+                  IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova"
+
+                  # Tag with latest
+                  docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+
+                  # Push branch and latest tags
+                  docker push ${IMAGE_NAME}:main
+                  docker push ${IMAGE_NAME}:latest
+
+    publish-bluebot:
+        name: Publish Image - bluebot
+        runs-on: ubuntu-latest
+        needs: [validate-bluebot]
+        steps:
+            - name: Download artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: bluebot-image
+                  path: /tmp
+
+            - name: Load Docker image
+              run: docker load --input /tmp/bluebot.tar
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Tag and push images
+              run: |
+                  IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot"
+
+                  # Tag with latest
+                  docker tag ${IMAGE_NAME}:main ${IMAGE_NAME}:latest
+
+                  # Push branch and latest tags
+                  docker push ${IMAGE_NAME}:main
+                  docker push ${IMAGE_NAME}:latest
+
+    # =============================================================================
+    # GROUP 4: DEPLOYMENT SUMMARY (final gate)
+    # =============================================================================
+
+    validation-complete:
+        name: Deployment & Release Summary
+        runs-on: ubuntu-latest
+        needs:
+            - detect-changes
+            - validate-bunkbot
+            - validate-covabot
+            - validate-djcova
+            - validate-bluebot
+            - publish-bunkbot
+            - publish-covabot
+            - publish-djcova
+            - publish-bluebot
+        if: always() && !cancelled()
+        steps:
+            - name: Check for failures
+              run: |
+                  # Check if any job that ran actually failed
+                  if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
+                    echo "❌ One or more deployment jobs failed"
+                    exit 1
+                  fi
+
+            - name: Check if no apps changed
+              if: needs.detect-changes.outputs.any_app_changed != 'true'
+              run: |
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo "⏭️  Deployment skipped - no app changes detected"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo "ℹ️  No application code changes detected"
+                  echo "ℹ️  Docker builds and publishing skipped"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            - name: Deployment summary
+              if: needs.detect-changes.outputs.any_app_changed == 'true'
+              run: |
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo "✅ Main deployment workflow completed successfully!"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+                  APPS='${{ needs.detect-changes.outputs.changed_apps }}'
+                  echo "✓ Built and deployed apps: $APPS"
+                  echo "✓ Container Validation"
+                  echo "✓ Image Publishing (main + latest tags)"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
