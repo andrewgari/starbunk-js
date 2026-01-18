@@ -6,6 +6,7 @@ import { ensureError } from './utils';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Client, Collection, Events, GatewayIntentBits, ChatInputCommandInteraction } from 'discord.js';
+import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 
 // Setup logging mixins before creating any logger instances
 setupDJCovaLogging();
@@ -38,6 +39,9 @@ async function main(): Promise<void> {
 	if (!token) {
 		throw new Error('DISCORD_TOKEN environment variable is required');
 	}
+
+	// Start health/metrics server
+	globalHealthServer = await initializeHealthServer();
 
 	const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates] }) as Client & {
 		commands: Collection<string, Command>;
@@ -125,13 +129,17 @@ async function main(): Promise<void> {
 }
 
 // Graceful shutdown
+let globalHealthServer: Awaited<ReturnType<typeof initializeHealthServer>> | undefined;
+
 process.on('SIGINT', async () => {
 	logger.info('Received SIGINT signal, shutting down DJCova...');
+	await globalHealthServer?.stop();
 	process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
 	logger.info('Received SIGTERM signal, shutting down DJCova...');
+	await globalHealthServer?.stop();
 	process.exit(0);
 });
 

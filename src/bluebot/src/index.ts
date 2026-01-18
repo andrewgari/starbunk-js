@@ -4,6 +4,7 @@ import { setupBlueBotLogging } from '@/observability/setup-logging';
 import { logger } from '@/observability/logger';
 import { BlueBot } from '@/blue-bot';
 import { runSmokeTest } from '@starbunk/shared/health/smoke-test';
+import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 
 // Setup logging mixins before creating any logger instances
 setupBlueBotLogging();
@@ -29,6 +30,9 @@ async function main(): Promise<void> {
 		throw new Error('DISCORD_TOKEN environment variable is required');
 	}
 
+	// Start health/metrics server
+	const healthServer = await initializeHealthServer();
+
 	const client = new Client({ intents });
 
 	logger.info('Logging in to Discord...');
@@ -39,8 +43,9 @@ async function main(): Promise<void> {
 	await bot.start();
 
 	// Set up graceful shutdown handlers
-	const shutdown = (signal: string) => {
+	const shutdown = async (signal: string) => {
 		logger.info(`Received ${signal}, shutting down gracefully...`);
+		await healthServer?.stop();
 		client.destroy();
 		process.exit(0);
 	};
