@@ -48,7 +48,7 @@ jobs:
           fi
           
           echo "Changed files:"
-          echo "$CHANGED_FILES"
+          echo "${CHANGED_FILES}"
           
           # Check if any files outside of .github/ or CI config were changed
           # These are files that affect the application itself
@@ -61,7 +61,7 @@ jobs:
             echo "should_release=true" >> $GITHUB_OUTPUT
             echo "✅ Application files changed - release needed"
             echo "Changed application files:"
-            echo "$APP_FILES_CHANGED"
+            echo "${APP_FILES_CHANGED}"
           fi
 
   # =============================================================================
