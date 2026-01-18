@@ -136,7 +136,11 @@ jobs:
                   node-version: ${{ env.NODE_VERSION }}
 
             - name: Build all applications
-              run: npm run build
+              run: |
+                  echo "🧹 Cleaning previous builds..."
+                  npm run clean
+                  echo "🔨 Building all applications..."
+                  npm run build
 
             - name: Compress build artifacts
               run: |
