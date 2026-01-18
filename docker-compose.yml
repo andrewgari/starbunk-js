@@ -89,7 +89,7 @@ services:
         reservations:
           memory: 512M
 
-  # CovaBot - AI personality bot
+  # CovaBot - AI personality bot (Cognitive Simulacrum)
   covabot:
     build:
       context: .
@@ -111,6 +111,14 @@ services:
       - OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS:-true}
       - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
       - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
+      # Redis Configuration (Social Battery) - external endpoint
+      - REDIS_HOST=${REDIS_HOST:-localhost}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-0}
+      # Qdrant Configuration (Saliency/Interest Matching) - external endpoint
+      - QDRANT_URL=${QDRANT_URL:-http://localhost:6333}
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
       # Storage Configuration
       - COVABOT_DATA_DIR=/app/data
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
@@ -139,7 +147,6 @@ services:
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
       - com.centurylinklabs.watchtower.enable=true
-
     deploy:
       resources:
         limits:

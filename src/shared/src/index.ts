@@ -21,6 +21,16 @@ export type {
 
 // Types
 export type { BotIdentity } from './types/bot-identity';
+export type {
+	SimulacrumProfile,
+	SaliencyResult,
+	SocialBatteryResult,
+	SimulacrumDecision,
+} from './types/personality';
+export {
+	IGNORE_CONVERSATION_MARKER,
+	buildSelectiveObserverPrompt,
+} from './types/personality';
 
 // Discord services
 export { DiscordService } from './discord/discord-service';
