@@ -1,43 +1,10 @@
-# BlueBot Container - Blue detection and response bot
-# Optimized 2-stage build with Alpine Linux (Docker & Podman compatible)
+# BlueBot Container - CI-optimized build using pre-built artifacts
+# This Dockerfile expects dist/ folders to already exist (built by CI)
+# Skips TypeScript compilation for faster builds
 
-# Stage 1: Builder - Build everything in one stage for speed
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-# Install all system dependencies in one layer
-RUN apk add --no-cache python3 make g++ openssl curl dumb-init
-
-# Copy package files for better caching
-COPY package.json package-lock.json* ./
-COPY src/shared/package.json ./src/shared/
-COPY src/bluebot/package.json ./src/bluebot/
-
-# Install all dependencies using workspace (more efficient)
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --prefer-offline --no-audit --ignore-scripts
-
-# Copy shared package source
-COPY src/shared/src ./src/shared/src
-COPY src/shared/tsconfig*.json ./src/shared/
-
-# Build the shared package first
-RUN cd src/shared && npm run build
-
-# Copy app source code
-COPY src/bluebot/src ./src/bluebot/src
-COPY src/bluebot/tests ./src/bluebot/tests
-COPY src/bluebot/vitest.config.ts src/bluebot/tsconfig*.json src/bluebot/.dockerignore ./src/bluebot/
-
-# Build the application
-RUN cd src/bluebot && npm run build:docker
-
-# Stage 2: Runtime - Minimal production image
 FROM node:20-alpine AS runtime
 
 # Build-time arguments for non-secret environment variables
-# These can be overridden at runtime via .env file or docker-compose
 ARG DEBUG_MODE=false
 ARG NODE_ENV=production
 ARG LOG_LEVEL=info
@@ -56,11 +23,18 @@ RUN apk add --no-cache openssl dumb-init curl && \
     addgroup -g 1001 -S bluebot && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G bluebot bluebot
 
-# Copy only production dependencies and built artifacts from builder
-COPY --from=builder --chown=bluebot:bluebot /app/node_modules ./node_modules
-COPY --from=builder --chown=bluebot:bluebot /app/src/shared/dist ./node_modules/@starbunk/shared
-COPY --from=builder --chown=bluebot:bluebot /app/src/bluebot/dist ./dist
-COPY --from=builder --chown=bluebot:bluebot /app/package.json ./package.json
+# Copy package files for dependency installation
+COPY package.json package-lock.json* ./
+COPY src/shared/package.json ./src/shared/
+COPY src/bluebot/package.json ./src/bluebot/
+
+# Install only production dependencies
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --omit=dev --ignore-scripts
+
+# Copy pre-built artifacts from CI
+COPY --chown=bluebot:bluebot src/shared/dist ./src/shared/dist
+COPY --chown=bluebot:bluebot src/bluebot/dist ./src/bluebot/dist
 
 # Set default environment variables from build args
 ENV NODE_ENV=${NODE_ENV} \
@@ -79,6 +53,7 @@ USER bluebot
 
 # Monitoring labels for Grafana/Prometheus discovery
 LABEL com.starbunk.service="bluebot"
+LABEL com.starbunk.build-type="ci-optimized"
 LABEL prometheus.io/scrape="true"
 LABEL prometheus.io/path="/metrics"
 LABEL prometheus.io/port="3000"
@@ -92,4 +67,5 @@ EXPOSE 3000
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "src/bluebot/dist/index.js"]
+

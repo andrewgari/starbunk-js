@@ -1,0 +1,64 @@
+# BunkBot Container - CI-optimized build using pre-built artifacts
+# This Dockerfile expects dist/ folders to already exist (built by CI)
+# Skips TypeScript compilation for faster builds
+
+FROM node:20-alpine AS runtime
+
+# Build-time arguments for non-secret environment variables
+ARG NODE_ENV=production
+ARG LOG_LEVEL=info
+ARG DEBUG_MODE=false
+ARG ENABLE_METRICS=true
+ARG ENABLE_STRUCTURED_LOGGING=true
+ARG METRICS_PORT=3000
+
+WORKDIR /app
+
+# Create user and install runtime dependencies in one layer
+RUN apk add --no-cache openssl dumb-init curl && \
+    addgroup -g 1001 -S bunkbot && \
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G bunkbot bunkbot
+
+# Copy package files for dependency installation
+COPY package.json package-lock.json* ./
+COPY src/shared/package.json ./src/shared/
+COPY src/bunkbot/package.json ./src/bunkbot/
+
+# Install only production dependencies
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --omit=dev --ignore-scripts
+
+# Copy pre-built artifacts from CI
+COPY --chown=bunkbot:bunkbot src/shared/dist ./src/shared/dist
+COPY --chown=bunkbot:bunkbot src/bunkbot/dist ./src/bunkbot/dist
+
+# Set default environment variables from build args
+ENV NODE_ENV=${NODE_ENV} \
+    LOG_LEVEL=${LOG_LEVEL} \
+    DEBUG_MODE=${DEBUG_MODE} \
+    ENABLE_METRICS=${ENABLE_METRICS} \
+    ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING} \
+    METRICS_PORT=${METRICS_PORT}
+
+# Switch to non-root user
+USER bunkbot
+
+# Monitoring labels for Grafana/Prometheus discovery
+LABEL com.starbunk.service="bunkbot"
+LABEL com.starbunk.description="Next generation YAML-based reply bot system"
+LABEL com.starbunk.build-type="ci-optimized"
+LABEL prometheus.io/scrape="true"
+LABEL prometheus.io/path="/metrics"
+LABEL prometheus.io/port="3000"
+
+# Health check using HTTP endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD sh -c 'PORT="${METRICS_PORT:-3000}"; curl -fsS "http://127.0.0.1:${PORT}/live" || exit 1'
+
+# Expose metrics port
+EXPOSE 3000
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "src/bunkbot/dist/index.js"]
+

@@ -1,6 +1,6 @@
 // CovaBot - AI personality bot container
 import 'dotenv/config';
-import { Events,Client, } from 'discord.js';
+import { Events, Client, GatewayIntentBits } from 'discord.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 
 import { logger } from '@/observability/logger';
@@ -13,7 +13,34 @@ class CovaBotContainer {
 
 
 	async initialize(): Promise<void> {
+		logger.info('🤖 Initializing CovaBot container...');
 
+		try {
+			// Create Discord client with minimal required intents
+			// Only needs: Guilds (basic functionality), GuildMessages + MessageContent (to read/respond to messages)
+			this.client = new Client({
+				intents: [
+					GatewayIntentBits.Guilds,
+					GatewayIntentBits.GuildMessages,
+					GatewayIntentBits.MessageContent,
+				],
+			});
+
+			// Set up error handling
+			this.client.on('error', (error) => logger.error('Discord client error:', { error }));
+			this.client.on('warn', (warning) => logger.warn('Discord client warning:', { warning }));
+
+			// Set up ready event
+			this.client.once(Events.ClientReady, () => {
+				logger.info('🤖 CovaBot is ready and connected to Discord');
+				this.hasInitialized = true;
+			});
+
+			logger.info('✅ CovaBot container initialized successfully');
+		} catch (error) {
+			logger.error('❌ Failed to initialize CovaBot container:', ensureError(error));
+			throw error;
+		}
 	}
 
 

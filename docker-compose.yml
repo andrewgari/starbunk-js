@@ -34,6 +34,7 @@ services:
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
+      - com.centurylinklabs.watchtower.enable=true
     deploy:
       resources:
         limits:
@@ -80,6 +81,7 @@ services:
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
+      - com.centurylinklabs.watchtower.enable=true
     deploy:
       resources:
         limits:
@@ -136,6 +138,7 @@ services:
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
+      - com.centurylinklabs.watchtower.enable=true
 
     deploy:
       resources:
@@ -150,7 +153,7 @@ services:
       context: .
       dockerfile: src/bluebot/Dockerfile
     image: ghcr.io/andrewgari/bluebot:latest
-    container_name: bluebot
+    container_name: starbunk-bluebot
     restart: unless-stopped
     env_file:
       - .env
@@ -176,6 +179,7 @@ services:
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
+      - com.centurylinklabs.watchtower.enable=true
     deploy:
       resources:
         limits:
