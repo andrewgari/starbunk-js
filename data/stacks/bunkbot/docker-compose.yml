@@ -20,6 +20,8 @@ services:
       - "${BUNKBOT_METRICS_PORT:-9301}:3000"
     networks:
       - starbunk-network
+    volumes:
+      - ${UNRAID_APPDATA_PATH:-./data}/bunkbot:/config
     logging:
       driver: "json-file"
       options:
@@ -54,6 +56,7 @@ services:
       - METRICS_PORT=${METRICS_PORT:-3000}
     volumes:
       # Unraid-compatible host path mounts
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova:/config
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
     ports:
@@ -87,25 +90,24 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - NODE_OPTIONS=--max-old-space-size=384
       - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
       - GUILD_ID=${GUILD_ID}
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
-      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-mistral:latest}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-mistral:latest}
       - OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS:-true}
       - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
       - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
-      - COVABOT_DATA_DIR=/app/data
+      - COVABOT_DATA_DIR=/config
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
       # Observability Configuration
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - METRICS_PORT=${METRICS_PORT:-3000}
     volumes:
       # Unraid-compatible host path mount for CovaBot personality notes
-      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
+      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/config
     ports:
       - "${COVABOT_WEB_PORT:-7080}:7080"
       # Metrics and health endpoint port
@@ -144,6 +146,8 @@ services:
       # Observability Configuration
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - METRICS_PORT=${METRICS_PORT:-3000}
+    volumes:
+      - ${UNRAID_APPDATA_PATH:-./data}/bluebot:/config
     ports:
       # Metrics and health endpoint port
       - "${BLUEBOT_METRICS_PORT:-9302}:3000"
