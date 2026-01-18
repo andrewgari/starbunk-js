@@ -24,7 +24,7 @@ yarn-error.log
 # Build artifacts and coverage
 coverage
 .nyc_output
-dist
+# dist - needed for CI builds with pre-built artifacts
 *.tgz
 *.tar.gz
 
