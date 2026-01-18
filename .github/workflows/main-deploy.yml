@@ -497,7 +497,7 @@ jobs:
       - name: All deployment stages completed
         if: needs.check-release-needed.outputs.should_release == 'true'
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\e[0m"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✅ Main deployment workflow completed successfully!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✓ Docker Builds (4 apps)"
