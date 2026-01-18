@@ -19,9 +19,29 @@ reply-bots:
       type: mimic
       as_member: "113035990725066752" # Guy
     responses:
-      - "What!? What did you say?"
-      - "Geeeeeet ready for Shriek Week!"
-      - "Try and keep up mate...."
+      - 'What!? What did you say?'
+      - 'Geeeeeet ready for Shriek Week!'
+      - 'Try and keep up mate....'
+      - 'But Who really died that day.\n...and who came back?'
+      - 'Sheeeeeeeeeeeesh'
+      - "Rats! Rats! Weeeeeeee're the Rats!"
+      - 'The One Piece is REEEEEEEEEEEEEEEEAL'
+      - 'Psh, I dunno about that, Chief...'
+      - 'Come to me my noble EINHERJAHR'
+      - "If you can't beat em, EAT em!"
+      - 'Have you ever been so sick you sluiced your pants?'
+      - "Welcome back to ... Melon be Smellin'"
+      - "Chaotic Evil: Don't Respond. :unamused:"
+      - ':NODDERS: Big Boys... :NODDERS:'
+      - 'Fun Fact: That was actually in XI as well.'
+      - 'Bird Up!'
+      - 'Schlorp'
+      - "I wouldn't dream of disturbing something so hideously erogenous"
+      - 'Good Year, Good Year'
+      - 'True Grit'
+      - 'MisterMisterMisterMisterMisterMisterMisterMisterMisterMisterMisterMisterBeeeeeeeeeeeeeeeeeeeeeeeeeeast'
+      - "It's a message you can say"
+      - 'Blimbo'
     triggers:
       - name: guy-mentioned
         conditions: { contains_phrase: "guy" }
@@ -187,12 +207,19 @@ reply-bots:
       - name: venn-cringe-trigger
         conditions: { contains_phrase: "cringe" }
         responses:
-          - 'Sorry, but that was über cringe...'
-          - 'Geez, that was hella cringe...'
-          - 'That was cringe to the max...'
-          - 'What a cringe thing to say...'
-          - 'Mondo cringe, man...'
-          - "Yo that was the cringiest thing I've ever heard..."
+          - 'Sorry, but that was über cringe...',
+          - 'Geez, that was hella cringe...',
+          - 'That was cringe to the max...',
+          - 'What a cringe thing to say...',
+          - 'Mondo cringe, man...',
+          - "Yo that was the cringiest thing I've ever heard...",
+          - 'Your daily serving of cringe, milord...',
+          - 'On a scale of one to cringe, that was pretty cringe...',
+          - 'That was pretty cringe :airplane:',
+          - 'Wow, like....cringe much?',
+          - 'Excuse me, I seem to have dropped my cringe. Do you have it perchance?',
+          - 'Like I always say, that was pretty cringe...',
+          - 'C.R.I.N.G.E'
 
   - name: check-bot
     identity:
@@ -200,12 +227,9 @@ reply-bots:
       botName: CheckBot
       avatarUrl: https://m.media-amazon.com/images/I/21Unzn9U8sL._AC_.jpg
     triggers:
-      - name: check-trigger
+      - name: check-swap-trigger
         conditions: { matches_regex: "\\b(czech|check)\\b" }
-        responses:
-          - "Did you mean 'czech' or 'check'? I can never tell!"
-          - "Ah yes, the classic czech/check confusion!"
-          - "Czech yourself before you wreck yourself!"
+        responses: "I think you meant: {swap_message:check:czech}"
 
   - name: chad-bot
     identity:
@@ -254,3 +278,11 @@ reply-bots:
             - matches_regex: "\\b(to|too|two)\\b"
             - with_chance: 15
         responses: 'You mean "too"*'
+
+  - name: sig-great-bot
+    identity:
+      type: random
+    triggers:
+      - name: sig-great-trigger
+        conditions: { matches_regex: "\\b(sig|siggles)\\s+(?:is\\s+)?(best|greatest|awesome|amazing|cool|fantastic|wonderful|excellent|good|great|brilliant|perfect|the\\s+best)\\b/i" }
+        responses: "Yeah, is is pretty great, huh? :NODDERS:"
