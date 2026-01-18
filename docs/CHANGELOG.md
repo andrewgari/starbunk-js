@@ -1,3 +1,9 @@
+## [1.16.0](https://github.com/andrewgari/starbunk-js/compare/v1.15.2...v1.16.0) (2026-01-18)
+
+### Features
+
+* Add '/live' endpoint for health check in smoke mode ([#455](https://github.com/andrewgari/starbunk-js/issues/455)) ([723de50](https://github.com/andrewgari/starbunk-js/commit/723de500e89dd6ae7edc46adaa88dde1cbd68179))
+
 ## [1.15.2](https://github.com/andrewgari/starbunk-js/compare/v1.15.1...v1.15.2) (2026-01-18)
 
 ### Bug Fixes
