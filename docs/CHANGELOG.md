@@ -1,3 +1,9 @@
+## [1.15.0](https://github.com/andrewgari/starbunk-js/compare/v1.14.0...v1.15.0) (2026-01-18)
+
+### Features
+
+* Add dynamic character repetition placeholder for bot responses ([#453](https://github.com/andrewgari/starbunk-js/issues/453)) ([e95383c](https://github.com/andrewgari/starbunk-js/commit/e95383c9612206aeee2b434a8c131c900df602f0))
+
 ## [1.14.0](https://github.com/andrewgari/starbunk-js/compare/v1.13.0...v1.14.0) (2026-01-17)
 
 ### Features
