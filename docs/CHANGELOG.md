@@ -1,3 +1,9 @@
+## [1.17.0](https://github.com/andrewgari/starbunk-js/compare/v1.16.0...v1.17.0) (2026-01-18)
+
+### Features
+
+* **bunkbot:** add {swap_message} placeholder for word swapping ([#456](https://github.com/andrewgari/starbunk-js/issues/456)) ([b8e2bd2](https://github.com/andrewgari/starbunk-js/commit/b8e2bd2aa85e4e439a1d828aeac9a457734022d0))
+
 ## [1.16.0](https://github.com/andrewgari/starbunk-js/compare/v1.15.2...v1.16.0) (2026-01-18)
 
 ### Features
