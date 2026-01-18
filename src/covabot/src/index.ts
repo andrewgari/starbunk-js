@@ -6,6 +6,7 @@ import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { logger } from '@/observability/logger';
 import { ensureError, } from './utils';
 import { WebServer } from './web/server';
+import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 
 class CovaBotContainer {
 	private client!: Client;
@@ -141,6 +142,9 @@ async function main(): Promise<void> {
 	let webServer: WebServer | undefined;
 
 	try {
+		// Start health/metrics server
+		globalHealthServer = await initializeHealthServer();
+
 		// Check if web interface should be enabled (if COVABOT_WEB_PORT is set)
 		const webPort = process.env.COVABOT_WEB_PORT;
 		const enableWebInterface = webPort !== undefined && webPort !== '';
@@ -196,8 +200,11 @@ async function main(): Promise<void> {
 }
 
 // Graceful shutdown
+let globalHealthServer: Awaited<ReturnType<typeof initializeHealthServer>> | undefined;
+
 const shutdown = async () => {
 	logger.info('🛑 Shutting down CovaBot...');
+	await globalHealthServer?.stop();
 	process.exit(0);
 };
 
