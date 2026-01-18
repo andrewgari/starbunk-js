@@ -138,6 +138,27 @@ jobs:
             - name: Build all applications
               run: npm run build
 
+            - name: Verify build outputs
+              run: |
+                  echo "📁 Verifying build outputs..."
+                  for app in bunkbot djcova covabot bluebot; do
+                    echo ""
+                    echo "Checking $app:"
+                    if [ -d "src/$app/dist" ]; then
+                      echo "✅ dist folder exists"
+                      ls -la "src/$app/dist/" | head -15
+                      if [ -f "src/$app/dist/index.js" ]; then
+                        echo "✅ index.js found ($(stat -c%s src/$app/dist/index.js) bytes)"
+                      else
+                        echo "❌ index.js NOT found"
+                        exit 1
+                      fi
+                    else
+                      echo "❌ dist folder NOT found"
+                      exit 1
+                    fi
+                  done
+
             - name: Compress build artifacts
               run: |
                   tar -czf build-artifacts.tar.gz \
