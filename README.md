@@ -322,3 +322,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Discord.js team for their excellent library
 - Ollama and OpenAI for LLM capabilities
 - All contributors to the project
+# Trigger rebuild
