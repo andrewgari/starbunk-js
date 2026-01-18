@@ -15,7 +15,7 @@
 		"build:bunkbot": "tsc --build src/bunkbot && npx tsc-alias -p src/bunkbot/tsconfig.json",
 		"build:djcova": "tsc --build src/djcova && npx tsc-alias -p src/djcova/tsconfig.json",
 		"build:covabot": "tsc --build src/covabot && npx tsc-alias -p src/covabot/tsconfig.json",
-		"build:bluebot": "tsc --build src/bluebot && npx tsc-alias -p src/bluebot/tsconfig.json",
+		"build:bluebot": "tsc --build src/bluebot && npx tsc-alias -p src/bluebot/tsconfig.json --verbose",
 		"start": "docker compose up -d",
 		"start:dev": "docker compose -f infrastructure/docker/docker-compose.dev.yml up -d",
 		"stop": "docker compose down",
