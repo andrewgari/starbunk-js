@@ -289,9 +289,9 @@ export class CovaBot {
   /**
    * Reset the singleton (for testing)
    */
-  static resetInstance(): void {
+  static async resetInstance(): Promise<void> {
     if (CovaBot.instance) {
-      CovaBot.instance.stop();
+      await CovaBot.instance.stop();
       CovaBot.instance = null;
     }
   }

@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build && tsc-alias",
+    "build:docker": "tsc --build tsconfig.docker.json && tsc-alias -p tsconfig.docker.json",
     "dev": "tsc --build --watch",
     "start": "node dist/index.js",
     "test": "vitest run",
