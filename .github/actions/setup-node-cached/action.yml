@@ -78,10 +78,6 @@ runs:
           src/djcova/node_modules
           src/starbunk-dnd/node_modules
           src/covabot/node_modules
-          src/shared/dist
-          src/shared/lib
-          src/*/dist/.tsbuildinfo
-          src/*/dist-test/.tsbuildinfo
         key: ${{ steps.cache-key.outputs.cache-key }}
         restore-keys: |
           node-${{ inputs.node-version }}-${{ runner.os }}-deps-
