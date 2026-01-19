@@ -18,6 +18,7 @@ import { PersonalityService } from '@/services/personality-service';
 import { MessageHandler } from '@/handlers/message-handler';
 import { CovaProfile } from '@/models/memory-types';
 import { loadPersonalitiesFromDirectory, getDefaultPersonalitiesPath } from '@/serialization/personality-parser';
+import { EmbeddingManager } from '@/services/llm/embedding-manager';
 
 const logger = logLayer.withPrefix('CovaBot');
 
@@ -50,6 +51,7 @@ export class CovaBot {
   private llmService: LlmService | null = null;
   private personalityService: PersonalityService | null = null;
   private messageHandler: MessageHandler | null = null;
+  private embeddingManager: EmbeddingManager | null = null;
 
   private constructor(config: CovaBotConfig) {
     this.config = config;
@@ -102,6 +104,11 @@ export class CovaBot {
   async stop(): Promise<void> {
     logger.info('Stopping CovaBot v2');
 
+    // Stop scheduled model updates
+    if (this.embeddingManager) {
+      this.embeddingManager.stopScheduledUpdates();
+    }
+
     if (this.client) {
       this.client.destroy();
       this.client = null;
@@ -140,6 +147,7 @@ export class CovaBot {
       responseDecision: this.responseDecisionService,
       llm: this.llmService,
       personality: this.personalityService,
+      embedding: this.embeddingManager,
     };
   }
 
@@ -198,6 +206,20 @@ export class CovaBot {
       openaiDefaultModel: this.config.openaiDefaultModel,
     });
     this.personalityService = new PersonalityService(db);
+
+    // Initialize embedding manager with scheduled model updates
+    this.embeddingManager = new EmbeddingManager({
+      ollamaApiUrl: this.config.ollamaApiUrl,
+      ollamaEmbeddingModel: process.env.OLLAMA_EMBEDDING_MODEL,
+      openaiApiKey: this.config.openaiApiKey,
+      openaiEmbeddingModel: process.env.OPENAI_EMBEDDING_MODEL,
+    });
+
+    // Start scheduled model updates (weekly by default)
+    // Includes embedding model + chat model if configured
+    const chatModel = this.config.ollamaDefaultModel || process.env.OLLAMA_DEFAULT_MODEL;
+    const additionalModels = chatModel ? [chatModel] : [];
+    this.embeddingManager.startScheduledUpdates(additionalModels);
 
     // Initialize interests from profiles
     for (const profile of this.profiles.values()) {
