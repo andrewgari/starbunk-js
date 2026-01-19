@@ -114,5 +114,5 @@ export function buildSelectiveObserverPrompt(
 You are a selective observer. You have been monitoring this channel and the current message has a saliency score of ${saliencyScore.toFixed(2)} (your threshold is ${profile.saliency.interestThreshold}).
 ${traitsSection}${interestsSection}${styleSection}
 
-${channelContext ? `Recent channel context:\n${channelContext}\n\n` : ''}IMPORTANT: If you have nothing significant to add to the conversation, return exactly "${IGNORE_CONVERSATION_MARKER}" with no other text. Otherwise, respond naturally as your persona.`;
+${channelContext ? `Recent channel context:\n${channelContext}\n\n` : ''}IMPORTANT: If you have nothing significant to add to the conversation, return exactly ${IGNORE_CONVERSATION_MARKER} with no other text. Otherwise, respond naturally as your persona.`;
 }

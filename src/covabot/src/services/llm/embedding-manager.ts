@@ -112,8 +112,27 @@ export class EmbeddingManager {
    * Generate embedding with caching and fallback
    */
   async generateEmbedding(text: string, options?: EmbeddingOptions): Promise<EmbeddingResult> {
+    // Input validation
+    if (!text || text.trim().length === 0) {
+      throw new Error('Cannot generate embedding for empty text');
+    }
+
+    // Truncate very long text to prevent model issues (most models have ~8k token limit)
+    // Rough estimate: 1 token ≈ 4 characters, so 32k chars ≈ 8k tokens
+    const MAX_TEXT_LENGTH = 32000;
+    const processedText = text.length > MAX_TEXT_LENGTH
+      ? text.substring(0, MAX_TEXT_LENGTH)
+      : text;
+
+    if (text.length > MAX_TEXT_LENGTH) {
+      logger.withMetadata({
+        originalLength: text.length,
+        truncatedLength: MAX_TEXT_LENGTH,
+      }).warn('Text truncated for embedding generation');
+    }
+
     // Check cache first
-    const cacheKey = this.getCacheKey(text, options);
+    const cacheKey = this.getCacheKey(processedText, options);
     const cached = this.getFromCache(cacheKey);
     if (cached) {
       return {
@@ -124,7 +143,7 @@ export class EmbeddingManager {
     }
 
     // Generate new embedding
-    const result = await this.generateWithFallback(text, options);
+    const result = await this.generateWithFallback(processedText, options);
 
     // Cache the result
     this.addToCache(cacheKey, result);
