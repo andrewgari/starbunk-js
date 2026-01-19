@@ -9,7 +9,7 @@
  */
 
 import Database from 'better-sqlite3';
-import { logLayer } from '@/observability/log-layer';
+import { logLayer } from '../../observability/log-layer';
 import { cosineSimilarity } from '../llm/embedding-provider';
 
 const logger = logLayer.withPrefix('VectorStore');

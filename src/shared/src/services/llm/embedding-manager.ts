@@ -5,7 +5,7 @@
  * Priority: Ollama (local, free) -> OpenAI (cloud, paid)
  */
 
-import { logLayer } from '@/observability/log-layer';
+import { logLayer } from '../../observability/log-layer';
 import {
   EmbeddingProvider,
   EmbeddingProviderConfig,

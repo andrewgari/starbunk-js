@@ -15,7 +15,7 @@
  * - More coherent personality over time
  */
 
-import { logLayer } from '@/observability/log-layer';
+import { logLayer } from '../../observability/log-layer';
 import { VectorStore, SimilarityResult } from './vector-store';
 import { EmbeddingManager } from '../llm/embedding-manager';
 
