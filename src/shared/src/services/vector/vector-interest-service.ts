@@ -15,14 +15,20 @@
  * - No manual synonym lists needed
  */
 
-import { logLayer } from '@starbunk/shared/observability/log-layer';
-import { CovaProfile, InterestMatch } from '@/models/memory-types';
+import { logLayer } from '@/observability/log-layer';
 import { VectorStore, SimilarityResult } from './vector-store';
-import { EmbeddingManager } from './llm/embedding-manager';
+import { EmbeddingManager } from '../llm/embedding-manager';
 
 const logger = logLayer.withPrefix('VectorInterestService');
 
 const INTEREST_COLLECTION = 'interests';
+
+export interface InterestMatch {
+  keyword: string;
+  category: string | null;
+  weight: number;
+  score: number;
+}
 
 export interface VectorInterestResult {
   score: number;
@@ -33,6 +39,13 @@ export interface VectorInterestResult {
 export interface VectorInterestMatch extends InterestMatch {
   semanticScore: number;
   originalInterest: string;
+}
+
+export interface ProfileWithInterests {
+  id: string;
+  personality: {
+    interests: string[];
+  };
 }
 
 export class VectorInterestService {
@@ -48,7 +61,7 @@ export class VectorInterestService {
   /**
    * Initialize interest vectors from a profile's configuration
    */
-  async initializeFromProfile(profile: CovaProfile): Promise<void> {
+  async initializeFromProfile(profile: ProfileWithInterests): Promise<void> {
     if (!this.embeddingManager.hasAvailableProvider()) {
       logger.warn('No embedding provider available, skipping vector initialization');
       return;

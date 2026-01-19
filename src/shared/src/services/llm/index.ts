@@ -1,50 +1,13 @@
 // LLM Provider Interface and Implementations
+export * from './llm-provider';
+export * from './llm-provider-manager';
+export * from './ollama-provider';
+export * from './gemini-provider';
+export * from './openai-provider';
+export * from './ollama-model-manager';
 
-export interface LlmMessage {
-	role: 'system' | 'user' | 'assistant';
-	content: string;
-}
-
-export interface LlmCompletionOptions {
-	model: string;
-	temperature?: number;
-	maxTokens?: number;
-}
-
-export interface LlmCompletionResult {
-	content: string;
-	model: string;
-	tokensUsed?: number;
-	provider: string;
-}
-
-/**
- * Abstract LLM Provider interface
- */
-export interface LlmProvider {
-	/** Provider name for logging/identification */
-	readonly name: string;
-
-	/** Check if this provider is configured and available */
-	isAvailable(): boolean;
-
-	/** Generate a chat completion */
-	generateCompletion(messages: LlmMessage[], options: LlmCompletionOptions): Promise<LlmCompletionResult>;
-}
-
-/**
- * Configuration for LLM providers
- */
-export interface LlmProviderConfig {
-	// Ollama
-	ollamaApiUrl?: string;
-	ollamaDefaultModel?: string;
-
-	// Gemini
-	geminiApiKey?: string;
-	geminiDefaultModel?: string;
-
-	// OpenAI
-	openaiApiKey?: string;
-	openaiDefaultModel?: string;
-}
+// Embedding Provider Interface and Implementations
+export * from './embedding-provider';
+export * from './embedding-manager';
+export * from './ollama-embedding-provider';
+export * from './openai-embedding-provider';
