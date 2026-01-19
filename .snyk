@@ -1,0 +1,51 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+
+# Ignore vulnerabilities in devDependencies that are bundled inside npm package
+# These only run during semantic-release in GitHub Actions CI environment
+# Risk: LOW - controlled environment, not in production containers
+
+ignore:
+  # High severity: Path Traversal vulnerability in tar package (<=7.5.2)
+  # Bundled inside npm@11.7.0 which is bundled in @semantic-release/npm
+  # Only affects semantic-release process during CI/CD
+  # Path: semantic-release > @semantic-release/npm > npm > tar
+  SNYK-JS-TAR-8239548:
+    - '*':
+        reason: 'Dev dependency bundled in npm package used only in CI for semantic-release. Not in production.'
+        expires: '2026-07-19T00:00:00.000Z'
+
+  # Alternative tar vulnerability IDs
+  'npm:tar:20241218':
+    - '*':
+        reason: 'Dev dependency bundled in npm package used only in CI for semantic-release. Not in production.'
+        expires: '2026-07-19T00:00:00.000Z'
+
+  SNYK-JS-TAR-7932124:
+    - '*':
+        reason: 'Dev dependency bundled in npm package used only in CI for semantic-release. Not in production.'
+        expires: '2026-07-19T00:00:00.000Z'
+
+  # Low severity: ReDoS vulnerability in diff package (<8.0.3)
+  # Bundled inside npm@11.7.0 which is bundled in @semantic-release/npm
+  # Only affects semantic-release process during CI/CD
+  # Path: semantic-release > @semantic-release/npm > npm > libnpmdiff > diff
+  SNYK-JS-DIFF-8239547:
+    - '*':
+        reason: 'Dev dependency bundled in npm package used only in CI for semantic-release. Not in production.'
+        expires: '2026-07-19T00:00:00.000Z'
+
+  # Alternative diff vulnerability IDs
+  'npm:diff:20241218':
+    - '*':
+        reason: 'Dev dependency bundled in npm package used only in CI for semantic-release. Not in production.'
+        expires: '2026-07-19T00:00:00.000Z'
+
+  SNYK-JS-DIFF-7932123:
+    - '*':
+        reason: 'Dev dependency bundled in npm package used only in CI for semantic-release. Not in production.'
+        expires: '2026-07-19T00:00:00.000Z'
+
+# Patch any vulnerabilities that have available patches
+patch: {}
+
