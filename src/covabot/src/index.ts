@@ -14,6 +14,7 @@
 
 import { config } from 'dotenv';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
+import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
 import { CovaBot, CovaBotConfig } from './cova-bot';
 
 // Load environment variables
@@ -23,6 +24,13 @@ const logger = logLayer.withPrefix('CovaBot:Main');
 
 async function main(): Promise<void> {
   logger.info('CovaBot v2 starting...');
+
+  // Check for CI smoke mode
+  if (process.env.CI_SMOKE_MODE === 'true') {
+    logger.info('CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
+    runSmokeMode();
+    return;
+  }
 
   // Validate required environment variables
   const discordToken = process.env.DISCORD_TOKEN;
