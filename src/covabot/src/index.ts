@@ -1,224 +1,72 @@
-// CovaBot - AI personality bot container
-import 'dotenv/config';
-import { Events, Client, GatewayIntentBits } from 'discord.js';
-import { createServer, IncomingMessage, ServerResponse } from 'http';
+/**
+ * CovaBot v2 - Multi-persona Discord Bot
+ *
+ * Entry point for the CovaBot service.
+ * Requires environment variables:
+ *   - DISCORD_TOKEN: Discord bot token
+ *   - OPENAI_API_KEY: OpenAI API key
+ *   - COVABOT_PERSONALITIES_PATH (optional): Path to personality YAML files
+ *   - COVABOT_DATABASE_PATH (optional): Path to SQLite database
+ */
 
-import { logger } from '@/observability/logger';
-import { ensureError, } from './utils';
-import { WebServer } from './web/server';
-import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
+import { config } from 'dotenv';
+import { logLayer } from '@starbunk/shared/observability/log-layer';
+import { CovaBot, CovaBotConfig } from './cova-bot';
 
-class CovaBotContainer {
-	private client!: Client;
-	private hasInitialized = false;
+// Load environment variables
+config();
 
+const logger = logLayer.withPrefix('CovaBot:Main');
 
-	async initialize(): Promise<void> {
-		logger.info('🤖 Initializing CovaBot container...');
-
-		try {
-			// Create Discord client with minimal required intents
-			// Only needs: Guilds (basic functionality), GuildMessages + MessageContent (to read/respond to messages)
-			this.client = new Client({
-				intents: [
-					GatewayIntentBits.Guilds,
-					GatewayIntentBits.GuildMessages,
-					GatewayIntentBits.MessageContent,
-				],
-			});
-
-			// Set up error handling
-			this.client.on('error', (error) => logger.error('Discord client error:', { error }));
-			this.client.on('warn', (warning) => logger.warn('Discord client warning:', { warning }));
-
-			// Set up ready event
-			this.client.once(Events.ClientReady, () => {
-				logger.info('🤖 CovaBot is ready and connected to Discord');
-				this.hasInitialized = true;
-			});
-
-			logger.info('✅ CovaBot container initialized successfully');
-		} catch (error) {
-			logger.error('❌ Failed to initialize CovaBot container:', ensureError(error));
-			throw error;
-		}
-	}
-
-
-
-	async start(): Promise<void> {
-		const token = process.env.DISCORD_TOKEN;
-		if (!token) {
-			const error = new Error('DISCORD_TOKEN environment variable is required');
-			throw error;
-		}
-
-		// Validate token format (basic check)
-		if (!token.match(/^[\w-]+\.[\w-]+\.[\w-]+$/)) {
-			const error = new Error('DISCORD_TOKEN appears to be invalid (incorrect format)');
-			logger.error('❌ Invalid Discord token format');
-			throw error;
-		}
-
-		// Attempt login with retry logic
-		const maxRetries = 3;
-		let lastError: Error | undefined = undefined;
-
-		for (let attempt = 1; attempt <= maxRetries; attempt++) {
-			try {
-				logger.info(`Attempting Discord login (attempt ${attempt}/${maxRetries})...`);
-				await this.client.login(token);
-				await this.waitForReady();
-				logger.info('🎉 CovaBot started successfully');
-				return;
-			} catch (error) {
-				lastError = ensureError(error);
-
-				logger.error(`❌ Discord login attempt ${attempt}/${maxRetries} failed:`, lastError);
-
-				// Check for specific error types
-				if (
-					lastError &&
-					(lastError.message.includes('TOKEN_INVALID') || lastError.message.includes('Incorrect login'))
-				) {
-					logger.error('❌ Discord token is invalid - cannot retry');
-					throw new Error(`Invalid Discord token: ${lastError.message}`);
-				}
-
-				if (attempt < maxRetries) {
-					const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Exponential backoff, max 10s
-					logger.info(`Retrying in ${delay}ms...`);
-					await new Promise((resolve) => setTimeout(resolve, delay));
-				}
-			}
-		}
-
-		throw new Error(`Failed to connect to Discord after ${maxRetries} attempts: ${lastError?.message}`);
-	}
-
-	private waitForReady(): Promise<void> {
-		return new Promise((resolve) => {
-			if (this.hasInitialized) {
-				resolve();
-			} else {
-				this.client.once(Events.ClientReady, () => resolve());
-			}
-		});
-	}
-
-	async stop(): Promise<void> {
-		logger.info('Stopping CovaBot...');
-		if (this.client) {
-			await this.client.destroy();
-		}
-		logger.info('CovaBot stopped');
-	}
-}
-
-// Main execution
 async function main(): Promise<void> {
-	if (process.env.CI_SMOKE_MODE === 'true') {
-		logger.info('CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
-		const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT) : 3003;
-		const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-			if (req.url === '/health') {
-				res.writeHead(200, { 'Content-Type': 'application/json' });
-				res.end(JSON.stringify({ status: 'healthy', mode: 'smoke', timestamp: new Date().toISOString() }));
-				return;
-			}
-			if (req.url === '/live') {
-				res.writeHead(200, { 'Content-Type': 'application/json' });
-				res.end(JSON.stringify({ status: 'alive', mode: 'smoke' }));
-				return;
-			}
-			res.writeHead(404, { 'Content-Type': 'text/plain' });
-			res.end('Not Found');
-		});
-		server.listen(port, () => logger.info(`🏥 [SMOKE] CovaBot health server running on port ${port}`));
-		const shutdown = (_signal: string) => {
-			server.close(() => process.exit(0));
-		};
-		process.on('SIGINT', () => shutdown('SIGINT'));
-		process.on('SIGTERM', () => shutdown('SIGTERM'));
-		return;
-	}
+  logger.info('CovaBot v2 starting...');
 
-	let covaBot: CovaBotContainer | undefined;
-	let webServer: WebServer | undefined;
+  // Validate required environment variables
+  const discordToken = process.env.DISCORD_TOKEN;
+  const openaiApiKey = process.env.OPENAI_API_KEY;
 
-	try {
-		// Start health/metrics server
-		globalHealthServer = await initializeHealthServer();
+  if (!discordToken) {
+    logger.error('DISCORD_TOKEN environment variable is required');
+    process.exit(1);
+  }
 
-		// Check if web interface should be enabled (if COVABOT_WEB_PORT is set)
-		const webPort = process.env.COVABOT_WEB_PORT;
-		const enableWebInterface = webPort !== undefined && webPort !== '';
+  if (!openaiApiKey) {
+    logger.error('OPENAI_API_KEY environment variable is required');
+    process.exit(1);
+  }
 
-		if (enableWebInterface) {
-			// Web interface mode - start with web server
-			logger.info(`🤖 Starting CovaBot with Web Interface...`);
+  // Build configuration
+  const botConfig: CovaBotConfig = {
+    discordToken,
+    openaiApiKey,
+    personalitiesPath: process.env.COVABOT_PERSONALITIES_PATH,
+    databasePath: process.env.COVABOT_DATABASE_PATH,
+  };
 
-			// Start web server
-			try {
-				const port = parseInt(webPort || '7080', 10);
-				webServer = new WebServer(port);
-				await webServer.start();
-				logger.info(`✅ Web interface started on http://localhost:${port}`);
-			} catch (error) {
-				logger.error('❌ Failed to start web server:', ensureError(error));
-				logger.warn('⚠️ Continuing without web interface');
-			}
+  // Initialize and start the bot
+  const bot = CovaBot.getInstance(botConfig);
 
-			// Start the main CovaBot
-			covaBot = new CovaBotContainer();
-			await covaBot.initialize();
-			await covaBot.start();
+  // Handle graceful shutdown
+  const shutdown = async (signal: string) => {
+    logger.withMetadata({ signal }).info('Shutdown signal received');
+    await bot.stop();
+    process.exit(0);
+  };
 
-			logger.info('🚀 CovaBot with Web Interface started successfully!');
-			if (webServer) {
-				logger.info(`📝 Manage personality at: http://localhost:${webPort}`);
-			}
-		} else {
-			// Standard mode - just start CovaBot
-			covaBot = new CovaBotContainer();
-			await covaBot.initialize();
-			await covaBot.start();
-		}
-	} catch (error) {
-		const err = ensureError(error);
-		logger.error('❌ Failed to start CovaBot:', err);
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-		// Cleanup any partially initialized services
-		if (covaBot) {
-			try {
-				await covaBot.stop();
-			} catch (cleanupError) {
-				logger.error('Error during cleanup:', ensureError(cleanupError));
-			}
-		}
-
-		// Give observability time to flush logs/metrics before exiting
-		await new Promise((resolve) => setTimeout(resolve, 2000));
-
-		process.exit(1);
-	}
+  try {
+    await bot.start();
+    logger.info('CovaBot v2 is now running');
+  } catch (error) {
+    logger.withError(error).error('Failed to start CovaBot');
+    process.exit(1);
+  }
 }
 
-// Graceful shutdown
-let globalHealthServer: Awaited<ReturnType<typeof initializeHealthServer>> | undefined;
+main().catch((error) => {
+  console.error('Unhandled error in CovaBot main:', error);
+  process.exit(1);
+});
 
-const shutdown = async () => {
-	logger.info('🛑 Shutting down CovaBot...');
-	await globalHealthServer?.stop();
-	process.exit(0);
-};
-
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
-
-if (require.main === module) {
-	main().catch((error) => {
-		console.error('Fatal error:', ensureError(error));
-		process.exit(1);
-	});
-}
