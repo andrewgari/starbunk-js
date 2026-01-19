@@ -10,7 +10,7 @@
 		"sync-versions": "bash ./scripts/sync-versions.sh",
 		"build": "npm run build:shared && npm run build:containers",
 		"build:clean": "tsc --build --clean && npm run build",
-		"build:shared": "tsc --build src/shared",
+		"build:shared": "tsc --build src/shared && npx tsc-alias -p src/shared/tsconfig.json",
 		"build:containers": "npm run build:bunkbot && npm run build:djcova && npm run build:covabot && npm run build:bluebot",
 		"build:bunkbot": "tsc --build src/bunkbot && npx tsc-alias -p src/bunkbot/tsconfig.json",
 		"build:djcova": "tsc --build src/djcova && npx tsc-alias -p src/djcova/tsconfig.json",
