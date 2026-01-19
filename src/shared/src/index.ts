@@ -36,21 +36,8 @@ export { OpenAIProvider } from './services/llm/openai-provider';
 export { GeminiProvider } from './services/llm/gemini-provider';
 export { OllamaProvider } from './services/llm/ollama-provider';
 
-// Embedding services
-export type { EmbeddingProvider, EmbeddingOptions } from './services/llm/embedding-provider';
-export { cosineSimilarity } from './services/llm/embedding-provider';
-export { OpenAiEmbeddingProvider } from './services/llm/openai-embedding-provider';
-export { OllamaEmbeddingProvider } from './services/llm/ollama-embedding-provider';
-export { EmbeddingManager } from './services/llm/embedding-manager';
-
 // Ollama model management
 export { OllamaModelManager } from './services/llm/ollama-model-manager';
-
-// Vector services
-export type { VectorEntry, SimilarityResult } from './services/vector/vector-store';
-export { VectorStore } from './services/vector/vector-store';
-export { VectorMemoryService } from './services/vector/vector-memory-service';
-export { VectorInterestService } from './services/vector/vector-interest-service';
 
 // Database services
 export { DatabaseService } from './services/database/database-service';
