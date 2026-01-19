@@ -1,3 +1,9 @@
+## [1.18.0](https://github.com/andrewgari/starbunk-js/compare/v1.17.0...v1.18.0) (2026-01-19)
+
+### Features
+
+* **covabot:** implement Cognitive Simulacrum architecture ([#457](https://github.com/andrewgari/starbunk-js/issues/457)) ([5b7fe5c](https://github.com/andrewgari/starbunk-js/commit/5b7fe5caddfca2a7ef6d3e035b9ee199c09b423a))
+
 ## [1.17.0](https://github.com/andrewgari/starbunk-js/compare/v1.16.0...v1.17.0) (2026-01-18)
 
 ### Features
