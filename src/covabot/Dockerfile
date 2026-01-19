@@ -57,8 +57,8 @@ WORKDIR /app
 RUN apk add --no-cache openssl dumb-init curl python3 make g++ && \
     addgroup -g 1001 -S covabot && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G covabot covabot && \
-    mkdir -p /app/data /app/config && \
-    chown -R covabot:covabot /app/data /app/config
+    mkdir -p /app/data /app/config /app/src/config && \
+    chown -R covabot:covabot /app/data /app/config /app/src/config
 
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=covabot:covabot /app/node_modules ./node_modules
