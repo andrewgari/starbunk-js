@@ -205,3 +205,7 @@ src/**/src/**/*.js
 src/**/src/**/*.d.ts
 src/**/src/**/*.map
 actionlint
+build-artifacts.tar.gz
+
+# Snyk Security Extension - AI Rules (auto-generated)
+.github/instructions/snyk_rules.instructions.md

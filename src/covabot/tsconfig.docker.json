@@ -1,15 +1,17 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "sourceMap": false,
-    "removeComments": true,
-    "composite": false,
-    "paths": {
-      "@/*": ["*"],
-      "@starbunk/shared": ["../../shared/dist"],
-      "@starbunk/shared/*": ["../../shared/dist/*"]
-    }
-  },
-  "references": []
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"composite": false,
+		"sourceMap": false,
+		"declaration": false,
+		"declarationMap": false,
+		"removeComments": true,
+		"paths": {
+			"@/*": ["./*"],
+			"@starbunk/shared": ["../../shared/dist"],
+			"@starbunk/shared/*": ["../../shared/dist/*"]
+		}
+	},
+	"references": []
 }
 

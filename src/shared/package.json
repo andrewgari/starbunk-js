@@ -8,7 +8,11 @@
 		".": "./dist/index.js",
 		"./*": "./dist/*.js",
 		"./observability/mixins": "./dist/observability/mixins/index.js",
-		"./observability/*": "./dist/observability/*.js"
+		"./observability/*": "./dist/observability/*.js",
+		"./services/llm": "./dist/services/llm/index.js",
+		"./services/llm/*": "./dist/services/llm/*.js",
+		"./services/vector": "./dist/services/vector/index.js",
+		"./services/vector/*": "./dist/services/vector/*.js"
 	},
 	"files": [
 		"dist/**/*",
@@ -16,7 +20,7 @@
 		"README.md"
 	],
 	"scripts": {
-		"build": "tsc --build",
+		"build": "tsc --build && tsc-alias -p tsconfig.json",
 		"dev": "tsc --build --watch",
 		"test": "vitest run",
 		"test:watch": "vitest",
@@ -52,6 +56,7 @@
 		"@types/uuid": "^10.0.0",
 		"@vitest/ui": "^4.0.17",
 		"rimraf": "^5.0.1",
+		"tsc-alias": "^1.8.16",
 		"typescript": "~5.3.0",
 		"vitest": "^4.0.17"
 	},

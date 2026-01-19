@@ -5,34 +5,30 @@
 FROM node:20-alpine AS runtime
 
 # Build-time arguments for non-secret environment variables
-ARG DEBUG_MODE=false
 ARG NODE_ENV=production
 ARG LOG_LEVEL=info
 ARG LOG_FORMAT=json
+ARG DEBUG_MODE=false
 ARG ENABLE_METRICS=true
 ARG ENABLE_STRUCTURED_LOGGING=true
 ARG ENABLE_RUNTIME_METRICS=true
 ARG METRICS_PUSH_INTERVAL=30000
 ARG METRICS_PORT=3000
 ARG HEALTH_PORT=3000
-ARG OLLAMA_DEFAULT_MODEL=mistral:latest
-ARG OLLAMA_AUTO_PULL_MODELS=true
-ARG OLLAMA_PULL_ON_STARTUP=true
-ARG OLLAMA_PULL_TIMEOUT_MS=1200000
-ARG USE_DATABASE=false
 
 WORKDIR /app
 
 # Create user and install runtime dependencies in one layer
-# Note: gcompat is needed for onnxruntime-node (used by @xenova/transformers)
-RUN apk add --no-cache openssl dumb-init curl gcompat && \
+# better-sqlite3 needs python3, make, g++ for native compilation
+RUN apk add --no-cache openssl dumb-init curl python3 make g++ && \
     addgroup -g 1001 -S covabot && \
-    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G covabot covabot
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G covabot covabot && \
+    mkdir -p /app/data /app/config /app/src/config && \
+    chown -R covabot:covabot /app/data /app/config /app/src/config
 
 # Copy package files for dependency installation
 COPY package.json package-lock.json* ./
 COPY src/shared/package.json ./src/shared/
-COPY src/shared/node_modules ./src/shared/node_modules
 COPY src/covabot/package.json ./src/covabot/
 
 # Install only production dependencies
@@ -43,39 +39,38 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY --chown=covabot:covabot src/shared/dist ./src/shared/dist
 COPY --chown=covabot:covabot src/covabot/dist ./src/covabot/dist
 
+# Rebuild better-sqlite3 for the runtime environment
+RUN cd /app && npm rebuild better-sqlite3
+
 # Set default environment variables from build args
-ENV DEBUG_MODE=${DEBUG_MODE} \
-    NODE_ENV=${NODE_ENV} \
+ENV NODE_ENV=${NODE_ENV} \
     LOG_LEVEL=${LOG_LEVEL} \
     LOG_FORMAT=${LOG_FORMAT} \
+    DEBUG_MODE=${DEBUG_MODE} \
     ENABLE_METRICS=${ENABLE_METRICS} \
     ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING} \
     ENABLE_RUNTIME_METRICS=${ENABLE_RUNTIME_METRICS} \
     METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL} \
     METRICS_PORT=${METRICS_PORT} \
-    HEALTH_PORT=${HEALTH_PORT} \
-    OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL} \
-    OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS} \
-    OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP} \
-    OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS} \
-    USE_DATABASE=${USE_DATABASE}
+    HEALTH_PORT=${HEALTH_PORT}
 
 # Switch to non-root user
 USER covabot
 
 # Monitoring labels for Grafana/Prometheus discovery
 LABEL com.starbunk.service="covabot"
+LABEL com.starbunk.description="AI personality bot with Cognitive Simulacrum architecture"
 LABEL com.starbunk.build-type="ci-optimized"
 LABEL prometheus.io/scrape="true"
 LABEL prometheus.io/path="/metrics"
 LABEL prometheus.io/port="3000"
 
-# Health check (prefers HEALTH_PORT, then METRICS_PORT, else defaults)
+# Health check using HTTP endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD sh -c 'PORT="${HEALTH_PORT:-${METRICS_PORT:-3000}}"; curl -fsS "http://127.0.0.1:${PORT}/live" || exit 1'
 
-# Expose metrics port (3000) and web UI port (3003)
-EXPOSE 3000 3003
+# Expose metrics port
+EXPOSE 3000 7080
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
