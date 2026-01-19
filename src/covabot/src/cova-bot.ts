@@ -23,9 +23,15 @@ const logger = logLayer.withPrefix('CovaBot');
 
 export interface CovaBotConfig {
   discordToken: string;
-  openaiApiKey: string;
   personalitiesPath?: string;
   databasePath?: string;
+  // LLM Provider configuration (priority: Ollama > Gemini > OpenAI)
+  ollamaApiUrl?: string;
+  ollamaDefaultModel?: string;
+  geminiApiKey?: string;
+  geminiDefaultModel?: string;
+  openaiApiKey?: string;
+  openaiDefaultModel?: string;
 }
 
 export class CovaBot {
@@ -183,7 +189,14 @@ export class CovaBot {
     this.memoryService = new MemoryService(db);
     this.interestService = new InterestService(db);
     this.socialBatteryService = new SocialBatteryService(db);
-    this.llmService = new LlmService(this.config.openaiApiKey);
+    this.llmService = new LlmService({
+      ollamaApiUrl: this.config.ollamaApiUrl,
+      ollamaDefaultModel: this.config.ollamaDefaultModel,
+      geminiApiKey: this.config.geminiApiKey,
+      geminiDefaultModel: this.config.geminiDefaultModel,
+      openaiApiKey: this.config.openaiApiKey,
+      openaiDefaultModel: this.config.openaiDefaultModel,
+    });
     this.personalityService = new PersonalityService(db);
 
     // Initialize interests from profiles

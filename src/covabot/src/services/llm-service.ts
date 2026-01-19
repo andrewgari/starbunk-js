@@ -1,10 +1,16 @@
 /**
- * LLM Service - OpenAI integration for response generation
+ * LLM Service - Multi-provider LLM integration for response generation
+ *
+ * Supports Ollama (primary), Gemini (fallback), and OpenAI (fallback).
  */
 
-import OpenAI from 'openai';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { CovaProfile, LlmContext, IGNORE_CONVERSATION_MARKER } from '@/models/memory-types';
+import {
+  LlmProviderManager,
+  LlmProviderConfig,
+  LlmMessage,
+} from './llm';
 
 const logger = logLayer.withPrefix('LlmService');
 
@@ -13,13 +19,14 @@ export interface LlmResponse {
   shouldIgnore: boolean;
   tokensUsed: number;
   model: string;
+  provider: string;
 }
 
 export class LlmService {
-  private client: OpenAI;
+  private providerManager: LlmProviderManager;
 
-  constructor(apiKey: string) {
-    this.client = new OpenAI({ apiKey });
+  constructor(config?: LlmProviderConfig) {
+    this.providerManager = new LlmProviderManager(config);
   }
 
   /**
@@ -43,7 +50,7 @@ export class LlmService {
     const systemPrompt = this.buildSystemPrompt(profile, context);
 
     // Build messages array
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    const messages: LlmMessage[] = [
       { role: 'system', content: systemPrompt },
     ];
 
@@ -70,28 +77,28 @@ export class LlmService {
     });
 
     try {
-      const completion = await this.client.chat.completions.create({
+      const result = await this.providerManager.generateCompletion(messages, {
         model: profile.llmConfig.model,
-        messages,
         temperature: profile.llmConfig.temperature,
-        max_tokens: profile.llmConfig.max_tokens,
+        maxTokens: profile.llmConfig.max_tokens,
       });
 
-      const responseContent = completion.choices[0]?.message?.content || '';
-      const tokensUsed = completion.usage?.total_tokens || 0;
+      const responseContent = result.content;
+      const tokensUsed = result.tokensUsed || 0;
       const duration = Date.now() - startTime;
 
       // Check for ignore marker
       const shouldIgnore = responseContent.includes(IGNORE_CONVERSATION_MARKER);
 
       // Apply speech pattern transformations
-      let finalContent = shouldIgnore
+      const finalContent = shouldIgnore
         ? ''
         : this.applySpechPatterns(responseContent, profile);
 
       logger.withMetadata({
         profile_id: profile.id,
-        model: profile.llmConfig.model,
+        model: result.model,
+        provider: result.provider,
         tokens_used: tokensUsed,
         duration_ms: duration,
         should_ignore: shouldIgnore,
@@ -102,7 +109,8 @@ export class LlmService {
         content: finalContent,
         shouldIgnore,
         tokensUsed,
-        model: profile.llmConfig.model,
+        model: result.model,
+        provider: result.provider,
       };
     } catch (error) {
       logger.withError(error).withMetadata({
@@ -191,9 +199,16 @@ export class LlmService {
   }
 
   /**
-   * Simple check if the OpenAI client is configured
+   * Check if any LLM provider is available
    */
   isConfigured(): boolean {
-    return !!this.client;
+    return this.providerManager.hasAvailableProvider();
+  }
+
+  /**
+   * Get the provider manager for advanced usage
+   */
+  getProviderManager(): LlmProviderManager {
+    return this.providerManager;
   }
 }

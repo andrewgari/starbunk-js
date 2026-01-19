@@ -16,6 +16,7 @@
     "lint:fix": "eslint --ext .ts src --fix"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@starbunk/shared": "*",
     "better-sqlite3": "^11.0.0",
     "discord.js": "^14.18.0",
@@ -32,4 +33,3 @@
     "vitest": "^4.0.17"
   }
 }
-
