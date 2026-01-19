@@ -8,7 +8,11 @@
 		".": "./dist/index.js",
 		"./*": "./dist/*.js",
 		"./observability/mixins": "./dist/observability/mixins/index.js",
-		"./observability/*": "./dist/observability/*.js"
+		"./observability/*": "./dist/observability/*.js",
+		"./services/llm": "./dist/services/llm/index.js",
+		"./services/llm/*": "./dist/services/llm/*.js",
+		"./services/vector": "./dist/services/vector/index.js",
+		"./services/vector/*": "./dist/services/vector/*.js"
 	},
 	"files": [
 		"dist/**/*",
