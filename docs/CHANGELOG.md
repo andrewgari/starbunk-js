@@ -1,3 +1,9 @@
+## [1.19.0](https://github.com/andrewgari/starbunk-js/compare/v1.18.3...v1.19.0) (2026-01-21)
+
+### Features
+
+* add force-all mode for manual workflow triggers ([#462](https://github.com/andrewgari/starbunk-js/issues/462)) ([e43f3e9](https://github.com/andrewgari/starbunk-js/commit/e43f3e9171a20e74007a86d63181f41a5d759fde))
+
 ## [1.18.0](https://github.com/andrewgari/starbunk-js/compare/v1.17.0...v1.18.0) (2026-01-19)
 
 ### Features
