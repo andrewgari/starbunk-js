@@ -8,10 +8,10 @@ const logger = logLayer.withPrefix('DiscordService');
 export class DiscordService implements DiscordService {
   private static instance: DiscordService | null = null;
 
-	private client: Client | null = null;
-	private webhookService: WebhookService | null = null;
+	protected client: Client | null = null;
+	protected webhookService: WebhookService | null = null;
 
-	private constructor() {
+	protected constructor() {
 		// Don't create client here - it will be set via setClient
 		logger.debug('DiscordService instance created');
 	}
