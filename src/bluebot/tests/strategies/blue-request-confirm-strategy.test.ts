@@ -1,13 +1,13 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { NiceStrategy } from '../../src/strategy/nice-strategy';
+import { RequestConfirmStrategy } from '../../src/strategy/blue-request-confirm-strategy';
 import { createMockMessage } from '../helpers/mock-message';
 import { Message } from 'discord.js';
 
-describe('NiceStrategy', () => {
-	let strategy: NiceStrategy;
+describe('RequestConfirmStrategy', () => {
+	let strategy: RequestConfirmStrategy;
 
 	beforeEach(() => {
-		strategy = new NiceStrategy();
+		strategy = new RequestConfirmStrategy();
 	});
 
   describe('getFriendFromMessage', () => {

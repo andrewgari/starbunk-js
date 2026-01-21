@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { DefaultStrategy } from '../../src/strategy/default-strategy';
+import { DefaultStrategy } from '../../src/strategy/blue-default-strategy';
 import { createMockMessage } from '../helpers/mock-message';
 import { Message } from 'discord.js';
 import { expectShouldRespond, testMultipleCases, expectResponse } from '../helpers/test-utils';

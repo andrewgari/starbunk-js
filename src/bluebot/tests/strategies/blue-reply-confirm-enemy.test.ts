@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { ConfirmEnemyStrategy, MURDER_RESPONSE } from '../../src/strategy/blue-reply-confirm-enemy';
+import { ConfirmEnemyStrategy, MURDER_RESPONSE } from '../../src/strategy/blue-reply-confirm-enemy-strategy';
 import { createMockMessage } from '../helpers/mock-message';
 import { Message } from 'discord.js';
 import { expectShouldRespond, expectShouldNotRespond, setupEnemyEnv } from '../helpers/test-utils';

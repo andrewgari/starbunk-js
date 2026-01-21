@@ -2,9 +2,9 @@ import { describe, test, expect, vi, beforeAll, afterAll } from 'vitest';
 import { processMessageByStrategy } from '../../src/strategy/strategy-router';
 import { createMockMessage } from '../helpers/mock-message';
 import { Message, TextChannel } from 'discord.js';
+import { DefaultStrategy } from '../../src/strategy/blue-default-strategy';
 import { BlueRequestStrategy } from '../../src/strategy/blue-request-strategy';
 import { BlueReplyStrategy } from '../../src/strategy/blue-reply-strategy';
-import { DefaultStrategy } from '../../src/strategy/default-strategy';
 
 describe('Strategy Router', () => {
 	const requestStrategy = new BlueRequestStrategy();

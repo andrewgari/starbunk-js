@@ -1,10 +1,10 @@
 import { Message } from 'discord.js';
 import { BlueStrategy } from '@/strategy/blue-strategy';
-import { NiceStrategy } from '@/strategy/blue-request-nice-strategy';
-import { RequestEnemyStrategy } from '@/strategy/blue-request-murder-strategy';
+import { RequestConfirmStrategy } from '@/strategy/blue-request-confirm-strategy';
+import { RequestConfirmEnemyStrategy } from '@/strategy/blue-request-confirm-enemy-strategy';
 
-const complimentStrategy = new NiceStrategy();
-const insultStrategy = new RequestEnemyStrategy();
+const complimentStrategy = new RequestConfirmStrategy();
+const insultStrategy = new RequestConfirmEnemyStrategy();
 
 export class BlueRequestStrategy implements BlueStrategy {
   shouldRespond(message: Message): Promise<boolean> {

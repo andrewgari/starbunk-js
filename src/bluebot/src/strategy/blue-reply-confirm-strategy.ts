@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
 import { BlueStrategy } from '@/strategy/blue-strategy';
 
-export class ConfirmStrategy implements BlueStrategy {
+export class ReplyConfirmStrategy implements BlueStrategy {
 	private confirmPhrases = [
     /blue/i,
     /blue?bot/i,

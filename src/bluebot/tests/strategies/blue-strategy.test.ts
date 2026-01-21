@@ -1,10 +1,9 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
-import { BlueReplyStrategy } from '../../src/strategy/blue-reply-strategy';
-import { createMockMessage } from '../helpers/mock-message';
+import { BlueReplyStrategy } from '../../src/strategy/blue-reply-strategy';import { createMockMessage } from '../helpers/mock-message';
 import { MURDER_RESPONSE } from '../../src/strategy/blue-reply-confirm-enemy-strategy';
 import { Message } from 'discord.js';
 
-describe('BlueReplyStrategy', () => {
+describe('BaseBlueStrategy', () => {
 	let strategy: BlueReplyStrategy;
 	const enemyUserId = '999999999999999999';
 	const friendUserId = '111111111111111111';
@@ -24,14 +23,14 @@ describe('BlueReplyStrategy', () => {
 
   describe('Message tracking', () => {
     test('should record the last time it asked if somebody said blue', async () => {
-      const message = createMockMessage('blue', friendUserId);
+      const message = createMockMessage({ content: 'blue', authorId: friendUserId });
       await strategy.shouldRespond(message as Message);
       await strategy.getResponse(message as Message);
       expect(strategy.lastBlueResponseTime).toBeInstanceOf(Date);
     });
 
     test('should clear the last blue response when somebody confirms that they said blue', async () => {
-      let message = createMockMessage('blue', friendUserId);
+      let message = createMockMessage({ content: 'blue', authorId: friendUserId });
       await strategy.shouldRespond(message as Message);
       await strategy.getResponse(message as Message);
       expect(strategy.lastBlueResponseTime).toBeInstanceOf(Date);
@@ -39,14 +38,14 @@ describe('BlueReplyStrategy', () => {
       // Advance time by 1 minute (within the 5-minute reply window)
       vi.advanceTimersByTime(60 * 1000);
 
-      message = createMockMessage('yes', friendUserId);
+      message = createMockMessage({ content: 'yes', authorId: friendUserId });
       await strategy.shouldRespond(message as Message);
       await strategy.getResponse(message as Message);
       expect(strategy.lastBlueResponseTime).toEqual(new Date(0));
     });
 
     test('should only murder once every 24 hours', async () => {
-      let message = createMockMessage('blue', enemyUserId);
+      let message = createMockMessage({ content: 'blue', authorId: enemyUserId });
       let triggered = await strategy.shouldRespond(message as Message);
       let response = await strategy.getResponse(message as Message);
       expect(strategy.lastBlueResponseTime).toBeInstanceOf(Date);
@@ -55,7 +54,7 @@ describe('BlueReplyStrategy', () => {
 
       // advance one minute
       vi.advanceTimersByTime(1 * 60 * 1000);
-      message = createMockMessage('fuck', enemyUserId);
+      message = createMockMessage({ content: 'fuck', authorId: enemyUserId });
       triggered = await strategy.shouldRespond(message as Message);
       response = await strategy.getResponse(message as Message);
       expect(strategy.lastMurderResponseTime).toBeInstanceOf(Date);
@@ -64,14 +63,14 @@ describe('BlueReplyStrategy', () => {
 
       // advance one minute
       vi.advanceTimersByTime(1 * 60 * 1000);
-      message = createMockMessage('fuck', enemyUserId);
+      message = createMockMessage({ content: 'fuck', authorId: enemyUserId });
       triggered = await strategy.shouldRespond(message as Message);
       // once it's said it's piece, it goes back to asking if they said blue
       expect(triggered).toBe(false);
 
       // advance 12 hours
       vi.advanceTimersByTime(12 * 60 * 60 * 1000);
-      message = createMockMessage('blue', enemyUserId);
+      message = createMockMessage({ content: 'blue', authorId: enemyUserId });
       triggered = await strategy.shouldRespond(message as Message);
       response = await strategy.getResponse(message as Message);
       // back to normal behavior
@@ -84,7 +83,7 @@ describe('BlueReplyStrategy', () => {
 
       // advance one minute
       vi.advanceTimersByTime(1 * 60 * 1000);
-      message = createMockMessage('fuck', enemyUserId);
+      message = createMockMessage({ content: 'fuck', authorId: enemyUserId });
       triggered = await strategy.shouldRespond(message as Message);
       response = await strategy.getResponse(message as Message);
       expect(triggered).toBe(true);
@@ -96,7 +95,7 @@ describe('BlueReplyStrategy', () => {
       // advance 24 hours
       vi.advanceTimersByTime(24 * 60 * 60 * 1000);
 
-      message = createMockMessage('blue', enemyUserId);
+      message = createMockMessage({ content: 'blue', authorId: enemyUserId });
       triggered = await strategy.shouldRespond(message as Message);
       response = await strategy.getResponse(message as Message);
       expect(response).not.toBe(MURDER_RESPONSE);
@@ -108,7 +107,7 @@ describe('BlueReplyStrategy', () => {
 
       // advance one minute
       vi.advanceTimersByTime(1 * 60 * 1000);
-      message = createMockMessage('fuck', enemyUserId);
+      message = createMockMessage({ content: 'fuck', authorId: enemyUserId });
       triggered = await strategy.shouldRespond(message as Message);
       response = await strategy.getResponse(message as Message);
       expect(strategy.lastMurderResponseTime).toBeInstanceOf(Date);

@@ -1,12 +1,12 @@
 import { describe, test, beforeEach } from 'vitest';
-import { ConfirmStrategy } from '../../src/strategy/confirm-strategy';
+import { ReplyConfirmStrategy } from '../../src/strategy/blue-reply-confirm-strategy';
 import { testMultipleCases } from '../helpers/test-utils';
 
 describe('ConfirmStrategy', () => {
-	let strategy = new ConfirmStrategy();
+	let strategy = new ReplyConfirmStrategy();
 
 	beforeEach(() => {
-		strategy = new ConfirmStrategy();
+		strategy = new ReplyConfirmStrategy();
 	});
 
 	test('should acknowledge when somebody confirms that they said blue', async () => {

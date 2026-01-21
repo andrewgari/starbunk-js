@@ -1,17 +1,17 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { NiceEnemyStrategy } from '../../src/strategy/nice-enemy-strategy';
+import { RequestConfirmEnemyStrategy } from '../../src/strategy/blue-request-confirm-enemy-strategy';
 import { createMockMessage } from '../helpers/mock-message';
 import { Message } from 'discord.js';
 import { setupEnemyEnv, setupDiscordService, expectResponse } from '../helpers/test-utils';
 
-describe('NiceEnemyStrategy', () => {
-	let strategy: NiceEnemyStrategy;
+describe('RequestEnemyStrategy', () => {
+	let strategy: RequestConfirmEnemyStrategy;
 	let cleanupEnv: () => void;
 	const enemyUserId = '999999999999999999';
 	const guildId = '999999999999999999';
 
 	beforeEach(() => {
-		strategy = new NiceEnemyStrategy();
+		strategy = new RequestConfirmEnemyStrategy();
 		cleanupEnv = setupEnemyEnv(enemyUserId, guildId);
 	});
 
