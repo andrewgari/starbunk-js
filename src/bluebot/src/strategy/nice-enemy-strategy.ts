@@ -1,25 +1,30 @@
 import { Message } from 'discord.js';
 import { NiceStrategy } from '@/strategy/nice-strategy';
+import { BlueBotDiscordService } from '@/discord/discord-service';
+import { matchesAnyName } from '@/utils/string-similarity';
 
 export class NiceEnemyStrategy extends NiceStrategy {
-  shouldRespond(message: Message): Promise<boolean> {
-		const match = message.content.match(this.niceRegex);
-		if (match) {
-			return Promise.resolve(true);
-		}
+  async shouldRespond(message: Message): Promise<boolean> {
+    const enemy = await BlueBotDiscordService.getInstance().getEnemy();
+		const subject = this.getRequestedName(message);
 
-		return Promise.resolve(false);
+    // Check if subject matches enemy's nickname or username using fuzzy matching
+    if (matchesAnyName(subject, [enemy.nickname, enemy.user.username])) {
+      return true;
+    }
+
+		return false;
   }
 
 	getResponse(message: Message): Promise<string> {
-    let userId = '';
-    const match = message.content.match(this.niceRegex);
-		if (match && match.length > 1) {
-			userId = match[1];
-		}
+		const userMentionRegex = /<@!?(\d+)>/;
+    const mentionMatch = message.content.match(userMentionRegex);
 
-    if (userId === process.env.BLUEBOT_ENEMY_USER_ID) {
-			return Promise.resolve('No way, they can suck my blue cane :unamused:');
+		if (mentionMatch && mentionMatch[1]) {
+			const userId = mentionMatch[1];
+			if (userId === process.env.BLUEBOT_ENEMY_USER_ID) {
+				return Promise.resolve('No way, they can suck my blue cane :unamused:');
+			}
 		}
 
 		return Promise.reject('');
