@@ -1,9 +1,9 @@
 import { Message, TextChannel } from 'discord.js';
-import { BlueReplyStrategy } from '@/strategy/blue-reply-strategy';
+import { BaseBlueStrategy } from '@/strategy/blue-strategy-impl';
 import { BlueRequestStrategy } from '@/strategy/blue-request-strategy';
 
 const blueRequestStrategy = new BlueRequestStrategy();
-const blueReplyStrategy = new BlueReplyStrategy();
+const blueReplyStrategy = new BaseBlueStrategy();
 
 const strategies = [
 	blueRequestStrategy,

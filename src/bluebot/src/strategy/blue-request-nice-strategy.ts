@@ -1,8 +1,8 @@
 import { Message } from 'discord.js';
-import { Strategy } from '@/strategy/strategy';
+import { BlueStrategy } from '@/strategy/blue-strategy';
 import { matchesAnyName } from '@/utils/string-similarity';
 
-export class NiceStrategy implements Strategy {
+export class NiceStrategy implements BlueStrategy {
 	protected niceRegex = /blue?bot,? say something nice about (?<n>.+$)/i;
 
 	protected isRequest(message: Message): boolean {

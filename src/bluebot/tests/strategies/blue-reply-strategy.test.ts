@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { BlueReplyStrategy } from '../../src/strategy/blue-reply-strategy';
 import { createMockMessage } from '../helpers/mock-message';
-import { MURDER_RESPONSE } from '../../src/strategy/confirm-enemy-strategy';
+import { MURDER_RESPONSE } from '../../src/strategy/blue-reply-confirm-enemy-strategy';
 import { Message } from 'discord.js';
 
 describe('BlueReplyStrategy', () => {

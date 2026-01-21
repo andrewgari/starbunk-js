@@ -1,8 +1,8 @@
 import { Message } from 'discord.js';
-import { Strategy } from '@/strategy/strategy';
-import { DefaultStrategy } from '@/strategy/default-strategy';
-import { ConfirmStrategy } from '@/strategy/confirm-strategy';
-import { ConfirmEnemyStrategy } from '@/strategy/confirm-enemy-strategy';
+import { BlueStrategy } from '@/strategy/blue-strategy';
+import { DefaultStrategy } from '@/strategy/blue-default-strategy';
+import { ConfirmStrategy } from '@/strategy/blue-reply-confirm-strategy';
+import { ConfirmEnemyStrategy } from '@/strategy/blue-reply-confirm-enemy-strategy';
 
 const defaultStrategy = new DefaultStrategy();
 const confirmStrategy = new ConfirmStrategy();
@@ -15,14 +15,14 @@ enum StrategyOptions {
 	ConfirmEnemy,
 }
 
-export class BlueReplyStrategy implements Strategy {
+export class BaseBlueStrategy implements BlueStrategy {
 	private lastBlueResponse = new Date(0);
 	private lastMurderResponse = new Date(0);
 	private readonly replyWindow = 5 * 60 * 1000; // 5 minutes in ms
 	private readonly murderWindow = 24 * 60 * 60 * 1000; // 24 hours in ms
 
 	private strategy: StrategyOptions = StrategyOptions.None;
-	private strat: Strategy | null = null;
+	private strat: BlueStrategy | null = null;
 
   get lastBlueResponseTime(): Date {
     return this.lastBlueResponse;

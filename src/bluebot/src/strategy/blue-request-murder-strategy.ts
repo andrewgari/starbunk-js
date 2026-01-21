@@ -1,9 +1,9 @@
 import { Message } from 'discord.js';
-import { NiceStrategy } from '@/strategy/nice-strategy';
+import { NiceStrategy as RequestStrategy } from '@/strategy/blue-request-nice-strategy';
 import { BlueBotDiscordService } from '@/discord/discord-service';
 import { matchesAnyName } from '@/utils/string-similarity';
 
-export class NiceEnemyStrategy extends NiceStrategy {
+export class RequestEnemyStrategy extends RequestStrategy {
   async shouldRespond(message: Message): Promise<boolean> {
     const enemy = await BlueBotDiscordService.getInstance().getEnemy();
 		const subject = this.getRequestedName(message);

@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
-import { Strategy } from '@/strategy/strategy';
+import { BlueStrategy } from '@/strategy/blue-strategy';
 
-export class DefaultStrategy implements Strategy {
+export class DefaultStrategy implements BlueStrategy {
 	private blueRegex = /\b(blue?|blue?bot|bl(o+)|azul|blau|bl(u+)|blew)\b/i;
 
 	shouldRespond(message: Message): Promise<boolean> {
