@@ -41,16 +41,70 @@ export const DEFAULT_TEST_MEMBERS: AdditionalGuildMember[] = [
 ];
 
 /**
+ * Options for creating a mock message
+ */
+export interface MockMessageOptions {
+	content: string;
+	authorId?: string;
+	isBot?: boolean;
+	guildId?: string;
+	nickname?: string;
+	additionalMembers?: AdditionalGuildMember[];
+	/** Message ID this message is replying to */
+	replyToMessageId?: string;
+	/** Custom timestamp for the message (defaults to Date.now()) */
+	timestamp?: number;
+}
+
+/**
  * Creates a mock Discord Message for testing
+ * @deprecated Use createMockMessage with MockMessageOptions object instead
  */
 export function createMockMessage(
 	content: string,
+	authorId?: string,
+	isBot?: boolean,
+	guildId?: string,
+	nickname?: string,
+	additionalMembers?: AdditionalGuildMember[],
+): Partial<Message>;
+
+/**
+ * Creates a mock Discord Message for testing with options object
+ */
+export function createMockMessage(options: MockMessageOptions): Partial<Message>;
+
+/**
+ * Implementation
+ */
+export function createMockMessage(
+	contentOrOptions: string | MockMessageOptions,
 	authorId: string = '111111111111111111',
 	isBot: boolean = false,
 	guildId: string = '999999999999999999',
 	nickname: string = 'TestNickname',
 	additionalMembers: AdditionalGuildMember[] = [],
 ): Partial<Message> {
+	// Handle both old and new API
+	let content: string;
+	let replyToMessageId: string | undefined;
+	let timestamp: number;
+
+	if (typeof contentOrOptions === 'string') {
+		// Old API: positional parameters
+		content = contentOrOptions;
+		timestamp = Date.now();
+	} else {
+		// New API: options object
+		content = contentOrOptions.content;
+		authorId = contentOrOptions.authorId ?? '111111111111111111';
+		isBot = contentOrOptions.isBot ?? false;
+		guildId = contentOrOptions.guildId ?? '999999999999999999';
+		nickname = contentOrOptions.nickname ?? 'TestNickname';
+		additionalMembers = contentOrOptions.additionalMembers ?? [];
+		replyToMessageId = contentOrOptions.replyToMessageId;
+		timestamp = contentOrOptions.timestamp ?? Date.now();
+	}
 	const mockUser = {
 		id: authorId,
 		bot: isBot,
@@ -144,9 +198,7 @@ export function createMockMessage(
 	// Make channel an instance of TextChannel for instanceof checks
 	Object.setPrototypeOf(mockChannel, TextChannel.prototype);
 
-	const timestamp = Date.now();
-
-	return {
+	const message = {
 		content,
 		author: mockUser as User,
 		guild: mockGuild as Guild,
@@ -156,4 +208,15 @@ export function createMockMessage(
 		createdTimestamp: timestamp,
 		createdAt: new Date(timestamp),
 	} as Partial<Message>;
+
+	// Add message reference if replying to another message
+	if (replyToMessageId) {
+		message.reference = {
+			messageId: replyToMessageId,
+			channelId: mockChannel.id,
+			guildId: guildId,
+		} as any;
+	}
+
+	return message;
 }
