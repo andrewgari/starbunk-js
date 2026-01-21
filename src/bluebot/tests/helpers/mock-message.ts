@@ -57,54 +57,17 @@ export interface MockMessageOptions {
 }
 
 /**
- * Creates a mock Discord Message for testing
- * @deprecated Use createMockMessage with MockMessageOptions object instead
- */
-export function createMockMessage(
-	content: string,
-	authorId?: string,
-	isBot?: boolean,
-	guildId?: string,
-	nickname?: string,
-	additionalMembers?: AdditionalGuildMember[],
-): Partial<Message>;
-
-/**
  * Creates a mock Discord Message for testing with options object
  */
-export function createMockMessage(options: MockMessageOptions): Partial<Message>;
-
-/**
- * Implementation
- */
-export function createMockMessage(
-	contentOrOptions: string | MockMessageOptions,
-	authorId: string = '111111111111111111',
-	isBot: boolean = false,
-	guildId: string = '999999999999999999',
-	nickname: string = 'TestNickname',
-	additionalMembers: AdditionalGuildMember[] = [],
-): Partial<Message> {
-	// Handle both old and new API
-	let content: string;
-	let replyToMessageId: string | undefined;
-	let timestamp: number;
-
-	if (typeof contentOrOptions === 'string') {
-		// Old API: positional parameters
-		content = contentOrOptions;
-		timestamp = Date.now();
-	} else {
-		// New API: options object
-		content = contentOrOptions.content;
-		authorId = contentOrOptions.authorId ?? '111111111111111111';
-		isBot = contentOrOptions.isBot ?? false;
-		guildId = contentOrOptions.guildId ?? '999999999999999999';
-		nickname = contentOrOptions.nickname ?? 'TestNickname';
-		additionalMembers = contentOrOptions.additionalMembers ?? [];
-		replyToMessageId = contentOrOptions.replyToMessageId;
-		timestamp = contentOrOptions.timestamp ?? Date.now();
-	}
+export function createMockMessage(options: MockMessageOptions): Partial<Message> {
+	const content = options.content;
+	const authorId = options.authorId ?? '111111111111111111';
+	const isBot = options.isBot ?? false;
+	const guildId = options.guildId ?? '999999999999999999';
+	const nickname = options.nickname ?? 'TestNickname';
+	const additionalMembers = options.additionalMembers ?? [];
+	const replyToMessageId = options.replyToMessageId;
+	const timestamp = options.timestamp ?? Date.now();
 	const mockUser = {
 		id: authorId,
 		bot: isBot,

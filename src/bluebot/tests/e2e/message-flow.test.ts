@@ -16,7 +16,7 @@ describe('E2E: Message Flow', () => {
 	 * This reduces duplication in tests that need to trigger the initial blue detection
 	 */
 	async function sendBlueMessage(authorId: string = friendUserId, content: string = 'blue') {
-		const message = createMockMessage(content, authorId);
+		const message = createMockMessage({ content, authorId });
 		const sendSpy = vi.fn();
 		(message.channel as TextChannel).send = sendSpy;
 
@@ -50,7 +50,7 @@ describe('E2E: Message Flow', () => {
 
 	describe('Basic blue detection', () => {
 		test('should respond to "blue" with default response', async () => {
-			const message = createMockMessage('I love blue', friendUserId);
+			const message = createMockMessage({ content: 'I love blue', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -65,7 +65,7 @@ describe('E2E: Message Flow', () => {
 
 			for (const word of variations) {
 				resetStrategies(); // Reset state between iterations
-				const message = createMockMessage(`I like ${word}`, friendUserId);
+				const message = createMockMessage({ content: `I like ${word}`, authorId: friendUserId });
 				const sendSpy = vi.fn();
 				(message.channel as TextChannel).send = sendSpy;
 
@@ -76,7 +76,7 @@ describe('E2E: Message Flow', () => {
 		});
 
 		test('should not respond to messages without blue', async () => {
-			const message = createMockMessage('Hello world', friendUserId);
+			const message = createMockMessage({ content: 'Hello world', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -88,7 +88,7 @@ describe('E2E: Message Flow', () => {
 
 	describe('Nice requests', () => {
 		test('should respond to "bluebot say something nice about" request', async () => {
-			const message = createMockMessage('bluebot say something nice about Alice', friendUserId);
+			const message = createMockMessage({ content: 'bluebot say something nice about Alice', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -100,7 +100,7 @@ describe('E2E: Message Flow', () => {
 		});
 
 		test('should handle "blubot" variation', async () => {
-			const message = createMockMessage('blubot say something nice about Bob', friendUserId);
+			const message = createMockMessage({ content: 'blubot say something nice about Bob', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -112,7 +112,7 @@ describe('E2E: Message Flow', () => {
 		});
 
 		test('should mention requester when asked about "me"', async () => {
-			const message = createMockMessage('bluebot say something nice about me', friendUserId);
+			const message = createMockMessage({ content: 'bluebot say something nice about me', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -127,7 +127,7 @@ describe('E2E: Message Flow', () => {
 
 		test('should mention user when given user mention', async () => {
 			const targetUserId = '222222222222222222'; // FriendUser from DEFAULT_TEST_MEMBERS
-			const message = createMockMessage(`bluebot say something nice about <@${targetUserId}>`, friendUserId);
+			const message = createMockMessage({ content: `bluebot say something nice about <@${targetUserId}>`, authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -141,7 +141,7 @@ describe('E2E: Message Flow', () => {
 		});
 
 		test('should find and mention user by username', async () => {
-			const message = createMockMessage('bluebot say something nice about FriendUser', friendUserId);
+			const message = createMockMessage({ content: 'bluebot say something nice about FriendUser', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -155,7 +155,7 @@ describe('E2E: Message Flow', () => {
 		});
 
 		test('should find and mention user by nickname', async () => {
-			const message = createMockMessage('bluebot say something nice about FriendNickname', friendUserId);
+			const message = createMockMessage({ content: 'bluebot say something nice about FriendNickname', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -169,7 +169,7 @@ describe('E2E: Message Flow', () => {
 		});
 
 		test('should use fuzzy matching for usernames', async () => {
-			const message = createMockMessage('bluebot say something nice about frienduser', friendUserId);
+			const message = createMockMessage({ content: 'bluebot say something nice about frienduser', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -182,7 +182,7 @@ describe('E2E: Message Flow', () => {
 		});
 
 		test('should handle case when user is not found', async () => {
-			const message = createMockMessage('bluebot say something nice about NonExistentUser', friendUserId);
+			const message = createMockMessage({ content: 'bluebot say something nice about NonExistentUser', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -207,7 +207,7 @@ describe('E2E: Message Flow', () => {
 
 		test('should give enemy user default response when saying "blue"', async () => {
 			// Enemy user saying "blue" should still get the default response
-			const message = createMockMessage('I love blue', enemyUserId);
+			const message = createMockMessage({ content: 'I love blue', authorId: enemyUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -222,7 +222,7 @@ describe('E2E: Message Flow', () => {
 		});
 
 		test('should give enemy user insult when requesting nice about themselves by mention', async () => {
-			const message = createMockMessage(`bluebot say something nice about <@${enemyUserId}>`, enemyUserId);
+			const message = createMockMessage({ content: `bluebot say something nice about <@${enemyUserId}>`, authorId: enemyUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -237,7 +237,7 @@ describe('E2E: Message Flow', () => {
 		});
 
 		test('should give enemy user insult when requesting nice about themselves by name', async () => {
-			const message = createMockMessage('bluebot say something nice about EnemyUser', enemyUserId);
+			const message = createMockMessage({ content: 'bluebot say something nice about EnemyUser', authorId: enemyUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -253,7 +253,7 @@ describe('E2E: Message Flow', () => {
 		});
 
 		test('should give enemy user insult when requesting nice about themselves by nickname', async () => {
-			const message = createMockMessage('bluebot say something nice about EnemyNickname', enemyUserId);
+			const message = createMockMessage({ content: 'bluebot say something nice about EnemyNickname', authorId: enemyUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -350,7 +350,7 @@ describe('E2E: Message Flow', () => {
 
 	describe('No response scenarios', () => {
 		test('should not respond to empty messages', async () => {
-			const message = createMockMessage('', friendUserId);
+			const message = createMockMessage({ content: '', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -368,7 +368,7 @@ describe('E2E: Message Flow', () => {
 			];
 
 			for (const content of unrelatedMessages) {
-				const message = createMockMessage(content, friendUserId);
+				const message = createMockMessage({ content, authorId: friendUserId });
 				const sendSpy = vi.fn();
 				(message.channel as TextChannel).send = sendSpy;
 
@@ -382,7 +382,7 @@ describe('E2E: Message Flow', () => {
 	describe('Strategy priority', () => {
 		test('nice request should take priority over blue detection', async () => {
 			// Message contains both "blue" and a nice request
-			const message = createMockMessage('bluebot say something nice about blue things', friendUserId);
+			const message = createMockMessage({ content: 'bluebot say something nice about blue things', authorId: friendUserId });
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
 
@@ -416,7 +416,7 @@ describe('E2E: Message Flow', () => {
 			resetStrategies();
 
 			// Nice request
-			const message2 = createMockMessage('bluebot say something nice about Charlie', friendUserId);
+			const message2 = createMockMessage({ content: 'bluebot say something nice about Charlie', authorId: friendUserId });
 			const sendSpy2 = vi.fn();
 			(message2.channel as TextChannel).send = sendSpy2;
 
@@ -426,7 +426,7 @@ describe('E2E: Message Flow', () => {
 			expect(response).toContain('Charlie');
 
 			// Unrelated message
-			const message3 = createMockMessage('hello world', friendUserId);
+			const message3 = createMockMessage({ content: 'hello world', authorId: friendUserId });
 			const sendSpy3 = vi.fn();
 			(message3.channel as TextChannel).send = sendSpy3;
 
@@ -441,7 +441,7 @@ describe('E2E: Message Flow', () => {
 
 			for (const word of cases) {
 				resetStrategies(); // Reset state between iterations
-				const message = createMockMessage(`I like ${word}`, friendUserId);
+				const message = createMockMessage({ content: `I like ${word}`, authorId: friendUserId });
 				const sendSpy = vi.fn();
 				(message.channel as TextChannel).send = sendSpy;
 
@@ -463,7 +463,7 @@ describe('E2E: Message Flow', () => {
 
 			for (const content of messages) {
 				resetStrategies(); // Reset state between iterations
-				const message = createMockMessage(content, friendUserId);
+				const message = createMockMessage({ content, authorId: friendUserId });
 				const sendSpy = vi.fn();
 				(message.channel as TextChannel).send = sendSpy;
 
@@ -481,7 +481,7 @@ describe('E2E: Message Flow', () => {
 			];
 
 			for (const content of messages) {
-				const message = createMockMessage(content, friendUserId);
+				const message = createMockMessage({ content, authorId: friendUserId });
 				const sendSpy = vi.fn();
 				(message.channel as TextChannel).send = sendSpy;
 

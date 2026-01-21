@@ -65,13 +65,13 @@ function printHelp() {
 
 async function processMessage(content: string): Promise<void> {
 	try {
-		const mockMessage = createMockMessage(
+		const mockMessage = createMockMessage({
 			content,
-			identity.userId,
-			false,
-			'999999999999999999',
-			identity.nickname
-		);
+			authorId: identity.userId,
+			isBot: false,
+			guildId: '999999999999999999',
+			nickname: identity.nickname
+		});
 
 		// Override username
 		if (mockMessage.author) {

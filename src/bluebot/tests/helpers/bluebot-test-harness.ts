@@ -47,7 +47,7 @@ export class BlueBotTestHarness {
     }
 
     // Create a fake Discord message
-    const message = createMockMessage(content, authorId);
+    const message = createMockMessage({ content, authorId });
 
     // Set up the BlueBotDiscordService with the mock client from the message
     // This ensures the service can fetch guild and member information
