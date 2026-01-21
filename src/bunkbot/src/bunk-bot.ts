@@ -7,7 +7,8 @@ import { DiscordService } from '@starbunk/shared/discord/discord-service';
 import { MetricsService } from '@starbunk/shared/observability/metrics-service';
 import { HealthServer } from '@starbunk/shared/observability/health-server';
 import { logger } from '@/observability/logger';
-import { initializeCommands } from '@/commands/command-registry';
+import { initializeCommands } from '@starbunk/shared/discord/command-registry';
+import { commands } from '@/commands';
 
 /**
  * Main BunkBot application class
@@ -39,7 +40,7 @@ export class BunkBot {
 		await this.discoverBots();
 
 		// Initialize commands
-		await initializeCommands(this.client);
+		await initializeCommands(this.client, commands);
 
 		// Set up event handlers
 		this.setupMessageHandler();

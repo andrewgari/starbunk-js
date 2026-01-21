@@ -1,4 +1,4 @@
-import { ResponseResolver } from "@/reply-bots/responses/response-resolver";
+import { ResponseResolver } from "@/reply-bots/resolvers/response-resolver";
 import { ReplyBot} from "@/reply-bots/models/reply-bot";
 import { Message } from 'discord.js';
 import { DiscordService } from "@starbunk/shared/discord/discord-service";

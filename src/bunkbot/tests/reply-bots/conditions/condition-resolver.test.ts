@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ConditionResolver } from '@/reply-bots/conditions/condition-resolver';
+import { ConditionResolver } from '@/reply-bots/resolvers/condition-resolver';
 import { Message } from 'discord.js';
 
 // Helper to create a mock message

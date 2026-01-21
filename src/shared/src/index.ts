@@ -22,6 +22,8 @@ export { IGNORE_CONVERSATION_MARKER, buildSelectiveObserverPrompt } from './type
 // Discord services
 export { DiscordService } from './discord/discord-service';
 export { WebhookService } from './discord/webhook-service';
+export { CommandRegistry, deployCommands, setupCommandHandlers, initializeCommands } from './discord/command-registry';
+export type { Command } from './discord/command-registry';
 
 // LLM services
 export type {

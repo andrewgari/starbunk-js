@@ -1,9 +1,9 @@
-import { StandardReplyBot } from "@/reply-bots/models/standard-reply-bot";
+import { StandardReplyBot } from "@/reply-bots/standard-reply-bot";
 import { Message } from "discord.js";
 import { botSchema } from "@/serialization/yaml-bot-parser";
 import { z } from "zod";
 import { getBotIdentityFromDiscord } from "@/reply-bots/identity/get-bot-identity";
-import { ConditionResolver } from "@/reply-bots/conditions/condition-resolver";
+import { ConditionResolver } from "@/reply-bots/resolvers/condition-resolver";
 import { logger } from "@/observability/logger";
 
 export class YamlBotFactory {
