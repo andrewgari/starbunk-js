@@ -1,39 +1,49 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { NiceEnemyStrategy } from '../../src/strategy/nice-enemy-strategy';
 import { createMockMessage } from '../helpers/mock-message';
-import { Message, Client } from 'discord.js';
-import { BlueBotDiscordService } from '../../src/discord/discord-service';
+import { Message } from 'discord.js';
+import { setupEnemyEnv, setupDiscordService, expectResponse } from '../helpers/test-utils';
 
 describe('NiceEnemyStrategy', () => {
 	let strategy: NiceEnemyStrategy;
+	let cleanupEnv: () => void;
+	const enemyUserId = '999999999999999999';
+	const guildId = '999999999999999999';
 
 	beforeEach(() => {
 		strategy = new NiceEnemyStrategy();
-    process.env.BLUEBOT_ENEMY_USER_ID = '999999999999999999';
-    process.env.GUILD_ID = '999999999999999999';
+		cleanupEnv = setupEnemyEnv(enemyUserId, guildId);
+	});
+
+	afterEach(() => {
+		cleanupEnv();
 	});
 
 	describe('Requests to say something nice about the enemy', () => {
     test('should recognize request for the enemy using nickname', async () => {
-      const content = 'Bluebot, say something nice about EnemyNickname';
-      const message = createMockMessage(content, '111111111111111111', false, '999999999999999999', 'AuthorNickname');
+      const message = createMockMessage({
+				content: 'Bluebot, say something nice about EnemyNickname',
+				authorId: '111111111111111111',
+				guildId,
+				nickname: 'AuthorNickname',
+			});
 
-      // Set up the BlueBotDiscordService with the mock client
-      const discordService = BlueBotDiscordService.getInstance();
-      discordService.setClient(message.client as Client);
+      setupDiscordService(message);
 
       expect(await strategy.shouldRespond(message as Message)).toBe(true);
     });
 
     test('should respond with insult when using user mention', async () => {
-      const content = 'Bluebot, say something nice about <@999999999999999999>';
-      const message = createMockMessage(content, '111111111111111111', false, '999999999999999999', 'AuthorNickname');
+      const message = createMockMessage({
+				content: 'Bluebot, say something nice about <@999999999999999999>',
+				authorId: '111111111111111111',
+				guildId,
+				nickname: 'AuthorNickname',
+			});
 
-      // Set up the BlueBotDiscordService with the mock client
-      const discordService = BlueBotDiscordService.getInstance();
-      discordService.setClient(message.client as Client);
+      setupDiscordService(message);
 
-      expect(await strategy.getResponse(message as Message)).toBe('No way, they can suck my blue cane :unamused:');
+      await expectResponse(strategy, message as Message, 'No way, they can suck my blue cane :unamused:');
     });
   });
 

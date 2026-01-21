@@ -1,14 +1,21 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { ConfirmEnemyStrategy, MURDER_RESPONSE } from '../../src/strategy/confirm-enemy-strategy';
 import { createMockMessage } from '../helpers/mock-message';
 import { Message } from 'discord.js';
+import { expectShouldRespond, expectShouldNotRespond, setupEnemyEnv } from '../helpers/test-utils';
 
 describe('ConfirmEnemyStrategy', () => {
   const enemyUserId = '9999999999';
+  const friendUserId = '123456789';
   const strategy = new ConfirmEnemyStrategy();
+  let cleanupEnv: () => void;
 
   beforeEach(() => {
-    process.env.BLUEBOT_ENEMY_USER_ID = enemyUserId;
+    cleanupEnv = setupEnemyEnv(enemyUserId);
+  });
+
+  afterEach(() => {
+    cleanupEnv();
   });
 
   describe('Enemy user replies', () => {
@@ -26,13 +33,11 @@ describe('ConfirmEnemyStrategy', () => {
         ['bots', 'I hate bots'],
         ['mom', 'your mom'],
       ])('should respond to "%s"', async (_keyword, messageContent) => {
-        const message = createMockMessage(messageContent, enemyUserId);
-        const result = await strategy.shouldRespond(message as Message);
-        expect(result).toBe(true);
+        await expectShouldRespond(strategy, messageContent, true, { authorId: enemyUserId });
       });
 
       test('should reply with the navy seal copypasta', async () => {
-        const message = createMockMessage('fuck this bot', enemyUserId);
+        const message = createMockMessage({ content: 'fuck this bot', authorId: enemyUserId });
         const shouldRespond = await strategy.shouldRespond(message as Message);
         expect(shouldRespond).toBe(true);
         const result = await strategy.getResponse();
@@ -42,38 +47,30 @@ describe('ConfirmEnemyStrategy', () => {
 
     describe('Non-hostile messages', () => {
       test('should not respond when message is long and does not contain mean words', async () => {
-        const message = createMockMessage(
+        await expectShouldNotRespond(
+          strategy,
           'This is a very long message that does not contain any mean words or confirmation phrases',
-          enemyUserId
+          { authorId: enemyUserId }
         );
-        const result = await strategy.shouldRespond(message as Message);
-        expect(result).toBe(false);
       });
 
       test('should not respond when message is neutral and long', async () => {
-        const message = createMockMessage(
+        await expectShouldNotRespond(
+          strategy,
           'I was thinking about the weather today and how nice it is',
-          enemyUserId
+          { authorId: enemyUserId }
         );
-        const result = await strategy.shouldRespond(message as Message);
-        expect(result).toBe(false);
       });
     });
   });
 
   describe('Non-enemy user replies', () => {
-    const friendUserId = '123456789';
-
     test('should not respond even with mean words', async () => {
-      const message = createMockMessage('fuck this bot', friendUserId);
-      const result = await strategy.shouldRespond(message as Message);
-      expect(result).toBe(false);
+      await expectShouldNotRespond(strategy, 'fuck this bot', { authorId: friendUserId });
     });
 
     test('should not respond even with confirmation phrases', async () => {
-      const message = createMockMessage('blue', friendUserId);
-      const result = await strategy.shouldRespond(message as Message);
-      expect(result).toBe(false);
+      await expectShouldNotRespond(strategy, 'blue', { authorId: friendUserId });
     });
   });
 });
