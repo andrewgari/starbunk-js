@@ -1,55 +1,79 @@
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { ConfirmEnemyStrategy } from '../../src/strategy/confirm-enemy-strategy';
+import { describe, test, expect, beforeEach } from 'vitest';
+import { ConfirmEnemyStrategy, MURDER_RESPONSE } from '../../src/strategy/confirm-enemy-strategy';
 import { createMockMessage } from '../helpers/mock-message';
 import { Message } from 'discord.js';
-import { vi } from 'vitest';
-import { beforeAll, afterAll } from 'vitest';
 
 describe('ConfirmEnemyStrategy', () => {
-	const strategy = new ConfirmEnemyStrategy();
-	const originalEnv = process.env.BLUEBOT_ENEMY_USER_ID;
-	const enemyUserId = '999999999999999999';
-	const friendUserId = '111111111111111111';
+  const enemyUserId = '9999999999';
+  const strategy = new ConfirmEnemyStrategy();
 
-	beforeAll(() => {
-		vi.useFakeTimers();
-	});
+  beforeEach(() => {
+    process.env.BLUEBOT_ENEMY_USER_ID = enemyUserId;
+  });
 
-	afterAll(() => {
-		vi.useRealTimers();
-	});
+  describe('a reply from the enemy user', () => {
+    describe('with mean/hostile words', () => {
+      test.each([
+        ['fuck', 'fuck'],
+        ['fucking', 'fucking annoying'],
+        ['hate', 'I hate this bot'],
+        ['die', 'just die already'],
+        ['kill', 'kill this bot'],
+        ['worst', 'worst bot ever'],
+        ['shit', 'this is shit'],
+        ['murder', 'murder the bot'],
+        ['bot', 'stupid bot'],
+        ['bots', 'I hate bots'],
+        ['mom', 'your mom'],
+      ])('should respond to "%s"', async (_keyword, messageContent) => {
+        const message = createMockMessage(messageContent, enemyUserId);
+        const result = await strategy.shouldRespond(message as Message);
+        expect(result).toBe(true);
+      });
 
-	beforeEach(() => {
-		process.env.BLUEBOT_ENEMY_USER_ID = enemyUserId;
-	});
-
-	afterEach(() => {
-		if (originalEnv !== undefined) {
-			process.env.BLUEBOT_ENEMY_USER_ID = originalEnv;
-		} else {
-			delete process.env.BLUEBOT_ENEMY_USER_ID;
-		}
-	});
-
-	describe('shouldRespond', () => {
-    let message: Partial<Message>;
-
-    beforeEach(async () => {
-      vi.setSystemTime(Date.now());
-      message = createMockMessage('murder', enemyUserId);
-      message.createdTimestamp = Date.now();
+      test('it should reply with the navy seal thing', async () => {
+        const message = createMockMessage('fuck this bot', enemyUserId);
+        const shouldRespond = await strategy.shouldRespond(message as Message);
+        expect(shouldRespond).toBe(true);
+        const result = await strategy.getResponse();
+        expect(result).toBe(MURDER_RESPONSE);
+      });
     });
 
-    test('blue message from enemy should respond', async () => {
-      message.author = { id: enemyUserId } as any;
-      const result = await strategy.shouldRespond(message as Message);
-      expect(result).toBe(true);
-    });
+    describe('should NOT respond', () => {
+      test('when message is long and does not contain mean words', async () => {
+        const message = createMockMessage(
+          'This is a very long message that does not contain any mean words or confirmation phrases',
+          enemyUserId
+        );
+        const result = await strategy.shouldRespond(message as Message);
+        expect(result).toBe(false);
+      });
 
-    test('blue message from friend should not respond', async () => {
-      message.author = { id: friendUserId } as any;
+      test('when message is neutral and long', async () => {
+        const message = createMockMessage(
+          'I was thinking about the weather today and how nice it is',
+          enemyUserId
+        );
+        const result = await strategy.shouldRespond(message as Message);
+        expect(result).toBe(false);
+      });
+    });
+  });
+
+  describe('a reply from a non-enemy user', () => {
+    const friendUserId = '123456789';
+
+    test('should NOT respond even with mean words', async () => {
+      const message = createMockMessage('fuck this bot', friendUserId);
       const result = await strategy.shouldRespond(message as Message);
       expect(result).toBe(false);
     });
-	});
+
+    test('should NOT respond even with confirmation phrases', async () => {
+      const message = createMockMessage('blue', friendUserId);
+      const result = await strategy.shouldRespond(message as Message);
+      expect(result).toBe(false);
+    });
+  });
 });
