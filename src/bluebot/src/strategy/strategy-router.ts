@@ -7,6 +7,22 @@ const strategies = [
 	new BlueReplyStrategy(),
 ];
 
+/**
+ * Get the response for a message without sending it to Discord
+ * Useful for testing and debugging
+ */
+export async function getResponseForMessage(message: Message): Promise<string | null> {
+  for (const strategy of strategies) {
+    if (await strategy.shouldRespond(message)) {
+      const response = await strategy.getResponse(message);
+      if (response) {
+        return response;
+      }
+    }
+  }
+  return null;
+}
+
 export async function processMessageByStrategy(message: Message): Promise<void> {
   for (const strategy of strategies) {
     if (await strategy.shouldRespond(message)) {

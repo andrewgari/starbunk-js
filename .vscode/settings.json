@@ -1,0 +1,5 @@
+{
+    "snyk.advanced.organization": "fd7ad408-57b5-4e14-b998-1a2af45973a1",
+    "snyk.advanced.autoSelectOrganization": true,
+    "vitest.disableWorkspaceWarning": true
+}

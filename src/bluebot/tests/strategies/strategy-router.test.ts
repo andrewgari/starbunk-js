@@ -1,7 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { processMessageByStrategy } from '../../src/strategy/strategy-router';
 import { createMockMessage } from '../helpers/mock-message';
-import { Message, TextChannel } from 'discord.js';
+import { Message, TextChannel, Client } from 'discord.js';
+import { BlueBot } from '../../src/blue-bot';
 
 describe('Strategy Router', () => {
 	const originalEnv = process.env.BLUEBOT_ENEMY_USER_ID;
@@ -30,6 +31,14 @@ describe('Strategy Router', () => {
 
 			expect(sendSpy).toHaveBeenCalledWith('Did somebody say Blu?');
 			expect(sendSpy).toHaveBeenCalledTimes(1);
+		});
+
+		test('BlueBot can be instantiated with a client', () => {
+			const mockClient = {} as Client;
+			const bluebot = new BlueBot(mockClient);
+			expect(bluebot).toBeDefined();
+
+      bluebot.start();
 		});
 
 		test('ConfirmStrategy responds to yes', async () => {
