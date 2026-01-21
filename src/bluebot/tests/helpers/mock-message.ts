@@ -1,50 +1,150 @@
 import { Message, User, TextChannel, Guild, GuildMember, Client } from 'discord.js';
 
 /**
+ * Additional guild member to include in the mock
+ */
+export interface AdditionalGuildMember {
+	userId: string;
+	nickname?: string;
+	username?: string;
+	isBot?: boolean;
+}
+
+/**
+ * Default test members that are always present in the mock guild
+ * These can be referenced in tests without needing to pass them explicitly
+ *
+ * Available members:
+ * - TestUser (ID: 123456789012345678, nickname: TestNickname)
+ * - EnemyUser (ID: 999999999999999999, nickname: EnemyNickname) - commonly used as BLUEBOT_ENEMY_USER_ID
+ * - FriendUser (ID: 222222222222222222, nickname: FriendNickname)
+ */
+export const DEFAULT_TEST_MEMBERS: AdditionalGuildMember[] = [
+	{
+		userId: '123456789012345678',
+		nickname: 'TestNickname',
+		username: 'TestUser',
+		isBot: false,
+	},
+	{
+		userId: '999999999999999999',
+		nickname: 'EnemyNickname',
+		username: 'EnemyUser',
+		isBot: false,
+	},
+	{
+		userId: '222222222222222222',
+		nickname: 'FriendNickname',
+		username: 'FriendUser',
+		isBot: false,
+	},
+];
+
+/**
  * Creates a mock Discord Message for testing
  */
 export function createMockMessage(
 	content: string,
-	authorId: string = '123456789012345678',
+	authorId: string = '111111111111111111',
 	isBot: boolean = false,
 	guildId: string = '999999999999999999',
-	nickname?: string,
+	nickname: string = 'TestNickname',
+	additionalMembers: AdditionalGuildMember[] = [],
 ): Partial<Message> {
-	const mockUser: Partial<User> = {
+	const mockUser = {
 		id: authorId,
 		bot: isBot,
 		username: 'TestUser',
-		discriminator: '0001',
-	};
+	} as Partial<User>;
 
-	const mockGuildMember: Partial<GuildMember> = {
+	const mockGuildMember = {
 		id: authorId,
-		nickname: nickname ?? 'TestNickname',
+		nickname: nickname,
 		user: mockUser as User,
-	};
+	} as Partial<GuildMember>;
 
-	const mockGuild: Partial<Guild> = {
+	// Create a map of guild members starting with the message author
+	const membersCache = new Map<string, GuildMember>([[authorId, mockGuildMember as GuildMember]]);
+
+	// Merge default test members with any additional members passed in
+	// Additional members take precedence over defaults (in case of duplicate IDs)
+	const allAdditionalMembers = [
+		...DEFAULT_TEST_MEMBERS,
+		...additionalMembers,
+	];
+
+	// Remove duplicates, keeping the last occurrence (which would be from additionalMembers)
+	const uniqueMembers = new Map<string, AdditionalGuildMember>();
+	for (const member of allAdditionalMembers) {
+		uniqueMembers.set(member.userId, member);
+	}
+
+	// Add all unique guild members
+	for (const additionalMember of uniqueMembers.values()) {
+		const additionalUser = {
+			id: additionalMember.userId,
+			bot: additionalMember.isBot ?? false,
+			username: additionalMember.username ?? 'AdditionalUser',
+		} as Partial<User>;
+
+		const additionalGuildMember = {
+			id: additionalMember.userId,
+			nickname: additionalMember.nickname ?? null,
+			user: additionalUser as User,
+		} as Partial<GuildMember>;
+
+		membersCache.set(additionalMember.userId, additionalGuildMember as GuildMember);
+	}
+
+	// Add Collection-like methods to the members cache
+	const membersCollection = Object.assign(membersCache, {
+		find: (predicate: (member: GuildMember) => boolean) => {
+			for (const member of membersCache.values()) {
+				if (predicate(member)) {
+					return member;
+				}
+			}
+			return undefined;
+		},
+	});
+
+	const mockGuild = {
 		id: guildId,
 		members: {
-			cache: new Map([[authorId, mockGuildMember as GuildMember]]),
+			cache: membersCollection,
+			fetch: async (userId: string) => {
+				const member = membersCache.get(userId);
+				if (!member) {
+					throw new Error(`Member ${userId} not found`);
+				}
+				return member;
+			},
 		} as any,
-	};
+	} as Partial<Guild>;
 
-	const mockClient: Partial<Client> = {
+	const mockClient = {
 		guilds: {
 			cache: new Map([[guildId, mockGuild as Guild]]),
+			fetch: async (id: string) => {
+				if (id === guildId) {
+					return mockGuild as Guild;
+				}
+				throw new Error(`Guild ${id} not found`);
+			},
 		} as any,
-	};
+	} as Partial<Client>;
 
-	const mockChannel: Partial<TextChannel> = {
+	const mockChannel = {
 		id: '888888888888888888',
 		send: async () => ({} as Message),
 		isTextBased: () => true,
 		type: 0, // GUILD_TEXT
-	};
+	} as unknown as Partial<TextChannel>;
 
 	// Make channel an instance of TextChannel for instanceof checks
 	Object.setPrototypeOf(mockChannel, TextChannel.prototype);
+
+	const timestamp = Date.now();
 
 	return {
 		content,
@@ -53,6 +153,7 @@ export function createMockMessage(
 		channel: mockChannel as TextChannel,
 		client: mockClient as Client,
 		member: mockGuildMember as GuildMember,
+		createdTimestamp: timestamp,
+		createdAt: new Date(timestamp),
 	} as Partial<Message>;
 }
-
