@@ -3,6 +3,7 @@ import { processMessageByStrategy } from '../../src/strategy/strategy-router';
 import { createMockMessage } from '../helpers/mock-message';
 import { Message, TextChannel, Client } from 'discord.js';
 import { BlueBot } from '../../src/blue-bot';
+import { EventEmitter } from 'events';
 
 describe('Strategy Router', () => {
 	const originalEnv = process.env.BLUEBOT_ENEMY_USER_ID;
@@ -33,12 +34,29 @@ describe('Strategy Router', () => {
 			expect(sendSpy).toHaveBeenCalledTimes(1);
 		});
 
-		test('BlueBot can be instantiated with a client', () => {
-			const mockClient = {} as Client;
+		test('BlueBot can be instantiated with a client and process messages', async () => {
+			// Create a mock client that can emit events
+			const mockClient = new EventEmitter() as unknown as Client;
 			const bluebot = new BlueBot(mockClient);
 			expect(bluebot).toBeDefined();
 
-      bluebot.start();
+			// Start the BlueBot to register the messageCreate listener
+			await bluebot.start();
+
+			// Create a fake Discord message
+			const message = createMockMessage('I love blue', friendUserId);
+			const sendSpy = vi.fn();
+			(message.channel as TextChannel).send = sendSpy;
+
+			// Emit a messageCreate event with the fake message
+			mockClient.emit('messageCreate', message);
+
+			// Wait for the message to be processed
+			await new Promise(resolve => setImmediate(resolve));
+
+			// Verify the message was processed by the BlueBot through the strategy router
+			expect(sendSpy).toHaveBeenCalledWith('Did somebody say Blu?');
+			expect(sendSpy).toHaveBeenCalledTimes(1);
 		});
 
 		test('ConfirmStrategy responds to yes', async () => {
