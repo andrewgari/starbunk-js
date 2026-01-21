@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ResponseResolver } from './response-resolver';
+import { ResponseResolver } from '@/reply-bots/responses/response-resolver';
 import { Message } from 'discord.js';
 
 // Helper to create a mock message
