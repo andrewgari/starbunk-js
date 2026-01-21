@@ -3,7 +3,7 @@ import * as path from 'path';
 import { Client, GatewayIntentBits } from 'discord.js';
 import { setupBunkBotLogging } from '@/observability/setup-logging';
 import { logger } from '@/observability/logger';
-import { BunkBot } from '@/bunkbot';
+import { BunkBot } from '@/bunk-bot';
 import { runSmokeTest } from '@starbunk/shared/health/smoke-test';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';

@@ -3,7 +3,7 @@ import { logger } from '@/observability/logger';
 
 // Import commands
 import pingCommand from '@/commands/ping';
-import clearwebhooksCommand from '@/commands/clearwebhooks';
+import clearwebhooksCommand from '@/commands/clear-webhooks';
 import botCommand from '@/commands/bot';
 
 // Command interface
