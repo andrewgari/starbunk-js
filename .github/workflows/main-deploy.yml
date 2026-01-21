@@ -54,6 +54,8 @@ jobs:
             - name: Detect changes
               id: changes
               uses: ./.github/actions/detect-changes
+              with:
+                  force-all: ${{ github.event_name == 'workflow_dispatch' }}
 
     # =============================================================================
     # GROUP 1: BUILD (compile TypeScript once, reuse for all containers)

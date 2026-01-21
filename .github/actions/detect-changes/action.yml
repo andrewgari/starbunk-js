@@ -6,6 +6,10 @@ inputs:
     description: 'Base reference for comparison (e.g., origin/main, HEAD~1)'
     required: false
     default: 'origin/main'
+  force-all:
+    description: 'Force all apps to be marked as changed (for manual builds)'
+    required: false
+    default: 'false'
 
 outputs:
   # High-level categories
@@ -55,124 +59,146 @@ runs:
 
         echo "🔍 Detecting changed files..."
 
-        # Determine the base reference for comparison
-        BASE_REF="${{ inputs.base-ref }}"
+        # Check if force-all mode is enabled
+        FORCE_ALL="${{ inputs.force-all }}"
+        if [ "$FORCE_ALL" = "true" ]; then
+          echo "🔨 Force-all mode enabled - marking all apps as changed"
 
-        # For PRs, compare against the base branch
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          BASE_REF="${{ github.event.pull_request.base.sha }}"
-          echo "📋 PR mode: comparing against base SHA ${BASE_REF}"
-        else
-          # For push events, compare against previous commit
-          if git rev-parse HEAD~1 >/dev/null 2>&1; then
-            BASE_REF="HEAD~1"
-            echo "📋 Push mode: comparing against HEAD~1"
-          else
-            # For initial commit, consider all files changed
-            echo "📋 Initial commit: considering all files changed"
-            BASE_REF=""
-          fi
-        fi
-
-        # Get changed files
-        if [ -z "$BASE_REF" ]; then
-          CHANGED_FILES=$(git ls-files)
-        else
-          CHANGED_FILES=$(git diff --name-only "$BASE_REF" HEAD)
-        fi
-
-        echo "Changed files:"
-        echo "$CHANGED_FILES"
-        echo ""
-
-        # Initialize all outputs to false
-        SOURCE_CHANGED=false
-        WORKFLOW_CHANGED=false
-        CONTAINER_CONFIG_CHANGED=false
-        SHARED_CHANGED=false
-        BUNKBOT_CHANGED=false
-        COVABOT_CHANGED=false
-        DJCOVA_CHANGED=false
-        BLUEBOT_CHANGED=false
-
-        # Detect high-level categories
-        if echo "$CHANGED_FILES" | grep -q '^src/'; then
+          # Set all flags to true and skip change detection
           SOURCE_CHANGED=true
-          echo "✅ Source files changed"
-        fi
-
-        if echo "$CHANGED_FILES" | grep -q '^\.github/workflows/'; then
-          WORKFLOW_CHANGED=true
-          echo "✅ Workflow files changed"
-        fi
-
-        if echo "$CHANGED_FILES" | grep -qE '(Dockerfile|docker-compose.*\.yml)'; then
+          WORKFLOW_CHANGED=false
           CONTAINER_CONFIG_CHANGED=true
-          echo "✅ Container configuration changed"
-        fi
-
-        if echo "$CHANGED_FILES" | grep -q '^src/shared/'; then
           SHARED_CHANGED=true
-          echo "✅ Shared code changed"
-        fi
-
-        # Detect per-app changes (source OR Dockerfile OR shared)
-        if echo "$CHANGED_FILES" | grep -qE '^src/bunkbot/'; then
           BUNKBOT_CHANGED=true
-          echo "✅ bunkbot changed"
-        elif [ "$SHARED_CHANGED" = "true" ]; then
-          BUNKBOT_CHANGED=true
-          echo "✅ bunkbot affected by shared changes"
-        fi
-
-        if echo "$CHANGED_FILES" | grep -qE '^src/covabot/'; then
           COVABOT_CHANGED=true
-          echo "✅ covabot changed"
-        elif [ "$SHARED_CHANGED" = "true" ]; then
-          COVABOT_CHANGED=true
-          echo "✅ covabot affected by shared changes"
-        fi
-
-        if echo "$CHANGED_FILES" | grep -qE '^src/djcova/'; then
           DJCOVA_CHANGED=true
-          echo "✅ djcova changed"
-        elif [ "$SHARED_CHANGED" = "true" ]; then
-          DJCOVA_CHANGED=true
-          echo "✅ djcova affected by shared changes"
-        fi
-
-        if echo "$CHANGED_FILES" | grep -qE '^src/bluebot/'; then
           BLUEBOT_CHANGED=true
-          echo "✅ bluebot changed"
-        elif [ "$SHARED_CHANGED" = "true" ]; then
-          BLUEBOT_CHANGED=true
-          echo "✅ bluebot affected by shared changes"
-        fi
-
-        # Build changed apps array for matrix
-        CHANGED_APPS="[]"
-        ANY_APP_CHANGED=false
-
-        if [ "$BUNKBOT_CHANGED" = "true" ] || [ "$COVABOT_CHANGED" = "true" ] || \
-           [ "$DJCOVA_CHANGED" = "true" ] || [ "$BLUEBOT_CHANGED" = "true" ]; then
           ANY_APP_CHANGED=true
+          CHANGED_APPS='["bunkbot", "covabot", "djcova", "bluebot"]'
 
-          # Build JSON array of changed apps
-          APPS=()
-          [ "$BUNKBOT_CHANGED" = "true" ] && APPS+=("bunkbot")
-          [ "$COVABOT_CHANGED" = "true" ] && APPS+=("covabot")
-          [ "$DJCOVA_CHANGED" = "true" ] && APPS+=("djcova")
-          [ "$BLUEBOT_CHANGED" = "true" ] && APPS+=("bluebot")
+          echo "✅ All apps marked as changed"
+        else
+          # Normal change detection logic
 
-          # Convert to JSON array
-          CHANGED_APPS="["
-          for i in "${!APPS[@]}"; do
-            [ $i -gt 0 ] && CHANGED_APPS+=","
-            CHANGED_APPS+="\"${APPS[$i]}\""
-          done
-          CHANGED_APPS+="]"
+          # Determine the base reference for comparison
+          BASE_REF="${{ inputs.base-ref }}"
 
-          echo "📦 Changed apps: $CHANGED_APPS"
+          # For PRs, compare against the base branch
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_REF="${{ github.event.pull_request.base.sha }}"
+            echo "📋 PR mode: comparing against base SHA ${BASE_REF}"
+          else
+            # For push events, compare against previous commit
+            if git rev-parse HEAD~1 >/dev/null 2>&1; then
+              BASE_REF="HEAD~1"
+              echo "📋 Push mode: comparing against HEAD~1"
+            else
+              # For initial commit, consider all files changed
+              echo "📋 Initial commit: considering all files changed"
+              BASE_REF=""
+            fi
+          fi
+
+          # Get changed files
+          if [ -z "$BASE_REF" ]; then
+            CHANGED_FILES=$(git ls-files)
+          else
+            CHANGED_FILES=$(git diff --name-only "$BASE_REF" HEAD)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo ""
+
+          # Initialize all outputs to false
+          SOURCE_CHANGED=false
+          WORKFLOW_CHANGED=false
+          CONTAINER_CONFIG_CHANGED=false
+          SHARED_CHANGED=false
+          BUNKBOT_CHANGED=false
+          COVABOT_CHANGED=false
+          DJCOVA_CHANGED=false
+          BLUEBOT_CHANGED=false
+
+          # Detect high-level categories
+          if echo "$CHANGED_FILES" | grep -q '^src/'; then
+            SOURCE_CHANGED=true
+            echo "✅ Source files changed"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q '^\.github/workflows/'; then
+            WORKFLOW_CHANGED=true
+            echo "✅ Workflow files changed"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -qE '(Dockerfile|docker-compose.*\.yml)'; then
+            CONTAINER_CONFIG_CHANGED=true
+            echo "✅ Container configuration changed"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q '^src/shared/'; then
+            SHARED_CHANGED=true
+            echo "✅ Shared code changed"
+          fi
+
+          # Detect per-app changes (source OR Dockerfile OR shared)
+          if echo "$CHANGED_FILES" | grep -qE '^src/bunkbot/'; then
+            BUNKBOT_CHANGED=true
+            echo "✅ bunkbot changed"
+          elif [ "$SHARED_CHANGED" = "true" ]; then
+            BUNKBOT_CHANGED=true
+            echo "✅ bunkbot affected by shared changes"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -qE '^src/covabot/'; then
+            COVABOT_CHANGED=true
+            echo "✅ covabot changed"
+          elif [ "$SHARED_CHANGED" = "true" ]; then
+            COVABOT_CHANGED=true
+            echo "✅ covabot affected by shared changes"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -qE '^src/djcova/'; then
+            DJCOVA_CHANGED=true
+            echo "✅ djcova changed"
+          elif [ "$SHARED_CHANGED" = "true" ]; then
+            DJCOVA_CHANGED=true
+            echo "✅ djcova affected by shared changes"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -qE '^src/bluebot/'; then
+            BLUEBOT_CHANGED=true
+            echo "✅ bluebot changed"
+          elif [ "$SHARED_CHANGED" = "true" ]; then
+            BLUEBOT_CHANGED=true
+            echo "✅ bluebot affected by shared changes"
+          fi
+
+          # Build changed apps array for matrix
+          CHANGED_APPS="[]"
+          ANY_APP_CHANGED=false
+
+          if [ "$BUNKBOT_CHANGED" = "true" ] || [ "$COVABOT_CHANGED" = "true" ] || \
+             [ "$DJCOVA_CHANGED" = "true" ] || [ "$BLUEBOT_CHANGED" = "true" ]; then
+            ANY_APP_CHANGED=true
+
+            # Build JSON array of changed apps
+            APPS=()
+            [ "$BUNKBOT_CHANGED" = "true" ] && APPS+=("bunkbot")
+            [ "$COVABOT_CHANGED" = "true" ] && APPS+=("covabot")
+            [ "$DJCOVA_CHANGED" = "true" ] && APPS+=("djcova")
+            [ "$BLUEBOT_CHANGED" = "true" ] && APPS+=("bluebot")
+
+            # Convert to JSON array
+            CHANGED_APPS="["
+            for i in "${!APPS[@]}"; do
+              [ $i -gt 0 ] && CHANGED_APPS+=","
+              CHANGED_APPS+="\"${APPS[$i]}\""
+            done
+            CHANGED_APPS+="]"
+
+            echo "📦 Changed apps: $CHANGED_APPS"
+          fi
         fi
 
         # Set outputs
