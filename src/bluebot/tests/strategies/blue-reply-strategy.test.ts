@@ -6,7 +6,6 @@ import { Message } from 'discord.js';
 
 describe('BlueReplyStrategy', () => {
 	let strategy: BlueReplyStrategy;
-	const originalEnv = process.env.BLUEBOT_ENEMY_USER_ID;
 	const enemyUserId = '999999999999999999';
 	const friendUserId = '111111111111111111';
 
