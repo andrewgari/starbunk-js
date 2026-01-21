@@ -11,8 +11,8 @@ describe('ConfirmEnemyStrategy', () => {
     process.env.BLUEBOT_ENEMY_USER_ID = enemyUserId;
   });
 
-  describe('a reply from the enemy user', () => {
-    describe('with mean/hostile words', () => {
+  describe('Enemy user replies', () => {
+    describe('Mean or hostile words', () => {
       test.each([
         ['fuck', 'fuck'],
         ['fucking', 'fucking annoying'],
@@ -31,7 +31,7 @@ describe('ConfirmEnemyStrategy', () => {
         expect(result).toBe(true);
       });
 
-      test('it should reply with the navy seal thing', async () => {
+      test('should reply with the navy seal copypasta', async () => {
         const message = createMockMessage('fuck this bot', enemyUserId);
         const shouldRespond = await strategy.shouldRespond(message as Message);
         expect(shouldRespond).toBe(true);
@@ -40,8 +40,8 @@ describe('ConfirmEnemyStrategy', () => {
       });
     });
 
-    describe('should NOT respond', () => {
-      test('when message is long and does not contain mean words', async () => {
+    describe('Non-hostile messages', () => {
+      test('should not respond when message is long and does not contain mean words', async () => {
         const message = createMockMessage(
           'This is a very long message that does not contain any mean words or confirmation phrases',
           enemyUserId
@@ -50,7 +50,7 @@ describe('ConfirmEnemyStrategy', () => {
         expect(result).toBe(false);
       });
 
-      test('when message is neutral and long', async () => {
+      test('should not respond when message is neutral and long', async () => {
         const message = createMockMessage(
           'I was thinking about the weather today and how nice it is',
           enemyUserId
@@ -61,16 +61,16 @@ describe('ConfirmEnemyStrategy', () => {
     });
   });
 
-  describe('a reply from a non-enemy user', () => {
+  describe('Non-enemy user replies', () => {
     const friendUserId = '123456789';
 
-    test('should NOT respond even with mean words', async () => {
+    test('should not respond even with mean words', async () => {
       const message = createMockMessage('fuck this bot', friendUserId);
       const result = await strategy.shouldRespond(message as Message);
       expect(result).toBe(false);
     });
 
-    test('should NOT respond even with confirmation phrases', async () => {
+    test('should not respond even with confirmation phrases', async () => {
       const message = createMockMessage('blue', friendUserId);
       const result = await strategy.shouldRespond(message as Message);
       expect(result).toBe(false);

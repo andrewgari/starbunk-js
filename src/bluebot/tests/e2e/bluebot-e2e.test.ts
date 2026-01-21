@@ -31,33 +31,33 @@ describe('BlueBot E2E Tests', () => {
     }
   });
 
-  describe('Basic Blue Detection', () => {
-    test('responds to "blue" message', async () => {
+  describe('Basic blue detection', () => {
+    test('should respond to "blue" message', async () => {
       const response = await harness.sendMessage('I love blue', friendUserId);
       expect(response).toBe('Did somebody say Blu?');
     });
 
-    test('responds to "blu" variation', async () => {
+    test('should respond to "blu" variation', async () => {
       const response = await harness.sendMessage('blu is great', friendUserId);
       expect(response).toBe('Did somebody say Blu?');
     });
 
-    test('does not respond to unrelated messages', async () => {
+    test('should not respond to unrelated messages', async () => {
       const response = await harness.sendMessage('Hello world', friendUserId);
       expect(response).toBeNull();
     });
   });
 
-  describe('Nice Requests', () => {
-    test('responds to "say something nice" request', async () => {
+  describe('Nice requests', () => {
+    test('should respond to "say something nice" request', async () => {
       const response = await harness.sendMessage('bluebot say something nice about Alice', friendUserId);
       expect(response).toBeTruthy();
       expect(response).toContain('Alice');
     });
   });
 
-  describe('Enemy User Handling', () => {
-    test('enemy user gets default response for "blue"', async () => {
+  describe('Enemy user handling', () => {
+    test('should give enemy user default response for "blue"', async () => {
       const response = await harness.sendMessage('I love blue', enemyUserId);
       expect(response).toBe('Did somebody say Blu?');
     });

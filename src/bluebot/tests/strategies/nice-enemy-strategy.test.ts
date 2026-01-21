@@ -13,8 +13,8 @@ describe('NiceEnemyStrategy', () => {
     process.env.GUILD_ID = '999999999999999999';
 	});
 
-	describe('how it responds to a request to say something nice about their enemy', () => {
-    test('that it understands that the request is for the enemy using nickname', async () => {
+	describe('Requests to say something nice about the enemy', () => {
+    test('should recognize request for the enemy using nickname', async () => {
       const content = 'Bluebot, say something nice about EnemyNickname';
       const message = createMockMessage(content, '111111111111111111', false, '999999999999999999', 'AuthorNickname');
 
@@ -25,7 +25,7 @@ describe('NiceEnemyStrategy', () => {
       expect(await strategy.shouldRespond(message as Message)).toBe(true);
     });
 
-    test('that it responds with the correct message when using user mention', async () => {
+    test('should respond with insult when using user mention', async () => {
       const content = 'Bluebot, say something nice about <@999999999999999999>';
       const message = createMockMessage(content, '111111111111111111', false, '999999999999999999', 'AuthorNickname');
 

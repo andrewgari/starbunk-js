@@ -48,7 +48,7 @@ describe('E2E: Message Flow', () => {
 		}
 	});
 
-	describe('Basic Blue Detection Flow', () => {
+	describe('Basic blue detection', () => {
 		test('should respond to "blue" with default response', async () => {
 			const message = createMockMessage('I love blue', friendUserId);
 			const sendSpy = vi.fn();
@@ -86,7 +86,7 @@ describe('E2E: Message Flow', () => {
 		});
 	});
 
-	describe('Nice Request Flow', () => {
+	describe('Nice requests', () => {
 		test('should respond to "bluebot say something nice about" request', async () => {
 			const message = createMockMessage('bluebot say something nice about Alice', friendUserId);
 			const sendSpy = vi.fn();
@@ -196,7 +196,7 @@ describe('E2E: Message Flow', () => {
 		});
 	});
 
-	describe('Enemy User Flow', () => {
+	describe('Enemy user interactions', () => {
 		beforeEach(() => {
 			vi.useFakeTimers();
 		});
@@ -205,7 +205,7 @@ describe('E2E: Message Flow', () => {
 			vi.useRealTimers();
 		});
 
-		test('enemy user saying "blue" gets default response', async () => {
+		test('should give enemy user default response when saying "blue"', async () => {
 			// Enemy user saying "blue" should still get the default response
 			const message = createMockMessage('I love blue', enemyUserId);
 			const sendSpy = vi.fn();
@@ -221,7 +221,7 @@ describe('E2E: Message Flow', () => {
 			expect(sendSpy).toHaveBeenCalledWith('Did somebody say Blu?');
 		});
 
-		test('enemy user requesting nice about themselves by mention gets insult', async () => {
+		test('should give enemy user insult when requesting nice about themselves by mention', async () => {
 			const message = createMockMessage(`bluebot say something nice about <@${enemyUserId}>`, enemyUserId);
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
@@ -236,7 +236,7 @@ describe('E2E: Message Flow', () => {
 			expect(sendSpy).toHaveBeenCalledWith('No way, they can suck my blue cane :unamused:');
 		});
 
-		test('enemy user requesting nice about themselves by name gets insult', async () => {
+		test('should give enemy user insult when requesting nice about themselves by name', async () => {
 			const message = createMockMessage('bluebot say something nice about EnemyUser', enemyUserId);
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
@@ -252,7 +252,7 @@ describe('E2E: Message Flow', () => {
 			expect(sendSpy).toHaveBeenCalledWith('No way, they can suck my blue cane :unamused:');
 		});
 
-		test('enemy user requesting nice about themselves by nickname gets insult', async () => {
+		test('should give enemy user insult when requesting nice about themselves by nickname', async () => {
 			const message = createMockMessage('bluebot say something nice about EnemyNickname', enemyUserId);
 			const sendSpy = vi.fn();
 			(message.channel as TextChannel).send = sendSpy;
@@ -268,7 +268,7 @@ describe('E2E: Message Flow', () => {
 			expect(sendSpy).toHaveBeenCalledWith('No way, they can suck my blue cane :unamused:');
 		});
 
-		test('enemy user saying mean words within reply window gets MURDER_RESPONSE', async () => {
+		test('should give enemy user MURDER_RESPONSE when saying mean words within reply window', async () => {
 			// First message: enemy says "blue"
 			const { message: message1 } = await sendBlueMessage(enemyUserId);
 
@@ -298,7 +298,7 @@ describe('E2E: Message Flow', () => {
 			expect(response).toContain('300 confirmed spells');
 		});
 
-		test('enemy user mean words should not trigger outside reply window', async () => {
+		test('should not trigger MURDER_RESPONSE for enemy user mean words outside reply window', async () => {
 			// First message: enemy says "blue"
 			const { message: message1 } = await sendBlueMessage(enemyUserId);
 
@@ -324,7 +324,7 @@ describe('E2E: Message Flow', () => {
 			expect(sendSpy2).not.toHaveBeenCalled();
 		});
 
-		test('non-enemy user saying mean words does not trigger MURDER_RESPONSE', async () => {
+		test('should not trigger MURDER_RESPONSE for non-enemy user saying mean words', async () => {
 			// First message: friend says "blue"
 			await sendBlueMessage(friendUserId);
 
@@ -348,7 +348,7 @@ describe('E2E: Message Flow', () => {
 		});
 	});
 
-	describe('No Response Scenarios', () => {
+	describe('No response scenarios', () => {
 		test('should not respond to empty messages', async () => {
 			const message = createMockMessage('', friendUserId);
 			const sendSpy = vi.fn();
@@ -379,7 +379,7 @@ describe('E2E: Message Flow', () => {
 		});
 	});
 
-	describe('Strategy Priority', () => {
+	describe('Strategy priority', () => {
 		test('nice request should take priority over blue detection', async () => {
 			// Message contains both "blue" and a nice request
 			const message = createMockMessage('bluebot say something nice about blue things', friendUserId);
@@ -396,7 +396,7 @@ describe('E2E: Message Flow', () => {
 		});
 	});
 
-	describe('Conversation Flows', () => {
+	describe('Conversation flows', () => {
 		test('should handle multiple blue messages in sequence', async () => {
 			// First message
 			await sendBlueMessage(friendUserId, 'I love blue');
@@ -435,7 +435,7 @@ describe('E2E: Message Flow', () => {
 		});
 	});
 
-	describe('Edge Cases', () => {
+	describe('Edge cases', () => {
 		test('should handle blue in different cases', async () => {
 			const cases = ['BLUE', 'Blue', 'BLuE', 'bLuE'];
 
@@ -493,7 +493,7 @@ describe('E2E: Message Flow', () => {
 		});
 	});
 
-	describe('Confirm Strategy (Reply Window)', () => {
+	describe('Confirm strategy (reply window)', () => {
 		beforeEach(() => {
 			vi.useFakeTimers();
 		});

@@ -12,7 +12,7 @@ describe('ConfirmStrategy', () => {
 		strategy = new ConfirmStrategy();
 	});
 
-	test('that it acknowledges when somebody confirms that they said blue', async () => {
+	test('should acknowledge when somebody confirms that they said blue', async () => {
 		const testCases = [
       'yes',
       'yep',

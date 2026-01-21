@@ -19,8 +19,8 @@ describe('Strategy Router', () => {
 		vi.useRealTimers();
 	});
 
-	describe('how we determine the strategy to use', () => {
-		test('that Requests take priority over Replies', async () => {
+	describe('Strategy priority', () => {
+		test('should prioritize requests over replies', async () => {
 			let message = createMockMessage('blue');
 			expect(await requestStrategy.shouldRespond(message as Message)).toBe(false);
 			expect(await replyStrategy.shouldRespond(message as Message)).toBe(true);
@@ -40,7 +40,7 @@ describe('Strategy Router', () => {
 			);
 		});
 
-    test('that Replies take priority over Defaults while in the time window', async () => {
+    test('should prioritize replies over defaults within the time window', async () => {
       const sendSpy = vi.fn();
 
       let message = createMockMessage('blue');

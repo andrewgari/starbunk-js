@@ -22,15 +22,15 @@ describe('BlueReplyStrategy', () => {
 		strategy = new BlueReplyStrategy();
 	});
 
-  describe('how it keeps track of messages its posted', () => {
-    test('that is records the last time it asked if somebody said blue', async () => {
+  describe('Message tracking', () => {
+    test('should record the last time it asked if somebody said blue', async () => {
       const message = createMockMessage('blue', friendUserId);
       await strategy.shouldRespond(message as Message);
       await strategy.getResponse(message as Message);
       expect(strategy.lastBlueResponseTime).toBeInstanceOf(Date);
     });
 
-    test('that is clears the last blue response when somebody confirms that they said blue', async () => {
+    test('should clear the last blue response when somebody confirms that they said blue', async () => {
       let message = createMockMessage('blue', friendUserId);
       await strategy.shouldRespond(message as Message);
       await strategy.getResponse(message as Message);
@@ -45,7 +45,7 @@ describe('BlueReplyStrategy', () => {
       expect(strategy.lastBlueResponseTime).toEqual(new Date(0));
     });
 
-    test('that it only murders once every 24 hours', async () => {
+    test('should only murder once every 24 hours', async () => {
       let message = createMockMessage('blue', enemyUserId);
       let triggered = await strategy.shouldRespond(message as Message);
       let response = await strategy.getResponse(message as Message);
