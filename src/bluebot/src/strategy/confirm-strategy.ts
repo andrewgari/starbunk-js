@@ -11,20 +11,25 @@ export class ConfirmStrategy implements Strategy {
 		/\bi did(n't| not)?\b/i,
 		/\byou got it\b/i,
 		/\bsure did\b/i,
-    /stupid/i,
+    /\bstupid\b/i,
 	];
 
 	async shouldRespond(message: Message): Promise<boolean> {
 		// Check if it's a reply to the bot
-		const isReplyToBot = message.reference?.messageId !== undefined;
+		if (message.reference?.messageId) {
+			return Promise.resolve(true);
+		}
 
 		// Confirmations are usually short
-		const isShortMessage = message.content.trim().split(/\s+/).length <= 5;
+		if (message.content.trim().split(/\s+/).length <= 5) {
+      return Promise.resolve(true);
+    }
 
-		const matchesPhrase = this.confirmPhrases.some(regex => regex.test(message.content));
+		if (this.confirmPhrases.some(regex => regex.test(message.content))) {
+			return Promise.resolve(true);
+		}
 
-		// Respond if it matches AND (is a reply OR is short)
-		return Promise.resolve(matchesPhrase && (isReplyToBot || isShortMessage));
+    return Promise.resolve(false);
 	}
 
 	async getResponse(): Promise<string> {
