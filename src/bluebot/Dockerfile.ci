@@ -19,7 +19,8 @@ ARG HEALTH_PORT=3000
 WORKDIR /app
 
 # Create user and install runtime dependencies in one layer
-RUN apk add --no-cache openssl dumb-init curl && \
+# better-sqlite3 needs python3, make, g++ for native compilation
+RUN apk add --no-cache openssl dumb-init curl python3 make g++ && \
     addgroup -g 1001 -S bluebot && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G bluebot bluebot
 
@@ -35,6 +36,9 @@ RUN --mount=type=cache,target=/root/.npm \
 # Copy pre-built artifacts from CI
 COPY --chown=bluebot:bluebot src/shared/dist ./src/shared/dist
 COPY --chown=bluebot:bluebot src/bluebot/dist ./src/bluebot/dist
+
+# Rebuild better-sqlite3 for the runtime environment
+RUN cd /app && npm rebuild better-sqlite3
 
 # Set default environment variables from build args
 ENV NODE_ENV=${NODE_ENV} \
