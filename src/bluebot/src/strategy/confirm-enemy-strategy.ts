@@ -13,7 +13,7 @@ export class ConfirmEnemyStrategy extends ConfirmStrategy {
 			return Promise.resolve(true);
 		}
 
-		return Promise.resolve(false);
+		return super.shouldRespond(message);
 	}
 
 	getResponse(): Promise<string> {
