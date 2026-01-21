@@ -2,10 +2,20 @@ import { Message, TextChannel } from 'discord.js';
 import { BlueReplyStrategy } from '@/strategy/blue-reply-strategy';
 import { BlueRequestStrategy } from '@/strategy/blue-request-strategy';
 
+const blueRequestStrategy = new BlueRequestStrategy();
+const blueReplyStrategy = new BlueReplyStrategy();
+
 const strategies = [
-	new BlueRequestStrategy(),
-	new BlueReplyStrategy(),
+	blueRequestStrategy,
+	blueReplyStrategy,
 ];
+
+/**
+ * Reset all strategy state - useful for testing
+ */
+export function resetStrategies(): void {
+	blueReplyStrategy.reset();
+}
 
 /**
  * Get the response for a message without sending it to Discord

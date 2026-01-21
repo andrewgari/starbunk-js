@@ -104,4 +104,12 @@ export class BlueReplyStrategy implements Strategy {
 	private clearLastMurderResponse() {
 		this.lastMurderResponse = new Date(0);
 	}
+
+	/**
+	 * Reset the strategy state - useful for testing
+	 */
+	public reset(): void {
+		this.clearLastBlueResponse();
+		this.clearLastMurderResponse();
+	}
 }

@@ -8,6 +8,13 @@ export class NiceEnemyStrategy extends NiceStrategy {
     const enemy = await BlueBotDiscordService.getInstance().getEnemy();
 		const subject = this.getRequestedName(message);
 
+    // Check if subject is a user mention matching the enemy
+    const userMentionRegex = /<@!?(\d+)>/;
+    const mentionMatch = subject?.match(userMentionRegex);
+    if (mentionMatch && mentionMatch[1] === process.env.BLUEBOT_ENEMY_USER_ID) {
+      return true;
+    }
+
     // Check if subject matches enemy's nickname or username using fuzzy matching
     if (matchesAnyName(subject, [enemy.nickname, enemy.user.username])) {
       return true;
@@ -16,15 +23,20 @@ export class NiceEnemyStrategy extends NiceStrategy {
 		return false;
   }
 
-	getResponse(message: Message): Promise<string> {
-		const userMentionRegex = /<@!?(\d+)>/;
-    const mentionMatch = message.content.match(userMentionRegex);
+	async getResponse(message: Message): Promise<string> {
+		const subject = this.getRequestedName(message);
 
-		if (mentionMatch && mentionMatch[1]) {
-			const userId = mentionMatch[1];
-			if (userId === process.env.BLUEBOT_ENEMY_USER_ID) {
-				return Promise.resolve('No way, they can suck my blue cane :unamused:');
-			}
+		// Check if subject is a user mention matching the enemy
+		const userMentionRegex = /<@!?(\d+)>/;
+    const mentionMatch = subject?.match(userMentionRegex);
+		if (mentionMatch && mentionMatch[1] === process.env.BLUEBOT_ENEMY_USER_ID) {
+			return Promise.resolve('No way, they can suck my blue cane :unamused:');
+		}
+
+		// Check if subject matches enemy's nickname or username using fuzzy matching
+		const enemy = await BlueBotDiscordService.getInstance().getEnemy();
+		if (matchesAnyName(subject, [enemy.nickname, enemy.user.username])) {
+			return Promise.resolve('No way, they can suck my blue cane :unamused:');
 		}
 
 		return Promise.reject('');
