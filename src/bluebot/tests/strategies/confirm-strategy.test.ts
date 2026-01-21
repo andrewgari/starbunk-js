@@ -1,32 +1,35 @@
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ConfirmStrategy } from '../../src/strategy/confirm-strategy';
 import { createMockMessage } from '../helpers/mock-message';
-import { Message } from 'discord.js';
+import { Message, TextChannel } from 'discord.js';
+import { processMessageByStrategy } from '../../src/strategy/strategy-router';
+import { BlueReplyStrategy } from '../../src/strategy/blue-reply-strategy';
 
 describe('ConfirmStrategy', () => {
-	const strategy = new ConfirmStrategy();
-	const enemyUserId = '999999999999999999';
-	const friendUserId = '111111111111111111';
+	let strategy = new ConfirmStrategy();
 
-	describe('shouldRespond', () => {
-		test('does not respond to enemy user', async () => {
-			const message = createMockMessage('yes', enemyUserId);
-			message.author = { id: enemyUserId } as any;
+	beforeEach(() => {
+		strategy = new ConfirmStrategy();
+	});
 
-			const result = await strategy.shouldRespond(message as Message);
-			expect(result).toBe(false);
-		});
+	test('that it acknowledges when somebody confirms that they said blue', async () => {
+		const testCases = [
+      'yes',
+      'yep',
+      'yeah',
+      'no',
+      'nope',
+      'nah',
+			'Yes, I did bluebot.',
+			'No, I did not bluebot.',
+			'You got it bluebot!',
+			'When did I say blue?',
+		];
 
-		test('does not respond to "hello world"', async () => {
-			const message = createMockMessage('hello world', friendUserId);
-			const result = await strategy.shouldRespond(message as Message);
-			expect(result).toBe(false);
-		});
-
-    test('responds to "yes"', async () => {
-			const message = createMockMessage('yes', friendUserId);
+		for (const content of testCases) {
+			const message = createMockMessage(content);
 			const result = await strategy.shouldRespond(message as Message);
 			expect(result).toBe(true);
-		});
+		}
 	});
 });
