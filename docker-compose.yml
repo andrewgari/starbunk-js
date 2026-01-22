@@ -5,9 +5,8 @@ services:
     image: ghcr.io/andrewgari/bunkbot:prod
     container_name: starbunk-bunkbot
     restart: unless-stopped
-    # Use absolute path so Watchtower can find tokens during auto-updates
     env_file:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/.env
+      - .env
     environment:
       - DISCORD_TOKEN=${BUNKBOT_TOKEN}
       - GUILD_ID=${GUILD_ID}
@@ -43,7 +42,7 @@ services:
     container_name: starbunk-djcova
     restart: unless-stopped
     env_file:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/.env
+      - .env
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
@@ -81,7 +80,7 @@ services:
     container_name: starbunk-covabot
     restart: unless-stopped
     env_file:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/.env
+      - .env
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=768
@@ -115,7 +114,7 @@ services:
     container_name: starbunk-bluebot
     restart: unless-stopped
     env_file:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/.env
+      - .env
     environment:
       - NODE_ENV=production
       - BLUEBOT_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
