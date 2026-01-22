@@ -176,11 +176,8 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
     volumes:
-      # Configuration directory (read-only)
-      - ./config/covabot:/app/config:ro
-      # Data directory for personality notes (read-write)
-      # Optional: Data directory path (default: ./data)
-      - ${HOST_WORKDIR}/covabot:/app/data
+      - ${HOST_WORKDIR}/config/covabot:/app/config:ro
+      - ${HOST_WORKDIR}/data/covabot:/app/data
     ports:
       # Optional: Web interface port (default: 7080)
       - "${COVABOT_WEB_PORT:-7080}:7080"
@@ -240,8 +237,8 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
     volumes:
       # Configuration directory (read-only)
-      - .${HOST_WORKDIR}/config/bluebot:/app/config:ro
-    # No host ports exposed - all observability via OTEL collector
+      - ${HOST_WORKDIR}/config/bluebot:/app/config:ro
+      - ${HOST_WORKDIR}/data/bluebot:/app/data
     networks:
       - starbunk-network
     logging:
@@ -298,104 +295,6 @@ services:
           memory: 512M
         reservations:
           memory: 256M
-
-  # Grafana Tempo - Distributed tracing backend
-  starbunk-tempo:
-    image: grafana/tempo:latest
-    container_name: starbunk-tempo
-    restart: unless-stopped
-    command: ["-config.file=/etc/tempo.yml"]
-    environment:
-      # Environment & Logging
-      - ENVIRONMENT=${ENVIRONMENT:-production}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-    volumes:
-      - ${HOST_WORKDIR}/config/tempo.yml:/etc/tempo.yml:ro
-      # Optional: Data directory path (default: ./data)
-      - ${HOST_WORKDIR}/data/tempo:/data/tempo
-    networks:
-      - starbunk-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    labels:
-      - com.starbunk.service=tempo
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
-
-  # Prometheus - Metrics storage and querying
-  starbunk-prometheus:
-    image: prom/prometheus:latest
-    container_name: starbunk-prometheus
-    restart: unless-stopped
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--web.enable-lifecycle'
-      - '--web.enable-admin-api'
-    environment:
-      # Environment & Logging
-      - ENVIRONMENT=${ENVIRONMENT:-production}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-    volumes:
-      - ${HOST_WORKDIR}/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ${HOST_WORKDIR}/data/prometheus:/prometheus    # Ports exposed only within Docker network (not to host)
-
-    networks:
-      - starbunk-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    labels:
-      - com.starbunk.service=prometheus
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
-
-  # Loki - Log aggregation system
-  starbunk-loki:
-    image: grafana/loki:latest
-    container_name: starbunk-loki
-    restart: unless-stopped
-    command: ["-config.file=/etc/loki/loki-config.yml"]
-    environment:
-      # Environment & Logging
-      - ENVIRONMENT=${ENVIRONMENT:-production}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-    volumes:
-      - ${HOST_WORKDIR}/config/loki.yml:/etc/loki/loki.yml:ro
-      - ${HOST_WORKDIR}/data/loki:/loki
-    networks:
-      - starbunk-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    labels:
-      - com.starbunk.service=loki
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
-
-
 
 # Note: Using host path mounts for Unraid compatibility
 # Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
