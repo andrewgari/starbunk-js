@@ -1,4 +1,4 @@
-import { ReplyBot } from "@/reply-bots/models/reply-bot";
+import { ReplyBot } from '@/reply-bots/models/reply-bot';
 import { Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
@@ -45,7 +45,7 @@ export class BotRegistry {
     return Array.from(this.bots.keys());
   }
 
-  public async processmessage(message: Message) {
+  public async processMessage(message: Message) {
     const startTime = Date.now();
     const metrics = getMetricsService();
     const stateManager = BotStateManager.getInstance();

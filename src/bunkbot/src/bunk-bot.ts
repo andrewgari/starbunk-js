@@ -86,7 +86,7 @@ export class BunkBot {
 				this.metricsService.trackMessageProcessed(message.guildId, message.channelId);
 			}
 
-			await this.botRegistry.processmessage(message);
+			await this.botRegistry.processMessage(message);
 		});
 	}
 

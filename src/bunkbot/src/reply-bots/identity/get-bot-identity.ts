@@ -2,11 +2,12 @@ import { BotIdentity } from '@/reply-bots/models/bot-identity';
 import { GetBotIdentityOptions } from '@/reply-bots/identity/get-identity-options';
 import { GuildMember } from 'discord.js';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
+import { logger } from '@/observability/logger';
 
 export async function getBotIdentityFromDiscord(options: GetBotIdentityOptions): Promise<BotIdentity> {
   const { userId, message, useRandomMember, fallbackName = 'BunkBot' } = options;
 
-  if(!message || !message.guild) {
+  if (!message || !message.guild) {
     throw new Error('Message and guild are required');
   }
 
@@ -15,7 +16,7 @@ export async function getBotIdentityFromDiscord(options: GetBotIdentityOptions):
   try {
     if (useRandomMember) {
       const members = await message.guild.members.fetch();
-      const humanMembers = members.filter(m => !m.user.bot)
+      const humanMembers = members.filter(m => !m.user.bot);
       member = humanMembers.random() || null;
     } else if (userId) {
       member = await DiscordService.getInstance().getMemberById(message.guild.id, userId);
@@ -32,7 +33,11 @@ export async function getBotIdentityFromDiscord(options: GetBotIdentityOptions):
     };
 
   } catch (error) {
-    console.error('Error fetching member:', error);
+    logger.withError(error).withMetadata({
+      user_id: userId,
+      use_random: useRandomMember,
+      guild_id: message.guild?.id,
+    }).error('Error fetching member for bot identity');
   }
 
   return {

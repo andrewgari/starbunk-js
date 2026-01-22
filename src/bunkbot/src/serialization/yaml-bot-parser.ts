@@ -1,6 +1,6 @@
-// apps/bunkbot/src/core/yaml-bot-parser.ts
 import { z } from 'zod';
 import * as yaml from 'js-yaml';
+import { logger } from '@/observability/logger';
 
 export const identitySchema = z.discriminatedUnion('type', [
   z.object({
@@ -45,7 +45,7 @@ export function parseYamlBots(yamlContent: string) {
     const data = yaml.load(yamlContent);
     return yamlSchema.parse(data);
   } catch (error) {
-    console.error('YAML validation error:', error);
+    logger.withError(error).error('YAML validation error');
     throw error;
   }
 }
