@@ -83,20 +83,18 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      # Observability Configuration
-      - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - METRICS_PORT=${METRICS_PORT:-3000}
       - HEALTH_PORT=${HEALTH_PORT:-3000}
-      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
-      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      # Metrics and health endpoint port
-      - "${BUNKBOT_METRICS_PORT:-9301}:3000"
+    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
@@ -132,21 +130,19 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      # Observability Configuration
-      - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - METRICS_PORT=${METRICS_PORT:-3000}
       - HEALTH_PORT=${HEALTH_PORT:-3000}
-      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
-      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
     volumes:
       # Unraid-compatible host path mounts
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
-    ports:
-      # Metrics and health endpoint port
-      - "${DJCOVA_METRICS_PORT:-9304}:3000"
+    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
@@ -194,21 +190,20 @@ services:
       - USE_DATABASE=${USE_DATABASE:-false}
       - COVABOT_DATA_DIR=/app/data
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
-      # Observability Configuration
-      - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - METRICS_PORT=${METRICS_PORT:-3000}
       - HEALTH_PORT=${HEALTH_PORT:-3000}
-      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
-      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
     volumes:
       # Unraid-compatible host path mount for CovaBot personality notes
       - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
     ports:
       - "${COVABOT_WEB_PORT:-7080}:7080"
-      # Metrics and health endpoint port
-      - "${COVABOT_METRICS_PORT:-9303}:3000"
+      # No metrics port exposed - all observability via OTEL collector
     depends_on:
       postgres:
         condition: service_healthy
@@ -255,17 +250,15 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      # Observability Configuration
-      - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - METRICS_PORT=${METRICS_PORT:-3000}
       - HEALTH_PORT=${HEALTH_PORT:-3000}
-      - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
-      - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
-    ports:
-      # Metrics and health endpoint port
-      - "${BLUEBOT_METRICS_PORT:-9302}:3000"
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    # No host ports exposed - all observability via OTEL collector
     depends_on:
       redis:
         condition: service_healthy
@@ -287,6 +280,137 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+
+  # OpenTelemetry Collector - Unified telemetry pipeline
+  starbunk-otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: starbunk-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ../../infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    # OTLP collector exposed to host for external access
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver (for bot services and host)
+      - "4318:4318"   # OTLP HTTP receiver (for bot services and host)
+    expose:
+      - "8888"        # Prometheus metrics (internal only)
+      - "8889"        # Prometheus exporter (internal only)
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=otel-collector
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=8888
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Grafana Tempo - Distributed tracing backend
+  starbunk-tempo:
+    image: grafana/tempo:latest
+    container_name: starbunk-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ../../infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
+      - ${UNRAID_APPDATA_PATH:-./data}/tempo:/tmp/tempo
+    # Ports exposed only within Docker network (not to host)
+    expose:
+      - "3200"        # Tempo HTTP API (for Grafana)
+      - "4317"        # OTLP gRPC receiver (for OTEL collector)
+      - "4318"        # OTLP HTTP receiver (for OTEL collector)
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=tempo
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Prometheus - Metrics storage and querying
+  starbunk-prometheus:
+    image: prom/prometheus:latest
+    container_name: starbunk-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ../../infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${UNRAID_APPDATA_PATH:-./data}/prometheus:/prometheus
+    # Ports exposed only within Docker network (not to host)
+    expose:
+      - "9090"        # Prometheus web UI and API (for Grafana and OTEL collector)
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Loki - Log aggregation system
+  starbunk-loki:
+    image: grafana/loki:latest
+    container_name: starbunk-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - ../../infrastructure/monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - ${UNRAID_APPDATA_PATH:-./data}/loki:/loki
+    # Ports exposed only within Docker network (not to host)
+    expose:
+      - "3100"        # Loki HTTP API (for Grafana and OTEL collector)
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=loki
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+
 
 # Note: Using host path mounts for Unraid compatibility
 # Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure

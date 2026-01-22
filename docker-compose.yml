@@ -6,22 +6,32 @@ services:
     build:
       context: .
       dockerfile: src/bunkbot/Dockerfile
-    image: ghcr.io/andrewgari/bunkbot:latest
+    image: ghcr.io/andrewgari/bunkbot:prod
     container_name: starbunk-bunkbot
     restart: unless-stopped
     env_file:
       - .env
     environment:
+      # Required: Discord bot token for BunkBot
       - DISCORD_TOKEN=${BUNKBOT_TOKEN}
+      # Required: Discord guild/server ID
       - GUILD_ID=${GUILD_ID}
       - BUNKBOT_BOTS_DIR=/app/config
+      # Optional: Internal metrics port (default: 3000)
       - METRICS_PORT=${METRICS_PORT:-3000}
+      # OpenTelemetry Configuration (all optional)
+      # Optional: OTEL collector hostname (default: otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      # Optional: OTEL collector HTTP port (default: 4318)
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      # Optional: Deployment environment (default: production)
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Optional: Logging level (default: info)
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Mount the bot configuration directory
       - ./config/bunkbot:/app/config:ro
-    ports:
-      # Metrics and health endpoint port
-      - "${BUNKBOT_METRICS_PORT:-9301}:3000"
+    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
@@ -47,28 +57,43 @@ services:
     build:
       context: .
       dockerfile: src/djcova/Dockerfile
-    image: ghcr.io/andrewgari/djcova:latest
+    image: ghcr.io/andrewgari/djcova:prod
     container_name: starbunk-djcova
     restart: unless-stopped
     env_file:
       - .env
     environment:
       - NODE_ENV=production
+      # Optional: Discord bot token (default: STARBUNK_TOKEN)
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
+      # Required: Discord application client ID
       - CLIENT_ID=${DJCOVA_CLIENT_ID}
+      # Optional: Enable debug mode (default: false)
       - DEBUG_MODE=${DEBUG_MODE:-false}
+      # Optional: Comma-separated testing server IDs (default: empty)
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      # Optional: Comma-separated testing channel IDs (default: empty)
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      # Optional: Health check port (default: 3000)
       - HEALTH_PORT=${HEALTH_PORT:-3000}
+      # OpenTelemetry Configuration (all optional)
+      # Optional: OTEL collector hostname (default: starbunk-otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
+      # Optional: OTEL collector HTTP port (default: 4318)
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      # Optional: Deployment environment (default: production)
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Optional: Logging level (default: info)
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Configuration directory (read-only)
       - ./config/djcova:/app/config:ro
       # Data directories (read-write)
+      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
+      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
-    ports:
-      # Metrics and health endpoint port
-      - "${DJCOVA_METRICS_PORT:-9304}:3000"
+    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
@@ -94,7 +119,7 @@ services:
     build:
       context: .
       dockerfile: src/covabot/Dockerfile
-    image: ghcr.io/andrewgari/covabot:latest
+    image: ghcr.io/andrewgari/covabot:prod
     container_name: starbunk-covabot
     restart: unless-stopped
     env_file:
@@ -102,40 +127,64 @@ services:
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=768
+      # Optional: Discord bot token (default: STARBUNK_TOKEN)
       - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
-      # LLM Configuration
+      # LLM Configuration (all optional)
+      # Optional: OpenAI API key (default: empty, disables OpenAI)
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Optional: Default OpenAI model (default: gpt-4o-mini)
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      # Optional: Ollama API URL (default: empty, disables Ollama)
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
+      # Optional: Default Ollama model (default: mistral:latest)
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-mistral:latest}
+      # Optional: Auto-pull missing Ollama models (default: true)
       - OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS:-true}
+      # Optional: Pull Ollama models on startup (default: true)
       - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
+      # Optional: Ollama model pull timeout in ms (default: 1200000 = 20min)
       - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
-      # Redis Configuration (Social Battery) - external endpoint
-      # Note: Use host.docker.internal to access services on the Docker host
+      # Redis Configuration (Social Battery) - all optional
+      # Optional: Redis hostname (default: host.docker.internal)
       - REDIS_HOST=${REDIS_HOST:-host.docker.internal}
+      # Optional: Redis port (default: 6379)
       - REDIS_PORT=${REDIS_PORT:-6379}
+      # Optional: Redis password (default: empty)
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      # Optional: Redis database number (default: 0)
       - REDIS_DB=${REDIS_DB:-0}
-      # Qdrant Configuration (Saliency/Interest Matching) - external endpoint
-      # Note: Use host.docker.internal to access services on the Docker host
+      # Qdrant Configuration (Saliency/Interest Matching) - all optional
+      # Optional: Qdrant URL (default: http://host.docker.internal:6333)
       - QDRANT_URL=${QDRANT_URL:-http://host.docker.internal:6333}
+      # Optional: Qdrant API key (default: empty)
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
       # Storage Configuration
       - COVABOT_DATA_DIR=/app/data
+      # Optional: CovaBot API key for web interface (default: empty)
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
-      # Debug/Testing
+      # Debug/Testing (optional)
+      # Optional: Enable debug mode (default: false)
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - HEALTH_PORT=3000
+      # OpenTelemetry Configuration (all optional)
+      # Optional: OTEL collector hostname (default: otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      # Optional: OTEL collector HTTP port (default: 4318)
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      # Optional: Deployment environment (default: production)
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Optional: Logging level (default: info)
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Configuration directory (read-only)
       - ./config/covabot:/app/config:ro
       # Data directory for personality notes (read-write)
+      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
     ports:
+      # Optional: Web interface port (default: 7080)
       - "${COVABOT_WEB_PORT:-7080}:7080"
-      # Metrics and health endpoint port
-      - "${COVABOT_METRICS_PORT:-9303}:3000"
+      # No metrics port exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     extra_hosts:
@@ -164,21 +213,29 @@ services:
     build:
       context: .
       dockerfile: src/bluebot/Dockerfile
-    image: ghcr.io/andrewgari/bluebot:latest
+    image: ghcr.io/andrewgari/bluebot:prod
     container_name: starbunk-bluebot
     restart: unless-stopped
     env_file:
       - .env
     environment:
       - NODE_ENV=production
+      # Optional: Discord bot token (default: STARBUNK_TOKEN)
       - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
       - HEALTH_PORT=3000
+      # OpenTelemetry Configuration (all optional)
+      # Optional: OTEL collector hostname (default: starbunk-otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
+      # Optional: OTEL collector HTTP port (default: 4318)
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      # Optional: Deployment environment (default: production)
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Optional: Logging level (default: info)
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Configuration directory (read-only)
       - ./config/bluebot:/app/config:ro
-    ports:
-      # Metrics and health endpoint port
-      - "${BLUEBOT_METRICS_PORT:-9302}:3000"
+    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
@@ -199,6 +256,132 @@ services:
         reservations:
           memory: 256M
 
+  # OpenTelemetry Collector - Unified telemetry pipeline
+  starbunk-otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: starbunk-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    # OTLP collector exposed to host for external access
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver (for bot services and host)
+      - "4318:4318"   # OTLP HTTP receiver (for bot services and host)
+    expose:
+      - "8888"        # Prometheus metrics (internal only)
+      - "8889"        # Prometheus exporter (internal only)
+    environment:
+      # Optional: Deployment environment (default: production)
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=otel-collector
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=8888
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Grafana Tempo - Distributed tracing backend
+  starbunk-tempo:
+    image: grafana/tempo:latest
+    container_name: starbunk-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
+      # Optional: Data directory path (default: ./data)
+      - ${UNRAID_APPDATA_PATH:-./data}/tempo:/tmp/tempo
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=tempo
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Prometheus - Metrics storage and querying
+  starbunk-prometheus:
+    image: prom/prometheus:latest
+    container_name: starbunk-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Optional: Data directory path (default: ./data)
+      - ${UNRAID_APPDATA_PATH:-./data}/prometheus:/prometheus    # Ports exposed only within Docker network (not to host)
+
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Loki - Log aggregation system
+  starbunk-loki:
+    image: grafana/loki:latest
+    container_name: starbunk-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - ./infrastructure/monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
+      # Optional: Data directory path (default: ./data)
+      - ${UNRAID_APPDATA_PATH:-./data}/loki:/loki
+    # Ports exposed only within Docker network (not to host)
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=loki
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+
+
 # Note: Using host path mounts for Unraid compatibility
 # Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
 # Default fallback to ./data/ for non-Unraid environments
@@ -209,4 +392,4 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.31.0.0/16
