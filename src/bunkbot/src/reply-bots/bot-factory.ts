@@ -1,11 +1,12 @@
-import { getBotIdentityFromDiscord } from "@/reply-bots/identity/get-bot-identity";
-import { botSchema } from "@/serialization/yaml-bot-parser";
-import { Message } from "discord.js";
-import { z } from "zod";
+import { getBotIdentityFromDiscord } from '@/reply-bots/identity/get-bot-identity';
+import { botSchema } from '@/serialization/yaml-bot-parser';
+import { Message } from 'discord.js';
+import { z } from 'zod';
+
 export class BotFactory {
   async resolveIdentity(config: z.infer<typeof botSchema>, message: Message) {
     const identity = config.identity;
-    if(!identity) {
+    if (!identity) {
       throw new Error('Identity config is required');
     }
 

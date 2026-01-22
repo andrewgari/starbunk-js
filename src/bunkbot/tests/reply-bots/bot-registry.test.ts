@@ -108,7 +108,7 @@ describe('BotRegistry', () => {
     });
   });
 
-  describe('processmessage', () => {
+  describe('processMessage', () => {
     it('should process message with all bots', async () => {
       const bot1 = createMockBot('bot-one');
       const bot2 = createMockBot('bot-two');
@@ -117,7 +117,7 @@ describe('BotRegistry', () => {
       registry.register(bot2);
 
       const message = createMockMessage(false);
-      await registry.processmessage(message as Message);
+      await registry.processMessage(message as Message);
 
       expect(bot1.handleMessage).toHaveBeenCalledWith(message);
       expect(bot2.handleMessage).toHaveBeenCalledWith(message);
@@ -128,7 +128,7 @@ describe('BotRegistry', () => {
       registry.register(bot);
 
       const botMessage = createMockMessage(true);
-      await registry.processmessage(botMessage as Message);
+      await registry.processMessage(botMessage as Message);
 
       expect(bot.handleMessage).not.toHaveBeenCalled();
     });
@@ -138,7 +138,7 @@ describe('BotRegistry', () => {
       registry.register(bot);
 
       const botMessage = createMockMessage(true);
-      await registry.processmessage(botMessage as Message);
+      await registry.processMessage(botMessage as Message);
 
       expect(bot.handleMessage).toHaveBeenCalledWith(botMessage);
     });
@@ -148,7 +148,7 @@ describe('BotRegistry', () => {
       registry.register(bot);
 
       const humanMessage = createMockMessage(false);
-      await registry.processmessage(humanMessage as Message);
+      await registry.processMessage(humanMessage as Message);
 
       expect(bot.handleMessage).not.toHaveBeenCalled();
     });
@@ -158,7 +158,7 @@ describe('BotRegistry', () => {
       registry.register(bot);
 
       const humanMessage = createMockMessage(false);
-      await registry.processmessage(humanMessage as Message);
+      await registry.processMessage(humanMessage as Message);
 
       expect(bot.handleMessage).toHaveBeenCalledWith(humanMessage);
     });
@@ -176,7 +176,7 @@ describe('BotRegistry', () => {
       const message = createMockMessage(false);
 
       // Should not throw
-      await expect(registry.processmessage(message as Message)).resolves.not.toThrow();
+      await expect(registry.processMessage(message as Message)).resolves.not.toThrow();
 
       // Bot2 should still be called
       expect(bot2.handleMessage).toHaveBeenCalled();

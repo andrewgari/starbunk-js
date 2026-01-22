@@ -1,4 +1,3 @@
-// apps/bunkbot/src/core/response-resolver.ts
 import { Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 

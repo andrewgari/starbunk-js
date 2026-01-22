@@ -1,10 +1,10 @@
-import { StandardReplyBot } from "@/reply-bots/models/standard-reply-bot";
-import { Message } from "discord.js";
-import { botSchema } from "@/serialization/yaml-bot-parser";
-import { z } from "zod";
-import { getBotIdentityFromDiscord } from "@/reply-bots/identity/get-bot-identity";
-import { ConditionResolver } from "@/reply-bots/conditions/condition-resolver";
-import { logger } from "@/observability/logger";
+import { StandardReplyBot } from '@/reply-bots/standard-reply-bot';
+import { Message } from 'discord.js';
+import { botSchema } from '@/serialization/yaml-bot-parser';
+import { z } from 'zod';
+import { getBotIdentityFromDiscord } from '@/reply-bots/identity/get-bot-identity';
+import { ConditionResolver } from '@/reply-bots/resolvers/condition-resolver';
+import { logger } from '@/observability/logger';
 
 export class YamlBotFactory {
   public createLiveBot(config: z.infer<typeof botSchema>): StandardReplyBot {
@@ -18,7 +18,7 @@ export class YamlBotFactory {
 
     const identityResolver = async (message: Message) => {
       const id = config.identity;
-      if(!id) {
+      if (!id) {
         logger.withMetadata({
           bot_name: config.name,
         }).error('Identity config is required but not provided');

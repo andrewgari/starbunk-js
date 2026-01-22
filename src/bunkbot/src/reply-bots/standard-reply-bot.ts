@@ -1,11 +1,11 @@
-import { ResponseResolver } from "@/reply-bots/responses/response-resolver";
-import { ReplyBot} from "@/reply-bots/models/reply-bot";
+import { ResponseResolver } from '@/reply-bots/resolvers/response-resolver';
+import { ReplyBot } from '@/reply-bots/models/reply-bot';
 import { Message } from 'discord.js';
-import { DiscordService } from "@starbunk/shared/discord/discord-service";
-import { BotIdentity } from "@/reply-bots/models/bot-identity";
-import { Trigger } from "@/reply-bots/conditions/trigger";
-import { logger } from "@/observability/logger";
-import { getMetricsService } from "@starbunk/shared/observability/metrics-service";
+import { DiscordService } from '@starbunk/shared/discord/discord-service';
+import { BotIdentity } from '@/reply-bots/models/bot-identity';
+import { Trigger } from '@/reply-bots/conditions/trigger';
+import { logger } from '@/observability/logger';
+import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 
 export class StandardReplyBot implements ReplyBot {
   constructor(

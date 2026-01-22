@@ -1,12 +1,15 @@
-import { Client, Interaction, AutocompleteInteraction, ChatInputCommandInteraction, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js';
-import { logger } from '@/observability/logger';
+import {
+	Client,
+	Interaction,
+	AutocompleteInteraction,
+	ChatInputCommandInteraction,
+	RESTPostAPIChatInputApplicationCommandsJSONBody,
+} from 'discord.js';
+import { logLayer as logger } from '../observability/log-layer';
 
-// Import commands
-import pingCommand from '@/commands/ping';
-import clearwebhooksCommand from '@/commands/clear-webhooks';
-import botCommand from '@/commands/bot';
-
-// Command interface
+/**
+ * Command interface for Discord slash commands
+ */
 export interface Command {
 	data: RESTPostAPIChatInputApplicationCommandsJSONBody;
 	execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
@@ -14,25 +17,32 @@ export interface Command {
 }
 
 /**
- * Registry of all available commands
+ * Generic registry for Discord slash commands
+ * Can be used by any bot to manage their commands
  */
-class CommandRegistry {
+export class CommandRegistry {
 	private commands: Map<string, Command>;
 
-	constructor() {
+	/**
+	 * Create a new command registry
+	 * @param commands - Array of commands to register
+	 */
+	constructor(commands: Command[]) {
 		this.commands = new Map<string, Command>();
-		this.registerCommands();
+		this.registerCommands(commands);
 	}
 
 	/**
-	 * Register all commands
+	 * Register commands in the registry
 	 */
-	private registerCommands() {
-		this.commands.set('ping', pingCommand);
-		this.commands.set('clearwebhooks', clearwebhooksCommand);
-		this.commands.set('bot', botCommand);
+	private registerCommands(commands: Command[]) {
+		for (const command of commands) {
+			this.commands.set(command.data.name, command);
+		}
 
-		logger.info(`Registered ${this.commands.size} commands: ${Array.from(this.commands.keys()).join(', ')}`);
+		logger.info(
+			`Registered ${this.commands.size} commands: ${Array.from(this.commands.keys()).join(', ')}`
+		);
 	}
 
 	/**
@@ -128,10 +138,12 @@ export function setupCommandHandlers(client: Client, registry: CommandRegistry):
 }
 
 /**
- * Initialize commands: register, deploy, and set up handlers
+ * Initialize commands: create registry, deploy, and set up handlers
+ * @param client - Discord client
+ * @param commands - Array of commands to register
  */
-export async function initializeCommands(client: Client): Promise<CommandRegistry> {
-	const registry = new CommandRegistry();
+export async function initializeCommands(client: Client, commands: Command[]): Promise<CommandRegistry> {
+	const registry = new CommandRegistry(commands);
 	await deployCommands(client, registry);
 	setupCommandHandlers(client, registry);
 	return registry;
