@@ -38,7 +38,7 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
     volumes:
-      - ${UNRAID_APPDATA_PATH}/config/bunkbot:/app/config:ro
+      - ${HOST_WORKDIR}/config/bunkbot:/app/config:ro
     networks:
       - starbunk-network
     logging:
@@ -93,11 +93,9 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
     volumes:
       # Configuration directory (read-only)
-      - ${UNRAID_APPDATA_PATH}/config/djcova:/app/config:ro
-      # Data directories (read-write)
-      - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
+      - ${HOST_WORKDIR}/config/djcova:/app/config:ro
       # Optional: Data directory path (default: ./data)
-      - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
+      - ${HOST_WORKDIR}/data/djcova:/data
     networks:
       - starbunk-network
     logging:
@@ -182,7 +180,7 @@ services:
       - ./config/covabot:/app/config:ro
       # Data directory for personality notes (read-write)
       # Optional: Data directory path (default: ./data)
-      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
+      - ${HOST_WORKDIR}/covabot:/app/data
     ports:
       # Optional: Web interface port (default: 7080)
       - "${COVABOT_WEB_PORT:-7080}:7080"
@@ -242,7 +240,7 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
     volumes:
       # Configuration directory (read-only)
-      - ./config/bluebot:/app/config:ro
+      - .${HOST_WORKDIR}/config/bluebot:/app/config:ro
     # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
@@ -271,7 +269,7 @@ services:
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
-      - ${UNRAID_APPDATA_PATH}/config/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+      - ${HOST_WORKDIR}/config/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
     # OTLP collector exposed to host for external access
     ports:
       - "14317:4317"   # OTLP gRPC receiver (for bot services and host)
@@ -312,9 +310,9 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - ./infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
+      - ${HOST_WORKDIR}/config/tempo.yml:/etc/tempo.yml:ro
       # Optional: Data directory path (default: ./data)
-      - ${UNRAID_APPDATA_PATH:-./data}/tempo:/tmp/tempo
+      - ${HOST_WORKDIR}/data/tempo:/data/tempo
     networks:
       - starbunk-network
     logging:
@@ -349,9 +347,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      # Optional: Data directory path (default: ./data)
-      - ${UNRAID_APPDATA_PATH}/config/prometheus:/prometheus    # Ports exposed only within Docker network (not to host)
+      - ${HOST_WORKDIR}/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${HOST_WORKDIR}/data/prometheus:/prometheus    # Ports exposed only within Docker network (not to host)
 
     networks:
       - starbunk-network
@@ -380,10 +377,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - ./infrastructure/monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
-      # Optional: Data directory path (default: ./data)
-      - ${UNRAID_APPDATA_PATH:-./data}/loki:/loki
-    # Ports exposed only within Docker network (not to host)
+      - ${HOST_WORKDIR}/config/loki.yml:/etc/loki/loki.yml:ro
+      - ${HOST_WORKDIR}/data/loki:/loki
     networks:
       - starbunk-network
     logging:
