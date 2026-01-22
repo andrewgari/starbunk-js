@@ -1,3 +1,9 @@
+## [1.21.1](https://github.com/andrewgari/starbunk-js/compare/v1.21.0...v1.21.1) (2026-01-22)
+
+### Bug Fixes
+
+* ensure logs reach OTEL collector and flush on shutdown ([#480](https://github.com/andrewgari/starbunk-js/issues/480)) ([a7c8ca7](https://github.com/andrewgari/starbunk-js/commit/a7c8ca77018a8b23ef10bd9f5faeecd8c9472612))
+
 ## [1.21.0](https://github.com/andrewgari/starbunk-js/compare/v1.20.0...v1.21.0) (2026-01-22)
 
 ### Features
