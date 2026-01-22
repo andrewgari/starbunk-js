@@ -94,9 +94,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      # Metrics and health endpoint port
-      - "${BUNKBOT_METRICS_PORT:-9301}:3000"
+    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
@@ -144,9 +142,7 @@ services:
       # Unraid-compatible host path mounts
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
-    ports:
-      # Metrics and health endpoint port
-      - "${DJCOVA_METRICS_PORT:-9304}:3000"
+    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
@@ -207,8 +203,7 @@ services:
       - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
     ports:
       - "${COVABOT_WEB_PORT:-7080}:7080"
-      # Metrics and health endpoint port
-      - "${COVABOT_METRICS_PORT:-9303}:3000"
+      # No metrics port exposed - all observability via OTEL collector
     depends_on:
       postgres:
         condition: service_healthy
@@ -263,9 +258,7 @@ services:
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
       - ENVIRONMENT=${ENVIRONMENT:-production}
-    ports:
-      # Metrics and health endpoint port
-      - "${BLUEBOT_METRICS_PORT:-9302}:3000"
+    # No host ports exposed - all observability via OTEL collector
     depends_on:
       redis:
         condition: service_healthy

@@ -24,9 +24,7 @@ services:
     volumes:
       # Mount the bot configuration directory
       - ./config/bunkbot:/app/config:ro
-    ports:
-      # Metrics and health endpoint port
-      - "${BUNKBOT_METRICS_PORT:-9301}:3000"
+    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
@@ -76,9 +74,7 @@ services:
       # Data directories (read-write)
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
-    ports:
-      # Metrics and health endpoint port
-      - "${DJCOVA_METRICS_PORT:-9304}:3000"
+    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
@@ -149,8 +145,7 @@ services:
       - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
     ports:
       - "${COVABOT_WEB_PORT:-7080}:7080"
-      # Metrics and health endpoint port
-      - "${COVABOT_METRICS_PORT:-9303}:3000"
+      # No metrics port exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     extra_hosts:
@@ -196,9 +191,7 @@ services:
     volumes:
       # Configuration directory (read-only)
       - ./config/bluebot:/app/config:ro
-    ports:
-      # Metrics and health endpoint port
-      - "${BLUEBOT_METRICS_PORT:-9302}:3000"
+    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
