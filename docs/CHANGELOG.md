@@ -1,3 +1,9 @@
+## [1.21.0](https://github.com/andrewgari/starbunk-js/compare/v1.20.0...v1.21.0) (2026-01-22)
+
+### Features
+
+* Add IP-based environment configuration for OTLP trace server ([#469](https://github.com/andrewgari/starbunk-js/issues/469)) ([5bffc30](https://github.com/andrewgari/starbunk-js/commit/5bffc3000ddeee0dd8501558ddd1bf6daf057311))
+
 ## [1.20.0](https://github.com/andrewgari/starbunk-js/compare/v1.19.2...v1.20.0) (2026-01-22)
 
 ### Features

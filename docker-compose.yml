@@ -90,9 +90,9 @@ services:
       - /mnt/user/appdata/starbunk-js/config/djcova:/app/config:ro
       # Data directories (read-write)
       # Optional: Data directory path (default: ./data)
-      - /mnt/user/appdata/starbunk-js/data/djcova/cache:/app/cache
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
       # Optional: Data directory path (default: ./data)
-      - /mnt/user/appdata/starbunk-js/data/djcova/temp:/tmp
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
     # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
@@ -180,7 +180,7 @@ services:
       - /mnt/user/appdata/starbunk-js/config/covabot:/app/config:ro
       # Data directory for personality notes (read-write)
       # Optional: Data directory path (default: ./data)
-      - /mnt/user/appdata/starbunk-js/data/covabot:/app/data
+      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
     ports:
       # Optional: Web interface port (default: 7080)
       - "${COVABOT_WEB_PORT:-7080}:7080"
@@ -234,7 +234,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Configuration directory (read-only)
-      - /mnt/user/appdata/starbunk-js/config/bluebot:/app/config:ro
+      - ./config/bluebot:/app/config:ro
     # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
@@ -263,7 +263,7 @@ services:
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
-      - /mnt/user/appdata/starbunk-js/infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+      - ./infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
     # OTLP collector exposed to host for external access
     ports:
       - "4317:4317"   # OTLP gRPC receiver (for bot services and host)
@@ -298,12 +298,11 @@ services:
     image: grafana/tempo:latest
     container_name: starbunk-tempo
     restart: unless-stopped
-    user: "${UID:-1000}:${GID:-1000}"
     command: ["-config.file=/etc/tempo.yml"]
     volumes:
-      - /mnt/user/appdata/starbunk-js/infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
+      - ./infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
       # Optional: Data directory path (default: ./data)
-      - /mnt/user/appdata/starbunk-js/data/tempo:/tmp/tempo
+      - ${UNRAID_APPDATA_PATH:-./data}/tempo:/tmp/tempo
     networks:
       - starbunk-network
     logging:
@@ -325,7 +324,6 @@ services:
     image: prom/prometheus:latest
     container_name: starbunk-prometheus
     restart: unless-stopped
-    user: "${UID:-1000}:${GID:-1000}"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -335,9 +333,9 @@ services:
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
     volumes:
-      - /mnt/user/appdata/starbunk-js/infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       # Optional: Data directory path (default: ./data)
-      - /mnt/user/appdata/starbunk-js/data/prometheus:/prometheus    # Ports exposed only within Docker network (not to host)
+      - ${UNRAID_APPDATA_PATH:-./data}/prometheus:/prometheus    # Ports exposed only within Docker network (not to host)
 
     networks:
       - starbunk-network
@@ -360,12 +358,11 @@ services:
     image: grafana/loki:latest
     container_name: starbunk-loki
     restart: unless-stopped
-    user: "${UID:-1000}:${GID:-1000}"
     command: ["-config.file=/etc/loki/loki-config.yml"]
     volumes:
-      - /mnt/user/appdata/starbunk-js/infrastructure/monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - ./infrastructure/monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
       # Optional: Data directory path (default: ./data)
-      - /mnt/user/appdata/starbunk-js/data/loki:/loki
+      - ${UNRAID_APPDATA_PATH:-./data}/loki:/loki
     # Ports exposed only within Docker network (not to host)
     networks:
       - starbunk-network
