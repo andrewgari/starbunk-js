@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 ## [1.21.0](https://github.com/andrewgari/starbunk-js/compare/v1.20.0...v1.21.0) (2026-01-22)
 
 ### Features
@@ -12,7 +10,6 @@
 
 * **bluebot:** Add comprehensive logging and metrics matching BunkBot ([#468](https://github.com/andrewgari/starbunk-js/issues/468)) ([9a71965](https://github.com/andrewgari/starbunk-js/commit/9a71965ad7a3fe03cf37beae6fcc7244e0bd7ad1))
 
->>>>>>> origin/main
 ## [1.19.0](https://github.com/andrewgari/starbunk-js/compare/v1.18.3...v1.19.0) (2026-01-21)
 
 ### Features
