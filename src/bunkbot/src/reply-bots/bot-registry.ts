@@ -2,6 +2,7 @@ import { ReplyBot } from '@/reply-bots/models/reply-bot';
 import { Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
+import { getTraceService } from '@starbunk/shared/observability/trace-service';
 import { BotStateManager } from '@/reply-bots/services/bot-state-manager';
 
 export class BotRegistry {
@@ -48,7 +49,16 @@ export class BotRegistry {
   public async processMessage(message: Message) {
     const startTime = Date.now();
     const metrics = getMetricsService();
+    const tracing = getTraceService('bunkbot');
     const stateManager = BotStateManager.getInstance();
+
+    // Start root span for message processing
+    const messageSpan = tracing.startMessageProcessing(
+      message.id,
+      message.guildId || 'dm',
+      message.channelId,
+      message.author.id
+    );
 
     // Extract comprehensive message context
     const messageContext = {
@@ -68,6 +78,10 @@ export class BotRegistry {
       sticker_count: message.stickers.size,
     };
 
+    // Get trace context for logging
+    const traceId = tracing.getTraceId(messageSpan);
+    const spanId = tracing.getSpanId(messageSpan);
+
     logger.withMetadata({
       message_id: message.id,
       author_id: message.author.id,
@@ -78,6 +92,8 @@ export class BotRegistry {
       guild_id: message.guildId,
       content_length: message.content.length,
       total_bots: this.bots.size,
+      trace_id: traceId,
+      span_id: spanId,
       timestamp: message.createdAt.toISOString(),
       ...messageContext,
     }).debug('Processing message');
@@ -131,6 +147,15 @@ export class BotRegistry {
     }
 
     const duration = Date.now() - startTime;
+
+    // End message processing span
+    tracing.endSpanSuccess(messageSpan, {
+      'message.bots_processed': botsProcessed,
+      'message.bots_skipped': botsSkipped,
+      'message.total_bots': this.bots.size,
+      'message.processing_duration_ms': duration,
+    });
+
     logger.withMetadata({
       message_id: message.id,
       author_id: message.author.id,
@@ -143,6 +168,8 @@ export class BotRegistry {
       total_bots: this.bots.size,
       duration_ms: duration,
       timestamp: new Date().toISOString(),
+      trace_id: traceId,
+      span_id: spanId,
     }).debug('Message processing complete');
   }
 }
