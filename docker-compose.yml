@@ -17,10 +17,12 @@ services:
       - BUNKBOT_BOTS_DIR=/app/config
       - METRICS_PORT=${METRICS_PORT:-3000}
       # OpenTelemetry Configuration
-      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-starbunk-otel-collector}
-      - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
-      - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
-      - ENABLE_TRACING=${ENABLE_TRACING:-true}
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - OTEL_COLLECTOR_GRPC_PORT=${OTEL_COLLECTOR_GRPC_PORT:-4317}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Mount the bot configuration directory
       - ./config/bunkbot:/app/config:ro
@@ -140,10 +142,12 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - HEALTH_PORT=3000
       # OpenTelemetry Configuration
-      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-starbunk-otel-collector}
-      - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
-      - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
-      - ENABLE_TRACING=${ENABLE_TRACING:-true}
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - OTEL_COLLECTOR_GRPC_PORT=${OTEL_COLLECTOR_GRPC_PORT:-4317}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Configuration directory (read-only)
       - ./config/covabot:/app/config:ro
