@@ -24,7 +24,7 @@ export class TraceService {
 			const traceExporter =
 				exporterType === 'otlp'
 					? new OTLPTraceExporter({
-							url: process.env.OTLP_ENDPOINT || 'http://localhost:4318/v1/traces',
+							url: this.getOtlpTraceUrl(),
 						})
 					: new ConsoleSpanExporter();
 
@@ -44,6 +44,27 @@ export class TraceService {
 
 		// Get tracer instance
 		this.tracer = trace.getTracer(serviceName, serviceVersion);
+	}
+
+	/**
+	 * Get the OTLP trace endpoint URL
+	 * Priority: OTLP_ENDPOINT (full URL) > OTEL_COLLECTOR_IP (IP only) > default localhost
+	 */
+	private getOtlpTraceUrl(): string {
+		// If full endpoint URL is provided, use it (backward compatibility)
+		if (process.env.OTLP_ENDPOINT) {
+			return process.env.OTLP_ENDPOINT;
+		}
+
+		// If collector IP is provided, construct the URL
+		if (process.env.OTEL_COLLECTOR_IP) {
+			const ip = process.env.OTEL_COLLECTOR_IP;
+			const port = process.env.OTEL_COLLECTOR_PORT || '4318';
+			return `http://${ip}:${port}/v1/traces`;
+		}
+
+		// Default to localhost
+		return 'http://localhost:4318/v1/traces';
 	}
 
 	/**
