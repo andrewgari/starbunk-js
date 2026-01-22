@@ -140,10 +140,11 @@ export class BunkBot {
 			logger.info('Discord client destroyed');
 
 			logger.info('Flushing observability data...');
-			await shutdownObservability('bunkbot');
-			logger.info('Observability data flushed');
+			await shutdownObservability(process.env.SERVICE_NAME || 'bunkbot');
 
-			logger.info('Shutdown complete');
+			// Use stderr for final messages since logger is shut down
+			process.stderr.write('[BunkBot] Observability data flushed\n');
+			process.stderr.write('[BunkBot] Shutdown complete\n');
 		} catch (error) {
 			logger.withError(error).error('Error during shutdown');
 			throw error;

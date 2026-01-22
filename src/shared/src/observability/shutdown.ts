@@ -4,6 +4,9 @@ import { getMetricsService } from './metrics-service';
 /**
  * Gracefully shutdown all observability services
  * This ensures all pending logs, metrics, and traces are flushed before exit
+ *
+ * @param serviceName - The service name (only used if services haven't been initialized yet;
+ *                      otherwise the singleton instances are used regardless of this parameter)
  */
 export async function shutdownObservability(serviceName: string): Promise<void> {
 	const shutdownStart = Date.now();
@@ -11,6 +14,8 @@ export async function shutdownObservability(serviceName: string): Promise<void> 
 
 	try {
 		// Flush logs
+		// Note: getLogsService and getMetricsService are singletons, so the serviceName
+		// parameter is only used if they haven't been initialized yet
 		const logsService = getLogsService(serviceName);
 		if (logsService.isEnabled()) {
 			process.stderr.write('[Observability] Flushing pending logs...\n');
@@ -27,7 +32,16 @@ export async function shutdownObservability(serviceName: string): Promise<void> 
 		const shutdownDuration = Date.now() - shutdownStart;
 		process.stderr.write(`[Observability] Shutdown complete in ${shutdownDuration}ms\n`);
 	} catch (error) {
-		process.stderr.write(`[Observability] Error during shutdown: ${error}\n`);
+		if (error instanceof Error) {
+			const stackInfo = error.stack ? `\n${error.stack}` : '';
+			process.stderr.write(
+				`[Observability] Error during shutdown: ${error.message}${stackInfo}\n`,
+			);
+		} else {
+			process.stderr.write(
+				`[Observability] Error during shutdown: ${String(error)}\n`,
+			);
+		}
 		throw error;
 	}
 }

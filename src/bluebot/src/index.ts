@@ -62,7 +62,7 @@ async function main(): Promise<void> {
 		logger.info(`Received ${signal}, shutting down gracefully...`);
 		await healthServer?.stop();
 		client.destroy();
-		await shutdownObservability('bluebot');
+		await shutdownObservability(process.env.SERVICE_NAME || 'bluebot');
 		process.exit(0);
 	};
 

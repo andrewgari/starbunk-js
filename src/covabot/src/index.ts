@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string) => {
     logger.withMetadata({ signal }).info('Shutdown signal received');
     await bot.stop();
-    await shutdownObservability('covabot');
+    await shutdownObservability(process.env.SERVICE_NAME || 'covabot');
     process.exit(0);
   };
 

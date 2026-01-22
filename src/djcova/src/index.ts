@@ -135,14 +135,14 @@ let globalHealthServer: Awaited<ReturnType<typeof initializeHealthServer>> | und
 process.on('SIGINT', async () => {
 	logger.info('Received SIGINT signal, shutting down DJCova...');
 	await globalHealthServer?.stop();
-	await shutdownObservability('djcova');
+	await shutdownObservability(process.env.SERVICE_NAME || 'djcova');
 	process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
 	logger.info('Received SIGTERM signal, shutting down DJCova...');
 	await globalHealthServer?.stop();
-	await shutdownObservability('djcova');
+	await shutdownObservability(process.env.SERVICE_NAME || 'djcova');
 	process.exit(0);
 });
 

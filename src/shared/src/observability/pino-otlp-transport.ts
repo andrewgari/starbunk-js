@@ -1,5 +1,5 @@
 import { trace } from '@opentelemetry/api';
-import { LogsService } from './logs-service';
+import { getLogsService, LogsService } from './logs-service';
 import type { DestinationStream } from 'pino';
 
 /**
@@ -22,7 +22,8 @@ export class PinoOtlpDestination implements DestinationStream {
 	private logsService: LogsService;
 
 	constructor(serviceName: string) {
-		this.logsService = new LogsService(serviceName);
+		// Use the singleton LogsService instance to ensure shutdown flushes all logs
+		this.logsService = getLogsService(serviceName);
 	}
 
 	/**
@@ -43,7 +44,8 @@ export class PinoOtlpDestination implements DestinationStream {
 			this.emitLogRecord(logRecord);
 		} catch (error) {
 			// Log parsing errors to stderr so we can debug
-			process.stderr.write(`[OTLP Bridge Error] Failed to parse log record: ${error}\n`);
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			process.stderr.write(`[OTLP Bridge Error] Failed to parse log record: ${errorMsg}\n`);
 		}
 	}
 
@@ -80,7 +82,12 @@ export class PinoOtlpDestination implements DestinationStream {
 
 				// Convert complex objects to strings
 				if (typeof value === 'object' && value !== null) {
-					attributes[key] = JSON.stringify(value);
+					try {
+						attributes[key] = JSON.stringify(value);
+					} catch {
+						// Handle circular references or non-serializable objects
+						attributes[key] = '[Circular or non-serializable]';
+					}
 				} else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
 					attributes[key] = value;
 				} else {
@@ -106,7 +113,8 @@ export class PinoOtlpDestination implements DestinationStream {
 			});
 		} catch (error) {
 			// Log OTLP emission errors to stderr
-			process.stderr.write(`[OTLP Bridge Error] Failed to emit log to OTLP: ${error}\n`);
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			process.stderr.write(`[OTLP Bridge Error] Failed to emit log to OTLP: ${errorMsg}\n`);
 		}
 	}
 
