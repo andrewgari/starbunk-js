@@ -5,6 +5,7 @@ import { logger } from '@/observability/logger';
 import { BlueBot } from '@/blue-bot';
 import { runSmokeTest } from '@starbunk/shared/health/smoke-test';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
+import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 
 // Setup logging mixins before creating any logger instances
@@ -61,6 +62,7 @@ async function main(): Promise<void> {
 		logger.info(`Received ${signal}, shutting down gracefully...`);
 		await healthServer?.stop();
 		client.destroy();
+		await shutdownObservability('bluebot');
 		process.exit(0);
 	};
 

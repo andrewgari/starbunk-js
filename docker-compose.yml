@@ -20,8 +20,10 @@ services:
       # Optional: Internal metrics port (default: 3000)
       - METRICS_PORT=${METRICS_PORT:-3000}
       # OpenTelemetry Configuration (all optional)
-      # Optional: OTEL collector hostname (default: otel-collector)
-      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      # Optional: Service name for observability (default: bunkbot)
+      - SERVICE_NAME=${BUNKBOT_SERVICE_NAME:-bunkbot}
+      # Optional: OTEL collector hostname (default: starbunk-otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
       # Optional: OTEL collector HTTP port (default: 4318)
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
       # Optional: Deployment environment (default: production)
@@ -77,6 +79,8 @@ services:
       # Optional: Health check port (default: 3000)
       - HEALTH_PORT=${HEALTH_PORT:-3000}
       # OpenTelemetry Configuration (all optional)
+      # Optional: Service name for observability (default: djcova)
+      - SERVICE_NAME=${DJCOVA_SERVICE_NAME:-djcova}
       # Optional: OTEL collector hostname (default: starbunk-otel-collector)
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
       # Optional: OTEL collector HTTP port (default: 4318)
@@ -167,8 +171,10 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - HEALTH_PORT=3000
       # OpenTelemetry Configuration (all optional)
-      # Optional: OTEL collector hostname (default: otel-collector)
-      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      # Optional: Service name for observability (default: covabot)
+      - SERVICE_NAME=${COVABOT_SERVICE_NAME:-covabot}
+      # Optional: OTEL collector hostname (default: starbunk-otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
       # Optional: OTEL collector HTTP port (default: 4318)
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
       # Optional: Deployment environment (default: production)
@@ -224,6 +230,8 @@ services:
       - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
       - HEALTH_PORT=3000
       # OpenTelemetry Configuration (all optional)
+      # Optional: Service name for observability (default: bluebot)
+      - SERVICE_NAME=${BLUEBOT_SERVICE_NAME:-bluebot}
       # Optional: OTEL collector hostname (default: starbunk-otel-collector)
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
       # Optional: OTEL collector HTTP port (default: 4318)

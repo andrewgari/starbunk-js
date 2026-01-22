@@ -26,27 +26,44 @@ export class LogsService {
 	 * Initialize OTLP logs export
 	 */
 	private initializeOtlpExport(): void {
-		const otlpUrl = this.getOtlpLogsUrl();
+		try {
+			const otlpUrl = this.getOtlpLogsUrl();
 
-		const logExporter = new OTLPLogExporter({
-			url: otlpUrl,
-		});
+			// Log initialization for debugging
+			process.stderr.write(`[LogsService] Initializing OTLP logs export for service: ${this.serviceName}\n`);
+			process.stderr.write(`[LogsService] OTLP endpoint: ${otlpUrl}\n`);
 
-		const logRecordProcessor = new BatchLogRecordProcessor(logExporter, {
-			maxQueueSize: 2048,
-			maxExportBatchSize: 512,
-			scheduledDelayMillis: 5000, // 5 seconds
-		});
+			const logExporter = new OTLPLogExporter({
+				url: otlpUrl,
+				// Add timeout and retry configuration
+				timeoutMillis: 10000, // 10 second timeout
+			});
 
-		this.loggerProvider = new LoggerProvider({
-			resource: resourceFromAttributes({
-				[ATTR_SERVICE_NAME]: this.serviceName,
-			}),
-			processors: [logRecordProcessor],
-		});
+			const logRecordProcessor = new BatchLogRecordProcessor(logExporter, {
+				maxQueueSize: 2048,
+				maxExportBatchSize: 512,
+				scheduledDelayMillis: 5000, // 5 seconds
+				exportTimeoutMillis: 30000, // 30 second export timeout
+			});
 
-		// Set as global logger provider
-		logs.setGlobalLoggerProvider(this.loggerProvider);
+			this.loggerProvider = new LoggerProvider({
+				resource: resourceFromAttributes({
+					[ATTR_SERVICE_NAME]: this.serviceName,
+				}),
+			});
+
+			// Add the processor
+			this.loggerProvider.addLogRecordProcessor(logRecordProcessor);
+
+			// Set as global logger provider
+			logs.setGlobalLoggerProvider(this.loggerProvider);
+
+			process.stderr.write(`[LogsService] OTLP logs export initialized successfully\n`);
+		} catch (error) {
+			process.stderr.write(`[LogsService] Failed to initialize OTLP logs export: ${error}\n`);
+			// Disable the service if initialization fails
+			this.enabled = false;
+		}
 	}
 
 	/**

@@ -6,6 +6,7 @@ import { BotRegistry } from '@/reply-bots/bot-registry';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
 import { MetricsService } from '@starbunk/shared/observability/metrics-service';
 import { HealthServer } from '@starbunk/shared/observability/health-server';
+import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { logger } from '@/observability/logger';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
 import { commands } from '@/commands';
@@ -137,6 +138,10 @@ export class BunkBot {
 			logger.info('Destroying Discord client...');
 			await this.client.destroy();
 			logger.info('Discord client destroyed');
+
+			logger.info('Flushing observability data...');
+			await shutdownObservability('bunkbot');
+			logger.info('Observability data flushed');
 
 			logger.info('Shutdown complete');
 		} catch (error) {
