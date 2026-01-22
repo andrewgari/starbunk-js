@@ -36,8 +36,10 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
-      - LOKI_URL=${LOKI_URL:-}
+      # OpenTelemetry Configuration (all optional, defaults to starbunk-otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
     ports:
       - "${BUNKBOT_HEALTH_PORT:-3002}:${BUNKBOT_HEALTH_PORT:-3002}"
     healthcheck:
@@ -78,8 +80,10 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
-      - LOKI_URL=${LOKI_URL:-}
+      # OpenTelemetry Configuration (all optional, defaults to starbunk-otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
     volumes:
       - djcova_cache:/app/cache
       - djcova_temp:/tmp
@@ -124,8 +128,10 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
-      - LOKI_URL=${LOKI_URL:-}
+      # OpenTelemetry Configuration (all optional, defaults to starbunk-otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
     healthcheck:
       test: ["CMD", "/bin/sh", "-c", "curl -f http://localhost:3003/health || exit 1"]
       interval: 30s
