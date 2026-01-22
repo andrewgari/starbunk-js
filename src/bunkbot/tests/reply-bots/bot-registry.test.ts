@@ -46,6 +46,15 @@ function createMockMessage(isBot: boolean = false): Partial<Message> {
       username: 'TestUser',
       bot: isBot,
     } as any,
+    mentions: {
+      users: new Map(),
+      roles: new Map(),
+    } as any,
+    attachments: new Map(),
+    embeds: [],
+    stickers: new Map(),
+    reference: null,
+    createdAt: new Date(),
   } as Partial<Message>;
 }
 
