@@ -16,6 +16,12 @@ services:
       - GUILD_ID=${GUILD_ID}
       - BUNKBOT_BOTS_DIR=/app/config
       - METRICS_PORT=${METRICS_PORT:-3000}
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
+      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
+      - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
+      - ENABLE_TRACING=${ENABLE_TRACING:-true}
     volumes:
       # Mount the bot configuration directory
       - ./config/bunkbot:/app/config:ro
@@ -60,6 +66,12 @@ services:
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - HEALTH_PORT=${HEALTH_PORT:-3000}
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
+      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
+      - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
+      - ENABLE_TRACING=${ENABLE_TRACING:-true}
     volumes:
       # Configuration directory (read-only)
       - ./config/djcova:/app/config:ro
@@ -127,6 +139,12 @@ services:
       # Debug/Testing
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - HEALTH_PORT=3000
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
+      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
+      - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
+      - ENABLE_TRACING=${ENABLE_TRACING:-true}
     volumes:
       # Configuration directory (read-only)
       - ./config/covabot:/app/config:ro
@@ -173,6 +191,12 @@ services:
       - NODE_ENV=production
       - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
       - HEALTH_PORT=3000
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
+      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
+      - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
+      - ENABLE_TRACING=${ENABLE_TRACING:-true}
     volumes:
       # Configuration directory (read-only)
       - ./config/bluebot:/app/config:ro
@@ -192,6 +216,40 @@ services:
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
       - com.centurylinklabs.watchtower.enable=true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # OpenTelemetry Collector - Unified telemetry pipeline
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: starbunk-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Prometheus metrics exposed by the collector
+      - "8889:8889"   # Prometheus exporter (scrape endpoint)
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=otel-collector
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=8888
     deploy:
       resources:
         limits:

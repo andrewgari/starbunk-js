@@ -91,6 +91,12 @@ services:
       - HEALTH_PORT=${HEALTH_PORT:-3000}
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
+      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
+      - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
+      - ENABLE_TRACING=${ENABLE_TRACING:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -140,6 +146,12 @@ services:
       - HEALTH_PORT=${HEALTH_PORT:-3000}
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
+      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
+      - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
+      - ENABLE_TRACING=${ENABLE_TRACING:-true}
     volumes:
       # Unraid-compatible host path mounts
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
@@ -202,6 +214,12 @@ services:
       - HEALTH_PORT=${HEALTH_PORT:-3000}
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
+      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
+      - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
+      - ENABLE_TRACING=${ENABLE_TRACING:-true}
     volumes:
       # Unraid-compatible host path mount for CovaBot personality notes
       - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
@@ -263,6 +281,12 @@ services:
       - HEALTH_PORT=${HEALTH_PORT:-3000}
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
+      # OpenTelemetry Configuration
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
+      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
+      - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
+      - ENABLE_TRACING=${ENABLE_TRACING:-true}
     ports:
       # Metrics and health endpoint port
       - "${BLUEBOT_METRICS_PORT:-9302}:3000"
@@ -281,6 +305,40 @@ services:
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # OpenTelemetry Collector - Unified telemetry pipeline
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: starbunk-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ../../infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Prometheus metrics exposed by the collector
+      - "8889:8889"   # Prometheus exporter (scrape endpoint)
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=otel-collector
+      - prometheus.io/scrape=true
+      - prometheus.io/path=/metrics
+      - prometheus.io/port=8888
     deploy:
       resources:
         limits:
