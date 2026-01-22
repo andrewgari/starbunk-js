@@ -1,30 +1,33 @@
-version: "3.8"
+version: '3.8'
 
 services:
   # BunkBot - Next generation YAML-based reply bot system
   bunkbot:
-    image: ghcr.io/andrewgari/bunkbot:prod
+    build:
+      context: .
+      dockerfile: src/bunkbot/Dockerfile
+    image: ghcr.io/andrewgari/bunkbot:latest
     container_name: starbunk-bunkbot
     restart: unless-stopped
-    # Use absolute path so Watchtower can find tokens during auto-updates
     env_file:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/.env
+      - .env
     environment:
       - DISCORD_TOKEN=${BUNKBOT_TOKEN}
       - GUILD_ID=${GUILD_ID}
       - BUNKBOT_BOTS_DIR=/app/config
       - METRICS_PORT=${METRICS_PORT:-3000}
     volumes:
-      # Corrected to point to the actual folder in your stacks directory
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/config/bunkbot:/app/config:ro
+      # Mount the bot configuration directory
+      - ./config/bunkbot:/app/config:ro
     ports:
-      - ${BUNKBOT_METRICS_PORT:-9301}:3000
+      # Metrics and health endpoint port
+      - "${BUNKBOT_METRICS_PORT:-9301}:3000"
     networks:
-      - starbunk-net
+      - starbunk-network
     logging:
-      driver: json-file
+      driver: "json-file"
       options:
-        max-size: 10m
+        max-size: "10m"
         max-file: "3"
     labels:
       - com.starbunk.service=bunkbot
@@ -38,31 +41,40 @@ services:
           memory: 256M
         reservations:
           memory: 128M
+
   # DJCova - Music service
   djcova:
-    image: ghcr.io/andrewgari/djcova:prod
+    build:
+      context: .
+      dockerfile: src/djcova/Dockerfile
+    image: ghcr.io/andrewgari/djcova:latest
     container_name: starbunk-djcova
     restart: unless-stopped
     env_file:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/.env
+      - .env
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${DJCOVA_CLIENT_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
       - HEALTH_PORT=${HEALTH_PORT:-3000}
     volumes:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/config/djcova:/app/config:ro
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/data/djcova/cache:/app/cache
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/data/djcova/temp:/tmp
+      # Configuration directory (read-only)
+      - ./config/djcova:/app/config:ro
+      # Data directories (read-write)
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
+      - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
     ports:
-      - ${DJCOVA_METRICS_PORT:-9304}:3000
+      # Metrics and health endpoint port
+      - "${DJCOVA_METRICS_PORT:-9304}:3000"
     networks:
-      - starbunk-net
+      - starbunk-network
     logging:
-      driver: json-file
+      driver: "json-file"
       options:
-        max-size: 10m
+        max-size: "10m"
         max-file: "3"
     labels:
       - com.starbunk.service=djcova
@@ -76,33 +88,63 @@ services:
           memory: 1G
         reservations:
           memory: 512M
-  # CovaBot - AI personality bot
+
+  # CovaBot - AI personality bot (Cognitive Simulacrum)
   covabot:
-    image: ghcr.io/andrewgari/covabot:prod
+    build:
+      context: .
+      dockerfile: src/covabot/Dockerfile
+    image: ghcr.io/andrewgari/covabot:latest
     container_name: starbunk-covabot
     restart: unless-stopped
     env_file:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/.env
+      - .env
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=768
       - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
+      # LLM Configuration
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-mistral:latest}
+      - OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS:-true}
+      - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
+      - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
+      # Redis Configuration (Social Battery) - external endpoint
+      # Note: Use host.docker.internal to access services on the Docker host
+      - REDIS_HOST=${REDIS_HOST:-host.docker.internal}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-0}
+      # Qdrant Configuration (Saliency/Interest Matching) - external endpoint
+      # Note: Use host.docker.internal to access services on the Docker host
+      - QDRANT_URL=${QDRANT_URL:-http://host.docker.internal:6333}
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      # Storage Configuration
       - COVABOT_DATA_DIR=/app/data
+      - COVABOT_API_KEY=${COVABOT_API_KEY:-}
+      # Debug/Testing
+      - DEBUG_MODE=${DEBUG_MODE:-false}
       - HEALTH_PORT=3000
     volumes:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/config/covabot:/app/config:ro
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/data/config/covabot:/app/data
+      # Configuration directory (read-only)
+      - ./config/covabot:/app/config:ro
+      # Data directory for personality notes (read-write)
+      - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
     ports:
-      - ${COVABOT_WEB_PORT:-7080}:7080
-      - ${COVABOT_METRICS_PORT:-9303}:3000
+      - "${COVABOT_WEB_PORT:-7080}:7080"
+      # Metrics and health endpoint port
+      - "${COVABOT_METRICS_PORT:-9303}:3000"
     networks:
-      - starbunk-net
+      - starbunk-network
+    extra_hosts:
+      # Required for host.docker.internal to work on Linux
+      - "host.docker.internal:host-gateway"
     logging:
-      driver: json-file
+      driver: "json-file"
       options:
-        max-size: 10m
+        max-size: "10m"
         max-file: "3"
     labels:
       - com.starbunk.service=covabot
@@ -110,28 +152,39 @@ services:
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
       - com.centurylinklabs.watchtower.enable=true
-  # BlueBot - Blue detection bot
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # BlueBot - Blue detection and response bot
   bluebot:
-    image: ghcr.io/andrewgari/bluebot:prod
+    build:
+      context: .
+      dockerfile: src/bluebot/Dockerfile
+    image: ghcr.io/andrewgari/bluebot:latest
     container_name: starbunk-bluebot
     restart: unless-stopped
     env_file:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/.env
+      - .env
     environment:
       - NODE_ENV=production
-      - BLUEBOT_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
-      - STARBUNK_TOKEN=${STARBUNK_TOKEN}
+      - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
       - HEALTH_PORT=3000
     volumes:
-      - /mnt/user/appdata/dockge/stacks/starbunk-js/config/bluebot:/app/config:ro
+      # Configuration directory (read-only)
+      - ./config/bluebot:/app/config:ro
     ports:
-      - ${BLUEBOT_METRICS_PORT:-9302}:3000
+      # Metrics and health endpoint port
+      - "${BLUEBOT_METRICS_PORT:-9302}:3000"
     networks:
-      - starbunk-net
+      - starbunk-network
     logging:
-      driver: json-file
+      driver: "json-file"
       options:
-        max-size: 10m
+        max-size: "10m"
         max-file: "3"
     labels:
       - com.starbunk.service=bluebot
@@ -139,8 +192,20 @@ services:
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
       - com.centurylinklabs.watchtower.enable=true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+# Note: Using host path mounts for Unraid compatibility
+# Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
+# Default fallback to ./data/ for non-Unraid environments
+
+# Custom network for service communication
 networks:
-  starbunk-net:
+  starbunk-network:
     driver: bridge
     ipam:
       config:
