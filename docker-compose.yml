@@ -271,7 +271,7 @@ services:
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
-      - ./infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+      - ${UNRAID_APPDATA_PATH}/config/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
     # OTLP collector exposed to host for external access
     ports:
       - "14317:4317"   # OTLP gRPC receiver (for bot services and host)
@@ -351,7 +351,7 @@ services:
     volumes:
       - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       # Optional: Data directory path (default: ./data)
-      - ${UNRAID_APPDATA_PATH:-./data}/prometheus:/prometheus    # Ports exposed only within Docker network (not to host)
+      - ${UNRAID_APPDATA_PATH}/config/prometheus:/prometheus    # Ports exposed only within Docker network (not to host)
 
     networks:
       - starbunk-network
