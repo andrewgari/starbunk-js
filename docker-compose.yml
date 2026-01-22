@@ -1,4 +1,5 @@
 version: "3.8"
+
 services:
   # BunkBot - Next generation YAML-based reply bot system
   bunkbot:
