@@ -11,28 +11,34 @@ services:
     container_name: starbunk-bunkbot
     restart: unless-stopped
     environment:
-      # Required: Discord bot token for BunkBot
+      # Core Discord Configuration
       - DISCORD_TOKEN=${BUNKBOT_TOKEN}
-      # Required: Discord guild/server ID
+      - CLIENT_ID=${BUNKBOT_CLIENT_ID:-}
       - GUILD_ID=${GUILD_ID}
+
+      # Storage Configuration
       - BUNKBOT_BOTS_DIR=/app/config
-      # Optional: Internal metrics port (default: 3000)
-      - METRICS_PORT=${METRICS_PORT:-3000}
-      # OpenTelemetry Configuration (all optional)
-      # Optional: Service name for observability (default: bunkbot)
+
+      # Observability Configuration
       - SERVICE_NAME=${BUNKBOT_SERVICE_NAME:-bunkbot}
-      # Optional: OTEL collector hostname (default: starbunk-otel-collector)
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
-      # Optional: OTEL collector HTTP port (default: 4318)
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
-      # Optional: Deployment environment (default: production)
+
+      # Environment & Logging
       - ENVIRONMENT=${ENVIRONMENT:-production}
-      # Optional: Logging level (default: info)
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+
+      # Debug/Testing Configuration
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
     volumes:
-      # Mount the bot configuration directory
-      - ./config/bunkbot:/app/config:ro
-    # No host ports exposed - all observability via OTEL collector
+      - ${UNRAID_APPDATA_PATH}/config/bunkbot:/app/config:ro
     networks:
       - starbunk-network
     logging:
@@ -59,39 +65,39 @@ services:
     container_name: starbunk-djcova
     restart: unless-stopped
     environment:
+      # Node/Runtime Configuration
       - NODE_ENV=production
-      # Optional: Discord bot token (default: STARBUNK_TOKEN)
+
+      # Core Discord Configuration
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
-      # Required: Discord application client ID
       - CLIENT_ID=${DJCOVA_CLIENT_ID}
-      # Optional: Enable debug mode (default: false)
-      - DEBUG_MODE=${DEBUG_MODE:-false}
-      # Optional: Comma-separated testing server IDs (default: empty)
-      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
-      # Optional: Comma-separated testing channel IDs (default: empty)
-      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
-      # Optional: Health check port (default: 3000)
-      - HEALTH_PORT=${HEALTH_PORT:-3000}
-      # OpenTelemetry Configuration (all optional)
-      # Optional: Service name for observability (default: djcova)
+      - GUILD_ID=${GUILD_ID}
+
+      # Observability Configuration
       - SERVICE_NAME=${DJCOVA_SERVICE_NAME:-djcova}
-      # Optional: OTEL collector hostname (default: starbunk-otel-collector)
+      - HEALTH_PORT=${HEALTH_PORT:-3000}
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
-      # Optional: OTEL collector HTTP port (default: 4318)
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
-      # Optional: Deployment environment (default: production)
+
+      # Environment & Logging
       - ENVIRONMENT=${ENVIRONMENT:-production}
-      # Optional: Logging level (default: info)
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+
+      # Debug/Testing Configuration
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
     volumes:
       # Configuration directory (read-only)
-      - ./config/djcova:/app/config:ro
+      - ${UNRAID_APPDATA_PATH}/config/djcova:/app/config:ro
       # Data directories (read-write)
-      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
       # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
-    # No host ports exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     logging:
@@ -118,58 +124,59 @@ services:
     container_name: starbunk-covabot
     restart: unless-stopped
     environment:
+      # Node/Runtime Configuration
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=768
-      # Optional: Discord bot token (default: STARBUNK_TOKEN)
+
+      # Core Discord Configuration
       - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
-      # LLM Configuration (all optional)
-      # Optional: OpenAI API key (default: empty, disables OpenAI)
+
+      # AI/LLM Configuration
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      # Optional: Default OpenAI model (default: gpt-4o-mini)
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
-      # Optional: Ollama API URL (default: empty, disables Ollama)
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-pro}
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
-      # Optional: Default Ollama model (default: mistral:latest)
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-mistral:latest}
-      # Optional: Auto-pull missing Ollama models (default: true)
       - OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS:-true}
-      # Optional: Pull Ollama models on startup (default: true)
       - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
-      # Optional: Ollama model pull timeout in ms (default: 1200000 = 20min)
       - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
-      # Redis Configuration (Social Battery) - all optional
-      # Optional: Redis hostname (default: host.docker.internal)
+
+      # External Services - Redis (Social Battery)
       - REDIS_HOST=${REDIS_HOST:-host.docker.internal}
-      # Optional: Redis port (default: 6379)
       - REDIS_PORT=${REDIS_PORT:-6379}
-      # Optional: Redis password (default: empty)
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      # Optional: Redis database number (default: 0)
       - REDIS_DB=${REDIS_DB:-0}
-      # Qdrant Configuration (Saliency/Interest Matching) - all optional
-      # Optional: Qdrant URL (default: http://host.docker.internal:6333)
+
+      # External Services - Qdrant (Saliency/Interest Matching)
       - QDRANT_URL=${QDRANT_URL:-http://host.docker.internal:6333}
-      # Optional: Qdrant API key (default: empty)
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+
       # Storage Configuration
       - COVABOT_DATA_DIR=/app/data
-      # Optional: CovaBot API key for web interface (default: empty)
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
-      # Debug/Testing (optional)
-      # Optional: Enable debug mode (default: false)
-      - DEBUG_MODE=${DEBUG_MODE:-false}
-      - HEALTH_PORT=3000
-      # OpenTelemetry Configuration (all optional)
-      # Optional: Service name for observability (default: covabot)
+      - COVABOT_PERSONALITIES_PATH=${COVABOT_PERSONALITIES_PATH:-}
+      - COVABOT_DATABASE_PATH=${COVABOT_DATABASE_PATH:-}
+
+      # Observability Configuration
       - SERVICE_NAME=${COVABOT_SERVICE_NAME:-covabot}
-      # Optional: OTEL collector hostname (default: starbunk-otel-collector)
+      - HEALTH_PORT=3000
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
-      # Optional: OTEL collector HTTP port (default: 4318)
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
-      # Optional: Deployment environment (default: production)
+
+      # Environment & Logging
       - ENVIRONMENT=${ENVIRONMENT:-production}
-      # Optional: Logging level (default: info)
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+
+      # Debug/Testing Configuration
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - COVA_USER_ID=${COVA_USER_ID:-}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
     volumes:
       # Configuration directory (read-only)
       - ./config/covabot:/app/config:ro
@@ -209,21 +216,30 @@ services:
     container_name: starbunk-bluebot
     restart: unless-stopped
     environment:
+      # Node/Runtime Configuration
       - NODE_ENV=production
-      # Optional: Discord bot token (default: STARBUNK_TOKEN)
+
+      # Core Discord Configuration
       - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
-      - HEALTH_PORT=3000
-      # OpenTelemetry Configuration (all optional)
-      # Optional: Service name for observability (default: bluebot)
+
+      # Observability Configuration
       - SERVICE_NAME=${BLUEBOT_SERVICE_NAME:-bluebot}
-      # Optional: OTEL collector hostname (default: starbunk-otel-collector)
+      - HEALTH_PORT=3000
+      - METRICS_PORT=${METRICS_PORT:-3000}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
-      # Optional: OTEL collector HTTP port (default: 4318)
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
-      # Optional: Deployment environment (default: production)
+
+      # Environment & Logging
       - ENVIRONMENT=${ENVIRONMENT:-production}
-      # Optional: Logging level (default: info)
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+
+      # Debug/Testing Configuration
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
     volumes:
       # Configuration directory (read-only)
       - ./config/bluebot:/app/config:ro
@@ -264,7 +280,7 @@ services:
       - "8888"        # Prometheus metrics (internal only)
       - "8889"        # Prometheus exporter (internal only)
     environment:
-      # Optional: Deployment environment (default: production)
+      # Environment & Logging
       - ENVIRONMENT=${ENVIRONMENT:-production}
     networks:
       - starbunk-network
@@ -291,6 +307,10 @@ services:
     container_name: starbunk-tempo
     restart: unless-stopped
     command: ["-config.file=/etc/tempo.yml"]
+    environment:
+      # Environment & Logging
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       - ./infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
       # Optional: Data directory path (default: ./data)
@@ -324,6 +344,10 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
+    environment:
+      # Environment & Logging
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       # Optional: Data directory path (default: ./data)
@@ -351,6 +375,10 @@ services:
     container_name: starbunk-loki
     restart: unless-stopped
     command: ["-config.file=/etc/loki/loki-config.yml"]
+    environment:
+      # Environment & Logging
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       - ./infrastructure/monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
       # Optional: Data directory path (default: ./data)
