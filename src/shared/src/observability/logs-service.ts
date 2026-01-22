@@ -50,10 +50,9 @@ export class LogsService {
 				resource: resourceFromAttributes({
 					[ATTR_SERVICE_NAME]: this.serviceName,
 				}),
+				// Add the processor in the constructor
+				processors: [logRecordProcessor],
 			});
-
-			// Add the processor
-			this.loggerProvider.addLogRecordProcessor(logRecordProcessor);
 
 			// Set as global logger provider
 			logs.setGlobalLoggerProvider(this.loggerProvider);
