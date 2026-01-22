@@ -1,6 +1,5 @@
 import { trace, Span, SpanStatusCode, Tracer, context } from '@opentelemetry/api';
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 
 /**
@@ -14,19 +13,14 @@ export class TraceService {
 	private serviceName: string;
 
 	constructor(serviceName: string, serviceVersion: string = '1.0.0') {
-		this.enabled = process.env.ENABLE_TRACING !== 'false'; // Enabled by default
+		this.enabled = process.env.OTEL_ENABLED !== 'false'; // Enabled by default
 		this.serviceName = serviceName;
 
 		if (this.enabled) {
-			const exporterType = process.env.TRACE_EXPORTER || 'console';
-
-			// Choose exporter based on configuration
-			const traceExporter =
-				exporterType === 'otlp'
-					? new OTLPTraceExporter({
-							url: this.getOtlpTraceUrl(),
-						})
-					: new ConsoleSpanExporter();
+			// Always use OTLP exporter for unified observability
+			const traceExporter = new OTLPTraceExporter({
+				url: this.getOtlpTraceUrl(),
+			});
 
 			// Initialize the SDK with the exporter
 			this.sdk = new NodeSDK({
@@ -48,23 +42,12 @@ export class TraceService {
 
 	/**
 	 * Get the OTLP trace endpoint URL
-	 * Priority: OTLP_ENDPOINT (full URL) > OTEL_COLLECTOR_IP (IP only) > default localhost
+	 * Constructs URL from OTEL_COLLECTOR_HOST and OTEL_COLLECTOR_HTTP_PORT
 	 */
 	private getOtlpTraceUrl(): string {
-		// If full endpoint URL is provided, use it (backward compatibility)
-		if (process.env.OTLP_ENDPOINT) {
-			return process.env.OTLP_ENDPOINT;
-		}
-
-		// If collector IP is provided, construct the URL
-		if (process.env.OTEL_COLLECTOR_IP) {
-			const ip = process.env.OTEL_COLLECTOR_IP;
-			const port = process.env.OTEL_COLLECTOR_PORT || '4318';
-			return `http://${ip}:${port}/v1/traces`;
-		}
-
-		// Default to localhost
-		return 'http://localhost:4318/v1/traces';
+		const host = process.env.OTEL_COLLECTOR_HOST || 'localhost';
+		const port = process.env.OTEL_COLLECTOR_HTTP_PORT || '4318';
+		return `http://${host}:${port}/v1/traces`;
 	}
 
 	/**

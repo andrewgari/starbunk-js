@@ -57,7 +57,7 @@ export class MetricsService {
 	private cacheMisses: promClient.Counter<string>;
 
 	constructor(serviceName: string) {
-		this.enabled = process.env.ENABLE_METRICS !== 'false'; // Enabled by default
+		this.enabled = process.env.OTEL_ENABLED !== 'false'; // Enabled by default
 		this.registry = new promClient.Registry();
 		this.serviceName = serviceName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
@@ -66,7 +66,7 @@ export class MetricsService {
 			promClient.collectDefaultMetrics({ register: this.registry });
 		}
 
-		// Initialize OTLP metrics export if configured
+		// Initialize OTLP metrics export (always enabled when OTEL_ENABLED=true)
 		this.initializeOtlpExport();
 
 		// Initialize custom metrics
@@ -491,55 +491,39 @@ export class MetricsService {
 	}
 
 	/**
-	 * Initialize OTLP metrics export if configured
-	 * Supports both full URL and IP-based configuration
+	 * Initialize OTLP metrics export
+	 * Always exports to OTLP collector when observability is enabled
 	 */
 	private initializeOtlpExport(): void {
 		if (!this.enabled) return;
 
-		const metricsExporter = process.env.METRICS_EXPORTER || 'prometheus';
+		const otlpUrl = this.getOtlpMetricsUrl();
 
-		// Only initialize OTLP if explicitly configured
-		if (metricsExporter === 'otlp' || metricsExporter === 'both') {
-			const otlpUrl = this.getOtlpMetricsUrl();
+		const metricExporter = new OTLPMetricExporter({
+			url: otlpUrl,
+		});
 
-			const metricExporter = new OTLPMetricExporter({
-				url: otlpUrl,
-			});
+		const metricReader = new PeriodicExportingMetricReader({
+			exporter: metricExporter,
+			exportIntervalMillis: 30000, // 30 seconds
+		});
 
-			const metricReader = new PeriodicExportingMetricReader({
-				exporter: metricExporter,
-				exportIntervalMillis: parseInt(process.env.METRICS_PUSH_INTERVAL || '30000', 10),
-			});
-
-			this.meterProvider = new MeterProvider({
-				resource: new Resource({
-					[ATTR_SERVICE_NAME]: this.serviceName,
-				}),
-				readers: [metricReader],
-			});
-		}
+		this.meterProvider = new MeterProvider({
+			resource: new Resource({
+				[ATTR_SERVICE_NAME]: this.serviceName,
+			}),
+			readers: [metricReader],
+		});
 	}
 
 	/**
 	 * Get the OTLP metrics endpoint URL
-	 * Priority: OTLP_METRICS_ENDPOINT (full URL) > OTEL_COLLECTOR_IP (IP only) > default localhost
+	 * Constructs URL from OTEL_COLLECTOR_HOST and OTEL_COLLECTOR_HTTP_PORT
 	 */
 	private getOtlpMetricsUrl(): string {
-		// If full endpoint URL is provided, use it (backward compatibility)
-		if (process.env.OTLP_METRICS_ENDPOINT) {
-			return process.env.OTLP_METRICS_ENDPOINT;
-		}
-
-		// If collector IP is provided, construct the URL
-		if (process.env.OTEL_COLLECTOR_IP) {
-			const ip = process.env.OTEL_COLLECTOR_IP;
-			const port = process.env.OTEL_COLLECTOR_PORT || '4318';
-			return `http://${ip}:${port}/v1/metrics`;
-		}
-
-		// Default to localhost
-		return 'http://localhost:4318/v1/metrics';
+		const host = process.env.OTEL_COLLECTOR_HOST || 'localhost';
+		const port = process.env.OTEL_COLLECTOR_HTTP_PORT || '4318';
+		return `http://${host}:${port}/v1/metrics`;
 	}
 
 	async getMetrics(): Promise<string> {
