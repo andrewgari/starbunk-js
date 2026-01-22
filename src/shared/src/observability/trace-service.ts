@@ -25,7 +25,7 @@ export class TraceService {
 				exporterType === 'otlp'
 					? new OTLPTraceExporter({
 							url: process.env.OTLP_ENDPOINT || 'http://localhost:4318/v1/traces',
-					  })
+						})
 					: new ConsoleSpanExporter();
 
 			// Initialize the SDK with the exporter
@@ -77,7 +77,7 @@ export class TraceService {
 					'bot.name': botName,
 				},
 			},
-			ctx
+			ctx,
 		);
 	}
 
@@ -88,7 +88,7 @@ export class TraceService {
 		parentSpan: Span | null,
 		botName: string,
 		triggerName: string,
-		conditionType?: string
+		conditionType?: string,
 	): Span | null {
 		if (!this.enabled || !parentSpan) return null;
 
@@ -102,7 +102,7 @@ export class TraceService {
 					'trigger.condition_type': conditionType || 'unknown',
 				},
 			},
-			ctx
+			ctx,
 		);
 	}
 
@@ -120,7 +120,7 @@ export class TraceService {
 					'condition.type': conditionType,
 				},
 			},
-			ctx
+			ctx,
 		);
 	}
 
@@ -138,7 +138,7 @@ export class TraceService {
 					'bot.name': botName,
 				},
 			},
-			ctx
+			ctx,
 		);
 	}
 
@@ -157,7 +157,7 @@ export class TraceService {
 					'trigger.name': triggerName,
 				},
 			},
-			ctx
+			ctx,
 		);
 	}
 
@@ -175,7 +175,7 @@ export class TraceService {
 					'bot.name': botName,
 				},
 			},
-			ctx
+			ctx,
 		);
 	}
 
@@ -210,7 +210,11 @@ export class TraceService {
 	/**
 	 * Mark a span as failed and end it
 	 */
-	endSpanError(span: Span | null, error: Error | string, attributes?: Record<string, string | number | boolean>): void {
+	endSpanError(
+		span: Span | null,
+		error: Error | string,
+		attributes?: Record<string, string | number | boolean>,
+	): void {
 		if (!this.enabled || !span) return;
 		if (attributes) {
 			span.setAttributes(attributes);
@@ -270,4 +274,3 @@ export function getTraceService(serviceName: string, serviceVersion?: string): T
 	}
 	return traceServiceInstance;
 }
-
