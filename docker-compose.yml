@@ -12,14 +12,21 @@ services:
     env_file:
       - .env
     environment:
+      # Required: Discord bot token for BunkBot
       - DISCORD_TOKEN=${BUNKBOT_TOKEN}
+      # Required: Discord guild/server ID
       - GUILD_ID=${GUILD_ID}
       - BUNKBOT_BOTS_DIR=/app/config
+      # Optional: Internal metrics port (default: 3000)
       - METRICS_PORT=${METRICS_PORT:-3000}
-      # OpenTelemetry Configuration
+      # OpenTelemetry Configuration (all optional)
+      # Optional: OTEL collector hostname (default: otel-collector)
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      # Optional: OTEL collector HTTP port (default: 4318)
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      # Optional: Deployment environment (default: production)
       - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Optional: Logging level (default: info)
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Mount the bot configuration directory
@@ -57,22 +64,34 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      # Optional: Discord bot token (default: STARBUNK_TOKEN)
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
+      # Required: Discord application client ID
       - CLIENT_ID=${DJCOVA_CLIENT_ID}
+      # Optional: Enable debug mode (default: false)
       - DEBUG_MODE=${DEBUG_MODE:-false}
+      # Optional: Comma-separated testing server IDs (default: empty)
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
+      # Optional: Comma-separated testing channel IDs (default: empty)
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+      # Optional: Health check port (default: 3000)
       - HEALTH_PORT=${HEALTH_PORT:-3000}
-      # OpenTelemetry Configuration
+      # OpenTelemetry Configuration (all optional)
+      # Optional: OTEL collector hostname (default: starbunk-otel-collector)
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
+      # Optional: OTEL collector HTTP port (default: 4318)
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      # Optional: Deployment environment (default: production)
       - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Optional: Logging level (default: info)
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Configuration directory (read-only)
       - ./config/djcova:/app/config:ro
       # Data directories (read-write)
+      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/cache:/app/cache
+      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/djcova/temp:/tmp
     # No host ports exposed - all observability via OTEL collector
     networks:
@@ -108,42 +127,62 @@ services:
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=768
+      # Optional: Discord bot token (default: STARBUNK_TOKEN)
       - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
-      # LLM Configuration
+      # LLM Configuration (all optional)
+      # Optional: OpenAI API key (default: empty, disables OpenAI)
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Optional: Default OpenAI model (default: gpt-4o-mini)
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      # Optional: Ollama API URL (default: empty, disables Ollama)
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
+      # Optional: Default Ollama model (default: mistral:latest)
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-mistral:latest}
+      # Optional: Auto-pull missing Ollama models (default: true)
       - OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS:-true}
+      # Optional: Pull Ollama models on startup (default: true)
       - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
+      # Optional: Ollama model pull timeout in ms (default: 1200000 = 20min)
       - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
-      # Redis Configuration (Social Battery) - external endpoint
-      # Note: Use host.docker.internal to access services on the Docker host
+      # Redis Configuration (Social Battery) - all optional
+      # Optional: Redis hostname (default: host.docker.internal)
       - REDIS_HOST=${REDIS_HOST:-host.docker.internal}
+      # Optional: Redis port (default: 6379)
       - REDIS_PORT=${REDIS_PORT:-6379}
+      # Optional: Redis password (default: empty)
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      # Optional: Redis database number (default: 0)
       - REDIS_DB=${REDIS_DB:-0}
-      # Qdrant Configuration (Saliency/Interest Matching) - external endpoint
-      # Note: Use host.docker.internal to access services on the Docker host
+      # Qdrant Configuration (Saliency/Interest Matching) - all optional
+      # Optional: Qdrant URL (default: http://host.docker.internal:6333)
       - QDRANT_URL=${QDRANT_URL:-http://host.docker.internal:6333}
+      # Optional: Qdrant API key (default: empty)
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
       # Storage Configuration
       - COVABOT_DATA_DIR=/app/data
+      # Optional: CovaBot API key for web interface (default: empty)
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
-      # Debug/Testing
+      # Debug/Testing (optional)
+      # Optional: Enable debug mode (default: false)
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - HEALTH_PORT=3000
-      # OpenTelemetry Configuration
+      # OpenTelemetry Configuration (all optional)
+      # Optional: OTEL collector hostname (default: otel-collector)
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
+      # Optional: OTEL collector HTTP port (default: 4318)
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      # Optional: Deployment environment (default: production)
       - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Optional: Logging level (default: info)
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Configuration directory (read-only)
       - ./config/covabot:/app/config:ro
       # Data directory for personality notes (read-write)
+      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/covabot:/app/data
     ports:
+      # Optional: Web interface port (default: 7080)
       - "${COVABOT_WEB_PORT:-7080}:7080"
       # No metrics port exposed - all observability via OTEL collector
     networks:
@@ -181,12 +220,17 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      # Optional: Discord bot token (default: STARBUNK_TOKEN)
       - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
       - HEALTH_PORT=3000
-      # OpenTelemetry Configuration
+      # OpenTelemetry Configuration (all optional)
+      # Optional: OTEL collector hostname (default: starbunk-otel-collector)
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
+      # Optional: OTEL collector HTTP port (default: 4318)
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      # Optional: Deployment environment (default: production)
       - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Optional: Logging level (default: info)
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Configuration directory (read-only)
@@ -226,6 +270,7 @@ services:
       - "8888:8888"   # Prometheus metrics exposed by the collector
       - "8889:8889"   # Prometheus exporter (scrape endpoint)
     environment:
+      # Optional: Deployment environment (default: production)
       - ENVIRONMENT=${ENVIRONMENT:-production}
     networks:
       - starbunk-network
@@ -254,6 +299,7 @@ services:
     command: ["-config.file=/etc/tempo.yml"]
     volumes:
       - ./infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
+      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/tempo:/tmp/tempo
     ports:
       - "3200:3200"   # Tempo HTTP API
@@ -290,6 +336,7 @@ services:
       - '--web.enable-admin-api'
     volumes:
       - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/prometheus:/prometheus
     ports:
       - "9090:9090"   # Prometheus web UI and API
@@ -317,6 +364,7 @@ services:
     command: ["-config.file=/etc/loki/loki-config.yml"]
     volumes:
       - ./infrastructure/monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
+      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/loki:/loki
     ports:
       - "3100:3100"   # Loki HTTP API
@@ -345,6 +393,7 @@ services:
     volumes:
       - ./infrastructure/monitoring/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/promtail:/tmp
     networks:
       - starbunk-network
