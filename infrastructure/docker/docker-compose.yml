@@ -322,7 +322,6 @@ services:
     image: grafana/tempo:latest
     container_name: starbunk-tempo
     restart: unless-stopped
-    user: "${UID:-1000}:${GID:-1000}"
     command: ["-config.file=/etc/tempo.yml"]
     volumes:
       - ../../infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
@@ -353,7 +352,6 @@ services:
     image: prom/prometheus:latest
     container_name: starbunk-prometheus
     restart: unless-stopped
-    user: "${UID:-1000}:${GID:-1000}"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -389,7 +387,6 @@ services:
     image: grafana/loki:latest
     container_name: starbunk-loki
     restart: unless-stopped
-    user: "${UID:-1000}:${GID:-1000}"
     command: ["-config.file=/etc/loki/loki-config.yml"]
     volumes:
       - ../../infrastructure/monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
