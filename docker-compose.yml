@@ -272,8 +272,8 @@ services:
       - ${HOST_WORKDIR}/config/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
     # OTLP collector exposed to host for external access
     ports:
-      - "4317:4317"   # OTLP gRPC receiver (for bot services and host)
-      - "4318:4318"   # OTLP HTTP receiver (for bot services and host)
+      - "14317:4317"   # OTLP gRPC receiver (for bot services and host)
+      - "14318:4318"   # OTLP HTTP receiver (for bot services and host)
     expose:
       - "8888"        # Prometheus metrics (internal only)
       - "8889"        # Prometheus exporter (internal only)
