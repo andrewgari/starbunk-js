@@ -1,7 +1,7 @@
 import * as promClient from 'prom-client';
 import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 
 /**
@@ -509,7 +509,7 @@ export class MetricsService {
 		});
 
 		this.meterProvider = new MeterProvider({
-			resource: new Resource({
+			resource: resourceFromAttributes({
 				[ATTR_SERVICE_NAME]: this.serviceName,
 			}),
 			readers: [metricReader],
