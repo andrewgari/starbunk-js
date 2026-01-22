@@ -92,9 +92,8 @@ services:
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
       # OpenTelemetry Configuration
-      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-starbunk-otel-collector}
       - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
-      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
       - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
       - ENABLE_TRACING=${ENABLE_TRACING:-true}
     depends_on:
@@ -147,9 +146,8 @@ services:
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
       # OpenTelemetry Configuration
-      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-starbunk-otel-collector}
       - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
-      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
       - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
       - ENABLE_TRACING=${ENABLE_TRACING:-true}
     volumes:
@@ -215,9 +213,8 @@ services:
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
       # OpenTelemetry Configuration
-      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-starbunk-otel-collector}
       - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
-      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
       - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
       - ENABLE_TRACING=${ENABLE_TRACING:-true}
     volumes:
@@ -282,9 +279,8 @@ services:
       - PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
       - METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL:-30000}
       # OpenTelemetry Configuration
-      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-otel-collector}
+      - OTEL_COLLECTOR_IP=${OTEL_COLLECTOR_IP:-starbunk-otel-collector}
       - OTEL_COLLECTOR_PORT=${OTEL_COLLECTOR_PORT:-4318}
-      - TRACE_EXPORTER=${TRACE_EXPORTER:-console}
       - METRICS_EXPORTER=${METRICS_EXPORTER:-prometheus}
       - ENABLE_TRACING=${ENABLE_TRACING:-true}
     ports:
@@ -313,7 +309,7 @@ services:
           memory: 256M
 
   # OpenTelemetry Collector - Unified telemetry pipeline
-  otel-collector:
+  starbunk-otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: starbunk-otel-collector
     restart: unless-stopped
@@ -347,7 +343,7 @@ services:
           memory: 256M
 
   # Grafana Tempo - Distributed tracing backend
-  tempo:
+  starbunk-tempo:
     image: grafana/tempo:latest
     container_name: starbunk-tempo
     restart: unless-stopped
