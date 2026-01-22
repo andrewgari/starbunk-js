@@ -405,6 +405,34 @@ services:
         reservations:
           memory: 256M
 
+  # Promtail - Log collection agent
+  starbunk-promtail:
+    image: grafana/promtail:latest
+    container_name: starbunk-promtail
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/promtail-config.yml"]
+    volumes:
+      - ../../infrastructure/monitoring/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${UNRAID_APPDATA_PATH:-./data}/promtail:/tmp
+    networks:
+      - starbunk-network
+    depends_on:
+      - starbunk-loki
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=promtail
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
 # Note: Using host path mounts for Unraid compatibility
 # Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
 # Default fallback to ./data/ for non-Unraid environments

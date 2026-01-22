@@ -1,97 +1,125 @@
+# Promtail Configuration for Starbunk Discord Bots
+# Scrapes Docker container logs and sends them to Loki
+#
+# This configuration:
+# - Discovers all Starbunk bot containers via Docker labels
+# - Parses JSON-structured logs from Pino
+# - Extracts metadata (service, level, timestamps)
+# - Sends to Loki with proper labels for querying
+
 server:
   http_listen_port: 9080
   grpc_listen_port: 0
+  log_level: info
 
+# Position file to track which logs have been sent
 positions:
   filename: /tmp/positions.yaml
 
+# Loki endpoint
 clients:
   - url: http://starbunk-loki:3100/loki/api/v1/push
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+    timeout: 10s
 
 scrape_configs:
-  # Docker container logs
-  - job_name: docker
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: docker
-          __path__: /var/lib/docker/containers/*/*.log
-    pipeline_stages:
-      - json:
-          expressions:
-            output: log
-            stream: stream
-            attrs:
-      - json:
-          expressions:
-            tag:
-          source: attrs
-      - regex:
-          expression: (?P<container_name>(?:[^|]){1,10})
-          source: tag
-      - timestamp:
-          format: RFC3339Nano
-          source: time
-      - labels:
-          stream:
-          container_name:
-      - output:
-          source: output
+  # Scrape all Starbunk bot containers using Docker service discovery
+  - job_name: starbunk-bots
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          # Match containers with com.starbunk.service label
+          - name: label
+            values: ["com.starbunk.service"]
 
-  # Starbunk Discord Bot containers - specific log collection
-  - job_name: starbunk-containers
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: starbunk-bots
-          __path__: /var/lib/docker/containers/*/*.log
+    relabel_configs:
+      # Extract container name (remove leading slash)
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+
+      # Extract service name from label
+      - source_labels: ['__meta_docker_container_label_com_starbunk_service']
+        target_label: 'service'
+
+      # Extract container ID (short form)
+      - source_labels: ['__meta_docker_container_id']
+        regex: '([a-f0-9]{12}).*'
+        target_label: 'container_id'
+
+      # Set cluster label
+      - target_label: 'cluster'
+        replacement: 'starbunk-discord-bots'
+
     pipeline_stages:
+      # Parse JSON logs (Pino format)
       - json:
           expressions:
-            output: log
-            stream: stream
-            attrs:
+            level: level
+            msg: msg
+            message: message
             time: time
+            # Discord context
+            guild_id: guild_id
+            channel_id: channel_id
+            user_id: user_id
+            # Bot context
+            bot_name: bot_name
+            strategy: strategy
+            trigger_type: trigger_type
+            # Performance
+            duration_ms: duration_ms
+
+      # Extract timestamp from Pino's time field (Unix milliseconds)
+      - timestamp:
+          source: time
+          format: UnixMs
+
+      # Map Pino numeric levels to names
+      - template:
+          source: level_name
+          template: '{{ if eq .level 10 }}trace{{ else if eq .level 20 }}debug{{ else if eq .level 30 }}info{{ else if eq .level 40 }}warn{{ else if eq .level 50 }}error{{ else if eq .level 60 }}fatal{{ else }}unknown{{ end }}'
+
+      # Extract labels for efficient querying
+      - labels:
+          level_name:
+          guild_id:
+          bot_name:
+          strategy:
+
+      # Use msg field as the log line
+      - output:
+          source: msg
+
+  # Scrape OTEL Collector logs (for debugging observability pipeline)
+  - job_name: otel-collector
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: name
+            values: ["starbunk-otel-collector"]
+
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      - target_label: 'service'
+        replacement: 'otel-collector'
+      - target_label: 'cluster'
+        replacement: 'starbunk-discord-bots'
+
+    pipeline_stages:
       - json:
           expressions:
-            tag:
-          source: attrs
-      # Extract container name from Docker tag
-      - regex:
-          expression: ^[^-]+-(?P<container_name>.+)$
-          source: tag
-      # Only process our containers
-      - match:
-          selector: '{container_name=~"starbunk-.*"}'
-          stages:
-            - labels:
-                container_name:
-                stream:
-            - timestamp:
-                format: RFC3339Nano
-                source: time
-            - output:
-                source: output
-
-  # System logs
-  - job_name: system
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: syslog
-          __path__: /var/log/syslog
-    pipeline_stages:
-      - match:
-          selector: '{job="syslog"}'
-          stages:
-            - regex:
-                expression: '^(?P<timestamp>\S+\s+\S+\s+\S+) (?P<hostname>\S+) (?P<service>\S+)(\[(?P<pid>\d+)\])?: (?P<message>.*)$'
-            - labels:
-                hostname:
-                service:
-            - timestamp:
-                format: Jan 2 15:04:05
-                source: timestamp
+            level: level
+            msg: msg
+            message: message
+      - labels:
+          level:
+      - output:
+          source: msg
