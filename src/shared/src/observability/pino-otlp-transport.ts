@@ -1,7 +1,18 @@
-import { logs } from '@opentelemetry/api-logs';
 import { trace } from '@opentelemetry/api';
 import { LogsService } from './logs-service';
 import type { DestinationStream } from 'pino';
+
+/**
+ * Pino log record structure
+ */
+interface PinoLogRecord {
+	level: number;
+	time: number;
+	msg: string;
+	pid?: number;
+	hostname?: string;
+	[key: string]: unknown;
+}
 
 /**
  * Pino destination stream that sends logs to OTLP
@@ -26,9 +37,9 @@ export class PinoOtlpDestination implements DestinationStream {
 		}
 
 		try {
-			const logRecord = JSON.parse(chunk);
+			const logRecord = JSON.parse(chunk) as PinoLogRecord;
 			this.emitLogRecord(logRecord);
-		} catch (error) {
+		} catch (_error) {
 			// If parsing fails, write to stdout as fallback
 			process.stdout.write(chunk);
 		}
@@ -37,7 +48,7 @@ export class PinoOtlpDestination implements DestinationStream {
 	/**
 	 * Emit a log record to OpenTelemetry
 	 */
-	private emitLogRecord(logRecord: any): void {
+	private emitLogRecord(logRecord: PinoLogRecord): void {
 		const loggerProvider = this.logsService.getLoggerProvider();
 		if (!loggerProvider) return;
 
@@ -52,7 +63,7 @@ export class PinoOtlpDestination implements DestinationStream {
 		const severityText = this.getSeverityText(logRecord.level || 30);
 
 		// Build attributes from log record
-		const attributes: Record<string, any> = {};
+		const attributes: Record<string, string | number | boolean> = {};
 
 		// Add all fields from the log record as attributes
 		for (const [key, value] of Object.entries(logRecord)) {
@@ -64,8 +75,11 @@ export class PinoOtlpDestination implements DestinationStream {
 			// Convert complex objects to strings
 			if (typeof value === 'object' && value !== null) {
 				attributes[key] = JSON.stringify(value);
-			} else {
+			} else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
 				attributes[key] = value;
+			} else {
+				// For undefined or other types, convert to string
+				attributes[key] = String(value);
 			}
 		}
 
