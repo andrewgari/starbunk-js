@@ -163,14 +163,14 @@ export class MetricsService {
 		this.messagesByType = new promClient.Counter({
 			name: `${this.serviceName}_messages_by_type_total`,
 			help: 'Total messages by type',
-			labelNames: ['guild_id', 'channel_id', 'message_type', 'has_embeds', 'has_attachments'],
+			labelNames: ['guild_id', 'channel_type', 'message_type', 'has_embeds', 'has_attachments'],
 			registers: [this.registry],
 		});
 
 		this.messageSizeBytes = new promClient.Histogram({
 			name: `${this.serviceName}_message_size_bytes`,
 			help: 'Message content size distribution in bytes',
-			labelNames: ['guild_id', 'channel_id'],
+			labelNames: ['guild_id', 'channel_type'],
 			buckets: [100, 500, 1000, 2000, 4000, 8000, 16000],
 			registers: [this.registry],
 		});
@@ -200,14 +200,14 @@ export class MetricsService {
 		this.channelMessageRate = new promClient.Counter({
 			name: `${this.serviceName}_channel_messages_total`,
 			help: 'Total messages per channel',
-			labelNames: ['guild_id', 'channel_id', 'channel_name'],
+			labelNames: ['guild_id', 'channel_id'],
 			registers: [this.registry],
 		});
 
 		this.voiceChannelUsers = new promClient.Gauge({
 			name: `${this.serviceName}_voice_channel_users`,
 			help: 'Number of users in voice channels',
-			labelNames: ['guild_id', 'channel_id', 'channel_name'],
+			labelNames: ['guild_id', 'channel_id'],
 			registers: [this.registry],
 		});
 
@@ -235,8 +235,8 @@ export class MetricsService {
 
 		this.userMessageFrequency = new promClient.Counter({
 			name: `${this.serviceName}_user_message_frequency_total`,
-			help: 'Message count per user',
-			labelNames: ['guild_id', 'user_id', 'username'],
+			help: 'Message count aggregated by guild',
+			labelNames: ['guild_id'],
 			registers: [this.registry],
 		});
 
@@ -393,7 +393,7 @@ export class MetricsService {
 	// Message throughput tracking methods
 	trackMessageByType(
 		guildId: string,
-		channelId: string,
+		channelType: string,
 		messageType: 'text' | 'reply' | 'thread',
 		hasEmbeds: boolean,
 		hasAttachments: boolean
@@ -401,16 +401,16 @@ export class MetricsService {
 		if (!this.enabled) return;
 		this.messagesByType.inc({
 			guild_id: guildId,
-			channel_id: channelId,
+			channel_type: channelType,
 			message_type: messageType,
 			has_embeds: hasEmbeds.toString(),
 			has_attachments: hasAttachments.toString(),
 		});
 	}
 
-	trackMessageSize(guildId: string, channelId: string, sizeBytes: number): void {
+	trackMessageSize(guildId: string, channelType: string, sizeBytes: number): void {
 		if (!this.enabled) return;
-		this.messageSizeBytes.observe({ guild_id: guildId, channel_id: channelId }, sizeBytes);
+		this.messageSizeBytes.observe({ guild_id: guildId, channel_type: channelType }, sizeBytes);
 	}
 
 	setMessagesPerSecond(guildId: string, rate: number): void {
@@ -429,14 +429,14 @@ export class MetricsService {
 		this.activeChannelsGauge.set({ guild_id: guildId, channel_type: channelType }, count);
 	}
 
-	trackChannelMessage(guildId: string, channelId: string, channelName: string): void {
+	trackChannelMessage(guildId: string, channelId: string): void {
 		if (!this.enabled) return;
-		this.channelMessageRate.inc({ guild_id: guildId, channel_id: channelId, channel_name: channelName });
+		this.channelMessageRate.inc({ guild_id: guildId, channel_id: channelId });
 	}
 
-	setVoiceChannelUsers(guildId: string, channelId: string, channelName: string, userCount: number): void {
+	setVoiceChannelUsers(guildId: string, channelId: string, userCount: number): void {
 		if (!this.enabled) return;
-		this.voiceChannelUsers.set({ guild_id: guildId, channel_id: channelId, channel_name: channelName }, userCount);
+		this.voiceChannelUsers.set({ guild_id: guildId, channel_id: channelId }, userCount);
 	}
 
 	// Member activity tracking methods
@@ -455,9 +455,9 @@ export class MetricsService {
 		this.memberLeaves.inc({ guild_id: guildId, reason });
 	}
 
-	trackUserMessage(guildId: string, userId: string, username: string): void {
+	trackUserMessage(guildId: string): void {
 		if (!this.enabled) return;
-		this.userMessageFrequency.inc({ guild_id: guildId, user_id: userId, username });
+		this.userMessageFrequency.inc({ guild_id: guildId });
 	}
 
 	// Bot performance tracking methods

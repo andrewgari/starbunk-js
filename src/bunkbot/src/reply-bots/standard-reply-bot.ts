@@ -131,6 +131,8 @@ export class StandardReplyBot implements ReplyBot {
             'trigger.evaluation_duration_ms': triggerEvalDuration,
           });
 
+          const triggerTimestamp = new Date().toISOString();
+
           logger.withMetadata({
             bot_name: this.name,
             trigger_name: triggerName,
@@ -145,11 +147,11 @@ export class StandardReplyBot implements ReplyBot {
             guild_id: message.guildId,
             trigger_message: truncatedContent,
             evaluation_duration_ms: triggerEvalDuration,
-            timestamp: new Date().toISOString(),
+            timestamp: triggerTimestamp,
             trace_id: traceId,
             span_id: tracing.getSpanId(triggerSpan),
             ...messageContext,
-          }).info(`✓ TRIGGER FIRED - WHAT: ${this.name}/${triggerName}, HOW: ${conditionDescription}, WHEN: ${new Date().toISOString()}, WHO: ${message.author.username} (${authorType})`);
+          }).info(`✓ TRIGGER FIRED - WHAT: ${this.name}/${triggerName}, HOW: ${conditionDescription}, WHEN: ${triggerTimestamp}, WHO: ${message.author.username} (${authorType})`);
 
           // Track trigger metric
           if (message.guildId && message.channelId) {

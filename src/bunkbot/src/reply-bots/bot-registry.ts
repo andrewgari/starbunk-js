@@ -60,8 +60,12 @@ export class BotRegistry {
       message.author.id
     );
 
-    // Extract comprehensive message context
-    const messageContext = {
+    // Get trace context for logging
+    const traceId = tracing.getTraceId(messageSpan);
+    const spanId = tracing.getSpanId(messageSpan);
+
+    // Lazy evaluation: only extract detailed message context if debug logging is enabled
+    const getMessageContext = () => ({
       has_mentions: message.mentions.users.size > 0,
       mentioned_users: Array.from(message.mentions.users.values()).map(u => u.username).join(', '),
       mention_count: message.mentions.users.size,
@@ -76,11 +80,7 @@ export class BotRegistry {
       embed_count: message.embeds.length,
       has_stickers: message.stickers.size > 0,
       sticker_count: message.stickers.size,
-    };
-
-    // Get trace context for logging
-    const traceId = tracing.getTraceId(messageSpan);
-    const spanId = tracing.getSpanId(messageSpan);
+    });
 
     logger.withMetadata({
       message_id: message.id,
@@ -95,7 +95,7 @@ export class BotRegistry {
       trace_id: traceId,
       span_id: spanId,
       timestamp: message.createdAt.toISOString(),
-      ...messageContext,
+      ...getMessageContext(),
     }).debug('Processing message');
 
     let botsProcessed = 0;

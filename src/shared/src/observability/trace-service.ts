@@ -65,11 +65,12 @@ export class TraceService {
 
 	/**
 	 * Start a span for bot evaluation
+	 * Can create a root span if parentSpan is null
 	 */
 	startBotEvaluation(parentSpan: Span | null, botName: string): Span | null {
-		if (!this.enabled || !parentSpan) return null;
+		if (!this.enabled) return null;
 
-		const ctx = trace.setSpan(context.active(), parentSpan);
+		const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active();
 		return this.tracer.startSpan(
 			'bot.evaluate',
 			{
