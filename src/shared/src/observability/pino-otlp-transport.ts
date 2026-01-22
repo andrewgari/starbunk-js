@@ -1,5 +1,5 @@
 import { trace } from '@opentelemetry/api';
-import { LogsService } from './logs-service';
+import { getLogsService, LogsService } from './logs-service';
 import type { DestinationStream } from 'pino';
 
 /**
@@ -22,7 +22,8 @@ export class PinoOtlpDestination implements DestinationStream {
 	private logsService: LogsService;
 
 	constructor(serviceName: string) {
-		this.logsService = new LogsService(serviceName);
+		// Use the singleton LogsService instance to ensure shutdown flushes all logs
+		this.logsService = getLogsService(serviceName);
 	}
 
 	/**
@@ -30,18 +31,21 @@ export class PinoOtlpDestination implements DestinationStream {
 	 * This is called by Pino for each log entry
 	 */
 	write(chunk: string): void {
+		// Always write to stdout for Docker logs visibility
+		process.stdout.write(chunk);
+
+		// If OTLP is disabled, we're done
 		if (!this.logsService.isEnabled()) {
-			// If OTLP is disabled, write to stdout as fallback
-			process.stdout.write(chunk);
 			return;
 		}
 
 		try {
 			const logRecord = JSON.parse(chunk) as PinoLogRecord;
 			this.emitLogRecord(logRecord);
-		} catch (_error) {
-			// If parsing fails, write to stdout as fallback
-			process.stdout.write(chunk);
+		} catch (error) {
+			// Log parsing errors to stderr so we can debug
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			process.stderr.write(`[OTLP Bridge Error] Failed to parse log record: ${errorMsg}\n`);
 		}
 	}
 
@@ -49,55 +53,69 @@ export class PinoOtlpDestination implements DestinationStream {
 	 * Emit a log record to OpenTelemetry
 	 */
 	private emitLogRecord(logRecord: PinoLogRecord): void {
-		const loggerProvider = this.logsService.getLoggerProvider();
-		if (!loggerProvider) return;
-
-		const logger = loggerProvider.getLogger('pino-otlp-bridge', '1.0.0');
-
-		// Extract trace context if available
-		const activeSpan = trace.getActiveSpan();
-		const spanContext = activeSpan?.spanContext();
-
-		// Map Pino level to OpenTelemetry severity
-		const severityNumber = LogsService.mapPinoLevelToSeverity(logRecord.level || 30);
-		const severityText = this.getSeverityText(logRecord.level || 30);
-
-		// Build attributes from log record
-		const attributes: Record<string, string | number | boolean> = {};
-
-		// Add all fields from the log record as attributes
-		for (const [key, value] of Object.entries(logRecord)) {
-			// Skip special fields that are handled separately
-			if (key === 'level' || key === 'time' || key === 'msg' || key === 'pid' || key === 'hostname') {
-				continue;
+		try {
+			const loggerProvider = this.logsService.getLoggerProvider();
+			if (!loggerProvider) {
+				process.stderr.write('[OTLP Bridge] LoggerProvider not available\n');
+				return;
 			}
 
-			// Convert complex objects to strings
-			if (typeof value === 'object' && value !== null) {
-				attributes[key] = JSON.stringify(value);
-			} else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-				attributes[key] = value;
-			} else {
-				// For undefined or other types, convert to string
-				attributes[key] = String(value);
+			const logger = loggerProvider.getLogger('pino-otlp-bridge', '1.0.0');
+
+			// Extract trace context if available
+			const activeSpan = trace.getActiveSpan();
+			const spanContext = activeSpan?.spanContext();
+
+			// Map Pino level to OpenTelemetry severity
+			const severityNumber = LogsService.mapPinoLevelToSeverity(logRecord.level || 30);
+			const severityText = this.getSeverityText(logRecord.level || 30);
+
+			// Build attributes from log record
+			const attributes: Record<string, string | number | boolean> = {};
+
+			// Add all fields from the log record as attributes
+			for (const [key, value] of Object.entries(logRecord)) {
+				// Skip special fields that are handled separately
+				if (key === 'level' || key === 'time' || key === 'msg' || key === 'pid' || key === 'hostname') {
+					continue;
+				}
+
+				// Convert complex objects to strings
+				if (typeof value === 'object' && value !== null) {
+					try {
+						attributes[key] = JSON.stringify(value);
+					} catch {
+						// Handle circular references or non-serializable objects
+						attributes[key] = '[Circular or non-serializable]';
+					}
+				} else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+					attributes[key] = value;
+				} else {
+					// For undefined or other types, convert to string
+					attributes[key] = String(value);
+				}
 			}
-		}
 
-		// Add trace context if available
-		if (spanContext) {
-			attributes['trace_id'] = spanContext.traceId;
-			attributes['span_id'] = spanContext.spanId;
-			attributes['trace_flags'] = spanContext.traceFlags;
-		}
+			// Add trace context if available
+			if (spanContext) {
+				attributes['trace_id'] = spanContext.traceId;
+				attributes['span_id'] = spanContext.spanId;
+				attributes['trace_flags'] = spanContext.traceFlags;
+			}
 
-		// Emit the log record
-		logger.emit({
-			severityNumber,
-			severityText,
-			body: logRecord.msg || '',
-			attributes,
-			timestamp: logRecord.time ? new Date(logRecord.time) : new Date(),
-		});
+			// Emit the log record
+			logger.emit({
+				severityNumber,
+				severityText,
+				body: logRecord.msg || '',
+				attributes,
+				timestamp: logRecord.time ? new Date(logRecord.time) : new Date(),
+			});
+		} catch (error) {
+			// Log OTLP emission errors to stderr
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			process.stderr.write(`[OTLP Bridge Error] Failed to emit log to OTLP: ${errorMsg}\n`);
+		}
 	}
 
 	/**
