@@ -346,6 +346,35 @@ services:
         reservations:
           memory: 256M
 
+  # Grafana Tempo - Distributed tracing backend
+  tempo:
+    image: grafana/tempo:latest
+    container_name: starbunk-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ../../infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
+      - ${UNRAID_APPDATA_PATH:-./data}/tempo:/tmp/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP API
+      - "4317"        # OTLP gRPC receiver (internal)
+      - "4318"        # OTLP HTTP receiver (internal)
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=tempo
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
 # Note: Using host path mounts for Unraid compatibility
 # Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
 # Default fallback to ./data/ for non-Unraid environments

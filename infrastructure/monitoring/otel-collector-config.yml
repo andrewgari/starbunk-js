@@ -54,12 +54,12 @@ exporters:
     tls:
       insecure: true
 
-  # Jaeger exporter (for traces)
-  # Optional: only if you want distributed tracing visualization
-  # jaeger:
-  #   endpoint: starbunk-jaeger:14250
-  #   tls:
-  #     insecure: true
+  # Tempo exporter (for traces)
+  # Grafana Tempo for distributed tracing
+  otlp/tempo:
+    endpoint: starbunk-tempo:4317
+    tls:
+      insecure: true
 
   # Console exporter for debugging
   logging:
@@ -73,7 +73,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
-      exporters: [logging]  # Add jaeger here if using Jaeger
+      exporters: [otlp/tempo, logging]  # Export to Tempo and console
 
     # Metrics pipeline
     metrics:
