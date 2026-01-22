@@ -50,15 +50,36 @@ export class BotRegistry {
     const metrics = getMetricsService();
     const stateManager = BotStateManager.getInstance();
 
+    // Extract comprehensive message context
+    const messageContext = {
+      has_mentions: message.mentions.users.size > 0,
+      mentioned_users: Array.from(message.mentions.users.values()).map(u => u.username).join(', '),
+      mention_count: message.mentions.users.size,
+      has_role_mentions: message.mentions.roles.size > 0,
+      role_mention_count: message.mentions.roles.size,
+      has_attachments: message.attachments.size > 0,
+      attachment_count: message.attachments.size,
+      attachment_types: Array.from(message.attachments.values()).map(a => a.contentType).join(', '),
+      is_reply: !!message.reference,
+      replied_to_message_id: message.reference?.messageId,
+      has_embeds: message.embeds.length > 0,
+      embed_count: message.embeds.length,
+      has_stickers: message.stickers.size > 0,
+      sticker_count: message.stickers.size,
+    };
+
     logger.withMetadata({
       message_id: message.id,
       author_id: message.author.id,
       author_name: message.author.username,
       author_is_bot: message.author.bot,
+      author_type: message.author.bot ? 'bot' : 'human',
       channel_id: message.channelId,
       guild_id: message.guildId,
       content_length: message.content.length,
       total_bots: this.bots.size,
+      timestamp: message.createdAt.toISOString(),
+      ...messageContext,
     }).debug('Processing message');
 
     let botsProcessed = 0;
@@ -112,9 +133,16 @@ export class BotRegistry {
     const duration = Date.now() - startTime;
     logger.withMetadata({
       message_id: message.id,
+      author_id: message.author.id,
+      author_username: message.author.username,
+      author_type: message.author.bot ? 'bot' : 'human',
+      channel_id: message.channelId,
+      guild_id: message.guildId,
       bots_processed: botsProcessed,
       bots_skipped: botsSkipped,
+      total_bots: this.bots.size,
       duration_ms: duration,
+      timestamp: new Date().toISOString(),
     }).debug('Message processing complete');
   }
 }
