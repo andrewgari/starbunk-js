@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: src/bunkbot/Dockerfile
-    image: ghcr.io/andrewgari/bunkbot:latest
+    image: ghcr.io/andrewgari/bunkbot:prod
     container_name: starbunk-bunkbot
     restart: unless-stopped
     env_file:
@@ -57,7 +57,7 @@ services:
     build:
       context: .
       dockerfile: src/djcova/Dockerfile
-    image: ghcr.io/andrewgari/djcova:latest
+    image: ghcr.io/andrewgari/djcova:prod
     container_name: starbunk-djcova
     restart: unless-stopped
     env_file:
@@ -119,7 +119,7 @@ services:
     build:
       context: .
       dockerfile: src/covabot/Dockerfile
-    image: ghcr.io/andrewgari/covabot:latest
+    image: ghcr.io/andrewgari/covabot:prod
     container_name: starbunk-covabot
     restart: unless-stopped
     env_file:
@@ -213,7 +213,7 @@ services:
     build:
       context: .
       dockerfile: src/bluebot/Dockerfile
-    image: ghcr.io/andrewgari/bluebot:latest
+    image: ghcr.io/andrewgari/bluebot:prod
     container_name: starbunk-bluebot
     restart: unless-stopped
     env_file:
@@ -264,11 +264,13 @@ services:
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
       - ./infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    # OTLP collector exposed to host for external access
     ports:
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
-      - "8888:8888"   # Prometheus metrics exposed by the collector
-      - "8889:8889"   # Prometheus exporter (scrape endpoint)
+      - "4317:4317"   # OTLP gRPC receiver (for bot services and host)
+      - "4318:4318"   # OTLP HTTP receiver (for bot services and host)
+    expose:
+      - "8888"        # Prometheus metrics (internal only)
+      - "8889"        # Prometheus exporter (internal only)
     environment:
       # Optional: Deployment environment (default: production)
       - ENVIRONMENT=${ENVIRONMENT:-production}
@@ -301,10 +303,6 @@ services:
       - ./infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
       # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/tempo:/tmp/tempo
-    ports:
-      - "3200:3200"   # Tempo HTTP API
-      - "4317"        # OTLP gRPC receiver (internal)
-      - "4318"        # OTLP HTTP receiver (internal)
     networks:
       - starbunk-network
     logging:
@@ -337,9 +335,8 @@ services:
     volumes:
       - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       # Optional: Data directory path (default: ./data)
-      - ${UNRAID_APPDATA_PATH:-./data}/prometheus:/prometheus
-    ports:
-      - "9090:9090"   # Prometheus web UI and API
+      - ${UNRAID_APPDATA_PATH:-./data}/prometheus:/prometheus    # Ports exposed only within Docker network (not to host)
+
     networks:
       - starbunk-network
     logging:
@@ -366,8 +363,7 @@ services:
       - ./infrastructure/monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
       # Optional: Data directory path (default: ./data)
       - ${UNRAID_APPDATA_PATH:-./data}/loki:/loki
-    ports:
-      - "3100:3100"   # Loki HTTP API
+    # Ports exposed only within Docker network (not to host)
     networks:
       - starbunk-network
     logging:
@@ -396,4 +392,4 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.31.0.0/16

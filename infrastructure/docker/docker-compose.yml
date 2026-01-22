@@ -289,11 +289,13 @@ services:
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
       - ../../infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    # OTLP collector exposed to host for external access
     ports:
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
-      - "8888:8888"   # Prometheus metrics exposed by the collector
-      - "8889:8889"   # Prometheus exporter (scrape endpoint)
+      - "4317:4317"   # OTLP gRPC receiver (for bot services and host)
+      - "4318:4318"   # OTLP HTTP receiver (for bot services and host)
+    expose:
+      - "8888"        # Prometheus metrics (internal only)
+      - "8889"        # Prometheus exporter (internal only)
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-production}
     networks:
@@ -324,10 +326,11 @@ services:
     volumes:
       - ../../infrastructure/monitoring/tempo-config.yml:/etc/tempo.yml:ro
       - ${UNRAID_APPDATA_PATH:-./data}/tempo:/tmp/tempo
-    ports:
-      - "3200:3200"   # Tempo HTTP API
-      - "4317"        # OTLP gRPC receiver (internal)
-      - "4318"        # OTLP HTTP receiver (internal)
+    # Ports exposed only within Docker network (not to host)
+    expose:
+      - "3200"        # Tempo HTTP API (for Grafana)
+      - "4317"        # OTLP gRPC receiver (for OTEL collector)
+      - "4318"        # OTLP HTTP receiver (for OTEL collector)
     networks:
       - starbunk-network
     logging:
@@ -360,8 +363,9 @@ services:
     volumes:
       - ../../infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ${UNRAID_APPDATA_PATH:-./data}/prometheus:/prometheus
-    ports:
-      - "9090:9090"   # Prometheus web UI and API
+    # Ports exposed only within Docker network (not to host)
+    expose:
+      - "9090"        # Prometheus web UI and API (for Grafana and OTEL collector)
     networks:
       - starbunk-network
     logging:
@@ -387,8 +391,9 @@ services:
     volumes:
       - ../../infrastructure/monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
       - ${UNRAID_APPDATA_PATH:-./data}/loki:/loki
-    ports:
-      - "3100:3100"   # Loki HTTP API
+    # Ports exposed only within Docker network (not to host)
+    expose:
+      - "3100"        # Loki HTTP API (for Grafana and OTEL collector)
     networks:
       - starbunk-network
     logging:
