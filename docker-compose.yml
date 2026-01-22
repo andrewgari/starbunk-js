@@ -1,11 +1,12 @@
 version: '3.8'
 
+# Production deployment using pre-built images from GitHub Container Registry (GHCR)
+# Images are built by CI/CD pipeline and tagged as 'prod' for production releases
+# For local development with source builds, see src/{service}/docker-compose.dev.yml
+
 services:
   # BunkBot - Next generation YAML-based reply bot system
   bunkbot:
-    build:
-      context: .
-      dockerfile: src/bunkbot/Dockerfile
     image: ghcr.io/andrewgari/bunkbot:prod
     container_name: starbunk-bunkbot
     restart: unless-stopped
@@ -54,9 +55,6 @@ services:
 
   # DJCova - Music service
   djcova:
-    build:
-      context: .
-      dockerfile: src/djcova/Dockerfile
     image: ghcr.io/andrewgari/djcova:prod
     container_name: starbunk-djcova
     restart: unless-stopped
@@ -116,9 +114,6 @@ services:
 
   # CovaBot - AI personality bot (Cognitive Simulacrum)
   covabot:
-    build:
-      context: .
-      dockerfile: src/covabot/Dockerfile
     image: ghcr.io/andrewgari/covabot:prod
     container_name: starbunk-covabot
     restart: unless-stopped
@@ -210,9 +205,6 @@ services:
 
   # BlueBot - Blue detection and response bot
   bluebot:
-    build:
-      context: .
-      dockerfile: src/bluebot/Dockerfile
     image: ghcr.io/andrewgari/bluebot:prod
     container_name: starbunk-bluebot
     restart: unless-stopped
