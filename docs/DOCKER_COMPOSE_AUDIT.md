@@ -1,7 +1,7 @@
 # Docker Compose Configuration Audit
 
 **Date**: 2026-01-22  
-**Issue**: [#TBD] Clarify if build field is needed in BunkBot docker-compose service
+**Issue**: Clarify if build field is needed in BunkBot docker-compose service
 
 ## Executive Summary
 
@@ -282,14 +282,16 @@ The GitHub Actions workflow (`.github/workflows/main-deploy.yml`) handles image 
 
 1. **Detects Changes**: Determines which services need rebuilding
 2. **Builds Images**: Uses `Dockerfile.ci` for optimized CI builds
-3. **Pushes to GHCR**: Tags images with `latest`, `main`, and commit SHA
-4. **Release Promotion**: Release workflow re-tags `latest` as `prod` or `staging`
+3. **Pushes to GHCR**: Tags images with both `main` and `latest`
+4. **Release Promotion**: Release workflow (`.github/workflows/release.yml`) re-tags `latest` as `prod` or `staging` based on release type
 
 **Image Tags Available**:
-- `ghcr.io/andrewgari/{service}:latest` - Latest main branch build
-- `ghcr.io/andrewgari/{service}:prod` - Production release
-- `ghcr.io/andrewgari/{service}:staging` - Pre-release
-- `ghcr.io/andrewgari/{service}:v*.*.*` - Specific version
+- `ghcr.io/andrewgari/{service}:latest` - Latest main branch build (continuously updated)
+- `ghcr.io/andrewgari/{service}:main` - Latest main branch build (same as latest)
+- `ghcr.io/andrewgari/{service}:prod` - Production release (promoted from latest on full release)
+- `ghcr.io/andrewgari/{service}:staging` - Pre-release (promoted from latest on pre-release)
+- `ghcr.io/andrewgari/{service}:v*.*.*` - Specific version (promoted from latest with version tag)
+- `ghcr.io/andrewgari/{service}:sha-*` - Content-addressed builds (internal CI use)
 
 **Current docker-compose.yml uses**: `:prod` tag (correct for production)
 
