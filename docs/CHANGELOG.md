@@ -1,3 +1,9 @@
+## [1.22.0](https://github.com/andrewgari/starbunk-js/compare/v1.21.1...v1.22.0) (2026-01-22)
+
+### Features
+
+* Organize and expand docker-compose environment variables ([#483](https://github.com/andrewgari/starbunk-js/issues/483)) ([1af8a99](https://github.com/andrewgari/starbunk-js/commit/1af8a9949593d16362f34d59f828fd14512a304d))
+
 ## [1.21.1](https://github.com/andrewgari/starbunk-js/compare/v1.21.0...v1.21.1) (2026-01-22)
 
 ### Bug Fixes
