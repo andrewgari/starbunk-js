@@ -70,11 +70,9 @@ services:
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yml"]
     environment:
-      - PROMETHEUS_HOST=${PROMETHEUS_HOST:-prometheus}
+      - OBSERVABILITY_HOST=${OBSERVABILITY_HOST:-localhost}
       - PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
-      - LOKI_HOST=${LOKI_HOST:-loki}
       - LOKI_PORT=${LOKI_PORT:-3100}
-      - TEMPO_HOST=${TEMPO_HOST:-tempo}
       - TEMPO_PORT=${TEMPO_PORT:-4317}
     volumes:
       - ${HOST_WORKDIR}/infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
