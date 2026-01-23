@@ -260,23 +260,32 @@ services:
           memory: 256M
 
   # OpenTelemetry Collector - Unified telemetry pipeline
+  # Receives telemetry from bots via OTLP and forwards to remote observability stack
+  # Configure PROMETHEUS_HOST, LOKI_HOST, TEMPO_HOST to point to your Unraid/remote server
   starbunk-otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
-    container_name: starbunk-otel-collector
+    container_name: ${OTEL_COLLECTOR_CONTAINER_NAME:-starbunk-otel-collector}
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
-      - ${HOST_WORKDIR}/config/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+      - ${HOST_WORKDIR}/infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
     # OTLP collector exposed to host for external access
     ports:
-      - "14317:4317"   # OTLP gRPC receiver (for bot services and host)
-      - "14318:4318"   # OTLP HTTP receiver (for bot services and host)
+      - "${OTEL_GRPC_PORT:-4317}:4317"   # OTLP gRPC receiver (for bot services)
+      - "${OTEL_HTTP_PORT:-4318}:4318"   # OTLP HTTP receiver (for bot services)
     expose:
-      - "8888"        # Prometheus metrics (internal only)
-      - "8889"        # Prometheus exporter (internal only)
+      - "8888"        # Collector's own metrics (internal only)
+      - "8889"        # Prometheus metrics exporter (internal only)
     environment:
       # Environment & Logging
       - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Remote observability stack endpoints (point to your Unraid server)
+      - PROMETHEUS_HOST=${PROMETHEUS_HOST:-prometheus}
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
+      - LOKI_HOST=${LOKI_HOST:-loki}
+      - LOKI_PORT=${LOKI_PORT:-3100}
+      - TEMPO_HOST=${TEMPO_HOST:-tempo}
+      - TEMPO_PORT=${TEMPO_PORT:-4317}
     networks:
       - starbunk-network
     logging:
@@ -288,13 +297,15 @@ services:
       - com.starbunk.service=otel-collector
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
-      - prometheus.io/port=8888
+      - prometheus.io/port=${OTEL_METRICS_PORT:-8889}
     deploy:
       resources:
         limits:
           memory: 512M
         reservations:
           memory: 256M
+
+
 
 
 
