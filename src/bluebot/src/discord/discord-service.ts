@@ -1,5 +1,5 @@
 import { DiscordService as BaseDiscordService } from '@starbunk/shared';
-import { Client, GuildMember } from 'discord.js';
+import { Client, GuildMember, Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 
 /**
@@ -39,15 +39,15 @@ export class BlueBotDiscordService extends BaseDiscordService {
       .info('BlueBot Discord client initialized');
   }
 
-  public async getEnemy(): Promise<GuildMember> {
-    if (!process.env.GUILD_ID) {
-      throw new Error('GUILD_ID environment variable is not set');
-    }
+  public async getEnemy(message: Message): Promise<GuildMember> {
     if (!process.env.BLUEBOT_ENEMY_USER_ID) {
       throw new Error('BLUEBOT_ENEMY_USER_ID environment variable is not set');
     }
-    const client = this.getClient();
-    const guild = await client.guilds.fetch(process.env.GUILD_ID);
+    const client = message?.guild?.client || this.getClient();
+    if (!client) {
+      throw new Error('Failed to fetch client');
+    }
+    const guild = message?.guild;
     if (!guild) {
       throw new Error('Failed to fetch guild');
     }

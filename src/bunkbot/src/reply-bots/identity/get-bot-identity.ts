@@ -36,7 +36,6 @@ export async function getBotIdentityFromDiscord(options: GetBotIdentityOptions):
     logger.withError(error).withMetadata({
       user_id: userId,
       use_random: useRandomMember,
-      guild_id: message.guild?.id,
     }).error('Error fetching member for bot identity');
   }
 

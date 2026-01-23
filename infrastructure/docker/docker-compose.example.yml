@@ -16,7 +16,6 @@ services:
       # Discord / Starbunk configuration
       - DISCORD_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
-      - GUILD_ID=${GUILD_ID}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
       - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -66,8 +65,6 @@ services:
       # Discord / Starbunk configuration
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${DJCOVA_CLIENT_ID:-${CLIENT_ID}}
-      - GUILD_ID=${GUILD_ID}
-      # Debug / testing
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
@@ -115,8 +112,6 @@ services:
       # Discord / Starbunk configuration
       - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
-      - GUILD_ID=${GUILD_ID}
-      # Data & AI configuration
       - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}

@@ -6,10 +6,8 @@ import { BlueBotDiscordService } from '../../src/discord/discord-service';
 
 describe('E2E: Message Flow', () => {
 	const originalEnemyEnv = process.env.BLUEBOT_ENEMY_USER_ID;
-	const originalGuildEnv = process.env.GUILD_ID;
 	const enemyUserId = '999999999999999999';
 	const friendUserId = '111111111111111111';
-	const guildId = '999999999999999999';
 
 	/**
 	 * Helper function to send a "blue" message and assert the default response
@@ -30,7 +28,6 @@ describe('E2E: Message Flow', () => {
 
 	beforeEach(() => {
 		process.env.BLUEBOT_ENEMY_USER_ID = enemyUserId;
-		process.env.GUILD_ID = guildId;
 		// Reset strategy state to ensure tests don't interfere with each other
 		resetStrategies();
 	});
@@ -40,11 +37,6 @@ describe('E2E: Message Flow', () => {
 			process.env.BLUEBOT_ENEMY_USER_ID = originalEnemyEnv;
 		} else {
 			delete process.env.BLUEBOT_ENEMY_USER_ID;
-		}
-		if (originalGuildEnv !== undefined) {
-			process.env.GUILD_ID = originalGuildEnv;
-		} else {
-			delete process.env.GUILD_ID;
 		}
 	});
 

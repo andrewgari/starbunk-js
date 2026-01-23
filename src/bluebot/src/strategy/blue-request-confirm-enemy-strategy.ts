@@ -6,7 +6,7 @@ import { logger } from '@/observability/logger';
 
 export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
   async shouldRespond(message: Message): Promise<boolean> {
-    const enemy = await BlueBotDiscordService.getInstance().getEnemy();
+    const enemy = await BlueBotDiscordService.getInstance().getEnemy(message);
 		const subject = this.getRequestedName(message);
 
 		logger.withMetadata({
