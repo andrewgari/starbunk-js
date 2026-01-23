@@ -140,14 +140,14 @@ services:
       - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
       - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
 
-      # External Services - Redis (Social Battery)
-      - REDIS_HOST=${REDIS_HOST:-host.docker.internal}
+      # Database Services - Redis (Social Battery)
+      - REDIS_HOST=${REDIS_HOST:-starbunk-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - REDIS_DB=${REDIS_DB:-0}
 
-      # External Services - Qdrant (Saliency/Interest Matching)
-      - QDRANT_URL=${QDRANT_URL:-http://host.docker.internal:6333}
+      # Database Services - Qdrant (Saliency/Interest Matching)
+      - QDRANT_URL=${QDRANT_URL:-http://starbunk-qdrant:6333}
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
 
       # Storage Configuration
@@ -260,23 +260,30 @@ services:
           memory: 256M
 
   # OpenTelemetry Collector - Unified telemetry pipeline
+  # Receives telemetry from bots via OTLP and pushes to remote observability stack
+  # Configure PROMETHEUS_HOST, LOKI_HOST, TEMPO_HOST to point to your Unraid/remote server
+  # Internal only - no ports exposed to host
   starbunk-otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
-    container_name: starbunk-otel-collector
+    container_name: starbunk-exporter
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
-      - ${HOST_WORKDIR}/config/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
-    # OTLP collector exposed to host for external access
-    ports:
-      - "14317:4317"   # OTLP gRPC receiver (for bot services and host)
-      - "14318:4318"   # OTLP HTTP receiver (for bot services and host)
+      - ${HOST_WORKDIR}/infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    # No ports exposed - internal access only
     expose:
-      - "8888"        # Prometheus metrics (internal only)
-      - "8889"        # Prometheus exporter (internal only)
+      - "4317"        # OTLP gRPC receiver (internal only)
+      - "4318"        # OTLP HTTP receiver (internal only)
+      - "8888"        # Collector's own metrics (internal only)
+      - "8889"        # Prometheus metrics exporter (internal only)
     environment:
       # Environment & Logging
       - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Remote observability stack endpoints (point to your Unraid server)
+      - OBSERVABILITY_HOST=${OBSERVABILITY_HOST:-localhost}
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
+      - LOKI_PORT=${LOKI_PORT:-3100}
+      - TEMPO_PORT=${TEMPO_PORT:-4317}
     networks:
       - starbunk-network
     logging:
@@ -288,7 +295,7 @@ services:
       - com.starbunk.service=otel-collector
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
-      - prometheus.io/port=8888
+      - prometheus.io/port=${OTEL_METRICS_PORT:-8889}
     deploy:
       resources:
         limits:
@@ -296,9 +303,110 @@ services:
         reservations:
           memory: 256M
 
+  # ============================================================================
+  # Database Services
+  # ============================================================================
+  # These services are internal to the stack and not exposed to the host
+  # They provide data persistence for the bots
+
+  # PostgreSQL - Relational database
+  starbunk-postgres:
+    image: postgres:16-alpine
+    container_name: starbunk-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-starbunk}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-starbunk}
+      - POSTGRES_DB=${POSTGRES_DB:-starbunk}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - ${HOST_WORKDIR}/data/postgres:/var/lib/postgresql/data
+    networks:
+      - starbunk-network
+    # No ports exposed - internal access only
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=postgres
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-starbunk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - In-memory data store (for social battery, caching, etc.)
+  starbunk-redis:
+    image: redis:7-alpine
+    container_name: starbunk-cache
+    restart: unless-stopped
+    command: ["sh", "-c", "redis-server ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1 --loglevel warning"]
+    volumes:
+      - ${HOST_WORKDIR}/data/redis:/data
+    networks:
+      - starbunk-network
+    # No ports exposed - internal access only
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=redis
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", 'if [ -z "${REDIS_PASSWORD:-}" ]; then redis-cli ping; else redis-cli -a "${REDIS_PASSWORD}" ping; fi']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Qdrant - Vector database (for saliency/interest matching)
+  starbunk-qdrant:
+    image: qdrant/qdrant:latest
+    container_name: starbunk-vectordb
+    restart: unless-stopped
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-}
+    volumes:
+      - ${HOST_WORKDIR}/data/qdrant:/qdrant/storage
+    networks:
+      - starbunk-network
+    # No ports exposed - internal access only
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=qdrant
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 # Note: Using host path mounts for Unraid compatibility
-# Data persists in ${UNRAID_APPDATA_PATH:-./data}/ directory structure
-# Default fallback to ./data/ for non-Unraid environments
+# Data persists in ${HOST_WORKDIR}/data/ directory structure
+# Database data directories are created automatically by Docker
 
 # Custom network for service communication
 networks:

@@ -44,20 +44,20 @@ exporters:
 
   # Prometheus Remote Write exporter (alternative push-based approach)
   prometheusremotewrite:
-    endpoint: http://starbunk-prometheus:9090/api/v1/write
+    endpoint: http://${env:OBSERVABILITY_HOST}:${env:PROMETHEUS_PORT}/api/v1/write
     tls:
       insecure: true
 
   # Loki exporter (for logs)
   loki:
-    endpoint: http://starbunk-loki:3100/loki/api/v1/push
+    endpoint: http://${env:OBSERVABILITY_HOST}:${env:LOKI_PORT}/loki/api/v1/push
     tls:
       insecure: true
 
   # Tempo exporter (for traces)
   # Grafana Tempo for distributed tracing
   otlp/tempo:
-    endpoint: starbunk-tempo:4317
+    endpoint: ${env:OBSERVABILITY_HOST}:${env:TEMPO_PORT}
     tls:
       insecure: true
 

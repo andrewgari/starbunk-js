@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # BunkBot - Discord bot
+  bunkbot:
+    image: ghcr.io/andrewgari/bunkbot:prod
+    container_name: starbunk-bunkbot
+    restart: unless-stopped
+    environment:
+      - DISCORD_TOKEN=${BUNKBOT_TOKEN}
+      - GUILD_ID=${GUILD_ID}
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-exporter}
+    volumes:
+      - ${HOST_WORKDIR}/config/bunkbot:/app/config:ro
+    networks:
+      - starbunk-network
+
+  # DJCova - Discord bot
+  djcova:
+    image: ghcr.io/andrewgari/djcova:prod
+    container_name: starbunk-djcova
+    restart: unless-stopped
+    environment:
+      - DISCORD_TOKEN=${DJCOVA_TOKEN}
+      - CLIENT_ID=${DJCOVA_CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-exporter}
+    volumes:
+      - ${HOST_WORKDIR}/config/djcova:/app/config:ro
+      - ${HOST_WORKDIR}/data/djcova:/data
+    networks:
+      - starbunk-network
+
+  # CovaBot - Discord bot with AI
+  covabot:
+    image: ghcr.io/andrewgari/covabot:prod
+    container_name: starbunk-covabot
+    restart: unless-stopped
+    environment:
+      - DISCORD_TOKEN=${COVABOT_TOKEN}
+      - REDIS_HOST=${REDIS_HOST:-starbunk-cache}
+      - QDRANT_URL=${QDRANT_URL:-http://starbunk-vectordb:6333}
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-exporter}
+    volumes:
+      - ${HOST_WORKDIR}/config/covabot:/app/config:ro
+      - ${HOST_WORKDIR}/data/covabot:/app/data
+    ports:
+      - "${COVABOT_WEB_PORT:-7080}:7080"
+    networks:
+      - starbunk-network
+
+  # BlueBot - Discord bot
+  bluebot:
+    image: ghcr.io/andrewgari/bluebot:prod
+    container_name: starbunk-bluebot
+    restart: unless-stopped
+    environment:
+      - DISCORD_TOKEN=${BLUEBOT_TOKEN}
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-exporter}
+    volumes:
+      - ${HOST_WORKDIR}/config/bluebot:/app/config:ro
+      - ${HOST_WORKDIR}/data/bluebot:/app/data
+    networks:
+      - starbunk-network
+
+  # OTEL Collector - Observability
+  starbunk-exporter:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: starbunk-exporter
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yml"]
+    environment:
+      - OBSERVABILITY_HOST=${OBSERVABILITY_HOST:-localhost}
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
+      - LOKI_PORT=${LOKI_PORT:-3100}
+      - TEMPO_PORT=${TEMPO_PORT:-4317}
+    volumes:
+      - ${HOST_WORKDIR}/infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    networks:
+      - starbunk-network
+
+  # PostgreSQL - Database
+  starbunk-db:
+    image: postgres:16-alpine
+    container_name: starbunk-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-starbunk}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-starbunk}
+      - POSTGRES_DB=${POSTGRES_DB:-starbunk}
+    volumes:
+      - ${HOST_WORKDIR}/data/postgres:/var/lib/postgresql/data
+    networks:
+      - starbunk-network
+
+  # Redis - Cache
+  starbunk-cache:
+    image: redis:7-alpine
+    container_name: starbunk-cache
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-} --maxmemory 256mb
+    volumes:
+      - ${HOST_WORKDIR}/data/redis:/data
+    networks:
+      - starbunk-network
+
+  # Qdrant - Vector Database
+  starbunk-vectordb:
+    image: qdrant/qdrant:latest
+    container_name: starbunk-vectordb
+    restart: unless-stopped
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-}
+    volumes:
+      - ${HOST_WORKDIR}/data/qdrant:/qdrant/storage
+    networks:
+      - starbunk-network
+
+networks:
+  starbunk-network:
+    driver: bridge
+
