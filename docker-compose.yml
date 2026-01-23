@@ -406,7 +406,7 @@ services:
         max-file: "3"
     labels:
       - com.starbunk.service=qdrant
-      - io.portainer.icon=https://raw.githubusercontent.com/qdrant/qdrant/master/docs/logo.svg
+      - io.portainer.icon=https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/qdrant.svg
       - net.unraid.docker.icon=https://raw.githubusercontent.com/qdrant/qdrant/master/docs/logo.svg
     deploy:
       resources:
