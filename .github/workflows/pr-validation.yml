@@ -5,20 +5,13 @@ name: PR - Validation & Build
 # - Container builds run only for apps whose src/{app}/ directory or Dockerfile changed
 # - Shared code changes trigger all app container builds
 # - Workflow changes trigger full validation to test the workflow itself
+# - Adding the "validate" label to a PR forces the full pipeline to run regardless of changes
 
 on:
     pull_request:
         branches:
             - main
-        types: [opened, synchronize, reopened]
-        paths:
-            - 'src/**'
-            - '.github/**'
-            - 'package.json'
-            - 'package-lock.json'
-            - 'tsconfig.json'
-            - 'Dockerfile'
-            - 'docker-compose.yml'
+        types: [opened, synchronize, reopened, labeled]
 
 env:
     REGISTRY: ghcr.io
@@ -52,15 +45,40 @@ jobs:
             bluebot_changed: ${{ steps.changes.outputs.bluebot_changed }}
             any_app_changed: ${{ steps.changes.outputs.any_app_changed }}
             changed_apps: ${{ steps.changes.outputs.changed_apps }}
+            should_run: ${{ steps.should-run.outputs.should_run }}
         steps:
+            - name: Check if should run pipeline
+              id: should-run
+              run: |
+                  # Check if this is a labeled event with the "validate" label
+                  if [ "${{ github.event.action }}" = "labeled" ]; then
+                    if [ "${{ github.event.label.name }}" = "validate" ]; then
+                      echo "✅ 'validate' label detected - forcing full pipeline"
+                      echo "should_run=true" >> $GITHUB_OUTPUT
+                      echo "force_all=true" >> $GITHUB_OUTPUT
+                    else
+                      echo "⏭️  Label '${{ github.event.label.name }}' added - skipping pipeline"
+                      echo "should_run=false" >> $GITHUB_OUTPUT
+                      echo "force_all=false" >> $GITHUB_OUTPUT
+                    fi
+                  else
+                    echo "✅ PR event - running pipeline with change detection"
+                    echo "should_run=true" >> $GITHUB_OUTPUT
+                    echo "force_all=false" >> $GITHUB_OUTPUT
+                  fi
+
             - name: Checkout
+              if: steps.should-run.outputs.should_run == 'true'
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
 
             - name: Detect changes
+              if: steps.should-run.outputs.should_run == 'true'
               id: changes
               uses: ./.github/actions/detect-changes
+              with:
+                  force-all: ${{ steps.should-run.outputs.force_all }}
 
     # =============================================================================
     # GROUP 1: CODE QUALITY (runs when source or workflow files change)
@@ -70,7 +88,9 @@ jobs:
         name: PR Validation - Lint & Format
         runs-on: ubuntu-latest
         needs: [detect-changes]
-        if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
+        if: |
+            needs.detect-changes.outputs.should_run == 'true' &&
+            (needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true')
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -100,7 +120,9 @@ jobs:
         name: PR Validation - Type Check
         runs-on: ubuntu-latest
         needs: [detect-changes]
-        if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
+        if: |
+            needs.detect-changes.outputs.should_run == 'true' &&
+            (needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true')
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -123,7 +145,9 @@ jobs:
         name: PR Validation - Build
         runs-on: ubuntu-latest
         needs: [detect-changes]
-        if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
+        if: |
+            needs.detect-changes.outputs.should_run == 'true' &&
+            (needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true')
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -164,7 +188,9 @@ jobs:
         name: PR Validation - Tests
         runs-on: ubuntu-latest
         needs: [detect-changes]
-        if: needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true'
+        if: |
+            needs.detect-changes.outputs.should_run == 'true' &&
+            (needs.detect-changes.outputs.source_changed == 'true' || needs.detect-changes.outputs.workflow_changed == 'true')
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -193,8 +219,9 @@ jobs:
             - type-check
             - build
             - unit-tests
-        # Run if any app changed AND (source validation passed OR was skipped)
+        # Run if should_run is true AND any app changed AND (source validation passed OR was skipped)
         if: |
+            needs.detect-changes.outputs.should_run == 'true' &&
             needs.detect-changes.outputs.any_app_changed == 'true' &&
             (always() && !cancelled() && !contains(needs.*.result, 'failure'))
         strategy:
