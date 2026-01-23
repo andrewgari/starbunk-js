@@ -260,20 +260,20 @@ services:
           memory: 256M
 
   # OpenTelemetry Collector - Unified telemetry pipeline
-  # Receives telemetry from bots via OTLP and forwards to remote observability stack
+  # Receives telemetry from bots via OTLP and pushes to remote observability stack
   # Configure PROMETHEUS_HOST, LOKI_HOST, TEMPO_HOST to point to your Unraid/remote server
+  # Internal only - no ports exposed to host
   starbunk-otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
-    container_name: ${OTEL_COLLECTOR_CONTAINER_NAME:-starbunk-otel-collector}
+    container_name: starbunk-exporter
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
       - ${HOST_WORKDIR}/infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
-    # OTLP collector exposed to host for external access
-    ports:
-      - "${OTEL_GRPC_PORT:-4317}:4317"   # OTLP gRPC receiver (for bot services)
-      - "${OTEL_HTTP_PORT:-4318}:4318"   # OTLP HTTP receiver (for bot services)
+    # No ports exposed - internal access only
     expose:
+      - "4317"        # OTLP gRPC receiver (internal only)
+      - "4318"        # OTLP HTTP receiver (internal only)
       - "8888"        # Collector's own metrics (internal only)
       - "8889"        # Prometheus metrics exporter (internal only)
     environment:
@@ -314,7 +314,7 @@ services:
   # PostgreSQL - Relational database
   starbunk-postgres:
     image: postgres:16-alpine
-    container_name: ${POSTGRES_CONTAINER_NAME:-starbunk-postgres}
+    container_name: starbunk-db
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-starbunk}
@@ -348,7 +348,7 @@ services:
   # Redis - In-memory data store (for social battery, caching, etc.)
   starbunk-redis:
     image: redis:7-alpine
-    container_name: ${REDIS_CONTAINER_NAME:-starbunk-redis}
+    container_name: starbunk-cache
     restart: unless-stopped
     command: >
       redis-server
@@ -384,7 +384,7 @@ services:
   # Qdrant - Vector database (for saliency/interest matching)
   starbunk-qdrant:
     image: qdrant/qdrant:latest
-    container_name: ${QDRANT_CONTAINER_NAME:-starbunk-qdrant}
+    container_name: starbunk-vectordb
     restart: unless-stopped
     environment:
       - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-}
