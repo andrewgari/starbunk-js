@@ -376,7 +376,7 @@ services:
         reservations:
           memory: 128M
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", 'if [ -z "${REDIS_PASSWORD:-}" ]; then redis-cli ping; else redis-cli -a "${REDIS_PASSWORD}" ping; fi']
       interval: 10s
       timeout: 5s
       retries: 5
