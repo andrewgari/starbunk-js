@@ -74,7 +74,7 @@ export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
 		}
 
 		// Check if subject matches enemy's nickname or username using fuzzy matching
-		const enemy = await BlueBotDiscordService.getInstance().getEnemy();
+		const enemy = await BlueBotDiscordService.getInstance().getEnemy(message);
 		if (matchesAnyName(subject, [enemy.nickname, enemy.user.username])) {
 			return Promise.resolve(response);
 		}
