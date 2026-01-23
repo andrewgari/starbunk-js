@@ -1,1 +1,8 @@
-config/eslint/.eslintignore
+# Container build outputs
+containers/*/dist/
+containers/*/node_modules/
+
+**/dist/**/*.js
+**/build/**/*.js
+**/.next/**/*.js
+archive/**/*.js
