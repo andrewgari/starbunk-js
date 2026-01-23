@@ -407,7 +407,7 @@ services:
     labels:
       - com.starbunk.service=qdrant
       - io.portainer.icon=https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/qdrant.svg
-      - net.unraid.docker.icon=https://raw.githubusercontent.com/qdrant/qdrant/master/docs/logo.svg
+      - net.unraid.docker.icon=https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/qdrant.svg
     deploy:
       resources:
         limits:
