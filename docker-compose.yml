@@ -304,7 +304,7 @@ services:
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
       - prometheus.io/port=${OTEL_METRICS_PORT:-8889}
-      - io.portainer.icon=https://raw.githubusercontent.com/open-telemetry/opentelemetry.io/main/iconography/32x32/Otel_icon-color.png
+      - io.portainer.icon=https://opentelemetry.io/img/logos/opentelemetry-logo-nav.png
       - net.unraid.docker.icon=https://opentelemetry.io/img/logos/opentelemetry-logo-nav.png
     deploy:
       resources:
