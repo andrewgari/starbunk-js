@@ -106,7 +106,7 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: .eslintcache
-                  key: eslint-${{ runner.os }}-${{ hashFiles('**/*.ts', '**/*.tsx', '.eslintrc*', 'eslint.config.*') }}
+                  key: eslint-${{ runner.os }}-${{ hashFiles('**/*.{ts,tsx}', '.eslintrc*', 'eslint.config.*') }}
                   restore-keys: |
                       eslint-${{ runner.os }}-
 
