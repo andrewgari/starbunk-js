@@ -52,8 +52,8 @@ services:
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
       - com.centurylinklabs.watchtower.enable=true
-      - io.portainer.icon=https://raw.githubusercontent.com/andrewgari/starbunk-js/main/assets/bunkbot.png
-      - net.unraid.docker.icon=https://raw.githubusercontent.com/andrewgari/starbunk-js/main/assets/bunkbot.png
+      - io.portainer.icon=https://github.com/andrewgari/starbunk-js/blob/main/assets/bunkbot.png
+      - net.unraid.docker.icon=https://github.com/andrewgari/starbunk-js/blob/main/assets/bunkbot.png
     deploy:
       resources:
         limits:
@@ -111,8 +111,8 @@ services:
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
       - com.centurylinklabs.watchtower.enable=true
-      - io.portainer.icon=https://raw.githubusercontent.com/andrewgari/starbunk-js/main/assets/djcova.png
-      - net.unraid.docker.icon=https://raw.githubusercontent.com/andrewgari/starbunk-js/main/assets/djcova.png
+      - io.portainer.icon=https://github.com/andrewgari/starbunk-js/blob/main/assets/djcova.png
+      - net.unraid.docker.icon=https://github.com/andrewgari/starbunk-js/blob/main/assets/djcova.png
     deploy:
       resources:
         limits:
@@ -202,8 +202,8 @@ services:
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
       - com.centurylinklabs.watchtower.enable=true
-      - io.portainer.icon=https://raw.githubusercontent.com/andrewgari/starbunk-js/main/assets/covabot.png
-      - net.unraid.docker.icon=https://raw.githubusercontent.com/andrewgari/starbunk-js/main/assets/covabot.png
+      - io.portainer.icon=https://github.com/andrewgari/starbunk-js/blob/main/assets/covabot.png
+      - net.unraid.docker.icon=https://github.com/andrewgari/starbunk-js/blob/main/assets/covabot.png
     deploy:
       resources:
         limits:
@@ -258,8 +258,8 @@ services:
       - prometheus.io/path=/metrics
       - prometheus.io/port=3000
       - com.centurylinklabs.watchtower.enable=true
-      - io.portainer.icon=https://raw.githubusercontent.com/andrewgari/starbunk-js/main/assets/bluebot.png
-      - net.unraid.docker.icon=https://raw.githubusercontent.com/andrewgari/starbunk-js/main/assets/bluebot.png
+      - io.portainer.icon=https://github.com/andrewgari/starbunk-js/blob/main/assets/bluebot.png
+      - net.unraid.docker.icon=https://github.com/andrewgari/starbunk-js/blob/main/assets/bluebot.png
     deploy:
       resources:
         limits:
