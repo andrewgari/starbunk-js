@@ -25,7 +25,6 @@ services:
       - NODE_ENV=production
       - DISCORD_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
-      - GUILD_ID=${GUILD_ID}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
       - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -73,7 +72,6 @@ services:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
-      - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - DJCOVA_HEALTH_PORT=${DJCOVA_HEALTH_PORT:-3004}
@@ -118,7 +116,6 @@ services:
       - NODE_ENV=production
       - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
       - CLIENT_ID=${CLIENT_ID}
-      - GUILD_ID=${GUILD_ID}
       - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}

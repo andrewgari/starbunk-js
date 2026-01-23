@@ -107,7 +107,6 @@ The Docker container supports the following environment variables:
 **Discord Configuration:**
 - `BUNKBOT_TOKEN` or `DISCORD_TOKEN` - Discord bot token (required)
 - `CLIENT_ID` - Discord application client ID
-- `GUILD_ID` - Discord server/guild ID
 - `BUNKBOT_BOTS_DIR` - Path to bot configuration directory (default: `/app/config/bots`)
 
 **Logging:**
@@ -180,7 +179,6 @@ When `ENABLE_STRUCTURED_LOGGING=true`, all logs are output as JSON for easy pars
   "timestamp": "2024-01-13T12:00:00.000Z",
   "service": "bunkbot",
   "bot_name": "nice-bot",
-  "guild_id": "123456789"
 }
 ```
 

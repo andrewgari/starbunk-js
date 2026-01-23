@@ -6,7 +6,7 @@ import { logger } from '@/observability/logger';
 
 export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
   async shouldRespond(message: Message): Promise<boolean> {
-    const enemy = await BlueBotDiscordService.getInstance().getEnemy();
+    const enemy = await BlueBotDiscordService.getInstance().getEnemy(message);
 		const subject = this.getRequestedName(message);
 
 		logger.withMetadata({
@@ -74,7 +74,7 @@ export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
 		}
 
 		// Check if subject matches enemy's nickname or username using fuzzy matching
-		const enemy = await BlueBotDiscordService.getInstance().getEnemy();
+		const enemy = await BlueBotDiscordService.getInstance().getEnemy(message);
 		if (matchesAnyName(subject, [enemy.nickname, enemy.user.username])) {
 			return Promise.resolve(response);
 		}
