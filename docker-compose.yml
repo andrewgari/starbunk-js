@@ -13,7 +13,6 @@ services:
     environment:
       # Core Discord Configuration
       - DISCORD_TOKEN=${BUNKBOT_TOKEN}
-      - CLIENT_ID=${BUNKBOT_CLIENT_ID:-}
 
       # Storage Configuration
       - BUNKBOT_BOTS_DIR=/app/config
@@ -71,7 +70,6 @@ services:
 
       # Core Discord Configuration
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${DJCOVA_CLIENT_ID}
 
       # Observability Configuration
       - SERVICE_NAME=${DJCOVA_SERVICE_NAME:-djcova}

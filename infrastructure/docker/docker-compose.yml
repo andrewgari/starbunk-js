@@ -73,7 +73,6 @@ services:
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${BUNKBOT_CLIENT_ID:-${CLIENT_ID}}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
       - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -123,7 +122,6 @@ services:
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${DJCOVA_CLIENT_ID:-${CLIENT_ID}}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
@@ -171,7 +169,6 @@ services:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=384
       - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${COVABOT_CLIENT_ID:-${CLIENT_ID}}
       - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-starbunk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-starbunk}}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
@@ -234,7 +231,6 @@ services:
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${BLUEBOT_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${BLUEBOT_CLIENT_ID:-${CLIENT_ID}}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
