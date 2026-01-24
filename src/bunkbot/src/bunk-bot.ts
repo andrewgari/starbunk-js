@@ -6,6 +6,7 @@ import { BotRegistry } from '@/reply-bots/bot-registry';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
 import { MetricsService } from '@starbunk/shared/observability/metrics-service';
 import { HealthServer } from '@starbunk/shared/observability/health-server';
+import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { logger } from '@/observability/logger';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
 import { commands } from '@/commands';
@@ -138,7 +139,12 @@ export class BunkBot {
 			await this.client.destroy();
 			logger.info('Discord client destroyed');
 
-			logger.info('Shutdown complete');
+			logger.info('Flushing observability data...');
+			await shutdownObservability(process.env.SERVICE_NAME || 'bunkbot');
+
+			// Use stderr for final messages since logger is shut down
+			process.stderr.write('[BunkBot] Observability data flushed\n');
+			process.stderr.write('[BunkBot] Shutdown complete\n');
 		} catch (error) {
 			logger.withError(error).error('Error during shutdown');
 			throw error;

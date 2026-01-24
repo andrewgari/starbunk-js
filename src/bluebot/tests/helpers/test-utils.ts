@@ -82,23 +82,11 @@ export async function testMultipleCases(
  */
 export function setupEnemyEnv(enemyUserId: string, guildId?: string) {
 	const originalEnemyEnv = process.env.BLUEBOT_ENEMY_USER_ID;
-	const originalGuildEnv = process.env.GUILD_ID;
-
-	process.env.BLUEBOT_ENEMY_USER_ID = enemyUserId;
-	if (guildId) {
-		process.env.GUILD_ID = guildId;
-	}
-
 	return () => {
 		if (originalEnemyEnv !== undefined) {
 			process.env.BLUEBOT_ENEMY_USER_ID = originalEnemyEnv;
 		} else {
 			delete process.env.BLUEBOT_ENEMY_USER_ID;
-		}
-		if (originalGuildEnv !== undefined) {
-			process.env.GUILD_ID = originalGuildEnv;
-		} else {
-			delete process.env.GUILD_ID;
 		}
 	};
 }

@@ -24,8 +24,6 @@ services:
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${CLIENT_ID}
-      - GUILD_ID=${GUILD_ID}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
       - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -36,8 +34,10 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
-      - LOKI_URL=${LOKI_URL:-}
+      # OpenTelemetry Configuration (all optional, defaults to starbunk-otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
     ports:
       - "${BUNKBOT_HEALTH_PORT:-3002}:${BUNKBOT_HEALTH_PORT:-3002}"
     healthcheck:
@@ -70,16 +70,16 @@ services:
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DJCOVA_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${CLIENT_ID}
-      - GUILD_ID=${GUILD_ID}
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - DJCOVA_HEALTH_PORT=${DJCOVA_HEALTH_PORT:-3004}
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
-      - LOKI_URL=${LOKI_URL:-}
+      # OpenTelemetry Configuration (all optional, defaults to starbunk-otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
     volumes:
       - djcova_cache:/app/cache
       - djcova_temp:/tmp
@@ -113,8 +113,6 @@ services:
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
-      - CLIENT_ID=${CLIENT_ID}
-      - GUILD_ID=${GUILD_ID}
       - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
@@ -124,8 +122,10 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
-      - LOKI_URL=${LOKI_URL:-}
+      # OpenTelemetry Configuration (all optional, defaults to starbunk-otel-collector)
+      - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
+      - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
     healthcheck:
       test: ["CMD", "/bin/sh", "-c", "curl -f http://localhost:3003/health || exit 1"]
       interval: 30s

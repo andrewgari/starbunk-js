@@ -5,14 +5,11 @@ import { resetStrategies } from '../../src/strategy/strategy-router';
 describe('BlueBot E2E Tests', () => {
   let harness: BlueBotTestHarness;
   const originalEnemyEnv = process.env.BLUEBOT_ENEMY_USER_ID;
-  const originalGuildEnv = process.env.GUILD_ID;
   const enemyUserId = '999999999999999999';
   const friendUserId = '111111111111111111';
-  const guildId = '999999999999999999';
 
   beforeEach(async () => {
     process.env.BLUEBOT_ENEMY_USER_ID = enemyUserId;
-    process.env.GUILD_ID = guildId;
     resetStrategies();
     harness = new BlueBotTestHarness();
     await harness.start();
@@ -23,11 +20,6 @@ describe('BlueBot E2E Tests', () => {
       process.env.BLUEBOT_ENEMY_USER_ID = originalEnemyEnv;
     } else {
       delete process.env.BLUEBOT_ENEMY_USER_ID;
-    }
-    if (originalGuildEnv !== undefined) {
-      process.env.GUILD_ID = originalGuildEnv;
-    } else {
-      delete process.env.GUILD_ID;
     }
   });
 

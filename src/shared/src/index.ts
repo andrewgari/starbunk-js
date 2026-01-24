@@ -5,6 +5,9 @@ export { logLayer } from './observability/log-layer';
 
 // LogLayer mixins for structured logging
 export { discordContextMixin, performanceMixin, botContextMixin, registerStarbunkMixins } from './observability/mixins';
+
+// Tracing service
+export { TraceService, getTraceService } from './observability/trace-service';
 export type {
 	DiscordMessageContext,
 	IDiscordContextMixin,
