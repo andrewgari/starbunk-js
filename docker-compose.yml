@@ -19,10 +19,10 @@ services:
 
       # Observability Configuration
       - SERVICE_NAME=${BUNKBOT_SERVICE_NAME:-bunkbot}
-      - HEALTH_PORT=${HEALTH_PORT:-3000}
       - METRICS_PORT=${METRICS_PORT:-3000}
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      # OTEL Collector Configuration
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
 
@@ -73,10 +73,10 @@ services:
 
       # Observability Configuration
       - SERVICE_NAME=${DJCOVA_SERVICE_NAME:-djcova}
-      - HEALTH_PORT=${HEALTH_PORT:-3000}
       - METRICS_PORT=${METRICS_PORT:-3000}
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      # OTEL Collector Configuration
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
 
@@ -158,10 +158,10 @@ services:
 
       # Observability Configuration
       - SERVICE_NAME=${COVABOT_SERVICE_NAME:-covabot}
-      - HEALTH_PORT=3000
-      - METRICS_PORT=${METRICS_PORT:-3000}
+      - METRICS_PORT=3000
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      # OTEL Collector Configuration
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
 
@@ -221,10 +221,10 @@ services:
 
       # Observability Configuration
       - SERVICE_NAME=${BLUEBOT_SERVICE_NAME:-bluebot}
-      - HEALTH_PORT=3000
-      - METRICS_PORT=${METRICS_PORT:-3000}
+      - METRICS_PORT=3000
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      # OTEL Collector Configuration
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-otel-collector}
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
 
@@ -299,6 +299,7 @@ services:
       - com.starbunk.service=otel-collector
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
+      # Note: The collector's metrics are on port 8889, not on METRICS_PORT
       - prometheus.io/port=${OTEL_METRICS_PORT:-8889}
       - io.portainer.icon=https://opentelemetry.io/img/logos/opentelemetry-logo-nav.png
       - net.unraid.docker.icon=https://opentelemetry.io/img/logos/opentelemetry-logo-nav.png

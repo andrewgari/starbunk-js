@@ -8,7 +8,6 @@ services:
     environment:
         - NODE_ENV=production
         - DISCORD_TOKEN=${BLUEBOT_TOKEN}
-        - HEALTH_PORT=3000
     ports:
         # Metrics and health endpoint port
         - '${BLUEBOT_METRICS_PORT:-9302}:3000'

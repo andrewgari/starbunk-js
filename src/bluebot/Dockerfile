@@ -47,7 +47,6 @@ ARG ENABLE_STRUCTURED_LOGGING=true
 ARG ENABLE_RUNTIME_METRICS=true
 ARG METRICS_PUSH_INTERVAL=30000
 ARG METRICS_PORT=3000
-ARG HEALTH_PORT=3000
 
 WORKDIR /app
 
@@ -71,8 +70,7 @@ ENV NODE_ENV=${NODE_ENV} \
     ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING} \
     ENABLE_RUNTIME_METRICS=${ENABLE_RUNTIME_METRICS} \
     METRICS_PUSH_INTERVAL=${METRICS_PUSH_INTERVAL} \
-    METRICS_PORT=${METRICS_PORT} \
-    HEALTH_PORT=${HEALTH_PORT}
+    METRICS_PORT=${METRICS_PORT}
 
 # Switch to non-root user
 USER bluebot
@@ -86,7 +84,7 @@ LABEL prometheus.io/port="3000"
 # Health check (prefers HEALTH_PORT, then METRICS_PORT, else defaults)
 # Uses /live endpoint for simpler health check (doesn't require Discord connection)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD sh -c 'PORT="${HEALTH_PORT:-${METRICS_PORT:-3000}}"; curl -fsS "http://127.0.0.1:${PORT}/live" || exit 1'
+    CMD sh -c 'PORT="${METRICS_PORT:-3000}"; curl -fsS "http://127.0.0.1:${PORT}/live" || exit 1'
 
 EXPOSE 3000
 

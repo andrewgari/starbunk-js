@@ -17,7 +17,7 @@ export function runSmokeMode(): boolean {
 	}
 
 	logger.info('CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
-	const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT, 10) : 3000;
+	const port = process.env.METRICS_PORT ? parseInt(process.env.METRICS_PORT, 10) : 3000;
 
 	const server = http.createServer((req, res) => {
 		if (req.url === '/health') {
