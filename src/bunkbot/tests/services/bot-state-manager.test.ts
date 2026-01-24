@@ -15,6 +15,16 @@ vi.mock('@/observability/logger', () => ({
   },
 }));
 
+// Mock the trace service
+vi.mock('@starbunk/shared/observability/trace-service', () => ({
+  getTraceService: () => ({
+    startSpan: vi.fn(() => ({})),
+    endSpan: vi.fn(),
+    addAttributes: vi.fn(),
+    addEvent: vi.fn(),
+  }),
+}));
+
 describe('BotStateManager - Enable/Disable', () => {
   beforeEach(() => {
     // Reset singleton between tests

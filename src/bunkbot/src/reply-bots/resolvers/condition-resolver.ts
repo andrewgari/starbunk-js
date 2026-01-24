@@ -3,6 +3,7 @@ import { Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 import { TriggerConditionMetadata } from '@/reply-bots/conditions/trigger';
 import { BotStateManager } from '@/reply-bots/services/bot-state-manager';
+import { getTraceService } from '@starbunk/shared/observability/trace-service';
 
 export type Logic = {
   // Logical Operators (Recursive)
@@ -138,6 +139,15 @@ export class ConditionResolver {
               yaml_chance: l.with_chance,
               override_chance: override,
             }).debug('Applying frequency override to with_chance condition');
+            
+            // Emit trace event for frequency override application
+            const tracing = getTraceService('bunkbot');
+            tracing.addEvent(null, 'frequency.override_applied', {
+              'bot.name': botName,
+              'frequency.yaml': l.with_chance,
+              'frequency.override': override,
+            });
+            
             effectiveChance = override;
           }
         }

@@ -17,6 +17,15 @@ vi.mock('@/observability/logger', () => ({
   },
 }));
 
+vi.mock('@starbunk/shared/observability/trace-service', () => ({
+  getTraceService: () => ({
+    startSpan: vi.fn(() => ({})),
+    endSpan: vi.fn(),
+    addAttributes: vi.fn(),
+    addEvent: vi.fn(),
+  }),
+}));
+
 vi.mock('@/reply-bots/conditions/conditions', () => ({
   withChance: (percent: number) => () => {
     const roll = Math.random() * 100;
