@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { getBotIdentityFromDiscord } from '@/reply-bots/identity/get-bot-identity';
 import { ConditionResolver } from '@/reply-bots/resolvers/condition-resolver';
 import { logger } from '@/observability/logger';
+import CommentConfigService from '@/reply-bots/services/comment-config-service';
 
 export class YamlBotFactory {
   public createLiveBot(config: z.infer<typeof botSchema>): StandardReplyBot {
@@ -92,7 +93,8 @@ export class YamlBotFactory {
         condition: resolved.condition,
         metadata: resolved.metadata,
         responseGenerator: () => {
-          const pool = trigger.responses || config.responses;
+          const override = CommentConfigService.getInstance().getComments(config.name);
+          const pool = (override && override.length > 0) ? override : (trigger.responses || config.responses);
           if (!pool) {
             logger.withMetadata({
               bot_name: config.name,
