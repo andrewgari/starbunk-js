@@ -76,6 +76,7 @@ run_validation "Root Directory Compliance" "tools/scripts/validation/check-root-
 run_validation "File Naming Conventions" "tools/scripts/validation/check-naming-conventions.sh" "Check file naming follows style guide conventions"
 run_validation "Temporary Files Check" "tools/scripts/validation/check-temporary-files.sh" "Ensure no temporary files are committed"
 run_validation "Documentation Structure" "tools/scripts/validation/check-documentation-structure.sh" "Validate documentation organization"
+run_validation "Task Manifests" "scripts/validation/check-manifests.sh" "Ensure package TODO manifests comply with template"
 
 # Summary
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
