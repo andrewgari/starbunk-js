@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { EmbeddingManager } from '../../../src/services/llm/embedding-manager';
+import { EmbeddingManager } from '@starbunk/shared/services/llm';
 
 describe('EmbeddingManager - Scheduling', () => {
   const originalEnv = process.env;
