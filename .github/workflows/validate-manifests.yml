@@ -1,0 +1,26 @@
+name: Validate Manifests
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/TODO.md'
+      - 'docs/TASKS.md'
+      - '.github/agents/master-architect.agent.md'
+      - 'scripts/validation/check-manifests.sh'
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**/TODO.md'
+      - 'docs/TASKS.md'
+      - '.github/agents/master-architect.agent.md'
+      - 'scripts/validation/check-manifests.sh'
+
+jobs:
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate Manifests
+        run: |
+          bash scripts/validation/check-manifests.sh
