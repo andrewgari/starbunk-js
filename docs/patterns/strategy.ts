@@ -1,9 +1,9 @@
-import { MessageContext } from '@/observability/mixins/discord-context-mixin';
+import type { DiscordMessageContext } from '@starbunk/shared';
 
 /**
  * Pattern: Identity Strategy Resolver
  * Use this for bot-specific personality logic.
  */
 export interface IdentityStrategy {
-  resolve(context: MessageContext): Promise<Response>;
+  resolve(context: DiscordMessageContext): Promise<Response>;
 }
