@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { InterestService } from '../../src/services/interest-service';
-import { DatabaseService } from '../../src/services/database-service';
+import { DatabaseService } from '@starbunk/shared/database';
 import { CovaProfile } from '../../src/models/memory-types';
 import * as fs from 'fs';
 import * as path from 'path';

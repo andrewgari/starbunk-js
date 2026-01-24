@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { MemoryService } from '../../src/services/memory-service';
-import { DatabaseService } from '../../src/services/database-service';
+import { DatabaseService } from '@starbunk/shared/database';
 import * as fs from 'fs';
 import * as path from 'path';
 

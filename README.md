@@ -360,6 +360,14 @@ The project includes GitHub Actions workflows for:
 - **Container Registry**: Push images to GitHub Container Registry
 - **Deployment**: Automated deployment to production
 
+### CI Policy (PRs)
+- Validations: runs [scripts/validation/run-all-validations.sh](scripts/validation/run-all-validations.sh) for structure/naming/docs.
+- Changed packages only: build + type-check across modified workspaces.
+- Scoped tests: `src/shared` tests always run; `src/covabot` tests exclude `tests/services/llm/**` temporarily until those suites are stabilized.
+- Weekly security: scheduled `npm audit --audit-level=moderate` alongside existing Snyk PR checks.
+
+This scoping avoids unrelated failures on PRs while still enforcing correctness and security. As suites stabilize, CI will expand test coverage per workspace.
+
 ## 📊 Container Resource Requirements
 
 | Container | CPU | Memory | Storage | Network |
