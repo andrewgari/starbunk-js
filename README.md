@@ -124,11 +124,13 @@ The stack includes three internal database services for data persistence:
 
 **Configuration**:
 ```env
-REDIS_HOST=starbunk-redis  # Use local Redis instance (default)
+REDIS_HOST=starbunk-redis  # Use service name for internal networking
 REDIS_PORT=6379
 REDIS_PASSWORD=            # Optional: set for production
 REDIS_DB=0
 ```
+
+> **Note**: Use the service name `starbunk-redis` (not the container name `starbunk-cache`) for REDIS_HOST. Docker Compose uses service names for internal DNS resolution.
 
 **Using External Redis** (optional):
 ```env
