@@ -59,7 +59,7 @@ export class BunkBot {
 	 * Discover and load bots from the configured directory
 	 */
 	private async discoverBots(): Promise<void> {
-		const botsDir = process.env.BUNKBOT_BOTS_DIR || path.join(__dirname, '../../config/bots');
+		const botsDir = process.env.BUNKBOT_BOTS_DIR || '/app/config';
 		logger.withMetadata({ directory: botsDir }).info('Starting bot discovery');
 
 		BotRegistry.setInstance(this.botRegistry); // Make registry accessible globally
