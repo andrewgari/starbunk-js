@@ -110,6 +110,54 @@ DEBUG=true
 NODE_ENV=development
 ```
 
+## 🗄️ Database Services
+
+The stack includes three internal database services for data persistence:
+
+### Redis - In-Memory Data Store
+- **Purpose**: Social battery tracking, caching, session data
+- **Service**: `starbunk-redis` (container: `starbunk-cache`)
+- **Port**: 6379 (internal only)
+- **Memory**: 256MB limit, allkeys-lru eviction policy
+- **Persistence**: Snapshots every 60s if at least 1 change
+- **Data**: `/data/redis` volume mount
+
+**Configuration**:
+```env
+REDIS_HOST=starbunk-redis  # Use service name for internal networking
+REDIS_PORT=6379
+REDIS_PASSWORD=            # Optional: set for production
+REDIS_DB=0
+```
+
+> **Note**: Use the service name `starbunk-redis` (not the container name `starbunk-cache`) for REDIS_HOST. Docker Compose uses service names for internal DNS resolution.
+
+**Using External Redis** (optional):
+```env
+REDIS_HOST=192.168.1.100   # Point to external Redis server
+REDIS_PASSWORD=your_password
+```
+
+### PostgreSQL - Relational Database
+- **Purpose**: Persistent bot data, user settings
+- **Service**: `starbunk-postgres` (container: `starbunk-db`)
+- **Port**: 5432 (internal only)
+- **Memory**: 512MB limit
+- **Data**: `/data/postgres` volume mount
+
+### Qdrant - Vector Database
+- **Purpose**: Saliency/interest matching, semantic search
+- **Service**: `starbunk-qdrant` (container: `starbunk-vectordb`)
+- **Port**: 6333 (internal only)
+- **Memory**: 512MB limit
+- **Data**: `/data/qdrant` volume mount
+
+**Architecture Notes**:
+- All database services run within the `starbunk-network` and are not exposed to the host
+- Services can be replaced with external instances by updating environment variables
+- Data persists in `${HOST_WORKDIR}/data/` directory structure
+- Each service includes health checks for reliability
+
 ## 🛠️ Development Commands
 
 ### Container Management
@@ -179,28 +227,41 @@ src/
 graph TD
     User([Discord User]) <-->|Interacts with| Discord[Discord Platform]
 
-    subgraph "Container Stack"
+    subgraph "Bot Services"
         Discord <-->|Bot API| BunkBot[🤖 BunkBot<br/>Reply Bots + Admin]
         Discord <-->|Voice API| DJCova[🎵 DJCova<br/>Music Service]
         Discord <-->|Bot API| CovaBot[🧠 CovaBot<br/>AI Personality]
         Discord <-->|Bot API| BlueBot[💙 BlueBot<br/>Blue Detection]
     end
 
-    subgraph "Shared Infrastructure"
-        BunkBot --> SharedDB[(PostgreSQL)]
-        CovaBot --> SharedDB
-        BlueBot --> SharedDB
-
-        CovaBot --> LLM[LLM Services<br/>OpenAI/Ollama]
-
-        BunkBot --> Webhooks[Webhook Manager]
-        CovaBot --> Webhooks
+    subgraph "Database Services"
+        PostgresDB[(PostgreSQL<br/>Persistent Data)]
+        RedisDB[(Redis<br/>Cache/Sessions)]
+        QdrantDB[(Qdrant<br/>Vector Search)]
     end
+
+    subgraph "External Services"
+        LLM[LLM Services<br/>OpenAI/Ollama]
+        Webhooks[Webhook Manager]
+    end
+
+    BunkBot --> PostgresDB
+    CovaBot --> PostgresDB
+    CovaBot --> RedisDB
+    CovaBot --> QdrantDB
+    BlueBot --> PostgresDB
+
+    CovaBot --> LLM
+    BunkBot --> Webhooks
+    CovaBot --> Webhooks
 
     style BunkBot fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     style DJCova fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     style CovaBot fill:#fff3e0,stroke:#e65100,stroke-width:2px
     style BlueBot fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style PostgresDB fill:#336791,stroke:#fff,stroke-width:2px,color:#fff
+    style RedisDB fill:#DC382D,stroke:#fff,stroke-width:2px,color:#fff
+    style QdrantDB fill:#24386C,stroke:#fff,stroke-width:2px,color:#fff
     style LLM fill:#bfb,stroke:#333,stroke-width:1px
 ```
 
@@ -303,11 +364,14 @@ The project includes GitHub Actions workflows for:
 
 | Container | CPU | Memory | Storage | Network |
 |-----------|-----|--------|---------|---------|
-| **BunkBot** | 0.5 cores | 512MB | Minimal | High (webhooks) |
+| **BunkBot** | 0.5 cores | 256MB | Minimal | High (webhooks) |
 | **DJCova** | 1-2 cores | 1GB | Moderate (cache) | High (voice) |
-| **CovaBot** | 0.5-1 cores | 512MB | Low | Moderate |
-| **BlueBot** | 0.25-0.5 cores | 256MB | Minimal | Low |
+| **CovaBot** | 0.5-1 cores | 1GB | Low | Moderate |
+| **BlueBot** | 0.25-0.5 cores | 512MB | Minimal | Low |
 | **PostgreSQL** | 0.5 cores | 512MB | High | Low |
+| **Redis** | 0.25 cores | 256MB | Low (snapshots) | Low |
+| **Qdrant** | 0.5 cores | 512MB | Moderate | Low |
+| **OTEL Collector** | 0.5 cores | 512MB | Minimal | Moderate |
 
 ## 🔧 Troubleshooting
 
@@ -326,10 +390,28 @@ docker-compose build --no-cache bunkbot
 ### Database Connection Issues
 ```bash
 # Check PostgreSQL status
-docker-compose ps postgres
+docker-compose ps starbunk-postgres
 
-# Test database connection
-docker-compose exec postgres psql -U starbunk -d starbunk
+# Test PostgreSQL connection
+docker-compose exec starbunk-postgres psql -U starbunk -d starbunk
+
+# Check Redis status
+docker-compose ps starbunk-redis
+
+# Test Redis connection
+docker-compose exec starbunk-redis redis-cli ping
+# Expected output: PONG
+
+# Test Redis with password
+docker-compose exec starbunk-redis redis-cli -a your_password ping
+
+# Check Qdrant status
+docker-compose ps starbunk-qdrant
+
+# View database service logs
+docker-compose logs starbunk-redis
+docker-compose logs starbunk-postgres
+docker-compose logs starbunk-qdrant
 ```
 
 ## 📜 License
