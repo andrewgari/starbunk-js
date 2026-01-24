@@ -3,7 +3,6 @@ import { Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 import { TriggerConditionMetadata } from '@/reply-bots/conditions/trigger';
 import { BotStateManager } from '@/reply-bots/services/bot-state-manager';
-import { getTraceService } from '@starbunk/shared/observability/trace-service';
 
 export type Logic = {
   // Logical Operators (Recursive)
@@ -125,33 +124,26 @@ export class ConditionResolver {
             description: `Message from user: ${l.from_user}`,
           },
         };
-      case 'with_chance':
-        logger.withMetadata({ chance: l.with_chance }).debug('Resolving with_chance condition');
-        
+      case 'with_chance': {
+        const yamlChance = l.with_chance ?? 100;
+        logger.withMetadata({ chance: yamlChance }).debug('Resolving with_chance condition');
+
         // Check if bot has a frequency override
-        let effectiveChance = l.with_chance!;
+        let effectiveChance = yamlChance;
         if (botName) {
           const stateManager = BotStateManager.getInstance();
           const override = stateManager.getFrequency(botName);
           if (override !== undefined) {
             logger.withMetadata({
               bot_name: botName,
-              yaml_chance: l.with_chance,
+              yaml_chance: yamlChance,
               override_chance: override,
             }).debug('Applying frequency override to with_chance condition');
-            
-            // Emit trace event for frequency override application
-            const tracing = getTraceService('bunkbot');
-            tracing.addEvent(null, 'frequency.override_applied', {
-              'bot.name': botName,
-              'frequency.yaml': l.with_chance,
-              'frequency.override': override,
-            });
-            
+
             effectiveChance = override;
           }
         }
-        
+
         return {
           condition: Conditions.withChance(effectiveChance),
           metadata: {
@@ -160,6 +152,7 @@ export class ConditionResolver {
             description: `Random chance: ${effectiveChance}%`,
           },
         };
+      }
       case 'always':
         logger.debug('Resolving always condition');
         return {

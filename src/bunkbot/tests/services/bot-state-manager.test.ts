@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { BotStateManager, FrequencyOverride } from '@/reply-bots/services/bot-state-manager';
+import { BotStateManager } from '@/reply-bots/services/bot-state-manager';
 
 // Mock the logger
 vi.mock('@/observability/logger', () => ({
@@ -13,16 +13,6 @@ vi.mock('@/observability/logger', () => ({
       warn: vi.fn(),
     }),
   },
-}));
-
-// Mock the trace service
-vi.mock('@starbunk/shared/observability/trace-service', () => ({
-  getTraceService: () => ({
-    startSpan: vi.fn(() => ({})),
-    endSpan: vi.fn(),
-    addAttributes: vi.fn(),
-    addEvent: vi.fn(),
-  }),
 }));
 
 describe('BotStateManager - Enable/Disable', () => {
@@ -98,18 +88,18 @@ describe('BotStateManager - Frequency Overrides', () => {
     expect(manager.getOriginalFrequency('test-bot')).toBe(100);
   });
 
-  it('should reset frequency override', () => {
+  it('should reset frequency override and return original frequency', () => {
     const manager = BotStateManager.getInstance();
     manager.setFrequency('test-bot', 50, 'admin-123', 100);
     const result = manager.resetFrequency('test-bot');
-    expect(result).toBe(true);
+    expect(result).toBe(100);
     expect(manager.getFrequency('test-bot')).toBeUndefined();
   });
 
-  it('should return false when resetting non-existent override', () => {
+  it('should return undefined when resetting non-existent override', () => {
     const manager = BotStateManager.getInstance();
     const result = manager.resetFrequency('unknown-bot');
-    expect(result).toBe(false);
+    expect(result).toBeUndefined();
   });
 
   it('should return undefined for non-existent frequency', () => {

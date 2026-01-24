@@ -133,7 +133,7 @@ export default {
           if (setting === 'frequency') {
             const originalFrequency = stateManager.getOriginalFrequency(botName) ?? 100;
             stateManager.setFrequency(botName, percent, interaction.user.id, originalFrequency);
-            
+
             await interaction.reply({
               content: `✅ ${botName} frequency set to ${percent}% (was ${originalFrequency}%)`,
               ephemeral: true,
@@ -147,9 +147,8 @@ export default {
           const setting = interaction.options.getString('setting', true);
 
           if (setting === 'frequency') {
-            const wasReset = stateManager.resetFrequency(botName);
-            if (wasReset) {
-              const original = stateManager.getOriginalFrequency(botName) ?? 100;
+            const original = stateManager.resetFrequency(botName);
+            if (original !== undefined) {
               await interaction.reply({
                 content: `✅ ${botName} frequency reset to ${original}%`,
                 ephemeral: true,
@@ -181,15 +180,15 @@ export default {
             const isEnabled = stateManager.isBotEnabled(botName);
             const statusIcon = isEnabled ? '✅' : '❌';
             const statusText = isEnabled ? 'ENABLED' : 'DISABLED';
-            
+
             const currentFreq = stateManager.getFrequency(botName);
             const originalFreq = stateManager.getOriginalFrequency(botName);
-            
+
             let frequencyInfo = '';
             if (currentFreq !== undefined) {
               frequencyInfo = ` [FREQ: ${currentFreq}% ← ${originalFreq ?? 100}%]`;
             }
-            
+
             message += `${statusIcon} ${botName.padEnd(20)} [${statusText}]${frequencyInfo}\n`;
           }
 

@@ -17,21 +17,13 @@ vi.mock('@/observability/logger', () => ({
   },
 }));
 
-vi.mock('@starbunk/shared/observability/trace-service', () => ({
-  getTraceService: () => ({
-    startSpan: vi.fn(() => ({})),
-    endSpan: vi.fn(),
-    addAttributes: vi.fn(),
-    addEvent: vi.fn(),
-  }),
-}));
-
 vi.mock('@/reply-bots/conditions/conditions', () => ({
   withChance: (percent: number) => () => {
-    const roll = Math.random() * 100;
-    return roll <= percent;
+    // Deterministic: return true if percent >= 50, false otherwise
+    // This avoids flakiness from Math.random()
+    return percent >= 50;
   },
-  containsWord: (word: string) => (msg: Message) => 
+  containsWord: (word: string) => (msg: Message) =>
     msg.content.toLowerCase().includes(word.toLowerCase()),
   containsPhrase: (phrase: string) => (msg: Message) =>
     msg.content.toLowerCase().includes(phrase.toLowerCase()),

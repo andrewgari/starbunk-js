@@ -1,5 +1,4 @@
 import { logger } from '@/observability/logger';
-import { getTraceService } from '@starbunk/shared/observability/trace-service';
 
 /**
  * Represents a frequency override for a bot
@@ -68,13 +67,6 @@ export class BotStateManager {
    * Tracks the original frequency from YAML on first override
    */
   setFrequency(botName: string, frequencyPercent: number, adminUserId: string, originalFrequency?: number): void {
-    const tracing = getTraceService('bunkbot');
-    const span = tracing.startSpan('frequency.override_set', {
-      'bot.name': botName,
-      'frequency.percent': frequencyPercent,
-      'admin.user_id': adminUserId,
-    });
-
     if (frequencyPercent < 0 || frequencyPercent > 100) {
       logger.withMetadata({
         bot_name: botName,
@@ -95,11 +87,6 @@ export class BotStateManager {
     };
 
     this.botFrequencies.set(botName, override);
-    
-    tracing.addAttributes(span, {
-      'frequency.clamped': clamped,
-      'frequency.original': override.originalFrequency,
-    });
 
     logger.withMetadata({
       bot_name: botName,
@@ -107,8 +94,6 @@ export class BotStateManager {
       original_frequency: override.originalFrequency,
       admin_id: adminUserId,
     }).info('Frequency override set for bot');
-
-    tracing.endSpan(span);
   }
 
   /**
@@ -127,34 +112,24 @@ export class BotStateManager {
 
   /**
    * Reset a frequency override to the original YAML value
-   * Returns true if override existed and was reset, false otherwise
+   * Returns the original frequency that the override was reset to, or undefined if no override existed
    */
-  resetFrequency(botName: string): boolean {
-    const tracing = getTraceService('bunkbot');
-    const span = tracing.startSpan('frequency.override_reset', {
-      'bot.name': botName,
-    });
-
+  resetFrequency(botName: string): number | undefined {
     const existing = this.botFrequencies.get(botName);
     if (!existing) {
       logger.withMetadata({ bot_name: botName }).debug('No frequency override to reset');
-      tracing.endSpan(span);
-      return false;
+      return undefined;
     }
 
+    const originalFrequency = existing.originalFrequency;
     this.botFrequencies.delete(botName);
-    
-    tracing.addAttributes(span, {
-      'frequency.original': existing.originalFrequency,
-    });
 
     logger.withMetadata({
       bot_name: botName,
-      original_frequency: existing.originalFrequency,
+      original_frequency: originalFrequency,
     }).info('Frequency override reset for bot');
 
-    tracing.endSpan(span);
-    return true;
+    return originalFrequency;
   }
 
   /**
