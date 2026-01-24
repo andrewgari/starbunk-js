@@ -499,7 +499,7 @@ jobs:
                     -e CI_SMOKE_MODE=true \
                     -e CI=true \
                     -e NODE_ENV=test \
-                    -e HEALTH_PORT=3000 \
+                    -e METRICS_PORT=3000 \
                     ${{ env.REGISTRY }}/${{ github.repository_owner }}/bunkbot:main
 
             - name: Run container health & smoke checks
@@ -534,7 +534,7 @@ jobs:
                     -e CI_SMOKE_MODE=true \
                     -e CI=true \
                     -e NODE_ENV=test \
-                    -e HEALTH_PORT=3000 \
+                    -e METRICS_PORT=3000 \
                     ${{ env.REGISTRY }}/${{ github.repository_owner }}/covabot:main
 
             - name: Run container health & smoke checks
@@ -569,7 +569,7 @@ jobs:
                     -e CI_SMOKE_MODE=true \
                     -e CI=true \
                     -e NODE_ENV=test \
-                    -e HEALTH_PORT=3000 \
+                    -e METRICS_PORT=3000 \
                     ${{ env.REGISTRY }}/${{ github.repository_owner }}/djcova:main
 
             - name: Run container health & smoke checks
@@ -604,7 +604,7 @@ jobs:
                     -e CI_SMOKE_MODE=true \
                     -e CI=true \
                     -e NODE_ENV=test \
-                    -e HEALTH_PORT=3000 \
+                    -e METRICS_PORT=3000 \
                     ${{ env.REGISTRY }}/${{ github.repository_owner }}/bluebot:main
 
             - name: Run container health & smoke checks

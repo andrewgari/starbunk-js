@@ -56,7 +56,7 @@ services:
       # Observability Configuration
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - METRICS_PORT=${METRICS_PORT:-3000}
-      - HEALTH_PORT=${HEALTH_PORT:-3000}
+      - METRICS_PORT=${METRICS_PORT:-3000}
     volumes:
       # Unraid-compatible host path mounts
       - ${UNRAID_APPDATA_PATH:-./data}/djcova:/config
@@ -109,7 +109,7 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - METRICS_PORT=${METRICS_PORT:-3000}
-      - HEALTH_PORT=${HEALTH_PORT:-3000}
+      - METRICS_PORT=${METRICS_PORT:-3000}
     volumes:
       # Unraid-compatible host path mount for CovaBot personality notes
       - ${UNRAID_APPDATA_PATH:-./data}/covabot:/config

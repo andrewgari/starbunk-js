@@ -355,7 +355,7 @@ jobs:
                     -e CI_SMOKE_MODE=true \
                     -e CI=true \
                     -e NODE_ENV=test \
-                    -e HEALTH_PORT=3000 \
+                    -e METRICS_PORT=3000 \
                     ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.app }}:pr-${{ github.event.pull_request.number }}
 
             - name: Run container health & smoke checks
