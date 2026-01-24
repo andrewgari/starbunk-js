@@ -30,6 +30,7 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
+      - BUNKBOT_WEB_PORT=${BUNKBOT_WEB_PORT:-7081}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -37,6 +38,8 @@ services:
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
     volumes:
       - ${HOST_WORKDIR}/config/bunkbot:/app/config:ro
+    ports:
+      - "${BUNKBOT_WEB_PORT:-7081}:7081"
     networks:
       - starbunk-network
     logging:

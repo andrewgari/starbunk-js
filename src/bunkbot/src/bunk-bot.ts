@@ -1,4 +1,3 @@
-import * as path from 'path';
 import { Client, Message } from 'discord.js';
 import { BotDiscoveryService } from '@/reply-bots/services/bot-discovery-service';
 import { YamlBotFactory } from '@/serialization/yaml-bot-factory';
@@ -10,6 +9,7 @@ import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { logger } from '@/observability/logger';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
 import { commands } from '@/commands';
+import { ConfigServer } from '@/observability/config-server';
 
 /**
  * Main BunkBot application class
@@ -21,6 +21,7 @@ export class BunkBot {
 	private healthServer: HealthServer;
 	private botRegistry: BotRegistry;
 	private discordService: DiscordService;
+private configServer: ConfigServer;
 
 	constructor(client: Client, metricsService: MetricsService, healthServer: HealthServer) {
 		this.client = client;
@@ -28,6 +29,7 @@ export class BunkBot {
 		this.healthServer = healthServer;
 		this.botRegistry = new BotRegistry();
 		this.discordService = DiscordService.getInstance();
+this.configServer = new ConfigServer(parseInt(process.env.BUNKBOT_WEB_PORT || '7081', 10));
 	}
 
 	/**
@@ -47,6 +49,7 @@ export class BunkBot {
 		this.setupMessageHandler();
 		this.setupGuildEventHandlers();
 		this.setupErrorHandlers();
+await this.configServer.start();
 
 		const botCount = this.botRegistry.getBots().length;
 		logger.withMetadata({
@@ -131,7 +134,11 @@ export class BunkBot {
 		logger.withMetadata({ signal }).info(`Received ${signal}, shutting down gracefully...`);
 
 		try {
-			logger.info('Stopping health server...');
+			logger.info('Stopping config server...');
+await this.configServer.stop();
+logger.info('Config server stopped');
+
+logger.info('Stopping health server...');
 			await this.healthServer.stop();
 			logger.info('Health server stopped');
 
