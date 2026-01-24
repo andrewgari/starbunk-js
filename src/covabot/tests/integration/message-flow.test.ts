@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { Message, User, Client, Guild, GuildMember } from 'discord.js';
-import { DatabaseService } from '../../src/services/database-service';
+import { DatabaseService } from '@starbunk/shared/database';
 import { MemoryService } from '../../src/services/memory-service';
 import { InterestService } from '../../src/services/interest-service';
 import { SocialBatteryService } from '../../src/services/social-battery-service';

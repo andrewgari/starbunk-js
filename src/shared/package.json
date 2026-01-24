@@ -6,13 +6,14 @@
 	"types": "dist/index.d.ts",
 	"exports": {
 		".": "./dist/index.js",
-		"./*": "./dist/*.js",
+		"./database": "./dist/services/database/index.js",
 		"./observability/mixins": "./dist/observability/mixins/index.js",
 		"./observability/*": "./dist/observability/*.js",
 		"./services/llm": "./dist/services/llm/index.js",
 		"./services/llm/*": "./dist/services/llm/*.js",
 		"./services/vector": "./dist/services/vector/index.js",
-		"./services/vector/*": "./dist/services/vector/*.js"
+		"./services/vector/*": "./dist/services/vector/*.js",
+		"./*": "./dist/*.js"
 	},
 	"files": [
 		"dist/**/*",
@@ -41,7 +42,6 @@
 		"@opentelemetry/sdk-node": "^0.211.0",
 		"@opentelemetry/sdk-trace-node": "^2.5.0",
 		"@opentelemetry/semantic-conventions": "^1.39.0",
-		"better-sqlite3": "^11.0.0",
 		"chalk": "^4.1.2",
 		"date-fns": "^4.1.0",
 		"discord.js": "^14.18.0",
@@ -72,6 +72,12 @@
 		"vitest": "^4.0.17"
 	},
 	"peerDependencies": {
+				"better-sqlite3": "^11.0.0",
 		"typescript": "~5.3.0"
+		},
+		"peerDependenciesMeta": {
+			"better-sqlite3": {
+				"optional": true
+			}
 	}
 }

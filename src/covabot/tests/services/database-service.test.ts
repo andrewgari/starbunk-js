@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { DatabaseService } from '../../src/services/database-service';
+import { DatabaseService } from '@starbunk/shared/database';
 import * as fs from 'fs';
 import * as path from 'path';
 

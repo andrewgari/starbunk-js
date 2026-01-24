@@ -20,6 +20,7 @@
     "paths": {
       "@/*": ["./*"],
       "@starbunk/shared": ["../../shared/src"],
+        "@starbunk/shared/database": ["../../shared/src/services/database"],
       "@starbunk/shared/*": ["../../shared/src/*"]
     },
     "declaration": true,

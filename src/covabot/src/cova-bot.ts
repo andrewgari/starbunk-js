@@ -8,7 +8,7 @@
 import { Client, Events, Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
-import { DatabaseService } from '@starbunk/shared';
+import { DatabaseService } from '@starbunk/shared/database';
 import { MemoryService } from '@/services/memory-service';
 import { InterestService } from '@/services/interest-service';
 import { SocialBatteryService } from '@/services/social-battery-service';

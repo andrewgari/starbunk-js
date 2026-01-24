@@ -16,6 +16,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@starbunk/shared/database': path.resolve(__dirname, '../shared/src/services/database'),
       '@starbunk/shared': path.resolve(__dirname, '../shared/src'),
     },
   },
