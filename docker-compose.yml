@@ -7,7 +7,7 @@ version: '3.8'
 services:
   # BunkBot - Next generation YAML-based reply bot system
   bunkbot:
-    image: ghcr.io/andrewgari/bunkbot:prod
+    image: ghcr.io/andrewgari/bunkbot:main
     container_name: starbunk-bunkbot
     restart: unless-stopped
     environment:
@@ -67,7 +67,7 @@ services:
 
   # DJCova - Music service
   djcova:
-    image: ghcr.io/andrewgari/djcova:prod
+    image: ghcr.io/andrewgari/djcova:main
     container_name: starbunk-djcova
     restart: unless-stopped
     environment:
@@ -130,7 +130,7 @@ services:
 
   # CovaBot - AI personality bot (Cognitive Simulacrum)
   covabot:
-    image: ghcr.io/andrewgari/covabot:prod
+    image: ghcr.io/andrewgari/covabot:main
     container_name: starbunk-covabot
     restart: unless-stopped
     environment:
@@ -227,7 +227,7 @@ services:
 
   # BlueBot - Blue detection and response bot
   bluebot:
-    image: ghcr.io/andrewgari/bluebot:prod
+    image: ghcr.io/andrewgari/bluebot:main
     container_name: starbunk-bluebot
     restart: unless-stopped
     environment:
@@ -362,8 +362,8 @@ services:
         max-file: "3"
     labels:
       - com.starbunk.service=postgres
-      - io.portainer.icon=https://raw.githubusercontent.com/docker-library/docs/01c12653951b2fe592c1f93a13b4e289ada0e3a1/postgres/logo.png
-      - net.unraid.docker.icon=https://raw.githubusercontent.com/docker-library/docs/01c12653951b2fe592c1f93a13b4e289ada0e3a1/postgres/logo.png
+      - io.portainer.icon=https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/postgres.svg
+      - net.unraid.docker.icon=https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/postgres.svg
     deploy:
       resources:
         limits:
