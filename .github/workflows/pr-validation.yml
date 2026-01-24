@@ -363,6 +363,7 @@ jobs:
               uses: ./.github/actions/container-health-check
               with:
                   container-name: ${{ matrix.app }}-test
+                  health-path: /live
 
             - name: Tag and push image
               if: steps.should-run.outputs.skip != 'true'
