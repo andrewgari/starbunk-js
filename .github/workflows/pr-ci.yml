@@ -92,10 +92,7 @@ jobs:
         run: npm run build:covabot
       - name: Test covabot (exclude llm suites temporarily)
         working-directory: src/covabot
-        run: |
-          npx vitest run \
-            --include "tests/**/*.test.ts" \
-            --exclude "tests/services/llm/**/*.test.ts"
+        run: npx vitest run --exclude "tests/services/llm/**"
 
   bluebot:
     name: BlueBot type-check
