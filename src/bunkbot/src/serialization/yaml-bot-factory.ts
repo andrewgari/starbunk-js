@@ -86,7 +86,7 @@ export class YamlBotFactory {
         has_responses: !!(trigger.responses || config.responses),
       }).debug(`Creating trigger`);
 
-      const resolved = ConditionResolver.resolveWithMetadata(trigger.conditions);
+      const resolved = ConditionResolver.resolveWithMetadata(trigger.conditions, config.name);
 
       return {
         name: trigger.name,
