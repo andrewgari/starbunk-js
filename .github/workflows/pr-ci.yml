@@ -1,0 +1,152 @@
+name: PR CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validations:
+    name: Validations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install deps
+        run: npm ci
+      - name: Run structure/naming/docs validations
+        run: bash scripts/validation/run-all-validations.sh
+
+  changed:
+    name: Detect changed packages
+    runs-on: ubuntu-latest
+    outputs:
+      shared: ${{ steps.filter.outputs.shared }}
+      covabot: ${{ steps.filter.outputs.covabot }}
+      bluebot: ${{ steps.filter.outputs.bluebot }}
+      bunkbot: ${{ steps.filter.outputs.bunkbot }}
+      djcova: ${{ steps.filter.outputs.djcova }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Paths filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared:
+              - 'src/shared/**'
+            covabot:
+              - 'src/covabot/**'
+            bluebot:
+              - 'src/bluebot/**'
+            bunkbot:
+              - 'src/bunkbot/**'
+            djcova:
+              - 'src/djcova/**'
+
+  shared:
+    name: Shared build + tests
+    needs: [validations, changed]
+    if: needs.changed.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install deps
+        run: npm ci
+      - name: Type-check shared
+        run: npm run type-check:shared
+      - name: Build shared
+        run: npm run build:shared
+      - name: Test shared
+        run: npm run test:shared
+
+  covabot:
+    name: CovaBot build + scoped tests
+    needs: [validations, changed]
+    if: needs.changed.outputs.covabot == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install deps
+        run: npm ci
+      - name: Type-check covabot
+        run: npm run type-check:covabot
+      - name: Build covabot
+        run: npm run build:covabot
+      - name: Test covabot (exclude llm suites temporarily)
+        working-directory: src/covabot
+        run: |
+          npx vitest run \
+            --include "tests/**/*.test.ts" \
+            --exclude "tests/services/llm/**/*.test.ts"
+
+  bluebot:
+    name: BlueBot type-check
+    needs: [validations, changed]
+    if: needs.changed.outputs.bluebot == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install deps
+        run: npm ci
+      - name: Type-check bluebot
+        run: npm run type-check:bluebot
+
+  bunkbot:
+    name: BunkBot type-check
+    needs: [validations, changed]
+    if: needs.changed.outputs.bunkbot == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install deps
+        run: npm ci
+      - name: Type-check bunkbot
+        run: npm run type-check:bunkbot
+
+  djcova:
+    name: DJCova type-check
+    needs: [validations, changed]
+    if: needs.changed.outputs.djcova == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install deps
+        run: npm ci
+      - name: Type-check djcova
+        run: npm run type-check:djcova
