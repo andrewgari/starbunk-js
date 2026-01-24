@@ -300,8 +300,8 @@ services:
       - ${HOST_WORKDIR}/infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
     # No ports exposed - internal access only
     expose:
-      - "4317"        # OTLP gRPC receiver (internal only)
-      - "4318"        # OTLP HTTP receiver (internal only)
+      - "14317"        # OTLP gRPC receiver (internal only)
+      - "14318"        # OTLP HTTP receiver (internal only)
       - "8888"        # Collector's own metrics (internal only)
       - "8889"        # Prometheus metrics exporter (internal only)
     environment:
