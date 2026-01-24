@@ -72,7 +72,7 @@ const commandBuilder = new SlashCommandBuilder()
       ),
   )
   .addSubcommand((sub) => sub.setName('list').setDescription('List bots and comment counts'))
-  .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages);
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 function validateBotExists(botName: string): boolean {
   const registry = BotRegistry.getInstance();
