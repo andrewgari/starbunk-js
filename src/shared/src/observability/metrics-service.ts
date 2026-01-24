@@ -1,13 +1,19 @@
 import * as promClient from 'prom-client';
+import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 
 /**
  * Metrics service for Discord bots
  * Tracks bot triggers, responses, and system metrics
+ * Supports both Prometheus (pull-based) and OTLP (push-based) export
  */
 export class MetricsService {
 	private registry: promClient.Registry;
 	private enabled: boolean;
 	private serviceName: string;
+	private meterProvider?: MeterProvider;
 
 	// Bot-specific metrics
 	private messagesProcessed: promClient.Counter<string>;
@@ -51,7 +57,7 @@ export class MetricsService {
 	private cacheMisses: promClient.Counter<string>;
 
 	constructor(serviceName: string) {
-		this.enabled = process.env.ENABLE_METRICS !== 'false'; // Enabled by default
+		this.enabled = process.env.OTEL_ENABLED !== 'false'; // Enabled by default
 		this.registry = new promClient.Registry();
 		this.serviceName = serviceName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
@@ -59,6 +65,9 @@ export class MetricsService {
 		if (this.enabled) {
 			promClient.collectDefaultMetrics({ register: this.registry });
 		}
+
+		// Initialize OTLP metrics export (always enabled when OTEL_ENABLED=true)
+		this.initializeOtlpExport();
 
 		// Initialize custom metrics
 		this.messagesProcessed = new promClient.Counter({
@@ -481,12 +490,57 @@ export class MetricsService {
 		this.cacheMisses.inc({ cache_type: cacheType });
 	}
 
+	/**
+	 * Initialize OTLP metrics export
+	 * Always exports to OTLP collector when observability is enabled
+	 */
+	private initializeOtlpExport(): void {
+		if (!this.enabled) return;
+
+		const otlpUrl = this.getOtlpMetricsUrl();
+
+		const metricExporter = new OTLPMetricExporter({
+			url: otlpUrl,
+		});
+
+		const metricReader = new PeriodicExportingMetricReader({
+			exporter: metricExporter,
+			exportIntervalMillis: 30000, // 30 seconds
+		});
+
+		this.meterProvider = new MeterProvider({
+			resource: resourceFromAttributes({
+				[ATTR_SERVICE_NAME]: this.serviceName,
+			}),
+			readers: [metricReader],
+		});
+	}
+
+	/**
+	 * Get the OTLP metrics endpoint URL
+	 * Constructs URL from OTEL_COLLECTOR_HOST and OTEL_COLLECTOR_HTTP_PORT
+	 */
+	private getOtlpMetricsUrl(): string {
+		const host = process.env.OTEL_COLLECTOR_HOST || 'localhost';
+		const port = process.env.OTEL_COLLECTOR_HTTP_PORT || '4318';
+		return `http://${host}:${port}/v1/metrics`;
+	}
+
 	async getMetrics(): Promise<string> {
 		return this.registry.metrics();
 	}
 
 	getRegistry(): promClient.Registry {
 		return this.registry;
+	}
+
+	/**
+	 * Shutdown the metrics service and flush any pending metrics
+	 */
+	async shutdown(): Promise<void> {
+		if (this.meterProvider) {
+			await this.meterProvider.shutdown();
+		}
 	}
 }
 

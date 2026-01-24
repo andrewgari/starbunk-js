@@ -6,6 +6,7 @@ import { BotRegistry } from '@/reply-bots/bot-registry';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
 import { MetricsService } from '@starbunk/shared/observability/metrics-service';
 import { HealthServer } from '@starbunk/shared/observability/health-server';
+import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { logger } from '@/observability/logger';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
 import { commands } from '@/commands';
@@ -58,7 +59,7 @@ export class BunkBot {
 	 * Discover and load bots from the configured directory
 	 */
 	private async discoverBots(): Promise<void> {
-		const botsDir = process.env.BUNKBOT_BOTS_DIR || path.join(__dirname, '../../config/bots');
+		const botsDir = process.env.BUNKBOT_BOTS_DIR || '/app/config';
 		logger.withMetadata({ directory: botsDir }).info('Starting bot discovery');
 
 		BotRegistry.setInstance(this.botRegistry); // Make registry accessible globally
@@ -138,7 +139,12 @@ export class BunkBot {
 			await this.client.destroy();
 			logger.info('Discord client destroyed');
 
-			logger.info('Shutdown complete');
+			logger.info('Flushing observability data...');
+			await shutdownObservability(process.env.SERVICE_NAME || 'bunkbot');
+
+			// Use stderr for final messages since logger is shut down
+			process.stderr.write('[BunkBot] Observability data flushed\n');
+			process.stderr.write('[BunkBot] Shutdown complete\n');
 		} catch (error) {
 			logger.withError(error).error('Error during shutdown');
 			throw error;

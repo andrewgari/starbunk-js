@@ -1,3 +1,27 @@
+## [1.22.0](https://github.com/andrewgari/starbunk-js/compare/v1.21.1...v1.22.0) (2026-01-22)
+
+### Features
+
+* Organize and expand docker-compose environment variables ([#483](https://github.com/andrewgari/starbunk-js/issues/483)) ([1af8a99](https://github.com/andrewgari/starbunk-js/commit/1af8a9949593d16362f34d59f828fd14512a304d))
+
+## [1.21.1](https://github.com/andrewgari/starbunk-js/compare/v1.21.0...v1.21.1) (2026-01-22)
+
+### Bug Fixes
+
+* ensure logs reach OTEL collector and flush on shutdown ([#480](https://github.com/andrewgari/starbunk-js/issues/480)) ([a7c8ca7](https://github.com/andrewgari/starbunk-js/commit/a7c8ca77018a8b23ef10bd9f5faeecd8c9472612))
+
+## [1.21.0](https://github.com/andrewgari/starbunk-js/compare/v1.20.0...v1.21.0) (2026-01-22)
+
+### Features
+
+* Add IP-based environment configuration for OTLP trace server ([#469](https://github.com/andrewgari/starbunk-js/issues/469)) ([5bffc30](https://github.com/andrewgari/starbunk-js/commit/5bffc3000ddeee0dd8501558ddd1bf6daf057311))
+
+## [1.20.0](https://github.com/andrewgari/starbunk-js/compare/v1.19.2...v1.20.0) (2026-01-22)
+
+### Features
+
+* **bluebot:** Add comprehensive logging and metrics matching BunkBot ([#468](https://github.com/andrewgari/starbunk-js/issues/468)) ([9a71965](https://github.com/andrewgari/starbunk-js/commit/9a71965ad7a3fe03cf37beae6fcc7244e0bd7ad1))
+
 ## [1.19.0](https://github.com/andrewgari/starbunk-js/compare/v1.18.3...v1.19.0) (2026-01-21)
 
 ### Features

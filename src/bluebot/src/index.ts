@@ -5,6 +5,8 @@ import { logger } from '@/observability/logger';
 import { BlueBot } from '@/blue-bot';
 import { runSmokeTest } from '@starbunk/shared/health/smoke-test';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
+import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
+import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 
 // Setup logging mixins before creating any logger instances
 setupBlueBotLogging();
@@ -30,6 +32,16 @@ async function main(): Promise<void> {
 		throw new Error('DISCORD_TOKEN environment variable is required');
 	}
 
+	// Initialize observability
+	logger.withMetadata({
+		node_version: process.version,
+		platform: process.platform,
+		env: process.env.NODE_ENV || 'production',
+	}).info('Starting BlueBot...');
+
+	// Initialize metrics service (singleton pattern - will be used by other modules)
+	getMetricsService('bluebot');
+
 	// Start health/metrics server
 	const healthServer = await initializeHealthServer();
 
@@ -37,7 +49,10 @@ async function main(): Promise<void> {
 
 	logger.info('Logging in to Discord...');
 	await client.login(token);
-	logger.info('BlueBot connected to Discord');
+	logger.withMetadata({
+		user_id: client.user?.id,
+		user_tag: client.user?.tag,
+	}).info('BlueBot connected to Discord');
 
 	const bot = new BlueBot(client);
 	await bot.start();
@@ -47,6 +62,7 @@ async function main(): Promise<void> {
 		logger.info(`Received ${signal}, shutting down gracefully...`);
 		await healthServer?.stop();
 		client.destroy();
+		await shutdownObservability(process.env.SERVICE_NAME || 'bluebot');
 		process.exit(0);
 	};
 

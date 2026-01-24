@@ -1,0 +1,97 @@
+# OpenTelemetry Collector Configuration
+# Receives telemetry from services and exports to Prometheus, Loki, and other backends
+
+receivers:
+  # OTLP receiver for traces, metrics, and logs
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  # Batch processor to reduce number of outgoing connections
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # Resource processor to add additional attributes
+  resource:
+    attributes:
+      - key: cluster
+        value: starbunk-discord-bots
+        action: upsert
+      - key: environment
+        value: ${env:ENVIRONMENT}
+        action: upsert
+
+exporters:
+  # Prometheus exporter (for metrics)
+  # Exposes metrics in Prometheus format for scraping
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: starbunk
+    const_labels:
+      cluster: starbunk-discord-bots
+
+  # Prometheus Remote Write exporter (alternative push-based approach)
+  prometheusremotewrite:
+    endpoint: http://${env:OBSERVABILITY_HOST}:${env:PROMETHEUS_PORT}/api/v1/write
+    tls:
+      insecure: true
+
+  # Loki exporter (for logs)
+  loki:
+    endpoint: http://${env:OBSERVABILITY_HOST}:${env:LOKI_PORT}/loki/api/v1/push
+    tls:
+      insecure: true
+
+  # Tempo exporter (for traces)
+  # Grafana Tempo for distributed tracing
+  otlp/tempo:
+    endpoint: ${env:OBSERVABILITY_HOST}:${env:TEMPO_PORT}
+    tls:
+      insecure: true
+
+  # Console exporter for debugging
+  logging:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+service:
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [otlp/tempo, logging]  # Export to Tempo and console
+
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [prometheus, prometheusremotewrite, logging]
+
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [loki, logging]
+
+  # Telemetry configuration for the collector itself
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888
+

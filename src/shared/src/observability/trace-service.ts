@@ -1,6 +1,5 @@
 import { trace, Span, SpanStatusCode, Tracer, context } from '@opentelemetry/api';
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 
 /**
@@ -14,19 +13,14 @@ export class TraceService {
 	private serviceName: string;
 
 	constructor(serviceName: string, serviceVersion: string = '1.0.0') {
-		this.enabled = process.env.ENABLE_TRACING !== 'false'; // Enabled by default
+		this.enabled = process.env.OTEL_ENABLED !== 'false'; // Enabled by default
 		this.serviceName = serviceName;
 
 		if (this.enabled) {
-			const exporterType = process.env.TRACE_EXPORTER || 'console';
-
-			// Choose exporter based on configuration
-			const traceExporter =
-				exporterType === 'otlp'
-					? new OTLPTraceExporter({
-							url: process.env.OTLP_ENDPOINT || 'http://localhost:4318/v1/traces',
-						})
-					: new ConsoleSpanExporter();
+			// Always use OTLP exporter for unified observability
+			const traceExporter = new OTLPTraceExporter({
+				url: this.getOtlpTraceUrl(),
+			});
 
 			// Initialize the SDK with the exporter
 			this.sdk = new NodeSDK({
@@ -44,6 +38,16 @@ export class TraceService {
 
 		// Get tracer instance
 		this.tracer = trace.getTracer(serviceName, serviceVersion);
+	}
+
+	/**
+	 * Get the OTLP trace endpoint URL
+	 * Constructs URL from OTEL_COLLECTOR_HOST and OTEL_COLLECTOR_HTTP_PORT
+	 */
+	private getOtlpTraceUrl(): string {
+		const host = process.env.OTEL_COLLECTOR_HOST || 'localhost';
+		const port = process.env.OTEL_COLLECTOR_HTTP_PORT || '4318';
+		return `http://${host}:${port}/v1/traces`;
 	}
 
 	/**

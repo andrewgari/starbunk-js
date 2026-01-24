@@ -15,6 +15,7 @@
 import { config } from 'dotenv';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
+import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { CovaBot, CovaBotConfig } from './cova-bot';
 
 // Load environment variables
@@ -70,6 +71,7 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string) => {
     logger.withMetadata({ signal }).info('Shutdown signal received');
     await bot.stop();
+    await shutdownObservability(process.env.SERVICE_NAME || 'covabot');
     process.exit(0);
   };
 
