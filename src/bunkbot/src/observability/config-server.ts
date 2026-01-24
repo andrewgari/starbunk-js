@@ -120,9 +120,10 @@ export class ConfigServer {
 
   private escape(s: string) {
     return s
-      .replace(/&/g, '&')
-      .replace(/</g, '<')
-      .replace(/>/g, '>');
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
 
   private json(res: http.ServerResponse, body: unknown, status = 200) {
