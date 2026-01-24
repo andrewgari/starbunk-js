@@ -10,7 +10,7 @@ services:
       - DISCORD_TOKEN=${BUNKBOT_TOKEN}
 
       # Storage Configuration
-      - BUNKBOT_BOTS_DIR=/app/config
+      # BUNKBOT_BOTS_DIR=/app/config  # Optional: defaults to /app/config
 
       # Observability Configuration
       - SERVICE_NAME=${BUNKBOT_SERVICE_NAME:-bunkbot}

@@ -21,7 +21,8 @@ services:
       - LOG_LEVEL=debug
       - DISCORD_TOKEN=${BUNKBOT_TOKEN}
       - BUNKBOT_TOKEN=${BUNKBOT_TOKEN}
-      - BUNKBOT_BOTS_DIR=/app/config
+      - CLIENT_ID=${BUNKBOT_CLIENT_ID}
+      # - BUNKBOT_BOTS_DIR=/app/config  # Optional: defaults to /app/config
       # Observability
       - ENABLE_METRICS=true
       - ENABLE_STRUCTURED_LOGGING=true
