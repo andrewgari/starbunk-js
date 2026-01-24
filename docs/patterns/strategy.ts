@@ -5,5 +5,5 @@ import type { DiscordMessageContext } from '@starbunk/shared';
  * Use this for bot-specific personality logic.
  */
 export interface IdentityStrategy {
-  resolve(context: DiscordMessageContext): Promise<Response>;
+  resolve(context: DiscordMessageContext): Promise<string>;
 }
