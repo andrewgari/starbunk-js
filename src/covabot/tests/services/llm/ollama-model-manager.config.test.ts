@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { OllamaModelManager } from '../../../src/services/llm/ollama-model-manager';
+import { OllamaModelManager } from '@starbunk/shared/services/llm';
 
 describe('OllamaModelManager - Configuration', () => {
   const originalEnv = process.env;
