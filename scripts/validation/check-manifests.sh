@@ -9,6 +9,7 @@ MANIFEST_FILES=(
   "$ROOT_DIR/src/bluebot/TODO.md"
   "$ROOT_DIR/src/bunkbot/TODO.md"
   "$ROOT_DIR/src/covabot/TODO.md"
+  "$ROOT_DIR/src/djcova/TODO.md"
 )
 
 missing=()

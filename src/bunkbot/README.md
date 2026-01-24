@@ -106,7 +106,7 @@ The Docker container supports the following environment variables:
 
 **Discord Configuration:**
 - `BUNKBOT_TOKEN` or `DISCORD_TOKEN` - Discord bot token (required)
-- `CLIENT_ID` - Discord application client ID
+- Not required: Application/client ID is derived automatically from the bot token
 - `BUNKBOT_BOTS_DIR` - Path to bot configuration directory (default: `/app/config`, optional)
 
 **Logging:**
