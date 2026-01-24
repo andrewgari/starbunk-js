@@ -84,8 +84,7 @@ services:
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - METRICS_PORT=${METRICS_PORT:-3000}
-      - HEALTH_PORT=${HEALTH_PORT:-3000}
-      # OpenTelemetry Configuration
+      # OTEL Collector Configuration
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
       - ENVIRONMENT=${ENVIRONMENT:-production}
@@ -129,8 +128,7 @@ services:
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - METRICS_PORT=${METRICS_PORT:-3000}
-      - HEALTH_PORT=${HEALTH_PORT:-3000}
-      # OpenTelemetry Configuration
+      # OTEL Collector Configuration
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
       - ENVIRONMENT=${ENVIRONMENT:-production}
@@ -187,8 +185,7 @@ services:
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - METRICS_PORT=${METRICS_PORT:-3000}
-      - HEALTH_PORT=${HEALTH_PORT:-3000}
-      # OpenTelemetry Configuration
+      # OTEL Collector Configuration
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
       - ENVIRONMENT=${ENVIRONMENT:-production}
@@ -244,8 +241,7 @@ services:
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - METRICS_PORT=${METRICS_PORT:-3000}
-      - HEALTH_PORT=${HEALTH_PORT:-3000}
-      # OpenTelemetry Configuration
+      # OTEL Collector Configuration
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-otel-collector}
       - OTEL_COLLECTOR_HTTP_PORT=${OTEL_COLLECTOR_HTTP_PORT:-4318}
       - ENVIRONMENT=${ENVIRONMENT:-production}
