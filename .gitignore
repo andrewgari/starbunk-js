@@ -180,6 +180,9 @@ scripts/*
 
 *.md
 
+# Allow agent specs
+!.github/agents/*.agent.md
+
 # Allow the pre-push gate script to be tracked
 !scripts/
 !scripts/pre-push.sh
