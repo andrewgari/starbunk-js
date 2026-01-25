@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { SocialBatteryService, SocialBatteryConfig } from '../../src/services/social-battery-service';
+import { SocialBatteryRepository } from '../../src/repositories/social-battery-repository';
 import { DatabaseService } from '@starbunk/shared/database';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -8,6 +9,7 @@ import * as path from 'path';
 describe('SocialBatteryService', () => {
   const testDbPath = path.join(__dirname, '../../data/test-battery.sqlite');
   let db: Database.Database;
+  let socialBatteryRepository: SocialBatteryRepository;
   let batteryService: SocialBatteryService;
 
   const defaultConfig: SocialBatteryConfig = {
@@ -25,7 +27,8 @@ describe('SocialBatteryService', () => {
     const dbService = DatabaseService.getInstance(testDbPath);
     await dbService.initialize();
     db = dbService.getDb();
-    batteryService = new SocialBatteryService(db);
+    socialBatteryRepository = new SocialBatteryRepository(db);
+    batteryService = new SocialBatteryService(socialBatteryRepository);
   });
 
   afterEach(() => {

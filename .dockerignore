@@ -98,3 +98,4 @@ jest.config.js
 README.md
 LICENSE
 /archive/
+# CircleCI compatibility fix - ensure this is a regular file, not a symlink

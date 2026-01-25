@@ -82,6 +82,7 @@ export async function testMultipleCases(
  */
 export function setupEnemyEnv(enemyUserId: string, guildId?: string) {
 	const originalEnemyEnv = process.env.BLUEBOT_ENEMY_USER_ID;
+	process.env.BLUEBOT_ENEMY_USER_ID = enemyUserId;
 	return () => {
 		if (originalEnemyEnv !== undefined) {
 			process.env.BLUEBOT_ENEMY_USER_ID = originalEnemyEnv;

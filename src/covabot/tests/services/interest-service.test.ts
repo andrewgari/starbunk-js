@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { InterestService } from '../../src/services/interest-service';
+import { InterestRepository } from '../../src/repositories/interest-repository';
 import { DatabaseService } from '@starbunk/shared/database';
 import { CovaProfile } from '../../src/models/memory-types';
 import * as fs from 'fs';
@@ -9,6 +10,7 @@ import * as path from 'path';
 describe('InterestService', () => {
   const testDbPath = path.join(__dirname, '../../data/test-interest.sqlite');
   let db: Database.Database;
+  let interestRepository: InterestRepository;
   let interestService: InterestService;
 
   const mockProfile: CovaProfile = {
@@ -36,7 +38,8 @@ describe('InterestService', () => {
     const dbService = DatabaseService.getInstance(testDbPath);
     await dbService.initialize();
     db = dbService.getDb();
-    interestService = new InterestService(db);
+    interestRepository = new InterestRepository(db);
+    interestService = new InterestService(interestRepository);
   });
 
   afterEach(() => {

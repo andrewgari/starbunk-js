@@ -180,19 +180,13 @@ scripts/*
 
 *.md
 
-# Allow agent specs
-!.github/agents/*.agent.md
-
-# Allow the pre-push gate script to be tracked
-!scripts/
-!scripts/pre-push.sh
-!scripts/test-docker-env-precedence.sh
-
 !README.md
 !docs/DOCKER_ENV_VARS.md
 !docs/DOCKER_BUILD_OPTIMIZATION.md
 !docs/DOCKER_COMPOSE_AUDIT.md
 !docs/branch-protection.md
+!docs/AGENTS.md
+!docs/ISSUE_*.md
 
 # Build artifacts and temporary files
 *.tsbuildinfo
@@ -203,7 +197,7 @@ data/logs/
 *.tsbuildinfo
 *.tsbuildinfo
 prometheus.yml
-config/bots/bots.yml
+bots.yml
 
 src/**/src/**/*.js
 src/**/src/**/*.d.ts

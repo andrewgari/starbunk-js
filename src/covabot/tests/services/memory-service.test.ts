@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { MemoryService } from '../../src/services/memory-service';
+import { ConversationRepository } from '../../src/repositories/conversation-repository';
+import { UserFactRepository } from '../../src/repositories/user-fact-repository';
 import { DatabaseService } from '@starbunk/shared/database';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -8,6 +10,8 @@ import * as path from 'path';
 describe('MemoryService', () => {
   const testDbPath = path.join(__dirname, '../../data/test-memory.sqlite');
   let db: Database.Database;
+  let conversationRepository: ConversationRepository;
+  let userFactRepository: UserFactRepository;
   let memoryService: MemoryService;
 
   beforeEach(async () => {
@@ -20,7 +24,9 @@ describe('MemoryService', () => {
     const dbService = DatabaseService.getInstance(testDbPath);
     await dbService.initialize();
     db = dbService.getDb();
-    memoryService = new MemoryService(db);
+    conversationRepository = new ConversationRepository(db);
+    userFactRepository = new UserFactRepository(db);
+    memoryService = new MemoryService(conversationRepository, userFactRepository);
   });
 
   afterEach(() => {

@@ -4,17 +4,17 @@
  * Replaces Qdrant vector embeddings with simpler keyword matching
  */
 
-import Database from 'better-sqlite3';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { CovaProfile, InterestMatch, KeywordInterestRow } from '@/models/memory-types';
+import { InterestRepository } from '@/repositories/interest-repository';
 
 const logger = logLayer.withPrefix('InterestService');
 
 export class InterestService {
-  private db: Database.Database;
+  private interestRepo: InterestRepository;
 
-  constructor(db: Database.Database) {
-    this.db = db;
+  constructor(interestRepo: InterestRepository) {
+    this.interestRepo = interestRepo;
   }
 
   /**
@@ -26,33 +26,7 @@ export class InterestService {
       interests_count: profile.personality.interests.length,
     }).info('Initializing interests from profile');
 
-    // Clear existing interests for this profile
-    const deleteStmt = this.db.prepare('DELETE FROM keyword_interests WHERE profile_id = ?');
-    deleteStmt.run(profile.id);
-
-    // Insert new interests
-    const insertStmt = this.db.prepare(`
-      INSERT INTO keyword_interests (profile_id, keyword, category, weight)
-      VALUES (?, ?, ?, ?)
-    `);
-
-    const insertMany = this.db.transaction((interests: string[]) => {
-      for (const interest of interests) {
-        // Parse interest string - may include category prefix like "tech:typescript"
-        const [category, keyword] = interest.includes(':')
-          ? interest.split(':', 2)
-          : [null, interest];
-
-        insertStmt.run(profile.id, keyword.toLowerCase().trim(), category, 1.0);
-      }
-    });
-
-    insertMany(profile.personality.interests);
-
-    logger.withMetadata({
-      profile_id: profile.id,
-      keywords_inserted: profile.personality.interests.length,
-    }).info('Interests initialized');
+    this.interestRepo.initializeFromInterests(profile.id, profile.personality.interests);
   }
 
   /**
@@ -64,14 +38,7 @@ export class InterestService {
     category: string | null = null,
     weight: number = 1.0,
   ): void {
-    const stmt = this.db.prepare(`
-      INSERT INTO keyword_interests (profile_id, keyword, category, weight)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(profile_id, keyword)
-      DO UPDATE SET weight = excluded.weight, category = excluded.category
-    `);
-
-    stmt.run(profileId, keyword.toLowerCase().trim(), category, weight);
+    this.interestRepo.upsertInterest(profileId, keyword, category, weight);
 
     logger.withMetadata({
       profile_id: profileId,
@@ -84,27 +51,14 @@ export class InterestService {
    * Remove a keyword interest
    */
   removeInterest(profileId: string, keyword: string): boolean {
-    const stmt = this.db.prepare(`
-      DELETE FROM keyword_interests
-      WHERE profile_id = ? AND keyword = ?
-    `);
-
-    const result = stmt.run(profileId, keyword.toLowerCase().trim());
-    return result.changes > 0;
+    return this.interestRepo.deleteInterest(profileId, keyword);
   }
 
   /**
    * Get all interests for a profile
    */
   getInterests(profileId: string): KeywordInterestRow[] {
-    const stmt = this.db.prepare(`
-      SELECT profile_id, keyword, category, weight
-      FROM keyword_interests
-      WHERE profile_id = ?
-      ORDER BY weight DESC
-    `);
-
-    return stmt.all(profileId) as KeywordInterestRow[];
+    return this.interestRepo.getInterests(profileId);
   }
 
   /**
@@ -188,13 +142,7 @@ export class InterestService {
     keyword: string,
     adjustment: number,
   ): void {
-    const stmt = this.db.prepare(`
-      UPDATE keyword_interests
-      SET weight = MAX(0.1, MIN(2.0, weight + ?))
-      WHERE profile_id = ? AND keyword = ?
-    `);
-
-    stmt.run(adjustment, profileId, keyword.toLowerCase().trim());
+    this.interestRepo.adjustWeight(profileId, keyword, adjustment);
 
     logger.withMetadata({
       profile_id: profileId,

@@ -24,9 +24,14 @@ export class UserFactRepository {
   storeUserFact(
     userId: string,
     category: string,
-    fact: string,
+    factKey: string,
     confidence: number = 1.0,
+    profileId: string = '',
+    factValue?: string,
   ): void {
+    // If factValue is not provided, use factKey as the value (for backward compatibility)
+    const value = factValue || factKey;
+
     const stmt = this.db.prepare(`
       INSERT INTO user_facts (profile_id, user_id, fact_type, fact_key, fact_value, confidence)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -34,13 +39,13 @@ export class UserFactRepository {
       DO UPDATE SET fact_value = excluded.fact_value, confidence = excluded.confidence, learned_at = CURRENT_TIMESTAMP
     `);
 
-    // Note: profile_id is empty string as placeholder - in real usage, it would be passed
-    stmt.run('', userId, category, fact, fact, confidence);
+    stmt.run(profileId, userId, category, factKey, value, confidence);
 
     logger.withMetadata({
+      profile_id: profileId,
       user_id: userId,
       category,
-      fact_key: fact,
+      fact_key: factKey,
     }).debug('User fact stored');
   }
 

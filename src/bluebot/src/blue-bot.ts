@@ -33,7 +33,7 @@ export class BlueBot {
         channel_id: message.channelId,
         guild_id: message.guildId,
         content_length: message.content.length,
-        has_attachments: message.attachments.size > 0,
+        has_attachments: message.attachments ? message.attachments.size > 0 : false,
         has_embeds: message.embeds.length > 0,
       }).debug('Processing message');
 

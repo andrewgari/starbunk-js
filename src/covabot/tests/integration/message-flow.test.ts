@@ -7,6 +7,10 @@ import { InterestService } from '../../src/services/interest-service';
 import { SocialBatteryService } from '../../src/services/social-battery-service';
 import { ResponseDecisionService, DecisionContext } from '../../src/services/response-decision-service';
 import { PersonalityService } from '../../src/services/personality-service';
+import { ConversationRepository } from '../../src/repositories/conversation-repository';
+import { UserFactRepository } from '../../src/repositories/user-fact-repository';
+import { InterestRepository } from '../../src/repositories/interest-repository';
+import { SocialBatteryRepository } from '../../src/repositories/social-battery-repository';
 import { CovaProfile } from '../../src/models/memory-types';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -58,6 +62,10 @@ function createMockMessage(overrides: Partial<{
 describe('Message Flow Integration', () => {
   const testDbPath = path.join(__dirname, '../../data/test-flow.sqlite');
   let db: Database.Database;
+  let conversationRepository: ConversationRepository;
+  let userFactRepository: UserFactRepository;
+  let interestRepository: InterestRepository;
+  let socialBatteryRepository: SocialBatteryRepository;
   let memoryService: MemoryService;
   let interestService: InterestService;
   let socialBatteryService: SocialBatteryService;
@@ -118,9 +126,14 @@ describe('Message Flow Integration', () => {
     await dbService.initialize();
     db = dbService.getDb();
 
-    memoryService = new MemoryService(db);
-    interestService = new InterestService(db);
-    socialBatteryService = new SocialBatteryService(db);
+    conversationRepository = new ConversationRepository(db);
+    userFactRepository = new UserFactRepository(db);
+    interestRepository = new InterestRepository(db);
+    socialBatteryRepository = new SocialBatteryRepository(db);
+
+    memoryService = new MemoryService(conversationRepository, userFactRepository);
+    interestService = new InterestService(interestRepository);
+    socialBatteryService = new SocialBatteryService(socialBatteryRepository);
     personalityService = new PersonalityService(db);
     decisionService = new ResponseDecisionService(interestService, socialBatteryService);
 

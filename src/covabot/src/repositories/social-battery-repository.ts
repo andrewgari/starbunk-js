@@ -19,72 +19,133 @@ export class SocialBatteryRepository {
   }
 
   /**
-   * Get current social battery state for a user in a channel
+   * Get current social battery state for a channel and profile
    */
-  getState(channelId: string, userId: string): SocialBatteryStateRow | null {
+  getState(profileId: string, channelId: string): SocialBatteryStateRow | null {
     const stmt = this.db.prepare(`
       SELECT profile_id, channel_id, message_count, window_start, last_message_at
       FROM social_battery_state
-      WHERE channel_id = ? AND profile_id = ?
+      WHERE profile_id = ? AND channel_id = ?
     `);
 
-    const row = stmt.get(channelId, userId) as SocialBatteryStateRow | undefined;
+    const row = stmt.get(profileId, channelId) as SocialBatteryStateRow | undefined;
     return row || null;
   }
 
   /**
-   * Upsert (insert or update) social battery state
+   * Create initial state for a channel
    */
-  upsertState(
-    channelId: string,
-    userId: string,
-    level: number,
-  ): void {
+  createState(profileId: string, channelId: string, nowIso: string): void {
     const stmt = this.db.prepare(`
       INSERT INTO social_battery_state (profile_id, channel_id, message_count, window_start, last_message_at)
-      VALUES (?, ?, ?, datetime('now'), datetime('now'))
-      ON CONFLICT(profile_id, channel_id)
-      DO UPDATE SET message_count = ?, last_message_at = datetime('now')
+      VALUES (?, ?, 1, ?, ?)
     `);
 
-    stmt.run(userId, channelId, level, level);
+    stmt.run(profileId, channelId, nowIso, nowIso);
 
     logger.withMetadata({
+      profile_id: profileId,
       channel_id: channelId,
-      user_id: userId,
-      level,
-    }).debug('Social battery state upserted');
+    }).debug('Social battery state created');
   }
 
   /**
-   * Reset all social battery state for a channel
+   * Reset the window for a channel
    */
-  resetChannel(channelId: string): void {
+  resetWindow(profileId: string, channelId: string, nowIso: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE social_battery_state
+      SET message_count = 1, window_start = ?, last_message_at = ?
+      WHERE profile_id = ? AND channel_id = ?
+    `);
+
+    stmt.run(nowIso, nowIso, profileId, channelId);
+
+    logger.withMetadata({
+      profile_id: profileId,
+      channel_id: channelId,
+    }).debug('Social battery window reset');
+  }
+
+  /**
+   * Increment message count for a channel
+   */
+  incrementCount(profileId: string, channelId: string, nowIso: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE social_battery_state
+      SET message_count = message_count + 1, last_message_at = ?
+      WHERE profile_id = ? AND channel_id = ?
+    `);
+
+    stmt.run(nowIso, profileId, channelId);
+
+    logger.withMetadata({
+      profile_id: profileId,
+      channel_id: channelId,
+    }).debug('Social battery message count incremented');
+  }
+
+  /**
+   * Delete state for a specific channel and profile
+   */
+  deleteState(profileId: string, channelId: string): void {
     const stmt = this.db.prepare(`
       DELETE FROM social_battery_state
-      WHERE channel_id = ?
+      WHERE profile_id = ? AND channel_id = ?
     `);
 
-    stmt.run(channelId);
+    stmt.run(profileId, channelId);
 
     logger.withMetadata({
+      profile_id: profileId,
       channel_id: channelId,
-    }).info('Channel social battery state reset');
+    }).debug('Social battery state deleted');
   }
 
   /**
-   * Reset all social battery state for a user
+   * Reset all social battery state for a profile
    */
-  resetProfile(userId: string): void {
+  resetProfile(profileId: string): void {
     const stmt = this.db.prepare(`
       DELETE FROM social_battery_state
       WHERE profile_id = ?
     `);
 
-    stmt.run(userId);
+    stmt.run(profileId);
 
     logger.withMetadata({
-      user_id: userId,
-    }).info('User social battery state reset');
+      profile_id: profileId,
+    }).info('Profile social battery state reset');
+  }
+
+  /**
+   * Get summary of activity across all channels for a profile
+   */
+  getActivitySummary(profileId: string): {
+    totalChannels: number;
+    totalMessages: number;
+    activeChannels: number;
+  } {
+    const stmt = this.db.prepare(`
+      SELECT
+        COUNT(*) as total_channels,
+        SUM(message_count) as total_messages,
+        SUM(CASE WHEN last_message_at > datetime('now', '-1 hour') THEN 1 ELSE 0 END) as active_channels
+      FROM social_battery_state
+      WHERE profile_id = ?
+    `);
+
+    const row = stmt.get(profileId) as {
+      total_channels: number;
+      total_messages: number | null;
+      active_channels: number;
+    };
+
+    return {
+      totalChannels: row.total_channels,
+      totalMessages: row.total_messages || 0,
+      activeChannels: row.active_channels,
+    };
   }
 }
+

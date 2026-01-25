@@ -2,22 +2,26 @@
  * Memory Service - Manages conversation history and learned user facts
  */
 
-import Database from 'better-sqlite3';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import {
-  ConversationRow,
-  UserFactRow,
   ConversationContext,
   UserFact,
 } from '@/models/memory-types';
+import { ConversationRepository } from '@/repositories/conversation-repository';
+import { UserFactRepository } from '@/repositories/user-fact-repository';
 
 const logger = logLayer.withPrefix('MemoryService');
 
 export class MemoryService {
-  private db: Database.Database;
+  private conversationRepo: ConversationRepository;
+  private userFactRepo: UserFactRepository;
 
-  constructor(db: Database.Database) {
-    this.db = db;
+  constructor(
+    conversationRepo: ConversationRepository,
+    userFactRepo: UserFactRepository,
+  ) {
+    this.conversationRepo = conversationRepo;
+    this.userFactRepo = userFactRepo;
   }
 
   /**
@@ -31,21 +35,14 @@ export class MemoryService {
     messageContent: string,
     botResponse: string | null,
   ): number {
-    const stmt = this.db.prepare(`
-      INSERT INTO conversations (profile_id, channel_id, user_id, user_name, message_content, bot_response)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(profileId, channelId, userId, userName, messageContent, botResponse);
-
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-      user_id: userId,
-      conversation_id: result.lastInsertRowid,
-    }).debug('Conversation stored');
-
-    return Number(result.lastInsertRowid);
+    return this.conversationRepo.storeConversation(
+      profileId,
+      channelId,
+      userId,
+      userName,
+      messageContent,
+      botResponse,
+    );
   }
 
   /**
@@ -56,35 +53,7 @@ export class MemoryService {
     channelId: string,
     limit: number = 10,
   ): ConversationContext {
-    const stmt = this.db.prepare(`
-      SELECT user_id, user_name, message_content, bot_response, created_at
-      FROM conversations
-      WHERE profile_id = ? AND channel_id = ?
-      ORDER BY created_at DESC
-      LIMIT ?
-    `);
-
-    const rows = stmt.all(profileId, channelId, limit) as Pick<
-      ConversationRow,
-      'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
-    >[];
-
-    // Reverse to get chronological order
-    const messages = rows.reverse().map(row => ({
-      userId: row.user_id,
-      userName: row.user_name,
-      content: row.message_content,
-      botResponse: row.bot_response,
-      timestamp: new Date(row.created_at),
-    }));
-
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-      messages_count: messages.length,
-    }).debug('Channel context retrieved');
-
-    return { messages };
+    return this.conversationRepo.getChannelContext(profileId, channelId, limit);
   }
 
   /**
@@ -95,34 +64,7 @@ export class MemoryService {
     userId: string,
     limit: number = 20,
   ): ConversationContext {
-    const stmt = this.db.prepare(`
-      SELECT user_id, user_name, message_content, bot_response, created_at
-      FROM conversations
-      WHERE profile_id = ? AND user_id = ?
-      ORDER BY created_at DESC
-      LIMIT ?
-    `);
-
-    const rows = stmt.all(profileId, userId, limit) as Pick<
-      ConversationRow,
-      'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
-    >[];
-
-    const messages = rows.reverse().map(row => ({
-      userId: row.user_id,
-      userName: row.user_name,
-      content: row.message_content,
-      botResponse: row.bot_response,
-      timestamp: new Date(row.created_at),
-    }));
-
-    logger.withMetadata({
-      profile_id: profileId,
-      user_id: userId,
-      messages_count: messages.length,
-    }).debug('User history retrieved');
-
-    return { messages };
+    return this.conversationRepo.getUserHistory(profileId, userId, limit);
   }
 
   /**
@@ -136,14 +78,7 @@ export class MemoryService {
     factValue: string,
     confidence: number = 1.0,
   ): void {
-    const stmt = this.db.prepare(`
-      INSERT INTO user_facts (profile_id, user_id, fact_type, fact_key, fact_value, confidence)
-      VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(profile_id, user_id, fact_type, fact_key)
-      DO UPDATE SET fact_value = excluded.fact_value, confidence = excluded.confidence, learned_at = CURRENT_TIMESTAMP
-    `);
-
-    stmt.run(profileId, userId, factType, factKey, factValue, confidence);
+    this.userFactRepo.storeUserFact(userId, factType, factKey, confidence, profileId, factValue);
 
     logger.withMetadata({
       profile_id: profileId,
@@ -157,32 +92,7 @@ export class MemoryService {
    * Get all facts about a user
    */
   getUserFacts(profileId: string, userId: string): UserFact[] {
-    const stmt = this.db.prepare(`
-      SELECT fact_type, fact_key, fact_value, confidence
-      FROM user_facts
-      WHERE profile_id = ? AND user_id = ?
-      ORDER BY confidence DESC
-    `);
-
-    const rows = stmt.all(profileId, userId) as Pick<
-      UserFactRow,
-      'fact_type' | 'fact_key' | 'fact_value' | 'confidence'
-    >[];
-
-    const facts = rows.map(row => ({
-      type: row.fact_type as UserFact['type'],
-      key: row.fact_key,
-      value: row.fact_value,
-      confidence: row.confidence,
-    }));
-
-    logger.withMetadata({
-      profile_id: profileId,
-      user_id: userId,
-      facts_count: facts.length,
-    }).debug('User facts retrieved');
-
-    return facts;
+    return this.userFactRepo.getUserFacts(userId);
   }
 
   /**
@@ -193,45 +103,14 @@ export class MemoryService {
     userId: string,
     factType: 'interest' | 'relationship' | 'preference',
   ): UserFact[] {
-    const stmt = this.db.prepare(`
-      SELECT fact_type, fact_key, fact_value, confidence
-      FROM user_facts
-      WHERE profile_id = ? AND user_id = ? AND fact_type = ?
-      ORDER BY confidence DESC
-    `);
-
-    const rows = stmt.all(profileId, userId, factType) as Pick<
-      UserFactRow,
-      'fact_type' | 'fact_key' | 'fact_value' | 'confidence'
-    >[];
-
-    return rows.map(row => ({
-      type: row.fact_type as UserFact['type'],
-      key: row.fact_key,
-      value: row.fact_value,
-      confidence: row.confidence,
-    }));
+    return this.userFactRepo.getUserFactsByType(userId, factType);
   }
 
   /**
    * Delete old conversations to manage database size
    */
   pruneOldConversations(profileId: string, daysToKeep: number = 30): number {
-    const stmt = this.db.prepare(`
-      DELETE FROM conversations
-      WHERE profile_id = ?
-        AND created_at < datetime('now', '-' || ? || ' days')
-    `);
-
-    const result = stmt.run(profileId, daysToKeep);
-
-    logger.withMetadata({
-      profile_id: profileId,
-      days_kept: daysToKeep,
-      deleted_count: result.changes,
-    }).info('Old conversations pruned');
-
-    return result.changes;
+    return this.conversationRepo.pruneOldConversations(profileId, daysToKeep);
   }
 
   /**

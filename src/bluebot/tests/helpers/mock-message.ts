@@ -170,6 +170,8 @@ export function createMockMessage(options: MockMessageOptions): Partial<Message>
 		member: mockGuildMember as GuildMember,
 		createdTimestamp: timestamp,
 		createdAt: new Date(timestamp),
+		attachments: new Map(),
+		embeds: [],
 	} as Partial<Message>;
 
 	// Add message reference if replying to another message

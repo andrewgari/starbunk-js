@@ -4,9 +4,9 @@
  * Manages message frequency to prevent spam and create natural conversation pacing
  */
 
-import Database from 'better-sqlite3';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { SocialBatteryStateRow, SocialBatteryCheck } from '@/models/memory-types';
+import { SocialBatteryRepository } from '@/repositories/social-battery-repository';
 
 const logger = logLayer.withPrefix('SocialBatteryService');
 
@@ -17,10 +17,10 @@ export interface SocialBatteryConfig {
 }
 
 export class SocialBatteryService {
-  private db: Database.Database;
+  private socialBatteryRepo: SocialBatteryRepository;
 
-  constructor(db: Database.Database) {
-    this.db = db;
+  constructor(socialBatteryRepo: SocialBatteryRepository) {
+    this.socialBatteryRepo = socialBatteryRepo;
   }
 
   /**
@@ -123,11 +123,7 @@ export class SocialBatteryService {
 
     if (!state) {
       // Create new state
-      const stmt = this.db.prepare(`
-        INSERT INTO social_battery_state (profile_id, channel_id, message_count, window_start, last_message_at)
-        VALUES (?, ?, 1, ?, ?)
-      `);
-      stmt.run(profileId, channelId, nowIso, nowIso);
+      this.socialBatteryRepo.createState(profileId, channelId, nowIso);
     } else {
       // Check if window needs reset
       const windowStart = state.window_start ? new Date(state.window_start) : now;
@@ -135,20 +131,10 @@ export class SocialBatteryService {
 
       if (minutesSinceWindowStart >= config.windowMinutes) {
         // Reset window
-        const stmt = this.db.prepare(`
-          UPDATE social_battery_state
-          SET message_count = 1, window_start = ?, last_message_at = ?
-          WHERE profile_id = ? AND channel_id = ?
-        `);
-        stmt.run(nowIso, nowIso, profileId, channelId);
+        this.socialBatteryRepo.resetWindow(profileId, channelId, nowIso);
       } else {
         // Increment count
-        const stmt = this.db.prepare(`
-          UPDATE social_battery_state
-          SET message_count = message_count + 1, last_message_at = ?
-          WHERE profile_id = ? AND channel_id = ?
-        `);
-        stmt.run(nowIso, profileId, channelId);
+        this.socialBatteryRepo.incrementCount(profileId, channelId, nowIso);
       }
     }
 
@@ -162,26 +148,14 @@ export class SocialBatteryService {
    * Get current state for a channel
    */
   getState(profileId: string, channelId: string): SocialBatteryStateRow | null {
-    const stmt = this.db.prepare(`
-      SELECT profile_id, channel_id, message_count, window_start, last_message_at
-      FROM social_battery_state
-      WHERE profile_id = ? AND channel_id = ?
-    `);
-
-    const row = stmt.get(profileId, channelId) as SocialBatteryStateRow | undefined;
-    return row || null;
+    return this.socialBatteryRepo.getState(profileId, channelId);
   }
 
   /**
    * Reset state for a channel (admin function)
    */
   resetChannel(profileId: string, channelId: string): void {
-    const stmt = this.db.prepare(`
-      DELETE FROM social_battery_state
-      WHERE profile_id = ? AND channel_id = ?
-    `);
-
-    stmt.run(profileId, channelId);
+    this.socialBatteryRepo.deleteState(profileId, channelId);
 
     logger.withMetadata({
       profile_id: profileId,
@@ -193,12 +167,7 @@ export class SocialBatteryService {
    * Reset all states for a profile (admin function)
    */
   resetProfile(profileId: string): void {
-    const stmt = this.db.prepare(`
-      DELETE FROM social_battery_state
-      WHERE profile_id = ?
-    `);
-
-    stmt.run(profileId);
+    this.socialBatteryRepo.resetProfile(profileId);
 
     logger.withMetadata({ profile_id: profileId }).info('Profile state reset');
   }
@@ -211,25 +180,6 @@ export class SocialBatteryService {
     totalMessages: number;
     activeChannels: number;
   } {
-    const stmt = this.db.prepare(`
-      SELECT
-        COUNT(*) as total_channels,
-        SUM(message_count) as total_messages,
-        SUM(CASE WHEN last_message_at > datetime('now', '-1 hour') THEN 1 ELSE 0 END) as active_channels
-      FROM social_battery_state
-      WHERE profile_id = ?
-    `);
-
-    const row = stmt.get(profileId) as {
-      total_channels: number;
-      total_messages: number | null;
-      active_channels: number;
-    };
-
-    return {
-      totalChannels: row.total_channels,
-      totalMessages: row.total_messages || 0,
-      activeChannels: row.active_channels,
-    };
+    return this.socialBatteryRepo.getActivitySummary(profileId);
   }
 }
