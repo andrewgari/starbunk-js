@@ -39,7 +39,6 @@ echo ""
 # Function to update version in a package.json file
 update_package_version() {
   local package_file=$1
-  local package_dir=$(dirname "$package_file")
 
   if [ ! -f "$package_file" ]; then
     echo -e "${YELLOW}⚠️  Skipping: $package_file (not found)${NC}"
@@ -54,14 +53,23 @@ update_package_version() {
     return
   fi
 
-  # Update version using npm version (no git tag)
-  cd "$package_dir"
-  if ! npm version "$ROOT_VERSION" --no-git-tag-version --allow-same-version > /dev/null; then
+  # Update version without touching lockfiles
+  if ! node - "$package_file" "$ROOT_VERSION" <<'NODE'
+const fs = require('fs');
+const [packageFile, version] = process.argv.slice(2);
+try {
+  const data = JSON.parse(fs.readFileSync(packageFile, 'utf8'));
+  data.version = version;
+  fs.writeFileSync(packageFile, JSON.stringify(data, null, 2) + '\n');
+} catch (error) {
+  console.error(error);
+  process.exit(1);
+}
+NODE
+  then
     echo -e "${RED}✗ Failed to update $package_file${NC}"
-    cd "$ROOT_DIR"
     return 1
   fi
-  cd "$ROOT_DIR"
 
   echo -e "${GREEN}✓ Updated $package_file${NC} (${current_version} → ${ROOT_VERSION})"
 }
