@@ -14,20 +14,40 @@ pipeline:
           infrastructure:
             type: KubernetesDirect
             spec:
-              connectorRef: <+input>
+              connectorRef: unraid_local_docker
+              namespace: default
           execution:
             steps:
               - step:
                   type: Run
-                  name: System Check
-                  identifier: System_Check
+                  name: System and Persistence Check
+                  identifier: System_and_Persistence_Check
                   spec:
                     connectorRef: unraid_local_docker
                     image: alpine
                     shell: Sh
+                    mounts:
+                      - name: unraid_appdata
+                        path: /mnt/unraid_test
                     command: |
-                      echo "--- Checking Host Access ---"
+                      echo "--- Host Info ---"
                       uname -a
-                      echo "--- Checking File Persistence ---"
-                      touch /opt/harness-delegate/logs/test_file.txt
-                      ls -l /opt/harness-delegate/logs/test_file.txt
+                      if [ -d "/mnt/unraid_test" ]; then
+                        echo "Mount point exists. Writing test file..."
+                        echo "Harness run at $(date)" > /mnt/unraid_test/pipeline_check.txt
+                      else
+                        echo "Error: Mount point not found!"
+                        exit 1
+                      fi
+          failureStrategies:
+            - onFailure:
+                errors:
+                  - AllErrors
+                action:
+                  type: Abort
+  volumes:
+    - name: unraid_appdata
+      spec:
+        type: HostPath
+        spec:
+          path: /mnt/user/appdata/harness-test
