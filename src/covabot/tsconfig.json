@@ -27,7 +27,7 @@
         "../../shared/dist"
       ],
       "@starbunk/shared/database": [
-        "../../shared/src/services/database"
+        "../../shared/dist/services/database"
       ],
       "@starbunk/shared/*": [
         "../../shared/dist/*"
