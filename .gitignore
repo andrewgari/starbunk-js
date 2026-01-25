@@ -209,3 +209,7 @@ build-artifacts.tar.gz
 .github/instructions/snyk_rules.instructions.md
 
 .roo
+# Allow package TODO manifests
+!src/**/TODO.md
+# Allow package TODO manifests
+!src/**/TODO.md
