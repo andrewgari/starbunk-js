@@ -91,7 +91,7 @@ jobs:
           command: npm run test
 
 workflows:
-  version: 2
+  version: 2.1
   pr-validation:
     jobs:
       - install

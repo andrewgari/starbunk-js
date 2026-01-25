@@ -1,41 +1,53 @@
 {
-	"compilerOptions": {
-		"composite": true,
-		"incremental": true,
-		"tsBuildInfoFile": "./dist/.tsbuildinfo",
-		"target": "ES2022",
-		"module": "commonjs",
-		"lib": ["ES2022"],
-		"ignoreDeprecations": "5.0",
-		"outDir": "./dist",
-		"rootDir": "./src",
-		"strict": true,
-		"esModuleInterop": true,
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"resolveJsonModule": true,
-		"isolatedModules": true,
-		"moduleResolution": "node",
-		"allowSyntheticDefaultImports": true,
-		"baseUrl": "./src",
-		"paths": {
-			"@/*": ["./*"],
-			"@starbunk/shared": ["../../shared/src"],
-			"@starbunk/shared/*": ["../../shared/src/*"]
-		},
-		"declaration": true,
-		"declarationMap": true,
-		"sourceMap": true
-	},
-	"include": ["src/**/*.ts"],
-	"exclude": [
-		"node_modules",
-		"dist",
-		"tests",
-		"tools",
-		"src/**/__tests__/**"
-	],
-	"references": [
-		{ "path": "../shared" }
-	]
+  "compilerOptions": {
+    "composite": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": [
+      "ES2022"
+    ],
+    "ignoreDeprecations": "5.0",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@starbunk/shared": [
+        "../../shared/src"
+      ],
+      "@starbunk/shared/*": [
+        "../../shared/src/*"
+      ]
+    },
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "tools",
+    "src/**/__tests__/**"
+  ],
+  "references": [
+    {
+      "path": "../shared"
+    }
+  ]
 }
