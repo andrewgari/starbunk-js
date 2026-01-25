@@ -1,0 +1,75 @@
+pipeline:
+  name: Starbunk Unified CI
+  identifier: Starbunk_Unified_CI
+  projectIdentifier: starbunkjs
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: github
+        repoName: andrewgari/starbunk-js
+        build: <+input>
+  stages:
+    - stage:
+        name: App Matrix Validation
+        identifier: App_Matrix_Validation
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Validate Build and Test
+                  identifier: Validate_Build_and_Test
+                  spec:
+                    connectorRef: unraid_local_docker
+                    image: node:20-alpine
+                    shell: Bash
+                    command: |-
+                      APPS="bunkbot covabot djcova bluebot"
+                      for APP in $APPS; do
+                        echo "--- Step 1: Validating $APP ---"
+                        CHANGES=$(git diff --name-only HEAD~1 | grep -E "^src/$APP/|^src/shared/" || true)
+                        
+                        if [ -z "$CHANGES" ]; then
+                          echo "No changes for $APP. Skipping."
+                          continue
+                        fi
+
+                        cd src/$APP
+                        npm ci
+                        npm run lint || exit 1
+                        npm run test || exit 1
+                        npm run build || exit 1
+                        
+                        echo "--- Step 2: Building $APP Image ---"
+                        docker build -t starbunk/$APP:latest -f Dockerfile.ci .
+                        
+                        echo "--- Step 3: Health Check ---"
+                        docker run --rm \
+                          -e CI_SMOKE_MODE=true \
+                          -e NODE_ENV=test \
+                          starbunk/$APP:latest node dist/index.js --smoke-test || exit 1
+                        cd ../..
+                      done
+          failureStrategies:
+            - onFailure:
+                errors:
+                  - AllErrors
+                action:
+                  type: Abort
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Docker
+            spec:
+              harnessImageConnectorRef: account.unraid_local_docker
+  volumes:
+    - name: docker_sock
+      spec:
+        type: HostPath
+        spec:
+          path: /var/run/docker.sock
+  tags: {}
