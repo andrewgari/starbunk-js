@@ -108,6 +108,11 @@ runs:
 
           echo "Changed files:"
           echo "$CHANGED_FILES"
+          # Exclude non-source manifests from change detection
+          CHANGED_FILES=$(echo "$CHANGED_FILES" | grep -vE "^src/.*/TODO\.md$")
+          echo "Filtered files:"
+          echo "$CHANGED_FILES"
+          echo ""
           echo ""
 
           # Initialize all outputs to false
