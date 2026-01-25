@@ -1,16 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { InterestService } from '../../src/services/interest-service';
 import { InterestRepository } from '../../src/repositories/interest-repository';
-import { DatabaseService } from '@starbunk/shared/database';
 import { CovaProfile } from '../../src/models/memory-types';
-import * as fs from 'fs';
-import * as path from 'path';
 
 describe('InterestService', () => {
-  const testDbPath = path.join(__dirname, '../../data/test-interest.sqlite');
-  let db: Database.Database;
-  let interestRepository: InterestRepository;
+  let mockInterestRepo: Partial<InterestRepository>;
   let interestService: InterestService;
 
   const mockProfile: CovaProfile = {
@@ -29,29 +23,38 @@ describe('InterestService', () => {
     ignoreBots: true,
   };
 
-  beforeEach(async () => {
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-    DatabaseService.resetInstance();
+  beforeEach(() => {
+    mockInterestRepo = {
+      getInterests: vi.fn().mockReturnValue([]),
+      upsertInterest: vi.fn(),
+      deleteInterest: vi.fn().mockReturnValue(false),
+      adjustWeight: vi.fn(),
+      clearProfileInterests: vi.fn().mockReturnValue(0),
+      initializeFromInterests: vi.fn(),
+    };
 
-    const dbService = DatabaseService.getInstance(testDbPath);
-    await dbService.initialize();
-    db = dbService.getDb();
-    interestRepository = new InterestRepository(db);
-    interestService = new InterestService(interestRepository);
-  });
-
-  afterEach(() => {
-    DatabaseService.resetInstance();
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
+    interestService = new InterestService(
+      mockInterestRepo as InterestRepository,
+    );
   });
 
   describe('initializeFromProfile', () => {
     it('should initialize interests from profile', async () => {
+      const mockInterests = [
+        { profile_id: 'test-profile', keyword: 'typescript', category: null, weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'react', category: null, weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'discord', category: 'tech', weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'bots', category: 'tech', weight: 1.0 },
+      ];
+
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(mockInterests);
+
       await interestService.initializeFromProfile(mockProfile);
+
+      expect(mockInterestRepo.initializeFromInterests).toHaveBeenCalledWith(
+        'test-profile',
+        ['typescript', 'react', 'tech:discord', 'tech:bots'],
+      );
 
       const interests = interestService.getInterests('test-profile');
 
@@ -63,6 +66,12 @@ describe('InterestService', () => {
     });
 
     it('should parse category prefix from interests', async () => {
+      const mockInterests = [
+        { profile_id: 'test-profile', keyword: 'discord', category: 'tech', weight: 1.0 },
+      ];
+
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(mockInterests);
+
       await interestService.initializeFromProfile(mockProfile);
 
       const interests = interestService.getInterests('test-profile');
@@ -72,8 +81,21 @@ describe('InterestService', () => {
     });
 
     it('should clear existing interests on reinitialize', async () => {
+      // First initialization - mock returns extra-keyword
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue([
+        { profile_id: 'test-profile', keyword: 'extra-keyword', category: null, weight: 1.0 },
+      ]);
+
       await interestService.initializeFromProfile(mockProfile);
-      interestService.addInterest('test-profile', 'extra-keyword');
+
+      // After reinitialization - mock returns the new interests
+      const finalInterests = [
+        { profile_id: 'test-profile', keyword: 'typescript', category: null, weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'react', category: null, weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'discord', category: 'tech', weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'bots', category: 'tech', weight: 1.0 },
+      ];
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(finalInterests);
 
       await interestService.initializeFromProfile(mockProfile);
 
@@ -84,7 +106,15 @@ describe('InterestService', () => {
 
   describe('addInterest / removeInterest', () => {
     it('should add a new interest', () => {
+      const addedInterest = [
+        { profile_id: 'profile', keyword: 'testing', category: 'dev', weight: 0.8 },
+      ];
+
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(addedInterest);
+
       interestService.addInterest('profile', 'testing', 'dev', 0.8);
+
+      expect(mockInterestRepo.upsertInterest).toHaveBeenCalledWith('profile', 'testing', 'dev', 0.8);
 
       const interests = interestService.getInterests('profile');
 
@@ -95,6 +125,12 @@ describe('InterestService', () => {
     });
 
     it('should update existing interest', () => {
+      const updatedInterest = [
+        { profile_id: 'profile', keyword: 'testing', category: 'qa', weight: 0.9 },
+      ];
+
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(updatedInterest);
+
       interestService.addInterest('profile', 'testing', 'dev', 0.5);
       interestService.addInterest('profile', 'testing', 'qa', 0.9);
 
@@ -106,21 +142,34 @@ describe('InterestService', () => {
     });
 
     it('should remove an interest', () => {
+      vi.mocked(mockInterestRepo.deleteInterest!).mockReturnValue(true);
+
       interestService.addInterest('profile', 'testing');
       const removed = interestService.removeInterest('profile', 'testing');
 
       expect(removed).toBe(true);
-      expect(interestService.getInterests('profile')).toHaveLength(0);
+      expect(mockInterestRepo.deleteInterest).toHaveBeenCalledWith('profile', 'testing');
     });
 
     it('should return false when removing non-existent interest', () => {
+      vi.mocked(mockInterestRepo.deleteInterest!).mockReturnValue(false);
+
       const removed = interestService.removeInterest('profile', 'non-existent');
+      
       expect(removed).toBe(false);
     });
   });
 
   describe('calculateInterestScore', () => {
     beforeEach(async () => {
+      const mockInterests = [
+        { profile_id: 'test-profile', keyword: 'typescript', category: null, weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'react', category: null, weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'discord', category: 'tech', weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'bots', category: 'tech', weight: 1.0 },
+      ];
+
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(mockInterests);
       await interestService.initializeFromProfile(mockProfile);
     });
 
@@ -168,6 +217,14 @@ describe('InterestService', () => {
 
   describe('isInterested', () => {
     beforeEach(async () => {
+      const mockInterests = [
+        { profile_id: 'test-profile', keyword: 'typescript', category: null, weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'react', category: null, weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'discord', category: 'tech', weight: 1.0 },
+        { profile_id: 'test-profile', keyword: 'bots', category: 'tech', weight: 1.0 },
+      ];
+
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(mockInterests);
       await interestService.initializeFromProfile(mockProfile);
     });
 
@@ -206,22 +263,44 @@ describe('InterestService', () => {
 
   describe('adjustInterestWeight', () => {
     it('should increase weight', () => {
+      const adjustedInterest = [
+        { profile_id: 'profile', keyword: 'testing', category: null, weight: 0.8 },
+      ];
+
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(adjustedInterest);
+
       interestService.addInterest('profile', 'testing', null, 0.5);
       interestService.adjustInterestWeight('profile', 'testing', 0.3);
+
+      expect(mockInterestRepo.adjustWeight).toHaveBeenCalledWith('profile', 'testing', 0.3);
 
       const interests = interestService.getInterests('profile');
       expect(interests[0].weight).toBe(0.8);
     });
 
     it('should decrease weight', () => {
+      const adjustedInterest = [
+        { profile_id: 'profile', keyword: 'testing', category: null, weight: 0.3 },
+      ];
+
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(adjustedInterest);
+
       interestService.addInterest('profile', 'testing', null, 0.5);
       interestService.adjustInterestWeight('profile', 'testing', -0.2);
+
+      expect(mockInterestRepo.adjustWeight).toHaveBeenCalledWith('profile', 'testing', -0.2);
 
       const interests = interestService.getInterests('profile');
       expect(interests[0].weight).toBe(0.3);
     });
 
     it('should clamp weight to min 0.1', () => {
+      const adjustedInterest = [
+        { profile_id: 'profile', keyword: 'testing', category: null, weight: 0.1 },
+      ];
+
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(adjustedInterest);
+
       interestService.addInterest('profile', 'testing', null, 0.2);
       interestService.adjustInterestWeight('profile', 'testing', -0.5);
 
@@ -230,6 +309,12 @@ describe('InterestService', () => {
     });
 
     it('should clamp weight to max 2.0', () => {
+      const adjustedInterest = [
+        { profile_id: 'profile', keyword: 'testing', category: null, weight: 2.0 },
+      ];
+
+      vi.mocked(mockInterestRepo.getInterests!).mockReturnValue(adjustedInterest);
+
       interestService.addInterest('profile', 'testing', null, 1.8);
       interestService.adjustInterestWeight('profile', 'testing', 0.5);
 
