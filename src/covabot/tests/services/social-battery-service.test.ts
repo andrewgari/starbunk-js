@@ -34,8 +34,6 @@ describe('SocialBatteryService', () => {
 
   describe('canSpeak', () => {
     it('should allow speaking with no previous state', () => {
-      vi.mocked(mockSocialBatteryRepo.getState!).mockReturnValue(null);
-
       const result = batteryService.canSpeak('profile', 'channel-1', defaultConfig);
 
       expect(result.canSpeak).toBe(true);
