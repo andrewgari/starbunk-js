@@ -43,3 +43,10 @@ grep -R "export type .*" -n src/shared
   - Relationship: none currently
 
 Add cross-package tasks here with a short summary and a link to the package-local manifest entries.
+
+- CI change detection: ignore src/**/TODO.md on PRs
+  - Context: PR #540 (fix: restore release.config.cjs) — stabilize PR checks and semver release
+  - File Scope: .github/actions/detect-changes/action.yml, release.config.cjs, .gitignore, src/*/TODO.md
+  - The Change: filter manifest-only edits from change detection to avoid unnecessary container builds; restore semantic-release config at repo root; ensure manifests tracked by .gitignore exceptions
+  - Validation: unit tests pass (129/129), repo validations all green via scripts/validation/run-all-validations.sh; Observability not applicable (no runtime endpoints changed); Security: run Snyk per .github/instructions/snyk_rules.instructions.md before merge
+  - Relationship: No other agents active on these files; coordinate with @ts-sorcerer on any TS-type impacts in workflows
