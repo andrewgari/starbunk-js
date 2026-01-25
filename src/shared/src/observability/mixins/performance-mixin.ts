@@ -1,4 +1,10 @@
-import type { LogLayer, LogLayerMixin, LogLayerMixinRegistration, MockLogLayer, LogLayerPlugin } from 'loglayer';
+import type {
+  LogLayer,
+  LogLayerMixin,
+  LogLayerMixinRegistration,
+  MockLogLayer,
+  LogLayerPlugin,
+} from 'loglayer';
 import { LogLayerMixinAugmentType } from 'loglayer';
 import type { PluginBeforeDataOutParams } from 'loglayer';
 
@@ -63,7 +69,7 @@ const performanceMixinImpl: LogLayerMixin = {
     (instance as any)[TIMING_DATA_KEY] = {} as TimingData;
   },
 
-  augment: (prototype) => {
+  augment: prototype => {
     prototype.startTiming = function (this: LogLayer, operationName: string): LogLayer {
       const timingData = (this as any)[TIMING_DATA_KEY] as TimingData;
       timingData[operationName] = Date.now();
@@ -86,7 +92,11 @@ const performanceMixinImpl: LogLayerMixin = {
       return this;
     };
 
-    prototype.withDuration = function (this: LogLayer, operationName: string, durationMs: number): LogLayer {
+    prototype.withDuration = function (
+      this: LogLayer,
+      operationName: string,
+      durationMs: number,
+    ): LogLayer {
       return this.withContext({
         operation: operationName,
         duration_ms: durationMs,
@@ -94,7 +104,7 @@ const performanceMixinImpl: LogLayerMixin = {
     };
   },
 
-  augmentMock: (prototype) => {
+  augmentMock: prototype => {
     prototype.startTiming = function (this: MockLogLayer, _operationName: string): MockLogLayer {
       return this;
     };
@@ -103,7 +113,11 @@ const performanceMixinImpl: LogLayerMixin = {
       return this;
     };
 
-    prototype.withDuration = function (this: MockLogLayer, _operationName: string, _durationMs: number): MockLogLayer {
+    prototype.withDuration = function (
+      this: MockLogLayer,
+      _operationName: string,
+      _durationMs: number,
+    ): MockLogLayer {
       return this;
     };
   },
@@ -117,4 +131,3 @@ export function performanceMixin(): LogLayerMixinRegistration {
     mixinsToAdd: [performanceMixinImpl],
   };
 }
-

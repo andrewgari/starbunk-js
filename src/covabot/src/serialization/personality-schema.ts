@@ -13,7 +13,10 @@ export const identitySchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('mimic'),
-    as_member: z.string().regex(/^\d{17,19}$/).describe('Discord User ID to mimic'),
+    as_member: z
+      .string()
+      .regex(/^\d{17,19}$/)
+      .describe('Discord User ID to mimic'),
   }),
   z.object({
     type: z.literal('random'),
@@ -24,7 +27,12 @@ export const identitySchema = z.discriminatedUnion('type', [
 export const speechPatternsSchema = z.object({
   lowercase: z.boolean().default(false).describe('Force lowercase responses'),
   sarcasm_level: z.number().min(0).max(1).default(0.3).describe('Sarcasm tendency 0.0-1.0'),
-  technical_bias: z.number().min(0).max(1).default(0.5).describe('Technical language tendency 0.0-1.0'),
+  technical_bias: z
+    .number()
+    .min(0)
+    .max(1)
+    .default(0.5)
+    .describe('Technical language tendency 0.0-1.0'),
 });
 
 // Personality configuration
@@ -41,21 +49,26 @@ export const personalitySchema = z.object({
 
 // Trigger condition (recursive)
 export const conditionSchema: z.ZodType<unknown> = z.lazy(() =>
-  z.object({
-    matches_pattern: z.string().optional(),
-    contains_word: z.string().optional(),
-    contains_phrase: z.string().optional(),
-    from_user: z.string().optional(),
-    with_chance: z.number().min(0).max(1).optional(),
-    any_of: z.array(conditionSchema).optional(),
-    all_of: z.array(conditionSchema).optional(),
-    none_of: z.array(conditionSchema).optional(),
-    always: z.boolean().optional(),
-  }).refine((val) => {
-    // At least one condition type must be specified
-    const keys = Object.keys(val).filter(k => val[k as keyof typeof val] !== undefined);
-    return keys.length > 0;
-  }, { message: 'At least one condition type must be specified' })
+  z
+    .object({
+      matches_pattern: z.string().optional(),
+      contains_word: z.string().optional(),
+      contains_phrase: z.string().optional(),
+      from_user: z.string().optional(),
+      with_chance: z.number().min(0).max(1).optional(),
+      any_of: z.array(conditionSchema).optional(),
+      all_of: z.array(conditionSchema).optional(),
+      none_of: z.array(conditionSchema).optional(),
+      always: z.boolean().optional(),
+    })
+    .refine(
+      val => {
+        // At least one condition type must be specified
+        const keys = Object.keys(val).filter(k => val[k as keyof typeof val] !== undefined);
+        return keys.length > 0;
+      },
+      { message: 'At least one condition type must be specified' },
+    ),
 );
 
 // Trigger configuration
@@ -63,8 +76,15 @@ export const triggerSchema = z.object({
   name: z.string().describe('Internal identifier for this trigger'),
   conditions: conditionSchema.describe('Conditions that activate this trigger'),
   use_llm: z.boolean().default(true).describe('Whether to use LLM for response generation'),
-  response_chance: z.number().min(0).max(1).optional().describe('Probability of responding when matched'),
-  responses: z.union([z.string(), z.array(z.string())]).optional()
+  response_chance: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe('Probability of responding when matched'),
+  responses: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
     .describe('Canned responses (if use_llm is false)'),
 });
 
@@ -72,7 +92,12 @@ export const triggerSchema = z.object({
 export const socialBatterySchema = z.object({
   max_messages: z.number().int().positive().default(5).describe('Burst limit per window'),
   window_minutes: z.number().int().positive().default(10).describe('Window duration in minutes'),
-  cooldown_seconds: z.number().int().nonnegative().default(30).describe('Minimum gap between messages'),
+  cooldown_seconds: z
+    .number()
+    .int()
+    .nonnegative()
+    .default(30)
+    .describe('Minimum gap between messages'),
 });
 
 // LLM configuration

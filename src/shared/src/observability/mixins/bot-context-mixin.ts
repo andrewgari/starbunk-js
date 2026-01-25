@@ -35,13 +35,13 @@ declare module 'loglayer' {
 const botContextMixinImpl: LogLayerMixin = {
   augmentationType: LogLayerMixinAugmentType.LogLayer,
 
-  augment: (prototype) => {
+  augment: prototype => {
     prototype.withBotContext = function (this: LogLayer, context: BotContext): LogLayer {
       return this.withContext(context);
     };
   },
 
-  augmentMock: (prototype) => {
+  augmentMock: prototype => {
     prototype.withBotContext = function (this: MockLogLayer, _context: BotContext): MockLogLayer {
       return this;
     };
@@ -56,4 +56,3 @@ export function botContextMixin(): LogLayerMixinRegistration {
     mixinsToAdd: [botContextMixinImpl],
   };
 }
-

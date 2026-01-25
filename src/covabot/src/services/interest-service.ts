@@ -21,10 +21,12 @@ export class InterestService {
    * Initialize keyword interests from a profile's configuration
    */
   async initializeFromProfile(profile: CovaProfile): Promise<void> {
-    logger.withMetadata({
-      profile_id: profile.id,
-      interests_count: profile.personality.interests.length,
-    }).info('Initializing interests from profile');
+    logger
+      .withMetadata({
+        profile_id: profile.id,
+        interests_count: profile.personality.interests.length,
+      })
+      .info('Initializing interests from profile');
 
     this.interestRepo.initializeFromInterests(profile.id, profile.personality.interests);
   }
@@ -40,11 +42,13 @@ export class InterestService {
   ): void {
     this.interestRepo.upsertInterest(profileId, keyword, category, weight);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      keyword,
-      weight,
-    }).debug('Interest added');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        weight,
+      })
+      .debug('Interest added');
   }
 
   /**
@@ -66,7 +70,10 @@ export class InterestService {
    *
    * Uses keyword matching with word boundaries and stemming-lite
    */
-  calculateInterestScore(profileId: string, messageContent: string): {
+  calculateInterestScore(
+    profileId: string,
+    messageContent: string,
+  ): {
     score: number;
     matches: InterestMatch[];
   } {
@@ -99,16 +106,19 @@ export class InterestService {
 
     // Normalize score to 0-1 range
     // Use a softer normalization that doesn't require all keywords to match
-    const score = matches.length > 0
-      ? Math.min(1, matchedWeight / Math.min(totalWeight, 3)) // Cap at 3 keywords worth
-      : 0;
+    const score =
+      matches.length > 0
+        ? Math.min(1, matchedWeight / Math.min(totalWeight, 3)) // Cap at 3 keywords worth
+        : 0;
 
-    logger.withMetadata({
-      profile_id: profileId,
-      message_preview: messageContent.substring(0, 50),
-      matches_count: matches.length,
-      score: score.toFixed(3),
-    }).debug('Interest score calculated');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        message_preview: messageContent.substring(0, 50),
+        matches_count: matches.length,
+        score: score.toFixed(3),
+      })
+      .debug('Interest score calculated');
 
     return { score, matches };
   }
@@ -137,18 +147,16 @@ export class InterestService {
   /**
    * Update interest weight based on engagement
    */
-  adjustInterestWeight(
-    profileId: string,
-    keyword: string,
-    adjustment: number,
-  ): void {
+  adjustInterestWeight(profileId: string, keyword: string, adjustment: number): void {
     this.interestRepo.adjustWeight(profileId, keyword, adjustment);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      keyword,
-      adjustment,
-    }).debug('Interest weight adjusted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        adjustment,
+      })
+      .debug('Interest weight adjusted');
   }
 
   /**

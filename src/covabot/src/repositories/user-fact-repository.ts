@@ -41,12 +41,14 @@ export class UserFactRepository {
 
     stmt.run(profileId, userId, category, factKey, value, confidence);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      user_id: userId,
-      category,
-      fact_key: factKey,
-    }).debug('User fact stored');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        user_id: userId,
+        category,
+        fact_key: factKey,
+      })
+      .debug('User fact stored');
   }
 
   /**
@@ -72,10 +74,12 @@ export class UserFactRepository {
       confidence: row.confidence,
     }));
 
-    logger.withMetadata({
-      user_id: userId,
-      facts_count: facts.length,
-    }).debug('User facts retrieved');
+    logger
+      .withMetadata({
+        user_id: userId,
+        facts_count: facts.length,
+      })
+      .debug('User facts retrieved');
 
     return facts;
   }
@@ -103,11 +107,13 @@ export class UserFactRepository {
       confidence: row.confidence,
     }));
 
-    logger.withMetadata({
-      user_id: userId,
-      category,
-      facts_count: facts.length,
-    }).debug('User facts by type retrieved');
+    logger
+      .withMetadata({
+        user_id: userId,
+        category,
+        facts_count: facts.length,
+      })
+      .debug('User facts by type retrieved');
 
     return facts;
   }

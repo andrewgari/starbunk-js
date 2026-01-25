@@ -35,7 +35,9 @@ export function parsePersonalityFile(filePath: string): CovaProfile {
   // Validate with Zod
   const validationResult = yamlConfigSchema.safeParse(parsed);
   if (!validationResult.success) {
-    const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    const errors = validationResult.error.errors
+      .map(e => `${e.path.join('.')}: ${e.message}`)
+      .join(', ');
     logger.withMetadata({ file_path: filePath, errors }).error('Schema validation failed');
     throw new Error(`Schema validation failed for ${filePath}: ${errors}`);
   }
@@ -45,12 +47,14 @@ export function parsePersonalityFile(filePath: string): CovaProfile {
   // Transform to runtime profile
   const profile = transformToCovaProfile(config);
 
-  logger.withMetadata({
-    profile_id: profile.id,
-    display_name: profile.displayName,
-    triggers_count: profile.triggers.length,
-    interests_count: profile.personality.interests.length,
-  }).info('Personality loaded successfully');
+  logger
+    .withMetadata({
+      profile_id: profile.id,
+      display_name: profile.displayName,
+      triggers_count: profile.triggers.length,
+      interests_count: profile.personality.interests.length,
+    })
+    .info('Personality loaded successfully');
 
   return profile;
 }
@@ -62,14 +66,14 @@ export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
   logger.withMetadata({ dir_path: dirPath }).info('Loading personalities from directory');
 
   if (!fs.existsSync(dirPath)) {
-    logger.withMetadata({ dir_path: dirPath }).warn('Personalities directory not found, creating it');
+    logger
+      .withMetadata({ dir_path: dirPath })
+      .warn('Personalities directory not found, creating it');
     fs.mkdirSync(dirPath, { recursive: true });
     return [];
   }
 
-  const files = fs.readdirSync(dirPath).filter(f =>
-    f.endsWith('.yml') || f.endsWith('.yaml')
-  );
+  const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.yml') || f.endsWith('.yaml'));
 
   if (files.length === 0) {
     logger.withMetadata({ dir_path: dirPath }).warn('No personality files found');
@@ -83,14 +87,19 @@ export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
       const profile = parsePersonalityFile(filePath);
       profiles.push(profile);
     } catch (error) {
-      logger.withError(error).withMetadata({ file }).error('Failed to load personality file, skipping');
+      logger
+        .withError(error)
+        .withMetadata({ file })
+        .error('Failed to load personality file, skipping');
     }
   }
 
-  logger.withMetadata({
-    loaded_count: profiles.length,
-    total_files: files.length
-  }).info('Finished loading personalities');
+  logger
+    .withMetadata({
+      loaded_count: profiles.length,
+      total_files: files.length,
+    })
+    .info('Finished loading personalities');
 
   return profiles;
 }

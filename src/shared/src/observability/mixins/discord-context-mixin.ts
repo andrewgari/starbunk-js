@@ -64,23 +64,29 @@ function extractMessageContext(message: Message): DiscordMessageContext {
 const discordContextMixinImpl: LogLayerMixin = {
   augmentationType: LogLayerMixinAugmentType.LogLayer,
 
-  augment: (prototype) => {
+  augment: prototype => {
     prototype.withDiscordMessage = function (this: LogLayer, message: Message): LogLayer {
       const context = extractMessageContext(message);
       return this.withContext(context);
     };
 
-    prototype.withDiscordContext = function (this: LogLayer, context: DiscordMessageContext): LogLayer {
+    prototype.withDiscordContext = function (
+      this: LogLayer,
+      context: DiscordMessageContext,
+    ): LogLayer {
       return this.withContext(context);
     };
   },
 
-  augmentMock: (prototype) => {
+  augmentMock: prototype => {
     prototype.withDiscordMessage = function (this: MockLogLayer, _message: Message): MockLogLayer {
       return this;
     };
 
-    prototype.withDiscordContext = function (this: MockLogLayer, _context: DiscordMessageContext): MockLogLayer {
+    prototype.withDiscordContext = function (
+      this: MockLogLayer,
+      _context: DiscordMessageContext,
+    ): MockLogLayer {
       return this;
     };
   },
@@ -94,4 +100,3 @@ export function discordContextMixin(): LogLayerMixinRegistration {
     mixinsToAdd: [discordContextMixinImpl],
   };
 }
-

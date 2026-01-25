@@ -50,11 +50,13 @@ export class InterestRepository {
 
     stmt.run(profileId, keyword.toLowerCase().trim(), category, weight);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      keyword,
-      weight,
-    }).debug('Interest upserted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        weight,
+      })
+      .debug('Interest upserted');
   }
 
   /**
@@ -70,10 +72,12 @@ export class InterestRepository {
     const deleted = result.changes > 0;
 
     if (deleted) {
-      logger.withMetadata({
-        profile_id: profileId,
-        keyword,
-      }).debug('Interest deleted');
+      logger
+        .withMetadata({
+          profile_id: profileId,
+          keyword,
+        })
+        .debug('Interest deleted');
     }
 
     return deleted;
@@ -91,11 +95,13 @@ export class InterestRepository {
 
     stmt.run(delta, profileId, keyword.toLowerCase().trim());
 
-    logger.withMetadata({
-      profile_id: profileId,
-      keyword,
-      delta,
-    }).debug('Interest weight adjusted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        delta,
+      })
+      .debug('Interest weight adjusted');
   }
 
   /**
@@ -109,10 +115,12 @@ export class InterestRepository {
 
     const result = stmt.run(profileId);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      deleted_count: result.changes,
-    }).info('Profile interests cleared');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        deleted_count: result.changes,
+      })
+      .info('Profile interests cleared');
 
     return result.changes;
   }
@@ -142,10 +150,11 @@ export class InterestRepository {
 
     insertMany(interests);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      keywords_inserted: interests.length,
-    }).info('Profile interests initialized');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keywords_inserted: interests.length,
+      })
+      .info('Profile interests initialized');
   }
 }
-

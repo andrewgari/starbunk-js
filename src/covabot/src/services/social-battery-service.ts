@@ -26,11 +26,7 @@ export class SocialBatteryService {
   /**
    * Check if the bot can speak in a channel
    */
-  canSpeak(
-    profileId: string,
-    channelId: string,
-    config: SocialBatteryConfig,
-  ): SocialBatteryCheck {
+  canSpeak(profileId: string, channelId: string, config: SocialBatteryConfig): SocialBatteryCheck {
     const state = this.getState(profileId, channelId);
     const now = new Date();
 
@@ -50,11 +46,13 @@ export class SocialBatteryService {
       const secondsSinceLastMessage = (now.getTime() - lastMessage.getTime()) / 1000;
 
       if (secondsSinceLastMessage < config.cooldownSeconds) {
-        logger.withMetadata({
-          profile_id: profileId,
-          channel_id: channelId,
-          seconds_remaining: config.cooldownSeconds - secondsSinceLastMessage,
-        }).debug('Cooldown active');
+        logger
+          .withMetadata({
+            profile_id: profileId,
+            channel_id: channelId,
+            seconds_remaining: config.cooldownSeconds - secondsSinceLastMessage,
+          })
+          .debug('Cooldown active');
 
         return {
           canSpeak: false,
@@ -84,16 +82,18 @@ export class SocialBatteryService {
       // Check message count within window
       if (state.message_count >= config.maxMessages) {
         const windowResetSeconds = Math.ceil(
-          (config.windowMinutes * 60) - (minutesSinceWindowStart * 60)
+          config.windowMinutes * 60 - minutesSinceWindowStart * 60,
         );
 
-        logger.withMetadata({
-          profile_id: profileId,
-          channel_id: channelId,
-          message_count: state.message_count,
-          max_messages: config.maxMessages,
-          window_reset_seconds: windowResetSeconds,
-        }).debug('Rate limited');
+        logger
+          .withMetadata({
+            profile_id: profileId,
+            channel_id: channelId,
+            message_count: state.message_count,
+            max_messages: config.maxMessages,
+            window_reset_seconds: windowResetSeconds,
+          })
+          .debug('Rate limited');
 
         return {
           canSpeak: false,
@@ -138,10 +138,12 @@ export class SocialBatteryService {
       }
     }
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).debug('Message recorded');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Message recorded');
   }
 
   /**
@@ -157,10 +159,12 @@ export class SocialBatteryService {
   resetChannel(profileId: string, channelId: string): void {
     this.socialBatteryRepo.deleteState(profileId, channelId);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).info('Channel state reset');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .info('Channel state reset');
   }
 
   /**

@@ -43,10 +43,12 @@ export class SocialBatteryRepository {
 
     stmt.run(profileId, channelId, nowIso, nowIso);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).debug('Social battery state created');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery state created');
   }
 
   /**
@@ -61,10 +63,12 @@ export class SocialBatteryRepository {
 
     stmt.run(nowIso, nowIso, profileId, channelId);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).debug('Social battery window reset');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery window reset');
   }
 
   /**
@@ -79,10 +83,12 @@ export class SocialBatteryRepository {
 
     stmt.run(nowIso, profileId, channelId);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).debug('Social battery message count incremented');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery message count incremented');
   }
 
   /**
@@ -96,10 +102,12 @@ export class SocialBatteryRepository {
 
     stmt.run(profileId, channelId);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).debug('Social battery state deleted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery state deleted');
   }
 
   /**
@@ -113,9 +121,11 @@ export class SocialBatteryRepository {
 
     stmt.run(profileId);
 
-    logger.withMetadata({
-      profile_id: profileId,
-    }).info('Profile social battery state reset');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+      })
+      .info('Profile social battery state reset');
   }
 
   /**
@@ -148,4 +158,3 @@ export class SocialBatteryRepository {
     };
   }
 }
-

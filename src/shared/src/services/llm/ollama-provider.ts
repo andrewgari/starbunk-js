@@ -5,12 +5,7 @@
  */
 
 import { logLayer } from '../../observability/log-layer';
-import {
-  LlmProvider,
-  LlmMessage,
-  LlmCompletionOptions,
-  LlmCompletionResult,
-} from './llm-provider';
+import { LlmProvider, LlmMessage, LlmCompletionOptions, LlmCompletionResult } from './llm-provider';
 
 const logger = logLayer.withPrefix('OllamaProvider');
 
@@ -47,14 +42,16 @@ export class OllamaProvider implements LlmProvider {
 
   async generateCompletion(
     messages: LlmMessage[],
-    options: LlmCompletionOptions
+    options: LlmCompletionOptions,
   ): Promise<LlmCompletionResult> {
     const model = options.model || this.defaultModel;
     const url = `${this.apiUrl}/api/chat`;
 
-    logger.withMetadata({ model, messageCount: messages.length }).debug('Generating Ollama completion');
+    logger
+      .withMetadata({ model, messageCount: messages.length })
+      .debug('Generating Ollama completion');
 
-    const ollamaMessages: OllamaChatMessage[] = messages.map((m) => ({
+    const ollamaMessages: OllamaChatMessage[] = messages.map(m => ({
       role: m.role,
       content: m.content,
     }));
@@ -94,4 +91,3 @@ export class OllamaProvider implements LlmProvider {
     };
   }
 }
-

@@ -7,10 +7,7 @@
 
 import Database from 'better-sqlite3';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
-import {
-  ConversationRow,
-  ConversationContext,
-} from '@/models/memory-types';
+import { ConversationRow, ConversationContext } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('ConversationRepository');
 
@@ -39,12 +36,14 @@ export class ConversationRepository {
 
     const result = stmt.run(profileId, channelId, userId, userName, messageContent, botResponse);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-      user_id: userId,
-      conversation_id: result.lastInsertRowid,
-    }).debug('Conversation stored');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+        user_id: userId,
+        conversation_id: result.lastInsertRowid,
+      })
+      .debug('Conversation stored');
 
     return Number(result.lastInsertRowid);
   }
@@ -52,11 +51,7 @@ export class ConversationRepository {
   /**
    * Get recent conversation context for a channel
    */
-  getChannelContext(
-    profileId: string,
-    channelId: string,
-    limit: number = 10,
-  ): ConversationContext {
+  getChannelContext(profileId: string, channelId: string, limit: number = 10): ConversationContext {
     const stmt = this.db.prepare(`
       SELECT user_id, user_name, message_content, bot_response, created_at
       FROM conversations
@@ -79,11 +74,13 @@ export class ConversationRepository {
       timestamp: new Date(row.created_at),
     }));
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-      messages_count: messages.length,
-    }).debug('Channel context retrieved');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+        messages_count: messages.length,
+      })
+      .debug('Channel context retrieved');
 
     return { messages };
   }
@@ -91,11 +88,7 @@ export class ConversationRepository {
   /**
    * Get conversation history with a specific user
    */
-  getUserHistory(
-    profileId: string,
-    userId: string,
-    limit: number = 20,
-  ): ConversationContext {
+  getUserHistory(profileId: string, userId: string, limit: number = 20): ConversationContext {
     const stmt = this.db.prepare(`
       SELECT user_id, user_name, message_content, bot_response, created_at
       FROM conversations
@@ -117,11 +110,13 @@ export class ConversationRepository {
       timestamp: new Date(row.created_at),
     }));
 
-    logger.withMetadata({
-      profile_id: profileId,
-      user_id: userId,
-      messages_count: messages.length,
-    }).debug('User history retrieved');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        user_id: userId,
+        messages_count: messages.length,
+      })
+      .debug('User history retrieved');
 
     return { messages };
   }
@@ -138,11 +133,13 @@ export class ConversationRepository {
 
     const result = stmt.run(profileId, daysToKeep);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      days_kept: daysToKeep,
-      deleted_count: result.changes,
-    }).info('Old conversations pruned');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        days_kept: daysToKeep,
+        deleted_count: result.changes,
+      })
+      .info('Old conversations pruned');
 
     return result.changes;
   }

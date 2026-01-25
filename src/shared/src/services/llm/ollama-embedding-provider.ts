@@ -61,7 +61,9 @@ export class OllamaEmbeddingProvider implements EmbeddingProvider {
 
     const data = (await response.json()) as OllamaEmbeddingResponse;
 
-    logger.withMetadata({ model, dimensions: data.embedding.length }).debug('Ollama embedding successful');
+    logger
+      .withMetadata({ model, dimensions: data.embedding.length })
+      .debug('Ollama embedding successful');
 
     return {
       embedding: data.embedding,
@@ -70,7 +72,10 @@ export class OllamaEmbeddingProvider implements EmbeddingProvider {
     };
   }
 
-  async generateEmbeddings(texts: string[], options?: EmbeddingOptions): Promise<EmbeddingResult[]> {
+  async generateEmbeddings(
+    texts: string[],
+    options?: EmbeddingOptions,
+  ): Promise<EmbeddingResult[]> {
     // Ollama doesn't have a batch endpoint, so we generate one at a time
     const results: EmbeddingResult[] = [];
     for (const text of texts) {
@@ -80,4 +85,3 @@ export class OllamaEmbeddingProvider implements EmbeddingProvider {
     return results;
   }
 }
-

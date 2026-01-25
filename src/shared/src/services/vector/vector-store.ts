@@ -99,11 +99,13 @@ export class VectorStore {
     // Update in-memory store
     this.vectors.set(entry.id, fullEntry);
 
-    logger.withMetadata({
-      id: entry.id,
-      collection: entry.collection,
-      dimensions: entry.vector.length,
-    }).debug('Vector upserted');
+    logger
+      .withMetadata({
+        id: entry.id,
+        collection: entry.collection,
+        dimensions: entry.vector.length,
+      })
+      .debug('Vector upserted');
   }
 
   /**
@@ -198,10 +200,14 @@ export class VectorStore {
     }[];
 
     for (const row of rows) {
-      const vector = Array.from(new Float32Array(row.vector.buffer.slice(
-        row.vector.byteOffset,
-        row.vector.byteOffset + row.vector.byteLength,
-      )));
+      const vector = Array.from(
+        new Float32Array(
+          row.vector.buffer.slice(
+            row.vector.byteOffset,
+            row.vector.byteOffset + row.vector.byteLength,
+          ),
+        ),
+      );
 
       this.vectors.set(row.id, {
         id: row.id,
@@ -215,4 +221,3 @@ export class VectorStore {
     }
   }
 }
-
