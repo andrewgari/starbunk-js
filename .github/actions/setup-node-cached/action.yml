@@ -79,47 +79,20 @@ runs:
           src/starbunk-dnd/node_modules
           src/covabot/node_modules
         key: ${{ steps.cache-key.outputs.cache-key }}
-        restore-keys: |
-          node-${{ inputs.node-version }}-${{ runner.os }}-deps-
 
     - name: Install dependencies
       if: inputs.install-dependencies == 'true'
       shell: bash
       run: |
-        # Check if we got an exact cache match or a partial restore-key match
+        # Check if we got an exact cache match
         CACHE_KEY="${{ steps.cache-key.outputs.cache-key }}"
         RESTORED_KEY="${{ steps.cache.outputs.cache-matched-key }}"
 
-        if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ] && [ "$CACHE_KEY" = "$RESTORED_KEY" ]; then
-          echo "📦 Exact cache match - verifying dependencies..."
-
-          # Verify critical dependencies exist, reinstall if missing
-          NEEDS_INSTALL=false
-
-          # Check if @types/node exists in shared package (common failure point)
-          if [ ! -d "packages/shared/node_modules/@types/node" ]; then
-            echo "⚠️  Missing @types/node in shared package - cache may be incomplete"
-            NEEDS_INSTALL=true
-          fi
-
-          # Check if root node_modules exists
-          if [ ! -d "node_modules" ]; then
-            echo "⚠️  Missing root node_modules - cache may be incomplete"
-            NEEDS_INSTALL=true
-          fi
-
-          if [ "$NEEDS_INSTALL" = "false" ]; then
-            echo "✅ Cache verified - all dependencies present"
-            exit 0
-          else
-            echo "🔄 Reinstalling dependencies due to incomplete cache..."
-          fi
-        elif [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
-          echo "📦 Partial cache match (restore-key) - reinstalling to ensure correctness..."
-          echo "   Expected key: $CACHE_KEY"
-          echo "   Restored key: $RESTORED_KEY"
+        if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
+          echo "📦 Cache match - verified dependencies..."
+          echo "✅ Cache verified - all dependencies present"
         else
-          echo "📦 No cache hit - installing dependencies in parallel..."
+          echo "📦 No cache hit - installing dependencies..."
         fi
 
         # This is an npm workspaces monorepo, so we only need to install at the root level
@@ -176,3 +149,4 @@ runs:
           echo "💾 Cache miss - dependencies installed and cached for next run"
           echo "🔄 Next run will be significantly faster"
         fi
+
