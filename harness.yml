@@ -1,0 +1,33 @@
+pipeline:
+  name: Unraid Functional Check
+  identifier: Unraid_Functional_Check
+  projectIdentifier: default_project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Run Shell Test
+        identifier: Run_Shell_Test
+        type: CI
+        spec:
+          cloneCodebase: false
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: <+input>
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: System Check
+                  identifier: System_Check
+                  spec:
+                    connectorRef: unraid_local_docker
+                    image: alpine
+                    shell: Sh
+                    command: |
+                      echo "--- Checking Host Access ---"
+                      uname -a
+                      echo "--- Checking File Persistence ---"
+                      touch /opt/harness-delegate/logs/test_file.txt
+                      ls -l /opt/harness-delegate/logs/test_file.txt
