@@ -17,7 +17,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node16",
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
