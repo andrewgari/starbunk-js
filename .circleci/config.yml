@@ -57,7 +57,7 @@ jobs:
           command: npm run lint -- --cache --cache-location .eslintcache
       - run:
           name: Prettier check
-          command: npm run format -- --check
+          command: npm run format:check
 
   type-check:
     executor: node

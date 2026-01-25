@@ -114,7 +114,7 @@ jobs:
               run: npm run lint -- --cache --cache-location .eslintcache
 
             - name: Run Prettier
-              run: npm run format -- --check
+              run: npm run format:check
 
     type-check:
         name: PR Validation - Type Check

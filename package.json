@@ -41,6 +41,7 @@
 		"lint:fix": "eslint src/*/src/**/*.ts --fix",
 		"lint:bunkbot": "cd src/bunkbot && npm run lint",
 		"format": "prettier --write \"src/*/src/**/*.ts\"",
+		"format:check": "prettier --check \"src/*/src/**/*.ts\"",
 		"type-check": "tsc --build --dry",
 		"type-check:shared": "tsc --build src/shared --dry",
 		"type-check:containers": "npm run type-check:bunkbot && npm run type-check:djcova && npm run type-check:covabot && npm run type-check:bluebot",
