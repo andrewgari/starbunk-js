@@ -25,10 +25,10 @@
         "./src/*"
       ],
       "@starbunk/shared": [
-        "../../shared/src"
+        "../../shared/dist"
       ],
       "@starbunk/shared/*": [
-        "../../shared/src/*"
+        "../../shared/dist/*"
       ]
     },
     "declaration": true,

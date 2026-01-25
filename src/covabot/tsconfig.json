@@ -24,13 +24,13 @@
         "./src/*"
       ],
       "@starbunk/shared": [
-        "../../shared/src"
+        "../../shared/dist"
       ],
       "@starbunk/shared/database": [
         "../../shared/src/services/database"
       ],
       "@starbunk/shared/*": [
-        "../../shared/src/*"
+        "../../shared/dist/*"
       ]
     },
     "declaration": true,
