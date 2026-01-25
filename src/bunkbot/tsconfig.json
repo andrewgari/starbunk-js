@@ -4,7 +4,7 @@
     "incremental": true,
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "target": "ES2022",
-    "module": "commonjs",
+    "module": "Node16",
     "lib": [
       "ES2022"
     ],
