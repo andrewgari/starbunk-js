@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { Message, User, Client, Guild, GuildMember } from 'discord.js';
-import { DatabaseService } from '@starbunk/shared/database';
 import { MemoryService } from '../../src/services/memory-service';
 import { InterestService } from '../../src/services/interest-service';
 import { SocialBatteryService } from '../../src/services/social-battery-service';
@@ -12,8 +11,6 @@ import { UserFactRepository } from '../../src/repositories/user-fact-repository'
 import { InterestRepository } from '../../src/repositories/interest-repository';
 import { SocialBatteryRepository } from '../../src/repositories/social-battery-repository';
 import { CovaProfile } from '../../src/models/memory-types';
-import * as fs from 'fs';
-import * as path from 'path';
 
 // Mock Discord objects
 function createMockMessage(overrides: Partial<{
@@ -60,7 +57,6 @@ function createMockMessage(overrides: Partial<{
 }
 
 describe('Message Flow Integration', () => {
-  const testDbPath = path.join(__dirname, '../../data/test-flow.sqlite');
   let db: Database.Database;
   let conversationRepository: ConversationRepository;
   let userFactRepository: UserFactRepository;
@@ -114,17 +110,95 @@ describe('Message Flow Integration', () => {
 
   const botUserId = 'bot-999';
 
+  /**
+   * Initialize in-memory database with schema
+   */
+  function initializeInMemoryDb(): Database.Database {
+    const db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+
+    // Apply schema migrations
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS migrations (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Conversation history
+      CREATE TABLE IF NOT EXISTS conversations (
+        id INTEGER PRIMARY KEY,
+        profile_id TEXT NOT NULL,
+        channel_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        user_name TEXT,
+        message_content TEXT NOT NULL,
+        bot_response TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_conversations_profile_channel
+        ON conversations(profile_id, channel_id);
+      CREATE INDEX IF NOT EXISTS idx_conversations_user
+        ON conversations(profile_id, user_id);
+      CREATE INDEX IF NOT EXISTS idx_conversations_created
+        ON conversations(created_at);
+
+      -- Learned user facts
+      CREATE TABLE IF NOT EXISTS user_facts (
+        id INTEGER PRIMARY KEY,
+        profile_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        fact_type TEXT NOT NULL,
+        fact_key TEXT NOT NULL,
+        fact_value TEXT NOT NULL,
+        confidence REAL DEFAULT 1.0,
+        learned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(profile_id, user_id, fact_type, fact_key)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_facts_user
+        ON user_facts(profile_id, user_id);
+
+      -- Personality trait evolution
+      CREATE TABLE IF NOT EXISTS personality_evolution (
+        id INTEGER PRIMARY KEY,
+        profile_id TEXT NOT NULL,
+        trait_name TEXT NOT NULL,
+        trait_value REAL NOT NULL,
+        change_reason TEXT,
+        changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(profile_id, trait_name)
+      );
+
+      -- Social battery state
+      CREATE TABLE IF NOT EXISTS social_battery_state (
+        profile_id TEXT NOT NULL,
+        channel_id TEXT NOT NULL,
+        message_count INTEGER DEFAULT 0,
+        window_start DATETIME,
+        last_message_at DATETIME,
+        PRIMARY KEY(profile_id, channel_id)
+      );
+
+      -- Keyword interests
+      CREATE TABLE IF NOT EXISTS keyword_interests (
+        profile_id TEXT NOT NULL,
+        keyword TEXT NOT NULL,
+        category TEXT,
+        weight REAL DEFAULT 1.0,
+        PRIMARY KEY(profile_id, keyword)
+      );
+    `);
+
+    return db;
+  }
+
   beforeEach(async () => {
     vi.useFakeTimers();
 
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-    DatabaseService.resetInstance();
-
-    const dbService = DatabaseService.getInstance(testDbPath);
-    await dbService.initialize();
-    db = dbService.getDb();
+    // Create in-memory database
+    db = initializeInMemoryDb();
 
     conversationRepository = new ConversationRepository(db);
     userFactRepository = new UserFactRepository(db);
@@ -143,10 +217,7 @@ describe('Message Flow Integration', () => {
   });
 
   afterEach(() => {
-    DatabaseService.resetInstance();
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
+    db.close();
     vi.useRealTimers();
   });
 
