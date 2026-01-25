@@ -33,10 +33,13 @@ grep -R "interface .*Strategy" -n src/ shared/
 grep -R "export type .*" -n src/shared
 ```
 
-## Active Tasks (Examples)
+## Active Tasks
 
-- Bluebot: see `src/bluebot/TODO.md`
-- Bunkbot: see `src/bunkbot/TODO.md`
-- Covabot: see `src/covabot/TODO.md`
+- Root version sync lockfile suppression
+  - Context: issue/525-clean
+  - File Scope: [scripts/sync-versions.sh](scripts/sync-versions.sh)
+  - The Change: replace `npm version` calls with a direct JSON edit to update `version` without touching the lockfile
+  - Validation: no new tests; verify pre-commit no longer rewrites the lockfile; Snyk not needed (no JS/TS changes)
+  - Relationship: none currently
 
 Add cross-package tasks here with a short summary and a link to the package-local manifest entries.
