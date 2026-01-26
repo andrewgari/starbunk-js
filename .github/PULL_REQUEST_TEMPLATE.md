@@ -3,6 +3,9 @@ Please include a summary of the change and which issue is fixed. Please also inc
 
 Fixes # (issue)
 
+## 📸 Screenshots / Videos
+Please add screenshots or a video of your changes if applicable, especially for UI changes.
+
 ## 🔄 Type of change
 - [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
 - [ ] ✨ New feature (non-breaking change which adds functionality)
