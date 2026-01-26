@@ -7,12 +7,59 @@ module.exports = {
       "@semantic-release/commit-analyzer",
       {
         preset: "conventionalcommits",
+        releaseRules: [
+          {
+            type: "hotfix",
+            release: "patch",
+          },
+        ],
       },
     ],
     [
       "@semantic-release/release-notes-generator",
       {
         preset: "conventionalcommits",
+        presetConfig: {
+          types: [
+            {
+              type: "feat",
+              section: "Features",
+            },
+            {
+              type: "fix",
+              section: "Bug Fixes",
+            },
+            {
+              type: "hotfix",
+              section: "🔥 Hotfixes",
+              hidden: false,
+            },
+            {
+              type: "chore",
+              hidden: true,
+            },
+            {
+              type: "docs",
+              hidden: true,
+            },
+            {
+              type: "style",
+              hidden: true,
+            },
+            {
+              type: "refactor",
+              hidden: true,
+            },
+            {
+              type: "perf",
+              hidden: true,
+            },
+            {
+              type: "test",
+              hidden: true,
+            },
+          ],
+        },
       },
     ],
     [
