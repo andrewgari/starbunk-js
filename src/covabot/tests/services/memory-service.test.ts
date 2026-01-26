@@ -10,16 +10,16 @@ describe('MemoryService', () => {
 
   beforeEach(() => {
     mockConversationRepo = {
-      storeConversation: vi.fn().mockReturnValue(1),
-      getChannelContext: vi.fn().mockReturnValue({ messages: [] }),
-      getUserHistory: vi.fn().mockReturnValue({ messages: [] }),
-      pruneOldConversations: vi.fn().mockReturnValue(0),
+      storeConversation: vi.fn().mockResolvedValue(1),
+      getChannelContext: vi.fn().mockResolvedValue({ messages: [] }),
+      getUserHistory: vi.fn().mockResolvedValue({ messages: [] }),
+      pruneOldConversations: vi.fn().mockResolvedValue(0),
     };
 
     mockUserFactRepo = {
-      storeUserFact: vi.fn(),
-      getUserFacts: vi.fn().mockReturnValue([]),
-      getUserFactsByType: vi.fn().mockReturnValue([]),
+      storeUserFact: vi.fn().mockResolvedValue(undefined),
+      getUserFacts: vi.fn().mockResolvedValue([]),
+      getUserFactsByType: vi.fn().mockResolvedValue([]),
     };
 
     memoryService = new MemoryService(
@@ -29,10 +29,10 @@ describe('MemoryService', () => {
   });
 
   describe('storeConversation', () => {
-    it('should store a conversation', () => {
-      vi.mocked(mockConversationRepo.storeConversation!).mockReturnValue(42);
+    it('should store a conversation', async () => {
+      vi.mocked(mockConversationRepo.storeConversation!).mockResolvedValue(42);
 
-      const id = memoryService.storeConversation(
+      const id = await memoryService.storeConversation(
         'test-profile',
         'channel-123',
         'user-456',
@@ -52,10 +52,10 @@ describe('MemoryService', () => {
       );
     });
 
-    it('should store conversation without bot response', () => {
-      vi.mocked(mockConversationRepo.storeConversation!).mockReturnValue(43);
+    it('should store conversation without bot response', async () => {
+      vi.mocked(mockConversationRepo.storeConversation!).mockResolvedValue(43);
 
-      const id = memoryService.storeConversation(
+      const id = await memoryService.storeConversation(
         'test-profile',
         'channel-123',
         'user-456',
@@ -77,7 +77,7 @@ describe('MemoryService', () => {
   });
 
   describe('getChannelContext', () => {
-    it('should retrieve recent channel messages in chronological order', () => {
+    it('should retrieve recent channel messages in chronological order', async () => {
       const mockMessages = [
         {
           userId: 'user-1',
@@ -102,11 +102,11 @@ describe('MemoryService', () => {
         },
       ];
 
-      vi.mocked(mockConversationRepo.getChannelContext!).mockReturnValue({
+      vi.mocked(mockConversationRepo.getChannelContext!).mockResolvedValue({
         messages: mockMessages,
       });
 
-      const context = memoryService.getChannelContext('profile', 'channel-1', 10);
+      const context = await memoryService.getChannelContext('profile', 'channel-1', 10);
 
       expect(context.messages).toHaveLength(3);
       expect(mockConversationRepo.getChannelContext).toHaveBeenCalledWith('profile', 'channel-1', 10);
@@ -116,7 +116,7 @@ describe('MemoryService', () => {
       expect(contents).toContain('Message 3');
     });
 
-    it('should respect limit parameter', () => {
+    it('should respect limit parameter', async () => {
       const mockMessages = Array.from({ length: 5 }, (_, i) => ({
         userId: 'user-1',
         userName: 'User1',
@@ -125,17 +125,17 @@ describe('MemoryService', () => {
         timestamp: new Date(),
       }));
 
-      vi.mocked(mockConversationRepo.getChannelContext!).mockReturnValue({
+      vi.mocked(mockConversationRepo.getChannelContext!).mockResolvedValue({
         messages: mockMessages,
       });
 
-      const context = memoryService.getChannelContext('profile', 'channel-1', 5);
+      const context = await memoryService.getChannelContext('profile', 'channel-1', 5);
 
       expect(mockConversationRepo.getChannelContext).toHaveBeenCalledWith('profile', 'channel-1', 5);
       expect(context.messages).toHaveLength(5);
     });
 
-    it('should filter by channel', () => {
+    it('should filter by channel', async () => {
       const mockMessages1 = [
         {
           userId: 'user-1',
@@ -156,11 +156,11 @@ describe('MemoryService', () => {
       ];
 
       vi.mocked(mockConversationRepo.getChannelContext!)
-        .mockReturnValueOnce({ messages: mockMessages1 })
-        .mockReturnValueOnce({ messages: mockMessages2 });
+        .mockResolvedValueOnce({ messages: mockMessages1 })
+        .mockResolvedValueOnce({ messages: mockMessages2 });
 
-      const context1 = memoryService.getChannelContext('profile', 'channel-1', 10);
-      const context2 = memoryService.getChannelContext('profile', 'channel-2', 10);
+      const context1 = await memoryService.getChannelContext('profile', 'channel-1', 10);
+      const context2 = await memoryService.getChannelContext('profile', 'channel-2', 10);
 
       expect(context1.messages).toHaveLength(1);
       expect(context2.messages).toHaveLength(1);
@@ -168,15 +168,15 @@ describe('MemoryService', () => {
   });
 
   describe('storeUserFact / getUserFacts', () => {
-    it('should store and retrieve user facts', () => {
+    it('should store and retrieve user facts', async () => {
       const mockFacts = [
         { type: 'interest' as const, key: 'topic', value: 'programming', confidence: 0.9 },
       ];
 
-      vi.mocked(mockUserFactRepo.getUserFacts!).mockReturnValue(mockFacts);
+      vi.mocked(mockUserFactRepo.getUserFacts!).mockResolvedValue(mockFacts);
 
-      memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'programming', 0.9);
-      const facts = memoryService.getUserFacts('profile', 'user-1');
+      await memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'programming', 0.9);
+      const facts = await memoryService.getUserFacts('profile', 'user-1');
 
       expect(mockUserFactRepo.storeUserFact).toHaveBeenCalledWith(
         'user-1',
@@ -193,24 +193,24 @@ describe('MemoryService', () => {
       expect(facts[0].confidence).toBe(0.9);
     });
 
-    it('should update existing fact on conflict', () => {
+    it('should update existing fact on conflict', async () => {
       const updatedFact = [
         { type: 'interest' as const, key: 'topic', value: 'gaming', confidence: 0.8 },
       ];
 
-      vi.mocked(mockUserFactRepo.getUserFacts!).mockReturnValue(updatedFact);
+      vi.mocked(mockUserFactRepo.getUserFacts!).mockResolvedValue(updatedFact);
 
-      memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'programming', 0.5);
-      memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'gaming', 0.8);
+      await memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'programming', 0.5);
+      await memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'gaming', 0.8);
 
-      const facts = memoryService.getUserFacts('profile', 'user-1');
+      const facts = await memoryService.getUserFacts('profile', 'user-1');
 
       expect(facts).toHaveLength(1);
       expect(facts[0].value).toBe('gaming');
       expect(facts[0].confidence).toBe(0.8);
     });
 
-    it('should filter facts by type', () => {
+    it('should filter facts by type', async () => {
       const interests = [
         { type: 'interest' as const, key: 'hobby', value: 'coding', confidence: 1.0 },
       ];
@@ -219,15 +219,15 @@ describe('MemoryService', () => {
       ];
 
       vi.mocked(mockUserFactRepo.getUserFactsByType!)
-        .mockReturnValueOnce(interests)
-        .mockReturnValueOnce(preferences);
+        .mockResolvedValueOnce(interests)
+        .mockResolvedValueOnce(preferences);
 
-      memoryService.storeUserFact('profile', 'user-1', 'interest', 'hobby', 'coding', 1.0);
-      memoryService.storeUserFact('profile', 'user-1', 'preference', 'theme', 'dark', 1.0);
-      memoryService.storeUserFact('profile', 'user-1', 'relationship', 'status', 'friend', 1.0);
+      await memoryService.storeUserFact('profile', 'user-1', 'interest', 'hobby', 'coding', 1.0);
+      await memoryService.storeUserFact('profile', 'user-1', 'preference', 'theme', 'dark', 1.0);
+      await memoryService.storeUserFact('profile', 'user-1', 'relationship', 'status', 'friend', 1.0);
 
-      const retrievedInterests = memoryService.getUserFactsByType('profile', 'user-1', 'interest');
-      const retrievedPreferences = memoryService.getUserFactsByType('profile', 'user-1', 'preference');
+      const retrievedInterests = await memoryService.getUserFactsByType('profile', 'user-1', 'interest');
+      const retrievedPreferences = await memoryService.getUserFactsByType('profile', 'user-1', 'preference');
 
       expect(retrievedInterests).toHaveLength(1);
       expect(retrievedPreferences).toHaveLength(1);
@@ -235,7 +235,7 @@ describe('MemoryService', () => {
   });
 
   describe('formatContextForLlm', () => {
-    it('should format conversation context for LLM', () => {
+    it('should format conversation context for LLM', async () => {
       const mockMessages = [
         {
           userId: 'user-1',
@@ -253,11 +253,11 @@ describe('MemoryService', () => {
         },
       ];
 
-      vi.mocked(mockConversationRepo.getChannelContext!).mockReturnValue({
+      vi.mocked(mockConversationRepo.getChannelContext!).mockResolvedValue({
         messages: mockMessages,
       });
 
-      const context = memoryService.getChannelContext('profile', 'channel-1', 10);
+      const context = await memoryService.getChannelContext('profile', 'channel-1', 10);
       const formatted = memoryService.formatContextForLlm(context, 'Bot');
 
       expect(formatted).toContain('Alice: Hello!');
