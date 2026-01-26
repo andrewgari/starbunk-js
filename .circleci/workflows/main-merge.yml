@@ -1,0 +1,228 @@
+version: 2.1
+
+parameters:
+  snyk_token:
+    type: string
+    default: ""
+    description: "Snyk API token for security scanning"
+
+executors:
+  node20:
+    docker:
+      - image: cimg/node:20.16
+    resource_class: medium
+  docker:
+    machine: true
+    resource_class: medium
+
+commands:
+  setup_npm_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v1-npm-{{ arch }}-{{ .Branch }}-
+            - v1-npm-{{ arch }}-
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - node_modules
+  persist_build_artifacts:
+    steps:
+      - run:
+          name: Compress build artifacts
+          command: |
+            tar -czf build-artifacts.tar.gz \
+              src/bunkbot/dist/ \
+              src/bluebot/dist/ \
+              src/covabot/dist/ \
+              src/djcova/dist/ \
+              src/shared/dist/ \
+              package.json \
+              package-lock.json
+      - persist_to_workspace:
+          root: .
+          paths:
+            - build-artifacts.tar.gz
+  attach_build_artifacts:
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Extract build artifacts
+          command: tar -xzf build-artifacts.tar.gz
+
+jobs:
+  lint_and_format:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Lint and Format Check
+          command: |
+            npm run lint -- --cache --cache-location .eslintcache
+            npm run format -- --check
+
+  type_check:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: TypeScript Type Check
+          command: npm run type-check
+
+  shared_tests:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Shared Package Unit Tests
+          command: npm run test:shared
+
+  snyk_code_scan:
+    executor: node20
+    environment:
+      SNYK_TOKEN: << pipeline.parameters.snyk_token >>
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Snyk Code Scan
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then
+              echo "⊘ Snyk token not configured, skipping code scan"
+              exit 0
+            fi
+            npm run snyk:code || echo "⚠ Snyk found issues"
+
+  build_all:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Build All Packages
+          command: npm run build
+      - persist_build_artifacts
+
+  test_all:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Test All Packages
+          command: npm run test:full
+
+  push_docker_image:
+    executor: docker
+    parameters:
+      app_name:
+        type: string
+        description: "Application name (bunkbot, bluebot, covabot, djcova)"
+      dockerfile:
+        type: string
+        description: "Path to Dockerfile.ci"
+    steps:
+      - checkout
+      - attach_build_artifacts
+      - setup_remote_docker
+      - run:
+          name: Setup GHCR Authentication
+          command: |
+            if [ -n "${GHCR_TOKEN:-}" ]; then
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            else
+              echo "⚠ GHCR credentials not configured"
+              exit 0
+            fi
+      - run:
+          name: Check Current Latest Image
+          command: |
+            LATEST_DIGEST=$(docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null | tail -1 || echo "none")
+            echo "$LATEST_DIGEST" > /tmp/latest_digest.txt
+            echo "Current latest digest: $LATEST_DIGEST"
+      - run:
+          name: Build Docker Image
+          command: |
+            HASH=$(git rev-parse HEAD:src/<< parameters.app_name >> 2>/dev/null || echo "no-hash")
+            SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+            DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+            CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+            
+            echo "Building image with content hash: $CONTENT_HASH"
+            
+            docker build \
+              --build-arg BUILDKIT_INLINE_CACHE=1 \
+              --cache-from ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null || true \
+              -f << parameters.dockerfile >> \
+              -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7} \
+              -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest \
+              -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:main \
+              .
+      - run:
+          name: Compare Image Hash and Conditionally Push
+          command: |
+            # Get the digest of the newly built image
+            NEW_DIGEST=$(docker inspect ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest | grep -o '"Id":"[^"]*"' | head -1 | cut -d'"' -f4)
+            LATEST_DIGEST=$(cat /tmp/latest_digest.txt)
+            
+            echo "Previous latest digest: $LATEST_DIGEST"
+            echo "New image digest: $NEW_DIGEST"
+            
+            if [ "$NEW_DIGEST" != "$LATEST_DIGEST" ]; then
+              echo "✅ Image has changed - pushing to GHCR"
+              docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest
+              docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:main
+              docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7}
+            else
+              echo "⊘ Image unchanged - skipping push"
+            fi
+
+workflows:
+  main-merge:
+    jobs:
+      - lint_and_format
+      - type_check
+      - shared_tests
+      - snyk_code_scan
+      - build_all:
+          requires:
+            - lint_and_format
+            - type_check
+            - shared_tests
+      - test_all:
+          requires:
+            - build_all
+      - push_docker_image:
+          name: push_bunkbot
+          app_name: bunkbot
+          dockerfile: "./src/bunkbot/Dockerfile.ci"
+          requires:
+            - test_all
+      - push_docker_image:
+          name: push_bluebot
+          app_name: bluebot
+          dockerfile: "./src/bluebot/Dockerfile.ci"
+          requires:
+            - test_all
+      - push_docker_image:
+          name: push_covabot
+          app_name: covabot
+          dockerfile: "./src/covabot/Dockerfile.ci"
+          requires:
+            - test_all
+      - push_docker_image:
+          name: push_djcova
+          app_name: djcova
+          dockerfile: "./src/djcova/Dockerfile.ci"
+          requires:
+            - test_all
+
