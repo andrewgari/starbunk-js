@@ -50,7 +50,7 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
     logger.withMetadata({
       profile_id: profileId,
       keyword,
-      weight,
+      weight: validWeight,
     }).debug('Interest upserted');
   }
 

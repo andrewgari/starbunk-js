@@ -99,6 +99,11 @@ export class PersonalityService {
     newValue: number,
     reason: string,
   ): void {
+    // Validate newValue is a finite number
+    if (!Number.isFinite(newValue)) {
+      throw new Error('Invalid trait value: must be a finite number');
+    }
+
     // Clamp value to 0-1 range
     const clampedValue = Math.max(0, Math.min(1, newValue));
 
@@ -130,6 +135,11 @@ export class PersonalityService {
     adjustment: number,
     reason: string,
   ): void {
+    // Validate adjustment is a finite number
+    if (!Number.isFinite(adjustment)) {
+      throw new Error('Invalid adjustment value: must be a finite number');
+    }
+
     const currentValue = this.getTraitValue(profileId, traitName);
 
     if (currentValue === null) {
