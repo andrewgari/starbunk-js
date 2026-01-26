@@ -22,70 +22,31 @@ jobs:
       - run:
           name: Generate dynamic config
           command: |
-            # Check if this is a tag push (deployment trigger)
             if [ -n "${CIRCLE_TAG:-}" ]; then
               echo "🏷️ Detected git tag: $CIRCLE_TAG - loading deployment workflow"
               cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
             else
-              # For PRs and other branches, generate based on detected changes
               .circleci/scripts/generate_config.py > .circleci/generated_config.yml
             fi
-- run:
-    name: Continue pipeline (log response)
-    command: |
-      # Build payload without printing the continuation key
-      CONFIG_JSON=$(python - <<'PY'
-      import json
-      import os
-      from pathlib import Path
-
-      payload = {
-          "continuation-key": os.environ["CIRCLE_CONTINUATION_KEY"],
-          "configuration": Path(".circleci/generated_config.yml").read_text(),
-          "parameters": {},
-      }
-
-      print(json.dumps(payload))
-      PY
-      )
-
-            # Send continuation request and capture status + body
+      - run:
+          name: Build continuation payload
+          command: >
+            python3 -c "import json, os; from pathlib import Path;
+            Path('/tmp/continuation_payload.json').write_text(json.dumps({'continuation-key': os.environ['CIRCLE_CONTINUATION_KEY'],
+            'configuration': Path('.circleci/generated_config.yml').read_text(),
+            'parameters': {}}))"
+      - run:
+          name: Continue pipeline
+          command: |
             RESP_FILE=/tmp/continuation_resp.json
-            HTTP_CODE=$(echo "$CONFIG_JSON" | curl -sS -w "\n%{http_code}" -o "$RESP_FILE" \
-              -X POST \
-              -H 'Content-Type: application/json' \
-              "https://circleci.com/api/v2/pipeline/continue")
-
-            # Separate body and status code
+            HTTP_CODE=$(curl -sS -w "\n%{http_code}" -o "$RESP_FILE" -X POST -H 'Content-Type: application/json' -d @/tmp/continuation_payload.json "https://circleci.com/api/v2/pipeline/continue")
             STATUS=$(echo "$HTTP_CODE" | tail -n1)
             BODY=$(cat "$RESP_FILE")
-
             echo "Continuation HTTP status: $STATUS"
             echo "Continuation response: $BODY"
-
-# Fail fast if the API did not return a pipeline_id
-PIPELINE_ID=$(python - <<'PY'
-import json
-import sys
-
-try:
-    body = json.load(sys.stdin)
-    print(body.get("pipeline_id", ""))
-except Exception:
-    print("")
-PY
-<<< "$BODY")
-
-            if [ "$STATUS" != "200" ]; then
-              echo "Continuation failed with HTTP $STATUS" >&2
-              exit 1
-            fi
-
-            if [ -z "$PIPELINE_ID" ]; then
-              echo "Continuation did not return pipeline_id; failing setup so we can see logs." >&2
-              exit 1
-            fi
-
+            PIPELINE_ID=$(python3 -c "import json, sys; print(json.load(sys.stdin).get('pipeline_id', ''))" < "$RESP_FILE")
+            if [ "$STATUS" != "200" ]; then echo "Continuation failed with HTTP $STATUS" >&2; exit 1; fi
+            if [ -z "$PIPELINE_ID" ]; then echo "Continuation did not return pipeline_id" >&2; exit 1; fi
             echo "Continuation spawned pipeline_id: $PIPELINE_ID"
 
 workflows:
@@ -97,4 +58,3 @@ workflows:
               only: /.*/
             branches:
               ignore: /.*/
-
