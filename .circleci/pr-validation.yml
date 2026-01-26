@@ -127,9 +127,7 @@ jobs:
 # PHASE 2 & 3: CONDITIONAL DOCKER BUILD + HEALTH CHECK
 # ============================================================================
   docker_bunkbot:
-    docker:
-      - image: cimg/docker:27.0.2
-    resource_class: medium
+    executor: docker
     steps:
       - checkout
       - attach_build_artifacts
@@ -200,9 +198,7 @@ jobs:
             snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/bunkbot:pr-${PRNUM} --severity-threshold=high || true
 
   docker_covabot:
-    docker:
-      - image: cimg/docker:27.0.2
-    resource_class: medium
+    executor: docker
     steps:
       - checkout
       - attach_build_artifacts
@@ -271,9 +267,7 @@ jobs:
             snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/covabot:pr-${PRNUM} --severity-threshold=high || true
 
   docker_djcova:
-    docker:
-      - image: cimg/docker:27.0.2
-    resource_class: medium
+    executor: docker
     steps:
       - checkout
       - attach_build_artifacts
@@ -340,9 +334,7 @@ jobs:
             snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/djcova:pr-${PRNUM} --severity-threshold=high || true
 
   docker_bluebot:
-    docker:
-      - image: cimg/docker:27.0.2
-    resource_class: medium
+    executor: docker
     steps:
       - checkout
       - attach_build_artifacts
