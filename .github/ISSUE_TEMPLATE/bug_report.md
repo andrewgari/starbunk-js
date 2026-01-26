@@ -25,6 +25,7 @@ If applicable, add screenshots to help explain your problem.
 
 ## 💻 Environment
  - **OS:** [e.g. macOS, Windows, Linux]
+ - **Device:** [e.g. Desktop, iPhone 12]
  - **Node Version:** [e.g. 20.x]
  - **Package Manager:** [e.g. npm, pnpm]
  - **Browser (if applicable):** [e.g. Chrome, Safari]
