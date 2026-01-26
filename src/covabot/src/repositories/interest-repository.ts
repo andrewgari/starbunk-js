@@ -41,11 +41,13 @@ export class InterestRepository {
     category: string | null = null,
     weight: number = 1.0,
   ): void {
-    // Validate and clamp weight to reasonable range (0.1 to 2.0)
-    const validWeight = Math.max(0.1, Math.min(2.0, weight));
-    if (!Number.isFinite(validWeight)) {
+    // Validate weight is a finite number before clamping
+    if (!Number.isFinite(weight)) {
       throw new Error('Invalid weight parameter: must be a finite number');
     }
+
+    // Clamp weight to reasonable range (0.1 to 2.0)
+    const validWeight = Math.max(0.1, Math.min(2.0, weight));
 
     const stmt = this.db.prepare(`
       INSERT INTO keyword_interests (profile_id, keyword, category, weight)

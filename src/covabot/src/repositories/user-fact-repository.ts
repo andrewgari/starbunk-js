@@ -32,11 +32,13 @@ export class UserFactRepository {
     // If factValue is not provided, use factKey as the value (for backward compatibility)
     const value = factValue || factKey;
 
-    // Validate and clamp confidence to 0.0-1.0 range
-    const validConfidence = Math.max(0.0, Math.min(1.0, confidence));
-    if (!Number.isFinite(validConfidence)) {
+    // Validate confidence is a finite number before clamping
+    if (!Number.isFinite(confidence)) {
       throw new Error('Invalid confidence parameter: must be a finite number');
     }
+
+    // Clamp confidence to 0.0-1.0 range
+    const validConfidence = Math.max(0.0, Math.min(1.0, confidence));
 
     const stmt = this.db.prepare(`
       INSERT INTO user_facts (profile_id, user_id, fact_type, fact_key, fact_value, confidence)
