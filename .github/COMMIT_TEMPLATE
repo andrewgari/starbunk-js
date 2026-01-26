@@ -1,0 +1,30 @@
+# <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+#
+# Types:
+#   feat:     A new feature
+#   fix:      A bug fix
+#   docs:     Documentation only changes
+#   style:    Changes that do not affect the meaning of the code (white-space, formatting, etc)
+#   refactor: A code change that neither fixes a bug nor adds a feature
+#   perf:     A code change that improves performance
+#   test:     Adding missing tests or correcting existing tests
+#   build:    Changes that affect the build system or external dependencies
+#   ci:       Changes to our CI configuration files and scripts
+#   chore:    Other changes that don't modify src or test files
+#   revert:   Reverts a previous commit
+#
+# Scope:
+#   Optional. The module or file modified (e.g., auth, parser, config)
+#
+# Subject:
+#   Imperative mood ("add" not "added"). Max 50 chars. No period at end.
+#
+# Body:
+#   Motivation for change and contrast with previous behavior. Wrap at 72 chars.
+#
+# Footer:
+#   "BREAKING CHANGE: <description>" or "Fixes #<issue>"

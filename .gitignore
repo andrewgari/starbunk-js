@@ -209,3 +209,8 @@ build-artifacts.tar.gz
 .github/instructions/snyk_rules.instructions.md
 
 .roo
+
+# Project Templates
+!.github/PULL_REQUEST_TEMPLATE.md
+!.github/ISSUE_TEMPLATE/*.md
+!.github/BRANCH_NAMING_CONVENTION.md
