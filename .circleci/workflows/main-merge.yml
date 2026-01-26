@@ -14,6 +14,9 @@ executors:
   docker:
     machine: true
     resource_class: medium
+  runner:
+    machine: true
+    resource_class: starbunk-runner
 
 commands:
   setup_npm_cache:
@@ -21,7 +24,7 @@ commands:
       - restore_cache:
           keys:
             - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
-            - v1-npm-{{ arch }}-{{ .Branch }}-
+            - v1-npm-{{ .Branch }}-
             - v1-npm-{{ arch }}-
       - run:
           name: Install dependencies
@@ -186,6 +189,50 @@ jobs:
               echo "⊘ Image unchanged - skipping push"
             fi
 
+  deploy_to_runner:
+    executor: runner
+    steps:
+      - checkout
+      - run:
+          name: Login to GHCR
+          command: |
+            if [ -n "${GHCR_TOKEN:-}" ]; then
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            else
+              echo "⚠ GHCR credentials not configured - cannot pull images"
+              exit 1
+            fi
+      - run:
+          name: Pull Latest Images
+          command: |
+            echo "Pulling latest images from GHCR..."
+            docker pull ghcr.io/andrewgari/starbunk-bunkbot:main
+            docker pull ghcr.io/andrewgari/starbunk-bluebot:main
+            docker pull ghcr.io/andrewgari/starbunk-covabot:main
+            docker pull ghcr.io/andrewgari/starbunk-djcova:main
+      - run:
+          name: Deploy with Docker Compose
+          command: |
+            echo "🚀 Deploying services with docker-compose..."
+            docker-compose pull --policy always
+            docker-compose up -d
+            echo "✅ Deployment complete"
+      - run:
+          name: Verify Deployment Health
+          command: |
+            echo "Checking service health..."
+            sleep 10
+            
+            services=("starbunk-bunkbot" "starbunk-bluebot" "starbunk-covabot" "starbunk-djcova")
+            for service in "${services[@]}"; do
+              if docker ps --filter "name=$service" --filter "status=running" | grep -q "$service"; then
+                echo "✅ $service is running"
+              else
+                echo "⚠ $service is not running"
+                docker-compose logs "$service" | tail -20
+              fi
+            done
+
 workflows:
   main-merge:
     jobs:
@@ -225,4 +272,10 @@ workflows:
           dockerfile: "./src/djcova/Dockerfile.ci"
           requires:
             - test_all
+      - deploy_to_runner:
+          requires:
+            - push_bunkbot
+            - push_bluebot
+            - push_covabot
+            - push_djcova
 
