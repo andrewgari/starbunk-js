@@ -27,15 +27,15 @@ export class MemoryService {
   /**
    * Store a conversation exchange
    */
-  storeConversation(
+  async storeConversation(
     profileId: string,
     channelId: string,
     userId: string,
     userName: string | null,
     messageContent: string,
     botResponse: string | null,
-  ): number {
-    return this.conversationRepo.storeConversation(
+  ): Promise<number> {
+    return await this.conversationRepo.storeConversation(
       profileId,
       channelId,
       userId,
@@ -48,37 +48,37 @@ export class MemoryService {
   /**
    * Get recent conversation context for a channel
    */
-  getChannelContext(
+  async getChannelContext(
     profileId: string,
     channelId: string,
     limit: number = 10,
-  ): ConversationContext {
-    return this.conversationRepo.getChannelContext(profileId, channelId, limit);
+  ): Promise<ConversationContext> {
+    return await this.conversationRepo.getChannelContext(profileId, channelId, limit);
   }
 
   /**
    * Get conversation history with a specific user
    */
-  getUserHistory(
+  async getUserHistory(
     profileId: string,
     userId: string,
     limit: number = 20,
-  ): ConversationContext {
-    return this.conversationRepo.getUserHistory(profileId, userId, limit);
+  ): Promise<ConversationContext> {
+    return await this.conversationRepo.getUserHistory(profileId, userId, limit);
   }
 
   /**
    * Store a learned fact about a user
    */
-  storeUserFact(
+  async storeUserFact(
     profileId: string,
     userId: string,
     factType: 'interest' | 'relationship' | 'preference',
     factKey: string,
     factValue: string,
     confidence: number = 1.0,
-  ): void {
-    this.userFactRepo.storeUserFact(userId, factType, factKey, confidence, profileId, factValue);
+  ): Promise<void> {
+    await this.userFactRepo.storeUserFact(userId, factType, factKey, confidence, profileId, factValue);
 
     logger.withMetadata({
       profile_id: profileId,
@@ -91,26 +91,26 @@ export class MemoryService {
   /**
    * Get all facts about a user
    */
-  getUserFacts(profileId: string, userId: string): UserFact[] {
-    return this.userFactRepo.getUserFacts(userId);
+  async getUserFacts(profileId: string, userId: string): Promise<UserFact[]> {
+    return await this.userFactRepo.getUserFacts(userId);
   }
 
   /**
    * Get facts of a specific type for a user
    */
-  getUserFactsByType(
+  async getUserFactsByType(
     profileId: string,
     userId: string,
     factType: 'interest' | 'relationship' | 'preference',
-  ): UserFact[] {
-    return this.userFactRepo.getUserFactsByType(userId, factType);
+  ): Promise<UserFact[]> {
+    return await this.userFactRepo.getUserFactsByType(userId, factType);
   }
 
   /**
    * Delete old conversations to manage database size
    */
-  pruneOldConversations(profileId: string, daysToKeep: number = 30): number {
-    return this.conversationRepo.pruneOldConversations(profileId, daysToKeep);
+  async pruneOldConversations(profileId: string, daysToKeep: number = 30): Promise<number> {
+    return await this.conversationRepo.pruneOldConversations(profileId, daysToKeep);
   }
 
   /**

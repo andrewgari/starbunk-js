@@ -43,3 +43,6 @@ export { OllamaProvider } from './services/llm/ollama-provider';
 
 // Ollama model management
 export { OllamaModelManager } from './services/llm/ollama-model-manager';
+
+// Data access
+export { BaseRepository } from './data-access';

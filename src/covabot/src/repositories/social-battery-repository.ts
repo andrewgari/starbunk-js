@@ -6,42 +6,40 @@
  */
 
 import Database from 'better-sqlite3';
+import { BaseRepository } from '@starbunk/shared';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { SocialBatteryStateRow } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('SocialBatteryRepository');
 
-export class SocialBatteryRepository {
-  private db: Database.Database;
-
+export class SocialBatteryRepository extends BaseRepository<SocialBatteryStateRow> {
   constructor(db: Database.Database) {
-    this.db = db;
+    super(db);
   }
 
   /**
    * Get current social battery state for a channel and profile
    */
-  getState(profileId: string, channelId: string): SocialBatteryStateRow | null {
-    const stmt = this.db.prepare(`
-      SELECT profile_id, channel_id, message_count, window_start, last_message_at
-      FROM social_battery_state
-      WHERE profile_id = ? AND channel_id = ?
-    `);
+  async getState(profileId: string, channelId: string): Promise<SocialBatteryStateRow | null> {
+    const rows = await this.query<SocialBatteryStateRow>(
+      `SELECT profile_id, channel_id, message_count, window_start, last_message_at
+       FROM social_battery_state
+       WHERE profile_id = ? AND channel_id = ?`,
+      [profileId, channelId]
+    );
 
-    const row = stmt.get(profileId, channelId) as SocialBatteryStateRow | undefined;
-    return row || null;
+    return rows[0] || null;
   }
 
   /**
    * Create initial state for a channel
    */
-  createState(profileId: string, channelId: string, nowIso: string): void {
-    const stmt = this.db.prepare(`
-      INSERT INTO social_battery_state (profile_id, channel_id, message_count, window_start, last_message_at)
-      VALUES (?, ?, 1, ?, ?)
-    `);
-
-    stmt.run(profileId, channelId, nowIso, nowIso);
+  async createState(profileId: string, channelId: string, nowIso: string): Promise<void> {
+    await this.execute(
+      `INSERT INTO social_battery_state (profile_id, channel_id, message_count, window_start, last_message_at)
+       VALUES (?, ?, 1, ?, ?)`,
+      [profileId, channelId, nowIso, nowIso]
+    );
 
     logger.withMetadata({
       profile_id: profileId,
@@ -52,14 +50,13 @@ export class SocialBatteryRepository {
   /**
    * Reset the window for a channel
    */
-  resetWindow(profileId: string, channelId: string, nowIso: string): void {
-    const stmt = this.db.prepare(`
-      UPDATE social_battery_state
-      SET message_count = 1, window_start = ?, last_message_at = ?
-      WHERE profile_id = ? AND channel_id = ?
-    `);
-
-    stmt.run(nowIso, nowIso, profileId, channelId);
+  async resetWindow(profileId: string, channelId: string, nowIso: string): Promise<void> {
+    await this.execute(
+      `UPDATE social_battery_state
+       SET message_count = 1, window_start = ?, last_message_at = ?
+       WHERE profile_id = ? AND channel_id = ?`,
+      [nowIso, nowIso, profileId, channelId]
+    );
 
     logger.withMetadata({
       profile_id: profileId,
@@ -70,14 +67,13 @@ export class SocialBatteryRepository {
   /**
    * Increment message count for a channel
    */
-  incrementCount(profileId: string, channelId: string, nowIso: string): void {
-    const stmt = this.db.prepare(`
-      UPDATE social_battery_state
-      SET message_count = message_count + 1, last_message_at = ?
-      WHERE profile_id = ? AND channel_id = ?
-    `);
-
-    stmt.run(nowIso, profileId, channelId);
+  async incrementCount(profileId: string, channelId: string, nowIso: string): Promise<void> {
+    await this.execute(
+      `UPDATE social_battery_state
+       SET message_count = message_count + 1, last_message_at = ?
+       WHERE profile_id = ? AND channel_id = ?`,
+      [nowIso, profileId, channelId]
+    );
 
     logger.withMetadata({
       profile_id: profileId,
@@ -88,13 +84,12 @@ export class SocialBatteryRepository {
   /**
    * Delete state for a specific channel and profile
    */
-  deleteState(profileId: string, channelId: string): void {
-    const stmt = this.db.prepare(`
-      DELETE FROM social_battery_state
-      WHERE profile_id = ? AND channel_id = ?
-    `);
-
-    stmt.run(profileId, channelId);
+  async deleteState(profileId: string, channelId: string): Promise<void> {
+    await this.execute(
+      `DELETE FROM social_battery_state
+       WHERE profile_id = ? AND channel_id = ?`,
+      [profileId, channelId]
+    );
 
     logger.withMetadata({
       profile_id: profileId,
@@ -105,13 +100,12 @@ export class SocialBatteryRepository {
   /**
    * Reset all social battery state for a profile
    */
-  resetProfile(profileId: string): void {
-    const stmt = this.db.prepare(`
-      DELETE FROM social_battery_state
-      WHERE profile_id = ?
-    `);
-
-    stmt.run(profileId);
+  async resetProfile(profileId: string): Promise<void> {
+    await this.execute(
+      `DELETE FROM social_battery_state
+       WHERE profile_id = ?`,
+      [profileId]
+    );
 
     logger.withMetadata({
       profile_id: profileId,
@@ -121,25 +115,26 @@ export class SocialBatteryRepository {
   /**
    * Get summary of activity across all channels for a profile
    */
-  getActivitySummary(profileId: string): {
+  async getActivitySummary(profileId: string): Promise<{
     totalChannels: number;
     totalMessages: number;
     activeChannels: number;
-  } {
-    const stmt = this.db.prepare(`
-      SELECT
-        COUNT(*) as total_channels,
-        SUM(message_count) as total_messages,
-        SUM(CASE WHEN last_message_at > datetime('now', '-1 hour') THEN 1 ELSE 0 END) as active_channels
-      FROM social_battery_state
-      WHERE profile_id = ?
-    `);
-
-    const row = stmt.get(profileId) as {
+  }> {
+    const rows = await this.query<{
       total_channels: number;
       total_messages: number | null;
       active_channels: number;
-    };
+    }>(
+      `SELECT
+         COUNT(*) as total_channels,
+         SUM(message_count) as total_messages,
+         SUM(CASE WHEN last_message_at > datetime('now', '-1 hour') THEN 1 ELSE 0 END) as active_channels
+       FROM social_battery_state
+       WHERE profile_id = ?`,
+      [profileId]
+    );
+
+    const row = rows[0];
 
     return {
       totalChannels: row.total_channels,

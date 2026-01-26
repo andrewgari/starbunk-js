@@ -26,12 +26,12 @@ export class SocialBatteryService {
   /**
    * Check if the bot can speak in a channel
    */
-  canSpeak(
+  async canSpeak(
     profileId: string,
     channelId: string,
     config: SocialBatteryConfig,
-  ): SocialBatteryCheck {
-    const state = this.getState(profileId, channelId);
+  ): Promise<SocialBatteryCheck> {
+    const state = await this.getState(profileId, channelId);
     const now = new Date();
 
     // No state yet - can speak
@@ -116,14 +116,14 @@ export class SocialBatteryService {
   /**
    * Record that a message was sent
    */
-  recordMessage(profileId: string, channelId: string, config: SocialBatteryConfig): void {
-    const state = this.getState(profileId, channelId);
+  async recordMessage(profileId: string, channelId: string, config: SocialBatteryConfig): Promise<void> {
+    const state = await this.getState(profileId, channelId);
     const now = new Date();
     const nowIso = now.toISOString();
 
     if (!state) {
       // Create new state
-      this.socialBatteryRepo.createState(profileId, channelId, nowIso);
+      await this.socialBatteryRepo.createState(profileId, channelId, nowIso);
     } else {
       // Check if window needs reset
       const windowStart = state.window_start ? new Date(state.window_start) : now;
@@ -131,10 +131,10 @@ export class SocialBatteryService {
 
       if (minutesSinceWindowStart >= config.windowMinutes) {
         // Reset window
-        this.socialBatteryRepo.resetWindow(profileId, channelId, nowIso);
+        await this.socialBatteryRepo.resetWindow(profileId, channelId, nowIso);
       } else {
         // Increment count
-        this.socialBatteryRepo.incrementCount(profileId, channelId, nowIso);
+        await this.socialBatteryRepo.incrementCount(profileId, channelId, nowIso);
       }
     }
 
@@ -147,15 +147,15 @@ export class SocialBatteryService {
   /**
    * Get current state for a channel
    */
-  getState(profileId: string, channelId: string): SocialBatteryStateRow | null {
-    return this.socialBatteryRepo.getState(profileId, channelId);
+  async getState(profileId: string, channelId: string): Promise<SocialBatteryStateRow | null> {
+    return await this.socialBatteryRepo.getState(profileId, channelId);
   }
 
   /**
    * Reset state for a channel (admin function)
    */
-  resetChannel(profileId: string, channelId: string): void {
-    this.socialBatteryRepo.deleteState(profileId, channelId);
+  async resetChannel(profileId: string, channelId: string): Promise<void> {
+    await this.socialBatteryRepo.deleteState(profileId, channelId);
 
     logger.withMetadata({
       profile_id: profileId,
@@ -166,8 +166,8 @@ export class SocialBatteryService {
   /**
    * Reset all states for a profile (admin function)
    */
-  resetProfile(profileId: string): void {
-    this.socialBatteryRepo.resetProfile(profileId);
+  async resetProfile(profileId: string): Promise<void> {
+    await this.socialBatteryRepo.resetProfile(profileId);
 
     logger.withMetadata({ profile_id: profileId }).info('Profile state reset');
   }
@@ -175,11 +175,11 @@ export class SocialBatteryService {
   /**
    * Get summary of activity across all channels for a profile
    */
-  getActivitySummary(profileId: string): {
+  async getActivitySummary(profileId: string): Promise<{
     totalChannels: number;
     totalMessages: number;
     activeChannels: number;
-  } {
-    return this.socialBatteryRepo.getActivitySummary(profileId);
+  }> {
+    return await this.socialBatteryRepo.getActivitySummary(profileId);
   }
 }

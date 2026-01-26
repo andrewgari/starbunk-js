@@ -6,6 +6,7 @@
  */
 
 import Database from 'better-sqlite3';
+import { BaseRepository } from '@starbunk/shared';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import {
   ConversationRow,
@@ -14,100 +15,117 @@ import {
 
 const logger = logLayer.withPrefix('ConversationRepository');
 
-export class ConversationRepository {
-  private db: Database.Database;
-
+export class ConversationRepository extends BaseRepository<ConversationRow> {
   constructor(db: Database.Database) {
-    this.db = db;
+    super(db);
   }
 
   /**
    * Store a conversation exchange
    */
-  storeConversation(
+  async storeConversation(
     profileId: string,
     channelId: string,
     userId: string,
     userName: string | null,
     messageContent: string,
     botResponse: string | null,
-  ): number {
-    const stmt = this.db.prepare(`
-      INSERT INTO conversations (profile_id, channel_id, user_id, user_name, message_content, bot_response)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
+  ): Promise<number> {
+    const span = this.tracing.startSpan('conversation.store', {
+      'conversation.channel_id': channelId,
+      'conversation.user_id': userId,
+    });
 
-    const result = stmt.run(profileId, channelId, userId, userName, messageContent, botResponse);
+    try {
+      const id = await this.executeWithId(
+        `INSERT INTO conversations (profile_id, channel_id, user_id, user_name, message_content, bot_response)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [profileId, channelId, userId, userName, messageContent, botResponse]
+      );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-      user_id: userId,
-      conversation_id: result.lastInsertRowid,
-    }).debug('Conversation stored');
+      logger.withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+        user_id: userId,
+        conversation_id: id,
+      }).debug('Conversation stored');
 
-    return Number(result.lastInsertRowid);
+      return id;
+    } finally {
+      if (span) {
+        span.end();
+      }
+    }
   }
 
   /**
    * Get recent conversation context for a channel
    */
-  getChannelContext(
+  async getChannelContext(
     profileId: string,
     channelId: string,
     limit: number = 10,
-  ): ConversationContext {
-    const stmt = this.db.prepare(`
-      SELECT user_id, user_name, message_content, bot_response, created_at
-      FROM conversations
-      WHERE profile_id = ? AND channel_id = ?
-      ORDER BY created_at DESC
-      LIMIT ?
-    `);
+  ): Promise<ConversationContext> {
+    const span = this.tracing.startSpan('conversation.getChannelContext', {
+      'conversation.channel_id': channelId,
+      'conversation.profile_id': profileId,
+    });
 
-    const rows = stmt.all(profileId, channelId, limit) as Pick<
-      ConversationRow,
-      'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
-    >[];
+    try {
+      const rows = await this.query<Pick<
+        ConversationRow,
+        'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
+      >>(
+        `SELECT user_id, user_name, message_content, bot_response, created_at
+         FROM conversations
+         WHERE profile_id = ? AND channel_id = ?
+         ORDER BY created_at DESC
+         LIMIT ?`,
+        [profileId, channelId, limit]
+      );
 
-    // Reverse to get chronological order
-    const messages = rows.reverse().map(row => ({
-      userId: row.user_id,
-      userName: row.user_name,
-      content: row.message_content,
-      botResponse: row.bot_response,
-      timestamp: new Date(row.created_at),
-    }));
+      // Reverse to get chronological order
+      const messages = rows.reverse().map(row => ({
+        userId: row.user_id,
+        userName: row.user_name,
+        content: row.message_content,
+        botResponse: row.bot_response,
+        timestamp: new Date(row.created_at),
+      }));
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-      messages_count: messages.length,
-    }).debug('Channel context retrieved');
+      logger.withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+        messages_count: messages.length,
+      }).debug('Channel context retrieved');
 
-    return { messages };
+      return { messages };
+    } finally {
+      if (span) {
+        span.end();
+      }
+    }
   }
 
   /**
    * Get conversation history with a specific user
    */
-  getUserHistory(
+  async getUserHistory(
     profileId: string,
     userId: string,
     limit: number = 20,
-  ): ConversationContext {
-    const stmt = this.db.prepare(`
-      SELECT user_id, user_name, message_content, bot_response, created_at
-      FROM conversations
-      WHERE profile_id = ? AND user_id = ?
-      ORDER BY created_at DESC
-      LIMIT ?
-    `);
-
-    const rows = stmt.all(profileId, userId, limit) as Pick<
+  ): Promise<ConversationContext> {
+    const rows = await this.query<Pick<
       ConversationRow,
       'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
-    >[];
+    >>(
+      `SELECT user_id, user_name, message_content, bot_response, created_at
+       FROM conversations
+       WHERE profile_id = ? AND user_id = ?
+       ORDER BY created_at DESC
+       LIMIT ?`,
+      [profileId, userId, limit]
+    );
 
     const messages = rows.reverse().map(row => ({
       userId: row.user_id,
@@ -129,21 +147,20 @@ export class ConversationRepository {
   /**
    * Delete old conversations to manage database size
    */
-  pruneOldConversations(profileId: string, daysToKeep: number = 30): number {
-    const stmt = this.db.prepare(`
-      DELETE FROM conversations
-      WHERE profile_id = ?
-        AND created_at < datetime('now', '-' || ? || ' days')
-    `);
-
-    const result = stmt.run(profileId, daysToKeep);
+  async pruneOldConversations(profileId: string, daysToKeep: number = 30): Promise<number> {
+    const changes = await this.execute(
+      `DELETE FROM conversations
+       WHERE profile_id = ?
+         AND created_at < datetime('now', '-' || ? || ' days')`,
+      [profileId, daysToKeep]
+    );
 
     logger.withMetadata({
       profile_id: profileId,
       days_kept: daysToKeep,
-      deleted_count: result.changes,
+      deleted_count: changes,
     }).info('Old conversations pruned');
 
-    return result.changes;
+    return changes;
   }
 }
