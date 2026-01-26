@@ -57,7 +57,12 @@ export class ConversationRepository {
     channelId: string,
     limit: number = 10,
   ): ConversationContext {
-    // Validate and sanitize limit parameter
+    // Validate limit is a finite number before sanitization
+    if (!Number.isFinite(limit)) {
+      throw new Error('Invalid limit parameter: must be a finite number');
+    }
+
+    // Sanitize and clamp limit parameter
     const validLimit = Math.max(1, Math.min(1000, Math.floor(Math.abs(limit))));
 
     const stmt = this.db.prepare(`
@@ -99,7 +104,12 @@ export class ConversationRepository {
     userId: string,
     limit: number = 20,
   ): ConversationContext {
-    // Validate and sanitize limit parameter
+    // Validate limit is a finite number before sanitization
+    if (!Number.isFinite(limit)) {
+      throw new Error('Invalid limit parameter: must be a finite number');
+    }
+
+    // Sanitize and clamp limit parameter
     const validLimit = Math.max(1, Math.min(1000, Math.floor(Math.abs(limit))));
 
     const stmt = this.db.prepare(`
