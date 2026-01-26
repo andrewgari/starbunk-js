@@ -1,3 +1,33 @@
+## [1.24.0](https://github.com/andrewgari/starbunk-js/compare/v1.23.5...v1.24.0) (2026-01-26)
+
+### Features
+
+* add bot override and reset command subcommands ([02ed3d1](https://github.com/andrewgari/starbunk-js/commit/02ed3d1e5ae8c37ace45a8a7801fc1b1bad9db75))
+* add comments management commands and config server for BunkBot ([61a46b2](https://github.com/andrewgari/starbunk-js/commit/61a46b2b7af538decb955deb945012d583e25d70))
+* add comments management commands and config server for BunkBot ([#505](https://github.com/andrewgari/starbunk-js/issues/505)) ([a982cdc](https://github.com/andrewgari/starbunk-js/commit/a982cdc018488adc5e1c3a4ebd3947f163aac8b6))
+* add frequency override storage and trigger evaluation integration ([87df3b9](https://github.com/andrewgari/starbunk-js/commit/87df3b9ae9a1ed22c5140bb8a0e95c957c199d5e))
+* add observability spans to frequency override operations ([1b90509](https://github.com/andrewgari/starbunk-js/commit/1b9050980878eda6796db99c96622fe27ca832c9))
+* implement BunkBot admin frequency control system (closes [#506](https://github.com/andrewgari/starbunk-js/issues/506)) ([#507](https://github.com/andrewgari/starbunk-js/issues/507)) ([fa7f1a9](https://github.com/andrewgari/starbunk-js/commit/fa7f1a9e77f0668febd90f3f70c08a3b879c1768))
+* implement UserFact, SocialBattery & Interest repositories ([ef0ea6a](https://github.com/andrewgari/starbunk-js/commit/ef0ea6a666916ca951e0bb56f6d2b4539c0a6858)), closes [#524](https://github.com/andrewgari/starbunk-js/issues/524)
+* Implement UserFact, SocialBattery & Interest repositories ([#531](https://github.com/andrewgari/starbunk-js/issues/531)) ([0d5439b](https://github.com/andrewgari/starbunk-js/commit/0d5439bdb45634c04e4c5e567ba8eb8d7070ba1b))
+* migrate vitest configuration to ESM format and remove old config file ([4c3385e](https://github.com/andrewgari/starbunk-js/commit/4c3385e5d139d4a6613be4f08d77cc81db9fde46))
+* Refactor repositories and services to use profileId instead of userId ([f8c726c](https://github.com/andrewgari/starbunk-js/commit/f8c726c8eaad9b01b06c4bccfdc3e3983280149e))
+* update sync-versions script to modify package.json version with… ([#538](https://github.com/andrewgari/starbunk-js/issues/538)) ([811d966](https://github.com/andrewgari/starbunk-js/commit/811d96676c32cc607ad7e680d014237289ac0b61))
+* update sync-versions script to modify package.json version without affecting lockfiles ([d7e6ee1](https://github.com/andrewgari/starbunk-js/commit/d7e6ee1bc1d86e9bb39dfce4254c71f85855c5e4))
+
+### Bug Fixes
+
+* Remove artifacts & fix TypeScript/CircleCI config deprecations ([1063016](https://github.com/andrewgari/starbunk-js/commit/106301628053a24f6208b7376a53afad8f062b56))
+* Remove artifacts & fix TypeScript/CircleCI config deprecations ([#539](https://github.com/andrewgari/starbunk-js/issues/539)) ([16ecc5c](https://github.com/andrewgari/starbunk-js/commit/16ecc5c64fb368a9e0c294107af83cf8119dcee4))
+* replace broken symlinks with actual config files ([2fad575](https://github.com/andrewgari/starbunk-js/commit/2fad575997c9a23ac3d9584011204617431636ce))
+* replace broken symlinks with actual config files ([#542](https://github.com/andrewgari/starbunk-js/issues/542)) ([79c6600](https://github.com/andrewgari/starbunk-js/commit/79c660080a2f14dd945a5dfa9a3caf6290f1b45b))
+* update covabot LLM test imports to use shared package ([8f97a11](https://github.com/andrewgari/starbunk-js/commit/8f97a11a7c8fe86dab702607e186756181c43140))
+* update covabot LLM test imports to use shared package ([#508](https://github.com/andrewgari/starbunk-js/issues/508)) ([811d72e](https://github.com/andrewgari/starbunk-js/commit/811d72ef8491543628053a35c508c5d0ff4c1d75))
+* Update module to Node16 (required for node16 moduleResolution) ([ba3b793](https://github.com/andrewgari/starbunk-js/commit/ba3b7937d74cab6627cf031da235500ccee50c04))
+* Update moduleResolution to node16 (compatible with commonjs module) ([e238b75](https://github.com/andrewgari/starbunk-js/commit/e238b757a3cf112acd28724365e575ae0d3ddaa8))
+* update paths in tsconfig and vitest config to use dist directory ([8f04725](https://github.com/andrewgari/starbunk-js/commit/8f047250f42c92cb2f250c85e4d701be21aa9b80))
+* use shared/dist paths for container runtime ([a550aa8](https://github.com/andrewgari/starbunk-js/commit/a550aa83eb20cc3f8f3a9a4b8f77e9a05985289b))
+
 ## [1.22.0](https://github.com/andrewgari/starbunk-js/compare/v1.21.1...v1.22.0) (2026-01-22)
 
 ### Features
