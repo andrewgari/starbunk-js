@@ -10,13 +10,18 @@ We follow a strict branch naming convention to keep our repository organized and
 
 | Type | Description | Example |
 |------|-------------|---------|
-| `feat` | New feature | `feat/user-login` |
-| `fix` | Bug fix | `fix/header-alignment` |
-| `docs` | Documentation | `docs/update-readme` |
-| `chore` | Maintenance, dependencies, tooling | `chore/update-deps` |
-| `refactor` | Code restructuring without behavior change | `refactor/auth-service` |
-| `test` | Adding or updating tests | `test/add-unit-tests` |
-| `hotfix` | Critical fixes for production | `hotfix/security-patch` |
+| `feat`     | New feature                                  | `feat/user-login`              |
+| `fix`      | Bug fix                                      | `fix/header-alignment`         |
+| `docs`     | Documentation                                | `docs/update-readme`           |
+| `chore`    | Maintenance, dependencies, tooling         | `chore/update-deps`            |
+| `refactor` | Code restructuring without behavior change   | `refactor/auth-service`        |
+| `test`     | Adding or updating tests                     | `test/add-unit-tests`          |
+| `hotfix`   | Critical fixes for production                | `hotfix/security-patch`        |
+| `style`    | Code style changes                           | `style/update-lint-rules`      |
+| `perf`     | Performance improvements                     | `perf/optimize-image-loading`  |
+| `build`    | Build system or dependency changes           | `build/update-webpack`         |
+| `ci`       | CI configuration changes                     | `ci/add-deploy-step`           |
+| `revert`   | Reverting a previous commit                  | `revert/revert-login-feature`  |
 
 ## Rules
 
