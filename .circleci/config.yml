@@ -25,12 +25,12 @@ jobs:
       - run:
           name: Generate dynamic config
           command: |
-            # Check if this is a main branch merge
-            if [ "$CIRCLE_BRANCH" = "main" ]; then
-              echo "Detected main branch - loading main-merge workflow"
+            # Check if this is a tag push (deployment trigger)
+            if [ -n "${CIRCLE_TAG:-}" ]; then
+              echo "🏷️ Detected git tag: $CIRCLE_TAG - loading deployment workflow"
               cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
             else
-              # For PRs, generate based on detected changes
+              # For PRs and other branches, generate based on detected changes
               .circleci/scripts/generate_config.py > .circleci/generated_config.yml
             fi
       - continuation/continue:
@@ -39,5 +39,10 @@ jobs:
 workflows:
   setup:
     jobs:
-      - detect_and_continue
+      - detect_and_continue:
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
 
