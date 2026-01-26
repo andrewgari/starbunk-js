@@ -6,7 +6,8 @@ executors:
       - image: cimg/node:22.14
     resource_class: medium
   docker:
-    machine: true
+    docker:
+      - image: cimg/base:stable
     resource_class: medium
 
 commands:
@@ -51,6 +52,16 @@ commands:
       - run:
           name: Extract build artifacts
           command: tar -xzf build-artifacts.tar.gz
+  setup_docker_cli:
+    steps:
+      - run:
+          name: Ensure Docker CLI is available
+          command: |
+            if ! command -v docker >/dev/null 2>&1; then
+              sudo apt-get update
+              sudo apt-get install -y --no-install-recommends docker.io
+            fi
+            docker --version
 
 jobs:
   covabot_build:
@@ -80,6 +91,7 @@ jobs:
     steps:
       - checkout
       - attach_build_artifacts
+      - setup_docker_cli
       - setup_remote_docker
       - run:
           name: Build Docker Image
@@ -115,6 +127,7 @@ jobs:
       APP: covabot
     steps:
       - checkout
+      - setup_docker_cli
       - setup_remote_docker
       - run:
           name: Health Check
