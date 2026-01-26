@@ -32,6 +32,12 @@ export class UserFactRepository {
     // If factValue is not provided, use factKey as the value (for backward compatibility)
     const value = factValue || factKey;
 
+    // Validate and clamp confidence to 0.0-1.0 range
+    const validConfidence = Math.max(0.0, Math.min(1.0, confidence));
+    if (!Number.isFinite(validConfidence)) {
+      throw new Error('Invalid confidence parameter: must be a finite number');
+    }
+
     const stmt = this.db.prepare(`
       INSERT INTO user_facts (profile_id, user_id, fact_type, fact_key, fact_value, confidence)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -39,7 +45,7 @@ export class UserFactRepository {
       DO UPDATE SET fact_value = excluded.fact_value, confidence = excluded.confidence, learned_at = CURRENT_TIMESTAMP
     `);
 
-    stmt.run(profileId, userId, category, factKey, value, confidence);
+    stmt.run(profileId, userId, category, factKey, value, validConfidence);
 
     logger.withMetadata({
       profile_id: profileId,

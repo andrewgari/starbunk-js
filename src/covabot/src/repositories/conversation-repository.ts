@@ -57,6 +57,9 @@ export class ConversationRepository {
     channelId: string,
     limit: number = 10,
   ): ConversationContext {
+    // Validate and sanitize limit parameter
+    const validLimit = Math.max(1, Math.min(1000, Math.floor(Math.abs(limit))));
+
     const stmt = this.db.prepare(`
       SELECT user_id, user_name, message_content, bot_response, created_at
       FROM conversations
@@ -65,7 +68,7 @@ export class ConversationRepository {
       LIMIT ?
     `);
 
-    const rows = stmt.all(profileId, channelId, limit) as Pick<
+    const rows = stmt.all(profileId, channelId, validLimit) as Pick<
       ConversationRow,
       'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
     >[];
@@ -96,6 +99,9 @@ export class ConversationRepository {
     userId: string,
     limit: number = 20,
   ): ConversationContext {
+    // Validate and sanitize limit parameter
+    const validLimit = Math.max(1, Math.min(1000, Math.floor(Math.abs(limit))));
+
     const stmt = this.db.prepare(`
       SELECT user_id, user_name, message_content, bot_response, created_at
       FROM conversations
@@ -104,7 +110,7 @@ export class ConversationRepository {
       LIMIT ?
     `);
 
-    const rows = stmt.all(profileId, userId, limit) as Pick<
+    const rows = stmt.all(profileId, userId, validLimit) as Pick<
       ConversationRow,
       'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
     >[];
@@ -130,17 +136,23 @@ export class ConversationRepository {
    * Delete old conversations to manage database size
    */
   pruneOldConversations(profileId: string, daysToKeep: number = 30): number {
+    // Validate and sanitize daysToKeep to prevent SQL injection
+    const validDays = Math.floor(Math.abs(daysToKeep));
+    if (!Number.isFinite(validDays) || validDays < 0) {
+      throw new Error('Invalid daysToKeep parameter: must be a non-negative number');
+    }
+
     const stmt = this.db.prepare(`
       DELETE FROM conversations
       WHERE profile_id = ?
         AND created_at < datetime('now', '-' || ? || ' days')
     `);
 
-    const result = stmt.run(profileId, daysToKeep);
+    const result = stmt.run(profileId, validDays);
 
     logger.withMetadata({
       profile_id: profileId,
-      days_kept: daysToKeep,
+      days_kept: validDays,
       deleted_count: result.changes,
     }).info('Old conversations pruned');
 

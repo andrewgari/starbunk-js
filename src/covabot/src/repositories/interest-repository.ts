@@ -41,6 +41,12 @@ export class InterestRepository {
     category: string | null = null,
     weight: number = 1.0,
   ): void {
+    // Validate and clamp weight to reasonable range (0.1 to 2.0)
+    const validWeight = Math.max(0.1, Math.min(2.0, weight));
+    if (!Number.isFinite(validWeight)) {
+      throw new Error('Invalid weight parameter: must be a finite number');
+    }
+
     const stmt = this.db.prepare(`
       INSERT INTO keyword_interests (profile_id, keyword, category, weight)
       VALUES (?, ?, ?, ?)
@@ -48,12 +54,12 @@ export class InterestRepository {
       DO UPDATE SET weight = excluded.weight, category = excluded.category
     `);
 
-    stmt.run(profileId, keyword.toLowerCase().trim(), category, weight);
+    stmt.run(profileId, keyword.toLowerCase().trim(), category, validWeight);
 
     logger.withMetadata({
       profile_id: profileId,
       keyword,
-      weight,
+      weight: validWeight,
     }).debug('Interest upserted');
   }
 
@@ -83,6 +89,11 @@ export class InterestRepository {
    * Adjust interest weight by a delta amount
    */
   adjustWeight(profileId: string, keyword: string, delta: number): void {
+    // Validate delta is a finite number
+    if (!Number.isFinite(delta)) {
+      throw new Error('Invalid delta parameter: must be a finite number');
+    }
+
     const stmt = this.db.prepare(`
       UPDATE keyword_interests
       SET weight = MAX(0.1, MIN(2.0, weight + ?))
