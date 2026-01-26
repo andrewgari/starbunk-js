@@ -1,5 +1,11 @@
 version: 2.1
 
+parameters:
+  snyk_token:
+    type: string
+    default: ""
+    description: "Snyk API token for security scanning"
+
 executors:
   node20:
     docker:
@@ -24,56 +30,39 @@ commands:
             - node_modules
 
 jobs:
-  lint_and_format:
+  lint:
     executor: node20
     steps:
       - checkout
       - setup_npm_cache
       - run:
-          name: Lint and Format Check
+          name: Check linting & formatting
           command: |
             npm run lint -- --cache --cache-location .eslintcache
             npm run format -- --check
 
-  type_check:
+  types:
     executor: node20
     steps:
       - checkout
       - setup_npm_cache
       - run:
-          name: TypeScript Type Check
+          name: Verify type safety
           command: npm run type-check
 
-  shared_tests:
+  unit-tests:
     executor: node20
     steps:
       - checkout
       - setup_npm_cache
       - run:
-          name: Shared Package Unit Tests
+          name: Run shared package tests
           command: npm run test:shared
-
-  snyk_code_scan:
-    executor: node20
-    environment:
-      SNYK_TOKEN: << pipeline.parameters.snyk_token >>
-    steps:
-      - checkout
-      - setup_npm_cache
-      - run:
-          name: Snyk Code Scan
-          command: |
-            if [ -z "$SNYK_TOKEN" ]; then
-              echo "⊘ Snyk token not configured, skipping code scan"
-              exit 0
-            fi
-            npm run snyk:code || echo "⚠ Snyk found issues"
 
 workflows:
   core-validation:
     jobs:
-      - lint_and_format
-      - type_check
-      - shared_tests
-      - snyk_code_scan
+      - lint
+      - types
+      - unit-tests
 

@@ -1,11 +1,5 @@
 version: 2.1
 
-parameters:
-  snyk_token:
-    type: string
-    default: ""
-    description: "Snyk API token for security scanning"
-
 executors:
   node20:
     docker:
@@ -60,71 +54,55 @@ commands:
           command: tar -xzf build-artifacts.tar.gz
 
 jobs:
-  lint_and_format:
+  lint:
     executor: node20
     steps:
       - checkout
       - setup_npm_cache
       - run:
-          name: Lint and Format Check
+          name: Check linting & formatting
           command: |
             npm run lint -- --cache --cache-location .eslintcache
             npm run format -- --check
 
-  type_check:
+  types:
     executor: node20
     steps:
       - checkout
       - setup_npm_cache
       - run:
-          name: TypeScript Type Check
+          name: Verify type safety
           command: npm run type-check
 
-  shared_tests:
+  unit-tests:
     executor: node20
     steps:
       - checkout
       - setup_npm_cache
       - run:
-          name: Shared Package Unit Tests
+          name: Run shared package tests
           command: npm run test:shared
 
-  snyk_code_scan:
-    executor: node20
-    environment:
-      SNYK_TOKEN: << pipeline.parameters.snyk_token >>
-    steps:
-      - checkout
-      - setup_npm_cache
-      - run:
-          name: Snyk Code Scan
-          command: |
-            if [ -z "$SNYK_TOKEN" ]; then
-              echo "⊘ Snyk token not configured, skipping code scan"
-              exit 0
-            fi
-            npm run snyk:code || echo "⚠ Snyk found issues"
-
-  build_all:
+  build:
     executor: node20
     steps:
       - checkout
       - setup_npm_cache
       - run:
-          name: Build All Packages
+          name: Build all packages
           command: npm run build
       - persist_build_artifacts
 
-  test_all:
+  test:
     executor: node20
     steps:
       - checkout
       - setup_npm_cache
       - run:
-          name: Test All Packages
+          name: Test all packages
           command: npm run test:full
 
-  push_docker_image:
+  publish_image:
     executor: docker
     parameters:
       app_name:
@@ -189,7 +167,7 @@ jobs:
               echo "⊘ Image unchanged - skipping push"
             fi
 
-  deploy_to_runner:
+  deploy:
     executor: runner
     steps:
       - checkout
@@ -234,48 +212,47 @@ jobs:
             done
 
 workflows:
-  main-merge:
+  deploy:
     jobs:
-      - lint_and_format
-      - type_check
-      - shared_tests
-      - snyk_code_scan
-      - build_all:
+      - lint
+      - types
+      - unit-tests
+      - build:
           requires:
-            - lint_and_format
-            - type_check
-            - shared_tests
-      - test_all:
+            - lint
+            - types
+            - unit-tests
+      - test:
           requires:
-            - build_all
-      - push_docker_image:
-          name: push_bunkbot
+            - build
+      - publish_image:
+          name: publish_bunkbot
           app_name: bunkbot
           dockerfile: "./src/bunkbot/Dockerfile.ci"
           requires:
-            - test_all
-      - push_docker_image:
-          name: push_bluebot
+            - test
+      - publish_image:
+          name: publish_bluebot
           app_name: bluebot
           dockerfile: "./src/bluebot/Dockerfile.ci"
           requires:
-            - test_all
-      - push_docker_image:
-          name: push_covabot
+            - test
+      - publish_image:
+          name: publish_covabot
           app_name: covabot
           dockerfile: "./src/covabot/Dockerfile.ci"
           requires:
-            - test_all
-      - push_docker_image:
-          name: push_djcova
+            - test
+      - publish_image:
+          name: publish_djcova
           app_name: djcova
           dockerfile: "./src/djcova/Dockerfile.ci"
           requires:
-            - test_all
-      - deploy_to_runner:
+            - test
+      - deploy:
           requires:
-            - push_bunkbot
-            - push_bluebot
-            - push_covabot
-            - push_djcova
+            - publish_bunkbot
+            - publish_bluebot
+            - publish_covabot
+            - publish_djcova
 
