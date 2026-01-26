@@ -58,6 +58,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install jq
+          command: apt-get update && apt-get install -y jq
+      - run:
           name: Fetch main for diff
           command: git fetch origin main || true
       - run:
@@ -67,6 +70,7 @@ jobs:
           root: .
           paths:
             - .circleci/diff.json
+            - .circleci/changed_files.txt
 
   lint_and_format:
     executor: node20
