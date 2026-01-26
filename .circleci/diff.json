@@ -1,0 +1,12 @@
+{
+  "source_changed": "false",
+  "workflow_changed": "false",
+  "container_config_changed": "false",
+  "shared_changed": "false",
+  "bunkbot_changed": "false",
+  "covabot_changed": "false",
+  "djcova_changed": "false",
+  "bluebot_changed": "false",
+  "any_app_changed": "false",
+  "changed_apps": ""
+}

@@ -1,0 +1,264 @@
+version: 2.1
+
+executors:
+  node20:
+    docker:
+      - image: cimg/node:20.16
+    resource_class: medium
+  node22:
+    docker:
+      - image: cimg/node:22.7
+    resource_class: medium
+  docker:
+    machine: true
+    resource_class: medium
+
+commands:
+  setup_npm_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v1-npm-{{ arch }}-{{ .Branch }}-
+            - v1-npm-{{ arch }}-
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - node_modules
+  persist_build_artifacts:
+    steps:
+      - run:
+          name: Compress build artifacts
+          command: |
+            tar -czf build-artifacts.tar.gz \
+              src/*/dist/ \
+              src/*/package.json \
+              src/shared/node_modules/ \
+              package.json \
+              package-lock.json
+      - persist_to_workspace:
+          root: .
+          paths:
+            - build-artifacts.tar.gz
+  attach_build_artifacts:
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Extract build artifacts
+          command: tar -xzf build-artifacts.tar.gz
+
+jobs:
+  detect_changes:
+    executor: node20
+    steps:
+      - checkout
+      - run:
+          name: Fetch main for diff
+          command: git fetch origin main || true
+      - run:
+          name: Detect changed paths
+          command: .circleci/scripts/detect_changes.sh
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .circleci/diff.json
+
+  lint_and_format:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Run ESLint
+          command: npm run lint -- --cache --cache-location .eslintcache
+      - run:
+          name: Run Prettier check
+          command: npm run format -- --check
+
+  type_check:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Type check
+          command: npm run type-check
+
+  build_apps:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Clean and build
+          command: |
+            npm run clean || true
+            npm run build
+      - persist_build_artifacts
+
+  unit_tests:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Run unit tests
+          command: npm run test
+
+  snyk_code_scan:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Snyk Code Scan
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then
+              echo "SNYK_TOKEN not set, skipping Snyk code test"; exit 0; fi
+            npm install -g snyk@latest
+            snyk auth $SNYK_TOKEN
+            snyk code test --severity-threshold=high || snyk code test --severity-threshold=critical
+
+  docker_build_and_validate_pr:
+    parameters:
+      app:
+        type: string
+      dockerfile:
+        type: string
+    machine: true
+    resource_class: medium
+    steps:
+      - checkout
+      - attach_build_artifacts
+      - run:
+          name: Compute content hash
+          command: |
+            set -e
+            APP="<< parameters.app >>"
+            HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
+            SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+            DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+            CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+            echo "${CONTENT_HASH}" > .circleci/${APP}.hash
+      - run:
+          name: Login to GHCR
+          command: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+      - run:
+          name: Check for existing sha image
+          command: |
+            set -e
+            APP="<< parameters.app >>"
+            HASH=$(cat .circleci/${APP}.hash)
+            IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:sha-${HASH}"
+            if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
+              echo "exists=true" > .circleci/${APP}.exists
+              docker pull "$IMAGE"
+              PRNUM=${CIRCLE_PULL_REQUEST##*/}
+              [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+              docker tag "$IMAGE" "ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}"
+            else
+              echo "exists=false" > .circleci/${APP}.exists
+            fi
+      - when:
+          condition:
+            equal: ["false", "$(cat .circleci/<< parameters.app >>.exists | cut -d'=' -f2)" ]
+          steps:
+            - run:
+                name: Enable BuildKit
+                command: export DOCKER_BUILDKIT=1
+            - run:
+                name: Build image (PR)
+                command: |
+                  set -e
+                  APP="<< parameters.app >>"
+                  HASH=$(cat .circleci/${APP}.hash)
+                  PRNUM=${CIRCLE_PULL_REQUEST##*/}
+                  [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+                  IMAGE_BASE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}"
+                  docker build -f << parameters.dockerfile >> -t ${IMAGE_BASE}:pr-${PRNUM} -t ${IMAGE_BASE}:sha-${HASH} .
+            - run:
+                name: Push sha image (cache seed)
+                command: |
+                  APP="<< parameters.app >>"
+                  HASH=$(cat .circleci/${APP}.hash)
+                  docker push ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:sha-${HASH}
+      - run:
+          name: Run container and health checks
+          command: |
+            set -e
+            APP="<< parameters.app >>"
+            PRNUM=${CIRCLE_PULL_REQUEST##*/}
+            [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+            TOKEN_VAR="DISCORD_TOKEN"
+            if [ "$APP" = "covabot" ]; then TOKEN_VAR="COVABOT_TOKEN"; fi
+            docker run -d --name ${APP}-test \
+              -e DISCORD_TOKEN=test \
+              -e ${TOKEN_VAR}=test \
+              -e DEBUG_MODE=true \
+              -e CI_SMOKE_MODE=true \
+              -e CI=true \
+              -e NODE_ENV=test \
+              -e METRICS_PORT=3000 \
+              ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}
+            .circleci/scripts/container_health_check.sh ${APP}-test /live 180
+      - run:
+          name: Snyk Container Scan (optional)
+          command: |
+            if [ -n "$SNYK_TOKEN" ]; then
+              npm install -g snyk@latest || true
+              snyk auth $SNYK_TOKEN || true
+              PRNUM=${CIRCLE_PULL_REQUEST##*/}
+              [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+              snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/<< parameters.app >>:pr-${PRNUM} --severity-threshold=high || true
+            fi
+      - run:
+          name: Push PR tags
+          command: |
+            APP="<< parameters.app >>"
+            HASH=$(cat .circleci/${APP}.hash)
+            PRNUM=${CIRCLE_PULL_REQUEST##*/}
+            [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+            IMAGE_BASE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}"
+            docker push ${IMAGE_BASE}:pr-${PRNUM}
+            docker push ${IMAGE_BASE}:sha-${HASH} || true
+
+workflows:
+  pr_validation:
+    jobs:
+      - detect_changes
+      - lint_and_format:
+          requires: [detect_changes]
+      - type_check:
+          requires: [detect_changes]
+      - build_apps:
+          requires: [detect_changes]
+      - unit_tests:
+          requires: [detect_changes]
+      - snyk_code_scan:
+          requires: [detect_changes]
+      - docker_build_and_validate_pr:
+          name: docker_bunkbot
+          app: bunkbot
+          dockerfile: ./src/bunkbot/Dockerfile.ci
+          requires: [build_apps, lint_and_format, type_check, unit_tests]
+      - docker_build_and_validate_pr:
+          name: docker_covabot
+          app: covabot
+          dockerfile: ./src/covabot/Dockerfile.ci
+          requires: [build_apps, lint_and_format, type_check, unit_tests]
+      - docker_build_and_validate_pr:
+          name: docker_djcova
+          app: djcova
+          dockerfile: ./src/djcova/Dockerfile.ci
+          requires: [build_apps, lint_and_format, type_check, unit_tests]
+      - docker_build_and_validate_pr:
+          name: docker_bluebot
+          app: bluebot
+          dockerfile: ./src/bluebot/Dockerfile.ci
+          requires: [build_apps, lint_and_format, type_check, unit_tests]

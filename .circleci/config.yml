@@ -1,0 +1,27 @@
+version: 2.1
+setup: true
+orbs:
+  continuation: circleci/continuation@0.3.1
+jobs:
+  setup:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Select next config
+          command: |
+            if [ "$CIRCLE_BRANCH" = "main" ]; then
+              NEXT=.circleci/main-merge.yml
+            else
+              NEXT=.circleci/pr-validation.yml
+            fi
+            cp "$NEXT" /tmp/next-config.yml
+            echo "Routing to: $NEXT"
+      - continuation/continue:
+          configuration_path: /tmp/next-config.yml
+workflows:
+  setup-workflow:
+    jobs:
+      - setup
