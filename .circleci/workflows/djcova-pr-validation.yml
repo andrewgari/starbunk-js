@@ -48,17 +48,17 @@ commands:
           command: tar -xzf build-artifacts.tar.gz
 
 jobs:
-  build_djcova:
+  djcova_build:
     executor: node20
     steps:
       - checkout
       - setup_npm_cache
       - run:
           name: Build Djcova
-          command: npm run build -- --filter=djcova
+          command: npm run build:djcova
       - persist_build_artifacts
 
-  test_djcova:
+  djcova_test:
     executor: node20
     steps:
       - checkout
@@ -67,7 +67,7 @@ jobs:
           name: Test Djcova
           command: npm run test -- src/djcova
 
-  docker_djcova:
+  djcova_docker_build:
     executor: docker
     environment:
       APP: djcova
@@ -80,21 +80,21 @@ jobs:
           name: Build Docker Image
           command: |
             set -e
-            
+
             # Compute content hash for caching
             HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
             SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
             DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
             CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
-            
+
             # Login to GHCR (credentials from CircleCI context)
             if [ -n "${GHCR_TOKEN:-}" ]; then
               echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin || true
             fi
-            
+
             # Pull cache image if available
             docker pull ghcr.io/andrewgari/starbunk-${APP}:cache 2>/dev/null || true
-            
+
             # Build with cache
             docker build \
               --build-arg BUILDKIT_INLINE_CACHE=1 \
@@ -103,6 +103,14 @@ jobs:
               -t ghcr.io/andrewgari/starbunk-${APP}:${CIRCLE_SHA1:0:7} \
               -t ghcr.io/andrewgari/starbunk-${APP}:latest \
               .
+
+  djcova_docker_health_check:
+    executor: docker
+    environment:
+      APP: djcova
+    steps:
+      - checkout
+      - setup_remote_docker
       - run:
           name: Health Check
           command: |
@@ -110,11 +118,16 @@ jobs:
               ghcr.io/andrewgari/starbunk-${APP}:latest
 
 workflows:
-  djcova-validation:
+  djcova-checks:
     jobs:
-      - build_djcova
-      - test_djcova
-      - docker_djcova:
+      - djcova_build
+      - djcova_test:
           requires:
-            - build_djcova
-            - test_djcova
+            - djcova_build
+      - djcova_docker_build:
+          requires:
+            - djcova_build
+            - djcova_test
+      - djcova_docker_health_check:
+          requires:
+            - djcova_docker_build

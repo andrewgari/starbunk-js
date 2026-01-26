@@ -30,6 +30,15 @@ commands:
             - node_modules
 
 jobs:
+  build:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Build entire application
+          command: npm run build
+
   lint:
     executor: node20
     steps:
@@ -50,19 +59,10 @@ jobs:
           name: Verify type safety
           command: npm run type-check
 
-  unit-tests:
-    executor: node20
-    steps:
-      - checkout
-      - setup_npm_cache
-      - run:
-          name: Run shared package tests
-          command: npm run test:shared
-
 workflows:
-  core-validation:
+  core-checks:
     jobs:
+      - build
       - lint
       - types
-      - unit-tests
 

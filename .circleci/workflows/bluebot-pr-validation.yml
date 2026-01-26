@@ -48,17 +48,17 @@ commands:
           command: tar -xzf build-artifacts.tar.gz
 
 jobs:
-  build_bluebot:
+  bluebot_build:
     executor: node20
     steps:
       - checkout
       - setup_npm_cache
       - run:
           name: Build Bluebot
-          command: npm run build -- --filter=bluebot
+          command: npm run build:bluebot
       - persist_build_artifacts
 
-  test_bluebot:
+  bluebot_test:
     executor: node20
     steps:
       - checkout
@@ -67,7 +67,7 @@ jobs:
           name: Test Bluebot
           command: npm run test -- src/bluebot
 
-  docker_bluebot:
+  bluebot_docker_build:
     executor: docker
     environment:
       APP: bluebot
@@ -80,21 +80,21 @@ jobs:
           name: Build Docker Image
           command: |
             set -e
-            
+
             # Compute content hash for caching
             HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
             SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
             DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
             CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
-            
+
             # Login to GHCR (credentials from CircleCI context)
             if [ -n "${GHCR_TOKEN:-}" ]; then
               echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin || true
             fi
-            
+
             # Pull cache image if available
             docker pull ghcr.io/andrewgari/starbunk-${APP}:cache 2>/dev/null || true
-            
+
             # Build with cache
             docker build \
               --build-arg BUILDKIT_INLINE_CACHE=1 \
@@ -103,6 +103,14 @@ jobs:
               -t ghcr.io/andrewgari/starbunk-${APP}:${CIRCLE_SHA1:0:7} \
               -t ghcr.io/andrewgari/starbunk-${APP}:latest \
               .
+
+  bluebot_docker_health_check:
+    executor: docker
+    environment:
+      APP: bluebot
+    steps:
+      - checkout
+      - setup_remote_docker
       - run:
           name: Health Check
           command: |
@@ -110,11 +118,16 @@ jobs:
               ghcr.io/andrewgari/starbunk-${APP}:latest
 
 workflows:
-  bluebot-validation:
+  bluebot-checks:
     jobs:
-      - build_bluebot
-      - test_bluebot
-      - docker_bluebot:
+      - bluebot_build
+      - bluebot_test:
           requires:
-            - build_bluebot
-            - test_bluebot
+            - bluebot_build
+      - bluebot_docker_build:
+          requires:
+            - bluebot_build
+            - bluebot_test
+      - bluebot_docker_health_check:
+          requires:
+            - bluebot_docker_build

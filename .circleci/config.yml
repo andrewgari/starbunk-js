@@ -34,11 +34,17 @@ jobs:
             echo "=== Generated config preview (first 50 lines) ==="
             head -n 50 .circleci/generated_config.yml
             echo "=== Total lines: $(wc -l < .circleci/generated_config.yml) ==="
+      - run:
+          name: Validate generated config
+          command: |
+            python3 -c "import yaml; yaml.safe_load(open('.circleci/generated_config.yml'))"
+            echo "✓ Generated config is valid YAML"
       - continuation/continue:
           configuration_path: .circleci/generated_config.yml
+          parameters: '{}'
 
 workflows:
-  setup:
+  change-detection:
     jobs:
       - detect_and_continue:
           filters:
