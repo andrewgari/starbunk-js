@@ -1,27 +1,34 @@
 version: 2.1
+
 setup: true
+
 orbs:
-  continuation: circleci/continuation@0.3.1
-jobs:
-  setup:
+  continuation: circleci/continuation@0.1.2
+
+executors:
+  node20:
     docker:
-      - image: cimg/base:stable
-    resource_class: small
+      - image: cimg/node:20.16
+    resource_class: medium
+
+jobs:
+  detect_and_continue:
+    executor: node20
     steps:
       - checkout
       - run:
-          name: Select next config
-          command: |
-            if [ "$CIRCLE_BRANCH" = "main" ]; then
-              NEXT=.circleci/main-merge.yml
-            else
-              NEXT=.circleci/pr-validation.yml
-            fi
-            cp "$NEXT" /tmp/next-config.yml
-            echo "Routing to: $NEXT"
+          name: Fetch main for diff
+          command: git fetch origin main || true
+      - run:
+          name: Detect changed paths
+          command: .circleci/scripts/detect_changes.sh
+      - run:
+          name: Generate dynamic config
+          command: .circleci/scripts/generate_config.py > .circleci/generated_config.yml
       - continuation/continue:
-          configuration_path: /tmp/next-config.yml
+          configuration_path: .circleci/generated_config.yml
+
 workflows:
-  setup-workflow:
+  setup:
     jobs:
-      - setup
+      - detect_and_continue

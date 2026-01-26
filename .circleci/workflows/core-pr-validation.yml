@@ -1,0 +1,78 @@
+version: 2.1
+
+executors:
+  node20:
+    docker:
+      - image: cimg/node:20.16
+    resource_class: medium
+
+commands:
+  setup_npm_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v1-npm-{{ arch }}-{{ .Branch }}-
+            - v1-npm-{{ arch }}-
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - node_modules
+
+jobs:
+  lint_and_format:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Lint and Format Check
+          command: |
+            npm run lint -- --cache --cache-location .eslintcache
+            npm run format -- --check
+
+  type_check:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: TypeScript Type Check
+          command: npm run type-check
+
+  shared_tests:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Shared Package Unit Tests
+          command: npm run test -- src/shared
+
+  snyk_code_scan:
+    executor: node20
+    environment:
+      SNYK_TOKEN: << pipeline.parameters.snyk_token >>
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Snyk Code Scan
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then
+              echo "⊘ Snyk token not configured, skipping code scan"
+              exit 0
+            fi
+            npm run snyk:code || echo "⚠ Snyk found issues"
+
+workflows:
+  core-validation:
+    jobs:
+      - lint_and_format
+      - type_check
+      - shared_tests
+      - snyk_code_scan

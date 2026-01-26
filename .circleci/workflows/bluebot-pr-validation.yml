@@ -1,0 +1,120 @@
+version: 2.1
+
+executors:
+  node20:
+    docker:
+      - image: cimg/node:20.16
+    resource_class: medium
+  docker:
+    machine: true
+    resource_class: medium
+
+commands:
+  setup_npm_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v1-npm-{{ arch }}-{{ .Branch }}-
+            - v1-npm-{{ arch }}-
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - node_modules
+  persist_build_artifacts:
+    steps:
+      - run:
+          name: Compress build artifacts
+          command: |
+            tar -czf build-artifacts.tar.gz \
+              src/bluebot/dist/ \
+              src/shared/dist/ \
+              package.json \
+              package-lock.json
+      - persist_to_workspace:
+          root: .
+          paths:
+            - build-artifacts.tar.gz
+  attach_build_artifacts:
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Extract build artifacts
+          command: tar -xzf build-artifacts.tar.gz
+
+jobs:
+  build_bluebot:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Build Bluebot
+          command: npm run build -- --filter=bluebot
+      - persist_build_artifacts
+
+  test_bluebot:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Test Bluebot
+          command: npm run test -- src/bluebot
+
+  docker_bluebot:
+    executor: docker
+    environment:
+      APP: bluebot
+      DOCKERFILE: "./src/bluebot/Dockerfile.ci"
+    steps:
+      - checkout
+      - attach_build_artifacts
+      - setup_remote_docker
+      - run:
+          name: Build Docker Image
+          command: |
+            set -e
+            
+            # Compute content hash for caching
+            HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
+            SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+            DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+            CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+            
+            # Login to GHCR (credentials from CircleCI context)
+            if [ -n "${GHCR_TOKEN:-}" ]; then
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin || true
+            fi
+            
+            # Pull cache image if available
+            docker pull ghcr.io/andrewgari/starbunk-${APP}:cache 2>/dev/null || true
+            
+            # Build with cache
+            docker build \
+              --build-arg BUILDKIT_INLINE_CACHE=1 \
+              --cache-from ghcr.io/andrewgari/starbunk-${APP}:cache \
+              -f $DOCKERFILE \
+              -t ghcr.io/andrewgari/starbunk-${APP}:${CIRCLE_SHA1:0:7} \
+              -t ghcr.io/andrewgari/starbunk-${APP}:latest \
+              .
+      - run:
+          name: Health Check
+          command: |
+            .circleci/scripts/container_health_check.sh \
+              ghcr.io/andrewgari/starbunk-${APP}:latest
+
+workflows:
+  bluebot-validation:
+    jobs:
+      - build_bluebot
+      - test_bluebot
+      - docker_bluebot:
+          requires:
+            - build_bluebot
+            - test_bluebot
