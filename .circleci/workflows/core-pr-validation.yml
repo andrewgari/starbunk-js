@@ -9,7 +9,7 @@ parameters:
 executors:
   node20:
     docker:
-      - image: cimg/node:20.16
+      - image: cimg/node:22.14
     resource_class: medium
 
 commands:
@@ -20,6 +20,11 @@ commands:
             - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
             - v1-npm-{{ arch }}-{{ .Branch }}-
             - v1-npm-{{ arch }}-
+      - run:
+          name: Show Node and npm versions
+          command: |
+            node -v
+            npm -v
       - run:
           name: Install dependencies
           command: npm ci
@@ -65,4 +70,3 @@ workflows:
       - build
       - lint
       - types
-
