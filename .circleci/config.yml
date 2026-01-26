@@ -2,6 +2,9 @@ version: 2.1
 
 setup: true
 
+orbs:
+  continuation: circleci/continuation@1.0.0
+
 executors:
   node20:
     docker:
@@ -28,26 +31,11 @@ jobs:
             else
               .circleci/scripts/generate_config.py > .circleci/generated_config.yml
             fi
-      - run:
-          name: Build continuation payload
-          command: >
-            python3 -c "import json, os; from pathlib import Path;
-            Path('/tmp/continuation_payload.json').write_text(json.dumps({'continuation-key': os.environ['CIRCLE_CONTINUATION_KEY'],
-            'configuration': Path('.circleci/generated_config.yml').read_text(),
-            'parameters': {}}))"
-      - run:
-          name: Continue pipeline
-          command: |
-            RESP_FILE=/tmp/continuation_resp.json
-            HTTP_CODE=$(curl -sS -w "\n%{http_code}" -o "$RESP_FILE" -X POST -H 'Content-Type: application/json' -d @/tmp/continuation_payload.json "https://circleci.com/api/v2/pipeline/continue")
-            STATUS=$(echo "$HTTP_CODE" | tail -n1)
-            BODY=$(cat "$RESP_FILE")
-            echo "Continuation HTTP status: $STATUS"
-            echo "Continuation response: $BODY"
-            PIPELINE_ID=$(python3 -c "import json, sys; print(json.load(sys.stdin).get('pipeline_id', ''))" < "$RESP_FILE")
-            if [ "$STATUS" != "200" ]; then echo "Continuation failed with HTTP $STATUS" >&2; exit 1; fi
-            if [ -z "$PIPELINE_ID" ]; then echo "Continuation did not return pipeline_id" >&2; exit 1; fi
-            echo "Continuation spawned pipeline_id: $PIPELINE_ID"
+            echo "=== Generated config preview (first 50 lines) ==="
+            head -n 50 .circleci/generated_config.yml
+            echo "=== Total lines: $(wc -l < .circleci/generated_config.yml) ==="
+      - continuation/continue:
+          configuration_path: .circleci/generated_config.yml
 
 workflows:
   setup:
