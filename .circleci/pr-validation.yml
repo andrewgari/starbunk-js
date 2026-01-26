@@ -58,7 +58,10 @@ jobs:
       - checkout
       - run:
           name: Install jq
-          command: apt-get update && apt-get install -y jq
+          command: |
+            if ! command -v jq &> /dev/null; then
+              sudo apt-get update && sudo apt-get install -y jq
+            fi
       - run:
           name: Fetch main for diff
           command: git fetch origin main || true
