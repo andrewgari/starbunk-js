@@ -36,4 +36,5 @@ We follow a strict branch naming convention to keep our repository organized and
 *   ✅ `fix/crash-on-startup`
 *   ✅ `chore/bump-version-1.2.0`
 *   ❌ `Feature/AddDarkMode` (Use lowercase)
-*   ❌ `fix_crash` (Use hyphens and type)
+*   ❌ `fix/using_underscores` (Use hyphens to separate words in the description)
+*   ❌ `my-feature` (Missing a `type` prefix)
