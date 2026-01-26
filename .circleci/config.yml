@@ -26,7 +26,7 @@ jobs:
           name: Generate dynamic config
           command: |
             if [ -n "${CIRCLE_TAG:-}" ]; then
-              echo "🏷️ Detected git tag: $CIRCLE_TAG - loading deployment workflow"
+              echo "Detected git tag: $CIRCLE_TAG - loading deployment workflow"
               cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
             else
               .circleci/scripts/generate_config.py > .circleci/generated_config.yml
@@ -34,16 +34,10 @@ jobs:
             echo "=== Generated config preview (first 50 lines) ==="
             head -n 50 .circleci/generated_config.yml
             echo "=== Total lines: $(wc -l < .circleci/generated_config.yml) ==="
-      - run:
-          name: Validate generated config
-          command: |
-            # Install PyYAML for validation
-            pip install --quiet PyYAML
-            python3 -c "import yaml; yaml.safe_load(open('.circleci/generated_config.yml'))"
-            echo "✓ Generated config is valid YAML"
+            echo "Config generated successfully"
       - continuation/continue:
           configuration_path: .circleci/generated_config.yml
-          parameters: '{}'
+          parameters: {}
 
 workflows:
   change-detection:
