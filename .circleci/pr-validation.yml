@@ -77,7 +77,7 @@ jobs:
       - checkout
       - setup_npm_cache
       - run:
-          name: Lint & Format Check
+          name: Lint and Format Check
           command: |
             npm run lint -- --cache --cache-location .eslintcache
             npm run format -- --check
@@ -118,17 +118,16 @@ jobs:
       - checkout
       - setup_npm_cache
       - run:
-          name: Security: Snyk Code Scan
+          name: "Snyk Code Scan"
           command: |
             if [ -z "$SNYK_TOKEN" ]; then
-              echo "⏭️  SNYK_TOKEN not set, skipping code scan"; exit 0; fi
+              echo "SNYK_TOKEN not set, skipping code scan"; exit 0; fi
             npm install -g snyk@latest
             snyk auth $SNYK_TOKEN
             snyk code test --severity-threshold=high || snyk code test --severity-threshold=critical
 
 # ============================================================================
 # PHASE 2 & 3: CONDITIONAL DOCKER BUILD + HEALTH CHECK
-# (Only runs if app source changed)
 # ============================================================================
   docker_bunkbot:
     docker:
@@ -139,7 +138,7 @@ jobs:
       - attach_build_artifacts
       - setup_remote_docker
       - run:
-          name: "[Phase 2] Build Docker Image: bunkbot"
+          name: "[Phase 2] Build Docker Image"
           command: |
             set -e
             APP="bunkbot"
@@ -161,10 +160,10 @@ jobs:
             [ -z "$IMAGE_CURRENT" ] && IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_BUILD_NUM}"
             
             if docker pull "${IMAGE_CACHE}" 2>/dev/null; then
-              echo "✅ Using cached image: ${IMAGE_CACHE}"
+              echo "Using cached image: ${IMAGE_CACHE}"
               docker tag "${IMAGE_CACHE}" "${IMAGE_CURRENT}"
             else
-              echo "🔨 Building fresh image (cache miss)"
+              echo "Building fresh image (cache miss)"
               docker build -f "${DOCKERFILE}" \
                 -t "${IMAGE_CURRENT}" \
                 -t "${IMAGE_CACHE}" .
@@ -173,7 +172,7 @@ jobs:
             
             docker push "${IMAGE_CURRENT}"
       - run:
-          name: "[Phase 3] Health Check: bunkbot"
+          name: "[Phase 3] Health Check"
           command: |
             set -e
             APP="bunkbot"
@@ -181,7 +180,7 @@ jobs:
             [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
             IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}"
             
-            echo "🏥 Starting container and running health checks..."
+            echo "Starting container and running health checks..."
             docker run -d --name ${APP}-test \
               -e DISCORD_TOKEN=test \
               -e DEBUG_MODE=true \
@@ -192,9 +191,9 @@ jobs:
               "${IMAGE}"
             
             .circleci/scripts/container_health_check.sh ${APP}-test /live 180
-            echo "✅ Health check passed: ${APP}"
+            echo "Health check passed"
       - run:
-          name: Security: Snyk Container Scan (optional)"
+          name: "Snyk Container Scan"
           command: |
             if [ -z "$SNYK_TOKEN" ]; then exit 0; fi
             npm install -g snyk@latest || true
@@ -212,7 +211,7 @@ jobs:
       - attach_build_artifacts
       - setup_remote_docker
       - run:
-          name: "[Phase 2] Build Docker Image: covabot"
+          name: "[Phase 2] Build Docker Image"
           command: |
             set -e
             APP="covabot"
@@ -231,10 +230,10 @@ jobs:
             [ -z "$IMAGE_CURRENT" ] && IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_BUILD_NUM}"
             
             if docker pull "${IMAGE_CACHE}" 2>/dev/null; then
-              echo "✅ Using cached image: ${IMAGE_CACHE}"
+              echo "Using cached image: ${IMAGE_CACHE}"
               docker tag "${IMAGE_CACHE}" "${IMAGE_CURRENT}"
             else
-              echo "🔨 Building fresh image (cache miss)"
+              echo "Building fresh image (cache miss)"
               docker build -f "${DOCKERFILE}" \
                 -t "${IMAGE_CURRENT}" \
                 -t "${IMAGE_CACHE}" .
@@ -243,7 +242,7 @@ jobs:
             
             docker push "${IMAGE_CURRENT}"
       - run:
-          name: "[Phase 3] Health Check: covabot"
+          name: "[Phase 3] Health Check"
           command: |
             set -e
             APP="covabot"
@@ -251,7 +250,7 @@ jobs:
             [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
             IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}"
             
-            echo "🏥 Starting container and running health checks..."
+            echo "Starting container and running health checks..."
             docker run -d --name ${APP}-test \
               -e COVABOT_TOKEN=test \
               -e DISCORD_TOKEN=test \
@@ -263,9 +262,9 @@ jobs:
               "${IMAGE}"
             
             .circleci/scripts/container_health_check.sh ${APP}-test /live 180
-            echo "✅ Health check passed: ${APP}"
+            echo "Health check passed"
       - run:
-          name: "Security: Snyk Container Scan (optional)"
+          name: "Snyk Container Scan"
           command: |
             if [ -z "$SNYK_TOKEN" ]; then exit 0; fi
             npm install -g snyk@latest || true
@@ -283,7 +282,7 @@ jobs:
       - attach_build_artifacts
       - setup_remote_docker
       - run:
-          name: "[Phase 2] Build Docker Image: djcova"
+          name: "[Phase 2] Build Docker Image"
           command: |
             set -e
             APP="djcova"
@@ -302,10 +301,10 @@ jobs:
             [ -z "$IMAGE_CURRENT" ] && IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_BUILD_NUM}"
             
             if docker pull "${IMAGE_CACHE}" 2>/dev/null; then
-              echo "✅ Using cached image: ${IMAGE_CACHE}"
+              echo "Using cached image: ${IMAGE_CACHE}"
               docker tag "${IMAGE_CACHE}" "${IMAGE_CURRENT}"
             else
-              echo "🔨 Building fresh image (cache miss)"
+              echo "Building fresh image (cache miss)"
               docker build -f "${DOCKERFILE}" \
                 -t "${IMAGE_CURRENT}" \
                 -t "${IMAGE_CACHE}" .
@@ -314,7 +313,7 @@ jobs:
             
             docker push "${IMAGE_CURRENT}"
       - run:
-          name: "[Phase 3] Health Check: djcova"
+          name: "[Phase 3] Health Check"
           command: |
             set -e
             APP="djcova"
@@ -322,7 +321,7 @@ jobs:
             [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
             IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}"
             
-            echo "🏥 Starting container and running health checks..."
+            echo "Starting container and running health checks..."
             docker run -d --name ${APP}-test \
               -e DEBUG_MODE=true \
               -e CI_SMOKE_MODE=true \
@@ -332,9 +331,9 @@ jobs:
               "${IMAGE}"
             
             .circleci/scripts/container_health_check.sh ${APP}-test /live 180
-            echo "✅ Health check passed: ${APP}"
+            echo "Health check passed"
       - run:
-          name: "Security: Snyk Container Scan (optional)"
+          name: "Snyk Container Scan"
           command: |
             if [ -z "$SNYK_TOKEN" ]; then exit 0; fi
             npm install -g snyk@latest || true
@@ -352,7 +351,7 @@ jobs:
       - attach_build_artifacts
       - setup_remote_docker
       - run:
-          name: "[Phase 2] Build Docker Image: bluebot"
+          name: "[Phase 2] Build Docker Image"
           command: |
             set -e
             APP="bluebot"
@@ -371,10 +370,10 @@ jobs:
             [ -z "$IMAGE_CURRENT" ] && IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_BUILD_NUM}"
             
             if docker pull "${IMAGE_CACHE}" 2>/dev/null; then
-              echo "✅ Using cached image: ${IMAGE_CACHE}"
+              echo "Using cached image: ${IMAGE_CACHE}"
               docker tag "${IMAGE_CACHE}" "${IMAGE_CURRENT}"
             else
-              echo "🔨 Building fresh image (cache miss)"
+              echo "Building fresh image (cache miss)"
               docker build -f "${DOCKERFILE}" \
                 -t "${IMAGE_CURRENT}" \
                 -t "${IMAGE_CACHE}" .
@@ -383,7 +382,7 @@ jobs:
             
             docker push "${IMAGE_CURRENT}"
       - run:
-          name: "[Phase 3] Health Check: bluebot"
+          name: "[Phase 3] Health Check"
           command: |
             set -e
             APP="bluebot"
@@ -391,7 +390,7 @@ jobs:
             [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
             IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}"
             
-            echo "🏥 Starting container and running health checks..."
+            echo "Starting container and running health checks..."
             docker run -d --name ${APP}-test \
               -e DISCORD_TOKEN=test \
               -e DEBUG_MODE=true \
@@ -402,9 +401,9 @@ jobs:
               "${IMAGE}"
             
             .circleci/scripts/container_health_check.sh ${APP}-test /live 180
-            echo "✅ Health check passed: ${APP}"
+            echo "Health check passed"
       - run:
-          name: "Security: Snyk Container Scan (optional)"
+          name: "Snyk Container Scan"
           command: |
             if [ -z "$SNYK_TOKEN" ]; then exit 0; fi
             npm install -g snyk@latest || true
@@ -430,7 +429,6 @@ workflows:
           requires: [detect_changes]
 
       # PHASE 2 & 3: CONDITIONAL DOCKER BUILD + HEALTH CHECK
-      # These jobs run only if Phase 1 passes and will respect change detection
       - docker_bunkbot:
           requires: [build_apps, lint_and_format, type_check, unit_tests]
       - docker_covabot:
