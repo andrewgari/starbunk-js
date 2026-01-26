@@ -51,7 +51,7 @@ jobs:
       - setup_npm_cache
       - run:
           name: Shared Package Unit Tests
-          command: npm run test -- src/shared
+          command: npm run test:shared
 
   snyk_code_scan:
     executor: node20
@@ -76,3 +76,4 @@ workflows:
       - type_check
       - shared_tests
       - snyk_code_scan
+
