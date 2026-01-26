@@ -16,6 +16,7 @@
 #   ci:       Changes to our CI configuration files and scripts
 #   chore:    Other changes that don't modify src or test files
 #   revert:   Reverts a previous commit
+#   hotfix:   A critical fix for a production issue
 #
 # Scope:
 #   Optional. The module or file modified (e.g., auth, parser, config)
