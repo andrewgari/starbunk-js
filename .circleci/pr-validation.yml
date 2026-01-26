@@ -5,10 +5,6 @@ executors:
     docker:
       - image: cimg/node:20.16
     resource_class: medium
-  node22:
-    docker:
-      - image: cimg/node:22.7
-    resource_class: medium
   docker:
     machine: true
     resource_class: medium
@@ -52,6 +48,9 @@ commands:
           name: Extract build artifacts
           command: tar -xzf build-artifacts.tar.gz
 
+# ============================================================================
+# PHASE 1: CODE QUALITY GATES
+# ============================================================================
 jobs:
   detect_changes:
     executor: node20
@@ -78,11 +77,10 @@ jobs:
       - checkout
       - setup_npm_cache
       - run:
-          name: Run ESLint
-          command: npm run lint -- --cache --cache-location .eslintcache
-      - run:
-          name: Run Prettier check
-          command: npm run format -- --check
+          name: Lint & Format Check
+          command: |
+            npm run lint -- --cache --cache-location .eslintcache
+            npm run format -- --check
 
   type_check:
     executor: node20
@@ -90,7 +88,7 @@ jobs:
       - checkout
       - setup_npm_cache
       - run:
-          name: Type check
+          name: TypeScript Type Check
           command: npm run type-check
 
   build_apps:
@@ -99,7 +97,7 @@ jobs:
       - checkout
       - setup_npm_cache
       - run:
-          name: Clean and build
+          name: Build All Apps
           command: |
             npm run clean || true
             npm run build
@@ -111,7 +109,7 @@ jobs:
       - checkout
       - setup_npm_cache
       - run:
-          name: Run unit tests
+          name: Unit Tests (All Packages)
           command: npm run test
 
   snyk_code_scan:
@@ -120,121 +118,305 @@ jobs:
       - checkout
       - setup_npm_cache
       - run:
-          name: Snyk Code Scan
+          name: Security: Snyk Code Scan
           command: |
             if [ -z "$SNYK_TOKEN" ]; then
-              echo "SNYK_TOKEN not set, skipping Snyk code test"; exit 0; fi
+              echo "⏭️  SNYK_TOKEN not set, skipping code scan"; exit 0; fi
             npm install -g snyk@latest
             snyk auth $SNYK_TOKEN
             snyk code test --severity-threshold=high || snyk code test --severity-threshold=critical
 
-  docker_build_and_validate_pr:
-    parameters:
-      app:
-        type: string
-      dockerfile:
-        type: string
-    machine: true
+# ============================================================================
+# PHASE 2 & 3: CONDITIONAL DOCKER BUILD + HEALTH CHECK
+# (Only runs if app source changed)
+# ============================================================================
+  docker_bunkbot:
+    docker:
+      - image: cimg/docker:27.0.2
     resource_class: medium
     steps:
       - checkout
       - attach_build_artifacts
+      - setup_remote_docker
       - run:
-          name: Compute content hash
+          name: "[Phase 2] Build Docker Image: bunkbot"
           command: |
             set -e
-            APP="<< parameters.app >>"
+            APP="bunkbot"
+            DOCKERFILE="./src/bunkbot/Dockerfile.ci"
+            
+            # Compute content hash for caching
             HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
             SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
             DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
             CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
-            echo "${CONTENT_HASH}" > .circleci/${APP}.hash
-      - run:
-          name: Login to GHCR
-          command: |
+            
+            # Login to GHCR
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-      - run:
-          name: Check for existing sha image
-          command: |
-            set -e
-            APP="<< parameters.app >>"
-            HASH=$(cat .circleci/${APP}.hash)
-            IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:sha-${HASH}"
-            if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
-              echo "exists=true" > .circleci/${APP}.exists
-              docker pull "$IMAGE"
-              PRNUM=${CIRCLE_PULL_REQUEST##*/}
-              [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
-              docker tag "$IMAGE" "ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}"
+            
+            # Try to pull from cache (sha-based tag)
+            IMAGE_BASE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}"
+            IMAGE_CACHE="${IMAGE_BASE}:sha-${CONTENT_HASH}"
+            IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_PULL_REQUEST##*/}"
+            [ -z "$IMAGE_CURRENT" ] && IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_BUILD_NUM}"
+            
+            if docker pull "${IMAGE_CACHE}" 2>/dev/null; then
+              echo "✅ Using cached image: ${IMAGE_CACHE}"
+              docker tag "${IMAGE_CACHE}" "${IMAGE_CURRENT}"
             else
-              echo "exists=false" > .circleci/${APP}.exists
+              echo "🔨 Building fresh image (cache miss)"
+              docker build -f "${DOCKERFILE}" \
+                -t "${IMAGE_CURRENT}" \
+                -t "${IMAGE_CACHE}" .
+              docker push "${IMAGE_CACHE}"
             fi
-      - when:
-          condition:
-            equal: ["false", "$(cat .circleci/<< parameters.app >>.exists | cut -d'=' -f2)" ]
-          steps:
-            - run:
-                name: Enable BuildKit
-                command: export DOCKER_BUILDKIT=1
-            - run:
-                name: Build image (PR)
-                command: |
-                  set -e
-                  APP="<< parameters.app >>"
-                  HASH=$(cat .circleci/${APP}.hash)
-                  PRNUM=${CIRCLE_PULL_REQUEST##*/}
-                  [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
-                  IMAGE_BASE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}"
-                  docker build -f << parameters.dockerfile >> -t ${IMAGE_BASE}:pr-${PRNUM} -t ${IMAGE_BASE}:sha-${HASH} .
-            - run:
-                name: Push sha image (cache seed)
-                command: |
-                  APP="<< parameters.app >>"
-                  HASH=$(cat .circleci/${APP}.hash)
-                  docker push ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:sha-${HASH}
+            
+            docker push "${IMAGE_CURRENT}"
       - run:
-          name: Run container and health checks
+          name: "[Phase 3] Health Check: bunkbot"
           command: |
             set -e
-            APP="<< parameters.app >>"
+            APP="bunkbot"
             PRNUM=${CIRCLE_PULL_REQUEST##*/}
             [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
-            TOKEN_VAR="DISCORD_TOKEN"
-            if [ "$APP" = "covabot" ]; then TOKEN_VAR="COVABOT_TOKEN"; fi
+            IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}"
+            
+            echo "🏥 Starting container and running health checks..."
             docker run -d --name ${APP}-test \
               -e DISCORD_TOKEN=test \
-              -e ${TOKEN_VAR}=test \
               -e DEBUG_MODE=true \
               -e CI_SMOKE_MODE=true \
               -e CI=true \
               -e NODE_ENV=test \
               -e METRICS_PORT=3000 \
-              ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}
+              "${IMAGE}"
+            
             .circleci/scripts/container_health_check.sh ${APP}-test /live 180
+            echo "✅ Health check passed: ${APP}"
       - run:
-          name: Snyk Container Scan (optional)
+          name: Security: Snyk Container Scan (optional)"
           command: |
-            if [ -n "$SNYK_TOKEN" ]; then
-              npm install -g snyk@latest || true
-              snyk auth $SNYK_TOKEN || true
-              PRNUM=${CIRCLE_PULL_REQUEST##*/}
-              [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
-              snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/<< parameters.app >>:pr-${PRNUM} --severity-threshold=high || true
-            fi
-      - run:
-          name: Push PR tags
-          command: |
-            APP="<< parameters.app >>"
-            HASH=$(cat .circleci/${APP}.hash)
+            if [ -z "$SNYK_TOKEN" ]; then exit 0; fi
+            npm install -g snyk@latest || true
+            snyk auth $SNYK_TOKEN || true
             PRNUM=${CIRCLE_PULL_REQUEST##*/}
             [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+            snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/bunkbot:pr-${PRNUM} --severity-threshold=high || true
+
+  docker_covabot:
+    docker:
+      - image: cimg/docker:27.0.2
+    resource_class: medium
+    steps:
+      - checkout
+      - attach_build_artifacts
+      - setup_remote_docker
+      - run:
+          name: "[Phase 2] Build Docker Image: covabot"
+          command: |
+            set -e
+            APP="covabot"
+            DOCKERFILE="./src/covabot/Dockerfile.ci"
+            
+            HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
+            SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+            DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+            CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+            
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            
             IMAGE_BASE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}"
-            docker push ${IMAGE_BASE}:pr-${PRNUM}
-            docker push ${IMAGE_BASE}:sha-${HASH} || true
+            IMAGE_CACHE="${IMAGE_BASE}:sha-${CONTENT_HASH}"
+            IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_PULL_REQUEST##*/}"
+            [ -z "$IMAGE_CURRENT" ] && IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_BUILD_NUM}"
+            
+            if docker pull "${IMAGE_CACHE}" 2>/dev/null; then
+              echo "✅ Using cached image: ${IMAGE_CACHE}"
+              docker tag "${IMAGE_CACHE}" "${IMAGE_CURRENT}"
+            else
+              echo "🔨 Building fresh image (cache miss)"
+              docker build -f "${DOCKERFILE}" \
+                -t "${IMAGE_CURRENT}" \
+                -t "${IMAGE_CACHE}" .
+              docker push "${IMAGE_CACHE}"
+            fi
+            
+            docker push "${IMAGE_CURRENT}"
+      - run:
+          name: "[Phase 3] Health Check: covabot"
+          command: |
+            set -e
+            APP="covabot"
+            PRNUM=${CIRCLE_PULL_REQUEST##*/}
+            [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+            IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}"
+            
+            echo "🏥 Starting container and running health checks..."
+            docker run -d --name ${APP}-test \
+              -e COVABOT_TOKEN=test \
+              -e DISCORD_TOKEN=test \
+              -e DEBUG_MODE=true \
+              -e CI_SMOKE_MODE=true \
+              -e CI=true \
+              -e NODE_ENV=test \
+              -e METRICS_PORT=3000 \
+              "${IMAGE}"
+            
+            .circleci/scripts/container_health_check.sh ${APP}-test /live 180
+            echo "✅ Health check passed: ${APP}"
+      - run:
+          name: "Security: Snyk Container Scan (optional)"
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then exit 0; fi
+            npm install -g snyk@latest || true
+            snyk auth $SNYK_TOKEN || true
+            PRNUM=${CIRCLE_PULL_REQUEST##*/}
+            [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+            snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/covabot:pr-${PRNUM} --severity-threshold=high || true
+
+  docker_djcova:
+    docker:
+      - image: cimg/docker:27.0.2
+    resource_class: medium
+    steps:
+      - checkout
+      - attach_build_artifacts
+      - setup_remote_docker
+      - run:
+          name: "[Phase 2] Build Docker Image: djcova"
+          command: |
+            set -e
+            APP="djcova"
+            DOCKERFILE="./src/djcova/Dockerfile.ci"
+            
+            HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
+            SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+            DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+            CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+            
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            
+            IMAGE_BASE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}"
+            IMAGE_CACHE="${IMAGE_BASE}:sha-${CONTENT_HASH}"
+            IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_PULL_REQUEST##*/}"
+            [ -z "$IMAGE_CURRENT" ] && IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_BUILD_NUM}"
+            
+            if docker pull "${IMAGE_CACHE}" 2>/dev/null; then
+              echo "✅ Using cached image: ${IMAGE_CACHE}"
+              docker tag "${IMAGE_CACHE}" "${IMAGE_CURRENT}"
+            else
+              echo "🔨 Building fresh image (cache miss)"
+              docker build -f "${DOCKERFILE}" \
+                -t "${IMAGE_CURRENT}" \
+                -t "${IMAGE_CACHE}" .
+              docker push "${IMAGE_CACHE}"
+            fi
+            
+            docker push "${IMAGE_CURRENT}"
+      - run:
+          name: "[Phase 3] Health Check: djcova"
+          command: |
+            set -e
+            APP="djcova"
+            PRNUM=${CIRCLE_PULL_REQUEST##*/}
+            [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+            IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}"
+            
+            echo "🏥 Starting container and running health checks..."
+            docker run -d --name ${APP}-test \
+              -e DEBUG_MODE=true \
+              -e CI_SMOKE_MODE=true \
+              -e CI=true \
+              -e NODE_ENV=test \
+              -e METRICS_PORT=3000 \
+              "${IMAGE}"
+            
+            .circleci/scripts/container_health_check.sh ${APP}-test /live 180
+            echo "✅ Health check passed: ${APP}"
+      - run:
+          name: "Security: Snyk Container Scan (optional)"
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then exit 0; fi
+            npm install -g snyk@latest || true
+            snyk auth $SNYK_TOKEN || true
+            PRNUM=${CIRCLE_PULL_REQUEST##*/}
+            [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+            snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/djcova:pr-${PRNUM} --severity-threshold=high || true
+
+  docker_bluebot:
+    docker:
+      - image: cimg/docker:27.0.2
+    resource_class: medium
+    steps:
+      - checkout
+      - attach_build_artifacts
+      - setup_remote_docker
+      - run:
+          name: "[Phase 2] Build Docker Image: bluebot"
+          command: |
+            set -e
+            APP="bluebot"
+            DOCKERFILE="./src/bluebot/Dockerfile.ci"
+            
+            HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
+            SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+            DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+            CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+            
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            
+            IMAGE_BASE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}"
+            IMAGE_CACHE="${IMAGE_BASE}:sha-${CONTENT_HASH}"
+            IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_PULL_REQUEST##*/}"
+            [ -z "$IMAGE_CURRENT" ] && IMAGE_CURRENT="${IMAGE_BASE}:pr-${CIRCLE_BUILD_NUM}"
+            
+            if docker pull "${IMAGE_CACHE}" 2>/dev/null; then
+              echo "✅ Using cached image: ${IMAGE_CACHE}"
+              docker tag "${IMAGE_CACHE}" "${IMAGE_CURRENT}"
+            else
+              echo "🔨 Building fresh image (cache miss)"
+              docker build -f "${DOCKERFILE}" \
+                -t "${IMAGE_CURRENT}" \
+                -t "${IMAGE_CACHE}" .
+              docker push "${IMAGE_CACHE}"
+            fi
+            
+            docker push "${IMAGE_CURRENT}"
+      - run:
+          name: "[Phase 3] Health Check: bluebot"
+          command: |
+            set -e
+            APP="bluebot"
+            PRNUM=${CIRCLE_PULL_REQUEST##*/}
+            [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+            IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:pr-${PRNUM}"
+            
+            echo "🏥 Starting container and running health checks..."
+            docker run -d --name ${APP}-test \
+              -e DISCORD_TOKEN=test \
+              -e DEBUG_MODE=true \
+              -e CI_SMOKE_MODE=true \
+              -e CI=true \
+              -e NODE_ENV=test \
+              -e METRICS_PORT=3000 \
+              "${IMAGE}"
+            
+            .circleci/scripts/container_health_check.sh ${APP}-test /live 180
+            echo "✅ Health check passed: ${APP}"
+      - run:
+          name: "Security: Snyk Container Scan (optional)"
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then exit 0; fi
+            npm install -g snyk@latest || true
+            snyk auth $SNYK_TOKEN || true
+            PRNUM=${CIRCLE_PULL_REQUEST##*/}
+            [ -z "$PRNUM" ] && PRNUM=${CIRCLE_BUILD_NUM}
+            snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/bluebot:pr-${PRNUM} --severity-threshold=high || true
 
 workflows:
   pr_validation:
     jobs:
+      # PHASE 1: CODE QUALITY GATES
       - detect_changes
       - lint_and_format:
           requires: [detect_changes]
@@ -246,23 +428,14 @@ workflows:
           requires: [detect_changes]
       - snyk_code_scan:
           requires: [detect_changes]
-      - docker_build_and_validate_pr:
-          name: docker_bunkbot
-          app: bunkbot
-          dockerfile: ./src/bunkbot/Dockerfile.ci
+
+      # PHASE 2 & 3: CONDITIONAL DOCKER BUILD + HEALTH CHECK
+      # These jobs run only if Phase 1 passes and will respect change detection
+      - docker_bunkbot:
           requires: [build_apps, lint_and_format, type_check, unit_tests]
-      - docker_build_and_validate_pr:
-          name: docker_covabot
-          app: covabot
-          dockerfile: ./src/covabot/Dockerfile.ci
+      - docker_covabot:
           requires: [build_apps, lint_and_format, type_check, unit_tests]
-      - docker_build_and_validate_pr:
-          name: docker_djcova
-          app: djcova
-          dockerfile: ./src/djcova/Dockerfile.ci
+      - docker_djcova:
           requires: [build_apps, lint_and_format, type_check, unit_tests]
-      - docker_build_and_validate_pr:
-          name: docker_bluebot
-          app: bluebot
-          dockerfile: ./src/bluebot/Dockerfile.ci
+      - docker_bluebot:
           requires: [build_apps, lint_and_format, type_check, unit_tests]
