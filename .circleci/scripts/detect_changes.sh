@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Install jq if not available
-if ! command -v jq &> /dev/null; then
-  echo "Installing jq..."
-  apt-get update && apt-get install -y jq || npm install -g jq-shell || exit 0
-fi
-
 # Determine base commit for diff
 BASE=${BASE_REF:-origin/main}
 
@@ -49,21 +43,34 @@ for app in bunkbot covabot djcova bluebot; do
   fi
 done
 
-jq -n \
-  --arg source_changed "$source_changed" \
-  --arg workflow_changed "$workflow_changed" \
-  --arg container_config_changed "$container_config_changed" \
-  --arg shared_changed "$shared_changed" \
-  --arg bunkbot_changed "$bunkbot_changed" \
-  --arg covabot_changed "$covabot_changed" \
-  --arg djcova_changed "$djcova_changed" \
-  --arg bluebot_changed "$bluebot_changed" \
-  --arg any_app_changed "$any_app_changed" \
-  --arg changed_apps "${changed_apps[*]}" \
-  '{source_changed: $source_changed, workflow_changed: $workflow_changed, container_config_changed: $container_config_changed, shared_changed: $shared_changed, bunkbot_changed: $bunkbot_changed, covabot_changed: $covabot_changed, djcova_changed: $djcova_changed, bluebot_changed: $bluebot_changed, any_app_changed: $any_app_changed, changed_apps: $changed_apps}' \
-  > .circleci/diff.json
+# Generate JSON output without jq using pure bash
+{
+  printf '{\n'
+  printf '  "source_changed": %s,\n' "$source_changed"
+  printf '  "workflow_changed": %s,\n' "$workflow_changed"
+  printf '  "container_config_changed": %s,\n' "$container_config_changed"
+  printf '  "shared_changed": %s,\n' "$shared_changed"
+  printf '  "bunkbot_changed": %s,\n' "$bunkbot_changed"
+  printf '  "covabot_changed": %s,\n' "$covabot_changed"
+  printf '  "djcova_changed": %s,\n' "$djcova_changed"
+  printf '  "bluebot_changed": %s,\n' "$bluebot_changed"
+  printf '  "any_app_changed": %s,\n' "$any_app_changed"
+  printf '  "changed_apps": ['
+  if [[ ${#changed_apps[@]} -gt 0 ]]; then
+    printf '"%s"' "${changed_apps[0]}"
+    for i in "${!changed_apps[@]}"; do
+      if [[ $i -gt 0 ]]; then
+        printf ', "%s"' "${changed_apps[$i]}"
+      fi
+    done
+  fi
+  printf ']\n'
+  printf '}\n'
+} > .circleci/diff.json
 
+echo "Change detection completed. Results:"
 cat .circleci/diff.json
+echo "Changed files list:"
+cat .circleci/changed_files.txt
 
-# Always exit successfully
 exit 0
