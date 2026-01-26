@@ -37,12 +37,14 @@ jobs:
             echo "Config generated successfully"
       - continuation/continue:
           configuration_path: .circleci/generated_config.yml
-          parameters: {}
 
 workflows:
+  version: 2
   change-detection:
     jobs:
       - detect_and_continue:
           filters:
+            branches:
+              only: /.*/
             tags:
               only: /.*/
