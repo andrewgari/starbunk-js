@@ -37,6 +37,8 @@ jobs:
       - run:
           name: Validate generated config
           command: |
+            # Install PyYAML for validation
+            pip install --quiet PyYAML
             python3 -c "import yaml; yaml.safe_load(open('.circleci/generated_config.yml'))"
             echo "✓ Generated config is valid YAML"
       - continuation/continue:
