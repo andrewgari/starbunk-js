@@ -28,8 +28,8 @@ jobs:
             if [ -n "${CIRCLE_TAG:-}" ]; then
               echo "Detected git tag: $CIRCLE_TAG - loading deployment workflow"
               cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
-            elif [ "${CIRCLE_BRANCH:-}" = "main" ]; then
-              echo "On main branch - loading deployment workflow"
+            elif [ "${CIRCLE_BRANCH:-}" = "main" ] || [[ "${CIRCLE_BRANCH:-}" == fix/circleci-main-deployment ]]; then
+              echo "On main branch or test branch - loading deployment workflow"
               cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
             else
               echo "On feature branch/PR - loading PR validation workflows"

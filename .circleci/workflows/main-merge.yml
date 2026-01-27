@@ -201,28 +201,43 @@ jobs:
 
             echo "Building image with content hash: $CONTENT_HASH"
 
+            # Determine tag based on branch
+            if [ "${CIRCLE_BRANCH:-}" = "main" ]; then
+              DEPLOY_TAG="main"
+            else
+              DEPLOY_TAG="dev"
+            fi
+
             docker build \
               --build-arg BUILDKIT_INLINE_CACHE=1 \
               --cache-from ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null || true \
               -f << parameters.dockerfile >> \
               -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7} \
               -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest \
-              -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:main \
+              -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${DEPLOY_TAG} \
               .
       - run:
           name: Compare Image Hash and Conditionally Push
           command: |
+            # Determine tag based on branch
+            if [ "${CIRCLE_BRANCH:-}" = "main" ]; then
+              DEPLOY_TAG="main"
+            else
+              DEPLOY_TAG="dev"
+            fi
+
             # Get the digest of the newly built image
             NEW_DIGEST=$(docker inspect ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest | grep -o '"Id":"[^"]*"' | head -1 | cut -d'"' -f4)
             LATEST_DIGEST=$(cat /tmp/latest_digest.txt)
 
             echo "Previous latest digest: $LATEST_DIGEST"
             echo "New image digest: $NEW_DIGEST"
+            echo "Deploy tag: $DEPLOY_TAG"
 
             if [ "$NEW_DIGEST" != "$LATEST_DIGEST" ]; then
               echo "✅ Image has changed - pushing to GHCR"
               docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest
-              docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:main
+              docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${DEPLOY_TAG}
               docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7}
             else
               echo "⊘ Image unchanged - skipping push"
@@ -244,11 +259,18 @@ jobs:
       - run:
           name: Pull Latest Images
           command: |
-            echo "Pulling latest images from GHCR..."
-            docker pull ghcr.io/andrewgari/starbunk-bunkbot:main
-            docker pull ghcr.io/andrewgari/starbunk-bluebot:main
-            docker pull ghcr.io/andrewgari/starbunk-covabot:main
-            docker pull ghcr.io/andrewgari/starbunk-djcova:main
+            # Determine tag based on branch
+            if [ "${CIRCLE_BRANCH:-}" = "main" ]; then
+              DEPLOY_TAG="main"
+            else
+              DEPLOY_TAG="dev"
+            fi
+
+            echo "Pulling latest images from GHCR (tag: $DEPLOY_TAG)..."
+            docker pull ghcr.io/andrewgari/starbunk-bunkbot:${DEPLOY_TAG}
+            docker pull ghcr.io/andrewgari/starbunk-bluebot:${DEPLOY_TAG}
+            docker pull ghcr.io/andrewgari/starbunk-covabot:${DEPLOY_TAG}
+            docker pull ghcr.io/andrewgari/starbunk-djcova:${DEPLOY_TAG}
       - run:
           name: Deploy with Docker Compose
           command: |
