@@ -1,71 +1,7 @@
 version: 2.1
 
-executors:
-  node20:
-    docker:
-      - image: cimg/node:22.14
-    resource_class: medium
-  docker:
-    docker:
-      - image: cimg/base:stable
-    resource_class: medium
-
-commands:
-  setup_npm_cache:
-    steps:
-      - restore_cache:
-          keys:
-            - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
-            - v1-npm-{{ arch }}-{{ .Branch }}-
-            - v1-npm-{{ arch }}-
-      - run:
-          name: Show Node and npm versions
-          command: |
-            node -v
-            npm -v
-      - run:
-          name: Install dependencies
-          command: npm ci
-      - save_cache:
-          key: v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
-          paths:
-            - ~/.npm
-            - node_modules
-  persist_build_artifacts:
-    steps:
-      - run:
-          name: Compress build artifacts
-          command: |
-            # Build list of files to tar
-            FILES_TO_TAR="package.json package-lock.json"
-            for app in shared bunkbot bluebot covabot djcova; do
-              if [ -d "src/$app/dist" ]; then
-                FILES_TO_TAR="$FILES_TO_TAR src/$app/dist"
-              fi
-            done
-            tar -czf build-artifacts.tar.gz $FILES_TO_TAR
-            echo "Tarred files: $FILES_TO_TAR"
-      - persist_to_workspace:
-          root: .
-          paths:
-            - build-artifacts.tar.gz
-  attach_build_artifacts:
-    steps:
-      - attach_workspace:
-          at: .
-      - run:
-          name: Extract build artifacts
-          command: tar -xzf build-artifacts.tar.gz
-  setup_docker_cli:
-    steps:
-      - run:
-          name: Ensure Docker CLI is available
-          command: |
-            if ! command -v docker >/dev/null 2>&1; then
-              sudo apt-get update
-              sudo apt-get install -y --no-install-recommends docker.io
-            fi
-            docker --version
+# App-specific jobs for bluebot
+# Shared executors and commands are defined in shared-config.yml
 
 jobs:
   bluebot_build:
