@@ -51,6 +51,18 @@ export class TraceService {
 	}
 
 	/**
+	 * Start a generic span with custom name and attributes
+	 * This is a flexible method for creating spans in any context
+	 */
+	startSpan(name: string, attributes?: Record<string, string | number | boolean>): Span | null {
+		if (!this.enabled) return null;
+
+		return this.tracer.startSpan(name, {
+			attributes: attributes || {},
+		});
+	}
+
+	/**
 	 * Start a new root span for message processing
 	 */
 	startMessageProcessing(messageId: string, guildId: string, channelId: string, authorId: string): Span | null {

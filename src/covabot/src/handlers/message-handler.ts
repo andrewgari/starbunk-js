@@ -138,7 +138,7 @@ export class MessageHandler {
       await this.sendResponse(profile, message, responseContent);
 
       // Step 4: Record in memory
-      this.memoryService.storeConversation(
+      await this.memoryService.storeConversation(
         profile.id,
         message.channelId,
         message.author.id,
@@ -153,7 +153,7 @@ export class MessageHandler {
         windowMinutes: profile.socialBattery.windowMinutes,
         cooldownSeconds: profile.socialBattery.cooldownSeconds,
       };
-      this.socialBatteryService.recordMessage(
+      await this.socialBatteryService.recordMessage(
         profile.id,
         message.channelId,
         batteryConfig,
@@ -184,7 +184,7 @@ export class MessageHandler {
     message: Message,
   ): Promise<{ content: string; shouldIgnore: boolean }> {
     // Build context
-    const context = this.buildLlmContext(profile, message);
+    const context = await this.buildLlmContext(profile, message);
 
     // Generate response
     const response = await this.llmService.generateResponse(
@@ -203,9 +203,9 @@ export class MessageHandler {
   /**
    * Build full LLM context from memory
    */
-  private buildLlmContext(profile: CovaProfile, message: Message): LlmContext {
+  private async buildLlmContext(profile: CovaProfile, message: Message): Promise<LlmContext> {
     // Get conversation history
-    const channelContext = this.memoryService.getChannelContext(
+    const channelContext = await this.memoryService.getChannelContext(
       profile.id,
       message.channelId,
       8, // Last 8 messages
@@ -216,7 +216,7 @@ export class MessageHandler {
     );
 
     // Get user facts
-    const userFacts = this.memoryService.getUserFacts(
+    const userFacts = await this.memoryService.getUserFacts(
       profile.id,
       message.author.id,
     );

@@ -6,82 +6,75 @@
  */
 
 import Database from 'better-sqlite3';
+import { BaseRepository } from '@starbunk/shared';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { KeywordInterestRow } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('InterestRepository');
 
-export class InterestRepository {
-  private db: Database.Database;
-
+export class InterestRepository extends BaseRepository<KeywordInterestRow> {
   constructor(db: Database.Database) {
-    this.db = db;
+    super(db);
   }
 
   /**
    * Get all interests for a profile
    */
-  getInterests(profileId: string): KeywordInterestRow[] {
-    const stmt = this.db.prepare(`
-      SELECT profile_id, keyword, category, weight
-      FROM keyword_interests
-      WHERE profile_id = ?
-      ORDER BY weight DESC
-    `);
-
-    return stmt.all(profileId) as KeywordInterestRow[];
+  async getInterests(profileId: string): Promise<KeywordInterestRow[]> {
+    return await this.query<KeywordInterestRow>(
+      `SELECT profile_id, keyword, category, weight
+       FROM keyword_interests
+       WHERE profile_id = ?
+       ORDER BY weight DESC`,
+      [profileId],
+    );
   }
 
   /**
    * Upsert (insert or update) an interest
    */
-  upsertInterest(
+  async upsertInterest(
     profileId: string,
     keyword: string,
     category: string | null = null,
     weight: number = 1.0,
-  ): void {
-    // Validate weight is a finite number before clamping
-    if (!Number.isFinite(weight)) {
-      throw new Error('Invalid weight parameter: must be a finite number');
-    }
+  ): Promise<void> {
+    await this.execute(
+      `INSERT INTO keyword_interests (profile_id, keyword, category, weight)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(profile_id, keyword)
+       DO UPDATE SET weight = excluded.weight, category = excluded.category`,
+      [profileId, keyword.toLowerCase().trim(), category, weight],
+    );
 
-    // Clamp weight to reasonable range (0.1 to 2.0)
-    const validWeight = Math.max(0.1, Math.min(2.0, weight));
-
-    const stmt = this.db.prepare(`
-      INSERT INTO keyword_interests (profile_id, keyword, category, weight)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(profile_id, keyword)
-      DO UPDATE SET weight = excluded.weight, category = excluded.category
-    `);
-
-    stmt.run(profileId, keyword.toLowerCase().trim(), category, validWeight);
-
-    logger.withMetadata({
-      profile_id: profileId,
-      keyword,
-      weight: validWeight,
-    }).debug('Interest upserted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        weight,
+      })
+      .debug('Interest upserted');
   }
 
   /**
    * Delete a specific interest
    */
-  deleteInterest(profileId: string, keyword: string): boolean {
-    const stmt = this.db.prepare(`
-      DELETE FROM keyword_interests
-      WHERE profile_id = ? AND keyword = ?
-    `);
+  async deleteInterest(profileId: string, keyword: string): Promise<boolean> {
+    const changes = await this.execute(
+      `DELETE FROM keyword_interests
+       WHERE profile_id = ? AND keyword = ?`,
+      [profileId, keyword.toLowerCase().trim()],
+    );
 
-    const result = stmt.run(profileId, keyword.toLowerCase().trim());
-    const deleted = result.changes > 0;
+    const deleted = changes > 0;
 
     if (deleted) {
-      logger.withMetadata({
-        profile_id: profileId,
-        keyword,
-      }).debug('Interest deleted');
+      logger
+        .withMetadata({
+          profile_id: profileId,
+          keyword,
+        })
+        .debug('Interest deleted');
     }
 
     return deleted;
@@ -90,75 +83,69 @@ export class InterestRepository {
   /**
    * Adjust interest weight by a delta amount
    */
-  adjustWeight(profileId: string, keyword: string, delta: number): void {
-    // Validate delta is a finite number
-    if (!Number.isFinite(delta)) {
-      throw new Error('Invalid delta parameter: must be a finite number');
-    }
+  async adjustWeight(profileId: string, keyword: string, delta: number): Promise<void> {
+    await this.execute(
+      `UPDATE keyword_interests
+       SET weight = MAX(0.1, MIN(2.0, weight + ?))
+       WHERE profile_id = ? AND keyword = ?`,
+      [delta, profileId, keyword.toLowerCase().trim()],
+    );
 
-    const stmt = this.db.prepare(`
-      UPDATE keyword_interests
-      SET weight = MAX(0.1, MIN(2.0, weight + ?))
-      WHERE profile_id = ? AND keyword = ?
-    `);
-
-    stmt.run(delta, profileId, keyword.toLowerCase().trim());
-
-    logger.withMetadata({
-      profile_id: profileId,
-      keyword,
-      delta,
-    }).debug('Interest weight adjusted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        delta,
+      })
+      .debug('Interest weight adjusted');
   }
 
   /**
    * Clear all interests for a profile
    */
-  clearProfileInterests(profileId: string): number {
-    const stmt = this.db.prepare(`
-      DELETE FROM keyword_interests
-      WHERE profile_id = ?
-    `);
+  async clearProfileInterests(profileId: string): Promise<number> {
+    const changes = await this.execute(
+      `DELETE FROM keyword_interests
+       WHERE profile_id = ?`,
+      [profileId],
+    );
 
-    const result = stmt.run(profileId);
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        deleted_count: changes,
+      })
+      .info('Profile interests cleared');
 
-    logger.withMetadata({
-      profile_id: profileId,
-      deleted_count: result.changes,
-    }).info('Profile interests cleared');
-
-    return result.changes;
+    return changes;
   }
 
   /**
    * Initialize interests in batch (for loading from profile)
    */
-  initializeFromInterests(profileId: string, interests: string[]): void {
+  async initializeFromInterests(profileId: string, interests: string[]): Promise<void> {
     // Clear existing interests
-    this.clearProfileInterests(profileId);
+    await this.clearProfileInterests(profileId);
 
-    const insertStmt = this.db.prepare(`
-      INSERT INTO keyword_interests (profile_id, keyword, category, weight)
-      VALUES (?, ?, ?, ?)
-    `);
+    // Insert new interests
+    for (const interest of interests) {
+      // Parse interest string - may include category prefix like "tech:typescript"
+      const [category, keyword] = interest.includes(':')
+        ? interest.split(':', 2)
+        : [null, interest];
 
-    const insertMany = this.db.transaction((interestList: string[]) => {
-      for (const interest of interestList) {
-        // Parse interest string - may include category prefix like "tech:typescript"
-        const [category, keyword] = interest.includes(':')
-          ? interest.split(':', 2)
-          : [null, interest];
+      await this.execute(
+        `INSERT INTO keyword_interests (profile_id, keyword, category, weight)
+         VALUES (?, ?, ?, ?)`,
+        [profileId, keyword.toLowerCase().trim(), category || null, 1.0],
+      );
+    }
 
-        insertStmt.run(profileId, keyword.toLowerCase().trim(), category || null, 1.0);
-      }
-    });
-
-    insertMany(interests);
-
-    logger.withMetadata({
-      profile_id: profileId,
-      keywords_inserted: interests.length,
-    }).info('Profile interests initialized');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keywords_inserted: interests.length,
+      })
+      .info('Profile interests initialized');
   }
 }
-

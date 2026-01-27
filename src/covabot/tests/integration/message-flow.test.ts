@@ -4,7 +4,10 @@ import { Message, User, Client, Guild, GuildMember } from 'discord.js';
 import { MemoryService } from '../../src/services/memory-service';
 import { InterestService } from '../../src/services/interest-service';
 import { SocialBatteryService } from '../../src/services/social-battery-service';
-import { ResponseDecisionService, DecisionContext } from '../../src/services/response-decision-service';
+import {
+  ResponseDecisionService,
+  DecisionContext,
+} from '../../src/services/response-decision-service';
 import { PersonalityService } from '../../src/services/personality-service';
 import { ConversationRepository } from '../../src/repositories/conversation-repository';
 import { UserFactRepository } from '../../src/repositories/user-fact-repository';
@@ -13,16 +16,18 @@ import { SocialBatteryRepository } from '../../src/repositories/social-battery-r
 import { CovaProfile } from '../../src/models/memory-types';
 
 // Mock Discord objects
-function createMockMessage(overrides: Partial<{
-  id: string;
-  content: string;
-  authorId: string;
-  authorUsername: string;
-  authorBot: boolean;
-  channelId: string;
-  guildId: string;
-  mentions: string[];
-}>): Message {
+function createMockMessage(
+  overrides: Partial<{
+    id: string;
+    content: string;
+    authorId: string;
+    authorUsername: string;
+    authorBot: boolean;
+    channelId: string;
+    guildId: string;
+    mentions: string[];
+  }>,
+): Message {
   const defaults = {
     id: 'msg-123',
     content: 'Hello world',
@@ -94,10 +99,7 @@ describe('Message Flow Integration', () => {
       {
         name: 'tech-talk',
         conditions: {
-          any_of: [
-            { contains_word: 'typescript' },
-            { contains_word: 'react' },
-          ],
+          any_of: [{ contains_word: 'typescript' }, { contains_word: 'react' }],
         },
         use_llm: true,
         response_chance: 0.5,
@@ -332,7 +334,7 @@ describe('Message Flow Integration', () => {
 
       // Exhaust the social battery
       for (let i = 0; i < 5; i++) {
-        socialBatteryService.recordMessage(
+        await socialBatteryService.recordMessage(
           mockProfile.id,
           message.channelId,
           mockProfile.socialBattery,
@@ -350,9 +352,9 @@ describe('Message Flow Integration', () => {
   });
 
   describe('Memory Integration', () => {
-    it('should store and retrieve conversation context', () => {
+    it('should store and retrieve conversation context', async () => {
       // Simulate a conversation
-      memoryService.storeConversation(
+      await memoryService.storeConversation(
         mockProfile.id,
         'channel-1',
         'user-1',
@@ -360,7 +362,7 @@ describe('Message Flow Integration', () => {
         'Hello bot!',
         'Hello Alice!',
       );
-      memoryService.storeConversation(
+      await memoryService.storeConversation(
         mockProfile.id,
         'channel-1',
         'user-2',
@@ -369,7 +371,7 @@ describe('Message Flow Integration', () => {
         null,
       );
 
-      const context = memoryService.getChannelContext(mockProfile.id, 'channel-1', 10);
+      const context = await memoryService.getChannelContext(mockProfile.id, 'channel-1', 10);
 
       expect(context.messages).toHaveLength(2);
       // Find Alice's message
@@ -378,8 +380,8 @@ describe('Message Flow Integration', () => {
       expect(aliceMsg?.botResponse).toBe('Hello Alice!');
     });
 
-    it('should store and format user facts', () => {
-      memoryService.storeUserFact(
+    it('should store and format user facts', async () => {
+      await memoryService.storeUserFact(
         mockProfile.id,
         'user-1',
         'interest',
@@ -387,7 +389,7 @@ describe('Message Flow Integration', () => {
         'TypeScript expert',
         0.9,
       );
-      memoryService.storeUserFact(
+      await memoryService.storeUserFact(
         mockProfile.id,
         'user-1',
         'preference',
@@ -396,7 +398,7 @@ describe('Message Flow Integration', () => {
         0.8,
       );
 
-      const facts = memoryService.getUserFacts(mockProfile.id, 'user-1');
+      const facts = await memoryService.getUserFacts(mockProfile.id, 'user-1');
       const formatted = memoryService.formatFactsForLlm(facts, 'Alice');
 
       expect(facts).toHaveLength(2);
@@ -453,15 +455,19 @@ describe('Message Flow Integration', () => {
       expect(decision.shouldRespond).toBe(true);
 
       // 3. Build LLM context
-      const channelContext = memoryService.getChannelContext(mockProfile.id, message.channelId, 8);
-      const userFacts = memoryService.getUserFacts(mockProfile.id, message.author.id);
+      const channelContext = await memoryService.getChannelContext(
+        mockProfile.id,
+        message.channelId,
+        8,
+      );
+      const userFacts = await memoryService.getUserFacts(mockProfile.id, message.author.id);
       const traitModifiers = personalityService.getTraitModifiersForLlm(mockProfile.id);
 
       // 4. Simulate response (LLM would generate this)
       const botResponse = 'sure, what do you need help with?';
 
       // 5. Store conversation
-      memoryService.storeConversation(
+      await memoryService.storeConversation(
         mockProfile.id,
         message.channelId,
         message.author.id,
@@ -471,7 +477,7 @@ describe('Message Flow Integration', () => {
       );
 
       // 6. Record social battery
-      socialBatteryService.recordMessage(
+      await socialBatteryService.recordMessage(
         mockProfile.id,
         message.channelId,
         mockProfile.socialBattery,
@@ -481,11 +487,15 @@ describe('Message Flow Integration', () => {
       personalityService.analyzeForEvolution(mockProfile.id, message.content, botResponse);
 
       // 8. Verify everything was recorded
-      const finalContext = memoryService.getChannelContext(mockProfile.id, message.channelId, 10);
+      const finalContext = await memoryService.getChannelContext(
+        mockProfile.id,
+        message.channelId,
+        10,
+      );
       expect(finalContext.messages).toHaveLength(1);
       expect(finalContext.messages[0].botResponse).toBe(botResponse);
 
-      const batteryState = socialBatteryService.getState(mockProfile.id, message.channelId);
+      const batteryState = await socialBatteryService.getState(mockProfile.id, message.channelId);
       expect(batteryState?.message_count).toBe(1);
     });
   });

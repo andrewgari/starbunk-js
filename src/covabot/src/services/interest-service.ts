@@ -26,19 +26,19 @@ export class InterestService {
       interests_count: profile.personality.interests.length,
     }).info('Initializing interests from profile');
 
-    this.interestRepo.initializeFromInterests(profile.id, profile.personality.interests);
+    await this.interestRepo.initializeFromInterests(profile.id, profile.personality.interests);
   }
 
   /**
    * Add a new keyword interest
    */
-  addInterest(
+  async addInterest(
     profileId: string,
     keyword: string,
     category: string | null = null,
     weight: number = 1.0,
-  ): void {
-    this.interestRepo.upsertInterest(profileId, keyword, category, weight);
+  ): Promise<void> {
+    await this.interestRepo.upsertInterest(profileId, keyword, category, weight);
 
     logger.withMetadata({
       profile_id: profileId,
@@ -50,15 +50,15 @@ export class InterestService {
   /**
    * Remove a keyword interest
    */
-  removeInterest(profileId: string, keyword: string): boolean {
-    return this.interestRepo.deleteInterest(profileId, keyword);
+  async removeInterest(profileId: string, keyword: string): Promise<boolean> {
+    return await this.interestRepo.deleteInterest(profileId, keyword);
   }
 
   /**
    * Get all interests for a profile
    */
-  getInterests(profileId: string): KeywordInterestRow[] {
-    return this.interestRepo.getInterests(profileId);
+  async getInterests(profileId: string): Promise<KeywordInterestRow[]> {
+    return await this.interestRepo.getInterests(profileId);
   }
 
   /**
@@ -66,11 +66,11 @@ export class InterestService {
    *
    * Uses keyword matching with word boundaries and stemming-lite
    */
-  calculateInterestScore(profileId: string, messageContent: string): {
+  async calculateInterestScore(profileId: string, messageContent: string): Promise<{
     score: number;
     matches: InterestMatch[];
-  } {
-    const interests = this.getInterests(profileId);
+  }> {
+    const interests = await this.getInterests(profileId);
 
     if (interests.length === 0) {
       return { score: 0, matches: [] };
@@ -116,16 +116,16 @@ export class InterestService {
   /**
    * Check if a message matches any interest keywords above threshold
    */
-  isInterested(
+  async isInterested(
     profileId: string,
     messageContent: string,
     threshold: number = 0.3,
-  ): {
+  ): Promise<{
     interested: boolean;
     score: number;
     topMatch: InterestMatch | null;
-  } {
-    const { score, matches } = this.calculateInterestScore(profileId, messageContent);
+  }> {
+    const { score, matches } = await this.calculateInterestScore(profileId, messageContent);
 
     return {
       interested: score >= threshold,
@@ -137,12 +137,12 @@ export class InterestService {
   /**
    * Update interest weight based on engagement
    */
-  adjustInterestWeight(
+  async adjustInterestWeight(
     profileId: string,
     keyword: string,
     adjustment: number,
-  ): void {
-    this.interestRepo.adjustWeight(profileId, keyword, adjustment);
+  ): Promise<void> {
+    await this.interestRepo.adjustWeight(profileId, keyword, adjustment);
 
     logger.withMetadata({
       profile_id: profileId,
