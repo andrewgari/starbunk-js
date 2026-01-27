@@ -36,9 +36,15 @@ commands:
       - run:
           name: Compress build artifacts
           command: |
-            tar -czf build-artifacts.tar.gz \
-              package.json \
-              package-lock.json
+            # Build list of files to tar
+            FILES_TO_TAR="package.json package-lock.json"
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ -d "src/$app/dist" ]; then
+                FILES_TO_TAR="$FILES_TO_TAR src/$app/dist"
+              fi
+            done
+            tar -czf build-artifacts.tar.gz $FILES_TO_TAR
+            echo "Tarred files: $FILES_TO_TAR"
       - persist_to_workspace:
           root: .
           paths:
@@ -89,6 +95,25 @@ jobs:
     steps:
       - checkout
       - attach_build_artifacts
+      - run:
+          name: Rebuild artifacts if missing
+          command: |
+            MISSING=false
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ ! -d "src/$app/dist" ]; then
+                MISSING=true
+                echo "⚠ Missing src/$app/dist"
+              fi
+            done
+
+            if [ "$MISSING" = true ]; then
+              echo "Rebuilding missing artifacts..."
+              npm ci
+              npm run build
+              echo "Rebuild complete"
+            else
+              echo "All artifacts present"
+            fi
       - setup_docker_cli
       - setup_remote_docker
       - run:

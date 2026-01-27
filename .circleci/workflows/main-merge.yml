@@ -155,6 +155,25 @@ jobs:
                 echo "✗ src/$app/dist NOT FOUND after extraction"
               fi
             done
+      - run:
+          name: Rebuild artifacts if missing
+          command: |
+            MISSING=false
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ ! -d "src/$app/dist" ]; then
+                MISSING=true
+                echo "⚠ Missing src/$app/dist"
+              fi
+            done
+            
+            if [ "$MISSING" = true ]; then
+              echo "Rebuilding missing artifacts..."
+              npm ci
+              npm run build
+              echo "Rebuild complete"
+            else
+              echo "All artifacts present"
+            fi
       - setup_docker_cli
       - setup_remote_docker
       - run:
