@@ -84,6 +84,9 @@ jobs:
       - checkout
       - setup_npm_cache
       - run:
+          name: Build shared package
+          command: npm run build:shared
+      - run:
           name: Rebuild native dependencies
           command: npm rebuild better-sqlite3
       - run:
