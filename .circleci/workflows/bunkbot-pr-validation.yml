@@ -88,7 +88,7 @@ jobs:
           command: npm run test:bunkbot
 
   bunkbot_docker_build:
-    executor: docker
+    executor: node20
     environment:
       APP: bunkbot
       DOCKERFILE: "./src/bunkbot/Dockerfile.ci"

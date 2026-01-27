@@ -88,7 +88,7 @@ jobs:
           command: npm run test:bluebot
 
   bluebot_docker_build:
-    executor: docker
+    executor: node20
     environment:
       APP: bluebot
       DOCKERFILE: "./src/bluebot/Dockerfile.ci"

@@ -132,7 +132,7 @@ jobs:
           command: npm run test:full
 
   publish_image:
-    executor: docker
+    executor: node20
     parameters:
       app_name:
         type: string
@@ -165,7 +165,7 @@ jobs:
                 echo "⚠ Missing src/$app/dist"
               fi
             done
-            
+
             if [ "$MISSING" = true ]; then
               echo "Rebuilding missing artifacts..."
               npm ci
