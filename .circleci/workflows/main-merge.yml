@@ -189,9 +189,19 @@ jobs:
       - run:
           name: Check Current Latest Image
           command: |
-            LATEST_DIGEST=$(docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null | tail -1 || echo "none")
+            set +e
+            docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null
+            PULL_EXIT_CODE=$?
+            set -e
+            
+            if [ $PULL_EXIT_CODE -eq 0 ]; then
+              LATEST_DIGEST=$(docker images --digests ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest --format "{{.Digest}}" | head -1)
+              echo "Current latest digest: $LATEST_DIGEST"
+            else
+              LATEST_DIGEST="none"
+              echo "No existing latest image found (first deployment)"
+            fi
             echo "$LATEST_DIGEST" > /tmp/latest_digest.txt
-            echo "Current latest digest: $LATEST_DIGEST"
       - run:
           name: Build Docker Image
           command: |
