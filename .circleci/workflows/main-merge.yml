@@ -127,6 +127,7 @@ jobs:
     steps:
       - checkout
       - setup_npm_cache
+      - attach_build_artifacts
       - run:
           name: Test all packages
           command: npm run test:full
