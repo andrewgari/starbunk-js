@@ -8,7 +8,7 @@ The CircleCI configuration for this project uses a **shared configuration patter
 
 ### Files Structure
 
-```
+```yaml
 .circleci/
 ├── config.yml                    # Main entry point (dynamic config setup)
 ├── shared-config.yml             # Shared executors and commands
@@ -120,7 +120,7 @@ Adding a new module requires:
 
 Each module follows this standard flow:
 
-```
+```text
 module_build
     ↓
 module_test
