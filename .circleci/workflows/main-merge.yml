@@ -41,7 +41,12 @@ commands:
           command: |
             tar -czf build-artifacts.tar.gz \
               package.json \
-              package-lock.json
+              package-lock.json \
+              src/shared/dist \
+              src/bunkbot/dist \
+              src/bluebot/dist \
+              src/covabot/dist \
+              src/djcova/dist
       - persist_to_workspace:
           root: .
           paths:
