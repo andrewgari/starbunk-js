@@ -109,7 +109,11 @@ describe('MemoryService', () => {
       const context = await memoryService.getChannelContext('profile', 'channel-1', 10);
 
       expect(context.messages).toHaveLength(3);
-      expect(mockConversationRepo.getChannelContext).toHaveBeenCalledWith('profile', 'channel-1', 10);
+      expect(mockConversationRepo.getChannelContext).toHaveBeenCalledWith(
+        'profile',
+        'channel-1',
+        10,
+      );
       const contents = context.messages.map(m => m.content);
       expect(contents).toContain('Message 1');
       expect(contents).toContain('Message 2');
@@ -131,7 +135,11 @@ describe('MemoryService', () => {
 
       const context = await memoryService.getChannelContext('profile', 'channel-1', 5);
 
-      expect(mockConversationRepo.getChannelContext).toHaveBeenCalledWith('profile', 'channel-1', 5);
+      expect(mockConversationRepo.getChannelContext).toHaveBeenCalledWith(
+        'profile',
+        'channel-1',
+        5,
+      );
       expect(context.messages).toHaveLength(5);
     });
 
@@ -175,7 +183,14 @@ describe('MemoryService', () => {
 
       vi.mocked(mockUserFactRepo.getUserFacts!).mockResolvedValue(mockFacts);
 
-      await memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'programming', 0.9);
+      await memoryService.storeUserFact(
+        'profile',
+        'user-1',
+        'interest',
+        'topic',
+        'programming',
+        0.9,
+      );
       const facts = await memoryService.getUserFacts('profile', 'user-1');
 
       expect(mockUserFactRepo.storeUserFact).toHaveBeenCalledWith(
@@ -200,7 +215,14 @@ describe('MemoryService', () => {
 
       vi.mocked(mockUserFactRepo.getUserFacts!).mockResolvedValue(updatedFact);
 
-      await memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'programming', 0.5);
+      await memoryService.storeUserFact(
+        'profile',
+        'user-1',
+        'interest',
+        'topic',
+        'programming',
+        0.5,
+      );
       await memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'gaming', 0.8);
 
       const facts = await memoryService.getUserFacts('profile', 'user-1');
@@ -224,10 +246,25 @@ describe('MemoryService', () => {
 
       await memoryService.storeUserFact('profile', 'user-1', 'interest', 'hobby', 'coding', 1.0);
       await memoryService.storeUserFact('profile', 'user-1', 'preference', 'theme', 'dark', 1.0);
-      await memoryService.storeUserFact('profile', 'user-1', 'relationship', 'status', 'friend', 1.0);
+      await memoryService.storeUserFact(
+        'profile',
+        'user-1',
+        'relationship',
+        'status',
+        'friend',
+        1.0,
+      );
 
-      const retrievedInterests = await memoryService.getUserFactsByType('profile', 'user-1', 'interest');
-      const retrievedPreferences = await memoryService.getUserFactsByType('profile', 'user-1', 'preference');
+      const retrievedInterests = await memoryService.getUserFactsByType(
+        'profile',
+        'user-1',
+        'interest',
+      );
+      const retrievedPreferences = await memoryService.getUserFactsByType(
+        'profile',
+        'user-1',
+        'preference',
+      );
 
       expect(retrievedInterests).toHaveLength(1);
       expect(retrievedPreferences).toHaveLength(1);
@@ -288,10 +325,10 @@ describe('MemoryService', () => {
   });
 
   describe('pruneOldConversations', () => {
-    it('should delete old conversations', () => {
-      vi.mocked(mockConversationRepo.pruneOldConversations!).mockReturnValue(1);
+    it('should delete old conversations', async () => {
+      vi.mocked(mockConversationRepo.pruneOldConversations!).mockResolvedValue(1);
 
-      const deleted = memoryService.pruneOldConversations('profile', 30);
+      const deleted = await memoryService.pruneOldConversations('profile', 30);
 
       expect(deleted).toBe(1);
       expect(mockConversationRepo.pruneOldConversations).toHaveBeenCalledWith('profile', 30);
