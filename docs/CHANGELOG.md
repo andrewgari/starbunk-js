@@ -1,3 +1,9 @@
+## [1.26.1](https://github.com/andrewgari/starbunk-js/compare/v1.26.0...v1.26.1) (2026-01-27)
+
+### Bug Fixes
+
+* **ci:** correct executor and heredoc syntax in deployment workflows ([eaeb6a0](https://github.com/andrewgari/starbunk-js/commit/eaeb6a00c4c325bbd67ad032979385b26c2061e8))
+
 ## [1.26.0](https://github.com/andrewgari/starbunk-js/compare/v1.25.0...v1.26.0) (2026-01-27)
 
 ### Features
