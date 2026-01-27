@@ -6,9 +6,8 @@ version: 2.1
 
 executors:
   deployer:
-    docker:
-      - image: cimg/base:stable
-    resource_class: small
+    machine: true
+    resource_class: starbunk-runner
 
 commands:
   notify_discord:
