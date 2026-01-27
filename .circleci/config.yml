@@ -43,7 +43,6 @@ jobs:
           configuration_path: .circleci/generated_config.yml
 
 workflows:
-  version: 2
   change-detection:
     jobs:
       - detect_and_continue:
