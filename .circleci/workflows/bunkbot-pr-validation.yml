@@ -1,0 +1,185 @@
+version: 2.1
+
+executors:
+  node20:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: medium
+  docker:
+    docker:
+      - image: cimg/base:stable
+    resource_class: medium
+
+commands:
+  setup_npm_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v1-npm-{{ arch }}-{{ .Branch }}-
+            - v1-npm-{{ arch }}-
+      - run:
+          name: Show Node and npm versions
+          command: |
+            node -v
+            npm -v
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - node_modules
+  persist_build_artifacts:
+    steps:
+      - run:
+          name: Compress build artifacts
+          command: |
+            # Build list of files to tar
+            FILES_TO_TAR="package.json package-lock.json"
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ -d "src/$app/dist" ]; then
+                FILES_TO_TAR="$FILES_TO_TAR src/$app/dist"
+              fi
+            done
+            tar -czf build-artifacts.tar.gz $FILES_TO_TAR
+            echo "Tarred files: $FILES_TO_TAR"
+      - persist_to_workspace:
+          root: .
+          paths:
+            - build-artifacts.tar.gz
+  attach_build_artifacts:
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Extract build artifacts
+          command: tar -xzf build-artifacts.tar.gz
+  setup_docker_cli:
+    steps:
+      - run:
+          name: Ensure Docker CLI is available
+          command: |
+            if ! command -v docker >/dev/null 2>&1; then
+              sudo apt-get update
+              sudo apt-get install -y --no-install-recommends docker.io
+            fi
+            docker --version
+
+jobs:
+  bunkbot_build:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Build Bunkbot
+          command: npm run build:bunkbot
+      - persist_build_artifacts
+
+  bunkbot_test:
+    executor: node20
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Test Bunkbot
+          command: npm run test:bunkbot
+
+  bunkbot_docker_build:
+    executor: node20
+    environment:
+      APP: bunkbot
+      DOCKERFILE: "./src/bunkbot/Dockerfile.ci"
+    steps:
+      - checkout
+      - attach_build_artifacts
+      - run:
+          name: Rebuild artifacts if missing
+          command: |
+            MISSING=false
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ ! -d "src/$app/dist" ]; then
+                MISSING=true
+                echo "⚠ Missing src/$app/dist"
+              fi
+            done
+
+            if [ "$MISSING" = true ]; then
+              echo "Rebuilding missing artifacts..."
+              npm ci
+              npm run build
+              echo "Rebuild complete"
+            else
+              echo "All artifacts present"
+            fi
+      - setup_docker_cli
+      - setup_remote_docker
+      - run:
+          name: Build Docker Image
+          command: |
+            set -e
+
+            # Compute content hash for caching
+            HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
+            SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+            DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+            CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+
+            # Login to GHCR (credentials from CircleCI context)
+            if [ -n "${GHCR_TOKEN:-}" ]; then
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin || true
+            fi
+
+            # Pull cache image if available
+            docker pull ghcr.io/andrewgari/starbunk-${APP}:cache 2>/dev/null || true
+
+            # Build with cache
+            docker build \
+              --build-arg BUILDKIT_INLINE_CACHE=1 \
+              --cache-from ghcr.io/andrewgari/starbunk-${APP}:cache \
+              -f $DOCKERFILE \
+              -t ghcr.io/andrewgari/starbunk-${APP}:${CIRCLE_SHA1:0:7} \
+              -t ghcr.io/andrewgari/starbunk-${APP}:latest \
+              .
+
+  bunkbot_docker_health_check:
+    executor: docker
+    environment:
+      APP: bunkbot
+    steps:
+      - checkout
+      - setup_docker_cli
+      - setup_remote_docker
+      - run:
+          name: Health Check
+          command: |
+            ls -la .circleci/scripts/ || echo "Directory not found"
+            if [ -f .circleci/scripts/container_health_check.sh ]; then
+              chmod +x .circleci/scripts/container_health_check.sh
+
+              # For PR validation, skip health check since image isn't pushed to registry
+              echo "⊘ Skipping health check - image not available in registry for PR validation"
+              echo "Note: Health checks run on main merge after image is pushed to GHCR"
+            else
+              echo "ERROR: container_health_check.sh not found"
+              pwd
+              ls -la
+              exit 1
+            fi
+
+workflows:
+  bunkbot-checks:
+    jobs:
+      - bunkbot_build
+      - bunkbot_test:
+          requires:
+            - bunkbot_build
+      - bunkbot_docker_build:
+          requires:
+            - bunkbot_build
+            - bunkbot_test
+      - bunkbot_docker_health_check:
+          requires:
+            - bunkbot_docker_build

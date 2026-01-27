@@ -1,0 +1,50 @@
+version: 2.1
+
+setup: true
+
+orbs:
+  continuation: circleci/continuation@1.0.0
+
+executors:
+  node20:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: medium
+
+jobs:
+  detect_and_continue:
+    executor: node20
+    steps:
+      - checkout
+      - run:
+          name: Fetch main for diff
+          command: git fetch origin main || true
+      - run:
+          name: Detect changed paths
+          command: .circleci/scripts/detect_changes.sh
+      - run:
+          name: Generate dynamic config
+          command: |
+            if [ -n "${CIRCLE_TAG:-}" ]; then
+              echo "Detected git tag: $CIRCLE_TAG - loading deployment workflow"
+              cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
+            else
+              .circleci/scripts/generate_config.py > .circleci/generated_config.yml
+            fi
+            echo "=== Generated config preview (first 50 lines) ==="
+            head -n 50 .circleci/generated_config.yml
+            echo "=== Total lines: $(wc -l < .circleci/generated_config.yml) ==="
+            echo "Config generated successfully"
+      - continuation/continue:
+          configuration_path: .circleci/generated_config.yml
+
+workflows:
+  version: 2
+  change-detection:
+    jobs:
+      - detect_and_continue:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              only: /.*/

@@ -1,4 +1,6 @@
 name: Validate Manifests
+# ℹ️  KEPT - This is a minimal manifest validation that can run independently
+# Triggers on manifest file changes to ensure TODO.md structure is valid
 
 on:
   pull_request:
@@ -19,8 +21,6 @@ jobs:
   manifests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Validate Manifests
-        run: |
-          bash scripts/validation/check-manifests.sh
+      - uses: actions/checkout@v4
+      - run: bash scripts/validation/check-manifests.sh
+
