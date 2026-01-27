@@ -40,11 +40,6 @@ commands:
           name: Compress build artifacts
           command: |
             tar -czf build-artifacts.tar.gz \
-              src/bunkbot/dist/ \
-              src/bluebot/dist/ \
-              src/covabot/dist/ \
-              src/djcova/dist/ \
-              src/shared/dist/ \
               package.json \
               package-lock.json
       - persist_to_workspace:
