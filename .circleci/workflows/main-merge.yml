@@ -108,6 +108,18 @@ jobs:
       - run:
           name: Build all packages
           command: npm run build
+      - run:
+          name: Verify build artifacts exist
+          command: |
+            echo "Checking for dist directories..."
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ -d "src/$app/dist" ]; then
+                echo "✓ src/$app/dist exists"
+                ls -la src/$app/dist | head -5
+              else
+                echo "✗ src/$app/dist NOT FOUND"
+              fi
+            done
       - persist_build_artifacts
 
   test:
@@ -131,6 +143,18 @@ jobs:
     steps:
       - checkout
       - attach_build_artifacts
+      - run:
+          name: Verify extracted artifacts
+          command: |
+            echo "Checking extracted artifacts..."
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ -d "src/$app/dist" ]; then
+                echo "✓ src/$app/dist exists after extraction"
+                ls -la src/$app/dist | head -3
+              else
+                echo "✗ src/$app/dist NOT FOUND after extraction"
+              fi
+            done
       - setup_docker_cli
       - setup_remote_docker
       - run:
