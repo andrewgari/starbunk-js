@@ -1,3 +1,9 @@
+## [1.26.3](https://github.com/andrewgari/starbunk-js/compare/v1.26.2...v1.26.3) (2026-01-27)
+
+### Bug Fixes
+
+* **ci:** use self-hosted runner for deployment to access private network ([682f59a](https://github.com/andrewgari/starbunk-js/commit/682f59ad3c181677cd4634559e39c56101d17739))
+
 ## [1.26.2](https://github.com/andrewgari/starbunk-js/compare/v1.26.1...v1.26.2) (2026-01-27)
 
 ### Bug Fixes
