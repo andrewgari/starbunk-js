@@ -247,15 +247,17 @@ jobs:
             fi
 
             # Get the digest of the newly built image
-            NEW_DIGEST=$(docker inspect ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest | grep -o '"Id":"[^"]*"' | head -1 | cut -d'"' -f4)
+            NEW_DIGEST=$(docker images --no-trunc --quiet ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest)
             LATEST_DIGEST=$(cat /tmp/latest_digest.txt)
 
             echo "Previous latest digest: $LATEST_DIGEST"
             echo "New image digest: $NEW_DIGEST"
             echo "Deploy tag: $DEPLOY_TAG"
 
-            if [ "$NEW_DIGEST" != "$LATEST_DIGEST" ]; then
-              echo "✅ Image has changed - pushing to GHCR"
+            # Always push on first deployment (when LATEST_DIGEST is "none")
+            # or when digests differ
+            if [ "$LATEST_DIGEST" = "none" ] || [ "$NEW_DIGEST" != "$LATEST_DIGEST" ]; then
+              echo "✅ Image has changed (or first deployment) - pushing to GHCR"
               docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest
               docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${DEPLOY_TAG}
               docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7}
