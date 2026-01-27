@@ -39,14 +39,15 @@ commands:
       - run:
           name: Compress build artifacts
           command: |
-            tar -czf build-artifacts.tar.gz \
-              package.json \
-              package-lock.json \
-              src/shared/dist \
-              src/bunkbot/dist \
-              src/bluebot/dist \
-              src/covabot/dist \
-              src/djcova/dist
+            # Build list of files to tar
+            FILES_TO_TAR="package.json package-lock.json"
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ -d "src/$app/dist" ]; then
+                FILES_TO_TAR="$FILES_TO_TAR src/$app/dist"
+              fi
+            done
+            tar -czf build-artifacts.tar.gz $FILES_TO_TAR
+            echo "Tarred files: $FILES_TO_TAR"
       - persist_to_workspace:
           root: .
           paths:
