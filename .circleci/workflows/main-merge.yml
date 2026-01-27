@@ -212,12 +212,7 @@ jobs:
 
             echo "Building image with content hash: $CONTENT_HASH"
 
-            # Determine tag based on branch
-            if [ "${CIRCLE_BRANCH:-}" = "main" ]; then
-              DEPLOY_TAG="main"
-            else
-              DEPLOY_TAG="dev"
-            fi
+            DEPLOY_TAG="main"
 
             # Try to use layer cache from latest if it exists
             if docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null; then
@@ -239,12 +234,7 @@ jobs:
       - run:
           name: Compare Image Hash and Conditionally Push
           command: |
-            # Determine tag based on branch
-            if [ "${CIRCLE_BRANCH:-}" = "main" ]; then
-              DEPLOY_TAG="main"
-            else
-              DEPLOY_TAG="dev"
-            fi
+            DEPLOY_TAG="main"
 
             # Get the digest of the newly built image
             NEW_DIGEST=$(docker images --no-trunc --quiet ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest)
