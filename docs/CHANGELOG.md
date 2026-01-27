@@ -1,3 +1,10 @@
+## [1.26.0](https://github.com/andrewgari/starbunk-js/compare/v1.25.0...v1.26.0) (2026-01-27)
+
+### Features
+
+* implement automated production deployment workflow and configuration ([e7acd8e](https://github.com/andrewgari/starbunk-js/commit/e7acd8e3d82a50430a5c9b7b0fe6afb9d158c24d))
+* implement automated production deployment workflow and configuration ([#556](https://github.com/andrewgari/starbunk-js/issues/556)) ([9489f18](https://github.com/andrewgari/starbunk-js/commit/9489f18a97d322bb194a4401bb2dc33fd74f9eca))
+
 ## [1.25.0](https://github.com/andrewgari/starbunk-js/compare/v1.24.2...v1.25.0) (2026-01-27)
 
 ### Features
