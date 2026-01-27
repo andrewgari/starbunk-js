@@ -184,9 +184,15 @@ scripts/*
 !.circleci/scripts/detect_changes.sh
 !.circleci/scripts/generate_config.py
 
+# CircleCI generated files (generated dynamically)
+.circleci/diff.json
+.circleci/changed_files.txt
+.circleci/generated_config.yml
+
 *.md
 
 !README.md
+!.circleci/README.md
 !docs/DOCKER_ENV_VARS.md
 !docs/DOCKER_BUILD_OPTIMIZATION.md
 !docs/DOCKER_COMPOSE_AUDIT.md
