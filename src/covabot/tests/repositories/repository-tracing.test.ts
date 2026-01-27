@@ -9,9 +9,11 @@ describe('Repository Tracing', () => {
   let tracingMock: ReturnType<typeof getTraceService>;
 
   beforeEach(() => {
+    // Disable real OTLP export in tests
+    process.env.OTEL_ENABLED = 'false';
     // Create in-memory database for testing
     db = new Database(':memory:');
-    
+
     // Create conversations table
     db.exec(`
       CREATE TABLE conversations (
@@ -47,7 +49,7 @@ describe('Repository Tracing', () => {
           'db.system': 'sqlite',
           'db.statement': expect.stringContaining('SELECT'),
           'db.param_count': 3,
-        })
+        }),
       );
 
       // Should have called startSpan for conversation.getChannelContext
@@ -56,7 +58,7 @@ describe('Repository Tracing', () => {
         expect.objectContaining({
           'conversation.channel_id': 'channel-456',
           'conversation.profile_id': 'profile-123',
-        })
+        }),
       );
     });
 
@@ -69,7 +71,7 @@ describe('Repository Tracing', () => {
         'user-789',
         'TestUser',
         'Hello!',
-        'Hi there!'
+        'Hi there!',
       );
 
       // Should have called startSpan for db.execute
@@ -79,7 +81,7 @@ describe('Repository Tracing', () => {
           'db.system': 'sqlite',
           'db.statement': expect.stringContaining('INSERT'),
           'db.param_count': 6,
-        })
+        }),
       );
 
       // Should have called startSpan for conversation.store
@@ -88,7 +90,7 @@ describe('Repository Tracing', () => {
         expect.objectContaining({
           'conversation.channel_id': 'channel-456',
           'conversation.user_id': 'user-789',
-        })
+        }),
       );
     });
 
@@ -100,7 +102,7 @@ describe('Repository Tracing', () => {
         'user-789',
         'TestUser',
         'Message 1',
-        'Response 1'
+        'Response 1',
       );
       await conversationRepo.storeConversation(
         'profile-123',
@@ -108,7 +110,7 @@ describe('Repository Tracing', () => {
         'user-789',
         'TestUser',
         'Message 2',
-        'Response 2'
+        'Response 2',
       );
 
       const mockSpan = {
@@ -116,7 +118,7 @@ describe('Repository Tracing', () => {
         recordException: vi.fn(),
         end: vi.fn(),
       };
-      
+
       vi.spyOn(tracingMock, 'startSpan').mockReturnValue(mockSpan as any);
 
       await conversationRepo.getChannelContext('profile-123', 'channel-456', 10);
@@ -125,7 +127,7 @@ describe('Repository Tracing', () => {
       expect(mockSpan.setAttributes).toHaveBeenCalledWith(
         expect.objectContaining({
           'db.record_count': 2,
-        })
+        }),
       );
     });
 
@@ -135,7 +137,7 @@ describe('Repository Tracing', () => {
         recordException: vi.fn(),
         end: vi.fn(),
       };
-      
+
       vi.spyOn(tracingMock, 'startSpan').mockReturnValue(mockSpan as any);
 
       await conversationRepo.storeConversation(
@@ -144,14 +146,14 @@ describe('Repository Tracing', () => {
         'user-789',
         'TestUser',
         'Hello!',
-        'Hi there!'
+        'Hi there!',
       );
 
       // Should set rows_affected attribute
       expect(mockSpan.setAttributes).toHaveBeenCalledWith(
         expect.objectContaining({
           'db.rows_affected': 1,
-        })
+        }),
       );
     });
 
@@ -161,7 +163,7 @@ describe('Repository Tracing', () => {
         recordException: vi.fn(),
         end: vi.fn(),
       };
-      
+
       vi.spyOn(tracingMock, 'startSpan').mockReturnValue(mockSpan as any);
 
       // Try to query a non-existent table
@@ -182,7 +184,7 @@ describe('Repository Tracing', () => {
         recordException: vi.fn(),
         end: vi.fn(),
       };
-      
+
       vi.spyOn(tracingMock, 'startSpan').mockReturnValue(mockSpan as any);
 
       await conversationRepo.getChannelContext('profile-123', 'channel-456', 10);

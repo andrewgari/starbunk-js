@@ -26,7 +26,7 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
        FROM keyword_interests
        WHERE profile_id = ?
        ORDER BY weight DESC`,
-      [profileId]
+      [profileId],
     );
   }
 
@@ -44,14 +44,16 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
        VALUES (?, ?, ?, ?)
        ON CONFLICT(profile_id, keyword)
        DO UPDATE SET weight = excluded.weight, category = excluded.category`,
-      [profileId, keyword.toLowerCase().trim(), category, weight]
+      [profileId, keyword.toLowerCase().trim(), category, weight],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      keyword,
-      weight: validWeight,
-    }).debug('Interest upserted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        weight,
+      })
+      .debug('Interest upserted');
   }
 
   /**
@@ -61,16 +63,18 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
     const changes = await this.execute(
       `DELETE FROM keyword_interests
        WHERE profile_id = ? AND keyword = ?`,
-      [profileId, keyword.toLowerCase().trim()]
+      [profileId, keyword.toLowerCase().trim()],
     );
-    
+
     const deleted = changes > 0;
 
     if (deleted) {
-      logger.withMetadata({
-        profile_id: profileId,
-        keyword,
-      }).debug('Interest deleted');
+      logger
+        .withMetadata({
+          profile_id: profileId,
+          keyword,
+        })
+        .debug('Interest deleted');
     }
 
     return deleted;
@@ -84,14 +88,16 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
       `UPDATE keyword_interests
        SET weight = MAX(0.1, MIN(2.0, weight + ?))
        WHERE profile_id = ? AND keyword = ?`,
-      [delta, profileId, keyword.toLowerCase().trim()]
+      [delta, profileId, keyword.toLowerCase().trim()],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      keyword,
-      delta,
-    }).debug('Interest weight adjusted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        delta,
+      })
+      .debug('Interest weight adjusted');
   }
 
   /**
@@ -101,13 +107,15 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
     const changes = await this.execute(
       `DELETE FROM keyword_interests
        WHERE profile_id = ?`,
-      [profileId]
+      [profileId],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      deleted_count: changes,
-    }).info('Profile interests cleared');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        deleted_count: changes,
+      })
+      .info('Profile interests cleared');
 
     return changes;
   }
@@ -129,14 +137,15 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
       await this.execute(
         `INSERT INTO keyword_interests (profile_id, keyword, category, weight)
          VALUES (?, ?, ?, ?)`,
-        [profileId, keyword.toLowerCase().trim(), category || null, 1.0]
+        [profileId, keyword.toLowerCase().trim(), category || null, 1.0],
       );
     }
 
-    logger.withMetadata({
-      profile_id: profileId,
-      keywords_inserted: interests.length,
-    }).info('Profile interests initialized');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keywords_inserted: interests.length,
+      })
+      .info('Profile interests initialized');
   }
 }
-
