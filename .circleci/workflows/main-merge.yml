@@ -193,7 +193,7 @@ jobs:
             docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null
             PULL_EXIT_CODE=$?
             set -e
-            
+
             if [ $PULL_EXIT_CODE -eq 0 ]; then
               LATEST_DIGEST=$(docker images --digests ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest --format "{{.Digest}}" | head -1)
               echo "Current latest digest: $LATEST_DIGEST"
@@ -219,9 +219,18 @@ jobs:
               DEPLOY_TAG="dev"
             fi
 
+            # Try to use layer cache from latest if it exists
+            if docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null; then
+              CACHE_ARG="--cache-from ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest"
+              echo "Using layer cache from latest image"
+            else
+              CACHE_ARG=""
+              echo "No cache available (first deployment or image not found)"
+            fi
+
             docker build \
               --build-arg BUILDKIT_INLINE_CACHE=1 \
-              --cache-from ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null || true \
+              $CACHE_ARG \
               -f << parameters.dockerfile >> \
               -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7} \
               -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest \
