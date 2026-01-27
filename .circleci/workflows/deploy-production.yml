@@ -1,0 +1,207 @@
+version: 2.1
+
+# Production Deployment Workflow
+# Triggers on GitHub release publication
+# Deploys to Unraid server via SSH
+
+executors:
+  deployer:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+
+commands:
+  notify_discord:
+    parameters:
+      status:
+        type: string
+        description: "Deployment status: started, success, failed"
+      version:
+        type: string
+        default: "${CIRCLE_TAG}"
+      message:
+        type: string
+        default: ""
+    steps:
+      - run:
+          name: Send Discord Notification
+          when: always
+          command: |
+            if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+              echo "WARNING: DISCORD_WEBHOOK_URL not configured - skipping notification"
+              exit 0
+            fi
+
+            STATUS="<< parameters.status >>"
+            VERSION="<< parameters.version >>"
+            MESSAGE="<< parameters.message >>"
+
+            case "$STATUS" in
+              started)
+                COLOR=3447003  # Blue
+                EMOJI=":rocket:"
+                TITLE="Deployment Started"
+                ;;
+              success)
+                COLOR=3066993  # Green
+                EMOJI=":white_check_mark:"
+                TITLE="Deployment Successful"
+                ;;
+              failed)
+                COLOR=15158332  # Red
+                EMOJI=":x:"
+                TITLE="Deployment Failed"
+                ;;
+              *)
+                COLOR=10181046  # Purple
+                EMOJI=":information_source:"
+                TITLE="Deployment Update"
+                ;;
+            esac
+
+            TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            BUILD_URL="https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}"
+
+            PAYLOAD=$(cat <<EOF
+            {
+              "embeds": [{
+                "title": "${EMOJI} ${TITLE}",
+                "description": "${MESSAGE}",
+                "color": ${COLOR},
+                "fields": [
+                  {
+                    "name": "Version",
+                    "value": "\`${VERSION}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Branch",
+                    "value": "\`${CIRCLE_BRANCH:-N/A}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Commit",
+                    "value": "\`${CIRCLE_SHA1:0:7}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Triggered By",
+                    "value": "${CIRCLE_USERNAME:-CircleCI}",
+                    "inline": true
+                  }
+                ],
+                "timestamp": "${TIMESTAMP}",
+                "footer": {
+                  "text": "Starbunk Production Deployment"
+                },
+                "url": "${BUILD_URL}"
+              }]
+            }
+            EOF
+            )
+
+            curl -H "Content-Type: application/json" \
+                 -d "${PAYLOAD}" \
+                 "${DISCORD_WEBHOOK_URL}"
+
+jobs:
+  deploy_to_production:
+    executor: deployer
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "${SSH_KEY_FINGERPRINT}"
+
+      - notify_discord:
+          status: started
+          version: "${CIRCLE_TAG}"
+          message: "Deploying Starbunk services to production Unraid server..."
+
+      - run:
+          name: Setup SSH Config
+          command: |
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+
+            # Add Unraid server to known hosts
+            ssh-keyscan -H "${PROD_SERVER_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+            cat > ~/.ssh/config <<EOF
+            Host unraid-prod
+              HostName ${PROD_SERVER_HOST}
+              User ${PROD_SERVER_USER}
+              StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+              LogLevel ERROR
+            EOF
+
+            chmod 600 ~/.ssh/config
+
+      - run:
+          name: Verify SSH Connection
+          command: |
+            echo "Testing SSH connection to Unraid server..."
+            ssh unraid-prod "echo 'SSH connection successful'"
+
+      - run:
+          name: Deploy to Unraid Server
+          command: |
+            VERSION="${CIRCLE_TAG}"
+            DEPLOY_TAG="main"  # Use :main tag for production deployments
+
+            echo "========================================"
+            echo "Deploying version: ${VERSION}"
+            echo "Using image tag: ${DEPLOY_TAG}"
+            echo "Target: ${PROD_SERVER_HOST}"
+            echo "========================================"
+
+            # Copy deployment script to server
+            scp scripts/deployment/deploy.sh unraid-prod:/tmp/starbunk-deploy.sh
+            scp scripts/deployment/health-check.sh unraid-prod:/tmp/starbunk-health-check.sh
+
+            # Execute deployment on server
+            ssh unraid-prod "bash /tmp/starbunk-deploy.sh '${PROD_DOCKER_COMPOSE_DIR}' '${DEPLOY_TAG}' '${VERSION}'"
+
+      - run:
+          name: Verify Deployment Health
+          command: |
+            echo "========================================"
+            echo "Running post-deployment health checks..."
+            echo "========================================"
+
+            # Run health check script on server
+            ssh unraid-prod "bash /tmp/starbunk-health-check.sh '${PROD_DOCKER_COMPOSE_DIR}'"
+
+      - run:
+          name: Cleanup Remote Scripts
+          when: always
+          command: |
+            ssh unraid-prod "rm -f /tmp/starbunk-*.sh" || true
+
+      - notify_discord:
+          status: success
+          version: "${CIRCLE_TAG}"
+          message: "All services deployed and healthy on production server!"
+
+      - run:
+          name: Notify Deployment Failure
+          when: on_fail
+          command: |
+            # Failure notification is handled by the notify_discord command
+            # which has when: always, so it will run even on failure
+            echo "Deployment failed"
+
+workflows:
+  # Deployment workflow triggered by GitHub releases
+  production_deployment:
+    jobs:
+      - deploy_to_production:
+          context:
+            - deployment-production
+          filters:
+            # Only run on tag pushes (releases)
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
