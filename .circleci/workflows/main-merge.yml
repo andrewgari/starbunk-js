@@ -273,24 +273,28 @@ workflows:
           dockerfile: "./src/bunkbot/Dockerfile.ci"
           requires:
             - test
+            - build
       - publish_image:
           name: publish_bluebot
           app_name: bluebot
           dockerfile: "./src/bluebot/Dockerfile.ci"
           requires:
             - test
+            - build
       - publish_image:
           name: publish_covabot
           app_name: covabot
           dockerfile: "./src/covabot/Dockerfile.ci"
           requires:
             - test
+            - build
       - publish_image:
           name: publish_djcova
           app_name: djcova
           dockerfile: "./src/djcova/Dockerfile.ci"
           requires:
             - test
+            - build
       - deploy:
           requires:
             - publish_bunkbot
