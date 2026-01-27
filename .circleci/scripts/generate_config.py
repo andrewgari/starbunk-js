@@ -162,12 +162,65 @@ def main():
     print(f"Workflows to load: {', '.join(workflows_to_load)}", file=sys.stderr)
     print(f"Changes: {json.dumps(changes, indent=2)}", file=sys.stderr)
 
-    # Collect all sections from workflow files
+    # First, load shared configuration (executors and commands)
+    shared_config_path = os.path.join('.circleci', 'shared-config.yml')
     all_executors = {}
     all_commands = {}
     all_jobs = {}
     all_workflows = {}
 
+    # Load shared executors and commands
+    if os.path.exists(shared_config_path):
+        try:
+            with open(shared_config_path, 'r') as f:
+                shared_content = f.read()
+
+            lines = shared_content.split('\n')
+            current_section = None
+            current_item = None
+
+            for line in lines:
+                # Skip empty lines and comments
+                if not line.strip() or line.strip().startswith('#'):
+                    continue
+
+                # Detect top-level sections (no indentation)
+                if line and line[0] not in ' \t' and ':' in line:
+                    section_name = line.split(':')[0].strip()
+                    if section_name in ['executors', 'commands']:
+                        current_section = section_name
+                        current_item = None
+                        continue
+                    elif section_name in ['version', 'orbs', 'parameters', 'jobs', 'workflows']:
+                        current_section = None
+                        continue
+
+                # Process items within sections
+                if current_section and line.strip():
+                    indent = len(line) - len(line.lstrip())
+
+                    # This is a new item in the section (2 spaces indent)
+                    if indent == 2 and ':' in line:
+                        item_name = line.strip().split(':')[0].strip()
+                        current_item = item_name
+
+                        if current_section == 'executors':
+                            all_executors[item_name] = [line]
+                        elif current_section == 'commands':
+                            all_commands[item_name] = [line]
+
+                    # This is content within an item
+                    elif current_item and indent > 2:
+                        if current_section == 'executors':
+                            all_executors[current_item].append(line)
+                        elif current_section == 'commands':
+                            all_commands[current_item].append(line)
+
+            print(f"# Loaded shared-config.yml with {len(all_executors)} executors and {len(all_commands)} commands", file=sys.stderr)
+        except Exception as e:
+            print(f"Warning: Could not load shared-config.yml: {e}", file=sys.stderr)
+
+    # Collect all sections from workflow files
     for workflow_name in workflows_to_load:
         filepath = os.path.join('.circleci', 'workflows', f'{workflow_name}.yml')
 
