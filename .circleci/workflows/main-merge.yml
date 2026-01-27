@@ -104,7 +104,7 @@ jobs:
             npx semantic-release
 
   tag_version_images:
-    executor: docker
+    executor: runner
     steps:
       - checkout
       - run:

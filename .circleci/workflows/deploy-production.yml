@@ -62,7 +62,7 @@ commands:
             TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
             BUILD_URL="https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}"
 
-            PAYLOAD=$(cat <<EOF
+            PAYLOAD=$(cat <<-EOF
             {
               "embeds": [{
                 "title": "${EMOJI} ${TITLE}",
@@ -127,7 +127,7 @@ jobs:
             # Add Unraid server to known hosts
             ssh-keyscan -H "${PROD_SERVER_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-            cat > ~/.ssh/config <<EOF
+            cat > ~/.ssh/config <<-EOF
             Host unraid-prod
               HostName ${PROD_SERVER_HOST}
               User ${PROD_SERVER_USER}
