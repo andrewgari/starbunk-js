@@ -1,3 +1,9 @@
+## [1.26.2](https://github.com/andrewgari/starbunk-js/compare/v1.26.1...v1.26.2) (2026-01-27)
+
+### Bug Fixes
+
+* **ci:** escape heredoc syntax for CircleCI v2.1+ compatibility ([6b7350c](https://github.com/andrewgari/starbunk-js/commit/6b7350ca5506a6fd81a86089d43e133b8fd28544))
+
 ## [1.26.1](https://github.com/andrewgari/starbunk-js/compare/v1.26.0...v1.26.1) (2026-01-27)
 
 ### Bug Fixes
