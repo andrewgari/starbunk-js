@@ -6,14 +6,14 @@ orbs:
   continuation: circleci/continuation@1.0.0
 
 executors:
-  node20:
+  node22:
     docker:
       - image: cimg/node:22.14
     resource_class: medium
 
 jobs:
   detect_and_continue:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - run:
