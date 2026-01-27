@@ -127,6 +127,7 @@ jobs:
     steps:
       - checkout
       - setup_npm_cache
+      - attach_build_artifacts
       - run:
           name: Test all packages
           command: npm run test:full
@@ -188,9 +189,19 @@ jobs:
       - run:
           name: Check Current Latest Image
           command: |
-            LATEST_DIGEST=$(docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null | tail -1 || echo "none")
+            set +e
+            docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null
+            PULL_EXIT_CODE=$?
+            set -e
+
+            if [ $PULL_EXIT_CODE -eq 0 ]; then
+              LATEST_DIGEST=$(docker images --digests ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest --format "{{.Digest}}" | head -1)
+              echo "Current latest digest: $LATEST_DIGEST"
+            else
+              LATEST_DIGEST="none"
+              echo "No existing latest image found (first deployment)"
+            fi
             echo "$LATEST_DIGEST" > /tmp/latest_digest.txt
-            echo "Current latest digest: $LATEST_DIGEST"
       - run:
           name: Build Docker Image
           command: |
@@ -201,76 +212,99 @@ jobs:
 
             echo "Building image with content hash: $CONTENT_HASH"
 
+            DEPLOY_TAG="main"
+
+            # Try to use layer cache from latest if it exists
+            if docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null; then
+              CACHE_ARG="--cache-from ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest"
+              echo "Using layer cache from latest image"
+            else
+              CACHE_ARG=""
+              echo "No cache available (first deployment or image not found)"
+            fi
+
             docker build \
               --build-arg BUILDKIT_INLINE_CACHE=1 \
-              --cache-from ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null || true \
+              $CACHE_ARG \
               -f << parameters.dockerfile >> \
               -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7} \
               -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest \
-              -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:main \
+              -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${DEPLOY_TAG} \
               .
       - run:
           name: Compare Image Hash and Conditionally Push
           command: |
+            DEPLOY_TAG="main"
+
             # Get the digest of the newly built image
-            NEW_DIGEST=$(docker inspect ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest | grep -o '"Id":"[^"]*"' | head -1 | cut -d'"' -f4)
+            NEW_DIGEST=$(docker images --no-trunc --quiet ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest)
             LATEST_DIGEST=$(cat /tmp/latest_digest.txt)
 
             echo "Previous latest digest: $LATEST_DIGEST"
             echo "New image digest: $NEW_DIGEST"
+            echo "Deploy tag: $DEPLOY_TAG"
 
-            if [ "$NEW_DIGEST" != "$LATEST_DIGEST" ]; then
-              echo "✅ Image has changed - pushing to GHCR"
+            # Always push on first deployment (when LATEST_DIGEST is "none")
+            # or when digests differ
+            if [ "$LATEST_DIGEST" = "none" ] || [ "$NEW_DIGEST" != "$LATEST_DIGEST" ]; then
+              echo "✅ Image has changed (or first deployment) - pushing to GHCR"
               docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest
-              docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:main
+              docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${DEPLOY_TAG}
               docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7}
             else
               echo "⊘ Image unchanged - skipping push"
             fi
 
-  deploy:
-    executor: runner
-    steps:
-      - checkout
-      - run:
-          name: Login to GHCR
-          command: |
-            if [ -n "${GHCR_TOKEN:-}" ]; then
-              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-            else
-              echo "⚠ GHCR credentials not configured - cannot pull images"
-              exit 1
-            fi
-      - run:
-          name: Pull Latest Images
-          command: |
-            echo "Pulling latest images from GHCR..."
-            docker pull ghcr.io/andrewgari/starbunk-bunkbot:main
-            docker pull ghcr.io/andrewgari/starbunk-bluebot:main
-            docker pull ghcr.io/andrewgari/starbunk-covabot:main
-            docker pull ghcr.io/andrewgari/starbunk-djcova:main
-      - run:
-          name: Deploy with Docker Compose
-          command: |
-            echo "🚀 Deploying services with docker-compose..."
-            docker-compose pull --policy always
-            docker-compose up -d
-            echo "✅ Deployment complete"
-      - run:
-          name: Verify Deployment Health
-          command: |
-            echo "Checking service health..."
-            sleep 10
-
-            services=("starbunk-bunkbot" "starbunk-bluebot" "starbunk-covabot" "starbunk-djcova")
-            for service in "${services[@]}"; do
-              if docker ps --filter "name=$service" --filter "status=running" | grep -q "$service"; then
-                echo "✅ $service is running"
-              else
-                echo "⚠ $service is not running"
-                docker-compose logs "$service" | tail -20
-              fi
-            done
+  # deploy:
+  #   executor: runner
+  #   steps:
+  #     - checkout
+  #     - run:
+  #         name: Login to GHCR
+  #         command: |
+  #           if [ -n "${GHCR_TOKEN:-}" ]; then
+  #             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+  #           else
+  #             echo "⚠ GHCR credentials not configured - cannot pull images"
+  #             exit 1
+  #           fi
+  #     - run:
+  #         name: Pull Latest Images
+  #         command: |
+  #           # Determine tag based on branch
+  #           if [ "${CIRCLE_BRANCH:-}" = "main" ]; then
+  #             DEPLOY_TAG="main"
+  #           else
+  #             DEPLOY_TAG="dev"
+  #           fi
+  #
+  #           echo "Pulling latest images from GHCR (tag: $DEPLOY_TAG)..."
+  #           docker pull ghcr.io/andrewgari/starbunk-bunkbot:${DEPLOY_TAG}
+  #           docker pull ghcr.io/andrewgari/starbunk-bluebot:${DEPLOY_TAG}
+  #           docker pull ghcr.io/andrewgari/starbunk-covabot:${DEPLOY_TAG}
+  #           docker pull ghcr.io/andrewgari/starbunk-djcova:${DEPLOY_TAG}
+  #     - run:
+  #         name: Deploy with Docker Compose
+  #         command: |
+  #           echo "🚀 Deploying services with docker-compose..."
+  #           docker-compose pull --policy always
+  #           docker-compose up -d
+  #           echo "✅ Deployment complete"
+  #     - run:
+  #         name: Verify Deployment Health
+  #         command: |
+  #           echo "Checking service health..."
+  #           sleep 10
+  #
+  #           services=("starbunk-bunkbot" "starbunk-bluebot" "starbunk-covabot" "starbunk-djcova")
+  #           for service in "${services[@]}"; do
+  #             if docker ps --filter "name=$service" --filter "status=running" | grep -q "$service"; then
+  #               echo "✅ $service is running"
+  #             else
+  #               echo "⚠ $service is not running"
+  #               docker-compose logs "$service" | tail -20
+  #             fi
+  #           done
 
 workflows:
   deploy:
@@ -290,6 +324,7 @@ workflows:
           name: publish_bunkbot
           app_name: bunkbot
           dockerfile: "./src/bunkbot/Dockerfile.ci"
+          context: github-container-registry
           requires:
             - test
             - build
@@ -297,6 +332,7 @@ workflows:
           name: publish_bluebot
           app_name: bluebot
           dockerfile: "./src/bluebot/Dockerfile.ci"
+          context: github-container-registry
           requires:
             - test
             - build
@@ -304,6 +340,7 @@ workflows:
           name: publish_covabot
           app_name: covabot
           dockerfile: "./src/covabot/Dockerfile.ci"
+          context: github-container-registry
           requires:
             - test
             - build
@@ -311,12 +348,15 @@ workflows:
           name: publish_djcova
           app_name: djcova
           dockerfile: "./src/djcova/Dockerfile.ci"
+          context: github-container-registry
           requires:
             - test
             - build
-      - deploy:
-          requires:
-            - publish_bunkbot
-            - publish_bluebot
-            - publish_covabot
-            - publish_djcova
+      # Deploy job disabled - requires self-hosted runner (starbunk-runner)
+      # - deploy:
+      #     context: github-container-registry
+      #     requires:
+      #       - publish_bunkbot
+      #       - publish_bluebot
+      #       - publish_covabot
+      #       - publish_djcova

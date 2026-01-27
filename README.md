@@ -1,4 +1,5 @@
 # StarBunk Discord Bot - Container Architecture
+<!-- Testing deployment workflow -->
 
 A sophisticated Discord bot built with TypeScript using a **4-container modular architecture** that provides scalable, isolated services for different bot functionalities.
 

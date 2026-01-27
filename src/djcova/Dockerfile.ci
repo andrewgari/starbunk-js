@@ -36,7 +36,6 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # Copy pre-built artifacts from CI
 COPY --chown=djcova:djcova src/shared/dist ./src/shared/dist
-COPY --chown=djcova:djcova src/shared/node_modules ./src/shared/node_modules
 COPY --chown=djcova:djcova src/djcova/dist ./src/djcova/dist
 
 # Set default environment variables from build args
