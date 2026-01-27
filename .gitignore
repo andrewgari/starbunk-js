@@ -178,6 +178,12 @@ logs-dev
 scripts/
 scripts/*
 
+# Exception: CircleCI scripts must be tracked
+!.circleci/scripts/
+!.circleci/scripts/container_health_check.sh
+!.circleci/scripts/detect_changes.sh
+!.circleci/scripts/generate_config.py
+
 *.md
 
 !README.md
