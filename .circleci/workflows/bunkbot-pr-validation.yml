@@ -155,6 +155,7 @@ jobs:
       - run:
           name: Health Check
           command: |
+            chmod +x .circleci/scripts/container_health_check.sh
             .circleci/scripts/container_health_check.sh \
               ghcr.io/andrewgari/starbunk-${APP}:latest
 
