@@ -158,8 +158,10 @@ jobs:
             ls -la .circleci/scripts/ || echo "Directory not found"
             if [ -f .circleci/scripts/container_health_check.sh ]; then
               chmod +x .circleci/scripts/container_health_check.sh
-              .circleci/scripts/container_health_check.sh \
-                ghcr.io/andrewgari/starbunk-${APP}:latest
+
+              # For PR validation, skip health check since image isn't pushed to registry
+              echo "⊘ Skipping health check - image not available in registry for PR validation"
+              echo "Note: Health checks run on main merge after image is pushed to GHCR"
             else
               echo "ERROR: container_health_check.sh not found"
               pwd
