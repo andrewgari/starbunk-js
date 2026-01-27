@@ -7,7 +7,13 @@
 	"exports": {
 		".": "./dist/index.js",
 		"./database": "./dist/services/database/index.js",
+		"./observability/log-layer": "./dist/observability/log-layer.js",
 		"./observability/mixins": "./dist/observability/mixins/index.js",
+		"./observability/logs-service": "./dist/observability/logs-service.js",
+		"./observability/metrics-service": "./dist/observability/metrics-service.js",
+		"./observability/trace-service": "./dist/observability/trace-service.js",
+		"./observability/health-server": "./dist/observability/health-server.js",
+		"./observability/shutdown": "./dist/observability/shutdown.js",
 		"./observability/*": "./dist/observability/*.js",
 		"./services/llm": "./dist/services/llm/index.js",
 		"./services/llm/*": "./dist/services/llm/*.js",

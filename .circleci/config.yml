@@ -28,7 +28,11 @@ jobs:
             if [ -n "${CIRCLE_TAG:-}" ]; then
               echo "Detected git tag: $CIRCLE_TAG - loading deployment workflow"
               cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
+            elif [ "${CIRCLE_BRANCH:-}" = "main" ]; then
+              echo "On main branch - loading deployment workflow"
+              cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
             else
+              echo "On feature branch/PR - loading PR validation workflows"
               .circleci/scripts/generate_config.py > .circleci/generated_config.yml
             fi
             echo "=== Generated config preview (first 50 lines) ==="
