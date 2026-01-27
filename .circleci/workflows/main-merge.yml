@@ -265,56 +265,56 @@ jobs:
               echo "⊘ Image unchanged - skipping push"
             fi
 
-  deploy:
-    executor: runner
-    steps:
-      - checkout
-      - run:
-          name: Login to GHCR
-          command: |
-            if [ -n "${GHCR_TOKEN:-}" ]; then
-              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-            else
-              echo "⚠ GHCR credentials not configured - cannot pull images"
-              exit 1
-            fi
-      - run:
-          name: Pull Latest Images
-          command: |
-            # Determine tag based on branch
-            if [ "${CIRCLE_BRANCH:-}" = "main" ]; then
-              DEPLOY_TAG="main"
-            else
-              DEPLOY_TAG="dev"
-            fi
-
-            echo "Pulling latest images from GHCR (tag: $DEPLOY_TAG)..."
-            docker pull ghcr.io/andrewgari/starbunk-bunkbot:${DEPLOY_TAG}
-            docker pull ghcr.io/andrewgari/starbunk-bluebot:${DEPLOY_TAG}
-            docker pull ghcr.io/andrewgari/starbunk-covabot:${DEPLOY_TAG}
-            docker pull ghcr.io/andrewgari/starbunk-djcova:${DEPLOY_TAG}
-      - run:
-          name: Deploy with Docker Compose
-          command: |
-            echo "🚀 Deploying services with docker-compose..."
-            docker-compose pull --policy always
-            docker-compose up -d
-            echo "✅ Deployment complete"
-      - run:
-          name: Verify Deployment Health
-          command: |
-            echo "Checking service health..."
-            sleep 10
-
-            services=("starbunk-bunkbot" "starbunk-bluebot" "starbunk-covabot" "starbunk-djcova")
-            for service in "${services[@]}"; do
-              if docker ps --filter "name=$service" --filter "status=running" | grep -q "$service"; then
-                echo "✅ $service is running"
-              else
-                echo "⚠ $service is not running"
-                docker-compose logs "$service" | tail -20
-              fi
-            done
+  # deploy:
+  #   executor: runner
+  #   steps:
+  #     - checkout
+  #     - run:
+  #         name: Login to GHCR
+  #         command: |
+  #           if [ -n "${GHCR_TOKEN:-}" ]; then
+  #             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+  #           else
+  #             echo "⚠ GHCR credentials not configured - cannot pull images"
+  #             exit 1
+  #           fi
+  #     - run:
+  #         name: Pull Latest Images
+  #         command: |
+  #           # Determine tag based on branch
+  #           if [ "${CIRCLE_BRANCH:-}" = "main" ]; then
+  #             DEPLOY_TAG="main"
+  #           else
+  #             DEPLOY_TAG="dev"
+  #           fi
+  #
+  #           echo "Pulling latest images from GHCR (tag: $DEPLOY_TAG)..."
+  #           docker pull ghcr.io/andrewgari/starbunk-bunkbot:${DEPLOY_TAG}
+  #           docker pull ghcr.io/andrewgari/starbunk-bluebot:${DEPLOY_TAG}
+  #           docker pull ghcr.io/andrewgari/starbunk-covabot:${DEPLOY_TAG}
+  #           docker pull ghcr.io/andrewgari/starbunk-djcova:${DEPLOY_TAG}
+  #     - run:
+  #         name: Deploy with Docker Compose
+  #         command: |
+  #           echo "🚀 Deploying services with docker-compose..."
+  #           docker-compose pull --policy always
+  #           docker-compose up -d
+  #           echo "✅ Deployment complete"
+  #     - run:
+  #         name: Verify Deployment Health
+  #         command: |
+  #           echo "Checking service health..."
+  #           sleep 10
+  #
+  #           services=("starbunk-bunkbot" "starbunk-bluebot" "starbunk-covabot" "starbunk-djcova")
+  #           for service in "${services[@]}"; do
+  #             if docker ps --filter "name=$service" --filter "status=running" | grep -q "$service"; then
+  #               echo "✅ $service is running"
+  #             else
+  #               echo "⚠ $service is not running"
+  #               docker-compose logs "$service" | tail -20
+  #             fi
+  #           done
 
 workflows:
   deploy:
@@ -362,10 +362,11 @@ workflows:
           requires:
             - test
             - build
-      - deploy:
-          context: github-container-registry
-          requires:
-            - publish_bunkbot
-            - publish_bluebot
-            - publish_covabot
-            - publish_djcova
+      # Deploy job disabled - requires self-hosted runner (starbunk-runner)
+      # - deploy:
+      #     context: github-container-registry
+      #     requires:
+      #       - publish_bunkbot
+      #       - publish_bluebot
+      #       - publish_covabot
+      #       - publish_djcova
