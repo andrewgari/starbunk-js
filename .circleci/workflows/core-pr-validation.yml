@@ -1,19 +1,18 @@
 version: 2.1
 
-parameters:
-  snyk_token:
-    type: string
-    default: ""
-    description: "Snyk API token for security scanning"
+# Core validation jobs (lint, types, build)
+# Shared executors and commands are loaded from shared-config.yml by generate_config.py
+# Including them here for individual file validation
 
 executors:
-  node20:
+  node22:
     docker:
       - image: cimg/node:22.14
     resource_class: medium
 
 commands:
   setup_npm_cache:
+    description: "Install npm dependencies with caching"
     steps:
       - restore_cache:
           keys:
@@ -34,9 +33,15 @@ commands:
             - ~/.npm
             - node_modules
 
+parameters:
+  snyk_token:
+    type: string
+    default: ""
+    description: "Snyk API token for security scanning"
+
 jobs:
   build:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache
@@ -45,7 +50,7 @@ jobs:
           command: npm run build
 
   lint:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache
@@ -56,7 +61,7 @@ jobs:
             npm run format -- --check
 
   types:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache

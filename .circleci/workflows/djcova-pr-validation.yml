@@ -1,7 +1,11 @@
 version: 2.1
 
+# App-specific jobs for djcova
+# Shared executors and commands are loaded from shared-config.yml by generate_config.py
+# Including them here for individual file validation
+
 executors:
-  node20:
+  node22:
     docker:
       - image: cimg/node:22.14
     resource_class: medium
@@ -12,6 +16,7 @@ executors:
 
 commands:
   setup_npm_cache:
+    description: "Install npm dependencies with caching"
     steps:
       - restore_cache:
           keys:
@@ -31,14 +36,16 @@ commands:
           paths:
             - ~/.npm
             - node_modules
+
   persist_build_artifacts:
+    description: "Compress and persist build artifacts to workspace"
     steps:
       - run:
           name: Compress build artifacts
           command: |
             # Build list of files to tar
             FILES_TO_TAR="package.json package-lock.json"
-            for app in shared bunkbot bluebot covabot djcova; do
+            for app in $(ls src); do
               if [ -d "src/$app/dist" ]; then
                 FILES_TO_TAR="$FILES_TO_TAR src/$app/dist"
               fi
@@ -49,14 +56,18 @@ commands:
           root: .
           paths:
             - build-artifacts.tar.gz
+
   attach_build_artifacts:
+    description: "Attach and extract build artifacts from workspace"
     steps:
       - attach_workspace:
           at: .
       - run:
           name: Extract build artifacts
           command: tar -xzf build-artifacts.tar.gz
+
   setup_docker_cli:
+    description: "Ensure Docker CLI is available"
     steps:
       - run:
           name: Ensure Docker CLI is available
@@ -69,7 +80,7 @@ commands:
 
 jobs:
   djcova_build:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache
@@ -79,7 +90,7 @@ jobs:
       - persist_build_artifacts
 
   djcova_test:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache
@@ -88,7 +99,7 @@ jobs:
           command: npm run test:djcova
 
   djcova_docker_build:
-    executor: node20
+    executor: node22
     environment:
       APP: djcova
       DOCKERFILE: "./src/djcova/Dockerfile.ci"

@@ -1,7 +1,7 @@
 version: 2.1
 
 executors:
-  node20:
+  node22:
     docker:
       - image: cimg/node:22.14
     resource_class: medium
@@ -72,7 +72,7 @@ commands:
 
 jobs:
   lint:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache
@@ -83,7 +83,7 @@ jobs:
             npm run format -- --check
 
   types:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache
@@ -92,7 +92,7 @@ jobs:
           command: npm run type-check
 
   semantic_release:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache
@@ -126,7 +126,7 @@ jobs:
             done
 
   unit-tests:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache
@@ -135,7 +135,7 @@ jobs:
           command: npm run test:shared
 
   build:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache
@@ -157,7 +157,7 @@ jobs:
       - persist_build_artifacts
 
   test:
-    executor: node20
+    executor: node22
     steps:
       - checkout
       - setup_npm_cache
@@ -167,7 +167,7 @@ jobs:
           command: npm run test:full
 
   publish_image:
-    executor: node20
+    executor: node22
     parameters:
       app_name:
         type: string
