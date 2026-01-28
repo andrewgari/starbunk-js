@@ -1,147 +1,92 @@
-/**
- * YAML personality file loading and parsing
- */
-
-import * as fs from 'fs';
-import * as path from 'path';
-import * as yaml from 'js-yaml';
-import { logLayer } from '@starbunk/shared/observability/log-layer';
-import { yamlConfigSchema, YamlConfigType } from './personality-schema';
-import { CovaProfile } from '@/models/memory-types';
-
-const logger = logLayer.withPrefix('PersonalityParser');
+import { z } from 'zod';
 
 /**
- * Load and parse a single YAML personality file
+ * Personality Schema for Bunkbot and community bots
+ *
+ * This schema defines a complete chatbot personality including:
+ * - Identity (who the bot is)
+ * - Core personality traits and communication style
+ * - Response behavior rules (WHEN, HOW, WHAT to respond)
+ * - Interests and triggers
+ * - Guardrails and permissions
  */
-export function parsePersonalityFile(filePath: string): CovaProfile {
-  logger.withMetadata({ file_path: filePath }).info('Loading personality file');
 
-  if (!fs.existsSync(filePath)) {
-    logger.withMetadata({ file_path: filePath }).error('Personality file not found');
-    throw new Error(`Personality file not found: ${filePath}`);
-  }
+// Zod schemas for runtime validation
+export const PersonalityTraitSchema = z.object({
+  openness: z.number().min(0).max(1).describe('Receptiveness to new ideas, creativity'),
+  conscientiousness: z.number().min(0).max(1).describe('Organized, disciplined, reliable'),
+  extraversion: z.number().min(0).max(1).describe('Outgoing, social, energetic'),
+  agreeableness: z.number().min(0).max(1).describe('Compassionate, cooperative, empathetic'),
+  neuroticism: z.number().min(0).max(1).describe('Anxiety, moodiness, emotional sensitivity'),
+});
 
-  const fileContent = fs.readFileSync(filePath, 'utf-8');
+export const CommunicationStyleSchema = z.object({
+  tone: z.enum(['formal', 'casual', 'witty', 'supportive', 'authoritative', 'playful']),
+  verbosity: z.number().min(0).max(1).describe('0=concise, 1=verbose'),
+  sarcasmLevel: z.number().min(0).max(1),
+  technicalBias: z.number().min(0).max(1).describe('0=layperson, 1=highly technical'),
+  useEmoji: z.boolean(),
+  capitalization: z.enum(['normal', 'lowercase', 'UPPERCASE']),
+  formalLanguage: z.boolean(),
+});
 
-  let parsed: unknown;
-  try {
-    parsed = yaml.load(fileContent);
-  } catch (yamlError) {
-    logger.withError(yamlError).withMetadata({ file_path: filePath }).error('YAML parsing failed');
-    throw new Error(`Failed to parse YAML in ${filePath}: ${yamlError}`);
-  }
+export const ResponseTriggerSchema = z.object({
+  keywords: z.array(z.string()).describe('Phrases that trigger a response'),
+  patterns: z.array(z.string()).describe('Regex patterns for matching'),
+  weight: z.number().min(0).max(1).describe('Priority/likelihood of responding'),
+  confidence: z.number().min(0).max(1).describe('Min confidence threshold to engage'),
+});
 
-  // Validate with Zod
-  const validationResult = yamlConfigSchema.safeParse(parsed);
-  if (!validationResult.success) {
-    const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-    logger.withMetadata({ file_path: filePath, errors }).error('Schema validation failed');
-    throw new Error(`Schema validation failed for ${filePath}: ${errors}`);
-  }
+export const ResponseBehaviorSchema = z.object({
+  triggers: z.array(ResponseTriggerSchema),
+  responseTemplate: z.string().describe('How to structure the response'),
+  maxLength: z.number().optional().describe('Character limit for responses'),
+  includeContext: z.boolean().describe('Whether to reference conversation history'),
+  allowFollowUp: z.boolean().describe('Whether bot should ask clarifying questions'),
+});
 
-  const config = validationResult.data;
-
-  // Transform to runtime profile
-  const profile = transformToCovaProfile(config);
-
-  logger.withMetadata({
-    profile_id: profile.id,
-    display_name: profile.displayName,
-    triggers_count: profile.triggers.length,
-    interests_count: profile.personality.interests.length,
-  }).info('Personality loaded successfully');
-
-  return profile;
-}
-
-/**
- * Load all personality files from a directory
- */
-export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
-  logger.withMetadata({ dir_path: dirPath }).info('Loading personalities from directory');
-
-  if (!fs.existsSync(dirPath)) {
-    logger.withMetadata({ dir_path: dirPath }).warn('Personalities directory not found, creating it');
-    fs.mkdirSync(dirPath, { recursive: true });
-    return [];
-  }
-
-  const files = fs.readdirSync(dirPath).filter(f =>
-    f.endsWith('.yml') || f.endsWith('.yaml')
-  );
-
-  if (files.length === 0) {
-    logger.withMetadata({ dir_path: dirPath }).warn('No personality files found');
-    return [];
-  }
-
-  const profiles: CovaProfile[] = [];
-  for (const file of files) {
-    const filePath = path.join(dirPath, file);
-    try {
-      const profile = parsePersonalityFile(filePath);
-      profiles.push(profile);
-    } catch (error) {
-      logger.withError(error).withMetadata({ file }).error('Failed to load personality file, skipping');
-    }
-  }
-
-  logger.withMetadata({
-    loaded_count: profiles.length,
-    total_files: files.length
-  }).info('Finished loading personalities');
-
-  return profiles;
-}
-
-/**
- * Transform validated YAML config to runtime CovaProfile
- */
-function transformToCovaProfile(config: YamlConfigType): CovaProfile {
-  const { profile: p } = config;
-
-  return {
-    id: p.id,
-    displayName: p.display_name,
-    avatarUrl: p.avatar_url,
-    identity: p.identity,
-    personality: {
-      systemPrompt: p.personality.system_prompt,
-      traits: p.personality.traits,
-      interests: p.personality.interests,
-      speechPatterns: {
-        lowercase: p.personality.speech_patterns.lowercase,
-        sarcasmLevel: p.personality.speech_patterns.sarcasm_level,
-        technicalBias: p.personality.speech_patterns.technical_bias,
-      },
-    },
-    triggers: p.triggers.map(t => ({
-      name: t.name,
-      conditions: t.conditions as CovaProfile['triggers'][0]['conditions'],
-      use_llm: t.use_llm,
-      response_chance: t.response_chance,
-      responses: t.responses,
-    })),
-    socialBattery: {
-      maxMessages: p.social_battery.max_messages,
-      windowMinutes: p.social_battery.window_minutes,
-      cooldownSeconds: p.social_battery.cooldown_seconds,
-    },
-    llmConfig: {
-      model: p.llm.model,
-      temperature: p.llm.temperature,
-      max_tokens: p.llm.max_tokens,
-    },
-    ignoreBots: p.ignore_bots,
-  };
-}
-
-/**
- * Get the default personalities directory path
- */
-export function getDefaultPersonalitiesPath(): string {
-  // Look relative to the covabot package root
-  const packageRoot = path.resolve(__dirname, '../../..');
-  return path.join(packageRoot, 'config', 'personalities');
-}
+export const PersonalitySchema = z.object({
+  version: z.string(),
+  identity: z.object({
+    botId: z.string(),
+    displayName: z.string(),
+    description: z.string(),
+    avatarUrl: z.string().url(),
+    bannerUrl: z.string().url().optional(),
+    role: z.enum(['moderator', 'assistant', 'curator', 'game_master']).optional(),
+  }),
+  core: z.object({
+    systemPrompt: z.string().describe('Primary instruction for the AI model'),
+    coreValues: z.array(z.string()).describe('What the bot stands for'),
+    traits: PersonalityTraitSchema,
+  }),
+  communication: CommunicationStyleSchema,
+  quirks: z.object({
+    catchphrases: z.array(z.string()),
+    favoriteEmojis: z.array(z.string()).optional(),
+    mannerisms: z.array(z.string()).optional(),
+    petPeeves: z.array(z.string()).optional(),
+  }),
+  interests: z.object({
+    primary: z.array(z.string()),
+    secondary: z.array(z.string()).optional(),
+    triggers: z
+      .record(z.string(), ResponseBehaviorSchema)
+      .optional()
+      .describe('Topic-specific response rules'),
+  }),
+  guardrails: z.object({
+    doNotRespond: z.array(z.string()).describe('Topics or keywords to ignore'),
+    escalateToMod: z.array(z.string()).describe('Phrases that trigger mod escalation'),
+    banWords: z.array(z.string()).optional(),
+    maxResponsesPerConversation: z.number().optional(),
+    cooldownSeconds: z.number().optional(),
+  }),
+  permissions: z.object({
+    canModerate: z.boolean(),
+    canEditMessages: z.boolean(),
+    canDeleteMessages: z.boolean(),
+    canMentionEveryone: z.boolean(),
+    visibleServers: z.array(z.string()).optional(),
+  }),
+});
