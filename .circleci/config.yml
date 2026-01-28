@@ -23,6 +23,11 @@ jobs:
           name: Detect changed paths
           command: .circleci/scripts/detect_changes.sh
       - run:
+          name: Install Python and PyYAML
+          command: |
+            apt-get update && apt-get install -y python3 python3-pip
+            pip3 install pyyaml
+      - run:
           name: Generate dynamic config
           command: |
             if [ -n "${CIRCLE_TAG:-}" ]; then
