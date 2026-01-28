@@ -1,106 +1,74 @@
-import { z } from 'zod';
-import { PersonalitySchema, getDefaultPersonalitiesPath } from './personality-parser';
 import * as fs from 'fs';
-import * as path from 'path';
-import * as yaml from 'yaml';
 import { LiveData, ReadonlyLiveData } from '@starbunk/shared';
+import { getDefaultPersonalitiesPath, loadPersonalitiesFromDirectory } from './personality-parser';
+import type { CovaProfile } from '@/models/memory-types';
 
 export interface PersonalityService {
-  getPersonalityById(id: string): Personality | undefined;
-  getPersonalityByName(name: string): Personality | undefined;
-  activatePersonality(personality: Personality): void;
-  getActivePersonality(): Personality | null | undefined;
+  getPersonalityById(id: string): CovaProfile | undefined;
+  getPersonalityByName(name: string): CovaProfile | undefined;
+  activatePersonality(personality: CovaProfile): void;
+  getActivePersonality(): CovaProfile | null | undefined;
   refreshPersonalities(): void;
-  // LiveData-style observable accessors
-  getPersonalitiesLive(): ReadonlyLiveData<readonly Personality[]>;
-  getActivePersonalityLive(): ReadonlyLiveData<Personality | null>;
-  // Convenience synchronous accessors
-  getAllPersonalities(): readonly Personality[];
+  getPersonalitiesLive(): ReadonlyLiveData<readonly CovaProfile[]>;
+  getActivePersonalityLive(): ReadonlyLiveData<CovaProfile | null>;
+  getAllPersonalities(): readonly CovaProfile[];
   getPersonalityCount(): number;
 }
 
 export class PersonalityManager {
-  private personalities: Map<string, Personality> = new Map();
-  private activePersonality: Personality | null = null;
+  private personalities: Map<string, CovaProfile> = new Map();
+  private activePersonality: CovaProfile | null = null;
+  private readonly dir: string;
 
   // LiveData streams for observers
-  private readonly personalities$ = new LiveData<readonly Personality[]>([]);
-  private readonly activePersonality$ = new LiveData<Personality | null>(null);
+  private readonly personalities$ = new LiveData<readonly CovaProfile[]>([]);
+  private readonly activePersonality$ = new LiveData<CovaProfile | null>(null);
 
   // FS watch support
   private watcher?: fs.FSWatcher;
   private watchDebounce?: NodeJS.Timeout;
 
   constructor(configPath?: string) {
-    this.loadPersonalities(configPath);
+    this.dir = configPath ?? getDefaultPersonalitiesPath();
+    this.loadFromDirectory();
     this.startWatching();
   }
 
-  private loadPersonalities(_?: string) {
-    const configPath = path.join(process.cwd(), 'config');
-
-    // Scan for bot directories
-    const botDirs = fs.readdirSync(configPath).filter(file => {
-      const fullPath = path.join(configPath, file);
-      return fs.statSync(fullPath).isDirectory();
-    });
-
-    // Load personality files from each bot directory
-    for (const botDir of botDirs) {
-      const personalityPath = path.join(configPath, botDir, 'personality.yml');
-
-      if (fs.existsSync(personalityPath)) {
-        try {
-          const fileContent = fs.readFileSync(personalityPath, 'utf-8');
-          const configData = yaml.parse(fileContent);
-
-          // Validate and create personality using PersonalityFactory
-          const personality = PersonalityFactory.createPersonality(configData);
-
-          // Store by botId for quick lookup
-          this.personalities.set(personality.identity.botId, personality);
-
-          console.log(`✓ Loaded personality: ${personality.identity.displayName}`);
-        } catch (error) {
-          console.error(`✗ Failed to load personality from ${personalityPath}:`, error);
-        }
-      }
+  private loadFromDirectory(): void {
+    this.personalities.clear();
+    const profiles = loadPersonalitiesFromDirectory(this.dir);
+    for (const profile of profiles) {
+      this.personalities.set(profile.id, profile);
     }
-
-    if (this.personalities.size === 0) {
-      console.warn('⚠ No personalities loaded from config');
-    }
-
-    // Update stream after full scan
     this.publishPersonalities();
   }
 
-  public getPersonalityById(id: string): Personality | undefined {
+  public getPersonalityById(id: string): CovaProfile | undefined {
     return this.personalities.get(id);
   }
 
-  public getPersonalityByName(name: string): Personality | undefined {
+  public getPersonalityByName(name: string): CovaProfile | undefined {
     for (const personality of this.personalities.values()) {
-      if (personality.identity.displayName === name) {
+      if (personality.displayName === name) {
         return personality;
       }
     }
     return undefined;
   }
 
-  public activatePersonality(personality: Personality): void {
+  public activatePersonality(personality: CovaProfile): void {
     this.activePersonality = personality;
     this.activePersonality$.setValue(personality);
   }
 
-  public getActivePersonality(): Personality | null | undefined {
+  public getActivePersonality(): CovaProfile | null | undefined {
     return this.activePersonality;
   }
 
   public refreshPersonalities(): void {
     // Snapshot current state for safe rollback in case refresh fails
     const prevPersonalities = new Map(this.personalities);
-    const prevActiveId = this.activePersonality?.identity.botId ?? null;
+    const prevActiveId = this.activePersonality?.id ?? null;
 
     // Prepare a clean state to avoid stale or deleted entries lingering
     this.personalities = new Map();
@@ -109,7 +77,7 @@ export class PersonalityManager {
     this.activePersonality$.setValue(null);
 
     try {
-      this.loadPersonalities();
+      this.loadFromDirectory();
     } catch (error) {
       console.error('✗ Failed to refresh personalities:', error);
       // Roll back to previous known-good state
@@ -133,16 +101,16 @@ export class PersonalityManager {
   }
 
   // LiveData accessors
-  public getPersonalitiesLive(): ReadonlyLiveData<readonly Personality[]> {
+  public getPersonalitiesLive(): ReadonlyLiveData<readonly CovaProfile[]> {
     return this.personalities$.asReadonly();
   }
 
-  public getActivePersonalityLive(): ReadonlyLiveData<Personality | null> {
+  public getActivePersonalityLive(): ReadonlyLiveData<CovaProfile | null> {
     return this.activePersonality$.asReadonly();
   }
 
   // Convenience accessors maintained for synchronous reads
-  public getAllPersonalities(): readonly Personality[] {
+  public getAllPersonalities(): readonly CovaProfile[] {
     return this.personalities$.getValue();
   }
 
@@ -160,7 +128,7 @@ export class PersonalityManager {
   // File-system watching (auto-refresh)
   // ---------------------------------------------------------------------------
   private startWatching(): void {
-    const dir = getDefaultPersonalitiesPath();
+    const dir = this.dir;
     try {
       // Close any existing watcher first
       this.stopWatching();
@@ -176,7 +144,6 @@ export class PersonalityManager {
           }
         }, 500);
       });
-      console.log(`👀 Watching personalities directory: ${dir}`);
     } catch (err) {
       console.warn(`⚠ Failed to watch personalities directory '${dir}':`, err);
     }
@@ -199,13 +166,5 @@ export class PersonalityManager {
 
   public dispose(): void {
     this.stopWatching();
-  }
-}
-
-export type Personality = z.infer<typeof PersonalitySchema>;
-
-export class PersonalityFactory {
-  public static createPersonality(config: z.input<typeof PersonalitySchema>): Personality {
-    return PersonalitySchema.parse(config);
   }
 }
