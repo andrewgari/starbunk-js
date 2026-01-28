@@ -13,6 +13,13 @@ import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { yamlConfigSchema } from './personality-schema';
 import type { YamlConfigType } from './personality-schema';
 import type { CovaProfile } from '@/models/memory-types';
+import { deepFreeze } from './deep-freeze';
+import {
+  normalizeIdentity,
+  normalizeLlmConfig,
+  normalizeSpeechPatterns,
+  normalizeTrigger,
+} from './normalizers';
 
 const logger = logLayer.withPrefix('PersonalityParser');
 
@@ -96,31 +103,35 @@ function validateConfig(yamlData: unknown, filePath: string): YamlConfigType {
 }
 
 function transformToCovaProfile(config: YamlConfigType): CovaProfile {
-  const profile = config.profile;
-  return {
-    id: profile.id,
-    displayName: profile.display_name,
-    avatarUrl: profile.avatar_url,
-    identity: profile.identity as CovaProfile['identity'],
-    personality: {
-      systemPrompt: profile.personality.system_prompt,
-      traits: profile.personality.traits,
-      interests: profile.personality.interests,
-      speechPatterns: {
-        lowercase: profile.personality.speech_patterns.lowercase,
-        sarcasmLevel: profile.personality.speech_patterns.sarcasm_level,
-        technicalBias: profile.personality.speech_patterns.technical_bias,
-      },
-    },
-    triggers: profile.triggers as CovaProfile['triggers'],
+  const p = config.profile;
+
+  const personality = {
+    systemPrompt: String(p.personality.system_prompt).trim(),
+    traits: (p.personality.traits ?? []).map(t => String(t).trim()).filter(Boolean),
+    interests: (p.personality.interests ?? []).map(i => String(i).trim()).filter(Boolean),
+    speechPatterns: normalizeSpeechPatterns(p.personality.speech_patterns),
+  } as CovaProfile['personality'];
+
+  const triggers = p.triggers.map(t => normalizeTrigger(t));
+
+  const result: CovaProfile = {
+    id: p.id,
+    displayName: p.display_name,
+    avatarUrl: p.avatar_url,
+    identity: normalizeIdentity(p.identity),
+    personality,
+    triggers,
     socialBattery: {
-      maxMessages: profile.social_battery.max_messages,
-      windowMinutes: profile.social_battery.window_minutes,
-      cooldownSeconds: profile.social_battery.cooldown_seconds,
+      maxMessages: Math.max(1, Math.trunc(p.social_battery.max_messages)),
+      windowMinutes: Math.max(1, Math.trunc(p.social_battery.window_minutes)),
+      cooldownSeconds: Math.max(0, Math.trunc(p.social_battery.cooldown_seconds)),
     },
-    llmConfig: profile.llm as CovaProfile['llmConfig'],
-    ignoreBots: profile.ignore_bots ?? true,
+    llmConfig: normalizeLlmConfig(p.llm),
+    ignoreBots: Boolean(p.ignore_bots),
   };
+
+  // Return an immutable configuration to avoid accidental mutation at runtime
+  return deepFreeze(result) as unknown as CovaProfile;
 }
 
 // -----------------------------------------------------------------------------
