@@ -8,6 +8,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
+import { z } from 'zod';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { yamlConfigSchema } from './personality-schema';
 import type { CovaProfile } from '@/models/memory-types';
@@ -33,7 +34,8 @@ export function parsePersonalityFile(filePath: string): CovaProfile {
   try {
     yamlData = yaml.load(fileContent);
   } catch (error) {
-    throw new Error(`Failed to parse YAML in ${filePath}: ${error}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to parse YAML in ${filePath}: ${errorMessage}`);
   }
 
   // Validate against schema
@@ -125,8 +127,14 @@ export function getDefaultPersonalitiesPath(): string {
   return path.join(process.cwd(), 'config', 'covabot');
 }
 
-// Legacy schema exports (kept for backwards compatibility)
-import { z } from 'zod';
+// =============================================================================
+// Legacy Schemas (Backwards Compatibility)
+// =============================================================================
+// NOTE: These schemas are for backwards compatibility only and represent an
+// older personality configuration format. The current implementation uses
+// yamlConfigSchema from personality-schema.ts which maps to CovaProfile.
+// These legacy schemas are kept to maintain TypeScript type compatibility.
+// =============================================================================
 
 export const PersonalityTraitSchema = z.object({
   openness: z.number().min(0).max(1).describe('Receptiveness to new ideas, creativity'),

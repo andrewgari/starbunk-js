@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 import { PersonalitySchema, loadPersonalitiesFromDirectory, getDefaultPersonalitiesPath } from './personality-parser';
 import type { CovaProfile } from '@/models/memory-types';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
