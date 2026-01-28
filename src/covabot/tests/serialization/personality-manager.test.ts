@@ -14,13 +14,13 @@ describe('PersonalityManager', () => {
   });
 
   afterEach(() => {
-    // Clean up test directory
+    // Clean up test directory (robust recursive removal)
     if (fs.existsSync(testDir)) {
-      const files = fs.readdirSync(testDir);
-      for (const file of files) {
-        fs.unlinkSync(path.join(testDir, file));
+      try {
+        fs.rmSync(testDir, { recursive: true, force: true });
+      } catch {
+        // ignore
       }
-      fs.rmdirSync(testDir);
     }
   });
 

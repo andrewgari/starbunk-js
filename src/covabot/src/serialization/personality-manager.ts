@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import { LiveData, ReadonlyLiveData } from '@starbunk/shared';
+import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { getDefaultPersonalitiesPath, loadPersonalitiesFromDirectory } from './personality-parser';
 import type { CovaProfile } from '@/models/memory-types';
 
@@ -15,10 +16,11 @@ export interface PersonalityService {
   getPersonalityCount(): number;
 }
 
-export class PersonalityManager {
+export class PersonalityManager implements PersonalityService {
   private personalities: Map<string, CovaProfile> = new Map();
   private activePersonality: CovaProfile | null = null;
   private readonly dir: string;
+  private readonly logger = logLayer.withPrefix('PersonalityManager');
 
   // LiveData streams for observers
   private readonly personalities$ = new LiveData<readonly CovaProfile[]>([]);
@@ -31,7 +33,11 @@ export class PersonalityManager {
   constructor(configPath?: string) {
     this.dir = configPath ?? getDefaultPersonalitiesPath();
     this.loadFromDirectory();
-    this.startWatching();
+    if (fs.existsSync(this.dir)) {
+      this.startWatching();
+    } else {
+      this.logger.warn(`Personalities directory '${this.dir}' does not exist; watcher not started`);
+    }
   }
 
   private loadFromDirectory(): void {
@@ -61,42 +67,34 @@ export class PersonalityManager {
     this.activePersonality$.setValue(personality);
   }
 
-  public getActivePersonality(): CovaProfile | null | undefined {
+  public getActivePersonality(): CovaProfile | null {
     return this.activePersonality;
   }
 
   public refreshPersonalities(): void {
-    // Snapshot current state for safe rollback in case refresh fails
-    const prevPersonalities = new Map(this.personalities);
+    // Atomic refresh: only publish new state after successful load
     const prevActiveId = this.activePersonality?.id ?? null;
-
-    // Prepare a clean state to avoid stale or deleted entries lingering
-    this.personalities = new Map();
-    this.activePersonality = null;
-    this.publishPersonalities();
-    this.activePersonality$.setValue(null);
-
     try {
-      this.loadFromDirectory();
-    } catch (error) {
-      console.error('✗ Failed to refresh personalities:', error);
-      // Roll back to previous known-good state
-      this.personalities = prevPersonalities;
-      this.activePersonality = prevActiveId ? prevPersonalities.get(prevActiveId) ?? null : null;
-      this.publishPersonalities();
-      this.activePersonality$.setValue(this.activePersonality);
-      return;
-    }
-
-    // Restore previous active personality if it still exists after refresh
-    if (prevActiveId) {
-      const restored = this.getPersonalityById(prevActiveId);
-      if (restored) {
-        this.activePersonality = restored;
-        this.activePersonality$.setValue(restored);
-      } else {
-        console.warn(`⚠ Active personality '${prevActiveId}' no longer exists after refresh`);
+      const profiles = loadPersonalitiesFromDirectory(this.dir);
+      const nextPersonalities = new Map<string, CovaProfile>();
+      for (const profile of profiles) {
+        nextPersonalities.set(profile.id, profile);
       }
+
+      // Swap in new state atomically
+      this.personalities = nextPersonalities;
+      this.publishPersonalities();
+
+      // Restore previous active personality if available
+      const restored = prevActiveId ? this.getPersonalityById(prevActiveId) : null;
+      if (prevActiveId && !restored) {
+        this.logger.warn(`Active personality '${prevActiveId}' no longer exists after refresh`);
+      }
+      this.activePersonality = restored ?? null;
+      this.activePersonality$.setValue(this.activePersonality);
+    } catch (error) {
+      // On failure, keep previous state untouched
+      this.logger.withError(error as Error).error('Failed to refresh personalities');
     }
   }
 
@@ -140,12 +138,12 @@ export class PersonalityManager {
           try {
             this.refreshPersonalities();
           } catch (err) {
-            console.error('✗ Auto-refresh failed:', err);
+            this.logger.withError(err as Error).error('Auto-refresh failed');
           }
         }, 500);
       });
     } catch (err) {
-      console.warn(`⚠ Failed to watch personalities directory '${dir}':`, err);
+      this.logger.withError(err as Error).warn(`Failed to watch personalities directory '${dir}'`);
     }
   }
 
@@ -157,8 +155,8 @@ export class PersonalityManager {
     if (this.watcher) {
       try {
         this.watcher.close();
-      } catch {
-        // ignore
+      } catch (err) {
+        this.logger.withError(err as Error).warn('Failed to close personality watcher');
       }
       this.watcher = undefined;
     }

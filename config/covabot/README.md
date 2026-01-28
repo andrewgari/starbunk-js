@@ -16,44 +16,44 @@ See `example-personality.yml` for a complete working example.
 profile:
   # Unique identifier for this personality
   id: "unique-bot-id"
-  
+
   # Display name shown in Discord
   display_name: "Bot Display Name"
-  
+
   # Optional: Avatar URL for webhook messages
   avatar_url: "https://example.com/avatar.png"
-  
+
   # Identity configuration
   identity:
     type: static  # Options: static, mimic, random
     botName: "Bot Name"
     avatarUrl: "https://example.com/avatar.png"
     # For mimic type: as_member: "123456789012345678"
-  
+
   # Personality configuration
   personality:
     system_prompt: |
       Define the bot's core personality and behavior here.
       This is the primary instruction for the AI model.
-    
+
     # Personality traits
     traits:
       - "helpful"
       - "friendly"
       - "knowledgeable"
-    
+
     # Topics the bot is interested in
     interests:
       - "technology"
       - "programming"
       - "gaming"
-    
+
     # Speech patterns
     speech_patterns:
       lowercase: false          # Force lowercase responses
       sarcasm_level: 0.3       # 0.0-1.0, sarcasm tendency
       technical_bias: 0.5      # 0.0-1.0, technical language level
-  
+
   # Response triggers
   triggers:
     - name: "greeting"
@@ -63,19 +63,19 @@ profile:
           - contains_word: "hi"
       use_llm: true
       response_chance: 0.8  # Probability of responding
-  
+
   # Social battery (rate limiting)
   social_battery:
     max_messages: 5          # Max messages per window
     window_minutes: 10       # Time window in minutes
     cooldown_seconds: 30     # Minimum gap between messages
-  
+
   # LLM configuration
   llm:
     model: "gpt-4o-mini"    # OpenAI model to use
     temperature: 0.4         # Response creativity (0.0-2.0)
     max_tokens: 256          # Maximum response length
-  
+
   # Whether to ignore messages from other bots
   ignore_bots: true
 ```
@@ -95,7 +95,7 @@ triggers:
       from_user: "123456789012345678"
       with_chance: 0.5
       always: true
-      
+
       # Logical operators
       any_of:
         - contains_word: "hello"
@@ -105,7 +105,7 @@ triggers:
         - from_user: "123456789012345678"
       none_of:
         - contains_word: "spam"
-    
+
     use_llm: true
     response_chance: 0.8
     responses: "Optional canned response"
@@ -142,7 +142,7 @@ Writable data (personality notes, conversation history) goes in the data directo
 
 1. Create a new `.yml` file in this directory
 2. Follow the schema above
-3. Restart CovaBot to load the new personality
+3. CovaBot will automatically detect and load the new personality when the YAML file is created or modified (hot-reload via file watcher; no restart required under normal operation). If the file watcher is disabled or fails, restarting CovaBot will also load the new personality.
 4. The personality will be available by its `id` or `display_name`
 
 ## Validation
@@ -151,5 +151,4 @@ All personality files are validated against the schema on load. Invalid files wi
 - Logged as errors
 - Skipped (other valid files will still load)
 - Detailed error messages provided in logs
-
 
