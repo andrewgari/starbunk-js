@@ -12,7 +12,7 @@ export class PersonalityManager {
     this.loadPersonalities(configPath);
   }
 
-  private loadPersonalities() {
+  private loadPersonalities(_?: string) {
     const configPath = path.join(process.cwd(), 'config');
 
     // Scan for bot directories
