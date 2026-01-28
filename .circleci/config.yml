@@ -25,8 +25,8 @@ jobs:
       - run:
           name: Install Python and PyYAML
           command: |
-            apt-get update && apt-get install -y python3 python3-pip
-            pip3 install pyyaml
+            sudo apt-get update && sudo apt-get install -y python3 python3-pip
+            sudo pip3 install pyyaml
       - run:
           name: Generate dynamic config
           command: |
