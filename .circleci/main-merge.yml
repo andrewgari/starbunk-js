@@ -65,6 +65,33 @@ jobs:
             npm run build
       - persist_build_artifacts
 
+  snyk_monitor_code:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Install Snyk CLI
+          command: npm install -g snyk@latest
+      - run:
+          name: Monitor Code Dependencies
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then
+              echo "⚠️  WARNING: SNYK_TOKEN not set - skipping Snyk monitoring"
+            else
+              snyk auth $SNYK_TOKEN
+              
+              echo "📊 Registering main branch with Snyk for continuous monitoring"
+              snyk monitor \
+                --all-projects \
+                --detection-depth=4 \
+                --project-name=starbunk-js-main || {
+                  echo "⚠️  Failed to register with Snyk monitor (non-fatal)"
+                }
+              
+              echo "✅ Code monitoring configured"
+            fi
+
   docker_build_and_validate_main:
     parameters:
       app:
@@ -140,12 +167,31 @@ jobs:
               ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:main
             .circleci/scripts/container_health_check.sh ${APP}-test /live 180
       - run:
-          name: Snyk Container Scan (optional)
+          name: Snyk Container Scan and Monitor
           command: |
-            if [ -n "$SNYK_TOKEN" ]; then
-              npm install -g snyk@latest || true
-              snyk auth $SNYK_TOKEN || true
-              snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/<< parameters.app >>:main --severity-threshold=high || true
+            if [ -z "$SNYK_TOKEN" ]; then
+              echo "⚠️  WARNING: SNYK_TOKEN not set - skipping security scan"
+              echo "Please configure SNYK_TOKEN in CircleCI to enable security scanning"
+            else
+              npm install -g snyk@latest
+              snyk auth $SNYK_TOKEN
+              
+              echo "🔍 Running Snyk container scan with HIGH/CRITICAL enforcement"
+              snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/<< parameters.app >>:main \
+                --severity-threshold=high \
+                --file=<< parameters.dockerfile >> || {
+                  echo "❌ Container has High or Critical vulnerabilities"
+                  exit 1
+                }
+              
+              echo "📊 Registering container with Snyk for continuous monitoring"
+              snyk container monitor ghcr.io/${CIRCLE_PROJECT_USERNAME}/<< parameters.app >>:main \
+                --file=<< parameters.dockerfile >> \
+                --project-name=starbunk-<< parameters.app >>-main || {
+                  echo "⚠️  Failed to register with Snyk monitor (non-fatal)"
+                }
+              
+              echo "✅ Container scan passed"
             fi
       - run:
           name: Push main tag
@@ -211,6 +257,8 @@ workflows:
   main_merge:
     jobs:
       - build_apps
+      - snyk_monitor_code:
+          requires: [build_apps]
       - docker_build_and_validate_main:
           name: build_validate_bunkbot
           app: bunkbot
