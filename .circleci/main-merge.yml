@@ -253,6 +253,65 @@ jobs:
               docker push ${IMAGE}:${VERSION}
             done
 
+  deploy_to_unraid:
+    machine: true
+    resource_class: medium
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "${SSH_KEY_FINGERPRINT}"
+      - setup_ssh_config
+      - notify_discord:
+          status: started
+          version: "${CIRCLE_BRANCH}"
+          message: "Deploying Starbunk services (tag: main) to Unraid server..."
+      - run:
+          name: Deploy to Unraid Server
+          command: |
+            VERSION=$(cat config/VERSION | tr -d '\n')
+            DEPLOY_TAG="main"  # Use :main tag from main branch
+
+            echo "========================================"
+            echo "Deploying version: ${VERSION}"
+            echo "Using image tag: ${DEPLOY_TAG}"
+            echo "Target: ${PROD_SERVER_HOST}"
+            echo "========================================"
+
+            # Copy deployment script to server
+            scp scripts/deployment/deploy.sh unraid-prod:/tmp/starbunk-deploy.sh
+            scp scripts/deployment/health-check.sh unraid-prod:/tmp/starbunk-health-check.sh
+
+            # Execute deployment on server
+            ssh unraid-prod "bash /tmp/starbunk-deploy.sh '${PROD_DOCKER_COMPOSE_DIR}' '${DEPLOY_TAG}' '${VERSION}'"
+
+      - run:
+          name: Verify Deployment Health
+          command: |
+            echo "========================================"
+            echo "Running post-deployment health checks..."
+            echo "========================================"
+
+            # Run health check script on server
+            ssh unraid-prod "bash /tmp/starbunk-health-check.sh '${PROD_DOCKER_COMPOSE_DIR}'"
+
+      - run:
+          name: Cleanup Remote Scripts
+          when: always
+          command: |
+            ssh unraid-prod "rm -f /tmp/starbunk-*.sh" || true
+
+      - notify_discord:
+          status: success
+          version: "${CIRCLE_BRANCH}"
+          message: "All services deployed and healthy on Unraid server!"
+
+      - run:
+          name: Handle Deployment Failure
+          when: on_fail
+          command: |
+            echo "Deployment failed - Discord notification will be sent by notify_discord with when: always"
+
 workflows:
   main_merge:
     jobs:
@@ -303,3 +362,7 @@ workflows:
             - publish_bluebot_latest
       - tag_version_images:
           requires: [semantic_release]
+      - deploy_to_unraid:
+          context:
+            - deployment-production
+          requires: [tag_version_images]
