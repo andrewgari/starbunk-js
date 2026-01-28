@@ -104,9 +104,11 @@ jobs:
             npx semantic-release
 
   tag_version_images:
-    executor: runner
+    executor: docker
     steps:
       - checkout
+      - setup_docker_cli
+      - setup_remote_docker
       - run:
           name: Login to GHCR
           command: |
