@@ -35,7 +35,7 @@ def main():
         sys.exit(1)
 
     # Determine which workflows to include
-    workflows_to_load = ['core-pr-validation']
+    workflows_to_load = ['core-pr-validation', 'security-pr-validation']
 
     for app in ['bunkbot', 'bluebot', 'covabot', 'djcova']:
         if changes.get(f'{app}_changed', False):

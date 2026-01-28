@@ -48,6 +48,23 @@ StarBunk is built as **4 independent containers**, each handling specific functi
 - Reduced attack surface and resource usage
 - Faster startup times per service
 
+## 🔒 Security
+
+StarBunk implements comprehensive security scanning and gating policies:
+
+- **Automated Vulnerability Scanning**: All PRs are scanned for High/Critical vulnerabilities
+- **Container Security**: Docker images scanned for OS-level vulnerabilities
+- **Continuous Monitoring**: Main branch monitored via Snyk for real-time security posture
+- **Manual Rescans**: Trigger security-only rescans after applying fixes
+
+**📋 For detailed security information, see [SECURITY.md](./SECURITY.md)**
+
+Key security features:
+- PR blocking on High/Critical vulnerabilities
+- Snyk integration for code and container scanning
+- Workspace-aware scanning (all npm workspaces)
+- Infrastructure-specific checks for Unraid/homelab deployment
+
 ## 🚀 Quick Start
 
 ### Prerequisites

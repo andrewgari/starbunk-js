@@ -192,6 +192,7 @@ scripts/*
 *.md
 
 !README.md
+!SECURITY.md
 !.circleci/README.md
 !docs/DOCKER_ENV_VARS.md
 !docs/DOCKER_BUILD_OPTIMIZATION.md
