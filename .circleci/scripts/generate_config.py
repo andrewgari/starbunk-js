@@ -56,13 +56,13 @@ def main():
         try:
             with open(shared_config_path, 'r') as f:
                 shared_config = yaml.safe_load(f) or {}
-            
+
             # Extract executors and commands from shared config
             if 'executors' in shared_config:
                 all_executors.update(shared_config['executors'])
             if 'commands' in shared_config:
                 all_commands.update(shared_config['commands'])
-            
+
             print(f"# Loaded shared-config.yml with {len(all_executors)} executors and {len(all_commands)} commands", file=sys.stderr)
         except yaml.YAMLError as e:
             print(f"Warning: Could not parse shared-config.yml: {e}", file=sys.stderr)
@@ -76,7 +76,7 @@ def main():
         try:
             with open(filepath, 'r') as f:
                 workflow_config = yaml.safe_load(f) or {}
-            
+
             # Merge executors, commands, jobs, and workflows from workflow file
             if 'executors' in workflow_config:
                 all_executors.update(workflow_config['executors'])
@@ -102,7 +102,7 @@ def main():
             'continuation': 'circleci/continuation@0.1.2'
         }
     }
-    
+
     # Add parameters (snyk_token required for core validation)
     merged_config['parameters'] = {
         'snyk_token': {
@@ -110,19 +110,19 @@ def main():
             'default': ''
         }
     }
-    
+
     # Add executors if any
     if all_executors:
         merged_config['executors'] = all_executors
-    
+
     # Add commands if any
     if all_commands:
         merged_config['commands'] = all_commands
-    
+
     # Add jobs if any
     if all_jobs:
         merged_config['jobs'] = all_jobs
-    
+
     # Add workflows if any
     if all_workflows:
         merged_config['workflows'] = all_workflows
