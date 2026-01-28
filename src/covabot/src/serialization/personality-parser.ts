@@ -1,17 +1,133 @@
-import { z } from 'zod';
-
 /**
- * Personality Schema for Bunkbot and community bots
- *
- * This schema defines a complete chatbot personality including:
- * - Identity (who the bot is)
- * - Core personality traits and communication style
- * - Response behavior rules (WHEN, HOW, WHAT to respond)
- * - Interests and triggers
- * - Guardrails and permissions
+ * Personality Parser - YAML file loading and validation
+ * 
+ * Loads personality configuration files from disk and validates them
+ * against the schema defined in personality-schema.ts
  */
 
-// Zod schemas for runtime validation
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'js-yaml';
+import { logLayer } from '@starbunk/shared/observability/log-layer';
+import { yamlConfigSchema } from './personality-schema';
+import type { CovaProfile } from '@/models/memory-types';
+
+const logger = logLayer.withPrefix('PersonalityParser');
+
+/**
+ * Parse a single personality YAML file
+ * @param filePath Path to the YAML file
+ * @returns Parsed and validated CovaProfile
+ */
+export function parsePersonalityFile(filePath: string): CovaProfile {
+  // Check if file exists
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Personality file not found: ${filePath}`);
+  }
+
+  // Read file content
+  const fileContent = fs.readFileSync(filePath, 'utf8');
+  
+  // Parse YAML
+  let yamlData: unknown;
+  try {
+    yamlData = yaml.load(fileContent);
+  } catch (error) {
+    throw new Error(`Failed to parse YAML in ${filePath}: ${error}`);
+  }
+
+  // Validate against schema
+  const parseResult = yamlConfigSchema.safeParse(yamlData);
+  if (!parseResult.success) {
+    const errors = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    throw new Error(`Invalid personality configuration in ${filePath}: ${errors}`);
+  }
+
+  const config = parseResult.data;
+  const profile = config.profile;
+
+  // Transform to CovaProfile (convert snake_case to camelCase)
+  const covaProfile: CovaProfile = {
+    id: profile.id,
+    displayName: profile.display_name,
+    avatarUrl: profile.avatar_url,
+    identity: profile.identity as CovaProfile['identity'],
+    personality: {
+      systemPrompt: profile.personality.system_prompt,
+      traits: profile.personality.traits,
+      interests: profile.personality.interests,
+      speechPatterns: {
+        lowercase: profile.personality.speech_patterns.lowercase,
+        sarcasmLevel: profile.personality.speech_patterns.sarcasm_level,
+        technicalBias: profile.personality.speech_patterns.technical_bias,
+      },
+    },
+    triggers: profile.triggers as CovaProfile['triggers'],
+    socialBattery: {
+      maxMessages: profile.social_battery.max_messages,
+      windowMinutes: profile.social_battery.window_minutes,
+      cooldownSeconds: profile.social_battery.cooldown_seconds,
+    },
+    llmConfig: profile.llm as CovaProfile['llmConfig'],
+    ignoreBots: profile.ignore_bots ?? true,
+  };
+
+  return covaProfile;
+}
+
+/**
+ * Load all personality files from a directory
+ * @param dirPath Directory containing personality YAML files
+ * @returns Array of parsed CovaProfiles
+ */
+export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(dirPath)) {
+    logger.withMetadata({ path: dirPath }).info('Creating personalities directory');
+    fs.mkdirSync(dirPath, { recursive: true });
+    return [];
+  }
+
+  const profiles: CovaProfile[] = [];
+  const files = fs.readdirSync(dirPath);
+
+  for (const file of files) {
+    // Only process .yml and .yaml files
+    if (!file.endsWith('.yml') && !file.endsWith('.yaml')) {
+      continue;
+    }
+
+    const filePath = path.join(dirPath, file);
+    try {
+      const profile = parsePersonalityFile(filePath);
+      profiles.push(profile);
+      logger.withMetadata({ file, profileId: profile.id }).info('Loaded personality');
+    } catch (error) {
+      logger.withError(error).withMetadata({ file }).error('Failed to load personality file');
+      // Continue loading other files
+    }
+  }
+
+  return profiles;
+}
+
+/**
+ * Get the default personalities directory path
+ * @returns Default path based on environment
+ */
+export function getDefaultPersonalitiesPath(): string {
+  // Check for environment variable first
+  if (process.env.COVABOT_CONFIG_DIR) {
+    return process.env.COVABOT_CONFIG_DIR;
+  }
+
+  // Default to config/covabot in project root
+  return path.join(process.cwd(), 'config', 'covabot');
+}
+
+// Legacy schema exports (kept for backwards compatibility)
+import { z } from 'zod';
+
 export const PersonalityTraitSchema = z.object({
   openness: z.number().min(0).max(1).describe('Receptiveness to new ideas, creativity'),
   conscientiousness: z.number().min(0).max(1).describe('Organized, disciplined, reliable'),
@@ -90,3 +206,5 @@ export const PersonalitySchema = z.object({
     visibleServers: z.array(z.string()).optional(),
   }),
 });
+
+export type Personality = z.infer<typeof PersonalitySchema>;
