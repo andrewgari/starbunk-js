@@ -135,8 +135,6 @@ jobs:
             Host unraid-prod
               HostName ${PROD_SERVER_HOST}
               User ${PROD_SERVER_USER}
-              StrictHostKeyChecking no
-              UserKnownHostsFile /dev/null
               LogLevel ERROR
             EOF
 
