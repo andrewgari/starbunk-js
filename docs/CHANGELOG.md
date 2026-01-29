@@ -1,3 +1,9 @@
+## [1.27.1](https://github.com/andrewgari/starbunk-js/compare/v1.27.0...v1.27.1) (2026-01-29)
+
+### Bug Fixes
+
+* **ci:** restore dynamic config setup workflow ([#568](https://github.com/andrewgari/starbunk-js/issues/568)) ([a54a5e7](https://github.com/andrewgari/starbunk-js/commit/a54a5e7524e651e1eb93790adc0a9a37b134b551))
+
 ## [1.27.0](https://github.com/andrewgari/starbunk-js/compare/v1.26.3...v1.27.0) (2026-01-29)
 
 ### Features
