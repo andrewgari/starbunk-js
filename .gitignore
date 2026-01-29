@@ -227,3 +227,4 @@ build-artifacts.tar.gz
 !.github/ISSUE_TEMPLATE/*.md
 !.github/BRANCH_NAMING_CONVENTION.md
 !.github/COMMIT_TEMPLATE
+.roomodes

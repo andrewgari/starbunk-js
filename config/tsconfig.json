@@ -1,0 +1,11 @@
+{
+	"files": [],
+	"references": [
+		{ "path": "./src/shared" },
+		{ "path": "./src/bunkbot" },
+		{ "path": "./src/djcova" },
+		{ "path": "./src/covabot" },
+		{ "path": "./src/bluebot" }
+	]
+}
+
