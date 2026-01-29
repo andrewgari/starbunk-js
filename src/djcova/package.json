@@ -19,7 +19,7 @@
 		"@discordjs/voice": "^0.18.0",
 		"@distube/yt-dlp": "^2.0.1",
 		"@distube/ytdl-core": "^4.16.10",
-		"@starbunk/shared": "file:../../packages/shared",
+		"@starbunk/shared": "file:../shared",
 		"chalk": "^4.1.2",
 		"discord-api-types": "^0.38.23",
 		"discord.js": "^14.18.0",
@@ -40,5 +40,8 @@
 		"tsconfig-paths": "^4.2.0",
 		"typescript": "~5.3.0",
 		"vitest": "^4.0.17"
+	},
+	"overrides": {
+		"lodash": "^4.17.21"
 	}
 }

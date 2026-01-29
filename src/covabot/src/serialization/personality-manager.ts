@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { LiveData, ReadonlyLiveData } from '@starbunk/shared';
+import { LiveData, ReadonlyLiveData, getTraceService } from '@starbunk/shared';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { getDefaultPersonalitiesPath, loadPersonalitiesFromDirectory } from './personality-parser';
 import type { CovaProfile } from '@/models/memory-types';
@@ -21,6 +21,7 @@ export class PersonalityManager implements PersonalityService {
   private activePersonality: CovaProfile | null = null;
   private readonly dir: string;
   private readonly logger = logLayer.withPrefix('PersonalityManager');
+  private readonly tracing = getTraceService('covabot');
 
   // LiveData streams for observers
   private readonly personalities$ = new LiveData<readonly CovaProfile[]>([]);
@@ -41,12 +42,23 @@ export class PersonalityManager implements PersonalityService {
   }
 
   private loadFromDirectory(): void {
-    this.personalities.clear();
-    const profiles = loadPersonalitiesFromDirectory(this.dir);
-    for (const profile of profiles) {
-      this.personalities.set(profile.id, profile);
+    const span = this.tracing.startSpan('PersonalityManager.loadFromDirectory', {
+      'personality.dir': this.dir,
+    });
+    try {
+      this.personalities.clear();
+      const profiles = loadPersonalitiesFromDirectory(this.dir);
+      for (const profile of profiles) {
+        this.personalities.set(profile.id, profile);
+      }
+      this.publishPersonalities();
+      this.tracing.endSpanSuccess(span, {
+        'personalities.count': this.personalities.size,
+      });
+    } catch (error) {
+      this.tracing.endSpanError(span, error as Error);
+      throw error; // Preserve existing behavior by rethrowing
     }
-    this.publishPersonalities();
   }
 
   public getPersonalityById(id: string): CovaProfile | undefined {
@@ -74,6 +86,10 @@ export class PersonalityManager implements PersonalityService {
   public refreshPersonalities(): void {
     // Atomic refresh: only publish new state after successful load
     const prevActiveId = this.activePersonality?.id ?? null;
+    const span = this.tracing.startSpan('PersonalityManager.refreshPersonalities', {
+      'personality.dir': this.dir,
+      'personality.prev_active_id': prevActiveId ?? 'null',
+    });
     try {
       const profiles = loadPersonalitiesFromDirectory(this.dir);
       const nextPersonalities = new Map<string, CovaProfile>();
@@ -92,9 +108,15 @@ export class PersonalityManager implements PersonalityService {
       }
       this.activePersonality = restored ?? null;
       this.activePersonality$.setValue(this.activePersonality);
+
+      this.tracing.endSpanSuccess(span, {
+        'personalities.count': this.personalities.size,
+        'personality.restored_active_id': this.activePersonality?.id ?? 'null',
+      });
     } catch (error) {
       // On failure, keep previous state untouched
       this.logger.withError(error as Error).error('Failed to refresh personalities');
+      this.tracing.endSpanError(span, error as Error);
     }
   }
 
