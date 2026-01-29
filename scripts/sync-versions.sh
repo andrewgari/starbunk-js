@@ -86,7 +86,7 @@ echo ""
 echo "Updating src packages..."
 for package_dir in src/bluebot src/bunkbot src/covabot src/djcova src/shared; do
   package_file="$package_dir/package.json"
-  
+
   # Skip if package doesn't exist
   if [ ! -f "$package_file" ]; then
     echo -e "${YELLOW}⚠️  Skipping: $package_file (not found)${NC}"
