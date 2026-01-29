@@ -181,17 +181,123 @@ jobs:
           command: |
             ssh unraid-prod "rm -f /tmp/starbunk-*.sh" || true
 
-      - notify_discord:
-          status: success
-          version: '${CIRCLE_SHA1:0:7}'
-          message: 'All services deployed and healthy on production server!'
+      - run:
+          name: Notify Success
           when: on_success
+          command: |
+            if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+              echo "WARNING: DISCORD_WEBHOOK_URL not configured - skipping notification"
+              exit 0
+            fi
 
-      - notify_discord:
-          status: failed
-          version: '${CIRCLE_SHA1:0:7}'
-          message: 'Deployment failed! Check CircleCI logs for details.'
+            VERSION="${CIRCLE_SHA1:0:7}"
+            MESSAGE="All services deployed and healthy on production server!"
+            COLOR=3066993  # Green
+            EMOJI=":white_check_mark:"
+            TITLE="Deployment Successful"
+            TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            BUILD_URL="https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}"
+
+            PAYLOAD=$(cat \<<-EOF
+            {
+              "embeds": [{
+                "title": "${EMOJI} ${TITLE}",
+                "description": "${MESSAGE}",
+                "color": ${COLOR},
+                "fields": [
+                  {
+                    "name": "Version",
+                    "value": "\`${VERSION}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Branch",
+                    "value": "\`${CIRCLE_BRANCH:-N/A}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Commit",
+                    "value": "\`${CIRCLE_SHA1:0:7}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Triggered By",
+                    "value": "${CIRCLE_USERNAME:-CircleCI}",
+                    "inline": true
+                  }
+                ],
+                "timestamp": "${TIMESTAMP}",
+                "footer": {
+                  "text": "Starbunk Production Deployment"
+                },
+                "url": "${BUILD_URL}"
+              }]
+            }
+            EOF
+            )
+
+            curl -H "Content-Type: application/json" \
+                 -d "${PAYLOAD}" \
+                 "${DISCORD_WEBHOOK_URL}"
+
+      - run:
+          name: Notify Failure
           when: on_fail
+          command: |
+            if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+              echo "WARNING: DISCORD_WEBHOOK_URL not configured - skipping notification"
+              exit 0
+            fi
+
+            VERSION="${CIRCLE_SHA1:0:7}"
+            MESSAGE="Deployment failed! Check CircleCI logs for details."
+            COLOR=15158332  # Red
+            EMOJI=":x:"
+            TITLE="Deployment Failed"
+            TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            BUILD_URL="https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}"
+
+            PAYLOAD=$(cat \<<-EOF
+            {
+              "embeds": [{
+                "title": "${EMOJI} ${TITLE}",
+                "description": "${MESSAGE}",
+                "color": ${COLOR},
+                "fields": [
+                  {
+                    "name": "Version",
+                    "value": "\`${VERSION}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Branch",
+                    "value": "\`${CIRCLE_BRANCH:-N/A}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Commit",
+                    "value": "\`${CIRCLE_SHA1:0:7}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Triggered By",
+                    "value": "${CIRCLE_USERNAME:-CircleCI}",
+                    "inline": true
+                  }
+                ],
+                "timestamp": "${TIMESTAMP}",
+                "footer": {
+                  "text": "Starbunk Production Deployment"
+                },
+                "url": "${BUILD_URL}"
+              }]
+            }
+            EOF
+            )
+
+            curl -H "Content-Type: application/json" \
+                 -d "${PAYLOAD}" \
+                 "${DISCORD_WEBHOOK_URL}"
 
 workflows:
   # Production deployment triggered on pushes to main branch
