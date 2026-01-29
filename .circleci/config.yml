@@ -180,6 +180,7 @@ workflows:
   pr-validation:
     jobs:
       - build
+      # Run lint, types, and bunkbot_test in parallel after build
       - lint:
           requires:
             - build
@@ -189,6 +190,7 @@ workflows:
       - bunkbot_test:
           requires:
             - build
+      # Docker build requires both build and tests to pass
       - bunkbot_docker_build:
           requires:
             - build
