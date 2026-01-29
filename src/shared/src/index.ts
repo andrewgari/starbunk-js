@@ -61,3 +61,7 @@ export { OllamaModelManager } from './services/llm/ollama-model-manager';
 
 // Data access
 export { BaseRepository } from './data-access/base/base-repository';
+
+// Reactive utilities
+export { LiveData } from './utils/live-data';
+export type { ReadonlyLiveData, SubscribeOptions, Unsubscribe } from './utils/live-data';
