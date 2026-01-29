@@ -111,21 +111,12 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-<<<<<<< HEAD
             - '${SSH_KEY_FINGERPRINT}'
 
       - notify_discord:
           status: started
           version: '${CIRCLE_SHA1:0:7}'
           message: 'Deploying Starbunk services to production Unraid server...'
-=======
-            - "${SSH_KEY_FINGERPRINT}"
-
-      - notify_discord:
-          status: started
-          version: "${CIRCLE_TAG}"
-          message: "Deploying Starbunk services to production Unraid server..."
->>>>>>> origin/main
 
       - run:
           name: Setup SSH Config
@@ -156,22 +147,15 @@ jobs:
       - run:
           name: Deploy to Unraid Server
           command: |
-<<<<<<< HEAD
             # Read version from VERSION file
             VERSION=$(cat config/VERSION 2>/dev/null || echo "unknown")
-=======
-            VERSION="${CIRCLE_TAG}"
->>>>>>> origin/main
             DEPLOY_TAG="main"  # Use :main tag for production deployments
 
             echo "========================================"
             echo "Deploying version: ${VERSION}"
             echo "Using image tag: ${DEPLOY_TAG}"
             echo "Target: ${PROD_SERVER_HOST}"
-<<<<<<< HEAD
             echo "Commit: ${CIRCLE_SHA1:0:7}"
-=======
->>>>>>> origin/main
             echo "========================================"
 
             # Copy deployment script to server
@@ -199,7 +183,6 @@ jobs:
 
       - notify_discord:
           status: success
-<<<<<<< HEAD
           version: '${CIRCLE_SHA1:0:7}'
           message: 'All services deployed and healthy on production server!'
 
@@ -207,38 +190,14 @@ jobs:
           status: failed
           version: '${CIRCLE_SHA1:0:7}'
           message: 'Deployment failed! Check CircleCI logs for details.'
-=======
-          version: "${CIRCLE_TAG}"
-          message: "All services deployed and healthy on production server!"
->>>>>>> origin/main
-
-      - run:
-          name: Notify Deployment Failure
-          when: on_fail
-          command: |
-            # Failure notification is handled by the notify_discord command
-            # which has when: always, so it will run even on failure
-            echo "Deployment failed"
 
 workflows:
-<<<<<<< HEAD
   # Production deployment triggered on pushes to main branch
-=======
-  # Deployment workflow triggered by GitHub releases
->>>>>>> origin/main
   production_deployment:
     jobs:
       - deploy_to_production:
           context:
             - deployment-production
           filters:
-<<<<<<< HEAD
             branches:
               only: main
-=======
-            # Only run on tag pushes (releases)
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
->>>>>>> origin/main
