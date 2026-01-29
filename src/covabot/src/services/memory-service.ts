@@ -3,10 +3,7 @@
  */
 
 import { logLayer } from '@starbunk/shared/observability/log-layer';
-import {
-  ConversationContext,
-  UserFact,
-} from '@/models/memory-types';
+import { ConversationContext, UserFact } from '@/models/memory-types';
 import { ConversationRepository } from '@/repositories/conversation-repository';
 import { UserFactRepository } from '@/repositories/user-fact-repository';
 
@@ -16,10 +13,7 @@ export class MemoryService {
   private conversationRepo: ConversationRepository;
   private userFactRepo: UserFactRepository;
 
-  constructor(
-    conversationRepo: ConversationRepository,
-    userFactRepo: UserFactRepository,
-  ) {
+  constructor(conversationRepo: ConversationRepository, userFactRepo: UserFactRepository) {
     this.conversationRepo = conversationRepo;
     this.userFactRepo = userFactRepo;
   }
@@ -78,14 +72,23 @@ export class MemoryService {
     factValue: string,
     confidence: number = 1.0,
   ): Promise<void> {
-    await this.userFactRepo.storeUserFact(userId, factType, factKey, confidence, profileId, factValue);
+    await this.userFactRepo.storeUserFact(
+      userId,
+      factType,
+      factKey,
+      confidence,
+      profileId,
+      factValue,
+    );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      user_id: userId,
-      fact_type: factType,
-      fact_key: factKey,
-    }).debug('User fact stored');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        user_id: userId,
+        fact_type: factType,
+        fact_key: factKey,
+      })
+      .debug('User fact stored');
   }
 
   /**

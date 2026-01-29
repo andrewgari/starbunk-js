@@ -8,10 +8,7 @@
 import Database from 'better-sqlite3';
 import { BaseRepository } from '@starbunk/shared';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
-import {
-  ConversationRow,
-  ConversationContext,
-} from '@/models/memory-types';
+import { ConversationRow, ConversationContext } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('ConversationRepository');
 
@@ -40,15 +37,17 @@ export class ConversationRepository extends BaseRepository<ConversationRow> {
       const id = await this.executeWithId(
         `INSERT INTO conversations (profile_id, channel_id, user_id, user_name, message_content, bot_response)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [profileId, channelId, userId, userName, messageContent, botResponse]
+        [profileId, channelId, userId, userName, messageContent, botResponse],
       );
 
-      logger.withMetadata({
-        profile_id: profileId,
-        channel_id: channelId,
-        user_id: userId,
-        conversation_id: id,
-      }).debug('Conversation stored');
+      logger
+        .withMetadata({
+          profile_id: profileId,
+          channel_id: channelId,
+          user_id: userId,
+          conversation_id: id,
+        })
+        .debug('Conversation stored');
 
       return id;
     } finally {
@@ -72,16 +71,18 @@ export class ConversationRepository extends BaseRepository<ConversationRow> {
     });
 
     try {
-      const rows = await this.query<Pick<
-        ConversationRow,
-        'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
-      >>(
+      const rows = await this.query<
+        Pick<
+          ConversationRow,
+          'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
+        >
+      >(
         `SELECT user_id, user_name, message_content, bot_response, created_at
          FROM conversations
          WHERE profile_id = ? AND channel_id = ?
          ORDER BY created_at DESC
          LIMIT ?`,
-        [profileId, channelId, limit]
+        [profileId, channelId, limit],
       );
 
       // Reverse to get chronological order
@@ -93,11 +94,13 @@ export class ConversationRepository extends BaseRepository<ConversationRow> {
         timestamp: new Date(row.created_at),
       }));
 
-      logger.withMetadata({
-        profile_id: profileId,
-        channel_id: channelId,
-        messages_count: messages.length,
-      }).debug('Channel context retrieved');
+      logger
+        .withMetadata({
+          profile_id: profileId,
+          channel_id: channelId,
+          messages_count: messages.length,
+        })
+        .debug('Channel context retrieved');
 
       return { messages };
     } finally {
@@ -115,16 +118,18 @@ export class ConversationRepository extends BaseRepository<ConversationRow> {
     userId: string,
     limit: number = 20,
   ): Promise<ConversationContext> {
-    const rows = await this.query<Pick<
-      ConversationRow,
-      'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
-    >>(
+    const rows = await this.query<
+      Pick<
+        ConversationRow,
+        'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
+      >
+    >(
       `SELECT user_id, user_name, message_content, bot_response, created_at
        FROM conversations
        WHERE profile_id = ? AND user_id = ?
        ORDER BY created_at DESC
        LIMIT ?`,
-      [profileId, userId, limit]
+      [profileId, userId, limit],
     );
 
     const messages = rows.reverse().map(row => ({
@@ -135,11 +140,13 @@ export class ConversationRepository extends BaseRepository<ConversationRow> {
       timestamp: new Date(row.created_at),
     }));
 
-    logger.withMetadata({
-      profile_id: profileId,
-      user_id: userId,
-      messages_count: messages.length,
-    }).debug('User history retrieved');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        user_id: userId,
+        messages_count: messages.length,
+      })
+      .debug('User history retrieved');
 
     return { messages };
   }
@@ -152,14 +159,16 @@ export class ConversationRepository extends BaseRepository<ConversationRow> {
       `DELETE FROM conversations
        WHERE profile_id = ?
          AND created_at < datetime('now', '-' || ? || ' days')`,
-      [profileId, daysToKeep]
+      [profileId, daysToKeep],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      days_kept: daysToKeep,
-      deleted_count: changes,
-    }).info('Old conversations pruned');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        days_kept: daysToKeep,
+        deleted_count: changes,
+      })
+      .info('Old conversations pruned');
 
     return changes;
   }

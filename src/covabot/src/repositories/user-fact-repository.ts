@@ -36,30 +36,31 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
        VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(profile_id, user_id, fact_type, fact_key)
        DO UPDATE SET fact_value = excluded.fact_value, confidence = excluded.confidence, learned_at = CURRENT_TIMESTAMP`,
-      [profileId, userId, category, factKey, value, confidence]
+      [profileId, userId, category, factKey, value, confidence],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      user_id: userId,
-      category,
-      fact_key: factKey,
-    }).debug('User fact stored');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        user_id: userId,
+        category,
+        fact_key: factKey,
+      })
+      .debug('User fact stored');
   }
 
   /**
    * Get all facts for a user
    */
   async getUserFacts(userId: string): Promise<UserFact[]> {
-    const rows = await this.query<Pick<
-      UserFactRow,
-      'fact_type' | 'fact_key' | 'fact_value' | 'confidence'
-    >>(
+    const rows = await this.query<
+      Pick<UserFactRow, 'fact_type' | 'fact_key' | 'fact_value' | 'confidence'>
+    >(
       `SELECT fact_type, fact_key, fact_value, confidence
        FROM user_facts
        WHERE user_id = ?
        ORDER BY confidence DESC`,
-      [userId]
+      [userId],
     );
 
     const facts = rows.map(row => ({
@@ -69,10 +70,12 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
       confidence: row.confidence,
     }));
 
-    logger.withMetadata({
-      user_id: userId,
-      facts_count: facts.length,
-    }).debug('User facts retrieved');
+    logger
+      .withMetadata({
+        user_id: userId,
+        facts_count: facts.length,
+      })
+      .debug('User facts retrieved');
 
     return facts;
   }
@@ -81,15 +84,14 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
    * Get facts of a specific category for a user
    */
   async getUserFactsByType(userId: string, category: string): Promise<UserFact[]> {
-    const rows = await this.query<Pick<
-      UserFactRow,
-      'fact_type' | 'fact_key' | 'fact_value' | 'confidence'
-    >>(
+    const rows = await this.query<
+      Pick<UserFactRow, 'fact_type' | 'fact_key' | 'fact_value' | 'confidence'>
+    >(
       `SELECT fact_type, fact_key, fact_value, confidence
        FROM user_facts
        WHERE user_id = ? AND fact_type = ?
        ORDER BY confidence DESC`,
-      [userId, category]
+      [userId, category],
     );
 
     const facts = rows.map(row => ({
@@ -99,11 +101,13 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
       confidence: row.confidence,
     }));
 
-    logger.withMetadata({
-      user_id: userId,
-      category,
-      facts_count: facts.length,
-    }).debug('User facts by type retrieved');
+    logger
+      .withMetadata({
+        user_id: userId,
+        category,
+        facts_count: facts.length,
+      })
+      .debug('User facts by type retrieved');
 
     return facts;
   }

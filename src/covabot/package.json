@@ -1,6 +1,6 @@
 {
   "name": "@starbunk/covabot",
-  "version": "1.26.3",
+  "version": "1.27.0",
   "description": "CovaBot v2 - Multi-persona Discord Bot with SQLite persistence",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

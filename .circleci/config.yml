@@ -1,58 +1,195 @@
 version: 2.1
 
-setup: true
-
-orbs:
-  continuation: circleci/continuation@1.0.0
-
+# Shared executors
 executors:
   node22:
     docker:
       - image: cimg/node:22.14
     resource_class: medium
+  docker:
+    docker:
+      - image: cimg/base:stable
+    resource_class: medium
 
+# Shared commands
+commands:
+  setup_npm_cache:
+    description: 'Install npm dependencies with caching'
+    steps:
+      - restore_cache:
+          keys:
+            - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v1-npm-{{ arch }}-{{ .Branch }}-
+            - v1-npm-{{ arch }}-
+      - run:
+          name: Show Node and npm versions
+          command: |
+            node -v
+            npm -v
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - node_modules
+
+  persist_build_artifacts:
+    description: 'Compress and persist build artifacts to workspace'
+    steps:
+      - run:
+          name: Compress build artifacts
+          command: |
+            # Build list of files to tar
+            FILES_TO_TAR="package.json package-lock.json"
+            for app in $(ls src); do
+              if [ -d "src/$app/dist" ]; then
+                FILES_TO_TAR="$FILES_TO_TAR src/$app/dist"
+              fi
+            done
+            tar -czf build-artifacts.tar.gz $FILES_TO_TAR
+            echo "Tarred files: $FILES_TO_TAR"
+      - persist_to_workspace:
+          root: .
+          paths:
+            - build-artifacts.tar.gz
+
+  attach_build_artifacts:
+    description: 'Attach and extract build artifacts from workspace'
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Extract build artifacts
+          command: tar -xzf build-artifacts.tar.gz
+
+  setup_docker_cli:
+    description: 'Ensure Docker CLI is available'
+    steps:
+      - run:
+          name: Ensure Docker CLI is available
+          command: |
+            if ! command -v docker >/dev/null 2>&1; then
+              sudo apt-get update
+              sudo apt-get install -y --no-install-recommends docker.io
+            fi
+            docker --version
+
+# Core validation jobs
 jobs:
-  detect_and_continue:
+  build:
     executor: node22
     steps:
       - checkout
+      - setup_npm_cache
       - run:
-          name: Fetch main for diff
-          command: git fetch origin main || true
+          name: Build entire application
+          command: npm run build
+      - persist_build_artifacts
+
+  lint:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
       - run:
-          name: Detect changed paths
-          command: .circleci/scripts/detect_changes.sh
-      - run:
-          name: Install Python and PyYAML
+          name: Check linting & formatting
           command: |
-            sudo apt-get update && sudo apt-get install -y python3 python3-pip
-            python3 -m pip install --user pyyaml
+            npm run lint -- --cache --cache-location .eslintcache
+            npm run format -- --check
+
+  types:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
       - run:
-          name: Generate dynamic config
+          name: Verify type safety
+          command: npm run type-check
+
+  # Bunkbot jobs
+  bunkbot_test:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Test Bunkbot
+          command: npm run test:bunkbot
+
+  bunkbot_docker_build:
+    executor: node22
+    environment:
+      APP: bunkbot
+      DOCKERFILE: './src/bunkbot/Dockerfile.ci'
+    steps:
+      - checkout
+      - attach_build_artifacts
+      - run:
+          name: Rebuild artifacts if missing
           command: |
-            if [ -n "${CIRCLE_TAG:-}" ]; then
-              echo "Detected git tag: $CIRCLE_TAG - loading deployment workflow"
-              cp .circleci/workflows/deploy-production.yml .circleci/generated_config.yml
-            elif [ "${CIRCLE_BRANCH:-}" = "main" ]; then
-              echo "On main branch - loading deployment workflow"
-              cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
+            MISSING=false
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ ! -d "src/$app/dist" ]; then
+                MISSING=true
+                echo "⚠ Missing src/$app/dist"
+              fi
+            done
+
+            if [ "$MISSING" = true ]; then
+              echo "Rebuilding missing artifacts..."
+              npm ci
+              npm run build
+              echo "Rebuild complete"
             else
-              echo "On feature branch/PR - loading PR validation workflows"
-              .circleci/scripts/generate_config.py > .circleci/generated_config.yml
+              echo "All artifacts present"
             fi
-            echo "=== Generated config preview (first 50 lines) ==="
-            head -n 50 .circleci/generated_config.yml
-            echo "=== Total lines: $(wc -l < .circleci/generated_config.yml) ==="
-            echo "Config generated successfully"
-      - continuation/continue:
-          configuration_path: .circleci/generated_config.yml
+      - setup_docker_cli
+      - setup_remote_docker
+      - run:
+          name: Build Docker Image
+          command: |
+            set -e
+
+            # Compute content hash for caching
+            HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
+            SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+            DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+            CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+
+            # Login to GHCR (credentials from CircleCI context)
+            if [ -n "${GHCR_TOKEN:-}" ]; then
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin || true
+            fi
+
+            # Pull cache image if available
+            docker pull ghcr.io/andrewgari/starbunk-${APP}:cache 2>/dev/null || true
+
+            # Build with cache
+            docker build \
+              --build-arg BUILDKIT_INLINE_CACHE=1 \
+              --cache-from ghcr.io/andrewgari/starbunk-${APP}:cache \
+              -f $DOCKERFILE \
+              -t ghcr.io/andrewgari/starbunk-${APP}:${CIRCLE_SHA1:0:7} \
+              -t ghcr.io/andrewgari/starbunk-${APP}:latest \
+              .
 
 workflows:
-  change-detection:
+  version: 2
+  pr-validation:
     jobs:
-      - detect_and_continue:
-          filters:
-            branches:
-              only: /.*/
-            tags:
-              only: /.*/
+      - build
+      - lint:
+          requires:
+            - build
+      - types:
+          requires:
+            - build
+      - bunkbot_test:
+          requires:
+            - build
+      - bunkbot_docker_build:
+          requires:
+            - build
+            - bunkbot_test

@@ -25,7 +25,7 @@ export class SocialBatteryRepository extends BaseRepository<SocialBatteryStateRo
       `SELECT profile_id, channel_id, message_count, window_start, last_message_at
        FROM social_battery_state
        WHERE profile_id = ? AND channel_id = ?`,
-      [profileId, channelId]
+      [profileId, channelId],
     );
 
     return rows[0] || null;
@@ -38,13 +38,15 @@ export class SocialBatteryRepository extends BaseRepository<SocialBatteryStateRo
     await this.execute(
       `INSERT INTO social_battery_state (profile_id, channel_id, message_count, window_start, last_message_at)
        VALUES (?, ?, 1, ?, ?)`,
-      [profileId, channelId, nowIso, nowIso]
+      [profileId, channelId, nowIso, nowIso],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).debug('Social battery state created');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery state created');
   }
 
   /**
@@ -55,13 +57,15 @@ export class SocialBatteryRepository extends BaseRepository<SocialBatteryStateRo
       `UPDATE social_battery_state
        SET message_count = 1, window_start = ?, last_message_at = ?
        WHERE profile_id = ? AND channel_id = ?`,
-      [nowIso, nowIso, profileId, channelId]
+      [nowIso, nowIso, profileId, channelId],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).debug('Social battery window reset');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery window reset');
   }
 
   /**
@@ -72,13 +76,15 @@ export class SocialBatteryRepository extends BaseRepository<SocialBatteryStateRo
       `UPDATE social_battery_state
        SET message_count = message_count + 1, last_message_at = ?
        WHERE profile_id = ? AND channel_id = ?`,
-      [nowIso, profileId, channelId]
+      [nowIso, profileId, channelId],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).debug('Social battery message count incremented');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery message count incremented');
   }
 
   /**
@@ -88,13 +94,15 @@ export class SocialBatteryRepository extends BaseRepository<SocialBatteryStateRo
     await this.execute(
       `DELETE FROM social_battery_state
        WHERE profile_id = ? AND channel_id = ?`,
-      [profileId, channelId]
+      [profileId, channelId],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).debug('Social battery state deleted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery state deleted');
   }
 
   /**
@@ -104,12 +112,14 @@ export class SocialBatteryRepository extends BaseRepository<SocialBatteryStateRo
     await this.execute(
       `DELETE FROM social_battery_state
        WHERE profile_id = ?`,
-      [profileId]
+      [profileId],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-    }).info('Profile social battery state reset');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+      })
+      .info('Profile social battery state reset');
   }
 
   /**
@@ -131,7 +141,7 @@ export class SocialBatteryRepository extends BaseRepository<SocialBatteryStateRo
          SUM(CASE WHEN last_message_at > datetime('now', '-1 hour') THEN 1 ELSE 0 END) as active_channels
        FROM social_battery_state
        WHERE profile_id = ?`,
-      [profileId]
+      [profileId],
     );
 
     const row = rows[0];
@@ -143,4 +153,3 @@ export class SocialBatteryRepository extends BaseRepository<SocialBatteryStateRo
     };
   }
 }
-
