@@ -1,38 +1,38 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryService } from '../../src/services/memory-service';
-import { DatabaseService } from '@starbunk/shared/database';
-import * as fs from 'fs';
-import * as path from 'path';
+import { ConversationRepository } from '../../src/repositories/conversation-repository';
+import { UserFactRepository } from '../../src/repositories/user-fact-repository';
 
 describe('MemoryService', () => {
-  const testDbPath = path.join(__dirname, '../../data/test-memory.sqlite');
-  let db: Database.Database;
+  let mockConversationRepo: Partial<ConversationRepository>;
+  let mockUserFactRepo: Partial<UserFactRepository>;
   let memoryService: MemoryService;
 
-  beforeEach(async () => {
-    // Clean up any existing test database
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-    DatabaseService.resetInstance();
+  beforeEach(() => {
+    mockConversationRepo = {
+      storeConversation: vi.fn().mockResolvedValue(1),
+      getChannelContext: vi.fn().mockResolvedValue({ messages: [] }),
+      getUserHistory: vi.fn().mockResolvedValue({ messages: [] }),
+      pruneOldConversations: vi.fn().mockResolvedValue(0),
+    };
 
-    const dbService = DatabaseService.getInstance(testDbPath);
-    await dbService.initialize();
-    db = dbService.getDb();
-    memoryService = new MemoryService(db);
-  });
+    mockUserFactRepo = {
+      storeUserFact: vi.fn().mockResolvedValue(undefined),
+      getUserFacts: vi.fn().mockResolvedValue([]),
+      getUserFactsByType: vi.fn().mockResolvedValue([]),
+    };
 
-  afterEach(() => {
-    DatabaseService.resetInstance();
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
+    memoryService = new MemoryService(
+      mockConversationRepo as ConversationRepository,
+      mockUserFactRepo as UserFactRepository,
+    );
   });
 
   describe('storeConversation', () => {
-    it('should store a conversation', () => {
-      const id = memoryService.storeConversation(
+    it('should store a conversation', async () => {
+      vi.mocked(mockConversationRepo.storeConversation!).mockResolvedValue(42);
+
+      const id = await memoryService.storeConversation(
         'test-profile',
         'channel-123',
         'user-456',
@@ -41,14 +41,21 @@ describe('MemoryService', () => {
         'Hello human!',
       );
 
-      expect(id).toBeGreaterThan(0);
-
-      const row = db.prepare('SELECT * FROM conversations WHERE id = ?').get(id);
-      expect(row).toBeDefined();
+      expect(id).toBe(42);
+      expect(mockConversationRepo.storeConversation).toHaveBeenCalledWith(
+        'test-profile',
+        'channel-123',
+        'user-456',
+        'TestUser',
+        'Hello bot!',
+        'Hello human!',
+      );
     });
 
-    it('should store conversation without bot response', () => {
-      const id = memoryService.storeConversation(
+    it('should store conversation without bot response', async () => {
+      vi.mocked(mockConversationRepo.storeConversation!).mockResolvedValue(43);
+
+      const id = await memoryService.storeConversation(
         'test-profile',
         'channel-123',
         'user-456',
@@ -57,45 +64,111 @@ describe('MemoryService', () => {
         null,
       );
 
-      expect(id).toBeGreaterThan(0);
+      expect(id).toBe(43);
+      expect(mockConversationRepo.storeConversation).toHaveBeenCalledWith(
+        'test-profile',
+        'channel-123',
+        'user-456',
+        'TestUser',
+        'Hello bot!',
+        null,
+      );
     });
   });
 
   describe('getChannelContext', () => {
-    it('should retrieve recent channel messages in chronological order', () => {
-      // Store multiple conversations
-      memoryService.storeConversation('profile', 'channel-1', 'user-1', 'User1', 'Message 1', 'Response 1');
-      memoryService.storeConversation('profile', 'channel-1', 'user-2', 'User2', 'Message 2', 'Response 2');
-      memoryService.storeConversation('profile', 'channel-1', 'user-1', 'User1', 'Message 3', null);
+    it('should retrieve recent channel messages in chronological order', async () => {
+      const mockMessages = [
+        {
+          userId: 'user-1',
+          userName: 'User1',
+          content: 'Message 1',
+          botResponse: 'Response 1',
+          timestamp: new Date('2024-01-01T10:00:00Z'),
+        },
+        {
+          userId: 'user-2',
+          userName: 'User2',
+          content: 'Message 2',
+          botResponse: 'Response 2',
+          timestamp: new Date('2024-01-01T10:01:00Z'),
+        },
+        {
+          userId: 'user-1',
+          userName: 'User1',
+          content: 'Message 3',
+          botResponse: null,
+          timestamp: new Date('2024-01-01T10:02:00Z'),
+        },
+      ];
 
-      const context = memoryService.getChannelContext('profile', 'channel-1', 10);
+      vi.mocked(mockConversationRepo.getChannelContext!).mockResolvedValue({
+        messages: mockMessages,
+      });
+
+      const context = await memoryService.getChannelContext('profile', 'channel-1', 10);
 
       expect(context.messages).toHaveLength(3);
-      // Messages are returned in chronological order (oldest to newest)
-      // But since they're inserted with the same timestamp, order may vary
-      // Just verify we got all 3 messages
+      expect(mockConversationRepo.getChannelContext).toHaveBeenCalledWith(
+        'profile',
+        'channel-1',
+        10,
+      );
       const contents = context.messages.map(m => m.content);
       expect(contents).toContain('Message 1');
       expect(contents).toContain('Message 2');
       expect(contents).toContain('Message 3');
     });
 
-    it('should respect limit parameter', () => {
-      for (let i = 0; i < 15; i++) {
-        memoryService.storeConversation('profile', 'channel-1', 'user-1', 'User1', `Message ${i}`, null);
-      }
+    it('should respect limit parameter', async () => {
+      const mockMessages = Array.from({ length: 5 }, (_, i) => ({
+        userId: 'user-1',
+        userName: 'User1',
+        content: `Message ${i}`,
+        botResponse: null,
+        timestamp: new Date(),
+      }));
 
-      const context = memoryService.getChannelContext('profile', 'channel-1', 5);
+      vi.mocked(mockConversationRepo.getChannelContext!).mockResolvedValue({
+        messages: mockMessages,
+      });
 
+      const context = await memoryService.getChannelContext('profile', 'channel-1', 5);
+
+      expect(mockConversationRepo.getChannelContext).toHaveBeenCalledWith(
+        'profile',
+        'channel-1',
+        5,
+      );
       expect(context.messages).toHaveLength(5);
     });
 
-    it('should filter by channel', () => {
-      memoryService.storeConversation('profile', 'channel-1', 'user-1', 'User1', 'Channel 1', null);
-      memoryService.storeConversation('profile', 'channel-2', 'user-1', 'User1', 'Channel 2', null);
+    it('should filter by channel', async () => {
+      const mockMessages1 = [
+        {
+          userId: 'user-1',
+          userName: 'User1',
+          content: 'Channel 1',
+          botResponse: null,
+          timestamp: new Date(),
+        },
+      ];
+      const mockMessages2 = [
+        {
+          userId: 'user-1',
+          userName: 'User1',
+          content: 'Channel 2',
+          botResponse: null,
+          timestamp: new Date(),
+        },
+      ];
 
-      const context1 = memoryService.getChannelContext('profile', 'channel-1', 10);
-      const context2 = memoryService.getChannelContext('profile', 'channel-2', 10);
+      vi.mocked(mockConversationRepo.getChannelContext!)
+        .mockResolvedValueOnce({ messages: mockMessages1 })
+        .mockResolvedValueOnce({ messages: mockMessages2 });
+
+      const context1 = await memoryService.getChannelContext('profile', 'channel-1', 10);
+      const context2 = await memoryService.getChannelContext('profile', 'channel-2', 10);
 
       expect(context1.messages).toHaveLength(1);
       expect(context2.messages).toHaveLength(1);
@@ -103,11 +176,31 @@ describe('MemoryService', () => {
   });
 
   describe('storeUserFact / getUserFacts', () => {
-    it('should store and retrieve user facts', () => {
-      memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'programming', 0.9);
+    it('should store and retrieve user facts', async () => {
+      const mockFacts = [
+        { type: 'interest' as const, key: 'topic', value: 'programming', confidence: 0.9 },
+      ];
 
-      const facts = memoryService.getUserFacts('profile', 'user-1');
+      vi.mocked(mockUserFactRepo.getUserFacts!).mockResolvedValue(mockFacts);
 
+      await memoryService.storeUserFact(
+        'profile',
+        'user-1',
+        'interest',
+        'topic',
+        'programming',
+        0.9,
+      );
+      const facts = await memoryService.getUserFacts('profile', 'user-1');
+
+      expect(mockUserFactRepo.storeUserFact).toHaveBeenCalledWith(
+        'user-1',
+        'interest',
+        'topic',
+        0.9,
+        'profile',
+        'programming',
+      );
       expect(facts).toHaveLength(1);
       expect(facts[0].type).toBe('interest');
       expect(facts[0].key).toBe('topic');
@@ -115,36 +208,93 @@ describe('MemoryService', () => {
       expect(facts[0].confidence).toBe(0.9);
     });
 
-    it('should update existing fact on conflict', () => {
-      memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'programming', 0.5);
-      memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'gaming', 0.8);
+    it('should update existing fact on conflict', async () => {
+      const updatedFact = [
+        { type: 'interest' as const, key: 'topic', value: 'gaming', confidence: 0.8 },
+      ];
 
-      const facts = memoryService.getUserFacts('profile', 'user-1');
+      vi.mocked(mockUserFactRepo.getUserFacts!).mockResolvedValue(updatedFact);
+
+      await memoryService.storeUserFact(
+        'profile',
+        'user-1',
+        'interest',
+        'topic',
+        'programming',
+        0.5,
+      );
+      await memoryService.storeUserFact('profile', 'user-1', 'interest', 'topic', 'gaming', 0.8);
+
+      const facts = await memoryService.getUserFacts('profile', 'user-1');
 
       expect(facts).toHaveLength(1);
       expect(facts[0].value).toBe('gaming');
       expect(facts[0].confidence).toBe(0.8);
     });
 
-    it('should filter facts by type', () => {
-      memoryService.storeUserFact('profile', 'user-1', 'interest', 'hobby', 'coding', 1.0);
-      memoryService.storeUserFact('profile', 'user-1', 'preference', 'theme', 'dark', 1.0);
-      memoryService.storeUserFact('profile', 'user-1', 'relationship', 'status', 'friend', 1.0);
+    it('should filter facts by type', async () => {
+      const interests = [
+        { type: 'interest' as const, key: 'hobby', value: 'coding', confidence: 1.0 },
+      ];
+      const preferences = [
+        { type: 'preference' as const, key: 'theme', value: 'dark', confidence: 1.0 },
+      ];
 
-      const interests = memoryService.getUserFactsByType('profile', 'user-1', 'interest');
-      const preferences = memoryService.getUserFactsByType('profile', 'user-1', 'preference');
+      vi.mocked(mockUserFactRepo.getUserFactsByType!)
+        .mockResolvedValueOnce(interests)
+        .mockResolvedValueOnce(preferences);
 
-      expect(interests).toHaveLength(1);
-      expect(preferences).toHaveLength(1);
+      await memoryService.storeUserFact('profile', 'user-1', 'interest', 'hobby', 'coding', 1.0);
+      await memoryService.storeUserFact('profile', 'user-1', 'preference', 'theme', 'dark', 1.0);
+      await memoryService.storeUserFact(
+        'profile',
+        'user-1',
+        'relationship',
+        'status',
+        'friend',
+        1.0,
+      );
+
+      const retrievedInterests = await memoryService.getUserFactsByType(
+        'profile',
+        'user-1',
+        'interest',
+      );
+      const retrievedPreferences = await memoryService.getUserFactsByType(
+        'profile',
+        'user-1',
+        'preference',
+      );
+
+      expect(retrievedInterests).toHaveLength(1);
+      expect(retrievedPreferences).toHaveLength(1);
     });
   });
 
   describe('formatContextForLlm', () => {
-    it('should format conversation context for LLM', () => {
-      memoryService.storeConversation('profile', 'channel-1', 'user-1', 'Alice', 'Hello!', 'Hi Alice!');
-      memoryService.storeConversation('profile', 'channel-1', 'user-2', 'Bob', 'What are we talking about?', null);
+    it('should format conversation context for LLM', async () => {
+      const mockMessages = [
+        {
+          userId: 'user-1',
+          userName: 'Alice',
+          content: 'Hello!',
+          botResponse: 'Hi Alice!',
+          timestamp: new Date(),
+        },
+        {
+          userId: 'user-2',
+          userName: 'Bob',
+          content: 'What are we talking about?',
+          botResponse: null,
+          timestamp: new Date(),
+        },
+      ];
 
-      const context = memoryService.getChannelContext('profile', 'channel-1', 10);
+      vi.mocked(mockConversationRepo.getChannelContext!).mockResolvedValue({
+        messages: mockMessages,
+      });
+
+      const context = await memoryService.getChannelContext('profile', 'channel-1', 10);
       const formatted = memoryService.formatContextForLlm(context, 'Bot');
 
       expect(formatted).toContain('Alice: Hello!');
@@ -175,23 +325,13 @@ describe('MemoryService', () => {
   });
 
   describe('pruneOldConversations', () => {
-    it('should delete old conversations', () => {
-      // Insert an old conversation manually
-      db.prepare(`
-        INSERT INTO conversations (profile_id, channel_id, user_id, message_content, created_at)
-        VALUES (?, ?, ?, ?, datetime('now', '-60 days'))
-      `).run('profile', 'channel-1', 'user-1', 'Old message');
+    it('should delete old conversations', async () => {
+      vi.mocked(mockConversationRepo.pruneOldConversations!).mockResolvedValue(1);
 
-      // Insert a recent conversation
-      memoryService.storeConversation('profile', 'channel-1', 'user-1', 'User1', 'Recent message', null);
-
-      const deleted = memoryService.pruneOldConversations('profile', 30);
+      const deleted = await memoryService.pruneOldConversations('profile', 30);
 
       expect(deleted).toBe(1);
-
-      const context = memoryService.getChannelContext('profile', 'channel-1', 10);
-      expect(context.messages).toHaveLength(1);
-      expect(context.messages[0].content).toBe('Recent message');
+      expect(mockConversationRepo.pruneOldConversations).toHaveBeenCalledWith('profile', 30);
     });
   });
 });

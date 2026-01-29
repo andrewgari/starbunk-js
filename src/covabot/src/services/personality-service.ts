@@ -28,10 +28,12 @@ export class PersonalityService {
    * Initialize traits from profile config
    */
   initializeFromProfile(profile: CovaProfile): void {
-    logger.withMetadata({
-      profile_id: profile.id,
-      traits_count: profile.personality.traits.length,
-    }).info('Initializing personality traits');
+    logger
+      .withMetadata({
+        profile_id: profile.id,
+        traits_count: profile.personality.traits.length,
+      })
+      .info('Initializing personality traits');
 
     // Store numeric traits (sarcasm, technical bias) as evolvable
     const numericTraits = [
@@ -50,9 +52,11 @@ export class PersonalityService {
       stmt.run(profile.id, trait.name, trait.value);
     }
 
-    logger.withMetadata({
-      profile_id: profile.id,
-    }).debug('Personality traits initialized');
+    logger
+      .withMetadata({
+        profile_id: profile.id,
+      })
+      .debug('Personality traits initialized');
   }
 
   /**
@@ -93,12 +97,12 @@ export class PersonalityService {
   /**
    * Update a trait value with a reason
    */
-  updateTrait(
-    profileId: string,
-    traitName: string,
-    newValue: number,
-    reason: string,
-  ): void {
+  updateTrait(profileId: string, traitName: string, newValue: number, reason: string): void {
+    // Validate newValue is a finite number
+    if (!Number.isFinite(newValue)) {
+      throw new Error('Invalid trait value: must be a finite number');
+    }
+
     // Clamp value to 0-1 range
     const clampedValue = Math.max(0, Math.min(1, newValue));
 
@@ -113,30 +117,34 @@ export class PersonalityService {
 
     stmt.run(profileId, traitName, clampedValue, reason);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      trait_name: traitName,
-      new_value: clampedValue,
-      reason,
-    }).info('Trait updated');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        trait_name: traitName,
+        new_value: clampedValue,
+        reason,
+      })
+      .info('Trait updated');
   }
 
   /**
    * Gradually adjust a trait value (for organic evolution)
    */
-  nudgeTrait(
-    profileId: string,
-    traitName: string,
-    adjustment: number,
-    reason: string,
-  ): void {
+  nudgeTrait(profileId: string, traitName: string, adjustment: number, reason: string): void {
+    // Validate adjustment is a finite number
+    if (!Number.isFinite(adjustment)) {
+      throw new Error('Invalid adjustment value: must be a finite number');
+    }
+
     const currentValue = this.getTraitValue(profileId, traitName);
 
     if (currentValue === null) {
-      logger.withMetadata({
-        profile_id: profileId,
-        trait_name: traitName,
-      }).warn('Cannot nudge non-existent trait');
+      logger
+        .withMetadata({
+          profile_id: profileId,
+          trait_name: traitName,
+        })
+        .warn('Cannot nudge non-existent trait');
       return;
     }
 
@@ -160,17 +168,17 @@ export class PersonalityService {
       switch (trait.name) {
         case 'sarcasm_level':
           if (trait.value > 0.7) {
-            descriptions.push('You\'ve become notably more sarcastic lately.');
+            descriptions.push("You've become notably more sarcastic lately.");
           } else if (trait.value < 0.3) {
-            descriptions.push('You\'ve been more sincere and direct recently.');
+            descriptions.push("You've been more sincere and direct recently.");
           }
           break;
 
         case 'technical_bias':
           if (trait.value > 0.7) {
-            descriptions.push('You\'ve been leaning into technical discussions more.');
+            descriptions.push("You've been leaning into technical discussions more.");
           } else if (trait.value < 0.3) {
-            descriptions.push('You\'ve been keeping things more casual lately.');
+            descriptions.push("You've been keeping things more casual lately.");
           }
           break;
       }
@@ -184,21 +192,23 @@ export class PersonalityService {
    *
    * This is a simple heuristic - could be expanded with ML/NLP
    */
-  analyzeForEvolution(
-    profileId: string,
-    userMessage: string,
-    botResponse: string,
-  ): void {
+  analyzeForEvolution(profileId: string, userMessage: string, botResponse: string): void {
     const combinedText = `${userMessage} ${botResponse}`.toLowerCase();
 
     // Technical content increases technical bias slightly
     const technicalKeywords = [
-      'code', 'function', 'api', 'bug', 'error', 'debug',
-      'typescript', 'javascript', 'python', 'database',
+      'code',
+      'function',
+      'api',
+      'bug',
+      'error',
+      'debug',
+      'typescript',
+      'javascript',
+      'python',
+      'database',
     ];
-    const technicalMatches = technicalKeywords.filter(kw =>
-      combinedText.includes(kw)
-    ).length;
+    const technicalMatches = technicalKeywords.filter(kw => combinedText.includes(kw)).length;
 
     if (technicalMatches >= 3) {
       this.nudgeTrait(profileId, 'technical_bias', 0.01, 'Heavy technical conversation');
@@ -206,9 +216,7 @@ export class PersonalityService {
 
     // Sarcastic response patterns
     const sarcasticPatterns = ['oh really', 'wow, shocking', 'who knew', 'obviously'];
-    const sarcasticMatches = sarcasticPatterns.filter(p =>
-      combinedText.includes(p)
-    ).length;
+    const sarcasticMatches = sarcasticPatterns.filter(p => combinedText.includes(p)).length;
 
     if (sarcasticMatches > 0) {
       this.nudgeTrait(profileId, 'sarcasm_level', 0.01, 'Sarcastic interaction detected');
@@ -216,9 +224,7 @@ export class PersonalityService {
 
     // Genuine/sincere interactions decrease sarcasm
     const sincerePatterns = ['thank you', 'appreciate', 'helpful', 'thanks'];
-    const sincereMatches = sincerePatterns.filter(p =>
-      combinedText.includes(p)
-    ).length;
+    const sincereMatches = sincerePatterns.filter(p => combinedText.includes(p)).length;
 
     if (sincereMatches >= 2) {
       this.nudgeTrait(profileId, 'sarcasm_level', -0.005, 'Sincere interaction detected');
@@ -238,8 +244,10 @@ export class PersonalityService {
     // Reinitialize
     this.initializeFromProfile(profile);
 
-    logger.withMetadata({
-      profile_id: profile.id,
-    }).info('Traits reset to defaults');
+    logger
+      .withMetadata({
+        profile_id: profile.id,
+      })
+      .info('Traits reset to defaults');
   }
 }

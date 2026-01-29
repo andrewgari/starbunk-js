@@ -73,7 +73,7 @@ while IFS= read -r file; do
       fi
     fi
   fi
-done < <(find . -name "*.json" -o -name "*.yml" -o -name "*.yaml" 2>/dev/null | grep -v node_modules | grep -v .git | grep -v ".lh")
+done < <(find . -name "*.json" -o -name "*.yml" -o -name "*.yaml" 2>/dev/null | grep -v node_modules | grep -v .git | grep -v .lh)
 
 if [[ $config_violations -eq 0 ]]; then
   echo "✅ Configuration files follow kebab-case naming"

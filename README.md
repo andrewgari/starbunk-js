@@ -1,4 +1,5 @@
 # StarBunk Discord Bot - Container Architecture
+<!-- Testing deployment workflow -->
 
 A sophisticated Discord bot built with TypeScript using a **4-container modular architecture** that provides scalable, isolated services for different bot functionalities.
 
@@ -343,6 +344,12 @@ cd containers/bunkbot && npm test
 ## 🚀 Deployment
 
 ### Production Deployment
+
+Starbunk uses **automated deployment** to production via CircleCI when GitHub releases are published.
+
+**📖 For complete deployment setup and procedures, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
+
+#### Quick Deploy (Manual)
 ```bash
 # Build and start all containers
 docker-compose up -d
@@ -355,10 +362,16 @@ docker-compose up -d --no-deps bunkbot
 ```
 
 ### CI/CD Pipeline
-The project includes GitHub Actions workflows for:
-- **Continuous Integration**: Build and test all containers
-- **Container Registry**: Push images to GitHub Container Registry
-- **Deployment**: Automated deployment to production
+- **CircleCI (PRs)**: Build, test, and validate changed packages
+- **CircleCI (main)**: Build images and push to GitHub Container Registry (GHCR)
+- **Semantic Release**: Generate version tags and GitHub releases
+- **GitHub Actions**: Tag images with version numbers (`:prod`, `:staging`)
+- **CircleCI (releases)**: Deploy to production Unraid server via SSH
+
+#### Deployment Scripts
+- [`scripts/deployment/deploy.sh`](scripts/deployment/deploy.sh) - Automated deployment orchestration
+- [`scripts/deployment/health-check.sh`](scripts/deployment/health-check.sh) - Post-deployment verification
+- [`scripts/deployment/rollback.sh`](scripts/deployment/rollback.sh) - Emergency rollback procedures
 
 ### CI Policy (PRs)
 - Validations: runs [scripts/validation/run-all-validations.sh](scripts/validation/run-all-validations.sh) for structure/naming/docs.

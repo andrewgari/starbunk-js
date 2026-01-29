@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import Database from 'better-sqlite3';
-import { SocialBatteryService, SocialBatteryConfig } from '../../src/services/social-battery-service';
-import { DatabaseService } from '@starbunk/shared/database';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  SocialBatteryService,
+  SocialBatteryConfig,
+} from '../../src/services/social-battery-service';
+import { SocialBatteryRepository } from '../../src/repositories/social-battery-repository';
 
 describe('SocialBatteryService', () => {
-  const testDbPath = path.join(__dirname, '../../data/test-battery.sqlite');
-  let db: Database.Database;
+  let mockSocialBatteryRepo: Partial<SocialBatteryRepository>;
   let batteryService: SocialBatteryService;
 
   const defaultConfig: SocialBatteryConfig = {
@@ -16,105 +15,127 @@ describe('SocialBatteryService', () => {
     cooldownSeconds: 30,
   };
 
-  beforeEach(async () => {
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-    DatabaseService.resetInstance();
+  beforeEach(() => {
+    mockSocialBatteryRepo = {
+      getState: vi.fn().mockReturnValue(null),
+      createState: vi.fn(),
+      resetWindow: vi.fn(),
+      incrementCount: vi.fn(),
+      deleteState: vi.fn(),
+      resetProfile: vi.fn(),
+      getActivitySummary: vi.fn().mockReturnValue({
+        totalChannels: 0,
+        totalMessages: 0,
+        activeChannels: 0,
+      }),
+    };
 
-    const dbService = DatabaseService.getInstance(testDbPath);
-    await dbService.initialize();
-    db = dbService.getDb();
-    batteryService = new SocialBatteryService(db);
-  });
-
-  afterEach(() => {
-    DatabaseService.resetInstance();
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-    vi.useRealTimers();
+    batteryService = new SocialBatteryService(mockSocialBatteryRepo as SocialBatteryRepository);
   });
 
   describe('canSpeak', () => {
-    it('should allow speaking with no previous state', () => {
-      const result = batteryService.canSpeak('profile', 'channel-1', defaultConfig);
+    it('should allow speaking with no previous state', async () => {
+      const result = await batteryService.canSpeak('profile', 'channel-1', defaultConfig);
 
       expect(result.canSpeak).toBe(true);
       expect(result.currentCount).toBe(0);
       expect(result.reason).toBe('ok');
     });
 
-    it('should allow speaking within rate limit', () => {
+    it('should allow speaking within rate limit', async () => {
       vi.useFakeTimers();
 
-      // Record some messages but not at limit, with time gaps to avoid cooldown
-      for (let i = 0; i < 3; i++) {
-        batteryService.recordMessage('profile', 'channel-1', defaultConfig);
-        vi.advanceTimersByTime(35000); // Wait past cooldown
-      }
+      const now = new Date();
+      const windowStart = new Date(now.getTime() - 5 * 60 * 1000); // 5 minutes ago
 
-      const result = batteryService.canSpeak('profile', 'channel-1', defaultConfig);
+      vi.mocked(mockSocialBatteryRepo.getState!).mockResolvedValue({
+        profile_id: 'profile',
+        channel_id: 'channel-1',
+        message_count: 3,
+        window_start: windowStart.toISOString(),
+        last_message_at: new Date(now.getTime() - 35000).toISOString(), // 35 seconds ago
+      });
+
+      const result = await batteryService.canSpeak('profile', 'channel-1', defaultConfig);
 
       expect(result.canSpeak).toBe(true);
       expect(result.currentCount).toBe(3);
       expect(result.reason).toBe('ok');
+
+      vi.useRealTimers();
     });
 
-    it('should block when rate limited', () => {
+    it('should block when rate limited', async () => {
       vi.useFakeTimers();
 
-      // Hit the rate limit, with time gaps to avoid cooldown
-      for (let i = 0; i < 5; i++) {
-        batteryService.recordMessage('profile', 'channel-1', defaultConfig);
-        vi.advanceTimersByTime(35000); // Wait past cooldown between messages
-      }
+      const now = new Date();
+      const windowStart = new Date(now.getTime() - 5 * 60 * 1000); // 5 minutes ago
 
-      const result = batteryService.canSpeak('profile', 'channel-1', defaultConfig);
+      vi.mocked(mockSocialBatteryRepo.getState!).mockResolvedValue({
+        profile_id: 'profile',
+        channel_id: 'channel-1',
+        message_count: 5,
+        window_start: windowStart.toISOString(),
+        last_message_at: new Date(now.getTime() - 35000).toISOString(), // 35 seconds ago
+      });
+
+      const result = await batteryService.canSpeak('profile', 'channel-1', defaultConfig);
 
       expect(result.canSpeak).toBe(false);
       expect(result.currentCount).toBe(5);
       expect(result.reason).toBe('rate_limited');
       expect(result.windowResetSeconds).toBeDefined();
+
+      vi.useRealTimers();
     });
 
-    it('should block during cooldown', () => {
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
+    it('should block during cooldown', async () => {
+      const now = new Date();
 
-      // Immediately check - should be in cooldown
-      const result = batteryService.canSpeak('profile', 'channel-1', defaultConfig);
+      vi.mocked(mockSocialBatteryRepo.getState!).mockResolvedValue({
+        profile_id: 'profile',
+        channel_id: 'channel-1',
+        message_count: 1,
+        window_start: now.toISOString(),
+        last_message_at: new Date(now.getTime() - 10000).toISOString(), // 10 seconds ago
+      });
+
+      const result = await batteryService.canSpeak('profile', 'channel-1', defaultConfig);
 
       expect(result.canSpeak).toBe(false);
       expect(result.reason).toBe('cooldown');
     });
 
     it('should allow speaking after cooldown expires', async () => {
-      vi.useFakeTimers();
+      const now = new Date();
 
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
+      vi.mocked(mockSocialBatteryRepo.getState!).mockResolvedValue({
+        profile_id: 'profile',
+        channel_id: 'channel-1',
+        message_count: 1,
+        window_start: now.toISOString(),
+        last_message_at: new Date(now.getTime() - 31000).toISOString(), // 31 seconds ago
+      });
 
-      // Advance past cooldown
-      vi.advanceTimersByTime(31000); // 31 seconds
-
-      const result = batteryService.canSpeak('profile', 'channel-1', defaultConfig);
+      const result = await batteryService.canSpeak('profile', 'channel-1', defaultConfig);
 
       expect(result.canSpeak).toBe(true);
       expect(result.reason).toBe('ok');
     });
 
-    it('should reset window after time expires', () => {
-      vi.useFakeTimers();
+    it('should reset window after time expires', async () => {
+      const now = new Date();
+      const windowStart = new Date(now.getTime() - 11 * 60 * 1000); // 11 minutes ago
 
-      // Hit rate limit
-      for (let i = 0; i < 5; i++) {
-        batteryService.recordMessage('profile', 'channel-1', defaultConfig);
-        vi.advanceTimersByTime(35000); // Wait past cooldown each time
-      }
+      vi.mocked(mockSocialBatteryRepo.getState!).mockResolvedValue({
+        profile_id: 'profile',
+        channel_id: 'channel-1',
+        message_count: 5,
+        window_start: windowStart.toISOString(),
+        last_message_at: new Date(now.getTime() - 35000).toISOString(), // 35 seconds ago
+      });
 
-      // Advance past window
-      vi.advanceTimersByTime(11 * 60 * 1000); // 11 minutes
-
-      const result = batteryService.canSpeak('profile', 'channel-1', defaultConfig);
+      const result = await batteryService.canSpeak('profile', 'channel-1', defaultConfig);
 
       expect(result.canSpeak).toBe(true);
       expect(result.currentCount).toBe(0);
@@ -122,88 +143,119 @@ describe('SocialBatteryService', () => {
   });
 
   describe('recordMessage', () => {
-    it('should create state on first message', () => {
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
+    it('should create state on first message', async () => {
+      vi.useFakeTimers();
+      const now = new Date();
+      vi.setSystemTime(now);
 
-      const state = batteryService.getState('profile', 'channel-1');
+      vi.mocked(mockSocialBatteryRepo.getState!).mockResolvedValue(null);
 
-      expect(state).toBeDefined();
-      expect(state?.message_count).toBe(1);
-      expect(state?.window_start).toBeDefined();
-      expect(state?.last_message_at).toBeDefined();
+      await batteryService.recordMessage('profile', 'channel-1', defaultConfig);
+
+      expect(mockSocialBatteryRepo.createState).toHaveBeenCalledWith(
+        'profile',
+        'channel-1',
+        now.toISOString(),
+      );
+
+      vi.useRealTimers();
     });
 
-    it('should increment count on subsequent messages', () => {
+    it('should increment count on subsequent messages', async () => {
       vi.useFakeTimers();
+      const now = new Date();
+      vi.setSystemTime(now);
 
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
-      vi.advanceTimersByTime(35000); // Wait past cooldown
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
+      const existingState = {
+        profile_id: 'profile',
+        channel_id: 'channel-1',
+        message_count: 1,
+        window_start: new Date(now.getTime() - 5 * 60 * 1000).toISOString(),
+        last_message_at: new Date(now.getTime() - 35000).toISOString(),
+      };
 
-      const state = batteryService.getState('profile', 'channel-1');
+      vi.mocked(mockSocialBatteryRepo.getState!).mockResolvedValue(existingState);
 
-      expect(state?.message_count).toBe(2);
+      await batteryService.recordMessage('profile', 'channel-1', defaultConfig);
+
+      expect(mockSocialBatteryRepo.incrementCount).toHaveBeenCalledWith(
+        'profile',
+        'channel-1',
+        now.toISOString(),
+      );
+
+      vi.useRealTimers();
     });
 
-    it('should reset count when window expires', () => {
+    it('should reset count when window expires', async () => {
       vi.useFakeTimers();
+      const now = new Date();
+      vi.setSystemTime(now);
 
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
-      vi.advanceTimersByTime(11 * 60 * 1000); // 11 minutes
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
+      const existingState = {
+        profile_id: 'profile',
+        channel_id: 'channel-1',
+        message_count: 5,
+        window_start: new Date(now.getTime() - 11 * 60 * 1000).toISOString(), // 11 minutes ago
+        last_message_at: new Date(now.getTime() - 11 * 60 * 1000).toISOString(),
+      };
 
-      const state = batteryService.getState('profile', 'channel-1');
+      vi.mocked(mockSocialBatteryRepo.getState!).mockResolvedValue(existingState);
 
-      expect(state?.message_count).toBe(1); // Reset to 1 (this message)
+      await batteryService.recordMessage('profile', 'channel-1', defaultConfig);
+
+      expect(mockSocialBatteryRepo.resetWindow).toHaveBeenCalledWith(
+        'profile',
+        'channel-1',
+        now.toISOString(),
+      );
+
+      vi.useRealTimers();
     });
   });
 
   describe('resetChannel', () => {
-    it('should clear channel state', () => {
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
-      batteryService.resetChannel('profile', 'channel-1');
+    it('should clear channel state', async () => {
+      await batteryService.resetChannel('profile', 'channel-1');
 
-      const state = batteryService.getState('profile', 'channel-1');
-
-      expect(state).toBeNull();
+      expect(mockSocialBatteryRepo.deleteState).toHaveBeenCalledWith('profile', 'channel-1');
     });
   });
 
   describe('resetProfile', () => {
-    it('should clear all states for a profile', () => {
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
-      batteryService.recordMessage('profile', 'channel-2', defaultConfig);
-      batteryService.resetProfile('profile');
+    it('should clear all states for a profile', async () => {
+      await batteryService.resetProfile('profile');
 
-      expect(batteryService.getState('profile', 'channel-1')).toBeNull();
-      expect(batteryService.getState('profile', 'channel-2')).toBeNull();
+      expect(mockSocialBatteryRepo.resetProfile).toHaveBeenCalledWith('profile');
     });
   });
 
   describe('getActivitySummary', () => {
-    it('should return activity summary', () => {
-      vi.useFakeTimers();
+    it('should return activity summary', async () => {
+      vi.mocked(mockSocialBatteryRepo.getActivitySummary!).mockResolvedValue({
+        totalChannels: 2,
+        totalMessages: 3,
+        activeChannels: 2,
+      });
 
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
-      vi.advanceTimersByTime(35000);
-      batteryService.recordMessage('profile', 'channel-1', defaultConfig);
-      vi.advanceTimersByTime(35000);
-      batteryService.recordMessage('profile', 'channel-2', defaultConfig);
-
-      const summary = batteryService.getActivitySummary('profile');
+      const summary = await batteryService.getActivitySummary('profile');
 
       expect(summary.totalChannels).toBe(2);
       expect(summary.totalMessages).toBe(3);
-      expect(summary.activeChannels).toBe(2); // Both had messages in last hour
+      expect(summary.activeChannels).toBe(2);
     });
 
-    it('should handle empty profile', () => {
-      const summary = batteryService.getActivitySummary('non-existent');
+    it('should handle empty profile', async () => {
+      vi.mocked(mockSocialBatteryRepo.getActivitySummary!).mockResolvedValue({
+        totalChannels: 0,
+        totalMessages: 0,
+        activeChannels: 0,
+      });
+
+      const summary = await batteryService.getActivitySummary('non-existent');
 
       expect(summary.totalChannels).toBe(0);
-      // totalMessages can be null or 0 when no records exist
       expect(summary.totalMessages === 0 || summary.totalMessages === null).toBe(true);
-      // activeChannels can be null or 0 when no records exist
       expect(summary.activeChannels === 0 || summary.activeChannels === null).toBe(true);
     });
   });

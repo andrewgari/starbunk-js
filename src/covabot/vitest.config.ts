@@ -14,10 +14,17 @@ export default defineConfig({
     testTimeout: 10000,
   },
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@starbunk/shared/database': path.resolve(__dirname, '../shared/src/services/database'),
-      '@starbunk/shared': path.resolve(__dirname, '../shared/src'),
-    },
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      { find: /^@starbunk\/shared$/, replacement: path.resolve(__dirname, '../shared/src') },
+      {
+        find: /^@starbunk\/shared\/database$/,
+        replacement: path.resolve(__dirname, '../shared/src/services/database'),
+      },
+      {
+        find: /^@starbunk\/shared\/(.*)$/,
+        replacement: path.resolve(__dirname, '../shared/src/$1'),
+      },
+    ],
   },
 });

@@ -1,0 +1,77 @@
+version: 2.1
+
+# Core validation jobs (lint, types, build)
+# Shared executors and commands are loaded from shared-config.yml by generate_config.py
+# Including them here for individual file validation
+
+executors:
+  node22:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: medium
+
+commands:
+  setup_npm_cache:
+    description: "Install npm dependencies with caching"
+    steps:
+      - restore_cache:
+          keys:
+            - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v1-npm-{{ arch }}-{{ .Branch }}-
+            - v1-npm-{{ arch }}-
+      - run:
+          name: Show Node and npm versions
+          command: |
+            node -v
+            npm -v
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - node_modules
+
+parameters:
+  snyk_token:
+    type: string
+    default: ""
+    description: "Snyk API token for security scanning"
+
+jobs:
+  build:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Build entire application
+          command: npm run build
+
+  lint:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Check linting & formatting
+          command: |
+            npm run lint -- --cache --cache-location .eslintcache
+            npm run format -- --check
+
+  types:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Verify type safety
+          command: npm run type-check
+
+workflows:
+  core-checks:
+    jobs:
+      - build
+      - lint
+      - types

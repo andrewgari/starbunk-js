@@ -62,32 +62,39 @@ export class MessageHandler {
       return;
     }
 
-    logger.withMetadata({
-      message_id: message.id,
-      channel_id: message.channelId,
-      author_id: message.author.id,
-      author_name: message.author.username,
-      content_preview: message.content.substring(0, 50),
-    }).debug('Processing message');
+    logger
+      .withMetadata({
+        message_id: message.id,
+        channel_id: message.channelId,
+        author_id: message.author.id,
+        author_name: message.author.username,
+        content_preview: message.content.substring(0, 50),
+      })
+      .debug('Processing message');
 
     // Process message for each loaded profile
     for (const profile of this.profiles.values()) {
       try {
         await this.processForProfile(profile, message, botUserId);
       } catch (error) {
-        logger.withError(error).withMetadata({
-          profile_id: profile.id,
-          message_id: message.id,
-        }).error('Error processing message for profile');
+        logger
+          .withError(error)
+          .withMetadata({
+            profile_id: profile.id,
+            message_id: message.id,
+          })
+          .error('Error processing message for profile');
       }
     }
 
     const duration = Date.now() - startTime;
-    logger.withMetadata({
-      message_id: message.id,
-      duration_ms: duration,
-      profiles_count: this.profiles.size,
-    }).debug('Message processing complete');
+    logger
+      .withMetadata({
+        message_id: message.id,
+        duration_ms: duration,
+        profiles_count: this.profiles.size,
+      })
+      .debug('Message processing complete');
   }
 
   /**
@@ -103,10 +110,12 @@ export class MessageHandler {
     const decision = await this.decisionService.shouldRespond(ctx);
 
     if (!decision.shouldRespond) {
-      logger.withMetadata({
-        profile_id: profile.id,
-        reason: decision.reason,
-      }).debug('Decided not to respond');
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          reason: decision.reason,
+        })
+        .debug('Decided not to respond');
       return;
     }
 
@@ -118,15 +127,14 @@ export class MessageHandler {
       responseContent = decision.patternResponse;
     } else {
       // Generate LLM response
-      const llmResponse = await this.generateLlmResponse(
-        profile,
-        message,
-      );
+      const llmResponse = await this.generateLlmResponse(profile, message);
 
       if (llmResponse.shouldIgnore) {
-        logger.withMetadata({
-          profile_id: profile.id,
-        }).debug('LLM decided to ignore');
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+          })
+          .debug('LLM decided to ignore');
         return;
       }
 
@@ -138,7 +146,7 @@ export class MessageHandler {
       await this.sendResponse(profile, message, responseContent);
 
       // Step 4: Record in memory
-      this.memoryService.storeConversation(
+      await this.memoryService.storeConversation(
         profile.id,
         message.channelId,
         message.author.id,
@@ -153,26 +161,20 @@ export class MessageHandler {
         windowMinutes: profile.socialBattery.windowMinutes,
         cooldownSeconds: profile.socialBattery.cooldownSeconds,
       };
-      this.socialBatteryService.recordMessage(
-        profile.id,
-        message.channelId,
-        batteryConfig,
-      );
+      await this.socialBatteryService.recordMessage(profile.id, message.channelId, batteryConfig);
 
       // Step 6: Analyze for personality evolution
-      this.personalityService.analyzeForEvolution(
-        profile.id,
-        message.content,
-        responseContent,
-      );
+      this.personalityService.analyzeForEvolution(profile.id, message.content, responseContent);
 
-      logger.withMetadata({
-        profile_id: profile.id,
-        channel_id: message.channelId,
-        response_length: responseContent.length,
-        trigger: decision.triggerName,
-        reason: decision.reason,
-      }).info('Response sent');
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          channel_id: message.channelId,
+          response_length: responseContent.length,
+          trigger: decision.triggerName,
+          reason: decision.reason,
+        })
+        .info('Response sent');
     }
   }
 
@@ -184,7 +186,7 @@ export class MessageHandler {
     message: Message,
   ): Promise<{ content: string; shouldIgnore: boolean }> {
     // Build context
-    const context = this.buildLlmContext(profile, message);
+    const context = await this.buildLlmContext(profile, message);
 
     // Generate response
     const response = await this.llmService.generateResponse(
@@ -203,9 +205,9 @@ export class MessageHandler {
   /**
    * Build full LLM context from memory
    */
-  private buildLlmContext(profile: CovaProfile, message: Message): LlmContext {
+  private async buildLlmContext(profile: CovaProfile, message: Message): Promise<LlmContext> {
     // Get conversation history
-    const channelContext = this.memoryService.getChannelContext(
+    const channelContext = await this.memoryService.getChannelContext(
       profile.id,
       message.channelId,
       8, // Last 8 messages
@@ -216,14 +218,8 @@ export class MessageHandler {
     );
 
     // Get user facts
-    const userFacts = this.memoryService.getUserFacts(
-      profile.id,
-      message.author.id,
-    );
-    const userFactsStr = this.memoryService.formatFactsForLlm(
-      userFacts,
-      message.author.username,
-    );
+    const userFacts = await this.memoryService.getUserFacts(profile.id, message.author.id);
+    const userFactsStr = this.memoryService.formatFactsForLlm(userFacts, message.author.username);
 
     // Get trait modifiers
     const traitModifiers = this.personalityService.getTraitModifiersForLlm(profile.id);
@@ -255,10 +251,7 @@ export class MessageHandler {
   /**
    * Resolve bot identity based on profile configuration
    */
-  private async resolveBotIdentity(
-    profile: CovaProfile,
-    message: Message,
-  ): Promise<BotIdentity> {
+  private async resolveBotIdentity(profile: CovaProfile, message: Message): Promise<BotIdentity> {
     const identity = profile.identity;
 
     switch (identity.type) {
@@ -271,10 +264,7 @@ export class MessageHandler {
       case 'mimic':
         if (identity.as_member && message.guild) {
           const discordService = DiscordService.getInstance();
-          return discordService.getBotIdentityFromDiscord(
-            message.guild.id,
-            identity.as_member,
-          );
+          return discordService.getBotIdentityFromDiscord(message.guild.id, identity.as_member);
         }
         // Fallback to profile defaults
         return {
@@ -285,9 +275,7 @@ export class MessageHandler {
       case 'random':
         // Pick random member from guild
         if (message.guild) {
-          const members = message.guild.members.cache
-            .filter(m => !m.user.bot)
-            .map(m => m);
+          const members = message.guild.members.cache.filter(m => !m.user.bot).map(m => m);
 
           if (members.length > 0) {
             const randomMember = members[Math.floor(Math.random() * members.length)];

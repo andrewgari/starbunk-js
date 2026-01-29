@@ -178,21 +178,27 @@ logs-dev
 scripts/
 scripts/*
 
+# Exception: CircleCI scripts must be tracked
+!.circleci/scripts/
+!.circleci/scripts/container_health_check.sh
+!.circleci/scripts/detect_changes.sh
+!.circleci/scripts/generate_config.py
+
+# CircleCI generated files (generated dynamically)
+.circleci/diff.json
+.circleci/changed_files.txt
+.circleci/generated_config.yml
+
 *.md
 
-# Allow agent specs
-!.github/agents/*.agent.md
-
-# Allow the pre-push gate script to be tracked
-!scripts/
-!scripts/pre-push.sh
-!scripts/test-docker-env-precedence.sh
-
 !README.md
+!.circleci/README.md
 !docs/DOCKER_ENV_VARS.md
 !docs/DOCKER_BUILD_OPTIMIZATION.md
 !docs/DOCKER_COMPOSE_AUDIT.md
 !docs/branch-protection.md
+!docs/AGENTS.md
+!docs/ISSUE_*.md
 
 # Build artifacts and temporary files
 *.tsbuildinfo
@@ -203,7 +209,7 @@ data/logs/
 *.tsbuildinfo
 *.tsbuildinfo
 prometheus.yml
-config/bots/bots.yml
+bots.yml
 
 src/**/src/**/*.js
 src/**/src/**/*.d.ts
@@ -215,3 +221,10 @@ build-artifacts.tar.gz
 .github/instructions/snyk_rules.instructions.md
 
 .roo
+
+# Project Templates
+!.github/PULL_REQUEST_TEMPLATE.md
+!.github/ISSUE_TEMPLATE/*.md
+!.github/BRANCH_NAMING_CONVENTION.md
+!.github/COMMIT_TEMPLATE
+.roomodes

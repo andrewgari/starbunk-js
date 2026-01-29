@@ -93,3 +93,59 @@ workflows:
       - tests:
           requires:
             - build
+
+orbs:
+  continuation: circleci/continuation@1.0.0
+
+executors:
+  node22:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: medium
+
+jobs:
+  detect_and_continue:
+    executor: node22
+    steps:
+      - checkout
+      - run:
+          name: Fetch main for diff
+          command: git fetch origin main || true
+      - run:
+          name: Detect changed paths
+          command: .circleci/scripts/detect_changes.sh
+      - run:
+          name: Install Python and PyYAML
+          command: |
+            sudo apt-get update && sudo apt-get install -y python3 python3-pip
+            python3 -m pip install --user pyyaml
+      - run:
+          name: Generate dynamic config
+          command: |
+            if [ -n "${CIRCLE_TAG:-}" ]; then
+              echo "Detected git tag: $CIRCLE_TAG - loading deployment workflow"
+              cp .circleci/workflows/deploy-production.yml .circleci/generated_config.yml
+            elif [ "${CIRCLE_BRANCH:-}" = "main" ]; then
+              echo "On main branch - loading deployment workflow"
+              cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
+            else
+              echo "On feature branch/PR - loading PR validation workflows"
+              .circleci/scripts/generate_config.py > .circleci/generated_config.yml
+            fi
+            echo "=== Generated config preview (first 50 lines) ==="
+            head -n 50 .circleci/generated_config.yml
+            echo "=== Total lines: $(wc -l < .circleci/generated_config.yml) ==="
+            echo "Config generated successfully"
+      - continuation/continue:
+          configuration_path: .circleci/generated_config.yml
+
+workflows:
+  change-detection:
+    jobs:
+      - detect_and_continue:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              only: /.*/
+>>>>>>> origin/main

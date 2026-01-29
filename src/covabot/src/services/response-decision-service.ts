@@ -22,10 +22,7 @@ export class ResponseDecisionService {
   private interestService: InterestService;
   private socialBatteryService: SocialBatteryService;
 
-  constructor(
-    interestService: InterestService,
-    socialBatteryService: SocialBatteryService,
-  ) {
+  constructor(interestService: InterestService, socialBatteryService: SocialBatteryService) {
     this.interestService = interestService;
     this.socialBatteryService = socialBatteryService;
   }
@@ -36,11 +33,13 @@ export class ResponseDecisionService {
   async shouldRespond(ctx: DecisionContext): Promise<ResponseDecision> {
     const { profile, message, botUserId } = ctx;
 
-    logger.withMetadata({
-      profile_id: profile.id,
-      message_id: message.id,
-      author_id: message.author.id,
-    }).debug('Evaluating response decision');
+    logger
+      .withMetadata({
+        profile_id: profile.id,
+        message_id: message.id,
+        author_id: message.author.id,
+      })
+      .debug('Evaluating response decision');
 
     // Step 1: Basic filters
     if (this.shouldIgnore(profile, message, botUserId)) {
@@ -68,7 +67,7 @@ export class ResponseDecisionService {
     }
 
     // Step 4: Interest-based saliency check
-    const interestResult = this.interestService.isInterested(
+    const interestResult = await this.interestService.isInterested(
       profile.id,
       message.content,
       0.3, // threshold
@@ -76,7 +75,8 @@ export class ResponseDecisionService {
 
     if (!interestResult.interested) {
       // Random chime chance (low probability even when not interested)
-      if (Math.random() < 0.02) { // 2% chance
+      if (Math.random() < 0.02) {
+        // 2% chance
         logger.withMetadata({ profile_id: profile.id }).debug('Random chime triggered');
         return {
           shouldRespond: true,
@@ -86,10 +86,12 @@ export class ResponseDecisionService {
         };
       }
 
-      logger.withMetadata({
-        profile_id: profile.id,
-        interest_score: interestResult.score,
-      }).debug('Interest score below threshold');
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          interest_score: interestResult.score,
+        })
+        .debug('Interest score below threshold');
 
       return {
         shouldRespond: false,
@@ -106,18 +108,20 @@ export class ResponseDecisionService {
       cooldownSeconds: profile.socialBattery.cooldownSeconds,
     };
 
-    const batteryCheck = this.socialBatteryService.canSpeak(
+    const batteryCheck = await this.socialBatteryService.canSpeak(
       profile.id,
       message.channelId,
       batteryConfig,
     );
 
     if (!batteryCheck.canSpeak) {
-      logger.withMetadata({
-        profile_id: profile.id,
-        reason: batteryCheck.reason,
-        current_count: batteryCheck.currentCount,
-      }).debug('Social battery depleted');
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          reason: batteryCheck.reason,
+          current_count: batteryCheck.currentCount,
+        })
+        .debug('Social battery depleted');
 
       return {
         shouldRespond: false,
@@ -128,10 +132,12 @@ export class ResponseDecisionService {
     }
 
     // Passed all checks - respond with LLM
-    logger.withMetadata({
-      profile_id: profile.id,
-      interest_score: interestResult.score,
-    }).debug('Interest match - will respond');
+    logger
+      .withMetadata({
+        profile_id: profile.id,
+        interest_score: interestResult.score,
+      })
+      .debug('Interest match - will respond');
 
     return {
       shouldRespond: true,
@@ -195,11 +201,13 @@ export class ResponseDecisionService {
           }
         }
 
-        logger.withMetadata({
-          profile_id: profile.id,
-          trigger_name: trigger.name,
-          use_llm: trigger.use_llm,
-        }).debug('Trigger matched');
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            trigger_name: trigger.name,
+            use_llm: trigger.use_llm,
+          })
+          .debug('Trigger matched');
 
         // Get canned response if not using LLM
         let patternResponse: string | undefined;
@@ -225,10 +233,7 @@ export class ResponseDecisionService {
   /**
    * Recursively evaluate a trigger condition
    */
-  private async evaluateCondition(
-    condition: TriggerCondition,
-    message: Message,
-  ): Promise<boolean> {
+  private async evaluateCondition(condition: TriggerCondition, message: Message): Promise<boolean> {
     // Logical operators
     if (condition.all_of) {
       for (const sub of condition.all_of) {

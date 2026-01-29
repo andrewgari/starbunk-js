@@ -6,85 +6,150 @@
  */
 
 import Database from 'better-sqlite3';
+import { BaseRepository } from '@starbunk/shared';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { SocialBatteryStateRow } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('SocialBatteryRepository');
 
-export class SocialBatteryRepository {
-  private db: Database.Database;
-
+export class SocialBatteryRepository extends BaseRepository<SocialBatteryStateRow> {
   constructor(db: Database.Database) {
-    this.db = db;
+    super(db);
   }
 
   /**
-   * Get current social battery state for a user in a channel
+   * Get current social battery state for a channel and profile
    */
-  getState(channelId: string, userId: string): SocialBatteryStateRow | null {
-    const stmt = this.db.prepare(`
-      SELECT profile_id, channel_id, message_count, window_start, last_message_at
-      FROM social_battery_state
-      WHERE channel_id = ? AND profile_id = ?
-    `);
+  async getState(profileId: string, channelId: string): Promise<SocialBatteryStateRow | null> {
+    const rows = await this.query<SocialBatteryStateRow>(
+      `SELECT profile_id, channel_id, message_count, window_start, last_message_at
+       FROM social_battery_state
+       WHERE profile_id = ? AND channel_id = ?`,
+      [profileId, channelId],
+    );
 
-    const row = stmt.get(channelId, userId) as SocialBatteryStateRow | undefined;
-    return row || null;
+    return rows[0] || null;
   }
 
   /**
-   * Upsert (insert or update) social battery state
+   * Create initial state for a channel
    */
-  upsertState(
-    channelId: string,
-    userId: string,
-    level: number,
-  ): void {
-    const stmt = this.db.prepare(`
-      INSERT INTO social_battery_state (profile_id, channel_id, message_count, window_start, last_message_at)
-      VALUES (?, ?, ?, datetime('now'), datetime('now'))
-      ON CONFLICT(profile_id, channel_id)
-      DO UPDATE SET message_count = ?, last_message_at = datetime('now')
-    `);
+  async createState(profileId: string, channelId: string, nowIso: string): Promise<void> {
+    await this.execute(
+      `INSERT INTO social_battery_state (profile_id, channel_id, message_count, window_start, last_message_at)
+       VALUES (?, ?, 1, ?, ?)`,
+      [profileId, channelId, nowIso, nowIso],
+    );
 
-    stmt.run(userId, channelId, level, level);
-
-    logger.withMetadata({
-      channel_id: channelId,
-      user_id: userId,
-      level,
-    }).debug('Social battery state upserted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery state created');
   }
 
   /**
-   * Reset all social battery state for a channel
+   * Reset the window for a channel
    */
-  resetChannel(channelId: string): void {
-    const stmt = this.db.prepare(`
-      DELETE FROM social_battery_state
-      WHERE channel_id = ?
-    `);
+  async resetWindow(profileId: string, channelId: string, nowIso: string): Promise<void> {
+    await this.execute(
+      `UPDATE social_battery_state
+       SET message_count = 1, window_start = ?, last_message_at = ?
+       WHERE profile_id = ? AND channel_id = ?`,
+      [nowIso, nowIso, profileId, channelId],
+    );
 
-    stmt.run(channelId);
-
-    logger.withMetadata({
-      channel_id: channelId,
-    }).info('Channel social battery state reset');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery window reset');
   }
 
   /**
-   * Reset all social battery state for a user
+   * Increment message count for a channel
    */
-  resetProfile(userId: string): void {
-    const stmt = this.db.prepare(`
-      DELETE FROM social_battery_state
-      WHERE profile_id = ?
-    `);
+  async incrementCount(profileId: string, channelId: string, nowIso: string): Promise<void> {
+    await this.execute(
+      `UPDATE social_battery_state
+       SET message_count = message_count + 1, last_message_at = ?
+       WHERE profile_id = ? AND channel_id = ?`,
+      [nowIso, profileId, channelId],
+    );
 
-    stmt.run(userId);
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery message count incremented');
+  }
 
-    logger.withMetadata({
-      user_id: userId,
-    }).info('User social battery state reset');
+  /**
+   * Delete state for a specific channel and profile
+   */
+  async deleteState(profileId: string, channelId: string): Promise<void> {
+    await this.execute(
+      `DELETE FROM social_battery_state
+       WHERE profile_id = ? AND channel_id = ?`,
+      [profileId, channelId],
+    );
+
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Social battery state deleted');
+  }
+
+  /**
+   * Reset all social battery state for a profile
+   */
+  async resetProfile(profileId: string): Promise<void> {
+    await this.execute(
+      `DELETE FROM social_battery_state
+       WHERE profile_id = ?`,
+      [profileId],
+    );
+
+    logger
+      .withMetadata({
+        profile_id: profileId,
+      })
+      .info('Profile social battery state reset');
+  }
+
+  /**
+   * Get summary of activity across all channels for a profile
+   */
+  async getActivitySummary(profileId: string): Promise<{
+    totalChannels: number;
+    totalMessages: number;
+    activeChannels: number;
+  }> {
+    const rows = await this.query<{
+      total_channels: number;
+      total_messages: number | null;
+      active_channels: number;
+    }>(
+      `SELECT
+         COUNT(*) as total_channels,
+         SUM(message_count) as total_messages,
+         SUM(CASE WHEN last_message_at > datetime('now', '-1 hour') THEN 1 ELSE 0 END) as active_channels
+       FROM social_battery_state
+       WHERE profile_id = ?`,
+      [profileId],
+    );
+
+    const row = rows[0];
+
+    return {
+      totalChannels: row.total_channels,
+      totalMessages: row.total_messages || 0,
+      activeChannels: row.active_channels,
+    };
   }
 }

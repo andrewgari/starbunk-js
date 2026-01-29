@@ -11,7 +11,7 @@ set -euo pipefail  # Strict error handling
 
 # Change to repository root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../../" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../" && pwd)"
 cd "$REPO_ROOT"
 
 # Parse arguments
@@ -72,10 +72,10 @@ run_validation() {
 }
 
 # Run all validation checks
-run_validation "Root Directory Compliance" "tools/scripts/validation/check-root-directory.sh" "Validate root directory contains only essential files"
-run_validation "File Naming Conventions" "tools/scripts/validation/check-naming-conventions.sh" "Check file naming follows style guide conventions"
-run_validation "Temporary Files Check" "tools/scripts/validation/check-temporary-files.sh" "Ensure no temporary files are committed"
-run_validation "Documentation Structure" "tools/scripts/validation/check-documentation-structure.sh" "Validate documentation organization"
+run_validation "Root Directory Compliance" "scripts/validation/check-root-directory.sh" "Validate root directory contains only essential files"
+run_validation "File Naming Conventions" "scripts/validation/check-naming-conventions.sh" "Check file naming follows style guide conventions"
+run_validation "Temporary Files Check" "scripts/validation/check-temporary-files.sh" "Ensure no temporary files are committed"
+run_validation "Documentation Structure" "scripts/validation/check-documentation-structure.sh" "Validate documentation organization"
 run_validation "Task Manifests" "scripts/validation/check-manifests.sh" "Ensure package TODO manifests comply with template"
 
 # Summary

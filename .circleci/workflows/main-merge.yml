@@ -1,0 +1,407 @@
+version: 2.1
+
+executors:
+  node22:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: medium
+  docker:
+    docker:
+      - image: cimg/base:stable
+    resource_class: medium
+  runner:
+    machine: true
+    resource_class: starbunk-runner
+
+commands:
+  setup_npm_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v1-npm-{{ .Branch }}-
+            - v1-npm-{{ arch }}-
+      - run:
+          name: Show Node and npm versions
+          command: |
+            node -v
+            npm -v
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - node_modules
+  persist_build_artifacts:
+    steps:
+      - run:
+          name: Compress build artifacts
+          command: |
+            # Build list of files to tar
+            FILES_TO_TAR="package.json package-lock.json"
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ -d "src/$app/dist" ]; then
+                FILES_TO_TAR="$FILES_TO_TAR src/$app/dist"
+              fi
+            done
+            tar -czf build-artifacts.tar.gz $FILES_TO_TAR
+            echo "Tarred files: $FILES_TO_TAR"
+      - persist_to_workspace:
+          root: .
+          paths:
+            - build-artifacts.tar.gz
+  attach_build_artifacts:
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Extract build artifacts
+          command: tar -xzf build-artifacts.tar.gz
+  setup_docker_cli:
+    steps:
+      - run:
+          name: Ensure Docker CLI is available
+          command: |
+            if ! command -v docker >/dev/null 2>&1; then
+              sudo apt-get update
+              sudo apt-get install -y --no-install-recommends docker.io
+            fi
+            docker --version
+
+jobs:
+  lint:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Check linting & formatting
+          command: |
+            npm run lint -- --cache --cache-location .eslintcache
+            npm run format -- --check
+
+  types:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Verify type safety
+          command: npm run type-check
+
+  semantic_release:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Run semantic-release
+          command: |
+            if [ -z "$CI_TOKEN" ]; then echo "CI_TOKEN not set"; exit 1; fi
+            export GITHUB_TOKEN="$CI_TOKEN"
+            npx semantic-release
+
+  tag_version_images:
+    executor: docker
+    steps:
+      - checkout
+      - setup_docker_cli
+      - setup_remote_docker
+      - run:
+          name: Login to GHCR
+          command: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+      - run:
+          name: Tag images with VERSION
+          command: |
+            VERSION=$(cat config/VERSION | tr -d '\n')
+            echo "Tagging images with version: $VERSION"
+            for APP in bunkbot covabot djcova bluebot; do
+              IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}"
+              echo "Pulling ${IMAGE}:latest"
+              docker pull ${IMAGE}:latest || true
+              echo "Tagging ${IMAGE}:${VERSION}"
+              docker tag ${IMAGE}:latest ${IMAGE}:${VERSION}
+              docker push ${IMAGE}:${VERSION}
+            done
+
+  unit-tests:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Run shared package tests
+          command: npm run test:shared
+
+  build:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - run:
+          name: Build all packages
+          command: npm run build
+      - run:
+          name: Verify build artifacts exist
+          command: |
+            echo "Checking for dist directories..."
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ -d "src/$app/dist" ]; then
+                echo "✓ src/$app/dist exists"
+                ls -la src/$app/dist | head -5
+              else
+                echo "✗ src/$app/dist NOT FOUND"
+              fi
+            done
+      - persist_build_artifacts
+
+  test:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - attach_build_artifacts
+      - run:
+          name: Test all packages
+          command: npm run test:full
+
+  publish_image:
+    executor: node22
+    parameters:
+      app_name:
+        type: string
+        description: "Application name (bunkbot, bluebot, covabot, djcova)"
+      dockerfile:
+        type: string
+        description: "Path to Dockerfile.ci"
+    steps:
+      - checkout
+      - attach_build_artifacts
+      - run:
+          name: Verify extracted artifacts
+          command: |
+            echo "Checking extracted artifacts..."
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ -d "src/$app/dist" ]; then
+                echo "✓ src/$app/dist exists after extraction"
+                ls -la src/$app/dist | head -3
+              else
+                echo "✗ src/$app/dist NOT FOUND after extraction"
+              fi
+            done
+      - run:
+          name: Rebuild artifacts if missing
+          command: |
+            MISSING=false
+            for app in shared bunkbot bluebot covabot djcova; do
+              if [ ! -d "src/$app/dist" ]; then
+                MISSING=true
+                echo "⚠ Missing src/$app/dist"
+              fi
+            done
+
+            if [ "$MISSING" = true ]; then
+              echo "Rebuilding missing artifacts..."
+              npm ci
+              npm run build
+              echo "Rebuild complete"
+            else
+              echo "All artifacts present"
+            fi
+      - setup_docker_cli
+      - setup_remote_docker
+      - run:
+          name: Setup GHCR Authentication
+          command: |
+            if [ -n "${GHCR_TOKEN:-}" ]; then
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            else
+              echo "⚠ GHCR credentials not configured"
+              exit 0
+            fi
+      - run:
+          name: Check Current Latest Image
+          command: |
+            set +e
+            docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null
+            PULL_EXIT_CODE=$?
+            set -e
+
+            if [ $PULL_EXIT_CODE -eq 0 ]; then
+              LATEST_DIGEST=$(docker images --digests ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest --format "{{.Digest}}" | head -1)
+              echo "Current latest digest: $LATEST_DIGEST"
+            else
+              LATEST_DIGEST="none"
+              echo "No existing latest image found (first deployment)"
+            fi
+            echo "$LATEST_DIGEST" > /tmp/latest_digest.txt
+      - run:
+          name: Build Docker Image
+          command: |
+            HASH=$(git rev-parse HEAD:src/<< parameters.app_name >> 2>/dev/null || echo "no-hash")
+            SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+            DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+            CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+
+            echo "Building image with content hash: $CONTENT_HASH"
+
+            DEPLOY_TAG="main"
+
+            # Try to use layer cache from latest if it exists
+            if docker pull ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest 2>/dev/null; then
+              CACHE_ARG="--cache-from ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest"
+              echo "Using layer cache from latest image"
+            else
+              CACHE_ARG=""
+              echo "No cache available (first deployment or image not found)"
+            fi
+
+            docker build \
+              --build-arg BUILDKIT_INLINE_CACHE=1 \
+              $CACHE_ARG \
+              -f << parameters.dockerfile >> \
+              -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7} \
+              -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest \
+              -t ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${DEPLOY_TAG} \
+              .
+      - run:
+          name: Compare Image Hash and Conditionally Push
+          command: |
+            DEPLOY_TAG="main"
+
+            # Get the digest of the newly built image
+            NEW_DIGEST=$(docker images --no-trunc --quiet ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest)
+            LATEST_DIGEST=$(cat /tmp/latest_digest.txt)
+
+            echo "Previous latest digest: $LATEST_DIGEST"
+            echo "New image digest: $NEW_DIGEST"
+            echo "Deploy tag: $DEPLOY_TAG"
+
+            # Always push on first deployment (when LATEST_DIGEST is "none")
+            # or when digests differ
+            if [ "$LATEST_DIGEST" = "none" ] || [ "$NEW_DIGEST" != "$LATEST_DIGEST" ]; then
+              echo "✅ Image has changed (or first deployment) - pushing to GHCR"
+              docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest
+              docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${DEPLOY_TAG}
+              docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7}
+            else
+              echo "⊘ Image unchanged - skipping push"
+            fi
+
+  # deploy:
+  #   executor: runner
+  #   steps:
+  #     - checkout
+  #     - run:
+  #         name: Login to GHCR
+  #         command: |
+  #           if [ -n "${GHCR_TOKEN:-}" ]; then
+  #             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+  #           else
+  #             echo "⚠ GHCR credentials not configured - cannot pull images"
+  #             exit 1
+  #           fi
+  #     - run:
+  #         name: Pull Latest Images
+  #         command: |
+  #           # Determine tag based on branch
+  #           if [ "${CIRCLE_BRANCH:-}" = "main" ]; then
+  #             DEPLOY_TAG="main"
+  #           else
+  #             DEPLOY_TAG="dev"
+  #           fi
+  #
+  #           echo "Pulling latest images from GHCR (tag: $DEPLOY_TAG)..."
+  #           docker pull ghcr.io/andrewgari/starbunk-bunkbot:${DEPLOY_TAG}
+  #           docker pull ghcr.io/andrewgari/starbunk-bluebot:${DEPLOY_TAG}
+  #           docker pull ghcr.io/andrewgari/starbunk-covabot:${DEPLOY_TAG}
+  #           docker pull ghcr.io/andrewgari/starbunk-djcova:${DEPLOY_TAG}
+  #     - run:
+  #         name: Deploy with Docker Compose
+  #         command: |
+  #           echo "🚀 Deploying services with docker-compose..."
+  #           docker-compose pull --policy always
+  #           docker-compose up -d
+  #           echo "✅ Deployment complete"
+  #     - run:
+  #         name: Verify Deployment Health
+  #         command: |
+  #           echo "Checking service health..."
+  #           sleep 10
+  #
+  #           services=("starbunk-bunkbot" "starbunk-bluebot" "starbunk-covabot" "starbunk-djcova")
+  #           for service in "${services[@]}"; do
+  #             if docker ps --filter "name=$service" --filter "status=running" | grep -q "$service"; then
+  #               echo "✅ $service is running"
+  #             else
+  #               echo "⚠ $service is not running"
+  #               docker-compose logs "$service" | tail -20
+  #             fi
+  #           done
+
+workflows:
+  deploy:
+    jobs:
+      - lint
+      - types
+      - unit-tests
+      - build:
+          requires:
+            - lint
+            - types
+            - unit-tests
+      - test:
+          requires:
+            - build
+      - publish_image:
+          name: publish_bunkbot
+          app_name: bunkbot
+          dockerfile: "./src/bunkbot/Dockerfile.ci"
+          context: github-container-registry
+          requires:
+            - test
+            - build
+      - publish_image:
+          name: publish_bluebot
+          app_name: bluebot
+          dockerfile: "./src/bluebot/Dockerfile.ci"
+          context: github-container-registry
+          requires:
+            - test
+            - build
+      - publish_image:
+          name: publish_covabot
+          app_name: covabot
+          dockerfile: "./src/covabot/Dockerfile.ci"
+          context: github-container-registry
+          requires:
+            - test
+            - build
+      - publish_image:
+          name: publish_djcova
+          app_name: djcova
+          dockerfile: "./src/djcova/Dockerfile.ci"
+          context: github-container-registry
+          requires:
+            - test
+            - build
+      - semantic_release:
+          requires:
+            - publish_bunkbot
+            - publish_bluebot
+            - publish_covabot
+            - publish_djcova
+      - tag_version_images:
+          requires:
+            - semantic_release
+      # Deploy job disabled - requires self-hosted runner (starbunk-runner)
+      # - deploy:
+      #     context: github-container-registry
+      #     requires:
+      #       - publish_bunkbot
+      #       - publish_bluebot
+      #       - publish_covabot
+      #       - publish_djcova

@@ -39,7 +39,6 @@ echo ""
 # Function to update version in a package.json file
 update_package_version() {
   local package_file=$1
-  local package_dir=$(dirname "$package_file")
 
   if [ ! -f "$package_file" ]; then
     echo -e "${YELLOW}⚠️  Skipping: $package_file (not found)${NC}"
@@ -54,14 +53,23 @@ update_package_version() {
     return
   fi
 
-  # Update version using npm version (no git tag)
-  cd "$package_dir"
-  if ! npm version "$ROOT_VERSION" --no-git-tag-version --allow-same-version > /dev/null; then
+  # Update version without touching lockfiles
+  if ! node - "$package_file" "$ROOT_VERSION" <<'NODE'
+const fs = require('fs');
+const [packageFile, version] = process.argv.slice(2);
+try {
+  const data = JSON.parse(fs.readFileSync(packageFile, 'utf8'));
+  data.version = version;
+  fs.writeFileSync(packageFile, JSON.stringify(data, null, 2) + '\n');
+} catch (error) {
+  console.error(error);
+  process.exit(1);
+}
+NODE
+  then
     echo -e "${RED}✗ Failed to update $package_file${NC}"
-    cd "$ROOT_DIR"
     return 1
   fi
-  cd "$ROOT_DIR"
 
   echo -e "${GREEN}✓ Updated $package_file${NC} (${current_version} → ${ROOT_VERSION})"
 }
@@ -74,33 +82,19 @@ fi
 
 echo ""
 
-# Update all app packages
-echo "Updating app packages..."
-for app in apps/*/package.json; do
-  # Skip if glob didn't match anything (literal pattern) or file doesn't exist
-  if [ ! -f "$app" ] || [ "$app" = "apps/*/package.json" ]; then
+# Update all src packages (bluebot, bunkbot, covabot, djcova, shared)
+echo "Updating src packages..."
+for package_dir in src/bluebot src/bunkbot src/covabot src/djcova src/shared; do
+  package_file="$package_dir/package.json"
+
+  # Skip if package doesn't exist
+  if [ ! -f "$package_file" ]; then
+    echo -e "${YELLOW}⚠️  Skipping: $package_file (not found)${NC}"
     continue
   fi
 
-  app_dir="$(dirname "$app")"
-  app_name="$(basename "$app_dir")"
-
-  # Skip hidden app directories (e.g. apps/.cache)
-  if [[ "$app_name" == .* ]]; then
-    echo -e "${YELLOW}⚠️  Skipping hidden app directory: $app_dir${NC}"
-    continue
-  fi
-
-  update_package_version "$app"
+  update_package_version "$package_file"
 done
-
-echo ""
-
-# Update shared package
-echo "Updating shared package..."
-if [ -f "packages/shared/package.json" ]; then
-  update_package_version "packages/shared/package.json"
-fi
 
 echo ""
 echo -e "${GREEN}✅ Version sync complete! All packages are now at version ${YELLOW}${ROOT_VERSION}${NC}"

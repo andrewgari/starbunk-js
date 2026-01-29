@@ -5,7 +5,7 @@
  * YAML-based personality configuration, and hybrid response logic.
  */
 
-import { Client, Events, Message } from 'discord.js';
+import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
 import { DatabaseService } from '@starbunk/shared/database';
@@ -16,282 +16,243 @@ import { ResponseDecisionService } from '@/services/response-decision-service';
 import { LlmService } from '@/services/llm-service';
 import { PersonalityService } from '@/services/personality-service';
 import { MessageHandler } from '@/handlers/message-handler';
+import { ConversationRepository } from '@/repositories/conversation-repository';
+import { UserFactRepository } from '@/repositories/user-fact-repository';
+import { SocialBatteryRepository } from '@/repositories/social-battery-repository';
+import { InterestRepository } from '@/repositories/interest-repository';
 import { CovaProfile } from '@/models/memory-types';
-import { loadPersonalitiesFromDirectory, getDefaultPersonalitiesPath } from '@/serialization/personality-parser';
+import {
+  loadPersonalitiesFromDirectory,
+  getDefaultPersonalitiesPath,
+} from '@/serialization/personality-parser';
 import { EmbeddingManager } from '@/services/llm';
 
 const logger = logLayer.withPrefix('CovaBot');
 
 export interface CovaBotConfig {
-	discordToken: string;
-	personalitiesPath?: string;
-	databasePath?: string;
-	// LLM Provider configuration (priority: Ollama > Gemini > OpenAI)
-	ollamaApiUrl?: string;
-	ollamaDefaultModel?: string;
-	geminiApiKey?: string;
-	geminiDefaultModel?: string;
-	openaiApiKey?: string;
-	openaiDefaultModel?: string;
+  discordToken: string;
+  personalitiesPath?: string;
+  databasePath?: string;
+  // LLM Provider configuration (priority: Ollama > Gemini > OpenAI)
+  ollamaApiUrl?: string;
+  ollamaDefaultModel?: string;
+  geminiApiKey?: string;
+  geminiDefaultModel?: string;
+  openaiApiKey?: string;
+  openaiDefaultModel?: string;
 }
 
 export class CovaBot {
-	private static instance: CovaBot | null = null;
+  private static instance: CovaBot | null = null;
 
-	private config: CovaBotConfig;
-	private client: Client | null = null;
-	private profiles: Map<string, CovaProfile> = new Map();
+  private config: CovaBotConfig;
+  private client: Client | null = null;
+  private profiles: Map<string, CovaProfile> = new Map();
 
-	// Services
-	private dbService: DatabaseService | null = null;
-	private memoryService: MemoryService | null = null;
-	private interestService: InterestService | null = null;
-	private socialBatteryService: SocialBatteryService | null = null;
-	private responseDecisionService: ResponseDecisionService | null = null;
-	private llmService: LlmService | null = null;
-	private personalityService: PersonalityService | null = null;
-	private messageHandler: MessageHandler | null = null;
-	private embeddingManager: EmbeddingManager | null = null;
+  // Services
+  private dbService: DatabaseService | null = null;
+  private memoryService: MemoryService | null = null;
+  private interestService: InterestService | null = null;
+  private socialBatteryService: SocialBatteryService | null = null;
+  private responseDecisionService: ResponseDecisionService | null = null;
+  private llmService: LlmService | null = null;
+  private personalityService: PersonalityService | null = null;
+  private messageHandler: MessageHandler | null = null;
+  private embeddingManager: EmbeddingManager | null = null;
 
-	private constructor(config: CovaBotConfig) {
-		this.config = config;
-	}
+  private constructor(config: CovaBotConfig) {
+    this.config = config;
+  }
 
-	/**
-	 * Get the singleton instance
-	 */
-	static getInstance(config?: CovaBotConfig): CovaBot {
-		if (!CovaBot.instance) {
-			if (!config) {
-				throw new Error('CovaBot config required for first initialization');
-			}
-			CovaBot.instance = new CovaBot(config);
-		}
-		return CovaBot.instance;
-	}
+  static getInstance(config?: CovaBotConfig): CovaBot {
+    if (!CovaBot.instance) {
+      if (!config) {
+        throw new Error('CovaBot config required for first initialization');
+      }
+      CovaBot.instance = new CovaBot(config);
+    }
+    return CovaBot.instance;
+  }
 
-	/**
-	 * Initialize and start the bot
-	 */
-	async start(): Promise<void> {
-		logger.info('Starting CovaBot v2');
+  async start(): Promise<void> {
+    logger.info('Starting CovaBot v2');
 
-		try {
-			// Initialize database
-			await this.initializeDatabase();
+    try {
+      await this.initializeDatabase();
+      await this.loadProfiles();
+      await this.initializeServices();
+      await this.initializeDiscord();
 
-			// Load personality profiles
-			await this.loadProfiles();
+      logger
+        .withMetadata({ profiles_loaded: this.profiles.size })
+        .info('CovaBot v2 started successfully');
+    } catch (error) {
+      logger.withError(error).error('Failed to start CovaBot');
+      throw error;
+    }
+  }
 
-			// Initialize services
-			await this.initializeServices();
+  async stop(): Promise<void> {
+    logger.info('Stopping CovaBot v2');
 
-			// Initialize Discord client
-			await this.initializeDiscord();
+    if (this.embeddingManager) {
+      this.embeddingManager.stopScheduledUpdates();
+    }
 
-			logger
-				.withMetadata({
-					profiles_loaded: this.profiles.size,
-				})
-				.info('CovaBot v2 started successfully');
-		} catch (error) {
-			logger.withError(error).error('Failed to start CovaBot');
-			throw error;
-		}
-	}
+    if (this.client) {
+      this.client.destroy();
+      this.client = null;
+    }
 
-	/**
-	 * Stop the bot gracefully
-	 */
-	async stop(): Promise<void> {
-		logger.info('Stopping CovaBot v2');
+    if (this.dbService) {
+      this.dbService.close();
+      this.dbService = null;
+    }
 
-		// Stop scheduled model updates
-		if (this.embeddingManager) {
-			this.embeddingManager.stopScheduledUpdates();
-		}
+    logger.info('CovaBot v2 stopped');
+  }
 
-		if (this.client) {
-			this.client.destroy();
-			this.client = null;
-		}
+  getProfile(profileId: string): CovaProfile | undefined {
+    return this.profiles.get(profileId);
+  }
 
-		if (this.dbService) {
-			this.dbService.close();
-		}
+  getAllProfiles(): CovaProfile[] {
+    return Array.from(this.profiles.values());
+  }
 
-		logger.info('CovaBot v2 stopped');
-	}
+  getServices() {
+    return {
+      db: this.dbService,
+      memory: this.memoryService,
+      interest: this.interestService,
+      socialBattery: this.socialBatteryService,
+      responseDecision: this.responseDecisionService,
+      llm: this.llmService,
+      personality: this.personalityService,
+      embedding: this.embeddingManager,
+    };
+  }
 
-	/**
-	 * Get a loaded profile by ID
-	 */
-	getProfile(profileId: string): CovaProfile | undefined {
-		return this.profiles.get(profileId);
-	}
+  private async initializeDatabase(): Promise<void> {
+    this.dbService = DatabaseService.getInstance(this.config.databasePath);
+    await this.dbService.initialize();
+  }
 
-	/**
-	 * Get all loaded profiles
-	 */
-	getAllProfiles(): CovaProfile[] {
-		return Array.from(this.profiles.values());
-	}
+  private async loadProfiles(): Promise<void> {
+    const personalitiesPath = this.config.personalitiesPath || getDefaultPersonalitiesPath();
+    const profiles = loadPersonalitiesFromDirectory(personalitiesPath);
+    this.profiles = new Map(profiles.map(profile => [profile.id, profile]));
 
-	/**
-	 * Get service instances (for testing/integration)
-	 */
-	getServices() {
-		return {
-			db: this.dbService,
-			memory: this.memoryService,
-			interest: this.interestService,
-			socialBattery: this.socialBatteryService,
-			responseDecision: this.responseDecisionService,
-			llm: this.llmService,
-			personality: this.personalityService,
-			embedding: this.embeddingManager,
-		};
-	}
+    logger
+      .withMetadata({ count: this.profiles.size, path: personalitiesPath })
+      .info('Profiles loaded');
+  }
 
-	/**
-	 * Initialize SQLite database
-	 */
-	private async initializeDatabase(): Promise<void> {
-		logger.info('Initializing database');
+  private async initializeServices(): Promise<void> {
+    logger.info('Initializing services');
 
-		this.dbService = DatabaseService.getInstance(this.config.databasePath);
-		await this.dbService.initialize();
-	}
+    if (!this.dbService) {
+      throw new Error('Database not initialized');
+    }
 
-	/**
-	 * Load personality profiles from YAML files
-	 */
-	private async loadProfiles(): Promise<void> {
-		const personalitiesPath = this.config.personalitiesPath || getDefaultPersonalitiesPath();
-		logger.withMetadata({ path: personalitiesPath }).info('Loading personality profiles');
+    const db = this.dbService.getDb();
 
-		const loadedProfiles = loadPersonalitiesFromDirectory(personalitiesPath);
+    const conversationRepo = new ConversationRepository(db);
+    const userFactRepo = new UserFactRepository(db);
+    const socialBatteryRepo = new SocialBatteryRepository(db);
+    const interestRepo = new InterestRepository(db);
 
-		for (const profile of loadedProfiles) {
-			if (this.profiles.has(profile.id)) {
-				logger.withMetadata({ profile_id: profile.id }).warn('Duplicate profile ID, skipping');
-				continue;
-			}
-			this.profiles.set(profile.id, profile);
-		}
+    this.memoryService = new MemoryService(conversationRepo, userFactRepo);
+    this.interestService = new InterestService(interestRepo);
+    this.socialBatteryService = new SocialBatteryService(socialBatteryRepo);
+    this.llmService = new LlmService({
+      ollamaApiUrl: this.config.ollamaApiUrl,
+      ollamaDefaultModel: this.config.ollamaDefaultModel,
+      geminiApiKey: this.config.geminiApiKey,
+      geminiDefaultModel: this.config.geminiDefaultModel,
+      openaiApiKey: this.config.openaiApiKey,
+      openaiDefaultModel: this.config.openaiDefaultModel,
+    });
+    this.personalityService = new PersonalityService(db);
 
-		if (this.profiles.size === 0) {
-			logger.warn('No personality profiles loaded - bot will not respond to messages');
-		}
+    this.embeddingManager = new EmbeddingManager({
+      ollamaApiUrl: this.config.ollamaApiUrl,
+      ollamaEmbeddingModel: process.env.OLLAMA_EMBEDDING_MODEL,
+      openaiApiKey: this.config.openaiApiKey,
+      openaiEmbeddingModel: process.env.OPENAI_EMBEDDING_MODEL,
+    });
 
-		logger.withMetadata({ count: this.profiles.size }).info('Profiles loaded');
-	}
+    const chatModel = this.config.ollamaDefaultModel || process.env.OLLAMA_DEFAULT_MODEL;
+    const additionalModels = chatModel ? [chatModel] : [];
+    this.embeddingManager.startScheduledUpdates(additionalModels);
 
-	/**
-	 * Initialize all services
-	 */
-	private async initializeServices(): Promise<void> {
-		logger.info('Initializing services');
+    for (const profile of this.profiles.values()) {
+      await this.interestService.initializeFromProfile(profile);
+    }
 
-		const db = this.dbService!.getDb();
+    this.responseDecisionService = new ResponseDecisionService(
+      this.interestService,
+      this.socialBatteryService,
+    );
 
-		// Core services
-		this.memoryService = new MemoryService(db);
-		this.interestService = new InterestService(db);
-		this.socialBatteryService = new SocialBatteryService(db);
-		this.llmService = new LlmService({
-			ollamaApiUrl: this.config.ollamaApiUrl,
-			ollamaDefaultModel: this.config.ollamaDefaultModel,
-			geminiApiKey: this.config.geminiApiKey,
-			geminiDefaultModel: this.config.geminiDefaultModel,
-			openaiApiKey: this.config.openaiApiKey,
-			openaiDefaultModel: this.config.openaiDefaultModel,
-		});
-		this.personalityService = new PersonalityService(db);
+    this.messageHandler = new MessageHandler(
+      this.profiles,
+      this.memoryService,
+      this.responseDecisionService,
+      this.llmService,
+      this.personalityService,
+      this.socialBatteryService,
+    );
 
-		// Initialize embedding manager with scheduled model updates
-		this.embeddingManager = new EmbeddingManager({
-			ollamaApiUrl: this.config.ollamaApiUrl,
-			ollamaEmbeddingModel: process.env.OLLAMA_EMBEDDING_MODEL,
-			openaiApiKey: this.config.openaiApiKey,
-			openaiEmbeddingModel: process.env.OPENAI_EMBEDDING_MODEL,
-		});
+    logger.info('Services initialized');
+  }
 
-		// Start scheduled model updates (weekly by default)
-		// Includes embedding model + chat model if configured
-		const chatModel = this.config.ollamaDefaultModel || process.env.OLLAMA_DEFAULT_MODEL;
-		const additionalModels = chatModel ? [chatModel] : [];
-		this.embeddingManager.startScheduledUpdates(additionalModels);
+  private async initializeDiscord(): Promise<void> {
+    logger.info('Initializing Discord client');
 
-		// Initialize interests from profiles
-		for (const profile of this.profiles.values()) {
-			await this.interestService.initializeFromProfile(profile);
-		}
+    if (!this.messageHandler) {
+      throw new Error('Message handler not initialized');
+    }
 
-		// Response decision orchestrator
-		this.responseDecisionService = new ResponseDecisionService(this.interestService, this.socialBatteryService);
+    this.client = new Client({
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+      ],
+    });
 
-		// Message handler
-		this.messageHandler = new MessageHandler(
-			this.profiles,
-			this.memoryService,
-			this.responseDecisionService,
-			this.llmService,
-			this.personalityService,
-			this.socialBatteryService,
-		);
+    DiscordService.getInstance().setClient(this.client);
 
-		logger.info('Services initialized');
-	}
+    this.client.once(Events.ClientReady, readyClient => {
+      logger.withMetadata({ user_tag: readyClient.user.tag }).info('Discord client ready');
+    });
 
-	/**
-	 * Initialize Discord client
-	 */
-	private async initializeDiscord(): Promise<void> {
-		logger.info('Initializing Discord client');
+    this.client.on(Events.MessageCreate, async (message: Message) => {
+      if (message.author.bot) {
+        return;
+      }
 
-		this.client = new Client({
-			intents: ['Guilds', 'GuildMessages', 'MessageContent', 'GuildMembers'],
-		});
+      try {
+        await this.messageHandler!.handleMessage(message);
+      } catch (error) {
+        logger
+          .withError(error)
+          .withMetadata({
+            message_id: message.id,
+            channel_id: message.channelId,
+          })
+          .error('Error handling message');
+      }
+    });
 
-		// Set up shared Discord service
-		const discordService = DiscordService.getInstance();
+    await this.client.login(this.config.discordToken);
+  }
 
-		this.client.once(Events.ClientReady, (readyClient) => {
-			discordService.setClient(readyClient);
-			logger
-				.withMetadata({
-					user: readyClient.user.tag,
-					guilds: readyClient.guilds.cache.size,
-				})
-				.info('Discord client ready');
-		});
-
-		this.client.on(Events.MessageCreate, async (message: Message) => {
-			try {
-				await this.messageHandler!.handleMessage(message);
-			} catch (error) {
-				logger
-					.withError(error)
-					.withMetadata({
-						message_id: message.id,
-						channel_id: message.channelId,
-					})
-					.error('Error handling message');
-			}
-		});
-
-		// Login
-		await this.client.login(this.config.discordToken);
-	}
-
-	/**
-	 * Reset the singleton (for testing)
-	 */
-	static async resetInstance(): Promise<void> {
-		if (CovaBot.instance) {
-			await CovaBot.instance.stop();
-			CovaBot.instance = null;
-		}
-	}
+  static async resetInstance(): Promise<void> {
+    if (CovaBot.instance) {
+      await CovaBot.instance.stop();
+      CovaBot.instance = null;
+    }
+  }
 }

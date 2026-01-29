@@ -4,107 +4,65 @@
  * Replaces Qdrant vector embeddings with simpler keyword matching
  */
 
-import Database from 'better-sqlite3';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { CovaProfile, InterestMatch, KeywordInterestRow } from '@/models/memory-types';
+import { InterestRepository } from '@/repositories/interest-repository';
 
 const logger = logLayer.withPrefix('InterestService');
 
 export class InterestService {
-  private db: Database.Database;
+  private interestRepo: InterestRepository;
 
-  constructor(db: Database.Database) {
-    this.db = db;
+  constructor(interestRepo: InterestRepository) {
+    this.interestRepo = interestRepo;
   }
 
   /**
    * Initialize keyword interests from a profile's configuration
    */
   async initializeFromProfile(profile: CovaProfile): Promise<void> {
-    logger.withMetadata({
-      profile_id: profile.id,
-      interests_count: profile.personality.interests.length,
-    }).info('Initializing interests from profile');
+    logger
+      .withMetadata({
+        profile_id: profile.id,
+        interests_count: profile.personality.interests.length,
+      })
+      .info('Initializing interests from profile');
 
-    // Clear existing interests for this profile
-    const deleteStmt = this.db.prepare('DELETE FROM keyword_interests WHERE profile_id = ?');
-    deleteStmt.run(profile.id);
-
-    // Insert new interests
-    const insertStmt = this.db.prepare(`
-      INSERT INTO keyword_interests (profile_id, keyword, category, weight)
-      VALUES (?, ?, ?, ?)
-    `);
-
-    const insertMany = this.db.transaction((interests: string[]) => {
-      for (const interest of interests) {
-        // Parse interest string - may include category prefix like "tech:typescript"
-        const [category, keyword] = interest.includes(':')
-          ? interest.split(':', 2)
-          : [null, interest];
-
-        insertStmt.run(profile.id, keyword.toLowerCase().trim(), category, 1.0);
-      }
-    });
-
-    insertMany(profile.personality.interests);
-
-    logger.withMetadata({
-      profile_id: profile.id,
-      keywords_inserted: profile.personality.interests.length,
-    }).info('Interests initialized');
+    await this.interestRepo.initializeFromInterests(profile.id, profile.personality.interests);
   }
 
   /**
    * Add a new keyword interest
    */
-  addInterest(
+  async addInterest(
     profileId: string,
     keyword: string,
     category: string | null = null,
     weight: number = 1.0,
-  ): void {
-    const stmt = this.db.prepare(`
-      INSERT INTO keyword_interests (profile_id, keyword, category, weight)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(profile_id, keyword)
-      DO UPDATE SET weight = excluded.weight, category = excluded.category
-    `);
+  ): Promise<void> {
+    await this.interestRepo.upsertInterest(profileId, keyword, category, weight);
 
-    stmt.run(profileId, keyword.toLowerCase().trim(), category, weight);
-
-    logger.withMetadata({
-      profile_id: profileId,
-      keyword,
-      weight,
-    }).debug('Interest added');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        weight,
+      })
+      .debug('Interest added');
   }
 
   /**
    * Remove a keyword interest
    */
-  removeInterest(profileId: string, keyword: string): boolean {
-    const stmt = this.db.prepare(`
-      DELETE FROM keyword_interests
-      WHERE profile_id = ? AND keyword = ?
-    `);
-
-    const result = stmt.run(profileId, keyword.toLowerCase().trim());
-    return result.changes > 0;
+  async removeInterest(profileId: string, keyword: string): Promise<boolean> {
+    return await this.interestRepo.deleteInterest(profileId, keyword);
   }
 
   /**
    * Get all interests for a profile
    */
-  getInterests(profileId: string): KeywordInterestRow[] {
-    const stmt = this.db.prepare(`
-      SELECT profile_id, keyword, category, weight
-      FROM keyword_interests
-      WHERE profile_id = ?
-      ORDER BY weight DESC
-    `);
-
-    return stmt.all(profileId) as KeywordInterestRow[];
+  async getInterests(profileId: string): Promise<KeywordInterestRow[]> {
+    return await this.interestRepo.getInterests(profileId);
   }
 
   /**
@@ -112,11 +70,14 @@ export class InterestService {
    *
    * Uses keyword matching with word boundaries and stemming-lite
    */
-  calculateInterestScore(profileId: string, messageContent: string): {
+  async calculateInterestScore(
+    profileId: string,
+    messageContent: string,
+  ): Promise<{
     score: number;
     matches: InterestMatch[];
-  } {
-    const interests = this.getInterests(profileId);
+  }> {
+    const interests = await this.getInterests(profileId);
 
     if (interests.length === 0) {
       return { score: 0, matches: [] };
@@ -145,16 +106,19 @@ export class InterestService {
 
     // Normalize score to 0-1 range
     // Use a softer normalization that doesn't require all keywords to match
-    const score = matches.length > 0
-      ? Math.min(1, matchedWeight / Math.min(totalWeight, 3)) // Cap at 3 keywords worth
-      : 0;
+    const score =
+      matches.length > 0
+        ? Math.min(1, matchedWeight / Math.min(totalWeight, 3)) // Cap at 3 keywords worth
+        : 0;
 
-    logger.withMetadata({
-      profile_id: profileId,
-      message_preview: messageContent.substring(0, 50),
-      matches_count: matches.length,
-      score: score.toFixed(3),
-    }).debug('Interest score calculated');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        message_preview: messageContent.substring(0, 50),
+        matches_count: matches.length,
+        score: score.toFixed(3),
+      })
+      .debug('Interest score calculated');
 
     return { score, matches };
   }
@@ -162,16 +126,16 @@ export class InterestService {
   /**
    * Check if a message matches any interest keywords above threshold
    */
-  isInterested(
+  async isInterested(
     profileId: string,
     messageContent: string,
     threshold: number = 0.3,
-  ): {
+  ): Promise<{
     interested: boolean;
     score: number;
     topMatch: InterestMatch | null;
-  } {
-    const { score, matches } = this.calculateInterestScore(profileId, messageContent);
+  }> {
+    const { score, matches } = await this.calculateInterestScore(profileId, messageContent);
 
     return {
       interested: score >= threshold,
@@ -183,24 +147,20 @@ export class InterestService {
   /**
    * Update interest weight based on engagement
    */
-  adjustInterestWeight(
+  async adjustInterestWeight(
     profileId: string,
     keyword: string,
     adjustment: number,
-  ): void {
-    const stmt = this.db.prepare(`
-      UPDATE keyword_interests
-      SET weight = MAX(0.1, MIN(2.0, weight + ?))
-      WHERE profile_id = ? AND keyword = ?
-    `);
+  ): Promise<void> {
+    await this.interestRepo.adjustWeight(profileId, keyword, adjustment);
 
-    stmt.run(adjustment, profileId, keyword.toLowerCase().trim());
-
-    logger.withMetadata({
-      profile_id: profileId,
-      keyword,
-      adjustment,
-    }).debug('Interest weight adjusted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        adjustment,
+      })
+      .debug('Interest weight adjusted');
   }
 
   /**

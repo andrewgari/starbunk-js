@@ -33,10 +33,36 @@ grep -R "interface .*Strategy" -n src/ shared/
 grep -R "export type .*" -n src/shared
 ```
 
-## Active Tasks (Examples)
+## Active Tasks
 
-- Bluebot: see `src/bluebot/TODO.md`
-- Bunkbot: see `src/bunkbot/TODO.md`
-- Covabot: see `src/covabot/TODO.md`
+- Root version sync lockfile suppression
+  - Context: issue/525-clean
+  - File Scope: [scripts/sync-versions.sh](scripts/sync-versions.sh)
+  - The Change: replace `npm version` calls with a direct JSON edit to update `version` without touching the lockfile
+  - Validation: no new tests; verify pre-commit no longer rewrites the lockfile; Snyk not needed (no JS/TS changes)
+  - Relationship: none currently
 
 Add cross-package tasks here with a short summary and a link to the package-local manifest entries.
+
+## CircleCI Migration Manifest
+
+- Context: Migrate GitHub Actions CI/CD to CircleCI with parity and speed improvements.
+- File Scope:
+  - .circleci/config.yml (validation + merge workflows, PR vs main split)
+  - .circleci/scripts/detect_changes.sh (path-based change detection)
+  - .circleci/scripts/container_health_check.sh (HEALTHCHECK + /live probe)
+- Change Summary:
+  - Validation: lint, format check, type-check, build, unit tests, Snyk code scan.
+  - Docker: selective builds via content hash + reuse existing sha images; run health checks; optional Snyk container test.
+  - Merge: validate, tag images as main + latest; run semantic-release; tag images with version from config/VERSION.
+- Validation Requirements:
+  - Tests: vitest runs per package via root scripts.
+  - Observability: containers expose /live; health-check script probes it.
+  - Security: Snyk code and container scans gated by SNYK_TOKEN; fail on high severity when enabled.
+  - Lint: run scripts/validation/run-all-validations.sh optionally as pre-check (addable).
+- Secrets/Contexts (CircleCI):
+  - GHCR_USERNAME, GHCR_TOKEN (write:packages)
+  - CI_TOKEN (GitHub PAT for semantic-release)
+  - SNYK_TOKEN (optional, org/project mapping via env)
+- Decommission Plan:
+  - Shadow-run CircleCI; then disable GHA publishes; finally remove .github/workflows after parity validation.

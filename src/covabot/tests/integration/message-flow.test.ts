@@ -1,27 +1,33 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { Message, User, Client, Guild, GuildMember } from 'discord.js';
-import { DatabaseService } from '@starbunk/shared/database';
 import { MemoryService } from '../../src/services/memory-service';
 import { InterestService } from '../../src/services/interest-service';
 import { SocialBatteryService } from '../../src/services/social-battery-service';
-import { ResponseDecisionService, DecisionContext } from '../../src/services/response-decision-service';
+import {
+  ResponseDecisionService,
+  DecisionContext,
+} from '../../src/services/response-decision-service';
 import { PersonalityService } from '../../src/services/personality-service';
+import { ConversationRepository } from '../../src/repositories/conversation-repository';
+import { UserFactRepository } from '../../src/repositories/user-fact-repository';
+import { InterestRepository } from '../../src/repositories/interest-repository';
+import { SocialBatteryRepository } from '../../src/repositories/social-battery-repository';
 import { CovaProfile } from '../../src/models/memory-types';
-import * as fs from 'fs';
-import * as path from 'path';
 
 // Mock Discord objects
-function createMockMessage(overrides: Partial<{
-  id: string;
-  content: string;
-  authorId: string;
-  authorUsername: string;
-  authorBot: boolean;
-  channelId: string;
-  guildId: string;
-  mentions: string[];
-}>): Message {
+function createMockMessage(
+  overrides: Partial<{
+    id: string;
+    content: string;
+    authorId: string;
+    authorUsername: string;
+    authorBot: boolean;
+    channelId: string;
+    guildId: string;
+    mentions: string[];
+  }>,
+): Message {
   const defaults = {
     id: 'msg-123',
     content: 'Hello world',
@@ -56,8 +62,11 @@ function createMockMessage(overrides: Partial<{
 }
 
 describe('Message Flow Integration', () => {
-  const testDbPath = path.join(__dirname, '../../data/test-flow.sqlite');
   let db: Database.Database;
+  let conversationRepository: ConversationRepository;
+  let userFactRepository: UserFactRepository;
+  let interestRepository: InterestRepository;
+  let socialBatteryRepository: SocialBatteryRepository;
   let memoryService: MemoryService;
   let interestService: InterestService;
   let socialBatteryService: SocialBatteryService;
@@ -90,10 +99,7 @@ describe('Message Flow Integration', () => {
       {
         name: 'tech-talk',
         conditions: {
-          any_of: [
-            { contains_word: 'typescript' },
-            { contains_word: 'react' },
-          ],
+          any_of: [{ contains_word: 'typescript' }, { contains_word: 'react' }],
         },
         use_llm: true,
         response_chance: 0.5,
@@ -106,21 +112,104 @@ describe('Message Flow Integration', () => {
 
   const botUserId = 'bot-999';
 
+  /**
+   * Initialize in-memory database with schema
+   */
+  function initializeInMemoryDb(): Database.Database {
+    const db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+
+    // Apply schema migrations
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS migrations (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Conversation history
+      CREATE TABLE IF NOT EXISTS conversations (
+        id INTEGER PRIMARY KEY,
+        profile_id TEXT NOT NULL,
+        channel_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        user_name TEXT,
+        message_content TEXT NOT NULL,
+        bot_response TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_conversations_profile_channel
+        ON conversations(profile_id, channel_id);
+      CREATE INDEX IF NOT EXISTS idx_conversations_user
+        ON conversations(profile_id, user_id);
+      CREATE INDEX IF NOT EXISTS idx_conversations_created
+        ON conversations(created_at);
+
+      -- Learned user facts
+      CREATE TABLE IF NOT EXISTS user_facts (
+        id INTEGER PRIMARY KEY,
+        profile_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        fact_type TEXT NOT NULL,
+        fact_key TEXT NOT NULL,
+        fact_value TEXT NOT NULL,
+        confidence REAL DEFAULT 1.0,
+        learned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(profile_id, user_id, fact_type, fact_key)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_facts_user
+        ON user_facts(profile_id, user_id);
+
+      -- Personality trait evolution
+      CREATE TABLE IF NOT EXISTS personality_evolution (
+        id INTEGER PRIMARY KEY,
+        profile_id TEXT NOT NULL,
+        trait_name TEXT NOT NULL,
+        trait_value REAL NOT NULL,
+        change_reason TEXT,
+        changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(profile_id, trait_name)
+      );
+
+      -- Social battery state
+      CREATE TABLE IF NOT EXISTS social_battery_state (
+        profile_id TEXT NOT NULL,
+        channel_id TEXT NOT NULL,
+        message_count INTEGER DEFAULT 0,
+        window_start DATETIME,
+        last_message_at DATETIME,
+        PRIMARY KEY(profile_id, channel_id)
+      );
+
+      -- Keyword interests
+      CREATE TABLE IF NOT EXISTS keyword_interests (
+        profile_id TEXT NOT NULL,
+        keyword TEXT NOT NULL,
+        category TEXT,
+        weight REAL DEFAULT 1.0,
+        PRIMARY KEY(profile_id, keyword)
+      );
+    `);
+
+    return db;
+  }
+
   beforeEach(async () => {
     vi.useFakeTimers();
 
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-    DatabaseService.resetInstance();
+    // Create in-memory database
+    db = initializeInMemoryDb();
 
-    const dbService = DatabaseService.getInstance(testDbPath);
-    await dbService.initialize();
-    db = dbService.getDb();
+    conversationRepository = new ConversationRepository(db);
+    userFactRepository = new UserFactRepository(db);
+    interestRepository = new InterestRepository(db);
+    socialBatteryRepository = new SocialBatteryRepository(db);
 
-    memoryService = new MemoryService(db);
-    interestService = new InterestService(db);
-    socialBatteryService = new SocialBatteryService(db);
+    memoryService = new MemoryService(conversationRepository, userFactRepository);
+    interestService = new InterestService(interestRepository);
+    socialBatteryService = new SocialBatteryService(socialBatteryRepository);
     personalityService = new PersonalityService(db);
     decisionService = new ResponseDecisionService(interestService, socialBatteryService);
 
@@ -130,10 +219,7 @@ describe('Message Flow Integration', () => {
   });
 
   afterEach(() => {
-    DatabaseService.resetInstance();
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
+    db.close();
     vi.useRealTimers();
   });
 
@@ -248,7 +334,7 @@ describe('Message Flow Integration', () => {
 
       // Exhaust the social battery
       for (let i = 0; i < 5; i++) {
-        socialBatteryService.recordMessage(
+        await socialBatteryService.recordMessage(
           mockProfile.id,
           message.channelId,
           mockProfile.socialBattery,
@@ -266,9 +352,9 @@ describe('Message Flow Integration', () => {
   });
 
   describe('Memory Integration', () => {
-    it('should store and retrieve conversation context', () => {
+    it('should store and retrieve conversation context', async () => {
       // Simulate a conversation
-      memoryService.storeConversation(
+      await memoryService.storeConversation(
         mockProfile.id,
         'channel-1',
         'user-1',
@@ -276,7 +362,7 @@ describe('Message Flow Integration', () => {
         'Hello bot!',
         'Hello Alice!',
       );
-      memoryService.storeConversation(
+      await memoryService.storeConversation(
         mockProfile.id,
         'channel-1',
         'user-2',
@@ -285,7 +371,7 @@ describe('Message Flow Integration', () => {
         null,
       );
 
-      const context = memoryService.getChannelContext(mockProfile.id, 'channel-1', 10);
+      const context = await memoryService.getChannelContext(mockProfile.id, 'channel-1', 10);
 
       expect(context.messages).toHaveLength(2);
       // Find Alice's message
@@ -294,8 +380,8 @@ describe('Message Flow Integration', () => {
       expect(aliceMsg?.botResponse).toBe('Hello Alice!');
     });
 
-    it('should store and format user facts', () => {
-      memoryService.storeUserFact(
+    it('should store and format user facts', async () => {
+      await memoryService.storeUserFact(
         mockProfile.id,
         'user-1',
         'interest',
@@ -303,7 +389,7 @@ describe('Message Flow Integration', () => {
         'TypeScript expert',
         0.9,
       );
-      memoryService.storeUserFact(
+      await memoryService.storeUserFact(
         mockProfile.id,
         'user-1',
         'preference',
@@ -312,7 +398,7 @@ describe('Message Flow Integration', () => {
         0.8,
       );
 
-      const facts = memoryService.getUserFacts(mockProfile.id, 'user-1');
+      const facts = await memoryService.getUserFacts(mockProfile.id, 'user-1');
       const formatted = memoryService.formatFactsForLlm(facts, 'Alice');
 
       expect(facts).toHaveLength(2);
@@ -369,15 +455,19 @@ describe('Message Flow Integration', () => {
       expect(decision.shouldRespond).toBe(true);
 
       // 3. Build LLM context
-      const channelContext = memoryService.getChannelContext(mockProfile.id, message.channelId, 8);
-      const userFacts = memoryService.getUserFacts(mockProfile.id, message.author.id);
+      const channelContext = await memoryService.getChannelContext(
+        mockProfile.id,
+        message.channelId,
+        8,
+      );
+      const userFacts = await memoryService.getUserFacts(mockProfile.id, message.author.id);
       const traitModifiers = personalityService.getTraitModifiersForLlm(mockProfile.id);
 
       // 4. Simulate response (LLM would generate this)
       const botResponse = 'sure, what do you need help with?';
 
       // 5. Store conversation
-      memoryService.storeConversation(
+      await memoryService.storeConversation(
         mockProfile.id,
         message.channelId,
         message.author.id,
@@ -387,7 +477,7 @@ describe('Message Flow Integration', () => {
       );
 
       // 6. Record social battery
-      socialBatteryService.recordMessage(
+      await socialBatteryService.recordMessage(
         mockProfile.id,
         message.channelId,
         mockProfile.socialBattery,
@@ -397,11 +487,15 @@ describe('Message Flow Integration', () => {
       personalityService.analyzeForEvolution(mockProfile.id, message.content, botResponse);
 
       // 8. Verify everything was recorded
-      const finalContext = memoryService.getChannelContext(mockProfile.id, message.channelId, 10);
+      const finalContext = await memoryService.getChannelContext(
+        mockProfile.id,
+        message.channelId,
+        10,
+      );
       expect(finalContext.messages).toHaveLength(1);
       expect(finalContext.messages[0].botResponse).toBe(botResponse);
 
-      const batteryState = socialBatteryService.getState(mockProfile.id, message.channelId);
+      const batteryState = await socialBatteryService.getState(mockProfile.id, message.channelId);
       expect(batteryState?.message_count).toBe(1);
     });
   });

@@ -6,73 +6,75 @@
  */
 
 import Database from 'better-sqlite3';
+import { BaseRepository } from '@starbunk/shared';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { KeywordInterestRow } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('InterestRepository');
 
-export class InterestRepository {
-  private db: Database.Database;
-
+export class InterestRepository extends BaseRepository<KeywordInterestRow> {
   constructor(db: Database.Database) {
-    this.db = db;
+    super(db);
   }
 
   /**
-   * Get all interests for a user
+   * Get all interests for a profile
    */
-  getInterests(userId: string): KeywordInterestRow[] {
-    const stmt = this.db.prepare(`
-      SELECT profile_id, keyword, category, weight
-      FROM keyword_interests
-      WHERE profile_id = ?
-      ORDER BY weight DESC
-    `);
-
-    return stmt.all(userId) as KeywordInterestRow[];
+  async getInterests(profileId: string): Promise<KeywordInterestRow[]> {
+    return await this.query<KeywordInterestRow>(
+      `SELECT profile_id, keyword, category, weight
+       FROM keyword_interests
+       WHERE profile_id = ?
+       ORDER BY weight DESC`,
+      [profileId],
+    );
   }
 
   /**
    * Upsert (insert or update) an interest
    */
-  upsertInterest(
-    userId: string,
+  async upsertInterest(
+    profileId: string,
     keyword: string,
-    weight: number,
-  ): void {
-    const stmt = this.db.prepare(`
-      INSERT INTO keyword_interests (profile_id, keyword, category, weight)
-      VALUES (?, ?, NULL, ?)
-      ON CONFLICT(profile_id, keyword)
-      DO UPDATE SET weight = excluded.weight
-    `);
+    category: string | null = null,
+    weight: number = 1.0,
+  ): Promise<void> {
+    await this.execute(
+      `INSERT INTO keyword_interests (profile_id, keyword, category, weight)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(profile_id, keyword)
+       DO UPDATE SET weight = excluded.weight, category = excluded.category`,
+      [profileId, keyword.toLowerCase().trim(), category, weight],
+    );
 
-    stmt.run(userId, keyword.toLowerCase().trim(), weight);
-
-    logger.withMetadata({
-      user_id: userId,
-      keyword,
-      weight,
-    }).debug('Interest upserted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        weight,
+      })
+      .debug('Interest upserted');
   }
 
   /**
    * Delete a specific interest
    */
-  deleteInterest(userId: string, keyword: string): boolean {
-    const stmt = this.db.prepare(`
-      DELETE FROM keyword_interests
-      WHERE profile_id = ? AND keyword = ?
-    `);
+  async deleteInterest(profileId: string, keyword: string): Promise<boolean> {
+    const changes = await this.execute(
+      `DELETE FROM keyword_interests
+       WHERE profile_id = ? AND keyword = ?`,
+      [profileId, keyword.toLowerCase().trim()],
+    );
 
-    const result = stmt.run(userId, keyword.toLowerCase().trim());
-    const deleted = result.changes > 0;
+    const deleted = changes > 0;
 
     if (deleted) {
-      logger.withMetadata({
-        user_id: userId,
-        keyword,
-      }).debug('Interest deleted');
+      logger
+        .withMetadata({
+          profile_id: profileId,
+          keyword,
+        })
+        .debug('Interest deleted');
     }
 
     return deleted;
@@ -81,38 +83,69 @@ export class InterestRepository {
   /**
    * Adjust interest weight by a delta amount
    */
-  adjustWeight(userId: string, keyword: string, delta: number): void {
-    const stmt = this.db.prepare(`
-      UPDATE keyword_interests
-      SET weight = MAX(0.1, MIN(2.0, weight + ?))
-      WHERE profile_id = ? AND keyword = ?
-    `);
+  async adjustWeight(profileId: string, keyword: string, delta: number): Promise<void> {
+    await this.execute(
+      `UPDATE keyword_interests
+       SET weight = MAX(0.1, MIN(2.0, weight + ?))
+       WHERE profile_id = ? AND keyword = ?`,
+      [delta, profileId, keyword.toLowerCase().trim()],
+    );
 
-    stmt.run(delta, userId, keyword.toLowerCase().trim());
-
-    logger.withMetadata({
-      user_id: userId,
-      keyword,
-      delta,
-    }).debug('Interest weight adjusted');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keyword,
+        delta,
+      })
+      .debug('Interest weight adjusted');
   }
 
   /**
-   * Clear all interests for a user profile
+   * Clear all interests for a profile
    */
-  clearProfileInterests(userId: string): number {
-    const stmt = this.db.prepare(`
-      DELETE FROM keyword_interests
-      WHERE profile_id = ?
-    `);
+  async clearProfileInterests(profileId: string): Promise<number> {
+    const changes = await this.execute(
+      `DELETE FROM keyword_interests
+       WHERE profile_id = ?`,
+      [profileId],
+    );
 
-    const result = stmt.run(userId);
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        deleted_count: changes,
+      })
+      .info('Profile interests cleared');
 
-    logger.withMetadata({
-      user_id: userId,
-      deleted_count: result.changes,
-    }).info('Profile interests cleared');
+    return changes;
+  }
 
-    return result.changes;
+  /**
+   * Initialize interests in batch (for loading from profile)
+   */
+  async initializeFromInterests(profileId: string, interests: string[]): Promise<void> {
+    // Clear existing interests
+    await this.clearProfileInterests(profileId);
+
+    // Insert new interests
+    for (const interest of interests) {
+      // Parse interest string - may include category prefix like "tech:typescript"
+      const [category, keyword] = interest.includes(':')
+        ? interest.split(':', 2)
+        : [null, interest];
+
+      await this.execute(
+        `INSERT INTO keyword_interests (profile_id, keyword, category, weight)
+         VALUES (?, ?, ?, ?)`,
+        [profileId, keyword.toLowerCase().trim(), category || null, 1.0],
+      );
+    }
+
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        keywords_inserted: interests.length,
+      })
+      .info('Profile interests initialized');
   }
 }
