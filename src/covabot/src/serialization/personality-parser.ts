@@ -1,11 +1,3 @@
-/**
- * Personality Parser - robust YAML loading, validation, and transformation
- *
- * Loads personality configuration files from disk and validates them against
- * the schema defined in personality-schema.ts, then transforms the config to
- * the runtime CovaProfile shape used by the application.
- */
-
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
@@ -22,10 +14,6 @@ import {
 } from './normalizers';
 
 const logger = logLayer.withPrefix('PersonalityParser');
-
-// -----------------------------------------------------------------------------
-// Error Types
-// -----------------------------------------------------------------------------
 
 class PersonalityParserError extends Error {
   constructor(
@@ -58,10 +46,6 @@ class ValidationError extends PersonalityParserError {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Helpers
-// -----------------------------------------------------------------------------
-
 const YAML_EXTENSIONS = new Set(['.yml', '.yaml']);
 
 function isYamlFile(fileName: string): boolean {
@@ -69,7 +53,6 @@ function isYamlFile(fileName: string): boolean {
 }
 
 function parseYamlFile(filePath: string): unknown {
-  // Prefer single read+parse with explicit error surfaces
   let content: string;
   try {
     content = fs.readFileSync(filePath, 'utf8');
@@ -134,27 +117,13 @@ function transformToCovaProfile(config: YamlConfigType): CovaProfile {
   return deepFreeze(result) as unknown as CovaProfile;
 }
 
-// -----------------------------------------------------------------------------
-// Public API
-// -----------------------------------------------------------------------------
-
-/**
- * Parse a single personality YAML file and return a validated CovaProfile
- */
 export function parsePersonalityFile(filePath: string): CovaProfile {
   const raw = parseYamlFile(filePath);
   const validated = validateConfig(raw, filePath);
   return transformToCovaProfile(validated);
 }
 
-/**
- * Load all personality files from a directory
- * - Creates the directory if it does not exist
- * - Skips non-YAML files
- * - Logs and continues on individual file errors
- */
 export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
-  // Ensure directory exists; if it cannot be created, rethrow for visibility
   if (!fs.existsSync(dirPath)) {
     try {
       fs.mkdirSync(dirPath, { recursive: true });
@@ -185,15 +154,11 @@ export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
         .withError(error)
         .withMetadata({ file, path: filePath })
         .error('Failed to load personality file');
-      // Continue loading other files
     }
   }
   return profiles;
 }
 
-/**
- * Get the default personalities directory path
- */
 export function getDefaultPersonalitiesPath(): string {
   if (process.env.COVABOT_CONFIG_DIR) {
     return process.env.COVABOT_CONFIG_DIR;

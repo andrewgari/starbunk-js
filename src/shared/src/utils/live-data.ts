@@ -1,10 +1,3 @@
-// A lightweight LiveData-style observable for TypeScript (inspired by Android's LiveData)
-// Usage:
-//   const count$ = new LiveData(0);
-//   const unsubscribe = count$.subscribe(v => console.log(v));
-//   count$.setValue(1);
-//   unsubscribe();
-
 import { logLayer } from '../observability/log-layer';
 
 const logger = logLayer.withPrefix('LiveData');
@@ -17,7 +10,7 @@ export interface ReadonlyLiveData<T> {
 }
 
 export interface SubscribeOptions {
-  /** If true, immediately invoke the listener with the current value. */
+  /** Immediately invoke listener with current value when true. */
   emitImmediately?: boolean;
 }
 
@@ -38,28 +31,21 @@ export class LiveData<T> implements ReadonlyLiveData<T> {
     return this.value;
   }
 
-  /**
-   * Replace the current value and notify subscribers if it changed (Object.is).
-   */
+  /** Replace the current value and notify subscribers if it changed (Object.is). */
   public setValue(next: T): void {
-    // Strict reference check; callers can control structural equality if needed
     if (Object.is(this.value, next)) return;
     this.value = next;
-    // Notify subscribers
     for (const cb of Array.from(this.listeners)) {
       try {
         cb(this.value);
       } catch (err) {
-        // Fail-safe: keep notifying other subscribers
         const error = err instanceof Error ? err : new Error(String(err));
         logger.withError(error).error('LiveData subscriber error');
       }
     }
   }
 
-  /**
-   * Set the value by applying a transformation to the previous value.
-   */
+  /** Set the value by applying a transformation to the previous value. */
   public update(mutator: (prev: T) => T): void {
     this.setValue(mutator(this.value));
   }
