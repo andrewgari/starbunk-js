@@ -12,17 +12,17 @@ executors:
 
 commands:
   notify_discord:
-    description: "Send deployment notification to Discord"
+    description: 'Send deployment notification to Discord'
     parameters:
       status:
         type: string
-        description: "Deployment status: started, success, failed"
+        description: 'Deployment status: started, success, failed'
       version:
         type: string
-        default: "${CIRCLE_BRANCH}"
+        default: '${CIRCLE_BRANCH}'
       message:
         type: string
-        default: ""
+        default: ''
     steps:
       - run:
           name: Send Discord Notification
@@ -62,7 +62,7 @@ commands:
 
             TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
             BUILD_URL="https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}"
-            
+
             # Escape MESSAGE for JSON to prevent injection
             MESSAGE_ESCAPED=$(echo "<< parameters.message >>" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/$/\\n/g' | tr -d '\n')
 

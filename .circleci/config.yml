@@ -55,4 +55,4 @@ workflows:
             branches:
               only: /.*/
             tags:
-              only: /.*/ 
+              only: /.*/
