@@ -31,10 +31,10 @@ jobs:
           name: Generate dynamic config
           command: |
             if [ -n "${CIRCLE_TAG:-}" ]; then
-              echo "Detected git tag: $CIRCLE_TAG - loading deployment workflow"
+              echo "Detected git tag: $CIRCLE_TAG - loading production deployment workflow"
               cp .circleci/workflows/deploy-production.yml .circleci/generated_config.yml
             elif [ "${CIRCLE_BRANCH:-}" = "main" ]; then
-              echo "On main branch - loading deployment workflow"
+              echo "On main branch - loading publishing workflow"
               cp .circleci/workflows/main-merge.yml .circleci/generated_config.yml
             else
               echo "On feature branch/PR - loading PR validation workflows"

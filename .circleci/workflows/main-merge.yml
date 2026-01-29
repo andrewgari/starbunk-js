@@ -1,5 +1,12 @@
 version: 2.1
 
+# Publishing Workflow
+# Triggers on pushes to main branch
+# - Runs tests and quality checks
+# - Publishes Docker images to GHCR
+# - Updates semver via semantic-release
+# - Tags published images with version
+
 executors:
   node22:
     docker:
@@ -235,7 +242,7 @@ jobs:
               echo "Current latest digest: $LATEST_DIGEST"
             else
               LATEST_DIGEST="none"
-              echo "No existing latest image found (first deployment)"
+              echo "No existing latest image found (first publish)"
             fi
             echo "$LATEST_DIGEST" > /tmp/latest_digest.txt
       - run:
@@ -256,7 +263,7 @@ jobs:
               echo "Using layer cache from latest image"
             else
               CACHE_ARG=""
-              echo "No cache available (first deployment or image not found)"
+              echo "No cache available (first publish or image not found)"
             fi
 
             docker build \
@@ -280,10 +287,10 @@ jobs:
             echo "New image digest: $NEW_DIGEST"
             echo "Deploy tag: $DEPLOY_TAG"
 
-            # Always push on first deployment (when LATEST_DIGEST is "none")
+            # Always push on first publish (when LATEST_DIGEST is "none")
             # or when digests differ
             if [ "$LATEST_DIGEST" = "none" ] || [ "$NEW_DIGEST" != "$LATEST_DIGEST" ]; then
-              echo "✅ Image has changed (or first deployment) - pushing to GHCR"
+              echo "✅ Image has changed (or first publish) - pushing to GHCR"
               docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:latest
               docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${DEPLOY_TAG}
               docker push ghcr.io/andrewgari/starbunk-<< parameters.app_name >>:${CIRCLE_SHA1:0:7}
@@ -343,7 +350,7 @@ jobs:
   #           done
 
 workflows:
-  deploy:
+  publish:
     jobs:
       - lint
       - types
