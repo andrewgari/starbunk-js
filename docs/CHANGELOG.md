@@ -1,3 +1,13 @@
+## [1.27.0](https://github.com/andrewgari/starbunk-js/compare/v1.26.3...v1.27.0) (2026-01-29)
+
+### Features
+
+* **ci:** add automatic deployment to unraid on main branch ([#562](https://github.com/andrewgari/starbunk-js/issues/562)) ([a737fe9](https://github.com/andrewgari/starbunk-js/commit/a737fe98d7d6c7b0f1c188fb3360a57043cf1ffe))
+
+### Bug Fixes
+
+* **ci:** correct sync-versions.sh to target src/ packages ([#565](https://github.com/andrewgari/starbunk-js/issues/565)) ([b6448e3](https://github.com/andrewgari/starbunk-js/commit/b6448e3f693cdebdbaa7751ee213acb12bef72f7))
+
 ## [1.26.3](https://github.com/andrewgari/starbunk-js/compare/v1.26.2...v1.26.3) (2026-01-27)
 
 ### Bug Fixes
