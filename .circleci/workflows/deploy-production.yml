@@ -62,12 +62,15 @@ commands:
 
             TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
             BUILD_URL="https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}"
+            
+            # Escape MESSAGE for JSON to prevent injection
+            MESSAGE_ESCAPED=$(echo "<< parameters.message >>" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/$/\\n/g' | tr -d '\n')
 
             PAYLOAD=$(cat \<<-EOF
             {
               "embeds": [{
                 "title": "${EMOJI} ${TITLE}",
-                "description": "${MESSAGE}",
+                "description": "${MESSAGE_ESCAPED}",
                 "color": ${COLOR},
                 "fields": [
                   {
