@@ -1,17 +1,16 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
-import { yamlConfigSchema } from './personality-schema';
-import type { YamlConfigType } from './personality-schema';
 import type { CovaProfile } from '@/models/memory-types';
-import { deepFreeze } from './deep-freeze';
 import {
-  normalizeIdentity,
-  normalizeLlmConfig,
-  normalizeSpeechPatterns,
-  normalizeTrigger,
-} from './normalizers';
+  isYamlFile,
+  readDirectory,
+  directoryExists,
+  createDirectory,
+  readFileUtf8,
+} from './file-reader';
+import { validateOrThrow } from './personality-validator';
+import { mapToCovaProfile } from './personality-mapper';
 
 const logger = logLayer.withPrefix('PersonalityParser');
 
@@ -46,87 +45,48 @@ class ValidationError extends PersonalityParserError {
   }
 }
 
-const YAML_EXTENSIONS = new Set(['.yml', '.yaml']);
-
-function isYamlFile(fileName: string): boolean {
-  return YAML_EXTENSIONS.has(path.extname(fileName).toLowerCase());
-}
-
-function parseYamlFile(filePath: string): unknown {
+export function parsePersonalityFile(filePath: string): CovaProfile {
+  // 1) Read file
   let content: string;
   try {
-    content = fs.readFileSync(filePath, 'utf8');
+    content = readFileUtf8(filePath);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') {
       throw new FileNotFoundError(filePath);
     }
     throw new PersonalityParserError(`Unable to read file: ${filePath}`);
   }
 
+  // 2) Parse YAML
+  let raw: unknown;
   try {
-    const data = yaml.load(content);
-    if (data === undefined || data === null) {
+    raw = yaml.load(content);
+    if (raw === undefined || raw === null) {
       throw new YamlParseError(filePath, 'Empty YAML content');
     }
-    return data;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (err instanceof YamlParseError) throw err;
     throw new YamlParseError(filePath, msg);
   }
-}
 
-function validateConfig(yamlData: unknown, filePath: string): YamlConfigType {
-  const result = yamlConfigSchema.safeParse(yamlData);
-  if (!result.success) {
-    const details = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+  // 3) Validate schema
+  let validated;
+  try {
+    validated = validateOrThrow(raw);
+  } catch (err) {
+    const details = err instanceof Error ? err.message : String(err);
     throw new ValidationError(filePath, details);
   }
-  return result.data;
-}
 
-function transformToCovaProfile(config: YamlConfigType): CovaProfile {
-  const p = config.profile;
-
-  const personality = {
-    systemPrompt: String(p.personality.system_prompt).trim(),
-    traits: (p.personality.traits ?? []).map(t => String(t).trim()).filter(Boolean),
-    interests: (p.personality.interests ?? []).map(i => String(i).trim()).filter(Boolean),
-    speechPatterns: normalizeSpeechPatterns(p.personality.speech_patterns),
-  } as CovaProfile['personality'];
-
-  const triggers = p.triggers.map(t => normalizeTrigger(t));
-
-  const result: CovaProfile = {
-    id: p.id,
-    displayName: p.display_name,
-    avatarUrl: p.avatar_url,
-    identity: normalizeIdentity(p.identity),
-    personality,
-    triggers,
-    socialBattery: {
-      maxMessages: Math.max(1, Math.trunc(p.social_battery.max_messages)),
-      windowMinutes: Math.max(1, Math.trunc(p.social_battery.window_minutes)),
-      cooldownSeconds: Math.max(0, Math.trunc(p.social_battery.cooldown_seconds)),
-    },
-    llmConfig: normalizeLlmConfig(p.llm),
-    ignoreBots: Boolean(p.ignore_bots),
-  };
-
-  // Return an immutable configuration to avoid accidental mutation at runtime
-  return deepFreeze(result) as unknown as CovaProfile;
-}
-
-export function parsePersonalityFile(filePath: string): CovaProfile {
-  const raw = parseYamlFile(filePath);
-  const validated = validateConfig(raw, filePath);
-  return transformToCovaProfile(validated);
+  // 4) Map to runtime model
+  return mapToCovaProfile(validated);
 }
 
 export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
-  if (!fs.existsSync(dirPath)) {
+  if (!directoryExists(dirPath)) {
     try {
-      fs.mkdirSync(dirPath, { recursive: true });
+      createDirectory(dirPath);
       logger.withMetadata({ path: dirPath }).info('Created personalities directory');
     } catch (_err) {
       throw new PersonalityParserError(`Unable to create directory: ${dirPath}`);
@@ -136,7 +96,7 @@ export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
 
   let files: string[] = [];
   try {
-    files = fs.readdirSync(dirPath);
+    files = readDirectory(dirPath);
   } catch (_err) {
     throw new PersonalityParserError(`Unable to read directory: ${dirPath}`);
   }
