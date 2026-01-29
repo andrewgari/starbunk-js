@@ -82,33 +82,19 @@ fi
 
 echo ""
 
-# Update all app packages
-echo "Updating app packages..."
-for app in apps/*/package.json; do
-  # Skip if glob didn't match anything (literal pattern) or file doesn't exist
-  if [ ! -f "$app" ] || [ "$app" = "apps/*/package.json" ]; then
+# Update all src packages (bluebot, bunkbot, covabot, djcova, shared)
+echo "Updating src packages..."
+for package_dir in src/bluebot src/bunkbot src/covabot src/djcova src/shared; do
+  package_file="$package_dir/package.json"
+
+  # Skip if package doesn't exist
+  if [ ! -f "$package_file" ]; then
+    echo -e "${YELLOW}⚠️  Skipping: $package_file (not found)${NC}"
     continue
   fi
 
-  app_dir="$(dirname "$app")"
-  app_name="$(basename "$app_dir")"
-
-  # Skip hidden app directories (e.g. apps/.cache)
-  if [[ "$app_name" == .* ]]; then
-    echo -e "${YELLOW}⚠️  Skipping hidden app directory: $app_dir${NC}"
-    continue
-  fi
-
-  update_package_version "$app"
+  update_package_version "$package_file"
 done
-
-echo ""
-
-# Update shared package
-echo "Updating shared package..."
-if [ -f "packages/shared/package.json" ]; then
-  update_package_version "packages/shared/package.json"
-fi
 
 echo ""
 echo -e "${GREEN}✅ Version sync complete! All packages are now at version ${YELLOW}${ROOT_VERSION}${NC}"

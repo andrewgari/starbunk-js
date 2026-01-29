@@ -1,90 +1,90 @@
 {
-	"name": "@starbunk/shared",
-	"version": "1.10.1",
-	"description": "Shared services and utilities for Starbunk containers",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"exports": {
-		".": "./dist/index.js",
-		"./database": "./dist/services/database/index.js",
-		"./observability/log-layer": "./dist/observability/log-layer.js",
-		"./observability/mixins": "./dist/observability/mixins/index.js",
-		"./observability/logs-service": "./dist/observability/logs-service.js",
-		"./observability/metrics-service": "./dist/observability/metrics-service.js",
-		"./observability/trace-service": "./dist/observability/trace-service.js",
-		"./observability/health-server": "./dist/observability/health-server.js",
-		"./observability/shutdown": "./dist/observability/shutdown.js",
-		"./observability/*": "./dist/observability/*.js",
-		"./services/llm": "./dist/services/llm/index.js",
-		"./services/llm/*": "./dist/services/llm/*.js",
-		"./services/vector": "./dist/services/vector/index.js",
-		"./services/vector/*": "./dist/services/vector/*.js",
-		"./*": "./dist/*.js"
-	},
-	"files": [
-		"dist/**/*",
-		"package.json",
-		"README.md"
-	],
-	"scripts": {
-		"build": "tsc --build && tsc-alias -p tsconfig.json",
-		"dev": "tsc --build --watch",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"type-check": "tsc --build --dry",
-		"clean": "tsc --build --clean",
-		"lint": "eslint --ext .ts src",
-		"lint:fix": "eslint --ext .ts src --fix"
-	},
-	"dependencies": {
-		"@google/generative-ai": "^0.24.1",
-		"@loglayer/transport-pino": "^2.2.17",
-		"@opentelemetry/api-logs": "^0.211.0",
-		"@opentelemetry/exporter-logs-otlp-http": "^0.211.0",
-		"@opentelemetry/exporter-metrics-otlp-http": "^0.211.0",
-		"@opentelemetry/exporter-trace-otlp-http": "^0.211.0",
-		"@opentelemetry/resources": "^2.5.0",
-		"@opentelemetry/sdk-logs": "^0.211.0",
-		"@opentelemetry/sdk-node": "^0.211.0",
-		"@opentelemetry/sdk-trace-node": "^2.5.0",
-		"@opentelemetry/semantic-conventions": "^1.39.0",
-		"chalk": "^4.1.2",
-		"date-fns": "^4.1.0",
-		"discord.js": "^14.18.0",
-		"dotenv": "^16.5.0",
-		"envalid": "^8.0.0",
-		"ioredis": "^5.3.2",
-		"loglayer": "^8.4.0",
-		"lodash": "^4.17.21",
-		"node-fetch": "^2.7.0",
-		"node-schedule": "^2.1.1",
-		"openai": "^5.3.0",
-		"pino": "^10.2.0",
-		"prom-client": "^15.1.3",
-		"rxjs": "^7.8.2",
-		"uuid": "^11.1.0",
-		"zod": "^3.24.2"
-	},
-	"devDependencies": {
-		"@types/better-sqlite3": "^7.6.0",
-		"@types/ioredis": "^5.0.0",
-		"@types/node": "^20.19.27",
-		"@types/node-fetch": "^2.6.13",
-		"@types/node-schedule": "^2.1.7",
-		"@types/uuid": "^10.0.0",
-		"@vitest/ui": "^4.0.17",
-		"rimraf": "^5.0.1",
-		"tsc-alias": "^1.8.16",
-		"typescript": "~5.3.0",
-		"vitest": "^4.0.17"
-	},
-	"peerDependencies": {
-		"better-sqlite3": "^11.0.0",
-		"typescript": "~5.3.0"
-	},
-	"peerDependenciesMeta": {
-		"better-sqlite3": {
-			"optional": true
-		}
-	}
+  "name": "@starbunk/shared",
+  "version": "1.26.3",
+  "description": "Shared services and utilities for Starbunk containers",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./database": "./dist/services/database/index.js",
+    "./observability/log-layer": "./dist/observability/log-layer.js",
+    "./observability/mixins": "./dist/observability/mixins/index.js",
+    "./observability/logs-service": "./dist/observability/logs-service.js",
+    "./observability/metrics-service": "./dist/observability/metrics-service.js",
+    "./observability/trace-service": "./dist/observability/trace-service.js",
+    "./observability/health-server": "./dist/observability/health-server.js",
+    "./observability/shutdown": "./dist/observability/shutdown.js",
+    "./observability/*": "./dist/observability/*.js",
+    "./services/llm": "./dist/services/llm/index.js",
+    "./services/llm/*": "./dist/services/llm/*.js",
+    "./services/vector": "./dist/services/vector/index.js",
+    "./services/vector/*": "./dist/services/vector/*.js",
+    "./*": "./dist/*.js"
+  },
+  "files": [
+    "dist/**/*",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --build && tsc-alias -p tsconfig.json",
+    "dev": "tsc --build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --build --dry",
+    "clean": "tsc --build --clean",
+    "lint": "eslint --ext .ts src",
+    "lint:fix": "eslint --ext .ts src --fix"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@loglayer/transport-pino": "^2.2.17",
+    "@opentelemetry/api-logs": "^0.211.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.211.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.211.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.211.0",
+    "@opentelemetry/resources": "^2.5.0",
+    "@opentelemetry/sdk-logs": "^0.211.0",
+    "@opentelemetry/sdk-node": "^0.211.0",
+    "@opentelemetry/sdk-trace-node": "^2.5.0",
+    "@opentelemetry/semantic-conventions": "^1.39.0",
+    "chalk": "^4.1.2",
+    "date-fns": "^4.1.0",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.5.0",
+    "envalid": "^8.0.0",
+    "ioredis": "^5.3.2",
+    "loglayer": "^8.4.0",
+    "lodash": "^4.17.21",
+    "node-fetch": "^2.7.0",
+    "node-schedule": "^2.1.1",
+    "openai": "^5.3.0",
+    "pino": "^10.2.0",
+    "prom-client": "^15.1.3",
+    "rxjs": "^7.8.2",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/ioredis": "^5.0.0",
+    "@types/node": "^20.19.27",
+    "@types/node-fetch": "^2.6.13",
+    "@types/node-schedule": "^2.1.7",
+    "@types/uuid": "^10.0.0",
+    "@vitest/ui": "^4.0.17",
+    "rimraf": "^5.0.1",
+    "tsc-alias": "^1.8.16",
+    "typescript": "~5.3.0",
+    "vitest": "^4.0.17"
+  },
+  "peerDependencies": {
+    "better-sqlite3": "^11.0.0",
+    "typescript": "~5.3.0"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    }
+  }
 }
