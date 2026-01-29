@@ -185,11 +185,13 @@ jobs:
           status: success
           version: '${CIRCLE_SHA1:0:7}'
           message: 'All services deployed and healthy on production server!'
+          when: on_success
 
       - notify_discord:
           status: failed
           version: '${CIRCLE_SHA1:0:7}'
           message: 'Deployment failed! Check CircleCI logs for details.'
+          when: on_fail
 
 workflows:
   # Production deployment triggered on pushes to main branch
