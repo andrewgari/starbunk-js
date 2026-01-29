@@ -10,6 +10,104 @@ executors:
       image: ubuntu-2404:current
     resource_class: medium
 
+commands:
+  notify_discord:
+    description: 'Send deployment notification to Discord'
+    parameters:
+      status:
+        type: string
+        description: 'Deployment status: started, success, failed'
+      version:
+        type: string
+        default: '${CIRCLE_BRANCH}'
+      message:
+        type: string
+        default: ''
+    steps:
+      - run:
+          name: Send Discord Notification
+          when: always
+          command: |
+            if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+              echo "WARNING: DISCORD_WEBHOOK_URL not configured - skipping notification"
+              exit 0
+            fi
+
+            STATUS="<< parameters.status >>"
+            VERSION="<< parameters.version >>"
+            MESSAGE="<< parameters.message >>"
+
+            case "$STATUS" in
+              started)
+                COLOR=3447003  # Blue
+                EMOJI=":rocket:"
+                TITLE="Deployment Started"
+                ;;
+              success)
+                COLOR=3066993  # Green
+                EMOJI=":white_check_mark:"
+                TITLE="Deployment Successful"
+                ;;
+              failed)
+                COLOR=15158332  # Red
+                EMOJI=":x:"
+                TITLE="Deployment Failed"
+                ;;
+              *)
+                COLOR=10181046  # Purple
+                EMOJI=":information_source:"
+                TITLE="Deployment Update"
+                ;;
+            esac
+
+            TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            BUILD_URL="https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}"
+
+            # Escape MESSAGE for JSON to prevent injection
+            MESSAGE_ESCAPED=$(echo "<< parameters.message >>" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/$/\\n/g' | tr -d '\n')
+
+            PAYLOAD=$(cat \<<-EOF
+            {
+              "embeds": [{
+                "title": "${EMOJI} ${TITLE}",
+                "description": "${MESSAGE_ESCAPED}",
+                "color": ${COLOR},
+                "fields": [
+                  {
+                    "name": "Version/Branch",
+                    "value": "\`${VERSION}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Branch",
+                    "value": "\`${CIRCLE_BRANCH:-N/A}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Commit",
+                    "value": "\`${CIRCLE_SHA1:0:7}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Triggered By",
+                    "value": "${CIRCLE_USERNAME:-CircleCI}",
+                    "inline": true
+                  }
+                ],
+                "timestamp": "${TIMESTAMP}",
+                "footer": {
+                  "text": "Starbunk Production Deployment"
+                },
+                "url": "${BUILD_URL}"
+              }]
+            }
+            EOF
+            )
+
+            curl -H "Content-Type: application/json" \
+                 -d "${PAYLOAD}" \
+                 "${DISCORD_WEBHOOK_URL}"
+
 jobs:
   deploy_to_production:
     executor: deployer
