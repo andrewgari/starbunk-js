@@ -35,6 +35,11 @@ export default {
     try {
       // Service handles all the business logic using shared singleton instance
       const service = getDJCovaService();
+      if (!service) {
+        await sendErrorResponse(interaction, 'Music service is not available.');
+        return;
+      }
+
       await service.play(interaction, url);
 
       await sendSuccessResponse(interaction, `🎶 Now playing!`);

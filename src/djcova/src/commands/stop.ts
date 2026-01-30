@@ -14,6 +14,10 @@ export default {
     try {
       // Get shared service instance
       const service = getDJCovaService();
+      if (!service) {
+        await sendErrorResponse(interaction, 'Music service is not available.');
+        return;
+      }
 
       // Service handles the logic
       service.stop(interaction);
