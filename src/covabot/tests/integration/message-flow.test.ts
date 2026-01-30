@@ -136,6 +136,9 @@ describe('Message Flow Integration', () => {
             );
           }
         } else if (sql.includes('covabot_user_facts')) {
+          if (sql.includes('WHERE user_id')) {
+            return userFacts.filter(f => f.user_id === params?.[0]);
+          }
           return userFacts.filter(f => !params || f.profile_id === params[0]);
         } else if (sql.includes('covabot_keyword_interests')) {
           return interests.filter(i => !params || i.profile_id === params[0]);
@@ -165,21 +168,39 @@ describe('Message Flow Integration', () => {
                 created_at: new Date().toISOString(),
               });
             } else if (sql.includes('covabot_user_facts')) {
-              userFacts.push({
+              const fact = {
                 id,
                 profile_id: params?.[0],
                 user_id: params?.[1],
                 fact_type: params?.[2],
-                fact_detail: params?.[3],
-              });
+                fact_key: params?.[3],
+                fact_value: params?.[4],
+                confidence: params?.[5] || 1.0,
+                learned_at: new Date().toISOString(),
+              };
+              const idx = userFacts.findIndex(
+                f =>
+                  f.profile_id === fact.profile_id &&
+                  f.user_id === fact.user_id &&
+                  f.fact_type === fact.fact_type &&
+                  f.fact_key === fact.fact_key,
+              );
+              if (idx >= 0) userFacts[idx] = fact;
+              else userFacts.push(fact);
             } else if (sql.includes('covabot_personality_evolution')) {
-              personality.push({
+              const trait = {
                 id,
                 profile_id: params?.[0],
                 trait_name: params?.[1],
                 trait_value: params?.[2],
                 change_reason: params?.[3],
-              });
+                changed_at: new Date().toISOString(),
+              };
+              const idx = personality.findIndex(
+                p => p.profile_id === trait.profile_id && p.trait_name === trait.trait_name,
+              );
+              if (idx >= 0) personality[idx] = trait;
+              else personality.push(trait);
             }
 
             return { rows: [{ id }], rowCount: 1 };
@@ -187,13 +208,50 @@ describe('Message Flow Integration', () => {
 
           // Handle INSERT without RETURNING
           if (sql.includes('INSERT')) {
-            if (sql.includes('covabot_social_battery')) {
+            if (sql.includes('covabot_user_facts') && sql.includes('ON CONFLICT')) {
+              const fact = {
+                profile_id: params?.[0],
+                user_id: params?.[1],
+                fact_type: params?.[2],
+                fact_key: params?.[3],
+                fact_value: params?.[4],
+                confidence: params?.[5] || 1.0,
+                learned_at: new Date().toISOString(),
+              };
+              const idx = userFacts.findIndex(
+                f =>
+                  f.profile_id === fact.profile_id &&
+                  f.user_id === fact.user_id &&
+                  f.fact_type === fact.fact_type &&
+                  f.fact_key === fact.fact_key,
+              );
+              if (idx >= 0) userFacts[idx] = fact;
+              else userFacts.push(fact);
+              return { rows: [], rowCount: 1 };
+            } else if (
+              sql.includes('covabot_personality_evolution') &&
+              sql.includes('ON CONFLICT')
+            ) {
+              const trait = {
+                profile_id: params?.[0],
+                trait_name: params?.[1],
+                trait_value: params?.[2],
+                change_reason: params?.[3],
+                changed_at: new Date().toISOString(),
+              };
+              const idx = personality.findIndex(
+                p => p.profile_id === trait.profile_id && p.trait_name === trait.trait_name,
+              );
+              if (idx >= 0) personality[idx] = trait;
+              else personality.push(trait);
+              return { rows: [], rowCount: 1 };
+            } else if (sql.includes('covabot_social_battery')) {
               socialBattery.push({
                 profile_id: params?.[0],
                 channel_id: params?.[1],
-                message_count: params?.[2] || 1,
-                window_start: params?.[3],
-                last_message_at: params?.[4] || params?.[3],
+                message_count: 1,
+                window_start: params?.[2],
+                last_message_at: params?.[3],
               });
               return { rows: [], rowCount: 1 };
             } else if (sql.includes('covabot_keyword_interests')) {
@@ -245,13 +303,34 @@ describe('Message Flow Integration', () => {
           if (sql.includes('SELECT')) {
             let results: any[] = [];
             if (sql.includes('covabot_conversations')) {
-              results = conversations;
+              const filtered = sql.includes('WHERE profile_id = $1 AND channel_id = $2')
+                ? conversations.filter(
+                    c => c.profile_id === params?.[0] && c.channel_id === params?.[1],
+                  )
+                : conversations;
+              results = filtered.map(c => ({
+                user_id: c.user_id,
+                message_content: c.message_content,
+                response_content: c.response_content,
+                created_at: c.created_at,
+              }));
             } else if (sql.includes('covabot_user_facts')) {
               results = userFacts;
             } else if (sql.includes('covabot_personality_evolution')) {
               results = personality;
             } else if (sql.includes('covabot_social_battery')) {
-              results = socialBattery;
+              const filtered = sql.includes('WHERE profile_id = $1 AND channel_id = $2')
+                ? socialBattery.filter(
+                    s => s.profile_id === params?.[0] && s.channel_id === params?.[1],
+                  )
+                : socialBattery;
+              results = filtered.map(s => ({
+                profile_id: s.profile_id,
+                channel_id: s.channel_id,
+                message_count: s.message_count,
+                window_start: s.window_start,
+                last_message_at: s.last_message_at,
+              }));
             }
             return { rows: results, rowCount: results.length };
           }
@@ -469,32 +548,37 @@ describe('Message Flow Integration', () => {
   });
 
   describe('Personality Evolution', () => {
-    it('should track and evolve traits', () => {
+    it('should track and evolve traits', async () => {
       // Get initial traits
-      const initialTraits = personalityService.getTraits(mockProfile.id);
+      const initialTraits = await personalityService.getTraits(mockProfile.id);
       const initialSarcasm = initialTraits.find(t => t.name === 'sarcasm_level');
 
       expect(initialSarcasm?.value).toBe(0.3);
 
       // Simulate sarcastic interaction
-      personalityService.analyzeForEvolution(
+      await personalityService.analyzeForEvolution(
         mockProfile.id,
         'oh really, who knew that?',
         'wow, shocking discovery there',
       );
 
-      const updatedTraits = personalityService.getTraits(mockProfile.id);
+      const updatedTraits = await personalityService.getTraits(mockProfile.id);
       const updatedSarcasm = updatedTraits.find(t => t.name === 'sarcasm_level');
 
       // Sarcasm should have increased slightly
       expect(updatedSarcasm?.value).toBeGreaterThan(initialSarcasm?.value || 0);
     });
 
-    it('should generate trait modifiers for LLM', () => {
+    it('should generate trait modifiers for LLM', async () => {
       // Update sarcasm to high level
-      personalityService.updateTrait(mockProfile.id, 'sarcasm_level', 0.8, 'Testing high sarcasm');
+      await personalityService.updateTrait(
+        mockProfile.id,
+        'sarcasm_level',
+        0.8,
+        'Testing high sarcasm',
+      );
 
-      const modifiers = personalityService.getTraitModifiersForLlm(mockProfile.id);
+      const modifiers = await personalityService.getTraitModifiersForLlm(mockProfile.id);
 
       expect(modifiers).toContain('sarcastic');
     });
@@ -545,7 +629,7 @@ describe('Message Flow Integration', () => {
       );
 
       // 7. Analyze for personality evolution
-      personalityService.analyzeForEvolution(mockProfile.id, message.content, botResponse);
+      await personalityService.analyzeForEvolution(mockProfile.id, message.content, botResponse);
 
       // 8. Verify everything was recorded
       const finalContext = await memoryService.getChannelContext(
