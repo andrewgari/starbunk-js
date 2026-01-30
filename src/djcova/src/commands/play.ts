@@ -36,13 +36,7 @@ export default {
     }
 
     try {
-      // Get service from container
-      if (!service) {
-        await sendErrorResponse(interaction, 'Music service is not available.');
-        return;
-      }
-
-      // Service handles all the business logic
+      // Service handles all the business logic using the instance created at module load
       await service.play(interaction, url);
 
       await sendSuccessResponse(interaction, `🎶 Now playing!`);
