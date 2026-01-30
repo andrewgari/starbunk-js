@@ -161,6 +161,13 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - REDIS_DB=${REDIS_DB:-0}
 
+      # Database Services - PostgreSQL (Conversation Memory)
+      - POSTGRES_HOST=${POSTGRES_HOST:-starbunk-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-starbunk}
+      - POSTGRES_USER=${POSTGRES_USER:-starbunk}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
       # Database Services - Qdrant (Saliency/Interest Matching)
       - QDRANT_URL=${QDRANT_URL:-http://starbunk-qdrant:6333}
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
@@ -193,6 +200,9 @@ services:
     volumes:
       - ${HOST_WORKDIR}/config/covabot:/app/config:ro
       - ${HOST_WORKDIR}/data/covabot:/app/data
+    depends_on:
+      - starbunk-postgres
+      - starbunk-redis
     ports:
       # Optional: Web interface port (default: 7080)
       - "${COVABOT_WEB_PORT:-7080}:7080"
