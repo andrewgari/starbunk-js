@@ -153,6 +153,10 @@ archive/
 # Ignore archived GitHub workflows
 .github/workflows/archive/
 
+# Agent definitions and command templates (do not commit)
+.github/agents/
+.github/commands/
+
 # Cypress
 cypress/screenshots/
 cypress/videos/
@@ -197,7 +201,9 @@ scripts/*
 !docs/DOCKER_BUILD_OPTIMIZATION.md
 !docs/DOCKER_COMPOSE_AUDIT.md
 !docs/branch-protection.md
-!docs/AGENTS.md
+
+# Ignore agent system docs in .github
+.github/README.md
 !docs/ISSUE_*.md
 
 # Build artifacts and temporary files
