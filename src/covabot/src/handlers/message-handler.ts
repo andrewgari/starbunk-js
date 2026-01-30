@@ -222,7 +222,7 @@ export class MessageHandler {
     const userFactsStr = this.memoryService.formatFactsForLlm(userFacts, message.author.username);
 
     // Get trait modifiers
-    const traitModifiers = this.personalityService.getTraitModifiersForLlm(profile.id);
+    const traitModifiers = await this.personalityService.getTraitModifiersForLlm(profile.id);
 
     return {
       systemPrompt: profile.personality.systemPrompt,

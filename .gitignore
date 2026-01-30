@@ -228,3 +228,6 @@ build-artifacts.tar.gz
 !.github/BRANCH_NAMING_CONVENTION.md
 !.github/COMMIT_TEMPLATE
 .roomodes
+
+.gemini/
+gha-creds-*.json

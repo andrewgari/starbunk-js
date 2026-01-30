@@ -37,7 +37,7 @@ export class ConversationRepository extends PostgresBaseRepository<ConversationR
 
     try {
       const result = await this.executeWithReturning<{ id: string }>(
-        `INSERT INTO covabot_conversations 
+        `INSERT INTO covabot_conversations
          (profile_id, channel_id, user_id, message_content, response_content, metadata)
          VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id`,
