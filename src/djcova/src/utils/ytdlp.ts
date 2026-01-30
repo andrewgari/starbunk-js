@@ -166,7 +166,17 @@ export async function getVideoInfo(url: string): Promise<{
 
     ytdlpProcess.on('close', (code: number | null) => {
       clearTimeout(timer);
-      if (code === null || code !== 0) {
+  const ytdlpArgs = [
+    url,
+    '-f',
+    'ba[ext=m4a]/ba', // 1. Target M4A first, then any best audio
+    '-o',
+    '-', // 2. Stream to stdout
+    '--no-playlist',
+    '--quiet', // 3. Keep stdout clean of progress bars
+    '--no-warnings',
+    '--no-part', // 4. Disable .part files (essential for streaming)
+  ];
         reject(new Error(`yt-dlp exited with code ${code}`));
         return;
       }
