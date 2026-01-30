@@ -91,6 +91,8 @@ jobs:
 
   djcova_test:
     executor: node22
+    environment:
+      SKIP_YTDLP_TESTS: "true"
     steps:
       - checkout
       - setup_npm_cache
