@@ -6,6 +6,10 @@ import { logger } from '@/observability/logger';
 import { createDJCovaService } from '@/core/djcova-factory';
 
 const service: DJCovaService = createDJCovaService();
+import { logger } from '@/observability/logger';
+import { createDJCovaService } from '@/core/djcova-factory';
+
+const service: DJCovaService = createDJCovaService();
 
 const commandBuilder = new SlashCommandBuilder()
   .setName('play')
