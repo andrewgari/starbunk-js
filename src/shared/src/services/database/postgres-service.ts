@@ -19,6 +19,7 @@ export interface PostgresConfig {
   max?: number; // max connections in pool
   idleTimeoutMillis?: number;
   connectionTimeoutMillis?: number;
+  migrationsDir?: string; // Optional: path to service-specific migrations directory
 }
 
 export class PostgresService {
@@ -169,11 +170,13 @@ export class PostgresService {
   private async runMigrations(): Promise<void> {
     logger.info('Running PostgreSQL migrations');
 
-    // Get migrations directory
-    const migrationsDir = path.join(__dirname, 'migrations');
+    // Get migrations directory - use configured path or default to shared migrations
+    const migrationsDir = this.config.migrationsDir || path.join(__dirname, 'migrations');
 
     if (!fs.existsSync(migrationsDir)) {
-      logger.warn('No migrations directory found, skipping migrations');
+      logger
+        .withMetadata({ migrationsDir })
+        .warn('No migrations directory found, skipping migrations');
       return;
     }
 
