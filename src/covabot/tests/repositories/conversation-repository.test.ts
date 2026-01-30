@@ -103,10 +103,12 @@ describe('ConversationRepository', () => {
     });
 
     it('should respect the limit parameter', async () => {
-      vi.spyOn(mockPgService, 'query').mockImplementation(async (sql, params) => {
-        expect(params?.[2]).toBe(5);
-        return [];
-      });
+      vi.spyOn(mockPgService, 'query').mockImplementation(
+        async (_sql: string, params?: unknown[]) => {
+          expect(params?.[2]).toBe(5);
+          return [];
+        },
+      );
 
       await repository.getChannelContext('test-profile', 'channel-123', 5);
 
