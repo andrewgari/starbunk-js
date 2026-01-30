@@ -225,12 +225,15 @@ build-artifacts.tar.gz
 # Project Templates
 !.github/PULL_REQUEST_TEMPLATE.md
 !.github/ISSUE_TEMPLATE/*.md
-!.github/BRANCH_NAMING_CONVENTION.md
 !.github/COMMIT_TEMPLATE
 .github/agents
 .github/agents/**
 .github/commands
 .github/commands/**
+
+# GitHub documentation (moved to docs/github/)
+docs/github/
+docs/github/**
 
 .roomodes
 
@@ -246,3 +249,7 @@ Untitled-1769734935380.n8n
 .vscode/n8n.code-snippets
 
 .n8n/**
+
+.vscode
+data
+*.junit.xml
