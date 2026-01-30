@@ -170,4 +170,11 @@ export class MemoryService {
 
     return lines.join('\n');
   }
+
+  /**
+   * Delete old conversations based on retention period
+   */
+  async pruneOldConversations(profileId: string, daysToKeep: number): Promise<number> {
+    return await this.conversationRepo.deleteOldConversations(profileId, daysToKeep);
+  }
 }
