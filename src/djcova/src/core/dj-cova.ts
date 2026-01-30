@@ -20,7 +20,6 @@ type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
  */
 export class DJCova {
   private player: AudioPlayerLike;
-  private resource: ReturnType<typeof createAudioResource> | undefined;
   private volume: number = 10;
   private idleManager: IdleManager | null = null;
   private ytdlpProcess: ChildProcess | null = null;
@@ -60,7 +59,7 @@ export class DJCova {
   }
 
   async play(url: string): Promise<void> {
-    if (this.resource) {
+    if (this.player) {
       logger.warn('Already playing, stopping current track');
       this.stop(); //TODO: Consider queueing instead
     }
@@ -79,16 +78,16 @@ export class DJCova {
       this.ytdlpProcess = process;
 
       const probeResult = await demuxProbe(stream);
-      this.resource = createAudioResource(probeResult.stream, {
+      this.player = createAudioResource(probeResult.stream, {
         inputType: probeResult.type,
         inlineVolume: true,
       });
 
-      if (this.resource.volume) {
-        this.resource.volume.setVolume(this.volume / 100);
+      if (this.player.volume) {
+        this.player.volume.setVolume(this.volume / 100);
       }
 
-      this.player.play(this.resource);
+      this.player.play(this.player);
     } catch (error) {
       logger
         .withError(error instanceof Error ? error : new Error(String(error)))
@@ -108,8 +107,8 @@ export class DJCova {
     this.volume = Math.max(0, Math.min(vol, 100));
     logger.info(`🔊 Volume set to ${this.volume}%`);
 
-    if (this.resource?.volume) {
-      this.resource.volume.setVolume(this.volume / 100);
+    if (this.player?.volume) {
+      this.player.volume.setVolume(this.volume / 100);
     }
   }
 
@@ -154,7 +153,7 @@ export class DJCova {
       } catch {}
       this.ytdlpProcess = null;
     }
-    this.resource = undefined;
+    this.player = undefined;
   }
 
   destroy(): void {
