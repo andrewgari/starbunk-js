@@ -1,5 +1,8 @@
 # CovaBot Conversation Memory (PostgreSQL) - PRD
 
+## Plan (CI Fix)
+- Remove unsupported `Error` argument from `logger.error(...)` in `ConversationRepository` and rely on metadata fields for error details.
+
 ## Context
 Issue: https://github.com/andrewgari/starbunk-js/issues/516
 
