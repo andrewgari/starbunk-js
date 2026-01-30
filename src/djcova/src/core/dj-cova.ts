@@ -19,7 +19,7 @@ type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
  * Handles audio player, streams, volume, and idle management
  */
 export class DJCova {
-	private player: AudioPlayerLike;
+	private readonly player: AudioPlayerLike;
 	private resource: ReturnType<typeof createAudioResource> | undefined;
 	private volume: number = 10;
 	private idleManager: IdleManager | null = null;
