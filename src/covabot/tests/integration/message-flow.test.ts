@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import Database from 'better-sqlite3';
 import { Message, User, Client, Guild, GuildMember } from 'discord.js';
 import { MemoryService } from '../../src/services/memory-service';
 import { InterestService } from '../../src/services/interest-service';
@@ -13,6 +12,7 @@ import { ConversationRepository } from '../../src/repositories/conversation-repo
 import { UserFactRepository } from '../../src/repositories/user-fact-repository';
 import { InterestRepository } from '../../src/repositories/interest-repository';
 import { SocialBatteryRepository } from '../../src/repositories/social-battery-repository';
+import { PersonalityRepository } from '../../src/repositories/personality-repository';
 import { CovaProfile } from '../../src/models/memory-types';
 
 // Mock Discord objects
@@ -62,11 +62,12 @@ function createMockMessage(
 }
 
 describe('Message Flow Integration', () => {
-  let db: Database.Database;
+  let mockPgService: any;
   let conversationRepository: ConversationRepository;
   let userFactRepository: UserFactRepository;
   let interestRepository: InterestRepository;
   let socialBatteryRepository: SocialBatteryRepository;
+  let personalityRepository: PersonalityRepository;
   let memoryService: MemoryService;
   let interestService: InterestService;
   let socialBatteryService: SocialBatteryService;
@@ -112,114 +113,174 @@ describe('Message Flow Integration', () => {
 
   const botUserId = 'bot-999';
 
-  /**
-   * Initialize in-memory database with schema
-   */
-  function initializeInMemoryDb(): Database.Database {
-    const db = new Database(':memory:');
-    db.pragma('foreign_keys = ON');
-
-    // Apply schema migrations
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS migrations (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE,
-        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      -- Conversation history
-      CREATE TABLE IF NOT EXISTS conversations (
-        id INTEGER PRIMARY KEY,
-        profile_id TEXT NOT NULL,
-        channel_id TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        user_name TEXT,
-        message_content TEXT NOT NULL,
-        bot_response TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_conversations_profile_channel
-        ON conversations(profile_id, channel_id);
-      CREATE INDEX IF NOT EXISTS idx_conversations_user
-        ON conversations(profile_id, user_id);
-      CREATE INDEX IF NOT EXISTS idx_conversations_created
-        ON conversations(created_at);
-
-      -- Learned user facts
-      CREATE TABLE IF NOT EXISTS user_facts (
-        id INTEGER PRIMARY KEY,
-        profile_id TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        fact_type TEXT NOT NULL,
-        fact_key TEXT NOT NULL,
-        fact_value TEXT NOT NULL,
-        confidence REAL DEFAULT 1.0,
-        learned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(profile_id, user_id, fact_type, fact_key)
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_user_facts_user
-        ON user_facts(profile_id, user_id);
-
-      -- Personality trait evolution
-      CREATE TABLE IF NOT EXISTS personality_evolution (
-        id INTEGER PRIMARY KEY,
-        profile_id TEXT NOT NULL,
-        trait_name TEXT NOT NULL,
-        trait_value REAL NOT NULL,
-        change_reason TEXT,
-        changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(profile_id, trait_name)
-      );
-
-      -- Social battery state
-      CREATE TABLE IF NOT EXISTS social_battery_state (
-        profile_id TEXT NOT NULL,
-        channel_id TEXT NOT NULL,
-        message_count INTEGER DEFAULT 0,
-        window_start DATETIME,
-        last_message_at DATETIME,
-        PRIMARY KEY(profile_id, channel_id)
-      );
-
-      -- Keyword interests
-      CREATE TABLE IF NOT EXISTS keyword_interests (
-        profile_id TEXT NOT NULL,
-        keyword TEXT NOT NULL,
-        category TEXT,
-        weight REAL DEFAULT 1.0,
-        PRIMARY KEY(profile_id, keyword)
-      );
-    `);
-
-    return db;
-  }
-
   beforeEach(async () => {
     vi.useFakeTimers();
 
-    // Create in-memory database
-    db = initializeInMemoryDb();
+    // Create in-memory stores for mock data
+    const conversations: any[] = [];
+    const userFacts: any[] = [];
+    const interests: any[] = [];
+    const socialBattery: any[] = [];
+    const personality: any[] = [];
 
-    conversationRepository = new ConversationRepository(db);
-    userFactRepository = new UserFactRepository(db);
-    interestRepository = new InterestRepository(db);
-    socialBatteryRepository = new SocialBatteryRepository(db);
+    // Mock PostgresService with stateful storage
+    mockPgService = {
+      query: vi.fn(async (sql: string, params?: any[]) => {
+        // Route queries to appropriate stores
+        if (sql.includes('covabot_conversations')) {
+          if (sql.includes('SELECT')) {
+            return conversations.filter(
+              c =>
+                (!params || c.profile_id === params[0] || true) &&
+                (!params || params.length < 2 || c.channel_id === params[1]),
+            );
+          }
+        } else if (sql.includes('covabot_user_facts')) {
+          return userFacts.filter(f => !params || f.profile_id === params[0]);
+        } else if (sql.includes('covabot_keyword_interests')) {
+          return interests.filter(i => !params || i.profile_id === params[0]);
+        } else if (sql.includes('covabot_social_battery')) {
+          return socialBattery.filter(s => !params || s.profile_id === params[0]);
+        } else if (sql.includes('covabot_personality_evolution')) {
+          return personality.filter(p => !params || p.profile_id === params[0]);
+        }
+        return [];
+      }),
+      getClient: vi.fn(async () => ({
+        query: vi.fn(async (sql: string, params?: any[]) => {
+          // Handle INSERT with RETURNING
+          if (sql.includes('INSERT') && sql.includes('RETURNING')) {
+            const id = `id-${Date.now()}-${Math.random()}`;
+
+            // Store in appropriate collection
+            if (sql.includes('covabot_conversations')) {
+              conversations.push({
+                id,
+                profile_id: params?.[0],
+                channel_id: params?.[1],
+                user_id: params?.[2],
+                message_content: params?.[3],
+                response_content: params?.[4],
+                metadata: params?.[5],
+                created_at: new Date().toISOString(),
+              });
+            } else if (sql.includes('covabot_user_facts')) {
+              userFacts.push({
+                id,
+                profile_id: params?.[0],
+                user_id: params?.[1],
+                fact_type: params?.[2],
+                fact_detail: params?.[3],
+              });
+            } else if (sql.includes('covabot_personality_evolution')) {
+              personality.push({
+                id,
+                profile_id: params?.[0],
+                trait_name: params?.[1],
+                trait_value: params?.[2],
+                change_reason: params?.[3],
+              });
+            }
+
+            return { rows: [{ id }], rowCount: 1 };
+          }
+
+          // Handle INSERT without RETURNING
+          if (sql.includes('INSERT')) {
+            if (sql.includes('covabot_social_battery')) {
+              socialBattery.push({
+                profile_id: params?.[0],
+                channel_id: params?.[1],
+                message_count: params?.[2] || 1,
+                window_start: params?.[3],
+                last_message_at: params?.[4] || params?.[3],
+              });
+              return { rows: [], rowCount: 1 };
+            } else if (sql.includes('covabot_keyword_interests')) {
+              interests.push({
+                profile_id: params?.[0],
+                keyword: params?.[1],
+                interest_level: params?.[2],
+              });
+              return { rows: [], rowCount: 1 };
+            }
+          }
+
+          // Handle UPDATE
+          if (sql.includes('UPDATE')) {
+            if (sql.includes('covabot_social_battery')) {
+              // Two types of UPDATE: resetWindow and incrementCount
+              if (sql.includes('message_count = message_count + 1')) {
+                // incrementCount: params = [nowIso, profileId, channelId]
+                const nowIso = params?.[0];
+                const profileId = params?.[1];
+                const channelId = params?.[2];
+                const existingIdx = socialBattery.findIndex(
+                  s => s.profile_id === profileId && s.channel_id === channelId,
+                );
+                if (existingIdx >= 0) {
+                  socialBattery[existingIdx].message_count += 1;
+                  socialBattery[existingIdx].last_message_at = nowIso;
+                }
+                return { rows: [], rowCount: 1 };
+              } else {
+                // resetWindow: params = [nowIso, nowIso, profileId, channelId]
+                const nowIso = params?.[0];
+                const profileId = params?.[2];
+                const channelId = params?.[3];
+                const existingIdx = socialBattery.findIndex(
+                  s => s.profile_id === profileId && s.channel_id === channelId,
+                );
+                if (existingIdx >= 0) {
+                  socialBattery[existingIdx].message_count = 1;
+                  socialBattery[existingIdx].window_start = nowIso;
+                  socialBattery[existingIdx].last_message_at = nowIso;
+                }
+                return { rows: [], rowCount: 1 };
+              }
+            }
+          }
+
+          // Handle SELECT within getClient
+          if (sql.includes('SELECT')) {
+            let results: any[] = [];
+            if (sql.includes('covabot_conversations')) {
+              results = conversations;
+            } else if (sql.includes('covabot_user_facts')) {
+              results = userFacts;
+            } else if (sql.includes('covabot_personality_evolution')) {
+              results = personality;
+            } else if (sql.includes('covabot_social_battery')) {
+              results = socialBattery;
+            }
+            return { rows: results, rowCount: results.length };
+          }
+
+          return { rows: [], rowCount: 0 };
+        }),
+        release: vi.fn(),
+      })),
+    };
+
+    conversationRepository = new ConversationRepository(mockPgService);
+    userFactRepository = new UserFactRepository(mockPgService);
+    interestRepository = new InterestRepository(mockPgService);
+    socialBatteryRepository = new SocialBatteryRepository(mockPgService);
+    personalityRepository = new PersonalityRepository(mockPgService);
 
     memoryService = new MemoryService(conversationRepository, userFactRepository);
     interestService = new InterestService(interestRepository);
     socialBatteryService = new SocialBatteryService(socialBatteryRepository);
-    personalityService = new PersonalityService(db);
+    personalityService = new PersonalityService(personalityRepository);
     decisionService = new ResponseDecisionService(interestService, socialBatteryService);
 
     // Initialize interests from profile
     await interestService.initializeFromProfile(mockProfile);
-    personalityService.initializeFromProfile(mockProfile);
+    await personalityService.initializeFromProfile(mockProfile);
   });
 
   afterEach(() => {
-    db.close();
+    vi.clearAllMocks();
     vi.useRealTimers();
   });
 
