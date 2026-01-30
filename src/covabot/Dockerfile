@@ -65,6 +65,7 @@ COPY --from=builder --chown=covabot:covabot /app/src/shared/node_modules ./src/s
 COPY --from=builder --chown=covabot:covabot /app/src/shared/dist ./src/shared/dist
 COPY --from=builder --chown=covabot:covabot /app/src/shared/package.json ./src/shared/
 COPY --from=builder --chown=covabot:covabot /app/src/covabot/dist ./src/covabot/dist
+COPY --from=builder --chown=covabot:covabot /app/src/covabot/migrations ./src/covabot/migrations
 COPY --from=builder --chown=covabot:covabot /app/package.json ./
 COPY --from=builder --chown=covabot:covabot /app/src/covabot/package.json ./src/covabot/
 
