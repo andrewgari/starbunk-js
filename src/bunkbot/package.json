@@ -1,6 +1,6 @@
 {
   "name": "@starbunk/bunkbot",
-  "version": "1.27.0",
+  "version": "1.27.1",
   "description": "BunkBot - Next generation reply bot system",
   "main": "dist/index.js",
   "engines": {

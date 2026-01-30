@@ -1,39 +1,69 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
 import { ConversationRepository } from '../../src/repositories/conversation-repository';
 import { getTraceService } from '@starbunk/shared';
+import { PostgresService } from '@starbunk/shared/database';
 
 describe('Repository Tracing', () => {
-  let db: Database.Database;
+  let mockPgService: any;
   let conversationRepo: ConversationRepository;
   let tracingMock: ReturnType<typeof getTraceService>;
 
   beforeEach(() => {
     // Disable real OTLP export in tests
     process.env.OTEL_ENABLED = 'false';
-    // Create in-memory database for testing
-    db = new Database(':memory:');
 
-    // Create conversations table
-    db.exec(`
-      CREATE TABLE conversations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        profile_id TEXT NOT NULL,
-        channel_id TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        user_name TEXT,
-        message_content TEXT NOT NULL,
-        bot_response TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    // Mock PostgresService with test data
+    const storedMessages: any[] = [];
 
-    conversationRepo = new ConversationRepository(db);
+    mockPgService = {
+      query: vi.fn(async (sql: string, params?: any[]) => {
+        // Simulate error for nonexistent table
+        if (sql.includes('nonexistent_table')) {
+          throw new Error('relation "nonexistent_table" does not exist');
+        }
+
+        // SELECT query - return stored messages as array (not {rows: []} object)
+        if (sql.includes('SELECT')) {
+          return storedMessages.map((msg, idx) => ({
+            ...msg,
+            created_at: new Date(Date.now() + idx * 1000).toISOString(),
+          }));
+        }
+        return [];
+      }),
+      getClient: vi.fn(async () => ({
+        query: vi.fn(async (sql: string, params?: any[]) => {
+          // Simulate error for nonexistent table
+          if (sql.includes('nonexistent_table')) {
+            throw new Error('relation "nonexistent_table" does not exist');
+          }
+
+          // INSERT query - store message and return {rows, rowCount} for client.query
+          if (sql.includes('INSERT') && sql.includes('RETURNING')) {
+            const id = `id-${Date.now()}`;
+            storedMessages.push({
+              id,
+              profile_id: params?.[0],
+              channel_id: params?.[1],
+              user_id: params?.[2],
+              user_name: params?.[3],
+              message_content: params?.[4],
+              response_content: params?.[5],
+            });
+            return { rows: [{ id }], rowCount: 1 };
+          }
+          return { rows: [], rowCount: 0 };
+        }),
+        release: vi.fn(),
+      })),
+    };
+
+    conversationRepo = new ConversationRepository(mockPgService);
     tracingMock = getTraceService('data-access');
   });
 
   afterEach(() => {
-    db.close();
+    vi.clearAllMocks();
   });
 
   describe('ConversationRepository tracing', () => {
@@ -46,7 +76,7 @@ describe('Repository Tracing', () => {
       expect(startSpanSpy).toHaveBeenCalledWith(
         'db.query',
         expect.objectContaining({
-          'db.system': 'sqlite',
+          'db.system': 'postgresql',
           'db.statement': expect.stringContaining('SELECT'),
           'db.param_count': 3,
         }),
@@ -74,22 +104,24 @@ describe('Repository Tracing', () => {
         'Hi there!',
       );
 
-      // Should have called startSpan for db.execute
-      expect(startSpanSpy).toHaveBeenCalledWith(
-        'db.execute',
-        expect.objectContaining({
-          'db.system': 'sqlite',
-          'db.statement': expect.stringContaining('INSERT'),
-          'db.param_count': 6,
-        }),
-      );
-
-      // Should have called startSpan for conversation.store
-      expect(startSpanSpy).toHaveBeenCalledWith(
+      // Should have called startSpan for conversation.store (first)
+      expect(startSpanSpy).toHaveBeenNthCalledWith(
+        1,
         'conversation.store',
         expect.objectContaining({
           'conversation.channel_id': 'channel-456',
           'conversation.user_id': 'user-789',
+        }),
+      );
+
+      // Should have called startSpan for db.execute (second)
+      expect(startSpanSpy).toHaveBeenNthCalledWith(
+        2,
+        'db.execute',
+        expect.objectContaining({
+          'db.system': 'postgresql',
+          'db.statement': expect.stringContaining('INSERT'),
+          'db.param_count': 6,
         }),
       );
     });

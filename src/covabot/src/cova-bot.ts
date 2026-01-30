@@ -8,7 +8,8 @@
 import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
-import { DatabaseService } from '@starbunk/shared/database';
+import { PostgresService } from '@starbunk/shared/database';
+import { initializeDatabase } from '@/database';
 import { MemoryService } from '@/services/memory-service';
 import { InterestService } from '@/services/interest-service';
 import { SocialBatteryService } from '@/services/social-battery-service';
@@ -20,6 +21,7 @@ import { ConversationRepository } from '@/repositories/conversation-repository';
 import { UserFactRepository } from '@/repositories/user-fact-repository';
 import { SocialBatteryRepository } from '@/repositories/social-battery-repository';
 import { InterestRepository } from '@/repositories/interest-repository';
+import { PersonalityRepository } from '@/repositories/personality-repository';
 import { CovaProfile } from '@/models/memory-types';
 import {
   loadPersonalitiesFromDirectory,
@@ -50,7 +52,7 @@ export class CovaBot {
   private profiles: Map<string, CovaProfile> = new Map();
 
   // Services
-  private dbService: DatabaseService | null = null;
+  private pgService: PostgresService | null = null;
   private memoryService: MemoryService | null = null;
   private interestService: InterestService | null = null;
   private socialBatteryService: SocialBatteryService | null = null;
@@ -104,9 +106,9 @@ export class CovaBot {
       this.client = null;
     }
 
-    if (this.dbService) {
-      this.dbService.close();
-      this.dbService = null;
+    if (this.pgService) {
+      await this.pgService.close();
+      this.pgService = null;
     }
 
     logger.info('CovaBot v2 stopped');
@@ -122,7 +124,7 @@ export class CovaBot {
 
   getServices() {
     return {
-      db: this.dbService,
+      db: this.pgService,
       memory: this.memoryService,
       interest: this.interestService,
       socialBattery: this.socialBatteryService,
@@ -134,8 +136,7 @@ export class CovaBot {
   }
 
   private async initializeDatabase(): Promise<void> {
-    this.dbService = DatabaseService.getInstance(this.config.databasePath);
-    await this.dbService.initialize();
+    this.pgService = await initializeDatabase();
   }
 
   private async loadProfiles(): Promise<void> {
@@ -151,16 +152,15 @@ export class CovaBot {
   private async initializeServices(): Promise<void> {
     logger.info('Initializing services');
 
-    if (!this.dbService) {
-      throw new Error('Database not initialized');
+    if (!this.pgService) {
+      throw new Error('PostgreSQL not initialized');
     }
 
-    const db = this.dbService.getDb();
-
-    const conversationRepo = new ConversationRepository(db);
-    const userFactRepo = new UserFactRepository(db);
-    const socialBatteryRepo = new SocialBatteryRepository(db);
-    const interestRepo = new InterestRepository(db);
+    const conversationRepo = new ConversationRepository(this.pgService);
+    const userFactRepo = new UserFactRepository(this.pgService);
+    const socialBatteryRepo = new SocialBatteryRepository(this.pgService);
+    const interestRepo = new InterestRepository(this.pgService);
+    const personalityRepo = new PersonalityRepository(this.pgService);
 
     this.memoryService = new MemoryService(conversationRepo, userFactRepo);
     this.interestService = new InterestService(interestRepo);
@@ -173,7 +173,7 @@ export class CovaBot {
       openaiApiKey: this.config.openaiApiKey,
       openaiDefaultModel: this.config.openaiDefaultModel,
     });
-    this.personalityService = new PersonalityService(db);
+    this.personalityService = new PersonalityService(personalityRepo);
 
     this.embeddingManager = new EmbeddingManager({
       ollamaApiUrl: this.config.ollamaApiUrl,

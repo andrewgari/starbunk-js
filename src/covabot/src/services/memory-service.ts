@@ -28,7 +28,8 @@ export class MemoryService {
     userName: string | null,
     messageContent: string,
     botResponse: string | null,
-  ): Promise<number> {
+    metadata?: Record<string, unknown>,
+  ): Promise<string> {
     return await this.conversationRepo.storeConversation(
       profileId,
       channelId,
@@ -36,6 +37,7 @@ export class MemoryService {
       userName,
       messageContent,
       botResponse,
+      metadata,
     );
   }
 
@@ -110,10 +112,10 @@ export class MemoryService {
   }
 
   /**
-   * Delete old conversations to manage database size
+   * Delete old conversations to implement TTL (30-day retention by default)
    */
-  async pruneOldConversations(profileId: string, daysToKeep: number = 30): Promise<number> {
-    return await this.conversationRepo.pruneOldConversations(profileId, daysToKeep);
+  async deleteOldConversations(daysToKeep: number = 30): Promise<number> {
+    return await this.conversationRepo.deleteOldConversations(daysToKeep);
   }
 
   /**

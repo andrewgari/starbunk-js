@@ -5,16 +5,16 @@
  * delegating to the database for persistence.
  */
 
-import Database from 'better-sqlite3';
-import { BaseRepository } from '@starbunk/shared';
+import { PostgresBaseRepository } from '@starbunk/shared';
+import { PostgresService } from '@starbunk/shared/database';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { UserFactRow, UserFact } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('UserFactRepository');
 
-export class UserFactRepository extends BaseRepository<UserFactRow> {
-  constructor(db: Database.Database) {
-    super(db);
+export class UserFactRepository extends PostgresBaseRepository<UserFactRow> {
+  constructor(pgService: PostgresService) {
+    super(pgService);
   }
 
   /**
@@ -32,8 +32,8 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
     const value = factValue || factKey;
 
     await this.execute(
-      `INSERT INTO user_facts (profile_id, user_id, fact_type, fact_key, fact_value, confidence)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO covabot_user_facts (profile_id, user_id, fact_type, fact_key, fact_value, confidence)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT(profile_id, user_id, fact_type, fact_key)
        DO UPDATE SET fact_value = excluded.fact_value, confidence = excluded.confidence, learned_at = CURRENT_TIMESTAMP`,
       [profileId, userId, category, factKey, value, confidence],
@@ -57,8 +57,8 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
       Pick<UserFactRow, 'fact_type' | 'fact_key' | 'fact_value' | 'confidence'>
     >(
       `SELECT fact_type, fact_key, fact_value, confidence
-       FROM user_facts
-       WHERE user_id = ?
+       FROM covabot_user_facts
+       WHERE user_id = $1
        ORDER BY confidence DESC`,
       [userId],
     );
@@ -88,8 +88,8 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
       Pick<UserFactRow, 'fact_type' | 'fact_key' | 'fact_value' | 'confidence'>
     >(
       `SELECT fact_type, fact_key, fact_value, confidence
-       FROM user_facts
-       WHERE user_id = ? AND fact_type = ?
+       FROM covabot_user_facts
+       WHERE user_id = $1 AND fact_type = $2
        ORDER BY confidence DESC`,
       [userId, category],
     );

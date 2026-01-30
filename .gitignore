@@ -228,3 +228,16 @@ build-artifacts.tar.gz
 !.github/BRANCH_NAMING_CONVENTION.md
 !.github/COMMIT_TEMPLATE
 .roomodes
+
+.gemini/
+gha-creds-*.json
+
+# n8n-as-code AI helpers
+n8nac-skills
+n8nac-skills.cmd
+workflows/**/**
+n8nac-instance.json
+Untitled-1769734935380.n8n
+.vscode/n8n.code-snippets
+
+.n8n/**
