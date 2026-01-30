@@ -30,6 +30,7 @@ RUN cd src/shared && npm run build
 # Copy app source code
 COPY src/covabot/src ./src/covabot/src
 COPY src/covabot/tests ./src/covabot/tests
+COPY src/covabot/migrations ./src/covabot/migrations
 COPY src/covabot/vitest.config.ts src/covabot/tsconfig*.json ./src/covabot/
 
 # Build the application
@@ -65,6 +66,7 @@ COPY --from=builder --chown=covabot:covabot /app/src/shared/node_modules ./src/s
 COPY --from=builder --chown=covabot:covabot /app/src/shared/dist ./src/shared/dist
 COPY --from=builder --chown=covabot:covabot /app/src/shared/package.json ./src/shared/
 COPY --from=builder --chown=covabot:covabot /app/src/covabot/dist ./src/covabot/dist
+COPY --from=builder --chown=covabot:covabot /app/src/covabot/migrations ./src/covabot/migrations
 COPY --from=builder --chown=covabot:covabot /app/package.json ./
 COPY --from=builder --chown=covabot:covabot /app/src/covabot/package.json ./src/covabot/
 

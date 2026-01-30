@@ -44,7 +44,20 @@ export class ConversationRepository extends PostgresBaseRepository<ConversationR
         [profileId, channelId, userId, messageContent, botResponse, JSON.stringify(metadata || {})],
       );
 
-      const id = result?.id || '';
+      const id = result?.id;
+
+      if (!id) {
+        const err = new Error('Failed to store conversation: no id returned from INSERT');
+        logger
+          .withError(err)
+          .withMetadata({
+            profile_id: profileId,
+            channel_id: channelId,
+            user_id: userId,
+          })
+          .error('Failed to store conversation: no id returned from INSERT');
+        throw err;
+      }
 
       logger
         .withMetadata({

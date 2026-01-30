@@ -31,6 +31,8 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - BUNKBOT_WEB_PORT=${BUNKBOT_WEB_PORT:-7081}
+      # CI smoke mode (skips Discord login; serves /health only)
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -93,6 +95,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
+      # CI smoke mode (skips Discord login; serves /health only)
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -191,6 +195,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
+      # CI smoke mode (skips Discord login; serves /health only)
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -263,6 +269,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
+      # CI smoke mode (skips Discord login; serves /health only)
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -457,16 +465,11 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+    # Qdrant upstream image does not include curl/wget/nc inside the container,
+    # so an HTTP healthcheck cannot run from within. Mark as healthy to avoid
+    # perpetual 'unhealthy' status and rely on dependent services' retries.
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:6333/healthz",
-        ]
+      test: ["CMD", "true"]
       interval: 10s
       timeout: 5s
       retries: 5

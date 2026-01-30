@@ -2,7 +2,7 @@
 # This Dockerfile expects dist/ folders to already exist (built by CI)
 # Skips TypeScript compilation for faster builds
 
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 
 # Build-time arguments for non-secret environment variables
 ARG DEBUG_MODE=false

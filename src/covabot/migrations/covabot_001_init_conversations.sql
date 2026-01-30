@@ -19,20 +19,20 @@ CREATE TABLE IF NOT EXISTS covabot_conversations (
 );
 
 -- Indexes for efficient lookups
-CREATE INDEX IF NOT EXISTS idx_conversations_user_created 
+CREATE INDEX IF NOT EXISTS idx_conversations_user_created
   ON covabot_conversations(user_id, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_conversations_channel_created 
+CREATE INDEX IF NOT EXISTS idx_conversations_channel_created
   ON covabot_conversations(channel_id, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_conversations_profile 
+CREATE INDEX IF NOT EXISTS idx_conversations_profile
   ON covabot_conversations(profile_id);
 
-CREATE INDEX IF NOT EXISTS idx_conversations_metadata 
+CREATE INDEX IF NOT EXISTS idx_conversations_metadata
   ON covabot_conversations USING GIN(metadata);
 
 -- Index for TTL cleanup queries
-CREATE INDEX IF NOT EXISTS idx_conversations_created_at 
+CREATE INDEX IF NOT EXISTS idx_conversations_created_at
   ON covabot_conversations(created_at);
 
 -- User facts table (learned information about users)
@@ -49,10 +49,10 @@ CREATE TABLE IF NOT EXISTS covabot_user_facts (
   UNIQUE(profile_id, user_id, fact_type, fact_key)
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_facts_profile_user 
+CREATE INDEX IF NOT EXISTS idx_user_facts_profile_user
   ON covabot_user_facts(profile_id, user_id);
 
-CREATE INDEX IF NOT EXISTS idx_user_facts_type 
+CREATE INDEX IF NOT EXISTS idx_user_facts_type
   ON covabot_user_facts(fact_type);
 
 -- Personality evolution tracking
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS covabot_personality_evolution (
   changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_personality_evolution_profile 
+CREATE INDEX IF NOT EXISTS idx_personality_evolution_profile
   ON covabot_personality_evolution(profile_id, changed_at DESC);
 
 -- Social battery state per channel
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS covabot_social_battery (
   PRIMARY KEY (profile_id, channel_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_social_battery_last_message 
+CREATE INDEX IF NOT EXISTS idx_social_battery_last_message
   ON covabot_social_battery(last_message_at);
 
 -- Keyword interest tracking
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS covabot_keyword_interests (
   PRIMARY KEY (profile_id, keyword)
 );
 
-CREATE INDEX IF NOT EXISTS idx_keyword_interests_profile 
+CREATE INDEX IF NOT EXISTS idx_keyword_interests_profile
   ON covabot_keyword_interests(profile_id);
 
 -- Function to auto-update updated_at timestamp
@@ -103,19 +103,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Triggers for auto-updating timestamps
-CREATE TRIGGER update_conversations_updated_at 
+-- Note: PostgreSQL does not have CREATE TRIGGER IF NOT EXISTS,
+-- so we drop and recreate for true idempotency
+DROP TRIGGER IF EXISTS update_conversations_updated_at ON covabot_conversations;
+CREATE TRIGGER update_conversations_updated_at
   BEFORE UPDATE ON covabot_conversations
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_user_facts_updated_at 
+DROP TRIGGER IF EXISTS update_user_facts_updated_at ON covabot_user_facts;
+CREATE TRIGGER update_user_facts_updated_at
   BEFORE UPDATE ON covabot_user_facts
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Migration tracking
-CREATE TABLE IF NOT EXISTS schema_migrations (
-  version VARCHAR(50) PRIMARY KEY,
-  applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO schema_migrations (version) VALUES ('covabot_001_init_conversations')
-ON CONFLICT (version) DO NOTHING;

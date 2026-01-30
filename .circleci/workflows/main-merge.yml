@@ -16,9 +16,11 @@ executors:
     docker:
       - image: cimg/base:stable
     resource_class: medium
-  runner:
-    machine: true
-    resource_class: starbunk-runner
+  # runner:
+  #   machine:
+  #     image: ubuntu-2404:current
+  #   resource_class: medium
+  # Note: Self-hosted runner disabled. Uncomment and configure if needed.
 
 commands:
   setup_npm_cache:
@@ -367,7 +369,6 @@ workflows:
           name: publish_bunkbot
           app_name: bunkbot
           dockerfile: "./src/bunkbot/Dockerfile.ci"
-          context: github-container-registry
           requires:
             - test
             - build
@@ -375,7 +376,6 @@ workflows:
           name: publish_bluebot
           app_name: bluebot
           dockerfile: "./src/bluebot/Dockerfile.ci"
-          context: github-container-registry
           requires:
             - test
             - build
@@ -383,7 +383,6 @@ workflows:
           name: publish_covabot
           app_name: covabot
           dockerfile: "./src/covabot/Dockerfile.ci"
-          context: github-container-registry
           requires:
             - test
             - build
@@ -391,7 +390,6 @@ workflows:
           name: publish_djcova
           app_name: djcova
           dockerfile: "./src/djcova/Dockerfile.ci"
-          context: github-container-registry
           requires:
             - test
             - build
