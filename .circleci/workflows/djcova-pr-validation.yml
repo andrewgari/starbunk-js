@@ -16,7 +16,7 @@ executors:
 
 commands:
   setup_npm_cache:
-    description: "Install npm dependencies with caching"
+    description: 'Install npm dependencies with caching'
     steps:
       - restore_cache:
           keys:
@@ -38,7 +38,7 @@ commands:
             - node_modules
 
   persist_build_artifacts:
-    description: "Compress and persist build artifacts to workspace"
+    description: 'Compress and persist build artifacts to workspace'
     steps:
       - run:
           name: Compress build artifacts
@@ -58,7 +58,7 @@ commands:
             - build-artifacts.tar.gz
 
   attach_build_artifacts:
-    description: "Attach and extract build artifacts from workspace"
+    description: 'Attach and extract build artifacts from workspace'
     steps:
       - attach_workspace:
           at: .
@@ -67,7 +67,7 @@ commands:
           command: tar -xzf build-artifacts.tar.gz
 
   setup_docker_cli:
-    description: "Ensure Docker CLI is available"
+    description: 'Ensure Docker CLI is available'
     steps:
       - run:
           name: Ensure Docker CLI is available
@@ -92,7 +92,7 @@ jobs:
   djcova_test:
     executor: node22
     environment:
-      SKIP_YTDLP_TESTS: "true"
+      SKIP_YTDLP_TESTS: 'true'
     steps:
       - checkout
       - setup_npm_cache
@@ -104,7 +104,7 @@ jobs:
     executor: node22
     environment:
       APP: djcova
-      DOCKERFILE: "./src/djcova/Dockerfile.ci"
+      DOCKERFILE: './src/djcova/Dockerfile.ci'
     steps:
       - checkout
       - attach_build_artifacts
