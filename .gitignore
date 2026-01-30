@@ -153,10 +153,6 @@ archive/
 # Ignore archived GitHub workflows
 .github/workflows/archive/
 
-# Agent definitions and command templates (do not commit)
-.github/agents/
-.github/commands/
-
 # Cypress
 cypress/screenshots/
 cypress/videos/
@@ -201,9 +197,7 @@ scripts/*
 !docs/DOCKER_BUILD_OPTIMIZATION.md
 !docs/DOCKER_COMPOSE_AUDIT.md
 !docs/branch-protection.md
-
-# Ignore agent system docs in .github
-.github/README.md
+!docs/AGENTS.md
 !docs/ISSUE_*.md
 
 # Build artifacts and temporary files
@@ -233,6 +227,11 @@ build-artifacts.tar.gz
 !.github/ISSUE_TEMPLATE/*.md
 !.github/BRANCH_NAMING_CONVENTION.md
 !.github/COMMIT_TEMPLATE
+.github/agents
+.github/agents/**
+.github/commands
+.github/commands/**
+
 .roomodes
 
 .gemini/
@@ -246,5 +245,4 @@ n8nac-instance.json
 Untitled-1769734935380.n8n
 .vscode/n8n.code-snippets
 
-.n8n
-.n8n/**/*
+.n8n/**
