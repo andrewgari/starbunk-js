@@ -10,7 +10,6 @@ import { logLayer } from '../../observability/log-layer';
 import { getTraceService } from '../../observability/trace-service';
 
 const logger = logLayer.withPrefix('PostgresService');
-const tracing = getTraceService('database');
 
 export interface PostgresConfig {
   host: string;
@@ -50,6 +49,8 @@ export class PostgresService {
    * Initialize the database connection pool and run migrations
    */
   async initialize(): Promise<void> {
+    const serviceName = process.env.SERVICE_NAME || 'database';
+    const tracing = getTraceService(serviceName);
     const span = tracing.startSpan('postgres.initialize', {
       'db.host': this.config.host,
       'db.port': this.config.port,
@@ -118,6 +119,8 @@ export class PostgresService {
       throw new Error('PostgreSQL pool not initialized. Call initialize() first.');
     }
 
+    const serviceName = process.env.SERVICE_NAME || 'database';
+    const tracing = getTraceService(serviceName);
     const span = tracing.startSpan('postgres.query', {
       'db.system': 'postgresql',
       'db.statement': text.substring(0, 200),
@@ -173,6 +176,8 @@ export class PostgresService {
    * Execute a query within a transaction
    */
   async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
+    const serviceName = process.env.SERVICE_NAME || 'database';
+    const tracing = getTraceService(serviceName);
     const span = tracing.startSpan('postgres.transaction', {
       'db.system': 'postgresql',
     });
@@ -213,6 +218,8 @@ export class PostgresService {
    * Run database schema migrations from SQL files
    */
   private async runMigrations(): Promise<void> {
+    const serviceName = process.env.SERVICE_NAME || 'database';
+    const tracing = getTraceService(serviceName);
     const span = tracing.startSpan('postgres.runMigrations', {
       'db.system': 'postgresql',
     });

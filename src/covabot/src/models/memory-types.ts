@@ -2,7 +2,10 @@
  * Core TypeScript interfaces for CovaBot v2 memory and personality system
  */
 
-// Database row types (PostgreSQL schema)
+// Database row types
+// Note: ConversationRow is aligned with PostgreSQL schema (UUID IDs, timestamptz columns).
+// Other row types (UserFactRow, PersonalityEvolutionRow, etc.) require similar updates
+// to match the PostgreSQL schema defined in src/covabot/migrations/covabot_001_init_conversations.sql
 export interface ConversationRow {
   id: string; // UUID
   profile_id: string;
