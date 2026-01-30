@@ -240,4 +240,5 @@ n8nac-instance.json
 Untitled-1769734935380.n8n
 .vscode/n8n.code-snippets
 
-.n8n/**
+.n8n
+.n8n/**/*
