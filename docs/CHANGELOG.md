@@ -1,3 +1,9 @@
+## [1.28.0](https://github.com/andrewgari/starbunk-js/compare/v1.27.1...v1.28.0) (2026-01-30)
+
+### Features
+
+* **covabot:** PostgreSQL conversation memory implementation (Issue [#516](https://github.com/andrewgari/starbunk-js/issues/516)) ([#569](https://github.com/andrewgari/starbunk-js/issues/569)) ([9cbaac4](https://github.com/andrewgari/starbunk-js/commit/9cbaac4419a503b0e217413d25c1a7458990c278))
+
 ## [1.27.1](https://github.com/andrewgari/starbunk-js/compare/v1.27.0...v1.27.1) (2026-01-29)
 
 ### Bug Fixes

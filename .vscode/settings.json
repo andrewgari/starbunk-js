@@ -1,5 +1,11 @@
 {
-    "snyk.advanced.organization": "fd7ad408-57b5-4e14-b998-1a2af45973a1",
-    "snyk.advanced.autoSelectOrganization": true,
-    "vitest.disableWorkspaceWarning": true
+  "snyk.advanced.organization": "fd7ad408-57b5-4e14-b998-1a2af45973a1",
+  "snyk.advanced.autoSelectOrganization": true,
+  "vitest.disableWorkspaceWarning": true,
+  "chat.tools.terminal.autoApprove": {
+    "/^git -C /home/andrewgari/Repos/starbunk-js fetch origin --prune$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
 }
