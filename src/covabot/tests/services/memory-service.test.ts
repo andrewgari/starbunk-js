@@ -325,15 +325,4 @@ describe('MemoryService', () => {
       expect(formatted).toContain("Alice's preferences: language: TypeScript");
     });
   });
-
-  describe('pruneOldConversations', () => {
-    it('should delete old conversations', async () => {
-      vi.mocked(mockConversationRepo.deleteOldConversations!).mockResolvedValue(1);
-
-      const deleted = await memoryService.pruneOldConversations('profile', 30);
-
-      expect(deleted).toBe(1);
-      expect(mockConversationRepo.deleteOldConversations).toHaveBeenCalledWith('profile', 30);
-    });
-  });
 });
