@@ -516,4 +516,197 @@ describe('DJCova Resource Lifecycle Tests', () => {
 			expect(totalListeners).toBe(3);
 		});
 	});
+
+	describe('Volume Control During Lifecycle', () => {
+		it('should maintain volume settings across play/stop cycles', async () => {
+			djCova.setVolume(75);
+			expect(djCova.getVolume()).toBe(75);
+
+			for (let i = 0; i < 10; i++) {
+				await djCova.play(TEST_URL);
+				expect(djCova.getVolume()).toBe(75);
+				djCova.stop();
+			}
+
+			expect(djCova.getVolume()).toBe(75);
+		});
+
+		it('should apply volume to new resources', async () => {
+			djCova.setVolume(50);
+			await djCova.play(TEST_URL);
+
+			const djCovaAny = djCova as any;
+			const resource = djCovaAny.resource;
+			expect(resource).toBeDefined();
+			expect(resource.volume).toBeDefined();
+		});
+
+		it('should handle volume changes during playback', async () => {
+			await djCova.play(TEST_URL);
+			
+			djCova.setVolume(30);
+			expect(djCova.getVolume()).toBe(30);
+
+			djCova.setVolume(80);
+			expect(djCova.getVolume()).toBe(80);
+
+			djCova.stop();
+		});
+
+		it('should clamp volume to valid range', () => {
+			djCova.setVolume(-10);
+			expect(djCova.getVolume()).toBe(0);
+
+			djCova.setVolume(150);
+			expect(djCova.getVolume()).toBe(100);
+		});
+	});
+
+	describe('Notification Callback Lifecycle', () => {
+		it('should invoke notification callback on idle disconnect', async () => {
+			vi.useFakeTimers();
+			const mockCallback = vi.fn();
+
+			djCova.initializeIdleManagement('test-guild', 'test-channel', mockCallback);
+			await djCova.play(TEST_URL);
+
+			const audioPlayer = djCova.getPlayer();
+			audioPlayer.emit(AudioPlayerStatus.Idle);
+
+			// Fast-forward past idle timeout
+			vi.advanceTimersByTime(2000);
+			await Promise.resolve();
+
+			expect(mockCallback).toHaveBeenCalled();
+
+			vi.useRealTimers();
+		});
+
+		it('should handle callback errors gracefully', async () => {
+			vi.useFakeTimers();
+			const errorCallback = vi.fn().mockRejectedValue(new Error('Callback failed'));
+
+			djCova.initializeIdleManagement('test-guild', 'test-channel', errorCallback);
+			await djCova.play(TEST_URL);
+
+			const audioPlayer = djCova.getPlayer();
+			audioPlayer.emit(AudioPlayerStatus.Idle);
+
+			vi.advanceTimersByTime(2000);
+			await Promise.resolve();
+
+			// Should not throw
+			expect(errorCallback).toHaveBeenCalled();
+
+			vi.useRealTimers();
+		});
+
+		it('should support reinitialization with different callbacks', async () => {
+			const callback1 = vi.fn();
+			const callback2 = vi.fn();
+
+			djCova.initializeIdleManagement('guild-1', 'channel-1', callback1);
+			djCova.initializeIdleManagement('guild-2', 'channel-2', callback2);
+
+			// Only callback2 should be active now
+			const djCovaAny = djCova as any;
+			expect(djCovaAny.notificationCallback).toBe(callback2);
+		});
+
+		it('should work without notification callback', () => {
+			expect(() => {
+				djCova.initializeIdleManagement('test-guild', 'test-channel');
+			}).not.toThrow();
+
+			const djCovaAny = djCova as any;
+			expect(djCovaAny.notificationCallback).toBeNull();
+		});
+	});
+
+	describe('Player Event Handler Integration', () => {
+		it('should reset idle timer on Playing event', async () => {
+			vi.useFakeTimers();
+			djCova.initializeIdleManagement('test-guild', 'test-channel');
+
+			const audioPlayer = djCova.getPlayer();
+			
+			// Start idle timer
+			audioPlayer.emit(AudioPlayerStatus.Idle);
+			
+			const djCovaAny = djCova as any;
+			expect(djCovaAny.idleManager.isIdleTimerActive()).toBe(true);
+
+			// Playing should reset the timer
+			audioPlayer.emit(AudioPlayerStatus.Playing);
+			expect(djCovaAny.idleManager.isIdleTimerActive()).toBe(false);
+
+			vi.useRealTimers();
+		});
+
+		it('should start idle timer on Idle event', async () => {
+			djCova.initializeIdleManagement('test-guild', 'test-channel');
+
+			const audioPlayer = djCova.getPlayer();
+			const djCovaAny = djCova as any;
+
+			// Initially not active
+			expect(djCovaAny.idleManager.isIdleTimerActive()).toBe(false);
+
+			// Idle event should start timer
+			audioPlayer.emit(AudioPlayerStatus.Idle);
+			expect(djCovaAny.idleManager.isIdleTimerActive()).toBe(true);
+		});
+
+		it('should cleanup on error event', async () => {
+			await djCova.play(TEST_URL);
+
+			const djCovaAny = djCova as any;
+			expect(djCovaAny.ytdlpProcess).not.toBeNull();
+
+			const audioPlayer = djCova.getPlayer();
+			
+			// Add error listener to prevent uncaught error
+			audioPlayer.on('error', () => {});
+			
+			// Trigger error - should cleanup resources
+			audioPlayer.emit('error', new Error('Playback error'));
+
+			expect(djCovaAny.ytdlpProcess).toBeNull();
+		});
+	});
+
+	describe('Resource State Consistency', () => {
+		it('should maintain consistent state after rapid operations', async () => {
+			// Rapid sequence of operations
+			djCova.initializeIdleManagement('guild-1', 'channel-1');
+			await djCova.play(TEST_URL);
+			djCova.setVolume(50);
+			djCova.stop();
+			djCova.setVolume(75);
+			djCova.initializeIdleManagement('guild-2', 'channel-2');
+			await djCova.play(TEST_URL);
+			djCova.stop();
+
+			const djCovaAny = djCova as any;
+			expect(djCovaAny.ytdlpProcess).toBeNull();
+			expect(djCovaAny.resource).toBeUndefined();
+			expect(djCova.getVolume()).toBe(75);
+		});
+
+		it('should handle play during existing playback', async () => {
+			await djCova.play(TEST_URL);
+			const firstProcessCall = vi.mocked(getYouTubeAudioStream).mock.results[0];
+
+			// Play again without stopping
+			await djCova.play(TEST_URL);
+			const secondProcessCall = vi.mocked(getYouTubeAudioStream).mock.results[1];
+
+			// First process should have been killed
+			expect(firstProcessCall.value.process.kill).toHaveBeenCalledWith('SIGKILL');
+			
+			// New process should be active
+			const djCovaAny = djCova as any;
+			expect(djCovaAny.ytdlpProcess).toBe(secondProcessCall.value.process);
+		});
+	});
 });
