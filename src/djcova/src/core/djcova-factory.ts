@@ -1,7 +1,17 @@
 import { DJCovaService } from '@/services/dj-cova-service';
 import { DJCova } from '@/core/dj-cova';
 
-export function createDJCovaService(): DJCovaService {
-  const djCova = new DJCova();
-  return new DJCovaService(djCova);
+// Singleton instance shared across all commands
+let serviceInstance: DJCovaService | null = null;
+
+/**
+ * Get the shared DJCovaService singleton instance.
+ * This ensures all music commands operate on the same player state.
+ */
+export function getDJCovaService(): DJCovaService {
+  if (!serviceInstance) {
+    const djCova = new DJCova();
+    serviceInstance = new DJCovaService(djCova);
+  }
+  return serviceInstance;
 }
