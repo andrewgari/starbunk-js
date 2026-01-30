@@ -32,7 +32,7 @@ services:
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - BUNKBOT_WEB_PORT=${BUNKBOT_WEB_PORT:-7081}
       # CI smoke mode (skips Discord login; serves /health only)
-      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-true}
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -96,7 +96,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       # CI smoke mode (skips Discord login; serves /health only)
-      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-true}
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -197,7 +197,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       # CI smoke mode (skips Discord login; serves /health only)
-      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-true}
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -271,7 +271,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       # CI smoke mode (skips Discord login; serves /health only)
-      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-true}
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
