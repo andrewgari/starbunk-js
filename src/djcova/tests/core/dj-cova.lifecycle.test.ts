@@ -3,7 +3,6 @@
  */
 
 import { vi } from 'vitest';
-import * as Voice from '@discordjs/voice';
 import { PassThrough } from 'stream';
 import { DJCova } from '../../src/core/dj-cova';
 
@@ -15,20 +14,26 @@ vi.mock('../../src/utils/ytdlp', () => ({
   })),
 }));
 
+// Stub demuxProbe from @discordjs/voice so play() can create an audio resource
+// without performing a real probe. This also avoids ESM spy limitations by
+// providing a mocked implementation at module load time.
+vi.mock('@discordjs/voice', async importOriginal => {
+  const actual = await importOriginal<typeof import('@discordjs/voice')>();
+
+  return {
+    ...actual,
+    demuxProbe: vi.fn(async (stream: unknown) => ({
+      stream,
+      type: actual.StreamType.Opus,
+    })),
+  };
+});
+
 describe('DJCova Lifecycle - 100 play/stop cycles', () => {
   let djCova: DJCova;
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Stub demuxProbe so play() can create an audio resource without real probing
-    vi.spyOn(Voice, 'demuxProbe').mockImplementation(async (stream: unknown) => ({
-      // Pass through the provided stream and use a known stream type
-      // This is sufficient for our lifecycle testing needs
-      stream,
-      type: Voice.StreamType.Opus,
-    }));
-
     djCova = new DJCova();
   });
 
