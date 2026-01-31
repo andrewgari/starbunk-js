@@ -3,18 +3,18 @@
  * Incorporates traditional prompts with modern vector-saliency and social pacing.
  */
 export interface SimulacrumProfile {
-  id: string;                // internal ID (e.g., 'digital-cova')
-  displayName: string;       // Discord nickname
-  avatarUrl?: string;        // Bot avatar URL for webhook messages
+  id: string; // internal ID (e.g., 'digital-cova')
+  displayName: string; // Discord nickname
+  avatarUrl?: string; // Bot avatar URL for webhook messages
 
   // 1. Identity & Style
   identity: {
-    systemPrompt: string;    // Core persona instructions
-    traits: string[];        // Array of traits for dynamic prompt injection
-    interests: string[];     // Topics the bot is interested in (for saliency seeding)
+    systemPrompt: string; // Core persona instructions
+    traits: string[]; // Array of traits for dynamic prompt injection
+    interests: string[]; // Topics the bot is interested in (for saliency seeding)
     speechPatterns: {
-      lowercase: boolean;    // Force lowercase (human-like quirk)
-      sarcasmLevel: number;  // 0.0 - 1.0
+      lowercase: boolean; // Force lowercase (human-like quirk)
+      sarcasmLevel: number; // 0.0 - 1.0
       technicalBias: number; // 0.0 - 1.0
     };
   };
@@ -23,20 +23,20 @@ export interface SimulacrumProfile {
   saliency: {
     qdrantCollection: string; // Which interest-vector set to use
     interestThreshold: number; // 0.0 to 1.0 (Higher = more selective)
-    randomChimeRate: number;   // 0.0 to 0.1 (Probability to "lurk" and speak anyway)
+    randomChimeRate: number; // 0.0 to 0.1 (Probability to "lurk" and speak anyway)
   };
 
   // 3. Social Awareness (The Battery)
   socialBattery: {
-    maxMessages: number;     // Burst limit (e.g., 5 messages)
-    windowMinutes: number;   // Recharge time (e.g., 10 minutes)
+    maxMessages: number; // Burst limit (e.g., 5 messages)
+    windowMinutes: number; // Recharge time (e.g., 10 minutes)
     cooldownSeconds: number; // Forced gap between any two messages
   };
 
   // 4. LLM Generation
   llmConfig: {
-    model: string;           // e.g., 'gpt-4o'
-    temperature: number;     // 0.3 - 0.5 (Keep low for consistent personality)
+    model: string; // e.g., 'gpt-4o'
+    temperature: number; // 0.3 - 0.5 (Keep low for consistent personality)
     maxTokens: number;
   };
 }
@@ -46,7 +46,7 @@ export interface SimulacrumProfile {
  */
 export interface SaliencyResult {
   shouldRespond: boolean;
-  score: number;           // 0.0 - 1.0 similarity score
+  score: number; // 0.0 - 1.0 similarity score
   reason: 'interest' | 'random_chime' | 'direct_mention' | 'below_threshold';
   matchedInterest?: string; // The interest topic that triggered if any
 }
@@ -56,8 +56,8 @@ export interface SaliencyResult {
  */
 export interface SocialBatteryResult {
   canSpeak: boolean;
-  currentCount: number;       // Messages sent in current window
-  maxAllowed: number;         // Maximum messages allowed
+  currentCount: number; // Messages sent in current window
+  maxAllowed: number; // Maximum messages allowed
   windowResetSeconds: number; // Seconds until window resets
   reason: 'ok' | 'rate_limited' | 'cooldown';
 }
@@ -83,7 +83,7 @@ export const IGNORE_CONVERSATION_MARKER = '<IGNORE_CONVERSATION>';
 export function buildSelectiveObserverPrompt(
   profile: SimulacrumProfile,
   saliencyScore: number,
-  channelContext?: string
+  channelContext?: string,
 ): string {
   const styleInstructions: string[] = [];
 
@@ -97,17 +97,18 @@ export function buildSelectiveObserverPrompt(
     styleInstructions.push('use technically grounded language');
   }
 
-  const traitsSection = profile.identity.traits.length > 0
-    ? `\nYour personality traits: ${profile.identity.traits.join(', ')}.`
-    : '';
+  const traitsSection =
+    profile.identity.traits.length > 0
+      ? `\nYour personality traits: ${profile.identity.traits.join(', ')}.`
+      : '';
 
-  const interestsSection = profile.identity.interests.length > 0
-    ? `\nYour areas of interest: ${profile.identity.interests.join(', ')}.`
-    : '';
+  const interestsSection =
+    profile.identity.interests.length > 0
+      ? `\nYour areas of interest: ${profile.identity.interests.join(', ')}.`
+      : '';
 
-  const styleSection = styleInstructions.length > 0
-    ? `\nStyle: ${styleInstructions.join(', ')}.`
-    : '';
+  const styleSection =
+    styleInstructions.length > 0 ? `\nStyle: ${styleInstructions.join(', ')}.` : '';
 
   return `${profile.identity.systemPrompt}
 

@@ -14,14 +14,14 @@ export class CommentConfigService {
 
   setComments(botName: string, input: string | string[]): void {
     const list = Array.isArray(input) ? input : this.parseInput(input);
-    const normalized = list.map((s) => s.trim()).filter((s) => s.length > 0);
+    const normalized = list.map(s => s.trim()).filter(s => s.length > 0);
     this.comments.set(botName, normalized);
     logger.withMetadata({ bot_name: botName, count: normalized.length }).info('Comments set');
   }
 
   appendComments(botName: string, input: string | string[]): void {
     const list = Array.isArray(input) ? input : this.parseInput(input);
-    const normalized = list.map((s) => s.trim()).filter((s) => s.length > 0);
+    const normalized = list.map(s => s.trim()).filter(s => s.length > 0);
     const existing = this.comments.get(botName) || [];
     const merged = [...existing, ...normalized];
     this.comments.set(botName, merged);
@@ -47,7 +47,10 @@ export class CommentConfigService {
 
   private parseInput(input: string): string[] {
     // Split on | or newline and collapse consecutive separators
-    return input.split(/[\r\n|]+/).map((s) => s.trim()).filter((s) => s.length > 0);
+    return input
+      .split(/[\r\n|]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
   }
 }
 

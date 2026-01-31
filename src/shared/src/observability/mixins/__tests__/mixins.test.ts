@@ -8,11 +8,7 @@ describe('LogLayer Mixins', () => {
 
   beforeAll(() => {
     // Register mixins before creating LogLayer instances
-    useLogLayerMixin([
-      discordContextMixin(),
-      performanceMixin(),
-      botContextMixin(),
-    ]);
+    useLogLayerMixin([discordContextMixin(), performanceMixin(), botContextMixin()]);
   });
 
   beforeEach(() => {
@@ -103,4 +99,3 @@ describe('LogLayer Mixins', () => {
     });
   });
 });
-

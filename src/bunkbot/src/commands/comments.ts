@@ -11,67 +11,51 @@ import CommentConfigService from '@/reply-bots/services/comment-config-service';
 const commandBuilder = new SlashCommandBuilder()
   .setName('comments')
   .setDescription('Configure bot comments')
-  .addSubcommand((sub) =>
+  .addSubcommand(sub =>
     sub
       .setName('set')
       .setDescription('Set comments for a bot (overrides YAML)')
-      .addStringOption((opt) =>
-        opt
-          .setName('bot_name')
-          .setDescription('Bot name')
-          .setRequired(true)
-          .setAutocomplete(true),
+      .addStringOption(opt =>
+        opt.setName('bot_name').setDescription('Bot name').setRequired(true).setAutocomplete(true),
       )
-      .addStringOption((opt) =>
+      .addStringOption(opt =>
         opt
           .setName('comments')
           .setDescription('Comments text - use | or newline to separate')
           .setRequired(true),
       ),
   )
-  .addSubcommand((sub) =>
+  .addSubcommand(sub =>
     sub
       .setName('append')
       .setDescription('Append comments for a bot')
-      .addStringOption((opt) =>
-        opt
-          .setName('bot_name')
-          .setDescription('Bot name')
-          .setRequired(true)
-          .setAutocomplete(true),
+      .addStringOption(opt =>
+        opt.setName('bot_name').setDescription('Bot name').setRequired(true).setAutocomplete(true),
       )
-      .addStringOption((opt) =>
+      .addStringOption(opt =>
         opt
           .setName('comments')
           .setDescription('Comments text - use | or newline to separate')
           .setRequired(true),
       ),
   )
-  .addSubcommand((sub) =>
+  .addSubcommand(sub =>
     sub
       .setName('get')
       .setDescription('Get current comments for a bot')
-      .addStringOption((opt) =>
-        opt
-          .setName('bot_name')
-          .setDescription('Bot name')
-          .setRequired(true)
-          .setAutocomplete(true),
+      .addStringOption(opt =>
+        opt.setName('bot_name').setDescription('Bot name').setRequired(true).setAutocomplete(true),
       ),
   )
-  .addSubcommand((sub) =>
+  .addSubcommand(sub =>
     sub
       .setName('clear')
       .setDescription('Clear comments for a bot')
-      .addStringOption((opt) =>
-        opt
-          .setName('bot_name')
-          .setDescription('Bot name')
-          .setRequired(true)
-          .setAutocomplete(true),
+      .addStringOption(opt =>
+        opt.setName('bot_name').setDescription('Bot name').setRequired(true).setAutocomplete(true),
       ),
   )
-  .addSubcommand((sub) => sub.setName('list').setDescription('List bots and comment counts'))
+  .addSubcommand(sub => sub.setName('list').setDescription('List bots and comment counts'))
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 function validateBotExists(botName: string): boolean {
@@ -146,7 +130,7 @@ export default {
             });
             return;
           }
-          const message = `Comments for ${botName}:\n\n${list.map((c) => `- ${c}`).join('\n')}`;
+          const message = `Comments for ${botName}:\n\n${list.map(c => `- ${c}`).join('\n')}`;
           await interaction.reply({ content: message, ephemeral: true });
           break;
         }
@@ -174,7 +158,7 @@ export default {
             });
             return;
           }
-          const rows = botNames.map((name) => {
+          const rows = botNames.map(name => {
             const items = commentsSvc.getComments(name) || [];
             return `- ${name}: ${items.length} comment(s)`;
           });
@@ -202,8 +186,8 @@ export default {
     try {
       const registry = BotRegistry.getInstance();
       const choices = registry.getBotNames();
-      const filtered = choices.filter((choice) => choice.toLowerCase().includes(focusedValue));
-      await interaction.respond(filtered.map((choice) => ({ name: choice, value: choice })));
+      const filtered = choices.filter(choice => choice.toLowerCase().includes(focusedValue));
+      await interaction.respond(filtered.map(choice => ({ name: choice, value: choice })));
     } catch (error) {
       logger.withError(error).error('Error in comments command autocomplete');
       await interaction.respond([]);

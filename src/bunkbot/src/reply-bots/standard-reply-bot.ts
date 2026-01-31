@@ -15,7 +15,6 @@ export class StandardReplyBot implements ReplyBot {
     public triggers: Trigger[],
     public ignore_bots: boolean = true,
     public ignore_humans: boolean = false,
-
   ) {}
 
   get identity() {
@@ -31,9 +30,8 @@ export class StandardReplyBot implements ReplyBot {
     const botSpan = tracing.startBotEvaluation(null, this.name);
 
     // Truncate message content for logging (max 200 chars)
-    const truncatedContent = message.content.length > 200
-      ? message.content.substring(0, 200) + '...'
-      : message.content;
+    const truncatedContent =
+      message.content.length > 200 ? message.content.substring(0, 200) + '...' : message.content;
 
     const authorType: 'bot' | 'human' = message.author.bot ? 'bot' : 'human';
 
@@ -65,21 +63,23 @@ export class StandardReplyBot implements ReplyBot {
     const traceId = tracing.getTraceId(botSpan);
     const spanId = tracing.getSpanId(botSpan);
 
-    logger.withMetadata({
-      bot_name: this.name,
-      message_id: message.id,
-      author_id: message.author.id,
-      author_username: message.author.username,
-      author_type: authorType,
-      channel_id: message.channelId,
-      guild_id: message.guildId,
-      triggers_count: this.triggers.length,
-      message_content: truncatedContent,
-      message_length: message.content.length,
-      trace_id: traceId,
-      span_id: spanId,
-      ...messageContext,
-    }).debug(`Bot evaluating message`);
+    logger
+      .withMetadata({
+        bot_name: this.name,
+        message_id: message.id,
+        author_id: message.author.id,
+        author_username: message.author.username,
+        author_type: authorType,
+        channel_id: message.channelId,
+        guild_id: message.guildId,
+        triggers_count: this.triggers.length,
+        message_content: truncatedContent,
+        message_length: message.content.length,
+        trace_id: traceId,
+        span_id: spanId,
+        ...messageContext,
+      })
+      .debug(`Bot evaluating message`);
 
     // Implementation to handle the message
     for (const trigger of this.triggers) {
@@ -89,19 +89,26 @@ export class StandardReplyBot implements ReplyBot {
       const conditionDescription = trigger.metadata?.description || 'No description';
 
       // Start span for trigger evaluation
-      const triggerSpan = tracing.startTriggerEvaluation(botSpan, this.name, triggerName, conditionType);
+      const triggerSpan = tracing.startTriggerEvaluation(
+        botSpan,
+        this.name,
+        triggerName,
+        conditionType,
+      );
 
       try {
-        logger.withMetadata({
-          bot_name: this.name,
-          trigger_name: triggerName,
-          condition_type: conditionType,
-          condition_description: conditionDescription,
-          condition_details: trigger.metadata?.conditionDetails,
-          message_id: message.id,
-          trace_id: traceId,
-          span_id: tracing.getSpanId(triggerSpan),
-        }).debug(`Evaluating trigger condition`);
+        logger
+          .withMetadata({
+            bot_name: this.name,
+            trigger_name: triggerName,
+            condition_type: conditionType,
+            condition_description: conditionDescription,
+            condition_details: trigger.metadata?.conditionDetails,
+            message_id: message.id,
+            trace_id: traceId,
+            span_id: tracing.getSpanId(triggerSpan),
+          })
+          .debug(`Evaluating trigger condition`);
 
         const conditionMet = await trigger.condition(message);
         const triggerEvalDuration = Date.now() - triggerEvalStartTime;
@@ -114,14 +121,14 @@ export class StandardReplyBot implements ReplyBot {
             message.guildId,
             message.channelId,
             conditionMet ? 'matched' : 'not_matched',
-            authorType
+            authorType,
           );
           metrics.trackTriggerEvaluationDuration(
             this.name,
             triggerName,
             message.guildId,
             conditionMet ? 'matched' : 'not_matched',
-            triggerEvalDuration
+            triggerEvalDuration,
           );
         }
 
@@ -133,25 +140,29 @@ export class StandardReplyBot implements ReplyBot {
 
           const triggerTimestamp = new Date().toISOString();
 
-          logger.withMetadata({
-            bot_name: this.name,
-            trigger_name: triggerName,
-            condition_type: conditionType,
-            condition_description: conditionDescription,
-            condition_details: trigger.metadata?.conditionDetails,
-            message_id: message.id,
-            author_id: message.author.id,
-            author_username: message.author.username,
-            author_type: authorType,
-            channel_id: message.channelId,
-            guild_id: message.guildId,
-            trigger_message: truncatedContent,
-            evaluation_duration_ms: triggerEvalDuration,
-            timestamp: triggerTimestamp,
-            trace_id: traceId,
-            span_id: tracing.getSpanId(triggerSpan),
-            ...messageContext,
-          }).info(`✓ TRIGGER FIRED - WHAT: ${this.name}/${triggerName}, HOW: ${conditionDescription}, WHEN: ${triggerTimestamp}, WHO: ${message.author.username} (${authorType})`);
+          logger
+            .withMetadata({
+              bot_name: this.name,
+              trigger_name: triggerName,
+              condition_type: conditionType,
+              condition_description: conditionDescription,
+              condition_details: trigger.metadata?.conditionDetails,
+              message_id: message.id,
+              author_id: message.author.id,
+              author_username: message.author.username,
+              author_type: authorType,
+              channel_id: message.channelId,
+              guild_id: message.guildId,
+              trigger_message: truncatedContent,
+              evaluation_duration_ms: triggerEvalDuration,
+              timestamp: triggerTimestamp,
+              trace_id: traceId,
+              span_id: tracing.getSpanId(triggerSpan),
+              ...messageContext,
+            })
+            .info(
+              `✓ TRIGGER FIRED - WHAT: ${this.name}/${triggerName}, HOW: ${conditionDescription}, WHEN: ${triggerTimestamp}, WHO: ${message.author.username} (${authorType})`,
+            );
 
           // Track trigger metric
           if (message.guildId && message.channelId) {
@@ -161,7 +172,7 @@ export class StandardReplyBot implements ReplyBot {
               message.guildId,
               message.channelId,
               conditionType,
-              authorType
+              authorType,
             );
             metrics.trackUniqueUser(this.name, message.guildId, message.author.id);
           }
@@ -176,13 +187,15 @@ export class StandardReplyBot implements ReplyBot {
             'identity.duration_ms': identityDuration,
           });
 
-          logger.withMetadata({
-            bot_name: this.name,
-            trigger_name: triggerName,
-            resolved_name: identity.botName,
-            duration_ms: identityDuration,
-            trace_id: traceId,
-          }).debug(`Identity resolved`);
+          logger
+            .withMetadata({
+              bot_name: this.name,
+              trigger_name: triggerName,
+              resolved_name: identity.botName,
+              duration_ms: identityDuration,
+              trace_id: traceId,
+            })
+            .debug(`Identity resolved`);
 
           // Generate response
           const responseSpan = tracing.startResponseGeneration(triggerSpan, this.name, triggerName);
@@ -196,18 +209,19 @@ export class StandardReplyBot implements ReplyBot {
           });
 
           // Truncate response for logging (max 200 chars)
-          const truncatedResponse = response.length > 200
-            ? response.substring(0, 200) + '...'
-            : response;
+          const truncatedResponse =
+            response.length > 200 ? response.substring(0, 200) + '...' : response;
 
-          logger.withMetadata({
-            bot_name: this.name,
-            trigger_name: triggerName,
-            response_length: response.length,
-            response_content: truncatedResponse,
-            duration_ms: responseGenDuration,
-            trace_id: traceId,
-          }).debug(`Response generated`);
+          logger
+            .withMetadata({
+              bot_name: this.name,
+              trigger_name: triggerName,
+              response_length: response.length,
+              response_content: truncatedResponse,
+              duration_ms: responseGenDuration,
+              trace_id: traceId,
+            })
+            .debug(`Response generated`);
 
           // Send message
           const sendSpan = tracing.startMessageSend(triggerSpan, this.name);
@@ -236,29 +250,33 @@ export class StandardReplyBot implements ReplyBot {
             'bot.result': 'success',
           });
 
-          logger.withMetadata({
-            bot_name: this.name,
-            trigger_name: triggerName,
-            condition_type: conditionType,
-            identity_name: identity.botName,
-            message_id: message.id,
-            author_id: message.author.id,
-            author_username: message.author.username,
-            author_type: authorType,
-            channel_id: message.channelId,
-            guild_id: message.guildId,
-            trigger_message: truncatedContent,
-            response_content: truncatedResponse,
-            response_length: response.length,
-            total_duration_ms: totalDuration,
-            trigger_eval_duration_ms: triggerEvalDuration,
-            identity_duration_ms: identityDuration,
-            response_gen_duration_ms: responseGenDuration,
-            send_duration_ms: sendDuration,
-            timestamp: new Date().toISOString(),
-            trace_id: traceId,
-            span_id: spanId,
-          }).info(`✓ BOT RESPONSE SENT - Bot: ${this.name}, Trigger: ${triggerName}, Identity: ${identity.botName}, Duration: ${totalDuration}ms`);
+          logger
+            .withMetadata({
+              bot_name: this.name,
+              trigger_name: triggerName,
+              condition_type: conditionType,
+              identity_name: identity.botName,
+              message_id: message.id,
+              author_id: message.author.id,
+              author_username: message.author.username,
+              author_type: authorType,
+              channel_id: message.channelId,
+              guild_id: message.guildId,
+              trigger_message: truncatedContent,
+              response_content: truncatedResponse,
+              response_length: response.length,
+              total_duration_ms: totalDuration,
+              trigger_eval_duration_ms: triggerEvalDuration,
+              identity_duration_ms: identityDuration,
+              response_gen_duration_ms: responseGenDuration,
+              send_duration_ms: sendDuration,
+              timestamp: new Date().toISOString(),
+              trace_id: traceId,
+              span_id: spanId,
+            })
+            .info(
+              `✓ BOT RESPONSE SENT - Bot: ${this.name}, Trigger: ${triggerName}, Identity: ${identity.botName}, Duration: ${totalDuration}ms`,
+            );
 
           // Track metrics
           if (message.guildId && message.channelId) {
@@ -274,15 +292,17 @@ export class StandardReplyBot implements ReplyBot {
             'trigger.evaluation_duration_ms': triggerEvalDuration,
           });
 
-          logger.withMetadata({
-            bot_name: this.name,
-            trigger_name: triggerName,
-            condition_type: conditionType,
-            condition_description: conditionDescription,
-            message_id: message.id,
-            evaluation_duration_ms: triggerEvalDuration,
-            trace_id: traceId,
-          }).debug(`✗ Trigger condition not met`);
+          logger
+            .withMetadata({
+              bot_name: this.name,
+              trigger_name: triggerName,
+              condition_type: conditionType,
+              condition_description: conditionDescription,
+              message_id: message.id,
+              evaluation_duration_ms: triggerEvalDuration,
+              trace_id: traceId,
+            })
+            .debug(`✗ Trigger condition not met`);
         }
       } catch (error) {
         const triggerEvalDuration = Date.now() - triggerEvalStartTime;
@@ -293,15 +313,18 @@ export class StandardReplyBot implements ReplyBot {
           'trigger.evaluation_duration_ms': triggerEvalDuration,
         });
 
-        logger.withError(error).withMetadata({
-          bot_name: this.name,
-          trigger_name: triggerName,
-          condition_type: conditionType,
-          message_id: message.id,
-          guild_id: message.guildId,
-          evaluation_duration_ms: triggerEvalDuration,
-          trace_id: traceId,
-        }).error(`⚠ Error evaluating trigger`);
+        logger
+          .withError(error)
+          .withMetadata({
+            bot_name: this.name,
+            trigger_name: triggerName,
+            condition_type: conditionType,
+            message_id: message.id,
+            guild_id: message.guildId,
+            evaluation_duration_ms: triggerEvalDuration,
+            trace_id: traceId,
+          })
+          .error(`⚠ Error evaluating trigger`);
 
         // Track error metrics
         if (message.guildId && message.channelId) {
@@ -313,14 +336,14 @@ export class StandardReplyBot implements ReplyBot {
             message.guildId,
             message.channelId,
             'error',
-            authorType
+            authorType,
           );
           metrics.trackTriggerEvaluationDuration(
             this.name,
             triggerName,
             message.guildId,
             'error',
-            triggerEvalDuration
+            triggerEvalDuration,
           );
         }
       }
@@ -332,11 +355,13 @@ export class StandardReplyBot implements ReplyBot {
       'bot.triggers_evaluated': this.triggers.length,
     });
 
-    logger.withMetadata({
-      bot_name: this.name,
-      message_id: message.id,
-      triggers_evaluated: this.triggers.length,
-      trace_id: traceId,
-    }).debug(`No triggers matched`);
+    logger
+      .withMetadata({
+        bot_name: this.name,
+        message_id: message.id,
+        triggers_evaluated: this.triggers.length,
+        trace_id: traceId,
+      })
+      .debug(`No triggers matched`);
   }
 }

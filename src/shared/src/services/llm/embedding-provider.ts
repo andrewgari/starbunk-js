@@ -86,7 +86,7 @@ export function findTopKSimilar(
   candidates: { id: string; vector: number[] }[],
   k: number = 5,
 ): { id: string; score: number }[] {
-  const scored = candidates.map((c) => ({
+  const scored = candidates.map(c => ({
     id: c.id,
     score: cosineSimilarity(queryVector, c.vector),
   }));
@@ -95,4 +95,3 @@ export function findTopKSimilar(
 
   return scored.slice(0, k);
 }
-

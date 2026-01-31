@@ -31,4 +31,3 @@ export function setupBlueBotLogging() {
     strategyMixin() as unknown as LogLayerMixinRegistration,
   ]);
 }
-

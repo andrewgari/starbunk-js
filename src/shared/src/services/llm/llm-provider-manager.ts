@@ -54,10 +54,12 @@ export class LlmProviderManager {
     if (this.providers.length === 0) {
       logger.warn('No LLM providers configured! LLM features will not work.');
     } else {
-      logger.withMetadata({
-        providers: this.providers.map((p) => p.name),
-        primary: this.providers[0]?.name,
-      }).info('LLM providers initialized');
+      logger
+        .withMetadata({
+          providers: this.providers.map(p => p.name),
+          primary: this.providers[0]?.name,
+        })
+        .info('LLM providers initialized');
     }
   }
 
@@ -80,7 +82,7 @@ export class LlmProviderManager {
    */
   async generateCompletion(
     messages: LlmMessage[],
-    options: LlmCompletionOptions
+    options: LlmCompletionOptions,
   ): Promise<LlmCompletionResult> {
     if (this.providers.length === 0) {
       throw new Error('No LLM providers available');
@@ -95,9 +97,12 @@ export class LlmProviderManager {
         return result;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        logger.withError(lastError).withMetadata({
-          provider: provider.name,
-        }).warn('Provider failed, trying next');
+        logger
+          .withError(lastError)
+          .withMetadata({
+            provider: provider.name,
+          })
+          .warn('Provider failed, trying next');
       }
     }
 
@@ -111,4 +116,3 @@ export class LlmProviderManager {
     return this.providers.length > 0;
   }
 }
-
