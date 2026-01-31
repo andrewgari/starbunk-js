@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { PlayerState, InvalidStateTransitionError } from '../../src/core/player-state';
+import {
+  PlayerState,
+  PlayerStateValue,
+  InvalidStateTransitionError,
+} from '../../src/core/player-state';
 
 describe('PlayerState - State Machine Transitions', () => {
   let stateMachine: PlayerState;
@@ -392,7 +396,7 @@ describe('PlayerState - State Machine Transitions', () => {
       it('should allow event listeners to continue working after reset', () => {
         // Arrange
         let callCount = 0;
-        const listener = () => {
+        const listener = (_state: PlayerStateValue) => {
           callCount++;
         };
         stateMachine.on('state-changed', listener);
@@ -451,10 +455,10 @@ describe('PlayerState - State Machine Transitions', () => {
         let listener1Called = false;
         let listener2Called = false;
 
-        stateMachine.on('state-changed', () => {
+        stateMachine.on('state-changed', (_state: PlayerStateValue) => {
           listener1Called = true;
         });
-        stateMachine.on('state-changed', () => {
+        stateMachine.on('state-changed', (_state: PlayerStateValue) => {
           listener2Called = true;
         });
 
