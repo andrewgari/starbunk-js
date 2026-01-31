@@ -380,6 +380,19 @@ describe('PlayerState - State Machine Transitions', () => {
         expect(stateMachine.getState()).toBe('idle');
       });
 
+      it('should emit state-changed event on reset to idle', () => {
+        // Arrange
+        stateMachine.transitionToConnecting();
+        const listener = vi.fn<(state: PlayerStateValue) => void>();
+        stateMachine.on('state-changed', listener);
+
+        // Act
+        stateMachine.reset();
+
+        // Assert
+        expect(listener).toHaveBeenCalledWith('idle');
+      });
+
       it('should allow valid transitions after reset', () => {
         // Arrange
         stateMachine.transitionToConnecting();
@@ -406,7 +419,8 @@ describe('PlayerState - State Machine Transitions', () => {
 
         // Assert
         // The listener should have been called again, proving it wasn't cleared.
-        expect(listener).toHaveBeenCalledTimes(2);
+        // Called 3 times: 1) idle→connecting, 2) reset→idle, 3) idle→connecting
+        expect(listener).toHaveBeenCalledTimes(3);
       });
     });
 
