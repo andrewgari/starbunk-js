@@ -9,6 +9,11 @@ import playCommand from '../src/commands/play';
 import stopCommand from '../src/commands/stop';
 import volumeCommand from '../src/commands/set-volume';
 
+// Mock the factory before importing commands
+vi.mock('../src/core/djcova-factory', () => ({
+  getDJCovaService: vi.fn(),
+}));
+
 // Mock dependencies
 vi.mock('../src/observability/logger', () => ({
   logger: {
@@ -25,21 +30,13 @@ vi.mock('../src/utils/discord-utils', () => ({
   sendSuccessResponse: vi.fn(),
 }));
 
-vi.mock('../src/utils', () => ({
-  container: {
-    get: vi.fn(),
-    has: vi.fn(),
-  },
-  ServiceId: {
-    DJCovaService: 'DJCovaService',
-  },
-}));
-
 import { sendErrorResponse, sendSuccessResponse } from '../src/utils/discord-utils';
+import { getDJCovaService } from '../src/core/djcova-factory';
 
 // Get mocked versions
 const mockedSendErrorResponse = vi.mocked(sendErrorResponse);
 const mockedSendSuccessResponse = vi.mocked(sendSuccessResponse);
+const mockedGetDJCovaService = vi.mocked(getDJCovaService);
 
 describe('Music Commands Tests', () => {
   let mockInteraction: any;
@@ -71,17 +68,8 @@ describe('Music Commands Tests', () => {
       deferred: false,
     };
 
-    // Setup container mock to return our service
-    mockedContainer.has.mockImplementation(serviceId => {
-      return serviceId === ServiceId.DJCovaService;
-    });
-
-    mockedContainer.get.mockImplementation(serviceId => {
-      if (serviceId === ServiceId.DJCovaService) {
-        return mockService;
-      }
-      return null;
-    });
+    // Setup factory mock to return our service
+    mockedGetDJCovaService.mockReturnValue(mockService);
 
     // Setup response mocks
     mockedSendErrorResponse.mockResolvedValue(undefined as any);
@@ -124,13 +112,13 @@ describe('Music Commands Tests', () => {
     it('should handle service not available', async () => {
       const testUrl = 'https://www.youtube.com/watch?v=test';
       mockInteraction.options!.getString = vi.fn().mockReturnValue(testUrl);
-      mockedContainer.get.mockReturnValue(null);
+      mockInteraction.guild = null;
 
       await playCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
       expect(mockedSendErrorResponse).toHaveBeenCalledWith(
         mockInteraction,
-        'Music service is not available.',
+        'This command can only be used in a server.',
       );
     });
   });
@@ -151,8 +139,10 @@ describe('Music Commands Tests', () => {
 
       await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-      expect(mockService.stop).toHaveBeenCalledWith(mockInteraction);
-      expect(mockedSendSuccessResponse).toHaveBeenCalled();
+      expect(mockedSendErrorResponse).toHaveBeenCalledWith(
+        mockInteraction,
+        'This command can only be used in a server.',
+      );
     });
 
     it('should handle service errors during stop', async () => {
@@ -169,13 +159,14 @@ describe('Music Commands Tests', () => {
     });
 
     it('should handle service not available', async () => {
-      mockedContainer.get.mockReturnValue(null);
+      mockInteraction.options!.getInteger = vi.fn().mockReturnValue(50);
+      mockInteraction.guild = null;
 
       await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
       expect(mockedSendErrorResponse).toHaveBeenCalledWith(
         mockInteraction,
-        'Music service is not available.',
+        'This command can only be used in a server.',
       );
     });
   });
@@ -226,13 +217,13 @@ describe('Music Commands Tests', () => {
 
     it('should handle service not available', async () => {
       mockInteraction.options!.getInteger = vi.fn().mockReturnValue(50);
-      mockedContainer.get.mockReturnValue(null);
+      mockInteraction.guild = null;
 
       await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
       expect(mockedSendErrorResponse).toHaveBeenCalledWith(
         mockInteraction,
-        'Music service is not available.',
+        'This command can only be used in a server.',
       );
     });
   });

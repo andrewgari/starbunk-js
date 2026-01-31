@@ -12,12 +12,13 @@ export default {
   data: commandBuilder.toJSON(),
   async execute(interaction: ChatInputCommandInteraction) {
     try {
-      // Get shared service instance
-      const service = getDJCovaService();
-      if (!service) {
-        await sendErrorResponse(interaction, 'Music service is not available.');
+      if (!interaction.guild?.id) {
+        await sendErrorResponse(interaction, 'This command can only be used in a server.');
         return;
       }
+
+      // Get guild-specific service instance
+      const service = getDJCovaService(interaction.guild.id);
 
       // Service handles the logic
       service.stop(interaction);
