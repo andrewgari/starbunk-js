@@ -21,6 +21,20 @@ type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 export class DJCova {
   private readonly player: AudioPlayerLike;
   private currentResource: ReturnType<typeof createAudioResource> | undefined;
+
+  /**
+   * Backwards-compatible alias for the old `resource` property name.
+   * Some tests (and possibly external consumers) still access `djCovaAny.resource`.
+   */
+  public get resource(): ReturnType<typeof createAudioResource> | undefined {
+    return this.currentResource;
+  }
+
+  public set resource(
+    value: ReturnType<typeof createAudioResource> | undefined,
+  ) {
+    this.currentResource = value;
+  }
   private currentSubscription: PlayerSubscription | undefined;
   private volume: number = 10;
   private idleManager: IdleManager | null = null;
