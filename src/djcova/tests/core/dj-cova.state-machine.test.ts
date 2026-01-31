@@ -37,10 +37,25 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on idle→connecting transition', () => {
         // Arrange
-        let emittedState: string | null = null;
+        let emittedState = null;
+        stateMachine.on('state-changed', (state) => {
+          emittedState = state;
+      let emittedState: string | null = null;
+
+      beforeEach(() => {
+        emittedState = null;
         stateMachine.on('state-changed', (state: string) => {
           emittedState = state;
         });
+      });
+
+      it('should emit state-changed event on idle→connecting transition', () => {
+        // Act
+        stateMachine.transitionToConnecting();
+
+        // Assert
+        expect(emittedState).toBe('connecting');
+      });
 
         // Act
         stateMachine.transitionToConnecting();
@@ -315,8 +330,8 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on stopping→idle transition', () => {
         // Arrange
-        let emittedState: string | null = null;
-        stateMachine.on('state-changed', (state: string) => {
+        let emittedState: PlayerState['state'] | null = null;
+        stateMachine.on('state-changed', (state) => {
           emittedState = state;
         });
 
@@ -411,8 +426,8 @@ describe('PlayerState - State Machine Transitions', () => {
 
         // Act
         stateMachine.reset();
-        // Note: reset() doesn't clear listeners; they remain subscribed
-        // This is intentional to allow event-driven state recovery
+        // Note: reset() currently doesn't clear listeners; they remain subscribed.
+        // This test documents and verifies that behavior.
         stateMachine.transitionToConnecting();
 
         // Assert
