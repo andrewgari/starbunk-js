@@ -6,12 +6,7 @@
 
 import { logLayer } from '../../observability/log-layer';
 import OpenAI from 'openai';
-import {
-  LlmProvider,
-  LlmMessage,
-  LlmCompletionOptions,
-  LlmCompletionResult,
-} from './llm-provider';
+import { LlmProvider, LlmMessage, LlmCompletionOptions, LlmCompletionResult } from './llm-provider';
 
 const logger = logLayer.withPrefix('OpenAIProvider');
 
@@ -32,7 +27,7 @@ export class OpenAIProvider implements LlmProvider {
 
   async generateCompletion(
     messages: LlmMessage[],
-    options: LlmCompletionOptions
+    options: LlmCompletionOptions,
   ): Promise<LlmCompletionResult> {
     if (!this.client) {
       throw new Error('OpenAI API key not configured');
@@ -40,9 +35,11 @@ export class OpenAIProvider implements LlmProvider {
 
     const model = options.model || this.defaultModel;
 
-    logger.withMetadata({ model, messageCount: messages.length }).debug('Generating OpenAI completion');
+    logger
+      .withMetadata({ model, messageCount: messages.length })
+      .debug('Generating OpenAI completion');
 
-    const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = messages.map((m) => ({
+    const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = messages.map(m => ({
       role: m.role,
       content: m.content,
     }));
@@ -67,4 +64,3 @@ export class OpenAIProvider implements LlmProvider {
     };
   }
 }
-

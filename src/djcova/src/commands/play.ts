@@ -1,11 +1,8 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
-import { DJCovaService } from '@/services/dj-cova-service';
 import { logger } from '@/observability/logger';
-import { createDJCovaService } from '@/core/djcova-factory';
-
-const service: DJCovaService = createDJCovaService();
+import { getDJCovaService } from '@/core/djcova-factory';
 
 const commandBuilder = new SlashCommandBuilder()
   .setName('play')
@@ -36,13 +33,13 @@ export default {
     }
 
     try {
-      // Get service from container
+      // Service handles all the business logic using shared singleton instance
+      const service = getDJCovaService();
       if (!service) {
         await sendErrorResponse(interaction, 'Music service is not available.');
         return;
       }
 
-      // Service handles all the business logic
       await service.play(interaction, url);
 
       await sendSuccessResponse(interaction, `🎶 Now playing!`);

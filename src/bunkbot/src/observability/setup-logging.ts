@@ -26,4 +26,3 @@ export function setupBunkBotLogging() {
     botContextMixin() as unknown as LogLayerMixinRegistration,
   ]);
 }
-

@@ -7,7 +7,7 @@ import { LogLayerMixinAugmentType } from 'loglayer';
 export interface BotContext {
   bot_name?: string;
   response_type?: 'success' | 'error' | 'skipped';
-  [key: string]: any; // Allow additional bot-specific fields
+  [key: string]: unknown; // Allow additional bot-specific fields
 }
 
 /**
@@ -24,8 +24,11 @@ export interface IBotContextMixin<T> {
 
 // Augment the loglayer module
 declare module 'loglayer' {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface LogLayer extends IBotContextMixin<LogLayer> {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface MockLogLayer extends IBotContextMixin<MockLogLayer> {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface ILogLayer<This> extends IBotContextMixin<This> {}
 }
 
@@ -35,13 +38,13 @@ declare module 'loglayer' {
 const botContextMixinImpl: LogLayerMixin = {
   augmentationType: LogLayerMixinAugmentType.LogLayer,
 
-  augment: (prototype) => {
+  augment: prototype => {
     prototype.withBotContext = function (this: LogLayer, context: BotContext): LogLayer {
       return this.withContext(context);
     };
   },
 
-  augmentMock: (prototype) => {
+  augmentMock: prototype => {
     prototype.withBotContext = function (this: MockLogLayer, _context: BotContext): MockLogLayer {
       return this;
     };
@@ -56,4 +59,3 @@ export function botContextMixin(): LogLayerMixinRegistration {
     mixinsToAdd: [botContextMixinImpl],
   };
 }
-

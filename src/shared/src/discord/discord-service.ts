@@ -8,13 +8,13 @@ const logger = logLayer.withPrefix('DiscordService');
 export class DiscordService implements DiscordService {
   private static instance: DiscordService | null = null;
 
-	protected client: Client | null = null;
-	protected webhookService: WebhookService | null = null;
+  protected client: Client | null = null;
+  protected webhookService: WebhookService | null = null;
 
-	protected constructor() {
-		// Don't create client here - it will be set via setClient
-		logger.debug('DiscordService instance created');
-	}
+  protected constructor() {
+    // Don't create client here - it will be set via setClient
+    logger.debug('DiscordService instance created');
+  }
 
   static getInstance() {
     if (!DiscordService.instance) {
@@ -84,9 +84,7 @@ export class DiscordService implements DiscordService {
       throw new Error('Discord client not initialized. Call setClient first.');
     }
 
-    logger
-      .withMetadata({ channel_id: channelId })
-      .debug('Fetching channel');
+    logger.withMetadata({ channel_id: channelId }).debug('Fetching channel');
 
     const channel = await this.client.channels.fetch(channelId);
     if (!(channel instanceof TextChannel)) {
@@ -120,7 +118,8 @@ export class DiscordService implements DiscordService {
     const member = await this.getMemberById(guildId, memberId);
     const identity = {
       botName: member.nickname || member.user.username,
-      avatarUrl: member.displayAvatarURL({ size: 256, extension: 'png' }) ||
+      avatarUrl:
+        member.displayAvatarURL({ size: 256, extension: 'png' }) ||
         member.user.displayAvatarURL({ size: 256, extension: 'png' }),
     };
 

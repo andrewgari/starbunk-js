@@ -1,3 +1,9 @@
+## [1.29.0](https://github.com/andrewgari/starbunk-js/compare/v1.28.0...v1.29.0) (2026-01-31)
+
+### Features
+
+* **#578:** Implement PlayerState state machine for DJCova ([#597](https://github.com/andrewgari/starbunk-js/issues/597)) ([0564144](https://github.com/andrewgari/starbunk-js/commit/0564144f19ff9d480eeed72a9e76d5cbc66f8d1e)), closes [#578](https://github.com/andrewgari/starbunk-js/issues/578)
+
 ## [1.28.0](https://github.com/andrewgari/starbunk-js/compare/v1.27.1...v1.28.0) (2026-01-30)
 
 ### Features

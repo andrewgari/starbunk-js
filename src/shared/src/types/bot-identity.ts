@@ -1,5 +1,4 @@
 export type BotIdentity = {
-	botName: string;
-	avatarUrl: string;
-}
-
+  botName: string;
+  avatarUrl: string;
+};

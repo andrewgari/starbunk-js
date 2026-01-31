@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+echo "--- DEBUG INFO ---"
+echo "Current directory: $(pwd)"
+ls -la
+echo "Git log:"
+git log --oneline -n 10
+echo "--- END DEBUG INFO ---"
+
 # Check for force-all-checks label on PR
 force_all_checks=false
 if [[ -n "${CIRCLE_PULL_REQUEST:-}" ]]; then

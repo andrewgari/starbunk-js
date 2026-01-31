@@ -6,7 +6,8 @@ import { logger } from '@/observability/logger';
  */
 
 // Logical AND: All conditions must pass
-export const and = (...conditions: ((m: Message) => boolean | Promise<boolean>)[]) =>
+export const and =
+  (...conditions: ((m: Message) => boolean | Promise<boolean>)[]) =>
   async (message: Message) => {
     for (const condition of conditions) {
       const result = condition(message);
@@ -17,7 +18,8 @@ export const and = (...conditions: ((m: Message) => boolean | Promise<boolean>)[
   };
 
 // Logical OR: At least one condition must pass
-export const or = (...conditions: ((m: Message) => boolean | Promise<boolean>)[]) =>
+export const or =
+  (...conditions: ((m: Message) => boolean | Promise<boolean>)[]) =>
   async (message: Message) => {
     for (const condition of conditions) {
       const result = condition(message);
@@ -28,8 +30,8 @@ export const or = (...conditions: ((m: Message) => boolean | Promise<boolean>)[]
   };
 
 // Logical NOT: Negate a condition
-export const not = (condition: (m: Message) => boolean | Promise<boolean>) =>
-  async (message: Message) => {
+export const not =
+  (condition: (m: Message) => boolean | Promise<boolean>) => async (message: Message) => {
     const result = condition(message);
     const isMatch = result instanceof Promise ? await result : result;
     return !isMatch;
@@ -44,11 +46,13 @@ export const containsWord = (word: string) => (message: Message) => {
   const regex = new RegExp(`\\b${word}\\b`, 'i');
   const matches = regex.test(message.content);
   if (matches) {
-    logger.withMetadata({
-      word,
-      message_id: message.id,
-      message_content: message.content.substring(0, 100),
-    }).debug('Condition matched: contains_word');
+    logger
+      .withMetadata({
+        word,
+        message_id: message.id,
+        message_content: message.content.substring(0, 100),
+      })
+      .debug('Condition matched: contains_word');
   }
   return matches;
 };
@@ -57,11 +61,13 @@ export const containsWord = (word: string) => (message: Message) => {
 export const containsPhrase = (phrase: string) => (message: Message) => {
   const matches = message.content.toLowerCase().includes(phrase.toLowerCase());
   if (matches) {
-    logger.withMetadata({
-      phrase,
-      message_id: message.id,
-      message_content: message.content.substring(0, 100),
-    }).debug('Condition matched: contains_phrase');
+    logger
+      .withMetadata({
+        phrase,
+        message_id: message.id,
+        message_content: message.content.substring(0, 100),
+      })
+      .debug('Condition matched: contains_phrase');
   }
   return matches;
 };
@@ -70,11 +76,13 @@ export const containsPhrase = (phrase: string) => (message: Message) => {
 export const fromUser = (userId: string) => (message: Message) => {
   const matches = message.author.id === userId;
   if (matches) {
-    logger.withMetadata({
-      user_id: userId,
-      author_username: message.author.username,
-      message_id: message.id,
-    }).debug('Condition matched: from_user');
+    logger
+      .withMetadata({
+        user_id: userId,
+        author_username: message.author.username,
+        message_id: message.id,
+      })
+      .debug('Condition matched: from_user');
   }
   return matches;
 };
@@ -84,10 +92,12 @@ export const withChance = (percent: number) => () => {
   const roll = Math.random() * 100;
   const matches = roll <= percent;
   if (matches) {
-    logger.withMetadata({
-      percent,
-      roll: roll.toFixed(2),
-    }).debug('Condition matched: with_chance');
+    logger
+      .withMetadata({
+        percent,
+        roll: roll.toFixed(2),
+      })
+      .debug('Condition matched: with_chance');
   }
   return matches;
 };
@@ -97,11 +107,13 @@ export const matchesPattern = (pattern: string) => (message: Message) => {
   const regex = new RegExp(pattern, 'i');
   const matches = regex.test(message.content);
   if (matches) {
-    logger.withMetadata({
-      pattern,
-      message_id: message.id,
-      message_content: message.content.substring(0, 100),
-    }).debug('Condition matched: matches_pattern');
+    logger
+      .withMetadata({
+        pattern,
+        message_id: message.id,
+        message_content: message.content.substring(0, 100),
+      })
+      .debug('Condition matched: matches_pattern');
   }
   return matches;
 };

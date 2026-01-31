@@ -6,12 +6,7 @@
  */
 
 import { logLayer } from '../../observability/log-layer';
-import {
-  LlmProvider,
-  LlmMessage,
-  LlmCompletionOptions,
-  LlmCompletionResult,
-} from './llm-provider';
+import { LlmProvider, LlmMessage, LlmCompletionOptions, LlmCompletionResult } from './llm-provider';
 
 const logger = logLayer.withPrefix('GeminiProvider');
 
@@ -42,7 +37,7 @@ export class GeminiProvider implements LlmProvider {
 
   async generateCompletion(
     messages: LlmMessage[],
-    options: LlmCompletionOptions
+    options: LlmCompletionOptions,
   ): Promise<LlmCompletionResult> {
     if (!this.apiKey) {
       throw new Error('Gemini API key not configured');
@@ -50,7 +45,9 @@ export class GeminiProvider implements LlmProvider {
 
     const model = options.model || this.defaultModel;
 
-    logger.withMetadata({ model, messageCount: messages.length }).debug('Generating Gemini completion');
+    logger
+      .withMetadata({ model, messageCount: messages.length })
+      .debug('Generating Gemini completion');
 
     const GenAI = await getGeminiClient();
     const genAI = new GenAI(this.apiKey);
@@ -64,14 +61,14 @@ export class GeminiProvider implements LlmProvider {
 
     // Convert messages to Gemini format
     // Gemini expects system instructions separately and alternating user/model turns
-    const systemMessages = messages.filter((m) => m.role === 'system');
-    const chatMessages = messages.filter((m) => m.role !== 'system');
+    const systemMessages = messages.filter(m => m.role === 'system');
+    const chatMessages = messages.filter(m => m.role !== 'system');
 
     // Combine system messages into one instruction
-    const systemInstruction = systemMessages.map((m) => m.content).join('\n\n');
+    const systemInstruction = systemMessages.map(m => m.content).join('\n\n');
 
     // Build conversation history for Gemini
-    const history = chatMessages.slice(0, -1).map((m) => ({
+    const history = chatMessages.slice(0, -1).map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
@@ -102,4 +99,3 @@ export class GeminiProvider implements LlmProvider {
     };
   }
 }
-
