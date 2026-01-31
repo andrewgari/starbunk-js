@@ -5,6 +5,7 @@
 import { vi } from 'vitest';
 import { PassThrough } from 'stream';
 import { DJCova } from '../../src/core/dj-cova';
+import { getYouTubeAudioStream } from '../../src/utils/ytdlp';
 
 // Mock yt-dlp integration to avoid spawning real processes or network calls
 vi.mock('../../src/utils/ytdlp', () => ({
@@ -42,12 +43,20 @@ describe('DJCova Lifecycle - 100 play/stop cycles', () => {
     vi.restoreAllMocks();
   });
 
-  it('handles 100 sequential play/stop cycles without error', async () => {
+  it('handles 100 sequential play/stop cycles without error and kills yt-dlp processes', async () => {
     const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    const mockedGetYouTubeAudioStream = getYouTubeAudioStream as unknown as any;
 
     for (let i = 0; i < 100; i += 1) {
       await djCova.play(testUrl);
       djCova.stop();
+    }
+
+    expect(mockedGetYouTubeAudioStream).toHaveBeenCalledTimes(100);
+
+    for (const { value } of mockedGetYouTubeAudioStream.mock.results) {
+      if (!value) continue;
+      expect(value.process.kill).toHaveBeenCalledWith('SIGKILL');
     }
   });
 });
