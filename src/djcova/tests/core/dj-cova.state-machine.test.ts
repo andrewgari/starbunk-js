@@ -1,5 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { PlayerState, InvalidStateTransitionError } from '../../src/core/player-state';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  PlayerState,
+  PlayerStateValue,
+  InvalidStateTransitionError,
+} from '../../src/core/player-state';
 
 describe('PlayerState - State Machine Transitions', () => {
   let stateMachine: PlayerState;
@@ -37,17 +41,14 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on idle→connecting transition', () => {
         // Arrange
-        const listener = (state: string) => {
-          /* spy on this */
-        };
+        const listener = vi.fn<[PlayerStateValue], void>();
         stateMachine.on('state-changed', listener);
 
         // Act
-        // TODO: spy on listener call
         stateMachine.transitionToConnecting();
 
         // Assert
-        // TODO: verify listener was called with 'connecting'
+        expect(listener).toHaveBeenCalledWith('connecting');
       });
     });
 
@@ -141,24 +142,26 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on connecting→playing transition', () => {
         // Arrange
-        // TODO: spy on state-changed listener
+        const listener = vi.fn<[PlayerStateValue], void>();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToPlaying();
 
         // Assert
-        // TODO: verify listener was called with 'playing'
+        expect(listener).toHaveBeenCalledWith('playing');
       });
 
       it('should emit state-changed event on connecting→stopping transition', () => {
         // Arrange
-        // TODO: spy on state-changed listener
+        const listener = vi.fn<[PlayerStateValue], void>();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToStopping();
 
         // Assert
-        // TODO: verify listener was called with 'stopping'
+        expect(listener).toHaveBeenCalledWith('stopping');
       });
     });
 
@@ -226,13 +229,14 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on playing→stopping transition', () => {
         // Arrange
-        // TODO: spy on state-changed listener
+        const listener = vi.fn<[PlayerStateValue], void>();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToStopping();
 
         // Assert
-        // TODO: verify listener was called with 'stopping'
+        expect(listener).toHaveBeenCalledWith('stopping');
       });
     });
 
@@ -307,13 +311,14 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on stopping→idle transition', () => {
         // Arrange
-        // TODO: spy on state-changed listener
+        const listener = vi.fn<[PlayerStateValue], void>();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToIdle();
 
         // Assert
-        // TODO: verify listener was called with 'idle'
+        expect(listener).toHaveBeenCalledWith('idle');
       });
     });
 
@@ -388,10 +393,10 @@ describe('PlayerState - State Machine Transitions', () => {
         expect(stateMachine.getState()).toBe('connecting');
       });
 
-      it('should clear event listeners after reset', () => {
+      it('should allow event listeners to continue working after reset', () => {
         // Arrange
         let callCount = 0;
-        const listener = () => {
+        const listener = _state => {
           callCount++;
         };
         stateMachine.on('state-changed', listener);
@@ -400,9 +405,12 @@ describe('PlayerState - State Machine Transitions', () => {
 
         // Act
         stateMachine.reset();
+        // Note: reset() currently doesn't clear listeners; they remain subscribed.
+        // This test documents and verifies that behavior.
+        stateMachine.transitionToConnecting();
 
-        // TODO: Verify listeners are cleared or re-subscribe after reset
-        // This test may need adjustment based on actual event behavior
+        // Assert
+        expect(callCount).toBe(2); // Listener still fires after reset
       });
     });
 
@@ -447,10 +455,10 @@ describe('PlayerState - State Machine Transitions', () => {
         let listener1Called = false;
         let listener2Called = false;
 
-        stateMachine.on('state-changed', () => {
+        stateMachine.on('state-changed', _state => {
           listener1Called = true;
         });
-        stateMachine.on('state-changed', () => {
+        stateMachine.on('state-changed', _state => {
           listener2Called = true;
         });
 
@@ -464,16 +472,14 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should pass correct state value to event listener', () => {
         // Arrange
-        let emittedState: string | null = null;
-        stateMachine.on('state-changed', (state: string) => {
-          emittedState = state;
-        });
+        const listener = vi.fn<[PlayerStateValue], void>();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToConnecting();
 
         // Assert
-        expect(emittedState).toBe('connecting');
+        expect(listener).toHaveBeenCalledWith('connecting');
       });
     });
 
