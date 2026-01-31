@@ -1,9 +1,9 @@
 import {
-	createAudioPlayer,
-	createAudioResource,
-	AudioPlayerStatus,
-	demuxProbe,
-	NoSubscriberBehavior,
+  createAudioPlayer,
+  createAudioResource,
+  AudioPlayerStatus,
+  demuxProbe,
+  NoSubscriberBehavior,
 } from '@discordjs/voice';
 import { ChildProcess } from 'child_process';
 import { getYouTubeAudioStream } from '../utils/ytdlp';
@@ -157,4 +157,3 @@ export class DJCova {
 		logger.info('DJCova destroyed');
 	}
 }
-
