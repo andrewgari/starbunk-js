@@ -47,7 +47,9 @@ async function main(): Promise<void> {
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
   if (!ollamaApiUrl && !geminiApiKey && !openaiApiKey) {
-    logger.warn('No LLM provider configured. At least one of OLLAMA_API_URL, GEMINI_API_KEY, or OPENAI_API_KEY is recommended.');
+    logger.warn(
+      'No LLM provider configured. At least one of OLLAMA_API_URL, GEMINI_API_KEY, or OPENAI_API_KEY is recommended.',
+    );
   }
 
   // Build configuration
@@ -87,8 +89,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => {
+main().catch(error => {
   console.error('Unhandled error in CovaBot main:', error);
   process.exit(1);
 });
-

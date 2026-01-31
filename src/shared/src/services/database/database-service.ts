@@ -11,91 +11,91 @@ import { logLayer } from '../../observability/log-layer';
 const logger = logLayer.withPrefix('DatabaseService');
 
 export class DatabaseService {
-	private static instance: DatabaseService | null = null;
-	private db: Database.Database | null = null;
-	private dbPath: string;
+  private static instance: DatabaseService | null = null;
+  private db: Database.Database | null = null;
+  private dbPath: string;
 
-	private constructor(dbPath: string) {
-		this.dbPath = dbPath;
-	}
+  private constructor(dbPath: string) {
+    this.dbPath = dbPath;
+  }
 
-	/**
-	 * Get the singleton instance
-	 */
-	static getInstance(dbPath?: string): DatabaseService {
-		if (!DatabaseService.instance) {
-			const resolvedPath = dbPath || DatabaseService.getDefaultDbPath();
-			DatabaseService.instance = new DatabaseService(resolvedPath);
-		}
-		return DatabaseService.instance;
-	}
+  /**
+   * Get the singleton instance
+   */
+  static getInstance(dbPath?: string): DatabaseService {
+    if (!DatabaseService.instance) {
+      const resolvedPath = dbPath || DatabaseService.getDefaultDbPath();
+      DatabaseService.instance = new DatabaseService(resolvedPath);
+    }
+    return DatabaseService.instance;
+  }
 
-	/**
-	 * Get default database path
-	 */
-	static getDefaultDbPath(): string {
-		const packageRoot = path.resolve(__dirname, '../..');
-		return path.join(packageRoot, 'data', 'covabot.sqlite');
-	}
+  /**
+   * Get default database path
+   */
+  static getDefaultDbPath(): string {
+    const packageRoot = path.resolve(__dirname, '../..');
+    return path.join(packageRoot, 'data', 'covabot.sqlite');
+  }
 
-	/**
-	 * Initialize the database connection and run migrations
-	 */
-	async initialize(): Promise<void> {
-		logger.withMetadata({ db_path: this.dbPath }).info('Initializing database');
+  /**
+   * Initialize the database connection and run migrations
+   */
+  async initialize(): Promise<void> {
+    logger.withMetadata({ db_path: this.dbPath }).info('Initializing database');
 
-		// Ensure data directory exists
-		const dataDir = path.dirname(this.dbPath);
-		if (!fs.existsSync(dataDir)) {
-			logger.withMetadata({ dir: dataDir }).info('Creating data directory');
-			fs.mkdirSync(dataDir, { recursive: true });
-		}
+    // Ensure data directory exists
+    const dataDir = path.dirname(this.dbPath);
+    if (!fs.existsSync(dataDir)) {
+      logger.withMetadata({ dir: dataDir }).info('Creating data directory');
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
 
-		try {
-			this.db = new Database(this.dbPath);
-			this.db.pragma('journal_mode = WAL');
-			this.db.pragma('foreign_keys = ON');
+    try {
+      this.db = new Database(this.dbPath);
+      this.db.pragma('journal_mode = WAL');
+      this.db.pragma('foreign_keys = ON');
 
-			await this.runMigrations();
+      await this.runMigrations();
 
-			logger.info('Database initialized successfully');
-		} catch (error) {
-			logger.withError(error).error('Failed to initialize database');
-			throw error;
-		}
-	}
+      logger.info('Database initialized successfully');
+    } catch (error) {
+      logger.withError(error).error('Failed to initialize database');
+      throw error;
+    }
+  }
 
-	/**
-	 * Get the database instance
-	 */
-	getDb(): Database.Database {
-		if (!this.db) {
-			throw new Error('Database not initialized. Call initialize() first.');
-		}
-		return this.db;
-	}
+  /**
+   * Get the database instance
+   */
+  getDb(): Database.Database {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call initialize() first.');
+    }
+    return this.db;
+  }
 
-	/**
-	 * Close the database connection
-	 */
-	close(): void {
-		if (this.db) {
-			this.db.close();
-			this.db = null;
-			logger.info('Database connection closed');
-		}
-	}
+  /**
+   * Close the database connection
+   */
+  close(): void {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+      logger.info('Database connection closed');
+    }
+  }
 
-	/**
-	 * Run database schema migrations
-	 */
-	private async runMigrations(): Promise<void> {
-		logger.info('Running database migrations');
+  /**
+   * Run database schema migrations
+   */
+  private async runMigrations(): Promise<void> {
+    logger.info('Running database migrations');
 
-		const db = this.getDb();
+    const db = this.getDb();
 
-		// Create migrations tracking table
-		db.exec(`
+    // Create migrations tracking table
+    db.exec(`
       CREATE TABLE IF NOT EXISTS migrations (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL UNIQUE,
@@ -103,11 +103,11 @@ export class DatabaseService {
       )
     `);
 
-		// Define migrations
-		const migrations: { name: string; sql: string }[] = [
-			{
-				name: '001_initial_schema',
-				sql: `
+    // Define migrations
+    const migrations: { name: string; sql: string }[] = [
+      {
+        name: '001_initial_schema',
+        sql: `
           -- Conversation history
           CREATE TABLE IF NOT EXISTS conversations (
             id INTEGER PRIMARY KEY,
@@ -173,36 +173,36 @@ export class DatabaseService {
             PRIMARY KEY(profile_id, keyword)
           );
         `,
-			},
-		];
+      },
+    ];
 
-		// Apply migrations
-		const applied = db.prepare('SELECT name FROM migrations').all() as { name: string }[];
-		const appliedNames = new Set(applied.map((m) => m.name));
+    // Apply migrations
+    const applied = db.prepare('SELECT name FROM migrations').all() as { name: string }[];
+    const appliedNames = new Set(applied.map(m => m.name));
 
-		for (const migration of migrations) {
-			if (!appliedNames.has(migration.name)) {
-				logger.withMetadata({ migration: migration.name }).info('Applying migration');
+    for (const migration of migrations) {
+      if (!appliedNames.has(migration.name)) {
+        logger.withMetadata({ migration: migration.name }).info('Applying migration');
 
-				db.transaction(() => {
-					db.exec(migration.sql);
-					db.prepare('INSERT INTO migrations (name) VALUES (?)').run(migration.name);
-				})();
+        db.transaction(() => {
+          db.exec(migration.sql);
+          db.prepare('INSERT INTO migrations (name) VALUES (?)').run(migration.name);
+        })();
 
-				logger.withMetadata({ migration: migration.name }).info('Migration applied');
-			}
-		}
+        logger.withMetadata({ migration: migration.name }).info('Migration applied');
+      }
+    }
 
-		logger.info('Migrations complete');
-	}
+    logger.info('Migrations complete');
+  }
 
-	/**
-	 * Reset the singleton instance (for testing)
-	 */
-	static resetInstance(): void {
-		if (DatabaseService.instance) {
-			DatabaseService.instance.close();
-			DatabaseService.instance = null;
-		}
-	}
+  /**
+   * Reset the singleton instance (for testing)
+   */
+  static resetInstance(): void {
+    if (DatabaseService.instance) {
+      DatabaseService.instance.close();
+      DatabaseService.instance = null;
+    }
+  }
 }

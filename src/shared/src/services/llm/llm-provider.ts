@@ -1,6 +1,6 @@
 /**
  * LLM Provider Interface
- * 
+ *
  * Defines the contract for LLM providers (Ollama, Gemini, OpenAI).
  * All providers must implement this interface for consistent usage.
  */
@@ -36,7 +36,7 @@ export interface LlmProvider {
   /** Generate a chat completion */
   generateCompletion(
     messages: LlmMessage[],
-    options: LlmCompletionOptions
+    options: LlmCompletionOptions,
   ): Promise<LlmCompletionResult>;
 }
 
@@ -56,4 +56,3 @@ export interface LlmProviderConfig {
   openaiApiKey?: string;
   openaiDefaultModel?: string;
 }
-

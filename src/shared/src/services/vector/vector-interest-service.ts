@@ -73,10 +73,12 @@ export class VectorInterestService {
       return;
     }
 
-    logger.withMetadata({
-      profile_id: profile.id,
-      interests_count: interests.length,
-    }).info('Initializing interest vectors');
+    logger
+      .withMetadata({
+        profile_id: profile.id,
+        interests_count: interests.length,
+      })
+      .info('Initializing interest vectors');
 
     // Clear existing interests for this profile
     this.vectorStore.deleteCollection(profile.id, INTEREST_COLLECTION);
@@ -110,10 +112,12 @@ export class VectorInterestService {
 
     this.initialized.set(profile.id, true);
 
-    logger.withMetadata({
-      profile_id: profile.id,
-      vectors_stored: interests.length,
-    }).info('Interest vectors initialized');
+    logger
+      .withMetadata({
+        profile_id: profile.id,
+        vectors_stored: interests.length,
+      })
+      .info('Interest vectors initialized');
   }
 
   /**
@@ -150,13 +154,15 @@ export class VectorInterestService {
     // Calculate aggregate score (average of top matches, weighted)
     const score = this.calculateAggregateScore(results);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      message_preview: messageContent.substring(0, 50),
-      top_match: matches[0]?.keyword,
-      top_score: matches[0]?.semanticScore?.toFixed(3),
-      aggregate_score: score.toFixed(3),
-    }).debug('Semantic interest score calculated');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        message_preview: messageContent.substring(0, 50),
+        top_match: matches[0]?.keyword,
+        top_score: matches[0]?.semanticScore?.toFixed(3),
+        aggregate_score: score.toFixed(3),
+      })
+      .debug('Semantic interest score calculated');
 
     return {
       score,
@@ -183,7 +189,7 @@ export class VectorInterestService {
   }
 
   private resultsToMatches(results: SimilarityResult[]): VectorInterestMatch[] {
-    return results.map((r) => ({
+    return results.map(r => ({
       keyword: r.text,
       category: (r.metadata?.category as string) || null,
       weight: (r.metadata?.weight as number) || 1.0,
@@ -220,4 +226,3 @@ export class VectorInterestService {
     return this.initialized.get(profileId) || false;
   }
 }
-

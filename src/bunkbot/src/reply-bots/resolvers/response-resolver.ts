@@ -3,10 +3,12 @@ import { logger } from '@/observability/logger';
 
 export class ResponseResolver {
   static async resolve(template: string, message: Message): Promise<string> {
-    logger.withMetadata({
-      template_length: template.length,
-      has_placeholders: template.includes('{'),
-    }).debug('Resolving response template');
+    logger
+      .withMetadata({
+        template_length: template.length,
+        has_placeholders: template.includes('{'),
+      })
+      .debug('Resolving response template');
 
     let response = template;
 
@@ -17,10 +19,12 @@ export class ResponseResolver {
       const startText = words.slice(0, 3).join(' ').substring(0, 15);
       response = response.replace('{start}', `***${startText}...***`);
 
-      logger.withMetadata({
-        original_text: message.content.substring(0, 50),
-        start_text: startText,
-      }).debug('Replaced {start} placeholder');
+      logger
+        .withMetadata({
+          original_text: message.content.substring(0, 50),
+          start_text: startText,
+        })
+        .debug('Replaced {start} placeholder');
     }
 
     // Logic for the {random:min-max:char} placeholder
@@ -34,11 +38,13 @@ export class ResponseResolver {
 
       // Validate parsed numbers
       if (Number.isNaN(rawMin) || Number.isNaN(rawMax)) {
-        logger.withMetadata({
-          placeholder: match,
-          raw_min: minStr,
-          raw_max: maxStr,
-        }).warn('Invalid {random} placeholder bounds; leaving placeholder unchanged');
+        logger
+          .withMetadata({
+            placeholder: match,
+            raw_min: minStr,
+            raw_max: maxStr,
+          })
+          .warn('Invalid {random} placeholder bounds; leaving placeholder unchanged');
         return match;
       }
 
@@ -53,15 +59,17 @@ export class ResponseResolver {
       const count = Math.floor(Math.random() * (cappedMax - cappedMin + 1)) + cappedMin;
       const repeated = char.repeat(count);
 
-      logger.withMetadata({
-        placeholder: match,
-        original_min: rawMin,
-        original_max: rawMax,
-        effective_min: cappedMin,
-        effective_max: cappedMax,
-        count,
-        char,
-      }).debug('Replaced {random} placeholder');
+      logger
+        .withMetadata({
+          placeholder: match,
+          original_min: rawMin,
+          original_max: rawMax,
+          effective_min: cappedMin,
+          effective_max: cappedMax,
+          count,
+          char,
+        })
+        .debug('Replaced {random} placeholder');
 
       return repeated;
     });
@@ -72,31 +80,37 @@ export class ResponseResolver {
     const swapPattern = /\{swap_message:([^:}]+):([^}]+)\}/g;
     response = response.replace(swapPattern, (match, word1, word2) => {
       if (!word1 || !word2) {
-        logger.withMetadata({
-          placeholder: match,
-          word1,
-          word2,
-        }).warn('Invalid {swap_message} placeholder; leaving placeholder unchanged');
+        logger
+          .withMetadata({
+            placeholder: match,
+            word1,
+            word2,
+          })
+          .warn('Invalid {swap_message} placeholder; leaving placeholder unchanged');
         return match;
       }
 
       const swappedMessage = ResponseResolver.swapWords(message.content, word1, word2);
 
-      logger.withMetadata({
-        placeholder: match,
-        word1,
-        word2,
-        original_message: message.content.substring(0, 100),
-        swapped_message: swappedMessage.substring(0, 100),
-      }).debug('Replaced {swap_message} placeholder');
+      logger
+        .withMetadata({
+          placeholder: match,
+          word1,
+          word2,
+          original_message: message.content.substring(0, 100),
+          swapped_message: swappedMessage.substring(0, 100),
+        })
+        .debug('Replaced {swap_message} placeholder');
 
       return swappedMessage;
     });
 
-    logger.withMetadata({
-      original_length: template.length,
-      resolved_length: response.length,
-    }).debug('Response template resolved');
+    logger
+      .withMetadata({
+        original_length: template.length,
+        resolved_length: response.length,
+      })
+      .debug('Response template resolved');
 
     return response;
   }
@@ -109,11 +123,11 @@ export class ResponseResolver {
     // Create a single regex that matches either word (case-insensitive, word boundaries)
     const combinedPattern = new RegExp(
       `\\b(${ResponseResolver.escapeRegex(word1)}|${ResponseResolver.escapeRegex(word2)})\\b`,
-      'gi'
+      'gi',
     );
 
     // Replace each match with its counterpart, preserving case
-    return text.replace(combinedPattern, (match) => {
+    return text.replace(combinedPattern, match => {
       const matchLower = match.toLowerCase();
       const word1Lower = word1.toLowerCase();
 
@@ -148,7 +162,10 @@ export class ResponseResolver {
     if (source === source.toLowerCase()) {
       return target.toLowerCase();
     }
-    if (source[0] === source[0].toUpperCase() && source.slice(1) === source.slice(1).toLowerCase()) {
+    if (
+      source[0] === source[0].toUpperCase() &&
+      source.slice(1) === source.slice(1).toLowerCase()
+    ) {
       return target.charAt(0).toUpperCase() + target.slice(1).toLowerCase();
     }
     return target;

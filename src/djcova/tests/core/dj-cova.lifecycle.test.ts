@@ -1,0 +1,85 @@
+/**
+ * Lifecycle stress tests for DJCova play/stop cycles
+ */
+
+import { vi } from 'vitest';
+import { PassThrough } from 'stream';
+import { AudioPlayerStatus } from '@discordjs/voice';
+import { DJCova } from '../../src/core/dj-cova';
+import { getYouTubeAudioStream } from '../../src/utils/ytdlp';
+
+// Mock yt-dlp integration to avoid spawning real processes or network calls
+vi.mock('../../src/utils/ytdlp', () => ({
+  getYouTubeAudioStream: vi.fn(() => ({
+    stream: new PassThrough(),
+    process: { kill: vi.fn() },
+  })),
+}));
+
+// Stub demuxProbe from @discordjs/voice so play() can create an audio resource
+// without performing a real probe. This also avoids ESM spy limitations by
+// providing a mocked implementation at module load time.
+vi.mock('@discordjs/voice', async importOriginal => {
+  const actual = await importOriginal<typeof import('@discordjs/voice')>();
+
+  return {
+    ...actual,
+    demuxProbe: vi.fn(async (stream: unknown) => ({
+      stream,
+      type: actual.StreamType.Opus,
+    })),
+  };
+});
+
+describe('DJCova Lifecycle - 100 play/stop cycles', () => {
+  let djCova: DJCova;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    djCova = new DJCova();
+  });
+
+  afterEach(() => {
+    djCova.destroy();
+    vi.restoreAllMocks();
+  });
+
+  it('handles 100 sequential play/stop cycles without error and kills yt-dlp processes', async () => {
+    const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    const mockedGetYouTubeAudioStream = getYouTubeAudioStream as unknown as any;
+
+    for (let i = 0; i < 100; i += 1) {
+      await djCova.play(testUrl);
+      djCova.stop();
+    }
+
+    expect(mockedGetYouTubeAudioStream).toHaveBeenCalledTimes(100);
+
+    for (const { value } of mockedGetYouTubeAudioStream.mock.results) {
+      if (!value) continue;
+      expect(value.process.kill).toHaveBeenCalledWith('SIGKILL');
+    }
+  });
+
+  it('does not leak audio player event listeners across 100 play/stop cycles', async () => {
+    const audioPlayer = djCova.getPlayer();
+    const initialListenerCount =
+      audioPlayer.listenerCount(AudioPlayerStatus.Playing) +
+      audioPlayer.listenerCount(AudioPlayerStatus.Idle) +
+      audioPlayer.listenerCount('error');
+
+    const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+    for (let i = 0; i < 100; i += 1) {
+      await djCova.play(testUrl);
+      djCova.stop();
+    }
+
+    const finalListenerCount =
+      audioPlayer.listenerCount(AudioPlayerStatus.Playing) +
+      audioPlayer.listenerCount(AudioPlayerStatus.Idle) +
+      audioPlayer.listenerCount('error');
+
+    expect(finalListenerCount).toBe(initialListenerCount);
+  });
+});
