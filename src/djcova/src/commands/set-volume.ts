@@ -23,7 +23,7 @@ export default {
         return;
       }
 
-      // Get guild-specific service instance
+      // Use shared DJCovaService instance
       const service = getDJCovaService(interaction.guild.id);
 
       // Service handles validation and logic
