@@ -498,22 +498,25 @@ describe('DJCova Resource Lifecycle Tests', () => {
 		});
 
 		it('should handle concurrent play attempts without resource duplication', async () => {
+			// Spy on internal stream creation to detect resource duplication
+			const getStreamSpy = vi.spyOn(DJCova.prototype as any, 'getYouTubeAudioStream');
+
 			// Simulate rapid concurrent play calls
-			const playPromises = Array.from({ length: 10 }, () => 
+			const playPromises = Array.from({ length: 10 }, () =>
 				djCova.play(TEST_URL).catch(() => {}) // Ignore errors
 			);
 
 			await Promise.all(playPromises);
 
-			// Should only have one set of resources
-			const audioPlayer = djCova.getPlayer();
-			const totalListeners = 
-				audioPlayer.listenerCount(AudioPlayerStatus.Playing) +
-				audioPlayer.listenerCount(AudioPlayerStatus.Idle) +
-				audioPlayer.listenerCount('error');
+			const djCovaAny = djCova as any;
 
-			// Should maintain original 3 event handlers
-			expect(totalListeners).toBe(3);
+			// Concurrent play attempts should not create multiple YouTube streams
+			expect(getStreamSpy).toHaveBeenCalledTimes(1);
+
+			// Internal process reference should point to a single active yt-dlp process
+			expect(djCovaAny.ytdlpProcess).toBeDefined();
+
+			getStreamSpy.mockRestore();
 		});
 	});
 
