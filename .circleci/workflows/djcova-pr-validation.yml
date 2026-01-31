@@ -91,14 +91,12 @@ jobs:
 
   djcova_test:
     executor: node22
-    environment:
-      SKIP_YTDLP_TESTS: 'true'
     steps:
       - checkout
       - setup_npm_cache
       - run:
           name: Test Djcova
-          command: npm run test:djcova
+          command: SKIP_YTDLP_TESTS=true npm run test:djcova
 
   djcova_docker_build:
     executor: node22
