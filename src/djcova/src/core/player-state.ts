@@ -64,5 +64,6 @@ export class PlayerState {
 
   reset(): void {
     this.currentState = 'idle';
+    this.eventEmitter.emit('state-changed', 'idle');
   }
 }
