@@ -4,6 +4,7 @@ import {
   AudioPlayerStatus,
   demuxProbe,
   NoSubscriberBehavior,
+  joinVoiceChannel,
 } from '@discordjs/voice';
 import { ChildProcess } from 'child_process';
 import { getYouTubeAudioStream } from '../utils/ytdlp';
@@ -13,6 +14,9 @@ import ffmpegPath from 'ffmpeg-static';
 import { logger } from '../observability/logger';
 
 type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
+type AudioResourceLike = ReturnType<typeof createAudioResource>;
+type VoiceConnectionLike = ReturnType<typeof joinVoiceChannel>;
+type PlayerSubscriptionLike = ReturnType<VoiceConnectionLike['subscribe']>;
 
 /**
  * DJCova - Clean music playback engine
@@ -20,22 +24,20 @@ type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
  */
 export class DJCova {
   private readonly player: AudioPlayerLike;
-  private currentResource: ReturnType<typeof createAudioResource> | undefined;
+  private currentResource: AudioResourceLike | undefined;
 
   /**
    * Backwards-compatible alias for the old `resource` property name.
    * Some tests (and possibly external consumers) still access `djCovaAny.resource`.
    */
-  public get resource(): ReturnType<typeof createAudioResource> | undefined {
+  public get resource(): AudioResourceLike | undefined {
     return this.currentResource;
   }
 
-  public set resource(
-    value: ReturnType<typeof createAudioResource> | undefined,
-  ) {
+  public set resource(value: AudioResourceLike | undefined) {
     this.currentResource = value;
   }
-  private currentSubscription: PlayerSubscription | undefined;
+  private currentSubscription: PlayerSubscriptionLike | undefined;
   private volume: number = 10;
   private idleManager: IdleManager | null = null;
   private ytdlpProcess: ChildProcess | null = null;
@@ -132,9 +134,7 @@ export class DJCova {
    * Register the player subscription for lifecycle management
    * Called by DJCovaService immediately after player subscription is created
    */
-  setSubscription(
-    subscription: PlayerSubscription | undefined,
-  ): void {
+  setSubscription(subscription: PlayerSubscriptionLike | undefined): void {
     logger.debug('Setting player subscription for lifecycle management');
     this.currentSubscription = subscription;
   }
