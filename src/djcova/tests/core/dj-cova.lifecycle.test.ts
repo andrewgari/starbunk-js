@@ -4,6 +4,7 @@
 
 import { vi } from 'vitest';
 import { PassThrough } from 'stream';
+import { AudioPlayerStatus } from '@discordjs/voice';
 import { DJCova } from '../../src/core/dj-cova';
 import { getYouTubeAudioStream } from '../../src/utils/ytdlp';
 
@@ -58,5 +59,27 @@ describe('DJCova Lifecycle - 100 play/stop cycles', () => {
       if (!value) continue;
       expect(value.process.kill).toHaveBeenCalledWith('SIGKILL');
     }
+  });
+
+  it('does not leak audio player event listeners across 100 play/stop cycles', async () => {
+    const audioPlayer = djCova.getPlayer();
+    const initialListenerCount =
+      audioPlayer.listenerCount(AudioPlayerStatus.Playing) +
+      audioPlayer.listenerCount(AudioPlayerStatus.Idle) +
+      audioPlayer.listenerCount('error');
+
+    const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+    for (let i = 0; i < 100; i += 1) {
+      await djCova.play(testUrl);
+      djCova.stop();
+    }
+
+    const finalListenerCount =
+      audioPlayer.listenerCount(AudioPlayerStatus.Playing) +
+      audioPlayer.listenerCount(AudioPlayerStatus.Idle) +
+      audioPlayer.listenerCount('error');
+
+    expect(finalListenerCount).toBe(initialListenerCount);
   });
 });
