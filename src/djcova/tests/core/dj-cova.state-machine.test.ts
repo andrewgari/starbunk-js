@@ -462,22 +462,18 @@ describe('PlayerState - State Machine Transitions', () => {
     describe('event listener behavior', () => {
       it('should support multiple listeners for state-changed event', () => {
         // Arrange
-        let listener1Called = false;
-        let listener2Called = false;
+        const listener1 = vi.fn<(state: PlayerStateValue) => void>();
+        const listener2 = vi.fn<(state: PlayerStateValue) => void>();
 
-        stateMachine.on('state-changed', (_state: PlayerStateValue) => {
-          listener1Called = true;
-        });
-        stateMachine.on('state-changed', (_state: PlayerStateValue) => {
-          listener2Called = true;
-        });
+        stateMachine.on('state-changed', listener1);
+        stateMachine.on('state-changed', listener2);
 
         // Act
         stateMachine.transitionToConnecting();
 
         // Assert
-        expect(listener1Called).toBe(true);
-        expect(listener2Called).toBe(true);
+        expect(listener1).toHaveBeenCalledWith('connecting');
+        expect(listener2).toHaveBeenCalledWith('connecting');
       });
 
       it('should pass correct state value to event listener', () => {
