@@ -36,12 +36,10 @@ vi.mock('../src/utils', () => ({
 }));
 
 import { sendErrorResponse, sendSuccessResponse } from '../src/utils/discord-utils';
-import { container, ServiceId } from '../src/utils';
 
 // Get mocked versions
 const mockedSendErrorResponse = vi.mocked(sendErrorResponse);
 const mockedSendSuccessResponse = vi.mocked(sendSuccessResponse);
-const mockedContainer = vi.mocked(container);
 
 describe('Music Commands Tests', () => {
   let mockInteraction: any;
