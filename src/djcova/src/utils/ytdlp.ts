@@ -57,7 +57,7 @@ export function getYouTubeAudioStream(url: string): {
   const ytdlpArgs = [
     url,
     '-f',
-    'ba[ext=m4a]/ba', // 1. Target M4A first, then any best audio
+    'ba[ext=m4a]/bestaudio/best', // 1. Prefer M4A, fallback to best audio/video
     '-o',
     '-', // 2. Stream to stdout
     '--no-playlist',
