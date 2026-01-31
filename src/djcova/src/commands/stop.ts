@@ -17,7 +17,7 @@ export default {
         return;
       }
 
-      // Use shared DJCovaService instance
+      // Get per-guild DJCovaService instance
       const service = getDJCovaService(interaction.guild.id);
 
       // Service handles the logic

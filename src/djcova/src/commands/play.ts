@@ -33,7 +33,7 @@ export default {
     }
 
     try {
-      // Use shared DJCovaService instance
+      // Get or create per-guild DJCovaService instance
       if (!interaction.guild?.id) {
         await sendErrorResponse(interaction, 'This command can only be used in a server.');
         return;
