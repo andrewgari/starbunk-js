@@ -68,8 +68,9 @@ describe('Music Commands Tests', () => {
       deferred: false,
     };
 
-    // Setup factory mock to return our service
-    mockedGetDJCovaService.mockReturnValue(mockService);
+    // Setup factory mock to return our service when called with any guildId
+    // This properly mocks the factory pattern used in the implementation
+    mockedGetDJCovaService.mockImplementation((guildId: string) => mockService);
 
     // Setup response mocks
     mockedSendErrorResponse.mockResolvedValue(undefined as any);
@@ -83,6 +84,7 @@ describe('Music Commands Tests', () => {
 
       await playCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
+      expect(mockedGetDJCovaService).toHaveBeenCalledWith('guild-id');
       expect(mockService.play).toHaveBeenCalledWith(mockInteraction, testUrl);
       expect(mockedSendSuccessResponse).toHaveBeenCalledWith(mockInteraction, '🎶 Now playing!');
     });
@@ -127,6 +129,7 @@ describe('Music Commands Tests', () => {
     it('should successfully stop music and disconnect', async () => {
       await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
+      expect(mockedGetDJCovaService).toHaveBeenCalledWith('guild-id');
       expect(mockService.stop).toHaveBeenCalledWith(mockInteraction);
       expect(mockedSendSuccessResponse).toHaveBeenCalledWith(
         mockInteraction,
@@ -178,6 +181,7 @@ describe('Music Commands Tests', () => {
 
       await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
+      expect(mockedGetDJCovaService).toHaveBeenCalledWith('guild-id');
       expect(mockService.setVolume).toHaveBeenCalledWith(testVolume);
       expect(mockedSendSuccessResponse).toHaveBeenCalledWith(
         mockInteraction,
