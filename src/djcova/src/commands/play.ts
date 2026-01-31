@@ -33,13 +33,13 @@ export default {
     }
 
     try {
-      // Service handles all the business logic using shared singleton instance
-      const service = getDJCovaService();
-      if (!service) {
-        await sendErrorResponse(interaction, 'Music service is not available.');
+      // Get or create per-guild DJCovaService instance
+      if (!interaction.guild?.id) {
+        await sendErrorResponse(interaction, 'This command can only be used in a server.');
         return;
       }
 
+      const service = getDJCovaService(interaction.guild.id);
       await service.play(interaction, url);
 
       await sendSuccessResponse(interaction, `🎶 Now playing!`);

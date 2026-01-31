@@ -18,12 +18,13 @@ export default {
       // Since 'level' is required, getInteger with true will never return null
       const vol = interaction.options.getInteger('level', true);
 
-      // Get shared service instance
-      const service = getDJCovaService();
-      if (!service) {
-        await sendErrorResponse(interaction, 'Music service is not available.');
+      if (!interaction.guild?.id) {
+        await sendErrorResponse(interaction, 'This command can only be used in a server.');
         return;
       }
+
+      // Get per-guild DJCovaService instance
+      const service = getDJCovaService(interaction.guild.id);
 
       // Service handles validation and logic
       service.setVolume(vol);

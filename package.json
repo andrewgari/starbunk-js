@@ -63,6 +63,8 @@
     "validate:docs": "scripts/validation/check-documentation-structure.sh",
     "health-check": "scripts/monitoring/structure-health-check.sh",
     "health-check:json": "scripts/monitoring/structure-health-check.sh --json",
+    "ralph:pr-comments": "bash scripts/ai/ralph-pr-comments.sh",
+    "ralph:fix": "bash scripts/ai/ralph-fix-errors.sh",
     "release": "semantic-release"
   },
   "engines": {

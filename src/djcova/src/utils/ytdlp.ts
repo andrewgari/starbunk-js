@@ -57,13 +57,13 @@ export function getYouTubeAudioStream(url: string): {
   const ytdlpArgs = [
     url,
     '-f',
-    'ba[ext=m4a]/ba', // 1. Target M4A first, then any best audio
+    'ba[ext=m4a]/bestaudio/best', // 1. Prefer M4A, fallback to best audio/video
     '-o',
     '-', // 2. Stream to stdout
     '--no-playlist',
     '--quiet', // 3. Keep stdout clean of progress bars
     '--no-warnings',
-    '--no-part', // 4. Disable .part files (essential for streaming)
+    '--no-part', // 4. Disable .part files (not required when streaming to stdout)
   ];
 
   logger.debug(`Spawning yt-dlp with args: ${ytdlpArgs.join(' ')}`);
