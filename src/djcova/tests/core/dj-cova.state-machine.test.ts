@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PlayerState, InvalidStateTransitionError } from '../../src/core/player-state';
 
 describe('PlayerState - State Machine Transitions', () => {
@@ -37,31 +37,14 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on idle→connecting transition', () => {
         // Arrange
-        let emittedState = null;
-        stateMachine.on('state-changed', (state) => {
-          emittedState = state;
-      let emittedState: string | null = null;
-
-      beforeEach(() => {
-        emittedState = null;
-        stateMachine.on('state-changed', (state: string) => {
-          emittedState = state;
-        });
-      });
-
-      it('should emit state-changed event on idle→connecting transition', () => {
-        // Act
-        stateMachine.transitionToConnecting();
-
-        // Assert
-        expect(emittedState).toBe('connecting');
-      });
+        const listener = vi.fn();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToConnecting();
 
         // Assert
-        expect(emittedState).toBe('connecting');
+        expect(listener).toHaveBeenCalledWith('connecting');
       });
     });
 
@@ -155,30 +138,26 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on connecting→playing transition', () => {
         // Arrange
-        let emittedState: string | null = null;
-        stateMachine.on('state-changed', (state: string) => {
-          emittedState = state;
-        });
+        const listener = vi.fn();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToPlaying();
 
         // Assert
-        expect(emittedState).toBe('playing');
+        expect(listener).toHaveBeenCalledWith('playing');
       });
 
       it('should emit state-changed event on connecting→stopping transition', () => {
         // Arrange
-        let emittedState: string | null = null;
-        stateMachine.on('state-changed', (state: string) => {
-          emittedState = state;
-        });
+        const listener = vi.fn();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToStopping();
 
         // Assert
-        expect(emittedState).toBe('stopping');
+        expect(listener).toHaveBeenCalledWith('stopping');
       });
     });
 
@@ -246,16 +225,14 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on playing→stopping transition', () => {
         // Arrange
-        let emittedState: string | null = null;
-        stateMachine.on('state-changed', (state: string) => {
-          emittedState = state;
-        });
+        const listener = vi.fn();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToStopping();
 
         // Assert
-        expect(emittedState).toBe('stopping');
+        expect(listener).toHaveBeenCalledWith('stopping');
       });
     });
 
@@ -330,16 +307,14 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on stopping→idle transition', () => {
         // Arrange
-        let emittedState: PlayerState['state'] | null = null;
-        stateMachine.on('state-changed', (state) => {
-          emittedState = state;
-        });
+        const listener = vi.fn();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToIdle();
 
         // Assert
-        expect(emittedState).toBe('idle');
+        expect(listener).toHaveBeenCalledWith('idle');
       });
     });
 
@@ -493,16 +468,14 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should pass correct state value to event listener', () => {
         // Arrange
-        let emittedState: string | null = null;
-        stateMachine.on('state-changed', (state: string) => {
-          emittedState = state;
-        });
+        const listener = vi.fn();
+        stateMachine.on('state-changed', listener);
 
         // Act
         stateMachine.transitionToConnecting();
 
         // Assert
-        expect(emittedState).toBe('connecting');
+        expect(listener).toHaveBeenCalledWith('connecting');
       });
     });
 
