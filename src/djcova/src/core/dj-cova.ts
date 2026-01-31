@@ -78,9 +78,7 @@ export class DJCova {
   }
 
   async play(url: string): Promise<void> {
-    // Cleanup any existing resources BEFORE starting new play
-    logger.debug('Cleaning up any existing resources before new play');
-    this.cleanup();
+    this.stop();
 
     logger.info(`🎵 Playing: ${url}`);
 
