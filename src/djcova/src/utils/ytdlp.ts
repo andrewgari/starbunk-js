@@ -63,7 +63,7 @@ export function getYouTubeAudioStream(url: string): {
     '--no-playlist',
     '--quiet', // 3. Keep stdout clean of progress bars
     '--no-warnings',
-    '--no-part', // 4. Disable .part files (essential for streaming)
+    '--no-part', // 4. Disable .part files (not required when streaming to stdout)
   ];
 
   logger.debug(`Spawning yt-dlp with args: ${ytdlpArgs.join(' ')}`);
