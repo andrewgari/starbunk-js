@@ -41,7 +41,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on idle→connecting transition', () => {
         // Arrange
-        const listener = vi.fn();
+        const listener = vi.fn<[PlayerStateValue], void>();
         stateMachine.on('state-changed', listener);
 
         // Act
@@ -142,7 +142,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on connecting→playing transition', () => {
         // Arrange
-        const listener = vi.fn();
+        const listener = vi.fn<[PlayerStateValue], void>();
         stateMachine.on('state-changed', listener);
 
         // Act
@@ -154,7 +154,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on connecting→stopping transition', () => {
         // Arrange
-        const listener = vi.fn();
+        const listener = vi.fn<[PlayerStateValue], void>();
         stateMachine.on('state-changed', listener);
 
         // Act
@@ -229,7 +229,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on playing→stopping transition', () => {
         // Arrange
-        const listener = vi.fn();
+        const listener = vi.fn<[PlayerStateValue], void>();
         stateMachine.on('state-changed', listener);
 
         // Act
@@ -311,7 +311,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on stopping→idle transition', () => {
         // Arrange
-        const listener = vi.fn();
+        const listener = vi.fn<[PlayerStateValue], void>();
         stateMachine.on('state-changed', listener);
 
         // Act
@@ -472,7 +472,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should pass correct state value to event listener', () => {
         // Arrange
-        const listener = vi.fn();
+        const listener = vi.fn<[PlayerStateValue], void>();
         stateMachine.on('state-changed', listener);
 
         // Act
