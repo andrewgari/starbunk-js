@@ -119,7 +119,7 @@ export class DJCova {
    * Called by DJCovaService immediately after player subscription is created
    */
   setSubscription(
-    subscription: ReturnType<typeof createAudioPlayer>['subscribe'] | undefined,
+    subscription: PlayerSubscription | undefined,
   ): void {
     logger.debug('Setting player subscription for lifecycle management');
     this.currentSubscription = subscription;
