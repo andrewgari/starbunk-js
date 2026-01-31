@@ -32,6 +32,7 @@ ALLOWED_FILES=(
 	".editorconfig"
 	"README.md"
 	"CLAUDE.md"
+		"AGENTS.md"
 	"REPOSITORY_MIGRATION_PLAN.md"
 	"release.config.cjs"
 	"docker-compose*.yml"
