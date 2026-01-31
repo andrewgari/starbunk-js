@@ -393,24 +393,20 @@ describe('PlayerState - State Machine Transitions', () => {
         expect(stateMachine.getState()).toBe('connecting');
       });
 
-      it('should allow event listeners to continue working after reset', () => {
+      it('should not clear event listeners after reset', () => {
         // Arrange
-        let callCount = 0;
-        const listener = (_state: PlayerStateValue) => {
-          callCount++;
-        };
+        const listener = vi.fn();
         stateMachine.on('state-changed', listener);
         stateMachine.transitionToConnecting();
-        expect(callCount).toBe(1);
+        expect(listener).toHaveBeenCalledTimes(1);
 
         // Act
         stateMachine.reset();
-        // Note: reset() currently doesn't clear listeners; they remain subscribed.
-        // This test documents and verifies that behavior.
-        stateMachine.transitionToConnecting();
+        stateMachine.transitionToConnecting(); // Transition again after reset
 
         // Assert
-        expect(callCount).toBe(2); // Listener still fires after reset
+        // The listener should have been called again, proving it wasn't cleared.
+        expect(listener).toHaveBeenCalledTimes(2);
       });
     });
 
