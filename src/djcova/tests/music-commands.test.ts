@@ -11,27 +11,28 @@ import volumeCommand from '../src/commands/set-volume';
 
 // Mock dependencies
 vi.mock('../src/observability/logger', () => ({
-	logger: {
-		debug: vi.fn(),
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn(),
-		withError: vi.fn().mockReturnThis(),
-	},
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    withError: vi.fn().mockReturnThis(),
+  },
 }));
 
 vi.mock('../src/utils/discord-utils', () => ({
-	sendErrorResponse: vi.fn(),
-	sendSuccessResponse: vi.fn(),
+  sendErrorResponse: vi.fn(),
+  sendSuccessResponse: vi.fn(),
 }));
 
 vi.mock('../src/utils', () => ({
-	container: {
-		get: vi.fn(),
-	},
-	ServiceId: {
-		DJCovaService: 'DJCovaService',
-	},
+  container: {
+    get: vi.fn(),
+    has: vi.fn(),
+  },
+  ServiceId: {
+    DJCovaService: 'DJCovaService',
+  },
 }));
 
 import { sendErrorResponse, sendSuccessResponse } from '../src/utils/discord-utils';
@@ -43,176 +44,198 @@ const mockedSendSuccessResponse = vi.mocked(sendSuccessResponse);
 const mockedContainer = vi.mocked(container);
 
 describe('Music Commands Tests', () => {
-	let mockInteraction: any;
-	let mockService: any;
+  let mockInteraction: any;
+  let mockService: any;
 
-	beforeEach(() => {
-		vi.clearAllMocks();
+  beforeEach(() => {
+    vi.clearAllMocks();
 
-		// Mock service
-		mockService = {
-			play: vi.fn().mockResolvedValue(undefined),
-			stop: vi.fn(),
-			setVolume: vi.fn(),
-			getVolume: vi.fn().mockReturnValue(50),
-		};
+    // Mock service
+    mockService = {
+      play: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn(),
+      setVolume: vi.fn(),
+      getVolume: vi.fn().mockReturnValue(50),
+    };
 
-		// Mock interaction
-		mockInteraction = {
-			guild: { id: 'guild-id' } as Guild,
-			channelId: 'channel-id',
-			options: {
-				getString: vi.fn(),
-				getInteger: vi.fn(),
-			},
-			reply: vi.fn().mockResolvedValue(undefined),
-			followUp: vi.fn().mockResolvedValue(undefined),
-			deferReply: vi.fn().mockResolvedValue(undefined),
-			replied: false,
-			deferred: false,
-		};
+    // Mock interaction
+    mockInteraction = {
+      guild: { id: 'guild-id' } as Guild,
+      channelId: 'channel-id',
+      options: {
+        getString: vi.fn(),
+        getInteger: vi.fn(),
+      },
+      reply: vi.fn().mockResolvedValue(undefined),
+      followUp: vi.fn().mockResolvedValue(undefined),
+      deferReply: vi.fn().mockResolvedValue(undefined),
+      replied: false,
+      deferred: false,
+    };
 
-		// Setup container mock to return our service
-		(mockedContainer.get).mockImplementation((serviceId) => {
-			if (serviceId === ServiceId.DJCovaService) {
-				return mockService;
-			}
-			return null;
-		});
+    // Setup container mock to return our service
+    mockedContainer.has.mockImplementation(serviceId => {
+      return serviceId === ServiceId.DJCovaService;
+    });
 
-		// Setup response mocks
-		mockedSendErrorResponse.mockResolvedValue(undefined as any);
-		mockedSendSuccessResponse.mockResolvedValue(undefined as any);
-	});
+    mockedContainer.get.mockImplementation(serviceId => {
+      if (serviceId === ServiceId.DJCovaService) {
+        return mockService;
+      }
+      return null;
+    });
 
-	describe('Play Command', () => {
-		it('should successfully play a YouTube URL', async () => {
-			const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-			mockInteraction.options!.getString = vi.fn().mockReturnValue(testUrl);
+    // Setup response mocks
+    mockedSendErrorResponse.mockResolvedValue(undefined as any);
+    mockedSendSuccessResponse.mockResolvedValue(undefined as any);
+  });
 
-			await playCommand.execute(mockInteraction as ChatInputCommandInteraction);
+  describe('Play Command', () => {
+    it('should successfully play a YouTube URL', async () => {
+      const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+      mockInteraction.options!.getString = vi.fn().mockReturnValue(testUrl);
 
-			expect(mockService.play).toHaveBeenCalledWith(mockInteraction, testUrl);
-			expect(mockedSendSuccessResponse).toHaveBeenCalledWith(mockInteraction, '🎶 Now playing!');
-		});
+      await playCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-		it('should reject play command without URL', async () => {
-			mockInteraction.options!.getString = vi.fn().mockReturnValue(null);
+      expect(mockService.play).toHaveBeenCalledWith(mockInteraction, testUrl);
+      expect(mockedSendSuccessResponse).toHaveBeenCalledWith(mockInteraction, '🎶 Now playing!');
+    });
 
-			await playCommand.execute(mockInteraction as ChatInputCommandInteraction);
+    it('should reject play command without URL', async () => {
+      mockInteraction.options!.getString = vi.fn().mockReturnValue(null);
 
-			expect(mockedSendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Please provide a YouTube URL!');
-			expect(mockService.play).not.toHaveBeenCalled();
-		});
+      await playCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-		it('should handle service errors gracefully', async () => {
-			const testUrl = 'https://www.youtube.com/watch?v=invalid';
-			mockInteraction.options!.getString = vi.fn().mockReturnValue(testUrl);
-			mockService.play.mockRejectedValue(new Error('Invalid URL'));
+      expect(mockedSendErrorResponse).toHaveBeenCalledWith(
+        mockInteraction,
+        'Please provide a YouTube URL!',
+      );
+      expect(mockService.play).not.toHaveBeenCalled();
+    });
 
-			await playCommand.execute(mockInteraction as ChatInputCommandInteraction);
+    it('should handle service errors gracefully', async () => {
+      const testUrl = 'https://www.youtube.com/watch?v=invalid';
+      mockInteraction.options!.getString = vi.fn().mockReturnValue(testUrl);
+      mockService.play.mockRejectedValue(new Error('Invalid URL'));
 
-			expect(mockedSendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Invalid URL');
-		});
+      await playCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-		it('should handle service not available', async () => {
-			const testUrl = 'https://www.youtube.com/watch?v=test';
-			mockInteraction.options!.getString = vi.fn().mockReturnValue(testUrl);
-			mockedContainer.get.mockReturnValue(null);
+      expect(mockedSendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Invalid URL');
+    });
 
-			await playCommand.execute(mockInteraction as ChatInputCommandInteraction);
+    it('should handle service not available', async () => {
+      const testUrl = 'https://www.youtube.com/watch?v=test';
+      mockInteraction.options!.getString = vi.fn().mockReturnValue(testUrl);
+      mockedContainer.get.mockReturnValue(null);
 
-			expect(mockedSendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Music service is not available.');
-		});
-	});
+      await playCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-	describe('Stop Command', () => {
-		it('should successfully stop music and disconnect', async () => {
-			await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+      expect(mockedSendErrorResponse).toHaveBeenCalledWith(
+        mockInteraction,
+        'Music service is not available.',
+      );
+    });
+  });
 
-			expect(mockService.stop).toHaveBeenCalledWith(mockInteraction);
-			expect(mockedSendSuccessResponse).toHaveBeenCalledWith(mockInteraction, 'Music stopped and disconnected!');
-		});
+  describe('Stop Command', () => {
+    it('should successfully stop music and disconnect', async () => {
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-		it('should handle stop command without guild gracefully', async () => {
-			mockInteraction.guild = null;
+      expect(mockService.stop).toHaveBeenCalledWith(mockInteraction);
+      expect(mockedSendSuccessResponse).toHaveBeenCalledWith(
+        mockInteraction,
+        'Music stopped and disconnected!',
+      );
+    });
 
-			await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+    it('should handle stop command without guild gracefully', async () => {
+      mockInteraction.guild = null;
 
-			expect(mockService.stop).toHaveBeenCalledWith(mockInteraction);
-			expect(mockedSendSuccessResponse).toHaveBeenCalled();
-		});
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-		it('should handle service errors during stop', async () => {
-			mockService.stop.mockImplementation(() => {
-				throw new Error('Stop failed');
-			});
+      expect(mockService.stop).toHaveBeenCalledWith(mockInteraction);
+      expect(mockedSendSuccessResponse).toHaveBeenCalled();
+    });
 
-			await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+    it('should handle service errors during stop', async () => {
+      mockService.stop.mockImplementation(() => {
+        throw new Error('Stop failed');
+      });
 
-			expect(mockedSendErrorResponse).toHaveBeenCalledWith(
-				mockInteraction,
-				'An error occurred while stopping the music.',
-			);
-		});
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-		it('should handle service not available', async () => {
-			mockedContainer.get.mockReturnValue(null);
+      expect(mockedSendErrorResponse).toHaveBeenCalledWith(
+        mockInteraction,
+        'An error occurred while stopping the music.',
+      );
+    });
 
-			await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+    it('should handle service not available', async () => {
+      mockedContainer.get.mockReturnValue(null);
 
-			expect(mockedSendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Music service is not available.');
-		});
-	});
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-	describe('Volume Command', () => {
-		it('should successfully set volume', async () => {
-			const testVolume = 75;
-			mockInteraction.options!.getInteger = vi.fn().mockReturnValue(testVolume);
+      expect(mockedSendErrorResponse).toHaveBeenCalledWith(
+        mockInteraction,
+        'Music service is not available.',
+      );
+    });
+  });
 
-			await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
+  describe('Volume Command', () => {
+    it('should successfully set volume', async () => {
+      const testVolume = 75;
+      mockInteraction.options!.getInteger = vi.fn().mockReturnValue(testVolume);
 
-			expect(mockService.setVolume).toHaveBeenCalledWith(testVolume);
-			expect(mockedSendSuccessResponse).toHaveBeenCalledWith(mockInteraction, `Volume set to ${testVolume}%`);
-		});
+      await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-		// Note: "should reject volume command without value" test removed because
-		// the volume parameter is required in the command definition, so this scenario cannot occur
+      expect(mockService.setVolume).toHaveBeenCalledWith(testVolume);
+      expect(mockedSendSuccessResponse).toHaveBeenCalledWith(
+        mockInteraction,
+        `Volume set to ${testVolume}%`,
+      );
+    });
 
-		it('should handle service validation errors', async () => {
-			const invalidVolume = 150;
-			mockInteraction.options!.getInteger = vi.fn().mockReturnValue(invalidVolume);
-			mockService.setVolume.mockImplementation(() => {
-				throw new Error('Volume must be between 1 and 100');
-			});
+    // Note: "should reject volume command without value" test removed because
+    // the volume parameter is required in the command definition, so this scenario cannot occur
 
-			await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
+    it('should handle service validation errors', async () => {
+      const invalidVolume = 150;
+      mockInteraction.options!.getInteger = vi.fn().mockReturnValue(invalidVolume);
+      mockService.setVolume.mockImplementation(() => {
+        throw new Error('Volume must be between 1 and 100');
+      });
 
-			expect(mockedSendErrorResponse).toHaveBeenCalledWith(
-				mockInteraction,
-				'Volume must be between 1 and 100',
-			);
-		});
+      await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-		it('should handle service errors', async () => {
-			const testVolume = 50;
-			mockInteraction.options!.getInteger = vi.fn().mockReturnValue(testVolume);
-			mockService.setVolume.mockImplementation(() => {
-				throw new Error('Volume change failed');
-			});
+      expect(mockedSendErrorResponse).toHaveBeenCalledWith(
+        mockInteraction,
+        'Volume must be between 1 and 100',
+      );
+    });
 
-			await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
+    it('should handle service errors', async () => {
+      const testVolume = 50;
+      mockInteraction.options!.getInteger = vi.fn().mockReturnValue(testVolume);
+      mockService.setVolume.mockImplementation(() => {
+        throw new Error('Volume change failed');
+      });
 
-			expect(mockedSendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Volume change failed');
-		});
+      await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
 
-		it('should handle service not available', async () => {
-			mockInteraction.options!.getInteger = vi.fn().mockReturnValue(50);
-			mockedContainer.get.mockReturnValue(null);
+      expect(mockedSendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Volume change failed');
+    });
 
-			await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
+    it('should handle service not available', async () => {
+      mockInteraction.options!.getInteger = vi.fn().mockReturnValue(50);
+      mockedContainer.get.mockReturnValue(null);
 
-			expect(mockedSendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Music service is not available.');
-		});
-	});
+      await volumeCommand.execute(mockInteraction as ChatInputCommandInteraction);
+
+      expect(mockedSendErrorResponse).toHaveBeenCalledWith(
+        mockInteraction,
+        'Music service is not available.',
+      );
+    });
+  });
 });
