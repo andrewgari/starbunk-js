@@ -565,40 +565,44 @@ describe('DJCova Resource Lifecycle Tests', () => {
 	describe('Notification Callback Lifecycle', () => {
 		it('should invoke notification callback on idle disconnect', async () => {
 			vi.useFakeTimers();
-			const mockCallback = vi.fn();
+			try {
+				const mockCallback = vi.fn();
 
-			djCova.initializeIdleManagement('test-guild', 'test-channel', mockCallback);
-			await djCova.play(TEST_URL);
+				djCova.initializeIdleManagement('test-guild', 'test-channel', mockCallback);
+				await djCova.play(TEST_URL);
 
-			const audioPlayer = djCova.getPlayer();
-			audioPlayer.emit(AudioPlayerStatus.Idle);
+				const audioPlayer = djCova.getPlayer();
+				audioPlayer.emit(AudioPlayerStatus.Idle);
 
-			// Fast-forward past idle timeout
-			vi.advanceTimersByTime(2000);
-			await Promise.resolve();
+				// Fast-forward past idle timeout
+				vi.advanceTimersByTime(2000);
+				await Promise.resolve();
 
-			expect(mockCallback).toHaveBeenCalled();
-
-			vi.useRealTimers();
+				expect(mockCallback).toHaveBeenCalled();
+			} finally {
+				vi.useRealTimers();
+			}
 		});
 
 		it('should handle callback errors gracefully', async () => {
 			vi.useFakeTimers();
-			const errorCallback = vi.fn().mockRejectedValue(new Error('Callback failed'));
+			try {
+				const errorCallback = vi.fn().mockRejectedValue(new Error('Callback failed'));
 
-			djCova.initializeIdleManagement('test-guild', 'test-channel', errorCallback);
-			await djCova.play(TEST_URL);
+				djCova.initializeIdleManagement('test-guild', 'test-channel', errorCallback);
+				await djCova.play(TEST_URL);
 
-			const audioPlayer = djCova.getPlayer();
-			audioPlayer.emit(AudioPlayerStatus.Idle);
+				const audioPlayer = djCova.getPlayer();
+				audioPlayer.emit(AudioPlayerStatus.Idle);
 
-			vi.advanceTimersByTime(2000);
-			await Promise.resolve();
+				vi.advanceTimersByTime(2000);
+				await Promise.resolve();
 
-			// Should not throw
-			expect(errorCallback).toHaveBeenCalled();
-
-			vi.useRealTimers();
+				// Should not throw
+				expect(errorCallback).toHaveBeenCalled();
+			} finally {
+				vi.useRealTimers();
+			}
 		});
 
 		it('should support reinitialization with different callbacks', async () => {
