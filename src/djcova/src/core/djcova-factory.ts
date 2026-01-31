@@ -17,14 +17,14 @@ const guildServices = new Map<string, DJCovaService>();
  * @returns DJCovaService instance for the guild
  */
 export function getDJCovaService(guildId: string): DJCovaService {
-  let service = guildServices.get(guildId);
-
-  if (!service) {
-    const djCova = new DJCova();
-    service = new DJCovaService(djCova);
-    guildServices.set(guildId, service);
+  const existing = guildServices.get(guildId);
+  if (existing) {
+    return existing;
   }
 
+  const djCova = new DJCova();
+  const service = new DJCovaService(djCova);
+  guildServices.set(guildId, service);
   return service;
 }
 
