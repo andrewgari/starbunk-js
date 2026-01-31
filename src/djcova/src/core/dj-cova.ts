@@ -42,6 +42,7 @@ export class DJCova {
   private idleManager: IdleManager | null = null;
   private ytdlpProcess: ChildProcess | null = null;
   private notificationCallback: ((message: string) => Promise<void>) | null = null;
+  private isCleaningUp: boolean = false;
 
   constructor() {
     // Set FFMPEG path for audio processing
@@ -166,39 +167,51 @@ export class DJCova {
   }
 
   private cleanup(): void {
-    // Step 1: Unsubscribe from current subscription FIRST
-    if (this.currentSubscription) {
-      try {
-        logger.debug('Unsubscribing from player subscription');
-        this.currentSubscription.unsubscribe();
-      } catch (error) {
-        logger
-          .withError(error instanceof Error ? error : new Error(String(error)))
-          .warn('Error unsubscribing from player subscription');
+    // Prevent concurrent cleanup calls
+    if (this.isCleaningUp) {
+      logger.debug('Cleanup already in progress, skipping');
+      return;
+    }
+
+    this.isCleaningUp = true;
+
+    try {
+      // Step 1: Unsubscribe from current subscription FIRST
+      if (this.currentSubscription) {
+        try {
+          logger.debug('Unsubscribing from player subscription');
+          this.currentSubscription.unsubscribe();
+        } catch (error) {
+          logger
+            .withError(error instanceof Error ? error : new Error(String(error)))
+            .warn('Error unsubscribing from player subscription');
+        }
+        this.currentSubscription = undefined;
       }
-      this.currentSubscription = undefined;
-    }
 
-    // Step 2: Kill yt-dlp process with SIGKILL
-    if (this.ytdlpProcess) {
-      try {
-        logger.debug('Killing yt-dlp process');
-        this.ytdlpProcess.kill('SIGKILL');
-      } catch (error) {
-        logger
-          .withError(error instanceof Error ? error : new Error(String(error)))
-          .warn('Error killing yt-dlp process');
+      // Step 2: Kill yt-dlp process with SIGKILL
+      if (this.ytdlpProcess) {
+        try {
+          logger.debug('Killing yt-dlp process');
+          this.ytdlpProcess.kill('SIGKILL');
+        } catch (error) {
+          logger
+            .withError(error instanceof Error ? error : new Error(String(error)))
+            .warn('Error killing yt-dlp process');
+        }
+        this.ytdlpProcess = null;
       }
-      this.ytdlpProcess = null;
-    }
 
-    // Step 3: Clear resource reference
-    if (this.currentResource) {
-      logger.debug('Clearing audio resource');
-      this.currentResource = undefined;
-    }
+      // Step 3: Clear resource reference
+      if (this.currentResource) {
+        logger.debug('Clearing audio resource');
+        this.currentResource = undefined;
+      }
 
-    logger.debug('Cleanup complete: subscription, process, and resource cleared');
+      logger.debug('Cleanup complete: subscription, process, and resource cleared');
+    } finally {
+      this.isCleaningUp = false;
+    }
   }
 
   destroy(): void {
