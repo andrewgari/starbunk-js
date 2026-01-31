@@ -396,7 +396,7 @@ describe('PlayerState - State Machine Transitions', () => {
       it('should allow event listeners to continue working after reset', () => {
         // Arrange
         let callCount = 0;
-        const listener = (_state: PlayerStateValue) => {
+        const listener = _state => {
           callCount++;
         };
         stateMachine.on('state-changed', listener);
@@ -455,10 +455,10 @@ describe('PlayerState - State Machine Transitions', () => {
         let listener1Called = false;
         let listener2Called = false;
 
-        stateMachine.on('state-changed', (_state: PlayerStateValue) => {
+        stateMachine.on('state-changed', _state => {
           listener1Called = true;
         });
-        stateMachine.on('state-changed', (_state: PlayerStateValue) => {
+        stateMachine.on('state-changed', _state => {
           listener2Called = true;
         });
 
