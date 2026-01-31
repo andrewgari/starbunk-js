@@ -41,7 +41,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on idle→connecting transition', () => {
         // Arrange
-        const listener = vi.fn<[PlayerStateValue], void>();
+        const listener = vi.fn<(state: PlayerStateValue) => void>();
         stateMachine.on('state-changed', listener);
 
         // Act
@@ -142,7 +142,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on connecting→playing transition', () => {
         // Arrange
-        const listener = vi.fn<[PlayerStateValue], void>();
+        const listener = vi.fn<(state: PlayerStateValue) => void>();
         stateMachine.on('state-changed', listener);
 
         // Act
@@ -154,7 +154,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on connecting→stopping transition', () => {
         // Arrange
-        const listener = vi.fn<[PlayerStateValue], void>();
+        const listener = vi.fn<(state: PlayerStateValue) => void>();
         stateMachine.on('state-changed', listener);
 
         // Act
@@ -229,7 +229,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on playing→stopping transition', () => {
         // Arrange
-        const listener = vi.fn<[PlayerStateValue], void>();
+        const listener = vi.fn<(state: PlayerStateValue) => void>();
         stateMachine.on('state-changed', listener);
 
         // Act
@@ -311,7 +311,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should emit state-changed event on stopping→idle transition', () => {
         // Arrange
-        const listener = vi.fn<[PlayerStateValue], void>();
+        const listener = vi.fn<(state: PlayerStateValue) => void>();
         stateMachine.on('state-changed', listener);
 
         // Act
@@ -396,7 +396,7 @@ describe('PlayerState - State Machine Transitions', () => {
       it('should allow event listeners to continue working after reset', () => {
         // Arrange
         let callCount = 0;
-        const listener = _state => {
+        const listener = (_state: PlayerStateValue) => {
           callCount++;
         };
         stateMachine.on('state-changed', listener);
@@ -455,10 +455,10 @@ describe('PlayerState - State Machine Transitions', () => {
         let listener1Called = false;
         let listener2Called = false;
 
-        stateMachine.on('state-changed', _state => {
+        stateMachine.on('state-changed', (_state: PlayerStateValue) => {
           listener1Called = true;
         });
-        stateMachine.on('state-changed', _state => {
+        stateMachine.on('state-changed', (_state: PlayerStateValue) => {
           listener2Called = true;
         });
 
@@ -472,7 +472,7 @@ describe('PlayerState - State Machine Transitions', () => {
 
       it('should pass correct state value to event listener', () => {
         // Arrange
-        const listener = vi.fn<[PlayerStateValue], void>();
+        const listener = vi.fn<(state: PlayerStateValue) => void>();
         stateMachine.on('state-changed', listener);
 
         // Act
