@@ -2,17 +2,17 @@ import { distance } from 'fastest-levenshtein';
 
 /**
  * Check if two strings are similar enough using multiple fuzzy matching strategies
- * 
+ *
  * Strategies used:
  * 1. Exact match (case-insensitive)
  * 2. Partial match (one string contains the other)
  * 3. Levenshtein distance with adaptive threshold
- * 
+ *
  * @param str1 - First string to compare
  * @param str2 - Second string to compare
  * @param options - Optional configuration for similarity matching
  * @returns true if strings are considered similar
- * 
+ *
  * @example
  * isSimilarString('John', 'john') // true - exact match
  * isSimilarString('Johnny', 'John') // true - partial match
@@ -27,7 +27,7 @@ export function isSimilarString(
     maxDistancePercent?: number;
     /** Minimum allowed Levenshtein distance. Default: 2 */
     minDistance?: number;
-  } = {}
+  } = {},
 ): boolean {
   const { maxDistancePercent = 0.3, minDistance = 2 } = options;
 
@@ -60,12 +60,12 @@ export function isSimilarString(
 
 /**
  * Check if a subject name matches any of the target names
- * 
+ *
  * @param subject - The name to check
  * @param targets - Array of target names to match against
  * @param options - Optional configuration for similarity matching
  * @returns true if subject matches any target
- * 
+ *
  * @example
  * matchesAnyName('Jon', ['John', 'Jonathan']) // true
  * matchesAnyName('Bob', ['John', 'Jonathan']) // false
@@ -73,7 +73,7 @@ export function isSimilarString(
 export function matchesAnyName(
   subject: string | null | undefined,
   targets: (string | null | undefined)[],
-  options?: Parameters<typeof isSimilarString>[2]
+  options?: Parameters<typeof isSimilarString>[2],
 ): boolean {
   if (!subject) {
     return false;
@@ -81,4 +81,3 @@ export function matchesAnyName(
 
   return targets.some(target => isSimilarString(subject, target, options));
 }
-

@@ -29,11 +29,13 @@ export default {
         if (webhook.name === 'Starbunk Bot') {
           await webhook.delete();
           deletedCount++;
-          logger.withMetadata({
-            webhook_id: webhook.id,
-            webhook_name: webhook.name,
-            guild_id: interaction.guildId,
-          }).info('Webhook deleted');
+          logger
+            .withMetadata({
+              webhook_id: webhook.id,
+              webhook_name: webhook.name,
+              guild_id: interaction.guildId,
+            })
+            .info('Webhook deleted');
         }
       }
 
@@ -50,4 +52,3 @@ export default {
     }
   },
 };
-

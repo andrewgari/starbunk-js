@@ -66,13 +66,20 @@ export class BotStateManager {
    * Set a frequency override for a bot
    * Tracks the original frequency from YAML on first override
    */
-  setFrequency(botName: string, frequencyPercent: number, adminUserId: string, originalFrequency?: number): void {
+  setFrequency(
+    botName: string,
+    frequencyPercent: number,
+    adminUserId: string,
+    originalFrequency?: number,
+  ): void {
     if (frequencyPercent < 0 || frequencyPercent > 100) {
-      logger.withMetadata({
-        bot_name: botName,
-        frequency_percent: frequencyPercent,
-        admin_id: adminUserId,
-      }).warn('Invalid frequency percent provided, clamping to 0-100');
+      logger
+        .withMetadata({
+          bot_name: botName,
+          frequency_percent: frequencyPercent,
+          admin_id: adminUserId,
+        })
+        .warn('Invalid frequency percent provided, clamping to 0-100');
     }
 
     const clamped = Math.max(0, Math.min(100, frequencyPercent));
@@ -88,12 +95,14 @@ export class BotStateManager {
 
     this.botFrequencies.set(botName, override);
 
-    logger.withMetadata({
-      bot_name: botName,
-      frequency_percent: clamped,
-      original_frequency: override.originalFrequency,
-      admin_id: adminUserId,
-    }).info('Frequency override set for bot');
+    logger
+      .withMetadata({
+        bot_name: botName,
+        frequency_percent: clamped,
+        original_frequency: override.originalFrequency,
+        admin_id: adminUserId,
+      })
+      .info('Frequency override set for bot');
   }
 
   /**
@@ -124,10 +133,12 @@ export class BotStateManager {
     const originalFrequency = existing.originalFrequency;
     this.botFrequencies.delete(botName);
 
-    logger.withMetadata({
-      bot_name: botName,
-      original_frequency: originalFrequency,
-    }).info('Frequency override reset for bot');
+    logger
+      .withMetadata({
+        bot_name: botName,
+        original_frequency: originalFrequency,
+      })
+      .info('Frequency override reset for bot');
 
     return originalFrequency;
   }
@@ -146,4 +157,3 @@ export class BotStateManager {
     return this.botFrequencies.has(botName);
   }
 }
-

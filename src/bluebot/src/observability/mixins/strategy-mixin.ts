@@ -52,12 +52,16 @@ declare module 'loglayer' {
 const strategyMixinImpl: LogLayerMixin = {
   augmentationType: LogLayerMixinAugmentType.LogLayer,
 
-  augment: (prototype) => {
+  augment: prototype => {
     prototype.withStrategy = function (this: LogLayer, strategyName: string): LogLayer {
       return this.withContext({ strategy_name: strategyName });
     };
 
-    prototype.withTrigger = function (this: LogLayer, triggerName: string, triggerType?: string): LogLayer {
+    prototype.withTrigger = function (
+      this: LogLayer,
+      triggerName: string,
+      triggerType?: string,
+    ): LogLayer {
       const metadata: StrategyContext = { trigger_name: triggerName };
       if (triggerType) {
         metadata.trigger_type = triggerType;
@@ -66,12 +70,16 @@ const strategyMixinImpl: LogLayerMixin = {
     };
   },
 
-  augmentMock: (prototype) => {
+  augmentMock: prototype => {
     prototype.withStrategy = function (this: MockLogLayer, _strategyName: string): MockLogLayer {
       return this;
     };
 
-    prototype.withTrigger = function (this: MockLogLayer, _triggerName: string, _triggerType?: string): MockLogLayer {
+    prototype.withTrigger = function (
+      this: MockLogLayer,
+      _triggerName: string,
+      _triggerType?: string,
+    ): MockLogLayer {
       return this;
     };
   },
@@ -85,4 +93,3 @@ export function strategyMixin(): LogLayerMixinRegistration {
     mixinsToAdd: [strategyMixinImpl],
   };
 }
-

@@ -16,7 +16,7 @@ export class ConfigServer {
     if (this.server) return;
     this.server = http.createServer((req, res) => this.handle(req, res));
     return new Promise((resolve, reject) => {
-      this.server!.on('error', (err) => {
+      this.server!.on('error', err => {
         logger.withError(err).error('[ConfigServer] Server error');
         reject(err);
       });
@@ -29,7 +29,7 @@ export class ConfigServer {
 
   async stop(): Promise<void> {
     if (!this.server) return;
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       this.server!.close(() => {
         logger.info('[ConfigServer] Stopped');
         resolve();
@@ -59,7 +59,7 @@ export class ConfigServer {
     const state = BotStateManager.getInstance();
     const commentSvc = CommentConfigService.getInstance();
 
-    const bots = registry.getBotNames().map((name) => ({
+    const bots = registry.getBotNames().map(name => ({
       name,
       enabled: state.isBotEnabled(name),
       comments: commentSvc.getComments(name) || [],
@@ -76,14 +76,18 @@ export class ConfigServer {
 
   private renderHtml() {
     const data = this.snapshot();
-    const rows = data.bots.map((b) => `
+    const rows = data.bots
+      .map(
+        b => `
       <tr>
         <td>${b.name}</td>
         <td>${b.enabled ? '✅' : '❌'}</td>
         <td>${b.commentCount}</td>
-        <td>${b.comments.map((c) => this.escape(c)).join('<br/>')}</td>
+        <td>${b.comments.map(c => this.escape(c)).join('<br/>')}</td>
       </tr>
-    `).join('');
+    `,
+      )
+      .join('');
 
     return `
       <!doctype html>
@@ -123,7 +127,8 @@ export class ConfigServer {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   private json(res: http.ServerResponse, body: unknown, status = 200) {
@@ -132,7 +137,10 @@ export class ConfigServer {
   }
 
   private html(res: http.ServerResponse, body: string, status = 200) {
-    res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+    res.writeHead(status, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache',
+    });
     res.end(body);
   }
 }

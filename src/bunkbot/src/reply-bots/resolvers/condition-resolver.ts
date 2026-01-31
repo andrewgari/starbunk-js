@@ -26,7 +26,10 @@ export interface ResolvedCondition {
 }
 
 export class ConditionResolver {
-  public static resolve(logic: Logic, botName?: string): (message: Message) => boolean | Promise<boolean> {
+  public static resolve(
+    logic: Logic,
+    botName?: string,
+  ): (message: Message) => boolean | Promise<boolean> {
     const resolved = this.resolveWithMetadata(logic, botName);
     return resolved.condition;
   }
@@ -35,8 +38,10 @@ export class ConditionResolver {
     const l = logic as Logic;
 
     if (l.all_of) {
-      logger.withMetadata({ conditions_count: l.all_of.length }).debug('Resolving all_of condition');
-      const subConditions = l.all_of.map((subLogic) => ConditionResolver.resolve(subLogic, botName));
+      logger
+        .withMetadata({ conditions_count: l.all_of.length })
+        .debug('Resolving all_of condition');
+      const subConditions = l.all_of.map(subLogic => ConditionResolver.resolve(subLogic, botName));
       return {
         condition: Conditions.and(...subConditions),
         metadata: {
@@ -47,8 +52,10 @@ export class ConditionResolver {
       };
     }
     if (l.any_of) {
-      logger.withMetadata({ conditions_count: l.any_of.length }).debug('Resolving any_of condition');
-      const subConditions = l.any_of.map((subLogic) => ConditionResolver.resolve(subLogic, botName));
+      logger
+        .withMetadata({ conditions_count: l.any_of.length })
+        .debug('Resolving any_of condition');
+      const subConditions = l.any_of.map(subLogic => ConditionResolver.resolve(subLogic, botName));
       return {
         condition: Conditions.or(...subConditions),
         metadata: {
@@ -59,8 +66,10 @@ export class ConditionResolver {
       };
     }
     if (l.none_of) {
-      logger.withMetadata({ conditions_count: l.none_of.length }).debug('Resolving none_of condition');
-      const subConditions = l.none_of.map((subLogic) => ConditionResolver.resolve(subLogic, botName));
+      logger
+        .withMetadata({ conditions_count: l.none_of.length })
+        .debug('Resolving none_of condition');
+      const subConditions = l.none_of.map(subLogic => ConditionResolver.resolve(subLogic, botName));
       return {
         condition: Conditions.not(Conditions.or(...subConditions)),
         metadata: {
@@ -85,7 +94,9 @@ export class ConditionResolver {
           },
         };
       case 'contains_phrase':
-        logger.withMetadata({ phrase: l.contains_phrase }).debug('Resolving contains_phrase condition');
+        logger
+          .withMetadata({ phrase: l.contains_phrase })
+          .debug('Resolving contains_phrase condition');
         return {
           condition: Conditions.containsPhrase(l.contains_phrase!),
           metadata: {
@@ -95,7 +106,9 @@ export class ConditionResolver {
           },
         };
       case 'matches_pattern':
-        logger.withMetadata({ pattern: l.matches_pattern }).debug('Resolving matches_pattern condition');
+        logger
+          .withMetadata({ pattern: l.matches_pattern })
+          .debug('Resolving matches_pattern condition');
         return {
           condition: l.matches_pattern ? Conditions.matchesPattern(l.matches_pattern) : () => false,
           metadata: {
@@ -134,11 +147,13 @@ export class ConditionResolver {
           const stateManager = BotStateManager.getInstance();
           const override = stateManager.getFrequency(botName);
           if (override !== undefined) {
-            logger.withMetadata({
-              bot_name: botName,
-              yaml_chance: yamlChance,
-              override_chance: override,
-            }).debug('Applying frequency override to with_chance condition');
+            logger
+              .withMetadata({
+                bot_name: botName,
+                yaml_chance: yamlChance,
+                override_chance: override,
+              })
+              .debug('Applying frequency override to with_chance condition');
 
             effectiveChance = override;
           }

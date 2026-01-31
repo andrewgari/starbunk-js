@@ -26,4 +26,3 @@ export function setupDJCovaLogging() {
     botContextMixin() as unknown as LogLayerMixinRegistration,
   ]);
 }
-
