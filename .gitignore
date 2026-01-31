@@ -253,3 +253,8 @@ Untitled-1769734935380.n8n
 .vscode
 data
 *.junit.xml
+
+.ralph
+AGENT.md
+PRD.md
+progress.txt

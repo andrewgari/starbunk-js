@@ -33,6 +33,8 @@ ALLOWED_FILES=(
 	"README.md"
 	"CLAUDE.md"
 		"AGENTS.md"
+		"PRD.md"
+		"progress.txt"
 	"REPOSITORY_MIGRATION_PLAN.md"
 	"release.config.cjs"
 	"docker-compose*.yml"
