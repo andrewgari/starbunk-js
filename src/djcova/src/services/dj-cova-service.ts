@@ -23,39 +23,63 @@ export class DJCovaService {
    * Play a YouTube URL in a voice channel
    */
   async play(interaction: ChatInputCommandInteraction, url: string): Promise<void> {
+    logger.info(`Play request received for URL: ${url}`);
+    logger.debug(`Guild: ${interaction.guild?.id}, Channel: ${interaction.channelId}`);
+
     // Validate voice channel access
+    logger.debug('Validating voice channel access...');
     const validation = validateVoiceChannelAccess(interaction);
     if (!validation.isValid) {
-      throw new Error(validation.errorMessage || 'Voice channel validation failed');
+      const errorMsg = validation.errorMessage || 'Voice channel validation failed';
+      logger.warn(`Voice channel validation failed: ${errorMsg}`);
+      throw new Error(errorMsg);
     }
+    logger.debug('✅ Voice channel validation passed');
 
     const { voiceChannel } = validation;
 
     if (!voiceChannel) {
-      throw new Error('Voice channel is not available');
+      const errorMsg = 'Voice channel is not available';
+      logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
+    logger.debug(`Voice channel: ${voiceChannel.name} (${voiceChannel.id})`);
 
     // Validate YouTube URL
+    logger.debug('Validating YouTube URL...');
     if (!this.isValidYouTubeUrl(url)) {
-      throw new Error('Please provide a valid YouTube URL (youtube.com or youtu.be)');
+      const errorMsg = 'Please provide a valid YouTube URL (youtube.com or youtu.be)';
+      logger.warn(`URL validation failed: ${url}`);
+      throw new Error(errorMsg);
     }
+    logger.debug('✅ YouTube URL validation passed');
 
     // Create voice connection
+    logger.info('Creating voice connection...');
     const connection = createVoiceConnection(voiceChannel, voiceChannel.guild.voiceAdapterCreator);
+    logger.debug('✅ Voice connection created');
 
     // Subscribe player to connection
+    logger.debug('Subscribing player to connection...');
     const subscription = subscribePlayerToConnection(connection, this.djCova.getPlayer());
     if (!subscription) {
-      throw new Error('Failed to connect audio player to voice channel');
+      const errorMsg = 'Failed to connect audio player to voice channel';
+      logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
+    logger.debug('✅ Player subscribed to connection');
 
     if (!interaction.guild) {
-      throw new Error('This command can only be used within a server (guild) context');
+      const errorMsg = 'This command can only be used within a server (guild) context';
+      logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
 
     // Initialize idle management with notification callback
+    logger.debug('Setting up idle management with notification callback...');
     const notificationCallback = async (message: string) => {
       try {
+        logger.debug(`Sending idle notification: ${message}`);
         await interaction.followUp({ content: message, ephemeral: false });
       } catch (error) {
         logger
@@ -64,14 +88,18 @@ export class DJCovaService {
       }
     };
 
+    logger.debug('Initializing idle management...');
     this.djCova.initializeIdleManagement(
       interaction.guild.id,
       interaction.channelId,
       notificationCallback,
     );
+    logger.debug('✅ Idle management initialized');
 
     // Start playback
+    logger.info('Starting playback...');
     await this.djCova.play(url);
+    logger.info('✅ Playback started successfully');
   }
 
   /**

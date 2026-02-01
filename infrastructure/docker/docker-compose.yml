@@ -19,6 +19,7 @@ services:
 
       # Observability Configuration
       - SERVICE_NAME=${BUNKBOT_SERVICE_NAME:-bunkbot}
+      - OTEL_SERVICE_NAME=${BUNKBOT_SERVICE_NAME:-bunkbot}
       - METRICS_PORT=${METRICS_PORT:-3000}
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
@@ -84,6 +85,7 @@ services:
 
       # Observability Configuration
       - SERVICE_NAME=${DJCOVA_SERVICE_NAME:-djcova}
+      - OTEL_SERVICE_NAME=${DJCOVA_SERVICE_NAME:-djcova}
       - METRICS_PORT=${METRICS_PORT:-3000}
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
@@ -184,6 +186,7 @@ services:
 
       # Observability Configuration
       - SERVICE_NAME=${COVABOT_SERVICE_NAME:-covabot}
+      - OTEL_SERVICE_NAME=${COVABOT_SERVICE_NAME:-covabot}
       - METRICS_PORT=3000
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
@@ -258,6 +261,7 @@ services:
 
       # Observability Configuration
       - SERVICE_NAME=${BLUEBOT_SERVICE_NAME:-bluebot}
+      - OTEL_SERVICE_NAME=${BLUEBOT_SERVICE_NAME:-bluebot}
       - METRICS_PORT=3000
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
@@ -406,7 +410,7 @@ services:
       [
         "sh",
         "-c",
-        "redis-server --requirepass \"${REDIS_PASSWORD:?Error: REDIS_PASSWORD is required for security}\" --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1 --loglevel warning",
+        'redis-server --requirepass "${REDIS_PASSWORD:?Error: REDIS_PASSWORD is required for security}" --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1 --loglevel warning',
       ]
     volumes:
       - ${HOST_WORKDIR}/data/redis:/data
@@ -429,11 +433,7 @@ services:
         reservations:
           memory: 128M
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          'redis-cli -a "${REDIS_PASSWORD}" ping',
-        ]
+      test: ["CMD-SHELL", 'redis-cli -a "${REDIS_PASSWORD}" ping']
       interval: 10s
       timeout: 5s
       retries: 5

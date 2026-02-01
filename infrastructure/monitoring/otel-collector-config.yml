@@ -33,11 +33,29 @@ processors:
         value: ${env:ENVIRONMENT}
         action: upsert
 
+  # Attributes processor to preserve service.name and other key attributes for Loki
+  # Only remove attributes that cause Loki structured metadata issues (high-cardinality attributes)
+  attributes/preserve_service:
+    actions:
+      # Preserve critical attributes for log searching
+      - key: service.name
+        action: upsert
+      - key: service.version
+        action: upsert
+      - key: service.instance.id
+        action: upsert
+      - key: deployment.environment
+        action: upsert
+      - key: cluster
+        action: upsert
+      - key: environment
+        action: upsert
+
 exporters:
   # Prometheus exporter (for metrics)
   # Exposes metrics in Prometheus format for scraping
   prometheus:
-    endpoint: "0.0.0.0:8889"
+    endpoint: '0.0.0.0:8889'
     namespace: starbunk
     const_labels:
       cluster: starbunk-discord-bots
@@ -73,7 +91,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
-      exporters: [otlp/tempo, logging]  # Export to Tempo and console
+      exporters: [otlp/tempo, logging] # Export to Tempo and console
 
     # Metrics pipeline
     metrics:
@@ -84,7 +102,7 @@ service:
     # Logs pipeline
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, batch, resource]
+      processors: [memory_limiter, batch, resource, attributes/preserve_service]
       exporters: [loki, logging]
 
   # Telemetry configuration for the collector itself
@@ -94,4 +112,3 @@ service:
     metrics:
       level: detailed
       address: 0.0.0.0:8888
-
