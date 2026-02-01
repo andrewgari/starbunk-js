@@ -22,7 +22,7 @@ git add package-lock.json
 git commit -m "chore: update package-lock.json to sync with package.json"
 ```
 
-**Expected Outcome**: 
+**Expected Outcome**:
 - No "out of sync" warnings from Snyk
 - package-lock.json shows recent changes
 
