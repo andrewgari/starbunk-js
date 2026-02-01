@@ -180,7 +180,7 @@ Untitled-1769734935380.n8n
 .n8n/**
 
 # ==========================================
-# PROJECT-SPECIFIC: AI TOOLS
+# PROJECT-SPECIFIC: AI TOOLS & WORKSPACE
 # ==========================================
 # Gemini
 .gemini/
@@ -188,7 +188,17 @@ Untitled-1769734935380.n8n
 # Auggie/Ralph session logs
 .ralph
 
-# Agent working files
+# AI Workspace (local development/agent files)
+.workspace/
+
+# Local development and runtime data
+local/
+test-results/
+
+# Config directory (local-only, examples are tracked)
+config/
+
+# Agent working files (root level)
 AGENT.md
 PRD.md
 progress.txt
