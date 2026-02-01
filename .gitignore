@@ -198,7 +198,7 @@ local/
 test-results/
 
 # Config directory - Bot personalities and settings (local-only, examples in examples/config/ are tracked)
-config/
+/config/
 
 # Agent working files (root level - legacy, moving to .workspace/)
 AGENT.md
