@@ -239,16 +239,13 @@ actionlint
 # Ignore all markdown by default
 *.md
 
-# But allow these specific docs
+# But allow these specific docs (application documentation)
 !README.md
 !.circleci/README.md
-!docs/DOCKER_ENV_VARS.md
-!docs/AGENTS.md
-!docs/AGENT_WORKFLOW.md
-!docs/branch-protection.md
-!docs/DOCKER_BUILD_OPTIMIZATION.md
-!docs/DOCKER_COMPOSE_AUDIT.md
-!docs/ISSUE_*.md
+!docs/*.md
+!docs/**/*.md
+!examples/config/README.md
+!examples/config/**/README.md
 
 # ==========================================
 # TEMPLATE FILES (TRACKED)
