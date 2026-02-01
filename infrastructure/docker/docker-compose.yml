@@ -162,7 +162,7 @@ services:
       # Database Services - Redis (Social Battery)
       - REDIS_HOST=${REDIS_HOST:-starbunk-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?Error: REDIS_PASSWORD environment variable is required for security}
       - REDIS_DB=${REDIS_DB:-0}
 
       # Database Services - PostgreSQL (Conversation Memory)

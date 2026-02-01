@@ -148,14 +148,11 @@ examples/config/             # Templates (committed to git)
 After setting up configs, create your `.env` file:
 
 ```bash
-# Copy example environment file
-cp .env.production.example .env
-
-# Edit with your credentials
+# Create your .env file from scratch
 vi .env
 ```
 
-Required environment variables:
+Required environment variables (or use defaults where shown):
 ```env
 # Discord
 STARBUNK_TOKEN=your_discord_bot_token
@@ -212,9 +209,6 @@ chmod -R 755 /mnt/user/appdata/starbunk
 # Copy docker-compose.yml to Unraid
 scp infrastructure/docker/docker-compose.yml root@your-unraid-ip:/mnt/user/appdata/starbunk/
 
-# Copy production environment template
-scp .env.production.example root@your-unraid-ip:/mnt/user/appdata/starbunk/.env
-
 # Copy bot configurations (from examples if needed)
 scp -r examples/config/bunkbot/* root@your-unraid-ip:/mnt/user/appdata/starbunk/config/bunkbot/
 ```
@@ -228,7 +222,7 @@ cd /mnt/user/appdata/starbunk
 nano .env
 ```
 
-Fill in all required values (see [.env.production.example](.env.production.example) for reference).
+Fill in all required values. Most have sensible defaults if you use the same docker-compose.yml and service names.
 
 **Critical values to set:**
 - `HOST_WORKDIR=/mnt/user/appdata/starbunk`
@@ -482,15 +476,21 @@ docker-compose up -d --force-recreate
 
 ### Health Check Endpoints
 
-All services expose health endpoints on port 3000 (or METRICS_PORT):
+Services expose health endpoints on their respective ports:
 
 ```bash
-# Check service health
-curl http://your-unraid-ip:7081/health  # BunkBot
-curl http://your-unraid-ip:9301/health  # BunkBot metrics
-curl http://your-unraid-ip:9303/health  # CovaBot
-curl http://your-unraid-ip:9304/health  # DJCova
-curl http://your-unraid-ip:9305/health  # BlueBot
+# Check service health (internal docker network)
+# BunkBot
+curl http://starbunk-bunkbot:7081/health
+
+# CovaBot
+curl http://starbunk-covabot:7080/health
+
+# DJCova
+curl http://starbunk-djcova:7082/health
+
+# Access from host (if ports exposed in docker-compose)
+curl http://localhost:7081/health  # BunkBot (if exposed)
 ```
 
 ### Manual Health Check Script
