@@ -45,64 +45,118 @@ export class DJCova {
   private isCleaningUp: boolean = false;
 
   constructor() {
+    logger.debug('DJCova constructor: initializing...');
+
     // Set FFMPEG path for audio processing
     if (ffmpegPath && !process.env.FFMPEG_PATH) {
+      logger.debug(`Setting FFMPEG_PATH from ffmpeg-static: ${ffmpegPath}`);
       process.env.FFMPEG_PATH = ffmpegPath;
+    } else if (process.env.FFMPEG_PATH) {
+      logger.debug(`FFMPEG_PATH already set: ${process.env.FFMPEG_PATH}`);
+    } else {
+      logger.warn('No FFMPEG_PATH set and ffmpeg-static not available');
     }
 
-    this.player = createAudioPlayer({
-      behaviors: {
-        noSubscriber: NoSubscriberBehavior.Play,
-      },
-    });
+    try {
+      this.player = createAudioPlayer({
+        behaviors: {
+          noSubscriber: NoSubscriberBehavior.Play,
+        },
+      });
+      logger.debug('Audio player created successfully');
+    } catch (error) {
+      logger
+        .withError(error instanceof Error ? error : new Error(String(error)))
+        .error('Failed to create audio player');
+      throw error;
+    }
 
     this.setupEventHandlers();
-    logger.info('DJCova initialized');
+    logger.info('✅ DJCova initialized');
   }
 
   private setupEventHandlers(): void {
+    logger.debug('Setting up audio player event handlers...');
+
     this.player.on(AudioPlayerStatus.Playing, () => {
       logger.info('▶️ Playback started');
+      logger.debug('Resetting idle timer due to playback start');
       this.idleManager?.resetIdleTimer();
     });
 
     this.player.on(AudioPlayerStatus.Idle, () => {
       logger.info('⏸️ Playback idle');
+      logger.debug('Starting idle timer due to playback idle');
       this.idleManager?.startIdleTimer();
     });
 
     this.player.on('error', (error: Error) => {
-      logger.withError(error).error('Audio player error');
+      logger
+        .withError(error)
+        .withMetadata({ playerStatus: this.player.state.status })
+        .error('❌ Audio player error');
+      logger.debug('Triggering cleanup due to player error');
       this.cleanup();
     });
+
+    this.player.on(AudioPlayerStatus.Buffering, () => {
+      logger.debug('Audio player is buffering...');
+    });
+
+    this.player.on(AudioPlayerStatus.AutoPaused, () => {
+      logger.debug('Audio player auto-paused');
+    });
+
+    logger.debug('Audio player event handlers registered');
   }
 
   async play(url: string): Promise<void> {
-    this.stop();
-
     logger.info(`🎵 Playing: ${url}`);
+    logger.debug('Stopping any existing playback...');
+    this.stop();
+    logger.debug('Creating audio stream from URL...');
 
     try {
+      logger.debug(`Calling getYouTubeAudioStream for URL: ${url}`);
       const { stream, process } = getYouTubeAudioStream(url);
+      logger.debug(`✅ YouTube audio stream created, process PID: ${process.pid}`);
       this.ytdlpProcess = process;
 
+      logger.debug('Probing audio stream format...');
       const probeResult = await demuxProbe(stream);
+      logger.debug(`✅ Stream probe complete, type: ${probeResult.type}`);
+
       this.currentResource = createAudioResource(probeResult.stream, {
         inputType: probeResult.type,
         inlineVolume: true,
       });
+      logger.debug('✅ Audio resource created');
 
       if (this.currentResource.volume) {
-        this.currentResource.volume.setVolume(this.volume / 100);
+        const volumePercent = this.volume;
+        const volumeFloat = this.volume / 100;
+        this.currentResource.volume.setVolume(volumeFloat);
+        logger.debug(`Volume set to ${volumePercent}% (${volumeFloat})`);
+      } else {
+        logger.warn('Audio resource has no volume property');
       }
 
+      logger.debug('Calling player.play() with audio resource...');
       this.player.play(this.currentResource);
+      logger.info('✅ Audio playback started');
     } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
       logger
-        .withError(error instanceof Error ? error : new Error(String(error)))
-        .error('Failed to play audio');
+        .withError(err)
+        .withMetadata({
+          stack: err.stack,
+          url,
+          ytdlpProcessPid: this.ytdlpProcess?.pid,
+        })
+        .error('❌ Failed to play audio');
+      logger.debug('Cleaning up resources after play error...');
       this.cleanup();
-      throw error;
+      throw err;
     }
   }
 
@@ -143,25 +197,43 @@ export class DJCova {
     channelId: string,
     notificationCallback?: (message: string) => Promise<void>,
   ): void {
-    this.idleManager?.destroy();
+    logger.debug(`Initializing idle management for guild ${guildId}, channel ${channelId}`);
+
+    if (this.idleManager) {
+      logger.debug(`Destroying existing idle manager for guild ${guildId}`);
+      this.idleManager.destroy();
+    }
 
     this.notificationCallback = notificationCallback || null;
+    logger.debug(`Notification callback ${notificationCallback ? 'registered' : 'not provided'}`);
 
     const config = getMusicConfig();
+    logger.debug(`Music config: idleTimeoutSeconds=${config.idleTimeoutSeconds}`);
+
     const idleConfig: IdleManagerConfig = {
       timeoutSeconds: config.idleTimeoutSeconds,
       guildId,
       channelId,
       onDisconnect: async (reason: string) => {
+        logger.info(`Idle manager triggered disconnect: ${reason}`);
         this.stop();
         if (this.notificationCallback) {
-          await this.notificationCallback(reason);
+          logger.debug('Sending idle disconnect notification...');
+          try {
+            await this.notificationCallback(reason);
+          } catch (error) {
+            logger
+              .withError(error instanceof Error ? error : new Error(String(error)))
+              .warn('Failed to send idle disconnect notification');
+          }
         }
       },
     };
 
     this.idleManager = createIdleManager(idleConfig);
-    logger.debug(`Idle management initialized for guild ${guildId}`);
+    logger.info(
+      `✅ Idle management initialized for guild ${guildId} with timeout ${config.idleTimeoutSeconds}s`,
+    );
   }
 
   private cleanup(): void {
@@ -171,6 +243,7 @@ export class DJCova {
       return;
     }
 
+    logger.debug('Starting cleanup...');
     this.isCleaningUp = true;
 
     try {
@@ -179,10 +252,11 @@ export class DJCova {
         try {
           logger.debug('Unsubscribing from player subscription');
           this.currentSubscription.unsubscribe();
+          logger.debug('✅ Unsubscribed from player subscription');
         } catch (error) {
           logger
             .withError(error instanceof Error ? error : new Error(String(error)))
-            .warn('Error unsubscribing from player subscription');
+            .warn('⚠️ Error unsubscribing from player subscription');
         }
         this.currentSubscription = undefined;
       }
@@ -190,12 +264,14 @@ export class DJCova {
       // Step 2: Kill yt-dlp process with SIGKILL
       if (this.ytdlpProcess) {
         try {
-          logger.debug('Killing yt-dlp process');
+          const pidToKill = this.ytdlpProcess.pid || 'unknown';
+          logger.debug(`Killing yt-dlp process (PID: ${pidToKill})`);
           this.ytdlpProcess.kill('SIGKILL');
+          logger.debug(`✅ yt-dlp process killed`);
         } catch (error) {
           logger
             .withError(error instanceof Error ? error : new Error(String(error)))
-            .warn('Error killing yt-dlp process');
+            .warn('⚠️ Error killing yt-dlp process');
         }
         this.ytdlpProcess = null;
       }
@@ -204,19 +280,26 @@ export class DJCova {
       if (this.currentResource) {
         logger.debug('Clearing audio resource');
         this.currentResource = undefined;
+        logger.debug('✅ Audio resource cleared');
       }
 
-      logger.debug('Cleanup complete: subscription, process, and resource cleared');
+      logger.debug('✅ Cleanup complete: subscription, process, and resource cleared');
     } finally {
       this.isCleaningUp = false;
     }
   }
 
   destroy(): void {
+    logger.debug('Destroying DJCova...');
     this.stop();
-    this.idleManager?.destroy();
-    this.idleManager = null;
+
+    if (this.idleManager) {
+      logger.debug('Destroying idle manager...');
+      this.idleManager.destroy();
+      this.idleManager = null;
+    }
+
     this.player.removeAllListeners();
-    logger.info('DJCova destroyed');
+    logger.info('✅ DJCova destroyed');
   }
 }

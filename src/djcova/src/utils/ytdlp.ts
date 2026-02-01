@@ -16,6 +16,7 @@ import { logger } from '../observability/logger';
 function getYtDlpPath(): string {
   // Check environment variable first
   if (process.env.YTDLP_PATH && existsSync(process.env.YTDLP_PATH)) {
+    logger.debug(`Using YTDLP_PATH from env: ${process.env.YTDLP_PATH}`);
     return process.env.YTDLP_PATH;
   }
 
@@ -39,7 +40,7 @@ function getYtDlpPath(): string {
   }
 
   // Default to 'yt-dlp' and let it fail if not found
-  logger.debug('Using default yt-dlp command (relying on PATH)');
+  logger.debug('Using default yt-dlp command (relying on PATH environment variable)');
   return 'yt-dlp';
 }
 
@@ -51,9 +52,11 @@ export function getYouTubeAudioStream(url: string): {
   stream: Readable;
   process: ReturnType<typeof spawn>;
 } {
-  logger.debug(`Creating yt-dlp stream for: ${url}`);
+  logger.info(`Creating yt-dlp stream for: ${url}`);
 
   const ytdlpPath = getYtDlpPath();
+  logger.debug(`Using yt-dlp binary: ${ytdlpPath}`);
+
   const ytdlpArgs = [
     url,
     '-f',
@@ -72,6 +75,12 @@ export function getYouTubeAudioStream(url: string): {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
+  if (!ytdlpProcess.pid) {
+    logger.error('yt-dlp process failed to spawn (no PID assigned)');
+  } else {
+    logger.debug(`yt-dlp process spawned successfully with PID: ${ytdlpProcess.pid}`);
+  }
+
   // Create a readable stream wrapper that handles early errors
   const stream = ytdlpProcess.stdout as Readable;
   let stderrBuffer = '';
@@ -88,12 +97,16 @@ export function getYouTubeAudioStream(url: string): {
 
   // Handle process spawn errors
   ytdlpProcess.on('error', (error: Error) => {
-    logger.withError(error).error('yt-dlp process spawn error');
+    logger.withError(error).withMetadata({ ytdlpPath, url }).error('yt-dlp process spawn error');
     stream.destroy(error);
   });
 
   // Handle early process exits before stream starts
   ytdlpProcess.on('exit', (code: number | null, signal: string | null) => {
+    logger.debug(
+      `yt-dlp process exited: code=${code}, signal=${signal}, hasEmittedData=${hasEmittedData}`,
+    );
+
     if (code === null || code !== 0) {
       const stderrOutput = stderrBuffer.trim();
       logger.error(`yt-dlp exited with code ${code}, signal: ${signal}`);

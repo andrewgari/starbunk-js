@@ -13,35 +13,65 @@ import { commands } from '@/commands';
 setupDJCovaLogging();
 // Main execution
 async function main(): Promise<void> {
+  logger.info('DJCova main() function starting...');
+
   if (process.env.CI_SMOKE_MODE === 'true') {
     logger.info('CI_SMOKE_MODE enabled: starting minimal health server and skipping Discord login');
     runSmokeMode();
     return;
   }
 
+  logger.debug('Reading DISCORD_TOKEN from environment variables...');
   const token = process.env.DISCORD_TOKEN;
   if (!token) {
-    throw new Error('DISCORD_TOKEN environment variable is required');
+    const error = new Error('DISCORD_TOKEN environment variable is required');
+    logger.withError(error).error('DISCORD_TOKEN not found - aborting startup');
+    throw error;
+  }
+  logger.debug('DISCORD_TOKEN found (length: ' + token.length + ' chars)');
+
+  try {
+    // Start health/metrics server
+    logger.info('Starting health/metrics server...');
+    globalHealthServer = await initializeHealthServer();
+    logger.info('✅ Health/metrics server started');
+  } catch (error) {
+    logger
+      .withError(error instanceof Error ? error : new Error(String(error)))
+      .error('Failed to initialize health server');
+    throw error;
   }
 
-  // Start health/metrics server
-  globalHealthServer = await initializeHealthServer();
+  try {
+    // Create Discord client
+    logger.info('Creating Discord client...');
+    const client = new Client({
+      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
+    });
+    logger.debug('Discord client created successfully');
 
-  // Create Discord client
-  const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
-  });
+    client.on(Events.ClientReady, () => {
+      logger.info('🎵 DJCova is ready and connected to Discord');
+      logger.info(`Bot user: ${client.user?.tag}`);
+    });
 
-  client.on(Events.ClientReady, () => {
-    logger.info('DJCova is ready and connected to Discord');
-  });
+    logger.info('Authenticating with Discord...');
+    // Login to Discord
+    await client.login(token);
+    logger.info('✅ Discord authentication successful');
 
-  // Login to Discord
-  await client.login(token);
-
-  // Initialize commands using shared registry
-  await initializeCommands(client, commands);
-  logger.info('DJCova commands initialized successfully');
+    // Initialize commands using shared registry
+    logger.info('Initializing commands...');
+    await initializeCommands(client, commands);
+    logger.info('✅ DJCova commands initialized successfully');
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger
+      .withError(err)
+      .withMetadata({ stack: err.stack })
+      .error('Failed to initialize Discord client or commands');
+    throw err;
+  }
 }
 
 // Graceful shutdown

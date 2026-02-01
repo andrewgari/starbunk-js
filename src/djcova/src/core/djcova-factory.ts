@@ -1,6 +1,7 @@
 import { DJCovaService } from '@/services/dj-cova-service';
 import { DJCova } from '@/core/dj-cova';
 import { disconnectVoiceConnection } from '@/utils/voice-utils';
+import { logger } from '@/observability/logger';
 
 /**
  * Per-guild service instances to ensure state isolation between servers.
@@ -17,14 +18,21 @@ const guildServices = new Map<string, DJCovaService>();
  * @returns DJCovaService instance for the guild
  */
 export function getDJCovaService(guildId: string): DJCovaService {
+  logger.debug(`Getting DJCova service for guild: ${guildId}`);
+
   const existing = guildServices.get(guildId);
   if (existing) {
+    logger.debug(`✅ Returning existing service for guild: ${guildId}`);
     return existing;
   }
 
+  logger.info(`Creating new DJCova service instance for guild: ${guildId}`);
   const djCova = new DJCova();
   const service = new DJCovaService(djCova);
   guildServices.set(guildId, service);
+  logger.info(
+    `✅ New DJCova service created for guild: ${guildId} (Total guilds: ${guildServices.size})`,
+  );
   return service;
 }
 
@@ -35,10 +43,18 @@ export function getDJCovaService(guildId: string): DJCovaService {
  * @param guildId - Discord guild (server) ID
  */
 export function cleanupGuildService(guildId: string): void {
+  logger.debug(`Cleaning up guild service for: ${guildId}`);
+
   const service = guildServices.get(guildId);
   if (service) {
+    logger.info(`Removing DJCova service for guild: ${guildId}`);
     // Cleanup any active resources
     disconnectVoiceConnection(guildId);
     guildServices.delete(guildId);
+    logger.info(
+      `✅ Guild service cleaned up: ${guildId} (Remaining guilds: ${guildServices.size})`,
+    );
+  } else {
+    logger.debug(`No service found for guild: ${guildId}`);
   }
 }

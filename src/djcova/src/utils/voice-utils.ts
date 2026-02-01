@@ -33,32 +33,42 @@ export function createVoiceConnection(
   channel: VoiceChannelLike,
   adapterCreator: unknown,
 ): VoiceConnectionLike {
-  logger.debug(`Joining voice channel: ${channel.name} (${channel.id})`);
+  logger.info(`Attempting to join voice channel: ${channel.name} (${channel.id})`);
+  logger.debug(`Guild: ${channel.guild.id}`);
 
   // Check for existing connection first
   const existingConnection = getVoiceConnection(channel.guild.id);
   if (existingConnection) {
     const currentChannelId = existingConnection.joinConfig?.channelId;
     if (currentChannelId === channel.id) {
-      logger.debug(`Reusing existing voice connection for guild ${channel.guild.id}`);
+      logger.info(`✅ Reusing existing voice connection for guild ${channel.guild.id}`);
       return existingConnection;
     }
     logger.debug(
       `Existing connection is in ${currentChannelId}; switching to ${channel.id} for guild ${channel.guild.id}`,
     );
     try {
+      logger.debug('Destroying existing connection...');
       existingConnection.destroy();
-    } catch {
-      /* no-op */
+      logger.debug('✅ Existing connection destroyed');
+    } catch (error) {
+      logger
+        .withError(error instanceof Error ? error : new Error(String(error)))
+        .warn('Error destroying existing connection');
     }
   }
+
+  logger.debug('Creating new voice connection...');
   const connection = joinVoiceChannel({
     channelId: channel.id,
     guildId: channel.guild.id,
     adapterCreator: adapterCreator,
   });
+  logger.info(`✅ Voice connection created for channel: ${channel.name}`);
 
   // Set up connection event handlers with improved error handling
+  logger.debug('Setting up voice connection event handlers...');
+
   connection.on(VoiceConnectionStatus.Ready, () => {
     logger.info(`✅ Voice connection ready in channel: ${channel.name}`);
   });
@@ -84,7 +94,11 @@ export function createVoiceConnection(
   connection.on('error', (error: Error) => {
     logger
       .withError(error)
-      .withMetadata({ channel_name: channel.name })
+      .withMetadata({
+        channel_name: channel.name,
+        channel_id: channel.id,
+        guild_id: channel.guild.id,
+      })
       .error('❌ Voice connection error in channel');
   });
 
@@ -93,6 +107,8 @@ export function createVoiceConnection(
       `Voice connection state changed: ${oldState.status} -> ${newState.status} for channel: ${channel.name}`,
     );
   });
+
+  logger.debug('Voice connection event handlers registered');
 
   return connection;
 }
@@ -129,18 +145,20 @@ export function subscribePlayerToConnection(
   connection: VoiceConnectionLike,
   player: AudioPlayerLike,
 ): PlayerSubscriptionLike | undefined {
+  logger.debug('Subscribing audio player to voice connection...');
+
   try {
     const subscription = connection.subscribe(player);
     if (subscription) {
-      logger.debug('Audio player subscribed to voice connection');
+      logger.info('✅ Audio player subscribed to voice connection');
     } else {
-      logger.warn('Failed to subscribe audio player to voice connection');
+      logger.warn('⚠️ Failed to subscribe audio player to voice connection - returned undefined');
     }
     return subscription;
   } catch (error) {
     logger
       .withError(error instanceof Error ? error : new Error(String(error)))
-      .error('Error subscribing player to connection');
+      .error('❌ Error subscribing player to connection');
     return undefined;
   }
 }
