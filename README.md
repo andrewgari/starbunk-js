@@ -77,6 +77,9 @@ npm run logs
 # Install dependencies for all containers
 npm run setup:containers
 
+# Set up local config from examples
+npm run setup:config
+
 # Build all containers
 npm run build
 
@@ -89,6 +92,73 @@ npm run dev:djcova       # Music service
 npm run dev:covabot      # AI personality
 npm run dev:bluebot      # Blue detection
 ```
+
+## 📂 Repository Structure
+
+```
+starbunk-js/
+├── src/                     # Application source code
+│   ├── shared/             # Shared services & utilities
+│   ├── bunkbot/            # Reply bots & admin commands
+│   ├── djcova/             # Music service
+│   ├── covabot/            # AI personality
+│   └── bluebot/            # Blue detection bot
+├── infrastructure/          # Docker, deployment, monitoring configs
+│   ├── docker/             # Docker Compose files
+│   ├── monitoring/         # Observability stack
+│   └── podman/             # Podman configs
+├── docs/                    # Application documentation
+│   ├── DEPLOYMENT.md       # Deployment guide
+│   ├── RUNBOOK.md          # Operations guide
+│   └── CHANGELOG.md        # Version history
+├── examples/                # Config templates & examples
+│   ├── config/             # Bot personality templates
+│   └── observability/      # Monitoring config examples
+├── scripts/                 # Automation & deployment scripts
+└── tools/                   # Development utilities
+```
+
+### Local Development Directories (Git-Ignored)
+
+```
+.workspace/                  # AI agent context (not committed)
+├── agents/                 # Agent coordination docs
+├── prds/                   # Product requirements
+├── patterns/               # Code patterns
+└── plans/                  # Planning documents
+
+config/                      # Local bot configs (not committed)
+├── bunkbot/                # Your bunkbot personality
+├── djcova/                 # Your djcova config
+├── covabot/                # Your covabot personality
+└── bluebot/                # Your bluebot config
+
+local/                       # Runtime data (not committed)
+├── logs/                   # Application logs
+└── test-results/           # Test output
+
+data/                        # Database data (not committed)
+├── postgres/               # PostgreSQL data
+├── redis/                  # Redis snapshots
+└── qdrant/                 # Vector DB data
+```
+
+**Key Directories:**
+- **src/**: TypeScript source code for all bots
+- **infrastructure/**: Production deployment configs (Docker, monitoring)
+- **examples/**: Committed templates for configs
+- **docs/**: Application documentation (deployment, operations)
+- **.workspace/**: AI/dev docs, PRDs (local-only, not committed)
+- **config/**: Your local bot personalities (local-only, not committed)
+- **local/**: Runtime logs and test results (local-only, not committed)
+
+**First-Time Setup:**
+1. Clone repository
+2. Run `npm run setup:config` to copy example configs to `config/`
+3. Edit files in `config/` with your bot personalities and settings
+4. Never commit `config/` directory (it's git-ignored)
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment instructions.
 
 ## 📋 Environment Configuration
 
