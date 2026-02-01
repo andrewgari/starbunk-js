@@ -27,6 +27,7 @@
     "test:bluebot": "cd src/bluebot && npm test",
     "lint": "eslint src/*/src/**/*.ts",
     "lint:fix": "eslint src/*/src/**/*.ts --fix",
+    "format": "prettier --write \"src/*/src/**/*.ts\"",
     "type-check": "tsc --build --dry",
     "clean": "tsc --build --clean",
     "docker:build": "docker compose -f infrastructure/docker/docker-compose.yml build",

@@ -92,7 +92,7 @@ check_health_endpoints() {
 
     # Try to curl the health endpoint from inside the container
     # Use docker exec to avoid network access issues
-    HEALTH_RESPONSE=$(docker exec "$container" wget -qO- "http://localhost:${port}${path}" 2>/dev/null || echo "ERROR")
+    HEALTH_RESPONSE=$(docker exec "$container" curl -fsS "http://localhost:${port}${path}" 2>/dev/null || echo "ERROR")
 
     if [ "$HEALTH_RESPONSE" != "ERROR" ]; then
       # Check if response contains "ok" or "healthy" or HTTP 200 semantics

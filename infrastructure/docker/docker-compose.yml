@@ -368,7 +368,7 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-starbunk}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-starbunk}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD is required for security}
       - POSTGRES_DB=${POSTGRES_DB:-starbunk}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
@@ -406,7 +406,7 @@ services:
       [
         "sh",
         "-c",
-        "redis-server ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1 --loglevel warning",
+        "redis-server --requirepass \"${REDIS_PASSWORD:?Error: REDIS_PASSWORD is required for security}\" --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1 --loglevel warning",
       ]
     volumes:
       - ${HOST_WORKDIR}/data/redis:/data
@@ -432,7 +432,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          'if [ -z "${REDIS_PASSWORD:-}" ]; then redis-cli ping; else redis-cli -a "${REDIS_PASSWORD}" ping; fi',
+          'redis-cli -a "${REDIS_PASSWORD}" ping',
         ]
       interval: 10s
       timeout: 5s
