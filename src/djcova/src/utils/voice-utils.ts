@@ -222,7 +222,11 @@ export function attachHealthMonitor(
   // Start health check
   monitor.start();
 
-  // Add cleanup listener for when connection is destroyed
+  // Add cleanup listeners for when connection is disconnected or destroyed
+  connection.on(VoiceConnectionStatus.Disconnected, () => {
+    monitor.destroy();
+  });
+
   connection.on(VoiceConnectionStatus.Destroyed, () => {
     monitor.destroy();
   });

@@ -146,7 +146,7 @@ export class ConnectionHealthMonitor {
    */
   private async triggerReconnect(): Promise<void> {
     try {
-      logger.info(`Auto-reconnecting due to health check for guild: ${this.guildId}`);
+      logger.debug(`Auto-reconnecting due to health check for guild: ${this.guildId}`);
 
       if (this.connection?.rejoin && typeof this.connection.rejoin === 'function') {
         this.connection.rejoin();
@@ -169,7 +169,7 @@ export class ConnectionHealthMonitor {
       if (this.failureCount >= this.failureThreshold && !this.notificationSent) {
         this.notificationSent = true;
 
-        logger.info(`Connection health threshold exceeded for guild: ${this.guildId}`, {
+        logger.debug(`Connection health threshold exceeded for guild: ${this.guildId}`, {
           failureCount: this.failureCount,
           threshold: this.failureThreshold,
         });
