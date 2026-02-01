@@ -1,3 +1,9 @@
+## [1.30.1](https://github.com/andrewgari/starbunk-js/compare/v1.30.0...v1.30.1) (2026-02-01)
+
+### Bug Fixes
+
+* **djcova:** add defer to /stop command to prevent timeout errors ([#606](https://github.com/andrewgari/starbunk-js/issues/606)) ([4d74538](https://github.com/andrewgari/starbunk-js/commit/4d745388402e42e1bf97270a19a0f0a26908dc78))
+
 ## [1.30.0](https://github.com/andrewgari/starbunk-js/compare/v1.29.0...v1.30.0) (2026-02-01)
 
 ### Features
