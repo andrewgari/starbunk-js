@@ -43,6 +43,7 @@ import {
   getGuildVoiceConnection,
   validateVoiceChannelAccess,
   canJoinVoiceChannel,
+  attachHealthMonitor,
 } from '../src/utils/voice-utils';
 
 describe('voice-utils subscription lifecycle', () => {
@@ -342,6 +343,69 @@ describe('voice-utils subscription lifecycle', () => {
       const result = canJoinVoiceChannel(channel, botMember);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('attachHealthMonitor', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should create and start a health monitor with correct config', () => {
+      const mockConnection = {
+        state: { status: Voice.VoiceConnectionStatus.Ready },
+        on: vi.fn(),
+      } as any;
+
+      const mockCallback = vi.fn();
+
+      const monitor = attachHealthMonitor(mockConnection, 'test-guild', mockCallback);
+
+      expect(monitor).toBeDefined();
+      expect(mockConnection.on).toHaveBeenCalledWith(
+        Voice.VoiceConnectionStatus.Destroyed,
+        expect.any(Function),
+      );
+    });
+
+    it('should clean up monitor when Destroyed event fires', () => {
+      const mockConnection = {
+        state: { status: Voice.VoiceConnectionStatus.Ready },
+        on: vi.fn(),
+      } as any;
+
+      const mockCallback = vi.fn();
+
+      const monitor = attachHealthMonitor(mockConnection, 'test-guild', mockCallback);
+      const destroySpy = vi.spyOn(monitor, 'destroy');
+
+      // Find and invoke the Destroyed event listener
+      const destroyedHandler = mockConnection.on.mock.calls.find(
+        (call: any) => call[0] === Voice.VoiceConnectionStatus.Destroyed,
+      )?.[1];
+
+      expect(destroyedHandler).toBeDefined();
+      destroyedHandler?.();
+
+      expect(destroySpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT clean up monitor on Disconnected event', () => {
+      const mockConnection = {
+        state: { status: Voice.VoiceConnectionStatus.Ready },
+        on: vi.fn(),
+      } as any;
+
+      const mockCallback = vi.fn();
+
+      const monitor = attachHealthMonitor(mockConnection, 'test-guild', mockCallback);
+
+      // Verify no Disconnected listener was registered
+      const disconnectedHandler = mockConnection.on.mock.calls.find(
+        (call: any) => call[0] === Voice.VoiceConnectionStatus.Disconnected,
+      );
+
+      expect(disconnectedHandler).toBeUndefined();
     });
   });
 });
