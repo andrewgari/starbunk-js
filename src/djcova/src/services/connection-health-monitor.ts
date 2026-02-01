@@ -5,7 +5,7 @@ import { logger } from '../observability/logger';
  * Interface for voice connection - uses Discord.js connection type
  */
 export interface VoiceConnectionLike {
-  state: { status: VoiceConnectionStatus };
+  state: { status: (typeof VoiceConnectionStatus)[keyof typeof VoiceConnectionStatus] };
   rejoin?: () => void;
   on: (event: string, callback: (...args: unknown[]) => void) => void;
 }
@@ -54,7 +54,7 @@ export class ConnectionHealthMonitor {
       intervalMs: this.intervalMs,
       failureThreshold: this.failureThreshold,
       hasCallback: !!this.onThresholdExceeded,
-    });
+    } as any);
   }
 
   /**
@@ -106,7 +106,7 @@ export class ConnectionHealthMonitor {
       logger.debug(`Health check running for guild: ${this.guildId}`, {
         currentStatus: status,
         failureCount: this.failureCount,
-      });
+      } as any);
 
       if (status === VoiceConnectionStatus.Ready) {
         this.resetFailures();
@@ -137,7 +137,7 @@ export class ConnectionHealthMonitor {
 
     logger.debug(`Connection health recovered for guild: ${this.guildId}`, {
       previousFailureCount,
-    });
+    } as any);
   }
 
   /**
@@ -172,7 +172,7 @@ export class ConnectionHealthMonitor {
         logger.debug(`Connection health threshold exceeded for guild: ${this.guildId}`, {
           failureCount: this.failureCount,
           threshold: this.failureThreshold,
-        });
+        } as any);
 
         if (this.onThresholdExceeded) {
           const message =

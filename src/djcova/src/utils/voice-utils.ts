@@ -198,7 +198,8 @@ export function canJoinVoiceChannel(
 /**
  * Export health monitor types and functions
  */
-export { ConnectionHealthMonitor, ConnectionHealthMonitorConfig, createConnectionHealthMonitor };
+export { ConnectionHealthMonitor, createConnectionHealthMonitor };
+export type { ConnectionHealthMonitorConfig };
 
 /**
  * Attach health monitor to a voice connection
