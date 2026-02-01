@@ -303,28 +303,11 @@ sequenceDiagram
     end
 ```
 
-## ✅ How to Start a Task
-
-Use standardized manifests for zero-ambiguity work:
-
-- Global index: see [docs/TASKS.md](docs/TASKS.md).
-- Scoped manifests: [src/bluebot/TODO.md](src/bluebot/TODO.md), [src/bunkbot/TODO.md](src/bunkbot/TODO.md), [src/covabot/TODO.md](src/covabot/TODO.md).
-
-Each manifest entry must define:
-- Context (Issue/User Story link)
-- File scope (absolute paths)
-- The change (logic + pattern references)
-- Validation gates:
-    - Tests with `vitest` in the affected package
-    - Repo validations via [scripts/validation/run-all-validations.sh](scripts/validation/run-all-validations.sh)
-    - Tracing per [docs/observability/TRACING.md](docs/observability/TRACING.md)
-    - Security Snyk scan per [.github/instructions/snyk_rules.instructions.md](.github/instructions/snyk_rules.instructions.md)
-
-See the master architect spec at [.github/agents/master-architect.agent.md](.github/agents/master-architect.agent.md) for delegation protocol and lifecycle.
+> **Note:** For AI agent workflow and task coordination details, see [Agent Workflow](docs/AGENT_WORKFLOW.md).
 
 ## 🧪 Testing
 
-The container architecture uses Jest with project-based testing:
+The container architecture uses Vitest with project-based testing:
 
 ```bash
 # Test all containers
