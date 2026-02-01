@@ -3,7 +3,7 @@
  * These tests actually call yt-dlp and require:
  * 1. yt-dlp to be installed on the system
  * 2. Network access to YouTube
- * 
+ *
  * Run with: npm test -- ytdlp-integration.test.ts
  * Skip in CI by setting: SKIP_YTDLP_TESTS=true
  */
@@ -22,148 +22,148 @@ const activeProcesses: ReturnType<typeof spawn>[] = [];
 
 // Check if yt-dlp is available
 async function isYtDlpAvailable(): Promise<boolean> {
-	return new Promise((resolve) => {
-		const process = spawn('yt-dlp', ['--version']);
-		process.on('error', () => resolve(false));
-		process.on('close', (code) => resolve(code === 0));
-		setTimeout(() => {
-			process.kill();
-			resolve(false);
-		}, 5000);
-	});
+  return new Promise(resolve => {
+    const process = spawn('yt-dlp', ['--version']);
+    process.on('error', () => resolve(false));
+    process.on('close', code => resolve(code === 0));
+    setTimeout(() => {
+      process.kill();
+      resolve(false);
+    }, 5000);
+  });
 }
 
-describe('yt-dlp Integration Tests', () => {
-	let ytdlpAvailable = false;
+// Skip tests if environment variable is set
+const shouldSkipTests = process.env.SKIP_YTDLP_TESTS === 'true';
 
-	beforeAll(async () => {
-		// Skip tests if SKIP_YTDLP_TESTS is set or yt-dlp is not available
-		if (process.env.SKIP_YTDLP_TESTS === 'true') {
-			console.log('⏭️  Skipping yt-dlp integration tests (SKIP_YTDLP_TESTS=true)');
-			return;
-		}
+describe.skipIf(shouldSkipTests)('yt-dlp Integration Tests', () => {
+  let ytdlpAvailable = false;
 
-		ytdlpAvailable = await isYtDlpAvailable();
-		if (!ytdlpAvailable) {
-			console.log('⏭️  Skipping yt-dlp integration tests (yt-dlp not found)');
-		}
-	}, 10000);
+  beforeAll(async () => {
+    ytdlpAvailable = await isYtDlpAvailable();
+    if (!ytdlpAvailable) {
+      console.log('⏭️  Skipping yt-dlp integration tests (yt-dlp not found)');
+    }
+  }, 10000);
 
-	afterEach(() => {
-		// Cleanup any active processes
-		activeProcesses.forEach((proc) => {
-			try {
-				proc.kill('SIGKILL');
-			} catch (e) {
-				// Process may already be dead
-			}
-		});
-		activeProcesses.length = 0;
-	});
+  afterEach(() => {
+    // Cleanup any active processes
+    activeProcesses.forEach(proc => {
+      try {
+        proc.kill('SIGKILL');
+      } catch (e) {
+        // Process may already be dead
+      }
+    });
+    activeProcesses.length = 0;
+  });
 
-	describe('getVideoInfo', () => {
-		it('should fetch video metadata from YouTube', async () => {
-			if (!ytdlpAvailable) {
-				console.log('⏭️  Test skipped: yt-dlp not available');
-				return;
-			}
+  describe('getVideoInfo', () => {
+    it('should fetch video metadata from YouTube', async () => {
+      if (!ytdlpAvailable) {
+        console.log('⏭️  Test skipped: yt-dlp not available');
+        return;
+      }
 
-			const info = await getVideoInfo(TEST_VIDEO_URL);
+      const info = await getVideoInfo(TEST_VIDEO_URL);
 
-			expect(info).toBeDefined();
-			expect(info.title).toBe(TEST_VIDEO_TITLE);
-			expect(info.duration).toBeGreaterThan(0);
-			expect(info.duration).toBeLessThan(30); // Should be a short video
-		}, 30000); // 30 second timeout for network request
+      expect(info).toBeDefined();
+      expect(info.title).toBe(TEST_VIDEO_TITLE);
+      expect(info.duration).toBeGreaterThan(0);
+      expect(info.duration).toBeLessThan(30); // Should be a short video
+    }, 30000); // 30 second timeout for network request
 
-		it('should reject invalid YouTube URLs', async () => {
-			if (!ytdlpAvailable) {
-				console.log('⏭️  Test skipped: yt-dlp not available');
-				return;
-			}
+    it('should reject invalid YouTube URLs', async () => {
+      if (!ytdlpAvailable) {
+        console.log('⏭️  Test skipped: yt-dlp not available');
+        return;
+      }
 
-			await expect(getVideoInfo('https://invalid-url.com')).rejects.toThrow();
-		}, 30000);
-	});
+      await expect(getVideoInfo('https://invalid-url.com')).rejects.toThrow();
+    }, 30000);
+  });
 
-	describe('getYouTubeAudioStream', () => {
-		it('should create a readable stream from YouTube video', async () => {
-			if (!ytdlpAvailable) {
-				console.log('⏭️  Test skipped: yt-dlp not available');
-				return;
-			}
+  describe('getYouTubeAudioStream', () => {
+    it('should create a readable stream from YouTube video', async () => {
+      if (!ytdlpAvailable) {
+        console.log('⏭️  Test skipped: yt-dlp not available');
+        return;
+      }
+      if (!ytdlpAvailable) {
+        console.log('⏭️  Test skipped: yt-dlp not available');
+        return;
+      }
 
-			const { stream, process } = getYouTubeAudioStream(TEST_VIDEO_URL);
-			activeProcesses.push(process);
+      const { stream, process } = getYouTubeAudioStream(TEST_VIDEO_URL);
+      activeProcesses.push(process);
 
-			// Wait for stream to start producing data
-			const dataReceived = await new Promise<boolean>((resolve) => {
-				const timeout = setTimeout(() => {
-					resolve(false);
-				}, 30000); // 30 second timeout
+      // Wait for stream to start producing data
+      const dataReceived = await new Promise<boolean>(resolve => {
+        const timeout = setTimeout(() => {
+          resolve(false);
+        }, 30000); // 30 second timeout
 
-				stream.once('data', (chunk) => {
-					clearTimeout(timeout);
-					expect(chunk).toBeDefined();
-					expect(chunk.length).toBeGreaterThan(0);
-					resolve(true);
-				});
+        stream.once('data', chunk => {
+          clearTimeout(timeout);
+          expect(chunk).toBeDefined();
+          expect(chunk.length).toBeGreaterThan(0);
+          resolve(true);
+        });
 
-				stream.once('error', (error) => {
-					clearTimeout(timeout);
-					console.error('Stream error:', error);
-					resolve(false);
-				});
+        stream.once('error', error => {
+          clearTimeout(timeout);
+          console.error('Stream error:', error);
+          resolve(false);
+        });
 
-				process.once('error', (error) => {
-					clearTimeout(timeout);
-					console.error('Process error:', error);
-					resolve(false);
-				});
-			});
+        process.once('error', error => {
+          clearTimeout(timeout);
+          console.error('Process error:', error);
+          resolve(false);
+        });
+      });
 
-			expect(dataReceived).toBe(true);
+      expect(dataReceived).toBe(true);
 
-			// Cleanup
-			stream.destroy();
-			process.kill('SIGKILL');
-		}, 35000);
+      // Cleanup
+      stream.destroy();
+      process.kill('SIGKILL');
+    }, 35000);
 
-		it('should handle stream errors gracefully', async () => {
-			if (!ytdlpAvailable) {
-				console.log('⏭️  Test skipped: yt-dlp not available');
-				return;
-			}
+    it('should handle stream errors gracefully', async () => {
+      if (!ytdlpAvailable) {
+        console.log('⏭️  Test skipped: yt-dlp not available');
+        return;
+      }
 
-			const { stream, process } = getYouTubeAudioStream('https://www.youtube.com/watch?v=invalid');
-			activeProcesses.push(process);
+      const { stream, process } = getYouTubeAudioStream('https://www.youtube.com/watch?v=invalid');
+      activeProcesses.push(process);
 
-			// Wait for error
-			const errorReceived = await new Promise<boolean>((resolve) => {
-				const timeout = setTimeout(() => {
-					resolve(false);
-				}, 30000);
+      // Wait for error
+      const errorReceived = await new Promise<boolean>(resolve => {
+        const timeout = setTimeout(() => {
+          resolve(false);
+        }, 30000);
 
-				stream.once('error', () => {
-					clearTimeout(timeout);
-					resolve(true);
-				});
+        stream.once('error', () => {
+          clearTimeout(timeout);
+          resolve(true);
+        });
 
-				// Also check if process exits with error
-				process.once('exit', (code) => {
-					if (code !== 0) {
-						clearTimeout(timeout);
-						resolve(true);
-					}
-				});
-			});
+        // Also check if process exits with error
+        process.once('exit', code => {
+          if (code !== 0) {
+            clearTimeout(timeout);
+            resolve(true);
+          }
+        });
+      });
 
-			expect(errorReceived).toBe(true);
+      expect(errorReceived).toBe(true);
 
-			// Cleanup
-			stream.destroy();
-			process.kill('SIGKILL');
-		}, 35000);
-	});
+      // Cleanup
+      stream.destroy();
+      process.kill('SIGKILL');
+    }, 35000);
+  });
 });
-
