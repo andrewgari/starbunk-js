@@ -234,6 +234,7 @@ actionlint
 !docs/DOCKER_COMPOSE_AUDIT.md
 !docs/branch-protection.md
 !docs/AGENTS.md
+!docs/AGENT_WORKFLOW.md
 !docs/ISSUE_*.md
 
 # ==========================================
