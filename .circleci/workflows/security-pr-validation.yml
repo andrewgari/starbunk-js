@@ -103,7 +103,7 @@ jobs:
           name: Build Bunkbot Container for Scanning
           command: |
             # Build container for scanning (no need to push)
-            docker build -f src/bunkbot/Dockerfile.ci -t starbunk-bunkbot:scan .
+            docker build -f src/bunkbot/Dockerfile -t starbunk-bunkbot:scan .
       - run:
           name: Snyk Container Scan - Bunkbot
           command: |
@@ -111,7 +111,7 @@ jobs:
             echo "🔍 Scanning Bunkbot container for vulnerabilities"
             snyk container test starbunk-bunkbot:scan \
               --severity-threshold=high \
-              --file=src/bunkbot/Dockerfile.ci \
+              --file=src/bunkbot/Dockerfile \
               || {
                 echo "❌ Bunkbot container has High or Critical vulnerabilities"
                 exit 1
@@ -137,7 +137,7 @@ jobs:
       - run:
           name: Build DJCova Container for Scanning
           command: |
-            docker build -f src/djcova/Dockerfile.ci -t starbunk-djcova:scan .
+            docker build -f src/djcova/Dockerfile -t starbunk-djcova:scan .
       - run:
           name: Snyk Container Scan - DJCova
           command: |
@@ -145,7 +145,7 @@ jobs:
             echo "🔍 Scanning DJCova container for vulnerabilities"
             snyk container test starbunk-djcova:scan \
               --severity-threshold=high \
-              --file=src/djcova/Dockerfile.ci \
+              --file=src/djcova/Dockerfile \
               || {
                 echo "❌ DJCova container has High or Critical vulnerabilities"
                 exit 1
@@ -171,7 +171,7 @@ jobs:
       - run:
           name: Build Covabot Container for Scanning
           command: |
-            docker build -f src/covabot/Dockerfile.ci -t starbunk-covabot:scan .
+            docker build -f src/covabot/Dockerfile -t starbunk-covabot:scan .
       - run:
           name: Snyk Container Scan - Covabot
           command: |
@@ -179,7 +179,7 @@ jobs:
             echo "🔍 Scanning Covabot container for vulnerabilities"
             snyk container test starbunk-covabot:scan \
               --severity-threshold=high \
-              --file=src/covabot/Dockerfile.ci \
+              --file=src/covabot/Dockerfile \
               || {
                 echo "❌ Covabot container has High or Critical vulnerabilities"
                 exit 1
@@ -205,7 +205,7 @@ jobs:
       - run:
           name: Build Bluebot Container for Scanning
           command: |
-            docker build -f src/bluebot/Dockerfile.ci -t starbunk-bluebot:scan .
+            docker build -f src/bluebot/Dockerfile -t starbunk-bluebot:scan .
       - run:
           name: Snyk Container Scan - Bluebot
           command: |
@@ -213,7 +213,7 @@ jobs:
             echo "🔍 Scanning Bluebot container for vulnerabilities"
             snyk container test starbunk-bluebot:scan \
               --severity-threshold=high \
-              --file=src/bluebot/Dockerfile.ci \
+              --file=src/bluebot/Dockerfile \
               || {
                 echo "❌ Bluebot container has High or Critical vulnerabilities"
                 exit 1
