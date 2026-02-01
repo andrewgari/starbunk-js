@@ -158,7 +158,7 @@ Required environment variables (or use defaults where shown):
 STARBUNK_TOKEN=your_discord_bot_token
 
 # Database
-DATABASE_URL=postgresql://user:pass@postgres:5432/starbunk
+DATABASE_URL=postgresql://user:pass@starbunk-postgres:5432/starbunk
 
 # AI Services (if using CovaBot)
 OPENAI_API_KEY=your_openai_key
