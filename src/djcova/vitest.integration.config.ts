@@ -17,8 +17,13 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    // ONLY include integration tests
-    include: ['tests/**/*.integration.test.ts', 'src/**/*.integration.test.ts'],
+    // Include integration, contract, and e2e tests
+    include: [
+      'tests/**/*.integration.test.ts',
+      'tests/**/*.contract.test.ts',
+      'tests/**/*.e2e.test.ts',
+      'src/**/*.integration.test.ts',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],

@@ -12,6 +12,8 @@
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:integration:watch": "vitest --config vitest.integration.config.ts",
+    "test:e2e": "vitest run --config vitest.integration.config.ts tests/integration/*.e2e.test.ts",
+    "test:contract": "vitest run --config vitest.integration.config.ts tests/integration/*.contract.test.ts",
     "type-check": "tsc --build --dry",
     "clean": "tsc --build --clean"
   },
