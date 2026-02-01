@@ -1,491 +1,430 @@
-# VSCode AI Agents & Commands Reference
-
-## 🎯 **START HERE: Talk to @pm or @tech-guy**
-
-**You only need to talk to one bot.**
-- Use `@pm` for product/feature initiatives
-- Use `@tech-guy` for devtools, infra, deployment, or AI agent work
-
-```
-@pm: [Describe what you want to build]
-@tech-guy: [Describe the technical task]
-```
-
-### The Flow
-```
-@pm or @tech-guy (Requirements) → @master-architect (Planning) → Specialists (Execution)
-```
-
-**@pm will:**
-- ✅ Understand your goal and ask probing questions
-- ✅ Work through requirements with you iteratively
-- ✅ Create a detailed PRD (Product Requirements Document)
-- ✅ Hand off to @master-architect when ready
-
-**@tech-guy will:**
-- ✅ Clarify environment and constraints (Docker/SSH/infra/devtools)
-- ✅ Define scope, risks, and success criteria
-- ✅ Produce a technical execution brief
-- ✅ Hand off to @master-architect when ready
-
-**@master-architect will:**
-- ✅ Create technical execution plan
-- ✅ Delegate to specialists (@ts-sorcerer, @grunt-worker, @test-guard, etc.)
-- ✅ Coordinate the work
-- ✅ Report back when done
-
-**Strategic Approach**: All work is PRD-driven and references the master documents at `docs/PRD_SYSTEM_IMPLEMENTATION_PLAN.md` and `docs/PLAN.md`
-
----
-
-## 📋 **Quick Links**
-
-- **[Commands Cheat Sheet](COMMANDS_CHEAT_SHEET.md)** ⭐ Start here for command reference
-- **[PM Workflow Guide](PM_WORKFLOW.md)** - How to work with @pm
-- **[Operational Guide](OPERATIONAL_GUIDE.md)** - Complete guide
-- **[Quick Reference Card](QUICK_REFERENCE.md)** - One-pagers
-
----
-
-This directory contains specialized AI agents and reusable command templates for VSCode AI workflows, all aligned with active PRD initiatives.
-
-## 🤖 Agent System Overview
-
-The agent system uses a hierarchical structure where each agent has specific expertise, tools, and inter-agent communication protocols.
-
-## 🤖 Agent System Overview
-
-You communicate with **@pm**. They coordinate with **@master-architect**. Architect manages all other agents.
-
-```
-YOU
- ↓
-@pm (Your Interface - Requirements & PRD Creation)
- ↓
-@master-architect (Technical Lead - Planning & Execution)
- ├→ @ts-sorcerer (Type System Design)
- ├→ @data-architect (Database & Schema)
- ├→ @discord-expert (Discord API)
- ├→ @observability-engineer (Tracing & Monitoring)
- ├→ @grunt-worker (Implementation)
- │  ├→ @code-stylist (Code Review)
- │  └→ @test-guard (Testing)
- ├→ @ops-engineer (Infrastructure)
- └→ @github-liaison (Repository)
-```
-
-**All delegation happens automatically.** You start with @pm. They handle everything else.
-
-## 📋 Available Agents
-
-### 🏗️ pm
-**Role**: Product Manager & Requirements Gatherer
-**Expertise**: Initiative planning, PRD creation, scope definition, stakeholder alignment
-**Talk to them for**: Defining new features, discussing requirements, clarifying scope
-
-### 🛠️ tech-guy
-**Role**: Technical PM for non-product work
-**Expertise**: Docker, SSH, infrastructure, deployment, devtools, AI agents
-**Talk to them for**: Devtools, CI/CD, infra, deployments, agent creation
-**Expertise**: Zero-ambiguity handoffs, security gates, task delegation
-**Use when**: Planning multi-step work, coordinating team, architectural decisions
-
-**Key Capabilities**:
-- Draft & Refine Planning Protocol
-- Task Manifest generation
-- Security gate enforcement (Snyk)
-- Inter-agent delegation
-
-### 🔮 ts-sorcerer
-**Role**: TypeScript System Architect
-**Expertise**: Advanced TypeScript patterns, type safety, zero-`any` policy
-**Use when**: Type system design, refactoring for type safety, complex types
-
-**Key Capabilities**:
-- Discriminated unions
-- Template literal types
-- Branded types
-- Type inference optimization
-- Generic constraints
-
-### 🗄️ data-architect (NEW)
-**Role**: Database Schema Designer & Migration Specialist
-**Expertise**: Schema design, query optimization, migrations
-**Use when**: Database changes, performance optimization, data modeling
-
-**Key Capabilities**:
-- Schema normalization
-- Index design
-- Migration strategies (zero-downtime)
-- Query optimization
-- Data integrity enforcement
-
-### 📊 observability-engineer (NEW)
-**Role**: Tracing, Metrics & Monitoring Specialist
-**Expertise**: OpenTelemetry, structured logging, alerting
-**Use when**: Adding instrumentation, debugging production issues, creating dashboards
-
-**Key Capabilities**:
-- Distributed tracing with OpenTelemetry
-- Prometheus metrics design
-- Grafana dashboard creation
-- Alert threshold configuration
-- Log correlation
-
-### 💬 discord-expert
-**Role**: Discord API Platform Engineer
-**Expertise**: Discord.js v14+, Discord API v10+, platform updates
-**Use when**: Discord integration, bot commands, platform-specific features
-
-**Key Capabilities**:
-- Discord Gateway intents
-- Permission management
-- Slash commands
-- Webhooks & interactions
-- API deprecation awareness
-
-### 🛠️ grunt-worker
-**Role**: Pragmatic Executioner
-**Expertise**: Clean implementation, minimal diffs, pattern application
-**Use when**: Implementing features after design is approved
-
-**Key Capabilities**:
-- Surgical code changes
-- Pattern adherence (Strategy, Pipeline, Observer)
-- Minimalist footprint
-- Direct manifest execution
-
-### 🎨 code-stylist
-**Role**: Code Aesthetics & Organization Specialist
-**Expertise**: Naming conventions, folder structure, code elegance
-**Use when**: Reviewing code quality, refactoring for clarity
-
-**Key Capabilities**:
-- Declarative naming enforcement
-- Folder organization ("Zen")
-- Import ordering
-- Comment minimalism
-- Git hygiene
-
-### 🛡️ test-guard
-**Role**: QA Lead & TDD Specialist
-**Expertise**: Test coverage, testability, edge cases
-**Use when**: Writing tests, ensuring quality, TDD workflows
-
-**Key Capabilities**:
-- Unit/Integration/E2E test design
-- Test data factories
-- Coverage enforcement (80%+)
-- Flakiness detection
-- Edge case identification
-
-### 🚀 ops-engineer
-**Role**: Infrastructure & Deployment Specialist
-**Expertise**: Docker, CI/CD, Unraid, container orchestration
-**Use when**: Deployment issues, infrastructure optimization, DevOps tasks
-
-### 🔗 github-liaison
-**Role**: Git Repository Manager
-**Expertise**: Branching, PRs, Git workflows
-**Use when**: Repository operations, branch management, merge conflicts
-
----
-
-## ⚡ Quick Commands (PRD-Driven)
-
-Commands are reusable prompts for common workflows. **Every command now requires PRD context** and validates work against PRD acceptance criteria.
-
-### 📖 analyze-architecture.md
-**Purpose**: Comprehensive codebase analysis aligned with strategic PRD initiatives
-**PRD Dependent**: Yes
-**Use when**: Starting new PRD initiatives, tech debt assessment, onboarding
-
-**Required Context**:
-- PRD initiative being analyzed
-- Acceptance criteria from PRD
-- Timeline constraints from PRD
-
-### 🔄 design-refactor.md
-**Purpose**: PRD-driven refactoring strategy with risk assessment
-**PRD Dependent**: Yes
-**Use when**: Planning major refactors tied to PRD acceptance criteria
-
-**Required Context**:
-- Related PRD reference
-- PRD acceptance criteria
-- PRD phase alignment
-
-### 🔒 find-type-errors.md
-**Purpose**: TypeScript type safety audit aligned with code quality PRD initiatives
-**PRD Dependent**: Yes
-**Use when**: Improving type coverage to meet PRD type-safety goals
-
-**Required Context**:
-- PRD initiative (e.g., zero-`any` policy)
-- Type safety targets from PRD
-- Package focus
-
-### 🔐 find-security-issues.md
-**Purpose**: PRD-aligned security audit and hardening workflow
-**PRD Dependent**: Yes
-**Use when**: Security reviews tied to PRD compliance requirements
-
-**Required Context**:
-- PRD initiative
-- Security compliance targets
-- Risk tolerance from PRD
-
-### 🧪 design-tests.md
-**Purpose**: PRD-driven test strategy ensuring acceptance criteria validation
-**PRD Dependent**: Yes
-**Use when**: Setting up testing aligned with PRD acceptance criteria
-
-**Required Context**:
-- Related PRD reference
-- PRD acceptance criteria
-- Coverage requirements from PRD
-
-### ⚡ find-performance-issues.md
-**Purpose**: PRD-aligned performance optimization with measurable impact
-**PRD Dependent**: Yes
-**Use when**: Performance improvements tied to PRD targets
-
-**Required Context**:
-- PRD initiative
-- Target metrics from PRD
-- Baseline from PRD
-
-### 🚩 design-rollout.md
-**Purpose**: PRD-driven feature flag strategy for controlled rollouts
-**PRD Dependent**: Yes
-**Use when**: Implementing controlled rollouts for PRD features
-
-**Required Context**:
-- PRD initiative
-- Success metrics from PRD
-- Rollback triggers from PRD risk assessment
-
-### 📚 generate-api-docs.md
-**Purpose**: PRD-aligned API documentation generation
-**PRD Dependent**: Yes
-**Use when**: Creating API docs for PRD-required endpoints
-
-**Required Context**:
-- Related PRD initiative
-- API contracts from PRD
-- PRD acceptance validation paths
-
-### 🔀 design-migration.md
-**Purpose**: PRD-aligned migration planning with acceptance validation
-**PRD Dependent**: Yes
-**Use when**: Database migrations, API versioning, architecture changes required by PRD
-
-**Required Context**:
-- PRD initiative
-- Acceptance criteria
-- Success validation from PRD
-
-### ✅ fix-all-errors.md
-**Purpose**: Iterative error elimination until local + CI are clean
-**PRD Dependent**: Yes
-**Use when**: CI is red or local checks fail and you want them fully green
-
-**Required Context**:
-- PRD initiative (if relevant)
-- Required checks (type, lint, test, build)
-
-### ✂️ simplify-codebase.md
-**Purpose**: Reduce complexity and code size while staying PRD-aligned
-**PRD Dependent**: Yes
-**Use when**: Code feels bloated or overly complex
-
-**Required Context**:
-- PRD acceptance criteria to preserve
-- Target areas for simplification
-
-### 🧪 generate-unit-tests.md
-**Purpose**: Generate unit tests from existing code
-**PRD Dependent**: Yes
-**Use when**: Coverage gaps or new modules lack tests
-
-**Required Context**:
-- Target modules/files
-- Coverage expectations from PRD
-
-### 📦 complete-github-issue.md
-**Purpose**: End-to-end GitHub issue delivery (analysis → implementation → tests)
-**PRD Dependent**: Yes
-**Use when**: You want a full issue completed and PR-ready
-
-**Required Context**:
-- Issue number or link
-- Acceptance criteria from issue/PRD
-
-### 🧭 strategic-assessment.md
-**Purpose**: High-level assessment with course correction + long-term plan
-**PRD Dependent**: Yes
-**Use when**: You need strategic direction and roadmap alignment
-
-**Required Context**:
-- Active PRDs
-- Current priorities and timelines
-
-### 🧠 ralph.md
-**Purpose**: Simple, direct execution strategy for completing a task
-**PRD Dependent**: Yes
-**Use when**: You want the obvious, minimal path to completion
-
-**Required Context**:
-- Task to complete
-- PRD acceptance criteria
-
----
-
-## 📋 Usage Patterns
-
-### Pattern 1: Simple Task (Typical)
-```
-YOU: @master-architect: Add a new Discord command for !version
-
-@master-architect will:
-1. Review requirements
-2. Ask @discord-expert to validate Discord specifics
-3. Ask @ts-sorcerer to design types
-4. Ask @grunt-worker to implement
-5. Ask @test-guard to write tests
-6. Ask @code-stylist to review
-7. Report completion to you
-```
-
-### Pattern 2: Complex Feature
-```
-YOU: @master-architect: Implement personality system with database persistence
-
-@master-architect will:
-1. Run: analyze-architecture.md
-2. Delegate to @ts-sorcerer for type design
-3. Delegate to @data-architect for schema
-4. Delegate to @grunt-worker for implementation
-5. Delegate to @test-guard for testing
-6. Delegate to @observability-engineer for monitoring
-7. Report with status and next steps
-```
-
-### Pattern 3: Bug Investigation
-```
-YOU: @master-architect: Production error in message processing - 500 errors after deploy
-
-@master-architect will:
-1. Ask @observability-engineer to analyze traces
-2. Identify root cause
-3. Delegate to appropriate specialist for fix
-4. Verify fix with tests
-5. Coordinate deployment
-6. Confirm resolution
-```
-
-### Pattern 4: Using Commands (When You Need Specific Analysis)
-```
-YOU: @master-architect: Run find-type-errors.md on bunkbot package for PRD_INITIATIVE="Type Safety"
-
-@master-architect will:
-1. Execute the command with PRD context
-2. Analyze results
-3. Prioritize findings
-4. Create refactoring plan
-5. Delegate implementation
-6. Report progress
-```
-
-## 🚀 PRD Integration
-
-All commands are designed to be **PRD-driven**:
-
-### How It Works
-1. **Every command requires PRD context** - Specify which PRD initiative this work supports
-2. **Acceptance criteria validation** - Work is validated against PRD acceptance criteria
-3. **Timeline alignment** - Work is scheduled according to PRD phases
-4. **Success metrics** - Outcomes measured against PRD-defined success criteria
-
-### Command Variables for PRD Context
-All commands support these PRD variables:
-- `$PRD_INITIATIVE` - The PRD being executed (e.g., "Type Safety Improvement")
-- `$ACCEPTANCE_CRITERIA` - Success criteria from the PRD
-- `$PRD_REFERENCE` - Link to specific PRD document section
-- `$PRD_CRITERIA` - Detailed acceptance criteria
-- `$PRD_VALIDATION` - How success will be validated
-
-### Example Invocation
-```bash
-# Set PRD context
-export PRD_INITIATIVE="Personality Parser Type Safety"
-export ACCEPTANCE_CRITERIA="No `as` assertions in YAML parsing"
-export PRD_REFERENCE="docs/PLAN.md#acceptance-criteria"
-
-# Run command with PRD context
-# (VSCode AI will use these variables in the command)
-```
-
----
-
-## 🎓 Best Practices
-
-### Agent Selection
-- Use **master-architect** for planning and coordination
-- Use **specialists** (ts-sorcerer, data-architect, etc.) for domain-specific tasks
-- Use **grunt-worker** for implementation after design is complete
-- Use **test-guard** immediately after implementation
-
-### Communication Protocol
-1. **Always tag agents** with `@agent-name` for explicit delegation
-2. **Wait for handoff signals** before proceeding to next phase
-3. **Include context** from previous agents (types, schemas, etc.)
-4. **Document decisions** in package-local `TODO.md` files
-
-### Quality Gates
-Every change must pass:
-- [ ] Type safety (zero `any`)
-- [ ] Test coverage (80%+)
-- [ ] Security scan (Snyk clean)
-- [ ] Style guide (code-stylist approved)
-- [ ] Observability (spans and metrics added)
-- [ ] Documentation updated
-
-### File Organization
-```
-.github/
-  agents/           # Agent definitions (.agent.md)
-  commands/         # Command templates (.md)
-  instructions/     # Always-on rules (.instructions.md)
-```
-
----
+# StarBunk Discord Bot - Container Architecture
+<!-- Testing deployment workflow -->
+
+A sophisticated Discord bot built with TypeScript using a **4-container modular architecture** that provides scalable, isolated services for different bot functionalities.
+
+## 🏗️ Container Architecture
+
+StarBunk is built as **4 independent containers**, each handling specific functionality:
+
+### 🤖 **BunkBot** - Reply Bots & Admin Commands
+- **Purpose**: Handles reply bots and administrative commands
+- **Dependencies**: Discord.js, Webhooks, Basic Database
+- **Features**: Bot management, admin commands, webhook-based responses
+- **Scaling**: Lightweight, optimized for high message volume
+
+### 🎵 **DJCova** - Music Service
+- **Purpose**: Voice channel music playback and audio processing
+- **Dependencies**: Discord.js Voice, ffmpeg, audio libraries
+- **Features**: YouTube playback, voice channel management, audio streaming
+- **Scaling**: CPU-optimized for audio processing
+
+### 🧠 **CovaBot** - AI Personality
+- **Purpose**: AI-powered personality simulation and responses
+- **Dependencies**: LLM services, Minimal database
+- **Features**: Personality-driven responses, user behavior mimicking
+- **Scaling**: LLM-optimized for AI processing
+
+### 💙 **BlueBot** - Blue Detection Bot
+- **Purpose**: Detects and responds to mentions of "blue" or Blue Mage references
+- **Dependencies**: Discord.js, OpenAI (optional), Database
+- **Features**: Pattern matching, LLM-enhanced detection, contextual responses
+- **Scaling**: Lightweight, optimized for message processing
+
+## 🌟 Key Benefits
+
+### 🔧 **Independent Scaling**
+- Scale containers based on load (music service vs reply bots)
+- Resource optimization per container type
+- Independent deployment and updates
+
+### 🛡️ **Isolation & Reliability**
+- Container failures don't affect other services
+- Independent environment validation
+- Service-specific error boundaries
+
+### 📦 **Optimized Dependencies**
+- Each container only includes required dependencies
+- Reduced attack surface and resource usage
+- Faster startup times per service
 
 ## 🚀 Quick Start
 
-### 1. Invoke an Agent
+### Prerequisites
+- Docker and Docker Compose
+- Node.js 20.x or higher (for development)
+- Discord Bot Token
+
+### Production Deployment
+```bash
+# Clone the repository
+git clone https://github.com/andrewgari/starbunk-js.git
+cd starbunk-js
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your tokens and configuration
+
+# Start all containers
+docker-compose up -d
+
+# Monitor logs
+npm run logs
 ```
-@master-architect: Plan implementation of new personality system
+
+### Development Setup
+```bash
+# Install dependencies for all containers
+npm run setup:containers
+
+# Build all containers
+npm run build
+
+# Start development environment
+npm run start:dev
+
+# Work on specific containers
+npm run dev:bunkbot      # Reply bots + admin
+npm run dev:djcova       # Music service
+npm run dev:covabot      # AI personality
+npm run dev:bluebot      # Blue detection
 ```
 
-### 2. Run a Command
-Select and run a command template from `.github/commands/`
+## 📋 Environment Configuration
 
-### 3. Follow the Protocol
-Let agents hand off work between each other using explicit delegation
+### Required for All Containers
+```env
+STARBUNK_TOKEN=your_discord_bot_token
+```
 
----
+### Container-Specific Variables
+```env
+# Database-dependent containers (BunkBot, CovaBot)
+DATABASE_URL=postgresql://user:pass@postgres:5432/starbunk
 
-## � Related Documentation
-- [PRD System Implementation Plan](../../docs/PRD_SYSTEM_IMPLEMENTATION_PLAN.md) - Master document for PRD system
-- [PLAN - Type Safety Initiative](../../docs/PLAN.md) - Active PRD for personality parser type safety
-- [AGENTS.md](../../docs/AGENTS.md) - Legacy n8n agent guidelines
-- [SYSTEM_SPEC.md](../../docs/SYSTEM_SPEC.md) - System architecture
-- [Snyk Rules](./instructions/snyk_rules.instructions.md) - Security guidelines
+# LLM-dependent containers (CovaBot)
+OPENAI_API_KEY=your_openai_key
+OLLAMA_API_URL=http://ollama:11434
 
----
+# Development
+DEBUG=true
+NODE_ENV=development
+```
 
-**Last Updated**: January 30, 2026
-**Version**: 2.1.0 (PRD-Driven)
-**Strategic Approach**: All work aligned with `docs/PRD_SYSTEM_IMPLEMENTATION_PLAN.md`
-**Maintainer**: @master-architect
+## 🗄️ Database Services
+
+The stack includes three internal database services for data persistence:
+
+### Redis - In-Memory Data Store
+- **Purpose**: Social battery tracking, caching, session data
+- **Service**: `starbunk-redis` (container: `starbunk-cache`)
+- **Port**: 6379 (internal only)
+- **Memory**: 256MB limit, allkeys-lru eviction policy
+- **Persistence**: Snapshots every 60s if at least 1 change
+- **Data**: `/data/redis` volume mount
+
+**Configuration**:
+```env
+REDIS_HOST=starbunk-redis  # Use service name for internal networking
+REDIS_PORT=6379
+REDIS_PASSWORD=            # Optional: set for production
+REDIS_DB=0
+```
+
+> **Note**: Use the service name `starbunk-redis` (not the container name `starbunk-cache`) for REDIS_HOST. Docker Compose uses service names for internal DNS resolution.
+
+**Using External Redis** (optional):
+```env
+REDIS_HOST=192.168.1.100   # Point to external Redis server
+REDIS_PASSWORD=your_password
+```
+
+### PostgreSQL - Relational Database
+- **Purpose**: Persistent bot data, user settings
+- **Service**: `starbunk-postgres` (container: `starbunk-db`)
+- **Port**: 5432 (internal only)
+- **Memory**: 512MB limit
+- **Data**: `/data/postgres` volume mount
+
+### Qdrant - Vector Database
+- **Purpose**: Saliency/interest matching, semantic search
+- **Service**: `starbunk-qdrant` (container: `starbunk-vectordb`)
+- **Port**: 6333 (internal only)
+- **Memory**: 512MB limit
+- **Data**: `/data/qdrant` volume mount
+
+**Architecture Notes**:
+- All database services run within the `starbunk-network` and are not exposed to the host
+- Services can be replaced with external instances by updating environment variables
+- Data persists in `${HOST_WORKDIR}/data/` directory structure
+- Each service includes health checks for reliability
+
+## 🛠️ Development Commands
+
+### Container Management
+```bash
+# Build all containers
+npm run build
+
+# Test all containers
+npm test
+
+# Start production stack
+npm run start
+
+# Start development environment
+npm run start:dev
+
+# View logs
+npm run logs
+npm run logs:bunkbot
+npm run logs:djcova
+npm run logs:covabot
+npm run logs:bluebot
+```
+
+### Individual Container Development
+```bash
+# Work on specific containers
+cd src/bunkbot && npm run dev
+cd src/djcova && npm run dev
+cd src/covabot && npm run dev
+```
+
+## 📁 Container Structure
+
+```
+src/
+├── shared/                   # Shared services and utilities
+│   ├── src/
+│   │   ├── services/        # Logger, webhook manager, etc.
+│   │   ├── utils/           # Environment validation, error handling
+│   │   ├── discord/         # Discord client factory
+│   │   └── index.ts         # Shared exports
+│   └── package.json
+├── bunkbot/                 # Reply bots + admin commands
+│   ├── src/
+│   │   ├── index-minimal.ts # Container entry point
+│   │   └── tests/           # Container-specific tests
+│   ├── Dockerfile
+│   └── package.json
+├── djcova/                  # Music service
+│   ├── src/
+│   │   ├── index-minimal.ts # Container entry point
+│   │   └── tests/           # Container-specific tests
+│   ├── Dockerfile
+│   └── package.json
+└── covabot/                 # AI personality bot
+    ├── src/
+    │   ├── index-minimal.ts # Container entry point
+    │   └── tests/           # Container-specific tests
+    ├── Dockerfile
+    └── package.json
+```
+
+## 📊 Container Architecture Diagram
+
+```mermaid
+graph TD
+    User([Discord User]) <-->|Interacts with| Discord[Discord Platform]
+
+    subgraph "Bot Services"
+        Discord <-->|Bot API| BunkBot[🤖 BunkBot<br/>Reply Bots + Admin]
+        Discord <-->|Voice API| DJCova[🎵 DJCova<br/>Music Service]
+        Discord <-->|Bot API| CovaBot[🧠 CovaBot<br/>AI Personality]
+        Discord <-->|Bot API| BlueBot[💙 BlueBot<br/>Blue Detection]
+    end
+
+    subgraph "Database Services"
+        PostgresDB[(PostgreSQL<br/>Persistent Data)]
+        RedisDB[(Redis<br/>Cache/Sessions)]
+        QdrantDB[(Qdrant<br/>Vector Search)]
+    end
+
+    subgraph "External Services"
+        LLM[LLM Services<br/>OpenAI/Ollama]
+        Webhooks[Webhook Manager]
+    end
+
+    BunkBot --> PostgresDB
+    CovaBot --> PostgresDB
+    CovaBot --> RedisDB
+    CovaBot --> QdrantDB
+    BlueBot --> PostgresDB
+
+    CovaBot --> LLM
+    BunkBot --> Webhooks
+    CovaBot --> Webhooks
+
+    style BunkBot fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style DJCova fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    style CovaBot fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style BlueBot fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style PostgresDB fill:#336791,stroke:#fff,stroke-width:2px,color:#fff
+    style RedisDB fill:#DC382D,stroke:#fff,stroke-width:2px,color:#fff
+    style QdrantDB fill:#24386C,stroke:#fff,stroke-width:2px,color:#fff
+    style LLM fill:#bfb,stroke:#333,stroke-width:1px
+```
+
+## 🔄 Container Bootstrap Flow
+
+```mermaid
+sequenceDiagram
+    participant Docker as Docker Compose
+    participant Shared as Shared Package
+    participant BunkBot as BunkBot Container
+    participant DJCova as DJCova Container
+    participant CovaBot as CovaBot Container
+    participant BlueBot as BlueBot Container
+
+    Docker->>Shared: Build shared package
+    Shared-->>Docker: ✅ Built
+
+    par Container Initialization
+        Docker->>BunkBot: Start container
+        BunkBot->>BunkBot: Validate STARBUNK_TOKEN
+        BunkBot->>BunkBot: Initialize webhook services
+        BunkBot-->>Docker: ✅ Ready
+    and
+        Docker->>DJCova: Start container
+        DJCova->>DJCova: Validate STARBUNK_TOKEN
+        DJCova->>DJCova: Initialize voice services
+        DJCova-->>Docker: ✅ Ready
+    and
+        Docker->>CovaBot: Start container
+        CovaBot->>CovaBot: Validate STARBUNK_TOKEN + LLM
+        CovaBot->>CovaBot: Initialize AI services
+        CovaBot-->>Docker: ✅ Ready
+    and
+        Docker->>BlueBot: Start container
+        BlueBot->>BlueBot: Validate STARBUNK_TOKEN
+        BlueBot->>BlueBot: Initialize detection services
+        BlueBot-->>Docker: ✅ Ready
+    end
+```
+
+> **Note:** For AI agent workflow and task coordination details, see [Agent Workflow](docs/AGENT_WORKFLOW.md).
+
+## 🧪 Testing
+
+The container architecture uses Vitest with project-based testing:
+
+```bash
+# Test all containers
+npm test
+
+# Test specific containers
+npm run test:shared
+npm run test:bunkbot
+npm run test:djcova
+npm run test:covabot
+npm run test:bluebot
+
+# Test individual container
+cd containers/bunkbot && npm test
+```
+
+## 🚀 Deployment
+
+### Production Deployment
+
+Starbunk uses **automated deployment** to production via CircleCI when GitHub releases are published.
+
+**📖 For complete deployment setup and procedures, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
+
+#### Quick Deploy (Manual)
+```bash
+# Build and start all containers
+docker-compose up -d
+
+# Scale specific containers
+docker-compose up -d --scale djcova=2 --scale bunkbot=3
+
+# Update specific container
+docker-compose up -d --no-deps bunkbot
+```
+
+### CI/CD Pipeline
+- **CircleCI (PRs)**: Build, test, and validate changed packages
+- **CircleCI (main)**: Build images and push to GitHub Container Registry (GHCR)
+- **Semantic Release**: Generate version tags and GitHub releases
+- **GitHub Actions**: Tag images with version numbers (`:prod`, `:staging`)
+- **CircleCI (releases)**: Deploy to production Unraid server via SSH
+
+#### Deployment Scripts
+- [`scripts/deployment/deploy.sh`](scripts/deployment/deploy.sh) - Automated deployment orchestration
+- [`scripts/deployment/health-check.sh`](scripts/deployment/health-check.sh) - Post-deployment verification
+- [`scripts/deployment/rollback.sh`](scripts/deployment/rollback.sh) - Emergency rollback procedures
+
+### CI Policy (PRs)
+- Validations: runs [scripts/validation/run-all-validations.sh](scripts/validation/run-all-validations.sh) for structure/naming/docs.
+- Changed packages only: build + type-check across modified workspaces.
+- Scoped tests: `src/shared` tests always run; `src/covabot` tests exclude `tests/services/llm/**` temporarily until those suites are stabilized.
+- Weekly security: scheduled `npm audit --audit-level=moderate` alongside existing Snyk PR checks.
+
+This scoping avoids unrelated failures on PRs while still enforcing correctness and security. As suites stabilize, CI will expand test coverage per workspace.
+
+## 📊 Container Resource Requirements
+
+| Container | CPU | Memory | Storage | Network |
+|-----------|-----|--------|---------|---------|
+| **BunkBot** | 0.5 cores | 256MB | Minimal | High (webhooks) |
+| **DJCova** | 1-2 cores | 1GB | Moderate (cache) | High (voice) |
+| **CovaBot** | 0.5-1 cores | 1GB | Low | Moderate |
+| **BlueBot** | 0.25-0.5 cores | 512MB | Minimal | Low |
+| **PostgreSQL** | 0.5 cores | 512MB | High | Low |
+| **Redis** | 0.25 cores | 256MB | Low (snapshots) | Low |
+| **Qdrant** | 0.5 cores | 512MB | Moderate | Low |
+| **OTEL Collector** | 0.5 cores | 512MB | Minimal | Moderate |
+
+## 🔧 Troubleshooting
+
+### Container Won't Start
+```bash
+# Check container logs
+docker-compose logs bunkbot
+
+# Check environment variables
+docker-compose config
+
+# Rebuild container
+docker-compose build --no-cache bunkbot
+```
+
+### Database Connection Issues
+```bash
+# Check PostgreSQL status
+docker-compose ps starbunk-postgres
+
+# Test PostgreSQL connection
+docker-compose exec starbunk-postgres psql -U starbunk -d starbunk
+
+# Check Redis status
+docker-compose ps starbunk-redis
+
+# Test Redis connection
+docker-compose exec starbunk-redis redis-cli ping
+# Expected output: PONG
+
+# Test Redis with password
+docker-compose exec starbunk-redis redis-cli -a your_password ping
+
+# Check Qdrant status
+docker-compose ps starbunk-qdrant
+
+# View database service logs
+docker-compose logs starbunk-redis
+docker-compose logs starbunk-postgres
+docker-compose logs starbunk-qdrant
+```
+
+## 📜 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Discord.js team for their excellent library
+- Ollama and OpenAI for LLM capabilities
+- All contributors to the project
+# Trigger rebuild
