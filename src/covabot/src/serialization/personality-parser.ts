@@ -1,147 +1,127 @@
-/**
- * YAML personality file loading and parsing
- */
-
-import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
-import { yamlConfigSchema, YamlConfigType } from './personality-schema';
-import { CovaProfile } from '@/models/memory-types';
+import type { CovaProfile } from '@/models/memory-types';
+import {
+  isYamlFile,
+  readDirectory,
+  directoryExists,
+  createDirectory,
+  readFileUtf8,
+} from './file-reader';
+import { validateOrThrow } from './personality-validator';
+import { mapToCovaProfile } from './personality-mapper';
 
 const logger = logLayer.withPrefix('PersonalityParser');
 
-/**
- * Load and parse a single YAML personality file
- */
-export function parsePersonalityFile(filePath: string): CovaProfile {
-  logger.withMetadata({ file_path: filePath }).info('Loading personality file');
-
-  if (!fs.existsSync(filePath)) {
-    logger.withMetadata({ file_path: filePath }).error('Personality file not found');
-    throw new Error(`Personality file not found: ${filePath}`);
+class PersonalityParserError extends Error {
+  constructor(
+    message: string,
+    public readonly filePath?: string,
+  ) {
+    super(message);
+    this.name = 'PersonalityParserError';
   }
-
-  const fileContent = fs.readFileSync(filePath, 'utf-8');
-
-  let parsed: unknown;
-  try {
-    parsed = yaml.load(fileContent);
-  } catch (yamlError) {
-    logger.withError(yamlError).withMetadata({ file_path: filePath }).error('YAML parsing failed');
-    throw new Error(`Failed to parse YAML in ${filePath}: ${yamlError}`);
-  }
-
-  // Validate with Zod
-  const validationResult = yamlConfigSchema.safeParse(parsed);
-  if (!validationResult.success) {
-    const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-    logger.withMetadata({ file_path: filePath, errors }).error('Schema validation failed');
-    throw new Error(`Schema validation failed for ${filePath}: ${errors}`);
-  }
-
-  const config = validationResult.data;
-
-  // Transform to runtime profile
-  const profile = transformToCovaProfile(config);
-
-  logger.withMetadata({
-    profile_id: profile.id,
-    display_name: profile.displayName,
-    triggers_count: profile.triggers.length,
-    interests_count: profile.personality.interests.length,
-  }).info('Personality loaded successfully');
-
-  return profile;
 }
 
-/**
- * Load all personality files from a directory
- */
-export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
-  logger.withMetadata({ dir_path: dirPath }).info('Loading personalities from directory');
+class FileNotFoundError extends PersonalityParserError {
+  constructor(filePath: string) {
+    super(`Personality file not found: ${filePath}`, filePath);
+    this.name = 'FileNotFoundError';
+  }
+}
 
-  if (!fs.existsSync(dirPath)) {
-    logger.withMetadata({ dir_path: dirPath }).warn('Personalities directory not found, creating it');
-    fs.mkdirSync(dirPath, { recursive: true });
+class YamlParseError extends PersonalityParserError {
+  constructor(filePath: string, reason: string) {
+    super(`Failed to parse YAML in ${filePath}: ${reason}`, filePath);
+    this.name = 'YamlParseError';
+  }
+}
+
+class ValidationError extends PersonalityParserError {
+  constructor(filePath: string, details: string) {
+    super(`Invalid personality configuration in ${filePath}: ${details}`, filePath);
+    this.name = 'ValidationError';
+  }
+}
+
+export function parsePersonalityFile(filePath: string): CovaProfile {
+  // 1) Read file
+  let content: string;
+  try {
+    content = readFileUtf8(filePath);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') {
+      throw new FileNotFoundError(filePath);
+    }
+    throw new PersonalityParserError(`Unable to read file: ${filePath}`);
+  }
+
+  // 2) Parse YAML
+  let raw: unknown;
+  try {
+    raw = yaml.load(content);
+    if (raw === undefined || raw === null) {
+      throw new YamlParseError(filePath, 'Empty YAML content');
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (err instanceof YamlParseError) throw err;
+    throw new YamlParseError(filePath, msg);
+  }
+
+  // 3) Validate schema
+  let validated;
+  try {
+    validated = validateOrThrow(raw);
+  } catch (err) {
+    const details = err instanceof Error ? err.message : String(err);
+    throw new ValidationError(filePath, details);
+  }
+
+  // 4) Map to runtime model
+  return mapToCovaProfile(validated);
+}
+
+export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
+  if (!directoryExists(dirPath)) {
+    try {
+      createDirectory(dirPath);
+      logger.withMetadata({ path: dirPath }).info('Created personalities directory');
+    } catch (_err) {
+      throw new PersonalityParserError(`Unable to create directory: ${dirPath}`);
+    }
     return [];
   }
 
-  const files = fs.readdirSync(dirPath).filter(f =>
-    f.endsWith('.yml') || f.endsWith('.yaml')
-  );
-
-  if (files.length === 0) {
-    logger.withMetadata({ dir_path: dirPath }).warn('No personality files found');
-    return [];
+  let files: string[] = [];
+  try {
+    files = readDirectory(dirPath);
+  } catch (_err) {
+    throw new PersonalityParserError(`Unable to read directory: ${dirPath}`);
   }
 
   const profiles: CovaProfile[] = [];
   for (const file of files) {
+    if (!isYamlFile(file)) continue;
     const filePath = path.join(dirPath, file);
     try {
       const profile = parsePersonalityFile(filePath);
       profiles.push(profile);
+      logger.withMetadata({ file, profileId: profile.id }).info('Loaded personality');
     } catch (error) {
-      logger.withError(error).withMetadata({ file }).error('Failed to load personality file, skipping');
+      logger
+        .withError(error)
+        .withMetadata({ file, path: filePath })
+        .error('Failed to load personality file');
     }
   }
-
-  logger.withMetadata({
-    loaded_count: profiles.length,
-    total_files: files.length
-  }).info('Finished loading personalities');
-
   return profiles;
 }
 
-/**
- * Transform validated YAML config to runtime CovaProfile
- */
-function transformToCovaProfile(config: YamlConfigType): CovaProfile {
-  const { profile: p } = config;
-
-  return {
-    id: p.id,
-    displayName: p.display_name,
-    avatarUrl: p.avatar_url,
-    identity: p.identity,
-    personality: {
-      systemPrompt: p.personality.system_prompt,
-      traits: p.personality.traits,
-      interests: p.personality.interests,
-      speechPatterns: {
-        lowercase: p.personality.speech_patterns.lowercase,
-        sarcasmLevel: p.personality.speech_patterns.sarcasm_level,
-        technicalBias: p.personality.speech_patterns.technical_bias,
-      },
-    },
-    triggers: p.triggers.map(t => ({
-      name: t.name,
-      conditions: t.conditions as CovaProfile['triggers'][0]['conditions'],
-      use_llm: t.use_llm,
-      response_chance: t.response_chance,
-      responses: t.responses,
-    })),
-    socialBattery: {
-      maxMessages: p.social_battery.max_messages,
-      windowMinutes: p.social_battery.window_minutes,
-      cooldownSeconds: p.social_battery.cooldown_seconds,
-    },
-    llmConfig: {
-      model: p.llm.model,
-      temperature: p.llm.temperature,
-      max_tokens: p.llm.max_tokens,
-    },
-    ignoreBots: p.ignore_bots,
-  };
-}
-
-/**
- * Get the default personalities directory path
- */
 export function getDefaultPersonalitiesPath(): string {
-  // Look relative to the covabot package root
-  const packageRoot = path.resolve(__dirname, '../../..');
-  return path.join(packageRoot, 'config', 'personalities');
+  if (process.env.COVABOT_CONFIG_DIR) {
+    return process.env.COVABOT_CONFIG_DIR;
+  }
+  return path.join(process.cwd(), 'config', 'covabot');
 }

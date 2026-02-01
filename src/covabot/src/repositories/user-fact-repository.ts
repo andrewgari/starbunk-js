@@ -5,16 +5,16 @@
  * delegating to the database for persistence.
  */
 
-import Database from 'better-sqlite3';
-import { BaseRepository } from '@starbunk/shared';
+import { PostgresBaseRepository } from '@starbunk/shared';
+import { PostgresService } from '@starbunk/shared/database';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { UserFactRow, UserFact } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('UserFactRepository');
 
-export class UserFactRepository extends BaseRepository<UserFactRow> {
-  constructor(db: Database.Database) {
-    super(db);
+export class UserFactRepository extends PostgresBaseRepository<UserFactRow> {
+  constructor(pgService: PostgresService) {
+    super(pgService);
   }
 
   /**
@@ -32,34 +32,35 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
     const value = factValue || factKey;
 
     await this.execute(
-      `INSERT INTO user_facts (profile_id, user_id, fact_type, fact_key, fact_value, confidence)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO covabot_user_facts (profile_id, user_id, fact_type, fact_key, fact_value, confidence)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT(profile_id, user_id, fact_type, fact_key)
        DO UPDATE SET fact_value = excluded.fact_value, confidence = excluded.confidence, learned_at = CURRENT_TIMESTAMP`,
-      [profileId, userId, category, factKey, value, confidence]
+      [profileId, userId, category, factKey, value, confidence],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      user_id: userId,
-      category,
-      fact_key: factKey,
-    }).debug('User fact stored');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        user_id: userId,
+        category,
+        fact_key: factKey,
+      })
+      .debug('User fact stored');
   }
 
   /**
    * Get all facts for a user
    */
   async getUserFacts(userId: string): Promise<UserFact[]> {
-    const rows = await this.query<Pick<
-      UserFactRow,
-      'fact_type' | 'fact_key' | 'fact_value' | 'confidence'
-    >>(
+    const rows = await this.query<
+      Pick<UserFactRow, 'fact_type' | 'fact_key' | 'fact_value' | 'confidence'>
+    >(
       `SELECT fact_type, fact_key, fact_value, confidence
-       FROM user_facts
-       WHERE user_id = ?
+       FROM covabot_user_facts
+       WHERE user_id = $1
        ORDER BY confidence DESC`,
-      [userId]
+      [userId],
     );
 
     const facts = rows.map(row => ({
@@ -69,10 +70,12 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
       confidence: row.confidence,
     }));
 
-    logger.withMetadata({
-      user_id: userId,
-      facts_count: facts.length,
-    }).debug('User facts retrieved');
+    logger
+      .withMetadata({
+        user_id: userId,
+        facts_count: facts.length,
+      })
+      .debug('User facts retrieved');
 
     return facts;
   }
@@ -81,15 +84,14 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
    * Get facts of a specific category for a user
    */
   async getUserFactsByType(userId: string, category: string): Promise<UserFact[]> {
-    const rows = await this.query<Pick<
-      UserFactRow,
-      'fact_type' | 'fact_key' | 'fact_value' | 'confidence'
-    >>(
+    const rows = await this.query<
+      Pick<UserFactRow, 'fact_type' | 'fact_key' | 'fact_value' | 'confidence'>
+    >(
       `SELECT fact_type, fact_key, fact_value, confidence
-       FROM user_facts
-       WHERE user_id = ? AND fact_type = ?
+       FROM covabot_user_facts
+       WHERE user_id = $1 AND fact_type = $2
        ORDER BY confidence DESC`,
-      [userId, category]
+      [userId, category],
     );
 
     const facts = rows.map(row => ({
@@ -99,11 +101,13 @@ export class UserFactRepository extends BaseRepository<UserFactRow> {
       confidence: row.confidence,
     }));
 
-    logger.withMetadata({
-      user_id: userId,
-      category,
-      facts_count: facts.length,
-    }).debug('User facts by type retrieved');
+    logger
+      .withMetadata({
+        user_id: userId,
+        category,
+        facts_count: facts.length,
+      })
+      .debug('User facts by type retrieved');
 
     return facts;
   }

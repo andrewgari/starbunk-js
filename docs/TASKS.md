@@ -42,6 +42,17 @@ grep -R "export type .*" -n src/shared
   - Validation: no new tests; verify pre-commit no longer rewrites the lockfile; Snyk not needed (no JS/TS changes)
   - Relationship: none currently
 
+- Align CI Dockerfiles with Node 22
+  - Context: PR https://github.com/andrewgari/starbunk-js/pull/571
+  - File Scope:
+    - [src/bunkbot/Dockerfile.ci](src/bunkbot/Dockerfile.ci)
+    - [src/bluebot/Dockerfile.ci](src/bluebot/Dockerfile.ci)
+    - [src/covabot/Dockerfile.ci](src/covabot/Dockerfile.ci)
+    - [src/djcova/Dockerfile.ci](src/djcova/Dockerfile.ci)
+  - The Change: bump base image from `node:20-alpine` to `node:22-alpine` to match CI/runtime engine requirements.
+  - Validation: Docker builds in CI, `npm run build` and `npm run test:bunkbot` pass.
+  - Relationship: none currently
+
 Add cross-package tasks here with a short summary and a link to the package-local manifest entries.
 
 ## CircleCI Migration Manifest

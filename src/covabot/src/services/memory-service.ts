@@ -3,10 +3,7 @@
  */
 
 import { logLayer } from '@starbunk/shared/observability/log-layer';
-import {
-  ConversationContext,
-  UserFact,
-} from '@/models/memory-types';
+import { ConversationContext, UserFact } from '@/models/memory-types';
 import { ConversationRepository } from '@/repositories/conversation-repository';
 import { UserFactRepository } from '@/repositories/user-fact-repository';
 
@@ -16,10 +13,7 @@ export class MemoryService {
   private conversationRepo: ConversationRepository;
   private userFactRepo: UserFactRepository;
 
-  constructor(
-    conversationRepo: ConversationRepository,
-    userFactRepo: UserFactRepository,
-  ) {
+  constructor(conversationRepo: ConversationRepository, userFactRepo: UserFactRepository) {
     this.conversationRepo = conversationRepo;
     this.userFactRepo = userFactRepo;
   }
@@ -34,7 +28,8 @@ export class MemoryService {
     userName: string | null,
     messageContent: string,
     botResponse: string | null,
-  ): Promise<number> {
+    metadata?: Record<string, unknown>,
+  ): Promise<string> {
     return await this.conversationRepo.storeConversation(
       profileId,
       channelId,
@@ -42,6 +37,7 @@ export class MemoryService {
       userName,
       messageContent,
       botResponse,
+      metadata,
     );
   }
 
@@ -78,14 +74,23 @@ export class MemoryService {
     factValue: string,
     confidence: number = 1.0,
   ): Promise<void> {
-    await this.userFactRepo.storeUserFact(userId, factType, factKey, confidence, profileId, factValue);
+    await this.userFactRepo.storeUserFact(
+      userId,
+      factType,
+      factKey,
+      confidence,
+      profileId,
+      factValue,
+    );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      user_id: userId,
-      fact_type: factType,
-      fact_key: factKey,
-    }).debug('User fact stored');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        user_id: userId,
+        fact_type: factType,
+        fact_key: factKey,
+      })
+      .debug('User fact stored');
   }
 
   /**
@@ -107,10 +112,10 @@ export class MemoryService {
   }
 
   /**
-   * Delete old conversations to manage database size
+   * Delete old conversations to implement TTL (30-day retention by default)
    */
-  async pruneOldConversations(profileId: string, daysToKeep: number = 30): Promise<number> {
-    return await this.conversationRepo.pruneOldConversations(profileId, daysToKeep);
+  async deleteOldConversations(daysToKeep: number = 30): Promise<number> {
+    return await this.conversationRepo.deleteOldConversations(daysToKeep);
   }
 
   /**

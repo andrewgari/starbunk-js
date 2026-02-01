@@ -1,32 +1,35 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { ChatInputCommandInteraction } from 'discord.js';
-import { container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
-import { DJCovaService } from '../services/dj-cova-service';
 import { logger } from '../observability/logger';
+import { getDJCovaService } from '@/core/djcova-factory';
 
-const commandBuilder = new SlashCommandBuilder().setName('stop').setDescription('Stop playing and leave channel');
+const commandBuilder = new SlashCommandBuilder()
+  .setName('stop')
+  .setDescription('Stop playing and leave channel');
 
 export default {
-	data: commandBuilder.toJSON(),
-	async execute(interaction: ChatInputCommandInteraction) {
-		try {
-			// Get service from container
-			const service = container.get<DJCovaService>(ServiceId.DJCovaService);
-			if (!service) {
-				await sendErrorResponse(interaction, 'Music service is not available.');
-				return;
-			}
+  data: commandBuilder.toJSON(),
+  async execute(interaction: ChatInputCommandInteraction) {
+    try {
+      if (!interaction.guild?.id) {
+        await sendErrorResponse(interaction, 'This command can only be used in a server.');
+        return;
+      }
 
-			// Service handles the logic
-			service.stop(interaction);
+      // Get per-guild DJCovaService instance
+      const service = getDJCovaService(interaction.guild.id);
 
-			await sendSuccessResponse(interaction, 'Music stopped and disconnected!');
-			logger.info('Music stopped via stop command');
-		} catch (error) {
-			logger.withError(error instanceof Error ? error : new Error(String(error)))
-				.error('Error executing stop command');
-			await sendErrorResponse(interaction, 'An error occurred while stopping the music.');
-		}
-	},
+      // Service handles the logic
+      service.stop(interaction);
+
+      await sendSuccessResponse(interaction, 'Music stopped and disconnected!');
+      logger.info('Music stopped via stop command');
+    } catch (error) {
+      logger
+        .withError(error instanceof Error ? error : new Error(String(error)))
+        .error('Error executing stop command');
+      await sendErrorResponse(interaction, 'An error occurred while stopping the music.');
+    }
+  },
 };

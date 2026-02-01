@@ -34,7 +34,11 @@ export class EmbeddingManager {
   private ollamaProvider: OllamaEmbeddingProvider | null = null;
   private modelManager: OllamaModelManager | null = null;
 
-  constructor(config?: EmbeddingProviderConfig, cacheTtlMs: number = 3600000, maxCacheSize: number = 1000) {
+  constructor(
+    config?: EmbeddingProviderConfig,
+    cacheTtlMs: number = 3600000,
+    maxCacheSize: number = 1000,
+  ) {
     this.cacheTtlMs = cacheTtlMs;
     this.maxCacheSize = maxCacheSize;
     this.initializeProviders(config);
@@ -42,7 +46,10 @@ export class EmbeddingManager {
 
   private initializeProviders(config?: EmbeddingProviderConfig): void {
     // 1. Ollama (primary - local, free)
-    this.ollamaProvider = new OllamaEmbeddingProvider(config?.ollamaApiUrl, config?.ollamaEmbeddingModel);
+    this.ollamaProvider = new OllamaEmbeddingProvider(
+      config?.ollamaApiUrl,
+      config?.ollamaEmbeddingModel,
+    );
     if (this.ollamaProvider.supportsEmbeddings()) {
       this.providers.push(this.ollamaProvider);
       this.modelManager = this.ollamaProvider.getModelManager();
@@ -59,10 +66,12 @@ export class EmbeddingManager {
     if (this.providers.length === 0) {
       logger.warn('No embedding providers configured! Vector features will not work.');
     } else {
-      logger.withMetadata({
-        providers: this.providers.map((p) => p.name),
-        primary: this.providers[0]?.name,
-      }).info('Embedding providers initialized');
+      logger
+        .withMetadata({
+          providers: this.providers.map(p => p.name),
+          primary: this.providers[0]?.name,
+        })
+        .info('Embedding providers initialized');
     }
   }
 
@@ -120,15 +129,15 @@ export class EmbeddingManager {
     // Truncate very long text to prevent model issues (most models have ~8k token limit)
     // Rough estimate: 1 token ≈ 4 characters, so 32k chars ≈ 8k tokens
     const MAX_TEXT_LENGTH = 32000;
-    const processedText = text.length > MAX_TEXT_LENGTH
-      ? text.substring(0, MAX_TEXT_LENGTH)
-      : text;
+    const processedText = text.length > MAX_TEXT_LENGTH ? text.substring(0, MAX_TEXT_LENGTH) : text;
 
     if (text.length > MAX_TEXT_LENGTH) {
-      logger.withMetadata({
-        originalLength: text.length,
-        truncatedLength: MAX_TEXT_LENGTH,
-      }).warn('Text truncated for embedding generation');
+      logger
+        .withMetadata({
+          originalLength: text.length,
+          truncatedLength: MAX_TEXT_LENGTH,
+        })
+        .warn('Text truncated for embedding generation');
     }
 
     // Check cache first
@@ -154,7 +163,10 @@ export class EmbeddingManager {
   /**
    * Generate embeddings for multiple texts
    */
-  async generateEmbeddings(texts: string[], options?: EmbeddingOptions): Promise<EmbeddingResult[]> {
+  async generateEmbeddings(
+    texts: string[],
+    options?: EmbeddingOptions,
+  ): Promise<EmbeddingResult[]> {
     const results: EmbeddingResult[] = [];
     const uncachedTexts: { index: number; text: string }[] = [];
 
@@ -177,7 +189,7 @@ export class EmbeddingManager {
     // Generate embeddings for uncached texts
     if (uncachedTexts.length > 0) {
       const newEmbeddings = await this.generateBatchWithFallback(
-        uncachedTexts.map((u) => u.text),
+        uncachedTexts.map(u => u.text),
         options,
       );
 
@@ -194,7 +206,10 @@ export class EmbeddingManager {
     return results;
   }
 
-  private async generateWithFallback(text: string, options?: EmbeddingOptions): Promise<EmbeddingResult> {
+  private async generateWithFallback(
+    text: string,
+    options?: EmbeddingOptions,
+  ): Promise<EmbeddingResult> {
     if (this.providers.length === 0) {
       throw new Error('No embedding providers available');
     }
@@ -206,14 +221,20 @@ export class EmbeddingManager {
         return await provider.generateEmbedding(text, options);
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        logger.withError(lastError).withMetadata({ provider: provider.name }).warn('Provider failed');
+        logger
+          .withError(lastError)
+          .withMetadata({ provider: provider.name })
+          .warn('Provider failed');
       }
     }
 
     throw lastError || new Error('All embedding providers failed');
   }
 
-  private async generateBatchWithFallback(texts: string[], options?: EmbeddingOptions): Promise<EmbeddingResult[]> {
+  private async generateBatchWithFallback(
+    texts: string[],
+    options?: EmbeddingOptions,
+  ): Promise<EmbeddingResult[]> {
     if (this.providers.length === 0) {
       throw new Error('No embedding providers available');
     }
@@ -225,7 +246,10 @@ export class EmbeddingManager {
         return await provider.generateEmbeddings(texts, options);
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        logger.withError(lastError).withMetadata({ provider: provider.name }).warn('Provider failed');
+        logger
+          .withError(lastError)
+          .withMetadata({ provider: provider.name })
+          .warn('Provider failed');
       }
     }
 
@@ -268,4 +292,3 @@ export class EmbeddingManager {
     this.cache.clear();
   }
 }
-

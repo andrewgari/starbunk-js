@@ -11,11 +11,11 @@ import { BotRegistry } from '@/reply-bots/bot-registry';
 const commandBuilder = new SlashCommandBuilder()
   .setName('bot')
   .setDescription('Manage bot settings')
-  .addSubcommand((subcommand) =>
+  .addSubcommand(subcommand =>
     subcommand
       .setName('enable')
       .setDescription('Enable a bot')
-      .addStringOption((option) =>
+      .addStringOption(option =>
         option
           .setName('bot_name')
           .setDescription('Name of the bot to enable')
@@ -23,11 +23,11 @@ const commandBuilder = new SlashCommandBuilder()
           .setAutocomplete(true),
       ),
   )
-  .addSubcommand((subcommand) =>
+  .addSubcommand(subcommand =>
     subcommand
       .setName('disable')
       .setDescription('Disable a bot')
-      .addStringOption((option) =>
+      .addStringOption(option =>
         option
           .setName('bot_name')
           .setDescription('Name of the bot to disable')
@@ -35,25 +35,25 @@ const commandBuilder = new SlashCommandBuilder()
           .setAutocomplete(true),
       ),
   )
-  .addSubcommand((subcommand) =>
+  .addSubcommand(subcommand =>
     subcommand
       .setName('override')
       .setDescription('Set a frequency override for a bot')
-      .addStringOption((option) =>
+      .addStringOption(option =>
         option
           .setName('bot_name')
           .setDescription('Name of the bot to override')
           .setRequired(true)
           .setAutocomplete(true),
       )
-      .addStringOption((option) =>
+      .addStringOption(option =>
         option
           .setName('setting')
           .setDescription('Setting to override')
           .setRequired(true)
           .addChoices({ name: 'frequency', value: 'frequency' }),
       )
-      .addNumberOption((option) =>
+      .addNumberOption(option =>
         option
           .setName('percent')
           .setDescription('Frequency percentage (0-100)')
@@ -62,18 +62,18 @@ const commandBuilder = new SlashCommandBuilder()
           .setMaxValue(100),
       ),
   )
-  .addSubcommand((subcommand) =>
+  .addSubcommand(subcommand =>
     subcommand
       .setName('reset')
       .setDescription('Reset a bot override to original values')
-      .addStringOption((option) =>
+      .addStringOption(option =>
         option
           .setName('bot_name')
           .setDescription('Name of the bot to reset')
           .setRequired(true)
           .setAutocomplete(true),
       )
-      .addStringOption((option) =>
+      .addStringOption(option =>
         option
           .setName('setting')
           .setDescription('Setting to reset')
@@ -81,7 +81,7 @@ const commandBuilder = new SlashCommandBuilder()
           .addChoices({ name: 'frequency', value: 'frequency' }),
       ),
   )
-  .addSubcommand((subcommand) =>
+  .addSubcommand(subcommand =>
     subcommand.setName('list').setDescription('List all available bots and their status'),
   )
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages);
@@ -221,12 +221,11 @@ export default {
     try {
       const registry = BotRegistry.getInstance();
       const choices = registry.getBotNames();
-      const filtered = choices.filter((choice) => choice.toLowerCase().includes(focusedValue));
-      await interaction.respond(filtered.map((choice) => ({ name: choice, value: choice })));
+      const filtered = choices.filter(choice => choice.toLowerCase().includes(focusedValue));
+      await interaction.respond(filtered.map(choice => ({ name: choice, value: choice })));
     } catch (error) {
       logger.withError(error).error('Error in bot command autocomplete');
       await interaction.respond([]);
     }
   },
 };
-

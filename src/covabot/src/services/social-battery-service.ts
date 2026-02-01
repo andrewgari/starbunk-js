@@ -50,11 +50,13 @@ export class SocialBatteryService {
       const secondsSinceLastMessage = (now.getTime() - lastMessage.getTime()) / 1000;
 
       if (secondsSinceLastMessage < config.cooldownSeconds) {
-        logger.withMetadata({
-          profile_id: profileId,
-          channel_id: channelId,
-          seconds_remaining: config.cooldownSeconds - secondsSinceLastMessage,
-        }).debug('Cooldown active');
+        logger
+          .withMetadata({
+            profile_id: profileId,
+            channel_id: channelId,
+            seconds_remaining: config.cooldownSeconds - secondsSinceLastMessage,
+          })
+          .debug('Cooldown active');
 
         return {
           canSpeak: false,
@@ -84,16 +86,18 @@ export class SocialBatteryService {
       // Check message count within window
       if (state.message_count >= config.maxMessages) {
         const windowResetSeconds = Math.ceil(
-          (config.windowMinutes * 60) - (minutesSinceWindowStart * 60)
+          config.windowMinutes * 60 - minutesSinceWindowStart * 60,
         );
 
-        logger.withMetadata({
-          profile_id: profileId,
-          channel_id: channelId,
-          message_count: state.message_count,
-          max_messages: config.maxMessages,
-          window_reset_seconds: windowResetSeconds,
-        }).debug('Rate limited');
+        logger
+          .withMetadata({
+            profile_id: profileId,
+            channel_id: channelId,
+            message_count: state.message_count,
+            max_messages: config.maxMessages,
+            window_reset_seconds: windowResetSeconds,
+          })
+          .debug('Rate limited');
 
         return {
           canSpeak: false,
@@ -116,7 +120,11 @@ export class SocialBatteryService {
   /**
    * Record that a message was sent
    */
-  async recordMessage(profileId: string, channelId: string, config: SocialBatteryConfig): Promise<void> {
+  async recordMessage(
+    profileId: string,
+    channelId: string,
+    config: SocialBatteryConfig,
+  ): Promise<void> {
     const state = await this.getState(profileId, channelId);
     const now = new Date();
     const nowIso = now.toISOString();
@@ -138,10 +146,12 @@ export class SocialBatteryService {
       }
     }
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).debug('Message recorded');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .debug('Message recorded');
   }
 
   /**
@@ -157,10 +167,12 @@ export class SocialBatteryService {
   async resetChannel(profileId: string, channelId: string): Promise<void> {
     await this.socialBatteryRepo.deleteState(profileId, channelId);
 
-    logger.withMetadata({
-      profile_id: profileId,
-      channel_id: channelId,
-    }).info('Channel state reset');
+    logger
+      .withMetadata({
+        profile_id: profileId,
+        channel_id: channelId,
+      })
+      .info('Channel state reset');
   }
 
   /**

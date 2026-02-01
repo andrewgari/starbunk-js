@@ -5,16 +5,16 @@
  * managing keyword-based interest tracking and weight adjustments.
  */
 
-import Database from 'better-sqlite3';
-import { BaseRepository } from '@starbunk/shared';
+import { PostgresBaseRepository } from '@starbunk/shared';
+import { PostgresService } from '@starbunk/shared/database';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { KeywordInterestRow } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('InterestRepository');
 
-export class InterestRepository extends BaseRepository<KeywordInterestRow> {
-  constructor(db: Database.Database) {
-    super(db);
+export class InterestRepository extends PostgresBaseRepository<KeywordInterestRow> {
+  constructor(pgService: PostgresService) {
+    super(pgService);
   }
 
   /**
@@ -23,8 +23,8 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
   async getInterests(profileId: string): Promise<KeywordInterestRow[]> {
     return await this.query<KeywordInterestRow>(
       `SELECT profile_id, keyword, category, weight
-       FROM keyword_interests
-       WHERE profile_id = ?
+       FROM covabot_keyword_interests
+       WHERE profile_id = $1
        ORDER BY weight DESC`,
       [profileId],
     );
@@ -40,8 +40,8 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
     weight: number = 1.0,
   ): Promise<void> {
     await this.execute(
-      `INSERT INTO keyword_interests (profile_id, keyword, category, weight)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO covabot_keyword_interests (profile_id, keyword, category, weight)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT(profile_id, keyword)
        DO UPDATE SET weight = excluded.weight, category = excluded.category`,
       [profileId, keyword.toLowerCase().trim(), category, weight],
@@ -61,8 +61,8 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
    */
   async deleteInterest(profileId: string, keyword: string): Promise<boolean> {
     const changes = await this.execute(
-      `DELETE FROM keyword_interests
-       WHERE profile_id = ? AND keyword = ?`,
+      `DELETE FROM covabot_keyword_interests
+       WHERE profile_id = $1 AND keyword = $2`,
       [profileId, keyword.toLowerCase().trim()],
     );
 
@@ -85,9 +85,9 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
    */
   async adjustWeight(profileId: string, keyword: string, delta: number): Promise<void> {
     await this.execute(
-      `UPDATE keyword_interests
-       SET weight = MAX(0.1, MIN(2.0, weight + ?))
-       WHERE profile_id = ? AND keyword = ?`,
+      `UPDATE covabot_keyword_interests
+       SET weight = GREATEST(0.1, LEAST(2.0, weight + $1))
+       WHERE profile_id = $2 AND keyword = $3`,
       [delta, profileId, keyword.toLowerCase().trim()],
     );
 
@@ -105,8 +105,8 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
    */
   async clearProfileInterests(profileId: string): Promise<number> {
     const changes = await this.execute(
-      `DELETE FROM keyword_interests
-       WHERE profile_id = ?`,
+      `DELETE FROM covabot_keyword_interests
+       WHERE profile_id = $1`,
       [profileId],
     );
 
@@ -135,8 +135,8 @@ export class InterestRepository extends BaseRepository<KeywordInterestRow> {
         : [null, interest];
 
       await this.execute(
-        `INSERT INTO keyword_interests (profile_id, keyword, category, weight)
-         VALUES (?, ?, ?, ?)`,
+        `INSERT INTO covabot_keyword_interests (profile_id, keyword, category, weight)
+         VALUES ($1, $2, $3, $4)`,
         [profileId, keyword.toLowerCase().trim(), category || null, 1.0],
       );
     }

@@ -7,10 +7,4 @@ import commentsCommand from '@/commands/comments';
 /**
  * All commands available in BunkBot
  */
-export const commands: Command[] = [
-pingCommand,
-clearwebhooksCommand,
-botCommand,
-commentsCommand,
-];
-
+export const commands: Command[] = [pingCommand, clearwebhooksCommand, botCommand, commentsCommand];

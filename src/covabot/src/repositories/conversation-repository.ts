@@ -3,21 +3,19 @@
  *
  * Provides a clean abstraction over conversation operations,
  * managing conversation storage, retrieval, and pruning of conversation records.
+ * Uses PostgreSQL for persistent storage with parameterized queries.
  */
 
-import Database from 'better-sqlite3';
-import { BaseRepository } from '@starbunk/shared';
+import { PostgresBaseRepository } from '@starbunk/shared';
+import { PostgresService } from '@starbunk/shared/database';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
-import {
-  ConversationRow,
-  ConversationContext,
-} from '@/models/memory-types';
+import { ConversationRow, ConversationContext } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('ConversationRepository');
 
-export class ConversationRepository extends BaseRepository<ConversationRow> {
-  constructor(db: Database.Database) {
-    super(db);
+export class ConversationRepository extends PostgresBaseRepository<ConversationRow> {
+  constructor(pgService: PostgresService) {
+    super(pgService);
   }
 
   /**
@@ -30,25 +28,45 @@ export class ConversationRepository extends BaseRepository<ConversationRow> {
     userName: string | null,
     messageContent: string,
     botResponse: string | null,
-  ): Promise<number> {
+    metadata?: Record<string, unknown>,
+  ): Promise<string> {
     const span = this.tracing.startSpan('conversation.store', {
       'conversation.channel_id': channelId,
       'conversation.user_id': userId,
     });
 
     try {
-      const id = await this.executeWithId(
-        `INSERT INTO conversations (profile_id, channel_id, user_id, user_name, message_content, bot_response)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [profileId, channelId, userId, userName, messageContent, botResponse]
+      const result = await this.executeWithReturning<{ id: string }>(
+        `INSERT INTO covabot_conversations
+         (profile_id, channel_id, user_id, message_content, response_content, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id`,
+        [profileId, channelId, userId, messageContent, botResponse, JSON.stringify(metadata || {})],
       );
 
-      logger.withMetadata({
-        profile_id: profileId,
-        channel_id: channelId,
-        user_id: userId,
-        conversation_id: id,
-      }).debug('Conversation stored');
+      const id = result?.id;
+
+      if (!id) {
+        const err = new Error('Failed to store conversation: no id returned from INSERT');
+        logger
+          .withError(err)
+          .withMetadata({
+            profile_id: profileId,
+            channel_id: channelId,
+            user_id: userId,
+          })
+          .error('Failed to store conversation: no id returned from INSERT');
+        throw err;
+      }
+
+      logger
+        .withMetadata({
+          profile_id: profileId,
+          channel_id: channelId,
+          user_id: userId,
+          conversation_id: id,
+        })
+        .debug('Conversation stored');
 
       return id;
     } finally {
@@ -69,35 +87,46 @@ export class ConversationRepository extends BaseRepository<ConversationRow> {
     const span = this.tracing.startSpan('conversation.getChannelContext', {
       'conversation.channel_id': channelId,
       'conversation.profile_id': profileId,
+      'conversation.limit': limit,
     });
 
     try {
-      const rows = await this.query<Pick<
-        ConversationRow,
-        'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
-      >>(
-        `SELECT user_id, user_name, message_content, bot_response, created_at
-         FROM conversations
-         WHERE profile_id = ? AND channel_id = ?
+      const rows = await this.query<{
+        user_id: string;
+        message_content: string;
+        response_content: string | null;
+        created_at: Date;
+      }>(
+        `SELECT user_id, message_content, response_content, created_at
+         FROM covabot_conversations
+         WHERE profile_id = $1 AND channel_id = $2
          ORDER BY created_at DESC
-         LIMIT ?`,
-        [profileId, channelId, limit]
+         LIMIT $3`,
+        [profileId, channelId, limit],
       );
 
       // Reverse to get chronological order
       const messages = rows.reverse().map(row => ({
         userId: row.user_id,
-        userName: row.user_name,
+        userName: null, // userName removed from new schema
         content: row.message_content,
-        botResponse: row.bot_response,
+        botResponse: row.response_content,
         timestamp: new Date(row.created_at),
       }));
 
-      logger.withMetadata({
-        profile_id: profileId,
-        channel_id: channelId,
-        messages_count: messages.length,
-      }).debug('Channel context retrieved');
+      logger
+        .withMetadata({
+          profile_id: profileId,
+          channel_id: channelId,
+          messages_count: messages.length,
+        })
+        .debug('Channel context retrieved');
+
+      if (span) {
+        span.setAttributes({
+          'context.message_count': messages.length,
+        });
+      }
 
       return { messages };
     } finally {
@@ -115,52 +144,102 @@ export class ConversationRepository extends BaseRepository<ConversationRow> {
     userId: string,
     limit: number = 20,
   ): Promise<ConversationContext> {
-    const rows = await this.query<Pick<
-      ConversationRow,
-      'user_id' | 'user_name' | 'message_content' | 'bot_response' | 'created_at'
-    >>(
-      `SELECT user_id, user_name, message_content, bot_response, created_at
-       FROM conversations
-       WHERE profile_id = ? AND user_id = ?
-       ORDER BY created_at DESC
-       LIMIT ?`,
-      [profileId, userId, limit]
-    );
+    const span = this.tracing.startSpan('conversation.getUserHistory', {
+      'conversation.user_id': userId,
+      'conversation.profile_id': profileId,
+      'conversation.limit': limit,
+    });
 
-    const messages = rows.reverse().map(row => ({
-      userId: row.user_id,
-      userName: row.user_name,
-      content: row.message_content,
-      botResponse: row.bot_response,
-      timestamp: new Date(row.created_at),
-    }));
+    try {
+      const rows = await this.query<{
+        user_id: string;
+        message_content: string;
+        response_content: string | null;
+        created_at: Date;
+      }>(
+        `SELECT user_id, message_content, response_content, created_at
+         FROM covabot_conversations
+         WHERE profile_id = $1 AND user_id = $2
+         ORDER BY created_at DESC
+         LIMIT $3`,
+        [profileId, userId, limit],
+      );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      user_id: userId,
-      messages_count: messages.length,
-    }).debug('User history retrieved');
+      const messages = rows.reverse().map(row => ({
+        userId: row.user_id,
+        userName: null,
+        content: row.message_content,
+        botResponse: row.response_content,
+        timestamp: new Date(row.created_at),
+      }));
 
-    return { messages };
+      logger
+        .withMetadata({
+          profile_id: profileId,
+          user_id: userId,
+          messages_count: messages.length,
+        })
+        .debug('User history retrieved');
+
+      if (span) {
+        span.setAttributes({
+          'context.message_count': messages.length,
+        });
+      }
+
+      return { messages };
+    } finally {
+      if (span) {
+        span.end();
+      }
+    }
   }
 
   /**
-   * Delete old conversations to manage database size
+   * Delete old conversations to implement TTL (30-day retention)
    */
-  async pruneOldConversations(profileId: string, daysToKeep: number = 30): Promise<number> {
-    const changes = await this.execute(
-      `DELETE FROM conversations
-       WHERE profile_id = ?
-         AND created_at < datetime('now', '-' || ? || ' days')`,
-      [profileId, daysToKeep]
+  async deleteOldConversations(daysToKeep: number = 30): Promise<number> {
+    const span = this.tracing.startSpan('conversation.deleteOld', {
+      'conversation.days_to_keep': daysToKeep,
+    });
+
+    try {
+      const deletedCount = await this.execute(
+        `DELETE FROM covabot_conversations
+         WHERE created_at < NOW() - INTERVAL '1 day' * $1`,
+        [daysToKeep],
+      );
+
+      logger
+        .withMetadata({
+          days_kept: daysToKeep,
+          deleted_count: deletedCount,
+        })
+        .info('Old conversations deleted');
+
+      if (span) {
+        span.setAttributes({
+          'db.deleted_count': deletedCount,
+        });
+      }
+
+      return deletedCount;
+    } finally {
+      if (span) {
+        span.end();
+      }
+    }
+  }
+
+  /**
+   * Get conversation count for a profile (useful for metrics)
+   */
+  async getConversationCount(profileId: string): Promise<number> {
+    const result = await this.queryOne<{ count: string }>(
+      `SELECT COUNT(*) as count FROM covabot_conversations WHERE profile_id = $1`,
+      [profileId],
     );
 
-    logger.withMetadata({
-      profile_id: profileId,
-      days_kept: daysToKeep,
-      deleted_count: changes,
-    }).info('Old conversations pruned');
-
-    return changes;
+    return parseInt(result?.count || '0', 10);
   }
 }

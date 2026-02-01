@@ -6,9 +6,4 @@ import setVolumeCommand from '@/commands/set-volume';
 /**
  * All commands available in DJCova
  */
-export const commands: Command[] = [
-	playCommand,
-	stopCommand,
-	setVolumeCommand,
-];
-
+export const commands: Command[] = [playCommand, stopCommand, setVolumeCommand];

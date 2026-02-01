@@ -2,7 +2,7 @@
 # This Dockerfile expects dist/ folders to already exist (built by CI)
 # Skips TypeScript compilation for faster builds
 
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 
 # Build-time arguments for non-secret environment variables
 ARG NODE_ENV=production
@@ -37,6 +37,7 @@ RUN --mount=type=cache,target=/root/.npm \
 # Copy pre-built artifacts from CI
 COPY --chown=covabot:covabot src/shared/dist ./src/shared/dist
 COPY --chown=covabot:covabot src/covabot/dist ./src/covabot/dist
+COPY --chown=covabot:covabot src/covabot/migrations ./src/covabot/migrations
 
 # Rebuild better-sqlite3 for the runtime environment
 RUN cd /app && npm rebuild better-sqlite3

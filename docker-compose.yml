@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 # Production deployment using pre-built images from GitHub Container Registry (GHCR)
 # Images are built by CI/CD pipeline and tagged as 'prod' for production releases
@@ -31,6 +31,8 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - BUNKBOT_WEB_PORT=${BUNKBOT_WEB_PORT:-7081}
+      # CI smoke mode (skips Discord login; serves /health only)
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -93,6 +95,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
+      # CI smoke mode (skips Discord login; serves /health only)
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -161,6 +165,13 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - REDIS_DB=${REDIS_DB:-0}
 
+      # Database Services - PostgreSQL (Conversation Memory)
+      - POSTGRES_HOST=${POSTGRES_HOST:-starbunk-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-starbunk}
+      - POSTGRES_USER=${POSTGRES_USER:-starbunk}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable is required for security}
+
       # Database Services - Qdrant (Saliency/Interest Matching)
       - QDRANT_URL=${QDRANT_URL:-http://starbunk-qdrant:6333}
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
@@ -184,6 +195,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
+      # CI smoke mode (skips Discord login; serves /health only)
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -193,6 +206,9 @@ services:
     volumes:
       - ${HOST_WORKDIR}/config/covabot:/app/config:ro
       - ${HOST_WORKDIR}/data/covabot:/app/data
+    depends_on:
+      - starbunk-postgres
+      - starbunk-redis
     ports:
       # Optional: Web interface port (default: 7080)
       - "${COVABOT_WEB_PORT:-7080}:7080"
@@ -253,6 +269,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
+      # CI smoke mode (skips Discord login; serves /health only)
+      - CI_SMOKE_MODE=${CI_SMOKE_MODE:-false}
 
       # Debug/Testing Configuration
       - DEBUG_MODE=${DEBUG_MODE:-false}
@@ -303,10 +321,10 @@ services:
       - ${HOST_WORKDIR}/infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
     # No ports exposed - internal access only
     expose:
-      - "14317"        # OTLP gRPC receiver (internal only)
-      - "14318"        # OTLP HTTP receiver (internal only)
-      - "8888"        # Collector's own metrics (internal only)
-      - "8889"        # Prometheus metrics exporter (internal only)
+      - "14317" # OTLP gRPC receiver (internal only)
+      - "14318" # OTLP HTTP receiver (internal only)
+      - "8888" # Collector's own metrics (internal only)
+      - "8889" # Prometheus metrics exporter (internal only)
     environment:
       # Environment & Logging
       - ENVIRONMENT=${ENVIRONMENT:-production}
@@ -384,7 +402,12 @@ services:
     image: redis:7-alpine
     container_name: starbunk-cache
     restart: unless-stopped
-    command: ["sh", "-c", "redis-server ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1 --loglevel warning"]
+    command:
+      [
+        "sh",
+        "-c",
+        "redis-server ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1 --loglevel warning",
+      ]
     volumes:
       - ${HOST_WORKDIR}/data/redis:/data
     networks:
@@ -406,7 +429,11 @@ services:
         reservations:
           memory: 128M
     healthcheck:
-      test: ["CMD-SHELL", 'if [ -z "${REDIS_PASSWORD:-}" ]; then redis-cli ping; else redis-cli -a "${REDIS_PASSWORD}" ping; fi']
+      test:
+        [
+          "CMD-SHELL",
+          'if [ -z "${REDIS_PASSWORD:-}" ]; then redis-cli ping; else redis-cli -a "${REDIS_PASSWORD}" ping; fi',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -438,8 +465,11 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+    # Qdrant upstream image does not include curl/wget/nc inside the container,
+    # so an HTTP healthcheck cannot run from within. Mark as healthy to avoid
+    # perpetual 'unhealthy' status and rely on dependent services' retries.
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6333/healthz"]
+      test: ["CMD", "true"]
       interval: 10s
       timeout: 5s
       retries: 5

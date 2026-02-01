@@ -51,7 +51,9 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
 
     const tokensUsed = response.usage?.total_tokens;
 
-    logger.withMetadata({ model, dimensions: embedding.length, tokensUsed }).debug('OpenAI embedding successful');
+    logger
+      .withMetadata({ model, dimensions: embedding.length, tokensUsed })
+      .debug('OpenAI embedding successful');
 
     return {
       embedding,
@@ -61,14 +63,19 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
     };
   }
 
-  async generateEmbeddings(texts: string[], options?: EmbeddingOptions): Promise<EmbeddingResult[]> {
+  async generateEmbeddings(
+    texts: string[],
+    options?: EmbeddingOptions,
+  ): Promise<EmbeddingResult[]> {
     if (!this.client) {
       throw new Error('OpenAI API key not configured');
     }
 
     const model = options?.model || this.defaultModel;
 
-    logger.withMetadata({ model, count: texts.length }).debug('Generating OpenAI embeddings (batch)');
+    logger
+      .withMetadata({ model, count: texts.length })
+      .debug('Generating OpenAI embeddings (batch)');
 
     const response = await this.client.embeddings.create({
       model,
@@ -77,9 +84,11 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
 
     const tokensUsed = response.usage?.total_tokens;
 
-    logger.withMetadata({ model, count: texts.length, tokensUsed }).debug('OpenAI embeddings successful');
+    logger
+      .withMetadata({ model, count: texts.length, tokensUsed })
+      .debug('OpenAI embeddings successful');
 
-    return response.data.map((item) => ({
+    return response.data.map(item => ({
       embedding: item.embedding,
       model: response.model,
       provider: this.name,
@@ -87,4 +96,3 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
     }));
   }
 }
-

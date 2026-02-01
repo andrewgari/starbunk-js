@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseService } from '@starbunk/shared/database';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -31,11 +31,15 @@ describe('DatabaseService', () => {
     const db = service.getDb();
 
     // Check that tables were created
-    const tables = db.prepare(`
+    const tables = db
+      .prepare(
+        `
       SELECT name FROM sqlite_master
       WHERE type='table' AND name NOT LIKE 'sqlite_%'
       ORDER BY name
-    `).all() as { name: string }[];
+    `,
+      )
+      .all() as { name: string }[];
 
     const tableNames = tables.map(t => t.name);
 

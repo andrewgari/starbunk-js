@@ -4,7 +4,9 @@ import { GuildMember } from 'discord.js';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
 import { logger } from '@/observability/logger';
 
-export async function getBotIdentityFromDiscord(options: GetBotIdentityOptions): Promise<BotIdentity> {
+export async function getBotIdentityFromDiscord(
+  options: GetBotIdentityOptions,
+): Promise<BotIdentity> {
   const { userId, message, useRandomMember, fallbackName = 'BunkBot' } = options;
 
   if (!message || !message.guild) {
@@ -28,15 +30,18 @@ export async function getBotIdentityFromDiscord(options: GetBotIdentityOptions):
 
     return {
       botName: member.nickname || member.user.username,
-      avatarUrl: member.displayAvatarURL({ size: 256, extension: 'png' }) ||
+      avatarUrl:
+        member.displayAvatarURL({ size: 256, extension: 'png' }) ||
         member.user.displayAvatarURL({ size: 256, extension: 'png' }),
     };
-
   } catch (error) {
-    logger.withError(error).withMetadata({
-      user_id: userId,
-      use_random: useRandomMember,
-    }).error('Error fetching member for bot identity');
+    logger
+      .withError(error)
+      .withMetadata({
+        user_id: userId,
+        use_random: useRandomMember,
+      })
+      .error('Error fetching member for bot identity');
   }
 
   return {

@@ -48,10 +48,5 @@ export function registerStarbunkMixins() {
   const { performanceMixin: pm } = require('./performance-mixin');
   const { botContextMixin: bcm } = require('./bot-context-mixin');
 
-  useLogLayerMixin([
-    dcm(),
-    pm(),
-    bcm(),
-  ]);
+  useLogLayerMixin([dcm(), pm(), bcm()]);
 }
-

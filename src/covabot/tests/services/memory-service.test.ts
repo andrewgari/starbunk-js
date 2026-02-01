@@ -13,7 +13,7 @@ describe('MemoryService', () => {
       storeConversation: vi.fn().mockResolvedValue(1),
       getChannelContext: vi.fn().mockResolvedValue({ messages: [] }),
       getUserHistory: vi.fn().mockResolvedValue({ messages: [] }),
-      pruneOldConversations: vi.fn().mockResolvedValue(0),
+      deleteOldConversations: vi.fn().mockResolvedValue(0),
     };
 
     mockUserFactRepo = {
@@ -49,6 +49,7 @@ describe('MemoryService', () => {
         'TestUser',
         'Hello bot!',
         'Hello human!',
+        undefined,
       );
     });
 
@@ -72,6 +73,7 @@ describe('MemoryService', () => {
         'TestUser',
         'Hello bot!',
         null,
+        undefined,
       );
     });
   });
@@ -321,17 +323,6 @@ describe('MemoryService', () => {
 
       expect(formatted).toContain("Alice's interests: hobby: coding");
       expect(formatted).toContain("Alice's preferences: language: TypeScript");
-    });
-  });
-
-  describe('pruneOldConversations', () => {
-    it('should delete old conversations', async () => {
-      vi.mocked(mockConversationRepo.pruneOldConversations!).mockResolvedValue(1);
-
-      const deleted = await memoryService.pruneOldConversations('profile', 30);
-
-      expect(deleted).toBe(1);
-      expect(mockConversationRepo.pruneOldConversations).toHaveBeenCalledWith('profile', 30);
     });
   });
 });

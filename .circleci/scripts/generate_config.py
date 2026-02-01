@@ -96,11 +96,10 @@ def main():
             print(f"Warning: Error loading {workflow_name}.yml: {e}", file=sys.stderr)
 
     # Build the merged config using PyYAML for proper generation
+    # Note: continuation orb should NOT be included in the generated config
+    # It's only needed in the setup config (.circleci/config.yml)
     merged_config = {
-        'version': '2.1',
-        'orbs': {
-            'continuation': 'circleci/continuation@0.1.2'
-        }
+        'version': '2.1'
     }
 
     # Add parameters (snyk_token required for core validation)

@@ -1,3 +1,31 @@
+## [1.29.0](https://github.com/andrewgari/starbunk-js/compare/v1.28.0...v1.29.0) (2026-01-31)
+
+### Features
+
+* **#578:** Implement PlayerState state machine for DJCova ([#597](https://github.com/andrewgari/starbunk-js/issues/597)) ([0564144](https://github.com/andrewgari/starbunk-js/commit/0564144f19ff9d480eeed72a9e76d5cbc66f8d1e)), closes [#578](https://github.com/andrewgari/starbunk-js/issues/578)
+
+## [1.28.0](https://github.com/andrewgari/starbunk-js/compare/v1.27.1...v1.28.0) (2026-01-30)
+
+### Features
+
+* **covabot:** PostgreSQL conversation memory implementation (Issue [#516](https://github.com/andrewgari/starbunk-js/issues/516)) ([#569](https://github.com/andrewgari/starbunk-js/issues/569)) ([9cbaac4](https://github.com/andrewgari/starbunk-js/commit/9cbaac4419a503b0e217413d25c1a7458990c278))
+
+## [1.27.1](https://github.com/andrewgari/starbunk-js/compare/v1.27.0...v1.27.1) (2026-01-29)
+
+### Bug Fixes
+
+* **ci:** restore dynamic config setup workflow ([#568](https://github.com/andrewgari/starbunk-js/issues/568)) ([a54a5e7](https://github.com/andrewgari/starbunk-js/commit/a54a5e7524e651e1eb93790adc0a9a37b134b551))
+
+## [1.27.0](https://github.com/andrewgari/starbunk-js/compare/v1.26.3...v1.27.0) (2026-01-29)
+
+### Features
+
+* **ci:** add automatic deployment to unraid on main branch ([#562](https://github.com/andrewgari/starbunk-js/issues/562)) ([a737fe9](https://github.com/andrewgari/starbunk-js/commit/a737fe98d7d6c7b0f1c188fb3360a57043cf1ffe))
+
+### Bug Fixes
+
+* **ci:** correct sync-versions.sh to target src/ packages ([#565](https://github.com/andrewgari/starbunk-js/issues/565)) ([b6448e3](https://github.com/andrewgari/starbunk-js/commit/b6448e3f693cdebdbaa7751ee213acb12bef72f7))
+
 ## [1.26.3](https://github.com/andrewgari/starbunk-js/compare/v1.26.2...v1.26.3) (2026-01-27)
 
 ### Bug Fixes

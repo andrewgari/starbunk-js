@@ -1,41 +1,45 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { ChatInputCommandInteraction } from 'discord.js';
-import { container, ServiceId } from '../utils';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
-import { DJCovaService } from '../services/dj-cova-service';
 import { logger } from '../observability/logger';
+import { getDJCovaService } from '@/core/djcova-factory';
 
 const commandBuilder = new SlashCommandBuilder()
-.setName('volume')
-.setDescription('Set playback volume')
-.addIntegerOption((option) => option.setName('level').setDescription('Volume level (1-100)').setRequired(true));
+  .setName('volume')
+  .setDescription('Set playback volume')
+  .addIntegerOption(option =>
+    option.setName('level').setDescription('Volume level (1-100)').setRequired(true),
+  );
 
 export default {
-data: commandBuilder.toJSON(),
-async execute(interaction: ChatInputCommandInteraction) {
-try {
-// Since 'level' is required, getInteger with true will never return null
-const vol = interaction.options.getInteger('level', true);
+  data: commandBuilder.toJSON(),
+  async execute(interaction: ChatInputCommandInteraction) {
+    try {
+      // Since 'level' is required, getInteger with true will never return null
+      const vol = interaction.options.getInteger('level', true);
 
-// Get service from container
-const service = container.get<DJCovaService>(ServiceId.DJCovaService);
-if (!service) {
-await sendErrorResponse(interaction, 'Music service is not available.');
-return;
-}
+      if (!interaction.guild?.id) {
+        await sendErrorResponse(interaction, 'This command can only be used in a server.');
+        return;
+      }
 
-// Service handles validation and logic
-service.setVolume(vol);
+      // Get per-guild DJCovaService instance
+      const service = getDJCovaService(interaction.guild.id);
 
-await sendSuccessResponse(interaction, `Volume set to ${vol}%`);
-logger.info(`Volume changed to ${vol}%`);
-} catch (error) {
-logger.withError(error instanceof Error ? error : new Error(String(error)))
-	.error('Error executing volume command');
+      // Service handles validation and logic
+      service.setVolume(vol);
 
-const errorMessage = error instanceof Error ? error.message : 'An error occurred while changing the volume.';
+      await sendSuccessResponse(interaction, `Volume set to ${vol}%`);
+      logger.info(`Volume changed to ${vol}%`);
+    } catch (error) {
+      logger
+        .withError(error instanceof Error ? error : new Error(String(error)))
+        .error('Error executing volume command');
 
-await sendErrorResponse(interaction, errorMessage);
-}
-},
+      const errorMessage =
+        error instanceof Error ? error.message : 'An error occurred while changing the volume.';
+
+      await sendErrorResponse(interaction, errorMessage);
+    }
+  },
 };
