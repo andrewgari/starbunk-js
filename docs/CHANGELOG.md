@@ -1,3 +1,9 @@
+## [1.30.0](https://github.com/andrewgari/starbunk-js/compare/v1.29.0...v1.30.0) (2026-02-01)
+
+### Features
+
+* add connection health monitoring for DJCova voice connections ([#602](https://github.com/andrewgari/starbunk-js/issues/602)) ([19d7a9f](https://github.com/andrewgari/starbunk-js/commit/19d7a9f43d9809f341c46d55191e27656262b17e))
+
 ## [1.29.0](https://github.com/andrewgari/starbunk-js/compare/v1.28.0...v1.29.0) (2026-01-31)
 
 ### Features
