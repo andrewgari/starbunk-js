@@ -65,6 +65,7 @@
     "health-check:json": "scripts/monitoring/structure-health-check.sh --json",
     "ralph:pr-comments": "bash scripts/ai/ralph-pr-comments.sh",
     "ralph:fix": "bash scripts/ai/ralph-fix-errors.sh",
+    "setup:config": "bash scripts/setup-config.sh",
     "release": "semantic-release"
   },
   "engines": {

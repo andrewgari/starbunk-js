@@ -213,16 +213,15 @@ PRD.md
 # ==========================================
 # PROJECT-SPECIFIC: SCRIPTS
 # ==========================================
-# Temporary development and optimization scripts
-scripts/
+# Scripts directory is TRACKED (contains important automation)
+# Exception: exclude nested package scripts
 */scripts
-actionlint
 
-# Exception: CircleCI scripts must be tracked
-!.circleci/scripts/
-!.circleci/scripts/container_health_check.sh
-!.circleci/scripts/detect_changes.sh
-!.circleci/scripts/generate_config.py
+# CircleCI scripts must be tracked (already included in /scripts)
+# No exceptions needed
+
+# Temporary dev tools
+actionlint
 
 # ==========================================
 # PROJECT-SPECIFIC: PRISMA
