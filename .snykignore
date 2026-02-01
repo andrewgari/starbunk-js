@@ -1,0 +1,4 @@
+# Ignore data directories that contain runtime data, not code
+data/
+node_modules/
+dist/

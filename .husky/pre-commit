@@ -3,14 +3,6 @@ set -e
 
 echo "🔍 Running pre-commit validation checks..."
 
-# Sync VERSION to package.json files
-echo "📦 Syncing VERSION file to package.json files..."
-if [ -f "config/VERSION" ]; then
-  bash scripts/sync-versions.sh
-  # Stage any package.json files that were updated
-  git add package.json apps/*/package.json packages/shared/package.json 2>/dev/null || true
-fi
-
 # Repository structure validation
 echo "📁 Validating repository structure..."
 bash scripts/validation/check-root-directory.sh
