@@ -303,9 +303,11 @@ sequenceDiagram
     end
 ```
 
+> **Note:** For AI agent workflow and task coordination details, see [Agent Workflow](docs/AGENT_WORKFLOW.md).
+
 ## 🧪 Testing
 
-The container architecture uses Jest with project-based testing:
+The container architecture uses Vitest with project-based testing:
 
 ```bash
 # Test all containers
