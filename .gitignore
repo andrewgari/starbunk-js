@@ -275,3 +275,6 @@ lib-cov
 .lock-wscript
 
 config/**
+.repo_index.json
+tasks.json
+ralph.yml
