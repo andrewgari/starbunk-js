@@ -241,6 +241,7 @@ actionlint
 
 # But allow these specific docs (application documentation)
 !README.md
+!SECURITY.md
 !.circleci/README.md
 !docs/*.md
 !docs/**/*.md

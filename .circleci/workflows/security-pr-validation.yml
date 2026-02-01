@@ -1,0 +1,239 @@
+version: 2.1
+
+# Security validation jobs for PR checks
+# Enforces Snyk vulnerability thresholds and container scanning
+# Shared executors and commands are loaded from shared-config.yml by generate_config.py
+
+executors:
+  node22:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: medium
+
+commands:
+  setup_npm_cache:
+    description: "Install npm dependencies with caching"
+    steps:
+      - restore_cache:
+          keys:
+            - v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v1-npm-{{ arch }}-{{ .Branch }}-
+            - v1-npm-{{ arch }}-
+      - run:
+          name: Show Node and npm versions
+          command: |
+            node -v
+            npm -v
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: v1-npm-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - node_modules
+
+  install_snyk:
+    description: "Install Snyk CLI globally"
+    steps:
+      - run:
+          name: Install Snyk CLI
+          command: |
+            npm install -g snyk@latest
+            snyk --version
+
+jobs:
+  snyk_code_scan:
+    executor: node22
+    steps:
+      - checkout
+      - setup_npm_cache
+      - install_snyk
+      - run:
+          name: Authenticate Snyk
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then
+              echo "❌ ERROR: SNYK_TOKEN is not set"
+              echo "Please configure SNYK_TOKEN in CircleCI project settings"
+              exit 1
+            fi
+            snyk auth $SNYK_TOKEN
+      - run:
+          name: Snyk Code Scan (Workspace Aware)
+          command: |
+            set -e
+            echo "🔍 Running Snyk code scan with HIGH/CRITICAL enforcement"
+            echo "Scanning all workspace projects (shared + apps)"
+            
+            # Scan with --all-projects to handle npm workspaces
+            # --severity-threshold=high ensures we only fail on High/Critical
+            # --fail-on=all ensures we fail on any vulnerability at or above threshold
+            snyk test \
+              --all-projects \
+              --severity-threshold=high \
+              --fail-on=all \
+              --detection-depth=4 \
+              --exclude=node_modules \
+              || {
+                echo "❌ Snyk found High or Critical vulnerabilities"
+                echo "Please review and fix the vulnerabilities before merging"
+                echo "Run 'snyk test' locally to see detailed results"
+                exit 1
+              }
+            
+            echo "✅ No High or Critical vulnerabilities found"
+
+  snyk_container_scan_bunkbot:
+    docker:
+      - image: cimg/base:stable
+    resource_class: medium
+    steps:
+      - checkout
+      - setup_remote_docker
+      - install_snyk
+      - run:
+          name: Authenticate Snyk
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then
+              echo "❌ ERROR: SNYK_TOKEN is not set"
+              exit 1
+            fi
+            snyk auth $SNYK_TOKEN
+      - run:
+          name: Build Bunkbot Container for Scanning
+          command: |
+            # Build container for scanning (no need to push)
+            docker build -f src/bunkbot/Dockerfile -t starbunk-bunkbot:scan .
+      - run:
+          name: Snyk Container Scan - Bunkbot
+          command: |
+            set -e
+            echo "🔍 Scanning Bunkbot container for vulnerabilities"
+            snyk container test starbunk-bunkbot:scan \
+              --severity-threshold=high \
+              --file=src/bunkbot/Dockerfile \
+              || {
+                echo "❌ Bunkbot container has High or Critical vulnerabilities"
+                exit 1
+              }
+            echo "✅ Bunkbot container scan passed"
+
+  snyk_container_scan_djcova:
+    docker:
+      - image: cimg/base:stable
+    resource_class: medium
+    steps:
+      - checkout
+      - setup_remote_docker
+      - install_snyk
+      - run:
+          name: Authenticate Snyk
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then
+              echo "❌ ERROR: SNYK_TOKEN is not set"
+              exit 1
+            fi
+            snyk auth $SNYK_TOKEN
+      - run:
+          name: Build DJCova Container for Scanning
+          command: |
+            docker build -f src/djcova/Dockerfile -t starbunk-djcova:scan .
+      - run:
+          name: Snyk Container Scan - DJCova
+          command: |
+            set -e
+            echo "🔍 Scanning DJCova container for vulnerabilities"
+            snyk container test starbunk-djcova:scan \
+              --severity-threshold=high \
+              --file=src/djcova/Dockerfile \
+              || {
+                echo "❌ DJCova container has High or Critical vulnerabilities"
+                exit 1
+              }
+            echo "✅ DJCova container scan passed"
+
+  snyk_container_scan_covabot:
+    docker:
+      - image: cimg/base:stable
+    resource_class: medium
+    steps:
+      - checkout
+      - setup_remote_docker
+      - install_snyk
+      - run:
+          name: Authenticate Snyk
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then
+              echo "❌ ERROR: SNYK_TOKEN is not set"
+              exit 1
+            fi
+            snyk auth $SNYK_TOKEN
+      - run:
+          name: Build Covabot Container for Scanning
+          command: |
+            docker build -f src/covabot/Dockerfile -t starbunk-covabot:scan .
+      - run:
+          name: Snyk Container Scan - Covabot
+          command: |
+            set -e
+            echo "🔍 Scanning Covabot container for vulnerabilities"
+            snyk container test starbunk-covabot:scan \
+              --severity-threshold=high \
+              --file=src/covabot/Dockerfile \
+              || {
+                echo "❌ Covabot container has High or Critical vulnerabilities"
+                exit 1
+              }
+            echo "✅ Covabot container scan passed"
+
+  snyk_container_scan_bluebot:
+    docker:
+      - image: cimg/base:stable
+    resource_class: medium
+    steps:
+      - checkout
+      - setup_remote_docker
+      - install_snyk
+      - run:
+          name: Authenticate Snyk
+          command: |
+            if [ -z "$SNYK_TOKEN" ]; then
+              echo "❌ ERROR: SNYK_TOKEN is not set"
+              exit 1
+            fi
+            snyk auth $SNYK_TOKEN
+      - run:
+          name: Build Bluebot Container for Scanning
+          command: |
+            docker build -f src/bluebot/Dockerfile -t starbunk-bluebot:scan .
+      - run:
+          name: Snyk Container Scan - Bluebot
+          command: |
+            set -e
+            echo "🔍 Scanning Bluebot container for vulnerabilities"
+            snyk container test starbunk-bluebot:scan \
+              --severity-threshold=high \
+              --file=src/bluebot/Dockerfile \
+              || {
+                echo "❌ Bluebot container has High or Critical vulnerabilities"
+                exit 1
+              }
+            echo "✅ Bluebot container scan passed"
+
+workflows:
+  security-checks:
+    jobs:
+      - snyk_code_scan
+      # Container scans run in parallel after code scan
+      - snyk_container_scan_bunkbot:
+          requires:
+            - snyk_code_scan
+      - snyk_container_scan_djcova:
+          requires:
+            - snyk_code_scan
+      - snyk_container_scan_covabot:
+          requires:
+            - snyk_code_scan
+      - snyk_container_scan_bluebot:
+          requires:
+            - snyk_code_scan
