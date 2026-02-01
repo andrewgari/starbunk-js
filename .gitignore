@@ -137,8 +137,13 @@ data/
 # ARCHIVE DIRECTORIES
 # ==========================================
 archive/
-.archive/
-.github/workflows/archive/
+.archive
+.github/workflows/archive
+.github/commands
+.github/commands/**
+.github/prompts
+.github/prompts/**
+.github/**
 
 # ==========================================
 # PROJECT-SPECIFIC: GITHUB
@@ -159,6 +164,9 @@ docs/github/
 
 # GitHub Actions credentials
 gha-creds-*.json
+
+
+.continue 
 
 # ==========================================
 # PROJECT-SPECIFIC: CIRCLECI
@@ -240,21 +248,7 @@ actionlint
 *.md
 
 # But allow these specific docs (application documentation)
-!README.md
-!.circleci/README.md
-!docs/*.md
-!docs/**/*.md
-!examples/config/README.md
-!examples/config/**/README.md
-
-# ==========================================
-# TEMPLATE FILES & COMMANDS (TRACKED)
-# ==========================================
-!.github/PULL_REQUEST_TEMPLATE.md
-!.github/ISSUE_TEMPLATE/*.md
-!.github/COMMIT_TEMPLATE
-!.github/commands/
-!.github/commands/**/*.md
+!README.markdown
 
 # ==========================================
 # MISC
@@ -278,3 +272,4 @@ config/**
 .repo_index.json
 tasks.json
 ralph.yml
+ 

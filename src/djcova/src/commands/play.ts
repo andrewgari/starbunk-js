@@ -58,14 +58,7 @@ export default {
       await sendSuccessResponse(interaction, `🎶 Now playing!`);
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      logger
-        .withError(err)
-        .withMetadata({
-          stack: err.stack,
-          url,
-          guildId: interaction.guild?.id,
-        })
-        .error('❌ Error executing play command');
+      logger.withError(err).error('❌ Error executing play command');
 
       const errorMessage =
         error instanceof Error

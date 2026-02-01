@@ -91,10 +91,7 @@ export class DJCova {
     });
 
     this.player.on('error', (error: Error) => {
-      logger
-        .withError(error)
-        .withMetadata({ playerStatus: this.player.state.status })
-        .error('❌ Audio player error');
+      logger.withError(error).error('❌ Audio player error');
       logger.debug('Triggering cleanup due to player error');
       this.cleanup();
     });

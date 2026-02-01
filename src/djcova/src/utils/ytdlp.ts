@@ -97,7 +97,7 @@ export function getYouTubeAudioStream(url: string): {
 
   // Handle process spawn errors
   ytdlpProcess.on('error', (error: Error) => {
-    logger.withError(error).withMetadata({ ytdlpPath, url }).error('yt-dlp process spawn error');
+    logger.withError(error).error('yt-dlp process spawn error');
     stream.destroy(error);
   });
 
