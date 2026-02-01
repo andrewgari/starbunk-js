@@ -223,11 +223,8 @@ export function attachHealthMonitor(
   // Start health check
   monitor.start();
 
-  // Add cleanup listeners for when connection is disconnected or destroyed
-  connection.on(VoiceConnectionStatus.Disconnected, () => {
-    monitor.destroy();
-  });
-
+  // Add cleanup listener for when connection is permanently destroyed
+  // Note: Do not clean up on Disconnected - the library auto-recovers and the monitor should track failures
   connection.on(VoiceConnectionStatus.Destroyed, () => {
     monitor.destroy();
   });

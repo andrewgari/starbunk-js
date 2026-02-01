@@ -298,6 +298,11 @@ describe('ConnectionHealthMonitor', () => {
           i % 2 === 0 ? VoiceConnectionStatus.Ready : VoiceConnectionStatus.Disconnected;
         vi.advanceTimersByTime(100);
       }
+
+      // Verify: notification callback was only invoked once
+      expect(mockCallback).toHaveBeenCalledTimes(1);
+
+      monitor.destroy();
       vi.useRealTimers();
     });
 

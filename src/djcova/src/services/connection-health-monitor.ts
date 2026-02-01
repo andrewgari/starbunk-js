@@ -108,7 +108,12 @@ export class ConnectionHealthMonitor {
         failureCount: this.failureCount,
       } as any);
 
-      if (status === VoiceConnectionStatus.Ready) {
+      // Treat Ready, Connecting, and Signalling as healthy states
+      if (
+        status === VoiceConnectionStatus.Ready ||
+        status === VoiceConnectionStatus.Connecting ||
+        status === VoiceConnectionStatus.Signalling
+      ) {
         this.resetFailures();
       } else {
         this.failureCount++;
