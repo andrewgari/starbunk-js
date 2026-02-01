@@ -19,6 +19,12 @@ type InteractionLike = { member?: unknown; guild?: { id: string } | null; channe
 
 import { getVoiceConnection, VoiceConnectionStatus } from '@discordjs/voice';
 import { logger } from '../observability/logger';
+import { getMusicConfig } from '../config/music-config';
+import {
+  ConnectionHealthMonitor,
+  ConnectionHealthMonitorConfig,
+  createConnectionHealthMonitor,
+} from '../services/connection-health-monitor';
 
 /**
  * Join a voice channel and return the connection
@@ -187,4 +193,39 @@ export function canJoinVoiceChannel(
 ): boolean {
   const permissions = channel.permissionsFor(botMember);
   return !!permissions?.has(['Connect', 'Speak']);
+}
+
+/**
+ * Export health monitor types and functions
+ */
+export { ConnectionHealthMonitor, ConnectionHealthMonitorConfig, createConnectionHealthMonitor };
+
+/**
+ * Attach health monitor to a voice connection
+ * Automatically cleans up when connection is destroyed
+ */
+export function attachHealthMonitor(
+  connection: VoiceConnectionLike,
+  guildId: string,
+  notificationCallback?: (message: string) => Promise<void>,
+): ConnectionHealthMonitor {
+  const config = getMusicConfig();
+
+  const monitor = createConnectionHealthMonitor({
+    connection,
+    guildId,
+    intervalMs: config.connectionHealthIntervalMs,
+    failureThreshold: config.connectionHealthFailureThreshold,
+    onThresholdExceeded: notificationCallback,
+  });
+
+  // Start health check
+  monitor.start();
+
+  // Add cleanup listener for when connection is destroyed
+  connection.on(VoiceConnectionStatus.Destroyed, () => {
+    monitor.destroy();
+  });
+
+  return monitor;
 }
