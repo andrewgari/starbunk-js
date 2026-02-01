@@ -248,11 +248,13 @@ actionlint
 !examples/config/**/README.md
 
 # ==========================================
-# TEMPLATE FILES (TRACKED)
+# TEMPLATE FILES & COMMANDS (TRACKED)
 # ==========================================
 !.github/PULL_REQUEST_TEMPLATE.md
 !.github/ISSUE_TEMPLATE/*.md
 !.github/COMMIT_TEMPLATE
+!.github/commands/
+!.github/commands/**/*.md
 
 # ==========================================
 # MISC
