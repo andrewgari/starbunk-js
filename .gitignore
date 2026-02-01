@@ -188,20 +188,24 @@ Untitled-1769734935380.n8n
 # Auggie/Ralph session logs
 .ralph
 
-# AI Workspace (local development/agent files)
+# AI Workspace - Agent context, PRDs, patterns (local-only, not committed)
 .workspace/
 
-# Local development and runtime data
+# Local development and runtime data (local-only, not committed)
 local/
+
+# Test results (moved to local/, kept here for legacy)
 test-results/
 
-# Config directory (local-only, examples are tracked)
+# Config directory - Bot personalities and settings (local-only, examples in examples/config/ are tracked)
 config/
 
-# Agent working files (root level)
+# Agent working files (root level - legacy, moving to .workspace/)
 AGENT.md
-PRD.md
 progress.txt
+
+# Current PRD (root level - will be moved to .workspace/prds/)
+PRD.md
 
 # Snyk Security Extension - AI Rules (auto-generated)
 .github/instructions/snyk_rules.instructions.md
