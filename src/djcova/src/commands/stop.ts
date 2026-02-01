@@ -12,6 +12,11 @@ export default {
   data: commandBuilder.toJSON(),
   async execute(interaction: ChatInputCommandInteraction) {
     try {
+      // Defer immediately to avoid Discord's 3-second timeout
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply();
+      }
+
       if (!interaction.guild?.id) {
         await sendErrorResponse(interaction, 'This command can only be used in a server.');
         return;

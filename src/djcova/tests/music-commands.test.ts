@@ -137,6 +137,55 @@ describe('Music Commands Tests', () => {
       );
     });
 
+    it('should defer the interaction immediately to prevent Discord timeout (#606)', async () => {
+      mockInteraction.deferred = false;
+      mockInteraction.replied = false;
+
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+
+      // CRITICAL: Defer must be called BEFORE service operations
+      expect(mockInteraction.deferReply).toHaveBeenCalled();
+    });
+
+    it('should not double-defer an already-deferred interaction', async () => {
+      mockInteraction.deferred = true;
+      mockInteraction.replied = false;
+
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+
+      // Should NOT call defer if already deferred
+      expect(mockInteraction.deferReply).not.toHaveBeenCalled();
+    });
+
+    it('should not defer an already-replied interaction', async () => {
+      mockInteraction.deferred = false;
+      mockInteraction.replied = true;
+
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+
+      // Should NOT call defer if already replied
+      expect(mockInteraction.deferReply).not.toHaveBeenCalled();
+    });
+
+    it('should defer before guild validation to ensure timeout protection', async () => {
+      const callOrder: string[] = [];
+
+      mockInteraction.deferReply = vi.fn(async () => {
+        callOrder.push('defer');
+      });
+
+      mockInteraction.guild = null;
+
+      mockedSendErrorResponse.mockImplementation(async () => {
+        callOrder.push('error-response');
+      });
+
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+
+      // Defer MUST come before error response (proves it's called first)
+      expect(callOrder[0]).toBe('defer');
+    });
+
     it('should handle stop command without guild gracefully', async () => {
       mockInteraction.guild = null;
 
