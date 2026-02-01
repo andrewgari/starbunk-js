@@ -558,3 +558,90 @@ describe('Cleanup Error Handling', () => {
 
 **Conditions:**
 1. Implement Tasks 1-4 specified above
+2. Maintain >90% coverage for lifecycle code
+3. All tests must pass with zero flaky behavior
+4. Document manual memory validation in RUNBOOK.md
+
+**Next Phase:**
+@senior-engineer: Review this architecture specification and create detailed implementation tasks for @grunt-worker. Break down Tasks 1-4 into specific file edits and report back when ready to implement.
+
+---
+
+## Architecture Review Addendum: Coverage Expansion
+
+**Reviewer:** @architect
+**Date:** 2026-01-31
+**Status:** ✅ APPROVED (Addendum)
+
+### Executive Summary
+Coverage expansion is required to reach the >90% target. Add tests for initialization, playback start, stream handling, and error/cleanup branches in `dj-cova.ts`.
+
+### Coverage Targets (Uncovered Paths)
+- Initialization paths (lines 34–38)
+- Audio player setup handlers (lines 65–66, 70–71, 75–76)
+- Playback start logic (lines 101–105)
+- Stream handling and probe error paths (lines 116–125)
+- Core playback logic (lines 146–164)
+- Error handling branches (lines 170–171)
+- Cleanup paths (line 196)
+
+### Required Test Areas
+1. **Constructor + player configuration**: verify FFMPEG_PATH default and `createAudioPlayer` config
+2. **Audio player event handling**: `Playing`/`Idle` handlers call idle manager methods
+3. **Play happy path**: stream probe, resource creation, player play
+4. **Volume application**: `setVolume` applies expected scaling
+5. **Play error path**: `demuxProbe` failure triggers cleanup and rethrows
+6. **Stop ordering**: cleanup invoked before `player.stop()`
+7. **Player error event**: handler calls `cleanup()`
+8. **Destroy cleanup**: stops, destroys idle manager, removes listeners
+
+### Example Test Sketches (abbreviated)
+```typescript
+it('initializes player config and default FFMPEG_PATH', () => {
+  delete process.env.FFMPEG_PATH;
+  const djCova = new DJCova();
+  expect(process.env.FFMPEG_PATH).toBeDefined();
+  expect(createAudioPlayer).toHaveBeenCalledWith({
+    behaviors: { noSubscriber: NoSubscriberBehavior.Play },
+  });
+});
+
+it('resets idle timer on Playing and starts on Idle', () => {
+  const djCova = new DJCova();
+  const idleManager = { resetIdleTimer: vi.fn(), startIdleTimer: vi.fn(), destroy: vi.fn() };
+  (djCova as { idleManager: typeof idleManager }).idleManager = idleManager;
+  const player = djCova.getPlayer();
+  (player as EventEmitter).emit(AudioPlayerStatus.Playing);
+  (player as EventEmitter).emit(AudioPlayerStatus.Idle);
+  expect(idleManager.resetIdleTimer).toHaveBeenCalledTimes(1);
+  expect(idleManager.startIdleTimer).toHaveBeenCalledTimes(1);
+});
+
+it('rethrows probe errors and cleans up', async () => {
+  const djCova = new DJCova();
+  (demuxProbe as Mock).mockRejectedValue(new Error('probe failed'));
+  await expect(djCova.play('https://example')).rejects.toThrow('probe failed');
+  const djCovaAny = djCova as { ytdlpProcess: ChildProcess | null; currentResource?: unknown };
+  expect(djCovaAny.ytdlpProcess).toBeNull();
+  expect(djCovaAny.currentResource).toBeUndefined();
+});
+```
+
+### Mock Enhancements Required
+- **AudioPlayer mock**: EventEmitter-based stub with `play`, `stop`, `removeAllListeners`, `emit`
+- **createAudioResource**: return object with optional `volume.setVolume`
+- **demuxProbe**: success + failure paths
+- **getYouTubeAudioStream**: success + failure paths
+- **Idle manager fixture**: `resetIdleTimer`, `startIdleTimer`, `destroy`
+
+### Edge Cases to Cover
+- Init with missing `FFMPEG_PATH` (default set)
+- `demuxProbe` failure should rethrow and clean up
+- Player `error` event triggers `cleanup()`
+- `destroy()` removes listeners and clears idle manager
+
+### Expected Coverage Impact
+These tests should cover the remaining branches and lift `dj-cova.ts` coverage from ~65% to **≥92%**.
+
+### Next Phase
+@senior-engineer: Produce an updated implementation plan for the coverage expansion tests and hand off to @grunt-worker.
