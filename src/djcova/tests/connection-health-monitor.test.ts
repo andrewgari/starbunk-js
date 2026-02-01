@@ -44,6 +44,7 @@ describe('ConnectionHealthMonitor', () => {
   describe('Scenario 1: Normal Operation (Ready state)', () => {
     it('maintains failureCount at 0 when connection is Ready', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -51,12 +52,21 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
-      expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
-      // TODO: verify failureCount === 0
+      // Execute
+      monitor.start();
+      vi.advanceTimersByTime(350); // 3+ health check cycles (100ms each)
+
+      // Assert
+      expect(mockConnection.rejoin).not.toHaveBeenCalled();
+      expect(mockCallback).not.toHaveBeenCalled();
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
 
     it('does not send notification when connection stays Ready', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -65,8 +75,15 @@ describe('ConnectionHealthMonitor', () => {
         onThresholdExceeded: mockCallback,
       });
 
-      // TODO: start monitor, advance time, verify callback not called
+      // Execute
+      monitor.start();
+      vi.advanceTimersByTime(350); // 30+ seconds worth of checks
+
+      // Assert
       expect(mockCallback).not.toHaveBeenCalled();
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
   });
 
@@ -74,6 +91,7 @@ describe('ConnectionHealthMonitor', () => {
   describe('Scenario 2: Transient Failure (recovers before threshold)', () => {
     it('increments failureCount when connection leaves Ready', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -81,12 +99,22 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
-      // TODO: transition to non-Ready, verify failureCount increments
-      // TODO: verify failureCount === 1
+      // Execute
+      monitor.start();
+      vi.advanceTimersByTime(50); // Let first check run
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(100); // Run next check with non-Ready status
+
+      // Assert
+      expect(mockConnection.rejoin).toHaveBeenCalledTimes(1);
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
 
     it('triggers reconnect on first failure', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -94,12 +122,22 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
-      // TODO: transition to non-Ready, verify rejoin() called once
-      expect(mockConnection.rejoin).not.toHaveBeenCalled();
+      // Execute
+      monitor.start();
+      vi.advanceTimersByTime(50); // Let first check run
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(100); // Next check triggers reconnect
+
+      // Assert
+      expect(mockConnection.rejoin).toHaveBeenCalledTimes(1);
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
 
     it('resets failureCount when connection returns to Ready', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -107,12 +145,24 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
-      // TODO: transition Ready → non-Ready → Ready
-      // TODO: verify failureCount === 0 after recovery
+      // Execute
+      monitor.start();
+      vi.advanceTimersByTime(50);
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(100); // failureCount = 1
+      mockConnection.state.status = VoiceConnectionStatus.Ready;
+      vi.advanceTimersByTime(100); // should reset failureCount to 0
+
+      // Assert
+      expect(mockConnection.rejoin).toHaveBeenCalledTimes(1); // Only one from first failure
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
 
     it('does not notify when failureCount recovers before threshold', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -121,8 +171,19 @@ describe('ConnectionHealthMonitor', () => {
         onThresholdExceeded: mockCallback,
       });
 
-      // TODO: transition Ready → non-Ready → Ready before threshold
+      // Execute: Ready → non-Ready (count=1) → Ready (reset) before threshold
+      monitor.start();
+      vi.advanceTimersByTime(50);
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(100);
+      mockConnection.state.status = VoiceConnectionStatus.Ready;
+      vi.advanceTimersByTime(100);
+
+      // Assert
       expect(mockCallback).not.toHaveBeenCalled();
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
   });
 
@@ -130,6 +191,7 @@ describe('ConnectionHealthMonitor', () => {
   describe('Scenario 3: Persistent Failures (threshold exceeded)', () => {
     it('notifies user after failureThreshold consecutive failures', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -138,13 +200,25 @@ describe('ConnectionHealthMonitor', () => {
         onThresholdExceeded: mockCallback,
       });
 
-      // TODO: simulate 3 consecutive non-Ready checks
-      // TODO: verify callback called exactly once
-      expect(mockCallback).not.toHaveBeenCalled();
+      // Execute
+      monitor.start();
+      vi.advanceTimersByTime(50);
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(350); // 3+ checks with non-Ready status
+
+      // Assert
+      expect(mockCallback).toHaveBeenCalledTimes(1);
+      expect(mockCallback).toHaveBeenCalledWith(
+        expect.stringContaining('Voice connection health degraded'),
+      );
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
 
     it('sends only one notification per failure incident (spam prevention)', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -153,13 +227,22 @@ describe('ConnectionHealthMonitor', () => {
         onThresholdExceeded: mockCallback,
       });
 
-      // TODO: simulate 5 consecutive non-Ready checks
-      // TODO: verify callback called exactly once (not 5 times)
-      expect(mockCallback).not.toHaveBeenCalled();
+      // Execute
+      monitor.start();
+      vi.advanceTimersByTime(50);
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(550); // 5+ checks with non-Ready status
+
+      // Assert - callback invoked exactly once despite 5 checks
+      expect(mockCallback).toHaveBeenCalledTimes(1);
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
 
     it('allows new notification after recovery and new incident', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -168,9 +251,21 @@ describe('ConnectionHealthMonitor', () => {
         onThresholdExceeded: mockCallback,
       });
 
-      // TODO: Scenario: Fail 3x → notify → recover → fail 3x again → notify
-      // TODO: verify callback called exactly twice (once per incident)
-      expect(mockCallback).not.toHaveBeenCalled();
+      // Execute: Fail 3x → notify → recover → fail 3x again → notify
+      monitor.start();
+      vi.advanceTimersByTime(50);
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(350); // First incident, notify
+      mockConnection.state.status = VoiceConnectionStatus.Ready;
+      vi.advanceTimersByTime(100); // Recovery resets
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(350); // Second incident, notify again
+
+      // Assert
+      expect(mockCallback).toHaveBeenCalledTimes(2); // Once per incident
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
   });
 
@@ -178,6 +273,7 @@ describe('ConnectionHealthMonitor', () => {
   describe('Scenario 4: Rapid Flapping (Ready ↔ non-Ready)', () => {
     it('notifies only once despite rapid state changes', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -186,13 +282,28 @@ describe('ConnectionHealthMonitor', () => {
         onThresholdExceeded: mockCallback,
       });
 
-      // TODO: rapid flapping Ready → non-Ready → Ready → non-Ready → ... (6+ transitions)
-      // TODO: verify callback called at most once (notification not spammed)
-      expect(mockCallback).not.toHaveBeenCalled();
+      // Execute: Rapidly toggle Ready/non-Ready states
+      monitor.start();
+      vi.advanceTimersByTime(50);
+
+      // Execute: Stay non-Ready for 3 cycles to trigger notification
+      monitor.start();
+      vi.advanceTimersByTime(50);
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(350); // 3+ checks, triggers notification
+
+      // Now rapidly toggle despite notification already sent
+      for (let i = 0; i < 5; i++) {
+        mockConnection.state.status =
+          i % 2 === 0 ? VoiceConnectionStatus.Ready : VoiceConnectionStatus.Disconnected;
+        vi.advanceTimersByTime(100);
+      }
+      vi.useRealTimers();
     });
 
     it('correctly tracks failureCount during flapping', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -200,8 +311,26 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
-      // TODO: verify failureCount matches expected transitions
-      // Ready → non-Ready (count=1) → Ready (count=0) → non-Ready (count=1) → ...
+      // Execute: Track state transitions
+      monitor.start();
+      vi.advanceTimersByTime(50);
+
+      // Ready (count=0) → non-Ready (count=1)
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(100);
+      expect(mockConnection.rejoin).toHaveBeenCalledTimes(1);
+
+      // non-Ready (count=1) → Ready (reset count=0)
+      mockConnection.state.status = VoiceConnectionStatus.Ready;
+      vi.advanceTimersByTime(100);
+
+      // Ready (count=0) → non-Ready (count=1, rejoin again)
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(100);
+      expect(mockConnection.rejoin).toHaveBeenCalledTimes(2);
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
   });
 
@@ -210,6 +339,8 @@ describe('ConnectionHealthMonitor', () => {
     it('starts health check on start()', () => {
       // Setup
       vi.useFakeTimers();
+      const setIntervalSpy = vi.spyOn(global, 'setInterval');
+
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -217,16 +348,24 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
-      // TODO: verify timer is set
+      // Execute
       monitor.start();
-      expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
 
+      // Assert
+      expect(setIntervalSpy).toHaveBeenCalled();
+      const call = setIntervalSpy.mock.calls[setIntervalSpy.mock.calls.length - 1];
+      expect(call[1]).toBe(5000);
+
+      setIntervalSpy.mockRestore();
+      monitor.destroy();
       vi.useRealTimers();
     });
 
     it('stops health check and clears timer on destroy()', () => {
       // Setup
       vi.useFakeTimers();
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -234,11 +373,19 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
+      // Execute
       monitor.start();
+      vi.advanceTimersByTime(50);
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      const rejoinCallsBeforeDestroy = mockConnection.rejoin.mock.calls.length;
       monitor.destroy();
+      vi.advanceTimersByTime(200); // Advance timer after destroy
 
-      // TODO: verify timer cleared, no further health checks
+      // Assert
+      expect(clearIntervalSpy).toHaveBeenCalled();
+      expect(mockConnection.rejoin).toHaveBeenCalledTimes(rejoinCallsBeforeDestroy); // No new rejoin calls
 
+      clearIntervalSpy.mockRestore();
       vi.useRealTimers();
     });
 
@@ -253,7 +400,7 @@ describe('ConnectionHealthMonitor', () => {
 
       monitor.start();
 
-      // TODO: verify no errors thrown
+      // Assert - should not throw
       expect(() => {
         monitor.destroy();
         monitor.destroy();
@@ -263,6 +410,7 @@ describe('ConnectionHealthMonitor', () => {
 
     it('prevents health checks after destroy() (isDestroyed guard)', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -271,11 +419,21 @@ describe('ConnectionHealthMonitor', () => {
         onThresholdExceeded: mockCallback,
       });
 
+      // Execute
       monitor.start();
-      monitor.destroy();
+      vi.advanceTimersByTime(50);
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(350); // Trigger notification
+      expect(mockCallback).toHaveBeenCalledTimes(1);
 
-      // TODO: verify callback not invoked after destroy
+      mockCallback.mockClear();
+      monitor.destroy();
+      vi.advanceTimersByTime(500); // Try to run more checks
+
+      // Assert - callback not invoked after destroy
       expect(mockCallback).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
     });
   });
 
@@ -283,6 +441,7 @@ describe('ConnectionHealthMonitor', () => {
   describe('Scenario 6: Destruction Mid-Check (graceful error handling)', () => {
     it('handles connection destroyed during health check', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -290,13 +449,22 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
-      // TODO: destroy connection while check running
-      // TODO: verify no error thrown, graceful handling
+      // Execute
+      monitor.start();
+      vi.advanceTimersByTime(50);
+      mockConnection.state = null; // Destroy connection mid-check
+      vi.advanceTimersByTime(100);
+
+      // Assert - no error thrown, graceful handling
       expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
 
     it('does not throw when connection is missing', () => {
       // Setup
+      vi.useFakeTimers();
       const brokenConnection = {
         state: null,
         rejoin: undefined,
@@ -310,12 +478,21 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
-      // TODO: advance timer, verify no error thrown
-      expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
+      // Execute - should not throw
+      expect(() => {
+        monitor.start();
+        vi.advanceTimersByTime(200);
+        monitor.destroy();
+      }).not.toThrow();
+
+      vi.useRealTimers();
     });
 
     it('clears timer even if health check throws', () => {
       // Setup
+      vi.useFakeTimers();
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -323,11 +500,16 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
+      // Execute
       monitor.start();
+      mockConnection.state = null; // Make checks throw
       monitor.destroy();
 
-      // TODO: verify timer cleared despite potential errors
-      expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
+      // Assert
+      expect(clearIntervalSpy).toHaveBeenCalled();
+
+      clearIntervalSpy.mockRestore();
+      vi.useRealTimers();
     });
   });
 
@@ -335,6 +517,9 @@ describe('ConnectionHealthMonitor', () => {
   describe('Scenario 7: Configuration & Edge Cases', () => {
     it('uses provided interval and threshold values', () => {
       // Setup
+      vi.useFakeTimers();
+      const setIntervalSpy = vi.spyOn(global, 'setInterval');
+
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -342,12 +527,21 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 5,
       });
 
-      // TODO: verify uses custom values (2000ms, threshold 5)
-      expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
+      // Execute
+      monitor.start();
+
+      // Assert
+      const call = setIntervalSpy.mock.calls[setIntervalSpy.mock.calls.length - 1];
+      expect(call[1]).toBe(2000);
+
+      setIntervalSpy.mockRestore();
+      monitor.destroy();
+      vi.useRealTimers();
     });
 
     it('works without notification callback', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -356,20 +550,39 @@ describe('ConnectionHealthMonitor', () => {
         // no callback
       });
 
-      // TODO: simulate failure threshold, verify no error
-      expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
+      // Execute - simulate failure threshold without callback
+      expect(() => {
+        monitor.start();
+        vi.advanceTimersByTime(50);
+        mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+        vi.advanceTimersByTime(350); // Exceed threshold without callback
+        monitor.destroy();
+      }).not.toThrow();
+
+      vi.useRealTimers();
     });
 
     it('applies default values when not provided', () => {
       // Setup
+      vi.useFakeTimers();
+      const setIntervalSpy = vi.spyOn(global, 'setInterval');
+
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
         // no intervalMs or failureThreshold
       });
 
-      // TODO: verify defaults used (5000ms, threshold 3)
-      expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
+      // Execute
+      monitor.start();
+
+      // Assert - defaults: 5000ms interval, threshold 3
+      const call = setIntervalSpy.mock.calls[setIntervalSpy.mock.calls.length - 1];
+      expect(call[1]).toBe(5000);
+
+      setIntervalSpy.mockRestore();
+      monitor.destroy();
+      vi.useRealTimers();
     });
   });
 
@@ -377,6 +590,7 @@ describe('ConnectionHealthMonitor', () => {
   describe('Scenario 8: Notification Callback', () => {
     it('invokes callback when threshold is exceeded', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -385,12 +599,25 @@ describe('ConnectionHealthMonitor', () => {
         onThresholdExceeded: mockCallback,
       });
 
-      // TODO: simulate 3 failures, verify callback invoked with string message
-      expect(mockCallback).not.toHaveBeenCalled();
+      // Execute
+      monitor.start();
+      vi.advanceTimersByTime(50);
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(350); // Trigger 3 failures
+
+      // Assert
+      expect(mockCallback).toHaveBeenCalledTimes(1);
+      expect(mockCallback).toHaveBeenCalledWith(
+        expect.stringContaining('Voice connection health degraded'),
+      );
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
 
     it('catches callback errors and logs them', () => {
       // Setup
+      vi.useFakeTimers();
       const failingCallback = vi.fn().mockRejectedValue(new Error('callback error'));
 
       const monitor = createConnectionHealthMonitor({
@@ -401,13 +628,24 @@ describe('ConnectionHealthMonitor', () => {
         onThresholdExceeded: failingCallback,
       });
 
-      // TODO: simulate failure threshold
-      // TODO: verify error caught, logged, health check continues
-      expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
+      // Execute - should not throw even if callback fails
+      expect(() => {
+        monitor.start();
+        vi.advanceTimersByTime(50);
+        mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+        vi.advanceTimersByTime(350);
+        monitor.destroy();
+      }).not.toThrow();
+
+      // Assert
+      expect(failingCallback).toHaveBeenCalled();
+
+      vi.useRealTimers();
     });
 
     it('does not escalate callback errors', () => {
       // Setup
+      vi.useFakeTimers();
       const failingCallback = vi.fn().mockRejectedValue(new Error('callback error'));
 
       const monitor = createConnectionHealthMonitor({
@@ -418,16 +656,27 @@ describe('ConnectionHealthMonitor', () => {
         onThresholdExceeded: failingCallback,
       });
 
-      // TODO: simulate failure threshold
-      // TODO: verify callback error doesn't break health check loop
-      expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
+      // Execute
+      monitor.start();
+      vi.advanceTimersByTime(50);
+      mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+      vi.advanceTimersByTime(350); // Exceed threshold with failing callback
+      mockConnection.state.status = VoiceConnectionStatus.Ready;
+      vi.advanceTimersByTime(100); // Should continue running
+
+      // Assert - no error escalated, health check continues
+      expect(failingCallback).toHaveBeenCalled();
+      expect(mockConnection.rejoin).toHaveBeenCalled();
+
+      monitor.destroy();
+      vi.useRealTimers();
     });
   });
 
   // Test Scenario 9: Factory Function
   describe('Scenario 9: Factory Function', () => {
     it('creates instance with correct config', () => {
-      // Setup
+      // Setup & Execute
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -435,12 +684,13 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 5,
       });
 
+      // Assert
       expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
-      // TODO: verify config applied correctly
     });
 
     it('instance is fully functional', () => {
       // Setup
+      vi.useFakeTimers();
       const monitor = createConnectionHealthMonitor({
         connection: mockConnection,
         guildId: 'test-guild',
@@ -448,12 +698,20 @@ describe('ConnectionHealthMonitor', () => {
         failureThreshold: 3,
       });
 
-      monitor.start();
-      // TODO: verify interval works
-      monitor.destroy();
-      // TODO: verify cleanup
+      // Execute & Assert
+      expect(() => {
+        monitor.start();
+        vi.advanceTimersByTime(50);
+        mockConnection.state.status = VoiceConnectionStatus.Disconnected;
+        vi.advanceTimersByTime(100);
+        mockConnection.state.status = VoiceConnectionStatus.Ready;
+        vi.advanceTimersByTime(100);
+        monitor.destroy();
+      }).not.toThrow();
 
-      expect(monitor).toBeInstanceOf(ConnectionHealthMonitor);
+      expect(mockConnection.rejoin).toHaveBeenCalled();
+
+      vi.useRealTimers();
     });
   });
 });
