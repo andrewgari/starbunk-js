@@ -7,34 +7,34 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
   readonly name = 'BlueRequestStrategy';
   readonly priority = 30;
 
+  private selectedStrategy: 'insult' | 'compliment' | null = null;
+
   private readonly complimentStrategy = new RequestConfirmStrategy(this.triggeringEvent);
   private readonly insultStrategy = new RequestConfirmEnemyStrategy(this.triggeringEvent);
 
   async shouldTrigger(): Promise<boolean> {
-    const isEnemy = this.triggeringEvent.author.id === process.env.BLUEBOT_ENEMY_USER_ID;
-    const selectedStrategy = isEnemy ? 'insult' : 'compliment';
+    const insultResult = await this.insultStrategy.shouldTrigger();
+    this.selectedStrategy = insultResult ? 'insult' : 'compliment';
 
     logger
       .withMetadata({
         strategy_name: 'BlueRequestStrategy',
-        sub_strategy: selectedStrategy,
-        is_enemy: isEnemy,
+        sub_strategy: this.selectedStrategy,
         author_id: this.triggeringEvent.author.id,
         message_id: this.triggeringEvent.id,
       })
-      .debug(`BlueRequestStrategy: Routing to ${selectedStrategy} strategy`);
+      .debug(`BlueRequestStrategy: Routing to ${this.selectedStrategy} strategy`);
 
-    if (isEnemy) {
-      const result = await this.insultStrategy.shouldTrigger();
+    if (insultResult) {
       logger
         .withMetadata({
           strategy_name: 'BlueRequestStrategy',
           sub_strategy: 'insult',
-          result,
+          result: true,
           message_id: this.triggeringEvent.id,
         })
         .debug('BlueRequestStrategy: Insult strategy evaluation');
-      return result;
+      return true;
     }
 
     const result = await this.complimentStrategy.shouldTrigger();
@@ -50,19 +50,20 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
   }
 
   async getResponse(): Promise<string> {
-    const isEnemy = this.triggeringEvent.author.id === process.env.BLUEBOT_ENEMY_USER_ID;
-    const selectedStrategy = isEnemy ? 'insult' : 'compliment';
+    if (!this.selectedStrategy) {
+      const insultResult = await this.insultStrategy.shouldTrigger();
+      this.selectedStrategy = insultResult ? 'insult' : 'compliment';
+    }
 
     logger
       .withMetadata({
         strategy_name: 'BlueRequestStrategy',
-        sub_strategy: selectedStrategy,
-        is_enemy: isEnemy,
+        sub_strategy: this.selectedStrategy,
         message_id: this.triggeringEvent.id,
       })
-      .info(`BlueRequestStrategy: Generating ${selectedStrategy} response`);
+      .info(`BlueRequestStrategy: Generating ${this.selectedStrategy} response`);
 
-    if (isEnemy) {
+    if (this.selectedStrategy === 'insult') {
       const response = await this.insultStrategy.getResponse();
       logger
         .withMetadata({

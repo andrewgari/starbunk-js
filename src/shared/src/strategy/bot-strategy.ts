@@ -40,7 +40,7 @@ export abstract class BotStrategy<
     this._percentChance = value;
   }
 
-  constructor(protected readonly triggeringEvent?: TContext) {}
+  constructor(protected readonly triggeringEvent: TContext) {}
 
   abstract shouldTrigger(context: TContext): Promise<boolean>;
   abstract execute(context: TContext): Promise<TResult>;

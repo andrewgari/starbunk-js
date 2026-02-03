@@ -1,8 +1,14 @@
 import { Message, TextChannel } from 'discord.js';
 import { logger } from '@/observability/logger';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
-import { RequestConfirmStrategy } from '@/strategy/blue-request-confirm-strategy';
-import { RequestConfirmEnemyStrategy } from '@/strategy/blue-request-confirm-enemy-strategy';
+import { BlueRequestStrategy } from '@/strategy/blue-request-strategy';
+import { BlueReplyStrategy } from '@/strategy/blue-reply-strategy';
+
+let replyStrategy = new BlueReplyStrategy();
+
+export function resetStrategies(): void {
+  replyStrategy = new BlueReplyStrategy();
+}
 
 /**
  * Lightweight helpers to reduce repeated guild/channel guards around metrics tracking
@@ -71,15 +77,14 @@ function trackBotResponseSafe(
  * Useful for testing and debugging
  */
 export async function getResponseForMessage(message: Message): Promise<string | null> {
-  const complimentStrategy = new RequestConfirmStrategy(message);
-  const insultStrategy = new RequestConfirmEnemyStrategy(message);
+  const requestStrategy = new BlueRequestStrategy(message);
 
-  if (await insultStrategy.shouldTrigger()) {
-    const response = await insultStrategy.getResponse();
-    return response;
-  } else if (await complimentStrategy.shouldTrigger()) {
-    const response = await complimentStrategy.getResponse();
-    return response;
+  if (await requestStrategy.shouldTrigger()) {
+    return requestStrategy.getResponse();
+  }
+
+  if (await replyStrategy.shouldTrigger(message)) {
+    return replyStrategy.getResponse();
   }
 
   return null;
@@ -89,16 +94,15 @@ export async function processMessageByStrategy(message: Message): Promise<void> 
   const metrics = getMetricsService();
   const startTime = Date.now();
 
-  const complimentStrategy = new RequestConfirmStrategy(message);
-  const insultStrategy = new RequestConfirmEnemyStrategy(message);
+  const requestStrategy = new BlueRequestStrategy(message);
 
-  // Execute insult strategy first
-  if (await executeStrategy('insult', insultStrategy, message, metrics, startTime)) {
+  // Execute request strategy first
+  if (await executeStrategy('request', requestStrategy, message, metrics, startTime)) {
     return;
   }
 
-  // Execute compliment strategy second
-  if (await executeStrategy('compliment', complimentStrategy, message, metrics, startTime)) {
+  // Execute reply strategy second
+  if (await executeStrategy('reply', replyStrategy, message, metrics, startTime)) {
     return;
   }
 
@@ -113,9 +117,10 @@ export async function processMessageByStrategy(message: Message): Promise<void> 
 
 async function executeStrategy(
   name: string,
-  instance:
-    | InstanceType<typeof RequestConfirmStrategy>
-    | InstanceType<typeof RequestConfirmEnemyStrategy>,
+  instance: {
+    shouldTrigger: (message?: Message) => Promise<boolean>;
+    getResponse: () => Promise<string>;
+  },
   message: Message,
   metrics: ReturnType<typeof getMetricsService>,
   startTime: number,
@@ -134,7 +139,7 @@ async function executeStrategy(
 
   let shouldRespond = false;
   try {
-    shouldRespond = await instance.shouldTrigger();
+    shouldRespond = await instance.shouldTrigger(message);
   } catch (error) {
     const evalDuration = Date.now() - strategyEvalStartTime;
     logger

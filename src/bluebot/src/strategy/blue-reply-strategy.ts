@@ -18,6 +18,8 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
   private readonly replyWindow = 5 * 60 * 1000; // 5 minutes in ms
   private readonly murderWindow = 24 * 60 * 60 * 1000; // 24 hours in ms
 
+  private lastTriggeringMessage?: Message;
+
   private strategy: StrategyOptions = StrategyOptions.None;
 
   get name(): string {
@@ -51,6 +53,7 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
   }
 
   async shouldRespond(message: Message): Promise<boolean> {
+    this.lastTriggeringMessage = message;
     const timestamp = message.createdAt.getTime();
     const timeSinceLastBlue = timestamp - this.lastBlueResponse.getTime();
     const timeSinceLastMurder = timestamp - this.lastMurderResponse.getTime();
@@ -147,6 +150,11 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
     if (!this.strategy) throw new Error('Strategy not set');
     if (!this.strat) throw new Error('Strategy not set');
 
+    const event = this.lastTriggeringMessage ?? this.triggeringEvent;
+    if (!event) {
+      throw new Error('No triggering message available for response generation');
+    }
+
     const strategyName = StrategyOptions[this.strategy];
     const beforeState = {
       last_blue_response: this.lastBlueResponse.toISOString(),
@@ -157,7 +165,7 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
       .withMetadata({
         strategy_name: 'BlueReplyStrategy',
         sub_strategy: strategyName,
-        message_id: this.triggeringEvent.id,
+        message_id: event.id,
         timekeeper_state_before: beforeState,
       })
       .debug('BlueReplyStrategy: Generating response and updating timekeeper');
@@ -173,7 +181,7 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
             sub_strategy: strategyName,
             action: 'clear_blue_update_murder',
             new_murder_response_time: this.lastMurderResponse.toISOString(),
-            message_id: this.triggeringEvent.id,
+            message_id: event.id,
           })
           .info('BlueReplyStrategy: Updated timekeeper - cleared blue, set murder timestamp');
         break;
@@ -184,7 +192,7 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
             strategy_name: 'BlueReplyStrategy',
             sub_strategy: strategyName,
             action: 'clear_blue',
-            message_id: this.triggeringEvent.id,
+            message_id: event.id,
           })
           .info('BlueReplyStrategy: Updated timekeeper - cleared blue timestamp');
         break;
@@ -196,13 +204,13 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
             sub_strategy: strategyName,
             action: 'update_blue',
             new_blue_response_time: this.lastBlueResponse.toISOString(),
-            message_id: this.triggeringEvent.id,
+            message_id: event.id,
           })
           .info('BlueReplyStrategy: Updated timekeeper - set blue timestamp');
         break;
     }
 
-    const response = await this.strat.getResponse(this.triggeringEvent);
+    const response = await this.strat.getResponse(event);
 
     logger
       .withMetadata({
@@ -210,7 +218,7 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
         sub_strategy: strategyName,
         response_length: response.length,
         response_preview: response.substring(0, 100),
-        message_id: this.triggeringEvent.id,
+        message_id: event.id,
         timekeeper_state_after: {
           last_blue_response: this.lastBlueResponse.toISOString(),
           last_murder_response: this.lastMurderResponse.toISOString(),

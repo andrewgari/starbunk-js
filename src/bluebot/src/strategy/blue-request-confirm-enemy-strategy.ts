@@ -5,8 +5,28 @@ import { RequestConfirmStrategy } from '@/strategy/blue-request-confirm-strategy
 
 export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
   async shouldTrigger(): Promise<boolean> {
-    const enemy = await BlueBotDiscordService.getInstance().getEnemy(this.triggeringEvent);
-    const subject = this.getRequestedName(this.triggeringEvent);
+    const event = this.triggeringEvent;
+
+    const subject = this.getRequestedName(event);
+    if (!subject) {
+      return false;
+    }
+
+    let enemy: Awaited<
+      ReturnType<ReturnType<typeof BlueBotDiscordService.getInstance>['getEnemy']>
+    >;
+    try {
+      enemy = await BlueBotDiscordService.getInstance().getEnemy(event);
+    } catch (error) {
+      logger
+        .withError(error)
+        .withMetadata({
+          strategy_name: 'RequestConfirmEnemyStrategy',
+          message_id: this.triggeringEvent.id,
+        })
+        .warn('RequestConfirmEnemyStrategy: Enemy lookup failed');
+      return false;
+    }
 
     logger
       .withMetadata({

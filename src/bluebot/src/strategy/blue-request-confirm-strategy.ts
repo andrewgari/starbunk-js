@@ -65,7 +65,7 @@ export class RequestConfirmStrategy extends SendAPIMessageStrategy {
     return Promise.resolve(response);
   }
 
-  protected getFriendFromMessage(message: Message): string {
+  public getFriendFromMessage(message: Message): string {
     // get a baseline, we can at least repeat what they said.
     let friend = this.getRequestedName(message) || '';
     let userId = '';
