@@ -30,7 +30,10 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
     return 50;
   }
 
-  async shouldTrigger(message: Message): Promise<boolean> {
+  async shouldTrigger(message?: Message): Promise<boolean> {
+    if (!message) {
+      return false;
+    }
     return this.shouldRespond(message);
   }
 

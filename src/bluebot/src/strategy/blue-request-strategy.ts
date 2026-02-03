@@ -20,8 +20,8 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
       .withMetadata({
         strategy_name: 'BlueRequestStrategy',
         sub_strategy: this.selectedStrategy,
-        author_id: this.triggeringEvent.author.id,
-        message_id: this.triggeringEvent.id,
+        author_id: this.triggeringEvent!.author.id,
+        message_id: this.triggeringEvent!.id,
       })
       .debug(`BlueRequestStrategy: Routing to ${this.selectedStrategy} strategy`);
 
@@ -31,7 +31,7 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
           strategy_name: 'BlueRequestStrategy',
           sub_strategy: 'insult',
           result: true,
-          message_id: this.triggeringEvent.id,
+          message_id: this.triggeringEvent!.id,
         })
         .debug('BlueRequestStrategy: Insult strategy evaluation');
       return true;
@@ -43,7 +43,7 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
         strategy_name: 'BlueRequestStrategy',
         sub_strategy: 'compliment',
         result,
-        message_id: this.triggeringEvent.id,
+        message_id: this.triggeringEvent!.id,
       })
       .debug('BlueRequestStrategy: Compliment strategy evaluation');
     return result;
@@ -59,7 +59,7 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
       .withMetadata({
         strategy_name: 'BlueRequestStrategy',
         sub_strategy: this.selectedStrategy,
-        message_id: this.triggeringEvent.id,
+        message_id: this.triggeringEvent!.id,
       })
       .info(`BlueRequestStrategy: Generating ${this.selectedStrategy} response`);
 
@@ -70,7 +70,7 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
           strategy_name: 'BlueRequestStrategy',
           sub_strategy: 'insult',
           response_length: response.length,
-          message_id: this.triggeringEvent.id,
+          message_id: this.triggeringEvent!.id,
         })
         .info('BlueRequestStrategy: Generated insult response for enemy');
       return response;
@@ -82,7 +82,7 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
         strategy_name: 'BlueRequestStrategy',
         sub_strategy: 'compliment',
         response_length: response.length,
-        message_id: this.triggeringEvent.id,
+        message_id: this.triggeringEvent!.id,
       })
       .info('BlueRequestStrategy: Generated compliment response');
     return response;

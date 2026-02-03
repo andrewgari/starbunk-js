@@ -21,16 +21,16 @@ export class RequestConfirmStrategy extends SendAPIMessageStrategy {
   }
 
   async shouldTrigger(): Promise<boolean> {
-    const isRequest = this.isRequest(this.triggeringEvent);
-    const requestedName = this.getRequestedName(this.triggeringEvent);
+    const isRequest = this.isRequest(this.triggeringEvent!);
+    const requestedName = this.getRequestedName(this.triggeringEvent!);
 
     logger
       .withMetadata({
         strategy_name: 'RequestConfirmStrategy',
         is_request: isRequest,
         requested_name: requestedName,
-        message_content: this.triggeringEvent.content,
-        message_id: this.triggeringEvent.id,
+        message_content: this.triggeringEvent!.content,
+        message_id: this.triggeringEvent!.id,
       })
       .debug('RequestConfirmStrategy: Evaluating nice request');
 
@@ -39,7 +39,7 @@ export class RequestConfirmStrategy extends SendAPIMessageStrategy {
         .withMetadata({
           strategy_name: 'RequestConfirmStrategy',
           requested_name: requestedName,
-          message_id: this.triggeringEvent.id,
+          message_id: this.triggeringEvent!.id,
         })
         .info('RequestConfirmStrategy: Nice request detected');
       return Promise.resolve(true);
@@ -49,16 +49,16 @@ export class RequestConfirmStrategy extends SendAPIMessageStrategy {
   }
 
   async getResponse(): Promise<string> {
-    const friend = this.getFriendFromMessage(this.triggeringEvent);
+    const friend = this.getFriendFromMessage(this.triggeringEvent!);
     const response = `${friend}, I think you're pretty blue! :wink:`;
 
     logger
       .withMetadata({
         strategy_name: 'RequestConfirmStrategy',
-        requested_name: this.getRequestedName(this.triggeringEvent),
+        requested_name: this.getRequestedName(this.triggeringEvent!),
         resolved_friend: friend,
         response,
-        message_id: this.triggeringEvent.id,
+        message_id: this.triggeringEvent!.id,
       })
       .info('RequestConfirmStrategy: Generated compliment response');
 
