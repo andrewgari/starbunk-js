@@ -2,6 +2,7 @@ import { Message } from 'discord.js';
 import type { BotIdentity } from '../types/bot-identity';
 import { DiscordService } from '../discord/discord-service';
 import { BotStrategy } from './bot-strategy';
+import { logger } from '../observability/logger';
 
 export abstract class SendWebhookMessageStrategy extends BotStrategy<Message> {
   abstract readonly name: string;
@@ -20,7 +21,10 @@ export abstract class SendWebhookMessageStrategy extends BotStrategy<Message> {
       );
       return true;
     } catch (error) {
-      console.error(`Error sending message with identity: ${error}`);
+      logger
+        .withError(error)
+        .withMetadata({ strategy_name: this.name, message_id: message.id })
+        .error('Error sending message with bot identity');
       return false;
     }
   }
