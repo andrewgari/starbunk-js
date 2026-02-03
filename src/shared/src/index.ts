@@ -66,3 +66,8 @@ export { PostgresBaseRepository } from './data-access/base/postgres-base-reposit
 // Reactive utilities
 export { LiveData } from './utils/live-data';
 export type { ReadonlyLiveData, SubscribeOptions, Unsubscribe } from './utils/live-data';
+
+// Strategies
+export { BotStrategy } from './strategy/bot-strategy';
+export type { IBotStrategy } from './strategy/bot-strategy';
+export { SendWebhookMessageStrategy } from './strategy/send-webhook-message-strategy';

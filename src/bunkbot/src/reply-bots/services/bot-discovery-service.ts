@@ -1,7 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { z } from 'zod';
 import { BotRegistry } from '@/reply-bots/bot-registry';
-import { parseYamlBots } from '@/serialization/yaml-bot-parser';
+import { parseYamlBots, botSchema } from '@/serialization/yaml-bot-parser';
 import { YamlBotFactory } from '@/serialization/yaml-bot-factory';
 import { logger } from '@/observability/logger';
 
@@ -11,7 +12,7 @@ export class BotDiscoveryService {
     private registry: BotRegistry,
   ) {}
 
-  public async discover(botsDirectory: string): Promise<void> {
+  public async discover(botsDirectory: string): Promise<z.infer<typeof botSchema>[]> {
     logger.withMetadata({ directory: botsDirectory }).info('Starting bot discovery');
 
     if (!fs.existsSync(botsDirectory)) {
@@ -29,6 +30,7 @@ export class BotDiscoveryService {
 
     let totalBotsLoaded = 0;
     let totalBotsFailed = 0;
+    const allConfigs: z.infer<typeof botSchema>[] = [];
 
     for (const file of files) {
       const filePath = path.join(botsDirectory, file);
@@ -50,6 +52,7 @@ export class BotDiscoveryService {
           try {
             const bot = this.factory.createLiveBot(config);
             this.registry.register(bot);
+            allConfigs.push(config);
             totalBotsLoaded++;
 
             logger
@@ -91,5 +94,7 @@ export class BotDiscoveryService {
         bots_failed: totalBotsFailed,
       })
       .info('Bot discovery complete');
+
+    return allConfigs;
   }
 }

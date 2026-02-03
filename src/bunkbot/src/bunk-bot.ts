@@ -10,6 +10,8 @@ import { logger } from '@/observability/logger';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
 import { commands } from '@/commands';
 import { ConfigServer } from '@/observability/config-server';
+import { BotStrategyBuilder } from '@/reply-bots/strategies/bot-strategy-builder';
+import type { SendWebhookMessageStrategy } from '@starbunk/shared/strategy/send-webhook-message-strategy';
 
 /**
  * Main BunkBot application class
@@ -22,6 +24,7 @@ export class BunkBot {
   private botRegistry: BotRegistry;
   private discordService: DiscordService;
   private configServer: ConfigServer;
+  private strategyPool: SendWebhookMessageStrategy[] = [];
 
   constructor(client: Client, metricsService: MetricsService, healthServer: HealthServer) {
     this.client = client;
@@ -30,6 +33,13 @@ export class BunkBot {
     this.botRegistry = new BotRegistry();
     this.discordService = DiscordService.getInstance();
     this.configServer = new ConfigServer(parseInt(process.env.BUNKBOT_WEB_PORT || '7081', 10));
+  }
+
+  /**
+   * Get the strategy pool
+   */
+  getStrategyPool(): SendWebhookMessageStrategy[] {
+    return this.strategyPool;
   }
 
   /**
@@ -70,7 +80,10 @@ export class BunkBot {
     BotRegistry.setInstance(this.botRegistry); // Make registry accessible globally
     const factory = new YamlBotFactory();
     const discovery = new BotDiscoveryService(factory, this.botRegistry);
-    await discovery.discover(botsDir);
+    const botConfigs = await discovery.discover(botsDir);
+
+    // Build strategy pool from discovered bot configs
+    this.strategyPool = BotStrategyBuilder.buildAllFromConfigs(botConfigs);
 
     // Update active bots metric
     const botCount = this.botRegistry.getBots().length;
@@ -82,8 +95,9 @@ export class BunkBot {
           .getBots()
           .map(b => b.name)
           .join(', '),
+        strategy_pool_size: this.strategyPool.length,
       })
-      .info('Bot discovery complete');
+      .info('Bot discovery and strategy pool creation complete');
   }
 
   /**
