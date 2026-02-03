@@ -1,6 +1,5 @@
 import { Message, TextChannel } from 'discord.js';
 import { BotStrategy } from './bot-strategy';
-import { logger } from '../observability/logger';
 
 export abstract class SendAPIMessageStrategy extends BotStrategy<Message, boolean> {
   abstract readonly name: string;
@@ -12,10 +11,7 @@ export abstract class SendAPIMessageStrategy extends BotStrategy<Message, boolea
         await target.send(await this.getResponse());
         return true;
       } catch (error) {
-        logger
-          .withError(error)
-          .withMetadata({ strategy_name: this.name })
-          .error('Error sending message to text channel');
+        console.error(`[${this.name}] Error sending message to text channel:`, error);
         return false;
       }
     }
@@ -24,17 +20,12 @@ export abstract class SendAPIMessageStrategy extends BotStrategy<Message, boolea
         if (target.channel instanceof TextChannel) {
           await target.channel.send(await this.getResponse());
         } else {
-          logger
-            .withMetadata({ strategy_name: this.name, channel_id: target.channel.id })
-            .error('Message channel is not a text channel');
+          console.error(`[${this.name}] Message channel is not a text channel:`, target.channel.id);
           return false;
         }
         return true;
       } catch (error) {
-        logger
-          .withError(error)
-          .withMetadata({ strategy_name: this.name, message_id: target.id })
-          .error('Error sending message via message channel');
+        console.error(`[${this.name}] Error sending message via message channel:`, error);
         return false;
       }
     }
