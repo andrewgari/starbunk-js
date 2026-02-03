@@ -9,8 +9,22 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
 
   private selectedStrategy: 'insult' | 'compliment' | null = null;
 
-  private readonly complimentStrategy = new RequestConfirmStrategy(this.triggeringEvent);
-  private readonly insultStrategy = new RequestConfirmEnemyStrategy(this.triggeringEvent);
+  private _complimentStrategy?: RequestConfirmStrategy;
+  private _insultStrategy?: RequestConfirmEnemyStrategy;
+
+  private get complimentStrategy(): RequestConfirmStrategy {
+    if (!this._complimentStrategy) {
+      this._complimentStrategy = new RequestConfirmStrategy(this.triggeringEvent);
+    }
+    return this._complimentStrategy;
+  }
+
+  private get insultStrategy(): RequestConfirmEnemyStrategy {
+    if (!this._insultStrategy) {
+      this._insultStrategy = new RequestConfirmEnemyStrategy(this.triggeringEvent);
+    }
+    return this._insultStrategy;
+  }
 
   async shouldTrigger(): Promise<boolean> {
     const insultResult = await this.insultStrategy.shouldTrigger();
