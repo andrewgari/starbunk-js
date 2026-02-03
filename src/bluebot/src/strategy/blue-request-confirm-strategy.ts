@@ -133,10 +133,10 @@ export class RequestConfirmStrategy extends SendAPIMessageStrategy {
     logger
       .withMetadata({
         strategy_name: 'RequestConfirmStrategy',
-        original_name: this.getRequestedName(this.triggeringEvent),
+        original_name: this.getRequestedName(message),
         resolved_friend: friend,
         has_user_id: !!userId,
-        message_id: this.triggeringEvent.id,
+        message_id: message.id,
       })
       .debug('RequestConfirmStrategy: Friend identity resolved');
 
