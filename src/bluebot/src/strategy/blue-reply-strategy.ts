@@ -1,13 +1,9 @@
 import { Message } from 'discord.js';
-import { BlueStrategy } from '@/strategy/blue-strategy';
 import { DefaultStrategy } from '@/strategy/blue-default-strategy';
 import { ReplyConfirmStrategy } from '@/strategy/blue-reply-confirm-strategy';
 import { ConfirmEnemyStrategy } from '@/strategy/blue-reply-confirm-enemy-strategy';
 import { logger } from '@/observability/logger';
-
-const defaultStrategy = new DefaultStrategy();
-const confirmStrategy = new ReplyConfirmStrategy();
-const enemyStrategy = new ConfirmEnemyStrategy();
+import { SendAPIMessageStrategy } from '@starbunk/shared/strategy/send-api-message-strategy';
 
 enum StrategyOptions {
   None,
@@ -16,14 +12,35 @@ enum StrategyOptions {
   ConfirmEnemy,
 }
 
-export class BlueReplyStrategy implements BlueStrategy {
+export class BlueReplyStrategy extends SendAPIMessageStrategy {
   private lastBlueResponse = new Date(0);
   private lastMurderResponse = new Date(0);
   private readonly replyWindow = 5 * 60 * 1000; // 5 minutes in ms
   private readonly murderWindow = 24 * 60 * 60 * 1000; // 24 hours in ms
 
   private strategy: StrategyOptions = StrategyOptions.None;
-  private strat: BlueStrategy | null = null;
+
+  get name(): string {
+    return 'BlueReplyStrategy';
+  }
+
+  get priority(): number {
+    return 50;
+  }
+
+  async shouldTrigger(message: Message): Promise<boolean> {
+    return this.shouldRespond(message);
+  }
+
+  private readonly defaultStrategy: DefaultStrategy = new DefaultStrategy(this.triggeringEvent);
+  private readonly confirmStrategy: ReplyConfirmStrategy = new ReplyConfirmStrategy(
+    this.triggeringEvent,
+  );
+  private readonly enemyStrategy: ConfirmEnemyStrategy = new ConfirmEnemyStrategy(
+    this.triggeringEvent,
+  );
+
+  private strat: DefaultStrategy | ReplyConfirmStrategy | ConfirmEnemyStrategy | null = null;
 
   get lastBlueResponseTime(): Date {
     return this.lastBlueResponse;
@@ -71,7 +88,7 @@ export class BlueReplyStrategy implements BlueStrategy {
     if (withinReplyWindow) {
       if (shouldMurder) {
         this.strategy = StrategyOptions.ConfirmEnemy;
-        this.strat = enemyStrategy;
+        this.strat = this.enemyStrategy;
         logger
           .withMetadata({
             strategy_name: 'BlueReplyStrategy',
@@ -84,7 +101,7 @@ export class BlueReplyStrategy implements BlueStrategy {
           .info('BlueReplyStrategy: Selected ConfirmEnemy strategy (murder mode)');
       } else {
         this.strategy = StrategyOptions.ConfirmFriend;
-        this.strat = confirmStrategy;
+        this.strat = this.confirmStrategy;
         logger
           .withMetadata({
             strategy_name: 'BlueReplyStrategy',
@@ -97,7 +114,7 @@ export class BlueReplyStrategy implements BlueStrategy {
       }
     } else {
       this.strategy = StrategyOptions.Default;
-      this.strat = defaultStrategy;
+      this.strat = this.defaultStrategy;
       logger
         .withMetadata({
           strategy_name: 'BlueReplyStrategy',
@@ -112,7 +129,7 @@ export class BlueReplyStrategy implements BlueStrategy {
     if (!this.strategy) throw new Error('Strategy not set');
     if (!this.strat) throw new Error('Strategy not set');
 
-    const subStrategyResult = await this.strat.shouldRespond(message);
+    const subStrategyResult = await this.strat.shouldTrigger(message);
 
     logger
       .withMetadata({
@@ -126,7 +143,7 @@ export class BlueReplyStrategy implements BlueStrategy {
     return Promise.resolve(subStrategyResult);
   }
 
-  async getResponse(message: Message): Promise<string> {
+  async getResponse(): Promise<string> {
     if (!this.strategy) throw new Error('Strategy not set');
     if (!this.strat) throw new Error('Strategy not set');
 
@@ -140,7 +157,7 @@ export class BlueReplyStrategy implements BlueStrategy {
       .withMetadata({
         strategy_name: 'BlueReplyStrategy',
         sub_strategy: strategyName,
-        message_id: message.id,
+        message_id: this.triggeringEvent.id,
         timekeeper_state_before: beforeState,
       })
       .debug('BlueReplyStrategy: Generating response and updating timekeeper');
@@ -156,7 +173,7 @@ export class BlueReplyStrategy implements BlueStrategy {
             sub_strategy: strategyName,
             action: 'clear_blue_update_murder',
             new_murder_response_time: this.lastMurderResponse.toISOString(),
-            message_id: message.id,
+            message_id: this.triggeringEvent.id,
           })
           .info('BlueReplyStrategy: Updated timekeeper - cleared blue, set murder timestamp');
         break;
@@ -167,7 +184,7 @@ export class BlueReplyStrategy implements BlueStrategy {
             strategy_name: 'BlueReplyStrategy',
             sub_strategy: strategyName,
             action: 'clear_blue',
-            message_id: message.id,
+            message_id: this.triggeringEvent.id,
           })
           .info('BlueReplyStrategy: Updated timekeeper - cleared blue timestamp');
         break;
@@ -179,13 +196,13 @@ export class BlueReplyStrategy implements BlueStrategy {
             sub_strategy: strategyName,
             action: 'update_blue',
             new_blue_response_time: this.lastBlueResponse.toISOString(),
-            message_id: message.id,
+            message_id: this.triggeringEvent.id,
           })
           .info('BlueReplyStrategy: Updated timekeeper - set blue timestamp');
         break;
     }
 
-    const response = await this.strat.getResponse(message);
+    const response = await this.strat.getResponse(this.triggeringEvent);
 
     logger
       .withMetadata({
@@ -193,7 +210,7 @@ export class BlueReplyStrategy implements BlueStrategy {
         sub_strategy: strategyName,
         response_length: response.length,
         response_preview: response.substring(0, 100),
-        message_id: message.id,
+        message_id: this.triggeringEvent.id,
         timekeeper_state_after: {
           last_blue_response: this.lastBlueResponse.toISOString(),
           last_murder_response: this.lastMurderResponse.toISOString(),

@@ -1,8 +1,11 @@
 import { Message } from 'discord.js';
-import { BlueStrategy } from '@/strategy/blue-strategy';
 import { logger } from '@/observability/logger';
+import { SendAPIMessageStrategy } from '@starbunk/shared/strategy/send-api-message-strategy';
 
-export class ReplyConfirmStrategy implements BlueStrategy {
+export class ReplyConfirmStrategy extends SendAPIMessageStrategy {
+  readonly name = 'BlueReplyConfirmStrategy';
+  readonly priority = 30;
+
   private confirmPhrases = [
     /blue/i,
     /blue?bot/i,
@@ -15,7 +18,7 @@ export class ReplyConfirmStrategy implements BlueStrategy {
     /\bstupid\b/i,
   ];
 
-  async shouldRespond(message: Message): Promise<boolean> {
+  async shouldTrigger(message: Message): Promise<boolean> {
     const isReply = !!message.reference?.messageId;
     const wordCount = message.content.trim().split(/\s+/).length;
     const isShort = wordCount <= 5;
@@ -34,7 +37,7 @@ export class ReplyConfirmStrategy implements BlueStrategy {
         message_content: message.content,
         message_id: message.id,
       })
-      .debug('ReplyConfirmStrategy: Evaluating confirmation');
+      .debug('Reply ConfirmStrategy: Evaluating confirmation');
 
     // Check if it's a reply to the bot
     if (isReply) {
@@ -45,7 +48,7 @@ export class ReplyConfirmStrategy implements BlueStrategy {
           reply_to_message_id: message.reference?.messageId,
           message_id: message.id,
         })
-        .info('ReplyConfirmStrategy: Matched - is reply to bot');
+        .info(`${this.name}: Matched - is reply to bot`);
       return Promise.resolve(true);
     }
 
@@ -58,7 +61,7 @@ export class ReplyConfirmStrategy implements BlueStrategy {
           word_count: wordCount,
           message_id: message.id,
         })
-        .info('ReplyConfirmStrategy: Matched - short message');
+        .info(`${this.name}: Matched - short message`);
       return Promise.resolve(true);
     }
 
@@ -70,7 +73,7 @@ export class ReplyConfirmStrategy implements BlueStrategy {
           matched_phrase: matchedPhrase?.source,
           message_id: message.id,
         })
-        .info('ReplyConfirmStrategy: Matched - confirmation phrase detected');
+        .info(`${this.name}: Matched - confirmation phrase detected`);
       return Promise.resolve(true);
     }
 
@@ -79,20 +82,19 @@ export class ReplyConfirmStrategy implements BlueStrategy {
         strategy_name: 'ReplyConfirmStrategy',
         message_id: message.id,
       })
-      .debug('ReplyConfirmStrategy: No match');
+      .debug(`${this.name}: No match` + this.name);
 
     return Promise.resolve(false);
   }
 
-  async getResponse(_message: Message): Promise<string> {
+  async getResponse(): Promise<string> {
     const response = 'Somebody definitely said Blu!';
     logger
       .withMetadata({
-        strategy_name: 'ReplyConfirmStrategy',
+        strategy_name: 'BlueReplyConfirmStrategy',
         response,
-        message_id: _message.id,
       })
-      .info('ReplyConfirmStrategy: Generating confirmation response');
+      .info(`${this.name}: Generating confirmation response`);
     return Promise.resolve(response);
   }
 }
