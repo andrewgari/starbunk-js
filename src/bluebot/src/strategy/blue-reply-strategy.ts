@@ -37,13 +37,33 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
     return this.shouldRespond(message);
   }
 
-  private readonly defaultStrategy: DefaultStrategy = new DefaultStrategy(this.triggeringEvent);
-  private readonly confirmStrategy: ReplyConfirmStrategy = new ReplyConfirmStrategy(
-    this.triggeringEvent,
-  );
-  private readonly enemyStrategy: ConfirmEnemyStrategy = new ConfirmEnemyStrategy(
-    this.triggeringEvent,
-  );
+  private _defaultStrategy?: DefaultStrategy;
+  private _confirmStrategy?: ReplyConfirmStrategy;
+  private _enemyStrategy?: ConfirmEnemyStrategy;
+
+  private get defaultStrategy(): DefaultStrategy {
+    if (!this._defaultStrategy) {
+      const message = this.lastTriggeringMessage || this.triggeringEvent;
+      this._defaultStrategy = new DefaultStrategy(message);
+    }
+    return this._defaultStrategy;
+  }
+
+  private get confirmStrategy(): ReplyConfirmStrategy {
+    if (!this._confirmStrategy) {
+      const message = this.lastTriggeringMessage || this.triggeringEvent;
+      this._confirmStrategy = new ReplyConfirmStrategy(message);
+    }
+    return this._confirmStrategy;
+  }
+
+  private get enemyStrategy(): ConfirmEnemyStrategy {
+    if (!this._enemyStrategy) {
+      const message = this.lastTriggeringMessage || this.triggeringEvent;
+      this._enemyStrategy = new ConfirmEnemyStrategy(message);
+    }
+    return this._enemyStrategy;
+  }
 
   private strat: DefaultStrategy | ReplyConfirmStrategy | ConfirmEnemyStrategy | null = null;
 
