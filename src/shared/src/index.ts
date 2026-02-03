@@ -71,3 +71,4 @@ export type { ReadonlyLiveData, SubscribeOptions, Unsubscribe } from './utils/li
 export { BotStrategy } from './strategy/bot-strategy';
 export type { IBotStrategy } from './strategy/bot-strategy';
 export { SendWebhookMessageStrategy } from './strategy/send-webhook-message-strategy';
+export { SendAPIMessageStrategy } from './strategy/send-api-message-strategy';
