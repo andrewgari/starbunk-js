@@ -213,7 +213,7 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
         break;
     }
 
-    const response = await this.strat.getResponse(event);
+    const response = await this.strat.getResponse();
 
     logger
       .withMetadata({
