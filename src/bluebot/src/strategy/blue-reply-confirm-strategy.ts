@@ -79,7 +79,6 @@ export class ReplyConfirmStrategy extends SendAPIMessageStrategy {
 
     logger
       .withMetadata({
-      .debug(`${this.name}: No match`);
         message_id: message.id,
       })
       .debug(`${this.name}: No match`);
