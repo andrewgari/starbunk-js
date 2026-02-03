@@ -21,7 +21,7 @@
       "@starbunk/shared": ["../../shared/dist"],
       "@starbunk/shared/*": ["../../shared/dist/*"]
     },
-    "ignoreDeprecations": "5.0",
+    "ignoreDeprecations": "6.0",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true
