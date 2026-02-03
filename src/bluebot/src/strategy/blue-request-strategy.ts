@@ -65,8 +65,7 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
 
   async getResponse(): Promise<string> {
     if (!this.selectedStrategy) {
-      const insultResult = await this.insultStrategy.shouldTrigger();
-      this.selectedStrategy = insultResult ? 'insult' : 'compliment';
+      throw new Error('getResponse called without calling shouldTrigger first');
     }
 
     logger
