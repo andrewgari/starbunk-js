@@ -9,10 +9,7 @@ export class DefaultStrategy extends SendAPIMessageStrategy {
   private blueRegex = /\b(blue?|blue?bot|bl(o+)|azul|blau|bl(u+)|blew)\b/i;
   private currentMessage: Message | null = null;
 
-  shouldTrigger(message?: Message): Promise<boolean> {
-    if (!message) {
-      return Promise.resolve(false);
-    }
+  shouldTrigger(message: Message): Promise<boolean> {
     const matches = this.blueRegex.test(message.content);
     const matchedText = message.content.match(this.blueRegex)?.[0];
 
