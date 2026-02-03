@@ -82,7 +82,7 @@ export class ReplyConfirmStrategy extends SendAPIMessageStrategy {
         strategy_name: 'ReplyConfirmStrategy',
         message_id: message.id,
       })
-      .debug(`${this.name}: No match` + this.name);
+      .debug(`${this.name}: No match`);
 
     return Promise.resolve(false);
   }
