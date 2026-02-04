@@ -8,8 +8,7 @@ export class ReplyConfirmStrategy extends SendAPIMessageStrategy {
   private currentMessage: Message | null = null;
 
   private confirmPhrases = [
-    /blue/i,
-    /blue?bot/i,
+    /\bblue\b/i,
     /\b(blue?bot|bot)\b/i,
     /\b(yes|yep|yeah|yup|sure)\b/i,
     /\b(no|nope|nah)\b/i,
@@ -17,6 +16,7 @@ export class ReplyConfirmStrategy extends SendAPIMessageStrategy {
     /\byou got it\b/i,
     /\bsure did\b/i,
     /\bstupid\b/i,
+    /\b(fuck(ing)?|hate|die|kill|worst|mom|shit|murder|bots?)\b/i, // mean words
   ];
 
   async shouldTrigger(message: Message): Promise<boolean> {
@@ -54,28 +54,17 @@ export class ReplyConfirmStrategy extends SendAPIMessageStrategy {
       return Promise.resolve(true);
     }
 
-    // Confirmations are usually short
-    if (isShort) {
+    // Confirmations are short AND contain a confirmation phrase
+    if (isShort && hasConfirmPhrase) {
       logger
         .withMetadata({
           strategy_name: 'ReplyConfirmStrategy',
           trigger_reason: 'short_message',
           word_count: wordCount,
-          message_id: message.id,
-        })
-        .info(`${this.name}: Matched - short message`);
-      return Promise.resolve(true);
-    }
-
-    if (hasConfirmPhrase) {
-      logger
-        .withMetadata({
-          strategy_name: 'ReplyConfirmStrategy',
-          trigger_reason: 'confirm_phrase',
           matched_phrase: matchedPhrase?.source,
           message_id: message.id,
         })
-        .info(`${this.name}: Matched - confirmation phrase detected`);
+        .info(`${this.name}: Matched - short message with confirmation phrase`);
       return Promise.resolve(true);
     }
 
