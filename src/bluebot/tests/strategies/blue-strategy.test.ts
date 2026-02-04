@@ -21,6 +21,7 @@ describe('BaseBlueStrategy', () => {
     process.env.BLUEBOT_ENEMY_USER_ID = enemyUserId;
     const seedMessage = createMockMessage({ content: 'seed', authorId: friendUserId });
     strategy = new BlueReplyStrategy(seedMessage as Message);
+    strategy.reset();
   });
 
   describe('Message tracking', () => {
@@ -29,7 +30,7 @@ describe('BaseBlueStrategy', () => {
       const strategy = new BlueReplyStrategy(message as Message);
       const shouldTrigger = await strategy.shouldTrigger(message as Message);
       expect(shouldTrigger).toBe(true);
-      const response = await strategy.getResponse();
+      const response = await strategy.getResponse(message as Message);
       expect(response).toBe('Did somebody say Blu?');
       expect(strategy.lastBlueResponseTime).toBeInstanceOf(Date);
     });
@@ -37,7 +38,7 @@ describe('BaseBlueStrategy', () => {
     test('should clear the last blue response when somebody confirms that they said blue', async () => {
       let message = createMockMessage({ content: 'blue', authorId: friendUserId });
       await strategy.shouldTrigger(message as Message);
-      await strategy.getResponse();
+      await strategy.getResponse(message as Message);
       expect(strategy.lastBlueResponseTime).toBeInstanceOf(Date);
 
       // Advance time by 1 minute (within the 5-minute reply window)
@@ -45,7 +46,7 @@ describe('BaseBlueStrategy', () => {
 
       message = createMockMessage({ content: 'yes', authorId: friendUserId });
       await strategy.shouldTrigger(message as Message);
-      await strategy.getResponse();
+      await strategy.getResponse(message as Message);
       expect(strategy.lastBlueResponseTime).toEqual(new Date(0));
     });
 
@@ -86,7 +87,7 @@ describe('BaseBlueStrategy', () => {
       expect(strategy.lastBlueResponseTime).not.toEqual(new Date(0));
       expect(strategy.lastMurderResponseTime).not.toEqual(new Date(0));
 
-      // advance one minute
+      // advance one minute (should be at 13 hours total from start of test)
       vi.advanceTimersByTime(1 * 60 * 1000);
       message = createMockMessage({ content: 'fuck', authorId: enemyUserId });
       triggered = await strategy.shouldTrigger(message as Message);

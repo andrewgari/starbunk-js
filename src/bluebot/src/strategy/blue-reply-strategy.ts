@@ -58,7 +58,6 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
 
   async shouldRespond(message: Message): Promise<boolean> {
     const withinReplyWindow = this.isWithinReplyWindow(message);
-    const onMurderCooldown = !this.isWithinMurderWindow(message);
 
     // Initialize sub-strategies
     const defaultStrategy = new DefaultStrategy(this.triggeringEvent);
@@ -67,13 +66,17 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
 
     const shouldTriggerDefault = await defaultStrategy.shouldTrigger(message);
     const shouldTriggerConfirm = await confirmStrategy.shouldTrigger(message);
+    const shouldTriggerEnemy = await enemyStrategy.shouldTrigger(message);
 
-    const shouldMurder = !onMurderCooldown && withinReplyWindow && this.shouldMurder(message);
-    const shouldComfirm = !shouldMurder && withinReplyWindow && shouldTriggerConfirm;
+    // Murder only if: enemy says mean word AND we can murder AND within reply window
+    const shouldMurder = shouldTriggerEnemy && this.shouldMurder(message) && withinReplyWindow;
+    // Confirm if: within reply window AND it's a short message
+    const shouldComfirm = withinReplyWindow && shouldTriggerConfirm;
 
     if (shouldMurder) {
       this.selectedStrategy = enemyStrategy;
       this.updateLastMurderResponse();
+      this.clearLastBlueResponse(); // Clear the reply window after murder, forcing silence
       return true;
     }
 
