@@ -2,7 +2,7 @@ import { Message } from 'discord.js';
 import type { BotIdentity } from '../types/bot-identity';
 import { DiscordService } from '../discord/discord-service';
 import { BotStrategy } from './bot-strategy';
-import { logLayer } from '@/observability/log-layer';
+import { logLayer } from '../observability/log-layer';
 
 export abstract class SendWebhookMessageStrategy extends BotStrategy<Message> {
   abstract readonly name: string;
