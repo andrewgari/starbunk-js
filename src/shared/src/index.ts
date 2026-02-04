@@ -22,6 +22,11 @@ export type {
   IBotContextMixin,
 } from './observability/mixins';
 
+// Health and smoke testing
+export { runSmokeMode } from './health/smoke-mode';
+export { initializeHealthServer } from './health/health-server-init';
+export { shutdownObservability } from './observability/shutdown';
+
 // Types
 export type { BotIdentity } from './types/bot-identity';
 export type {
