@@ -4,6 +4,7 @@ import { BotStrategy } from './bot-strategy';
 export abstract class SendAPIMessageStrategy extends BotStrategy<Message, boolean> {
   abstract readonly name: string;
   abstract readonly priority: number;
+  abstract getResponse(context: Message): Promise<string>;
 
   async execute(message: Message): Promise<boolean> {
     try {
@@ -21,6 +22,4 @@ export abstract class SendAPIMessageStrategy extends BotStrategy<Message, boolea
       return false;
     }
   }
-
-  abstract getResponse(context: Message): Promise<string>;
 }
