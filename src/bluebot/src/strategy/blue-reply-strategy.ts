@@ -169,11 +169,11 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
     return Promise.resolve(subStrategyResult);
   }
 
-  async getResponse(): Promise<string> {
+  async getResponse(context: Message): Promise<string> {
     if (!this.strategy) throw new Error('Strategy not set');
     if (!this.strat) throw new Error('Strategy not set');
 
-    const event = this.lastTriggeringMessage ?? this.triggeringEvent;
+    const event = (context || this.lastTriggeringMessage) ?? this.triggeringEvent;
     if (!event) {
       throw new Error('No triggering message available for response generation');
     }
@@ -233,7 +233,7 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
         break;
     }
 
-    const response = await this.strat.getResponse();
+    const response = await this.strat.getResponse(event);
 
     logger
       .withMetadata({

@@ -38,7 +38,7 @@ export class DefaultStrategy extends SendAPIMessageStrategy {
     return Promise.resolve(false);
   }
 
-  getResponse(): Promise<string> {
+  getResponse(_context: Message): Promise<string> {
     const response = 'Did somebody say Blu?';
     logger
       .withMetadata({

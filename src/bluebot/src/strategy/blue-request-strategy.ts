@@ -1,3 +1,4 @@
+import { Message } from 'discord.js';
 import { RequestConfirmStrategy } from '@/strategy/blue-request-confirm-strategy';
 import { RequestConfirmEnemyStrategy } from '@/strategy/blue-request-confirm-enemy-strategy';
 import { logger } from '@/observability/logger';
@@ -63,7 +64,7 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
     return result;
   }
 
-  async getResponse(): Promise<string> {
+  async getResponse(context: Message): Promise<string> {
     if (!this.selectedStrategy) {
       throw new Error(
         'getResponse called without calling shouldTrigger first, or shouldTrigger failed to select a strategy.',
@@ -79,7 +80,7 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
       .info(`BlueRequestStrategy: Generating ${this.selectedStrategy} response`);
 
     if (this.selectedStrategy === 'insult') {
-      const response = await this.insultStrategy.getResponse();
+      const response = await this.insultStrategy.getResponse(context);
       logger
         .withMetadata({
           strategy_name: 'BlueRequestStrategy',
@@ -91,7 +92,7 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
       return response;
     }
 
-    const response = await this.complimentStrategy.getResponse();
+    const response = await this.complimentStrategy.getResponse(context);
     logger
       .withMetadata({
         strategy_name: 'BlueRequestStrategy',

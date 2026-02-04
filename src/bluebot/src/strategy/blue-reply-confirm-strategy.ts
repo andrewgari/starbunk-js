@@ -88,7 +88,7 @@ export class ReplyConfirmStrategy extends SendAPIMessageStrategy {
     return Promise.resolve(false);
   }
 
-  async getResponse(): Promise<string> {
+  async getResponse(_context: Message): Promise<string> {
     const response = 'Somebody definitely said Blu!';
     logger
       .withMetadata({

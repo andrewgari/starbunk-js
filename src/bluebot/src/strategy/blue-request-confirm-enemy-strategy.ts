@@ -1,3 +1,4 @@
+import { Message } from 'discord.js';
 import { BlueBotDiscordService } from '@/discord/discord-service';
 import { matchesAnyName } from '@/utils/string-similarity';
 import { logger } from '@/observability/logger';
@@ -82,7 +83,7 @@ export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
     return false;
   }
 
-  async getResponse(): Promise<string> {
+  async getResponse(_context: Message): Promise<string> {
     const subject = this.getRequestedName(this.triggeringEvent!);
     const response = 'No way, they can suck my blue cane :unamused:';
 

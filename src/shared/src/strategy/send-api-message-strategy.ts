@@ -8,7 +8,7 @@ export abstract class SendAPIMessageStrategy extends BotStrategy<Message, boolea
   async execute(message: Message): Promise<boolean> {
     try {
       if (message.channel instanceof TextChannel) {
-        await message.channel.send(await this.getResponse());
+        await message.channel.send(await this.getResponse(message));
         return true;
       } else {
         console.error(
@@ -22,5 +22,5 @@ export abstract class SendAPIMessageStrategy extends BotStrategy<Message, boolea
     }
   }
 
-  abstract getResponse(): Promise<string>;
+  abstract getResponse(context: Message): Promise<string>;
 }

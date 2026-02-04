@@ -48,7 +48,7 @@ export class RequestConfirmStrategy extends SendAPIMessageStrategy {
     return Promise.resolve(false);
   }
 
-  async getResponse(): Promise<string> {
+  async getResponse(_context: Message): Promise<string> {
     const friend = this.getFriendFromMessage(this.triggeringEvent!);
     const response = `${friend}, I think you're pretty blue! :wink:`;
 

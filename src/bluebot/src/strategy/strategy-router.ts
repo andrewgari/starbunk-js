@@ -4,10 +4,8 @@ import { getMetricsService } from '@starbunk/shared/observability/metrics-servic
 import { BlueRequestStrategy } from '@/strategy/blue-request-strategy';
 import { BlueReplyStrategy } from '@/strategy/blue-reply-strategy';
 
-let replyStrategy = new BlueReplyStrategy();
-
 export function resetStrategies(): void {
-  replyStrategy = new BlueReplyStrategy();
+  // Strategy instances are now created per-message, so no global reset needed
 }
 
 /**
@@ -80,11 +78,12 @@ export async function getResponseForMessage(message: Message): Promise<string | 
   const requestStrategy = new BlueRequestStrategy(message);
 
   if (await requestStrategy.shouldTrigger()) {
-    return requestStrategy.getResponse();
+    return requestStrategy.getResponse(message);
   }
 
+  const replyStrategy = new BlueReplyStrategy(message);
   if (await replyStrategy.shouldTrigger(message)) {
-    return replyStrategy.getResponse();
+    return replyStrategy.getResponse(message);
   }
 
   return null;
@@ -102,6 +101,7 @@ export async function processMessageByStrategy(message: Message): Promise<void> 
   }
 
   // Execute reply strategy second
+  const replyStrategy = new BlueReplyStrategy(message);
   if (await executeStrategy('reply', replyStrategy, message, metrics, startTime)) {
     return;
   }
@@ -119,7 +119,7 @@ async function executeStrategy(
   name: string,
   instance: {
     shouldTrigger: (message?: Message) => Promise<boolean>;
-    getResponse: () => Promise<string>;
+    getResponse: (message: Message) => Promise<string>;
   },
   message: Message,
   metrics: ReturnType<typeof getMetricsService>,
@@ -185,7 +185,7 @@ async function executeStrategy(
   const responseStartTime = Date.now();
   let response: string | null;
   try {
-    response = await instance.getResponse();
+    response = await instance.getResponse(message);
   } catch (error) {
     logger
       .withError(error)
