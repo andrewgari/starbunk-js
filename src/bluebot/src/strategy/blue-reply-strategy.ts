@@ -2,8 +2,8 @@ import { Message } from 'discord.js';
 import { DefaultStrategy } from '@/strategy/blue-default-strategy';
 import { ReplyConfirmStrategy } from '@/strategy/blue-reply-confirm-strategy';
 import { ConfirmEnemyStrategy } from '@/strategy/blue-reply-confirm-enemy-strategy';
-import { logger } from '@/observability/logger';
 import { SendAPIMessageStrategy } from '@starbunk/shared/strategy/send-api-message-strategy';
+import { BotStrategy } from '@starbunk/shared';
 
 enum StrategyOptions {
   None,
@@ -37,35 +37,11 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
     return this.shouldRespond(message);
   }
 
-  private _defaultStrategy?: DefaultStrategy;
-  private _confirmStrategy?: ReplyConfirmStrategy;
-  private _enemyStrategy?: ConfirmEnemyStrategy;
+  private selectedStrategy: DefaultStrategy | ReplyConfirmStrategy | ConfirmEnemyStrategy;
 
-  private get defaultStrategy(): DefaultStrategy {
-    if (!this._defaultStrategy) {
-      const message = this.lastTriggeringMessage || this.triggeringEvent;
-      this._defaultStrategy = new DefaultStrategy(message);
-    }
-    return this._defaultStrategy;
+  get selectedSubStrategy(): BotStrategy {
+    return this.selectedStrategy;
   }
-
-  private get confirmStrategy(): ReplyConfirmStrategy {
-    if (!this._confirmStrategy) {
-      const message = this.lastTriggeringMessage || this.triggeringEvent;
-      this._confirmStrategy = new ReplyConfirmStrategy(message);
-    }
-    return this._confirmStrategy;
-  }
-
-  private get enemyStrategy(): ConfirmEnemyStrategy {
-    if (!this._enemyStrategy) {
-      const message = this.lastTriggeringMessage || this.triggeringEvent;
-      this._enemyStrategy = new ConfirmEnemyStrategy(message);
-    }
-    return this._enemyStrategy;
-  }
-
-  private strat: DefaultStrategy | ReplyConfirmStrategy | ConfirmEnemyStrategy | null = null;
 
   get lastBlueResponseTime(): Date {
     return this.lastBlueResponse;
@@ -75,181 +51,45 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
     return this.lastMurderResponse;
   }
 
+  constructor(protected readonly triggeringEvent?: Message) {
+    super(triggeringEvent);
+    this.selectedStrategy = new DefaultStrategy(this.triggeringEvent);
+  }
+
   async shouldRespond(message: Message): Promise<boolean> {
-    this.lastTriggeringMessage = message;
-    const timestamp = message.createdAt.getTime();
-    const timeSinceLastBlue = timestamp - this.lastBlueResponse.getTime();
-    const timeSinceLastMurder = timestamp - this.lastMurderResponse.getTime();
     const withinReplyWindow = this.isWithinReplyWindow(message);
-    const withinMurderWindow = this.isWithinMurderWindow(message);
-    const isEnemy = message.author.id === process.env.BLUEBOT_ENEMY_USER_ID;
-    const shouldMurder = this.shouldMurder(message);
+    const onMurderCooldown = !this.isWithinMurderWindow(message);
 
-    // Log detailed timekeeper state
-    logger
-      .withMetadata({
-        strategy_name: 'BlueReplyStrategy',
-        message_id: message.id,
-        author_id: message.author.id,
-        author_username: message.author.username,
-        is_enemy: isEnemy,
-        // Timekeeper state
-        last_blue_response: this.lastBlueResponse.toISOString(),
-        last_murder_response: this.lastMurderResponse.toISOString(),
-        time_since_last_blue_ms: timeSinceLastBlue,
-        time_since_last_blue_minutes: (timeSinceLastBlue / (60 * 1000)).toFixed(2),
-        time_since_last_murder_ms: timeSinceLastMurder,
-        time_since_last_murder_hours: (timeSinceLastMurder / (60 * 60 * 1000)).toFixed(2),
-        reply_window_ms: this.replyWindow,
-        reply_window_minutes: this.replyWindow / (60 * 1000),
-        murder_window_ms: this.murderWindow,
-        murder_window_hours: this.murderWindow / (60 * 60 * 1000),
-        within_reply_window: withinReplyWindow,
-        within_murder_window: withinMurderWindow,
-        should_murder: shouldMurder,
-      })
-      .debug('BlueReplyStrategy: Evaluating timekeeper state');
+    // Initialize sub-strategies
+    const defaultStrategy = new DefaultStrategy(this.triggeringEvent);
+    const confirmStrategy = new ReplyConfirmStrategy(this.triggeringEvent);
+    const enemyStrategy = new ConfirmEnemyStrategy(this.triggeringEvent);
 
-    // Determine which sub-strategy to use based on timekeeper logic
-    if (withinReplyWindow) {
-      if (shouldMurder) {
-        this.strategy = StrategyOptions.ConfirmEnemy;
-        this.strat = this.enemyStrategy;
-        logger
-          .withMetadata({
-            strategy_name: 'BlueReplyStrategy',
-            sub_strategy: 'ConfirmEnemy',
-            reason: 'within_reply_window_and_should_murder',
-            message_id: message.id,
-            is_enemy: isEnemy,
-            within_murder_window: withinMurderWindow,
-          })
-          .info('BlueReplyStrategy: Selected ConfirmEnemy strategy (murder mode)');
-      } else {
-        this.strategy = StrategyOptions.ConfirmFriend;
-        this.strat = this.confirmStrategy;
-        logger
-          .withMetadata({
-            strategy_name: 'BlueReplyStrategy',
-            sub_strategy: 'ConfirmFriend',
-            reason: 'within_reply_window_not_murder',
-            message_id: message.id,
-            is_enemy: isEnemy,
-          })
-          .info('BlueReplyStrategy: Selected ConfirmFriend strategy');
-      }
-    } else {
-      this.strategy = StrategyOptions.Default;
-      this.strat = this.defaultStrategy;
-      logger
-        .withMetadata({
-          strategy_name: 'BlueReplyStrategy',
-          sub_strategy: 'Default',
-          reason: 'outside_reply_window',
-          message_id: message.id,
-          time_since_last_blue_minutes: (timeSinceLastBlue / (60 * 1000)).toFixed(2),
-        })
-        .info('BlueReplyStrategy: Selected Default strategy');
+    const shouldTriggerDefault = await defaultStrategy.shouldTrigger(message);
+    const shouldTriggerConfirm = await confirmStrategy.shouldTrigger(message);
+
+    const shouldMurder = !onMurderCooldown && withinReplyWindow && this.shouldMurder(message);
+    const shouldComfirm = !shouldMurder && withinReplyWindow && shouldTriggerConfirm;
+
+    if (shouldMurder) {
+      this.selectedStrategy = enemyStrategy;
+      this.updateLastMurderResponse();
+      return true;
     }
 
-    if (!this.strategy) throw new Error('Strategy not set');
-    if (!this.strat) throw new Error('Strategy not set');
+    if (shouldComfirm) {
+      this.selectedStrategy = confirmStrategy;
+      this.clearLastBlueResponse();
+      return true;
+    }
 
-    const subStrategyResult = await this.strat.shouldTrigger(message);
-
-    logger
-      .withMetadata({
-        strategy_name: 'BlueReplyStrategy',
-        sub_strategy: StrategyOptions[this.strategy],
-        sub_strategy_result: subStrategyResult,
-        message_id: message.id,
-      })
-      .debug(`BlueReplyStrategy: Sub-strategy evaluation result`);
-
-    return Promise.resolve(subStrategyResult);
+    this.selectedStrategy = defaultStrategy;
+    this.updateLastBlueResponse();
+    return shouldTriggerDefault;
   }
 
   async getResponse(context: Message): Promise<string> {
-    if (!this.strategy) throw new Error('Strategy not set');
-    if (!this.strat) throw new Error('Strategy not set');
-
-    const event = (context || this.lastTriggeringMessage) ?? this.triggeringEvent;
-    if (!event) {
-      throw new Error('No triggering message available for response generation');
-    }
-
-    const strategyName = StrategyOptions[this.strategy];
-    const beforeState = {
-      last_blue_response: this.lastBlueResponse.toISOString(),
-      last_murder_response: this.lastMurderResponse.toISOString(),
-    };
-
-    logger
-      .withMetadata({
-        strategy_name: 'BlueReplyStrategy',
-        sub_strategy: strategyName,
-        message_id: event.id,
-        timekeeper_state_before: beforeState,
-      })
-      .debug('BlueReplyStrategy: Generating response and updating timekeeper');
-
-    // Update timekeeper state based on strategy
-    switch (this.strategy) {
-      case StrategyOptions.ConfirmEnemy:
-        this.clearLastBlueResponse();
-        this.updateLastMurderResponse();
-        logger
-          .withMetadata({
-            strategy_name: 'BlueReplyStrategy',
-            sub_strategy: strategyName,
-            action: 'clear_blue_update_murder',
-            new_murder_response_time: this.lastMurderResponse.toISOString(),
-            message_id: event.id,
-          })
-          .info('BlueReplyStrategy: Updated timekeeper - cleared blue, set murder timestamp');
-        break;
-      case StrategyOptions.ConfirmFriend:
-        this.clearLastBlueResponse();
-        logger
-          .withMetadata({
-            strategy_name: 'BlueReplyStrategy',
-            sub_strategy: strategyName,
-            action: 'clear_blue',
-            message_id: event.id,
-          })
-          .info('BlueReplyStrategy: Updated timekeeper - cleared blue timestamp');
-        break;
-      case StrategyOptions.Default:
-        this.updateLastBlueResponse();
-        logger
-          .withMetadata({
-            strategy_name: 'BlueReplyStrategy',
-            sub_strategy: strategyName,
-            action: 'update_blue',
-            new_blue_response_time: this.lastBlueResponse.toISOString(),
-            message_id: event.id,
-          })
-          .info('BlueReplyStrategy: Updated timekeeper - set blue timestamp');
-        break;
-    }
-
-    const response = await this.strat.getResponse(event);
-
-    logger
-      .withMetadata({
-        strategy_name: 'BlueReplyStrategy',
-        sub_strategy: strategyName,
-        response_length: response.length,
-        response_preview: response.substring(0, 100),
-        message_id: event.id,
-        timekeeper_state_after: {
-          last_blue_response: this.lastBlueResponse.toISOString(),
-          last_murder_response: this.lastMurderResponse.toISOString(),
-        },
-      })
-      .info(`BlueReplyStrategy: Response generated via ${strategyName}`);
-
-    return Promise.resolve(response);
+    return this.selectedStrategy.getResponse(context);
   }
 
   private isWithinReplyWindow(message: Message): boolean {
