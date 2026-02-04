@@ -94,7 +94,13 @@ export class BotConfigStrategy extends SendWebhookMessageStrategy {
   /**
    * Generate response for the message
    */
-  async getResponse(message: Message): Promise<string> {
+  async getResponse(): Promise<string> {
+    if (!this.triggeringEvent) {
+      throw new Error(`No triggering message available for bot ${this.name}`);
+    }
+
+    const message = this.triggeringEvent;
+
     // Find the first matching trigger and generate its response
     for (const trigger of this.triggers) {
       try {
