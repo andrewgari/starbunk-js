@@ -4,26 +4,31 @@ import { createMockMessage } from '../helpers/mock-message';
 import { Message } from 'discord.js';
 
 describe('RequestConfirmStrategy', () => {
-	let strategy: RequestConfirmStrategy;
+  let strategy: RequestConfirmStrategy;
 
-	beforeEach(() => {
-		strategy = new RequestConfirmStrategy();
-	});
+  beforeEach(() => {
+    strategy = new RequestConfirmStrategy();
+  });
 
   describe('getFriendFromMessage', () => {
     test('should return the author\'s id when request is for "me"', () => {
-      const message = createMockMessage({ content: 'bluebot, say something nice about me', authorId: '123456789012345678' });
+      const message = createMockMessage({
+        content: 'bluebot, say something nice about me',
+        authorId: '123456789012345678',
+      });
       const friend = strategy.getFriendFromMessage(message as Message);
       expect(friend).toBe('<@123456789012345678>');
     });
 
-    test('should return the mentioned user\'s id when request is a user mention', () => {
-      const message = createMockMessage({ content: 'bluebot, say something nice about <@123456789012345678>' });
+    test("should return the mentioned user's id when request is a user mention", () => {
+      const message = createMockMessage({
+        content: 'bluebot, say something nice about <@123456789012345678>',
+      });
       const friend = strategy.getFriendFromMessage(message as Message);
       expect(friend).toBe('<@123456789012345678>');
     });
 
-    test('should return the user\'s id when request is for a user by name', () => {
+    test("should return the user's id when request is for a user by name", () => {
       const additionalMembers = [
         {
           userId: '123456789012345678',
@@ -37,7 +42,7 @@ describe('RequestConfirmStrategy', () => {
         isBot: false,
         guildId: '999999999999999999',
         nickname: 'AuthorNickname',
-        additionalMembers
+        additionalMembers,
       });
       const friend = strategy.getFriendFromMessage(message as Message);
       expect(friend).toBe('<@123456789012345678>');

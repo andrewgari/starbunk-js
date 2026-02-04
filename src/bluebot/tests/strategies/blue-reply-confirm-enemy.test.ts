@@ -1,5 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { ConfirmEnemyStrategy, MURDER_RESPONSE } from '../../src/strategy/blue-reply-confirm-enemy-strategy';
+import {
+  ConfirmEnemyStrategy,
+  MURDER_RESPONSE,
+} from '../../src/strategy/blue-reply-confirm-enemy-strategy';
 import { createMockMessage } from '../helpers/mock-message';
 import { Message } from 'discord.js';
 import { expectShouldRespond, expectShouldNotRespond, setupEnemyEnv } from '../helpers/test-utils';
@@ -38,8 +41,8 @@ describe('ConfirmEnemyStrategy', () => {
 
       test('should reply with the navy seal copypasta', async () => {
         const message = createMockMessage({ content: 'fuck this bot', authorId: enemyUserId });
-        const shouldRespond = await strategy.shouldRespond(message as Message);
-        expect(shouldRespond).toBe(true);
+        const shouldTrigger = await strategy.shouldTrigger(message as Message);
+        expect(shouldTrigger).toBe(true);
         const result = await strategy.getResponse();
         expect(result).toBe(MURDER_RESPONSE);
       });
@@ -50,7 +53,7 @@ describe('ConfirmEnemyStrategy', () => {
         await expectShouldNotRespond(
           strategy,
           'This is a very long message that does not contain any mean words or confirmation phrases',
-          { authorId: enemyUserId }
+          { authorId: enemyUserId },
         );
       });
 
@@ -58,7 +61,7 @@ describe('ConfirmEnemyStrategy', () => {
         await expectShouldNotRespond(
           strategy,
           'I was thinking about the weather today and how nice it is',
-          { authorId: enemyUserId }
+          { authorId: enemyUserId },
         );
       });
     });

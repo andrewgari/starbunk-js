@@ -1,87 +1,46 @@
 import { Message } from 'discord.js';
-import { BlueStrategy } from '@/strategy/blue-strategy';
 import { RequestConfirmStrategy } from '@/strategy/blue-request-confirm-strategy';
 import { RequestConfirmEnemyStrategy } from '@/strategy/blue-request-confirm-enemy-strategy';
 import { logger } from '@/observability/logger';
+import { SendAPIMessageStrategy } from '@starbunk/shared/strategy/send-api-message-strategy';
 
-const complimentStrategy = new RequestConfirmStrategy();
-const insultStrategy = new RequestConfirmEnemyStrategy();
+export class BlueRequestStrategy extends SendAPIMessageStrategy {
+  readonly name = 'BlueRequestStrategy';
+  readonly priority = 30;
 
-export class BlueRequestStrategy implements BlueStrategy {
-  async shouldRespond(message: Message): Promise<boolean> {
-    const isEnemy = message.author.id === process.env.BLUEBOT_ENEMY_USER_ID;
-    const selectedStrategy = isEnemy ? 'insult' : 'compliment';
+  private selectedStrategy: RequestConfirmStrategy;
 
-    logger
-      .withMetadata({
-        strategy_name: 'BlueRequestStrategy',
-        sub_strategy: selectedStrategy,
-        is_enemy: isEnemy,
-        author_id: message.author.id,
-        message_id: message.id,
-      })
-      .debug(`BlueRequestStrategy: Routing to ${selectedStrategy} strategy`);
+  constructor(triggeringEvent?: Message) {
+    super(triggeringEvent);
 
-    if (isEnemy) {
-      const result = await insultStrategy.shouldRespond(message);
-      logger
-        .withMetadata({
-          strategy_name: 'BlueRequestStrategy',
-          sub_strategy: 'insult',
-          result,
-          message_id: message.id,
-        })
-        .debug('BlueRequestStrategy: Insult strategy evaluation');
-      return result;
-    }
-
-    const result = await complimentStrategy.shouldRespond(message);
-    logger
-      .withMetadata({
-        strategy_name: 'BlueRequestStrategy',
-        sub_strategy: 'compliment',
-        result,
-        message_id: message.id,
-      })
-      .debug('BlueRequestStrategy: Compliment strategy evaluation');
-    return result;
+    this.selectedStrategy = new RequestConfirmStrategy(this.triggeringEvent);
   }
 
-  async getResponse(message: Message): Promise<string> {
-    const isEnemy = message.author.id === process.env.BLUEBOT_ENEMY_USER_ID;
-    const selectedStrategy = isEnemy ? 'insult' : 'compliment';
-
-    logger
-      .withMetadata({
-        strategy_name: 'BlueRequestStrategy',
-        sub_strategy: selectedStrategy,
-        is_enemy: isEnemy,
-        message_id: message.id,
-      })
-      .info(`BlueRequestStrategy: Generating ${selectedStrategy} response`);
-
-    if (isEnemy) {
-      const response = await insultStrategy.getResponse(message);
-      logger
-        .withMetadata({
-          strategy_name: 'BlueRequestStrategy',
-          sub_strategy: 'insult',
-          response_length: response.length,
-          message_id: message.id,
-        })
-        .info('BlueRequestStrategy: Generated insult response for enemy');
-      return response;
+  async shouldTrigger(): Promise<boolean> {
+    const enemyStrategy = new RequestConfirmEnemyStrategy(this.triggeringEvent);
+    if (await enemyStrategy.shouldTrigger()) {
+      this.selectedStrategy = enemyStrategy;
     }
 
-    const response = await complimentStrategy.getResponse(message);
     logger
       .withMetadata({
-        strategy_name: 'BlueRequestStrategy',
-        sub_strategy: 'compliment',
-        response_length: response.length,
-        message_id: message.id,
+        strategy_name: this.name,
+        sub_strategy: typeof this.selectedStrategy,
+        author_id: this.triggeringEvent!.author.id,
+        message_id: this.triggeringEvent!.id,
       })
-      .info('BlueRequestStrategy: Generated compliment response');
-    return response;
+      .debug(`${this.name}: Routing to ${this.selectedStrategy} strategy`);
+
+    return this.selectedStrategy.shouldTrigger();
+  }
+
+  async getResponse(context: Message): Promise<string> {
+    if (!this.selectedStrategy) {
+      throw new Error(
+        'getResponse called without calling shouldTrigger first, or shouldTrigger failed to select a strategy.',
+      );
+    }
+
+    return this.selectedStrategy.getResponse(context);
   }
 }

@@ -5,9 +5,7 @@
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "target": "ES2022",
     "module": "Node16",
-    "lib": [
-      "ES2022"
-    ],
+    "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
@@ -18,31 +16,18 @@
     "isolatedModules": true,
     "moduleResolution": "node16",
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@starbunk/shared": [
-        "../../shared/dist"
-      ],
-      "@starbunk/shared/*": [
-        "../../shared/dist/*"
-      ]
+      "@/*": ["./src/*"],
+      "@starbunk/shared": ["../../shared/dist"],
+      "@starbunk/shared/*": ["../../shared/dist/*"]
     },
+    "ignoreDeprecations": "5.0",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "tests",
-    "src/**/__tests__/**"
-  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests", "src/**/__tests__/**"],
   "references": [
     {
       "path": "../shared"

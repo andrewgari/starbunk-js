@@ -7,25 +7,29 @@ A sophisticated Discord bot built with TypeScript using a **4-container modular 
 
 StarBunk is built as **4 independent containers**, each handling specific functionality:
 
-### 🤖 **BunkBot** - Reply Bots & Admin Commands
+## 🤖 **BunkBot** - Reply Bots & Admin Commands
+
 - **Purpose**: Handles reply bots and administrative commands
 - **Dependencies**: Discord.js, Webhooks, Basic Database
 - **Features**: Bot management, admin commands, webhook-based responses
 - **Scaling**: Lightweight, optimized for high message volume
 
-### 🎵 **DJCova** - Music Service
+## 🎵 **DJCova** - Music Service
+
 - **Purpose**: Voice channel music playback and audio processing
 - **Dependencies**: Discord.js Voice, ffmpeg, audio libraries
 - **Features**: YouTube playback, voice channel management, audio streaming
 - **Scaling**: CPU-optimized for audio processing
 
-### 🧠 **CovaBot** - AI Personality
+## 🧠 **CovaBot** - AI Personality
+
 - **Purpose**: AI-powered personality simulation and responses
 - **Dependencies**: LLM services, Minimal database
 - **Features**: Personality-driven responses, user behavior mimicking
 - **Scaling**: LLM-optimized for AI processing
 
-### 💙 **BlueBot** - Blue Detection Bot
+## 💙 **BlueBot** - Blue Detection Bot
+
 - **Purpose**: Detects and responds to mentions of "blue" or Blue Mage references
 - **Dependencies**: Discord.js, OpenAI (optional), Database
 - **Features**: Pattern matching, LLM-enhanced detection, contextual responses
@@ -34,16 +38,19 @@ StarBunk is built as **4 independent containers**, each handling specific functi
 ## 🌟 Key Benefits
 
 ### 🔧 **Independent Scaling**
+
 - Scale containers based on load (music service vs reply bots)
 - Resource optimization per container type
 - Independent deployment and updates
 
-### 🛡️ **Isolation & Reliability**
+## 🛡️ **Isolation & Reliability**
+
 - Container failures don't affect other services
 - Independent environment validation
 - Service-specific error boundaries
 
-### 📦 **Optimized Dependencies**
+## 📦 **Optimized Dependencies**
+
 - Each container only includes required dependencies
 - Reduced attack surface and resource usage
 - Faster startup times per service
@@ -51,11 +58,13 @@ StarBunk is built as **4 independent containers**, each handling specific functi
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Docker and Docker Compose
 - Node.js 20.x or higher (for development)
 - Discord Bot Token
 
 ### Production Deployment
+
 ```bash
 # Clone the repository
 git clone https://github.com/andrewgari/starbunk-js.git
@@ -73,6 +82,7 @@ npm run logs
 ```
 
 ### Development Setup
+
 ```bash
 # Install dependencies for all containers
 npm run setup:containers
@@ -93,11 +103,13 @@ npm run dev:bluebot      # Blue detection
 ## 📋 Environment Configuration
 
 ### Required for All Containers
+
 ```env
 STARBUNK_TOKEN=your_discord_bot_token
 ```
 
 ### Container-Specific Variables
+
 ```env
 # Database-dependent containers (BunkBot, CovaBot)
 DATABASE_URL=postgresql://user:pass@postgres:5432/starbunk
@@ -116,6 +128,7 @@ NODE_ENV=development
 The stack includes three internal database services for data persistence:
 
 ### Redis - In-Memory Data Store
+
 - **Purpose**: Social battery tracking, caching, session data
 - **Service**: `starbunk-redis` (container: `starbunk-cache`)
 - **Port**: 6379 (internal only)
@@ -124,6 +137,7 @@ The stack includes three internal database services for data persistence:
 - **Data**: `/data/redis` volume mount
 
 **Configuration**:
+
 ```env
 REDIS_HOST=starbunk-redis  # Use service name for internal networking
 REDIS_PORT=6379
@@ -134,12 +148,14 @@ REDIS_DB=0
 > **Note**: Use the service name `starbunk-redis` (not the container name `starbunk-cache`) for REDIS_HOST. Docker Compose uses service names for internal DNS resolution.
 
 **Using External Redis** (optional):
+
 ```env
 REDIS_HOST=192.168.1.100   # Point to external Redis server
 REDIS_PASSWORD=your_password
 ```
 
 ### PostgreSQL - Relational Database
+
 - **Purpose**: Persistent bot data, user settings
 - **Service**: `starbunk-postgres` (container: `starbunk-db`)
 - **Port**: 5432 (internal only)
@@ -147,6 +163,7 @@ REDIS_PASSWORD=your_password
 - **Data**: `/data/postgres` volume mount
 
 ### Qdrant - Vector Database
+
 - **Purpose**: Saliency/interest matching, semantic search
 - **Service**: `starbunk-qdrant` (container: `starbunk-vectordb`)
 - **Port**: 6333 (internal only)
@@ -154,6 +171,7 @@ REDIS_PASSWORD=your_password
 - **Data**: `/data/qdrant` volume mount
 
 **Architecture Notes**:
+
 - All database services run within the `starbunk-network` and are not exposed to the host
 - Services can be replaced with external instances by updating environment variables
 - Data persists in `${HOST_WORKDIR}/data/` directory structure
@@ -162,6 +180,7 @@ REDIS_PASSWORD=your_password
 ## 🛠️ Development Commands
 
 ### Container Management
+
 ```bash
 # Build all containers
 npm run build
@@ -184,6 +203,7 @@ npm run logs:bluebot
 ```
 
 ### Individual Container Development
+
 ```bash
 # Work on specific containers
 cd src/bunkbot && npm run dev
@@ -193,7 +213,7 @@ cd src/covabot && npm run dev
 
 ## 📁 Container Structure
 
-```
+```text
 src/
 ├── shared/                   # Shared services and utilities
 │   ├── src/
@@ -326,13 +346,14 @@ cd containers/bunkbot && npm test
 
 ## 🚀 Deployment
 
-### Production Deployment
+### Automated Production Deployment
 
 Starbunk uses **automated deployment** to production via CircleCI when GitHub releases are published.
 
 **📖 For complete deployment setup and procedures, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
 
 #### Quick Deploy (Manual)
+
 ```bash
 # Build and start all containers
 docker-compose up -d
@@ -345,6 +366,7 @@ docker-compose up -d --no-deps bunkbot
 ```
 
 ### CI/CD Pipeline
+
 - **CircleCI (PRs)**: Build, test, and validate changed packages
 - **CircleCI (main)**: Build images and push to GitHub Container Registry (GHCR)
 - **Semantic Release**: Generate version tags and GitHub releases
@@ -352,11 +374,13 @@ docker-compose up -d --no-deps bunkbot
 - **CircleCI (releases)**: Deploy to production Unraid server via SSH
 
 #### Deployment Scripts
+
 - [`scripts/deployment/deploy.sh`](scripts/deployment/deploy.sh) - Automated deployment orchestration
 - [`scripts/deployment/health-check.sh`](scripts/deployment/health-check.sh) - Post-deployment verification
 - [`scripts/deployment/rollback.sh`](scripts/deployment/rollback.sh) - Emergency rollback procedures
 
 ### CI Policy (PRs)
+
 - Validations: runs [scripts/validation/run-all-validations.sh](scripts/validation/run-all-validations.sh) for structure/naming/docs.
 - Changed packages only: build + type-check across modified workspaces.
 - Scoped tests: `src/shared` tests always run; `src/covabot` tests exclude `tests/services/llm/**` temporarily until those suites are stabilized.
@@ -367,7 +391,7 @@ This scoping avoids unrelated failures on PRs while still enforcing correctness 
 ## 📊 Container Resource Requirements
 
 | Container | CPU | Memory | Storage | Network |
-|-----------|-----|--------|---------|---------|
+| --- | --- | --- | --- | --- |
 | **BunkBot** | 0.5 cores | 256MB | Minimal | High (webhooks) |
 | **DJCova** | 1-2 cores | 1GB | Moderate (cache) | High (voice) |
 | **CovaBot** | 0.5-1 cores | 1GB | Low | Moderate |
@@ -377,9 +401,11 @@ This scoping avoids unrelated failures on PRs while still enforcing correctness 
 | **Qdrant** | 0.5 cores | 512MB | Moderate | Low |
 | **OTEL Collector** | 0.5 cores | 512MB | Minimal | Moderate |
 
+
 ## 🔧 Troubleshooting
 
 ### Container Won't Start
+
 ```bash
 # Check container logs
 docker-compose logs bunkbot
@@ -392,6 +418,7 @@ docker-compose build --no-cache bunkbot
 ```
 
 ### Database Connection Issues
+
 ```bash
 # Check PostgreSQL status
 docker-compose ps starbunk-postgres
@@ -427,4 +454,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Discord.js team for their excellent library
 - Ollama and OpenAI for LLM capabilities
 - All contributors to the project
-# Trigger rebuild

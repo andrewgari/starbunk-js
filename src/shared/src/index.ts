@@ -22,6 +22,11 @@ export type {
   IBotContextMixin,
 } from './observability/mixins';
 
+// Health and smoke testing
+export { runSmokeMode } from './health/smoke-mode';
+export { initializeHealthServer } from './health/health-server-init';
+export { shutdownObservability } from './observability/shutdown';
+
 // Types
 export type { BotIdentity } from './types/bot-identity';
 export type {
@@ -66,3 +71,9 @@ export { PostgresBaseRepository } from './data-access/base/postgres-base-reposit
 // Reactive utilities
 export { LiveData } from './utils/live-data';
 export type { ReadonlyLiveData, SubscribeOptions, Unsubscribe } from './utils/live-data';
+
+// Strategies
+export { BotStrategy } from './strategy/bot-strategy';
+export type { IBotStrategy } from './strategy/bot-strategy';
+export { SendWebhookMessageStrategy } from './strategy/send-webhook-message-strategy';
+export { SendAPIMessageStrategy } from './strategy/send-api-message-strategy';
