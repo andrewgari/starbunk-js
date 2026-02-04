@@ -8,60 +8,30 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
   readonly name = 'BlueRequestStrategy';
   readonly priority = 30;
 
-  private selectedStrategy: 'insult' | 'compliment' | null = null;
+  private selectedStrategy: RequestConfirmStrategy;
 
-  private _complimentStrategy?: RequestConfirmStrategy;
-  private _insultStrategy?: RequestConfirmEnemyStrategy;
+  constructor(triggeringEvent?: Message) {
+    super(triggeringEvent);
 
-  private get complimentStrategy(): RequestConfirmStrategy {
-    if (!this._complimentStrategy) {
-      this._complimentStrategy = new RequestConfirmStrategy(this.triggeringEvent);
-    }
-    return this._complimentStrategy;
-  }
-
-  private get insultStrategy(): RequestConfirmEnemyStrategy {
-    if (!this._insultStrategy) {
-      this._insultStrategy = new RequestConfirmEnemyStrategy(this.triggeringEvent);
-    }
-    return this._insultStrategy;
+    this.selectedStrategy = new RequestConfirmStrategy(this.triggeringEvent);
   }
 
   async shouldTrigger(): Promise<boolean> {
-    const insultResult = await this.insultStrategy.shouldTrigger();
-    this.selectedStrategy = insultResult ? 'insult' : 'compliment';
+    const enemyStrategy = new RequestConfirmEnemyStrategy(this.triggeringEvent);
+    if (await enemyStrategy.shouldTrigger()) {
+      this.selectedStrategy = enemyStrategy;
+    }
 
     logger
       .withMetadata({
-        strategy_name: 'BlueRequestStrategy',
-        sub_strategy: this.selectedStrategy,
+        strategy_name: this.name,
+        sub_strategy: typeof this.selectedStrategy,
         author_id: this.triggeringEvent!.author.id,
         message_id: this.triggeringEvent!.id,
       })
-      .debug(`BlueRequestStrategy: Routing to ${this.selectedStrategy} strategy`);
+      .debug(`${this.name}: Routing to ${this.selectedStrategy} strategy`);
 
-    if (insultResult) {
-      logger
-        .withMetadata({
-          strategy_name: 'BlueRequestStrategy',
-          sub_strategy: 'insult',
-          result: true,
-          message_id: this.triggeringEvent!.id,
-        })
-        .debug('BlueRequestStrategy: Insult strategy evaluation');
-      return true;
-    }
-
-    const result = await this.complimentStrategy.shouldTrigger();
-    logger
-      .withMetadata({
-        strategy_name: 'BlueRequestStrategy',
-        sub_strategy: 'compliment',
-        result,
-        message_id: this.triggeringEvent!.id,
-      })
-      .debug('BlueRequestStrategy: Compliment strategy evaluation');
-    return result;
+    return this.selectedStrategy.shouldTrigger();
   }
 
   async getResponse(context: Message): Promise<string> {
@@ -71,36 +41,6 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
       );
     }
 
-    logger
-      .withMetadata({
-        strategy_name: 'BlueRequestStrategy',
-        sub_strategy: this.selectedStrategy,
-        message_id: this.triggeringEvent!.id,
-      })
-      .info(`BlueRequestStrategy: Generating ${this.selectedStrategy} response`);
-
-    if (this.selectedStrategy === 'insult') {
-      const response = await this.insultStrategy.getResponse(context);
-      logger
-        .withMetadata({
-          strategy_name: 'BlueRequestStrategy',
-          sub_strategy: 'insult',
-          response_length: response.length,
-          message_id: this.triggeringEvent!.id,
-        })
-        .info('BlueRequestStrategy: Generated insult response for enemy');
-      return response;
-    }
-
-    const response = await this.complimentStrategy.getResponse(context);
-    logger
-      .withMetadata({
-        strategy_name: 'BlueRequestStrategy',
-        sub_strategy: 'compliment',
-        response_length: response.length,
-        message_id: this.triggeringEvent!.id,
-      })
-      .info('BlueRequestStrategy: Generated compliment response');
-    return response;
+    return this.selectedStrategy.getResponse(context);
   }
 }
