@@ -4,8 +4,19 @@ import { getMetricsService } from '@starbunk/shared/observability/metrics-servic
 import { BlueRequestStrategy } from '@/strategy/blue-request-strategy';
 import { BlueReplyStrategy } from '@/strategy/blue-reply-strategy';
 
+// Singleton instances - these maintain state across messages
+let replyStrategy: BlueReplyStrategy | null = null;
+
+function getReplyStrategy(): BlueReplyStrategy {
+  if (!replyStrategy) {
+    replyStrategy = new BlueReplyStrategy();
+  }
+  return replyStrategy;
+}
+
 export function resetStrategies(): void {
-  // Strategy instances are now created per-message, so no global reset needed
+  // Reset the stateful reply strategy for testing
+  replyStrategy = null;
 }
 
 /**
@@ -81,9 +92,9 @@ export async function getResponseForMessage(message: Message): Promise<string | 
     return requestStrategy.getResponse(message);
   }
 
-  const replyStrategy = new BlueReplyStrategy(message);
-  if (await replyStrategy.shouldTrigger(message)) {
-    return replyStrategy.getResponse(message);
+  const replyStrategyInstance = getReplyStrategy();
+  if (await replyStrategyInstance.shouldTrigger(message)) {
+    return replyStrategyInstance.getResponse(message);
   }
 
   return null;
@@ -100,9 +111,9 @@ export async function processMessageByStrategy(message: Message): Promise<void> 
     return;
   }
 
-  // Execute reply strategy second
-  const replyStrategy = new BlueReplyStrategy(message);
-  if (await executeStrategy('reply', replyStrategy, message, metrics, startTime)) {
+  // Execute reply strategy second (using singleton)
+  const replyStrategyInstance = getReplyStrategy();
+  if (await executeStrategy('reply', replyStrategyInstance, message, metrics, startTime)) {
     return;
   }
 
