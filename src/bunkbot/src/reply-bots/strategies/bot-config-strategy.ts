@@ -23,8 +23,9 @@ export class BotConfigStrategy extends SendWebhookMessageStrategy {
     triggers: Trigger[],
     ignoreBots: boolean = true,
     ignoreHumans: boolean = false,
+    triggeringEvent?: Message,
   ) {
-    super();
+    super(triggeringEvent);
     this.name = name;
     this.identity = identity;
     this.triggers = triggers;

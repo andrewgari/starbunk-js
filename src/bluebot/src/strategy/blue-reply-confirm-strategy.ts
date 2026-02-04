@@ -5,6 +5,7 @@ import { SendAPIMessageStrategy } from '@starbunk/shared/strategy/send-api-messa
 export class ReplyConfirmStrategy extends SendAPIMessageStrategy {
   readonly name = 'BlueReplyConfirmStrategy';
   readonly priority = 30;
+  private currentMessage: Message | null = null;
 
   private confirmPhrases = [
     /blue/i,
@@ -19,6 +20,7 @@ export class ReplyConfirmStrategy extends SendAPIMessageStrategy {
   ];
 
   async shouldTrigger(message: Message): Promise<boolean> {
+    this.currentMessage = message;
     const isReply = !!message.reference?.messageId;
     const wordCount = message.content.trim().split(/\s+/).length;
     const isShort = wordCount <= 5;
@@ -90,8 +92,9 @@ export class ReplyConfirmStrategy extends SendAPIMessageStrategy {
     const response = 'Somebody definitely said Blu!';
     logger
       .withMetadata({
-        strategy_name: 'BlueReplyConfirmStrategy',
+        strategy_name: this.name,
         response,
+        message_id: this.currentMessage?.id,
       })
       .info(`${this.name}: Generating confirmation response`);
     return Promise.resolve(response);

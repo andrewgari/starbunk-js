@@ -17,7 +17,7 @@
     "emitDecoratorMetadata": true,
     "isolatedModules": true,
     "moduleResolution": "node16",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./src",
     "paths": {

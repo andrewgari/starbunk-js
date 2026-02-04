@@ -65,7 +65,9 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
 
   async getResponse(): Promise<string> {
     if (!this.selectedStrategy) {
-      throw new Error('getResponse called without calling shouldTrigger first');
+      throw new Error(
+        'getResponse called without calling shouldTrigger first, or shouldTrigger failed to select a strategy.',
+      );
     }
 
     logger
