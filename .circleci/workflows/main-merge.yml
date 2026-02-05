@@ -102,6 +102,8 @@ jobs:
 
   semantic_release:
     executor: node22
+    environment:
+      VERSION_FILE_PATH: config/VERSION
     steps:
       - checkout
       - setup_npm_cache
@@ -110,10 +112,36 @@ jobs:
           command: |
             if [ -z "$CI_TOKEN" ]; then echo "CI_TOKEN not set"; exit 1; fi
             export GITHUB_TOKEN="$CI_TOKEN"
+
+            # Capture exit code explicitly
+            # semantic-release returns:
+            #   0 = successful release
+            #   1 = no release needed (no release-worthy commits)
+            #   2+ = actual errors
+            set +e
             npx semantic-release
+            EXIT_CODE=$?
+            set -e
+
+            # Only fail on actual errors (exit code 2+)
+            if [ "$EXIT_CODE" -ge 2 ]; then
+              echo "❌ semantic-release failed with exit code $EXIT_CODE"
+              exit $EXIT_CODE
+            fi
+
+            # Check if VERSION file was created by semantic-release (for cases with no release)
+            if [ ! -f "$VERSION_FILE_PATH" ]; then
+              echo "ℹ No new version generated (no release-worthy commits)"
+              # Don't fail - tag_version_images will handle the missing file gracefully
+            else
+              VERSION=$(cat "$VERSION_FILE_PATH")
+              echo "✅ New version generated: $VERSION"
+            fi
 
   tag_version_images:
     executor: docker
+    environment:
+      VERSION_FILE_PATH: config/VERSION
     steps:
       - checkout
       - setup_docker_cli
@@ -125,7 +153,19 @@ jobs:
       - run:
           name: Tag images with VERSION
           command: |
-            VERSION=$(cat config/VERSION | tr -d '\n')
+            # Check if VERSION file exists (created by semantic-release)
+            if [ ! -f "$VERSION_FILE_PATH" ]; then
+              echo "⚠ No new version created by semantic-release (no release-worthy commits detected)"
+              echo "Skipping image tagging"
+              exit 0
+            fi
+
+            VERSION=$(cat "$VERSION_FILE_PATH")
+            if [ -z "$VERSION" ]; then
+              echo "⚠ VERSION file is empty"
+              exit 0
+            fi
+
             echo "Tagging images with version: $VERSION"
             for APP in bunkbot covabot djcova bluebot; do
               IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}"
@@ -182,10 +222,10 @@ jobs:
     parameters:
       app_name:
         type: string
-        description: "Application name (bunkbot, bluebot, covabot, djcova)"
+        description: 'Application name (bunkbot, bluebot, covabot, djcova)'
       dockerfile:
         type: string
-        description: "Path to Dockerfile.ci"
+        description: 'Path to Dockerfile.ci'
     steps:
       - checkout
       - attach_build_artifacts
@@ -368,28 +408,28 @@ workflows:
       - publish_image:
           name: publish_bunkbot
           app_name: bunkbot
-          dockerfile: "./src/bunkbot/Dockerfile.ci"
+          dockerfile: './src/bunkbot/Dockerfile.ci'
           requires:
             - test
             - build
       - publish_image:
           name: publish_bluebot
           app_name: bluebot
-          dockerfile: "./src/bluebot/Dockerfile.ci"
+          dockerfile: './src/bluebot/Dockerfile.ci'
           requires:
             - test
             - build
       - publish_image:
           name: publish_covabot
           app_name: covabot
-          dockerfile: "./src/covabot/Dockerfile.ci"
+          dockerfile: './src/covabot/Dockerfile.ci'
           requires:
             - test
             - build
       - publish_image:
           name: publish_djcova
           app_name: djcova
-          dockerfile: "./src/djcova/Dockerfile.ci"
+          dockerfile: './src/djcova/Dockerfile.ci'
           requires:
             - test
             - build
