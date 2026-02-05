@@ -17,7 +17,7 @@ type VoiceChannelLike = {
 
 type InteractionLike = { member?: unknown; guild?: { id: string } | null; channelId: string };
 
-import { getVoiceConnection, VoiceConnectionStatus } from '@discordjs/voice';
+import { getVoiceConnection, VoiceConnectionStatus, entersState } from '@discordjs/voice';
 import { logger } from '../observability/logger';
 import { getMusicConfig } from '../config/music-config';
 import {
@@ -25,6 +25,7 @@ import {
   ConnectionHealthMonitorConfig,
   createConnectionHealthMonitor,
 } from '../services/connection-health-monitor';
+import { trace } from '@opentelemetry/api';
 
 /**
  * Join a voice channel and return the connection
@@ -141,13 +142,14 @@ export function disconnectVoiceConnection(guildId: string): void {
 /**
  * Subscribe an audio player to a voice connection
  */
-export function subscribePlayerToConnection(
+export async function subscribePlayerToConnection(
   connection: VoiceConnectionLike,
   player: AudioPlayerLike,
-): PlayerSubscriptionLike | undefined {
+): Promise<PlayerSubscriptionLike | undefined> {
   logger.debug('Subscribing audio player to voice connection...');
 
   try {
+    await waitForConnectionReady(connection);
     const subscription = connection.subscribe(player);
     if (subscription) {
       logger.info('✅ Audio player subscribed to voice connection');
@@ -200,6 +202,148 @@ export function validateVoiceChannelAccess(interaction: InteractionLike): {
     member,
     voiceChannel,
   };
+}
+
+/**
+ * Asynchronously waits for a voice connection to reach the 'Ready' state.
+ * This is a critical readiness gate to prevent "player attached to not-ready connection" failures.
+ *
+ * Implements a connection readiness gate that:
+ * - Waits up to 5 seconds for the connection to reach Ready state
+ * - Handles race conditions (connection destroyed during wait)
+ * - Provides structured logging with trace IDs
+ * - Exports OpenTelemetry traces for observability
+ *
+ * @param connection The voice connection to monitor.
+ * @param timeoutMs The maximum time to wait in milliseconds (default: 5000ms).
+ * @throws ConnectionNotReadyError if the connection does not become ready within the timeout
+ * @throws ConnectionDestroyedError if the connection is destroyed while waiting
+ */
+export async function waitForConnectionReady(
+  connection: VoiceConnectionLike,
+  timeoutMs = 5000,
+): Promise<void> {
+  const tracer = trace.getTracer('djcova');
+  const startTime = Date.now();
+  const connectionId = `conn_${startTime}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Start OpenTelemetry span
+  const span = tracer.startSpan('djcova.connection.wait_for_ready', {
+    attributes: {
+      'connection.id': connectionId,
+      'connection.timeout_ms': timeoutMs,
+      'connection.initial_status': connection.state.status,
+    },
+  });
+
+  // Early return if already ready
+  if (connection.state.status === VoiceConnectionStatus.Ready) {
+    const elapsed = Date.now() - startTime;
+    logger
+      .withMetadata({
+        connection_id: connectionId,
+        wait_duration_ms: elapsed,
+        final_state: VoiceConnectionStatus.Ready,
+        trace_id: connectionId,
+      })
+      .debug('Connection already in Ready state');
+
+    span.setAttributes({
+      'connection.result': 'already_ready',
+      'connection.wait_duration_ms': elapsed,
+    });
+    span.end();
+    return;
+  }
+
+  try {
+    logger
+      .withMetadata({
+        connection_id: connectionId,
+        timeout_ms: timeoutMs,
+        current_status: connection.state.status,
+        trace_id: connectionId,
+      })
+      .debug('Waiting for voice connection to reach Ready state');
+
+    // entersState is a utility from @discordjs/voice that resolves when the connection
+    // enters the target state, and rejects if it is destroyed or the timeout is exceeded.
+    await entersState(connection, VoiceConnectionStatus.Ready, timeoutMs);
+
+    const elapsed = Date.now() - startTime;
+    logger
+      .withMetadata({
+        connection_id: connectionId,
+        wait_duration_ms: elapsed,
+        final_state: VoiceConnectionStatus.Ready,
+        timeout_ms: timeoutMs,
+        trace_id: connectionId,
+      })
+      .info('✅ Voice connection reached Ready state');
+
+    span.setAttributes({
+      'connection.result': 'success',
+      'connection.wait_duration_ms': elapsed,
+    });
+    span.end();
+  } catch (error) {
+    const elapsed = Date.now() - startTime;
+    const typedError = error instanceof Error ? error : new Error(String(error));
+    let errorType = 'unknown';
+    let errorMessage = '';
+
+    // Provide a clearer error message for different failure scenarios
+    if (typedError.message.includes('timed out')) {
+      errorType = 'timeout';
+      errorMessage = `Connection did not reach Ready state within ${timeoutMs}ms`;
+      logger
+        .withMetadata({
+          connection_id: connectionId,
+          wait_duration_ms: elapsed,
+          timeout_ms: timeoutMs,
+          final_state: connection.state.status,
+          error_type: errorType,
+          trace_id: connectionId,
+        })
+        .warn(`⏱️ ${errorMessage}`);
+    } else if (typedError.message.includes('destroyed')) {
+      errorType = 'destroyed';
+      errorMessage = 'Connection was destroyed before reaching Ready state';
+      logger
+        .withMetadata({
+          connection_id: connectionId,
+          wait_duration_ms: elapsed,
+          timeout_ms: timeoutMs,
+          final_state: connection.state.status,
+          error_type: errorType,
+          trace_id: connectionId,
+        })
+        .warn(`🔴 ${errorMessage}`);
+    } else {
+      errorType = 'error';
+      errorMessage = `Voice connection failed: ${typedError.message}`;
+      logger
+        .withError(typedError)
+        .withMetadata({
+          connection_id: connectionId,
+          wait_duration_ms: elapsed,
+          timeout_ms: timeoutMs,
+          final_state: connection.state.status,
+          error_type: errorType,
+          trace_id: connectionId,
+        })
+        .error('❌ Voice connection error while waiting for Ready state');
+    }
+
+    span.setAttributes({
+      'connection.result': errorType,
+      'connection.error': errorMessage,
+      'connection.wait_duration_ms': elapsed,
+    });
+    span.end();
+
+    throw new Error(errorMessage);
+  }
 }
 
 /**

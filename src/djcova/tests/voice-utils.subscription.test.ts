@@ -22,10 +22,12 @@ vi.mock('../src/observability/logger', () => ({
 // Stub @discordjs/voice so voice-utils can import it without touching real Discord voice internals
 vi.mock('@discordjs/voice', () => {
   const getVoiceConnection = vi.fn();
+  const entersState = vi.fn();
 
   return {
     joinVoiceChannel: vi.fn(),
     getVoiceConnection,
+    entersState,
     VoiceConnectionStatus: {
       Ready: 'ready',
       Disconnected: 'disconnected',
@@ -52,7 +54,10 @@ describe('voice-utils subscription lifecycle', () => {
     vi.mocked(Voice.joinVoiceChannel).mockReset();
   });
 
-  it('disconnectVoiceConnection destroys the connection and unsubscribes subscriptions', () => {
+  it('disconnectVoiceConnection destroys the connection and unsubscribes subscriptions', async () => {
+    // Mock entersState to resolve immediately (connection is ready)
+    vi.mocked(Voice.entersState).mockResolvedValue(undefined);
+
     type Subscription = { isActive: boolean; unsubscribe: () => void };
 
     const subscription1: Subscription = {
@@ -72,6 +77,7 @@ describe('voice-utils subscription lifecycle', () => {
     });
 
     const connection = {
+      state: { status: Voice.VoiceConnectionStatus.Connecting },
       // Simulate two sequential subscriptions on the same connection
       subscribe: vi.fn().mockReturnValueOnce(subscription1).mockReturnValueOnce(subscription2),
       // When the connection is destroyed, underlying library is expected to
@@ -86,8 +92,9 @@ describe('voice-utils subscription lifecycle', () => {
     vi.mocked(Voice.getVoiceConnection).mockReturnValue(connection as any);
 
     const player: unknown = {};
-    const returned1 = subscribePlayerToConnection(connection, player as any);
-    const returned2 = subscribePlayerToConnection(connection, player as any);
+    // Await the async calls
+    const returned1 = await subscribePlayerToConnection(connection, player as any);
+    const returned2 = await subscribePlayerToConnection(connection, player as any);
 
     expect(connection.subscribe).toHaveBeenCalledTimes(2);
     expect(returned1).toBe(subscription1);
@@ -128,27 +135,35 @@ describe('voice-utils subscription lifecycle', () => {
     expect(connection.destroy).toHaveBeenCalledTimes(1);
   });
 
-  it('subscribePlayerToConnection returns undefined when subscribe returns falsy', () => {
+  it('subscribePlayerToConnection returns undefined when subscribe returns falsy', async () => {
+    // Mock entersState to resolve immediately (connection is ready)
+    vi.mocked(Voice.entersState).mockResolvedValue(undefined);
+
     const connection = {
+      state: { status: Voice.VoiceConnectionStatus.Ready },
       subscribe: vi.fn().mockReturnValue(undefined),
     } as any;
 
     const player: unknown = {};
-    const result = subscribePlayerToConnection(connection, player as any);
+    const result = await subscribePlayerToConnection(connection, player as any);
 
     expect(connection.subscribe).toHaveBeenCalledTimes(1);
     expect(result).toBeUndefined();
   });
 
-  it('subscribePlayerToConnection returns undefined when subscribe throws', () => {
+  it('subscribePlayerToConnection returns undefined when subscribe throws', async () => {
+    // Mock entersState to resolve immediately (connection is ready)
+    vi.mocked(Voice.entersState).mockResolvedValue(undefined);
+
     const connection = {
+      state: { status: Voice.VoiceConnectionStatus.Ready },
       subscribe: vi.fn(() => {
         throw new Error('subscription failed');
       }),
     } as any;
 
     const player: unknown = {};
-    const result = subscribePlayerToConnection(connection, player as any);
+    const result = await subscribePlayerToConnection(connection, player as any);
 
     expect(connection.subscribe).toHaveBeenCalledTimes(1);
     expect(result).toBeUndefined();
