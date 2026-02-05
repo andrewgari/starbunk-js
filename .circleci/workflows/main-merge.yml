@@ -110,7 +110,23 @@ jobs:
           command: |
             if [ -z "$CI_TOKEN" ]; then echo "CI_TOKEN not set"; exit 1; fi
             export GITHUB_TOKEN="$CI_TOKEN"
-            npx semantic-release
+            npx semantic-release || EXIT_CODE=$?
+            
+            # Exit code 1 means no release was triggered (nothing to release)
+            # Exit code 2+ are actual errors
+            if [ "${EXIT_CODE:-0}" -ge 2 ]; then
+              echo "❌ semantic-release failed with exit code $EXIT_CODE"
+              exit $EXIT_CODE
+            fi
+            
+            # Create VERSION file if it doesn't exist (for cases with no release)
+            if [ ! -f config/VERSION ]; then
+              echo "ℹ No new version generated (no release-worthy commits)"
+              # Don't fail - tag_version_images will handle the missing file gracefully
+            else
+              VERSION=$(cat config/VERSION | tr -d '\n')
+              echo "✅ New version generated: $VERSION"
+            fi
 
   tag_version_images:
     executor: docker
@@ -125,7 +141,19 @@ jobs:
       - run:
           name: Tag images with VERSION
           command: |
+            # Check if VERSION file exists (created by semantic-release)
+            if [ ! -f config/VERSION ]; then
+              echo "⚠ No new version created by semantic-release (no release-worthy commits detected)"
+              echo "Skipping image tagging"
+              exit 0
+            fi
+
             VERSION=$(cat config/VERSION | tr -d '\n')
+            if [ -z "$VERSION" ]; then
+              echo "⚠ VERSION file is empty"
+              exit 0
+            fi
+
             echo "Tagging images with version: $VERSION"
             for APP in bunkbot covabot djcova bluebot; do
               IMAGE="ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}"
