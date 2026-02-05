@@ -135,27 +135,35 @@ describe('voice-utils subscription lifecycle', () => {
     expect(connection.destroy).toHaveBeenCalledTimes(1);
   });
 
-  it('subscribePlayerToConnection returns undefined when subscribe returns falsy', () => {
+  it('subscribePlayerToConnection returns undefined when subscribe returns falsy', async () => {
+    // Mock entersState to resolve immediately (connection is ready)
+    vi.mocked(Voice.entersState).mockResolvedValue(undefined);
+
     const connection = {
+      state: { status: Voice.VoiceConnectionStatus.Ready },
       subscribe: vi.fn().mockReturnValue(undefined),
     } as any;
 
     const player: unknown = {};
-    const result = subscribePlayerToConnection(connection, player as any);
+    const result = await subscribePlayerToConnection(connection, player as any);
 
     expect(connection.subscribe).toHaveBeenCalledTimes(1);
     expect(result).toBeUndefined();
   });
 
-  it('subscribePlayerToConnection returns undefined when subscribe throws', () => {
+  it('subscribePlayerToConnection returns undefined when subscribe throws', async () => {
+    // Mock entersState to resolve immediately (connection is ready)
+    vi.mocked(Voice.entersState).mockResolvedValue(undefined);
+
     const connection = {
+      state: { status: Voice.VoiceConnectionStatus.Ready },
       subscribe: vi.fn(() => {
         throw new Error('subscription failed');
       }),
     } as any;
 
     const player: unknown = {};
-    const result = subscribePlayerToConnection(connection, player as any);
+    const result = await subscribePlayerToConnection(connection, player as any);
 
     expect(connection.subscribe).toHaveBeenCalledTimes(1);
     expect(result).toBeUndefined();
