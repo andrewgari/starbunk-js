@@ -1,1 +1,0 @@
-PRD #582 created - see .workspace/prds/issue-582-connection-readiness-gate.md

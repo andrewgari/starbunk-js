@@ -215,7 +215,7 @@ export function validateVoiceChannelAccess(interaction: InteractionLike): {
  * - Exports OpenTelemetry traces for observability
  *
  * @param connection The voice connection to monitor.
- * @param timeoutMs The maximum time to wait in milliseconds (default: 5000ms per PRD #582).
+ * @param timeoutMs The maximum time to wait in milliseconds (default: 5000ms).
  * @throws ConnectionNotReadyError if the connection does not become ready within the timeout
  * @throws ConnectionDestroyedError if the connection is destroyed while waiting
  */
