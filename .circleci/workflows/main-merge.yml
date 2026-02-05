@@ -120,12 +120,13 @@ jobs:
             fi
             
             # Create VERSION file if it doesn't exist (for cases with no release)
-            if [ ! -f config/VERSION ]; then
+            if [ ! -f "$VERSION_FILE_PATH" ]; then
               echo "ℹ No new version generated (no release-worthy commits)"
               # Don't fail - tag_version_images will handle the missing file gracefully
             else
-              VERSION=$(cat config/VERSION | tr -d '\n')
+              VERSION=$(cat "$VERSION_FILE_PATH" | tr -d '\n')
               echo "✅ New version generated: $VERSION"
+            fi
             fi
 
   tag_version_images:
