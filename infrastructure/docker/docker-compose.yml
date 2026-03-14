@@ -174,9 +174,6 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-starbunk}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable is required for security}
 
-      # Database Services - Qdrant (Saliency/Interest Matching)
-      - QDRANT_URL=${QDRANT_URL:-http://starbunk-qdrant:6333}
-      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
 
       # Storage Configuration
       - COVABOT_DATA_DIR=/app/data
@@ -438,41 +435,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Qdrant - Vector database (for saliency/interest matching)
-  starbunk-qdrant:
-    image: qdrant/qdrant:latest
-    container_name: starbunk-vectordb
-    restart: unless-stopped
-    environment:
-      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-}
-    volumes:
-      - ${HOST_WORKDIR}/data/qdrant:/qdrant/storage
-    networks:
-      - starbunk-network
-    # No ports exposed - internal access only
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    labels:
-      - com.starbunk.service=qdrant
-      - io.portainer.icon=https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/qdrant.svg
-      - net.unraid.docker.icon=https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/qdrant.svg
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
-    # Qdrant upstream image does not include curl/wget/nc inside the container,
-    # so an HTTP healthcheck cannot run from within. Mark as healthy to avoid
-    # perpetual 'unhealthy' status and rely on dependent services' retries.
-    healthcheck:
-      test: ["CMD", "true"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 # Note: Using host path mounts for Unraid compatibility
 # Data persists in ${HOST_WORKDIR}/data/ directory structure

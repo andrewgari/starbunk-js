@@ -7,8 +7,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install all system dependencies in one layer
-# better-sqlite3 requires python3, make, g++ for native compilation
-RUN apk add --no-cache python3 make g++ openssl curl dumb-init
+RUN apk add --no-cache openssl curl dumb-init
 
 # Copy package files for better caching
 COPY package.json package-lock.json* ./
@@ -53,8 +52,7 @@ ARG METRICS_PORT=3000
 WORKDIR /app
 
 # Create user and install runtime dependencies in one layer
-# better-sqlite3 needs to be rebuilt for the runtime environment
-RUN apk add --no-cache openssl dumb-init curl python3 make g++ && \
+RUN apk add --no-cache openssl dumb-init curl && \
     addgroup -g 1001 -S covabot && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G covabot covabot && \
     mkdir -p /app/data /app/config /app/src/config && \
@@ -69,9 +67,6 @@ COPY --from=builder --chown=covabot:covabot /app/src/covabot/dist ./src/covabot/
 COPY --from=builder --chown=covabot:covabot /app/src/covabot/migrations ./src/covabot/migrations
 COPY --from=builder --chown=covabot:covabot /app/package.json ./
 COPY --from=builder --chown=covabot:covabot /app/src/covabot/package.json ./src/covabot/
-
-# Rebuild better-sqlite3 for the runtime environment
-RUN cd /app && npm rebuild better-sqlite3
 
 # Set default environment variables from build args
 ENV NODE_ENV=${NODE_ENV} \

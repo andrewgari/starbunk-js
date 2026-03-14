@@ -36,7 +36,6 @@ services:
     environment:
       - DISCORD_TOKEN=${COVABOT_TOKEN}
       - REDIS_HOST=${REDIS_HOST:-starbunk-cache}
-      - QDRANT_URL=${QDRANT_URL:-http://starbunk-vectordb:6333}
       - OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-starbunk-exporter}
     volumes:
       - ${HOST_WORKDIR}/config/covabot:/app/config:ro
@@ -101,17 +100,6 @@ services:
     networks:
       - starbunk-network
 
-  # Qdrant - Vector Database
-  starbunk-vectordb:
-    image: qdrant/qdrant:latest
-    container_name: starbunk-vectordb
-    restart: unless-stopped
-    environment:
-      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-}
-    volumes:
-      - ${HOST_WORKDIR}/data/qdrant:/qdrant/storage
-    networks:
-      - starbunk-network
 
 networks:
   starbunk-network:
