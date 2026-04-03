@@ -315,7 +315,7 @@ export class PostgresService {
 
       if (span) {
         span.setAttributes({
-          'migrations.count': migrationFiles.length,
+          'migrations.count': allMigrationFiles.length,
           'migrations.applied': appliedCount,
         });
       }

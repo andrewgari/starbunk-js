@@ -1,5 +1,5 @@
 // Vector Store and Services
 export * from './vector-store';
-export * from './postgres-vector-store';
+export { PostgresVectorStore } from './postgres-vector-store';
 export * from './vector-interest-service';
 export * from './vector-memory-service';
