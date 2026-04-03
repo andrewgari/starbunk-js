@@ -40,6 +40,13 @@ export class PostgresVectorStore {
   }
 
   /**
+   * Format a number[] vector into pgvector's string literal format: '[1,2,3]'
+   */
+  private formatVector(vector: number[]): string {
+    return `[${vector.join(',')}]`;
+  }
+
+  /**
    * Initialize the vector store (run migrations if needed)
    */
   async initialize(): Promise<void> {
@@ -54,6 +61,7 @@ export class PostgresVectorStore {
         `SELECT EXISTS (
           SELECT FROM information_schema.tables
           WHERE table_name = 'vector_embeddings'
+            AND table_schema = current_schema()
         ) as exists`,
       );
 
@@ -76,7 +84,7 @@ export class PostgresVectorStore {
    */
   async upsert(entry: Omit<VectorEntry, 'createdAt'>): Promise<void> {
     const paddedVector = this.padVector(entry.vector);
-    const vectorStr = `[${paddedVector.join(',')}]`;
+    const vectorStr = this.formatVector(paddedVector);
     const metadataJson = entry.metadata ? JSON.stringify(entry.metadata) : '{}';
 
     await this.pgService.query(
@@ -94,7 +102,7 @@ export class PostgresVectorStore {
         entry.collection,
         entry.text,
         vectorStr,
-        entry.vector.length,
+        Math.min(entry.vector.length, TARGET_DIMENSIONS),
         metadataJson,
       ],
     );
@@ -122,7 +130,7 @@ export class PostgresVectorStore {
     minScore: number = 0.0,
   ): Promise<SimilarityResult[]> {
     const paddedVector = this.padVector(queryVector);
-    const vectorStr = `[${paddedVector.join(',')}]`;
+    const vectorStr = this.formatVector(paddedVector);
 
     // cosine distance: 0 = identical, so similarity = 1 - distance
     // Filter: 1 - distance >= minScore  →  distance <= 1 - minScore
@@ -134,13 +142,17 @@ export class PostgresVectorStore {
       distance: number;
       metadata: Record<string, unknown> | null;
     }>(
-      `SELECT id, text, embedding <=> $1::vector AS distance, metadata
-       FROM vector_embeddings
-       WHERE profile_id = $2
-         AND collection = $3
-         AND (embedding <=> $1::vector) <= $4
-       ORDER BY embedding <=> $1::vector ASC
-       LIMIT $5`,
+      `WITH ranked AS (
+        SELECT id, text, embedding <=> $1::vector AS distance, metadata
+        FROM vector_embeddings
+        WHERE profile_id = $2
+          AND collection = $3
+      )
+      SELECT id, text, distance, metadata
+      FROM ranked
+      WHERE distance <= $4
+      ORDER BY distance ASC
+      LIMIT $5`,
       [vectorStr, profileId, collection, maxDistance, limit],
     );
 
@@ -203,10 +215,10 @@ export class PostgresVectorStore {
   private padVector(vector: number[]): number[] {
     if (vector.length === TARGET_DIMENSIONS) return vector;
     if (vector.length > TARGET_DIMENSIONS) {
-      logger.warn(
-        `Vector has ${vector.length} dimensions, truncating to ${TARGET_DIMENSIONS}`,
+      throw new Error(
+        `Vector has ${vector.length} dimensions, which exceeds the maximum of ${TARGET_DIMENSIONS}. ` +
+        `Truncation would destroy semantic meaning. Use an embedding model that produces <= ${TARGET_DIMENSIONS} dimensions.`,
       );
-      return vector.slice(0, TARGET_DIMENSIONS);
     }
     // Pad with zeros
     const padded = new Array(TARGET_DIMENSIONS).fill(0);

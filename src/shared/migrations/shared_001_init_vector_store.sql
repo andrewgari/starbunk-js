@@ -5,9 +5,6 @@
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Enable UUID generation if not already enabled
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
 -- Vector embeddings table
 -- Uses TEXT primary key to match existing VectorStore ID format (e.g., "profileId:interest:0")
 CREATE TABLE IF NOT EXISTS vector_embeddings (

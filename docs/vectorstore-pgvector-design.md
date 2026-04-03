@@ -45,7 +45,6 @@ The current SQLite implementation loads ALL vectors into memory for search. With
 ```sql
 -- shared_001_init_vector_store.sql
 CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS vector_embeddings (
   id TEXT PRIMARY KEY,
@@ -86,4 +85,5 @@ CREATE INDEX IF NOT EXISTS idx_ve_embedding_cosine
 | `src/shared/src/services/vector/postgres-vector-store.ts` | New |
 | `src/shared/src/services/vector/vector-interest-service.ts` | Update search/delete calls to async |
 | `src/shared/src/services/vector/vector-memory-service.ts` | Update getCollectionSize to async |
+| `src/shared/src/services/vector/index.ts` | Add barrel export for PostgresVectorStore |
 | Consumer bootstrap/wiring | Swap VectorStore → PostgresVectorStore |
