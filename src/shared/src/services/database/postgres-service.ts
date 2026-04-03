@@ -21,7 +21,7 @@ export interface PostgresConfig {
   max?: number; // max connections in pool
   idleTimeoutMillis?: number;
   connectionTimeoutMillis?: number;
-  migrationsDir?: string; // Optional: path to service-specific migrations directory
+  migrationsDir?: string | string[]; // Optional: path(s) to service-specific migrations directories
 }
 
 export class PostgresService {
@@ -228,23 +228,34 @@ export class PostgresService {
     logger.info('Running PostgreSQL migrations');
 
     try {
-      // Get migrations directory - use configured path or default to shared migrations
-      const migrationsDir = this.config.migrationsDir || path.join(__dirname, 'migrations');
+      // Get migrations directories - support single path, array, or default
+      const configuredDirs = this.config.migrationsDir || path.join(__dirname, 'migrations');
+      const migrationsDirs = Array.isArray(configuredDirs) ? configuredDirs : [configuredDirs];
 
-      if (!fs.existsSync(migrationsDir)) {
-        logger
-          .withMetadata({ migrationsDir })
-          .warn('No migrations directory found, skipping migrations');
-        return;
+      // Collect all migration files from all directories
+      const allMigrationFiles: { file: string; dir: string }[] = [];
+      for (const migrationsDir of migrationsDirs) {
+        if (!fs.existsSync(migrationsDir)) {
+          logger
+            .withMetadata({ migrationsDir })
+            .warn('No migrations directory found, skipping');
+          continue;
+        }
+
+        const files = fs
+          .readdirSync(migrationsDir)
+          .filter(file => file.endsWith('.sql'))
+          .sort();
+
+        for (const file of files) {
+          allMigrationFiles.push({ file, dir: migrationsDir });
+        }
       }
 
-      // Get all .sql files sorted by name
-      const migrationFiles = fs
-        .readdirSync(migrationsDir)
-        .filter(file => file.endsWith('.sql'))
-        .sort();
+      // Sort all migrations globally by filename
+      allMigrationFiles.sort((a, b) => a.file.localeCompare(b.file));
 
-      if (migrationFiles.length === 0) {
+      if (allMigrationFiles.length === 0) {
         logger.info('No migration files found');
         if (span) {
           span.setAttributes({ 'migrations.count': 0 });
@@ -269,7 +280,7 @@ export class PostgresService {
       let appliedCount = 0;
 
       // Apply pending migrations
-      for (const file of migrationFiles) {
+      for (const { file, dir } of allMigrationFiles) {
         const version = path.basename(file, '.sql');
 
         if (appliedVersions.has(version)) {
@@ -279,7 +290,7 @@ export class PostgresService {
 
         logger.withMetadata({ version }).info('Applying migration');
 
-        const migrationPath = path.join(migrationsDir, file);
+        const migrationPath = path.join(dir, file);
         const migrationSql = fs.readFileSync(migrationPath, 'utf8');
 
         try {
@@ -304,7 +315,7 @@ export class PostgresService {
 
       if (span) {
         span.setAttributes({
-          'migrations.count': migrationFiles.length,
+          'migrations.count': allMigrationFiles.length,
           'migrations.applied': appliedCount,
         });
       }

@@ -21,14 +21,16 @@ export async function initializeDatabase(): Promise<PostgresService> {
     );
   }
 
-  const migrationsDir = path.join(__dirname, '../../migrations');
+  const covabotMigrationsDir = path.join(__dirname, '../../migrations');
+  // Include shared migrations (e.g., vector store schema) alongside CovaBot-specific ones
+  const sharedMigrationsDir = path.resolve(__dirname, '../../../shared/migrations');
 
   // Verify migrations directory exists before initializing
   const fs = await import('fs');
-  if (!fs.existsSync(migrationsDir)) {
+  if (!fs.existsSync(covabotMigrationsDir)) {
     logger.warn(
       'WARNING: Migrations directory does not exist at ' +
-        migrationsDir +
+        covabotMigrationsDir +
         '. Database schema may not be initialized in production.',
     );
   }
@@ -42,8 +44,8 @@ export async function initializeDatabase(): Promise<PostgresService> {
     max: parseInt(process.env.POSTGRES_MAX_CONNECTIONS || '20', 10),
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
-    // CovaBot-specific migrations directory
-    migrationsDir: migrationsDir,
+    // CovaBot-specific + shared migrations directories
+    migrationsDir: [sharedMigrationsDir, covabotMigrationsDir],
   };
 
   logger
