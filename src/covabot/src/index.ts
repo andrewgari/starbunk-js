@@ -86,7 +86,7 @@ async function main(): Promise<void> {
     logger.withMetadata({ signal }).info('Shutdown signal received');
     await bot.stop();
     if (healthServer) {
-      healthServer.close();
+      await healthServer.stop();
     }
     await shutdownObservability(process.env.SERVICE_NAME || 'covabot');
     process.exit(0);
