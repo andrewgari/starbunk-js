@@ -15,6 +15,7 @@
 import { config } from 'dotenv';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
+import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { CovaBot, CovaBotConfig } from './cova-bot';
 
@@ -69,10 +70,24 @@ async function main(): Promise<void> {
   // Initialize and start the bot
   const bot = CovaBot.getInstance(botConfig);
 
+  // Start health/metrics server
+  let healthServer: Awaited<ReturnType<typeof initializeHealthServer>> | null = null;
+  try {
+    logger.info('Starting health/metrics server...');
+    healthServer = await initializeHealthServer();
+    logger.info('Health/metrics server started');
+  } catch (error) {
+    logger.withError(error).error('Failed to initialize health server');
+    throw error;
+  }
+
   // Handle graceful shutdown
   const shutdown = async (signal: string) => {
     logger.withMetadata({ signal }).info('Shutdown signal received');
     await bot.stop();
+    if (healthServer) {
+      await healthServer.stop();
+    }
     await shutdownObservability(process.env.SERVICE_NAME || 'covabot');
     process.exit(0);
   };
