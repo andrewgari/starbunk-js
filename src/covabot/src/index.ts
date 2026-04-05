@@ -20,6 +20,7 @@ import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { CovaBot, CovaBotConfig } from './cova-bot';
 
 // Load environment variables
+// Force rebuild: health server fix (PR #629)
 config();
 
 const logger = logLayer.withPrefix('CovaBot:Main');
