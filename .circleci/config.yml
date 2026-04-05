@@ -56,3 +56,4 @@ workflows:
               only: /.*/
             tags:
               only: /.*/
+# Trigger publish pipeline rebuild
