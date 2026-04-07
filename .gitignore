@@ -3,6 +3,7 @@
 # ==========================================
 .DS_Store
 Thumbs.db
+*.txt
 
 # ==========================================
 # IDEs & EDITORS
@@ -249,6 +250,9 @@ actionlint
 
 # But allow these specific docs (application documentation)
 !README.markdown
+!README.md
+!CLAUDE.md
+!src/**/CLAUDE.md
 
 # ==========================================
 # MISC

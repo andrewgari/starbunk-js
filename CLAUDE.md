@@ -1,0 +1,21 @@
+# Global Workspace Instructions (Starbunk-JS)
+
+## Overview
+This repository contains StarBunk, a sophisticated Discord bot built with TypeScript using a 4-container modular architecture. The system relies on Postgres, Redis, and Qdrant databases for state management and semantic search.
+
+## Major Pillars
+The project is split into four isolated containers, each under `src/`:
+1. **BunkBot** (`src/bunkbot`): Handles reply bots and admin commands.
+2. **DJCova** (`src/djcova`): Voice channel music playback and audio stream.
+3. **CovaBot** (`src/covabot`): AI-powered personality emulation.
+4. **BlueBot** (`src/bluebot`): Pattern matching bot for "blue" references.
+
+## Development Constraints
+- **Do not commit local secrets or configurations** under `config/`, `.workspace/`, `data/`, or `local/`.
+- Ensure changes follow the defined container separation. Each container maintains its specific dependencies.
+- Changes to shared packages/libraries must be made in `src/shared`.
+- Use correct Docker service names (`starbunk-postgres`, `starbunk-redis`, `starbunk-qdrant`) for inter-container communication.
+
+## Scripts Context
+- `npm run dev:[container_name]` starts custom containers individually.
+- `docker-compose up -d` handles complete integration spins.
