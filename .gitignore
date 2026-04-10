@@ -253,6 +253,7 @@ actionlint
 !README.md
 !CLAUDE.md
 !src/**/CLAUDE.md
+!.claude/commands/*.md
 
 # ==========================================
 # MISC
