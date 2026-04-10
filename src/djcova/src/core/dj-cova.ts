@@ -80,6 +80,16 @@ export class DJCova {
 
     this.player.on(AudioPlayerStatus.Playing, () => {
       logger.info('▶️ Playback started');
+      // Diagnostic: use currentSubscription to detect "no subscription = silence" bugs
+      if (!this.currentSubscription) {
+        logger.error(
+          '❌ Player started but has no active voice subscription — audio will be silent! Check subscription setup.',
+        );
+      } else {
+        logger.debug(
+          `Voice subscription active at playback start (connection status: ${this.currentSubscription.connection.state.status})`,
+        );
+      }
       logger.debug('Resetting idle timer due to playback start');
       this.idleManager?.resetIdleTimer();
     });
@@ -109,15 +119,22 @@ export class DJCova {
 
   async play(url: string): Promise<void> {
     logger.info(`🎵 Playing: ${url}`);
-    logger.debug('Stopping any existing playback...');
-    this.stop();
+    logger.debug('Stopping any existing playback (preserving voice subscription)...');
+    // Stop audio only — do NOT unsubscribe from the voice connection, or the
+    // new audio will have no subscriber and play silently into the void.
+    this.stopAudioOnly();
     logger.debug('Creating audio stream from URL...');
+
+    // Track which process instance belongs to this specific play() call so the
+    // catch block can skip cleanup() if a concurrent play() has already taken over.
+    let ownedProcess: ChildProcess | null = null;
 
     try {
       logger.debug(`Calling getYouTubeAudioStream for URL: ${url}`);
       const { stream, process } = getYouTubeAudioStream(url);
       logger.debug(`✅ YouTube audio stream created, process PID: ${process.pid}`);
       this.ytdlpProcess = process;
+      ownedProcess = process;
 
       logger.debug('Probing audio stream format...');
       const probeResult = await demuxProbe(stream);
@@ -151,9 +168,54 @@ export class DJCova {
           ytdlpProcessPid: this.ytdlpProcess?.pid,
         })
         .error('❌ Failed to play audio');
-      logger.debug('Cleaning up resources after play error...');
-      this.cleanup();
+      // Only run full cleanup if this play() call is still the active one.
+      // If a concurrent play() has already called stopAudioOnly() and replaced
+      // ytdlpProcess, running cleanup() here would unsubscribe the new call's
+      // voice connection and cause silent playback.
+      if (this.ytdlpProcess === ownedProcess) {
+        logger.debug('Cleaning up resources after play error...');
+        this.cleanup();
+      } else {
+        logger.debug('Skipping cleanup — concurrent play() call has taken over');
+      }
       throw err;
+    }
+  }
+
+  private killYtdlpProcess(): void {
+    if (!this.ytdlpProcess) return;
+    try {
+      logger.debug(`Killing yt-dlp process (PID: ${this.ytdlpProcess.pid ?? 'unknown'})`);
+      this.ytdlpProcess.kill('SIGKILL');
+      logger.debug('✅ yt-dlp process killed');
+    } catch (error) {
+      logger
+        .withError(error instanceof Error ? error : new Error(String(error)))
+        .warn('⚠️ Error killing yt-dlp process');
+    }
+    this.ytdlpProcess = null;
+  }
+
+  /**
+   * Stop audio resources only (yt-dlp process + resource), but preserve the
+   * voice connection subscription so the next play() call can reuse it.
+   * Called internally by play() to interrupt the current track before starting
+   * a new one.
+   */
+  private stopAudioOnly(): void {
+    if (this.isCleaningUp) {
+      logger.debug('Cleanup already in progress, skipping stopAudioOnly');
+      return;
+    }
+    this.isCleaningUp = true;
+    try {
+      this.killYtdlpProcess();
+      if (this.currentResource) {
+        this.currentResource = undefined;
+      }
+      this.player.stop();
+    } finally {
+      this.isCleaningUp = false;
     }
   }
 
@@ -259,19 +321,7 @@ export class DJCova {
       }
 
       // Step 2: Kill yt-dlp process with SIGKILL
-      if (this.ytdlpProcess) {
-        try {
-          const pidToKill = this.ytdlpProcess.pid || 'unknown';
-          logger.debug(`Killing yt-dlp process (PID: ${pidToKill})`);
-          this.ytdlpProcess.kill('SIGKILL');
-          logger.debug(`✅ yt-dlp process killed`);
-        } catch (error) {
-          logger
-            .withError(error instanceof Error ? error : new Error(String(error)))
-            .warn('⚠️ Error killing yt-dlp process');
-        }
-        this.ytdlpProcess = null;
-      }
+      this.killYtdlpProcess();
 
       // Step 3: Clear resource reference
       if (this.currentResource) {

@@ -96,11 +96,12 @@ export class DJCovaService {
     );
     logger.debug('✅ Idle management initialized');
 
-    // Start playback — register the subscription after play() runs its internal
-    // stop()/cleanup() so the new subscription is not immediately unsubscribed.
+    // Register the subscription before play() so it can be tracked for cleanup.
+    // play() uses stopAudioOnly() internally which preserves the voice subscription,
+    // so the subscription is safe to register here.
+    this.djCova.setSubscription(subscription);
     logger.info('Starting playback...');
     await this.djCova.play(url);
-    this.djCova.setSubscription(subscription);
     logger.info('✅ Playback started successfully');
   }
 

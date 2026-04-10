@@ -278,3 +278,4 @@ config/**
 tasks.json
 ralph.yml
  
+.aider*
