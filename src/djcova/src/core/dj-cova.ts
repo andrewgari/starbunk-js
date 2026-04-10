@@ -125,11 +125,16 @@ export class DJCova {
     this.stopAudioOnly();
     logger.debug('Creating audio stream from URL...');
 
+    // Track which process instance belongs to this specific play() call so the
+    // catch block can skip cleanup() if a concurrent play() has already taken over.
+    let ownedProcess: ChildProcess | null = null;
+
     try {
       logger.debug(`Calling getYouTubeAudioStream for URL: ${url}`);
       const { stream, process } = getYouTubeAudioStream(url);
       logger.debug(`✅ YouTube audio stream created, process PID: ${process.pid}`);
       this.ytdlpProcess = process;
+      ownedProcess = process;
 
       logger.debug('Probing audio stream format...');
       const probeResult = await demuxProbe(stream);
@@ -163,8 +168,16 @@ export class DJCova {
           ytdlpProcessPid: this.ytdlpProcess?.pid,
         })
         .error('❌ Failed to play audio');
-      logger.debug('Cleaning up resources after play error...');
-      this.cleanup();
+      // Only run full cleanup if this play() call is still the active one.
+      // If a concurrent play() has already called stopAudioOnly() and replaced
+      // ytdlpProcess, running cleanup() here would unsubscribe the new call's
+      // voice connection and cause silent playback.
+      if (this.ytdlpProcess === ownedProcess) {
+        logger.debug('Cleaning up resources after play error...');
+        this.cleanup();
+      } else {
+        logger.debug('Skipping cleanup — concurrent play() call has taken over');
+      }
       throw err;
     }
   }
