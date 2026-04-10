@@ -3,6 +3,7 @@ name: CI / PR Validation
 on:
   pull_request:
     branches: [ main ]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
   changes:
@@ -13,7 +14,6 @@ jobs:
       covabot: ${{ steps.filter.outputs.covabot }}
       djcova: ${{ steps.filter.outputs.djcova }}
       bluebot: ${{ steps.filter.outputs.bluebot }}
-      shared: ${{ steps.filter.outputs.shared }}
       core: ${{ steps.filter.outputs.core }}
     steps:
       - uses: actions/checkout@v4
@@ -24,47 +24,19 @@ jobs:
             bunkbot:
               - 'src/bunkbot/**'
               - 'src/shared/**'
-              - 'package.json'
-              - 'package-lock.json'
             covabot:
               - 'src/covabot/**'
               - 'src/shared/**'
-              - 'package.json'
-              - 'package-lock.json'
             djcova:
               - 'src/djcova/**'
               - 'src/shared/**'
-              - 'package.json'
-              - 'package-lock.json'
             bluebot:
               - 'src/bluebot/**'
-              - 'src/shared/**'
-              - 'package.json'
-              - 'package-lock.json'
-            shared:
               - 'src/shared/**'
             core:
               - 'package.json'
               - 'package-lock.json'
               - '.github/workflows/**'
-
-  core_validation:
-    name: Core Validation
-    runs-on: ubuntu-latest
-    needs: changes
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
-      - name: Lint workspace
-        run: npm run lint
-      - name: Build applications
-        run: npm run build
 
   bunkbot_validation:
     name: BunkBot Validation
@@ -80,8 +52,14 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Test Component
-        run: npm test --workspace=src/bunkbot --if-present
+      - name: Type Check
+        run: npx tsc --build src/bunkbot --dry
+      - name: Lint
+        run: npx eslint src/bunkbot/src/**/*.ts
+      - name: Build
+        run: npm run build:bunkbot
+      - name: Test
+        run: npm run test:bunkbot --if-present
 
   covabot_validation:
     name: CovaBot Validation
@@ -97,8 +75,14 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Test Component
-        run: npm test --workspace=src/covabot --if-present
+      - name: Type Check
+        run: npx tsc --build src/covabot --dry
+      - name: Lint
+        run: npx eslint src/covabot/src/**/*.ts
+      - name: Build
+        run: npm run build:covabot
+      - name: Test
+        run: npm run test:covabot --if-present
 
   djcova_validation:
     name: DJCova Validation
@@ -114,8 +98,14 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Test Component
-        run: npm test --workspace=src/djcova --if-present
+      - name: Type Check
+        run: npx tsc --build src/djcova --dry
+      - name: Lint
+        run: npx eslint src/djcova/src/**/*.ts
+      - name: Build
+        run: npm run build:djcova
+      - name: Test
+        run: npm run test:djcova --if-present
 
   bluebot_validation:
     name: BlueBot Validation
@@ -131,5 +121,67 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Test Component
-        run: npm test --workspace=src/bluebot --if-present
+      - name: Type Check
+        run: npx tsc --build src/bluebot --dry
+      - name: Lint
+        run: npx eslint src/bluebot/src/**/*.ts
+      - name: Build
+        run: npm run build:bluebot
+      - name: Test
+        run: npm run test:bluebot --if-present
+
+  docker_validation:
+    name: Docker Build & Validate
+    runs-on: ubuntu-latest
+    needs: [changes, bunkbot_validation, covabot_validation, djcova_validation, bluebot_validation]
+    if: |
+      always() && 
+      !contains(needs.*.result, 'failure') && 
+      !contains(needs.*.result, 'cancelled') &&
+      contains(github.event.pull_request.labels.*.name, 'validate')
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [bunkbot, covabot, djcova, bluebot]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build Apps
+        run: npm run build
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Docker build
+        run: |
+          APP=${{ matrix.app }}
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/${OWNER_LC}/${APP}"
+          docker build -f ./src/${APP}/Dockerfile.ci -t ${IMAGE}:test .
+          
+      - name: Run container and health check
+        run: |
+          APP=${{ matrix.app }}
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/${OWNER_LC}/${APP}:test"
+          docker run -d --name ${APP}-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e METRICS_PORT=3000 \
+            $IMAGE
+          
+          sleep 10
+          if [ "$(docker inspect -f '{{.State.Running}}' ${APP}-test)" != "true" ]; then
+            echo "Container ${APP}-test crashed!"
+            docker logs ${APP}-test
+            exit 1
+          fi
