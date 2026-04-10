@@ -1,0 +1,36 @@
+name: Deploy Production Tag
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  deploy_to_production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    concurrency: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Execute Remote Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PROD_DIR: ${{ secrets.PROD_DOCKER_COMPOSE_DIR }}
+        with:
+          host: ${{ secrets.PROD_SERVER_HOST }}
+          username: ${{ secrets.PROD_SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: PROD_DIR
+          script: |
+            # Reads from repository
+            VERSION=$(cat config/VERSION 2>/dev/null || echo "unknown")
+            bash /tmp/starbunk-deploy.sh $PROD_DIR main $VERSION
+            bash /tmp/starbunk-health-check.sh $PROD_DIR
+
+      - name: Notify Discord Deployment
+        uses: rjstone/discord-webhook-notify@v1
+        if: always()
+        with:
+          severity: ${{ job.status == 'success' && 'info' || 'error' }}
+          details: Manual Tag Deployment to Production finished with status ${{ job.status }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}

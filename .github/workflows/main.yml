@@ -1,0 +1,202 @@
+name: CD / Main Merge
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build_apps:
+    name: Build Apps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Clean and build
+        run: |
+          npm run clean || true
+          npm run build
+      - name: Compress artifacts
+        run: |
+          tar -czf build-artifacts.tar.gz \
+            src/*/dist/ \
+            src/*/package.json \
+            src/shared/node_modules/ \
+            package.json \
+            package-lock.json
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: build-artifacts.tar.gz
+          retention-days: 1
+
+  docker_build_validate:
+    name: Docker Build & Validate
+    runs-on: ubuntu-latest
+    needs: build_apps
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [bunkbot, covabot, djcova, bluebot]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+      - name: Extract artifacts
+        run: tar -xzf build-artifacts.tar.gz
+      
+      - name: Compute content hash
+        id: compute_hash
+        run: |
+          APP=${{ matrix.app }}
+          HASH=$(git rev-parse HEAD:src/${APP} 2>/dev/null || echo "no-hash")
+          SHARED_HASH=$(git rev-parse HEAD:src/shared 2>/dev/null || echo "no-shared")
+          DEPS_HASH=$(sha256sum package-lock.json | cut -d' ' -f1 | head -c 12)
+          CONTENT_HASH="${HASH:0:12}-${SHARED_HASH:0:12}-${DEPS_HASH}"
+          echo "HASH=${CONTENT_HASH}" >> $GITHUB_ENV
+          echo "Computed hash: ${CONTENT_HASH}"
+
+      - name: Login to Docker Hub
+        # Switch to GHCR or Docker Hub based on your actual secrets
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Check exists and build image
+        id: check_build
+        run: |
+          APP=${{ matrix.app }}
+          IMAGE="ghcr.io/${{ github.repository_owner }}/${APP}"
+          
+          if docker manifest inspect "${IMAGE}:sha-${HASH}" > /dev/null 2>&1; then
+            echo "Image exists. Pulling instead of building."
+            docker pull "${IMAGE}:sha-${HASH}"
+            docker tag "${IMAGE}:sha-${HASH}" "${IMAGE}:main"
+          else
+            echo "Building image ${IMAGE}:main"
+            docker build -f ./src/${APP}/Dockerfile.ci -t ${IMAGE}:main -t ${IMAGE}:sha-${HASH} .
+            docker push ${IMAGE}:sha-${HASH}
+          fi
+          
+      - name: Run container and health check
+        run: |
+          APP=${{ matrix.app }}
+          IMAGE="ghcr.io/${{ github.repository_owner }}/${APP}:main"
+          docker run -d --name ${APP}-test \
+            -e DISCORD_TOKEN=test \
+            -e DEBUG_MODE=true \
+            -e CI_SMOKE_MODE=true \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e METRICS_PORT=3000 \
+            $IMAGE
+          
+          # Emulate container_health_check.sh
+          # Wait up to 180s for container to run without crashing, or check `/live` if required.
+          sleep 10
+          if [ "$(docker inspect -f '{{.State.Running}}' ${APP}-test)" != "true" ]; then
+            echo "Container ${APP}-test crashed!"
+            docker logs ${APP}-test
+            exit 1
+          fi
+
+      - name: Push main tag
+        run: |
+          APP=${{ matrix.app }}
+          IMAGE="ghcr.io/${{ github.repository_owner }}/${APP}:main"
+          docker push ${IMAGE}
+
+  publish_releases:
+    name: Publish Releases
+    runs-on: ubuntu-latest
+    needs: docker_build_validate
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Tag and push latest
+        run: |
+          for APP in bunkbot covabot djcova bluebot; do
+            IMAGE="ghcr.io/${{ github.repository_owner }}/${APP}"
+            docker pull ${IMAGE}:main
+            docker tag ${IMAGE}:main ${IMAGE}:latest
+            docker push ${IMAGE}:latest
+          done
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm i -D semantic-release
+          npx semantic-release
+        
+      - name: Tag images with VERSION
+        run: |
+          VERSION=$(cat config/VERSION | tr -d '\n')
+          for APP in bunkbot covabot djcova bluebot; do
+            IMAGE="ghcr.io/${{ github.repository_owner }}/${APP}"
+            docker pull ${IMAGE}:latest || true
+            docker tag ${IMAGE}:latest ${IMAGE}:${VERSION}
+            docker push ${IMAGE}:${VERSION}
+          done
+
+  deploy_to_unraid:
+    name: Deploy to Unraid
+    runs-on: ubuntu-latest
+    needs: publish_releases
+    concurrency: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Discord Webhook
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "Missing webhook"; exit 0; fi
+          # Initial hook start ping omitted for brevity, you can add standard discord-action step.
+
+      - name: Execute Remote Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PROD_DIR: ${{ secrets.PROD_DOCKER_COMPOSE_DIR }}
+        with:
+          host: ${{ secrets.PROD_SERVER_HOST }}
+          username: ${{ secrets.PROD_SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: PROD_DIR
+          script: |
+            bash /tmp/starbunk-deploy.sh $PROD_DIR main $(cat config/VERSION)
+            bash /tmp/starbunk-health-check.sh $PROD_DIR
+
+      - name: Notify Discord Deployment
+        uses: rjstone/discord-webhook-notify@v1
+        if: always()
+        with:
+          severity: ${{ job.status == 'success' && 'info' || 'error' }}
+          details: Deployment to Production finished with status ${{ job.status }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}

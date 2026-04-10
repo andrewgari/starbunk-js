@@ -1,0 +1,135 @@
+name: CI / PR Validation
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      bunkbot: ${{ steps.filter.outputs.bunkbot }}
+      covabot: ${{ steps.filter.outputs.covabot }}
+      djcova: ${{ steps.filter.outputs.djcova }}
+      bluebot: ${{ steps.filter.outputs.bluebot }}
+      shared: ${{ steps.filter.outputs.shared }}
+      core: ${{ steps.filter.outputs.core }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            bunkbot:
+              - 'src/bunkbot/**'
+              - 'src/shared/**'
+              - 'package.json'
+              - 'package-lock.json'
+            covabot:
+              - 'src/covabot/**'
+              - 'src/shared/**'
+              - 'package.json'
+              - 'package-lock.json'
+            djcova:
+              - 'src/djcova/**'
+              - 'src/shared/**'
+              - 'package.json'
+              - 'package-lock.json'
+            bluebot:
+              - 'src/bluebot/**'
+              - 'src/shared/**'
+              - 'package.json'
+              - 'package-lock.json'
+            shared:
+              - 'src/shared/**'
+            core:
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/**'
+
+  core_validation:
+    name: Core Validation
+    runs-on: ubuntu-latest
+    needs: changes
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint workspace
+        run: npm run lint
+      - name: Build applications
+        run: npm run build
+
+  bunkbot_validation:
+    name: BunkBot Validation
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.bunkbot == 'true' || needs.changes.outputs.core == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Test Component
+        run: npm test --workspace=src/bunkbot --if-present
+
+  covabot_validation:
+    name: CovaBot Validation
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.covabot == 'true' || needs.changes.outputs.core == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Test Component
+        run: npm test --workspace=src/covabot --if-present
+
+  djcova_validation:
+    name: DJCova Validation
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.djcova == 'true' || needs.changes.outputs.core == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Test Component
+        run: npm test --workspace=src/djcova --if-present
+
+  bluebot_validation:
+    name: BlueBot Validation
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.bluebot == 'true' || needs.changes.outputs.core == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Test Component
+        run: npm test --workspace=src/bluebot --if-present
