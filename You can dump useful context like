@@ -1,9 +1,0 @@
-# Full file tree
-find . -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*'
-
-# A specific file
-cat src/bunkbot/src/some-file.ts
-
-# Recent changes
-git log --oneline -20
-git diff HEAD~1
