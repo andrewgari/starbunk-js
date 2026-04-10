@@ -80,15 +80,15 @@ export class DJCova {
 
     this.player.on(AudioPlayerStatus.Playing, () => {
       logger.info('▶️ Playback started');
-      // Diagnostic: log subscriber count so we can catch "no subscribers = silence" bugs
-      const subscriberCount =
-        (this.player as unknown as { subscribers: unknown[] }).subscribers?.length ?? -1;
-      if (subscriberCount === 0) {
+      // Diagnostic: use currentSubscription to detect "no subscription = silence" bugs
+      if (!this.currentSubscription) {
         logger.error(
-          '❌ Player started but has 0 voice subscribers — audio will be silent! Check subscription setup.',
+          '❌ Player started but has no active voice subscription — audio will be silent! Check subscription setup.',
         );
       } else {
-        logger.debug(`Voice subscribers at playback start: ${subscriberCount}`);
+        logger.debug(
+          `Voice subscription active at playback start (connection status: ${this.currentSubscription.connection.state.status})`,
+        );
       }
       logger.debug('Resetting idle timer due to playback start');
       this.idleManager?.resetIdleTimer();
