@@ -101,24 +101,21 @@ export function getYouTubeAudioStream(url: string): {
     stream.destroy(error);
   });
 
-  // Handle early process exits before stream starts
+  // Handle process exit — propagate non-zero exits as stream errors
   ytdlpProcess.on('exit', (code: number | null, signal: string | null) => {
     logger.debug(
       `yt-dlp process exited: code=${code}, signal=${signal}, hasEmittedData=${hasEmittedData}`,
     );
 
-    if (code === null || code !== 0) {
+    // code === null means the process was killed by a signal (e.g. our own SIGKILL).
+    // Only treat a non-zero exit CODE as an error; intentional kills are not errors.
+    if (code !== null && code !== 0) {
       const stderrOutput = stderrBuffer.trim();
-      logger.error(`yt-dlp exited with code ${code}, signal: ${signal}`);
-      if (stderrOutput) {
-        logger.error(`yt-dlp stderr output: ${stderrOutput}`);
-      }
-
-      // If the process exits with an error before emitting any data, emit error on stream
-      if (!hasEmittedData) {
-        const errorMessage = stderrOutput || `yt-dlp process failed with code ${code}`;
-        stream.destroy(new Error(errorMessage));
-      }
+      const errorMessage = stderrOutput || `yt-dlp process failed with code ${code}`;
+      logger.error(`yt-dlp exited with error: ${errorMessage}`);
+      // Destroy the stream regardless of whether data was already emitted —
+      // a partial stream produces silence rather than a user-visible error.
+      stream.destroy(new Error(errorMessage));
     }
   });
 
