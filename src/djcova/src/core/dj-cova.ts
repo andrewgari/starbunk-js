@@ -103,7 +103,11 @@ export class DJCova {
     this.player.on('error', (error: Error) => {
       logger.withError(error).error('❌ Audio player error');
       logger.debug('Triggering cleanup due to player error');
-      this.notificationCallback?.(`❌ Playback error: ${error.message}`).catch(() => {});
+      this.notificationCallback?.(`❌ Playback error: ${error.message}`).catch(err => {
+        logger
+          .withError(err instanceof Error ? err : new Error(String(err)))
+          .warn('⚠️ Failed to send error notification to user');
+      });
       this.cleanup();
     });
 
