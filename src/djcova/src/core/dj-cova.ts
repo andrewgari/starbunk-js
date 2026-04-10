@@ -2,6 +2,7 @@ import {
   createAudioPlayer,
   createAudioResource,
   AudioPlayerStatus,
+  VoiceConnectionStatus,
   demuxProbe,
   NoSubscriberBehavior,
   joinVoiceChannel,
@@ -80,15 +81,20 @@ export class DJCova {
 
     this.player.on(AudioPlayerStatus.Playing, () => {
       logger.info('▶️ Playback started');
-      // Diagnostic: use currentSubscription to detect "no subscription = silence" bugs
+      // Diagnostic: detect conditions that cause silent playback
       if (!this.currentSubscription) {
         logger.error(
           '❌ Player started but has no active voice subscription — audio will be silent! Check subscription setup.',
         );
       } else {
-        logger.debug(
-          `Voice subscription active at playback start (connection status: ${this.currentSubscription.connection.state.status})`,
-        );
+        const connStatus = this.currentSubscription.connection.state.status;
+        if (connStatus !== VoiceConnectionStatus.Ready) {
+          logger.error(
+            `❌ Player started but voice connection is not Ready (state: ${connStatus}) — audio will be silent!`,
+          );
+        } else {
+          logger.debug('✅ Voice subscription active and connection Ready at playback start');
+        }
       }
       logger.debug('Resetting idle timer due to playback start');
       this.idleManager?.resetIdleTimer();
