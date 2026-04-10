@@ -1,3 +1,9 @@
+## [1.31.2](https://github.com/andrewgari/starbunk-js/compare/v1.31.1...v1.31.2) (2026-04-10)
+
+### Bug Fixes
+
+* **djcova:** preserve voice subscription across play() calls to fix silent playback ([#638](https://github.com/andrewgari/starbunk-js/issues/638)) ([78d36af](https://github.com/andrewgari/starbunk-js/commit/78d36aff0262c73ee9e88433eae0a4c8ae05d33b))
+
 ## [1.31.1](https://github.com/andrewgari/starbunk-js/compare/v1.31.0...v1.31.1) (2026-04-10)
 
 ### Bug Fixes
