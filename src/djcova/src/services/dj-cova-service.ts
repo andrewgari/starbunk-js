@@ -61,12 +61,13 @@ export class DJCovaService {
 
     // Subscribe player to connection
     logger.debug('Subscribing player to connection...');
-    const subscription = subscribePlayerToConnection(connection, this.djCova.getPlayer());
+    const subscription = await subscribePlayerToConnection(connection, this.djCova.getPlayer());
     if (!subscription) {
       const errorMsg = 'Failed to connect audio player to voice channel';
       logger.error(errorMsg);
       throw new Error(errorMsg);
     }
+    this.djCova.setSubscription(subscription);
     logger.debug('✅ Player subscribed to connection');
 
     if (!interaction.guild) {
