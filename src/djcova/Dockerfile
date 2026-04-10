@@ -58,7 +58,7 @@ RUN apk add --no-cache ffmpeg openssl dumb-init curl python3 py3-pip && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova && \
     mkdir -p /tmp/djcova && \
     chown -R djcova:djcova /tmp/djcova && \
-    pip3 install --no-cache-dir --break-system-packages "yt-dlp==2026.03.17"
+    pip3 install --no-cache-dir --break-system-packages yt-dlp
 
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=djcova:djcova /app/node_modules ./node_modules
