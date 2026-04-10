@@ -76,8 +76,20 @@ export function createVoiceConnection(
 
   connection.on(VoiceConnectionStatus.Disconnected, async () => {
     logger.warn(`⚠️ Voice connection disconnected from channel: ${channel.name}`);
-    // The library will automatically attempt to reconnect
-    // If it can't reconnect within 5 seconds, it will transition to Destroyed
+    try {
+      // Wait up to 5 seconds to see if the library starts reconnecting on its own
+      await Promise.race([
+        entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+        entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+      ]);
+      logger.info(`🔄 Voice connection is reconnecting to channel: ${channel.name}`);
+    } catch {
+      // No reconnect attempt detected (e.g. bot was kicked) — destroy the connection
+      // so getVoiceConnection() returns null on the next /play call and a fresh
+      // connection is created instead of reusing this stale Disconnected one.
+      logger.info(`🔴 No reconnect detected; destroying stale connection for: ${channel.name}`);
+      connection.destroy();
+    }
   });
 
   connection.on(VoiceConnectionStatus.Destroyed, () => {
