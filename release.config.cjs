@@ -74,7 +74,7 @@ module.exports = {
       {
         // Persist the next release version to VERSION and sync it into package.json/workspaces
         prepareCmd:
-          "echo ${nextRelease.version} > config/VERSION && bash scripts/sync-versions.sh",
+          "mkdir -p config && echo ${nextRelease.version} > config/VERSION && bash scripts/sync-versions.sh",
       },
     ],
     [
