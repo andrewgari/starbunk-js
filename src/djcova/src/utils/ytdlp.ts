@@ -111,7 +111,12 @@ export function getYouTubeAudioStream(url: string): {
     // Only treat a non-zero exit CODE as an error; intentional kills are not errors.
     if (code !== null && code !== 0) {
       const stderrOutput = stderrBuffer.trim();
-      const errorMessage = stderrOutput || `yt-dlp process failed with code ${code}`;
+      // Truncate to 1000 chars so the message stays within Discord's 2000-char limit
+      // when it is eventually forwarded to the user via notificationCallback.
+      const errorMessage = (stderrOutput || `yt-dlp process failed with code ${code}`).slice(
+        0,
+        1000,
+      );
       logger.error(`yt-dlp exited with error: ${errorMessage}`);
       // Destroy the stream regardless of whether data was already emitted —
       // a partial stream produces silence rather than a user-visible error.
