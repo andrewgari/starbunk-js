@@ -77,8 +77,10 @@ export function createVoiceConnection(
   connection.on(VoiceConnectionStatus.Disconnected, async () => {
     logger.warn(`⚠️ Voice connection disconnected from channel: ${channel.name}`);
     try {
-      // Wait up to 5 seconds to see if the library starts reconnecting on its own
-      await Promise.race([
+      // Wait up to 5 seconds to see if the library starts reconnecting on its own.
+      // Promise.any is used so that both entersState() rejections are consumed
+      // internally — the losing promise doesn't surface as an unhandled rejection.
+      await Promise.any([
         entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
         entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
       ]);
