@@ -1,3 +1,19 @@
+## [1.31.0](https://github.com/andrewgari/starbunk-js/compare/v1.30.1...v1.31.0) (2026-04-10)
+
+### Features
+
+* Add DJCova integration tests for voice connection lifecycle ([#579](https://github.com/andrewgari/starbunk-js/issues/579)) ([#611](https://github.com/andrewgari/starbunk-js/issues/611)) ([9599997](https://github.com/andrewgari/starbunk-js/commit/95999979398d6105a662d1e7186c22b4350f2e26))
+* **djcova:** Add comprehensive debug logging for music service ([#610](https://github.com/andrewgari/starbunk-js/issues/610)) ([9c45cdf](https://github.com/andrewgari/starbunk-js/commit/9c45cdf6b1a05bb31185e4cd7542b827d35d5aaa))
+* pgvector VectorStore + docker-compose infrastructure (Phase 1 & 3) ([#628](https://github.com/andrewgari/starbunk-js/issues/628)) ([1e939ac](https://github.com/andrewgari/starbunk-js/commit/1e939ac6449f5f490ba1fccf2e62cdea05a39518))
+
+### Bug Fixes
+
+* add health server to CovaBot for Docker health checks ([#629](https://github.com/andrewgari/starbunk-js/issues/629)) ([dfa7ae4](https://github.com/andrewgari/starbunk-js/commit/dfa7ae4cdfcb28677a98b0c1cd22bb39f25c5a03))
+* **djcova:** unpin yt-dlp version to fix music playback ([#635](https://github.com/andrewgari/starbunk-js/issues/635)) ([189c25a](https://github.com/andrewgari/starbunk-js/commit/189c25af4c0f0c88fd3d6dc2de03f76ab71ed512))
+* **djcova:** update yt-dlp to 2026.03.17 and remove dead YouTube dependencies ([#630](https://github.com/andrewgari/starbunk-js/issues/630)) ([ccf840b](https://github.com/andrewgari/starbunk-js/commit/ccf840b5d02a019a90711486e0f6c344a49c96ef))
+* Improve semantic-release error handling and VERSION file management ([#613](https://github.com/andrewgari/starbunk-js/issues/613)) ([04668df](https://github.com/andrewgari/starbunk-js/commit/04668dfb47164589b8dab2c1aa9acba763c2c6d7))
+* **release:** create config/ dir before writing VERSION file ([3ab611f](https://github.com/andrewgari/starbunk-js/commit/3ab611fc4997892cd9955a311643e225ae648f23))
+
 ## [1.30.1](https://github.com/andrewgari/starbunk-js/compare/v1.30.0...v1.30.1) (2026-02-01)
 
 ### Bug Fixes
