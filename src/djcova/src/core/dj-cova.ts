@@ -38,7 +38,7 @@ export class DJCova {
     this.currentResource = value;
   }
   private currentSubscription: PlayerSubscriptionLike | undefined;
-  private volume: number = 10;
+  private volume: number = 80;
   private idleManager: IdleManager | null = null;
   private ytdlpProcess: ChildProcess | null = null;
   private notificationCallback: ((message: string) => Promise<void>) | null = null;
@@ -80,6 +80,16 @@ export class DJCova {
 
     this.player.on(AudioPlayerStatus.Playing, () => {
       logger.info('▶️ Playback started');
+      // Diagnostic: log subscriber count so we can catch "no subscribers = silence" bugs
+      const subscriberCount =
+        (this.player as unknown as { subscribers: unknown[] }).subscribers?.length ?? -1;
+      if (subscriberCount === 0) {
+        logger.error(
+          '❌ Player started but has 0 voice subscribers — audio will be silent! Check subscription setup.',
+        );
+      } else {
+        logger.debug(`Voice subscribers at playback start: ${subscriberCount}`);
+      }
       logger.debug('Resetting idle timer due to playback start');
       this.idleManager?.resetIdleTimer();
     });
@@ -109,8 +119,10 @@ export class DJCova {
 
   async play(url: string): Promise<void> {
     logger.info(`🎵 Playing: ${url}`);
-    logger.debug('Stopping any existing playback...');
-    this.stop();
+    logger.debug('Stopping any existing playback (preserving voice subscription)...');
+    // Stop audio only — do NOT unsubscribe from the voice connection, or the
+    // new audio will have no subscriber and play silently into the void.
+    this.stopAudioOnly();
     logger.debug('Creating audio stream from URL...');
 
     try {
@@ -154,6 +166,39 @@ export class DJCova {
       logger.debug('Cleaning up resources after play error...');
       this.cleanup();
       throw err;
+    }
+  }
+
+  /**
+   * Stop audio resources only (yt-dlp process + resource), but preserve the
+   * voice connection subscription so the next play() call can reuse it.
+   * Called internally by play() to interrupt the current track before starting
+   * a new one.
+   */
+  private stopAudioOnly(): void {
+    if (this.isCleaningUp) {
+      logger.debug('Cleanup already in progress, skipping stopAudioOnly');
+      return;
+    }
+    this.isCleaningUp = true;
+    try {
+      if (this.ytdlpProcess) {
+        try {
+          logger.debug(`Killing yt-dlp process (PID: ${this.ytdlpProcess.pid || 'unknown'})`);
+          this.ytdlpProcess.kill('SIGKILL');
+        } catch (error) {
+          logger
+            .withError(error instanceof Error ? error : new Error(String(error)))
+            .warn('⚠️ Error killing yt-dlp process');
+        }
+        this.ytdlpProcess = null;
+      }
+      if (this.currentResource) {
+        this.currentResource = undefined;
+      }
+      this.player.stop();
+    } finally {
+      this.isCleaningUp = false;
     }
   }
 
