@@ -38,7 +38,7 @@ export class DJCova {
     this.currentResource = value;
   }
   private currentSubscription: PlayerSubscriptionLike | undefined;
-  private volume: number = 80;
+  private volume: number = 10;
   private idleManager: IdleManager | null = null;
   private ytdlpProcess: ChildProcess | null = null;
   private notificationCallback: ((message: string) => Promise<void>) | null = null;
