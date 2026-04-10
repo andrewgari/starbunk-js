@@ -4,6 +4,10 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build_apps:
     name: Build Apps
@@ -78,7 +82,8 @@ jobs:
           APP=${{ matrix.app }}
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           IMAGE="ghcr.io/${OWNER_LC}/${APP}"
-          
+          GIT_SHA="${GITHUB_SHA:0:7}"
+
           if docker manifest inspect "${IMAGE}:sha-${HASH}" > /dev/null 2>&1; then
             echo "Image exists. Pulling instead of building."
             docker pull "${IMAGE}:sha-${HASH}"
@@ -88,7 +93,9 @@ jobs:
             docker build -f ./src/${APP}/Dockerfile.ci -t ${IMAGE}:main -t ${IMAGE}:sha-${HASH} .
             docker push ${IMAGE}:sha-${HASH}
           fi
-          docker push ${IMAGE}:main
+          docker tag "${IMAGE}:main" "${IMAGE}:sha-${GIT_SHA}"
+          docker push "${IMAGE}:main"
+          docker push "${IMAGE}:sha-${GIT_SHA}"
 
   publish_releases:
     name: Publish Releases
@@ -96,6 +103,9 @@ jobs:
     needs: docker_publish
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.CI_TOKEN }}
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -110,7 +120,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
-          
+
       - name: Tag and push latest
         run: |
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
@@ -122,17 +132,24 @@ jobs:
           done
 
       - name: Run semantic-release
+        id: semrel
         env:
           GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
-        run: npx semantic-release
-        
-      - name: Tag images with VERSION
         run: |
-          if [ ! -f config/VERSION ]; then
-            echo "No new version generated, skipping version tagging."
-            exit 0
+          OLD_VERSION=$(cat config/VERSION 2>/dev/null || echo "0.0.0")
+          npx semantic-release
+          NEW_VERSION=$(cat config/VERSION 2>/dev/null || echo "0.0.0")
+          if [ "$NEW_VERSION" != "$OLD_VERSION" ]; then
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "Released version $NEW_VERSION"
+          else
+            echo "No new release generated"
           fi
-          VERSION=$(cat config/VERSION | tr -d '\n')
+
+      - name: Tag images with VERSION
+        if: steps.semrel.outputs.new_version != ''
+        run: |
+          VERSION=${{ steps.semrel.outputs.new_version }}
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           for APP in bunkbot covabot djcova bluebot; do
             IMAGE="ghcr.io/${OWNER_LC}/${APP}"
@@ -140,3 +157,11 @@ jobs:
             docker tag ${IMAGE}:latest ${IMAGE}:${VERSION}
             docker push ${IMAGE}:${VERSION}
           done
+
+      - name: Create build tag (no semantic release)
+        if: steps.semrel.outputs.new_version == ''
+        run: |
+          BUILD_TAG="build-$(date +%Y%m%d)-${GITHUB_SHA:0:7}"
+          git tag "$BUILD_TAG" -m "CI build ${GITHUB_RUN_NUMBER} from ${GITHUB_SHA:0:7}"
+          git push origin "$BUILD_TAG"
+          echo "No semantic release — created build tag: ${BUILD_TAG}"
