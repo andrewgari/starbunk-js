@@ -67,7 +67,6 @@ export class DJCovaService {
       logger.error(errorMsg);
       throw new Error(errorMsg);
     }
-    this.djCova.setSubscription(subscription);
     logger.debug('✅ Player subscribed to connection');
 
     if (!interaction.guild) {
@@ -97,9 +96,11 @@ export class DJCovaService {
     );
     logger.debug('✅ Idle management initialized');
 
-    // Start playback
+    // Start playback — register the subscription after play() runs its internal
+    // stop()/cleanup() so the new subscription is not immediately unsubscribed.
     logger.info('Starting playback...');
     await this.djCova.play(url);
+    this.djCova.setSubscription(subscription);
     logger.info('✅ Playback started successfully');
   }
 
