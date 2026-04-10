@@ -182,6 +182,20 @@ export class DJCova {
     }
   }
 
+  private killYtdlpProcess(): void {
+    if (!this.ytdlpProcess) return;
+    try {
+      logger.debug(`Killing yt-dlp process (PID: ${this.ytdlpProcess.pid ?? 'unknown'})`);
+      this.ytdlpProcess.kill('SIGKILL');
+      logger.debug('✅ yt-dlp process killed');
+    } catch (error) {
+      logger
+        .withError(error instanceof Error ? error : new Error(String(error)))
+        .warn('⚠️ Error killing yt-dlp process');
+    }
+    this.ytdlpProcess = null;
+  }
+
   /**
    * Stop audio resources only (yt-dlp process + resource), but preserve the
    * voice connection subscription so the next play() call can reuse it.
@@ -195,17 +209,7 @@ export class DJCova {
     }
     this.isCleaningUp = true;
     try {
-      if (this.ytdlpProcess) {
-        try {
-          logger.debug(`Killing yt-dlp process (PID: ${this.ytdlpProcess.pid || 'unknown'})`);
-          this.ytdlpProcess.kill('SIGKILL');
-        } catch (error) {
-          logger
-            .withError(error instanceof Error ? error : new Error(String(error)))
-            .warn('⚠️ Error killing yt-dlp process');
-        }
-        this.ytdlpProcess = null;
-      }
+      this.killYtdlpProcess();
       if (this.currentResource) {
         this.currentResource = undefined;
       }
@@ -317,19 +321,7 @@ export class DJCova {
       }
 
       // Step 2: Kill yt-dlp process with SIGKILL
-      if (this.ytdlpProcess) {
-        try {
-          const pidToKill = this.ytdlpProcess.pid || 'unknown';
-          logger.debug(`Killing yt-dlp process (PID: ${pidToKill})`);
-          this.ytdlpProcess.kill('SIGKILL');
-          logger.debug(`✅ yt-dlp process killed`);
-        } catch (error) {
-          logger
-            .withError(error instanceof Error ? error : new Error(String(error)))
-            .warn('⚠️ Error killing yt-dlp process');
-        }
-        this.ytdlpProcess = null;
-      }
+      this.killYtdlpProcess();
 
       // Step 3: Clear resource reference
       if (this.currentResource) {
