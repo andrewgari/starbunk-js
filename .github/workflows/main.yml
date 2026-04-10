@@ -13,7 +13,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
@@ -26,7 +26,6 @@ jobs:
           tar -czf build-artifacts.tar.gz \
             src/*/dist/ \
             src/*/package.json \
-            src/shared/node_modules/ \
             package.json \
             package-lock.json
       - name: Upload Artifacts
@@ -79,7 +78,8 @@ jobs:
         id: check_build
         run: |
           APP=${{ matrix.app }}
-          IMAGE="ghcr.io/${{ github.repository_owner }}/${APP}"
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/${OWNER_LC}/${APP}"
           
           if docker manifest inspect "${IMAGE}:sha-${HASH}" > /dev/null 2>&1; then
             echo "Image exists. Pulling instead of building."
@@ -94,7 +94,8 @@ jobs:
       - name: Run container and health check
         run: |
           APP=${{ matrix.app }}
-          IMAGE="ghcr.io/${{ github.repository_owner }}/${APP}:main"
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/${OWNER_LC}/${APP}:main"
           docker run -d --name ${APP}-test \
             -e DISCORD_TOKEN=test \
             -e DEBUG_MODE=true \
@@ -116,7 +117,8 @@ jobs:
       - name: Push main tag
         run: |
           APP=${{ matrix.app }}
-          IMAGE="ghcr.io/${{ github.repository_owner }}/${APP}:main"
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/${OWNER_LC}/${APP}:main"
           docker push ${IMAGE}
 
   publish_releases:
@@ -142,8 +144,9 @@ jobs:
           
       - name: Tag and push latest
         run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           for APP in bunkbot covabot djcova bluebot; do
-            IMAGE="ghcr.io/${{ github.repository_owner }}/${APP}"
+            IMAGE="ghcr.io/${OWNER_LC}/${APP}"
             docker pull ${IMAGE}:main
             docker tag ${IMAGE}:main ${IMAGE}:latest
             docker push ${IMAGE}:latest
@@ -152,51 +155,19 @@ jobs:
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm i -D semantic-release
-          npx semantic-release
+        run: npx semantic-release
         
       - name: Tag images with VERSION
         run: |
+          if [ ! -f config/VERSION ]; then
+            echo "No new version generated, skipping version tagging."
+            exit 0
+          fi
           VERSION=$(cat config/VERSION | tr -d '\n')
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           for APP in bunkbot covabot djcova bluebot; do
-            IMAGE="ghcr.io/${{ github.repository_owner }}/${APP}"
+            IMAGE="ghcr.io/${OWNER_LC}/${APP}"
             docker pull ${IMAGE}:latest || true
             docker tag ${IMAGE}:latest ${IMAGE}:${VERSION}
             docker push ${IMAGE}:${VERSION}
           done
-
-  deploy_to_unraid:
-    name: Deploy to Unraid
-    runs-on: ubuntu-latest
-    needs: publish_releases
-    concurrency: production
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Discord Webhook
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "Missing webhook"; exit 0; fi
-          # Initial hook start ping omitted for brevity, you can add standard discord-action step.
-
-      - name: Execute Remote Deploy
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          PROD_DIR: ${{ secrets.PROD_DOCKER_COMPOSE_DIR }}
-        with:
-          host: ${{ secrets.PROD_SERVER_HOST }}
-          username: ${{ secrets.PROD_SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: PROD_DIR
-          script: |
-            bash /tmp/starbunk-deploy.sh $PROD_DIR main $(cat config/VERSION)
-            bash /tmp/starbunk-health-check.sh $PROD_DIR
-
-      - name: Notify Discord Deployment
-        uses: rjstone/discord-webhook-notify@v1
-        if: always()
-        with:
-          severity: ${{ job.status == 'success' && 'info' || 'error' }}
-          details: Deployment to Production finished with status ${{ job.status }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}

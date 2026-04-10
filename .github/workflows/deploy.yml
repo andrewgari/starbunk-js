@@ -22,8 +22,9 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: PROD_DIR
           script: |
-            # Reads from repository
-            VERSION=$(cat config/VERSION 2>/dev/null || echo "unknown")
+            cd $PROD_DIR
+            git pull origin main
+            VERSION=$(cat config/VERSION)
             bash /tmp/starbunk-deploy.sh $PROD_DIR main $VERSION
             bash /tmp/starbunk-health-check.sh $PROD_DIR
 
