@@ -1,3 +1,9 @@
+## [1.31.3](https://github.com/andrewgari/starbunk-js/compare/v1.31.2...v1.31.3) (2026-04-10)
+
+### Bug Fixes
+
+* **djcova:** resolve silent playback and reconnection failures ([#639](https://github.com/andrewgari/starbunk-js/issues/639)) ([ce91c46](https://github.com/andrewgari/starbunk-js/commit/ce91c462c76dcdcd9cdbcc4a46eb9ea35c4187b4))
+
 ## [1.31.2](https://github.com/andrewgari/starbunk-js/compare/v1.31.1...v1.31.2) (2026-04-10)
 
 ### Bug Fixes
