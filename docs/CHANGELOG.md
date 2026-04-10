@@ -1,3 +1,9 @@
+## [1.31.1](https://github.com/andrewgari/starbunk-js/compare/v1.31.0...v1.31.1) (2026-04-10)
+
+### Bug Fixes
+
+* **djcova:** await voice subscription and register it for cleanup ([#637](https://github.com/andrewgari/starbunk-js/issues/637)) ([1e1ce63](https://github.com/andrewgari/starbunk-js/commit/1e1ce63c139364b0094c252b24853ee9dd2cc2a0))
+
 ## [1.31.0](https://github.com/andrewgari/starbunk-js/compare/v1.30.1...v1.31.0) (2026-04-10)
 
 ### Features
