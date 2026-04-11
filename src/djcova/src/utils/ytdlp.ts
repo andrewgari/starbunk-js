@@ -107,12 +107,25 @@ export function getYouTubeAudioStream(url: string): {
       `yt-dlp process exited: code=${code}, signal=${signal}, hasEmittedData=${hasEmittedData}`,
     );
 
-    // code === null means the process was killed by a signal (e.g. our own SIGKILL).
-    // Only treat a non-zero exit CODE as an error; intentional kills are not errors.
-    if (code !== null && code !== 0) {
+    // Treat as an error if yt-dlp exited with a non-zero code OR was killed by
+    // an unexpected signal.  We specifically exclude SIGKILL because that is the
+    // signal DJCova uses when intentionally terminating the process; treating it
+    // as an error here would cause spurious notifications on every track change.
+    // Note: we cannot distinguish our own SIGKILL from a system OOM-kill (both
+    // appear as signal='SIGKILL'), but that edge-case is acceptable — the stale
+    // state will be cleaned up on the next /play invocation.
+    const isUnexpectedExit =
+      (code !== null && code !== 0) || (code === null && signal !== null && signal !== 'SIGKILL');
+
+    if (isUnexpectedExit) {
       const stderrOutput = stderrBuffer.trim();
-      const errorMessage = stderrOutput || `yt-dlp process failed with code ${code}`;
-      logger.error(`yt-dlp exited with error: ${errorMessage}`);
+      // Truncate to 1000 chars so the message stays within Discord's 2000-char limit
+      // when it is eventually forwarded to the user via notificationCallback.
+      const errorMessage = (
+        stderrOutput ||
+        `yt-dlp process terminated unexpectedly (code=${code ?? 'null'}, signal=${signal ?? 'none'})`
+      ).slice(0, 1000);
+      logger.error(`yt-dlp terminated unexpectedly: ${errorMessage}`);
       // Destroy the stream regardless of whether data was already emitted —
       // a partial stream produces silence rather than a user-visible error.
       stream.destroy(new Error(errorMessage));

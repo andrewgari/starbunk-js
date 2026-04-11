@@ -213,6 +213,7 @@ describe('voice-utils subscription lifecycle', () => {
   it('createVoiceConnection reuses existing connection in same channel', () => {
     const existingConnection = {
       joinConfig: { channelId: 'channel-1' },
+      state: { status: Voice.VoiceConnectionStatus.Ready },
       destroy: vi.fn(),
       on: vi.fn(),
     } as any;
@@ -233,9 +234,39 @@ describe('voice-utils subscription lifecycle', () => {
     expect(result).toBe(existingConnection);
   });
 
+  it('createVoiceConnection destroys Disconnected connection in same channel and creates fresh one', () => {
+    const existingConnection = {
+      joinConfig: { channelId: 'channel-1' },
+      state: { status: Voice.VoiceConnectionStatus.Disconnected },
+      destroy: vi.fn(),
+      on: vi.fn(),
+    } as any;
+
+    const newConnection = {
+      on: vi.fn(),
+    } as any;
+
+    vi.mocked(Voice.getVoiceConnection).mockReturnValue(existingConnection as any);
+    vi.mocked(Voice.joinVoiceChannel).mockReturnValue(newConnection as any);
+
+    const channel = {
+      id: 'channel-1',
+      name: 'Music',
+      guild: { id: 'guild-1', voiceAdapterCreator: {} },
+      permissionsFor: vi.fn(),
+    } as any;
+
+    const result = createVoiceConnection(channel, channel.guild.voiceAdapterCreator);
+
+    expect(existingConnection.destroy).toHaveBeenCalledTimes(1);
+    expect(Voice.joinVoiceChannel).toHaveBeenCalledTimes(1);
+    expect(result).toBe(newConnection);
+  });
+
   it('createVoiceConnection destroys existing connection in different channel before joining new one', () => {
     const existingConnection = {
       joinConfig: { channelId: 'other-channel' },
+      state: { status: Voice.VoiceConnectionStatus.Ready },
       destroy: vi.fn(),
       on: vi.fn(),
     } as any;

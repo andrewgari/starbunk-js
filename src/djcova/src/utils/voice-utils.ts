@@ -41,13 +41,32 @@ export function createVoiceConnection(
   const existingConnection = getVoiceConnection(channel.guild.id);
   if (existingConnection) {
     const currentChannelId = existingConnection.joinConfig?.channelId;
+    const existingStatus = existingConnection.state.status;
     if (currentChannelId === channel.id) {
-      logger.info(`✅ Reusing existing voice connection for guild ${channel.guild.id}`);
-      return existingConnection;
+      // Only reuse the connection if it is in a state that can still reach Ready.
+      // A Disconnected connection is unusable: returning it causes waitForConnectionReady()
+      // to time out (or see "destroyed") because the Disconnected handler will destroy it
+      // within 5 seconds — leaving the bot visually in the channel but unable to play audio,
+      // and preventing the caller from creating a fresh connection via joinVoiceChannel().
+      if (
+        existingStatus === VoiceConnectionStatus.Ready ||
+        existingStatus === VoiceConnectionStatus.Connecting ||
+        existingStatus === VoiceConnectionStatus.Signalling
+      ) {
+        logger.info(
+          `✅ Reusing existing voice connection (state: ${existingStatus}) for guild ${channel.guild.id}`,
+        );
+        return existingConnection;
+      }
+      logger.warn(
+        `Existing connection for same channel is in unusable state '${existingStatus}'; destroying and recreating`,
+      );
+      // Fall through to destroy + recreate below
+    } else {
+      logger.debug(
+        `Existing connection is in channel ${currentChannelId}; switching to ${channel.id} for guild ${channel.guild.id}`,
+      );
     }
-    logger.debug(
-      `Existing connection is in ${currentChannelId}; switching to ${channel.id} for guild ${channel.guild.id}`,
-    );
     try {
       logger.debug('Destroying existing connection...');
       existingConnection.destroy();
@@ -77,8 +96,10 @@ export function createVoiceConnection(
   connection.on(VoiceConnectionStatus.Disconnected, async () => {
     logger.warn(`⚠️ Voice connection disconnected from channel: ${channel.name}`);
     try {
-      // Wait up to 5 seconds to see if the library starts reconnecting on its own
-      await Promise.race([
+      // Wait up to 5 seconds to see if the library starts reconnecting on its own.
+      // Promise.any is used so that both entersState() rejections are consumed
+      // internally — the losing promise doesn't surface as an unhandled rejection.
+      await Promise.any([
         entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
         entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
       ]);

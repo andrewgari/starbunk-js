@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+echo "🔍 Running pre-commit validation checks..."
+
+# Repository structure validation
+echo "📁 Validating repository structure..."
+bash scripts/validation/check-root-directory.sh
+bash scripts/validation/check-naming-conventions.sh
+bash scripts/validation/check-temporary-files.sh
+
+echo "🧹 Running lint-staged (ESLint + Prettier on staged files)..."
+npx lint-staged
+
+echo "✅ Pre-commit checks completed successfully!"
