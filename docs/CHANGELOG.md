@@ -1,3 +1,9 @@
+## [1.31.4](https://github.com/andrewgari/starbunk-js/compare/v1.31.3...v1.31.4) (2026-04-11)
+
+### Bug Fixes
+
+* **djcova:** destroy Disconnected connections before retrying voice join ([#640](https://github.com/andrewgari/starbunk-js/issues/640)) ([740f539](https://github.com/andrewgari/starbunk-js/commit/740f5395adb318173985953279e8552600c432c5))
+
 ## [1.31.3](https://github.com/andrewgari/starbunk-js/compare/v1.31.2...v1.31.3) (2026-04-10)
 
 ### Bug Fixes
