@@ -13,6 +13,7 @@ import { IdleManager, createIdleManager, IdleManagerConfig } from '../services/i
 import { getMusicConfig } from '../config/music-config';
 import ffmpegPath from 'ffmpeg-static';
 import { logger } from '../observability/logger';
+import { DJCovaErrorCode } from '../errors';
 
 type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 type AudioResourceLike = ReturnType<typeof createAudioResource>;
@@ -68,6 +69,7 @@ export class DJCova {
     } catch (error) {
       logger
         .withError(error instanceof Error ? error : new Error(String(error)))
+        .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_AUDIO_PLAYER_FAILED })
         .error('Failed to create audio player');
       throw error;
     }
@@ -107,12 +109,15 @@ export class DJCova {
     });
 
     this.player.on('error', (error: Error) => {
-      logger.withError(error).error('❌ Audio player error');
+      logger
+        .withError(error)
+        .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR })
+        .error('Audio player error');
       logger.debug('Triggering cleanup due to player error');
       this.notificationCallback?.(`❌ Playback error: ${error.message}`).catch(err => {
         logger
           .withError(err instanceof Error ? err : new Error(String(err)))
-          .warn('⚠️ Failed to send error notification to user');
+          .warn('Failed to send error notification to user');
       });
       this.cleanup();
     });
@@ -174,11 +179,12 @@ export class DJCova {
       logger
         .withError(err)
         .withMetadata({
+          error_code: DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR,
           stack: err.stack,
           url,
           ytdlpProcessPid: this.ytdlpProcess?.pid,
         })
-        .error('❌ Failed to play audio');
+        .error('Failed to start audio playback');
       // Only run full cleanup if this play() call is still the active one.
       // If a concurrent play() has already called stopAudioOnly() and replaced
       // ytdlpProcess, running cleanup() here would unsubscribe the new call's

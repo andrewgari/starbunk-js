@@ -1,0 +1,29 @@
+/**
+ * DJCova error codes
+ *
+ * All codes are prefixed with DJCOVA_ to make them unambiguous in logs and
+ * Prometheus label values when mixed with codes from other containers.
+ */
+export const DJCovaErrorCode = {
+  // yt-dlp / media extraction
+  DJCOVA_YTDLP_NOT_FOUND: 'DJCOVA_YTDLP_NOT_FOUND',
+  DJCOVA_YTDLP_SPAWN_FAILED: 'DJCOVA_YTDLP_SPAWN_FAILED',
+  DJCOVA_YTDLP_CONTENT_ERROR: 'DJCOVA_YTDLP_CONTENT_ERROR',
+  DJCOVA_YTDLP_TIMEOUT: 'DJCOVA_YTDLP_TIMEOUT',
+  DJCOVA_YTDLP_EXIT_ERROR: 'DJCOVA_YTDLP_EXIT_ERROR',
+
+  // Audio player / stream
+  DJCOVA_AUDIO_PLAYER_FAILED: 'DJCOVA_AUDIO_PLAYER_FAILED',
+  DJCOVA_AUDIO_STREAM_ERROR: 'DJCOVA_AUDIO_STREAM_ERROR',
+
+  // Voice connection
+  DJCOVA_VOICE_JOIN_FAILED: 'DJCOVA_VOICE_JOIN_FAILED',
+  DJCOVA_VOICE_CONNECTION_LOST: 'DJCOVA_VOICE_CONNECTION_LOST',
+  DJCOVA_VOICE_RECONNECT_FAILED: 'DJCOVA_VOICE_RECONNECT_FAILED',
+
+  // Command / input
+  DJCOVA_INVALID_URL: 'DJCOVA_INVALID_URL',
+  DJCOVA_QUEUE_EMPTY: 'DJCOVA_QUEUE_EMPTY',
+} as const;
+
+export type DJCovaErrorCode = (typeof DJCovaErrorCode)[keyof typeof DJCovaErrorCode];

@@ -7,10 +7,19 @@ import { Client, Events, GatewayIntentBits } from 'discord.js';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
+import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
+import { getDJCovaMetrics } from './observability/djcova-metrics';
 import { commands } from '@/commands';
 
 // Setup logging mixins before creating any logger instances
 setupDJCovaLogging();
+
+// Initialize MetricsService with the DJCova service name before anything else
+// creates the singleton with the wrong name (health server calls getMetricsService()
+// internally). DJCovaMetrics will share this same registry.
+const serviceName = process.env.SERVICE_NAME || 'djcova';
+getMetricsService(serviceName);
+getDJCovaMetrics();
 // Main execution
 async function main(): Promise<void> {
   logger.info('DJCova main() function starting...');

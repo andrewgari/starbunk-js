@@ -7,6 +7,9 @@ import {
   disconnectVoiceConnection,
 } from '../utils/voice-utils';
 import { logger } from '../observability/logger';
+import { getDJCovaMetrics } from '../observability/djcova-metrics';
+import { DJCovaErrorCode } from '../errors';
+import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 
 /**
  * DJCovaService - Business logic layer
@@ -23,8 +26,9 @@ export class DJCovaService {
    * Play a YouTube URL in a voice channel
    */
   async play(interaction: ChatInputCommandInteraction, url: string): Promise<void> {
+    const guildId = interaction.guild?.id ?? 'unknown';
     logger.info(`Play request received for URL: ${url}`);
-    logger.debug(`Guild: ${interaction.guild?.id}, Channel: ${interaction.channelId}`);
+    logger.debug(`Guild: ${guildId}, Channel: ${interaction.channelId}`);
 
     // Validate voice channel access
     logger.debug('Validating voice channel access...');
@@ -48,9 +52,10 @@ export class DJCovaService {
     // Validate YouTube URL
     logger.debug('Validating YouTube URL...');
     if (!this.isValidYouTubeUrl(url)) {
-      const errorMsg = 'Please provide a valid YouTube URL (youtube.com or youtu.be)';
-      logger.warn(`URL validation failed: ${url}`);
-      throw new Error(errorMsg);
+      logger
+        .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_INVALID_URL, url, guild_id: guildId })
+        .warn('Invalid YouTube URL provided');
+      throw new Error('Please provide a valid YouTube URL (youtube.com or youtu.be)');
     }
     logger.debug('✅ YouTube URL validation passed');
 
@@ -63,10 +68,18 @@ export class DJCovaService {
     logger.debug('Subscribing player to connection...');
     const subscription = await subscribePlayerToConnection(connection, this.djCova.getPlayer());
     if (!subscription) {
-      const errorMsg = 'Failed to connect audio player to voice channel';
-      logger.error(errorMsg);
-      throw new Error(errorMsg);
+      logger
+        .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED, guild_id: guildId })
+        .error('Failed to connect audio player to voice channel');
+      getDJCovaMetrics().trackVoiceJoin(guildId, 'failed');
+      getMetricsService().trackBotError(
+        'djcova',
+        DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+        guildId,
+      );
+      throw new Error('Failed to connect audio player to voice channel');
     }
+    getDJCovaMetrics().trackVoiceJoin(guildId, 'joined');
     logger.debug('✅ Player subscribed to connection');
 
     if (!interaction.guild) {
@@ -102,6 +115,7 @@ export class DJCovaService {
     this.djCova.setSubscription(subscription);
     logger.info('Starting playback...');
     await this.djCova.play(url);
+    getDJCovaMetrics().trackAudioPlaybackStarted(guildId);
     logger.info('✅ Playback started successfully');
   }
 
