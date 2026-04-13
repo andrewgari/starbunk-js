@@ -24,6 +24,7 @@ export const DJCovaErrorCode = {
   // Command / input
   DJCOVA_INVALID_URL: 'DJCOVA_INVALID_URL',
   DJCOVA_QUEUE_EMPTY: 'DJCOVA_QUEUE_EMPTY',
+  DJCOVA_PLAY_COMMAND_FAILED: 'DJCOVA_PLAY_COMMAND_FAILED',
 } as const;
 
 export type DJCovaErrorCode = (typeof DJCovaErrorCode)[keyof typeof DJCovaErrorCode];

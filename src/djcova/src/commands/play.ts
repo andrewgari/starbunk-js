@@ -40,6 +40,7 @@ export default {
 
     if (!url) {
       logger.warn('No URL provided in play command');
+      getDJCovaMetrics().trackPlayCommand(interaction.guild?.id ?? 'unknown', 'error');
       await sendErrorResponse(interaction, 'Please provide a YouTube URL!');
       return;
     }
@@ -48,6 +49,7 @@ export default {
 
     if (!guildId) {
       logger.warn('Play command used outside of guild context');
+      getDJCovaMetrics().trackPlayCommand('unknown', 'error');
       await sendErrorResponse(interaction, 'This command can only be used in a server.');
       return;
     }
@@ -63,7 +65,7 @@ export default {
       getDJCovaMetrics().trackPlayCommand(guildId, 'success');
       await sendSuccessResponse(interaction, `🎶 Now playing!`);
     } catch (error) {
-      logError(logger, DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR, 'Play command failed', {
+      logError(logger, DJCovaErrorCode.DJCOVA_PLAY_COMMAND_FAILED, 'Play command failed', {
         cause: error,
         guild_id: guildId,
       });

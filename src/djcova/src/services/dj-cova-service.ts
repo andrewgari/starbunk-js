@@ -121,7 +121,6 @@ export class DJCovaService {
     this.djCova.setSubscription(subscription);
     logger.info('Starting playback...');
     await this.djCova.play(url);
-    getDJCovaMetrics().trackAudioPlaybackStarted(guildId);
     logger.info('✅ Playback started successfully');
   }
 

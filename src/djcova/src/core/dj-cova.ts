@@ -15,6 +15,7 @@ import ffmpegPath from 'ffmpeg-static';
 import { logger } from '../observability/logger';
 import { DJCovaErrorCode } from '../errors';
 import { logError } from '@starbunk/shared/errors';
+import { getDJCovaMetrics } from '../observability/djcova-metrics';
 
 type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 type AudioResourceLike = ReturnType<typeof createAudioResource>;
@@ -28,6 +29,7 @@ type PlayerSubscriptionLike = ReturnType<VoiceConnectionLike['subscribe']>;
 export class DJCova {
   private readonly player: AudioPlayerLike;
   private currentResource: AudioResourceLike | undefined;
+  private guildId: string | null = null;
 
   /**
    * Backwards-compatible alias for the old `resource` property name.
@@ -105,6 +107,11 @@ export class DJCova {
       }
       logger.debug('Resetting idle timer due to playback start');
       this.idleManager?.resetIdleTimer();
+      // Record the metric here — at this point Discord Voice has actually started
+      // consuming audio frames, not just when player.play() was called.
+      if (this.guildId) {
+        getDJCovaMetrics().trackAudioPlaybackStarted(this.guildId);
+      }
     });
 
     this.player.on(AudioPlayerStatus.Idle, () => {
@@ -199,7 +206,7 @@ export class DJCova {
       } else {
         logger.debug('Skipping cleanup — concurrent play() call has taken over');
       }
-      throw err;
+      throw error;
     }
   }
 
@@ -278,6 +285,7 @@ export class DJCova {
     notificationCallback?: (message: string) => Promise<void>,
   ): void {
     logger.debug(`Initializing idle management for guild ${guildId}, channel ${channelId}`);
+    this.guildId = guildId;
 
     if (this.idleManager) {
       logger.debug(`Destroying existing idle manager for guild ${guildId}`);
