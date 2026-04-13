@@ -2,14 +2,13 @@
 import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
 import { setupDJCovaLogging } from './observability/setup-logging';
 import { logger } from './observability/logger';
-import { ensureError } from './utils';
 import { Client, Events, GatewayIntentBits } from 'discord.js';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { getDJCovaMetrics } from './observability/djcova-metrics';
-import { SharedErrorCode } from '@starbunk/shared/errors';
+import { SharedErrorCode, logError } from '@starbunk/shared/errors';
 import { commands } from '@/commands';
 
 // Setup logging mixins before creating any logger instances
@@ -35,10 +34,9 @@ async function main(): Promise<void> {
   const token = process.env.DISCORD_TOKEN;
   if (!token) {
     const error = new Error('DISCORD_TOKEN environment variable is required');
-    logger
-      .withError(error)
-      .withMetadata({ error_code: SharedErrorCode.CONFIG_MISSING, config_key: 'DISCORD_TOKEN' })
-      .error('DISCORD_TOKEN not found - aborting startup');
+    logError(logger, SharedErrorCode.CONFIG_MISSING, 'DISCORD_TOKEN not found - aborting startup', {
+      config_key: 'DISCORD_TOKEN',
+    });
     throw error;
   }
   logger.debug('DISCORD_TOKEN found (length: ' + token.length + ' chars)');
@@ -49,10 +47,9 @@ async function main(): Promise<void> {
     globalHealthServer = await initializeHealthServer();
     logger.info('✅ Health/metrics server started');
   } catch (error) {
-    logger
-      .withError(error instanceof Error ? error : new Error(String(error)))
-      .withMetadata({ error_code: SharedErrorCode.UNKNOWN })
-      .error('Failed to initialize health server');
+    logError(logger, SharedErrorCode.UNKNOWN, 'Failed to initialize health server', {
+      cause: error,
+    });
     throw error;
   }
 
@@ -79,12 +76,15 @@ async function main(): Promise<void> {
     await initializeCommands(client, commands);
     logger.info('✅ DJCova commands initialized successfully');
   } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    logger
-      .withError(err)
-      .withMetadata({ error_code: SharedErrorCode.DISCORD_API_ERROR, stack: err.stack })
-      .error('Failed to initialize Discord client or commands');
-    throw err;
+    logError(
+      logger,
+      SharedErrorCode.DISCORD_API_ERROR,
+      'Failed to initialize Discord client or commands',
+      {
+        cause: error,
+      },
+    );
+    throw error instanceof Error ? error : new Error(String(error));
   }
 }
 
@@ -107,34 +107,25 @@ process.on('SIGTERM', async () => {
 
 // Global error handlers to properly log unhandled errors with structured logging
 process.on('uncaughtException', (error: Error) => {
-  logger
-    .withError(error)
-    .withMetadata({
-      stack: error.stack,
-    })
-    .error('Uncaught exception - process will exit');
+  logError(logger, SharedErrorCode.UNKNOWN, 'Uncaught exception - process will exit', {
+    cause: error,
+  });
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason: unknown) => {
-  const error = ensureError(reason);
-  logger
-    .withError(error)
-    .withMetadata({
-      reason: String(reason),
-    })
-    .error('Unhandled promise rejection - process will exit');
+  logError(logger, SharedErrorCode.UNKNOWN, 'Unhandled promise rejection - process will exit', {
+    cause: reason,
+    reason: String(reason),
+  });
   process.exit(1);
 });
 
 if (require.main === module) {
   main().catch(error => {
-    logger
-      .withError(ensureError(error))
-      .withMetadata({
-        stack: error.stack,
-      })
-      .error('Fatal error in main - process will exit');
+    logError(logger, SharedErrorCode.UNKNOWN, 'Fatal error in main - process will exit', {
+      cause: error,
+    });
     process.exit(1);
   });
 }

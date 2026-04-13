@@ -5,6 +5,8 @@ import { logger } from '@/observability/logger';
 import { getDJCovaService } from '@/core/djcova-factory';
 import { getDJCovaMetrics } from '@/observability/djcova-metrics';
 import { DJCovaErrorCode } from '@/errors';
+import { logError } from '@starbunk/shared/errors';
+import { SharedErrorCode } from '@starbunk/shared/errors';
 
 const commandBuilder = new SlashCommandBuilder()
   .setName('play')
@@ -27,9 +29,9 @@ export default {
         logger.debug('✅ Reply deferred');
       }
     } catch (deferError) {
-      logger
-        .withError(deferError instanceof Error ? deferError : new Error(String(deferError)))
-        .error('Failed to defer interaction');
+      logError(logger, SharedErrorCode.DISCORD_API_ERROR, 'Failed to defer interaction', {
+        cause: deferError,
+      });
       return;
     }
 
@@ -61,12 +63,10 @@ export default {
       getDJCovaMetrics().trackPlayCommand(guildId, 'success');
       await sendSuccessResponse(interaction, `🎶 Now playing!`);
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger
-        .withError(err)
-        .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR, guild_id: guildId })
-        .error('Play command failed');
-
+      logError(logger, DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR, 'Play command failed', {
+        cause: error,
+        guild_id: guildId,
+      });
       getDJCovaMetrics().trackPlayCommand(guildId, 'error');
 
       const errorMessage =

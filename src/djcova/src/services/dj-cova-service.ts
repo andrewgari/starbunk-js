@@ -10,6 +10,7 @@ import { logger } from '../observability/logger';
 import { getDJCovaMetrics } from '../observability/djcova-metrics';
 import { DJCovaErrorCode } from '../errors';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
+import { logError } from '@starbunk/shared/errors';
 
 /**
  * DJCovaService - Business logic layer
@@ -68,9 +69,14 @@ export class DJCovaService {
     logger.debug('Subscribing player to connection...');
     const subscription = await subscribePlayerToConnection(connection, this.djCova.getPlayer());
     if (!subscription) {
-      logger
-        .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED, guild_id: guildId })
-        .error('Failed to connect audio player to voice channel');
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+        'Failed to connect audio player to voice channel',
+        {
+          guild_id: guildId,
+        },
+      );
       getDJCovaMetrics().trackVoiceJoin(guildId, 'failed');
       getMetricsService().trackBotError(
         'djcova',

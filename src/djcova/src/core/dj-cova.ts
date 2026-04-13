@@ -14,6 +14,7 @@ import { getMusicConfig } from '../config/music-config';
 import ffmpegPath from 'ffmpeg-static';
 import { logger } from '../observability/logger';
 import { DJCovaErrorCode } from '../errors';
+import { logError } from '@starbunk/shared/errors';
 
 type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 type AudioResourceLike = ReturnType<typeof createAudioResource>;
@@ -67,10 +68,14 @@ export class DJCova {
       });
       logger.debug('Audio player created successfully');
     } catch (error) {
-      logger
-        .withError(error instanceof Error ? error : new Error(String(error)))
-        .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_AUDIO_PLAYER_FAILED })
-        .error('Failed to create audio player');
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_AUDIO_PLAYER_FAILED,
+        'Failed to create audio player',
+        {
+          cause: error,
+        },
+      );
       throw error;
     }
 
@@ -109,10 +114,9 @@ export class DJCova {
     });
 
     this.player.on('error', (error: Error) => {
-      logger
-        .withError(error)
-        .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR })
-        .error('Audio player error');
+      logError(logger, DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR, 'Audio player error', {
+        cause: error,
+      });
       logger.debug('Triggering cleanup due to player error');
       this.notificationCallback?.(`❌ Playback error: ${error.message}`).catch(err => {
         logger
@@ -175,16 +179,16 @@ export class DJCova {
       this.player.play(this.currentResource);
       logger.info('✅ Audio playback started');
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger
-        .withError(err)
-        .withMetadata({
-          error_code: DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR,
-          stack: err.stack,
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR,
+        'Failed to start audio playback',
+        {
+          cause: error,
           url,
           ytdlpProcessPid: this.ytdlpProcess?.pid,
-        })
-        .error('Failed to start audio playback');
+        },
+      );
       // Only run full cleanup if this play() call is still the active one.
       // If a concurrent play() has already called stopAudioOnly() and replaced
       // ytdlpProcess, running cleanup() here would unsubscribe the new call's

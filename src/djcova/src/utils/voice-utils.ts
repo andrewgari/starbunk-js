@@ -21,6 +21,7 @@ import { getVoiceConnection, VoiceConnectionStatus, entersState } from '@discord
 import { logger } from '../observability/logger';
 import { getMusicConfig } from '../config/music-config';
 import { DJCovaErrorCode } from '../errors';
+import { logError } from '@starbunk/shared/errors';
 import {
   ConnectionHealthMonitor,
   ConnectionHealthMonitorConfig,
@@ -127,15 +128,17 @@ export function createVoiceConnection(
   });
 
   connection.on('error', (error: Error) => {
-    logger
-      .withError(error)
-      .withMetadata({
-        error_code: DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+    logError(
+      logger,
+      DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+      'Voice connection error in channel',
+      {
+        cause: error,
         channel_name: channel.name,
         channel_id: channel.id,
         guild_id: channel.guild.id,
-      })
-      .error('Voice connection error in channel');
+      },
+    );
   });
 
   connection.on('stateChange', (oldState: { status: string }, newState: { status: string }) => {
@@ -167,13 +170,15 @@ export function disconnectVoiceConnection(guildId: string): void {
       connection.destroy();
       logger.debug(`Voice connection destroyed for guild: ${guildId}`);
     } catch (error) {
-      logger
-        .withError(error instanceof Error ? error : new Error(String(error)))
-        .withMetadata({
-          error_code: DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+        'Error destroying voice connection',
+        {
+          cause: error,
           guild_id: guildId,
-        })
-        .error('Error destroying voice connection');
+        },
+      );
     }
   }
 }
@@ -197,10 +202,14 @@ export async function subscribePlayerToConnection(
     }
     return subscription;
   } catch (error) {
-    logger
-      .withError(error instanceof Error ? error : new Error(String(error)))
-      .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED })
-      .error('Error subscribing player to connection');
+    logError(
+      logger,
+      DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+      'Error subscribing player to connection',
+      {
+        cause: error,
+      },
+    );
     return undefined;
   }
 }
@@ -362,18 +371,20 @@ export async function waitForConnectionReady(
     } else {
       errorType = 'error';
       errorMessage = `Voice connection failed: ${typedError.message}`;
-      logger
-        .withError(typedError)
-        .withMetadata({
-          error_code: DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+        'Voice connection error while waiting for Ready state',
+        {
+          cause: typedError,
           connection_id: connectionId,
           wait_duration_ms: elapsed,
           timeout_ms: timeoutMs,
           final_state: connection.state.status,
           error_type: errorType,
           trace_id: connectionId,
-        })
-        .error('Voice connection error while waiting for Ready state');
+        },
+      );
     }
 
     span.setAttributes({

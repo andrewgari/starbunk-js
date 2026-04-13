@@ -2,6 +2,7 @@ import { VoiceConnectionStatus } from '@discordjs/voice';
 import { logger } from '../observability/logger';
 import { DJCovaErrorCode } from '../errors';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
+import { logError } from '@starbunk/shared/errors';
 
 /**
  * Interface for voice connection - uses Discord.js connection type
@@ -181,16 +182,16 @@ export class ConnectionHealthMonitor {
       if (this.failureCount >= this.failureThreshold && !this.notificationSent) {
         this.notificationSent = true;
 
-        logger
-          .withMetadata({
-            error_code: DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+        logError(
+          logger,
+          DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+          `Voice connection lost for guild: ${this.guildId} (${this.failureCount} consecutive failures)`,
+          {
             guild_id: this.guildId,
             failure_count: this.failureCount,
             threshold: this.failureThreshold,
-          })
-          .error(
-            `Voice connection lost for guild: ${this.guildId} (${this.failureCount} consecutive failures)`,
-          );
+          },
+        );
 
         getMetricsService().trackBotError(
           'djcova',

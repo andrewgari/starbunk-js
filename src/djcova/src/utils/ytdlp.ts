@@ -9,6 +9,7 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { logger } from '../observability/logger';
 import { DJCovaErrorCode } from '../errors';
+import { logError } from '@starbunk/shared/errors';
 
 /**
  * Find yt-dlp binary path
@@ -77,9 +78,12 @@ export function getYouTubeAudioStream(url: string): {
   });
 
   if (!ytdlpProcess.pid) {
-    logger
-      .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_YTDLP_SPAWN_FAILED, url })
-      .error('yt-dlp process failed to spawn (no PID assigned)');
+    logError(
+      logger,
+      DJCovaErrorCode.DJCOVA_YTDLP_SPAWN_FAILED,
+      'yt-dlp process failed to spawn (no PID assigned)',
+      { url },
+    );
   } else {
     logger.debug(`yt-dlp process spawned successfully with PID: ${ytdlpProcess.pid}`);
   }
@@ -100,10 +104,10 @@ export function getYouTubeAudioStream(url: string): {
 
   // Handle process spawn errors
   ytdlpProcess.on('error', (error: Error) => {
-    logger
-      .withError(error)
-      .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_YTDLP_SPAWN_FAILED, url })
-      .error('yt-dlp process spawn error');
+    logError(logger, DJCovaErrorCode.DJCOVA_YTDLP_SPAWN_FAILED, 'yt-dlp process spawn error', {
+      cause: error,
+      url,
+    });
     stream.destroy(error);
   });
 
@@ -131,14 +135,16 @@ export function getYouTubeAudioStream(url: string): {
         stderrOutput ||
         `yt-dlp process terminated unexpectedly (code=${code ?? 'null'}, signal=${signal ?? 'none'})`
       ).slice(0, 1000);
-      logger
-        .withMetadata({
-          error_code: DJCovaErrorCode.DJCOVA_YTDLP_EXIT_ERROR,
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_YTDLP_EXIT_ERROR,
+        `yt-dlp terminated unexpectedly: ${errorMessage}`,
+        {
           url,
           exit_code: code,
           signal,
-        })
-        .error(`yt-dlp terminated unexpectedly: ${errorMessage}`);
+        },
+      );
       // Destroy the stream regardless of whether data was already emitted —
       // a partial stream produces silence rather than a user-visible error.
       stream.destroy(new Error(errorMessage));
@@ -147,10 +153,10 @@ export function getYouTubeAudioStream(url: string): {
 
   // Propagate stdout errors for better diagnostics
   (ytdlpProcess.stdout as Readable).on('error', (e: Error) => {
-    logger
-      .withError(e)
-      .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR, url })
-      .error('yt-dlp stdout error');
+    logError(logger, DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR, 'yt-dlp stdout error', {
+      cause: e,
+      url,
+    });
   });
 
   // Track when data starts flowing
@@ -184,13 +190,15 @@ export async function getVideoInfo(url: string): Promise<{
       try {
         ytdlpProcess.kill('SIGKILL');
       } catch {}
-      logger
-        .withMetadata({
-          error_code: DJCovaErrorCode.DJCOVA_YTDLP_TIMEOUT,
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_YTDLP_TIMEOUT,
+        `yt-dlp info timed out after ${timeoutMs}ms`,
+        {
           url,
           timeout_ms: timeoutMs,
-        })
-        .error(`yt-dlp info timed out after ${timeoutMs}ms`);
+        },
+      );
       reject(new Error(`yt-dlp info timeout after ${timeoutMs}ms`));
     }, timeoutMs);
 
@@ -206,10 +214,10 @@ export async function getVideoInfo(url: string): Promise<{
 
     ytdlpProcess.on('error', (error: Error) => {
       clearTimeout(timer);
-      logger
-        .withError(error)
-        .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_YTDLP_SPAWN_FAILED, url })
-        .error('Failed to get video info');
+      logError(logger, DJCovaErrorCode.DJCOVA_YTDLP_SPAWN_FAILED, 'Failed to get video info', {
+        cause: error,
+        url,
+      });
       reject(error);
     });
 
@@ -228,10 +236,12 @@ export async function getVideoInfo(url: string): Promise<{
         });
       } catch (error) {
         const parseError = error instanceof Error ? error : new Error(String(error));
-        logger
-          .withError(parseError)
-          .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_YTDLP_CONTENT_ERROR, url })
-          .error('Failed to parse yt-dlp JSON output');
+        logError(
+          logger,
+          DJCovaErrorCode.DJCOVA_YTDLP_CONTENT_ERROR,
+          'Failed to parse yt-dlp JSON output',
+          { cause: parseError, url },
+        );
         reject(parseError);
       }
     });
