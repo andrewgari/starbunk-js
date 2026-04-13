@@ -147,7 +147,10 @@ export function getYouTubeAudioStream(url: string): {
 
   // Propagate stdout errors for better diagnostics
   (ytdlpProcess.stdout as Readable).on('error', (e: Error) => {
-    logger.withError(e).error('yt-dlp stdout error');
+    logger
+      .withError(e)
+      .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR, url })
+      .error('yt-dlp stdout error');
   });
 
   // Track when data starts flowing

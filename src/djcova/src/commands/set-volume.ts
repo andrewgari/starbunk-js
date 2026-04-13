@@ -3,6 +3,7 @@ import { ChatInputCommandInteraction } from 'discord.js';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
 import { logger } from '../observability/logger';
 import { getDJCovaService } from '@/core/djcova-factory';
+import { SharedErrorCode } from '@starbunk/shared/errors';
 
 const commandBuilder = new SlashCommandBuilder()
   .setName('volume')
@@ -34,6 +35,7 @@ export default {
     } catch (error) {
       logger
         .withError(error instanceof Error ? error : new Error(String(error)))
+        .withMetadata({ error_code: SharedErrorCode.VALIDATION_FAILED })
         .error('Error executing volume command');
 
       const errorMessage =

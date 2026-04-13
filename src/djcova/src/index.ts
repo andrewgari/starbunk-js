@@ -9,6 +9,7 @@ import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { getDJCovaMetrics } from './observability/djcova-metrics';
+import { SharedErrorCode } from '@starbunk/shared/errors';
 import { commands } from '@/commands';
 
 // Setup logging mixins before creating any logger instances
@@ -34,7 +35,10 @@ async function main(): Promise<void> {
   const token = process.env.DISCORD_TOKEN;
   if (!token) {
     const error = new Error('DISCORD_TOKEN environment variable is required');
-    logger.withError(error).error('DISCORD_TOKEN not found - aborting startup');
+    logger
+      .withError(error)
+      .withMetadata({ error_code: SharedErrorCode.CONFIG_MISSING, config_key: 'DISCORD_TOKEN' })
+      .error('DISCORD_TOKEN not found - aborting startup');
     throw error;
   }
   logger.debug('DISCORD_TOKEN found (length: ' + token.length + ' chars)');
@@ -47,6 +51,7 @@ async function main(): Promise<void> {
   } catch (error) {
     logger
       .withError(error instanceof Error ? error : new Error(String(error)))
+      .withMetadata({ error_code: SharedErrorCode.UNKNOWN })
       .error('Failed to initialize health server');
     throw error;
   }
@@ -77,7 +82,7 @@ async function main(): Promise<void> {
     const err = error instanceof Error ? error : new Error(String(error));
     logger
       .withError(err)
-      .withMetadata({ stack: err.stack })
+      .withMetadata({ error_code: SharedErrorCode.DISCORD_API_ERROR, stack: err.stack })
       .error('Failed to initialize Discord client or commands');
     throw err;
   }
