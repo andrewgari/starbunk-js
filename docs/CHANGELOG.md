@@ -1,3 +1,9 @@
+## [1.32.0](https://github.com/andrewgari/starbunk-js/compare/v1.31.4...v1.32.0) (2026-04-13)
+
+### Features
+
+* **observability:** standardized error codes and DJCova play funnel metrics ([#641](https://github.com/andrewgari/starbunk-js/issues/641)) ([b73d66d](https://github.com/andrewgari/starbunk-js/commit/b73d66d516cda7f006ab617db1c817f530469eb1))
+
 ## [1.31.4](https://github.com/andrewgari/starbunk-js/compare/v1.31.3...v1.31.4) (2026-04-11)
 
 ### Bug Fixes
