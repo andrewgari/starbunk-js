@@ -22,7 +22,14 @@ vi.mock('../src/observability/logger', () => ({
     warn: vi.fn(),
     error: vi.fn(),
     withError: vi.fn().mockReturnThis(),
+    withMetadata: vi.fn().mockReturnThis(),
   },
+}));
+
+vi.mock('@/observability/djcova-metrics', () => ({
+  getDJCovaMetrics: vi.fn().mockReturnValue({
+    trackPlayCommand: vi.fn(),
+  }),
 }));
 
 vi.mock('../src/utils/discord-utils', () => ({

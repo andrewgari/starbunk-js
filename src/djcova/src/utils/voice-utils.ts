@@ -20,6 +20,8 @@ type InteractionLike = { member?: unknown; guild?: { id: string } | null; channe
 import { getVoiceConnection, VoiceConnectionStatus, entersState } from '@discordjs/voice';
 import { logger } from '../observability/logger';
 import { getMusicConfig } from '../config/music-config';
+import { DJCovaErrorCode } from '../errors';
+import { logError } from '@starbunk/shared/errors';
 import {
   ConnectionHealthMonitor,
   ConnectionHealthMonitorConfig,
@@ -70,7 +72,7 @@ export function createVoiceConnection(
     try {
       logger.debug('Destroying existing connection...');
       existingConnection.destroy();
-      logger.debug('✅ Existing connection destroyed');
+      logger.debug('Existing connection destroyed');
     } catch (error) {
       logger
         .withError(error instanceof Error ? error : new Error(String(error)))
@@ -126,14 +128,17 @@ export function createVoiceConnection(
   });
 
   connection.on('error', (error: Error) => {
-    logger
-      .withError(error)
-      .withMetadata({
+    logError(
+      logger,
+      DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+      'Voice connection error in channel',
+      {
+        cause: error,
         channel_name: channel.name,
         channel_id: channel.id,
         guild_id: channel.guild.id,
-      })
-      .error('❌ Voice connection error in channel');
+      },
+    );
   });
 
   connection.on('stateChange', (oldState: { status: string }, newState: { status: string }) => {
@@ -165,9 +170,15 @@ export function disconnectVoiceConnection(guildId: string): void {
       connection.destroy();
       logger.debug(`Voice connection destroyed for guild: ${guildId}`);
     } catch (error) {
-      logger
-        .withError(error instanceof Error ? error : new Error(String(error)))
-        .error('Error destroying voice connection');
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+        'Error destroying voice connection',
+        {
+          cause: error,
+          guild_id: guildId,
+        },
+      );
     }
   }
 }
@@ -191,9 +202,14 @@ export async function subscribePlayerToConnection(
     }
     return subscription;
   } catch (error) {
-    logger
-      .withError(error instanceof Error ? error : new Error(String(error)))
-      .error('❌ Error subscribing player to connection');
+    logError(
+      logger,
+      DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+      'Error subscribing player to connection',
+      {
+        cause: error,
+      },
+    );
     return undefined;
   }
 }
@@ -355,17 +371,20 @@ export async function waitForConnectionReady(
     } else {
       errorType = 'error';
       errorMessage = `Voice connection failed: ${typedError.message}`;
-      logger
-        .withError(typedError)
-        .withMetadata({
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+        'Voice connection error while waiting for Ready state',
+        {
+          cause: typedError,
           connection_id: connectionId,
           wait_duration_ms: elapsed,
           timeout_ms: timeoutMs,
           final_state: connection.state.status,
           error_type: errorType,
           trace_id: connectionId,
-        })
-        .error('❌ Voice connection error while waiting for Ready state');
+        },
+      );
     }
 
     span.setAttributes({

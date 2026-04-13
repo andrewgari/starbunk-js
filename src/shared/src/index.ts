@@ -1,5 +1,12 @@
 // Shared utilities and services for all containers
 
+// Error codes and utilities
+export { SharedErrorCode } from './errors/codes';
+export type { SharedErrorCodeType } from './errors';
+export { ensureError } from './errors/ensure-error';
+export { logError } from './errors/log-error';
+export type { LogErrorOptions } from './errors/log-error';
+
 // Core logger
 export { logLayer } from './observability/log-layer';
 

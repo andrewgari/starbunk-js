@@ -3,6 +3,10 @@ import type { ChatInputCommandInteraction } from 'discord.js';
 import { sendErrorResponse, sendSuccessResponse } from '../utils/discord-utils';
 import { logger } from '@/observability/logger';
 import { getDJCovaService } from '@/core/djcova-factory';
+import { getDJCovaMetrics } from '@/observability/djcova-metrics';
+import { DJCovaErrorCode } from '@/errors';
+import { logError } from '@starbunk/shared/errors';
+import { SharedErrorCode } from '@starbunk/shared/errors';
 
 const commandBuilder = new SlashCommandBuilder()
   .setName('play')
@@ -25,9 +29,9 @@ export default {
         logger.debug('✅ Reply deferred');
       }
     } catch (deferError) {
-      logger
-        .withError(deferError instanceof Error ? deferError : new Error(String(deferError)))
-        .error('Failed to defer interaction');
+      logError(logger, SharedErrorCode.DISCORD_API_ERROR, 'Failed to defer interaction', {
+        cause: deferError,
+      });
       return;
     }
 
@@ -36,29 +40,36 @@ export default {
 
     if (!url) {
       logger.warn('No URL provided in play command');
+      getDJCovaMetrics().trackPlayCommand(interaction.guild?.id ?? 'unknown', 'error');
       await sendErrorResponse(interaction, 'Please provide a YouTube URL!');
       return;
     }
 
-    try {
-      // Get or create per-guild DJCovaService instance
-      if (!interaction.guild?.id) {
-        logger.warn('Play command used outside of guild context');
-        await sendErrorResponse(interaction, 'This command can only be used in a server.');
-        return;
-      }
+    const guildId = interaction.guild?.id;
 
-      logger.debug(`Getting DJCova service for guild: ${interaction.guild.id}`);
-      const service = getDJCovaService(interaction.guild.id);
+    if (!guildId) {
+      logger.warn('Play command used outside of guild context');
+      getDJCovaMetrics().trackPlayCommand('unknown', 'error');
+      await sendErrorResponse(interaction, 'This command can only be used in a server.');
+      return;
+    }
+
+    try {
+      logger.debug(`Getting DJCova service for guild: ${guildId}`);
+      const service = getDJCovaService(guildId);
       logger.debug('DJCova service retrieved, calling play method...');
 
       await service.play(interaction, url);
       logger.info('✅ Play command completed successfully');
 
+      getDJCovaMetrics().trackPlayCommand(guildId, 'success');
       await sendSuccessResponse(interaction, `🎶 Now playing!`);
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.withError(err).error('❌ Error executing play command');
+      logError(logger, DJCovaErrorCode.DJCOVA_PLAY_COMMAND_FAILED, 'Play command failed', {
+        cause: error,
+        guild_id: guildId,
+      });
+      getDJCovaMetrics().trackPlayCommand(guildId, 'error');
 
       const errorMessage =
         error instanceof Error

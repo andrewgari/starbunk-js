@@ -6,6 +6,7 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
+    "./errors": "./dist/errors/index.js",
     "./database": "./dist/services/database/index.js",
     "./health/smoke-mode": "./dist/health/smoke-mode.js",
     "./health/smoke-test": "./dist/health/smoke-test.js",

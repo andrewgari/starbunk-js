@@ -13,6 +13,9 @@ import { IdleManager, createIdleManager, IdleManagerConfig } from '../services/i
 import { getMusicConfig } from '../config/music-config';
 import ffmpegPath from 'ffmpeg-static';
 import { logger } from '../observability/logger';
+import { DJCovaErrorCode } from '../errors';
+import { logError } from '@starbunk/shared/errors';
+import { getDJCovaMetrics } from '../observability/djcova-metrics';
 
 type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 type AudioResourceLike = ReturnType<typeof createAudioResource>;
@@ -26,6 +29,7 @@ type PlayerSubscriptionLike = ReturnType<VoiceConnectionLike['subscribe']>;
 export class DJCova {
   private readonly player: AudioPlayerLike;
   private currentResource: AudioResourceLike | undefined;
+  private guildId: string | null = null;
 
   /**
    * Backwards-compatible alias for the old `resource` property name.
@@ -66,9 +70,14 @@ export class DJCova {
       });
       logger.debug('Audio player created successfully');
     } catch (error) {
-      logger
-        .withError(error instanceof Error ? error : new Error(String(error)))
-        .error('Failed to create audio player');
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_AUDIO_PLAYER_FAILED,
+        'Failed to create audio player',
+        {
+          cause: error,
+        },
+      );
       throw error;
     }
 
@@ -98,6 +107,11 @@ export class DJCova {
       }
       logger.debug('Resetting idle timer due to playback start');
       this.idleManager?.resetIdleTimer();
+      // Record the metric here — at this point Discord Voice has actually started
+      // consuming audio frames, not just when player.play() was called.
+      if (this.guildId) {
+        getDJCovaMetrics().trackAudioPlaybackStarted(this.guildId);
+      }
     });
 
     this.player.on(AudioPlayerStatus.Idle, () => {
@@ -107,12 +121,14 @@ export class DJCova {
     });
 
     this.player.on('error', (error: Error) => {
-      logger.withError(error).error('❌ Audio player error');
+      logError(logger, DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR, 'Audio player error', {
+        cause: error,
+      });
       logger.debug('Triggering cleanup due to player error');
       this.notificationCallback?.(`❌ Playback error: ${error.message}`).catch(err => {
         logger
           .withError(err instanceof Error ? err : new Error(String(err)))
-          .warn('⚠️ Failed to send error notification to user');
+          .warn('Failed to send error notification to user');
       });
       this.cleanup();
     });
@@ -170,15 +186,16 @@ export class DJCova {
       this.player.play(this.currentResource);
       logger.info('✅ Audio playback started');
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger
-        .withError(err)
-        .withMetadata({
-          stack: err.stack,
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR,
+        'Failed to start audio playback',
+        {
+          cause: error,
           url,
           ytdlpProcessPid: this.ytdlpProcess?.pid,
-        })
-        .error('❌ Failed to play audio');
+        },
+      );
       // Only run full cleanup if this play() call is still the active one.
       // If a concurrent play() has already called stopAudioOnly() and replaced
       // ytdlpProcess, running cleanup() here would unsubscribe the new call's
@@ -189,7 +206,7 @@ export class DJCova {
       } else {
         logger.debug('Skipping cleanup — concurrent play() call has taken over');
       }
-      throw err;
+      throw error;
     }
   }
 
@@ -268,6 +285,7 @@ export class DJCova {
     notificationCallback?: (message: string) => Promise<void>,
   ): void {
     logger.debug(`Initializing idle management for guild ${guildId}, channel ${channelId}`);
+    this.guildId = guildId;
 
     if (this.idleManager) {
       logger.debug(`Destroying existing idle manager for guild ${guildId}`);

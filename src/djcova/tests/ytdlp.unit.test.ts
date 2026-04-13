@@ -10,6 +10,7 @@ vi.mock('../src/observability/logger', () => ({
     warn: vi.fn(),
     error: vi.fn(),
     withError: vi.fn().mockReturnThis(),
+    withMetadata: vi.fn().mockReturnThis(),
   },
 }));
 

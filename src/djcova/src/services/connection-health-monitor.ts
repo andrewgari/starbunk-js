@@ -1,5 +1,8 @@
 import { VoiceConnectionStatus } from '@discordjs/voice';
 import { logger } from '../observability/logger';
+import { DJCovaErrorCode } from '../errors';
+import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
+import { logError } from '@starbunk/shared/errors';
 
 /**
  * Interface for voice connection - uses Discord.js connection type
@@ -152,6 +155,7 @@ export class ConnectionHealthMonitor {
   private async triggerReconnect(): Promise<void> {
     try {
       logger.debug(`Auto-reconnecting due to health check for guild: ${this.guildId}`);
+      getMetricsService().trackReconnection('health_monitor');
 
       if (this.connection?.rejoin && typeof this.connection.rejoin === 'function') {
         this.connection.rejoin();
@@ -161,7 +165,11 @@ export class ConnectionHealthMonitor {
     } catch (error) {
       logger
         .withError(error instanceof Error ? error : new Error(String(error)))
-        .debug(`Reconnect attempt failed for guild: ${this.guildId}`);
+        .withMetadata({
+          error_code: DJCovaErrorCode.DJCOVA_VOICE_RECONNECT_FAILED,
+          guild_id: this.guildId,
+        })
+        .warn(`Reconnect attempt failed for guild: ${this.guildId}`);
     }
   }
 
@@ -174,10 +182,22 @@ export class ConnectionHealthMonitor {
       if (this.failureCount >= this.failureThreshold && !this.notificationSent) {
         this.notificationSent = true;
 
-        logger.debug(`Connection health threshold exceeded for guild: ${this.guildId}`, {
-          failureCount: this.failureCount,
-          threshold: this.failureThreshold,
-        } as any);
+        logError(
+          logger,
+          DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+          `Voice connection lost for guild: ${this.guildId} (${this.failureCount} consecutive failures)`,
+          {
+            guild_id: this.guildId,
+            failure_count: this.failureCount,
+            threshold: this.failureThreshold,
+          },
+        );
+
+        getMetricsService().trackBotError(
+          'djcova',
+          DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+          this.guildId,
+        );
 
         if (this.onThresholdExceeded) {
           const message =
