@@ -11,11 +11,29 @@ concurrency:
   group: e2e
   cancel-in-progress: false  # never cancel a running E2E — it leaves bots in bad state
 
+# Each app runs as a separate matrix job for clear per-app pass/fail status.
+# max-parallel: 1 ensures sequential execution — all bots share the same Discord
+# tokens so concurrent container startups would cause session conflicts.
 jobs:
   e2e:
-    name: End-to-End Tests
+    name: E2E Tests — ${{ matrix.app }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      matrix:
+        include:
+          - app: infrastructure
+            test_cmd: test:infra
+          - app: bunkbot
+            test_cmd: test:bunkbot
+          - app: bluebot
+            test_cmd: test:bluebot
+          - app: djcova
+            test_cmd: test:djcova
+          - app: covabot
+            test_cmd: test:covabot
+      max-parallel: 1
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v4
@@ -58,8 +76,8 @@ jobs:
 
       # ── Run tests ───────────────────────────────────────────────────────────
       # Global setup waits for all bots to appear online before running tests.
-      - name: Run E2E tests
-        run: cd src/e2e && npm test
+      - name: Run E2E tests — ${{ matrix.app }}
+        run: cd src/e2e && npm run ${{ matrix.test_cmd }}
         env:
           # CI sender (sends test messages)
           E2E_DISCORD_SENDER_TOKEN: ${{ secrets.E2E_DISCORD_SENDER_TOKEN }}
@@ -98,7 +116,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-test-results
+          name: e2e-${{ matrix.app }}-results
           path: test-results/e2e.junit.xml
           if-no-files-found: ignore
 
