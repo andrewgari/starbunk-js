@@ -25,6 +25,15 @@ The project is split into four isolated containers, each under `src/`:
 - Changes to shared packages/libraries must be made in `src/shared`.
 - Use correct Docker service names (`starbunk-postgres`, `starbunk-redis`, `starbunk-qdrant`) for inter-container communication.
 
+## CI/CD and Definition of "Done"
+- The only satisfactory **"complete"** state for any task touching this repository is when **all CI/CD checks are passing**.
+- Locally, always run `npm run check:ci` at the project root before considering a task done.
+  - `npm run check:ci` currently runs type-checking, linting, and the full test suite.
+- For any work that results in a PR, do **not** treat the task as complete until:
+  - All GitHub/CI checks are green for that PR, and
+  - Any blocking code review comments have been addressed.
+- If CI fails, fixing the failure (or updating the tests/CI configuration with explicit agreement) is part of the task, not a separate optional step.
+
 ## Scripts Context
 - `npm run dev:[container_name]` starts custom containers individually.
 - `docker-compose up -d` handles complete integration spins.
