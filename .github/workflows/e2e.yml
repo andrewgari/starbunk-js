@@ -1,14 +1,7 @@
 name: E2E Tests
 
 on:
-  # Run after the build pipeline finishes publishing fresh images to GHCR.
-  # This ensures the containers under test contain the code from the current push.
-  # E2E on raw "push to main" would race the build and test the previous images.
-  workflow_run:
-    workflows: ["CD / Main Merge"]
-    types: [completed]
-    branches: [main]
-  # Nightly at 06:00 UTC — catches regressions that aren't code changes
+  # Nightly at 06:00 UTC — catches regressions from non-code changes (config, infra, Discord API drift)
   schedule:
     - cron: '0 6 * * *'
   # Manual trigger — useful for debugging or pre-release validation
@@ -23,8 +16,6 @@ jobs:
     name: End-to-End Tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    # Skip if triggered by a failed build — no point testing broken images
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +46,7 @@ jobs:
         run: docker compose -f docker-compose.e2e.yml up -d
         env:
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          IMAGE_TAG: main
           E2E_BUNKBOT_TOKEN: ${{ secrets.E2E_BUNKBOT_TOKEN }}
           E2E_BLUEBOT_TOKEN: ${{ secrets.E2E_BLUEBOT_TOKEN }}
           E2E_DJCOVA_TOKEN: ${{ secrets.E2E_DJCOVA_TOKEN }}

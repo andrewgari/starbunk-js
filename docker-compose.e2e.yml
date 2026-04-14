@@ -33,7 +33,7 @@ services:
   # ─── Bots ─────────────────────────────────────────────────────────────────────
 
   bunkbot:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/bunkbot:main
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/bunkbot:${IMAGE_TAG:-main}
     depends_on:
       starbunk-postgres:
         condition: service_healthy
@@ -49,7 +49,7 @@ services:
       - ./e2e-bots-processed:/app/config/e2e:ro
 
   bluebot:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/bluebot:main
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/bluebot:${IMAGE_TAG:-main}
     depends_on:
       starbunk-postgres:
         condition: service_healthy
@@ -65,14 +65,14 @@ services:
       BLUEBOT_MURDER_WINDOW_MS: ${BLUEBOT_MURDER_WINDOW_MS:-300000}
 
   djcova:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/djcova:main
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/djcova:${IMAGE_TAG:-main}
     environment:
       DISCORD_TOKEN: ${E2E_DJCOVA_TOKEN}
       E2E_MODE: "true"
       E2E_ALLOWED_BOT_IDS: ${E2E_DISCORD_SENDER_BOT_ID}
 
   covabot:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/covabot:main
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/covabot:${IMAGE_TAG:-main}
     depends_on:
       starbunk-postgres:
         condition: service_healthy
