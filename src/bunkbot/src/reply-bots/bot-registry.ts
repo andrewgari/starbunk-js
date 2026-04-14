@@ -123,7 +123,8 @@ export class BotRegistry {
         continue;
       }
 
-      if (bot.ignore_bots && message.author.bot) {
+      const e2eAllowedBotIds = process.env.E2E_ALLOWED_BOT_IDS?.split(',').map(s => s.trim()) ?? [];
+      if (bot.ignore_bots && message.author.bot && !e2eAllowedBotIds.includes(message.author.id)) {
         logger
           .withMetadata({
             bot_name: bot.name,

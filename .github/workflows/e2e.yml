@@ -1,0 +1,116 @@
+name: E2E Tests
+
+on:
+  # Run after the build pipeline finishes publishing fresh images to GHCR.
+  # This ensures the containers under test contain the code from the current push.
+  # E2E on raw "push to main" would race the build and test the previous images.
+  workflow_run:
+    workflows: ["CD / Main Merge"]
+    types: [completed]
+    branches: [main]
+  # Nightly at 06:00 UTC — catches regressions that aren't code changes
+  schedule:
+    - cron: '0 6 * * *'
+  # Manual trigger — useful for debugging or pre-release validation
+  workflow_dispatch:
+
+concurrency:
+  group: e2e
+  cancel-in-progress: false  # never cancel a running E2E — it leaves bots in bad state
+
+jobs:
+  e2e:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Skip if triggered by a failed build — no point testing broken images
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Process BunkBot test YAML ───────────────────────────────────────────
+      # Replace the E2E_CI_SENDER_BOT_ID placeholder with the actual bot ID
+      # before the containers start so the mounted config is ready immediately.
+      - name: Process E2E bot config
+        run: |
+          mkdir -p e2e-bots-processed
+          E2E_CI_SENDER_BOT_ID="${{ secrets.E2E_DISCORD_SENDER_BOT_ID }}" \
+            envsubst < src/e2e/config/e2e-test-bots.template.yml \
+            > e2e-bots-processed/bots.yml
+          echo "Generated e2e-bots-processed/bots.yml:"
+          cat e2e-bots-processed/bots.yml
+
+      # ── Start bot containers ────────────────────────────────────────────────
+      - name: Start E2E bot containers
+        run: docker compose -f docker-compose.e2e.yml up -d
+        env:
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          E2E_BUNKBOT_TOKEN: ${{ secrets.E2E_BUNKBOT_TOKEN }}
+          E2E_BLUEBOT_TOKEN: ${{ secrets.E2E_BLUEBOT_TOKEN }}
+          E2E_DJCOVA_TOKEN: ${{ secrets.E2E_DJCOVA_TOKEN }}
+          E2E_COVABOT_TOKEN: ${{ secrets.E2E_COVABOT_TOKEN }}
+          E2E_DISCORD_SENDER_BOT_ID: ${{ secrets.E2E_DISCORD_SENDER_BOT_ID }}
+          E2E_DISCORD_ENEMY_BOT_ID: ${{ secrets.E2E_DISCORD_ENEMY_BOT_ID }}
+          E2E_GEMINI_API_KEY: ${{ secrets.E2E_GEMINI_API_KEY }}
+          BLUEBOT_REPLY_WINDOW_MS: "6000"
+
+      # ── Run tests ───────────────────────────────────────────────────────────
+      # Global setup waits for all bots to appear online before running tests.
+      - name: Run E2E tests
+        run: cd src/e2e && npm test
+        env:
+          # CI sender (sends test messages)
+          E2E_DISCORD_SENDER_TOKEN: ${{ secrets.E2E_DISCORD_SENDER_TOKEN }}
+          E2E_DISCORD_SENDER_BOT_ID: ${{ secrets.E2E_DISCORD_SENDER_BOT_ID }}
+          # Enemy bot (BlueBot murder tests)
+          E2E_DISCORD_ENEMY_TOKEN: ${{ secrets.E2E_DISCORD_ENEMY_TOKEN }}
+          E2E_DISCORD_ENEMY_BOT_ID: ${{ secrets.E2E_DISCORD_ENEMY_BOT_ID }}
+          # Test guild + channels
+          E2E_DISCORD_TEST_GUILD_ID: ${{ secrets.E2E_DISCORD_TEST_GUILD_ID }}
+          E2E_CHANNEL_INFRASTRUCTURE: ${{ secrets.E2E_CHANNEL_INFRASTRUCTURE }}
+          E2E_CHANNEL_BUNKBOT: ${{ secrets.E2E_CHANNEL_BUNKBOT }}
+          E2E_CHANNEL_BLUEBOT: ${{ secrets.E2E_CHANNEL_BLUEBOT }}
+          E2E_CHANNEL_COVABOT: ${{ secrets.E2E_CHANNEL_COVABOT }}
+          E2E_CHANNEL_DJCOVA: ${{ secrets.E2E_CHANNEL_DJCOVA }}
+          E2E_VOICE_CHANNEL_DJCOVA: ${{ secrets.E2E_VOICE_CHANNEL_DJCOVA }}
+          # Bot user IDs
+          E2E_BUNKBOT_BOT_ID: ${{ secrets.E2E_BUNKBOT_BOT_ID }}
+          E2E_BLUEBOT_BOT_ID: ${{ secrets.E2E_BLUEBOT_BOT_ID }}
+          E2E_COVABOT_BOT_ID: ${{ secrets.E2E_COVABOT_BOT_ID }}
+          E2E_DJCOVA_BOT_ID: ${{ secrets.E2E_DJCOVA_BOT_ID }}
+          # DJCova audio test URL
+          E2E_DJCOVA_TEST_AUDIO_URL: ${{ secrets.E2E_DJCOVA_TEST_AUDIO_URL }}
+          # BlueBot timing windows
+          BLUEBOT_REPLY_WINDOW_MS: "6000"
+
+      # ── Diagnostics on failure ──────────────────────────────────────────────
+      - name: Collect container logs on failure
+        if: failure()
+        run: |
+          echo "=== BunkBot ===" && docker compose -f docker-compose.e2e.yml logs bunkbot
+          echo "=== BlueBot ===" && docker compose -f docker-compose.e2e.yml logs bluebot
+          echo "=== DJCova ===" && docker compose -f docker-compose.e2e.yml logs djcova
+          echo "=== CovaBot ===" && docker compose -f docker-compose.e2e.yml logs covabot
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: test-results/e2e.junit.xml
+          if-no-files-found: ignore
+
+      # ── Cleanup ─────────────────────────────────────────────────────────────
+      - name: Stop containers
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down -v

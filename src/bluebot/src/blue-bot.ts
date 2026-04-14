@@ -9,7 +9,9 @@ export class BlueBot {
   async start(): Promise<void> {
     this.client.on('messageCreate', async (message: Message) => {
       // Basic bot-loop safety: never respond to other bots or self
-      if (message.author.bot) {
+      // E2E_ALLOWED_BOT_IDS allows specific test bots to bypass this filter
+      const e2eAllowedBotIds = process.env.E2E_ALLOWED_BOT_IDS?.split(',').map(s => s.trim()) ?? [];
+      if (message.author.bot && !e2eAllowedBotIds.includes(message.author.id)) {
         logger
           .withMetadata({
             message_id: message.id,

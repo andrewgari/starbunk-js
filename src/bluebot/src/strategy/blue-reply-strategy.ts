@@ -15,8 +15,10 @@ enum StrategyOptions {
 export class BlueReplyStrategy extends SendAPIMessageStrategy {
   private lastBlueResponse = new Date(0);
   private lastMurderResponse = new Date(0);
-  private readonly replyWindow = 5 * 60 * 1000; // 5 minutes in ms
-  private readonly murderWindow = 24 * 60 * 60 * 1000; // 24 hours in ms
+  private readonly replyWindow =
+    parseInt(process.env.BLUEBOT_REPLY_WINDOW_MS ?? '') || 5 * 60 * 1000;
+  private readonly murderWindow =
+    parseInt(process.env.BLUEBOT_MURDER_WINDOW_MS ?? '') || 24 * 60 * 60 * 1000;
 
   private lastTriggeringMessage?: Message;
 

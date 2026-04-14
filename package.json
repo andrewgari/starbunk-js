@@ -25,6 +25,7 @@
     "test:djcova": "cd src/djcova && npm test",
     "test:covabot": "cd src/covabot && npm test",
     "test:bluebot": "cd src/bluebot && npm test",
+    "test:e2e": "cd src/e2e && npm test",
     "lint": "eslint src/*/src/**/*.ts",
     "lint:fix": "eslint src/*/src/**/*.ts --fix",
     "format": "prettier --write \"src/*/src/**/*.ts\"",

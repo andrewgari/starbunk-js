@@ -156,8 +156,9 @@ export class ResponseDecisionService {
       return true;
     }
 
-    // Ignore bots if configured
-    if (profile.ignoreBots && message.author.bot) {
+    // Ignore bots if configured (E2E_ALLOWED_BOT_IDS bypasses this for test accounts)
+    const e2eAllowedBotIds = process.env.E2E_ALLOWED_BOT_IDS?.split(',').map(s => s.trim()) ?? [];
+    if (profile.ignoreBots && message.author.bot && !e2eAllowedBotIds.includes(message.author.id)) {
       return true;
     }
 
@@ -195,8 +196,11 @@ export class ResponseDecisionService {
 
       if (matches) {
         // Check response chance if specified
-        if (trigger.response_chance !== undefined && trigger.response_chance < 1) {
-          if (Math.random() > trigger.response_chance) {
+        // COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE forces all chances to a fixed value (e.g. 1.0)
+        const chanceOverride = parseFloat(process.env.COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE ?? '');
+        const effectiveChance = !isNaN(chanceOverride) ? chanceOverride : trigger.response_chance;
+        if (effectiveChance !== undefined && effectiveChance < 1) {
+          if (Math.random() > effectiveChance) {
             continue; // Skip this trigger due to chance roll
           }
         }

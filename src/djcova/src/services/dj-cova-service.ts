@@ -125,6 +125,44 @@ export class DJCovaService {
   }
 
   /**
+   * Play a YouTube URL in a known voice channel directly (used by E2E test handler).
+   * Bypasses the slash-command interaction layer.
+   */
+  async playInVoiceChannel(
+    voiceChannel: { id: string; name: string; guild: { id: string; voiceAdapterCreator: unknown } },
+    url: string,
+    notifyFn?: (message: string) => Promise<void>,
+  ): Promise<void> {
+    const guildId = voiceChannel.guild.id;
+    logger.info(`E2E play request in channel: ${voiceChannel.name} (${voiceChannel.id})`);
+
+    if (!this.isValidYouTubeUrl(url)) {
+      throw new Error('Please provide a valid YouTube URL (youtube.com or youtu.be)');
+    }
+
+    const connection = createVoiceConnection(voiceChannel, voiceChannel.guild.voiceAdapterCreator);
+    const subscription = await subscribePlayerToConnection(connection, this.djCova.getPlayer());
+
+    if (!subscription) {
+      getDJCovaMetrics().trackVoiceJoin(guildId, 'failed');
+      throw new Error('Failed to connect audio player to voice channel');
+    }
+
+    getDJCovaMetrics().trackVoiceJoin(guildId, 'joined');
+    this.djCova.initializeIdleManagement(guildId, voiceChannel.id, notifyFn);
+    this.djCova.setSubscription(subscription);
+    await this.djCova.play(url);
+  }
+
+  /**
+   * Stop playback and disconnect by guild ID directly (used by E2E test handler).
+   */
+  stopInGuild(guildId: string): void {
+    this.djCova.stop();
+    disconnectVoiceConnection(guildId);
+  }
+
+  /**
    * Stop playback and disconnect
    */
   stop(interaction: ChatInputCommandInteraction): void {

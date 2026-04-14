@@ -1,0 +1,94 @@
+services:
+
+  # ─── Infrastructure ──────────────────────────────────────────────────────────
+
+  starbunk-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: starbunk
+      POSTGRES_USER: starbunk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-starbunk_e2e}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U starbunk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  starbunk-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  starbunk-qdrant:
+    image: qdrant/qdrant:v1.7.4
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ─── Bots ─────────────────────────────────────────────────────────────────────
+
+  bunkbot:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/bunkbot:main
+    depends_on:
+      starbunk-postgres:
+        condition: service_healthy
+    environment:
+      DISCORD_TOKEN: ${E2E_BUNKBOT_TOKEN}
+      DATABASE_URL: postgresql://starbunk:${POSTGRES_PASSWORD:-starbunk_e2e}@starbunk-postgres:5432/starbunk
+      # Point to the processed E2E test bot config (template substituted before docker up)
+      BUNKBOT_BOTS_DIR: /app/config/e2e
+      # Allow the CI sender bot's messages through ignore_bots filter
+      E2E_ALLOWED_BOT_IDS: ${E2E_DISCORD_SENDER_BOT_ID},${E2E_DISCORD_ENEMY_BOT_ID}
+    volumes:
+      # Processed test YAML is written to ./e2e-bots-processed/ by the CI workflow
+      - ./e2e-bots-processed:/app/config/e2e:ro
+
+  bluebot:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/bluebot:main
+    depends_on:
+      starbunk-postgres:
+        condition: service_healthy
+    environment:
+      DISCORD_TOKEN: ${E2E_BLUEBOT_TOKEN}
+      DATABASE_URL: postgresql://starbunk:${POSTGRES_PASSWORD:-starbunk_e2e}@starbunk-postgres:5432/starbunk
+      # The enemy bot account — BlueBot will apply the murder strategy to this user ID
+      BLUEBOT_ENEMY_USER_ID: ${E2E_DISCORD_ENEMY_BOT_ID}
+      E2E_ALLOWED_BOT_IDS: ${E2E_DISCORD_SENDER_BOT_ID},${E2E_DISCORD_ENEMY_BOT_ID}
+      # Short reply window in CI so timing tests don't take 5 minutes
+      BLUEBOT_REPLY_WINDOW_MS: ${BLUEBOT_REPLY_WINDOW_MS:-6000}
+      # Murder window short enough to allow both "first murder" and "blocked second" in one run
+      BLUEBOT_MURDER_WINDOW_MS: ${BLUEBOT_MURDER_WINDOW_MS:-300000}
+
+  djcova:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/djcova:main
+    environment:
+      DISCORD_TOKEN: ${E2E_DJCOVA_TOKEN}
+      E2E_MODE: "true"
+      E2E_ALLOWED_BOT_IDS: ${E2E_DISCORD_SENDER_BOT_ID}
+
+  covabot:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-andrewgari}/covabot:main
+    depends_on:
+      starbunk-postgres:
+        condition: service_healthy
+      starbunk-redis:
+        condition: service_healthy
+      starbunk-qdrant:
+        condition: service_healthy
+    environment:
+      DISCORD_TOKEN: ${E2E_COVABOT_TOKEN}
+      DATABASE_URL: postgresql://starbunk:${POSTGRES_PASSWORD:-starbunk_e2e}@starbunk-postgres:5432/starbunk
+      REDIS_URL: redis://starbunk-redis:6379
+      QDRANT_URL: http://starbunk-qdrant:6333
+      E2E_ALLOWED_BOT_IDS: ${E2E_DISCORD_SENDER_BOT_ID}
+      # Force all trigger response_chance values to 1.0 so tests are deterministic
+      COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE: "1.0"
+      # At least one LLM provider must be set — the E2E env should supply one
+      OLLAMA_API_URL: ${E2E_OLLAMA_API_URL:-}
+      GEMINI_API_KEY: ${E2E_GEMINI_API_KEY:-}
+      OPENAI_API_KEY: ${E2E_OPENAI_API_KEY:-}
