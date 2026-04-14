@@ -29,21 +29,26 @@ describe('Infrastructure: Discord connectivity', () => {
   it('sender can read its own sent message via messageCreate event', async () => {
     const client = getE2EClient();
 
-    const responsePromise = client.waitForResponse(env.CHANNEL_INFRA, {
-      timeout: 5_000,
-      filter: msg => msg.content === 'E2E echo test' && msg.author.id === env.SENDER_BOT_ID,
-    });
-
-    // Override filter to accept own message for this specific echo test
-    // (we want to confirm the messageCreate event fires at all)
+    // Confirm the messageCreate event fires for the sender's own messages
     const echoPromise = new Promise<boolean>(resolve => {
+      let settled = false;
+      const finish = (received: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        client.sender.removeListener(
+          'messageCreate',
+          handler as Parameters<typeof client.sender.on>[1],
+        );
+        resolve(received);
+      };
       const handler = (msg: { content: string; author: { id: string } }) => {
         if (msg.content === 'E2E echo test' && msg.author.id === env.SENDER_BOT_ID) {
-          resolve(true);
+          finish(true);
         }
       };
-      client.sender.once('messageCreate', handler as Parameters<typeof client.sender.once>[1]);
-      setTimeout(() => resolve(false), 5_000);
+      const timer = setTimeout(() => finish(false), 5_000);
+      client.sender.on('messageCreate', handler as Parameters<typeof client.sender.on>[1]);
     });
 
     await client.send(env.CHANNEL_INFRA, 'E2E echo test');
@@ -63,7 +68,7 @@ describe('Infrastructure: All bots are online', () => {
   for (const [name, idKey] of bots) {
     it(`${name} is present in the test guild`, async () => {
       const client = getE2EClient();
-      const online = await client.isBotOnline(env.GUILD_ID, env[idKey]);
+      const online = await client.isBotInGuild(env.GUILD_ID, env[idKey]);
       expect(online, `${name} was not found in guild ${env.GUILD_ID}`).toBe(true);
     });
   }

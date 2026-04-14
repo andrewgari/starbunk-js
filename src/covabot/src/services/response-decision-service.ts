@@ -12,6 +12,13 @@ import { CovaProfile, ResponseDecision, TriggerCondition } from '@/models/memory
 
 const logger = logLayer.withPrefix('ResponseDecisionService');
 
+const e2eAllowedBotIds = new Set(
+  (process.env.E2E_ALLOWED_BOT_IDS ?? '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean),
+);
+
 export interface DecisionContext {
   profile: CovaProfile;
   message: Message;
@@ -157,8 +164,7 @@ export class ResponseDecisionService {
     }
 
     // Ignore bots if configured (E2E_ALLOWED_BOT_IDS bypasses this for test accounts)
-    const e2eAllowedBotIds = process.env.E2E_ALLOWED_BOT_IDS?.split(',').map(s => s.trim()) ?? [];
-    if (profile.ignoreBots && message.author.bot && !e2eAllowedBotIds.includes(message.author.id)) {
+    if (profile.ignoreBots && message.author.bot && !e2eAllowedBotIds.has(message.author.id)) {
       return true;
     }
 
@@ -191,13 +197,14 @@ export class ResponseDecisionService {
     profile: CovaProfile,
     message: Message,
   ): Promise<ResponseDecision | null> {
+    const chanceOverride = parseFloat(process.env.COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE ?? '');
+
     for (const trigger of profile.triggers) {
       const matches = await this.evaluateCondition(trigger.conditions, message);
 
       if (matches) {
         // Check response chance if specified
         // COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE forces all chances to a fixed value (e.g. 1.0)
-        const chanceOverride = parseFloat(process.env.COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE ?? '');
         const effectiveChance = !isNaN(chanceOverride) ? chanceOverride : trigger.response_chance;
         if (effectiveChance !== undefined && effectiveChance < 1) {
           if (Math.random() > effectiveChance) {

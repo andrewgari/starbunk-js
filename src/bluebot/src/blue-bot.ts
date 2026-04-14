@@ -3,6 +3,8 @@ import { logger } from '@/observability/logger';
 import { processMessageByStrategy } from '@/strategy/strategy-router';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 
+const e2eAllowedBotIds = process.env.E2E_ALLOWED_BOT_IDS?.split(',').map(s => s.trim()) ?? [];
+
 export class BlueBot {
   constructor(private readonly client: Client) {}
 
@@ -10,7 +12,6 @@ export class BlueBot {
     this.client.on('messageCreate', async (message: Message) => {
       // Basic bot-loop safety: never respond to other bots or self
       // E2E_ALLOWED_BOT_IDS allows specific test bots to bypass this filter
-      const e2eAllowedBotIds = process.env.E2E_ALLOWED_BOT_IDS?.split(',').map(s => s.trim()) ?? [];
       if (message.author.bot && !e2eAllowedBotIds.includes(message.author.id)) {
         logger
           .withMetadata({

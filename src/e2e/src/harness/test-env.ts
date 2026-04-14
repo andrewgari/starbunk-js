@@ -38,7 +38,7 @@ export const env = {
   DJCOVA_BOT_ID: required('E2E_DJCOVA_BOT_ID'),
 
   // Delay between test messages (ms) — avoids Discord rate limits
-  MESSAGE_DELAY_MS: parseInt(process.env.E2E_MESSAGE_DELAY_MS ?? '800'),
+  MESSAGE_DELAY_MS: parseInt(process.env.E2E_MESSAGE_DELAY_MS ?? '800') || 800,
 };
 
 /** Wait between messages to respect Discord rate limits */

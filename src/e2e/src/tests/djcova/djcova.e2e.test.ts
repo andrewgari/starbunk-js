@@ -69,8 +69,7 @@ describe('DJCova: voice join and audio playback', () => {
     const replyPromise = client.waitForResponse(CH(), {
       timeout: 15_000,
       filter: m =>
-        m.author.id === env.SENDER_BOT_ID &&
-        (m.content.includes('E2E:') || m.content.includes('🎶')),
+        m.author.id === DJCOVA_ID() && (m.content.includes('E2E:') || m.content.includes('🎶')),
     });
 
     await client.send(CH(), `!e2eplay ${TEST_AUDIO_URL}`);
@@ -109,7 +108,7 @@ describe('DJCova: voice join and audio playback', () => {
 
     const stopReplyPromise = client.waitForResponse(CH(), {
       timeout: 10_000,
-      filter: m => m.author.id === env.SENDER_BOT_ID && m.content.includes('E2E: Stopped'),
+      filter: m => m.author.id === DJCOVA_ID() && m.content.includes('E2E: Stopped'),
     });
 
     await client.send(CH(), '!e2estop');
@@ -139,7 +138,7 @@ describe('DJCova: voice join and audio playback', () => {
 
     const replyPromise = client.waitForResponse(CH(), {
       timeout: 10_000,
-      filter: m => m.author.id === env.SENDER_BOT_ID && m.content.includes('E2E error'),
+      filter: m => m.author.id === DJCOVA_ID() && m.content.includes('E2E error'),
     });
 
     await client.send(CH(), `!e2eplay ${TEST_AUDIO_URL}`);

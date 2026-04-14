@@ -31,11 +31,11 @@ export async function setup(): Promise<void> {
     DJCova: env.DJCOVA_BOT_ID,
   };
 
-  const deadline = Date.now() + BOT_READY_TIMEOUT_MS;
   for (const [name, id] of Object.entries(botIds)) {
+    const deadline = Date.now() + BOT_READY_TIMEOUT_MS;
     let online = false;
     while (Date.now() < deadline) {
-      online = await client.isBotOnline(env.GUILD_ID, id);
+      online = await client.isBotInGuild(env.GUILD_ID, id);
       if (online) break;
       await new Promise(r => setTimeout(r, 2_000));
     }

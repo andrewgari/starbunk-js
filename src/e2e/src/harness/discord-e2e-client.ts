@@ -116,15 +116,28 @@ export class DiscordE2EClient {
 
   // ─── Sending ───────────────────────────────────────────────────────────────
 
+  private async _fetchTextChannel(client: Client, channelId: string): Promise<TextChannel> {
+    const channel = await client.channels.fetch(channelId);
+    if (!channel) {
+      throw new Error(`Channel ${channelId} was not found`);
+    }
+    if (channel.type !== ChannelType.GuildText) {
+      throw new Error(
+        `Channel ${channelId} is not a guild text channel (received type ${channel.type})`,
+      );
+    }
+    return channel as TextChannel;
+  }
+
   /** Send a message as the CI sender bot */
   async send(channelId: string, content: string): Promise<Message> {
-    const channel = (await this.senderClient.channels.fetch(channelId)) as TextChannel;
+    const channel = await this._fetchTextChannel(this.senderClient, channelId);
     return channel.send(content);
   }
 
   /** Send a message as the enemy bot */
   async sendAsEnemy(channelId: string, content: string): Promise<Message> {
-    const channel = (await this.enemyClient.channels.fetch(channelId)) as TextChannel;
+    const channel = await this._fetchTextChannel(this.enemyClient, channelId);
     return channel.send(content);
   }
 
@@ -261,8 +274,7 @@ export class DiscordE2EClient {
     const guild = await this.senderClient.guilds.fetch(guildId);
 
     while (Date.now() < deadline) {
-      await guild.members.fetch({ force: true });
-      const member = guild.members.cache.get(botId);
+      const member = await guild.members.fetch(botId).catch(() => null);
       if (member?.voice.channelId === voiceChannelId) return;
       await new Promise(r => setTimeout(r, 500));
     }
@@ -281,32 +293,44 @@ export class DiscordE2EClient {
     timeout = 20_000,
   ): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error(`No audio packets from ${sourceBotId} within ${timeout}ms`));
-      }, timeout);
-
       const receiver = connection.receiver;
       const stream = receiver.subscribe(sourceBotId, {
         end: { behavior: EndBehaviorType.Manual },
       });
 
-      stream.once('data', () => {
+      const cleanup = () => {
         clearTimeout(timer);
-        stream.destroy();
-        resolve();
-      });
+        stream.removeListener('data', onData);
+        stream.removeListener('error', onError);
+        if (!stream.destroyed) {
+          stream.destroy();
+        }
+      };
 
-      stream.once('error', err => {
-        clearTimeout(timer);
+      const onData = () => {
+        cleanup();
+        resolve();
+      };
+
+      const onError = (err: Error) => {
+        cleanup();
         reject(err);
-      });
+      };
+
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error(`No audio packets from ${sourceBotId} within ${timeout}ms`));
+      }, timeout);
+
+      stream.once('data', onData);
+      stream.once('error', onError);
     });
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
-  /** Check whether a bot account is visible (online) in the guild */
-  async isBotOnline(guildId: string, botId: string): Promise<boolean> {
+  /** Check whether a bot account is a member of the guild */
+  async isBotInGuild(guildId: string, botId: string): Promise<boolean> {
     try {
       const guild = await this.senderClient.guilds.fetch(guildId);
       const member = await guild.members.fetch(botId);

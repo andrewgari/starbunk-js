@@ -15,10 +15,14 @@ enum StrategyOptions {
 export class BlueReplyStrategy extends SendAPIMessageStrategy {
   private lastBlueResponse = new Date(0);
   private lastMurderResponse = new Date(0);
-  private readonly replyWindow =
-    parseInt(process.env.BLUEBOT_REPLY_WINDOW_MS ?? '') || 5 * 60 * 1000;
-  private readonly murderWindow =
-    parseInt(process.env.BLUEBOT_MURDER_WINDOW_MS ?? '') || 24 * 60 * 60 * 1000;
+  private readonly replyWindow = (() => {
+    const parsed = parseInt(process.env.BLUEBOT_REPLY_WINDOW_MS ?? '');
+    return Number.isNaN(parsed) ? 5 * 60 * 1000 : parsed;
+  })();
+  private readonly murderWindow = (() => {
+    const parsed = parseInt(process.env.BLUEBOT_MURDER_WINDOW_MS ?? '');
+    return Number.isNaN(parsed) ? 24 * 60 * 60 * 1000 : parsed;
+  })();
 
   private lastTriggeringMessage?: Message;
 
