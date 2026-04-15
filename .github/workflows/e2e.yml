@@ -38,19 +38,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ── Secrets preflight ───────────────────────────────────────────────────
+      - name: Preflight — check E2E secrets
+        id: preflight
+        env:
+          TOKEN: ${{ secrets.E2E_DISCORD_SENDER_TOKEN }}
+        run: |
+          if [[ -n "$TOKEN" ]]; then
+            echo "run_e2e=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=E2E Skipped::E2E secrets not configured in repository settings — skipping E2E tests."
+            echo "run_e2e=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node 22
+        if: steps.preflight.outputs.run_e2e == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
+        if: steps.preflight.outputs.run_e2e == 'true'
         run: npm ci
 
       # ── Process BunkBot test YAML ───────────────────────────────────────────
       # Replace the E2E_CI_SENDER_BOT_ID placeholder with the actual bot ID
       # before the containers start so the mounted config is ready immediately.
       - name: Process E2E bot config
+        if: steps.preflight.outputs.run_e2e == 'true'
         run: |
           mkdir -p e2e-bots-processed
           E2E_CI_SENDER_BOT_ID="${{ secrets.E2E_DISCORD_SENDER_BOT_ID }}" \
@@ -61,6 +77,7 @@ jobs:
 
       # ── Start bot containers ────────────────────────────────────────────────
       - name: Start E2E bot containers
+        if: steps.preflight.outputs.run_e2e == 'true'
         run: docker compose -f docker-compose.e2e.yml up -d
         env:
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
@@ -77,6 +94,7 @@ jobs:
       # ── Run tests ───────────────────────────────────────────────────────────
       # Global setup waits for all bots to appear online before running tests.
       - name: Run E2E tests — ${{ matrix.app }}
+        if: steps.preflight.outputs.run_e2e == 'true'
         run: cd src/e2e && npm run ${{ matrix.test_cmd }}
         env:
           # CI sender (sends test messages)
@@ -105,7 +123,7 @@ jobs:
 
       # ── Diagnostics on failure ──────────────────────────────────────────────
       - name: Collect container logs on failure
-        if: failure()
+        if: failure() && steps.preflight.outputs.run_e2e == 'true'
         run: |
           echo "=== BunkBot ===" && docker compose -f docker-compose.e2e.yml logs bunkbot
           echo "=== BlueBot ===" && docker compose -f docker-compose.e2e.yml logs bluebot
@@ -113,7 +131,7 @@ jobs:
           echo "=== CovaBot ===" && docker compose -f docker-compose.e2e.yml logs covabot
 
       - name: Upload test results
-        if: always()
+        if: always() && steps.preflight.outputs.run_e2e == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: e2e-${{ matrix.app }}-results
@@ -122,5 +140,5 @@ jobs:
 
       # ── Cleanup ─────────────────────────────────────────────────────────────
       - name: Stop containers
-        if: always()
+        if: always() && steps.preflight.outputs.run_e2e == 'true'
         run: docker compose -f docker-compose.e2e.yml down -v

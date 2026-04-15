@@ -1,0 +1,17 @@
+version: 2.1
+
+# Minimal CircleCI config — CI is handled by GitHub Actions.
+# This file exists only to satisfy the CircleCI integration check.
+jobs:
+  noop:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - run:
+          name: No-op
+          command: echo "CI runs on GitHub Actions. Nothing to do here."
+
+workflows:
+  noop:
+    jobs:
+      - noop
