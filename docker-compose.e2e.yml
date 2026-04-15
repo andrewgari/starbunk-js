@@ -25,10 +25,12 @@ services:
   starbunk-qdrant:
     image: qdrant/qdrant:v1.7.4
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/healthz || exit 1"]
-      interval: 10s
+      # Qdrant v1.7.4 image has no wget/curl/nc — use bash's built-in TCP check
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333' 2>/dev/null && exit 0 || exit 1"]
+      interval: 5s
       timeout: 5s
-      retries: 10
+      start_period: 30s
+      retries: 20
 
   # ─── Bots ─────────────────────────────────────────────────────────────────────
 
