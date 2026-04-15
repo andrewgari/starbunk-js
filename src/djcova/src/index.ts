@@ -2,7 +2,7 @@
 import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
 import { setupDJCovaLogging } from './observability/setup-logging';
 import { logger } from './observability/logger';
-import { Client, Events, GatewayIntentBits } from 'discord.js';
+import { Client, Events, GatewayIntentBits, Message, VoiceChannel } from 'discord.js';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
@@ -10,6 +10,7 @@ import { getMetricsService } from '@starbunk/shared/observability/metrics-servic
 import { getDJCovaMetrics } from './observability/djcova-metrics';
 import { SharedErrorCode, logError } from '@starbunk/shared/errors';
 import { commands } from '@/commands';
+import { getDJCovaService } from '@/core/djcova-factory';
 
 // Setup logging mixins before creating any logger instances
 setupDJCovaLogging();
@@ -56,9 +57,13 @@ async function main(): Promise<void> {
   try {
     // Create Discord client
     logger.info('Creating Discord client...');
-    const client = new Client({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
-    });
+    const isE2eMode = process.env.E2E_MODE === 'true';
+    const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates];
+    if (isE2eMode) {
+      intents.push(GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent);
+      logger.info('E2E_MODE enabled: added GuildMessages + MessageContent intents');
+    }
+    const client = new Client({ intents });
     logger.debug('Discord client created successfully');
 
     client.on(Events.ClientReady, () => {
@@ -75,6 +80,46 @@ async function main(): Promise<void> {
     logger.info('Initializing commands...');
     await initializeCommands(client, commands);
     logger.info('✅ DJCova commands initialized successfully');
+
+    // E2E text command handler — only active when E2E_MODE=true
+    if (isE2eMode) {
+      const e2eAllowedBotIds = process.env.E2E_ALLOWED_BOT_IDS?.split(',').map(s => s.trim()) ?? [];
+
+      client.on(Events.MessageCreate, async (message: Message) => {
+        if (!e2eAllowedBotIds.includes(message.author.id)) return;
+        if (!message.guild) return;
+
+        const content = message.content.trim();
+
+        if (content.startsWith('!e2eplay ')) {
+          const url = content.slice('!e2eplay '.length).trim();
+          const member = message.member;
+          const voiceChannel = member?.voice.channel as VoiceChannel | null;
+
+          if (!voiceChannel) {
+            await message.reply('E2E error: sender is not in a voice channel');
+            return;
+          }
+
+          try {
+            const service = getDJCovaService(message.guild.id);
+            await service.playInVoiceChannel(voiceChannel, url, async msg => {
+              await message.reply(msg);
+            });
+            await message.reply('🎶 E2E: Now playing!');
+          } catch (err) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            await message.reply(`E2E error: ${errMsg}`);
+          }
+        } else if (content === '!e2estop') {
+          const service = getDJCovaService(message.guild.id);
+          service.stopInGuild(message.guild.id);
+          await message.reply('E2E: Stopped');
+        }
+      });
+
+      logger.info('✅ E2E text command handler registered (!e2eplay, !e2estop)');
+    }
   } catch (error) {
     logError(
       logger,

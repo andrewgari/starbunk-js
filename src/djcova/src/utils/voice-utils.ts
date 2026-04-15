@@ -6,12 +6,17 @@ type VoiceConnectionLike = ReturnType<typeof joinVoiceChannel>;
 type PlayerSubscriptionLike = ReturnType<VoiceConnectionLike['subscribe']>;
 type AudioPlayerLike = Parameters<VoiceConnectionLike['subscribe']>[0];
 
-type GuildMemberLike = { voice: { channel: VoiceChannelLike | null } };
-
-type VoiceChannelLike = {
+// Minimal type for creating voice connections — does not require permission checks
+type VoiceChannelBasic = {
   id: string;
   name: string;
   guild: { id: string; voiceAdapterCreator: unknown };
+};
+
+type GuildMemberLike = { voice: { channel: VoiceChannelLike | null } };
+
+// Full type including permission checks (used by canJoinVoiceChannel / validateVoiceChannelAccess)
+type VoiceChannelLike = VoiceChannelBasic & {
   permissionsFor(member: GuildMemberLike): { has(perms: string[] | string): boolean } | null;
 };
 
@@ -33,7 +38,7 @@ import { trace } from '@opentelemetry/api';
  * Join a voice channel and return the connection
  */
 export function createVoiceConnection(
-  channel: VoiceChannelLike,
+  channel: VoiceChannelBasic,
   adapterCreator: unknown,
 ): VoiceConnectionLike {
   logger.info(`Attempting to join voice channel: ${channel.name} (${channel.id})`);

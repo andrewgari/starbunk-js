@@ -110,6 +110,7 @@ export class BotRegistry {
 
     let botsProcessed = 0;
     let botsSkipped = 0;
+    const e2eAllowedBotIds = process.env.E2E_ALLOWED_BOT_IDS?.split(',').map(s => s.trim()) ?? [];
 
     for (const bot of this.bots.values()) {
       // Check if bot is enabled
@@ -122,8 +123,7 @@ export class BotRegistry {
         botsSkipped++;
         continue;
       }
-
-      if (bot.ignore_bots && message.author.bot) {
+      if (bot.ignore_bots && message.author.bot && !e2eAllowedBotIds.includes(message.author.id)) {
         logger
           .withMetadata({
             bot_name: bot.name,

@@ -10,7 +10,6 @@ import { logLayer } from '../../observability/log-layer';
 import { getTraceService } from '../../observability/trace-service';
 
 const logger = logLayer.withPrefix('PostgresService');
-const tracing = getTraceService('database');
 
 export interface PostgresConfig {
   host: string;
@@ -236,9 +235,7 @@ export class PostgresService {
       const allMigrationFiles: { file: string; dir: string }[] = [];
       for (const migrationsDir of migrationsDirs) {
         if (!fs.existsSync(migrationsDir)) {
-          logger
-            .withMetadata({ migrationsDir })
-            .warn('No migrations directory found, skipping');
+          logger.withMetadata({ migrationsDir }).warn('No migrations directory found, skipping');
           continue;
         }
 

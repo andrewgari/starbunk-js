@@ -1,0 +1,207 @@
+# E2E Test Bot Configuration
+# ============================================================
+# All bots use ignore_bots: false so the CI sender bot (a bot account) can
+# trigger them. Triggers are prefixed with "e2e_" to avoid false positives
+# from real chat.
+#
+# TEMPLATE: The string E2E_CI_SENDER_BOT_ID is replaced at CI time by the
+# actual Discord user ID of the CI sender bot account. Run:
+#   envsubst < e2e-test-bots.template.yml > /path/to/bots.yml
+# ============================================================
+
+reply-bots:
+
+  # ─── TRIGGER TYPES ───────────────────────────────────────────────────────────
+
+  # contains_word: whole-word match
+  - name: e2e-word-trigger
+    identity:
+      type: static
+      botName: E2EWordBot
+    ignore_bots: false
+    triggers:
+      - name: word-trigger
+        conditions: { contains_word: "e2e_word" }
+        responses: "word trigger fired"
+
+  # contains_phrase: substring match (includes spaces)
+  - name: e2e-phrase-trigger
+    identity:
+      type: static
+      botName: E2EPhraseBot
+    ignore_bots: false
+    triggers:
+      - name: phrase-trigger
+        conditions: { contains_phrase: "e2e phrase test" }
+        responses: "phrase trigger fired"
+
+  # matches_regex: arbitrary regex
+  - name: e2e-regex-trigger
+    identity:
+      type: static
+      botName: E2ERegexBot
+    ignore_bots: false
+    triggers:
+      - name: regex-trigger
+        conditions: { matches_regex: "e2e_regex\\d+" }
+        responses: "regex trigger fired"
+
+  # from_user: only fires when sender is the CI bot itself
+  - name: e2e-fromuser-trigger
+    identity:
+      type: static
+      botName: E2EFromUserBot
+    ignore_bots: false
+    triggers:
+      - name: fromuser-trigger
+        conditions:
+          all_of:
+            - from_user: "E2E_CI_SENDER_BOT_ID"
+            - contains_word: "e2e_fromuser"
+        responses: "from_user trigger fired"
+
+  # with_chance: 100 → always fires (deterministic in tests)
+  - name: e2e-chance-100
+    identity:
+      type: static
+      botName: E2EChance100Bot
+    ignore_bots: false
+    triggers:
+      - name: chance-100-trigger
+        conditions:
+          all_of:
+            - contains_word: "e2e_chance100"
+            - with_chance: 100
+        responses: "chance 100 fired"
+
+  # with_chance: 0 → never fires (used for negative assertion)
+  - name: e2e-chance-0
+    identity:
+      type: static
+      botName: E2EChance0Bot
+    ignore_bots: false
+    triggers:
+      - name: chance-0-trigger
+        conditions:
+          all_of:
+            - contains_word: "e2e_chance0"
+            - with_chance: 0
+        responses: "this should never fire"
+
+  # ─── COMPOUND TRIGGERS ───────────────────────────────────────────────────────
+
+  # all_of: BOTH words required
+  - name: e2e-all-of
+    identity:
+      type: static
+      botName: E2EAllOfBot
+    ignore_bots: false
+    triggers:
+      - name: all-of-trigger
+        conditions:
+          all_of:
+            - contains_word: "e2e_both1"
+            - contains_word: "e2e_both2"
+        responses: "all_of fired"
+
+  # any_of: EITHER word is sufficient
+  - name: e2e-any-of
+    identity:
+      type: static
+      botName: E2EAnyOfBot
+    ignore_bots: false
+    triggers:
+      - name: any-of-trigger
+        conditions:
+          any_of:
+            - contains_word: "e2e_either1"
+            - contains_word: "e2e_either2"
+        responses: "any_of fired"
+
+  # none_of: base word fires UNLESS block word is also present
+  - name: e2e-none-of
+    identity:
+      type: static
+      botName: E2ENoneOfBot
+    ignore_bots: false
+    triggers:
+      - name: none-of-trigger
+        conditions:
+          all_of:
+            - contains_word: "e2e_nonebase"
+            - none_of:
+                - contains_word: "e2e_noneblock"
+        responses: "none_of fired"
+
+  # ─── RESPONSE TEMPLATES ──────────────────────────────────────────────────────
+
+  # {start}: first ~3 words of the triggering message, italicized
+  - name: e2e-start-template
+    identity:
+      type: static
+      botName: E2EStartBot
+    ignore_bots: false
+    triggers:
+      - name: start-trigger
+        conditions: { contains_word: "e2e_starttemplate" }
+        responses: "You said: {start}"
+
+  # {random:min-max:char}: repeated character, random count
+  - name: e2e-random-template
+    identity:
+      type: static
+      botName: E2ERandomTemplateBot
+    ignore_bots: false
+    triggers:
+      - name: random-trigger
+        conditions: { contains_word: "e2e_randomtemplate" }
+        responses: "sh{random:3-5:e}sh"
+
+  # {swap_message:a:b}: swap words throughout original message
+  - name: e2e-swap-template
+    identity:
+      type: static
+      botName: E2ESwapBot
+    ignore_bots: false
+    triggers:
+      - name: swap-trigger
+        conditions: { contains_word: "e2e_swap" }
+        responses: "{swap_message:hello:goodbye}"
+
+  # Response pool: multiple options, one chosen at random
+  - name: e2e-pool
+    identity:
+      type: static
+      botName: E2EPoolBot
+    ignore_bots: false
+    triggers:
+      - name: pool-trigger
+        conditions: { contains_word: "e2e_pool" }
+        responses:
+          - "pool response alpha"
+          - "pool response beta"
+          - "pool response gamma"
+
+  # ─── IDENTITY TYPES ──────────────────────────────────────────────────────────
+
+  # random: picks a random non-bot guild member each time
+  - name: e2e-random-identity
+    identity:
+      type: random
+    ignore_bots: false
+    triggers:
+      - name: random-id-trigger
+        conditions: { contains_word: "e2e_randomidentity" }
+        responses: "random identity response"
+
+  # mimic: copies a guild member's username + avatar
+  # Uses the CI sender bot itself so the test knows exactly what to expect
+  - name: e2e-mimic-identity
+    identity:
+      type: mimic
+      as_member: "E2E_CI_SENDER_BOT_ID"
+    ignore_bots: false
+    triggers:
+      - name: mimic-trigger
+        conditions: { contains_word: "e2e_mimic" }
+        responses: "mimic identity response"
