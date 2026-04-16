@@ -1,12 +1,15 @@
 /**
  * Response Decision Service - Orchestrates hybrid response flow
  *
- * Flow: Basic Filters → Direct Mention → Pattern Trigger → Interest Check → Social Battery → LLM
+ * Flow: Basic Filters → Direct Mention → Pattern Trigger → Social Battery → LLM
+ *
+ * The LLM itself decides whether to engage via the IGNORE marker.
+ * Keyword-based interest gating has been removed — the LLM receives structured
+ * engagement context signals and uses those to make a natural engagement decision.
  */
 
 import { Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
-import { InterestService } from './interest-service';
 import { SocialBatteryService, SocialBatteryConfig } from './social-battery-service';
 import { CovaProfile, ResponseDecision, TriggerCondition } from '@/models/memory-types';
 
@@ -26,11 +29,9 @@ export interface DecisionContext {
 }
 
 export class ResponseDecisionService {
-  private interestService: InterestService;
   private socialBatteryService: SocialBatteryService;
 
-  constructor(interestService: InterestService, socialBatteryService: SocialBatteryService) {
-    this.interestService = interestService;
+  constructor(socialBatteryService: SocialBatteryService) {
     this.socialBatteryService = socialBatteryService;
   }
 
@@ -73,42 +74,7 @@ export class ResponseDecisionService {
       return triggerResult;
     }
 
-    // Step 4: Interest-based saliency check
-    const interestResult = await this.interestService.isInterested(
-      profile.id,
-      message.content,
-      0.3, // threshold
-    );
-
-    if (!interestResult.interested) {
-      // Random chime chance (low probability even when not interested)
-      if (Math.random() < 0.02) {
-        // 2% chance
-        logger.withMetadata({ profile_id: profile.id }).debug('Random chime triggered');
-        return {
-          shouldRespond: true,
-          reason: 'random_chime',
-          useLlm: true,
-          interestScore: interestResult.score,
-        };
-      }
-
-      logger
-        .withMetadata({
-          profile_id: profile.id,
-          interest_score: interestResult.score,
-        })
-        .debug('Interest score below threshold');
-
-      return {
-        shouldRespond: false,
-        reason: 'ignored',
-        useLlm: false,
-        interestScore: interestResult.score,
-      };
-    }
-
-    // Step 5: Social battery check
+    // Step 4: Social battery ceiling — hard stop if exceeded
     const batteryConfig: SocialBatteryConfig = {
       maxMessages: profile.socialBattery.maxMessages,
       windowMinutes: profile.socialBattery.windowMinutes,
@@ -134,23 +100,16 @@ export class ResponseDecisionService {
         shouldRespond: false,
         reason: 'ignored',
         useLlm: false,
-        interestScore: interestResult.score,
       };
     }
 
-    // Passed all checks - respond with LLM
-    logger
-      .withMetadata({
-        profile_id: profile.id,
-        interest_score: interestResult.score,
-      })
-      .debug('Interest match - will respond');
+    // Passed all pre-checks — LLM decides via IGNORE marker whether to actually engage
+    logger.withMetadata({ profile_id: profile.id }).debug('Passing to LLM for engagement decision');
 
     return {
       shouldRespond: true,
-      reason: 'interest_match',
+      reason: 'llm_response',
       useLlm: true,
-      interestScore: interestResult.score,
     };
   }
 

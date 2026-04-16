@@ -19,6 +19,15 @@ export function mapToCovaProfile(config: YamlConfigType): CovaProfile {
     systemPrompt: String(p.personality.system_prompt).trim(),
     traits: (p.personality.traits ?? []).map(t => String(t).trim()).filter(Boolean),
     interests: (p.personality.interests ?? []).map(i => String(i).trim()).filter(Boolean),
+    topicAffinities: (p.personality.topic_affinities?.length
+      ? p.personality.topic_affinities
+      : (p.personality.interests ?? [])
+    )
+      .map(i => String(i).trim())
+      .filter(Boolean),
+    backgroundFacts: (p.personality.background_facts ?? [])
+      .map(s => String(s).trim())
+      .filter(Boolean),
     speechPatterns: normalizeSpeechPatterns(p.personality.speech_patterns),
   } as CovaProfile['personality'];
 

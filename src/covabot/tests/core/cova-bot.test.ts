@@ -13,6 +13,8 @@ vi.mock('../../src/serialization/personality-parser', () => {
           systemPrompt: 'You are helpful.',
           traits: ['helpful'],
           interests: ['testing'],
+          topicAffinities: ['testing'],
+          backgroundFacts: [],
           speechPatterns: { lowercase: true, sarcasmLevel: 0.2, technicalBias: 0.3 },
         },
         triggers: [],

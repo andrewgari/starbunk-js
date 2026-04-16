@@ -40,6 +40,8 @@ const baseProfile: CovaProfile = {
     systemPrompt: 'You are helpful.',
     traits: ['friendly'],
     interests: ['testing', 'typescript'],
+    topicAffinities: ['testing', 'typescript'],
+    backgroundFacts: [],
     speechPatterns: { lowercase: true, sarcasmLevel: 0.5, technicalBias: 0.5 },
   },
   triggers: [],
@@ -53,6 +55,13 @@ const baseContext: LlmContext = {
   conversationHistory: 'Alice: hi\nBot: hello',
   userFacts: "Alice's interests: hobby: coding",
   traitModifiers: 'Be concise.',
+  engagementContext: {
+    wasMentioned: false,
+    isDirectExchange: false,
+    activeParticipants: ['Alice'],
+    secondsSinceLastResponse: 120,
+    conversationMessageCount: 2,
+  },
 };
 
 describe('LlmService', () => {

@@ -38,8 +38,16 @@ export const speechPatternsSchema = z.object({
 // Personality configuration
 export const personalitySchema = z.object({
   system_prompt: z.string().describe('Core persona instructions for LLM'),
-  traits: z.array(z.string()).default([]).describe('Personality trait descriptors'),
-  interests: z.array(z.string()).default([]).describe('Topics the bot is interested in'),
+  traits: z.array(z.string()).default([]).describe('Personality trait descriptors (voice/tone)'),
+  interests: z.array(z.string()).default([]).describe('[Deprecated] Use topic_affinities instead'),
+  topic_affinities: z
+    .array(z.string())
+    .default([])
+    .describe('Topics that draw engagement — not talking points to broadcast'),
+  background_facts: z
+    .array(z.string())
+    .default([])
+    .describe('Personal background details — mentioned rarely and only when naturally relevant'),
   speech_patterns: speechPatternsSchema.default({
     lowercase: false,
     sarcasm_level: 0.3,

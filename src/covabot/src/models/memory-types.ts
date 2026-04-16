@@ -85,13 +85,7 @@ export interface InterestMatch {
 }
 
 // Response decision types
-export type ResponseReason =
-  | 'direct_mention'
-  | 'pattern_trigger'
-  | 'interest_match'
-  | 'random_chime'
-  | 'llm_response'
-  | 'ignored';
+export type ResponseReason = 'direct_mention' | 'pattern_trigger' | 'llm_response' | 'ignored';
 
 export interface ResponseDecision {
   shouldRespond: boolean;
@@ -99,7 +93,15 @@ export interface ResponseDecision {
   useLlm: boolean;
   patternResponse?: string;
   triggerName?: string;
-  interestScore?: number;
+}
+
+// Structured engagement context passed to LLM for natural engagement decisions
+export interface EngagementContext {
+  wasMentioned: boolean;
+  isDirectExchange: boolean; // only 1-2 unique human speakers in recent history
+  activeParticipants: string[]; // display names of recent human speakers
+  secondsSinceLastResponse: number | null;
+  conversationMessageCount: number;
 }
 
 export interface SocialBatteryCheck {
@@ -116,6 +118,7 @@ export interface LlmContext {
   conversationHistory: string;
   userFacts: string;
   traitModifiers: string;
+  engagementContext: EngagementContext;
 }
 
 // Personality profile types (match YAML schema)
@@ -168,6 +171,8 @@ export interface PersonalityConfig {
   system_prompt: string;
   traits: string[];
   interests: string[];
+  topic_affinities?: string[];
+  background_facts?: string[];
   speech_patterns: SpeechPatterns;
 }
 
@@ -192,7 +197,9 @@ export interface CovaProfile {
   personality: {
     systemPrompt: string;
     traits: string[];
-    interests: string[];
+    interests: string[]; // kept for backward compat / InterestService
+    topicAffinities: string[]; // engagement signals — not talking points
+    backgroundFacts: string[]; // personal details — rarely mentioned
     speechPatterns: SpeechPatterns;
   };
   triggers: TriggerConfig[];

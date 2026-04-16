@@ -15,6 +15,8 @@ describe('InterestService', () => {
       systemPrompt: 'You are a test bot',
       traits: [],
       interests: ['typescript', 'react', 'tech:discord', 'tech:bots'],
+      topicAffinities: ['typescript', 'react', 'tech:discord', 'tech:bots'],
+      backgroundFacts: [],
       speechPatterns: { lowercase: false, sarcasmLevel: 0.3, technicalBias: 0.5 },
     },
     triggers: [],

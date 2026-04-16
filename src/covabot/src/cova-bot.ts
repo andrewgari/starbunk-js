@@ -186,14 +186,7 @@ export class CovaBot {
     const additionalModels = chatModel ? [chatModel] : [];
     this.embeddingManager.startScheduledUpdates(additionalModels);
 
-    for (const profile of this.profiles.values()) {
-      await this.interestService.initializeFromProfile(profile);
-    }
-
-    this.responseDecisionService = new ResponseDecisionService(
-      this.interestService,
-      this.socialBatteryService,
-    );
+    this.responseDecisionService = new ResponseDecisionService(this.socialBatteryService);
 
     this.messageHandler = new MessageHandler(
       this.profiles,
