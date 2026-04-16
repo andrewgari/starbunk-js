@@ -18,7 +18,12 @@ import { ResponseDecisionService, DecisionContext } from '@/services/response-de
 import { LlmService } from '@/services/llm-service';
 import { PersonalityService } from '@/services/personality-service';
 import { SocialBatteryService, SocialBatteryConfig } from '@/services/social-battery-service';
-import { CovaProfile, LlmContext } from '@/models/memory-types';
+import {
+  CovaProfile,
+  ConversationContext,
+  EngagementContext,
+  LlmContext,
+} from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('MessageHandler');
 
@@ -127,7 +132,7 @@ export class MessageHandler {
       responseContent = decision.patternResponse;
     } else {
       // Generate LLM response
-      const llmResponse = await this.generateLlmResponse(profile, message);
+      const llmResponse = await this.generateLlmResponse(profile, message, botUserId);
 
       if (llmResponse.shouldIgnore) {
         logger
@@ -184,9 +189,10 @@ export class MessageHandler {
   private async generateLlmResponse(
     profile: CovaProfile,
     message: Message,
+    botUserId: string,
   ): Promise<{ content: string; shouldIgnore: boolean }> {
     // Build context
-    const context = await this.buildLlmContext(profile, message);
+    const context = await this.buildLlmContext(profile, message, botUserId);
 
     // Generate response
     const response = await this.llmService.generateResponse(
@@ -205,7 +211,11 @@ export class MessageHandler {
   /**
    * Build full LLM context from memory
    */
-  private async buildLlmContext(profile: CovaProfile, message: Message): Promise<LlmContext> {
+  private async buildLlmContext(
+    profile: CovaProfile,
+    message: Message,
+    botUserId: string,
+  ): Promise<LlmContext> {
     // Get conversation history
     const channelContext = await this.memoryService.getChannelContext(
       profile.id,
@@ -224,11 +234,57 @@ export class MessageHandler {
     // Get trait modifiers
     const traitModifiers = await this.personalityService.getTraitModifiersForLlm(profile.id);
 
+    // Build structured engagement context
+    const engagementContext = this.buildEngagementContext(message, channelContext, botUserId);
+
     return {
       systemPrompt: profile.personality.systemPrompt,
       conversationHistory,
       userFacts: userFactsStr,
       traitModifiers,
+      engagementContext,
+    };
+  }
+
+  /**
+   * Extract structured engagement signals from message + conversation history.
+   * These are passed to the LLM so it can make a natural, weighted engagement decision.
+   */
+  private buildEngagementContext(
+    message: Message,
+    channelContext: ConversationContext,
+    botUserId: string,
+  ): EngagementContext {
+    // Find unique human participants in the recent conversation window
+    const seenUserIds = new Set<string>();
+    const participantNames: string[] = [];
+
+    for (const msg of channelContext.messages) {
+      if (msg.userId !== botUserId && !seenUserIds.has(msg.userId)) {
+        seenUserIds.add(msg.userId);
+        participantNames.push(msg.userName || `User-${msg.userId.slice(-4)}`);
+      }
+    }
+
+    // A direct exchange: 1 or 2 unique human speakers (private back-and-forth)
+    const isDirectExchange = seenUserIds.size <= 2;
+
+    // Time since the bot last responded in this channel
+    let secondsSinceLastResponse: number | null = null;
+    for (let i = channelContext.messages.length - 1; i >= 0; i--) {
+      const msg = channelContext.messages[i];
+      if (msg.botResponse) {
+        secondsSinceLastResponse = Math.floor((Date.now() - msg.timestamp.getTime()) / 1000);
+        break;
+      }
+    }
+
+    return {
+      wasMentioned: message.mentions.users.has(botUserId),
+      isDirectExchange,
+      activeParticipants: participantNames,
+      secondsSinceLastResponse,
+      conversationMessageCount: channelContext.messages.length,
     };
   }
 

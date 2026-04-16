@@ -13,11 +13,12 @@ CovaBot acts as the AI personality for StarBunk, supplying context-aware, LLM-dr
 - **Output:** Synthesized text responses formatted as Discord replies, injected with accurate personality traits.
 
 ## Dependencies & Architecture
-- **Primary Dependencies:** LLM APIs (OpenAI/Ollama), Postgres (general state), Redis (social battery/caches), Qdrant (semantic vector memory).
+- **Primary Dependencies:** LLM APIs (Gemini primary, Ollama fallback, OpenAI fallback), Postgres (conversation memory + social battery).
+- Redis and Qdrant have been removed — social battery is stored in Postgres; interest matching uses keyword-based scoring.
 - Scaled for LLM interactions. API calls should be heavily asynchronous and timeout-resistant.
 
 ## Edge Cases to Consider
 - LLM API rate limits, timeouts, and hallucination management.
-- Missing Qdrant or Redis instances drastically slow down context building; handle degradation gracefully.
+- All three LLM providers failing simultaneously (Gemini + Ollama + OpenAI).
 - Parsing extremely long contextual threads efficiently.
 - Avoiding infinite loops when interacting with other bots.

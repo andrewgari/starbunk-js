@@ -5,7 +5,12 @@
  */
 
 import { logLayer } from '@starbunk/shared/observability/log-layer';
-import { CovaProfile, LlmContext, IGNORE_CONVERSATION_MARKER } from '@/models/memory-types';
+import {
+  CovaProfile,
+  EngagementContext,
+  LlmContext,
+  IGNORE_CONVERSATION_MARKER,
+} from '@/models/memory-types';
 import { LlmProviderManager, LlmProviderConfig, LlmMessage } from '@starbunk/shared';
 
 const logger = logLayer.withPrefix('LlmService');
@@ -65,6 +70,12 @@ export class LlmService {
         content: `What you know about ${userName}:\n${context.userFacts}`,
       });
     }
+
+    // Add structured engagement context signals
+    messages.push({
+      role: 'system',
+      content: this.buildEngagementBlock(context.engagementContext),
+    });
 
     // Add the current message
     messages.push({
@@ -127,33 +138,81 @@ export class LlmService {
   private buildSystemPrompt(profile: CovaProfile, context: LlmContext): string {
     const parts: string[] = [profile.personality.systemPrompt];
 
-    // Add traits
+    // Traits describe voice and tone — not things to demonstrate
     if (profile.personality.traits.length > 0) {
-      parts.push(`\nYour personality traits: ${profile.personality.traits.join(', ')}.`);
+      parts.push(`\nYour personality: ${profile.personality.traits.join(', ')}.`);
     }
 
-    // Add interests
-    if (profile.personality.interests.length > 0) {
-      parts.push(`\nYour areas of interest: ${profile.personality.interests.join(', ')}.`);
+    // Topic affinities — engagement signals, not talking points to broadcast
+    const affinities = profile.personality.topicAffinities;
+    if (affinities.length > 0) {
+      parts.push(
+        `\nTopics that naturally draw your attention and make you want to join a conversation:\n${affinities.join(', ')}\nThese help you judge whether a conversation is worth engaging with. They are NOT talking points to broadcast or force into unrelated discussions.`,
+      );
     }
 
-    // Add speech style instructions
+    // Background facts — personal details, mentioned rarely and only when natural
+    const bgFacts = profile.personality.backgroundFacts;
+    if (bgFacts.length > 0) {
+      const factLines = bgFacts.map(f => `- ${f}`).join('\n');
+      parts.push(
+        `\nBackground about you — only bring these up when the conversation genuinely leads there, never force them:\n${factLines}`,
+      );
+    }
+
+    // Speech style
     const styleInstructions = this.buildStyleInstructions(profile);
     if (styleInstructions) {
       parts.push(`\nStyle: ${styleInstructions}`);
     }
 
-    // Add trait modifiers
+    // Trait modifiers
     if (context.traitModifiers) {
       parts.push(`\n${context.traitModifiers}`);
     }
 
-    // Add ignore instruction
+    // Engagement guidance — full behavioral description replaces single-line IGNORE instruction
     parts.push(
-      `\nIMPORTANT: If you have nothing meaningful to add to the conversation, respond with exactly "${IGNORE_CONVERSATION_MARKER}" (with no other text).`,
+      `\nHow you decide whether to respond:\n\nYou are in a group Discord chat. You participate with natural, human conversational instincts — not on every message, not randomly, but when you genuinely have something to contribute.\n\nRespond when:\n- Someone addresses you directly\n- The conversation touches something you genuinely care about and you have a real reaction, insight, or take to add — not just an excuse to mention your interests\n- There is a natural opening that fits your personality\n\nRespond with exactly "${IGNORE_CONVERSATION_MARKER}" (nothing else) when:\n- Two people are clearly in their own back-and-forth and don't need you\n- The topic is completely outside your world and you have nothing real to offer\n- You would be forcing engagement — looking for excuses to speak rather than having something to say\n- You spoke recently and don't have something new to add\n\nUse ${IGNORE_CONVERSATION_MARKER} generously. A natural participant in a group chat is silent most of the time. Silence when you have nothing to say is better than speaking just to be present.`,
     );
 
     return parts.join('');
+  }
+
+  /**
+   * Build the engagement context block injected as a separate system message.
+   * Provides weighted signals for the LLM to make a natural engagement decision.
+   */
+  private buildEngagementBlock(ctx: EngagementContext): string {
+    const lines: string[] = ['Current context signals:'];
+
+    lines.push(`- Directly mentioned: ${ctx.wasMentioned ? 'YES' : 'NO'}`);
+
+    if (ctx.activeParticipants.length === 0) {
+      lines.push('- Conversation type: no prior history in this channel');
+    } else if (ctx.isDirectExchange && ctx.activeParticipants.length <= 2) {
+      const names = ctx.activeParticipants.join(' and ');
+      lines.push(`- Conversation type: private exchange between ${names}`);
+    } else {
+      const names = ctx.activeParticipants.join(', ');
+      lines.push(`- Conversation type: group discussion with ${names}`);
+    }
+
+    if (ctx.secondsSinceLastResponse === null) {
+      lines.push('- I have not responded yet in this conversation window');
+    } else if (ctx.secondsSinceLastResponse < 60) {
+      lines.push(`- I last responded ${ctx.secondsSinceLastResponse}s ago`);
+    } else {
+      const minutes = Math.floor(ctx.secondsSinceLastResponse / 60);
+      lines.push(`- I last responded ${minutes} minute${minutes !== 1 ? 's' : ''} ago`);
+    }
+
+    lines.push(`- Messages in window: ${ctx.conversationMessageCount}`);
+    lines.push(
+      `\nWeigh these signals when deciding whether to respond or return ${IGNORE_CONVERSATION_MARKER}.`,
+    );
+
+    return lines.join('\n');
   }
 
   /**

@@ -56,6 +56,7 @@ function createMessage(
     channelId: cfg.channelId!,
     author: { id: cfg.authorId!, username: cfg.authorUsername!, bot: false } as User,
     guild: cfg.guildId ? ({ id: cfg.guildId } as Guild) : null,
+    mentions: { users: { has: (_: string) => false } },
   } as unknown as Message;
 }
 
@@ -103,6 +104,8 @@ describe('MessageHandler', () => {
         systemPrompt: 'You are Test.',
         traits: [],
         interests: [],
+        topicAffinities: [],
+        backgroundFacts: [],
         speechPatterns: { lowercase: true, sarcasmLevel: 0.1, technicalBias: 0.1 },
       },
       triggers: [],
