@@ -74,14 +74,14 @@ module.exports = {
       {
         // Persist the next release version to VERSION and sync it into package.json/workspaces
         prepareCmd:
-          "mkdir -p config && echo ${nextRelease.version} > config/VERSION && bash scripts/sync-versions.sh",
+          "echo ${nextRelease.version} > VERSION && bash scripts/sync-versions.sh",
       },
     ],
     [
       "@semantic-release/git",
       {
         // Commit the synced version files and the docs changelog
-        assets: ["package.json", "config/VERSION", "docs/CHANGELOG.md"],
+        assets: ["package.json", "VERSION", "docs/CHANGELOG.md"],
         message:
           "chore(release): v${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
       },
