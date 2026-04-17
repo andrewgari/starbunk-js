@@ -372,7 +372,9 @@ services:
     volumes:
       - ${HOST_WORKDIR}/data/postgres:/var/lib/postgresql/data
     networks:
-      - starbunk-network
+      starbunk-network:
+        aliases:
+          - starbunk-db  # backward-compat alias for deployments that still reference the old container name
     # No ports exposed - internal access only
     logging:
       driver: "json-file"

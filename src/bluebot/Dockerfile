@@ -82,9 +82,9 @@ LABEL prometheus.io/path="/metrics"
 LABEL prometheus.io/port="3000"
 
 # Health check (prefers HEALTH_PORT, then METRICS_PORT, else defaults)
-# Uses /live endpoint for simpler health check (doesn't require Discord connection)
+# Uses /health endpoint to verify startup completed successfully (returns 503 during init or if startup failed)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD sh -c 'PORT="${METRICS_PORT:-3000}"; curl -fsS "http://127.0.0.1:${PORT}/live" || exit 1'
+    CMD sh -c 'PORT="${METRICS_PORT:-3000}"; curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1'
 
 EXPOSE 3000
 
