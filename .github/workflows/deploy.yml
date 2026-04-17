@@ -21,6 +21,7 @@ jobs:
           tags: tag:ci
 
       - name: Execute Remote Deploy
+        if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
         uses: appleboy/ssh-action@v1.0.3
         env:
           PROD_DIR: ${{ secrets.PROD_DOCKER_COMPOSE_DIR }}
