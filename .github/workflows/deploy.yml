@@ -11,8 +11,17 @@ jobs:
     concurrency: production
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Connect to Tailscale
+        if: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID != '' }}
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-client-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+
       - name: Execute Remote Deploy
+        if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
         uses: appleboy/ssh-action@v1.0.3
         env:
           PROD_DIR: ${{ secrets.PROD_DOCKER_COMPOSE_DIR }}
