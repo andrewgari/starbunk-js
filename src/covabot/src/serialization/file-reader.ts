@@ -19,6 +19,22 @@ export function directoryExists(dirPath: string): boolean {
   return fs.existsSync(dirPath);
 }
 
+export function isDirectory(entryPath: string): boolean {
+  try {
+    return fs.statSync(entryPath).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+export function fileExists(filePath: string): boolean {
+  try {
+    return fs.statSync(filePath).isFile();
+  } catch {
+    return false;
+  }
+}
+
 export function createDirectory(dirPath: string): void {
   fs.mkdirSync(dirPath, { recursive: true });
 }

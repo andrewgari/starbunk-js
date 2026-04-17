@@ -19,8 +19,9 @@ describe('InterestService', () => {
       backgroundFacts: [],
       speechPatterns: { lowercase: false, sarcasmLevel: 0.3, technicalBias: 0.5 },
     },
-    triggers: [],
+    nameAliases: [],
     socialBattery: { maxMessages: 5, windowMinutes: 10, cooldownSeconds: 30 },
+    memory: { channelWindow: 8 },
     llmConfig: { model: 'gpt-4o-mini', temperature: 0.4, max_tokens: 256 },
     ignoreBots: true,
   };

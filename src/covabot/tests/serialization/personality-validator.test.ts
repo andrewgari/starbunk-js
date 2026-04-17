@@ -20,15 +20,6 @@ describe('personality-validator', () => {
           technical_bias: 0.5,
         },
       },
-      triggers: [
-        {
-          name: 'greeting',
-          conditions: {
-            contains_word: 'hello',
-          },
-          use_llm: true,
-        },
-      ],
       social_battery: {
         max_messages: 5,
         window_minutes: 10,
@@ -97,8 +88,8 @@ describe('personality-validator', () => {
       expect(() => validateOrThrow(invalid)).toThrow();
     });
 
-    it('should throw for missing system_prompt', () => {
-      const invalid = {
+    it('should accept missing system_prompt (populated from markdown files at load time)', () => {
+      const withoutPrompt = {
         profile: {
           ...validProfile.profile,
           personality: {
@@ -107,43 +98,7 @@ describe('personality-validator', () => {
           },
         },
       };
-      expect(() => validateOrThrow(invalid)).toThrow();
-    });
-
-    it('should throw for empty triggers array', () => {
-      const invalid = {
-        profile: {
-          ...validProfile.profile,
-          triggers: [],
-        },
-      };
-      expect(() => validateOrThrow(invalid)).toThrow('At least one trigger');
-    });
-
-    it('should throw for missing triggers', () => {
-      const invalid = {
-        profile: {
-          ...validProfile.profile,
-          triggers: undefined,
-        },
-      };
-      expect(() => validateOrThrow(invalid)).toThrow();
-    });
-
-    it('should throw for trigger with empty conditions', () => {
-      const invalid = {
-        profile: {
-          ...validProfile.profile,
-          triggers: [
-            {
-              name: 'test',
-              conditions: {},
-              use_llm: true,
-            },
-          ],
-        },
-      };
-      expect(() => validateOrThrow(invalid)).toThrow('At least one condition');
+      expect(() => validateOrThrow(withoutPrompt)).not.toThrow();
     });
 
     it('should throw for invalid mimic identity (bad user ID format)', () => {
@@ -225,14 +180,6 @@ describe('personality-validator', () => {
           personality: {
             system_prompt: 'Minimal prompt',
           },
-          triggers: [
-            {
-              name: 'test',
-              conditions: {
-                always: true,
-              },
-            },
-          ],
         },
       };
 
@@ -285,55 +232,10 @@ describe('personality-validator', () => {
           personality: {
             system_prompt: 'Test',
           },
-          triggers: [{ name: 'test', conditions: { always: true } }],
         },
       };
 
       expect(() => validateOrThrow(invalid)).toThrow('botName');
-    });
-
-    it('should validate complex nested conditions', () => {
-      const complexProfile = {
-        profile: {
-          ...validProfile.profile,
-          triggers: [
-            {
-              name: 'complex',
-              conditions: {
-                any_of: [
-                  { contains_word: 'hello' },
-                  {
-                    all_of: [{ from_user: '123456789012345678' }, { with_chance: 0.5 }],
-                  },
-                ],
-              },
-              use_llm: true,
-            },
-          ],
-        },
-      };
-
-      const result = validateOrThrow(complexProfile);
-      expect(result.profile.triggers[0].conditions.any_of).toHaveLength(2);
-    });
-
-    it('should validate trigger with responses array', () => {
-      const withResponses = {
-        profile: {
-          ...validProfile.profile,
-          triggers: [
-            {
-              name: 'canned',
-              conditions: { contains_word: 'hi' },
-              use_llm: false,
-              responses: ['Hello!', 'Hi there!', 'Hey!'],
-            },
-          ],
-        },
-      };
-
-      const result = validateOrThrow(withResponses);
-      expect(result.profile.triggers[0].responses).toEqual(['Hello!', 'Hi there!', 'Hey!']);
     });
 
     it('should throw for non-object input', () => {

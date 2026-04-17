@@ -25,20 +25,14 @@ describe('personality-mapper', () => {
           technical_bias: 0.5,
         },
       },
-      triggers: [
-        {
-          name: 'greeting',
-          conditions: {
-            contains_word: 'hello',
-          },
-          use_llm: true,
-          response_chance: 0.8,
-        },
-      ],
+      name_aliases: ['cova', 'covabot'],
       social_battery: {
         max_messages: 5,
         window_minutes: 10,
         cooldown_seconds: 30,
+      },
+      memory: {
+        channel_window: 8,
       },
       llm: {
         model: 'gpt-4o-mini',
@@ -179,61 +173,22 @@ describe('personality-mapper', () => {
       });
     });
 
-    it('should map triggers with normalized conditions', () => {
+    it('should map name_aliases as lowercase trimmed strings', () => {
       const config = createValidConfig({
-        triggers: [
-          {
-            name: '  greeting  ',
-            conditions: {
-              contains_word: 'hello',
-            },
-            use_llm: true,
-            response_chance: 0.8,
-          },
-        ],
+        name_aliases: ['  Cova  ', 'COVABOT', 'cova'],
       });
 
       const result = mapToCovaProfile(config);
 
-      expect(result.triggers).toHaveLength(1);
-      expect(result.triggers[0].name).toBe('greeting');
-      expect(result.triggers[0].conditions).toEqual({ contains_word: 'hello' });
-      expect(result.triggers[0].use_llm).toBe(true);
-      expect(result.triggers[0].response_chance).toBe(0.8);
+      expect(result.nameAliases).toEqual(['cova', 'covabot', 'cova']);
     });
 
-    it('should map trigger with array responses', () => {
-      const config = createValidConfig({
-        triggers: [
-          {
-            name: 'canned',
-            conditions: { always: true },
-            use_llm: false,
-            responses: ['Hello!', 'Hi!'],
-          },
-        ],
-      });
+    it('should default nameAliases to empty array when not provided', () => {
+      const config = createValidConfig({ name_aliases: undefined });
 
       const result = mapToCovaProfile(config);
 
-      expect(result.triggers[0].responses).toEqual(['Hello!', 'Hi!']);
-    });
-
-    it('should map trigger with string response', () => {
-      const config = createValidConfig({
-        triggers: [
-          {
-            name: 'canned',
-            conditions: { always: true },
-            use_llm: false,
-            responses: 'Hello!',
-          },
-        ],
-      });
-
-      const result = mapToCovaProfile(config);
-
-      expect(result.triggers[0].responses).toBe('Hello!');
+      expect(result.nameAliases).toEqual([]);
     });
 
     it('should map social battery with truncated and clamped values', () => {
@@ -266,6 +221,24 @@ describe('personality-mapper', () => {
       expect(result.socialBattery.maxMessages).toBe(1);
       expect(result.socialBattery.windowMinutes).toBe(1);
       expect(result.socialBattery.cooldownSeconds).toBe(0);
+    });
+
+    it('should map memory channel_window', () => {
+      const config = createValidConfig({
+        memory: { channel_window: 20 },
+      });
+
+      const result = mapToCovaProfile(config);
+
+      expect(result.memory.channelWindow).toBe(20);
+    });
+
+    it('should default channelWindow to 8 when memory not provided', () => {
+      const config = createValidConfig({ memory: undefined });
+
+      const result = mapToCovaProfile(config);
+
+      expect(result.memory.channelWindow).toBe(8);
     });
 
     it('should map LLM config with clamped temperature', () => {
@@ -304,62 +277,7 @@ describe('personality-mapper', () => {
       expect(Object.isFrozen(result.personality.speechPatterns)).toBe(true);
       expect(Object.isFrozen(result.socialBattery)).toBe(true);
       expect(Object.isFrozen(result.llmConfig)).toBe(true);
-      expect(Object.isFrozen(result.triggers[0])).toBe(true);
-    });
-
-    it('should map multiple triggers', () => {
-      const config = createValidConfig({
-        triggers: [
-          {
-            name: 'greeting',
-            conditions: { contains_word: 'hello' },
-            use_llm: true,
-          },
-          {
-            name: 'farewell',
-            conditions: { contains_word: 'goodbye' },
-            use_llm: true,
-          },
-          {
-            name: 'random',
-            conditions: { with_chance: 0.1 },
-            use_llm: true,
-          },
-        ],
-      });
-
-      const result = mapToCovaProfile(config);
-
-      expect(result.triggers).toHaveLength(3);
-      expect(result.triggers.map(t => t.name)).toEqual(['greeting', 'farewell', 'random']);
-    });
-
-    it('should handle complex nested trigger conditions', () => {
-      const config = createValidConfig({
-        triggers: [
-          {
-            name: 'complex',
-            conditions: {
-              any_of: [
-                { contains_word: 'hello' },
-                {
-                  all_of: [{ from_user: '123456789012345678' }, { with_chance: 0.5 }],
-                },
-                {
-                  none_of: [{ contains_phrase: 'ignore this' }],
-                },
-              ],
-            },
-            use_llm: true,
-          },
-        ],
-      });
-
-      const result = mapToCovaProfile(config);
-
-      expect(result.triggers[0].conditions.any_of).toHaveLength(3);
-      expect(result.triggers[0].conditions.any_of![1].all_of).toHaveLength(2);
-      expect(result.triggers[0].conditions.any_of![2].none_of).toHaveLength(1);
+      expect(Object.isFrozen(result.nameAliases)).toBe(true);
     });
   });
 });

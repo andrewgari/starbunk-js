@@ -124,27 +124,15 @@ export class MessageHandler {
       return;
     }
 
-    // Step 2: Get response content
-    let responseContent: string;
+    // Step 2: Get response content from LLM
+    const llmResponse = await this.generateLlmResponse(profile, message, botUserId);
 
-    if (!decision.useLlm && decision.patternResponse) {
-      // Use canned pattern response
-      responseContent = decision.patternResponse;
-    } else {
-      // Generate LLM response
-      const llmResponse = await this.generateLlmResponse(profile, message, botUserId);
-
-      if (llmResponse.shouldIgnore) {
-        logger
-          .withMetadata({
-            profile_id: profile.id,
-          })
-          .debug('LLM decided to ignore');
-        return;
-      }
-
-      responseContent = llmResponse.content;
+    if (llmResponse.shouldIgnore) {
+      logger.withMetadata({ profile_id: profile.id }).debug('LLM decided to ignore');
+      return;
     }
+
+    const responseContent = llmResponse.content;
 
     // Step 3: Send response
     if (responseContent && responseContent.trim().length > 0) {
@@ -176,7 +164,6 @@ export class MessageHandler {
           profile_id: profile.id,
           channel_id: message.channelId,
           response_length: responseContent.length,
-          trigger: decision.triggerName,
           reason: decision.reason,
         })
         .info('Response sent');
@@ -220,7 +207,7 @@ export class MessageHandler {
     const channelContext = await this.memoryService.getChannelContext(
       profile.id,
       message.channelId,
-      8, // Last 8 messages
+      profile.memory.channelWindow,
     );
     const conversationHistory = this.memoryService.formatContextForLlm(
       channelContext,
@@ -235,7 +222,12 @@ export class MessageHandler {
     const traitModifiers = await this.personalityService.getTraitModifiersForLlm(profile.id);
 
     // Build structured engagement context
-    const engagementContext = this.buildEngagementContext(message, channelContext, botUserId);
+    const engagementContext = this.buildEngagementContext(
+      profile,
+      message,
+      channelContext,
+      botUserId,
+    );
 
     return {
       systemPrompt: profile.personality.systemPrompt,
@@ -251,6 +243,7 @@ export class MessageHandler {
    * These are passed to the LLM so it can make a natural, weighted engagement decision.
    */
   private buildEngagementContext(
+    profile: CovaProfile,
     message: Message,
     channelContext: ConversationContext,
     botUserId: string,
@@ -279,8 +272,24 @@ export class MessageHandler {
       }
     }
 
+    // Detect if any of the bot's known names/aliases appear in the message text
+    const lowerContent = message.content.toLowerCase();
+    const nameReferenced =
+      profile.nameAliases.length > 0 &&
+      profile.nameAliases.some(alias => {
+        const pattern = new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+        return pattern.test(lowerContent);
+      });
+
+    if (nameReferenced) {
+      logger
+        .withMetadata({ profile_id: profile.id, content_preview: message.content.substring(0, 50) })
+        .debug('Name referenced in message');
+    }
+
     return {
       wasMentioned: message.mentions.users.has(botUserId),
+      nameReferenced,
       isDirectExchange,
       activeParticipants: participantNames,
       secondsSinceLastResponse,

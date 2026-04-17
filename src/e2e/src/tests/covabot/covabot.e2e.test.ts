@@ -1,19 +1,25 @@
 /**
  * CovaBot E2E tests
  *
- * Kept intentionally simple: validates the pipeline fires and produces a
- * non-empty response. We do NOT assert exact LLM output — that changes with
- * model versions and is better covered by unit tests with a mocked LLM.
+ * Validates the pipeline fires and produces a non-empty response.
+ * We do NOT assert exact LLM output — that changes with model versions
+ * and is better covered by unit tests with a mocked LLM.
  *
  * What we DO assert:
- *   - Direct @mention always produces a response
- *   - Known personality triggers produce a response (COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE=1.0)
- *   - Completely unrelated messages do NOT produce a response (social battery / interest gate)
+ *   - Direct @mention always produces a response (bypasses social battery)
+ *   - Messages containing Cova's name/alias produce a response
+ *     (nameReferenced = true is a strong engagement signal for the LLM)
+ *   - Completely unrelated messages with no context signals do NOT produce
+ *     a response (LLM outputs <IGNORE_CONVERSATION> for irrelevant content)
+ *
+ * Note: There are no longer hard-coded trigger patterns. Engagement is decided
+ * entirely by the LLM given structured context signals (wasMentioned,
+ * nameReferenced, isDirectExchange, etc.).
  *
  * Environment:
- *   COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE=1.0  — forces all trigger response_chance to 100%
- *   E2E_ALLOWED_BOT_IDS must include E2E_DISCORD_SENDER_BOT_ID so CovaBot processes our messages
- *   LLM must be reachable from the container (Ollama / Gemini / OpenAI key set)
+ *   E2E_ALLOWED_BOT_IDS must include E2E_DISCORD_SENDER_BOT_ID so CovaBot
+ *   processes our messages.
+ *   LLM must be reachable from the container (Ollama / Gemini / OpenAI key set).
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -61,28 +67,24 @@ describe('CovaBot: direct @mention always triggers a response', () => {
   });
 });
 
-describe('CovaBot: personality trigger responses', () => {
+describe('CovaBot: name reference triggers a response', () => {
   beforeEach(rateLimit);
 
-  it('responds to greeting trigger "hey cova"', async () => {
-    await expectCovaResponds('hey cova');
+  it('responds when name is referenced in a greeting', async () => {
+    await expectCovaResponds('hey cova, how are you doing?');
   });
 
-  it('responds to help request trigger', async () => {
-    await expectCovaResponds('can you help me with this');
-  });
-
-  it('responds to tech discussion trigger', async () => {
-    await expectCovaResponds('I am working with typescript today');
+  it('responds when name is referenced in a question', async () => {
+    await expectCovaResponds('cova what do you think about typescript?');
   });
 });
 
-describe('CovaBot: silence / interest gate', () => {
+describe('CovaBot: silence / no engagement signal', () => {
   beforeEach(rateLimit);
 
-  it('does NOT respond to a completely unrelated message', async () => {
-    // "iufahjfsajk" is nonsensical — will score very low on all interest vectors
-    // and not match any personality trigger
+  it('does NOT respond to a message with no context signals', async () => {
+    // No @mention, no name reference, no conversation context — LLM should output
+    // <IGNORE_CONVERSATION> for completely unrelated content
     await expectCovaSilent('iufahjfsajk zlqpx');
   });
 });

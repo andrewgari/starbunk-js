@@ -1,17 +1,16 @@
 /**
- * Response Decision Service - Orchestrates hybrid response flow
+ * Response Decision Service
  *
- * Flow: Basic Filters → Direct Mention → Pattern Trigger → Social Battery → LLM
+ * Flow: Hard Filters → Direct Mention → Social Battery → LLM
  *
- * The LLM itself decides whether to engage via the IGNORE marker.
- * Keyword-based interest gating has been removed — the LLM receives structured
- * engagement context signals and uses those to make a natural engagement decision.
+ * The LLM receives rich context signals (including whether its name was mentioned)
+ * and decides whether to engage via the IGNORE marker. No string-pattern gating.
  */
 
 import { Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { SocialBatteryService, SocialBatteryConfig } from './social-battery-service';
-import { CovaProfile, ResponseDecision, TriggerCondition } from '@/models/memory-types';
+import { CovaProfile, ResponseDecision } from '@/models/memory-types';
 
 const logger = logLayer.withPrefix('ResponseDecisionService');
 
@@ -35,9 +34,6 @@ export class ResponseDecisionService {
     this.socialBatteryService = socialBatteryService;
   }
 
-  /**
-   * Main decision flow - determines whether and how to respond
-   */
   async shouldRespond(ctx: DecisionContext): Promise<ResponseDecision> {
     const { profile, message, botUserId } = ctx;
 
@@ -49,32 +45,18 @@ export class ResponseDecisionService {
       })
       .debug('Evaluating response decision');
 
-    // Step 1: Basic filters
+    // Step 1: Hard filters — structural rejections that need no LLM input
     if (this.shouldIgnore(profile, message, botUserId)) {
-      return {
-        shouldRespond: false,
-        reason: 'ignored',
-        useLlm: false,
-      };
+      return { shouldRespond: false, reason: 'ignored' };
     }
 
-    // Step 2: Direct @mention - always respond with LLM
+    // Step 2: Direct @mention — bypass rate limits, the user explicitly addressed us
     if (this.isDirectMention(message, botUserId)) {
       logger.withMetadata({ profile_id: profile.id }).debug('Direct mention detected');
-      return {
-        shouldRespond: true,
-        reason: 'direct_mention',
-        useLlm: true,
-      };
+      return { shouldRespond: true, reason: 'direct_mention' };
     }
 
-    // Step 3: Pattern triggers
-    const triggerResult = await this.evaluateTriggers(profile, message);
-    if (triggerResult) {
-      return triggerResult;
-    }
-
-    // Step 4: Social battery ceiling — hard stop if exceeded
+    // Step 3: Social battery ceiling — hard stop if we've been too chatty
     const batteryConfig: SocialBatteryConfig = {
       maxMessages: profile.socialBattery.maxMessages,
       windowMinutes: profile.socialBattery.windowMinutes,
@@ -95,177 +77,40 @@ export class ResponseDecisionService {
           current_count: batteryCheck.currentCount,
         })
         .debug('Social battery depleted');
-
-      return {
-        shouldRespond: false,
-        reason: 'ignored',
-        useLlm: false,
-      };
+      return { shouldRespond: false, reason: 'ignored' };
     }
 
-    // Passed all pre-checks — LLM decides via IGNORE marker whether to actually engage
+    // Step 4: Everything else — LLM decides via IGNORE marker with full context signals
     logger.withMetadata({ profile_id: profile.id }).debug('Passing to LLM for engagement decision');
-
-    return {
-      shouldRespond: true,
-      reason: 'llm_response',
-      useLlm: true,
-    };
+    return { shouldRespond: true, reason: 'llm_response' };
   }
 
-  /**
-   * Check basic ignore conditions
-   */
   private shouldIgnore(profile: CovaProfile, message: Message, botUserId: string): boolean {
-    // Ignore self
     if (message.author.id === botUserId) {
+      logger.withMetadata({ profile_id: profile.id }).debug('Ignoring self-message');
       return true;
     }
 
-    // Ignore bots if configured (E2E_ALLOWED_BOT_IDS bypasses this for test accounts)
     if (profile.ignoreBots && message.author.bot && !e2eAllowedBotIds.has(message.author.id)) {
+      logger
+        .withMetadata({ profile_id: profile.id, author_id: message.author.id })
+        .debug('Ignoring bot message');
       return true;
     }
 
-    // Ignore empty messages
     if (!message.content || message.content.trim().length === 0) {
+      logger.withMetadata({ profile_id: profile.id }).debug('Ignoring empty message');
       return true;
     }
 
     return false;
   }
 
-  /**
-   * Check if message is a direct @mention of the bot
-   */
   private isDirectMention(message: Message, botUserId: string): boolean {
-    // Check for @mention
     if (message.mentions.users.has(botUserId)) {
       return true;
     }
-
-    // Check for mention pattern in content
     const mentionPattern = new RegExp(`<@!?${botUserId}>`);
     return mentionPattern.test(message.content);
-  }
-
-  /**
-   * Evaluate profile triggers against the message
-   */
-  private async evaluateTriggers(
-    profile: CovaProfile,
-    message: Message,
-  ): Promise<ResponseDecision | null> {
-    const chanceOverride = parseFloat(process.env.COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE ?? '');
-
-    for (const trigger of profile.triggers) {
-      const matches = await this.evaluateCondition(trigger.conditions, message);
-
-      if (matches) {
-        // Check response chance if specified
-        // COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE forces all chances to a fixed value (e.g. 1.0)
-        const effectiveChance = !isNaN(chanceOverride) ? chanceOverride : trigger.response_chance;
-        if (effectiveChance !== undefined && effectiveChance < 1) {
-          if (Math.random() > effectiveChance) {
-            continue; // Skip this trigger due to chance roll
-          }
-        }
-
-        logger
-          .withMetadata({
-            profile_id: profile.id,
-            trigger_name: trigger.name,
-            use_llm: trigger.use_llm,
-          })
-          .debug('Trigger matched');
-
-        // Get canned response if not using LLM
-        let patternResponse: string | undefined;
-        if (!trigger.use_llm && trigger.responses) {
-          patternResponse = Array.isArray(trigger.responses)
-            ? trigger.responses[Math.floor(Math.random() * trigger.responses.length)]
-            : trigger.responses;
-        }
-
-        return {
-          shouldRespond: true,
-          reason: 'pattern_trigger',
-          useLlm: trigger.use_llm,
-          patternResponse,
-          triggerName: trigger.name,
-        };
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Recursively evaluate a trigger condition
-   */
-  private async evaluateCondition(condition: TriggerCondition, message: Message): Promise<boolean> {
-    // Logical operators
-    if (condition.all_of) {
-      for (const sub of condition.all_of) {
-        if (!(await this.evaluateCondition(sub, message))) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    if (condition.any_of) {
-      for (const sub of condition.any_of) {
-        if (await this.evaluateCondition(sub, message)) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    if (condition.none_of) {
-      for (const sub of condition.none_of) {
-        if (await this.evaluateCondition(sub, message)) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    // Condition sensors
-    if (condition.always) {
-      return true;
-    }
-
-    if (condition.matches_pattern) {
-      const regex = new RegExp(condition.matches_pattern, 'i');
-      return regex.test(message.content);
-    }
-
-    if (condition.contains_word) {
-      const regex = new RegExp(`\\b${this.escapeRegex(condition.contains_word)}\\b`, 'i');
-      return regex.test(message.content);
-    }
-
-    if (condition.contains_phrase) {
-      return message.content.toLowerCase().includes(condition.contains_phrase.toLowerCase());
-    }
-
-    if (condition.from_user) {
-      return message.author.id === condition.from_user;
-    }
-
-    if (condition.with_chance !== undefined) {
-      return Math.random() < condition.with_chance;
-    }
-
-    return false;
-  }
-
-  /**
-   * Escape special regex characters
-   */
-  private escapeRegex(str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 }

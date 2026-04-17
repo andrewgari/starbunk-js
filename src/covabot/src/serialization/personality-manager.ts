@@ -153,8 +153,13 @@ export class PersonalityManager implements PersonalityService {
       // Close any existing watcher first
       this.stopWatching();
       this.watcher = fs.watch(dir, { persistent: true }, (_event, file) => {
-        // Only react to YAML changes; filename can be undefined on some platforms
-        if (file && !file.endsWith('.yml') && !file.endsWith('.yaml')) return;
+        // React to YAML files and subdirectory changes (entries without extension).
+        // Subdirectory names are reported without an extension when created/removed.
+        // filename can be undefined on some platforms — always trigger in that case.
+        if (file) {
+          const ext = file.includes('.') ? file.slice(file.lastIndexOf('.')) : '';
+          if (ext !== '' && ext !== '.yml' && ext !== '.yaml') return;
+        }
         if (this.watchDebounce) clearTimeout(this.watchDebounce);
         this.watchDebounce = setTimeout(() => {
           try {
