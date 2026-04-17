@@ -1,3 +1,9 @@
+## [1.34.4](https://github.com/andrewgari/starbunk-js/compare/v1.34.3...v1.34.4) (2026-04-17)
+
+### Bug Fixes
+
+* **covabot:** fix ENOTFOUND starbunk-db and false-positive health checks ([#661](https://github.com/andrewgari/starbunk-js/issues/661)) ([008f003](https://github.com/andrewgari/starbunk-js/commit/008f0031f35751289742927b691946f65dc4d85c))
+
 ## [1.34.3](https://github.com/andrewgari/starbunk-js/compare/v1.34.2...v1.34.3) (2026-04-17)
 
 ### Bug Fixes
