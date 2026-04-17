@@ -11,7 +11,7 @@ The project is split into four isolated containers, each under `src/`:
 4. **BlueBot** (`src/bluebot`): Pattern matching bot for "blue" references.
 
 ## Second Brain / Wiki
-- Location: `~/wiki/starbunk-js`
+- Location: `wiki/` (repo root)
 - **Always** check relevant wiki pages before starting any task
 - **Always** update the relevant page after completing a task
 - Wiki uses markdown files organized by topic

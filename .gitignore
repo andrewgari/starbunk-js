@@ -258,6 +258,12 @@ actionlint
 !src/covabot/config/personalities/**/*.md
 
 # ==========================================
+# PROJECT-SPECIFIC: WIKI
+# ==========================================
+# Local wiki (Obsidian second brain — not committed)
+wiki/
+
+# ==========================================
 # MISC
 # ==========================================
 # Optional REPL history
