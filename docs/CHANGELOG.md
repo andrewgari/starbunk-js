@@ -1,3 +1,9 @@
+## [1.34.2](https://github.com/andrewgari/starbunk-js/compare/v1.34.1...v1.34.2) (2026-04-17)
+
+### Bug Fixes
+
+* standardize Docker service/container names to fix CovaBot DNS failures ([#659](https://github.com/andrewgari/starbunk-js/issues/659)) ([b571249](https://github.com/andrewgari/starbunk-js/commit/b571249bdf1f83190b7316436bcba8580e71d0de))
+
 ## [1.34.1](https://github.com/andrewgari/starbunk-js/compare/v1.34.0...v1.34.1) (2026-04-17)
 
 ### Bug Fixes
