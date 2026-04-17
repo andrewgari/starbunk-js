@@ -1,18 +1,37 @@
 name: Deploy Production Tag
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["CD / Main Merge"]
+    types: [completed]
+    branches: [main]
 
 jobs:
   deploy_to_production:
     name: Deploy Production
     runs-on: ubuntu-latest
     concurrency: production
+    environment: production
+    # Only deploy when the CD workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
 
+      # Skip gracefully when deploy secrets are not configured (e.g. forks, dev repos)
+      - name: Preflight — check deploy secrets
+        id: preflight
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          if [[ -n "$SSH_KEY" ]]; then
+            echo "run_deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=Deploy Skipped::Deploy secrets not configured in the 'production' environment — skipping deployment. Add SSH_PRIVATE_KEY (and other deploy secrets) to enable."
+            echo "run_deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Connect to Tailscale
+        if: steps.preflight.outputs.run_deploy == 'true'
         uses: tailscale/github-action@v2
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
@@ -20,6 +39,7 @@ jobs:
           tags: tag:ci
 
       - name: Execute Remote Deploy
+        if: steps.preflight.outputs.run_deploy == 'true'
         uses: appleboy/ssh-action@v1.0.3
         env:
           PROD_DIR: ${{ secrets.PROD_DOCKER_COMPOSE_DIR }}
@@ -37,8 +57,8 @@ jobs:
 
       - name: Notify Discord Deployment
         uses: rjstone/discord-webhook-notify@v1
-        if: always()
+        if: always() && steps.preflight.outputs.run_deploy == 'true'
         with:
           severity: ${{ job.status == 'success' && 'info' || 'error' }}
-          details: Manual Tag Deployment to Production finished with status ${{ job.status }}
+          details: Production deployment finished with status ${{ job.status }}
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}
