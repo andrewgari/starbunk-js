@@ -1,3 +1,9 @@
+## [1.33.4](https://github.com/andrewgari/starbunk-js/compare/v1.33.3...v1.33.4) (2026-04-17)
+
+### Bug Fixes
+
+* **deploy:** correct vars.* references and Tailscale input name ([#651](https://github.com/andrewgari/starbunk-js/issues/651)) ([8d5e591](https://github.com/andrewgari/starbunk-js/commit/8d5e591ab6cfa8a75d86d7af18ce564dab58e1fc))
+
 ## [1.33.3](https://github.com/andrewgari/starbunk-js/compare/v1.33.2...v1.33.3) (2026-04-17)
 
 ### Bug Fixes
