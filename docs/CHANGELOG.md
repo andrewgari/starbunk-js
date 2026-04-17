@@ -1,3 +1,9 @@
+## [1.33.2](https://github.com/andrewgari/starbunk-js/compare/v1.33.1...v1.33.2) (2026-04-17)
+
+### Bug Fixes
+
+* **deploy:** add Tailscale for LAN production server access ([#649](https://github.com/andrewgari/starbunk-js/issues/649)) ([c60fcf1](https://github.com/andrewgari/starbunk-js/commit/c60fcf1e72059e71d9f42c2c81bd4e71925b9856))
+
 ## [1.33.1](https://github.com/andrewgari/starbunk-js/compare/v1.33.0...v1.33.1) (2026-04-17)
 
 ### Bug Fixes
