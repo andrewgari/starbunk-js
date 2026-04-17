@@ -472,3 +472,4 @@ services:
 networks:
   starbunk-network:
     driver: bridge
+    name: starbunk-network  # Force explicit name so multi-stack Portainer deployments share the same bridge

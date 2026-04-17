@@ -7,6 +7,7 @@
 
 import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
+import { setApplicationHealth } from '@starbunk/shared/observability/health-server';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
 import { PostgresService } from '@starbunk/shared/database';
 import { initializeDatabase } from '@/database';
@@ -214,7 +215,35 @@ export class CovaBot {
     DiscordService.getInstance().setClient(this.client);
 
     this.client.once(Events.ClientReady, readyClient => {
-      logger.withMetadata({ user_tag: readyClient.user.tag }).info('Discord client ready');
+      logger
+        .withMetadata({
+          user_tag: readyClient.user.tag,
+          guild_count: readyClient.guilds.cache.size,
+        })
+        .info('Discord client ready');
+    });
+
+    // Prevent uncaught exceptions from gateway/network errors
+    this.client.on(Events.Error, error => {
+      logger.withError(error).error('Discord client error');
+    });
+
+    this.client.on(Events.ShardDisconnect, (closeEvent, shardId) => {
+      logger
+        .withMetadata({ code: closeEvent.code, reason: closeEvent.reason, shard_id: shardId })
+        .warn('Discord shard disconnected');
+      setApplicationHealth('unhealthy', `Discord disconnected (code ${closeEvent.code})`);
+    });
+
+    this.client.on(Events.ShardReconnecting, shardId => {
+      logger.withMetadata({ shard_id: shardId }).info('Discord shard reconnecting');
+    });
+
+    this.client.on(Events.ShardResume, (shardId, replayedEvents) => {
+      logger
+        .withMetadata({ shard_id: shardId, replayed_events: replayedEvents })
+        .info('Discord shard resumed');
+      setApplicationHealth('healthy');
     });
 
     this.client.on(Events.MessageCreate, async (message: Message) => {

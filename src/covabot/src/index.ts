@@ -93,6 +93,18 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 
+  process.on('unhandledRejection', reason => {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    logger.withMetadata({ reason: message }).error('Unhandled promise rejection');
+    setApplicationHealth('unhealthy', `Unhandled rejection: ${message}`);
+  });
+
+  process.on('uncaughtException', error => {
+    logger.withError(error).error('Uncaught exception');
+    setApplicationHealth('unhealthy', `Uncaught exception: ${error.message}`);
+    process.exit(1);
+  });
+
   try {
     await bot.start();
     setApplicationHealth('healthy');

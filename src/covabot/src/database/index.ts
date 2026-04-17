@@ -10,7 +10,10 @@ import { logLayer } from '@starbunk/shared/observability/log-layer';
 const logger = logLayer.withPrefix('CovaBot:Database');
 
 /**
- * Initialize PostgreSQL service for CovaBot
+ * Initialize PostgreSQL service for CovaBot, with retry on transient failures.
+ * Retries up to MAX_RETRIES times with exponential backoff to handle:
+ *   - Postgres container still starting up
+ *   - Transient DNS resolution delays on Docker bridge networks
  */
 export async function initializeDatabase(): Promise<PostgresService> {
   // Validate critical security requirement
@@ -35,8 +38,9 @@ export async function initializeDatabase(): Promise<PostgresService> {
     );
   }
 
+  const host = process.env.POSTGRES_HOST || 'localhost';
   const config: PostgresConfig = {
-    host: process.env.POSTGRES_HOST || 'localhost',
+    host,
     port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
     database: process.env.POSTGRES_DB || 'starbunk',
     user: process.env.POSTGRES_USER || 'starbunk',
@@ -56,12 +60,41 @@ export async function initializeDatabase(): Promise<PostgresService> {
     })
     .info('Initializing CovaBot PostgreSQL connection');
 
-  const pgService = PostgresService.getInstance(config);
-  await pgService.initialize();
+  const MAX_RETRIES = 10;
+  const BASE_DELAY_MS = 3000;
 
-  logger.info('PostgreSQL initialized successfully');
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      // Reset singleton between retries so a fresh pool is created
+      if (attempt > 1) {
+        await PostgresService.resetInstance();
+      }
+      const pgService = PostgresService.getInstance(config);
+      await pgService.initialize();
+      logger.info('PostgreSQL initialized successfully');
+      return pgService;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      if (attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY_MS * attempt;
+        logger
+          .withMetadata({ attempt, max_retries: MAX_RETRIES, delay_ms: delay, error: message })
+          .warn('PostgreSQL connection failed, retrying...');
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        logger
+          .withMetadata({ attempt, max_retries: MAX_RETRIES, host, error: message })
+          .error(
+            'PostgreSQL connection failed after all retries. ' +
+              'Verify POSTGRES_HOST is reachable and CovaBot is on the same Docker network as starbunk-postgres.',
+          );
+      }
+    }
+  }
 
-  return pgService;
+  throw lastError;
 }
 
 /**
