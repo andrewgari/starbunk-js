@@ -362,7 +362,7 @@ services:
   # PostgreSQL - Relational database
   starbunk-postgres:
     image: postgres:16-alpine
-    container_name: starbunk-db
+    container_name: starbunk-postgres
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-starbunk}
@@ -398,7 +398,7 @@ services:
   # Redis - Session cache and state management (internal only)
   starbunk-redis:
     image: redis:7-alpine
-    container_name: starbunk-cache
+    container_name: starbunk-redis
     restart: unless-stopped
     command: sh -c "redis-server $${REDIS_PASSWORD:+--requirepass \"$$REDIS_PASSWORD\"} --maxmemory 256mb --maxmemory-policy allkeys-lru"
     volumes:
@@ -430,7 +430,7 @@ services:
   # Qdrant - Vector database for semantic search (internal only)
   starbunk-qdrant:
     image: qdrant/qdrant:v1.7.4
-    container_name: starbunk-vectordb
+    container_name: starbunk-qdrant
     restart: unless-stopped
     environment:
       - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-}
