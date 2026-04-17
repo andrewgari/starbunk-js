@@ -166,7 +166,7 @@ services:
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_DB=${POSTGRES_DB:-starbunk}
       - POSTGRES_USER=${POSTGRES_USER:-starbunk}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable is required for security}
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable is required for security}"
 
       # Cache & Vector DB
       - REDIS_URL=${REDIS_URL:-redis://starbunk-redis:6379}
@@ -368,7 +368,7 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-starbunk}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD is required for security}
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD is required for security}"
       - POSTGRES_DB=${POSTGRES_DB:-starbunk}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
