@@ -15,6 +15,7 @@ import { config } from 'dotenv';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
+import { setApplicationHealth } from '@starbunk/shared/observability/health-server';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { CovaBot, CovaBotConfig } from './cova-bot';
 
@@ -94,9 +95,11 @@ async function main(): Promise<void> {
 
   try {
     await bot.start();
+    setApplicationHealth('healthy');
     logger.info('CovaBot v2 is now running');
   } catch (error) {
     logger.withError(error).error('Failed to start CovaBot');
+    setApplicationHealth('unhealthy', error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

@@ -4,6 +4,7 @@ import { setupDJCovaLogging } from './observability/setup-logging';
 import { logger } from './observability/logger';
 import { Client, Events, GatewayIntentBits, Message, VoiceChannel } from 'discord.js';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
+import { setApplicationHealth } from '@starbunk/shared/observability/health-server';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
@@ -80,6 +81,7 @@ async function main(): Promise<void> {
     logger.info('Initializing commands...');
     await initializeCommands(client, commands);
     logger.info('✅ DJCova commands initialized successfully');
+    setApplicationHealth('healthy');
 
     // E2E text command handler — only active when E2E_MODE=true
     if (isE2eMode) {
