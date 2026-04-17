@@ -1,3 +1,9 @@
+## [1.34.1](https://github.com/andrewgari/starbunk-js/compare/v1.34.0...v1.34.1) (2026-04-17)
+
+### Bug Fixes
+
+* remove hardcoded subnet to prevent Portainer address pool conflicts ([#658](https://github.com/andrewgari/starbunk-js/issues/658)) ([a7a182a](https://github.com/andrewgari/starbunk-js/commit/a7a182a2f02fccb4f99deafe6ba1879dbf40c0c7))
+
 ## [1.34.0](https://github.com/andrewgari/starbunk-js/compare/v1.33.5...v1.34.0) (2026-04-17)
 
 ### Features
