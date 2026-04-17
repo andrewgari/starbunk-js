@@ -65,7 +65,6 @@ export type {
 } from './services/llm';
 export { LlmProviderManager } from './services/llm/llm-provider-manager';
 export { OpenAIProvider } from './services/llm/openai-provider';
-export { GeminiProvider } from './services/llm/gemini-provider';
 export { OllamaProvider } from './services/llm/ollama-provider';
 
 // Ollama model management

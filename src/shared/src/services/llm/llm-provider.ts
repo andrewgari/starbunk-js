@@ -1,7 +1,7 @@
 /**
  * LLM Provider Interface
  *
- * Defines the contract for LLM providers (Ollama, Gemini, OpenAI).
+ * Defines the contract for LLM providers (Ollama, OpenAI).
  * All providers must implement this interface for consistent usage.
  */
 
@@ -47,10 +47,6 @@ export interface LlmProviderConfig {
   // Ollama
   ollamaApiUrl?: string;
   ollamaDefaultModel?: string;
-
-  // Gemini
-  geminiApiKey?: string;
-  geminiDefaultModel?: string;
 
   // OpenAI
   openaiApiKey?: string;

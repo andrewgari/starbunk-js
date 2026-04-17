@@ -92,5 +92,4 @@ services:
       COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE: "1.0"
       # At least one LLM provider must be set — the E2E env should supply one
       OLLAMA_API_URL: ${E2E_OLLAMA_API_URL:-}
-      GEMINI_API_KEY: ${E2E_GEMINI_API_KEY:-}
       OPENAI_API_KEY: ${E2E_OPENAI_API_KEY:-}

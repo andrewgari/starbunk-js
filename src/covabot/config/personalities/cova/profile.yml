@@ -31,7 +31,7 @@ profile:
     channel_window: 15
 
   llm:
-    model: "gemini-1.5-flash"
+    model: "mistral:latest"
     temperature: 0.4
     max_tokens: 256
 

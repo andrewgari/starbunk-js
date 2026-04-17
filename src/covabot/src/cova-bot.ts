@@ -35,11 +35,9 @@ export interface CovaBotConfig {
   discordToken: string;
   personalitiesPath?: string;
   databasePath?: string;
-  // LLM Provider configuration (priority: Ollama > Gemini > OpenAI)
+  // LLM Provider configuration (priority: Ollama > OpenAI)
   ollamaApiUrl?: string;
   ollamaDefaultModel?: string;
-  geminiApiKey?: string;
-  geminiDefaultModel?: string;
   openaiApiKey?: string;
   openaiDefaultModel?: string;
 }
@@ -168,8 +166,6 @@ export class CovaBot {
     this.llmService = new LlmService({
       ollamaApiUrl: this.config.ollamaApiUrl,
       ollamaDefaultModel: this.config.ollamaDefaultModel,
-      geminiApiKey: this.config.geminiApiKey,
-      geminiDefaultModel: this.config.geminiDefaultModel,
       openaiApiKey: this.config.openaiApiKey,
       openaiDefaultModel: this.config.openaiDefaultModel,
     });

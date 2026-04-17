@@ -2,7 +2,6 @@
 export * from './llm-provider';
 export * from './llm-provider-manager';
 export * from './ollama-provider';
-export * from './gemini-provider';
 export * from './openai-provider';
 export * from './ollama-model-manager';
 

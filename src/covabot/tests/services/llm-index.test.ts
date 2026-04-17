@@ -8,7 +8,6 @@ describe('LLM index re-exports', () => {
     expect(LlmModule).toHaveProperty('EmbeddingManager');
     expect(LlmModule).toHaveProperty('LlmProviderManager');
     expect(LlmModule).toHaveProperty('OpenAIProvider');
-    expect(LlmModule).toHaveProperty('GeminiProvider');
     expect(LlmModule).toHaveProperty('OllamaProvider');
   });
 });
