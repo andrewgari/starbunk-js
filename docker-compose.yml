@@ -1,7 +1,7 @@
 version: "3.8"
 
 # Production deployment using pre-built images from GitHub Container Registry (GHCR)
-# Images are built by CI/CD pipeline and tagged as 'prod' for production releases
+# Images are built by CI/CD pipeline and tagged as 'main' for the latest production build
 # For local development with source builds, see src/{service}/docker-compose.dev.yml
 
 services:
@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     environment:
       # Core Discord Configuration
-      - DISCORD_TOKEN=${BUNKBOT_TOKEN}
+      - DISCORD_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
 
       # Storage Configuration
       # BUNKBOT_BOTS_DIR=/app/config  # Optional: defaults to /app/config
@@ -304,7 +304,7 @@ services:
 
   # OpenTelemetry Collector - Unified telemetry pipeline
   starbunk-otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:0.102.1
     container_name: starbunk-exporter
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yml"]
@@ -383,7 +383,7 @@ services:
     image: redis:7-alpine
     container_name: starbunk-cache
     restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD:-} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: sh -c "redis-server $${REDIS_PASSWORD:+--requirepass \"$$REDIS_PASSWORD\"} --maxmemory 256mb --maxmemory-policy allkeys-lru"
     volumes:
       - ${HOST_WORKDIR}/data/redis:/data
     networks:
@@ -405,7 +405,7 @@ services:
         reservations:
           memory: 128M
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli ${REDIS_PASSWORD:+-a \"$REDIS_PASSWORD\"} ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
