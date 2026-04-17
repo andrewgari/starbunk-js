@@ -1,3 +1,9 @@
+## [1.34.0](https://github.com/andrewgari/starbunk-js/compare/v1.33.5...v1.34.0) (2026-04-17)
+
+### Features
+
+* **infra:** full production stack — Redis, Qdrant, Portainer webhook deploy ([#653](https://github.com/andrewgari/starbunk-js/issues/653)) ([5bf4510](https://github.com/andrewgari/starbunk-js/commit/5bf4510c926d070e8bfe0a6c552764c422d2fd06))
+
 ## [1.33.5](https://github.com/andrewgari/starbunk-js/compare/v1.33.4...v1.33.5) (2026-04-17)
 
 ### Bug Fixes
