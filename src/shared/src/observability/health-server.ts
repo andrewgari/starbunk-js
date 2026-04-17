@@ -4,8 +4,27 @@ import { logLayer } from './log-layer';
 
 const logger = logLayer.withPrefix('HealthServer');
 
+type ApplicationHealthState = 'starting' | 'healthy' | 'unhealthy';
+
+interface ApplicationHealthInfo {
+  state: ApplicationHealthState;
+  reason?: string;
+}
+
+// Module-level health state — starts as 'starting' to prevent false positives during init.
+// Containers must call setApplicationHealth('healthy') after successful startup.
+let applicationHealth: ApplicationHealthInfo = { state: 'starting' };
+
 /**
- * Health and metrics HTTP server for BunkBot
+ * Update the application health state.
+ * Call with 'healthy' after successful startup, 'unhealthy' if startup fails.
+ */
+export function setApplicationHealth(state: ApplicationHealthState, reason?: string): void {
+  applicationHealth = { state, reason };
+}
+
+/**
+ * Health and metrics HTTP server
  * Provides endpoints for Prometheus scraping and health checks
  */
 export class HealthServer {
@@ -86,15 +105,31 @@ export class HealthServer {
 
   private handleHealth(req: http.IncomingMessage, res: http.ServerResponse): void {
     const uptime = Date.now() - this.startTime;
-    const health = {
-      status: 'healthy',
-      uptime: uptime,
-      timestamp: new Date().toISOString(),
-      service: 'bunkbot',
-    };
+    const serviceName = process.env.SERVICE_NAME || 'unknown';
+
+    if (applicationHealth.state !== 'healthy') {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          status: applicationHealth.state,
+          reason: applicationHealth.reason,
+          uptime,
+          timestamp: new Date().toISOString(),
+          service: serviceName,
+        }),
+      );
+      return;
+    }
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(health));
+    res.end(
+      JSON.stringify({
+        status: 'healthy',
+        uptime,
+        timestamp: new Date().toISOString(),
+        service: serviceName,
+      }),
+    );
   }
 
   private handleLiveness(req: http.IncomingMessage, res: http.ServerResponse): void {

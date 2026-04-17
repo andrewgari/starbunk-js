@@ -5,6 +5,7 @@ import { logger } from '@/observability/logger';
 import { BlueBot } from '@/blue-bot';
 import { runSmokeTest } from '@starbunk/shared/health/smoke-test';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
+import { setApplicationHealth } from '@starbunk/shared/observability/health-server';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 
@@ -60,6 +61,7 @@ async function main(): Promise<void> {
 
   const bot = new BlueBot(client);
   await bot.start();
+  setApplicationHealth('healthy');
 
   // Set up graceful shutdown handlers
   const shutdown = async (signal: string) => {
