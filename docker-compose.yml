@@ -151,8 +151,6 @@ services:
       # AI/LLM Configuration
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-1.5-flash}
       - OLLAMA_API_URL=${OLLAMA_API_URL:-}
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-mistral:latest}
       - OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS:-true}
@@ -164,7 +162,7 @@ services:
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_DB=${POSTGRES_DB:-starbunk}
       - POSTGRES_USER=${POSTGRES_USER:-starbunk}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable is required for security}
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable is required for security}"
 
       # Storage Configuration
       - COVABOT_DATA_DIR=/app/data

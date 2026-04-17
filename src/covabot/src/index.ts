@@ -6,7 +6,6 @@
  *   - DISCORD_TOKEN: Discord bot token
  *   - At least one LLM provider configured:
  *     - OLLAMA_API_URL (primary, recommended)
- *     - GEMINI_API_KEY (fallback)
  *     - OPENAI_API_KEY (fallback)
  *   - COVABOT_PERSONALITIES_PATH (optional): Path to personality YAML files
  *   - COVABOT_DATABASE_PATH (optional): Path to SQLite database
@@ -45,12 +44,11 @@ async function main(): Promise<void> {
 
   // Check if at least one LLM provider is configured
   const ollamaApiUrl = process.env.OLLAMA_API_URL;
-  const geminiApiKey = process.env.GEMINI_API_KEY;
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
-  if (!ollamaApiUrl && !geminiApiKey && !openaiApiKey) {
+  if (!ollamaApiUrl && !openaiApiKey) {
     logger.warn(
-      'No LLM provider configured. At least one of OLLAMA_API_URL, GEMINI_API_KEY, or OPENAI_API_KEY is recommended.',
+      'No LLM provider configured. At least one of OLLAMA_API_URL or OPENAI_API_KEY is recommended.',
     );
   }
 
@@ -59,11 +57,9 @@ async function main(): Promise<void> {
     discordToken,
     personalitiesPath: process.env.COVABOT_PERSONALITIES_PATH,
     databasePath: process.env.COVABOT_DATABASE_PATH,
-    // LLM providers (priority: Ollama > Gemini > OpenAI)
+    // LLM providers (priority: Ollama > OpenAI)
     ollamaApiUrl,
     ollamaDefaultModel: process.env.OLLAMA_DEFAULT_MODEL,
-    geminiApiKey,
-    geminiDefaultModel: process.env.GEMINI_DEFAULT_MODEL,
     openaiApiKey,
     openaiDefaultModel: process.env.OPENAI_DEFAULT_MODEL,
   };
