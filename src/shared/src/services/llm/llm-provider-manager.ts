@@ -2,7 +2,7 @@
  * LLM Provider Manager
  *
  * Manages multiple LLM providers with fallback support.
- * Priority: Gemini (primary) -> Ollama (fallback) -> OpenAI (fallback)
+ * Priority: Ollama (primary) -> OpenAI (fallback)
  */
 
 import { logLayer } from '../../observability/log-layer';
@@ -14,7 +14,6 @@ import {
   LlmCompletionResult,
 } from './llm-provider';
 import { OllamaProvider } from './ollama-provider';
-import { GeminiProvider } from './gemini-provider';
 import { OpenAIProvider } from './openai-provider';
 
 const logger = logLayer.withPrefix('LlmProviderManager');
@@ -30,21 +29,14 @@ export class LlmProviderManager {
    * Initialize providers in priority order
    */
   private initializeProviders(config?: LlmProviderConfig): void {
-    // 1. Gemini (primary - free tier available)
-    const gemini = new GeminiProvider(config?.geminiApiKey, config?.geminiDefaultModel);
-    if (gemini.isAvailable()) {
-      this.providers.push(gemini);
-      logger.info('Gemini provider registered (primary)');
-    }
-
-    // 2. Ollama (first fallback - local, free, private)
+    // 1. Ollama (primary - local, free, private)
     const ollama = new OllamaProvider(config?.ollamaApiUrl, config?.ollamaDefaultModel);
     if (ollama.isAvailable()) {
       this.providers.push(ollama);
-      logger.info('Ollama provider registered (fallback)');
+      logger.info('Ollama provider registered (primary)');
     }
 
-    // 3. OpenAI (second fallback - paid)
+    // 2. OpenAI (fallback - paid)
     const openai = new OpenAIProvider(config?.openaiApiKey, config?.openaiDefaultModel);
     if (openai.isAvailable()) {
       this.providers.push(openai);

@@ -1,7 +1,7 @@
 /**
  * LLM Service - Multi-provider LLM integration for response generation
  *
- * Supports Ollama (primary), Gemini (fallback), and OpenAI (fallback).
+ * Supports Ollama (primary) and OpenAI (fallback).
  */
 
 import { logLayer } from '@starbunk/shared/observability/log-layer';
