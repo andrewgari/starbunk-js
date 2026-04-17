@@ -1,3 +1,15 @@
+## [1.33.5](https://github.com/andrewgari/starbunk-js/compare/v1.33.4...v1.33.5) (2026-04-17)
+
+### Bug Fixes
+
+* **deploy:** remove postgres host port exposure ([#652](https://github.com/andrewgari/starbunk-js/issues/652)) ([bd74ef1](https://github.com/andrewgari/starbunk-js/commit/bd74ef1ef8c67f35ff1fa7bdd5be89419ab7574c))
+
+## [1.33.4](https://github.com/andrewgari/starbunk-js/compare/v1.33.3...v1.33.4) (2026-04-17)
+
+### Bug Fixes
+
+* **deploy:** correct vars.* references and Tailscale input name ([#651](https://github.com/andrewgari/starbunk-js/issues/651)) ([8d5e591](https://github.com/andrewgari/starbunk-js/commit/8d5e591ab6cfa8a75d86d7af18ce564dab58e1fc))
+
 ## [1.33.3](https://github.com/andrewgari/starbunk-js/compare/v1.33.2...v1.33.3) (2026-04-17)
 
 ### Bug Fixes
