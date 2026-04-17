@@ -1,3 +1,9 @@
+## [1.33.1](https://github.com/andrewgari/starbunk-js/compare/v1.33.0...v1.33.1) (2026-04-17)
+
+### Bug Fixes
+
+* **cd:** configure git identity before creating build tag ([#648](https://github.com/andrewgari/starbunk-js/issues/648)) ([7b26775](https://github.com/andrewgari/starbunk-js/commit/7b2677564b3196f51a8a1f3aa143cc5e93e0eba0))
+
 ## [1.33.0](https://github.com/andrewgari/starbunk-js/compare/v1.32.0...v1.33.0) (2026-04-17)
 
 ### Features
