@@ -1,3 +1,9 @@
+## [1.33.3](https://github.com/andrewgari/starbunk-js/compare/v1.33.2...v1.33.3) (2026-04-17)
+
+### Bug Fixes
+
+* **deploy:** fix race condition and use production environment secrets ([#650](https://github.com/andrewgari/starbunk-js/issues/650)) ([47d9bcb](https://github.com/andrewgari/starbunk-js/commit/47d9bcb7b073eaa5642b4379b1b8f7f7a0585a63))
+
 ## [1.33.2](https://github.com/andrewgari/starbunk-js/compare/v1.33.1...v1.33.2) (2026-04-17)
 
 ### Bug Fixes
