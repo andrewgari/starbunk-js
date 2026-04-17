@@ -12,11 +12,16 @@
 
 import 'dotenv/config';
 import { initE2EClient } from '@/harness/discord-e2e-client';
-import { env } from '@/harness/test-env';
+import { env, isConfigured } from '@/harness/test-env';
 
 const BOT_READY_TIMEOUT_MS = 60_000;
 
 export async function setup(): Promise<void> {
+  if (!isConfigured) {
+    console.log('\n[E2E Global Setup] E2E env vars not configured — skipping suite.\n');
+    process.exit(0);
+  }
+
   console.log('\n[E2E Global Setup] Connecting to Discord...');
 
   const client = initE2EClient(env.SENDER_TOKEN, env.ENEMY_TOKEN, env.SENDER_BOT_ID);
