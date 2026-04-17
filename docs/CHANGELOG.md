@@ -1,3 +1,9 @@
+## [1.34.3](https://github.com/andrewgari/starbunk-js/compare/v1.34.2...v1.34.3) (2026-04-17)
+
+### Bug Fixes
+
+* **health:** return 503 during startup to prevent false-positive health checks ([#660](https://github.com/andrewgari/starbunk-js/issues/660)) ([cd61035](https://github.com/andrewgari/starbunk-js/commit/cd61035fa8a7fef7f724402aac0b49e916ab4fe9))
+
 ## [1.34.2](https://github.com/andrewgari/starbunk-js/compare/v1.34.1...v1.34.2) (2026-04-17)
 
 ### Bug Fixes
