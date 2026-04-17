@@ -35,14 +35,14 @@ jobs:
         uses: tailscale/github-action@v2
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          oauth-client-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
           tags: tag:ci
 
       - name: Execute Remote Deploy
         if: steps.preflight.outputs.run_deploy == 'true'
         uses: appleboy/ssh-action@v1.0.3
         env:
-          PROD_DIR: ${{ secrets.PROD_DOCKER_COMPOSE_DIR }}
+          PROD_DIR: ${{ vars.PROD_DOCKER_COMPOSE_DIR }}
         with:
           host: ${{ secrets.PROD_SERVER_HOST }}
           username: ${{ secrets.PROD_SERVER_USER }}
@@ -61,4 +61,4 @@ jobs:
         with:
           severity: ${{ job.status == 'success' && 'info' || 'error' }}
           details: Production deployment finished with status ${{ job.status }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
