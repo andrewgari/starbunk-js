@@ -15,6 +15,7 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 60_000,
+    passWithNoTests: true,
     include: ['src/tests/**/*.e2e.test.ts'],
     globalSetup: ['src/setup/global-setup.ts'],
     reporters: [
