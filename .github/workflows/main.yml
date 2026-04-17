@@ -242,6 +242,8 @@ jobs:
       - name: Create build tag (no semantic release)
         if: steps.semrel.outputs.new_version == ''
         run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
           BUILD_TAG="build-$(date +%Y%m%d)-${GITHUB_SHA:0:7}"
           git tag "$BUILD_TAG" -m "CI build ${GITHUB_RUN_NUMBER} from ${GITHUB_SHA:0:7}"
           git push origin "$BUILD_TAG"
