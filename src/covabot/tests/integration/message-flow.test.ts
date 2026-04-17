@@ -83,28 +83,9 @@ describe('Message Flow Integration', () => {
       backgroundFacts: [],
       speechPatterns: { lowercase: true, sarcasmLevel: 0.3, technicalBias: 0.5 },
     },
-    triggers: [
-      {
-        name: 'help-request',
-        conditions: { contains_phrase: 'help me' },
-        use_llm: true,
-      },
-      {
-        name: 'greeting',
-        conditions: { contains_word: 'hello' },
-        use_llm: false,
-        responses: ['Hello there!', 'Hi!'],
-      },
-      {
-        name: 'tech-talk',
-        conditions: {
-          any_of: [{ contains_word: 'typescript' }, { contains_word: 'react' }],
-        },
-        use_llm: true,
-        response_chance: 0.5,
-      },
-    ],
+    nameAliases: ['test bot', 'testbot'],
     socialBattery: { maxMessages: 5, windowMinutes: 10, cooldownSeconds: 30 },
+    memory: { channelWindow: 8 },
     llmConfig: { model: 'gpt-4o-mini', temperature: 0.4, max_tokens: 256 },
     ignoreBots: true,
   };
@@ -374,7 +355,7 @@ describe('Message Flow Integration', () => {
       expect(decision.reason).toBe('ignored');
     });
 
-    it('should respond to direct mentions with LLM', async () => {
+    it('should respond to direct mentions', async () => {
       const message = createMockMessage({
         content: `<@${botUserId}> what do you think?`,
         mentions: [botUserId],
@@ -385,52 +366,9 @@ describe('Message Flow Integration', () => {
 
       expect(decision.shouldRespond).toBe(true);
       expect(decision.reason).toBe('direct_mention');
-      expect(decision.useLlm).toBe(true);
     });
 
-    it('should match pattern trigger without LLM', async () => {
-      const message = createMockMessage({
-        content: 'hello everyone',
-      });
-
-      const ctx: DecisionContext = { profile: mockProfile, message, botUserId };
-      const decision = await decisionService.shouldRespond(ctx);
-
-      expect(decision.shouldRespond).toBe(true);
-      expect(decision.reason).toBe('pattern_trigger');
-      expect(decision.useLlm).toBe(false);
-      expect(decision.patternResponse).toBeDefined();
-      expect(['Hello there!', 'Hi!']).toContain(decision.patternResponse);
-    });
-
-    it('should match pattern trigger with LLM', async () => {
-      const message = createMockMessage({
-        content: 'can you help me with this?',
-      });
-
-      const ctx: DecisionContext = { profile: mockProfile, message, botUserId };
-      const decision = await decisionService.shouldRespond(ctx);
-
-      expect(decision.shouldRespond).toBe(true);
-      expect(decision.reason).toBe('pattern_trigger');
-      expect(decision.useLlm).toBe(true);
-      expect(decision.triggerName).toBe('help-request');
-    });
-
-    it('should pass messages about interest topics to the LLM', async () => {
-      const message = createMockMessage({
-        content: 'I love working with typescript and testing!',
-      });
-
-      const ctx: DecisionContext = { profile: mockProfile, message, botUserId };
-      const decision = await decisionService.shouldRespond(ctx);
-
-      // tech-talk trigger matches "typescript", LLM decides final response via IGNORE
-      expect(decision.shouldRespond).toBe(true);
-      expect(decision.useLlm).toBe(true);
-    });
-
-    it('should pass unmatched messages to the LLM for engagement decision', async () => {
+    it('should pass all non-filtered messages to LLM for engagement decision', async () => {
       const message = createMockMessage({
         content: 'what is the weather like today',
       });
@@ -438,10 +376,9 @@ describe('Message Flow Integration', () => {
       const ctx: DecisionContext = { profile: mockProfile, message, botUserId };
       const decision = await decisionService.shouldRespond(ctx);
 
-      // No pattern trigger matches — LLM decides via IGNORE whether to engage
+      // No string-pattern matching — LLM decides via IGNORE whether to engage
       expect(decision.shouldRespond).toBe(true);
       expect(decision.reason).toBe('llm_response');
-      expect(decision.useLlm).toBe(true);
     });
 
     it('should respect social battery rate limit for non-trigger messages', async () => {

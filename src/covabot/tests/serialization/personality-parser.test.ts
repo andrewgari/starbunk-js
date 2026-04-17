@@ -4,6 +4,7 @@ import * as path from 'path';
 import {
   parsePersonalityFile,
   loadPersonalitiesFromDirectory,
+  loadPersonalityFromDirectory,
 } from '../../src/serialization/personality-parser';
 
 describe('PersonalityParser', () => {
@@ -17,13 +18,9 @@ describe('PersonalityParser', () => {
   });
 
   afterEach(() => {
-    // Clean up test directory
+    // Clean up test directory recursively
     if (fs.existsSync(testDir)) {
-      const files = fs.readdirSync(testDir);
-      for (const file of files) {
-        fs.unlinkSync(path.join(testDir, file));
-      }
-      fs.rmdirSync(testDir);
+      fs.rmSync(testDir, { recursive: true, force: true });
     }
   });
 
@@ -34,6 +31,9 @@ profile:
   id: "test-bot"
   display_name: "Test Bot"
   avatar_url: "https://example.com/avatar.png"
+  name_aliases:
+    - "test"
+    - "testbot"
 
   identity:
     type: static
@@ -52,12 +52,6 @@ profile:
       lowercase: true
       sarcasm_level: 0.3
       technical_bias: 0.5
-
-  triggers:
-    - name: "greeting"
-      conditions:
-        contains_word: "hello"
-      use_llm: true
 
   social_battery:
     max_messages: 5
@@ -82,8 +76,7 @@ profile:
       expect(profile.personality.traits).toContain('friendly');
       expect(profile.personality.interests).toContain('testing');
       expect(profile.personality.speechPatterns.lowercase).toBe(true);
-      expect(profile.triggers).toHaveLength(1);
-      expect(profile.triggers[0].name).toBe('greeting');
+      expect(profile.nameAliases).toEqual(['test', 'testbot']);
       expect(profile.socialBattery.maxMessages).toBe(5);
       expect(profile.llmConfig.model).toBe('gpt-4o-mini');
       expect(profile.ignoreBots).toBe(true);
@@ -108,8 +101,6 @@ profile:
   identity:
     type: static
     botName: "Test Bot"
-  personality:
-    system_prompt: "Test"
 `;
       const filePath = path.join(testDir, 'incomplete.yml');
       fs.writeFileSync(filePath, yamlContent);
@@ -129,12 +120,6 @@ profile:
 
   personality:
     system_prompt: "You are minimal."
-
-  triggers:
-    - name: "always"
-      conditions:
-        always: true
-      use_llm: true
 `;
       const filePath = path.join(testDir, 'minimal.yml');
       fs.writeFileSync(filePath, yamlContent);
@@ -162,11 +147,6 @@ profile:
 
   personality:
     system_prompt: "You mimic a user."
-
-  triggers:
-    - name: "always"
-      conditions:
-        always: true
 `;
       const filePath = path.join(testDir, 'mimic.yml');
       fs.writeFileSync(filePath, yamlContent);
@@ -177,42 +157,40 @@ profile:
       expect((profile.identity as { as_member: string }).as_member).toBe('123456789012345678');
     });
 
-    it('should parse complex trigger conditions', () => {
+    it('should parse name_aliases', () => {
       const yamlContent = `
 profile:
-  id: "complex-bot"
-  display_name: "Complex Bot"
+  id: "alias-bot"
+  display_name: "Alias Bot"
+  name_aliases:
+    - "alias"
+    - "aliasbot"
 
   identity:
     type: static
-    botName: "Complex Bot"
+    botName: "Alias Bot"
 
   personality:
-    system_prompt: "You have complex triggers."
-
-  triggers:
-    - name: "complex"
-      conditions:
-        any_of:
-          - contains_word: "hello"
-          - all_of:
-              - from_user: "123456789012345678"
-              - with_chance: 0.5
-      use_llm: true
-      response_chance: 0.8
+    system_prompt: "You respond to aliases."
 `;
-      const filePath = path.join(testDir, 'complex.yml');
+      const filePath = path.join(testDir, 'alias.yml');
       fs.writeFileSync(filePath, yamlContent);
 
       const profile = parsePersonalityFile(filePath);
 
-      expect(profile.triggers[0].conditions).toHaveProperty('any_of');
-      expect(profile.triggers[0].response_chance).toBe(0.8);
+      expect(profile.nameAliases).toEqual(['alias', 'aliasbot']);
     });
   });
 
   describe('loadPersonalitiesFromDirectory', () => {
-    it('should load all personality files from directory', () => {
+    const mkPersonalityDir = (name: string, yaml: string) => {
+      const dir = path.join(testDir, name);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'profile.yml'), yaml);
+      return dir;
+    };
+
+    it('should load all personality subdirectories', () => {
       const yaml1 = `
 profile:
   id: "bot-1"
@@ -222,10 +200,6 @@ profile:
     botName: "Bot 1"
   personality:
     system_prompt: "Bot 1"
-  triggers:
-    - name: "test"
-      conditions:
-        always: true
 `;
       const yaml2 = `
 profile:
@@ -236,13 +210,9 @@ profile:
     botName: "Bot 2"
   personality:
     system_prompt: "Bot 2"
-  triggers:
-    - name: "test"
-      conditions:
-        always: true
 `;
-      fs.writeFileSync(path.join(testDir, 'bot1.yml'), yaml1);
-      fs.writeFileSync(path.join(testDir, 'bot2.yaml'), yaml2);
+      mkPersonalityDir('bot-1', yaml1);
+      mkPersonalityDir('bot-2', yaml2);
 
       const profiles = loadPersonalitiesFromDirectory(testDir);
 
@@ -257,12 +227,9 @@ profile:
 
       expect(profiles).toHaveLength(0);
       expect(fs.existsSync(newDir)).toBe(true);
-
-      // Clean up
-      fs.rmdirSync(newDir);
     });
 
-    it('should skip invalid files and continue loading', () => {
+    it('should skip subdirectories with invalid profile.yml and continue loading', () => {
       const validYaml = `
 profile:
   id: "valid-bot"
@@ -272,15 +239,12 @@ profile:
     botName: "Valid Bot"
   personality:
     system_prompt: "Valid"
-  triggers:
-    - name: "test"
-      conditions:
-        always: true
 `;
-      const invalidYaml = 'invalid yaml content [[[';
+      mkPersonalityDir('valid-bot', validYaml);
 
-      fs.writeFileSync(path.join(testDir, 'valid.yml'), validYaml);
-      fs.writeFileSync(path.join(testDir, 'invalid.yml'), invalidYaml);
+      const invalidDir = path.join(testDir, 'invalid-bot');
+      fs.mkdirSync(invalidDir, { recursive: true });
+      fs.writeFileSync(path.join(invalidDir, 'profile.yml'), 'invalid yaml content [[[');
 
       const profiles = loadPersonalitiesFromDirectory(testDir);
 
@@ -288,7 +252,7 @@ profile:
       expect(profiles[0].id).toBe('valid-bot');
     });
 
-    it('should ignore non-YAML files', () => {
+    it('should ignore files at the top level (only processes subdirectories)', () => {
       const validYaml = `
 profile:
   id: "test-bot"
@@ -298,18 +262,114 @@ profile:
     botName: "Test Bot"
   personality:
     system_prompt: "Test"
-  triggers:
-    - name: "test"
-      conditions:
-        always: true
 `;
-      fs.writeFileSync(path.join(testDir, 'bot.yml'), validYaml);
-      fs.writeFileSync(path.join(testDir, 'readme.txt'), 'Not a YAML file');
-      fs.writeFileSync(path.join(testDir, 'config.json'), '{}');
+      mkPersonalityDir('test-bot', validYaml);
+      // These top-level files should be ignored
+      fs.writeFileSync(path.join(testDir, 'readme.txt'), 'Not a personality dir');
+      fs.writeFileSync(path.join(testDir, 'stray.yml'), validYaml);
 
       const profiles = loadPersonalitiesFromDirectory(testDir);
 
       expect(profiles).toHaveLength(1);
+      expect(profiles[0].id).toBe('test-bot');
+    });
+
+    it('should skip subdirectories without a profile.yml', () => {
+      const validYaml = `
+profile:
+  id: "test-bot"
+  display_name: "Test Bot"
+  identity:
+    type: static
+    botName: "Test Bot"
+  personality:
+    system_prompt: "Test"
+`;
+      mkPersonalityDir('test-bot', validYaml);
+
+      // subdir without profile.yml
+      fs.mkdirSync(path.join(testDir, 'no-profile'), { recursive: true });
+      fs.writeFileSync(path.join(testDir, 'no-profile', 'core.md'), 'Just markdown, no profile');
+
+      const profiles = loadPersonalitiesFromDirectory(testDir);
+
+      expect(profiles).toHaveLength(1);
+    });
+  });
+
+  describe('loadPersonalityFromDirectory', () => {
+    const mkPersonalityDir = (
+      name: string,
+      yaml: string,
+      markdownFiles?: Record<string, string>,
+    ) => {
+      const dir = path.join(testDir, name);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'profile.yml'), yaml);
+      if (markdownFiles) {
+        for (const [file, content] of Object.entries(markdownFiles)) {
+          fs.writeFileSync(path.join(dir, file), content);
+        }
+      }
+      return dir;
+    };
+
+    it('should use system_prompt from YAML when no markdown files are present', () => {
+      const yaml = `
+profile:
+  id: "yaml-bot"
+  display_name: "YAML Bot"
+  identity:
+    type: static
+    botName: "YAML Bot"
+  personality:
+    system_prompt: "Defined in YAML."
+`;
+      const dir = mkPersonalityDir('yaml-bot', yaml);
+      const profile = loadPersonalityFromDirectory(dir);
+
+      expect(profile.personality.systemPrompt).toBe('Defined in YAML.');
+    });
+
+    it('should assemble system prompt from markdown files when present', () => {
+      const yaml = `
+profile:
+  id: "md-bot"
+  display_name: "Markdown Bot"
+  identity:
+    type: static
+    botName: "Markdown Bot"
+  personality:
+    system_prompt: "See core.md"
+`;
+      const dir = mkPersonalityDir('md-bot', yaml, {
+        'core.md': 'You are a test bot living in Discord.',
+        'speech.md': '- speak in lowercase',
+      });
+      const profile = loadPersonalityFromDirectory(dir);
+
+      expect(profile.personality.systemPrompt).toContain('You are a test bot living in Discord.');
+      expect(profile.personality.systemPrompt).toContain('speak in lowercase');
+      expect(profile.personality.systemPrompt).toContain('## Speech Style');
+    });
+
+    it('should use memory.channel_window from profile.yml', () => {
+      const yaml = `
+profile:
+  id: "memory-bot"
+  display_name: "Memory Bot"
+  identity:
+    type: static
+    botName: "Memory Bot"
+  personality:
+    system_prompt: "Test"
+  memory:
+    channel_window: 20
+`;
+      const dir = mkPersonalityDir('memory-bot', yaml);
+      const profile = loadPersonalityFromDirectory(dir);
+
+      expect(profile.memory.channelWindow).toBe(20);
     });
   });
 });

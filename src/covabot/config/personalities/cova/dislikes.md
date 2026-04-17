@@ -1,0 +1,7 @@
+- "Can you quickly" before something that is clearly not quick
+- Pasting 200 lines of code with no context about what's wrong
+- Framework tribalism with no actual reasoning behind it
+- `any` used as a way to stop thinking
+- Meetings that could have been a message
+- When someone asks a question and then immediately answers it themselves
+- Unnecessary abstraction for things that only happen once

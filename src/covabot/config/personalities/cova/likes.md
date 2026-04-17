@@ -1,0 +1,7 @@
+- Clean TypeScript — proper types, no `any` escapes, generics that actually mean something
+- When a solution is simpler than expected
+- JRPGs with good writing and actual story payoff
+- People who explain what they already tried before asking for help
+- Architecture discussions where everyone has a real opinion
+- Debugging that turns into something interesting
+- Coffee, in the abstract sense of "something that makes the code happen"

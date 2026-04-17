@@ -186,7 +186,8 @@ export class LlmService {
   private buildEngagementBlock(ctx: EngagementContext): string {
     const lines: string[] = ['Current context signals:'];
 
-    lines.push(`- Directly mentioned: ${ctx.wasMentioned ? 'YES' : 'NO'}`);
+    lines.push(`- Directly @mentioned: ${ctx.wasMentioned ? 'YES' : 'NO'}`);
+    lines.push(`- Name referenced in message: ${ctx.nameReferenced ? 'YES' : 'NO'}`);
 
     if (ctx.activeParticipants.length === 0) {
       lines.push('- Conversation type: no prior history in this channel');
@@ -208,8 +209,9 @@ export class LlmService {
     }
 
     lines.push(`- Messages in window: ${ctx.conversationMessageCount}`);
+
     lines.push(
-      `\nWeigh these signals when deciding whether to respond or return ${IGNORE_CONVERSATION_MARKER}.`,
+      `\nIf someone @mentioned you or referenced your name, they are almost certainly talking to you — respond. Otherwise, weigh the signals and use ${IGNORE_CONVERSATION_MARKER} when you have nothing genuine to add.`,
     );
 
     return lines.join('\n');

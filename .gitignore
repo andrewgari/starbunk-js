@@ -254,6 +254,8 @@ actionlint
 !CLAUDE.md
 !src/**/CLAUDE.md
 !.claude/commands/*.md
+# Personality config markdown files (not documentation — loaded as system prompt)
+!src/covabot/config/personalities/**/*.md
 
 # ==========================================
 # MISC

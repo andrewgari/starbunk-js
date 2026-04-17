@@ -85,19 +85,17 @@ export interface InterestMatch {
 }
 
 // Response decision types
-export type ResponseReason = 'direct_mention' | 'pattern_trigger' | 'llm_response' | 'ignored';
+export type ResponseReason = 'direct_mention' | 'llm_response' | 'ignored';
 
 export interface ResponseDecision {
   shouldRespond: boolean;
   reason: ResponseReason;
-  useLlm: boolean;
-  patternResponse?: string;
-  triggerName?: string;
 }
 
 // Structured engagement context passed to LLM for natural engagement decisions
 export interface EngagementContext {
-  wasMentioned: boolean;
+  wasMentioned: boolean; // Discord @mention
+  nameReferenced: boolean; // bot name/alias appears in message text
   isDirectExchange: boolean; // only 1-2 unique human speakers in recent history
   activeParticipants: string[]; // display names of recent human speakers
   secondsSinceLastResponse: number | null;
@@ -135,26 +133,6 @@ export interface SpeechPatterns {
   technicalBias: number;
 }
 
-export interface TriggerCondition {
-  matches_pattern?: string;
-  contains_word?: string;
-  contains_phrase?: string;
-  from_user?: string;
-  with_chance?: number;
-  any_of?: TriggerCondition[];
-  all_of?: TriggerCondition[];
-  none_of?: TriggerCondition[];
-  always?: boolean;
-}
-
-export interface TriggerConfig {
-  name: string;
-  conditions: TriggerCondition;
-  use_llm: boolean;
-  response_chance?: number;
-  responses?: string | string[];
-}
-
 export interface SocialBatteryConfig {
   max_messages: number;
   window_minutes: number;
@@ -168,7 +146,7 @@ export interface LlmConfig {
 }
 
 export interface PersonalityConfig {
-  system_prompt: string;
+  system_prompt?: string;
   traits: string[];
   interests: string[];
   topic_affinities?: string[];
@@ -180,10 +158,11 @@ export interface ProfileConfig {
   id: string;
   display_name: string;
   avatar_url?: string;
+  name_aliases?: string[];
   identity: BotIdentityConfig;
   personality: PersonalityConfig;
-  triggers: TriggerConfig[];
   social_battery: SocialBatteryConfig;
+  memory?: { channel_window?: number };
   llm: LlmConfig;
   ignore_bots?: boolean;
 }
@@ -193,6 +172,7 @@ export interface CovaProfile {
   id: string;
   displayName: string;
   avatarUrl?: string;
+  nameAliases: string[]; // names/aliases used to detect when the bot is being addressed
   identity: BotIdentityConfig;
   personality: {
     systemPrompt: string;
@@ -202,11 +182,13 @@ export interface CovaProfile {
     backgroundFacts: string[]; // personal details — rarely mentioned
     speechPatterns: SpeechPatterns;
   };
-  triggers: TriggerConfig[];
   socialBattery: {
     maxMessages: number;
     windowMinutes: number;
     cooldownSeconds: number;
+  };
+  memory: {
+    channelWindow: number; // how many recent messages to pull as context
   };
   llmConfig: LlmConfig;
   ignoreBots: boolean;
