@@ -1,3 +1,14 @@
+## [1.33.0](https://github.com/andrewgari/starbunk-js/compare/v1.32.0...v1.33.0) (2026-04-17)
+
+### Features
+
+* **covabot:** organic engagement + personality discipline ([#643](https://github.com/andrewgari/starbunk-js/issues/643)) ([20fe2ac](https://github.com/andrewgari/starbunk-js/commit/20fe2ac11e49e881678840cac0fe31f86c707c6d))
+
+### Bug Fixes
+
+* **covabot:** replace trigger system with LLM-based engagement + fix e2e tests ([#646](https://github.com/andrewgari/starbunk-js/issues/646)) ([df4b008](https://github.com/andrewgari/starbunk-js/commit/df4b0086be192168645a420a133d4dd323377980))
+* **e2e:** gracefully skip suite when Discord env vars are absent ([#647](https://github.com/andrewgari/starbunk-js/issues/647)) ([3c62421](https://github.com/andrewgari/starbunk-js/commit/3c62421c0d4342a227a1ba4e7f2db77e6b02c497))
+
 ## [1.32.0](https://github.com/andrewgari/starbunk-js/compare/v1.31.4...v1.32.0) (2026-04-13)
 
 ### Features
