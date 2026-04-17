@@ -15,45 +15,29 @@ jobs:
     # Only deploy when the CD workflow succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - uses: actions/checkout@v4
-
       # Skip gracefully when deploy secrets are not configured (e.g. forks, dev repos)
       - name: Preflight — check deploy secrets
         id: preflight
         env:
-          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
         run: |
-          if [[ -n "$SSH_KEY" ]]; then
+          if [[ -n "$WEBHOOK_URL" ]]; then
             echo "run_deploy=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice title=Deploy Skipped::Deploy secrets not configured in the 'production' environment — skipping deployment. Add SSH_PRIVATE_KEY (and other deploy secrets) to enable."
+            echo "::notice title=Deploy Skipped::PORTAINER_WEBHOOK_URL not configured in the 'production' environment — skipping deployment."
             echo "run_deploy=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Connect to Tailscale
+      - name: Trigger Portainer Stack Update
         if: steps.preflight.outputs.run_deploy == 'true'
-        uses: tailscale/github-action@v2
-        with:
-          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
-          tags: tag:ci
-
-      - name: Execute Remote Deploy
-        if: steps.preflight.outputs.run_deploy == 'true'
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          PROD_DIR: ${{ vars.PROD_DOCKER_COMPOSE_DIR }}
-        with:
-          host: ${{ secrets.PROD_SERVER_HOST }}
-          username: ${{ secrets.PROD_SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: PROD_DIR
-          script: |
-            cd $PROD_DIR
-            git pull origin main
-            VERSION=$(cat config/VERSION)
-            bash /tmp/starbunk-deploy.sh $PROD_DIR main $VERSION
-            bash /tmp/starbunk-health-check.sh $PROD_DIR
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}")
+          echo "Portainer webhook response: $STATUS"
+          if ! echo "$STATUS" | grep -qE '^(200|204)$'; then
+            echo "::error::Portainer webhook returned unexpected status: $STATUS"
+            exit 1
+          fi
 
       - name: Notify Discord Deployment
         uses: rjstone/discord-webhook-notify@v1
