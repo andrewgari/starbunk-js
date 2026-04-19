@@ -24,6 +24,7 @@ import {
   EngagementContext,
   LlmContext,
 } from '@/models/memory-types';
+import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
 
 const logger = logLayer.withPrefix('MessageHandler');
 
@@ -115,12 +116,21 @@ export class MessageHandler {
     const decision = await this.decisionService.shouldRespond(ctx);
 
     if (!decision.shouldRespond) {
-      logger
-        .withMetadata({
-          profile_id: profile.id,
-          reason: decision.reason,
-        })
-        .debug('Decided not to respond');
+      if (VERBOSE_LOGGING) {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            reason: decision.reason,
+            channel_id: message.channelId,
+            author: message.author.username,
+            content_preview: message.content.substring(0, 80),
+          })
+          .info('Not responding to message');
+      } else {
+        logger
+          .withMetadata({ profile_id: profile.id, reason: decision.reason })
+          .debug('Decided not to respond');
+      }
       return;
     }
 
@@ -128,7 +138,18 @@ export class MessageHandler {
     const llmResponse = await this.generateLlmResponse(profile, message, botUserId);
 
     if (llmResponse.shouldIgnore) {
-      logger.withMetadata({ profile_id: profile.id }).debug('LLM decided to ignore');
+      if (VERBOSE_LOGGING) {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            channel_id: message.channelId,
+            author: message.author.username,
+            content_preview: message.content.substring(0, 80),
+          })
+          .info('LLM chose to stay silent (IGNORE)');
+      } else {
+        logger.withMetadata({ profile_id: profile.id }).debug('LLM decided to ignore');
+      }
       return;
     }
 
@@ -228,6 +249,28 @@ export class MessageHandler {
       channelContext,
       botUserId,
     );
+
+    if (VERBOSE_LOGGING) {
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          channel_id: message.channelId,
+          history_messages: channelContext.messages.length,
+          user_facts_length: userFactsStr.length,
+          has_trait_modifiers: !!traitModifiers,
+          was_mentioned: engagementContext.wasMentioned,
+          name_referenced: engagementContext.nameReferenced,
+          is_direct_exchange: engagementContext.isDirectExchange,
+          participants: engagementContext.activeParticipants,
+          seconds_since_last_response: engagementContext.secondsSinceLastResponse,
+          convo_message_count: engagementContext.conversationMessageCount,
+          system_prompt_length: profile.personality.systemPrompt.length,
+          traits_count: profile.personality.traits.length,
+          topic_affinities_count: profile.personality.topicAffinities.length,
+          background_facts_count: profile.personality.backgroundFacts.length,
+        })
+        .info('LLM context built — sending to model');
+    }
 
     return {
       systemPrompt: profile.personality.systemPrompt,

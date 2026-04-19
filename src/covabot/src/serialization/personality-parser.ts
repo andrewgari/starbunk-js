@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as yaml from 'js-yaml';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import type { CovaProfile } from '@/models/memory-types';
+import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
 import {
   readDirectory,
   directoryExists,
@@ -105,15 +106,34 @@ const PERSONALITY_SECTIONS: Array<{ file: string; heading: string }> = [
  */
 function loadMarkdownSystemPrompt(dirPath: string): string {
   const sections: string[] = [];
+  const loaded: string[] = [];
+  const skipped: string[] = [];
 
   for (const { file, heading } of PERSONALITY_SECTIONS) {
     const filePath = path.join(dirPath, file);
-    if (!fileExists(filePath)) continue;
+    if (!fileExists(filePath)) {
+      skipped.push(file);
+      continue;
+    }
 
     const content = readFileUtf8(filePath).trim();
-    if (!content) continue;
+    if (!content) {
+      skipped.push(`${file} (empty)`);
+      continue;
+    }
 
     sections.push(heading ? `${heading}\n${content}` : content);
+    loaded.push(file);
+  }
+
+  if (VERBOSE_LOGGING) {
+    logger
+      .withMetadata({ dir: path.basename(dirPath), loaded, skipped })
+      .info('Markdown personality files loaded');
+  } else if (skipped.length > 0) {
+    logger
+      .withMetadata({ dir: path.basename(dirPath), skipped })
+      .debug('Some personality markdown files not found (optional)');
   }
 
   return sections.join('\n\n');
