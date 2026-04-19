@@ -45,15 +45,28 @@ export interface LlmProvider {
 /**
  * Configuration passed to LlmProviderManager to initialise all providers.
  *
- * The naming follows the env-var convention used by CovaBot:
- *   - `localLlmApiKey`      → LOCAL_LLM_API_KEY  (Ollama base URL, e.g. http://127.0.0.1:11434)
- *   - `localLlmDefaultModel`→ LOCAL_LLM_DEFAULT_MODEL
- *   - `cloudLlmApiKey`      → CLOUD_LLM_API_KEY  (OpenAI API key)
- *   - `cloudLlmDefaultModel`→ CLOUD_LLM_DEFAULT_MODEL
+ * Provider priority (first configured wins, then falls back):
+ *   1. Ollama   — OLLAMA_BASE_URL (no API key needed)
+ *   2. Anthropic — ANTHROPIC_API_KEY
+ *   3. Gemini   — GEMINI_API_KEY
+ *   4. OpenAI   — OPENAI_API_KEY (legacy: CLOUD_LLM_API_KEY)
  *
  * Fields are optional — providers whose key/URL is absent will be skipped.
  */
 export interface LlmProviderConfig {
+  // Ollama (local, no API key required)
+  ollamaBaseUrl?: string;
+  ollamaDefaultModel?: string;
+  // Anthropic / Claude
+  anthropicApiKey?: string;
+  anthropicDefaultModel?: string;
+  // Google Gemini
+  geminiApiKey?: string;
+  geminiDefaultModel?: string;
+  // OpenAI
+  openaiApiKey?: string;
+  openaiDefaultModel?: string;
+  // Legacy aliases kept for backward compatibility
   localLlmApiKey?: string;
   localLlmDefaultModel?: string;
   cloudLlmApiKey?: string;

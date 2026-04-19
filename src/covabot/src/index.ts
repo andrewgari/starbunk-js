@@ -43,12 +43,25 @@ async function main(): Promise<void> {
   }
 
   // Check if at least one LLM provider is configured
+  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL;
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  // Legacy aliases
   const localLlmApiKey = process.env.LOCAL_LLM_API_KEY;
   const cloudLlmApiKey = process.env.CLOUD_LLM_API_KEY;
 
-  if (!localLlmApiKey && !cloudLlmApiKey) {
+  const hasLlmProvider =
+    ollamaBaseUrl ||
+    anthropicApiKey ||
+    geminiApiKey ||
+    openaiApiKey ||
+    localLlmApiKey ||
+    cloudLlmApiKey;
+
+  if (!hasLlmProvider) {
     logger.warn(
-      'No LLM provider configured. At least one of LOCAL_LLM_API_KEY or CLOUD_LLM_API_KEY is recommended.',
+      'No LLM provider configured. Set one of: OLLAMA_BASE_URL, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY',
     );
     process.exit(1);
   }
@@ -58,7 +71,19 @@ async function main(): Promise<void> {
     discordToken,
     personalitiesPath: process.env.COVABOT_PERSONALITIES_PATH,
     databasePath: process.env.COVABOT_DATABASE_PATH,
-    // LLM providers (priority: LocalLLM > CloudLLM)
+    // Ollama
+    ollamaBaseUrl,
+    ollamaDefaultModel: process.env.OLLAMA_DEFAULT_MODEL,
+    // Anthropic
+    anthropicApiKey,
+    anthropicDefaultModel: process.env.ANTHROPIC_DEFAULT_MODEL,
+    // Gemini
+    geminiApiKey,
+    geminiDefaultModel: process.env.GEMINI_DEFAULT_MODEL,
+    // OpenAI
+    openaiApiKey,
+    openaiDefaultModel: process.env.OPENAI_DEFAULT_MODEL,
+    // Legacy
     localLlmApiKey,
     localLlmDefaultModel: process.env.LOCAL_LLM_DEFAULT_MODEL,
     cloudLlmApiKey,

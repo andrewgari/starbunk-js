@@ -7,8 +7,10 @@
  * If all providers fail, the last error is re-thrown.
  *
  * Default priority (set at construction time):
- *   1. OllamaProvider  — local, free, private (primary)
- *   2. OpenAIProvider  — cloud, paid (fallback)
+ *   1. OllamaProvider    — local, free, private (primary)
+ *   2. AnthropicProvider — Claude models
+ *   3. GeminiProvider    — Google Gemini models
+ *   4. OpenAIProvider    — OpenAI / legacy CLOUD_LLM_API_KEY (final fallback)
  *
  * Only providers whose isAvailable() returns true at construction time are
  * registered, so unconfigured providers are silently skipped.
@@ -23,6 +25,8 @@ import {
   LlmCompletionResult,
 } from './llm-provider';
 import { OllamaProvider } from './ollama-provider';
+import { AnthropicProvider } from './anthropic-provider';
+import { GeminiProvider } from './gemini-provider';
 import { OpenAIProvider } from './openai-provider';
 
 const logger = logLayer.withPrefix('LlmProviderManager');
@@ -38,18 +42,38 @@ export class LlmProviderManager {
    * Initialize providers in priority order
    */
   private initializeProviders(config?: LlmProviderConfig): void {
-    // 1. Local LLM (primary - local, free, private)
-    const local = new OllamaProvider(config?.localLlmApiKey, config?.localLlmDefaultModel);
-    if (local.isAvailable()) {
-      this.providers.push(local);
-      logger.info('Local LLM provider registered (primary)');
+    // 1. Ollama (local, free, private)
+    const ollama = new OllamaProvider(
+      config?.ollamaBaseUrl || config?.localLlmApiKey,
+      config?.ollamaDefaultModel || config?.localLlmDefaultModel,
+    );
+    if (ollama.isAvailable()) {
+      this.providers.push(ollama);
+      logger.info('Ollama provider registered');
     }
 
-    // 2. Cloud LLM (fallback - paid)
-    const cloud = new OpenAIProvider(config?.cloudLlmApiKey, config?.cloudLlmDefaultModel);
-    if (cloud.isAvailable()) {
-      this.providers.push(cloud);
-      logger.info('Cloud LLM provider registered (fallback)');
+    // 2. Anthropic / Claude
+    const anthropic = new AnthropicProvider(config?.anthropicApiKey, config?.anthropicDefaultModel);
+    if (anthropic.isAvailable()) {
+      this.providers.push(anthropic);
+      logger.info('Anthropic provider registered');
+    }
+
+    // 3. Google Gemini
+    const gemini = new GeminiProvider(config?.geminiApiKey, config?.geminiDefaultModel);
+    if (gemini.isAvailable()) {
+      this.providers.push(gemini);
+      logger.info('Gemini provider registered');
+    }
+
+    // 4. OpenAI (legacy fallback via OPENAI_API_KEY or CLOUD_LLM_API_KEY)
+    const openai = new OpenAIProvider(
+      config?.openaiApiKey || config?.cloudLlmApiKey,
+      config?.openaiDefaultModel || config?.cloudLlmDefaultModel,
+    );
+    if (openai.isAvailable()) {
+      this.providers.push(openai);
+      logger.info('OpenAI provider registered');
     }
 
     if (this.providers.length === 0) {
