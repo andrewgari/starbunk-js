@@ -121,7 +121,16 @@ export class CovaBot {
     return Array.from(this.profiles.values());
   }
 
-  getServices() {
+  getServices(): {
+    db: PostgresService | null;
+    memory: MemoryService | null;
+    interest: InterestService | null;
+    socialBattery: SocialBatteryService | null;
+    responseDecision: ResponseDecisionService | null;
+    llm: LlmService | null;
+    personality: PersonalityService | null;
+    embedding: EmbeddingManager | null;
+  } {
     return {
       db: this.pgService,
       memory: this.memoryService,
@@ -267,6 +276,7 @@ export class CovaBot {
     await this.client.login(this.config.discordToken);
   }
 
+  /** Test-only: stop the singleton and clear it so tests can create a fresh instance. */
   static async resetInstance(): Promise<void> {
     if (CovaBot.instance) {
       await CovaBot.instance.stop();

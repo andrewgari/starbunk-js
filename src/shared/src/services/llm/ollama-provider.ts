@@ -1,7 +1,9 @@
 /**
- * Ollama LLM Provider
+ * Ollama LLM Provider — primary provider for local LLM inference.
  *
- * Primary provider for local LLM inference via Ollama.
+ * Communicates with a locally-running Ollama server via its HTTP chat API.
+ * Intended to be used first in the provider priority chain so that inference
+ * stays local and free; OpenAIProvider is the cloud fallback.
  */
 
 import { logLayer } from '../../observability/log-layer';
@@ -9,6 +11,9 @@ import { LlmProvider, LlmMessage, LlmCompletionOptions, LlmCompletionResult } fr
 
 const logger = logLayer.withPrefix('OllamaProvider');
 
+// Structurally identical to LlmMessage — typed separately so the shape is
+// explicit when constructing the Ollama API body, rather than relying on
+// duck-typing between the shared interface and the provider-specific payload.
 interface OllamaChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -36,6 +41,11 @@ export class OllamaProvider implements LlmProvider {
     this.defaultModel = defaultModel || process.env.LOCAL_LLM_DEFAULT_MODEL || 'llama3';
   }
 
+  /**
+   * Returns true when an API URL is configured — this does NOT verify that the
+   * Ollama server is actually running. A network error during generateCompletion
+   * will surface the real connectivity failure at call time.
+   */
   isAvailable(): boolean {
     return !!this.apiUrl;
   }

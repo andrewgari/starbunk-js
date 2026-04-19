@@ -1,8 +1,10 @@
 /**
- * LLM Provider Interface
+ * Shared LLM provider interface and associated types.
  *
- * Defines the contract for LLM providers (Ollama, OpenAI).
- * All providers must implement this interface for consistent usage.
+ * All LLM providers (Ollama, OpenAI, etc.) implement LlmProvider so callers
+ * can generate completions without knowing which backend is in use.
+ * LlmProviderManager selects and sequences providers; consumers only see this
+ * interface and the message/result types defined here.
  */
 
 export interface LlmMessage {
@@ -41,14 +43,19 @@ export interface LlmProvider {
 }
 
 /**
- * Configuration for LLM providers
+ * Configuration passed to LlmProviderManager to initialise all providers.
+ *
+ * The naming follows the env-var convention used by CovaBot:
+ *   - `localLlmApiKey`      → LOCAL_LLM_API_KEY  (Ollama base URL, e.g. http://127.0.0.1:11434)
+ *   - `localLlmDefaultModel`→ LOCAL_LLM_DEFAULT_MODEL
+ *   - `cloudLlmApiKey`      → CLOUD_LLM_API_KEY  (OpenAI API key)
+ *   - `cloudLlmDefaultModel`→ CLOUD_LLM_DEFAULT_MODEL
+ *
+ * Fields are optional — providers whose key/URL is absent will be skipped.
  */
 export interface LlmProviderConfig {
-  // Local LLM (e.g., Ollama)
   localLlmApiKey?: string;
   localLlmDefaultModel?: string;
-
-  // Cloud LLM (e.g., OpenAI)
   cloudLlmApiKey?: string;
   cloudLlmDefaultModel?: string;
 }

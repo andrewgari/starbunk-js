@@ -1,3 +1,15 @@
+/**
+ * Normalization helpers used by personality-mapper.ts to convert Zod-parsed
+ * YAML config values into the runtime CovaProfile types.
+ *
+ * Each function handles a distinct sub-object:
+ * - normalizeSpeechPatterns: snake_case YAML → camelCase SpeechPatterns, with clamping
+ * - normalizeIdentity: Zod discriminated union → BotIdentityConfig
+ * - normalizeLlmConfig: raw LLM schema → LlmConfig with bounds enforcement
+ *
+ * clamp and clamp01 are general utilities exported for testing and ad-hoc use.
+ */
+
 import type { BotIdentityConfig, LlmConfig, SpeechPatterns } from '@/models/memory-types';
 import type { IdentityConfig, LlmSchemaType, SpeechPatternsConfig } from './personality-schema';
 

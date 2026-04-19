@@ -1,11 +1,23 @@
 /**
- * Core TypeScript interfaces for CovaBot v2 memory and personality system
+ * Core type definitions for CovaBot's memory and personality system.
+ *
+ * This file contains three categories of types:
+ *
+ * 1. **Database row types** (`*Row`) — direct mirrors of PostgreSQL table columns.
+ *    Named to match the DB schema (snake_case fields) so repository query results
+ *    can be typed without translation.
+ *
+ * 2. **Runtime types** — the domain objects services work with at runtime,
+ *    using standard TypeScript camelCase conventions.
+ *
+ * 3. **Config / profile types** — describe the structure of personality YAML
+ *    after parsing and validation.
+ *
+ * Note: `ConversationRow` is aligned with the PostgreSQL schema (UUID IDs, timestamptz).
+ * Other row types should similarly match src/covabot/migrations/covabot_001_init_conversations.sql.
  */
 
-// Database row types
-// Note: ConversationRow is aligned with PostgreSQL schema (UUID IDs, timestamptz columns).
-// Other row types (UserFactRow, PersonalityEvolutionRow, etc.) require similar updates
-// to match the PostgreSQL schema defined in src/covabot/migrations/covabot_001_init_conversations.sql
+// ─── Database Row Types ────────────────────────────────────────────────────
 export interface ConversationRow {
   id: string; // UUID
   profile_id: string;
@@ -53,7 +65,8 @@ export interface KeywordInterestRow {
   weight: number;
 }
 
-// Runtime types
+// ─── Runtime Types ────────────────────────────────────────────────────────
+
 export interface ConversationContext {
   messages: {
     userId: string;
@@ -84,7 +97,8 @@ export interface InterestMatch {
   score: number;
 }
 
-// Response decision types
+// ─── Decision Types ───────────────────────────────────────────────────────
+
 export type ResponseReason = 'direct_mention' | 'llm_response' | 'ignored';
 
 export interface ResponseDecision {
@@ -110,7 +124,8 @@ export interface SocialBatteryCheck {
   windowResetSeconds?: number;
 }
 
-// LLM context building
+// ─── LLM Context ─────────────────────────────────────────────────────────
+
 export interface LlmContext {
   systemPrompt: string;
   conversationHistory: string;
@@ -119,11 +134,13 @@ export interface LlmContext {
   engagementContext: EngagementContext;
 }
 
-// Personality profile types (match YAML schema)
+// ─── Profile Config Types (mirrors YAML schema) ───────────────────────────
+
 export interface BotIdentityConfig {
   type: 'static' | 'mimic' | 'random';
   botName?: string;
   avatarUrl?: string;
+  // as_member intentionally uses snake_case to match the YAML field name
   as_member?: string;
 }
 
@@ -133,6 +150,9 @@ export interface SpeechPatterns {
   technicalBias: number;
 }
 
+// Note: this uses snake_case to match the YAML / ProfileConfig convention.
+// The runtime rate-limit config used by SocialBatteryService lives in
+// social-battery-service.ts and uses camelCase — they are distinct types.
 export interface SocialBatteryConfig {
   max_messages: number;
   window_minutes: number;
@@ -154,6 +174,12 @@ export interface PersonalityConfig {
   speech_patterns: SpeechPatterns;
 }
 
+/**
+ * Structural documentation for the raw profile YAML shape (before Zod parsing).
+ * This is NOT used at runtime — the parsed, validated, and frozen runtime model
+ * is CovaProfile below. This type exists to document what the YAML is expected
+ * to contain before the Zod schema processes it.
+ */
 export interface ProfileConfig {
   id: string;
   display_name: string;
@@ -167,7 +193,13 @@ export interface ProfileConfig {
   ignore_bots?: boolean;
 }
 
-// Runtime profile (parsed and validated)
+// ─── Runtime Profile ──────────────────────────────────────────────────────
+
+/**
+ * The validated, normalized, and deeply-frozen runtime representation of a
+ * loaded personality. Constructed by personality-mapper.ts from the Zod-parsed
+ * YAML and then frozen to prevent accidental mutation.
+ */
 export interface CovaProfile {
   id: string;
   displayName: string;
