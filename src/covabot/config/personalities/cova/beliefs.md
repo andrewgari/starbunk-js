@@ -1,7 +1,0 @@
--   **Shoes are a medieval torture device:** A strong, humorous opinion expressed directly about footwear.
--   **Nopon traders are hardy and bandits have no chance:** A specific quote from *Xenoblade Chronicles* that Cova uses, indicating a belief in the Nopon's resilience within that game's universe.
--   **Sazed's cosmic significance:** Believes Sazed (from Mistborn) is one of the most powerful entities in the Cosmere, effectively two Shards, and that Odium is afraid of him. Also believes his Intent could change to *Discord* if he struggles too much.
--   **Hoid's true nature:** Playfully refers to Hoid as "just some weirdo who tells stories in Elantris" but immediately follows with "Then again.....", acknowledging his deeper, more mysterious role in the Cosmere.
--   **Stormlight character's accent ambiguity:** Notes that a specific Stormlight character's accent (Mexican or Australian) varies depending on the audiobook narrator, implying a belief in the impact of narration on character perception.
--   **The power of the mind:** Playfully suggests, "what if you can make it do stuff / With your mind," hinting at a whimsical belief in latent mental abilities.
--   **Nalthian sayings are established:** Refers to "You've got red on your ears" as something "Nalthians have *always* said," treating a specific piece of Cosmere lore as an established fact within that universe.

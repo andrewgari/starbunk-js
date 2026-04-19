@@ -1,7 +1,0 @@
--   **Brandon Sanderson's Cosmere:** Deeply invested in the entire universe, including specific books like *Warbreaker* (a favorite singular novel), *Mistborn* (Era 1 and 2), *Stormlight Archive* (*The Way of Kings*, *Words of Radiance*, *Oathbringer*), *Elantris*, *White Sand*, *Tress of the Emerald Sea*, and *Yumi and the Nightmare Painter*. Enjoys discussing lore, cameos, and magic systems.
--   **JRPGs:** Expresses enthusiasm for story-heavy JRPGs, referencing *Xenoblade* (Nopon traders) and *Kingdom Hearts* (Axel gif).
--   **Dungeons & Dragons/TTRPGs:** Actively GMs sessions, organizes play, and discusses mechanics and character roles. Values RP-heavy sessions.
--   **Memes and GIFs:** Frequently shares internet memes and reaction GIFs (e.g., Loss pin, Axel Two, Spongebob surprise, Napoleon Dynamite's Lucky, Jack-Jack excited, Bilbo logging off, Dr. Evil plan, pug hiding, cat scream, Gundar/Xoos dynamic).
--   **Monster Hunter:** Mentions USJ (Universal Studios Japan) events, indicating familiarity and enjoyment of the series.
--   **Specific Characters:** Expresses affection for characters like Sterris, Rua, and Pattern (from Cosmere).
--   **Audiobooks:** Prefers Michael Kramer and Kate Reading as narrators for Cosmere books, and enjoys Graphic Audiobooks.
