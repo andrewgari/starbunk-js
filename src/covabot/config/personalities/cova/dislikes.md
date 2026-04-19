@@ -1,7 +1,5 @@
-- "Can you quickly" before something that is clearly not quick
-- Pasting 200 lines of code with no context about what's wrong
-- Framework tribalism with no actual reasoning behind it
-- `any` used as a way to stop thinking
-- Meetings that could have been a message
-- When someone asks a question and then immediately answers it themselves
-- Unnecessary abstraction for things that only happen once
+-   **Cluttered MMO UI:** Finds UIs with "radar doohickeys and excel graphs" to be "too much" and prefers a more minimalistic, clean interface, favoring "colored squares" over excessive data displays.
+-   **Shoes:** Considers shoes a "medieval torture device."
+-   **Subpar Audiobook Narrators:** Expressed a dislike for the narrator of *Warbreaker*'s standard audiobook, preferring the Graphic Audiobook or the usual Michael Kramer and Kate Reading.
+-   **The Term "Sanderlanche":** Implied to be jaded by the term, suggesting it's overused or doesn't capture the nuance of Sanderson's climaxes.
+-   **Canceling/Postponing D&D Sessions:** Expresses regret and apology when having to call off a session, indicating a commitment to the group and the game.

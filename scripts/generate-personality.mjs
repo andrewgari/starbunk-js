@@ -174,10 +174,10 @@ function reservoirSample(arr, k) {
 }
 
 // ---------------------------------------------------------------------------
-// Claude API call
+// LLM API calls — tries Anthropic, then Gemini, then OpenAI
 // ---------------------------------------------------------------------------
 
-async function callClaude(apiKey, systemPrompt, userPrompt) {
+async function callAnthropic(apiKey, systemPrompt, userPrompt) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -201,6 +201,84 @@ async function callClaude(apiKey, systemPrompt, userPrompt) {
 
   const data = await res.json();
   return data.content[0]?.text ?? '';
+}
+
+async function callGemini(apiKey, systemPrompt, userPrompt) {
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'models/gemini-2.5-flash',
+      max_tokens: 8192,
+      temperature: 0.6,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Gemini API ${res.status}: ${body}`);
+  }
+
+  const data = await res.json();
+  return data.choices[0]?.message?.content ?? '';
+}
+
+async function callOpenAI(apiKey, systemPrompt, userPrompt) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      max_tokens: 8192,
+      temperature: 0.6,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`OpenAI API ${res.status}: ${body}`);
+  }
+
+  const data = await res.json();
+  return data.choices[0]?.message?.content ?? '';
+}
+
+async function callLLM(systemPrompt, userPrompt) {
+  const providers = [
+    { name: 'Anthropic (Claude)', key: process.env.ANTHROPIC_API_KEY, fn: callAnthropic },
+    { name: 'Gemini',             key: process.env.GEMINI_API_KEY,    fn: callGemini },
+    { name: 'OpenAI',             key: process.env.OPENAI_API_KEY,    fn: callOpenAI },
+  ].filter(p => p.key);
+
+  if (providers.length === 0) {
+    throw new Error('No LLM API key found. Set ANTHROPIC_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY.');
+  }
+
+  for (const { name, key, fn } of providers) {
+    console.log(`  Trying ${name}...`);
+    try {
+      return await fn(key, systemPrompt, userPrompt);
+    } catch (err) {
+      console.warn(`  ${name} failed: ${err.message}`);
+      console.warn('  Falling back to next provider...');
+    }
+  }
+
+  throw new Error('All LLM providers failed.');
 }
 
 // ---------------------------------------------------------------------------
@@ -323,14 +401,13 @@ async function main() {
   const { guildId, userId, name, output, extra } = parseArgs();
 
   const discordToken = process.env.DISCORD_TOKEN;
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
   if (!discordToken) {
     console.error('Error: DISCORD_TOKEN env var not set');
     process.exit(1);
   }
-  if (!anthropicKey) {
-    console.error('Error: ANTHROPIC_API_KEY env var not set');
+  if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY) {
+    console.error('Error: No LLM API key set. Need ANTHROPIC_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY.');
     process.exit(1);
   }
 
@@ -368,7 +445,7 @@ async function main() {
   console.log('\nCalling Claude to generate personality profile...');
 
   const userPrompt = buildUserPrompt(name, userId, sampled, extra);
-  const raw = await callClaude(anthropicKey, SYSTEM_PROMPT, userPrompt);
+  const raw = await callLLM(SYSTEM_PROMPT, userPrompt);
 
   console.log('Response received. Parsing...');
 
