@@ -36,11 +36,11 @@ export interface CovaBotConfig {
   discordToken: string;
   personalitiesPath?: string;
   databasePath?: string;
-  // LLM Provider configuration (priority: Ollama > OpenAI)
-  ollamaApiUrl?: string;
-  ollamaDefaultModel?: string;
-  openaiApiKey?: string;
-  openaiDefaultModel?: string;
+  // LLM Provider configuration (priority: LocalLLM > CloudLLM)
+  localLlmApiKey?: string;
+  localLlmDefaultModel?: string;
+  cloudLlmApiKey?: string;
+  cloudLlmDefaultModel?: string;
 }
 
 export class CovaBot {
@@ -165,21 +165,21 @@ export class CovaBot {
     this.interestService = new InterestService(interestRepo);
     this.socialBatteryService = new SocialBatteryService(socialBatteryRepo);
     this.llmService = new LlmService({
-      ollamaApiUrl: this.config.ollamaApiUrl,
-      ollamaDefaultModel: this.config.ollamaDefaultModel,
-      openaiApiKey: this.config.openaiApiKey,
-      openaiDefaultModel: this.config.openaiDefaultModel,
+      localLlmApiKey: this.config.localLlmApiKey,
+      localLlmDefaultModel: this.config.localLlmDefaultModel,
+      cloudLlmApiKey: this.config.cloudLlmApiKey,
+      cloudLlmDefaultModel: this.config.cloudLlmDefaultModel,
     });
     this.personalityService = new PersonalityService(personalityRepo);
 
     this.embeddingManager = new EmbeddingManager({
-      ollamaApiUrl: this.config.ollamaApiUrl,
-      ollamaEmbeddingModel: process.env.OLLAMA_EMBEDDING_MODEL,
-      openaiApiKey: this.config.openaiApiKey,
-      openaiEmbeddingModel: process.env.OPENAI_EMBEDDING_MODEL,
+      localLlmApiKey: this.config.localLlmApiKey,
+      localLlmEmbeddingModel: process.env.LOCAL_LLM_EMBEDDING_MODEL,
+      cloudLlmApiKey: this.config.cloudLlmApiKey,
+      cloudLlmEmbeddingModel: process.env.CLOUD_LLM_EMBEDDING_MODEL,
     });
 
-    const chatModel = this.config.ollamaDefaultModel || process.env.OLLAMA_DEFAULT_MODEL;
+    const chatModel = this.config.localLlmDefaultModel || process.env.LOCAL_LLM_DEFAULT_MODEL;
     const additionalModels = chatModel ? [chatModel] : [];
     this.embeddingManager.startScheduledUpdates(additionalModels);
 

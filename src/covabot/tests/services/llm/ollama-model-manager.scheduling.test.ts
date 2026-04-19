@@ -69,7 +69,7 @@ describe('OllamaModelManager - Scheduling', () => {
     manager.addScheduledModel('model-a');
 
     const models = manager.getScheduledModels();
-    const count = models.filter((m) => m === 'model-a').length;
+    const count = models.filter(m => m === 'model-a').length;
     expect(count).toBe(1);
   });
 
@@ -92,11 +92,10 @@ describe('OllamaModelManager - Scheduling', () => {
   });
 
   it('should not start if scheduled updates are disabled', () => {
-    process.env.OLLAMA_SCHEDULED_UPDATES = 'false';
+    process.env.LOCAL_LLM_SCHEDULED_UPDATES = 'false';
     const manager = new OllamaModelManager();
     manager.startScheduledUpdates(['model-a']);
 
     expect(manager.isScheduledUpdatesRunning()).toBe(false);
   });
 });
-

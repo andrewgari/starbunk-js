@@ -16,9 +16,9 @@ export class OpenAIProvider implements LlmProvider {
   private readonly defaultModel: string;
 
   constructor(apiKey?: string, defaultModel?: string) {
-    const key = apiKey || process.env.OPENAI_API_KEY;
+    const key = apiKey || process.env.CLOUD_LLM_API_KEY;
     this.client = key ? new OpenAI({ apiKey: key }) : null;
-    this.defaultModel = defaultModel || process.env.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini';
+    this.defaultModel = defaultModel || process.env.CLOUD_LLM_DEFAULT_MODEL || 'gpt-4o-mini';
   }
 
   isAvailable(): boolean {

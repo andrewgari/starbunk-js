@@ -21,7 +21,7 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   private readonly defaultModel: string;
 
   constructor(apiKey?: string, defaultModel?: string) {
-    const key = apiKey || process.env.OPENAI_API_KEY;
+    const key = apiKey || process.env.CLOUD_LLM_API_KEY;
     this.client = key ? new OpenAI({ apiKey: key }) : null;
     this.defaultModel = defaultModel || DEFAULT_EMBEDDING_MODELS.openai;
   }

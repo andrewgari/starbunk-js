@@ -31,7 +31,7 @@ describe('OllamaModelManager - Configuration', () => {
   });
 
   it('should use API URL from environment variable', () => {
-    process.env.OLLAMA_API_URL = 'http://env-ollama:11434';
+    process.env.LOCAL_LLM_API_KEY = 'http://env-ollama:11434';
     const manager = new OllamaModelManager();
     expect(manager).toBeDefined();
   });
@@ -61,9 +61,8 @@ describe('OllamaModelManager - Configuration', () => {
   });
 
   it('should disable auto-pull via environment variable', () => {
-    process.env.OLLAMA_AUTO_PULL_MODELS = 'false';
+    process.env.LOCAL_LLM_AUTO_PULL_MODELS = 'false';
     const manager = new OllamaModelManager();
     expect(manager).toBeDefined();
   });
 });
-
