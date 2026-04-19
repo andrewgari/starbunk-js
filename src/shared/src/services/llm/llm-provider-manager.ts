@@ -115,10 +115,13 @@ export class LlmProviderManager {
 
     let lastError: Error | null = null;
 
-    for (const provider of this.providers) {
+    for (const [index, provider] of this.providers.entries()) {
       try {
         logger.withMetadata({ provider: provider.name }).debug('Attempting LLM completion');
-        const result = await provider.generateCompletion(messages, options);
+        // For fallback providers (not the primary), strip the requested model so
+        // each provider uses its own default rather than a model name it won't recognise.
+        const effectiveOptions = index === 0 ? options : { ...options, model: undefined };
+        const result = await provider.generateCompletion(messages, effectiveOptions);
         return result;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
