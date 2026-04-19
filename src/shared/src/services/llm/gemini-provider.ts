@@ -22,7 +22,7 @@ export class GeminiProvider implements LlmProvider {
   constructor(apiKey?: string, defaultModel?: string) {
     const key = apiKey || process.env.GEMINI_API_KEY;
     this.client = key ? new OpenAI({ apiKey: key, baseURL: GEMINI_BASE_URL }) : null;
-    this.defaultModel = defaultModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.0-flash';
+    this.defaultModel = defaultModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash';
   }
 
   isAvailable(): boolean {
