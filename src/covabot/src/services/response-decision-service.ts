@@ -11,6 +11,7 @@ import { Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { SocialBatteryService, SocialBatteryConfig } from './social-battery-service';
 import { CovaProfile, ResponseDecision } from '@/models/memory-types';
+import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
 
 const logger = logLayer.withPrefix('ResponseDecisionService');
 
@@ -52,7 +53,9 @@ export class ResponseDecisionService {
 
     // Step 2: Direct @mention — bypass rate limits, the user explicitly addressed us
     if (this.isDirectMention(message, botUserId)) {
-      logger.withMetadata({ profile_id: profile.id }).debug('Direct mention detected');
+      logger
+        .withMetadata({ profile_id: profile.id, channel_id: message.channelId })
+        .info('Direct mention — will respond');
       return { shouldRespond: true, reason: 'direct_mention' };
     }
 
@@ -70,18 +73,37 @@ export class ResponseDecisionService {
     );
 
     if (!batteryCheck.canSpeak) {
-      logger
-        .withMetadata({
-          profile_id: profile.id,
-          reason: batteryCheck.reason,
-          current_count: batteryCheck.currentCount,
-        })
-        .debug('Social battery depleted');
+      const meta = {
+        profile_id: profile.id,
+        channel_id: message.channelId,
+        battery_reason: batteryCheck.reason,
+        current_count: batteryCheck.currentCount,
+        max_allowed: batteryCheck.maxAllowed,
+        reset_in_seconds: batteryCheck.windowResetSeconds,
+      };
+      if (VERBOSE_LOGGING) {
+        logger.withMetadata(meta).info('Social battery depleted — not responding');
+      } else {
+        logger.withMetadata(meta).debug('Social battery depleted');
+      }
       return { shouldRespond: false, reason: 'ignored' };
     }
 
     // Step 4: Everything else — LLM decides via IGNORE marker with full context signals
-    logger.withMetadata({ profile_id: profile.id }).debug('Passing to LLM for engagement decision');
+    if (VERBOSE_LOGGING) {
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          channel_id: message.channelId,
+          battery_count: batteryCheck.currentCount,
+          battery_max: batteryCheck.maxAllowed,
+        })
+        .info('Battery OK — passing to LLM for engagement decision');
+    } else {
+      logger
+        .withMetadata({ profile_id: profile.id })
+        .debug('Passing to LLM for engagement decision');
+    }
     return { shouldRespond: true, reason: 'llm_response' };
   }
 
@@ -101,6 +123,17 @@ export class ResponseDecisionService {
     if (!message.content || message.content.trim().length === 0) {
       logger.withMetadata({ profile_id: profile.id }).debug('Ignoring empty message');
       return true;
+    }
+
+    if (VERBOSE_LOGGING) {
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          author: message.author.username,
+          channel_id: message.channelId,
+          content_preview: message.content.substring(0, 80),
+        })
+        .info('Message passed hard filters — evaluating');
     }
 
     return false;

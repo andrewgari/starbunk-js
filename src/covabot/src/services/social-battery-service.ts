@@ -13,6 +13,7 @@
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { SocialBatteryStateRow, SocialBatteryCheck } from '@/models/memory-types';
 import { SocialBatteryRepository } from '@/repositories/social-battery-repository';
+import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
 
 const logger = logLayer.withPrefix('SocialBatteryService');
 
@@ -62,20 +63,27 @@ export class SocialBatteryService {
       const secondsSinceLastMessage = (now.getTime() - lastMessage.getTime()) / 1000;
 
       if (secondsSinceLastMessage < config.cooldownSeconds) {
-        logger
-          .withMetadata({
-            profile_id: profileId,
-            channel_id: channelId,
-            seconds_remaining: config.cooldownSeconds - secondsSinceLastMessage,
-          })
-          .debug('Cooldown active');
+        const secondsRemaining = Math.ceil(config.cooldownSeconds - secondsSinceLastMessage);
+        const meta = {
+          profile_id: profileId,
+          channel_id: channelId,
+          cooldown_seconds: config.cooldownSeconds,
+          seconds_remaining: secondsRemaining,
+        };
+        if (VERBOSE_LOGGING) {
+          logger
+            .withMetadata(meta)
+            .info(`Cooldown active — ${secondsRemaining}s remaining before next response`);
+        } else {
+          logger.withMetadata(meta).debug('Cooldown active');
+        }
 
         return {
           canSpeak: false,
           currentCount: state.message_count,
           maxAllowed: config.maxMessages,
           reason: 'cooldown',
-          windowResetSeconds: Math.ceil(config.cooldownSeconds - secondsSinceLastMessage),
+          windowResetSeconds: secondsRemaining,
         };
       }
     }
@@ -101,15 +109,23 @@ export class SocialBatteryService {
           config.windowMinutes * 60 - minutesSinceWindowStart * 60,
         );
 
-        logger
-          .withMetadata({
-            profile_id: profileId,
-            channel_id: channelId,
-            message_count: state.message_count,
-            max_messages: config.maxMessages,
-            window_reset_seconds: windowResetSeconds,
-          })
-          .debug('Rate limited');
+        const meta = {
+          profile_id: profileId,
+          channel_id: channelId,
+          message_count: state.message_count,
+          max_messages: config.maxMessages,
+          window_minutes: config.windowMinutes,
+          window_reset_seconds: windowResetSeconds,
+        };
+        if (VERBOSE_LOGGING) {
+          logger
+            .withMetadata(meta)
+            .info(
+              `Rate limited — sent ${state.message_count}/${config.maxMessages} messages this window, resets in ${windowResetSeconds}s`,
+            );
+        } else {
+          logger.withMetadata(meta).debug('Rate limited');
+        }
 
         return {
           canSpeak: false,

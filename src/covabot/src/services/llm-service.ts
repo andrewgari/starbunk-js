@@ -17,6 +17,7 @@ import {
   IGNORE_CONVERSATION_MARKER,
 } from '@/models/memory-types';
 import { LlmProviderManager, LlmProviderConfig, LlmMessage } from '@starbunk/shared';
+import { VERBOSE_LOGGING, LOG_PROMPTS } from '@/utils/verbose-mode';
 
 const logger = logLayer.withPrefix('LlmService');
 
@@ -46,13 +47,29 @@ export class LlmService {
   ): Promise<LlmResponse> {
     const startTime = Date.now();
 
-    logger
-      .withMetadata({
-        profile_id: profile.id,
-        model: profile.llmConfig.model,
-        user_message_length: userMessage.length,
-      })
-      .debug('Generating LLM response');
+    if (VERBOSE_LOGGING) {
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          model: profile.llmConfig.model,
+          temperature: profile.llmConfig.temperature,
+          max_tokens: profile.llmConfig.max_tokens,
+          user: userName,
+          user_message_preview: userMessage.substring(0, 80),
+          has_system_prompt: profile.personality.systemPrompt.length > 0,
+          traits: profile.personality.traits,
+          topic_affinities: profile.personality.topicAffinities,
+        })
+        .info('Calling LLM');
+    } else {
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          model: profile.llmConfig.model,
+          user_message_length: userMessage.length,
+        })
+        .debug('Generating LLM response');
+    }
 
     // Build the full system prompt
     const systemPrompt = this.buildSystemPrompt(profile, context);
@@ -105,17 +122,52 @@ export class LlmService {
       // Apply speech pattern transformations
       const finalContent = shouldIgnore ? '' : this.applySpeechPatterns(responseContent, profile);
 
-      logger
-        .withMetadata({
-          profile_id: profile.id,
-          model: result.model,
-          provider: result.provider,
-          tokens_used: tokensUsed,
-          duration_ms: duration,
-          should_ignore: shouldIgnore,
-          response_length: finalContent.length,
-        })
-        .debug('LLM response generated');
+      if (VERBOSE_LOGGING) {
+        if (shouldIgnore) {
+          logger
+            .withMetadata({
+              profile_id: profile.id,
+              model: result.model,
+              provider: result.provider,
+              tokens_used: tokensUsed,
+              duration_ms: duration,
+            })
+            .info('LLM returned IGNORE — bot will stay silent');
+        } else {
+          logger
+            .withMetadata({
+              profile_id: profile.id,
+              model: result.model,
+              provider: result.provider,
+              tokens_used: tokensUsed,
+              duration_ms: duration,
+              response_length: finalContent.length,
+              response_preview: finalContent.substring(0, 100),
+            })
+            .info('LLM generated response');
+        }
+      } else {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            model: result.model,
+            provider: result.provider,
+            tokens_used: tokensUsed,
+            duration_ms: duration,
+            should_ignore: shouldIgnore,
+            response_length: finalContent.length,
+          })
+          .debug('LLM response generated');
+      }
+
+      if (LOG_PROMPTS) {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            raw_response: responseContent.substring(0, 500),
+          })
+          .info('[LOG_PROMPTS] Raw LLM response');
+      }
 
       return {
         content: finalContent,

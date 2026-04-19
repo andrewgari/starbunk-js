@@ -29,6 +29,7 @@ import {
   getDefaultPersonalitiesPath,
 } from '@/serialization/personality-parser';
 import { EmbeddingManager } from '@/services/llm';
+import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
 
 const logger = logLayer.withPrefix('CovaBot');
 
@@ -155,6 +156,59 @@ export class CovaBot {
     logger
       .withMetadata({ count: this.profiles.size, path: personalitiesPath })
       .info('Profiles loaded');
+
+    // Always audit personality data completeness — warns on startup if data is missing
+    for (const profile of this.profiles.values()) {
+      const issues: string[] = [];
+
+      if (
+        !profile.personality.systemPrompt ||
+        profile.personality.systemPrompt.trim().length < 50
+      ) {
+        issues.push(
+          `system_prompt too short or missing (${profile.personality.systemPrompt.length} chars)`,
+        );
+      }
+      if (profile.personality.traits.length === 0) {
+        issues.push('no traits defined');
+      }
+      if (profile.personality.topicAffinities.length === 0) {
+        issues.push('no topic_affinities defined');
+      }
+      if (profile.nameAliases.length === 0) {
+        issues.push('no name_aliases — bot will never detect name mentions');
+      }
+
+      if (issues.length > 0) {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            display_name: profile.displayName,
+            issues,
+          })
+          .warn('Personality data incomplete');
+      } else if (VERBOSE_LOGGING) {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            display_name: profile.displayName,
+            system_prompt_length: profile.personality.systemPrompt.length,
+            traits: profile.personality.traits,
+            topic_affinities: profile.personality.topicAffinities,
+            background_facts_count: profile.personality.backgroundFacts.length,
+            name_aliases: profile.nameAliases,
+            social_battery: profile.socialBattery,
+            llm_model: profile.llmConfig.model,
+          })
+          .info('Personality loaded OK');
+      }
+    }
+
+    if (VERBOSE_LOGGING) {
+      logger
+        .withMetadata({ verbose: true, log_prompts: process.env.COVABOT_LOG_PROMPTS === 'true' })
+        .info('COVABOT_VERBOSE=true — decision logging enabled at INFO level');
+    }
   }
 
   private async initializeServices(): Promise<void> {

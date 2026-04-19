@@ -197,6 +197,11 @@ services:
       - COVA_USER_ID=${COVA_USER_ID:-}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+
+      # Verbose decision logging (set to true to see why the bot speaks/stays silent at INFO level)
+      - COVABOT_VERBOSE=${COVABOT_VERBOSE:-false}
+      # Prompt-level logging (set to true to log raw LLM responses — very noisy)
+      - COVABOT_LOG_PROMPTS=${COVABOT_LOG_PROMPTS:-false}
     volumes:
       - ${HOST_WORKDIR}/config/covabot:/app/config:ro
       - ${HOST_WORKDIR}/data/covabot:/app/data
