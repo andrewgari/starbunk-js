@@ -18,7 +18,13 @@ export class UserFactRepository extends PostgresBaseRepository<UserFactRow> {
   }
 
   /**
-   * Store a user fact (INSERT or UPDATE)
+   * Store a user fact, inserting a new record or updating the existing one if
+   * the (profile_id, user_id, fact_type, fact_key) combination already exists.
+   *
+   * Parameter order note: `profileId` is intentionally in the middle rather than
+   * first because the method signature pre-dates profile scoping. Callers in
+   * MemoryService should pass profileId explicitly — the empty-string default
+   * exists only for backward compatibility.
    */
   async storeUserFact(
     userId: string,
@@ -28,7 +34,8 @@ export class UserFactRepository extends PostgresBaseRepository<UserFactRow> {
     profileId: string = '',
     factValue?: string,
   ): Promise<void> {
-    // If factValue is not provided, use factKey as the value (for backward compatibility)
+    // factValue defaults to factKey when omitted (backward compatibility with callers
+    // that stored a single-field fact as key=value)
     const value = factValue || factKey;
 
     await this.execute(

@@ -1,7 +1,12 @@
 /**
- * LLM Service - Multi-provider LLM integration for response generation
+ * LLM Service — builds prompts from personality profiles and generates responses.
  *
- * Supports Ollama (primary) and OpenAI (fallback).
+ * This service owns the prompt construction logic: it assembles the system
+ * prompt from a CovaProfile, injects conversation context, formats engagement
+ * signals, and delegates the actual HTTP/API call to LlmProviderManager.
+ *
+ * Provider selection (Ollama primary → OpenAI fallback) is handled entirely
+ * by LlmProviderManager; this service never calls a provider directly.
  */
 
 import { logLayer } from '@starbunk/shared/observability/log-layer';
@@ -98,7 +103,7 @@ export class LlmService {
       const shouldIgnore = responseContent.includes(IGNORE_CONVERSATION_MARKER);
 
       // Apply speech pattern transformations
-      const finalContent = shouldIgnore ? '' : this.applySpechPatterns(responseContent, profile);
+      const finalContent = shouldIgnore ? '' : this.applySpeechPatterns(responseContent, profile);
 
       logger
         .withMetadata({
@@ -180,8 +185,9 @@ export class LlmService {
   }
 
   /**
-   * Build the engagement context block injected as a separate system message.
-   * Provides weighted signals for the LLM to make a natural engagement decision.
+   * Format the pre-computed engagement signals as a human-readable system message
+   * block. Injected as a separate system message so the LLM sees current context
+   * separately from the persona prompt and can make a natural engagement decision.
    */
   private buildEngagementBlock(ctx: EngagementContext): string {
     const lines: string[] = ['Current context signals:'];
@@ -244,9 +250,10 @@ export class LlmService {
   }
 
   /**
-   * Apply speech pattern transformations to the response
+   * Apply post-processing speech pattern transformations to the raw LLM response.
+   * Currently handles: lowercase enforcement and stripping any stray IGNORE marker.
    */
-  private applySpechPatterns(content: string, profile: CovaProfile): string {
+  private applySpeechPatterns(content: string, profile: CovaProfile): string {
     let result = content;
 
     // Lowercase transformation

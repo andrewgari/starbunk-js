@@ -1,7 +1,9 @@
 /**
- * OpenAI LLM Provider
+ * OpenAI LLM Provider — cloud fallback for when Ollama is unavailable.
  *
- * OpenAI provider as a fallback option.
+ * Wraps the official OpenAI SDK. The client is only instantiated when an API
+ * key is present, so this provider is a no-op (isAvailable() = false) in
+ * environments without CLOUD_LLM_API_KEY configured.
  */
 
 import { logLayer } from '../../observability/log-layer';

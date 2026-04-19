@@ -1,7 +1,13 @@
 /**
- * Social Battery Service - Rate limiting with SQLite persistence
+ * Social Battery Service — per-channel rate limiting for natural conversation pacing.
  *
- * Manages message frequency to prevent spam and create natural conversation pacing
+ * Enforces two independent throttles per (profile, channel) pair:
+ *   1. **Window limit**: at most N messages within a rolling time window
+ *   2. **Cooldown**: a minimum gap between consecutive messages
+ *
+ * State is persisted in Postgres so limits survive process restarts.
+ * Direct @mentions bypass rate limits upstream (in ResponseDecisionService)
+ * so the bot always responds when explicitly addressed.
  */
 
 import { logLayer } from '@starbunk/shared/observability/log-layer';
@@ -10,6 +16,12 @@ import { SocialBatteryRepository } from '@/repositories/social-battery-repositor
 
 const logger = logLayer.withPrefix('SocialBatteryService');
 
+/**
+ * Runtime rate-limit config used by this service — camelCase TypeScript convention.
+ * Note: memory-types.ts defines a structurally similar interface also called
+ * SocialBatteryConfig but in snake_case, matching the YAML schema. That one
+ * documents the raw config shape; this one is what callers pass at runtime.
+ */
 export interface SocialBatteryConfig {
   maxMessages: number;
   windowMinutes: number;

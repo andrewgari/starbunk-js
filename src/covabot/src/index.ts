@@ -19,8 +19,7 @@ import { setApplicationHealth } from '@starbunk/shared/observability/health-serv
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { CovaBot, CovaBotConfig } from './cova-bot';
 
-// Load environment variables
-// Force rebuild: health server fix (PR #629)
+// Load environment variables from .env file
 config();
 
 const logger = logLayer.withPrefix('CovaBot:Main');
@@ -51,6 +50,7 @@ async function main(): Promise<void> {
     logger.warn(
       'No LLM provider configured. At least one of LOCAL_LLM_API_KEY or CLOUD_LLM_API_KEY is recommended.',
     );
+    process.exit(1);
   }
 
   // Build configuration

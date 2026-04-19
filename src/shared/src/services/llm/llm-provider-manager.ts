@@ -1,8 +1,17 @@
 /**
- * LLM Provider Manager
+ * LLM Provider Manager — multi-provider orchestrator with automatic fallback.
  *
- * Manages multiple LLM providers with fallback support.
- * Priority: LocalLLM (primary) -> CloudLLM (fallback)
+ * Maintains an ordered list of LlmProvider implementations. On each completion
+ * request, it tries providers in priority order and returns the first success.
+ * If a provider fails, the error is logged and the next provider is tried.
+ * If all providers fail, the last error is re-thrown.
+ *
+ * Default priority (set at construction time):
+ *   1. OllamaProvider  — local, free, private (primary)
+ *   2. OpenAIProvider  — cloud, paid (fallback)
+ *
+ * Only providers whose isAvailable() returns true at construction time are
+ * registered, so unconfigured providers are silently skipped.
  */
 
 import { logLayer } from '../../observability/log-layer';
