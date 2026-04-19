@@ -7,6 +7,7 @@
     "src/*"
   ],
   "scripts": {
+    "generate-personality": "node scripts/generate-personality.mjs",
     "sync-versions": "bash ./scripts/sync-versions.sh",
     "build": "npm run build:shared && npm run build:containers",
     "build:clean": "tsc --build --clean && npm run build",
