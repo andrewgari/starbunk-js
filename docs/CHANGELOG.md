@@ -1,3 +1,9 @@
+## [1.36.0](https://github.com/andrewgari/starbunk-js/compare/v1.35.0...v1.36.0) (2026-04-19)
+
+### Features
+
+* **covabot:** add Anthropic and Gemini LLM providers ([#666](https://github.com/andrewgari/starbunk-js/issues/666)) ([88f09d3](https://github.com/andrewgari/starbunk-js/commit/88f09d39111ff4b447dd0436b8b83b963da8cc75))
+
 ## [1.35.0](https://github.com/andrewgari/starbunk-js/compare/v1.34.4...v1.35.0) (2026-04-19)
 
 ### Features
