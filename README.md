@@ -173,8 +173,8 @@ STARBUNK_TOKEN=your_discord_bot_token
 DATABASE_URL=postgresql://user:pass@postgres:5432/starbunk
 
 # LLM-dependent containers (CovaBot)
-OPENAI_API_KEY=your_openai_key
-OLLAMA_API_URL=http://ollama:11434
+CLOUD_LLM_API_KEY=your_cloud_llm_key
+LOCAL_LLM_API_KEY=http://ollama:11434
 
 # Development
 DEBUG=true

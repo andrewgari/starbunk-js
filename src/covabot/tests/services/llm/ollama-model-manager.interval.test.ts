@@ -52,10 +52,9 @@ describe('OllamaModelManager - Interval Descriptions', () => {
 
   it('should use interval from environment variable', () => {
     const oneDay = 24 * 60 * 60 * 1000;
-    process.env.OLLAMA_UPDATE_INTERVAL_MS = String(oneDay);
+    process.env.LOCAL_LLM_UPDATE_INTERVAL_MS = String(oneDay);
 
     const manager = new OllamaModelManager();
     expect(manager.getUpdateIntervalDescription()).toBe('daily');
   });
 });
-

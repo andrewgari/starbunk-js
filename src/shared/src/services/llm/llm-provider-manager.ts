@@ -2,7 +2,7 @@
  * LLM Provider Manager
  *
  * Manages multiple LLM providers with fallback support.
- * Priority: Ollama (primary) -> OpenAI (fallback)
+ * Priority: LocalLLM (primary) -> CloudLLM (fallback)
  */
 
 import { logLayer } from '../../observability/log-layer';
@@ -29,18 +29,18 @@ export class LlmProviderManager {
    * Initialize providers in priority order
    */
   private initializeProviders(config?: LlmProviderConfig): void {
-    // 1. Ollama (primary - local, free, private)
-    const ollama = new OllamaProvider(config?.ollamaApiUrl, config?.ollamaDefaultModel);
-    if (ollama.isAvailable()) {
-      this.providers.push(ollama);
-      logger.info('Ollama provider registered (primary)');
+    // 1. Local LLM (primary - local, free, private)
+    const local = new OllamaProvider(config?.localLlmApiKey, config?.localLlmDefaultModel);
+    if (local.isAvailable()) {
+      this.providers.push(local);
+      logger.info('Local LLM provider registered (primary)');
     }
 
-    // 2. OpenAI (fallback - paid)
-    const openai = new OpenAIProvider(config?.openaiApiKey, config?.openaiDefaultModel);
-    if (openai.isAvailable()) {
-      this.providers.push(openai);
-      logger.info('OpenAI provider registered (fallback)');
+    // 2. Cloud LLM (fallback - paid)
+    const cloud = new OpenAIProvider(config?.cloudLlmApiKey, config?.cloudLlmDefaultModel);
+    if (cloud.isAvailable()) {
+      this.providers.push(cloud);
+      logger.info('Cloud LLM provider registered (fallback)');
     }
 
     if (this.providers.length === 0) {

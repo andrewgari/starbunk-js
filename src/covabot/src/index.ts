@@ -5,8 +5,8 @@
  * Requires environment variables:
  *   - DISCORD_TOKEN: Discord bot token
  *   - At least one LLM provider configured:
- *     - OLLAMA_API_URL (primary, recommended)
- *     - OPENAI_API_KEY (fallback)
+ *     - LOCAL_LLM_API_KEY (primary, recommended)
+ *     - CLOUD_LLM_API_KEY (fallback)
  *   - COVABOT_PERSONALITIES_PATH (optional): Path to personality YAML files
  *   - COVABOT_DATABASE_PATH (optional): Path to SQLite database
  */
@@ -44,12 +44,12 @@ async function main(): Promise<void> {
   }
 
   // Check if at least one LLM provider is configured
-  const ollamaApiUrl = process.env.OLLAMA_API_URL;
-  const openaiApiKey = process.env.OPENAI_API_KEY;
+  const localLlmApiKey = process.env.LOCAL_LLM_API_KEY;
+  const cloudLlmApiKey = process.env.CLOUD_LLM_API_KEY;
 
-  if (!ollamaApiUrl && !openaiApiKey) {
+  if (!localLlmApiKey && !cloudLlmApiKey) {
     logger.warn(
-      'No LLM provider configured. At least one of OLLAMA_API_URL or OPENAI_API_KEY is recommended.',
+      'No LLM provider configured. At least one of LOCAL_LLM_API_KEY or CLOUD_LLM_API_KEY is recommended.',
     );
   }
 
@@ -58,11 +58,11 @@ async function main(): Promise<void> {
     discordToken,
     personalitiesPath: process.env.COVABOT_PERSONALITIES_PATH,
     databasePath: process.env.COVABOT_DATABASE_PATH,
-    // LLM providers (priority: Ollama > OpenAI)
-    ollamaApiUrl,
-    ollamaDefaultModel: process.env.OLLAMA_DEFAULT_MODEL,
-    openaiApiKey,
-    openaiDefaultModel: process.env.OPENAI_DEFAULT_MODEL,
+    // LLM providers (priority: LocalLLM > CloudLLM)
+    localLlmApiKey,
+    localLlmDefaultModel: process.env.LOCAL_LLM_DEFAULT_MODEL,
+    cloudLlmApiKey,
+    cloudLlmDefaultModel: process.env.CLOUD_LLM_DEFAULT_MODEL,
   };
 
   // Initialize and start the bot

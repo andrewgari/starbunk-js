@@ -44,11 +44,11 @@ export interface LlmProvider {
  * Configuration for LLM providers
  */
 export interface LlmProviderConfig {
-  // Ollama
-  ollamaApiUrl?: string;
-  ollamaDefaultModel?: string;
+  // Local LLM (e.g., Ollama)
+  localLlmApiKey?: string;
+  localLlmDefaultModel?: string;
 
-  // OpenAI
-  openaiApiKey?: string;
-  openaiDefaultModel?: string;
+  // Cloud LLM (e.g., OpenAI)
+  cloudLlmApiKey?: string;
+  cloudLlmDefaultModel?: string;
 }

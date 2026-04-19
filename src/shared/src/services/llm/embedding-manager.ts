@@ -2,7 +2,7 @@
  * Embedding Manager
  *
  * Manages embedding providers with fallback support, caching, and scheduled updates.
- * Priority: Ollama (local, free) -> OpenAI (cloud, paid)
+ * Priority: LocalLLM (local, free) -> CloudLLM (cloud, paid)
  */
 
 import { logLayer } from '../../observability/log-layer';
@@ -45,22 +45,25 @@ export class EmbeddingManager {
   }
 
   private initializeProviders(config?: EmbeddingProviderConfig): void {
-    // 1. Ollama (primary - local, free)
+    // 1. Local LLM (primary - local, free)
     this.ollamaProvider = new OllamaEmbeddingProvider(
-      config?.ollamaApiUrl,
-      config?.ollamaEmbeddingModel,
+      config?.localLlmApiKey,
+      config?.localLlmEmbeddingModel,
     );
     if (this.ollamaProvider.supportsEmbeddings()) {
       this.providers.push(this.ollamaProvider);
       this.modelManager = this.ollamaProvider.getModelManager();
-      logger.info('Ollama embedding provider registered (primary)');
+      logger.info('Local LLM embedding provider registered (primary)');
     }
 
-    // 2. OpenAI (fallback - cloud, paid)
-    const openai = new OpenAIEmbeddingProvider(config?.openaiApiKey, config?.openaiEmbeddingModel);
-    if (openai.supportsEmbeddings()) {
-      this.providers.push(openai);
-      logger.info('OpenAI embedding provider registered (fallback)');
+    // 2. Cloud LLM (fallback - cloud, paid)
+    const cloud = new OpenAIEmbeddingProvider(
+      config?.cloudLlmApiKey,
+      config?.cloudLlmEmbeddingModel,
+    );
+    if (cloud.supportsEmbeddings()) {
+      this.providers.push(cloud);
+      logger.info('Cloud LLM embedding provider registered (fallback)');
     }
 
     if (this.providers.length === 0) {
@@ -86,7 +89,7 @@ export class EmbeddingManager {
     }
 
     const models = [
-      process.env.OLLAMA_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODELS.ollama,
+      process.env.LOCAL_LLM_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODELS.ollama,
       ...additionalModels,
     ];
 
