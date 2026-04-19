@@ -1,3 +1,9 @@
+## [1.35.0](https://github.com/andrewgari/starbunk-js/compare/v1.34.4...v1.35.0) (2026-04-19)
+
+### Features
+
+* **covabot:** add verbose logging mode for decision visibility ([#665](https://github.com/andrewgari/starbunk-js/issues/665)) ([592be8e](https://github.com/andrewgari/starbunk-js/commit/592be8ec25d9098d5bcca859bd54913e7e11e17e))
+
 ## [1.34.4](https://github.com/andrewgari/starbunk-js/compare/v1.34.3...v1.34.4) (2026-04-17)
 
 ### Bug Fixes
