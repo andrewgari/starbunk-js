@@ -33,23 +33,6 @@ processors:
         value: ${env:ENVIRONMENT}
         action: upsert
 
-  # Attributes processor to preserve service.name and other key attributes for Loki
-  # Only remove attributes that cause Loki structured metadata issues (high-cardinality attributes)
-  attributes/preserve_service:
-    actions:
-      # Preserve critical attributes for log searching
-      - key: service.name
-        action: upsert
-      - key: service.version
-        action: upsert
-      - key: service.instance.id
-        action: upsert
-      - key: deployment.environment
-        action: upsert
-      - key: cluster
-        action: upsert
-      - key: environment
-        action: upsert
 
 exporters:
   # Prometheus exporter (for metrics)
@@ -102,7 +85,7 @@ service:
     # Logs pipeline
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, batch, resource, attributes/preserve_service]
+      processors: [memory_limiter, batch, resource]
       exporters: [loki, logging]
 
   # Telemetry configuration for the collector itself

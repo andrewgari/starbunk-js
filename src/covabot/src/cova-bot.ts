@@ -37,7 +37,19 @@ export interface CovaBotConfig {
   discordToken: string;
   personalitiesPath?: string;
   databasePath?: string;
-  // LLM Provider configuration (priority: LocalLLM > CloudLLM)
+  // Ollama (local, no API key)
+  ollamaBaseUrl?: string;
+  ollamaDefaultModel?: string;
+  // Anthropic / Claude
+  anthropicApiKey?: string;
+  anthropicDefaultModel?: string;
+  // Google Gemini
+  geminiApiKey?: string;
+  geminiDefaultModel?: string;
+  // OpenAI
+  openaiApiKey?: string;
+  openaiDefaultModel?: string;
+  // Legacy aliases
   localLlmApiKey?: string;
   localLlmDefaultModel?: string;
   cloudLlmApiKey?: string;
@@ -228,6 +240,14 @@ export class CovaBot {
     this.interestService = new InterestService(interestRepo);
     this.socialBatteryService = new SocialBatteryService(socialBatteryRepo);
     this.llmService = new LlmService({
+      ollamaBaseUrl: this.config.ollamaBaseUrl,
+      ollamaDefaultModel: this.config.ollamaDefaultModel,
+      anthropicApiKey: this.config.anthropicApiKey,
+      anthropicDefaultModel: this.config.anthropicDefaultModel,
+      geminiApiKey: this.config.geminiApiKey,
+      geminiDefaultModel: this.config.geminiDefaultModel,
+      openaiApiKey: this.config.openaiApiKey,
+      openaiDefaultModel: this.config.openaiDefaultModel,
       localLlmApiKey: this.config.localLlmApiKey,
       localLlmDefaultModel: this.config.localLlmDefaultModel,
       cloudLlmApiKey: this.config.cloudLlmApiKey,

@@ -37,8 +37,16 @@ export class OllamaProvider implements LlmProvider {
   private readonly defaultModel: string;
 
   constructor(apiUrl?: string, defaultModel?: string) {
-    this.apiUrl = apiUrl || process.env.LOCAL_LLM_API_KEY || 'http://127.0.0.1:11434';
-    this.defaultModel = defaultModel || process.env.LOCAL_LLM_DEFAULT_MODEL || 'llama3';
+    this.apiUrl =
+      apiUrl ||
+      process.env.OLLAMA_BASE_URL ||
+      process.env.LOCAL_LLM_API_KEY ||
+      'http://127.0.0.1:11434';
+    this.defaultModel =
+      defaultModel ||
+      process.env.OLLAMA_DEFAULT_MODEL ||
+      process.env.LOCAL_LLM_DEFAULT_MODEL ||
+      'llama3';
   }
 
   /**
