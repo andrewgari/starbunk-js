@@ -1,3 +1,9 @@
+## [1.36.2](https://github.com/andrewgari/starbunk-js/compare/v1.36.1...v1.36.2) (2026-04-20)
+
+### Bug Fixes
+
+* **covabot:** fix Ollama model leak and webhook permission fallback ([f35d0a4](https://github.com/andrewgari/starbunk-js/commit/f35d0a43e20367722c7cd2455680f7beef06ee83))
+
 ## [1.36.1](https://github.com/andrewgari/starbunk-js/compare/v1.36.0...v1.36.1) (2026-04-20)
 
 ### Bug Fixes
