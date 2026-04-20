@@ -1,3 +1,9 @@
+## [1.36.1](https://github.com/andrewgari/starbunk-js/compare/v1.36.0...v1.36.1) (2026-04-20)
+
+### Bug Fixes
+
+* **covabot:** fix LLM provider model fallback and mention response ([#668](https://github.com/andrewgari/starbunk-js/issues/668)) ([2f8081d](https://github.com/andrewgari/starbunk-js/commit/2f8081dec31fc5c0c7091ad0cba4c0629fafde46))
+
 ## [1.36.0](https://github.com/andrewgari/starbunk-js/compare/v1.35.0...v1.36.0) (2026-04-19)
 
 ### Features
