@@ -268,9 +268,15 @@ export class LlmService {
 
     lines.push(`- Messages in window: ${ctx.conversationMessageCount}`);
 
-    lines.push(
-      `\nIf someone @mentioned you or referenced your name, they are almost certainly talking to you — respond. Otherwise, weigh the signals and use ${IGNORE_CONVERSATION_MARKER} when you have nothing genuine to add.`,
-    );
+    if (ctx.wasMentioned || ctx.nameReferenced) {
+      lines.push(
+        `\nYou were @mentioned or your name was used. Read the message carefully: if it contains a direct question, request, or is clearly addressed to you, respond. If you are mentioned only incidentally (e.g. someone talking about you rather than to you, or a quick "thanks @you"), use ${IGNORE_CONVERSATION_MARKER}.`,
+      );
+    } else {
+      lines.push(
+        `\nWeigh the signals above and use ${IGNORE_CONVERSATION_MARKER} when you have nothing genuine to add.`,
+      );
+    }
 
     return lines.join('\n');
   }

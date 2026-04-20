@@ -51,10 +51,14 @@ export class AnthropicProvider implements LlmProvider {
       throw new Error('Anthropic API key not configured');
     }
 
-    const model = options.model || this.defaultModel;
+    const requestedModel = options.model;
+    const model =
+      requestedModel && requestedModel.startsWith('claude') ? requestedModel : this.defaultModel;
 
-    // Anthropic requires system prompt as a top-level field, not in the messages array
-    const systemMessage = messages.find(m => m.role === 'system')?.content;
+    // Anthropic requires system prompt as a single top-level field — concatenate all system
+    // messages so conversation history, user facts, and engagement context are all included.
+    const systemParts = messages.filter(m => m.role === 'system').map(m => m.content);
+    const systemMessage = systemParts.length > 0 ? systemParts.join('\n\n') : undefined;
     const conversationMessages: AnthropicMessage[] = messages
       .filter(m => m.role !== 'system')
       .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
