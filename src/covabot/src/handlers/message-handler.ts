@@ -138,7 +138,16 @@ export class MessageHandler {
     const llmResponse = await this.generateLlmResponse(profile, message, botUserId);
 
     if (llmResponse.shouldIgnore) {
-      if (VERBOSE_LOGGING) {
+      if (decision.reason === 'direct_mention') {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            channel_id: message.channelId,
+            author: message.author.username,
+            content_preview: message.content.substring(0, 80),
+          })
+          .warn('LLM returned IGNORE for a direct @mention — this is a prompt compliance failure');
+      } else if (VERBOSE_LOGGING) {
         logger
           .withMetadata({
             profile_id: profile.id,

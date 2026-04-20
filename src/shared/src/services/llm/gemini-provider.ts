@@ -37,7 +37,9 @@ export class GeminiProvider implements LlmProvider {
       throw new Error('Gemini API key not configured');
     }
 
-    const model = options.model || this.defaultModel;
+    const requestedModel = options.model;
+    const model =
+      requestedModel && requestedModel.startsWith('gemini') ? requestedModel : this.defaultModel;
 
     logger
       .withMetadata({ model, messageCount: messages.length })
