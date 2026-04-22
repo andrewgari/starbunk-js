@@ -4,12 +4,23 @@ import { logLayer } from './log-layer';
 
 const logger = logLayer.withPrefix('HealthServer');
 
-type ApplicationHealthState = 'starting' | 'healthy' | 'unhealthy';
+type ApplicationHealthState = 'starting' | 'healthy' | 'unhealthy' | 'shutting_down';
 
 interface ApplicationHealthInfo {
   state: ApplicationHealthState;
   reason?: string;
 }
+
+/**
+ * Interface for health check modules that provide bot-specific health information.
+ */
+export interface HealthCheckModule {
+  name: string;
+  getHealth(): Promise<Record<string, unknown>>;
+}
+
+// Registry for health check modules
+const healthCheckModules: HealthCheckModule[] = [];
 
 // Module-level health state — starts as 'starting' to prevent false positives during init.
 // Containers must call setApplicationHealth('healthy') after successful startup.
@@ -22,6 +33,16 @@ let applicationHealth: ApplicationHealthInfo = { state: 'starting' };
 export function setApplicationHealth(state: ApplicationHealthState, reason?: string): void {
   applicationHealth = { state, reason };
 }
+
+/**
+ * Register a health check module to be included in the /health endpoint response.
+ * @param module The health check module to register.
+ */
+export function registerHealthCheckModule(module: HealthCheckModule): void {
+  healthCheckModules.push(module);
+  logger.info(`Registered health check module: ${module.name}`);
+}
+
 
 /**
  * Health and metrics HTTP server
@@ -103,33 +124,39 @@ export class HealthServer {
     }
   }
 
-  private handleHealth(req: http.IncomingMessage, res: http.ServerResponse): void {
+  private async handleHealth(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     const uptime = Date.now() - this.startTime;
     const serviceName = process.env.SERVICE_NAME || 'unknown';
 
-    if (applicationHealth.state !== 'healthy') {
-      res.writeHead(503, { 'Content-Type': 'application/json' });
-      res.end(
-        JSON.stringify({
-          status: applicationHealth.state,
-          reason: applicationHealth.reason,
-          uptime,
-          timestamp: new Date().toISOString(),
-          service: serviceName,
-        }),
-      );
-      return;
-    }
+    // Gather health from all registered modules
+    const moduleHealths: Record<string, unknown> = {};
+    const modulePromises = healthCheckModules.map(async module => {
+      try {
+        moduleHealths[module.name] = await module.getHealth();
+      } catch (error) {
+        logger.withError(error).warn(`Health check module '${module.name}' failed`);
+        moduleHealths[module.name] = { status: 'error', error: (error as Error).message };
+      }
+    });
+    await Promise.allSettled(modulePromises);
 
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(
-      JSON.stringify({
-        status: 'healthy',
-        uptime,
-        timestamp: new Date().toISOString(),
-        service: serviceName,
-      }),
-    );
+    const responseBody = {
+      status: applicationHealth.state,
+      reason: applicationHealth.reason,
+      uptime,
+      timestamp: new Date().toISOString(),
+      service: serviceName,
+      modules: moduleHealths,
+    };
+
+    if (applicationHealth.state === 'healthy') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+    } else if (applicationHealth.state === 'shutting_down') {
+      res.writeHead(202, { 'Content-Type': 'application/json' }); // 202 Accepted for graceful shutdown
+    } else {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+    }
+    res.end(JSON.stringify(responseBody));
   }
 
   private handleLiveness(req: http.IncomingMessage, res: http.ServerResponse): void {
