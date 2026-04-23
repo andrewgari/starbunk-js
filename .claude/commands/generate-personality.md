@@ -15,6 +15,13 @@ Distills a Discord user's message history into a complete CovaBot personality pr
 - `DISCORD_TOKEN` — bot token with READ_MESSAGE_HISTORY in the target server
 - `ANTHROPIC_API_KEY` — for the personality generation call
 
+## Privacy & Consent
+
+> **Before running this script:**
+> - Ensure you have permission from the target user and the server owner to collect and analyze their message history.
+> - Avoid running this against private or DM channels where the user has a reasonable expectation of privacy.
+> - Message content will be transmitted to a third-party LLM provider (Anthropic, Gemini, or OpenAI depending on which API key is set). Do not use this script on channels containing sensitive, confidential, or personally identifying information.
+
 ## Steps
 
 Ask the user for the following if not already provided:

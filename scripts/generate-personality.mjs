@@ -21,7 +21,7 @@
  *     profile.yml, core.md, speech.md, likes.md, dislikes.md, opinions.md, beliefs.md
  */
 
-import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'fs';
+import { mkdirSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -57,6 +57,11 @@ Usage: node scripts/generate-personality.mjs \\
     process.exit(1);
   }
 
+  if (!/^[a-z0-9][a-z0-9_-]*$/.test(output)) {
+    console.error('Error: --output must be a kebab-case slug (lowercase letters, numbers, hyphens, underscores only — no path separators)');
+    process.exit(1);
+  }
+
   return { guildId, userId, name, output, extra };
 }
 
@@ -87,7 +92,9 @@ async function discordGet(path, token) {
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Discord API ${res.status} on ${path}: ${body}`);
+    const err = new Error(`Discord API ${res.status} on ${path}: ${body}`);
+    err.status = res.status;
+    throw err;
   }
 
   if (remaining === 0 && resetAfter > 0) {
@@ -133,8 +140,11 @@ async function fetchUserMessagesFromChannel(channelId, userId, token, maxPerChan
     let batch;
     try {
       batch = await discordGet(`/channels/${channelId}/messages${qs}`, token);
-    } catch {
-      break; // no access to this channel — skip
+    } catch (err) {
+      if (err.status === 403 || err.status === 404) {
+        break; // no access to this channel — skip
+      }
+      throw err; // unexpected error (network, 5xx, etc.) — propagate
     }
 
     if (!batch || batch.length === 0) break;
@@ -186,7 +196,7 @@ async function callAnthropic(apiKey, systemPrompt, userPrompt) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: process.env.ANTHROPIC_DEFAULT_MODEL ?? 'claude-sonnet-4-6',
       max_tokens: 8192,
       temperature: 0.6,
       system: systemPrompt,
@@ -296,13 +306,24 @@ Respond with a single JSON object (no markdown code fences) with these exact key
 
 Each value is the raw file content as a string.`;
 
+// ~150k chars leaves ample room for system prompt + response within typical context limits
+const MAX_MESSAGES_CHARS = 150_000;
+
 function buildUserPrompt(name, userId, messages, extra) {
-  const formatted = messages
-    .map(m => `[${m.timestamp.slice(0, 10)}] ${m.content}`)
-    .join('\n');
+  let formatted = '';
+  let included = 0;
+  for (const m of messages) {
+    const line = `[${m.timestamp.slice(0, 10)}] ${m.content}\n`;
+    if (formatted.length + line.length > MAX_MESSAGES_CHARS) break;
+    formatted += line;
+    included++;
+  }
+  if (included < messages.length) {
+    console.warn(`  Prompt budget: included ${included}/${messages.length} messages (oldest omitted to stay within context limit)`);
+  }
 
   return `
-Here are ${messages.length} Discord messages from ${name} (user ID: ${userId}).
+Here are ${included} Discord messages from ${name} (user ID: ${userId}).
 ${extra ? `\nAdditional context provided: ${extra}\n` : ''}
 ---
 ${formatted}
@@ -364,9 +385,17 @@ profile:
 // ---------------------------------------------------------------------------
 
 function parseGeneratedJson(raw) {
-  // Claude sometimes wraps in ```json ... ``` — strip if present
-  const cleaned = raw.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
-  return JSON.parse(cleaned);
+  // Extract JSON from a fenced code block (```json ... ``` or ``` ... ```)
+  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenceMatch) {
+    return JSON.parse(fenceMatch[1].trim());
+  }
+  // Fall back: find the first complete JSON object in the response
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    return JSON.parse(jsonMatch[0]);
+  }
+  return JSON.parse(raw.trim());
 }
 
 function writePersonalityFiles(outputDir, files) {
