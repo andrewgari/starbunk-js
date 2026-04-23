@@ -1,0 +1,3 @@
+# Personality profiles contain personal data — keep off git, deploy to server directly
+*
+!.gitignore
